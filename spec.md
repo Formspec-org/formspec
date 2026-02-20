@@ -5519,3 +5519,233 @@ API-only or PDF contexts. Formspec's `timing` values (`continuous`, `submit`,
 **EBNF vs PEG grammar notation.** UDF uses EBNF; Formspec uses PEG. Both
 are unambiguous grammar formalisms. No change.
 
+
+
+---
+
+## Appendix G: UDF Cross-Analysis (Routing, Extensions, Conformance)
+
+This appendix completes the UDF cross-analysis covering screener routing,
+extension semantics, and conformance requirements. This appendix is
+informative except where noted as normative.
+
+### G.1 Features Adopted as Amendments
+
+#### G.1.1 Formal Screener Routing (Normative)
+
+UDF defines a first-class `screener` section with an ordered `routes` array
+where each route has a `condition` expression and a `target` definition URL.
+Formspec handles routing via calculated fields and examples (§7.5) but has
+no dedicated routing structure. The calculate-field approach works but
+requires the implementor to invent the pattern each time.
+
+**Amendment.** Formspec adds an optional `screener` property to the Definition:
+
+```json
+{
+  "$formspec": "1.0",
+  "url": "https://grants.gov/forms/sf-425-screener",
+  "version": "1.0.0",
+  "status": "active",
+  "screener": {
+    "items": [
+      {
+        "key": "award_amount",
+        "type": "field",
+        "dataType": "money",
+        "label": "Total federal award amount"
+      },
+      {
+        "key": "frequency",
+        "type": "field",
+        "dataType": "choice",
+        "optionSet": "reporting_frequencies",
+        "label": "Required reporting frequency"
+      }
+    ],
+    "routes": [
+      {
+        "condition": "moneyAmount($award_amount) < 250000 and $frequency = 'annual'",
+        "target": "https://grants.gov/forms/sf-425-short|1.0.0",
+        "label": "SF-425 Short Form"
+      },
+      {
+        "condition": "true",
+        "target": "https://grants.gov/forms/sf-425|2.1.0",
+        "label": "SF-425 Full Form"
+      }
+    ]
+  }
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `screener.items` | array of Item | Fields presented to the user for routing classification. These items use the standard Item schema (§4.2) and their values are available to route conditions. |
+| `screener.routes` | array of Route | Ordered list of routing rules. |
+| `screener.routes[].condition` | string (FEL → boolean) | Expression evaluated against screener item values. |
+| `screener.routes[].target` | string (URI) | Canonical reference (`url\|version`) to the target FormDefinition. |
+| `screener.routes[].label` | string (OPTIONAL) | Human-readable description of this route. |
+
+Routes are evaluated in declaration order. The first route whose `condition`
+evaluates to `true` wins. A route with `"condition": "true"` acts as a
+default/fallback.
+
+Screener items are NOT part of the form's instance data — they exist only for
+routing purposes. The consuming application is responsible for launching the
+target definition after routing.
+
+A Definition with a `screener` section MAY also contain regular `items` and
+`binds`. In this case the screener acts as a gating step before the main form.
+
+#### G.1.2 `mustUnderstand` on Extensions (Normative)
+
+UDF's §8.4 specifies that extensions may be marked `mustUnderstand: true`,
+requiring engines to report an error if they cannot process the extension.
+Formspec's current rule (§8.4) says processors "MUST ignore extension
+properties they do not understand." This is safe for decorative extensions
+but dangerous for behavioral ones — a custom constraint component that is
+silently ignored produces a false sense of validation.
+
+**Amendment.** Any extension object (in `extensions.dataTypes`,
+`extensions.functions`, `extensions.constraints`, or item-level `extensions`)
+MAY include:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `mustUnderstand` | boolean | `false` | When `true`, a processor that does not recognize or cannot evaluate this extension MUST report a definition error and MUST NOT proceed with evaluation. When `false` (default), the processor MAY ignore the extension. |
+
+```json
+{
+  "extensions": {
+    "functions": {
+      "x-verify-npi": {
+        "description": "Verify NPI checksum using the Luhn algorithm",
+        "parameters": [{ "name": "npi", "type": "string" }],
+        "returns": "boolean",
+        "implementation": "external",
+        "mustUnderstand": true
+      }
+    }
+  }
+}
+```
+
+The existing rule that processors "MUST ignore extension properties they do
+not understand" (§8.4) is amended to: processors MUST ignore extension
+properties they do not understand **unless `mustUnderstand` is `true`**.
+
+This enables critical extensions (custom validation functions, domain-required
+type checks) to fail loudly rather than silently.
+
+#### G.1.3 Conformance Tiers (Normative)
+
+UDF defines Core and Extended conformance levels. Formspec's §1.4 defines a
+single conformance level. Tiered conformance enables lightweight processors
+(e.g., a validation-only API) to claim conformance without implementing
+every feature.
+
+**Amendment.** Formspec defines two conformance tiers:
+
+**Formspec Core** — A conformant Core processor MUST support:
+
+1. Parsing and validating FormDefinition documents
+2. All core data types (§4.2.3), including `money` (Appendix C)
+3. All five Bind MIPs: `calculate`, `relevant`, `required`, `readonly`,
+   `constraint`
+4. The full FEL expression language (§3), including all built-in functions
+5. Validation shapes with severity levels and ValidationReport generation (§5)
+6. The four-phase processing model (§2.4)
+7. Canonical identity, versioning, and response pinning (§6)
+8. Named option sets (Appendix E)
+
+**Formspec Extended** — A conformant Extended processor MUST support Formspec
+Core plus:
+
+1. Extension data types, functions, and constraint components (§8)
+2. `mustUnderstand` extension processing (Appendix G, §G.1.2)
+3. Screener routing (Appendix G, §G.1.1)
+4. Modular composition and assembly (§6.6)
+5. Version migration maps (Appendix E, §E.1.2)
+6. Pre-population declarations (Appendix E, §E.1.3)
+
+A processor MAY claim "Formspec Core" or "Formspec Extended" conformance.
+A processor claiming Extended conformance implicitly claims Core conformance.
+
+#### G.1.4 Conformance Prohibitions (Normative)
+
+In addition to the positive requirements in §1.4, a conformant Formspec
+processor (Core or Extended) MUST NOT:
+
+1. **Silently substitute definition versions.** When validating a Response
+   pinned to version X, the processor MUST use version X. If version X is
+   unavailable, the processor MUST report an error.
+2. **Produce validation results for non-relevant fields.** Non-relevant
+   fields are exempt from all validation (§5.6 rule 1).
+3. **Block data persistence based on validation state.** Validation and
+   persistence are independent operations. A processor MUST allow saving
+   instance data regardless of whether the data is valid (§5.5).
+4. **Silently drop unknown `mustUnderstand` extensions.** If an extension
+   has `mustUnderstand: true` and the processor does not support it, the
+   processor MUST report an error.
+
+### G.2 Features Already Covered
+
+**Worked examples (§9.1–9.6).** All six UDF examples map to existing
+Formspec examples (§7.1–7.6): budget line items with calculated totals,
+conditional sections with dependent validation, year-over-year warnings,
+screener routing, external validation injection, and repeatable rows with
+per-row and cross-row constraints.
+
+**Extension points (§8.1–8.3).** Custom field types, custom functions, and
+custom constraint components — all structurally equivalent to Formspec §8.
+
+**Extension namespacing via URIs.** UDF uses URIs for extension identifiers;
+Formspec uses `x-` prefixed names. Both prevent collisions. Formspec's
+approach is simpler for common cases; UDF's is more formal.
+
+**Lineage documentation (§10).** UDF's lineage tables are structurally
+identical to Formspec §9, attributing the same sources (XForms, SHACL,
+FHIR R5, ODK, SurveyJS, JSON Forms, CommonGrants).
+
+**`when` on shapes.** UDF's `when` is identical to Formspec's `activeWhen`
+(Appendix C, §C.1.4).
+
+**`validationMode` per shape.** UDF's `validationMode` (onChange/onBlur/
+onSubmit/onDemand) is addressed by Formspec's `timing` (continuous/submit/
+demand) from Appendix F, §F.1.3.
+
+**`constraintComponent` on results.** UDF's `constraintComponent` is
+addressed by Formspec's `constraintKind` from Appendix F, §F.1.1.
+
+**`context` map on ValidationResult.** Already present in Formspec §5.3.
+
+### G.3 Design Divergences (No Action)
+
+**`$form` and `$cross` as magic path targets.** UDF uses `"$form"` for
+form-level shapes and `"$cross"` for cross-form shapes. Formspec uses `"#"`
+for root-level targeting and cross-instance references via `@instance()` in
+expressions. The `$cross` concept conflates targeting with data access —
+a shape still needs to specify *which* cross-form data to compare. Formspec's
+approach of using standard instance references within shape expressions is
+more explicit. No change.
+
+**Inline constraint objects on binds.** UDF allows
+`"constraint": { "expression": "...", "message": "..." }` on binds. Formspec
+uses separate `constraint` (expression) and `constraintMessage` (string)
+properties. Both work. No change.
+
+**Presentation Hints as separate optional layer.** UDF explicitly separates
+labels/descriptions into an optional layer. Formspec embeds them on items
+but doesn't require them for structural validity (§4.2.1: `label` is
+REQUIRED but a headless processor can ignore it). The practical difference
+is minimal. No change.
+
+**`code` required on all ValidationResults.** UDF makes `code` required
+(not optional) on every result. With the standard built-in codes from
+Appendix F (§F.1.2), this is achievable — every result has either a
+shape-specific code or a built-in code. Formspec's §5.3 already lists
+`code` as optional. Given that §F.1.2 now provides standard fallback codes,
+this appendix upgrades `code` to RECOMMENDED (processors SHOULD include it,
+using built-in codes from §F.1.2 when no specific code is declared).
+
