@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/registry/v1.0/registry.json",
+  "title": "Formspec Registry Document",
+  "type": "object",
+  "required": [
+    "$formspecRegistry",
+    "publisher",
+    "published",
+    "entries"
+  ],
+  "properties": {
+    "$formspecRegistry": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "publisher": {
+      "$ref": "#/$defs/Publisher"
+    },
+    "published": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RegistryEntry"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x-"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Publisher": {
+      "type": "object",
+      "required": [
+        "name",
+        "url"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "contact": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RegistryEntry": {
+      "type": "object",
+      "required": [
+        "name",
+        "category",
+        "version",
+        "status",
+        "description",
+        "compatibility"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^x-[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "dataType",
+            "function",
+            "constraint",
+            "property",
+            "namespace"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "stable",
+            "deprecated",
+            "retired"
+          ]
+        },
+        "publisher": {
+          "$ref": "#/$defs/Publisher"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "specUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "schemaUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "compatibility": {
+          "type": "object",
+          "required": [
+            "formspecVersion"
+          ],
+          "properties": {
+            "formspecVersion": {
+              "type": "string"
+            },
+            "mappingDslVersion": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "license": {
+          "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "items": true
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          }
+        },
+        "baseType": {
+          "type": "string",
+          "enum": [
+            "string",
+            "integer",
+            "decimal",
+            "boolean",
+            "date",
+            "dateTime",
+            "time",
+            "uri"
+          ]
+        },
+        "constraints": {
+          "type": "object"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "type"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "returns": {
+          "type": "string"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^x-[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "dataType"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "baseType"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "function"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "parameters",
+              "returns"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "constraint"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "parameters"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
