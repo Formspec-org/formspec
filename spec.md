@@ -312,7 +312,7 @@ Field items MUST declare a `dataType` from the following set:
 | `"boolean"` | JSON `true` / `false` | `boolean` | |
 | `"date"` | JSON string, ISO 8601 date (`YYYY-MM-DD`) | `date` | |
 | `"dateTime"` | JSON string, ISO 8601 date-time | `date` | |
-| `"time"` | JSON string, ISO 8601 time (`HH:MM:SS`) | `string` | Treated as string in FEL; time functions are a future extension. |
+| `"time"` | JSON string, ISO 8601 time (`HH:MM:SS`) | `string` | Supports time extraction and construction via `hours()`, `minutes()`, `seconds()`, and `time()` functions (§3.5). |
 | `"choice"` | JSON string (selected option key) | `string` | Valid values constrained by an `options` array or data source reference. |
 | `"multiChoice"` | JSON array of strings | `array` | |
 | `"attachment"` | JSON object `{ "url": "...", "contentType": "...", "size": ... }` | N/A | Binary content is out-of-band; the Instance stores a reference. |
@@ -1248,6 +1248,11 @@ Aggregate functions operate on arrays and reduce them to a single value.
 |----------|-----------|---------|------------|
 | `today` | `today() → date` | `date` | The current date in the processor’s local time zone (or UTC, at the processor’s discretion; processors SHOULD document their choice). |
 | `now` | `now() → date` | `date` | The current date-time. Non-deterministic. |
+| `hours` | `hours(string) → integer` | `time` | Extract the hours component (0–23) from an ISO 8601 time string. E.g., `hours('14:30:00')` → `14`. |
+| `minutes` | `minutes(string) → integer` | `time` | Extract the minutes component (0–59) from an ISO 8601 time string. E.g., `minutes('14:30:00')` → `30`. |
+| `seconds` | `seconds(string) → integer` | `time` | Extract the seconds component (0–59) from an ISO 8601 time string. E.g., `seconds('14:30:00')` → `0`. |
+| `time` | `time(integer, integer, integer) → string` | `time` | Construct an ISO 8601 time string from hours, minutes, seconds. E.g., `time(14, 30, 0)` → `'14:30:00'`. Hours MUST be 0–23, minutes and seconds 0–59. |
+| `timeDiff` | `timeDiff(string, string) → integer` | `time` | Difference in seconds between two ISO 8601 time strings. `timeDiff('14:30:00', '13:00:00')` → `5400`. Result MAY be negative. |
 | `year` | `year(date) → number` | `number` | The four-digit year component. |
 | `month` | `month(date) → number` | `number` | The month component (1–12). |
 | `day` | `day(date) → number` | `number` | The day-of-month component (1–31). |
@@ -4334,7 +4339,7 @@ architecture, and expression extensions.
 | Data/UI schema separation | JSON Forms (JSON Schema for data, UI Schema for layout) | Structure layer / Presentation layer separation; presentation explicitly out of scope to avoid under-specifying a complex domain |
 | Validation modes | JSON Forms (`validateMode: "onBlur"`, `"onChange"`, etc.) | `continuous` / `deferred` / `disabled` validation modes; the mapping to UI events is an implementation concern |
 | External error injection | JSON Forms / React JSON Schema Form (RJSF) `additionalErrors` | External validation results with `source` and `sourceId` properties, merged into a single ValidationReport |
-| Mapping DSL for data transformation | CommonGrants (proposed) | Not included in core specification. Data mapping and transformation between Formspec Responses and backend schemas is identified as a candidate for a future companion specification. |
+| Mapping DSL for data transformation | CommonGrants (proposed) | Published as a companion specification: **Formspec Mapping DSL v1.0** (see [`mapping-spec.md`](mapping-spec.md)). Covers bidirectional transforms between Formspec Responses and external schemas (JSON, XML, CSV). |
 
 ---
 

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/response.schema.json",
+  "title": "Formspec Response",
+  "description": "A Formspec Response document — a completed or in-progress Instance pinned to a specific Definition version (§2.1.6).",
+  "type": "object",
+  "required": [
+    "definitionUrl",
+    "definitionVersion",
+    "status",
+    "data",
+    "authored"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "definitionUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "The canonical URL of the Definition."
+    },
+    "definitionVersion": {
+      "type": "string",
+      "description": "The exact semver version of the Definition against which this Response was created."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["in-progress", "completed", "amended", "stopped"],
+      "description": "The current status of this Response."
+    },
+    "data": {
+      "type": "object",
+      "description": "The primary Instance — the form data.",
+      "additionalProperties": true
+    },
+    "authored": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the Response was last modified (ISO 8601 date-time)."
+    },
+    "id": {
+      "type": "string",
+      "description": "A globally unique identifier (e.g., UUID)."
+    },
+    "author": {
+      "type": "object",
+      "description": "Identifier and display name of the person or system that authored the Response.",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the author."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the author."
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "description": "The entity this Response is about.",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the subject entity."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of the subject entity (e.g., 'Grant', 'Patient')."
+        }
+      }
+    },
+    "validationResults": {
+      "type": "array",
+      "description": "The most recent set of ValidationResult entries (§2.5.1).",
+      "items": {
+        "$ref": "#/$defs/ValidationResult"
+      }
+    }
+  },
+  "$defs": {
+    "ValidationResult": {
+      "type": "object",
+      "description": "A single validation finding produced by constraint evaluation (§2.5.1).",
+      "required": ["path", "severity", "message", "constraintKind"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Dot-notation path to the data node that produced this result."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["error", "warning", "info"],
+          "description": "The severity level of this finding (§5.1)."
+        },
+        "message": {
+          "type": "string",
+          "description": "A human-readable description of the finding."
+        },
+        "constraintKind": {
+          "type": "string",
+          "enum": ["required", "type", "cardinality", "constraint", "shape", "external"],
+          "description": "The category of constraint that produced this result."
+        },
+        "code": {
+          "type": "string",
+          "description": "A machine-readable identifier for this class of finding."
+        },
+        "shapeId": {
+          "type": "string",
+          "description": "If the source is a Validation Shape, the identifier of that shape."
+        },
+        "sourceId": {
+          "type": "string",
+          "description": "Identifies the origin of the finding (e.g., bind or shape identifier)."
+        }
+      }
+    }
+  }
+}

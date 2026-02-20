@@ -688,8 +688,9 @@ set:</p>
 <td><code>"time"</code></td>
 <td>JSON string, ISO 8601 time (<code>HH:MM:SS</code>)</td>
 <td><code>string</code></td>
-<td>Treated as string in FEL; time functions are a future
-extension.</td>
+<td>Supports time extraction and construction via <code>hours()</code>,
+<code>minutes()</code>, <code>seconds()</code>, and <code>time()</code>
+functions (§3.5).</td>
 </tr>
 <tr class="even">
 <td><code>"choice"</code></td>
@@ -2475,24 +2476,61 @@ processor’s discretion; processors SHOULD document their choice).</td>
 <td>The current date-time. Non-deterministic.</td>
 </tr>
 <tr class="odd">
+<td><code>hours</code></td>
+<td><code>hours(string) → integer</code></td>
+<td><code>time</code></td>
+<td>Extract the hours component (0–23) from an ISO 8601 time string.
+E.g., <code>hours('14:30:00')</code> → <code>14</code>.</td>
+</tr>
+<tr class="even">
+<td><code>minutes</code></td>
+<td><code>minutes(string) → integer</code></td>
+<td><code>time</code></td>
+<td>Extract the minutes component (0–59) from an ISO 8601 time string.
+E.g., <code>minutes('14:30:00')</code> → <code>30</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>seconds</code></td>
+<td><code>seconds(string) → integer</code></td>
+<td><code>time</code></td>
+<td>Extract the seconds component (0–59) from an ISO 8601 time string.
+E.g., <code>seconds('14:30:00')</code> → <code>0</code>.</td>
+</tr>
+<tr class="even">
+<td><code>time</code></td>
+<td><code>time(integer, integer, integer) → string</code></td>
+<td><code>time</code></td>
+<td>Construct an ISO 8601 time string from hours, minutes, seconds.
+E.g., <code>time(14, 30, 0)</code> → <code>'14:30:00'</code>. Hours MUST
+be 0–23, minutes and seconds 0–59.</td>
+</tr>
+<tr class="odd">
+<td><code>timeDiff</code></td>
+<td><code>timeDiff(string, string) → integer</code></td>
+<td><code>time</code></td>
+<td>Difference in seconds between two ISO 8601 time strings.
+<code>timeDiff('14:30:00', '13:00:00')</code> → <code>5400</code>.
+Result MAY be negative.</td>
+</tr>
+<tr class="even">
 <td><code>year</code></td>
 <td><code>year(date) → number</code></td>
 <td><code>number</code></td>
 <td>The four-digit year component.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>month</code></td>
 <td><code>month(date) → number</code></td>
 <td><code>number</code></td>
 <td>The month component (1–12).</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>day</code></td>
 <td><code>day(date) → number</code></td>
 <td><code>number</code></td>
 <td>The day-of-month component (1–31).</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>dateDiff</code></td>
 <td><code>dateDiff(date, date, string) → number</code></td>
 <td><code>number</code></td>
@@ -2502,7 +2540,7 @@ argument MUST be one of <code>'years'</code>, <code>'months'</code>,
 if date1 is later). For <code>'years'</code> and <code>'months'</code>,
 the result is a whole number (truncated, not rounded).</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>dateAdd</code></td>
 <td><code>dateAdd(date, number, string) → date</code></td>
 <td><code>date</code></td>
@@ -7219,9 +7257,11 @@ ValidationReport</td>
 <tr class="odd">
 <td>Mapping DSL for data transformation</td>
 <td>CommonGrants (proposed)</td>
-<td>Not included in core specification. Data mapping and transformation
-between Formspec Responses and backend schemas is identified as a
-candidate for a future companion specification.</td>
+<td>Published as a companion specification: <strong>Formspec Mapping DSL
+v1.0</strong> (see <a
+href="mapping-spec.md"><code>mapping-spec.md</code></a>). Covers
+bidirectional transforms between Formspec Responses and external schemas
+(JSON, XML, CSV).</td>
 </tr>
 </tbody>
 </table>

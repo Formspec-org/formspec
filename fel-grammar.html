@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FEL Normative Grammar v1.0</title>
+<style>
+  body { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color: #1f2328; line-height: 1.6; font-size: 16px; }
+  #TOC { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 1rem 1.5rem; margin-bottom: 2rem; }
+  #TOC > ul { list-style: none; padding-left: 0; }
+  #TOC ul { padding-left: 1.5rem; }
+  #TOC li { margin: 0.15rem 0; font-size: 14px; }
+  #TOC a { text-decoration: none; color: #0969da; }
+  #TOC a:hover { text-decoration: underline; }
+  h1 { border-bottom: 2px solid #d0d7de; padding-bottom: 0.3rem; }
+  h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 0.3rem; margin-top: 2.5rem; }
+  h3 { margin-top: 1.5rem; }
+  h4 { margin-top: 1.2rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 14px; }
+  th, td { border: 1px solid #d0d7de; padding: 6px 13px; text-align: left; }
+  th { background: #f6f8fa; font-weight: 600; }
+  pre { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 13px; }
+  code { font-size: 0.9em; background: #f0f2f5; padding: 0.2em 0.4em; border-radius: 3px; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 4px solid #d0d7de; margin: 0; padding: 0 1rem; color: #57606a; }
+  strong { color: #1f2328; }
+  a { color: #0969da; }
+  hr { border: none; border-top: 1px solid #d0d7de; margin: 2rem 0; }
+</style>
+</head>
+<body>
+<nav id="TOC">
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#formspec-expression-language-fel-normative-grammar"
+id="toc-formspec-expression-language-fel-normative-grammar">Formspec
+Expression Language (FEL) — Normative Grammar</a>
+<ul>
+<li><a href="#introduction" id="toc-introduction">1.
+Introduction</a></li>
+<li><a href="#notation" id="toc-notation">2. Notation</a></li>
+<li><a href="#lexical-grammar" id="toc-lexical-grammar">3. Lexical
+Grammar</a>
+<ul>
+<li><a href="#whitespace-and-comments"
+id="toc-whitespace-and-comments">3.1 Whitespace and Comments</a></li>
+<li><a href="#identifiers" id="toc-identifiers">3.2 Identifiers</a></li>
+<li><a href="#reserved-words" id="toc-reserved-words">3.3 Reserved
+Words</a></li>
+<li><a href="#string-literals" id="toc-string-literals">3.4 String
+Literals</a></li>
+<li><a href="#number-literals" id="toc-number-literals">3.5 Number
+Literals</a></li>
+<li><a href="#date-and-datetime-literals"
+id="toc-date-and-datetime-literals">3.6 Date and DateTime
+Literals</a></li>
+<li><a href="#boolean-and-null-literals"
+id="toc-boolean-and-null-literals">3.7 Boolean and Null
+Literals</a></li>
+<li><a href="#integer-array-index" id="toc-integer-array-index">3.8
+Integer (Array Index)</a></li>
+</ul></li>
+<li><a href="#expression-grammar" id="toc-expression-grammar">4.
+Expression Grammar</a>
+<ul>
+<li><a href="#function-calls" id="toc-function-calls">4.1 Function
+Calls</a></li>
+<li><a href="#object-literals" id="toc-object-literals">4.2 Object
+Literals</a></li>
+<li><a href="#array-literals" id="toc-array-literals">4.3 Array
+Literals</a></li>
+<li><a href="#literals" id="toc-literals">4.4 Literals</a></li>
+</ul></li>
+<li><a href="#operator-precedence-table"
+id="toc-operator-precedence-table">5. Operator Precedence Table</a></li>
+<li><a href="#path-expressions" id="toc-path-expressions">6. Path
+Expressions</a>
+<ul>
+<li><a href="#reference-forms" id="toc-reference-forms">6.1 Reference
+Forms</a></li>
+<li><a href="#path-resolution-rules" id="toc-path-resolution-rules">6.2
+Path Resolution Rules</a></li>
+</ul></li>
+<li><a href="#conformance" id="toc-conformance">7. Conformance</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="formspec-expression-language-fel-normative-grammar">Formspec
+Expression Language (FEL) — Normative Grammar</h1>
+<p><strong>Version:</strong> 1.0 <strong>Status:</strong> Normative
+companion to Formspec v1.0 §3</p>
+<hr />
+<h2 id="introduction">1. Introduction</h2>
+<p>This document defines the <strong>normative</strong> Parsing
+Expression Grammar (PEG) for the Formspec Expression Language (FEL). It
+is a companion to the Formspec specification v1.0 §3 and supersedes the
+<strong>informative</strong> grammar given in §3.7 of that
+specification.</p>
+<p>A conformant FEL parser MUST accept exactly the language described by
+this grammar. The semantics of each construct are defined in §§3.2–3.12
+of the Formspec specification; this document defines only the
+syntax.</p>
+<h2 id="notation">2. Notation</h2>
+<p>This grammar uses the Parsing Expression Grammar (PEG) formalism as
+defined by Bryan Ford in <em>“Parsing Expression Grammars: A
+Recognition-Based Syntactic Foundation”</em> (POPL 2004). PEGs are
+unambiguous by construction: for every input there is at most one valid
+parse tree.</p>
+<p>The following notation conventions are used throughout:</p>
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 80%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Notation</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>'text'</code></td>
+<td>Literal string match</td>
+</tr>
+<tr class="even">
+<td><code>[a-z]</code></td>
+<td>Character class (any character in range)</td>
+</tr>
+<tr class="odd">
+<td><code>e1 e2</code></td>
+<td>Sequence: match <code>e1</code> then <code>e2</code></td>
+</tr>
+<tr class="even">
+<td><code>e1 / e2</code></td>
+<td>Ordered choice: try <code>e1</code>; if it fails, try
+<code>e2</code></td>
+</tr>
+<tr class="odd">
+<td><code>e*</code></td>
+<td>Zero or more repetitions of <code>e</code></td>
+</tr>
+<tr class="even">
+<td><code>e+</code></td>
+<td>One or more repetitions of <code>e</code></td>
+</tr>
+<tr class="odd">
+<td><code>e?</code></td>
+<td>Optional: zero or one occurrence of <code>e</code></td>
+</tr>
+<tr class="even">
+<td><code>!e</code></td>
+<td>Negative lookahead: succeeds iff <code>e</code> fails; consumes no
+input</td>
+</tr>
+<tr class="odd">
+<td><code>&amp;e</code></td>
+<td>Positive lookahead: succeeds iff <code>e</code> succeeds; consumes
+no input</td>
+</tr>
+<tr class="even">
+<td><code>( )</code></td>
+<td>Grouping</td>
+</tr>
+<tr class="odd">
+<td><code>{n}</code></td>
+<td>Exactly <code>n</code> repetitions</td>
+</tr>
+<tr class="even">
+<td><code>.</code></td>
+<td>Any single character</td>
+</tr>
+</tbody>
+</table>
+<p>Non-terminals are written in <code>PascalCase</code>. Terminals
+(literal strings and character classes) appear inline. Rule definitions
+use the <code>←</code> arrow.</p>
+<h2 id="lexical-grammar">3. Lexical Grammar</h2>
+<p>The lexical grammar defines the low-level tokens of FEL. These rules
+are referenced by the expression grammar in §4.</p>
+<h3 id="whitespace-and-comments">3.1 Whitespace and Comments</h3>
+<p>Whitespace and comments are <strong>insignificant</strong> except
+inside string literals. The <code>_</code> production matches optional
+whitespace and/or comments and may appear between any two tokens.</p>
+<pre class="peg"><code>_              ← (Whitespace / Comment)*
+Whitespace     ← [ \t\n\r]
+Comment        ← LineComment / BlockComment
+LineComment    ← &#39;//&#39; (!LineTerminator .)* LineTerminator?
+BlockComment   ← &#39;/*&#39; (!&#39;*/&#39; .)* &#39;*/&#39;
+LineTerminator ← &#39;\n&#39; / &#39;\r\n&#39; / &#39;\r&#39;</code></pre>
+<p>Block comments do <strong>not</strong> nest. The input
+<code>/* a /* b */ c */</code> is a block comment
+<code>/* a /* b */</code> followed by the tokens <code>c</code>,
+<code>*</code>, <code>/</code>.</p>
+<h3 id="identifiers">3.2 Identifiers</h3>
+<p>Identifiers are ASCII-only in FEL v1.0.</p>
+<pre class="peg"><code>Identifier     ← !ReservedWord [a-zA-Z_] [a-zA-Z0-9_]*</code></pre>
+<p>An identifier MUST NOT be a reserved word (§3.5) when used as a
+function name. Field keys referenced via <code>$</code> are not subject
+to this restriction because the <code>$</code> sigil disambiguates
+them.</p>
+<h3 id="reserved-words">3.3 Reserved Words</h3>
+<p>The following words are reserved. They MUST NOT be used as function
+names (built-in or extension).</p>
+<pre class="peg"><code>ReservedWord   ← (&#39;true&#39; / &#39;false&#39; / &#39;null&#39;
+               /  &#39;and&#39; / &#39;or&#39; / &#39;not&#39; / &#39;in&#39;
+               /  &#39;if&#39; / &#39;then&#39; / &#39;else&#39; / &#39;let&#39;)
+                  ![a-zA-Z0-9_]</code></pre>
+<p>The trailing negative lookahead ensures that identifiers such as
+<code>notify</code> or <code>informal</code> are not incorrectly matched
+as containing a reserved word.</p>
+<h3 id="string-literals">3.4 String Literals</h3>
+<p>FEL supports single-quoted and double-quoted strings with escape
+sequences.</p>
+<pre class="peg"><code>StringSQ       ← &#39;\&#39;&#39; (EscapeSeq / !(&#39;\&#39;&#39; / &#39;\\&#39;) .)* &#39;\&#39;&#39;
+StringDQ       ← &#39;&quot;&#39; (EscapeSeq / !(&#39;&quot;&#39; / &#39;\\&#39;) .)* &#39;&quot;&#39;
+StringLiteral  ← StringDQ / StringSQ
+
+EscapeSeq      ← &#39;\\&#39; [\\&#39;&quot;nrt]
+               / &#39;\\u&#39; HexDigit{4}
+HexDigit       ← [0-9a-fA-F]</code></pre>
+<p>Defined escape sequences:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Escape</th>
+<th>Character</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>\\</code></td>
+<td>Backslash (<code>U+005C</code>)</td>
+</tr>
+<tr class="even">
+<td><code>\'</code></td>
+<td>Single quote (<code>U+0027</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>\"</code></td>
+<td>Double quote (<code>U+0022</code>)</td>
+</tr>
+<tr class="even">
+<td><code>\n</code></td>
+<td>Line feed (<code>U+000A</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>\r</code></td>
+<td>Carriage return (<code>U+000D</code>)</td>
+</tr>
+<tr class="even">
+<td><code>\t</code></td>
+<td>Horizontal tab (<code>U+0009</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>\uXXXX</code></td>
+<td>Unicode code point (4 hex digits)</td>
+</tr>
+</tbody>
+</table>
+<p>An unrecognised escape sequence (e.g., <code>\a</code>) is a syntax
+error.</p>
+<h3 id="number-literals">3.5 Number Literals</h3>
+<pre class="peg"><code>NumberLiteral  ← &#39;-&#39;? IntegerPart (&#39;.&#39; [0-9]+)? Exponent?
+IntegerPart    ← &#39;0&#39; / [1-9] [0-9]*
+Exponent       ← (&#39;e&#39; / &#39;E&#39;) (&#39;+&#39; / &#39;-&#39;)? [0-9]+</code></pre>
+<ul>
+<li>A leading dot is <strong>not</strong> permitted: <code>.5</code> is
+invalid; write <code>0.5</code>.</li>
+<li>A trailing dot is <strong>not</strong> permitted: <code>5.</code> is
+invalid; write <code>5</code> or <code>5.0</code>.</li>
+<li>A bare minus sign is the unary negation operator, not part of a
+number literal. However, the grammar allows a leading <code>-</code> on
+<code>NumberLiteral</code> so that negative constants are parsed as a
+single token in literal position.</li>
+</ul>
+<h3 id="date-and-datetime-literals">3.6 Date and DateTime Literals</h3>
+<pre class="peg"><code>DateTimeLiteral ← &#39;@&#39; Digit{4} &#39;-&#39; Digit{2} &#39;-&#39; Digit{2} &#39;T&#39;
+                   Digit{2} &#39;:&#39; Digit{2} &#39;:&#39; Digit{2}
+                   TimeZone?
+DateLiteral     ← &#39;@&#39; Digit{4} &#39;-&#39; Digit{2} &#39;-&#39; Digit{2}
+
+TimeZone        ← &#39;Z&#39; / [+-] Digit{2} &#39;:&#39; Digit{2}
+Digit           ← [0-9]</code></pre>
+<p>Note: <code>DateTimeLiteral</code> MUST be tried before
+<code>DateLiteral</code> (ordered choice) to avoid partial matching.</p>
+<h3 id="boolean-and-null-literals">3.7 Boolean and Null Literals</h3>
+<pre class="peg"><code>BooleanLiteral ← &#39;true&#39; / &#39;false&#39;
+NullLiteral    ← &#39;null&#39;</code></pre>
+<p>These are listed under <code>ReservedWord</code> (§3.3) and the
+trailing <code>![a-zA-Z0-9_]</code> lookahead applies to prevent
+<code>trueValue</code> from being parsed as <code>true</code> +
+<code>Value</code>.</p>
+<h3 id="integer-array-index">3.8 Integer (Array Index)</h3>
+<pre class="peg"><code>Integer        ← [0-9]+</code></pre>
+<p>Used only in array-index position within path expressions.</p>
+<h2 id="expression-grammar">4. Expression Grammar</h2>
+<p>The expression grammar defines the full syntax of FEL expressions.
+Operator precedence is encoded structurally: lower-precedence operators
+appear higher in the grammar (closer to the start symbol).</p>
+<pre class="peg"><code># ============================================================
+# Formspec Expression Language (FEL) — Normative PEG Grammar
+# Version 1.0
+# ============================================================
+
+Expression     ← _ LetExpr _
+
+# --- Let binding ---
+LetExpr        ← &#39;let&#39; _ Identifier _ &#39;=&#39; _ LetExpr _ &#39;in&#39; _ LetExpr
+               / IfExpr
+
+# --- If-then-else (keyword form) ---
+IfExpr         ← &#39;if&#39; _ Ternary _ &#39;then&#39; _ IfExpr _ &#39;else&#39; _ IfExpr
+               / Ternary
+
+# --- Ternary conditional (precedence 1, right-associative) ---
+Ternary        ← LogicalOr (_ &#39;?&#39; _ Expression _ &#39;:&#39; _ Expression)?
+
+# --- Logical OR (precedence 2, left-associative) ---
+LogicalOr      ← LogicalAnd (_ &#39;or&#39; !IdContinue _ LogicalAnd)*
+
+# --- Logical AND (precedence 3, left-associative) ---
+LogicalAnd     ← Equality (_ &#39;and&#39; !IdContinue _ Equality)*
+
+# --- Equality (precedence 4, left-associative) ---
+Equality       ← Comparison ((_ &#39;!=&#39; / _ &#39;=&#39;) _ Comparison)*
+
+# --- Comparison (precedence 5, left-associative) ---
+Comparison     ← Membership ((_ &#39;&lt;=&#39; / _ &#39;&gt;=&#39; / _ &#39;&lt;&#39; / _ &#39;&gt;&#39;) _ Membership)*
+
+# --- Membership (precedence 6, non-associative) ---
+Membership     ← NullCoalesce (_ &#39;not&#39; _ &#39;in&#39; _ NullCoalesce
+                              / _ &#39;in&#39; !IdContinue _ NullCoalesce)?
+
+# --- Null-coalescing (precedence 7, left-associative) ---
+NullCoalesce   ← Addition (_ &#39;??&#39; _ Addition)*
+
+# --- Addition / concatenation (precedence 8, left-associative) ---
+Addition       ← Multiplication ((_ &#39;+&#39; / _ &#39;-&#39; / _ &#39;&amp;&#39;) _ Multiplication)*
+
+# --- Multiplication (precedence 9, left-associative) ---
+Multiplication ← Unary ((_ &#39;*&#39; / _ &#39;/&#39; / _ &#39;%&#39;) _ Unary)*
+
+# --- Unary prefix (precedence 10, right-associative) ---
+Unary          ← &#39;not&#39; !IdContinue _ Unary
+               / Atom
+
+# --- Atoms ---
+Atom           ← FunctionCall
+               / FieldRef
+               / ObjectLiteral
+               / ArrayLiteral
+               / Literal
+               / &#39;(&#39; _ Expression _ &#39;)&#39;
+
+# --- Helper: identifier-continue character ---
+IdContinue     ← [a-zA-Z0-9_]</code></pre>
+<h3 id="function-calls">4.1 Function Calls</h3>
+<pre class="peg"><code>FunctionCall   ← Identifier &#39;(&#39; _ ArgList? _ &#39;)&#39;
+ArgList        ← Expression (_ &#39;,&#39; _ Expression)*</code></pre>
+<p>The function name is an <code>Identifier</code> and MUST NOT be a
+reserved word (§3.3). Note: <code>if(cond, a, b)</code> is a built-in
+function call, <strong>not</strong> the keyword
+<code>if-then-else</code> form — the opening parenthesis
+disambiguates.</p>
+<h3 id="object-literals">4.2 Object Literals</h3>
+<pre class="peg"><code>ObjectLiteral  ← &#39;{&#39; _ ObjectEntries? _ &#39;}&#39;
+ObjectEntries  ← ObjectEntry (_ &#39;,&#39; _ ObjectEntry)*
+ObjectEntry    ← ObjectKey _ &#39;:&#39; _ Expression
+ObjectKey      ← Identifier / StringLiteral</code></pre>
+<p>Object literal keys are either bare identifiers or string literals.
+Duplicate keys within a single object literal are a syntax error.</p>
+<h3 id="array-literals">4.3 Array Literals</h3>
+<pre class="peg"><code>ArrayLiteral   ← &#39;[&#39; _ (Expression (_ &#39;,&#39; _ Expression)*)? _ &#39;]&#39;</code></pre>
+<p>All elements of an array literal MUST be of the same type (enforced
+during type checking, not at the grammar level).</p>
+<h3 id="literals">4.4 Literals</h3>
+<pre class="peg"><code>Literal        ← DateTimeLiteral
+               / DateLiteral
+               / NumberLiteral
+               / StringLiteral
+               / BooleanLiteral !IdContinue
+               / NullLiteral !IdContinue</code></pre>
+<p><code>DateTimeLiteral</code> MUST be tried before
+<code>DateLiteral</code> (ordered choice) to prevent the date prefix
+from matching prematurely.</p>
+<h2 id="operator-precedence-table">5. Operator Precedence Table</h2>
+<p>The following table lists all FEL operators from
+<strong>lowest</strong> to <strong>highest</strong> precedence. This
+table is normative and matches the structural encoding in §4.</p>
+<table>
+<colgroup>
+<col style="width: 8%" />
+<col style="width: 16%" />
+<col style="width: 12%" />
+<col style="width: 10%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Prec.</th>
+<th>Operator(s)</th>
+<th>Category</th>
+<th style="text-align: center;">Assoc.</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">0</td>
+<td><code>let … = … in …</code></td>
+<td>Binding</td>
+<td style="text-align: center;">Right</td>
+<td><code>let x = 1 in x + 2</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">0</td>
+<td><code>if … then … else …</code></td>
+<td>Conditional</td>
+<td style="text-align: center;">Right</td>
+<td><code>if $a then 'yes' else 'no'</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td><code>? :</code></td>
+<td>Ternary</td>
+<td style="text-align: center;">Right</td>
+<td><code>$a &gt; 0 ? 'pos' : 'neg'</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2</td>
+<td><code>or</code></td>
+<td>Logical OR</td>
+<td style="text-align: center;">Left</td>
+<td><code>$a or $b</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">3</td>
+<td><code>and</code></td>
+<td>Logical AND</td>
+<td style="text-align: center;">Left</td>
+<td><code>$a and $b</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">4</td>
+<td><code>=</code> <code>!=</code></td>
+<td>Equality</td>
+<td style="text-align: center;">Left</td>
+<td><code>$x = 5</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5</td>
+<td><code>&lt;</code> <code>&gt;</code> <code>&lt;=</code>
+<code>&gt;=</code></td>
+<td>Comparison</td>
+<td style="text-align: center;">Left</td>
+<td><code>$age &gt;= 18</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">6</td>
+<td><code>in</code> <code>not in</code></td>
+<td>Membership</td>
+<td style="text-align: center;">Non</td>
+<td><code>$s in ['a','b']</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">7</td>
+<td><code>??</code></td>
+<td>Null-coalescing</td>
+<td style="text-align: center;">Left</td>
+<td><code>$x ?? 0</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">8</td>
+<td><code>+</code> <code>-</code> <code>&amp;</code></td>
+<td>Add / Concat</td>
+<td style="text-align: center;">Left</td>
+<td><code>$a + $b</code>, <code>$s &amp; '!'</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">9</td>
+<td><code>*</code> <code>/</code> <code>%</code></td>
+<td>Multiply</td>
+<td style="text-align: center;">Left</td>
+<td><code>$a * $b</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">10</td>
+<td><code>not</code> (prefix)</td>
+<td>Logical NOT</td>
+<td style="text-align: center;">Right</td>
+<td><code>not $flag</code></td>
+</tr>
+</tbody>
+</table>
+<p>Parenthesised sub-expressions (<code>( … )</code>) override
+precedence as usual.</p>
+<h2 id="path-expressions">6. Path Expressions</h2>
+<p>Path expressions reference Instance data. They are
+<strong>not</strong> general expressions — they appear as atoms in the
+expression grammar.</p>
+<pre class="peg"><code>FieldRef       ← &#39;$&#39; Identifier PathTail*
+               / &#39;$&#39;
+               / ContextRef
+
+PathTail       ← &#39;.&#39; Identifier
+               / &#39;[&#39; _ ( Integer / &#39;*&#39; ) _ &#39;]&#39;
+
+ContextRef     ← &#39;@&#39; Identifier (&#39;(&#39; _ StringLiteral _ &#39;)&#39;)? (&#39;.&#39; Identifier)*</code></pre>
+<h3 id="reference-forms">6.1 Reference Forms</h3>
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 43%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Syntax</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$</code></td>
+<td>Current context node (self-reference).</td>
+<td><code>$ &gt; 0</code></td>
+</tr>
+<tr class="even">
+<td><code>$ident</code></td>
+<td>Field reference resolved from nearest scope.</td>
+<td><code>$firstName</code></td>
+</tr>
+<tr class="odd">
+<td><code>$a.b.c</code></td>
+<td>Nested field path through groups.</td>
+<td><code>$address.city</code></td>
+</tr>
+<tr class="even">
+<td><code>$a[n]</code></td>
+<td>1-based index into a repeat collection.</td>
+<td><code>$items[1].name</code></td>
+</tr>
+<tr class="odd">
+<td><code>$a[*]</code></td>
+<td>Wildcard — array of all values across repeat instances.</td>
+<td><code>sum($items[*].amt)</code></td>
+</tr>
+<tr class="even">
+<td><code>$a[n].b</code></td>
+<td>Field within indexed repeat instance.</td>
+<td><code>$items[2].qty</code></td>
+</tr>
+<tr class="odd">
+<td><code>$a[*].b</code></td>
+<td>Field across all repeat instances (produces array).</td>
+<td><code>$items[*].qty</code></td>
+</tr>
+<tr class="even">
+<td><code>@current</code></td>
+<td>Explicit reference to the current repeat instance.</td>
+<td><code>@current.amount</code></td>
+</tr>
+<tr class="odd">
+<td><code>@index</code></td>
+<td>1-based position of current repeat instance.</td>
+<td><code>@index = 1</code></td>
+</tr>
+<tr class="even">
+<td><code>@count</code></td>
+<td>Total instances in current repeat collection.</td>
+<td><code>@count &gt;= 1</code></td>
+</tr>
+<tr class="odd">
+<td><code>@instance('n')</code></td>
+<td>Secondary data-source instance.</td>
+<td><code>@instance('prior').income</code></td>
+</tr>
+<tr class="even">
+<td><code>@source</code></td>
+<td>Source binding in mapping DSL.</td>
+<td><code>@source.fieldA</code></td>
+</tr>
+<tr class="odd">
+<td><code>@target</code></td>
+<td>Target binding in mapping DSL.</td>
+<td><code>@target.fieldB</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="path-resolution-rules">6.2 Path Resolution Rules</h3>
+<ol type="1">
+<li><strong>Scope:</strong> Field references are lexically scoped.
+Inside a repeatable group, <code>$sibling</code> resolves within the
+<strong>same repeat instance</strong>.</li>
+<li><strong>Index bounds:</strong> An explicit index
+<code>$repeat[n]</code> where <code>n &lt; 1</code> or
+<code>n &gt;</code> the number of instances MUST signal an evaluation
+error.</li>
+<li><strong>Instance lookup:</strong> <code>@instance('name')</code>
+MUST match a declared Data Source. If the named instance does not exist,
+the processor MUST signal a definition error.</li>
+<li><strong>Chaining:</strong> Dot-segments after an indexed or wildcard
+subscript continue path resolution into the selected object(s). Multiple
+subscripts may be chained: <code>$a[1].nested[*].value</code> is
+valid.</li>
+</ol>
+<h2 id="conformance">7. Conformance</h2>
+<p>A conformant FEL parser:</p>
+<ol type="1">
+<li><strong>MUST</strong> accept all input strings that match the
+<code>Expression</code> production of this grammar.</li>
+<li><strong>MUST</strong> reject all input strings that do not match the
+<code>Expression</code> production. Rejection MUST include a diagnostic
+indicating the approximate position of the syntax error.</li>
+<li><strong>MUST</strong> treat whitespace and comments as insignificant
+except inside string literals.</li>
+<li><strong>MUST</strong> implement all escape sequences defined in
+§3.4. An unrecognised escape sequence MUST be rejected as a syntax
+error.</li>
+<li><strong>MUST</strong> enforce the reserved-word restriction in §3.3:
+reserved words MUST NOT be accepted as function names.</li>
+<li><strong>MUST</strong> parse the <code>|&gt;</code> (pipe) character
+sequence as a syntax error in v1.0. This token is reserved for future
+use.</li>
+<li><strong>SHOULD</strong> produce a parse tree (or equivalent AST)
+that preserves the precedence and associativity encoded in this grammar.
+The parse tree structure determines evaluation order as specified in
+§3.3 and §3.8–3.10 of the Formspec specification.</li>
+</ol>
+<hr />
+<p><em>End of normative grammar.</em></p>
+</body>
+</html>

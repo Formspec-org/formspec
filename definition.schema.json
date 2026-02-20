@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/definition/1.0",
+  "title": "Formspec Definition",
+  "description": "A Formspec Definition document per the Formspec v1.0 specification.",
+  "type": "object",
+  "required": ["$formspec", "url", "version", "status", "title", "items"],
+  "properties": {
+    "$formspec": { "type": "string", "const": "1.0" },
+    "url": { "type": "string", "format": "uri" },
+    "version": { "type": "string", "minLength": 1 },
+    "versionAlgorithm": { "type": "string", "enum": ["semver", "date", "integer", "natural"], "default": "semver" },
+    "status": { "type": "string", "enum": ["draft", "active", "retired"] },
+    "derivedFrom": { "type": "string", "format": "uri" },
+    "name": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9\\-]*$" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "date": { "type": "string", "format": "date" },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/Item" } },
+    "binds": { "type": "array", "items": { "$ref": "#/$defs/Bind" } },
+    "shapes": { "type": "array", "items": { "$ref": "#/$defs/Shape" } },
+    "instances": { "type": "object", "additionalProperties": { "$ref": "#/$defs/Instance" } },
+    "variables": { "type": "array", "items": { "$ref": "#/$defs/Variable" } },
+    "nonRelevantBehavior": { "type": "string", "enum": ["remove", "empty", "keep"], "default": "remove" },
+    "optionSets": { "type": "object", "additionalProperties": { "$ref": "#/$defs/OptionSet" } },
+    "screener": { "$ref": "#/$defs/Screener" },
+    "migrations": { "$ref": "#/$defs/Migrations" },
+    "extensions": { "type": "object" }
+  },
+  "patternProperties": { "^x-": {} },
+  "additionalProperties": false,
+
+  "$defs": {
+    "Item": {
+      "type": "object",
+      "required": ["key", "type", "label"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$" },
+        "type": { "type": "string", "enum": ["group", "field", "display"] },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "group" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "key": true, "type": true, "label": true, "description": true, "labels": true,
+              "children": { "type": "array", "items": { "$ref": "#/$defs/Item" } },
+              "repeatable": { "type": "boolean", "default": false },
+              "minRepeat": { "type": "integer", "minimum": 0 },
+              "maxRepeat": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["children"],
+            "patternProperties": { "^x-": {} },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "field" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "key": true, "type": true, "label": true, "description": true, "labels": true,
+              "dataType": {
+                "type": "string",
+                "enum": ["string", "text", "integer", "decimal", "boolean", "date", "dateTime", "time", "uri", "attachment", "choice", "multiChoice", "money"]
+              },
+              "precision": { "type": "integer", "minimum": 0 },
+              "prefix": { "type": "string" },
+              "suffix": { "type": "string" },
+              "options": {
+                "oneOf": [
+                  { "type": "array", "items": { "$ref": "#/$defs/OptionEntry" } },
+                  { "type": "string", "format": "uri" }
+                ]
+              },
+              "optionSet": { "type": "string" },
+              "initialValue": {},
+              "semanticType": { "type": "string" },
+              "prePopulate": {
+                "type": "object",
+                "properties": {
+                  "instance": { "type": "string" },
+                  "path": { "type": "string" },
+                  "editable": { "type": "boolean", "default": true }
+                },
+                "required": ["instance", "path"],
+                "additionalProperties": false
+              },
+              "children": { "type": "array", "items": { "$ref": "#/$defs/Item" } }
+            },
+            "required": ["dataType"],
+            "patternProperties": { "^x-": {} },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "display" } }, "required": ["type"] },
+          "then": {
+            "properties": {
+              "key": true, "type": true, "label": true, "description": true, "labels": true
+            },
+            "patternProperties": { "^x-": {} },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+
+    "Bind": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "calculate": { "type": "string" },
+        "relevant": { "type": "string" },
+        "required": { "type": "string" },
+        "readonly": { "type": "string" },
+        "constraint": { "type": "string" },
+        "constraintMessage": { "type": "string" },
+        "default": {},
+        "whitespace": { "type": "string", "enum": ["preserve", "trim", "normalize", "remove"], "default": "preserve" },
+        "excludedValue": { "type": "string", "enum": ["preserve", "null"], "default": "preserve" },
+        "nonRelevantBehavior": { "type": "string", "enum": ["remove", "empty", "keep"] },
+        "disabledDisplay": { "type": "string", "enum": ["hidden", "protected"], "default": "hidden" }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "Shape": {
+      "type": "object",
+      "required": ["id", "target", "message"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$" },
+        "target": { "type": "string", "minLength": 1 },
+        "severity": { "type": "string", "enum": ["error", "warning", "info"], "default": "error" },
+        "constraint": { "type": "string" },
+        "message": { "type": "string" },
+        "code": { "type": "string" },
+        "context": { "type": "object" },
+        "activeWhen": { "type": "string" },
+        "timing": { "type": "string", "enum": ["continuous", "submit", "demand"], "default": "continuous" },
+        "and": { "type": "array", "items": { "type": "string" } },
+        "or": { "type": "array", "items": { "type": "string" } },
+        "not": { "type": "string" },
+        "xone": { "type": "array", "items": { "type": "string" } }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "Instance": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string", "format": "uri" },
+        "static": { "type": "boolean", "default": false },
+        "data": {},
+        "schema": { "type": "object", "additionalProperties": { "type": "string" } },
+        "readonly": { "type": "boolean", "default": true }
+      },
+      "anyOf": [
+        { "required": ["source"] },
+        { "required": ["data"] }
+      ],
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "Variable": {
+      "type": "object",
+      "required": ["name", "expression"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$" },
+        "expression": { "type": "string" },
+        "scope": { "type": "string", "default": "#" }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "OptionSet": {
+      "type": "object",
+      "properties": {
+        "options": { "type": "array", "items": { "$ref": "#/$defs/OptionEntry" } },
+        "source": { "type": "string", "format": "uri" },
+        "valueField": { "type": "string", "default": "value" },
+        "labelField": { "type": "string", "default": "label" }
+      },
+      "anyOf": [
+        { "required": ["options"] },
+        { "required": ["source"] }
+      ],
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "OptionEntry": {
+      "type": "object",
+      "required": ["value", "label"],
+      "properties": {
+        "value": { "type": "string" },
+        "label": { "type": "string" }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "Screener": {
+      "type": "object",
+      "required": ["items", "routes"],
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/$defs/Item" } },
+        "routes": { "type": "array", "items": { "$ref": "#/$defs/Route" }, "minItems": 1 }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "Route": {
+      "type": "object",
+      "required": ["condition", "target"],
+      "properties": {
+        "condition": { "type": "string" },
+        "target": { "type": "string", "format": "uri" },
+        "label": { "type": "string" }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "Migrations": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/MigrationDescriptor" }
+        }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "MigrationDescriptor": {
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "fieldMap": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source", "target", "transform"],
+            "properties": {
+              "source": { "type": "string" },
+              "target": { "type": ["string", "null"] },
+              "transform": { "type": "string", "enum": ["preserve", "drop", "expression"] },
+              "expression": { "type": "string" }
+            },
+            "patternProperties": { "^x-": {} },
+            "additionalProperties": false
+          }
+        },
+        "defaults": { "type": "object" }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    }
+  }
+}
