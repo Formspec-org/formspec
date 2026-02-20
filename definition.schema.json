@@ -39,6 +39,7 @@
         "type": { "type": "string", "enum": ["group", "field", "display"] },
         "label": { "type": "string" },
         "description": { "type": "string" },
+        "hint": { "type": "string" },
         "labels": { "type": "object", "additionalProperties": { "type": "string" } }
       },
       "allOf": [
@@ -46,7 +47,7 @@
           "if": { "properties": { "type": { "const": "group" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "key": true, "type": true, "label": true, "description": true, "labels": true,
+              "key": true, "type": true, "label": true, "description": true, "hint": true, "labels": true,
               "children": { "type": "array", "items": { "$ref": "#/$defs/Item" } },
               "repeatable": { "type": "boolean", "default": false },
               "minRepeat": { "type": "integer", "minimum": 0 },
@@ -61,7 +62,7 @@
           "if": { "properties": { "type": { "const": "field" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "key": true, "type": true, "label": true, "description": true, "labels": true,
+              "key": true, "type": true, "label": true, "description": true, "hint": true, "labels": true,
               "dataType": {
                 "type": "string",
                 "enum": ["string", "text", "integer", "decimal", "boolean", "date", "dateTime", "time", "uri", "attachment", "choice", "multiChoice", "money"]
@@ -99,7 +100,7 @@
           "if": { "properties": { "type": { "const": "display" } }, "required": ["type"] },
           "then": {
             "properties": {
-              "key": true, "type": true, "label": true, "description": true, "labels": true
+              "key": true, "type": true, "label": true, "description": true, "hint": true, "labels": true
             },
             "patternProperties": { "^x-": {} },
             "additionalProperties": false

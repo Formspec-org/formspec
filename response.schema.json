@@ -11,6 +11,7 @@
     "data",
     "authored"
   ],
+  "patternProperties": { "^x-": {} },
   "additionalProperties": false,
   "properties": {
     "definitionUrl": {
@@ -85,7 +86,7 @@
     "ValidationResult": {
       "type": "object",
       "description": "A single validation finding produced by constraint evaluation (§2.5.1).",
-      "required": ["path", "severity", "message", "constraintKind"],
+      "required": ["path", "severity", "constraintKind", "message"],
       "additionalProperties": false,
       "properties": {
         "path": {
@@ -97,14 +98,14 @@
           "enum": ["error", "warning", "info"],
           "description": "The severity level of this finding (§5.1)."
         },
-        "message": {
-          "type": "string",
-          "description": "A human-readable description of the finding."
-        },
         "constraintKind": {
           "type": "string",
           "enum": ["required", "type", "cardinality", "constraint", "shape", "external"],
           "description": "The category of constraint that produced this result."
+        },
+        "message": {
+          "type": "string",
+          "description": "A human-readable description of the finding."
         },
         "code": {
           "type": "string",
@@ -114,9 +115,25 @@
           "type": "string",
           "description": "If the source is a Validation Shape, the identifier of that shape."
         },
+        "source": {
+          "type": "string",
+          "enum": ["bind", "shape", "external"],
+          "description": "The origin category of this finding."
+        },
         "sourceId": {
           "type": "string",
           "description": "Identifies the origin of the finding (e.g., bind or shape identifier)."
+        },
+        "value": {
+          "description": "The value that was evaluated when this finding was produced."
+        },
+        "constraint": {
+          "type": "string",
+          "description": "The FEL constraint expression that failed. Included for diagnostic purposes."
+        },
+        "context": {
+          "type": "object",
+          "description": "Additional context data from the Shape's context expressions."
         }
       }
     }

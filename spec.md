@@ -267,7 +267,7 @@ An Instance mirrors the Item tree according to these rules:
 > ```json
 > [
 >   { "key": "name", "type": "field", "dataType": "string" },
->   { "key": "addresses", "type": "group", "repeat": true, "children": [
+>   { "key": "addresses", "type": "group", "repeatable": true, "children": [
 >       { "key": "street", "type": "field", "dataType": "string" },
 >       { "key": "city",   "type": "field", "dataType": "string" }
 >   ]}
@@ -299,7 +299,7 @@ An Item MUST have a `type` property with one of three values:
 | Type | Description | Has value? | Has children? |
 |------|-------------|-----------|---------------|
 | `"field"` | Captures a single data value from the user or from a calculation. The `dataType` property declares the value’s type. | Yes | No |
-| `"group"` | A structural container. Groups organize related fields and may be **repeatable** (`"repeat": true`), meaning the user can add zero or more instances of the group’s child structure. | No (contains children) | Yes |
+| `"group"` | A structural container. Groups organize related fields and may be **repeatable** (`"repeatable": true`), meaning the user can add zero or more instances of the group’s child structure. | No (contains children) | Yes |
 | `"display"` | Read-only presentational content: instructions, headings, separators, help text. Display items carry no data and appear in neither the Instance nor the Response data. | No | No |
 
 Field items MUST declare a `dataType` from the following set:
@@ -830,8 +830,8 @@ A single ValidationResult entry is a JSON object with the following properties:
 | `constraintKind` | string | REQUIRED | The category of constraint that produced this result. MUST be one of: `"required"` (required field has no value), `"type"` (value does not conform to declared `dataType`), `"cardinality"` (repeatable group violates `minRepeat`/`maxRepeat`), `"constraint"` (Bind `constraint` evaluated to `false`), `"shape"` (named Shape's constraint evaluated to `false`), `"external"` (external system injected this result). |
 | `code` | string | RECOMMENDED | A machine-readable identifier for this class of finding. Processors SHOULD include this using the standard built-in codes (see below) when no specific code is declared. Codes enable programmatic handling (e.g., suppressing known warnings, mapping to external error catalogs). |
 | `source` | string | OPTIONAL | Identifies the origin of the finding: `"bind"` (from a Bind `constraint` or `required` check) or `"shape"` (from a Validation Shape). |
-| `shapeName` | string | OPTIONAL | If `source` is `"shape"`, the `name` of the Validation Shape that produced this entry. |
-| `expression` | string | OPTIONAL | The FEL expression that was evaluated. Included for diagnostic purposes. Processors MAY omit this in production to reduce payload size. |
+| `shapeId` | string | OPTIONAL | If `source` is `"shape"`, the `id` of the Validation Shape that produced this entry. |
+| `constraint` | string | OPTIONAL | The FEL constraint expression that failed. Included for diagnostic purposes. Processors MAY omit this in production to reduce payload size. |
 
 **Standard Built-in Constraint Codes:**
 
@@ -867,7 +867,7 @@ codes override the generic defaults.
 >     "message": "Date range exceeds one year. Please verify.",
 >     "code": "DATE_RANGE_002",
 >     "source": "shape",
->     "shapeName": "dateRangeReasonable"
+>     "shapeId": "dateRangeReasonable"
 >   },
 >   {
 >     "severity": "error",
@@ -1833,6 +1833,7 @@ The following properties are recognized on all Item types:
 | `type` | string | **1..1** (REQUIRED) | Item type. MUST be one of: `"group"`, `"field"`, `"display"`. |
 | `label` | string | **1..1** (REQUIRED) | Primary human-readable label. Implementations MUST display this label (or a `labels` alternative) when rendering the Item. |
 | `description` | string | **0..1** (OPTIONAL) | Human-readable help text or description. Implementations SHOULD make this text available to users on demand (e.g., via tooltip or help icon). |
+| `hint` | string | **0..1** (OPTIONAL) | Short instructional text displayed alongside the input (e.g., below the label or as placeholder guidance). Distinct from `description`, which is typically shown on demand. |
 | `labels` | object | **0..1** (OPTIONAL) | Alternative display labels keyed by context name. Well-known context names include `"short"`, `"pdf"`, `"csv"`, and `"accessibility"`. Implementations MAY define additional context names. |
 
 #### 4.2.2 Group Items
