@@ -259,6 +259,21 @@ Covered</a></li>
 id="toc-e.3-design-divergences-no-action">E.3 Design Divergences (No
 Action)</a></li>
 </ul></li>
+<li><a
+href="#appendix-f-udf-cross-analysis-expression-language-validation-composition"
+id="toc-appendix-f-udf-cross-analysis-expression-language-validation-composition">Appendix
+F: UDF Cross-Analysis (Expression Language, Validation, Composition)</a>
+<ul>
+<li><a href="#f.1-features-adopted-as-amendments"
+id="toc-f.1-features-adopted-as-amendments">F.1 Features Adopted as
+Amendments</a></li>
+<li><a href="#f.2-features-already-covered"
+id="toc-f.2-features-already-covered">F.2 Features Already
+Covered</a></li>
+<li><a href="#f.3-design-divergences-no-action"
+id="toc-f.3-design-divergences-no-action">F.3 Design Divergences (No
+Action)</a></li>
+</ul></li>
 </ul></li>
 </ul>
 </nav>
@@ -8264,6 +8279,472 @@ conceptual layer that can be omitted. Formspec embeds these as Item
 properties but does not require them for structural validity (a form
 without labels is processable, just not user-facing). The practical
 effect is the same. No change.</p>
+<hr />
+<h2
+id="appendix-f-udf-cross-analysis-expression-language-validation-composition">Appendix
+F: UDF Cross-Analysis (Expression Language, Validation,
+Composition)</h2>
+<p>This appendix continues the UDF cross-analysis from Appendix E,
+covering the expression language (UEL), validation semantics, and
+composition features from the remaining sections of the UDF
+specification. This appendix is informative except where noted as
+normative.</p>
+<h3 id="f.1-features-adopted-as-amendments">F.1 Features Adopted as
+Amendments</h3>
+<h4
+id="f.1.1-constraint-component-type-on-validationresults-normative">F.1.1
+Constraint Component Type on ValidationResults (Normative)</h4>
+<p>UDF includes a <code>constraintComponent</code> field on every
+ValidationResult that categorizes <em>what kind of check</em> produced
+the result: <code>"required"</code>, <code>"type"</code>,
+<code>"field-constraint"</code>, <code>"shape"</code>, or
+<code>"external"</code>. Formspec’s current ValidationResult schema
+(§5.3) includes <code>shapeId</code> (which is null for non-shape
+results) and <code>source</code> (for external results), but does not
+provide a uniform categorizer for the constraint kind.</p>
+<p>This matters for programmatic consumers that need to route different
+constraint types to different handlers — e.g., suppress all “required”
+errors during draft save, or count only “shape” failures for
+analytics.</p>
+<p><strong>Amendment.</strong> Formspec adds <code>constraintKind</code>
+to the ValidationResult schema:</p>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 14%" />
+<col style="width: 30%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Property</th>
+<th>Type</th>
+<th>Cardinality</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>constraintKind</code></td>
+<td>string</td>
+<td>1..1 (REQUIRED)</td>
+<td>The category of constraint that produced this result.</td>
+</tr>
+</tbody>
+</table>
+<p>Standard values:</p>
+<table>
+<colgroup>
+<col style="width: 43%" />
+<col style="width: 56%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>"required"</code></td>
+<td>The field is required but has no value (null or empty).</td>
+</tr>
+<tr class="even">
+<td><code>"type"</code></td>
+<td>The value does not conform to the field’s declared
+<code>dataType</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>"cardinality"</code></td>
+<td>A repeatable group violates <code>minRepeat</code> or
+<code>maxRepeat</code>.</td>
+</tr>
+<tr class="even">
+<td><code>"constraint"</code></td>
+<td>A Bind <code>constraint</code> expression evaluated to
+<code>false</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>"shape"</code></td>
+<td>A named Shape’s constraint expression evaluated to
+<code>false</code>.</td>
+</tr>
+<tr class="even">
+<td><code>"external"</code></td>
+<td>An external system injected this result.</td>
+</tr>
+</tbody>
+</table>
+<p>This replaces the previous convention of inferring the constraint
+source from <code>shapeId</code> presence/absence. All ValidationResults
+MUST include <code>constraintKind</code>.</p>
+<h4 id="f.1.2-standard-built-in-constraint-codes-normative">F.1.2
+Standard Built-in Constraint Codes (Normative)</h4>
+<p>UDF defines a standard set of machine-readable codes for built-in
+constraint failures. Formspec’s §5.3 defines the <code>code</code>
+property as optional with no standardized vocabulary. Without standard
+codes, every implementation invents its own, making cross-system result
+processing unreliable.</p>
+<p><strong>Amendment.</strong> The following codes are RESERVED.
+Conformant processors MUST use these exact codes for the corresponding
+built-in constraints:</p>
+<table>
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 41%" />
+<col style="width: 41%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>constraintKind</th>
+<th>Triggered When</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>REQUIRED</code></td>
+<td><code>required</code></td>
+<td>A required field is null or empty string.</td>
+</tr>
+<tr class="even">
+<td><code>TYPE_MISMATCH</code></td>
+<td><code>type</code></td>
+<td>The value cannot be interpreted as the field’s
+<code>dataType</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>MIN_REPEAT</code></td>
+<td><code>cardinality</code></td>
+<td>A repeatable group has fewer instances than
+<code>minRepeat</code>.</td>
+</tr>
+<tr class="even">
+<td><code>MAX_REPEAT</code></td>
+<td><code>cardinality</code></td>
+<td>A repeatable group has more instances than
+<code>maxRepeat</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>CONSTRAINT_FAILED</code></td>
+<td><code>constraint</code></td>
+<td>A Bind <code>constraint</code> expression returned
+<code>false</code>.</td>
+</tr>
+<tr class="even">
+<td><code>SHAPE_FAILED</code></td>
+<td><code>shape</code></td>
+<td>A named Shape’s constraint returned <code>false</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>EXTERNAL_FAILED</code></td>
+<td><code>external</code></td>
+<td>An external validation source reported a failure.</td>
+</tr>
+</tbody>
+</table>
+<p>Shape-level and external codes (<code>code</code> property on Shapes,
+<code>code</code> on external results) override the generic
+<code>SHAPE_FAILED</code> / <code>EXTERNAL_FAILED</code> defaults. The
+built-in codes are fallbacks for when no specific code is declared.</p>
+<h4 id="f.1.3-per-shape-validation-timing-normative">F.1.3 Per-Shape
+Validation Timing (Normative)</h4>
+<p>UDF defines <code>validationMode</code> per-shape with values
+<code>onChange</code>, <code>onBlur</code>, <code>onSubmit</code>, and
+<code>onDemand</code>. Formspec’s validation modes (§5.5) are a global
+runtime setting
+(<code>continuous</code>/<code>deferred</code>/<code>disabled</code>).
+This is too coarse: a form often needs lightweight field-level checks
+running continuously alongside heavyweight cross-section checks that
+only run on submit.</p>
+<p><strong>Amendment.</strong> Formspec adds <code>timing</code> to the
+Shape schema:</p>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 14%" />
+<col style="width: 30%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Property</th>
+<th>Type</th>
+<th>Cardinality</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>timing</code></td>
+<td>string</td>
+<td>0..1 (OPTIONAL)</td>
+<td>Controls when this shape is evaluated. Default:
+<code>"continuous"</code>.</td>
+</tr>
+</tbody>
+</table>
+<table>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 61%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Semantics</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>"continuous"</code></td>
+<td>Evaluated whenever any dependency changes. This is the default.
+Suitable for field-level and group-level validation.</td>
+</tr>
+<tr class="even">
+<td><code>"submit"</code></td>
+<td>Evaluated only when submission is requested. Suitable for expensive
+cross-section checks, grand total verification, and final consistency
+rules.</td>
+</tr>
+<tr class="odd">
+<td><code>"demand"</code></td>
+<td>Evaluated only when explicitly requested by the consuming
+application. Suitable for external API validations and checks that
+require user confirmation.</td>
+</tr>
+</tbody>
+</table>
+<p>The global validation mode (§5.5) acts as an override: - When the
+global mode is <code>"disabled"</code>, no shapes fire regardless of
+<code>timing</code>. - When the global mode is <code>"deferred"</code>,
+all shapes (including <code>"continuous"</code>) are deferred until
+explicitly requested. - When the global mode is
+<code>"continuous"</code> (default), shapes fire according to their
+individual <code>timing</code>.</p>
+<p>This two-level model (global override + per-shape timing) provides
+both coarse and fine-grained control.</p>
+<h4 id="f.1.4-date-and-datetime-literals-in-fel-normative">F.1.4 Date
+and DateTime Literals in FEL (Normative)</h4>
+<p>UDF defines date literals with an <code>@</code> prefix:
+<code>@2025-01-15</code>, <code>@2025-01-15T14:30:00Z</code>. Formspec
+currently requires the <code>date()</code> cast function:
+<code>date('2025-01-15')</code>. Literal syntax is cleaner in
+expressions, especially for comparisons:</p>
+<pre><code>$report_date &gt;= date(&#39;2025-01-01&#39;) and $report_date &lt;= date(&#39;2025-12-31&#39;)</code></pre>
+<p>vs.</p>
+<pre><code>$report_date &gt;= @2025-01-01 and $report_date &lt;= @2025-12-31</code></pre>
+<p><strong>Amendment.</strong> FEL adds date and dateTime literal
+syntax:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Literal</th>
+<th>Format</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Date</td>
+<td><code>@YYYY-MM-DD</code></td>
+<td><code>@2025-01-15</code></td>
+</tr>
+<tr class="even">
+<td>DateTime</td>
+<td><code>@YYYY-MM-DDThh:mm:ssZ</code></td>
+<td><code>@2025-01-15T14:30:00Z</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>@</code> prefix is chosen to avoid ambiguity with field
+references (<code>$</code>) and numeric literals. The date/dateTime
+format after <code>@</code> MUST conform to ISO 8601.</p>
+<p>The <code>date()</code> and <code>dateTime()</code> cast functions
+remain available for parsing string values at runtime. Literals are for
+compile-time constants.</p>
+<p>Updated grammar production (extends §3.7):</p>
+<pre><code>Literal ← NumberLiteral / StringLiteral / &#39;true&#39; / &#39;false&#39; / &#39;null&#39;
+         / DateTimeLiteral / DateLiteral
+DateLiteral     ← &#39;@&#39; [0-9]{4} &#39;-&#39; [0-9]{2} &#39;-&#39; [0-9]{2}
+DateTimeLiteral ← &#39;@&#39; [0-9]{4} &#39;-&#39; [0-9]{2} &#39;-&#39; [0-9]{2} &#39;T&#39;
+                   [0-9]{2} &#39;:&#39; [0-9]{2} &#39;:&#39; [0-9]{2} (&#39;Z&#39; / [+-][0-9]{2}&#39;:&#39;[0-9]{2})</code></pre>
+<h4 id="f.1.5-additional-built-in-functions-normative">F.1.5 Additional
+Built-in Functions (Normative)</h4>
+<p>UDF’s function set includes several functions absent from FEL that
+address common form logic patterns:</p>
+<p><strong>Amendment.</strong> The following functions are added to
+FEL:</p>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 25%" />
+<col style="width: 20%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>countWhere(array, expr)</code></td>
+<td><code>countWhere(array, boolean) → number</code></td>
+<td>number</td>
+<td>Count of elements where the expression evaluates to
+<code>true</code>. Within the expression, <code>$</code> refers to the
+current element. E.g.,
+<code>countWhere($line_items[*].amount, $ &gt; 10000)</code>.</td>
+</tr>
+<tr class="even">
+<td><code>selected(field, value)</code></td>
+<td><code>selected(array, string) → boolean</code></td>
+<td>boolean</td>
+<td>Returns <code>true</code> if the multiChoice field’s value array
+contains the specified value. Shorthand for
+<code>value in $field</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>format(template, ...)</code></td>
+<td><code>format(string, any...) → string</code></td>
+<td>string</td>
+<td>String interpolation. Positional placeholders <code>{0}</code>,
+<code>{1}</code>, etc. are replaced with the corresponding arguments,
+formatted as strings. E.g.,
+<code>format('{0} of {1}', $current, $total)</code>.</td>
+</tr>
+<tr class="even">
+<td><code>power(base, exp)</code></td>
+<td><code>power(number, number) → number</code></td>
+<td>number</td>
+<td>Exponentiation. <code>power(2, 10)</code> returns
+<code>1024</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><code>countWhere</code> is particularly valuable for repeat contexts:
+“how many line items exceed the threshold?” is a common validation and
+display requirement that currently requires verbose workarounds.</p>
+<h4 id="f.1.6-fragment-level-composition-references-normative">F.1.6
+Fragment-Level Composition References (Normative)</h4>
+<p>UDF’s <code>$include</code> supports fragment paths:
+<code>"https://grants.gov/forms/common/recipient-info|1.0.0#recipient"</code>.
+This allows including a specific field or group from another definition,
+not just all root items.</p>
+<p>Formspec’s <code>$ref</code> (§6.6) includes all root items from the
+referenced definition. This is too coarse for the common case of “I want
+just the address group from the common demographics definition.”</p>
+<p><strong>Amendment.</strong> Formspec extends the <code>$ref</code>
+syntax to support fragment addressing:</p>
+<div class="sourceCode" id="cb91"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;key&quot;</span><span class="fu">:</span> <span class="st">&quot;recipient_address&quot;</span><span class="fu">,</span></span>
+<span id="cb91-3"><a href="#cb91-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;group&quot;</span><span class="fu">,</span></span>
+<span id="cb91-4"><a href="#cb91-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$ref&quot;</span><span class="fu">:</span> <span class="st">&quot;https://grants.gov/forms/common/demographics|1.0.0#mailing_address&quot;</span><span class="fu">,</span></span>
+<span id="cb91-5"><a href="#cb91-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;keyPrefix&quot;</span><span class="fu">:</span> <span class="st">&quot;rcpt_&quot;</span></span>
+<span id="cb91-6"><a href="#cb91-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>The fragment (after <code>#</code>) is the <code>key</code> of the
+item to include from the referenced definition. When a fragment is
+present: - Only the item with the matching <code>key</code> (and its
+descendants) is included. - If the fragment key does not exist in the
+referenced definition, assembly MUST fail with an error.</p>
+<p>When no fragment is present, the existing behavior applies: all root
+items from the referenced definition are included.</p>
+<h3 id="f.2-features-already-covered">F.2 Features Already Covered</h3>
+<p><strong>Expression language design goals.</strong> UEL’s goals
+(portable, deterministic, safe, readable) are identical to FEL’s
+(§3.1).</p>
+<p><strong>Field reference syntax.</strong> UEL uses bare
+<code>field_name</code> and <code>.</code> for self; FEL uses
+<code>$field_name</code> and <code>$</code>. Different tokens, same
+semantics.</p>
+<p><strong>Operator set and precedence.</strong> Nearly identical. Both
+use <code>&amp;</code> for concatenation, <code>mod</code> /
+<code>%</code> for modulo, word-form logical operators.</p>
+<p><strong>Aggregate functions.</strong> <code>sum</code>,
+<code>count</code>, <code>avg</code>, <code>min</code>, <code>max</code>
+— identical.</p>
+<p><strong>String, numeric, date functions.</strong> Substantially
+overlapping. UEL’s <code>daysBetween</code>/<code>monthsBetween</code>
+map to FEL’s <code>dateDiff(d1, d2, 'days')</code> /
+<code>dateDiff(d1, d2, 'months')</code>. UEL’s
+<code>addDays</code>/<code>addMonths</code> map to FEL’s
+<code>dateAdd(d, n, 'days')</code> /
+<code>dateAdd(d, n, 'months')</code>.</p>
+<p><strong>Conditional expression.</strong> Both use
+<code>if(cond, then, else)</code>.</p>
+<p><strong>Repeat context.</strong> UEL’s <code>[]</code> (current
+iteration), <code>[*]</code> (all), <code>[0]</code> (indexed),
+<code>index()</code> map to FEL’s <code>@current</code>,
+<code>[*]</code>, <code>[1]</code> (1-based), <code>@index</code>.</p>
+<p><strong>Shape structure and composition.</strong> Identical: named
+shapes with id, path, severity, constraint, message, code, and logical
+composition (and/or/not/xone).</p>
+<p><strong><code>when</code> on shapes.</strong> UDF’s <code>when</code>
+is identical to Formspec’s <code>activeWhen</code> (Appendix C,
+§C.1.4).</p>
+<p><strong>Severity semantics.</strong> Identical: error blocks
+submission, warning/info do not. <code>isValid</code> = zero
+error-severity results.</p>
+<p><strong>Non-relevant field handling.</strong> Identical five-point
+rule set.</p>
+<p><strong>ValidationReport structure.</strong> Identical:
+<code>isValid</code>, <code>timestamp</code>, <code>counts</code>,
+<code>results</code> array.</p>
+<p><strong>External validation injection.</strong> Identical: same
+result structure, merged into unified report, affects
+<code>isValid</code>.</p>
+<p><strong>Form-level and cross-form scope.</strong> UDF’s
+<code>"$form"</code> maps to Formspec’s <code>"#"</code>; cross-form
+references use secondary instances in both specs.</p>
+<p><strong>Assembly.</strong> Both define
+<code>$include</code>/<code>$ref</code> resolved at publish time with
+<code>assembledFrom</code> provenance.</p>
+<h3 id="f.3-design-divergences-no-action">F.3 Design Divergences (No
+Action)</h3>
+<p><strong>Weak typing vs strict typing.</strong> UEL uses implicit
+coercion (null→0, ““→0,”“→false). FEL requires explicit casting. This is
+Formspec’s most deliberate design choice — implicit coercion causes
+subtle bugs in financial calculations where <code>null</code> silently
+becomes <code>0</code>. Form authors must write
+<code>coalesce($field, 0)</code> to explicitly handle missing values. No
+change.</p>
+<p><strong>NaN vs null propagation.</strong> UEL produces
+<code>NaN</code> from invalid arithmetic and uses <code>isNaN()</code>
+to test. FEL produces <code>null</code> and uses <code>isNull()</code>.
+FEL’s approach is simpler (one “absent” sentinel, not two) and avoids
+the <code>NaN != NaN</code> paradox. No change.</p>
+<p><strong>Zero-based vs 1-based repeat indexing.</strong> UEL’s
+<code>index()</code> returns 0-based. FEL’s <code>@index</code> returns
+1-based. 1-based matches XForms, spreadsheets, and human counting. No
+change.</p>
+<p><strong><code>prior()</code> shorthand.</strong> UDF provides
+<code>prior(path)</code> as sugar for
+<code>$instances.prior_year.path</code>. This hard-codes the instance
+name <code>prior_year</code>. FEL’s
+<code>@instance('prior_year').path</code> is more general — the instance
+name is explicit. No change.</p>
+<p><strong>Both-branches-evaluated <code>if()</code>.</strong> UDF notes
+<code>if()</code> evaluates both branches (with optional optimization).
+FEL specifies short-circuit evaluation: only the selected branch is
+evaluated (§3.5). Short-circuit is correct for expressions that may
+error on one branch (e.g.,
+<code>if(@count &gt; 0, $items[1].value, 0)</code> — evaluating the
+then-branch when <code>@count = 0</code> would be an index error). No
+change.</p>
+<p><strong><code>onBlur</code> validation timing.</strong> UDF includes
+<code>onBlur</code> as a validation mode. This is a UI-specific concept
+(focus leaving a field) that doesn’t exist in API-only or PDF contexts.
+Formspec’s <code>timing</code> values (<code>continuous</code>,
+<code>submit</code>, <code>demand</code>) are rendering-agnostic. No
+change.</p>
+<p><strong>EBNF vs PEG grammar notation.</strong> UDF uses EBNF;
+Formspec uses PEG. Both are unambiguous grammar formalisms. No
+change.</p>
 <aside id="footnotes" class="footnotes footnotes-end-of-document"
 role="doc-endnotes">
 <hr />

@@ -5243,3 +5243,279 @@ be omitted. Formspec embeds these as Item properties but does not require
 them for structural validity (a form without labels is processable, just not
 user-facing). The practical effect is the same. No change.
 
+
+
+---
+
+## Appendix F: UDF Cross-Analysis (Expression Language, Validation, Composition)
+
+This appendix continues the UDF cross-analysis from Appendix E, covering the
+expression language (UEL), validation semantics, and composition features from
+the remaining sections of the UDF specification. This appendix is informative
+except where noted as normative.
+
+### F.1 Features Adopted as Amendments
+
+#### F.1.1 Constraint Component Type on ValidationResults (Normative)
+
+UDF includes a `constraintComponent` field on every ValidationResult that
+categorizes *what kind of check* produced the result: `"required"`, `"type"`,
+`"field-constraint"`, `"shape"`, or `"external"`. Formspec's current
+ValidationResult schema (§5.3) includes `shapeId` (which is null for
+non-shape results) and `source` (for external results), but does not
+provide a uniform categorizer for the constraint kind.
+
+This matters for programmatic consumers that need to route different
+constraint types to different handlers — e.g., suppress all "required"
+errors during draft save, or count only "shape" failures for analytics.
+
+**Amendment.** Formspec adds `constraintKind` to the ValidationResult schema:
+
+| Property | Type | Cardinality | Description |
+|----------|------|-------------|-------------|
+| `constraintKind` | string | 1..1 (REQUIRED) | The category of constraint that produced this result. |
+
+Standard values:
+
+| Value | Meaning |
+|-------|---------|
+| `"required"` | The field is required but has no value (null or empty). |
+| `"type"` | The value does not conform to the field's declared `dataType`. |
+| `"cardinality"` | A repeatable group violates `minRepeat` or `maxRepeat`. |
+| `"constraint"` | A Bind `constraint` expression evaluated to `false`. |
+| `"shape"` | A named Shape's constraint expression evaluated to `false`. |
+| `"external"` | An external system injected this result. |
+
+This replaces the previous convention of inferring the constraint source
+from `shapeId` presence/absence. All ValidationResults MUST include
+`constraintKind`.
+
+#### F.1.2 Standard Built-in Constraint Codes (Normative)
+
+UDF defines a standard set of machine-readable codes for built-in constraint
+failures. Formspec's §5.3 defines the `code` property as optional with no
+standardized vocabulary. Without standard codes, every implementation invents
+its own, making cross-system result processing unreliable.
+
+**Amendment.** The following codes are RESERVED. Conformant processors MUST
+use these exact codes for the corresponding built-in constraints:
+
+| Code | constraintKind | Triggered When |
+|------|---------------|---------------|
+| `REQUIRED` | `required` | A required field is null or empty string. |
+| `TYPE_MISMATCH` | `type` | The value cannot be interpreted as the field's `dataType`. |
+| `MIN_REPEAT` | `cardinality` | A repeatable group has fewer instances than `minRepeat`. |
+| `MAX_REPEAT` | `cardinality` | A repeatable group has more instances than `maxRepeat`. |
+| `CONSTRAINT_FAILED` | `constraint` | A Bind `constraint` expression returned `false`. |
+| `SHAPE_FAILED` | `shape` | A named Shape's constraint returned `false`. |
+| `EXTERNAL_FAILED` | `external` | An external validation source reported a failure. |
+
+Shape-level and external codes (`code` property on Shapes, `code` on
+external results) override the generic `SHAPE_FAILED` / `EXTERNAL_FAILED`
+defaults. The built-in codes are fallbacks for when no specific code is
+declared.
+
+#### F.1.3 Per-Shape Validation Timing (Normative)
+
+UDF defines `validationMode` per-shape with values `onChange`, `onBlur`,
+`onSubmit`, and `onDemand`. Formspec's validation modes (§5.5) are a global
+runtime setting (`continuous`/`deferred`/`disabled`). This is too coarse:
+a form often needs lightweight field-level checks running continuously
+alongside heavyweight cross-section checks that only run on submit.
+
+**Amendment.** Formspec adds `timing` to the Shape schema:
+
+| Property | Type | Cardinality | Description |
+|----------|------|-------------|-------------|
+| `timing` | string | 0..1 (OPTIONAL) | Controls when this shape is evaluated. Default: `"continuous"`. |
+
+| Value | Semantics |
+|-------|-----------|
+| `"continuous"` | Evaluated whenever any dependency changes. This is the default. Suitable for field-level and group-level validation. |
+| `"submit"` | Evaluated only when submission is requested. Suitable for expensive cross-section checks, grand total verification, and final consistency rules. |
+| `"demand"` | Evaluated only when explicitly requested by the consuming application. Suitable for external API validations and checks that require user confirmation. |
+
+The global validation mode (§5.5) acts as an override:
+- When the global mode is `"disabled"`, no shapes fire regardless of `timing`.
+- When the global mode is `"deferred"`, all shapes (including `"continuous"`)
+  are deferred until explicitly requested.
+- When the global mode is `"continuous"` (default), shapes fire according to
+  their individual `timing`.
+
+This two-level model (global override + per-shape timing) provides both
+coarse and fine-grained control.
+
+#### F.1.4 Date and DateTime Literals in FEL (Normative)
+
+UDF defines date literals with an `@` prefix: `@2025-01-15`,
+`@2025-01-15T14:30:00Z`. Formspec currently requires the `date()` cast
+function: `date('2025-01-15')`. Literal syntax is cleaner in expressions,
+especially for comparisons:
+
+```
+$report_date >= date('2025-01-01') and $report_date <= date('2025-12-31')
+```
+
+vs.
+
+```
+$report_date >= @2025-01-01 and $report_date <= @2025-12-31
+```
+
+**Amendment.** FEL adds date and dateTime literal syntax:
+
+| Literal | Format | Example |
+|---------|--------|---------|
+| Date | `@YYYY-MM-DD` | `@2025-01-15` |
+| DateTime | `@YYYY-MM-DDThh:mm:ssZ` | `@2025-01-15T14:30:00Z` |
+
+The `@` prefix is chosen to avoid ambiguity with field references (`$`) and
+numeric literals. The date/dateTime format after `@` MUST conform to ISO 8601.
+
+The `date()` and `dateTime()` cast functions remain available for parsing
+string values at runtime. Literals are for compile-time constants.
+
+Updated grammar production (extends §3.7):
+
+```
+Literal ← NumberLiteral / StringLiteral / 'true' / 'false' / 'null'
+         / DateTimeLiteral / DateLiteral
+DateLiteral     ← '@' [0-9]{4} '-' [0-9]{2} '-' [0-9]{2}
+DateTimeLiteral ← '@' [0-9]{4} '-' [0-9]{2} '-' [0-9]{2} 'T'
+                   [0-9]{2} ':' [0-9]{2} ':' [0-9]{2} ('Z' / [+-][0-9]{2}':'[0-9]{2})
+```
+
+#### F.1.5 Additional Built-in Functions (Normative)
+
+UDF's function set includes several functions absent from FEL that address
+common form logic patterns:
+
+**Amendment.** The following functions are added to FEL:
+
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `countWhere(array, expr)` | `countWhere(array, boolean) → number` | number | Count of elements where the expression evaluates to `true`. Within the expression, `$` refers to the current element. E.g., `countWhere($line_items[*].amount, $ > 10000)`. |
+| `selected(field, value)` | `selected(array, string) → boolean` | boolean | Returns `true` if the multiChoice field's value array contains the specified value. Shorthand for `value in $field`. |
+| `format(template, ...)` | `format(string, any...) → string` | string | String interpolation. Positional placeholders `{0}`, `{1}`, etc. are replaced with the corresponding arguments, formatted as strings. E.g., `format('{0} of {1}', $current, $total)`. |
+| `power(base, exp)` | `power(number, number) → number` | number | Exponentiation. `power(2, 10)` returns `1024`. |
+
+`countWhere` is particularly valuable for repeat contexts: "how many line
+items exceed the threshold?" is a common validation and display requirement
+that currently requires verbose workarounds.
+
+#### F.1.6 Fragment-Level Composition References (Normative)
+
+UDF's `$include` supports fragment paths:
+`"https://grants.gov/forms/common/recipient-info|1.0.0#recipient"`. This
+allows including a specific field or group from another definition, not just
+all root items.
+
+Formspec's `$ref` (§6.6) includes all root items from the referenced
+definition. This is too coarse for the common case of "I want just the
+address group from the common demographics definition."
+
+**Amendment.** Formspec extends the `$ref` syntax to support fragment
+addressing:
+
+```json
+{
+  "key": "recipient_address",
+  "type": "group",
+  "$ref": "https://grants.gov/forms/common/demographics|1.0.0#mailing_address",
+  "keyPrefix": "rcpt_"
+}
+```
+
+The fragment (after `#`) is the `key` of the item to include from the
+referenced definition. When a fragment is present:
+- Only the item with the matching `key` (and its descendants) is included.
+- If the fragment key does not exist in the referenced definition, assembly
+  MUST fail with an error.
+
+When no fragment is present, the existing behavior applies: all root items
+from the referenced definition are included.
+
+### F.2 Features Already Covered
+
+**Expression language design goals.** UEL's goals (portable, deterministic,
+safe, readable) are identical to FEL's (§3.1).
+
+**Field reference syntax.** UEL uses bare `field_name` and `.` for self;
+FEL uses `$field_name` and `$`. Different tokens, same semantics.
+
+**Operator set and precedence.** Nearly identical. Both use `&` for
+concatenation, `mod` / `%` for modulo, word-form logical operators.
+
+**Aggregate functions.** `sum`, `count`, `avg`, `min`, `max` — identical.
+
+**String, numeric, date functions.** Substantially overlapping. UEL's
+`daysBetween`/`monthsBetween` map to FEL's `dateDiff(d1, d2, 'days')` /
+`dateDiff(d1, d2, 'months')`. UEL's `addDays`/`addMonths` map to FEL's
+`dateAdd(d, n, 'days')` / `dateAdd(d, n, 'months')`.
+
+**Conditional expression.** Both use `if(cond, then, else)`.
+
+**Repeat context.** UEL's `[]` (current iteration), `[*]` (all), `[0]`
+(indexed), `index()` map to FEL's `@current`, `[*]`, `[1]` (1-based),
+`@index`.
+
+**Shape structure and composition.** Identical: named shapes with id, path,
+severity, constraint, message, code, and logical composition (and/or/not/xone).
+
+**`when` on shapes.** UDF's `when` is identical to Formspec's `activeWhen`
+(Appendix C, §C.1.4).
+
+**Severity semantics.** Identical: error blocks submission, warning/info
+do not. `isValid` = zero error-severity results.
+
+**Non-relevant field handling.** Identical five-point rule set.
+
+**ValidationReport structure.** Identical: `isValid`, `timestamp`, `counts`,
+`results` array.
+
+**External validation injection.** Identical: same result structure, merged
+into unified report, affects `isValid`.
+
+**Form-level and cross-form scope.** UDF's `"$form"` maps to Formspec's `"#"`;
+cross-form references use secondary instances in both specs.
+
+**Assembly.** Both define `$include`/`$ref` resolved at publish time with
+`assembledFrom` provenance.
+
+### F.3 Design Divergences (No Action)
+
+**Weak typing vs strict typing.** UEL uses implicit coercion (null→0,
+""→0, ""→false). FEL requires explicit casting. This is Formspec's most
+deliberate design choice — implicit coercion causes subtle bugs in financial
+calculations where `null` silently becomes `0`. Form authors must write
+`coalesce($field, 0)` to explicitly handle missing values. No change.
+
+**NaN vs null propagation.** UEL produces `NaN` from invalid arithmetic
+and uses `isNaN()` to test. FEL produces `null` and uses `isNull()`.
+FEL's approach is simpler (one "absent" sentinel, not two) and avoids the
+`NaN != NaN` paradox. No change.
+
+**Zero-based vs 1-based repeat indexing.** UEL's `index()` returns 0-based.
+FEL's `@index` returns 1-based. 1-based matches XForms, spreadsheets, and
+human counting. No change.
+
+**`prior()` shorthand.** UDF provides `prior(path)` as sugar for
+`$instances.prior_year.path`. This hard-codes the instance name `prior_year`.
+FEL's `@instance('prior_year').path` is more general — the instance name is
+explicit. No change.
+
+**Both-branches-evaluated `if()`.** UDF notes `if()` evaluates both branches
+(with optional optimization). FEL specifies short-circuit evaluation: only the
+selected branch is evaluated (§3.5). Short-circuit is correct for expressions
+that may error on one branch (e.g., `if(@count > 0, $items[1].value, 0)` —
+evaluating the then-branch when `@count = 0` would be an index error). No
+change.
+
+**`onBlur` validation timing.** UDF includes `onBlur` as a validation mode.
+This is a UI-specific concept (focus leaving a field) that doesn't exist in
+API-only or PDF contexts. Formspec's `timing` values (`continuous`, `submit`,
+`demand`) are rendering-agnostic. No change.
+
+**EBNF vs PEG grammar notation.** UDF uses EBNF; Formspec uses PEG. Both
+are unambiguous grammar formalisms. No change.
+
