@@ -4381,3 +4381,286 @@ functions by implementations that need them.
 security and predictability concerns incompatible with FEL's determinism
 guarantee (§3.1, goal 4).
 
+
+
+---
+
+## Appendix C: JDFM Cross-Analysis
+
+This appendix documents a cross-analysis with the JSON Declarative Form Model
+(JDFM), an independent specification effort addressing the same problem space.
+Several JDFM design choices address gaps in Formspec or make implicit choices
+explicit. This appendix is informative except where noted as normative.
+
+### C.1 Features Adopted as Amendments
+
+#### C.1.1 First-Class Money Type (Normative)
+
+JDFM defines `Money` as a first-class runtime type: an object with `amount`
+(arbitrary-precision decimal) and `currency` (ISO 4217 code). This is
+materially superior to Formspec's current approach of modeling financial
+fields as `decimal` with a display `prefix`.
+
+The problem: `decimal` with `prefix: "$"` loses the currency identity. A
+field holding `50000.00` with prefix `"$"` is indistinguishable from one
+holding `50000.00` with prefix `"€"` at the data layer. Currency-aware
+operations (addition across fields, cross-currency detection) are impossible.
+
+**Amendment.** Formspec adds `"money"` as a core data type:
+
+| Data Type | JSON Representation | Description |
+|-----------|-------------------|-------------|
+| `"money"` | `{ "amount": "50000.00", "currency": "USD" }` | A monetary value. `amount` is a decimal string (not a floating-point number) to preserve precision. `currency` is an ISO 4217 three-letter code. |
+
+The `amount` field MUST be serialized as a JSON string containing a decimal
+number, not as a JSON number. This avoids IEEE 754 precision loss on values
+like `0.10` (which cannot be represented exactly in binary floating-point).
+
+FEL adds the following money functions:
+
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `money(amount, currency)` | `money(number, string) → money` | money | Construct a Money value. |
+| `moneyAmount(m)` | `moneyAmount(money) → number` | number | Extract the decimal amount. |
+| `moneyCurrency(m)` | `moneyCurrency(money) → string` | string | Extract the ISO 4217 currency code. |
+| `moneyAdd(a, b)` | `moneyAdd(money, money) → money` | money | Add two Money values. Operands MUST have the same currency; mismatched currencies produce a type error. |
+| `moneySum(arr)` | `moneySum(array) → money` | money | Sum an array of Money values. All elements MUST share the same currency. Empty array returns `null`. |
+
+Example — budget line items with currency-safe summation:
+
+```json
+{
+  "key": "award_amount",
+  "type": "field",
+  "dataType": "money",
+  "label": "Authorized Award Amount"
+}
+```
+
+```json
+{
+  "path": "total_budget",
+  "calculate": "moneySum($line_items[*].amount)"
+}
+```
+
+Processors that do not support the `money` type MUST fall back to treating
+the value as a JSON object with `amount` and `currency` string properties,
+validating only structural correctness.
+
+#### C.1.2 Arbitrary-Precision Decimal Semantics (Normative)
+
+JDFM specifies `Decimal` as arbitrary-precision base-10. Formspec currently
+defines `number` as "IEEE 754 double." This is inadequate for financial
+calculations where `0.1 + 0.2 ≠ 0.3` in binary floating-point.
+
+**Amendment.** The FEL `number` type is redefined:
+
+> FEL `number` values MUST be treated as **decimal** (base-10) values during
+> arithmetic evaluation. Implementations MUST NOT introduce binary
+> floating-point rounding errors in arithmetic operations on values that are
+> representable as finite decimal fractions. The minimum precision MUST be
+> sufficient to exactly represent any value with up to 18 significant decimal
+> digits.
+>
+> JSON serialization uses JSON number syntax per RFC 8259. Implementations
+> SHOULD preserve the original decimal representation when round-tripping
+> values through the Instance.
+
+This aligns with how financial systems, databases (`DECIMAL`/`NUMERIC` types),
+and spreadsheets handle arithmetic. It also matches JDFM's `Decimal` type.
+
+#### C.1.3 Excluded-Value Evaluation Semantics (Normative)
+
+JDFM's `whenExcluded.evaluationValue` addresses a question Formspec leaves
+ambiguous: when a field is non-relevant, what do *downstream expressions* see
+when they reference it?
+
+Formspec §5.6 rule 4 says "The computed value exists in the in-memory data
+model and MAY be referenced by other expressions." But this conflates two
+cases:
+
+1. A `calculate`-bound field that is non-relevant — its value is still
+   computed (rule 4), so downstream references work.
+2. A user-input field that is non-relevant — its value was entered before the
+   field became non-relevant. Should downstream expressions see the stale
+   value, `null`, or `Missing`?
+
+**Amendment.** Formspec adds `excludedValue` to the Bind schema:
+
+| Value | Behavior | Use Case |
+|-------|----------|----------|
+| `"preserve"` | Downstream expressions see the field's last value, even while non-relevant. This is the DEFAULT. | Calculations that should remain stable when a section is temporarily hidden. |
+| `"null"` | Downstream expressions see `null` when the field is non-relevant. | Expressions that should react to a field's relevance state (e.g., conditional totals that should exclude hidden line items). |
+
+```json
+{
+  "path": "optional_section.subtotal",
+  "relevant": "$include_optional = true",
+  "excludedValue": "null"
+}
+```
+
+This makes an explicit choice where Formspec previously left behavior
+implementation-defined. The `"preserve"` default maintains backward
+compatibility with §5.6 rule 4.
+
+For the submission question (what value appears in the Response), the
+`nonRelevantBehavior` property (Appendix B, §B.2.1) continues to govern.
+`excludedValue` controls the *in-memory evaluation model*;
+`nonRelevantBehavior` controls the *serialized output*.
+
+#### C.1.4 Conditional Shape Activation (Normative)
+
+JDFM defines `activeWhen` on Shapes — a boolean expression that controls
+whether the shape is evaluated at all. Formspec's current design evaluates
+all shapes whose target path exists in the instance (subject to non-relevant
+suppression), with no way to conditionally activate a shape independent of
+its target's relevance.
+
+This matters for rules like "validate budget totals only after the user has
+confirmed the budget is final" or "apply strict validation rules only when
+the response status is 'complete'."
+
+**Amendment.** Formspec adds `activeWhen` to the Shape schema:
+
+```json
+{
+  "id": "strict_budget_check",
+  "target": "budget_section",
+  "severity": "error",
+  "message": "Budget line items must sum to the authorized award amount.",
+  "constraint": "moneyAmount(moneySum($line_items[*].amount)) = moneyAmount($award_amount)",
+  "activeWhen": "$budget_confirmed = true"
+}
+```
+
+| Property | Type | Cardinality | Description |
+|----------|------|-------------|-------------|
+| `activeWhen` | string (FEL → boolean) | 0..1 (OPTIONAL) | When present, the shape is evaluated only when this expression evaluates to `true`. When absent or `true`, the shape is always evaluated (subject to non-relevant suppression). When `false`, the shape produces no ValidationResults. |
+
+`activeWhen` is evaluated during the Revalidate phase, *before* the shape's
+`constraint` expression. If `activeWhen` evaluates to `false`, the shape is
+skipped entirely — it produces no results of any severity.
+
+`activeWhen` is independent of the target's relevance. A shape with
+`activeWhen: "true"` targeting a non-relevant path still produces no results
+(non-relevant suppression takes precedence per §5.6 rule 1).
+
+#### C.1.5 FieldRef vs DataPointer Distinction
+
+JDFM distinguishes two addressing vocabularies:
+
+- **FieldRef**: stable definition-time paths (`budget.line_items.amount`) used
+  in Binds and Shapes.
+- **DataPointer**: runtime JSON Pointer paths
+  (`/budget/line_items/2/amount`) used in ValidationResults to identify
+  specific instances within repeats.
+
+Formspec uses `path` for both purposes. This works when a path targets a
+single field, but is ambiguous for repeatable contexts: `line_items[*].amount`
+is a valid Bind target (meaning "the amount field in every row"), but a
+ValidationResult must identify *which row* failed.
+
+**Amendment.** Formspec clarifies:
+
+- **Bind `path` and Shape `target`** use **FieldRef** syntax (the existing
+  dot-notation with `[*]` wildcards). These are definition-time addresses.
+- **ValidationResult `path`** uses **resolved instance paths** with concrete
+  indexes: `line_items[3].amount` (1-based, matching `@index` semantics).
+  This unambiguously identifies the specific data node that failed.
+
+This distinction was implicit in Formspec's existing examples (§7.3.3 shows
+`"path": "categories[1]"` with a specific index) but is now explicitly
+normative.
+
+#### C.1.6 Repeat Navigation: `parent()` Function
+
+JDFM defines `parent()` to navigate one level up from the current repeat
+context. Formspec has `@current` (the current repeat instance) and `@index`
+/ `@count`, but no upward navigation.
+
+**Amendment.** FEL adds `parent()`:
+
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `parent()` | `parent() → object` | object | Returns the parent context of the current repeat row. Within a nested repeat, `parent()` returns the enclosing repeat row. At the top-level repeat, `parent()` returns the root instance object. |
+
+Example — accessing a group-level field from within a nested repeat:
+
+```
+parent().section_total
+```
+
+Example — referencing an outer repeat's field from an inner repeat:
+
+```
+parent().parent().outer_field
+```
+
+`parent()` MUST NOT be called outside a repeat context. Calling `parent()`
+at the root instance level is a definition error.
+
+### C.2 Features Already Covered
+
+**Three-layer separation (instance / behavior / constraint).** Both specs
+define this identically. JDFM uses the terms "Instance layer," "Behavior
+layer," and "Constraint layer"; Formspec uses "Structure Layer," "Behavior
+Layer," and the combined Bind/Shape mechanism.
+
+**Expression language design.** Both define deterministic, side-effect-free
+expression languages with dependency extraction. Syntax differs (`${field}`
+in JDFM-EL vs `$field` in FEL) but semantics are convergent.
+
+**`whenExcluded.submission` policy.** JDFM's `"prune" | "null" | "default"`
+maps to Formspec's `nonRelevantBehavior`: `"remove" | "empty" | "keep"` plus
+the Bind-level `default` property (Appendix B, §B.2.1).
+
+**Repeat context variables.** JDFM's `@` / `idx()` map to Formspec's
+`@current` / `@index`. JDFM uses zero-based indexing; Formspec uses 1-based
+(matching XForms convention).
+
+**Composition operators on shapes.** JDFM's `allOf`/`anyOf`/`oneOf`/`not`
+map directly to Formspec's `and`/`or`/`xone`/`not`.
+
+**Named instances.** JDFM's `inst(name)` maps to Formspec's
+`@instance('name')`.
+
+**Canonical identity + version + status lifecycle.** Both specs adopt the
+FHIR R5 pattern identically.
+
+**Response pinning.** Both specs require responses to reference a specific
+definition version.
+
+### C.3 Design Divergences (No Action)
+
+**`${field}` vs `$field` reference syntax.** JDFM uses `${...}` (ODK-style
+with braces); Formspec uses `$field` (no braces). Both are valid choices.
+Formspec's syntax is more concise for simple references; JDFM's is safer
+for field names containing special characters. No change — both are
+internally consistent.
+
+**Zero-based vs 1-based repeat indexing.** JDFM uses zero-based (`idx()`
+returns 0 for the first item); Formspec uses 1-based (`@index` returns 1).
+1-based aligns with XForms, spreadsheet conventions, and human counting.
+No change.
+
+**Separate `constraint` from `assert` structure.** JDFM wraps shape
+assertions in an explicit `{ "expr": "..." }` object, allowing composition
+and expression to be structurally distinct. Formspec uses a flat `constraint`
+string on shapes. The JDFM approach is more explicit but more verbose. No
+change — Formspec's composition operators (`and`/`or`/`not`/`xone`)
+achieve the same expressiveness.
+
+**`Missing` as a distinct type from `Null`.** JDFM distinguishes `Missing`
+(path doesn't exist in instance) from `Null` (path exists, value is null).
+Formspec collapses both to `null` (§3.8.3). The distinction is theoretically
+cleaner but adds complexity for form authors who must reason about three
+states (missing, null, empty string) instead of two (null, empty string).
+Formspec's simplification is intentional. No change.
+
+**String concatenation.** JDFM requires `concat()` and forbids `+` for
+strings. Formspec uses `&` as the concatenation operator (distinct from `+`
+which is arithmetic-only). Both prevent the ambiguity of `+` on mixed types.
+No change.
+

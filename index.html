@@ -217,6 +217,20 @@ Amendments</a></li>
 id="toc-b.3-features-intentionally-excluded">B.3 Features Intentionally
 Excluded</a></li>
 </ul></li>
+<li><a href="#appendix-c-jdfm-cross-analysis"
+id="toc-appendix-c-jdfm-cross-analysis">Appendix C: JDFM
+Cross-Analysis</a>
+<ul>
+<li><a href="#c.1-features-adopted-as-amendments"
+id="toc-c.1-features-adopted-as-amendments">C.1 Features Adopted as
+Amendments</a></li>
+<li><a href="#c.2-features-already-covered"
+id="toc-c.2-features-already-covered">C.2 Features Already
+Covered</a></li>
+<li><a href="#c.3-design-divergences-no-action"
+id="toc-c.3-design-divergences-no-action">C.3 Design Divergences (No
+Action)</a></li>
+</ul></li>
 </ul></li>
 </ul>
 </nav>
@@ -7008,6 +7022,400 @@ as extension functions.</p>
 <code>eval-in-context()</code>.</strong> Dynamic expression evaluation
 introduces security and predictability concerns incompatible with FEL’s
 determinism guarantee (§3.1, goal 4).</p>
+<hr />
+<h2 id="appendix-c-jdfm-cross-analysis">Appendix C: JDFM
+Cross-Analysis</h2>
+<p>This appendix documents a cross-analysis with the JSON Declarative
+Form Model (JDFM), an independent specification effort addressing the
+same problem space. Several JDFM design choices address gaps in Formspec
+or make implicit choices explicit. This appendix is informative except
+where noted as normative.</p>
+<h3 id="c.1-features-adopted-as-amendments">C.1 Features Adopted as
+Amendments</h3>
+<h4 id="c.1.1-first-class-money-type-normative">C.1.1 First-Class Money
+Type (Normative)</h4>
+<p>JDFM defines <code>Money</code> as a first-class runtime type: an
+object with <code>amount</code> (arbitrary-precision decimal) and
+<code>currency</code> (ISO 4217 code). This is materially superior to
+Formspec’s current approach of modeling financial fields as
+<code>decimal</code> with a display <code>prefix</code>.</p>
+<p>The problem: <code>decimal</code> with <code>prefix: "$"</code> loses
+the currency identity. A field holding <code>50000.00</code> with prefix
+<code>"$"</code> is indistinguishable from one holding
+<code>50000.00</code> with prefix <code>"€"</code> at the data layer.
+Currency-aware operations (addition across fields, cross-currency
+detection) are impossible.</p>
+<p><strong>Amendment.</strong> Formspec adds <code>"money"</code> as a
+core data type:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 44%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Data Type</th>
+<th>JSON Representation</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>"money"</code></td>
+<td><code>{ "amount": "50000.00", "currency": "USD" }</code></td>
+<td>A monetary value. <code>amount</code> is a decimal string (not a
+floating-point number) to preserve precision. <code>currency</code> is
+an ISO 4217 three-letter code.</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>amount</code> field MUST be serialized as a JSON string
+containing a decimal number, not as a JSON number. This avoids IEEE 754
+precision loss on values like <code>0.10</code> (which cannot be
+represented exactly in binary floating-point).</p>
+<p>FEL adds the following money functions:</p>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 25%" />
+<col style="width: 20%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>money(amount, currency)</code></td>
+<td><code>money(number, string) → money</code></td>
+<td>money</td>
+<td>Construct a Money value.</td>
+</tr>
+<tr class="even">
+<td><code>moneyAmount(m)</code></td>
+<td><code>moneyAmount(money) → number</code></td>
+<td>number</td>
+<td>Extract the decimal amount.</td>
+</tr>
+<tr class="odd">
+<td><code>moneyCurrency(m)</code></td>
+<td><code>moneyCurrency(money) → string</code></td>
+<td>string</td>
+<td>Extract the ISO 4217 currency code.</td>
+</tr>
+<tr class="even">
+<td><code>moneyAdd(a, b)</code></td>
+<td><code>moneyAdd(money, money) → money</code></td>
+<td>money</td>
+<td>Add two Money values. Operands MUST have the same currency;
+mismatched currencies produce a type error.</td>
+</tr>
+<tr class="odd">
+<td><code>moneySum(arr)</code></td>
+<td><code>moneySum(array) → money</code></td>
+<td>money</td>
+<td>Sum an array of Money values. All elements MUST share the same
+currency. Empty array returns <code>null</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Example — budget line items with currency-safe summation:</p>
+<div class="sourceCode" id="cb72"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;key&quot;</span><span class="fu">:</span> <span class="st">&quot;award_amount&quot;</span><span class="fu">,</span></span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;field&quot;</span><span class="fu">,</span></span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;dataType&quot;</span><span class="fu">:</span> <span class="st">&quot;money&quot;</span><span class="fu">,</span></span>
+<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;Authorized Award Amount&quot;</span></span>
+<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb73"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;path&quot;</span><span class="fu">:</span> <span class="st">&quot;total_budget&quot;</span><span class="fu">,</span></span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;calculate&quot;</span><span class="fu">:</span> <span class="st">&quot;moneySum($line_items[*].amount)&quot;</span></span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Processors that do not support the <code>money</code> type MUST fall
+back to treating the value as a JSON object with <code>amount</code> and
+<code>currency</code> string properties, validating only structural
+correctness.</p>
+<h4 id="c.1.2-arbitrary-precision-decimal-semantics-normative">C.1.2
+Arbitrary-Precision Decimal Semantics (Normative)</h4>
+<p>JDFM specifies <code>Decimal</code> as arbitrary-precision base-10.
+Formspec currently defines <code>number</code> as “IEEE 754 double.”
+This is inadequate for financial calculations where
+<code>0.1 + 0.2 ≠ 0.3</code> in binary floating-point.</p>
+<p><strong>Amendment.</strong> The FEL <code>number</code> type is
+redefined:</p>
+<blockquote>
+<p>FEL <code>number</code> values MUST be treated as
+<strong>decimal</strong> (base-10) values during arithmetic evaluation.
+Implementations MUST NOT introduce binary floating-point rounding errors
+in arithmetic operations on values that are representable as finite
+decimal fractions. The minimum precision MUST be sufficient to exactly
+represent any value with up to 18 significant decimal digits.</p>
+<p>JSON serialization uses JSON number syntax per RFC 8259.
+Implementations SHOULD preserve the original decimal representation when
+round-tripping values through the Instance.</p>
+</blockquote>
+<p>This aligns with how financial systems, databases
+(<code>DECIMAL</code>/<code>NUMERIC</code> types), and spreadsheets
+handle arithmetic. It also matches JDFM’s <code>Decimal</code> type.</p>
+<h4 id="c.1.3-excluded-value-evaluation-semantics-normative">C.1.3
+Excluded-Value Evaluation Semantics (Normative)</h4>
+<p>JDFM’s <code>whenExcluded.evaluationValue</code> addresses a question
+Formspec leaves ambiguous: when a field is non-relevant, what do
+<em>downstream expressions</em> see when they reference it?</p>
+<p>Formspec §5.6 rule 4 says “The computed value exists in the in-memory
+data model and MAY be referenced by other expressions.” But this
+conflates two cases:</p>
+<ol type="1">
+<li>A <code>calculate</code>-bound field that is non-relevant — its
+value is still computed (rule 4), so downstream references work.</li>
+<li>A user-input field that is non-relevant — its value was entered
+before the field became non-relevant. Should downstream expressions see
+the stale value, <code>null</code>, or <code>Missing</code>?</li>
+</ol>
+<p><strong>Amendment.</strong> Formspec adds <code>excludedValue</code>
+to the Bind schema:</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 37%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Behavior</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>"preserve"</code></td>
+<td>Downstream expressions see the field’s last value, even while
+non-relevant. This is the DEFAULT.</td>
+<td>Calculations that should remain stable when a section is temporarily
+hidden.</td>
+</tr>
+<tr class="even">
+<td><code>"null"</code></td>
+<td>Downstream expressions see <code>null</code> when the field is
+non-relevant.</td>
+<td>Expressions that should react to a field’s relevance state (e.g.,
+conditional totals that should exclude hidden line items).</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb74"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;path&quot;</span><span class="fu">:</span> <span class="st">&quot;optional_section.subtotal&quot;</span><span class="fu">,</span></span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;relevant&quot;</span><span class="fu">:</span> <span class="st">&quot;$include_optional = true&quot;</span><span class="fu">,</span></span>
+<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;excludedValue&quot;</span><span class="fu">:</span> <span class="st">&quot;null&quot;</span></span>
+<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>This makes an explicit choice where Formspec previously left behavior
+implementation-defined. The <code>"preserve"</code> default maintains
+backward compatibility with §5.6 rule 4.</p>
+<p>For the submission question (what value appears in the Response), the
+<code>nonRelevantBehavior</code> property (Appendix B, §B.2.1) continues
+to govern. <code>excludedValue</code> controls the <em>in-memory
+evaluation model</em>; <code>nonRelevantBehavior</code> controls the
+<em>serialized output</em>.</p>
+<h4 id="c.1.4-conditional-shape-activation-normative">C.1.4 Conditional
+Shape Activation (Normative)</h4>
+<p>JDFM defines <code>activeWhen</code> on Shapes — a boolean expression
+that controls whether the shape is evaluated at all. Formspec’s current
+design evaluates all shapes whose target path exists in the instance
+(subject to non-relevant suppression), with no way to conditionally
+activate a shape independent of its target’s relevance.</p>
+<p>This matters for rules like “validate budget totals only after the
+user has confirmed the budget is final” or “apply strict validation
+rules only when the response status is ‘complete’.”</p>
+<p><strong>Amendment.</strong> Formspec adds <code>activeWhen</code> to
+the Shape schema:</p>
+<div class="sourceCode" id="cb75"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;id&quot;</span><span class="fu">:</span> <span class="st">&quot;strict_budget_check&quot;</span><span class="fu">,</span></span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;target&quot;</span><span class="fu">:</span> <span class="st">&quot;budget_section&quot;</span><span class="fu">,</span></span>
+<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;severity&quot;</span><span class="fu">:</span> <span class="st">&quot;error&quot;</span><span class="fu">,</span></span>
+<span id="cb75-5"><a href="#cb75-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;message&quot;</span><span class="fu">:</span> <span class="st">&quot;Budget line items must sum to the authorized award amount.&quot;</span><span class="fu">,</span></span>
+<span id="cb75-6"><a href="#cb75-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;constraint&quot;</span><span class="fu">:</span> <span class="st">&quot;moneyAmount(moneySum($line_items[*].amount)) = moneyAmount($award_amount)&quot;</span><span class="fu">,</span></span>
+<span id="cb75-7"><a href="#cb75-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;activeWhen&quot;</span><span class="fu">:</span> <span class="st">&quot;$budget_confirmed = true&quot;</span></span>
+<span id="cb75-8"><a href="#cb75-8" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 14%" />
+<col style="width: 30%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Property</th>
+<th>Type</th>
+<th>Cardinality</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>activeWhen</code></td>
+<td>string (FEL → boolean)</td>
+<td>0..1 (OPTIONAL)</td>
+<td>When present, the shape is evaluated only when this expression
+evaluates to <code>true</code>. When absent or <code>true</code>, the
+shape is always evaluated (subject to non-relevant suppression). When
+<code>false</code>, the shape produces no ValidationResults.</td>
+</tr>
+</tbody>
+</table>
+<p><code>activeWhen</code> is evaluated during the Revalidate phase,
+<em>before</em> the shape’s <code>constraint</code> expression. If
+<code>activeWhen</code> evaluates to <code>false</code>, the shape is
+skipped entirely — it produces no results of any severity.</p>
+<p><code>activeWhen</code> is independent of the target’s relevance. A
+shape with <code>activeWhen: "true"</code> targeting a non-relevant path
+still produces no results (non-relevant suppression takes precedence per
+§5.6 rule 1).</p>
+<h4 id="c.1.5-fieldref-vs-datapointer-distinction">C.1.5 FieldRef vs
+DataPointer Distinction</h4>
+<p>JDFM distinguishes two addressing vocabularies:</p>
+<ul>
+<li><strong>FieldRef</strong>: stable definition-time paths
+(<code>budget.line_items.amount</code>) used in Binds and Shapes.</li>
+<li><strong>DataPointer</strong>: runtime JSON Pointer paths
+(<code>/budget/line_items/2/amount</code>) used in ValidationResults to
+identify specific instances within repeats.</li>
+</ul>
+<p>Formspec uses <code>path</code> for both purposes. This works when a
+path targets a single field, but is ambiguous for repeatable contexts:
+<code>line_items[*].amount</code> is a valid Bind target (meaning “the
+amount field in every row”), but a ValidationResult must identify
+<em>which row</em> failed.</p>
+<p><strong>Amendment.</strong> Formspec clarifies:</p>
+<ul>
+<li><strong>Bind <code>path</code> and Shape
+<code>target</code></strong> use <strong>FieldRef</strong> syntax (the
+existing dot-notation with <code>[*]</code> wildcards). These are
+definition-time addresses.</li>
+<li><strong>ValidationResult <code>path</code></strong> uses
+<strong>resolved instance paths</strong> with concrete indexes:
+<code>line_items[3].amount</code> (1-based, matching <code>@index</code>
+semantics). This unambiguously identifies the specific data node that
+failed.</li>
+</ul>
+<p>This distinction was implicit in Formspec’s existing examples (§7.3.3
+shows <code>"path": "categories[1]"</code> with a specific index) but is
+now explicitly normative.</p>
+<h4 id="c.1.6-repeat-navigation-parent-function">C.1.6 Repeat
+Navigation: <code>parent()</code> Function</h4>
+<p>JDFM defines <code>parent()</code> to navigate one level up from the
+current repeat context. Formspec has <code>@current</code> (the current
+repeat instance) and <code>@index</code> / <code>@count</code>, but no
+upward navigation.</p>
+<p><strong>Amendment.</strong> FEL adds <code>parent()</code>:</p>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 25%" />
+<col style="width: 20%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>parent()</code></td>
+<td><code>parent() → object</code></td>
+<td>object</td>
+<td>Returns the parent context of the current repeat row. Within a
+nested repeat, <code>parent()</code> returns the enclosing repeat row.
+At the top-level repeat, <code>parent()</code> returns the root instance
+object.</td>
+</tr>
+</tbody>
+</table>
+<p>Example — accessing a group-level field from within a nested
+repeat:</p>
+<pre><code>parent().section_total</code></pre>
+<p>Example — referencing an outer repeat’s field from an inner
+repeat:</p>
+<pre><code>parent().parent().outer_field</code></pre>
+<p><code>parent()</code> MUST NOT be called outside a repeat context.
+Calling <code>parent()</code> at the root instance level is a definition
+error.</p>
+<h3 id="c.2-features-already-covered">C.2 Features Already Covered</h3>
+<p><strong>Three-layer separation (instance / behavior /
+constraint).</strong> Both specs define this identically. JDFM uses the
+terms “Instance layer,” “Behavior layer,” and “Constraint layer”;
+Formspec uses “Structure Layer,” “Behavior Layer,” and the combined
+Bind/Shape mechanism.</p>
+<p><strong>Expression language design.</strong> Both define
+deterministic, side-effect-free expression languages with dependency
+extraction. Syntax differs (<code>${field}</code> in JDFM-EL vs
+<code>$field</code> in FEL) but semantics are convergent.</p>
+<p><strong><code>whenExcluded.submission</code> policy.</strong> JDFM’s
+<code>"prune" | "null" | "default"</code> maps to Formspec’s
+<code>nonRelevantBehavior</code>:
+<code>"remove" | "empty" | "keep"</code> plus the Bind-level
+<code>default</code> property (Appendix B, §B.2.1).</p>
+<p><strong>Repeat context variables.</strong> JDFM’s <code>@</code> /
+<code>idx()</code> map to Formspec’s <code>@current</code> /
+<code>@index</code>. JDFM uses zero-based indexing; Formspec uses
+1-based (matching XForms convention).</p>
+<p><strong>Composition operators on shapes.</strong> JDFM’s
+<code>allOf</code>/<code>anyOf</code>/<code>oneOf</code>/<code>not</code>
+map directly to Formspec’s
+<code>and</code>/<code>or</code>/<code>xone</code>/<code>not</code>.</p>
+<p><strong>Named instances.</strong> JDFM’s <code>inst(name)</code> maps
+to Formspec’s <code>@instance('name')</code>.</p>
+<p><strong>Canonical identity + version + status lifecycle.</strong>
+Both specs adopt the FHIR R5 pattern identically.</p>
+<p><strong>Response pinning.</strong> Both specs require responses to
+reference a specific definition version.</p>
+<h3 id="c.3-design-divergences-no-action">C.3 Design Divergences (No
+Action)</h3>
+<p><strong><code>${field}</code> vs <code>$field</code> reference
+syntax.</strong> JDFM uses <code>${...}</code> (ODK-style with braces);
+Formspec uses <code>$field</code> (no braces). Both are valid choices.
+Formspec’s syntax is more concise for simple references; JDFM’s is safer
+for field names containing special characters. No change — both are
+internally consistent.</p>
+<p><strong>Zero-based vs 1-based repeat indexing.</strong> JDFM uses
+zero-based (<code>idx()</code> returns 0 for the first item); Formspec
+uses 1-based (<code>@index</code> returns 1). 1-based aligns with
+XForms, spreadsheet conventions, and human counting. No change.</p>
+<p><strong>Separate <code>constraint</code> from <code>assert</code>
+structure.</strong> JDFM wraps shape assertions in an explicit
+<code>{ "expr": "..." }</code> object, allowing composition and
+expression to be structurally distinct. Formspec uses a flat
+<code>constraint</code> string on shapes. The JDFM approach is more
+explicit but more verbose. No change — Formspec’s composition operators
+(<code>and</code>/<code>or</code>/<code>not</code>/<code>xone</code>)
+achieve the same expressiveness.</p>
+<p><strong><code>Missing</code> as a distinct type from
+<code>Null</code>.</strong> JDFM distinguishes <code>Missing</code>
+(path doesn’t exist in instance) from <code>Null</code> (path exists,
+value is null). Formspec collapses both to <code>null</code> (§3.8.3).
+The distinction is theoretically cleaner but adds complexity for form
+authors who must reason about three states (missing, null, empty string)
+instead of two (null, empty string). Formspec’s simplification is
+intentional. No change.</p>
+<p><strong>String concatenation.</strong> JDFM requires
+<code>concat()</code> and forbids <code>+</code> for strings. Formspec
+uses <code>&amp;</code> as the concatenation operator (distinct from
+<code>+</code> which is arithmetic-only). Both prevent the ambiguity of
+<code>+</code> on mixed types. No change.</p>
 <aside id="footnotes" class="footnotes footnotes-end-of-document"
 role="doc-endnotes">
 <hr />
