@@ -4133,136 +4133,231 @@ that address them. This appendix is informative.
 
 ---
 
-## Appendix B: XForms 2.0 Delta Analysis
+## Appendix B: Proposed Amendments
 
-This appendix documents features from the W3C XForms 2.0 Community Group
-specification that were analyzed for inclusion in Formspec. XForms 2.0 is a
-living document maintained by the XForms Users Community Group; it is not a
-formal W3C Recommendation. This appendix is informative.
+This appendix collects 28 proposed amendments identified through cross-analysis
+of XForms 2.0, JDFM, UDFA, and UDF. None have been integrated into the
+normative body (§§1–9). Each amendment is self-contained and marked with its
+source analysis. This appendix is informative; amendments become normative
+only when folded into the main specification text.
 
-### B.1 Features Incorporated into Formspec
+Amendments are organized by theme rather than source document.
 
-The following XForms 2.0 features are already addressed by Formspec's design,
-though some warrant clarification or minor enhancement.
+---
 
-**Per-constraint error messages.** XForms 2.0 allows multiple `<bind>` elements
-to target the same node, each with its own `alert` attribute. Formspec addresses
-this through two complementary mechanisms: (a) the `constraintMessage` property
-on Bind objects, and (b) Validation Shapes (§5.2), which are inherently
-per-rule — each Shape carries its own `message`. For fields requiring multiple
-distinct validation rules with distinct messages, implementors SHOULD use
-multiple Shapes rather than a single Bind constraint.
+### B.1 Data Types & Arithmetic
 
-**Initial value expressions.** XForms 2.0 adds an `initial` MIP that evaluates
-an expression once during initialization. Formspec's `initialValue` on Items
-(§4.2.3) is currently defined as a static value. See §B.3 below for a
-recommended enhancement.
+#### B.1.1 First-Class Money Type
 
-**Batched/deferred updates.** XForms 2.0 clarifies that updates are deferred
-during action handler processing. Formspec specifies this in §2.4 (Deferred
-Processing): "During batch operations, phases 1–4 are deferred until the batch
-completes."
+*Source: JDFM (C.1.1)*
 
-**Empty non-required fields are valid.** XForms 2.0 clarifies that empty
-non-required fields are always valid. Formspec's validation semantics (§5.6)
-already specify that non-relevant fields skip validation and that `required`
-controls whether emptiness is an error.
+Formspec adds `"money"` as a core data type:
 
-**JSON instance data.** XForms 2.0 adds JSON support by converting JSON to an
-XML representation. Formspec is JSON-native and requires no conversion layer.
+| Data Type | JSON Representation | Description |
+|-----------|-------------------|-------------|
+| `"money"` | `{ "amount": "50000.00", "currency": "USD" }` | A monetary value. `amount` is a decimal string (not a floating-point number) to preserve precision. `currency` is an ISO 4217 three-letter code. |
 
-**Variables.** XForms 2.0 adds a `<var>` element for named values. Formspec
-provides this via the Variables mechanism (§4.5).
+The `amount` field MUST be serialized as a JSON string containing a decimal
+number, not as a JSON number. This avoids IEEE 754 precision loss on values
+like `0.10`.
 
-**Custom functions.** XForms 2.0 adds user-defined XPath functions via a
-`<function>` element. Formspec provides this capability via Extension Functions
-(§3.12, §8.2).
+FEL adds the following money functions:
 
-### B.2 Features Adopted as Amendments
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `money(amount, currency)` | `money(number, string) → money` | money | Construct a Money value. |
+| `moneyAmount(m)` | `moneyAmount(money) → number` | number | Extract the decimal amount. |
+| `moneyCurrency(m)` | `moneyCurrency(money) → string` | string | Extract the ISO 4217 currency code. |
+| `moneyAdd(a, b)` | `moneyAdd(money, money) → money` | money | Add two Money values. Operands MUST have the same currency; mismatched currencies produce a type error. |
+| `moneySum(arr)` | `moneySum(array) → money` | money | Sum an array of Money values. All elements MUST share the same currency. Empty array returns `null`. |
 
-The following features from XForms 2.0 represent genuine gaps in the current
-Formspec specification. They are incorporated here as normative amendments.
+Processors that do not support the `money` type MUST fall back to treating
+the value as a JSON object with `amount` and `currency` string properties,
+validating only structural correctness.
 
-#### B.2.1 Non-Relevant Submission Modes
+#### B.1.2 Arbitrary-Precision Decimal Semantics
 
-XForms 2.0 replaces the binary `relevant` attribute on submission with a
-three-valued `nonrelevant` attribute: `keep`, `remove`, `empty`. This addresses
-a real design question: when submitting form data, some systems require the full
-data structure (with blanked-out hidden fields) rather than a pruned tree.
+*Source: JDFM (C.1.2)*
 
-Formspec adopts this as the `nonRelevantBehavior` property on the Definition:
+The FEL `number` type is redefined:
+
+> FEL `number` values MUST be treated as **decimal** (base-10) values during
+> arithmetic evaluation. Implementations MUST NOT introduce binary
+> floating-point rounding errors in arithmetic operations on values that are
+> representable as finite decimal fractions. The minimum precision MUST be
+> sufficient to exactly represent any value with up to 18 significant decimal
+> digits.
+>
+> JSON serialization uses JSON number syntax per RFC 8259. Implementations
+> SHOULD preserve the original decimal representation when round-tripping
+> values through the Instance.
+
+This supersedes the current §3.4.1 definition of `number` as "IEEE 754
+double-precision floating-point."
+
+---
+
+### B.2 Expression Language Additions
+
+#### B.2.1 Date and DateTime Literals
+
+*Source: UDF (F.1.4)*
+
+FEL adds date and dateTime literal syntax:
+
+| Literal | Format | Example |
+|---------|--------|--------|
+| Date | `@YYYY-MM-DD` | `@2025-01-15` |
+| DateTime | `@YYYY-MM-DDThh:mm:ssZ` | `@2025-01-15T14:30:00Z` |
+
+The `@` prefix avoids ambiguity with field references (`$`) and numeric
+literals. The format after `@` MUST conform to ISO 8601.
+
+The `date()` and `dateTime()` cast functions remain available for parsing
+string values at runtime. Literals are for compile-time constants.
+
+Updated grammar production (extends §3.7):
+
+```
+Literal ← NumberLiteral / StringLiteral / 'true' / 'false' / 'null'
+         / DateTimeLiteral / DateLiteral
+DateLiteral     ← '@' [0-9]{4} '-' [0-9]{2} '-' [0-9]{2}
+DateTimeLiteral ← '@' [0-9]{4} '-' [0-9]{2} '-' [0-9]{2} 'T'
+                   [0-9]{2} ':' [0-9]{2} ':' [0-9]{2} ('Z' / [+-][0-9]{2}':'[0-9]{2})
+```
+
+This supersedes the §3.4.1 note "No date literal syntax; use `date('2025-07-10')`."
+
+#### B.2.2 MIP-State Query Functions
+
+*Source: XForms 2.0 (B.2.4)*
+
+FEL adds functions to query the computed state of model item properties:
+
+| Function | Signature | Returns |
+|----------|-----------|--------|
+| `valid(ref)` | `valid($path) → boolean` | `true` if the referenced field has no error-severity validation results |
+| `relevant(ref)` | `relevant($path) → boolean` | `true` if the referenced field is currently relevant |
+| `readonly(ref)` | `readonly($path) → boolean` | `true` if the referenced field is currently readonly |
+| `required(ref)` | `required($path) → boolean` | `true` if the referenced field is currently required |
+
+These functions read the **current computed state** of the referenced field's
+MIP, not the raw expression. They are evaluated during the Revalidate phase,
+after all Recalculate MIPs have been resolved.
+
+```
+if(not(valid($ein)), "Please correct EIN before proceeding", "")
+```
+
+#### B.2.3 Row-Relative Navigation (`prev()`, `next()`)
+
+*Source: UDFA (D.1.1)*
+
+FEL adds row-relative accessor functions for repeat contexts:
+
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `prev()` | `prev() → object \| null` | object or null | Returns the previous row (`@index - 1`). Returns `null` for the first row. |
+| `next()` | `next() → object \| null` | object or null | Returns the next row (`@index + 1`). Returns `null` for the last row. |
+
+Usage:
+
+```
+prev().cumulative_total + @current.amount
+```
+
+These functions MUST only be called within a repeat context. Calling `prev()`
+or `next()` outside a repeat is a definition error.
+
+**Dependency semantics:** When row order changes (insert, delete, reorder),
+all expressions using `prev()` or `next()` in the affected repeat MUST be
+re-evaluated.
+
+#### B.2.4 `parent()` Function
+
+*Source: JDFM (C.1.6)*
+
+FEL adds `parent()` for upward navigation in nested repeats:
+
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `parent()` | `parent() → object` | object | Returns the parent context of the current repeat row. Within a nested repeat, returns the enclosing repeat row. At the top-level repeat, returns the root instance object. |
+
+```
+parent().section_total
+parent().parent().outer_field
+```
+
+`parent()` MUST NOT be called outside a repeat context.
+
+#### B.2.5 Additional Built-in Functions
+
+*Source: UDF (F.1.5)*
+
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `countWhere(array, expr)` | `countWhere(array, boolean) → number` | number | Count of elements where the expression evaluates to `true`. Within the expression, `$` refers to the current element. |
+| `selected(field, value)` | `selected(array, string) → boolean` | boolean | Returns `true` if the multiChoice field's value array contains the specified value. |
+| `format(template, ...)` | `format(string, any...) → string` | string | String interpolation with positional `{0}`, `{1}` placeholders. |
+| `power(base, exp)` | `power(number, number) → number` | number | Exponentiation. `power(2, 10)` returns `1024`. |
+
+---
+
+### B.3 Bind & Field Properties
+
+#### B.3.1 Non-Relevant Submission Modes (`nonRelevantBehavior`)
+
+*Source: XForms 2.0 (B.2.1)*
+
+Formspec adds a `nonRelevantBehavior` property at both Definition and Bind
+level, replacing the binary `excludeNonRelevant` flag in §5.6:
 
 | Value | Behavior |
 |-------|----------|
-| `"remove"` | Non-relevant nodes and their descendants are excluded from the submitted Response instance. This is the DEFAULT. |
-| `"empty"` | Non-relevant nodes are retained in the submitted Response instance, but their values are set to `null`. The data structure is preserved. |
-| `"keep"` | Non-relevant nodes are retained in the submitted Response instance with their current values intact. |
+| `"remove"` | Non-relevant nodes are excluded from the submitted Response. **DEFAULT.** |
+| `"empty"` | Non-relevant nodes are retained but values set to `null`. |
+| `"keep"` | Non-relevant nodes are retained with current values intact. |
 
-This property is declared at the Definition level:
+Declared at the Definition level; Binds MAY override per-path:
 
 ```json
 {
   "$formspec": "1.0",
-  "url": "...",
   "nonRelevantBehavior": "empty",
-  ...
-}
-```
-
-Binds MAY override this for individual paths:
-
-```json
-{
-  "path": "sensitive_section",
-  "relevant": "$show_sensitive = true",
-  "nonRelevantBehavior": "remove"
+  "binds": [
+    {
+      "path": "sensitive_section",
+      "relevant": "$show_sensitive = true",
+      "nonRelevantBehavior": "remove"
+    }
+  ]
 }
 ```
 
 The per-Bind value takes precedence over the Definition-level default.
 
-#### B.2.2 Whitespace Handling
+#### B.3.2 Whitespace Handling
 
-XForms 2.0 adds a `whitespace` MIP controlling how text values are normalized
-on input. This prevents an entire class of data quality issues (leading/trailing
-spaces in names, multiple spaces in addresses, etc.).
+*Source: XForms 2.0 (B.2.2)*
 
-Formspec adopts this as the `whitespace` property on Bind objects:
+Formspec adds `whitespace` to the Bind schema:
 
 | Value | Behavior |
 |-------|----------|
-| `"preserve"` | No whitespace modification. This is the DEFAULT. |
-| `"trim"` | Remove leading and trailing whitespace characters. |
-| `"normalize"` | Trim, then collapse all internal runs of whitespace to a single space. |
-| `"remove"` | Remove all whitespace characters. Useful for identifiers (phone numbers, card numbers, EINs). |
-
-```json
-{
-  "path": "contact.full_name",
-  "whitespace": "normalize"
-},
-{
-  "path": "contact.phone_number",
-  "whitespace": "remove"
-}
-```
+| `"preserve"` | No modification. **DEFAULT.** |
+| `"trim"` | Remove leading and trailing whitespace. |
+| `"normalize"` | Trim, then collapse internal whitespace runs to a single space. |
+| `"remove"` | Remove all whitespace. Useful for identifiers (phone numbers, EINs). |
 
 Whitespace transformation is applied **before** the value is stored in the
-Instance and **before** any constraint or type validation executes. This means
-validators see the post-whitespace value.
+Instance and **before** any constraint or type validation. For `"integer"` or
+`"decimal"` fields, whitespace is always trimmed regardless of this setting.
 
-For fields with `dataType` of `"integer"` or `"decimal"`, whitespace is always
-trimmed regardless of this setting (leading/trailing whitespace on numeric
-values is never meaningful).
+#### B.3.3 Expression-Based Initial Values
 
-#### B.2.3 Expression-Based Initial Values
+*Source: XForms 2.0 (B.2.3)*
 
-XForms 2.0's `initial` MIP evaluates an expression once during initialization.
-Formspec's `initialValue` on Items is currently defined as a static value,
-which is insufficient for cases like "default to today's date" or "default to
-a value from a secondary instance."
-
-Amendment: The `initialValue` property on Field items MAY be either:
+The `initialValue` property on Field items MAY be either:
 
 1. **A literal value** — any JSON value conforming to the field's `dataType`.
 2. **An expression string** — prefixed with `=` to distinguish from literals.
@@ -4276,222 +4371,24 @@ Amendment: The `initialValue` property on Field items MAY be either:
 }
 ```
 
-```json
-{
-  "key": "entity_name",
-  "type": "field",
-  "dataType": "string",
-  "initialValue": "=@instance('entity').name"
-}
-```
-
 An `initialValue` expression is evaluated **once** when a new Response is
 created or when a new repeat instance is added. It is NOT re-evaluated when
 dependencies change (use `calculate` on a Bind for continuous recalculation).
 
-The `=` prefix convention is chosen because:
-- It matches spreadsheet conventions (Excel, Google Sheets use `=` to introduce formulas)
-- It is unambiguous — no valid static string value would begin with `=` in practice
-- It avoids the need for a separate `initialExpression` property
+This supersedes the §4.2.3 description of `initialValue` as "Static initial
+value."
 
-#### B.2.4 MIP-State Query Functions
+#### B.3.4 Excluded-Value Evaluation Semantics (`excludedValue`)
 
-XForms 2.0 adds functions to query the current state of model item properties:
-`valid()`, `relevant()`, `readonly()`, `required()`. These enable expressions
-like "show a summary of all invalid fields" or "count how many required fields
-are empty."
+*Source: JDFM (C.1.3)*
 
-Formspec adopts these as built-in FEL functions:
+Formspec adds `excludedValue` to the Bind schema to clarify what downstream
+expressions see when a field is non-relevant:
 
-| Function | Signature | Returns |
-|----------|-----------|---------|
-| `valid(ref)` | `valid($path) → boolean` | `true` if the referenced field has no error-severity validation results |
-| `relevant(ref)` | `relevant($path) → boolean` | `true` if the referenced field is currently relevant |
-| `readonly(ref)` | `readonly($path) → boolean` | `true` if the referenced field is currently readonly |
-| `required(ref)` | `required($path) → boolean` | `true` if the referenced field is currently required |
-
-The argument is a field reference using standard FEL `$path` syntax:
-
-```
-if(not(valid($ein)), "Please correct EIN before proceeding", "")
-```
-
-```
-count($line_items[*]) > 0 and valid($line_items[*].amount)
-```
-
-These functions read the **current computed state** of the referenced field's
-MIP, not the raw expression. They are evaluated during the Revalidate phase,
-after all Recalculate MIPs have been resolved.
-
-### B.3 Features Intentionally Excluded
-
-The following XForms 2.0 features were evaluated and intentionally excluded
-from Formspec.
-
-**Attribute Value Templates (AVTs).** XForms 2.0 allows `{expression}` syntax
-in most XML attributes for dynamic values. Formspec's JSON format does not have
-"attributes" in the XML sense — properties are already first-class JSON values.
-Where dynamic values are needed, FEL expressions serve this purpose directly.
-AVTs solve an XML-specific ergonomic problem.
-
-**Declarative sorting (`sort` MIP).** XForms 2.0 adds `sort`/`direction`/
-`collation` MIPs to keep node-sets in sorted order. This is a presentation
-concern in the form context — the order items are displayed vs. the order they
-are stored are separate. Sort order belongs in the presentation layer.
-
-**Dialog/modal container.** XForms 2.0 adds a `<dialog>` element. Modals are a
-UI pattern, not a data model concern. Formspec's presentation layer exclusion
-applies.
-
-**Collapsible groups (`collapse` attribute).** This is a presentation concern —
-whether a section is expanded or collapsed is a UI state, not a data or
-validation concern.
-
-**Model-based switch/case.** XForms 2.0 enhances `<switch>` with data binding.
-Formspec's `relevant` expressions on Binds provide equivalent functionality:
-each "case" is a group with a `relevant` expression, and mutual exclusion can
-be enforced via validation shapes.
-
-**`select1` deselection.** This is a UI behavior detail.
-
-**CSS pseudo-elements for repeats.** CSS is a presentation layer technology.
-
-**Repeat over non-node sequences (e.g., `1 to 10`).** Formspec's repeatable
-groups bind to data arrays, not computed sequences. A computed sequence that
-needs UI elements should be materialized as data nodes first (via a `calculate`
-bind that populates the array).
-
-**User-defined functions as inline expressions.** XForms 2.0 allows defining
-functions with inline expression bodies (`<function>` with `<result>` child).
-Formspec supports registering external functions (§8.2) but does not support
-defining function bodies inline in the Definition. Inline function definitions
-would require adding control flow to FEL (the `if/then/else` already exists,
-but recursion and named parameters would be needed), significantly increasing
-language complexity. Extension functions with external implementations are the
-preferred approach.
-
-**URI manipulation functions.** Functions like `uri-scheme()`, `uri-host()`,
-`uri-query()` solve HTTP-specific problems. These can be added as extension
-functions by implementations that need them.
-
-**Cryptographic functions.** Domain-specific. Suitable as extension functions.
-
-**`eval()` / `eval-in-context()`.** Dynamic expression evaluation introduces
-security and predictability concerns incompatible with FEL's determinism
-guarantee (§3.1, goal 4).
-
-
-
----
-
-## Appendix C: JDFM Cross-Analysis
-
-This appendix documents a cross-analysis with the JSON Declarative Form Model
-(JDFM), an independent specification effort addressing the same problem space.
-Several JDFM design choices address gaps in Formspec or make implicit choices
-explicit. This appendix is informative except where noted as normative.
-
-### C.1 Features Adopted as Amendments
-
-#### C.1.1 First-Class Money Type (Normative)
-
-JDFM defines `Money` as a first-class runtime type: an object with `amount`
-(arbitrary-precision decimal) and `currency` (ISO 4217 code). This is
-materially superior to Formspec's current approach of modeling financial
-fields as `decimal` with a display `prefix`.
-
-The problem: `decimal` with `prefix: "$"` loses the currency identity. A
-field holding `50000.00` with prefix `"$"` is indistinguishable from one
-holding `50000.00` with prefix `"€"` at the data layer. Currency-aware
-operations (addition across fields, cross-currency detection) are impossible.
-
-**Amendment.** Formspec adds `"money"` as a core data type:
-
-| Data Type | JSON Representation | Description |
-|-----------|-------------------|-------------|
-| `"money"` | `{ "amount": "50000.00", "currency": "USD" }` | A monetary value. `amount` is a decimal string (not a floating-point number) to preserve precision. `currency` is an ISO 4217 three-letter code. |
-
-The `amount` field MUST be serialized as a JSON string containing a decimal
-number, not as a JSON number. This avoids IEEE 754 precision loss on values
-like `0.10` (which cannot be represented exactly in binary floating-point).
-
-FEL adds the following money functions:
-
-| Function | Signature | Returns | Description |
-|----------|-----------|---------|-------------|
-| `money(amount, currency)` | `money(number, string) → money` | money | Construct a Money value. |
-| `moneyAmount(m)` | `moneyAmount(money) → number` | number | Extract the decimal amount. |
-| `moneyCurrency(m)` | `moneyCurrency(money) → string` | string | Extract the ISO 4217 currency code. |
-| `moneyAdd(a, b)` | `moneyAdd(money, money) → money` | money | Add two Money values. Operands MUST have the same currency; mismatched currencies produce a type error. |
-| `moneySum(arr)` | `moneySum(array) → money` | money | Sum an array of Money values. All elements MUST share the same currency. Empty array returns `null`. |
-
-Example — budget line items with currency-safe summation:
-
-```json
-{
-  "key": "award_amount",
-  "type": "field",
-  "dataType": "money",
-  "label": "Authorized Award Amount"
-}
-```
-
-```json
-{
-  "path": "total_budget",
-  "calculate": "moneySum($line_items[*].amount)"
-}
-```
-
-Processors that do not support the `money` type MUST fall back to treating
-the value as a JSON object with `amount` and `currency` string properties,
-validating only structural correctness.
-
-#### C.1.2 Arbitrary-Precision Decimal Semantics (Normative)
-
-JDFM specifies `Decimal` as arbitrary-precision base-10. Formspec currently
-defines `number` as "IEEE 754 double." This is inadequate for financial
-calculations where `0.1 + 0.2 ≠ 0.3` in binary floating-point.
-
-**Amendment.** The FEL `number` type is redefined:
-
-> FEL `number` values MUST be treated as **decimal** (base-10) values during
-> arithmetic evaluation. Implementations MUST NOT introduce binary
-> floating-point rounding errors in arithmetic operations on values that are
-> representable as finite decimal fractions. The minimum precision MUST be
-> sufficient to exactly represent any value with up to 18 significant decimal
-> digits.
->
-> JSON serialization uses JSON number syntax per RFC 8259. Implementations
-> SHOULD preserve the original decimal representation when round-tripping
-> values through the Instance.
-
-This aligns with how financial systems, databases (`DECIMAL`/`NUMERIC` types),
-and spreadsheets handle arithmetic. It also matches JDFM's `Decimal` type.
-
-#### C.1.3 Excluded-Value Evaluation Semantics (Normative)
-
-JDFM's `whenExcluded.evaluationValue` addresses a question Formspec leaves
-ambiguous: when a field is non-relevant, what do *downstream expressions* see
-when they reference it?
-
-Formspec §5.6 rule 4 says "The computed value exists in the in-memory data
-model and MAY be referenced by other expressions." But this conflates two
-cases:
-
-1. A `calculate`-bound field that is non-relevant — its value is still
-   computed (rule 4), so downstream references work.
-2. A user-input field that is non-relevant — its value was entered before the
-   field became non-relevant. Should downstream expressions see the stale
-   value, `null`, or `Missing`?
-
-**Amendment.** Formspec adds `excludedValue` to the Bind schema:
-
-| Value | Behavior | Use Case |
-|-------|----------|----------|
-| `"preserve"` | Downstream expressions see the field's last value, even while non-relevant. This is the DEFAULT. | Calculations that should remain stable when a section is temporarily hidden. |
-| `"null"` | Downstream expressions see `null` when the field is non-relevant. | Expressions that should react to a field's relevance state (e.g., conditional totals that should exclude hidden line items). |
+| Value | Behavior |
+|-------|----------|
+| `"preserve"` | Downstream expressions see the field's last value. **DEFAULT.** |
+| `"null"` | Downstream expressions see `null` when the field is non-relevant. |
 
 ```json
 {
@@ -4501,448 +4398,170 @@ cases:
 }
 ```
 
-This makes an explicit choice where Formspec previously left behavior
-implementation-defined. The `"preserve"` default maintains backward
-compatibility with §5.6 rule 4.
-
-For the submission question (what value appears in the Response), the
-`nonRelevantBehavior` property (Appendix B, §B.2.1) continues to govern.
 `excludedValue` controls the *in-memory evaluation model*;
-`nonRelevantBehavior` controls the *serialized output*.
+`nonRelevantBehavior` (§B.3.1) controls the *serialized output*.
 
-#### C.1.4 Conditional Shape Activation (Normative)
+#### B.3.5 Semantic Type Annotations (`semanticType`)
 
-JDFM defines `activeWhen` on Shapes — a boolean expression that controls
-whether the shape is evaluated at all. Formspec's current design evaluates
-all shapes whose target path exists in the instance (subject to non-relevant
-suppression), with no way to conditionally activate a shape independent of
-its target's relevance.
+*Source: UDFA (D.1.3)*
 
-This matters for rules like "validate budget totals only after the user has
-confirmed the budget is final" or "apply strict validation rules only when
-the response status is 'complete'."
+Formspec adds `semanticType` to Field items:
 
-**Amendment.** Formspec adds `activeWhen` to the Shape schema:
+| Property | Type | Cardinality | Description |
+|----------|------|-------------|-------------|
+| `semanticType` | string | 0..1 (OPTIONAL) | Domain meaning annotation. Implementations SHOULD use URIs or namespaced identifiers (e.g., `"us-gov:ein"`, `"ietf:email"`, `"iso:phone-e164"`). |
+
+`semanticType` is purely metadata. It MUST NOT affect validation, calculation,
+or any behavioral semantics. It supports intelligent widget selection, data
+classification, and interoperability mapping.
+
+#### B.3.6 Pre-Population Declarations (`prePopulate`)
+
+*Source: UDF (E.1.3)*
+
+Formspec adds `prePopulate` to Field items as syntactic sugar:
+
+```json
+{
+  "key": "award_amount",
+  "type": "field",
+  "dataType": "money",
+  "prePopulate": {
+    "instance": "award",
+    "path": "total_amount",
+    "editable": false
+  }
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `instance` | string | Name of a declared secondary instance (§4.4). |
+| `path` | string | Dot-notation path within the instance data. |
+| `editable` | boolean | Default: `true`. When `false`, the field is locked after pre-population. |
+
+A processor MUST treat `prePopulate` as equivalent to an `initialValue`
+expression plus a `readonly` bind. When both `prePopulate` and `initialValue`
+are present, `prePopulate` takes precedence.
+
+---
+
+### B.4 Validation Enhancements
+
+#### B.4.1 Conditional Shape Activation (`activeWhen`)
+
+*Source: JDFM (C.1.4)*
+
+Formspec adds `activeWhen` to the Shape schema:
+
+| Property | Type | Cardinality | Description |
+|----------|------|-------------|-------------|
+| `activeWhen` | string (FEL → boolean) | 0..1 (OPTIONAL) | When present, the shape is evaluated only when this expression is `true`. When absent, the shape is always evaluated. |
 
 ```json
 {
   "id": "strict_budget_check",
   "target": "budget_section",
   "severity": "error",
-  "message": "Budget line items must sum to the authorized award amount.",
   "constraint": "moneyAmount(moneySum($line_items[*].amount)) = moneyAmount($award_amount)",
   "activeWhen": "$budget_confirmed = true"
 }
 ```
 
+`activeWhen` is evaluated during the Revalidate phase, *before* the shape's
+`constraint`. If `false`, the shape is skipped entirely.
+
+`activeWhen` is independent of the target's relevance. Non-relevant
+suppression (§5.6 rule 1) takes precedence.
+
+#### B.4.2 Constraint Kind (`constraintKind`)
+
+*Source: UDF (F.1.1)*
+
+Formspec adds `constraintKind` to the ValidationResult schema:
+
 | Property | Type | Cardinality | Description |
 |----------|------|-------------|-------------|
-| `activeWhen` | string (FEL → boolean) | 0..1 (OPTIONAL) | When present, the shape is evaluated only when this expression evaluates to `true`. When absent or `true`, the shape is always evaluated (subject to non-relevant suppression). When `false`, the shape produces no ValidationResults. |
+| `constraintKind` | string | 1..1 (REQUIRED) | The category of constraint that produced this result. |
 
-`activeWhen` is evaluated during the Revalidate phase, *before* the shape's
-`constraint` expression. If `activeWhen` evaluates to `false`, the shape is
-skipped entirely — it produces no results of any severity.
+Standard values:
 
-`activeWhen` is independent of the target's relevance. A shape with
-`activeWhen: "true"` targeting a non-relevant path still produces no results
-(non-relevant suppression takes precedence per §5.6 rule 1).
+| Value | Meaning |
+|-------|--------|
+| `"required"` | Required field has no value. |
+| `"type"` | Value does not conform to declared `dataType`. |
+| `"cardinality"` | Repeatable group violates `minRepeat`/`maxRepeat`. |
+| `"constraint"` | Bind `constraint` expression evaluated to `false`. |
+| `"shape"` | Named Shape's constraint evaluated to `false`. |
+| `"external"` | External system injected this result. |
 
-#### C.1.5 FieldRef vs DataPointer Distinction
+#### B.4.3 Standard Built-in Constraint Codes
 
-JDFM distinguishes two addressing vocabularies:
+*Source: UDF (F.1.2)*
 
-- **FieldRef**: stable definition-time paths (`budget.line_items.amount`) used
-  in Binds and Shapes.
-- **DataPointer**: runtime JSON Pointer paths
-  (`/budget/line_items/2/amount`) used in ValidationResults to identify
-  specific instances within repeats.
+The following codes are RESERVED. Conformant processors MUST use these exact
+codes for the corresponding built-in constraints:
 
-Formspec uses `path` for both purposes. This works when a path targets a
-single field, but is ambiguous for repeatable contexts: `line_items[*].amount`
-is a valid Bind target (meaning "the amount field in every row"), but a
-ValidationResult must identify *which row* failed.
+| Code | constraintKind | Triggered When |
+|------|---------------|---------------|
+| `REQUIRED` | `required` | A required field is null or empty string. |
+| `TYPE_MISMATCH` | `type` | Value cannot be interpreted as the field's `dataType`. |
+| `MIN_REPEAT` | `cardinality` | Fewer instances than `minRepeat`. |
+| `MAX_REPEAT` | `cardinality` | More instances than `maxRepeat`. |
+| `CONSTRAINT_FAILED` | `constraint` | Bind `constraint` returned `false`. |
+| `SHAPE_FAILED` | `shape` | Shape's constraint returned `false`. |
+| `EXTERNAL_FAILED` | `external` | External validation source reported a failure. |
 
-**Amendment.** Formspec clarifies:
+Shape-level and external codes override the generic defaults.
 
-- **Bind `path` and Shape `target`** use **FieldRef** syntax (the existing
-  dot-notation with `[*]` wildcards). These are definition-time addresses.
-- **ValidationResult `path`** uses **resolved instance paths** with concrete
-  indexes: `line_items[3].amount` (1-based, matching `@index` semantics).
-  This unambiguously identifies the specific data node that failed.
+#### B.4.4 Per-Shape Validation Timing (`timing`)
 
-This distinction was implicit in Formspec's existing examples (§7.3.3 shows
-`"path": "categories[1]"` with a specific index) but is now explicitly
-normative.
+*Source: UDF (F.1.3)*
 
-#### C.1.6 Repeat Navigation: `parent()` Function
+Formspec adds `timing` to the Shape schema:
 
-JDFM defines `parent()` to navigate one level up from the current repeat
-context. Formspec has `@current` (the current repeat instance) and `@index`
-/ `@count`, but no upward navigation.
+| Property | Type | Cardinality | Description |
+|----------|------|-------------|-------------|
+| `timing` | string | 0..1 (OPTIONAL) | Controls when this shape is evaluated. Default: `"continuous"`. |
 
-**Amendment.** FEL adds `parent()`:
+| Value | Semantics |
+|-------|-----------|
+| `"continuous"` | Evaluated whenever any dependency changes. |
+| `"submit"` | Evaluated only when submission is requested. |
+| `"demand"` | Evaluated only when explicitly requested by the consuming application. |
 
-| Function | Signature | Returns | Description |
-|----------|-----------|---------|-------------|
-| `parent()` | `parent() → object` | object | Returns the parent context of the current repeat row. Within a nested repeat, `parent()` returns the enclosing repeat row. At the top-level repeat, `parent()` returns the root instance object. |
-
-Example — accessing a group-level field from within a nested repeat:
-
-```
-parent().section_total
-```
-
-Example — referencing an outer repeat's field from an inner repeat:
-
-```
-parent().parent().outer_field
-```
-
-`parent()` MUST NOT be called outside a repeat context. Calling `parent()`
-at the root instance level is a definition error.
-
-### C.2 Features Already Covered
-
-**Three-layer separation (instance / behavior / constraint).** Both specs
-define this identically. JDFM uses the terms "Instance layer," "Behavior
-layer," and "Constraint layer"; Formspec uses "Structure Layer," "Behavior
-Layer," and the combined Bind/Shape mechanism.
-
-**Expression language design.** Both define deterministic, side-effect-free
-expression languages with dependency extraction. Syntax differs (`${field}`
-in JDFM-EL vs `$field` in FEL) but semantics are convergent.
-
-**`whenExcluded.submission` policy.** JDFM's `"prune" | "null" | "default"`
-maps to Formspec's `nonRelevantBehavior`: `"remove" | "empty" | "keep"` plus
-the Bind-level `default` property (Appendix B, §B.2.1).
-
-**Repeat context variables.** JDFM's `@` / `idx()` map to Formspec's
-`@current` / `@index`. JDFM uses zero-based indexing; Formspec uses 1-based
-(matching XForms convention).
-
-**Composition operators on shapes.** JDFM's `allOf`/`anyOf`/`oneOf`/`not`
-map directly to Formspec's `and`/`or`/`xone`/`not`.
-
-**Named instances.** JDFM's `inst(name)` maps to Formspec's
-`@instance('name')`.
-
-**Canonical identity + version + status lifecycle.** Both specs adopt the
-FHIR R5 pattern identically.
-
-**Response pinning.** Both specs require responses to reference a specific
-definition version.
-
-### C.3 Design Divergences (No Action)
-
-**`${field}` vs `$field` reference syntax.** JDFM uses `${...}` (ODK-style
-with braces); Formspec uses `$field` (no braces). Both are valid choices.
-Formspec's syntax is more concise for simple references; JDFM's is safer
-for field names containing special characters. No change — both are
-internally consistent.
-
-**Zero-based vs 1-based repeat indexing.** JDFM uses zero-based (`idx()`
-returns 0 for the first item); Formspec uses 1-based (`@index` returns 1).
-1-based aligns with XForms, spreadsheet conventions, and human counting.
-No change.
-
-**Separate `constraint` from `assert` structure.** JDFM wraps shape
-assertions in an explicit `{ "expr": "..." }` object, allowing composition
-and expression to be structurally distinct. Formspec uses a flat `constraint`
-string on shapes. The JDFM approach is more explicit but more verbose. No
-change — Formspec's composition operators (`and`/`or`/`not`/`xone`)
-achieve the same expressiveness.
-
-**`Missing` as a distinct type from `Null`.** JDFM distinguishes `Missing`
-(path doesn't exist in instance) from `Null` (path exists, value is null).
-Formspec collapses both to `null` (§3.8.3). The distinction is theoretically
-cleaner but adds complexity for form authors who must reason about three
-states (missing, null, empty string) instead of two (null, empty string).
-Formspec's simplification is intentional. No change.
-
-**String concatenation.** JDFM requires `concat()` and forbids `+` for
-strings. Formspec uses `&` as the concatenation operator (distinct from `+`
-which is arithmetic-only). Both prevent the ambiguity of `+` on mixed types.
-No change.
-
-
+The global validation mode (§5.5) acts as an override:
+- `"disabled"`: no shapes fire regardless of `timing`.
+- `"deferred"`: all shapes deferred until explicitly requested.
+- `"continuous"` (default): shapes fire per their individual `timing`.
 
 ---
 
-## Appendix D: UDFA Cross-Analysis
+### B.5 Instance & Definition Schema
 
-This appendix documents a cross-analysis with the Universal Declarative Form
-Architecture (UDFA), an independent specification addressing the same problem
-space. UDFA makes several design choices that address minor gaps in Formspec
-or make implicit design decisions more explicit. This appendix is informative
-except where noted as normative.
+#### B.5.1 Instance Write-Protection (`readonly`)
 
-### D.1 Features Adopted as Amendments
+*Source: UDFA (D.1.2)*
 
-#### D.1.1 Row-Relative Navigation in Repeats (Normative)
-
-UDFA provides `${prevRow.field}` and `${nextRow.field}` syntax for
-referencing adjacent rows within a repeat context. Formspec has `@current`,
-`@index`, `@count`, and `parent()`, but no mechanism for accessing sibling
-rows without resorting to explicit indexing (e.g.,
-`$repeat[$@index - 1].field`).
-
-Adjacent-row access is essential for:
-- Running/cumulative totals: "this row's cumulative = previous row's cumulative + this row's amount"
-- Sequential validation: "this date must be after the previous row's date"
-- Difference calculations: "change from prior period"
-
-**Amendment.** FEL adds row-relative accessor functions:
-
-| Function | Signature | Returns | Description |
-|----------|-----------|---------|-------------|
-| `prev()` | `prev() → object \| null` | object or null | Returns the previous row in the current repeat collection (the row at `@index - 1`). Returns `null` for the first row (`@index = 1`). |
-| `next()` | `next() → object \| null` | object or null | Returns the next row in the current repeat collection (the row at `@index + 1`). Returns `null` for the last row (`@index = @count`). |
-
-Usage:
-
-```
-prev().cumulative_total + @current.amount
-```
-
-```
-$ > prev().end_date
-```
-
-These functions MUST only be called within a repeat context. Calling `prev()`
-or `next()` outside a repeat is a definition error.
-
-**Dependency semantics:** An expression containing `prev()` or `next()`
-depends on the adjacent row's fields. When row order changes (insert, delete,
-reorder), all expressions using `prev()` or `next()` in the affected repeat
-MUST be re-evaluated. Implementations SHOULD treat `prev()`/`next()` as
-depending on the entire repeat collection for dependency tracking purposes.
-
-#### D.1.2 Instance Write-Protection (Normative)
-
-UDFA explicitly marks external instances as `"locked": true`, preventing
-modification. Formspec states in prose that "secondary instances are
-read-only during form completion" (§2.1.2) and flags writes to secondary
-instances as definition errors (§3.10.1), but does not provide a formal
-property for this on the instance declaration itself.
-
-**Amendment.** Formspec adds `readonly` to the Instance schema:
+Formspec adds `readonly` to the Instance schema:
 
 | Property | Type | Cardinality | Description |
 |----------|------|-------------|-------------|
-| `readonly` | boolean | 0..1 (OPTIONAL) | If `true`, the instance data MUST NOT be modified by `calculate` Binds or any other mechanism during form execution. The instance is a read-only reference data source. Default: `true` for all non-primary instances. |
-
-```json
-{
-  "instances": {
-    "award": {
-      "source": "https://api.grants.example.gov/awards/{awardId}",
-      "readonly": true,
-      "data": { "award_amount": 250000.00 }
-    },
-    "scratchpad": {
-      "readonly": false,
-      "data": { "temp_total": 0 }
-    }
-  }
-}
-```
-
-When `readonly` is `true`:
-- A `calculate` Bind targeting a path within this instance is a definition
-  error.
-- The data is immutable for the duration of the form session.
-- Implementations MAY use this guarantee for aggressive caching and
-  optimization.
+| `readonly` | boolean | 0..1 (OPTIONAL) | If `true`, instance data MUST NOT be modified during form execution. Default: `true`. |
 
 The `readonly: false` case enables writable scratch-pad instances for complex
-multi-step calculations that don't belong in the primary response data. This
-is an uncommon but legitimate pattern for forms with intermediate computation
-states that should not be submitted.
+multi-step calculations that should not be submitted.
 
-#### D.1.3 Semantic Type Annotations (Normative)
+#### B.5.2 Named Option Sets (`optionSets`)
 
-UDFA draws an explicit distinction between "structural typing" (JSON's `string`,
-`number`, `object`) and "semantic typing" (what the data *means*: an EIN,
-a phone number, a DUNS number). Formspec's `dataType` property covers basic
-semantic types (`date`, `money`, `attachment`) but provides no standard way
-to annotate domain-specific semantics without resorting to extension types
-(`x-ein`, `x-phone`).
+*Source: UDF (E.1.1)*
 
-This matters because:
-- Multiple domain-specific types share the same structural type and validation
-  pattern but have different semantic meaning
-- Downstream systems need to know "this is an EIN" vs "this is a phone
-  number" even though both are validated strings
-- Visual authoring tools benefit from a richer type vocabulary for
-  auto-suggesting appropriate input widgets
-
-**Amendment.** Formspec adds `semanticType` to Field items:
-
-| Property | Type | Cardinality | Description |
-|----------|------|-------------|-------------|
-| `semanticType` | string | 0..1 (OPTIONAL) | A semantic annotation indicating the domain meaning of this field's value. Formspec defines no normative vocabulary for semantic types; the value is an opaque string interpreted by the implementation. Implementations SHOULD use URIs or namespaced identifiers to avoid collisions (e.g., `"us-gov:ein"`, `"ietf:email"`, `"iso:phone-e164"`). |
+Formspec adds a top-level `optionSets` property for shared, reusable option
+lists:
 
 ```json
 {
-  "key": "employer_id",
-  "type": "field",
-  "dataType": "string",
-  "semanticType": "us-gov:ein",
-  "label": "Employer Identification Number"
-}
-```
-
-`semanticType` is purely metadata. It MUST NOT affect validation, calculation,
-or any behavioral semantics defined by this specification. It exists to
-support:
-- Intelligent widget selection in visual authoring tools
-- Data classification and tagging in downstream analytics
-- Interoperability mapping between systems that share semantic vocabularies
-
-This is distinct from extension types (`x-ein` in §8.1) which *do* carry
-behavioral implications (custom validation, custom formatting). `semanticType`
-is a lightweight annotation; extension types are a heavyweight behavioral
-override.
-
-### D.2 Features Already Covered
-
-**MVC / three-layer separation.** UDFA's FormDefinition/DataInstance/BindGraph/
-ValidationShape map directly to Formspec's Definition/Instance/Bind/Shape.
-The conceptual models are isomorphic.
-
-**Model Item Properties.** UDFA's `calculate`, `constraint`, `relevant`,
-`required`, `readonly` are identical to Formspec's Bind properties.
-Inheritance rules (relevant via AND, readonly via OR) match.
-
-**Reactive dependency graph with topological sort.** Both specifications
-define the same algorithm: parse expressions for field references, build a
-DAG, topologically sort, re-evaluate only the affected subgraph on change.
-
-**Non-relevant data exclusion.** UDFA and Formspec share identical semantics:
-non-relevant nodes are pruned from submission, their validation is suppressed,
-and their `required` constraints are ignored. Formspec extends this with
-`nonRelevantBehavior` (Appendix B) offering `remove`/`empty`/`keep` modes.
-
-**Three-tier validation severity.** Both define Error/Warning/Info with
-identical semantics: only errors block submission.
-
-**SHACL-style constraint composition.** UDFA's `and`/`or`/`xone`/`not` maps
-to Formspec's identically-named composition operators.
-
-**Structured validation results.** UDFA's ValidationResult schema
-(focusNode, severity, message, sourceShape, value) maps to Formspec's
-(path, severity, message, shapeId, value, code, context).
-
-**External validation injection.** Both specifications define injection of
-externally-produced validation results into the unified report.
-
-**Validation modes.** UDFA's ValidateAndShow/ValidateAndHide/NoValidation maps
-to Formspec's continuous/deferred/disabled. The semantics are equivalent.
-
-**Canonical URL + version + status lifecycle.** Identical (both derived
-from FHIR R5).
-
-**Response pinning.** Identical.
-
-**Modular composition with $assemble.** Both define sub-form references
-resolved at publish time with key prefixing for namespace isolation and
-`assembledFrom` provenance metadata.
-
-**Multiple instances with cross-referencing.** Both support named secondary
-instances with expression-based access. UDFA's `instance('name').path` maps
-to Formspec's `@instance('name').path`.
-
-**Financial/money type.** UDFA's `financial` type (object with `amount` and
-`currency`) is equivalent to Formspec's `money` type (Appendix C, §C.1.1).
-
-**Attachment field modeling.** Both model file attachments as metadata objects
-with the actual binary storage being out of scope.
-
-**Pre-populated fields with editable vs locked distinction.** Both handle
-this through the combination of `initialValue` (or `calculate`) and
-`readonly` Binds.
-
-### D.3 Design Divergences (No Action)
-
-**Expression syntax: `${field}` vs `$field`.** UDFA uses `${...}` (curly
-braces, ODK-style); Formspec uses `$field` (bare sigil). Both are valid.
-Formspec's is more concise; UDFA's is more explicit about token boundaries.
-No change.
-
-**`nodeset` vs `path` for bind targeting.** UDFA uses `nodeset` (XForms
-terminology); Formspec uses `path`. Same semantics, different names.
-Formspec's `path` is more intuitive for JSON developers unfamiliar with
-XForms. No change.
-
-**Implicit numeric coercion in comparisons.** UDFA's JEXL-F performs
-automatic numeric coercion when comparing `${string} == ${number}`.
-Formspec's FEL requires explicit type matching (§3.4.3): comparing a string
-to a number is a type error unless explicitly cast with `number()`. This is
-a deliberate safety choice — implicit coercion is a well-documented source of
-bugs in JavaScript and similar languages. Form authors who need cross-type
-comparison must write `number($stringField) == $numberField`, making the
-intent explicit. No change.
-
-**Calculate continues regardless of relevance.** Both specifications define
-this behavior. UDFA states it explicitly in the MIP table; Formspec defines
-it in §5.6 rule 4. The semantics are identical. No change needed.
-
-**"Cryptographically locked" external data.** UDFA uses the phrase
-"cryptographically locked values representing external system truths" for
-pre-populated fields from external sources. Formspec handles this through
-`readonly: true` on Binds and `readonly: true` on instances (D.1.2 above).
-Cryptographic verification of external data integrity is an implementation
-concern outside the scope of a form definition standard. No change.
-
-**Separate "BindGraph" noun.** UDFA names the collection of Binds as a
-distinct entity ("BindGraph"). Formspec treats binds as an array property on
-the Definition without naming the collection as a separate conceptual entity.
-The BindGraph is an implementation artifact (the dependency graph constructed
-during the Rebuild phase), not a definition-time concept that needs a name in
-the schema. No change.
-
-
-
----
-
-## Appendix E: UDF Cross-Analysis
-
-This appendix documents a cross-analysis with the Universal Declarative Forms
-(UDF) specification (v0.1.0-draft), an independent effort addressing the same
-problem space. UDF makes several design choices that address gaps or improve
-ergonomics in areas Formspec has not yet formalized. This appendix is
-informative except where noted as normative.
-
-### E.1 Features Adopted as Amendments
-
-#### E.1.1 Named Option Sets (Normative)
-
-UDF extracts option lists into a top-level `optionSets` section, allowing
-multiple fields to reference the same named set. Formspec currently requires
-options to be declared inline on each field or referenced by external URI.
-This means two fields using the same options (e.g., "Yes/No/N/A") must
-duplicate the array or both point to an external endpoint — neither of
-which handles the common case of *shared options within a single definition*.
-
-**Amendment.** Formspec adds a top-level `optionSets` property to the
-Definition schema:
-
-```json
-{
-  "$formspec": "1.0",
-  "url": "...",
   "optionSets": {
-    "cost_categories": {
-      "options": [
-        { "value": "personnel", "label": "Personnel" },
-        { "value": "fringe", "label": "Fringe Benefits" },
-        { "value": "travel", "label": "Travel" },
-        { "value": "equipment", "label": "Equipment" },
-        { "value": "supplies", "label": "Supplies" },
-        { "value": "contractual", "label": "Contractual" },
-        { "value": "other", "label": "Other" }
-      ]
-    },
     "yes_no_na": {
       "options": [
         { "value": "yes", "label": "Yes" },
@@ -4955,78 +4574,70 @@ Definition schema:
       "valueField": "code",
       "labelField": "name"
     }
-  },
-  "items": [...]
+  }
 }
 ```
 
-An OptionSet is defined by one of:
+An OptionSet is defined by:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `options` | array of `{ value, label }` | Inline list of permitted values. Each entry MUST have `value` (string, REQUIRED) and `label` (string, REQUIRED). |
+| `options` | array of `{ value, label }` | Inline list of permitted values. |
 | `source` | string (URI) | External endpoint returning an array of options. |
-| `valueField` | string | When using `source`, the JSON property name for the option value. Default: `"value"`. |
-| `labelField` | string | When using `source`, the JSON property name for the option label. Default: `"label"`. |
+| `valueField` | string | JSON property name for the option value. Default: `"value"`. |
+| `labelField` | string | JSON property name for the option label. Default: `"label"`. |
 
-A `choice` or `multiChoice` field references a named option set via the
-`optionSet` property:
+Fields reference a named set via `optionSet`:
 
 ```json
 {
   "key": "category",
   "type": "field",
   "dataType": "choice",
-  "optionSet": "cost_categories",
-  "label": "Cost Category"
+  "optionSet": "cost_categories"
 }
 ```
 
-The existing `options` property on Field items (§4.2.3) remains valid for
-one-off inline options. When both `options` and `optionSet` are present on a
-field, `optionSet` takes precedence and `options` is ignored.
+When both `options` and `optionSet` are present, `optionSet` takes precedence.
 
-Named option sets enable:
-- **DRY definitions** — "Yes/No/N/A" declared once, referenced many times
-- **Consistent vocabulary** — all fields using the same set stay in sync
-- **Tooling support** — authoring tools can present a list of available sets
-- **Dynamic loading** — the `source` variant supports runtime option fetching
-  with standard value/label field mapping
+#### B.5.3 Response Metadata: `subject`, `date`, `name`
 
-#### E.1.2 Version Migration Maps (Normative)
+*Source: UDF (E.1.5)*
 
-UDF defines a `migrate` verb for transforming responses from one definition
-version to another. Formspec specifies response pinning (§6.4) — responses
-are validated against their pinned version — but provides no mechanism for
-*upgrading* a response when a new definition version is published.
+Formspec adds to the **FormResponse** schema:
 
-This is a real operational gap. When a form definition goes from v2.1.0 to
-v3.0.0 (a breaking change), existing in-progress responses on v2.1.0 need a
-path forward. Without a standard migration mechanism, implementors must write
-ad-hoc scripts.
+| Property | Type | Cardinality | Description |
+|----------|------|-------------|-------------|
+| `subject` | object | 0..1 (OPTIONAL) | The entity this response is about. Contains `id` (string, REQUIRED) and `type` (string, OPTIONAL). |
 
-**Amendment.** Formspec adds an optional `migrations` section to the
-Definition schema:
+Formspec adds to the **FormDefinition** schema:
+
+| Property | Type | Cardinality | Description |
+|----------|------|-------------|-------------|
+| `date` | string (ISO 8601 date) | 0..1 (OPTIONAL) | Publication date of this definition version. |
+| `name` | string | 0..1 (OPTIONAL) | Machine-friendly short identifier. MUST match `[a-zA-Z][a-zA-Z0-9\-]*`. |
+
+---
+
+### B.6 Versioning & Migration
+
+#### B.6.1 Version Migration Maps (`migrations`)
+
+*Source: UDF (E.1.2)*
+
+Formspec adds an optional `migrations` section for transforming responses
+between definition versions:
 
 ```json
 {
-  "$formspec": "1.0",
-  "url": "https://grants.gov/forms/sf-425",
-  "version": "3.0.0",
-  "status": "active",
   "migrations": {
     "from": {
       "2.1.0": {
-        "description": "Restructured budget section; split 'other_costs' into subcategories",
+        "description": "Restructured budget section",
         "fieldMap": [
           {
             "source": "expenditures.other_costs",
             "target": "expenditures.miscellaneous.total",
-            "transform": "preserve"
-          },
-          {
-            "source": "report_period",
-            "target": "reporting.period",
             "transform": "preserve"
           },
           {
@@ -5045,377 +4656,42 @@ Definition schema:
 }
 ```
 
-A migration map declares how to transform response data from a specific
-prior version into the current version's structure:
+Each field mapping rule:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `from` | object | Keys are source version strings. Values are migration descriptors. |
-| `from[version].description` | string | Human-readable description of what changed. |
-| `from[version].fieldMap` | array | Ordered list of field mapping rules. |
-| `from[version].defaults` | object | Default values for new fields that have no source mapping. Keys are target field paths; values are literal defaults. |
+| `source` | string | Field path in the source version. |
+| `target` | string or null | Field path in the target version. `null` = dropped. |
+| `transform` | string | `"preserve"`, `"drop"`, or `"expression"`. |
+| `expression` | string | When `transform` is `"expression"`, a FEL expression with `$` bound to source value and `@source` bound to entire source response. |
 
-Each field mapping rule contains:
+Migration produces a **new** Response pinned to the target version. The
+original is preserved unchanged. Migrated Response `status` SHOULD be reset
+to `"in-progress"`.
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `source` | string | Field path in the source version's instance. |
-| `target` | string or null | Field path in the target (current) version. `null` means the field is dropped. |
-| `transform` | string | One of: `"preserve"` (copy value as-is), `"drop"` (discard), `"expression"` (apply a FEL transform). |
-| `expression` | string | When `transform` is `"expression"`, a FEL expression evaluated with `$` bound to the source field's value and `@source` bound to the entire source response data. |
+#### B.6.2 Version Semantics for Form Definitions
 
-Migration semantics:
-- A conformant processor SHOULD support migrating responses when a migration
-  map exists for the response's pinned version.
-- Migration produces a **new** Response pinned to the target version. The
-  original Response is preserved unchanged.
-- Fields present in the source but absent from `fieldMap` are carried forward
-  by path matching (if the path exists in the target version) or dropped
-  (if it does not).
-- The migrated Response's `status` SHOULD be reset to `"in-progress"` to
-  signal that the respondent should review the migrated data.
+*Source: UDF (E.1.4)*
 
-#### E.1.3 Pre-Population Declarations on Fields (Normative)
-
-UDF declares pre-population directly on field definitions with a `prePopulate`
-object containing `source`, `field`, and `editable`. Formspec handles
-pre-population through the combination of secondary instances, `initialValue`
-expressions, and `readonly` binds — which works but requires three separate
-declarations for what is conceptually a single operation.
-
-**Amendment.** Formspec adds `prePopulate` to the Field item schema:
-
-```json
-{
-  "key": "award_amount",
-  "type": "field",
-  "dataType": "money",
-  "label": "Authorized Award Amount",
-  "prePopulate": {
-    "instance": "award",
-    "path": "total_amount",
-    "editable": false
-  }
-}
-```
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `instance` | string | Name of a declared secondary instance (§4.4) to pull the value from. |
-| `path` | string | Dot-notation path within the instance data to extract. |
-| `editable` | boolean | Default: `true`. When `false`, the field is locked after pre-population — equivalent to `readonly: true` on the bind, but expressed as an intrinsic property of the pre-population relationship. |
-
-`prePopulate` is syntactic sugar. A processor MUST treat:
-
-```json
-{ "prePopulate": { "instance": "award", "path": "total_amount", "editable": false } }
-```
-
-as equivalent to:
-
-```json
-// initialValue on the field:
-"initialValue": "=@instance('award').total_amount"
-// plus a bind:
-{ "path": "award_amount", "readonly": true }
-```
-
-The sugar exists because pre-population is extremely common in government and
-financial forms, and the three-declaration pattern is error-prone (easy to
-forget the `readonly` bind, or to reference the wrong instance).
-
-When both `prePopulate` and `initialValue` are present on the same field,
-`prePopulate` takes precedence.
-
-#### E.1.4 Version Semantics for Form Definitions (Normative)
-
-UDF defines what semver patch/minor/major mean in the context of form
-definitions. Formspec specifies `versionAlgorithm: "semver"` but does not
-define what constitutes a patch, minor, or major change to a form definition.
-
-**Amendment.** When `versionAlgorithm` is `"semver"`, the following
-version increment guidance applies:
+When `versionAlgorithm` is `"semver"`, the following guidance applies:
 
 | Increment | Change Type | Response Compatibility |
 |-----------|------------|----------------------|
-| **Patch** (2.1.0 → 2.1.1) | Cosmetic only — label text, descriptions, help text, display metadata. No structural or behavioral changes. | Existing responses remain fully valid. No re-validation needed. |
-| **Minor** (2.1.0 → 2.2.0) | Additive — new optional fields, new option values, relaxed constraints (wider ranges, fewer required fields), new validation shapes at warning/info severity. | Existing responses remain valid but may not contain data for new fields. Re-validation SHOULD pass. |
-| **Major** (2.1.0 → 3.0.0) | Breaking — removed fields, renamed fields, restructured groups, tightened constraints, new required fields, changed calculation logic. | Existing responses MAY fail validation against the new version. Migration (§E.1.2) is RECOMMENDED. |
+| **Patch** (2.1.0 → 2.1.1) | Cosmetic only — labels, descriptions, help text. | Existing responses remain fully valid. |
+| **Minor** (2.1.0 → 2.2.0) | Additive — new optional fields, relaxed constraints. | Existing responses valid but may lack new fields. |
+| **Major** (2.1.0 → 3.0.0) | Breaking — removed/renamed fields, tightened constraints. | Existing responses MAY fail. Migration RECOMMENDED. |
 
-This guidance is RECOMMENDED, not REQUIRED. Organizations MAY adopt stricter
-or more relaxed conventions as appropriate for their governance needs.
-
-#### E.1.5 Response Metadata: `subject` and `date` (Normative)
-
-UDF includes `subject` on FormResponse (identifying what entity the response
-is about) and `date` on FormDefinition (when this version was published).
-Formspec's Response schema (§2.1.6) includes `authored` (last modified) and
-`author` (who), but not `subject` (about what). The Definition schema
-includes `title` and `description` but not a publication date.
-
-**Amendment.** Formspec adds:
-
-To the **FormResponse** schema:
-
-| Property | Type | Cardinality | Description |
-|----------|------|-------------|-------------|
-| `subject` | object | 0..1 (OPTIONAL) | The entity this response is about. Contains `id` (string, REQUIRED) and `type` (string, OPTIONAL). E.g., `{ "id": "grant-12345", "type": "Grant" }`. |
-
-To the **FormDefinition** schema:
-
-| Property | Type | Cardinality | Description |
-|----------|------|-------------|-------------|
-| `date` | string (ISO 8601 date) | 0..1 (OPTIONAL) | The date this version of the definition was published or last updated. |
-| `name` | string | 0..1 (OPTIONAL) | A machine-friendly short identifier (ASCII letters, digits, hyphens only). Intended for code generation, file naming, and programmatic reference. MUST match `[a-zA-Z][a-zA-Z0-9\-]*`. |
-
-### E.2 Features Already Covered
-
-**Four-layer separation.** UDF's Identity/Instance/Bind/Presentation Hints
-maps to Formspec's Identity (§6) / Structure (Items) / Behavior (Binds +
-Shapes) / Presentation (out of scope). The models are isomorphic.
-
-**Core nouns and verbs.** FormDefinition, Field, Group, Bind, Shape,
-OptionSet, Instance, FormResponse, ValidationReport, ValidationResult — all
-present in both specifications. The verb set (evaluate, recalculate,
-revalidate, refresh relevance, submit, assemble) maps to Formspec's
-four-phase processing model (§2.4).
-
-**Canonical identity + version + status lifecycle.** Identical patterns,
-both derived from FHIR R5.
-
-**Response pinning.** Identical semantics.
-
-**Derivation with `derivedFrom` using `url|version` notation.** Identical.
-
-**Core field types.** UDF's type set is a superset of Formspec's (UDF adds
-`email` as a core type; Formspec handles this via `semanticType` annotation
-from Appendix D). The `currency` type maps to Formspec's `money` type
-(Appendix C).
-
-**MIPs (calculate, relevant, required, readonly, constraint).** Identical
-property set with identical semantics.
-
-**Non-relevant data exclusion.** Identical five-point rule set
-(hidden + excluded from submission + validation suspended + required
-suppressed + value retained in memory for re-relevance).
-
-**`defaultWhenExcluded`.** UDF's field-level `defaultWhenExcluded` is
-addressed by Formspec's `excludedValue` on Binds (Appendix C, §C.1.3).
-Formspec's approach is more flexible: it controls what downstream
-*expressions* see, while `nonRelevantBehavior` (Appendix B, §B.2.1)
-controls what the *submitted data* contains.
-
-**Secondary instances.** UDF's `secondaryInstances` with `source` and
-`inline` maps to Formspec's `instances` with `source` and `data`.
-
-**Modular composition with assembly.** Both define `$include`/`$ref`-based
-composition resolved at publish time with key/path prefixing.
-
-**Extension points.** Both define extension types via URI registration
-with fallback to base types.
-
-### E.3 Design Divergences (No Action)
-
-**`$instances.name.path` vs `@instance('name').path`.** Different syntax for
-secondary instance access. Formspec's function-call syntax is more explicit
-about the fact that instance resolution is a runtime operation. No change.
-
-**`[]` vs `[*]` for repeat template paths.** UDF uses `budget_lines[].field`;
-Formspec uses `budget_lines[*].field`. Both are clear. Formspec's `[*]`
-is more visually distinct from concrete indexed access (`[3]`). No change.
-
-**`requiredFields` array on binds.** UDF allows a bind to declare multiple
-required fields in one binding: `"requiredFields": ["section_b.narrative",
-"section_b.objectives_met"]`. This is syntactic sugar for multiple
-`required: true` binds. Formspec's approach of one bind per behavior
-declaration is more uniform and composable, even if slightly more verbose.
-No change.
-
-**`constraint` as inline shape on bind.** UDF allows embedding a shape
-object directly in the bind's `constraint` property. Formspec separates
-binds (for MIPs) from shapes (for composable validation). The separation
-is a core architectural choice that enables shape reuse and composition.
-No change.
-
-**Presentation Hints as a separate optional layer.** UDF explicitly separates
-labels, descriptions, and help text into a distinct conceptual layer that can
-be omitted. Formspec embeds these as Item properties but does not require
-them for structural validity (a form without labels is processable, just not
-user-facing). The practical effect is the same. No change.
-
-
+This guidance is RECOMMENDED, not REQUIRED.
 
 ---
 
-## Appendix F: UDF Cross-Analysis (Expression Language, Validation, Composition)
+### B.7 Composition & Routing
 
-This appendix continues the UDF cross-analysis from Appendix E, covering the
-expression language (UEL), validation semantics, and composition features from
-the remaining sections of the UDF specification. This appendix is informative
-except where noted as normative.
+#### B.7.1 Fragment-Level Composition References (`$ref#fragment`)
 
-### F.1 Features Adopted as Amendments
+*Source: UDF (F.1.6)*
 
-#### F.1.1 Constraint Component Type on ValidationResults (Normative)
-
-UDF includes a `constraintComponent` field on every ValidationResult that
-categorizes *what kind of check* produced the result: `"required"`, `"type"`,
-`"field-constraint"`, `"shape"`, or `"external"`. Formspec's current
-ValidationResult schema (§5.3) includes `shapeId` (which is null for
-non-shape results) and `source` (for external results), but does not
-provide a uniform categorizer for the constraint kind.
-
-This matters for programmatic consumers that need to route different
-constraint types to different handlers — e.g., suppress all "required"
-errors during draft save, or count only "shape" failures for analytics.
-
-**Amendment.** Formspec adds `constraintKind` to the ValidationResult schema:
-
-| Property | Type | Cardinality | Description |
-|----------|------|-------------|-------------|
-| `constraintKind` | string | 1..1 (REQUIRED) | The category of constraint that produced this result. |
-
-Standard values:
-
-| Value | Meaning |
-|-------|---------|
-| `"required"` | The field is required but has no value (null or empty). |
-| `"type"` | The value does not conform to the field's declared `dataType`. |
-| `"cardinality"` | A repeatable group violates `minRepeat` or `maxRepeat`. |
-| `"constraint"` | A Bind `constraint` expression evaluated to `false`. |
-| `"shape"` | A named Shape's constraint expression evaluated to `false`. |
-| `"external"` | An external system injected this result. |
-
-This replaces the previous convention of inferring the constraint source
-from `shapeId` presence/absence. All ValidationResults MUST include
-`constraintKind`.
-
-#### F.1.2 Standard Built-in Constraint Codes (Normative)
-
-UDF defines a standard set of machine-readable codes for built-in constraint
-failures. Formspec's §5.3 defines the `code` property as optional with no
-standardized vocabulary. Without standard codes, every implementation invents
-its own, making cross-system result processing unreliable.
-
-**Amendment.** The following codes are RESERVED. Conformant processors MUST
-use these exact codes for the corresponding built-in constraints:
-
-| Code | constraintKind | Triggered When |
-|------|---------------|---------------|
-| `REQUIRED` | `required` | A required field is null or empty string. |
-| `TYPE_MISMATCH` | `type` | The value cannot be interpreted as the field's `dataType`. |
-| `MIN_REPEAT` | `cardinality` | A repeatable group has fewer instances than `minRepeat`. |
-| `MAX_REPEAT` | `cardinality` | A repeatable group has more instances than `maxRepeat`. |
-| `CONSTRAINT_FAILED` | `constraint` | A Bind `constraint` expression returned `false`. |
-| `SHAPE_FAILED` | `shape` | A named Shape's constraint returned `false`. |
-| `EXTERNAL_FAILED` | `external` | An external validation source reported a failure. |
-
-Shape-level and external codes (`code` property on Shapes, `code` on
-external results) override the generic `SHAPE_FAILED` / `EXTERNAL_FAILED`
-defaults. The built-in codes are fallbacks for when no specific code is
-declared.
-
-#### F.1.3 Per-Shape Validation Timing (Normative)
-
-UDF defines `validationMode` per-shape with values `onChange`, `onBlur`,
-`onSubmit`, and `onDemand`. Formspec's validation modes (§5.5) are a global
-runtime setting (`continuous`/`deferred`/`disabled`). This is too coarse:
-a form often needs lightweight field-level checks running continuously
-alongside heavyweight cross-section checks that only run on submit.
-
-**Amendment.** Formspec adds `timing` to the Shape schema:
-
-| Property | Type | Cardinality | Description |
-|----------|------|-------------|-------------|
-| `timing` | string | 0..1 (OPTIONAL) | Controls when this shape is evaluated. Default: `"continuous"`. |
-
-| Value | Semantics |
-|-------|-----------|
-| `"continuous"` | Evaluated whenever any dependency changes. This is the default. Suitable for field-level and group-level validation. |
-| `"submit"` | Evaluated only when submission is requested. Suitable for expensive cross-section checks, grand total verification, and final consistency rules. |
-| `"demand"` | Evaluated only when explicitly requested by the consuming application. Suitable for external API validations and checks that require user confirmation. |
-
-The global validation mode (§5.5) acts as an override:
-- When the global mode is `"disabled"`, no shapes fire regardless of `timing`.
-- When the global mode is `"deferred"`, all shapes (including `"continuous"`)
-  are deferred until explicitly requested.
-- When the global mode is `"continuous"` (default), shapes fire according to
-  their individual `timing`.
-
-This two-level model (global override + per-shape timing) provides both
-coarse and fine-grained control.
-
-#### F.1.4 Date and DateTime Literals in FEL (Normative)
-
-UDF defines date literals with an `@` prefix: `@2025-01-15`,
-`@2025-01-15T14:30:00Z`. Formspec currently requires the `date()` cast
-function: `date('2025-01-15')`. Literal syntax is cleaner in expressions,
-especially for comparisons:
-
-```
-$report_date >= date('2025-01-01') and $report_date <= date('2025-12-31')
-```
-
-vs.
-
-```
-$report_date >= @2025-01-01 and $report_date <= @2025-12-31
-```
-
-**Amendment.** FEL adds date and dateTime literal syntax:
-
-| Literal | Format | Example |
-|---------|--------|---------|
-| Date | `@YYYY-MM-DD` | `@2025-01-15` |
-| DateTime | `@YYYY-MM-DDThh:mm:ssZ` | `@2025-01-15T14:30:00Z` |
-
-The `@` prefix is chosen to avoid ambiguity with field references (`$`) and
-numeric literals. The date/dateTime format after `@` MUST conform to ISO 8601.
-
-The `date()` and `dateTime()` cast functions remain available for parsing
-string values at runtime. Literals are for compile-time constants.
-
-Updated grammar production (extends §3.7):
-
-```
-Literal ← NumberLiteral / StringLiteral / 'true' / 'false' / 'null'
-         / DateTimeLiteral / DateLiteral
-DateLiteral     ← '@' [0-9]{4} '-' [0-9]{2} '-' [0-9]{2}
-DateTimeLiteral ← '@' [0-9]{4} '-' [0-9]{2} '-' [0-9]{2} 'T'
-                   [0-9]{2} ':' [0-9]{2} ':' [0-9]{2} ('Z' / [+-][0-9]{2}':'[0-9]{2})
-```
-
-#### F.1.5 Additional Built-in Functions (Normative)
-
-UDF's function set includes several functions absent from FEL that address
-common form logic patterns:
-
-**Amendment.** The following functions are added to FEL:
-
-| Function | Signature | Returns | Description |
-|----------|-----------|---------|-------------|
-| `countWhere(array, expr)` | `countWhere(array, boolean) → number` | number | Count of elements where the expression evaluates to `true`. Within the expression, `$` refers to the current element. E.g., `countWhere($line_items[*].amount, $ > 10000)`. |
-| `selected(field, value)` | `selected(array, string) → boolean` | boolean | Returns `true` if the multiChoice field's value array contains the specified value. Shorthand for `value in $field`. |
-| `format(template, ...)` | `format(string, any...) → string` | string | String interpolation. Positional placeholders `{0}`, `{1}`, etc. are replaced with the corresponding arguments, formatted as strings. E.g., `format('{0} of {1}', $current, $total)`. |
-| `power(base, exp)` | `power(number, number) → number` | number | Exponentiation. `power(2, 10)` returns `1024`. |
-
-`countWhere` is particularly valuable for repeat contexts: "how many line
-items exceed the threshold?" is a common validation and display requirement
-that currently requires verbose workarounds.
-
-#### F.1.6 Fragment-Level Composition References (Normative)
-
-UDF's `$include` supports fragment paths:
-`"https://grants.gov/forms/common/recipient-info|1.0.0#recipient"`. This
-allows including a specific field or group from another definition, not just
-all root items.
-
-Formspec's `$ref` (§6.6) includes all root items from the referenced
-definition. This is too coarse for the common case of "I want just the
-address group from the common demographics definition."
-
-**Amendment.** Formspec extends the `$ref` syntax to support fragment
-addressing:
+Formspec extends `$ref` to support fragment addressing:
 
 ```json
 {
@@ -5426,127 +4702,19 @@ addressing:
 }
 ```
 
-The fragment (after `#`) is the `key` of the item to include from the
-referenced definition. When a fragment is present:
-- Only the item with the matching `key` (and its descendants) is included.
-- If the fragment key does not exist in the referenced definition, assembly
-  MUST fail with an error.
+The fragment (after `#`) is the `key` of the item to include. When present,
+only the matching item and its descendants are included. If the key does not
+exist, assembly MUST fail. When no fragment is present, existing behavior
+applies (all root items).
 
-When no fragment is present, the existing behavior applies: all root items
-from the referenced definition are included.
+#### B.7.2 Formal Screener Routing (`screener`)
 
-### F.2 Features Already Covered
+*Source: UDF (G.1.1)*
 
-**Expression language design goals.** UEL's goals (portable, deterministic,
-safe, readable) are identical to FEL's (§3.1).
-
-**Field reference syntax.** UEL uses bare `field_name` and `.` for self;
-FEL uses `$field_name` and `$`. Different tokens, same semantics.
-
-**Operator set and precedence.** Nearly identical. Both use `&` for
-concatenation, `mod` / `%` for modulo, word-form logical operators.
-
-**Aggregate functions.** `sum`, `count`, `avg`, `min`, `max` — identical.
-
-**String, numeric, date functions.** Substantially overlapping. UEL's
-`daysBetween`/`monthsBetween` map to FEL's `dateDiff(d1, d2, 'days')` /
-`dateDiff(d1, d2, 'months')`. UEL's `addDays`/`addMonths` map to FEL's
-`dateAdd(d, n, 'days')` / `dateAdd(d, n, 'months')`.
-
-**Conditional expression.** Both use `if(cond, then, else)`.
-
-**Repeat context.** UEL's `[]` (current iteration), `[*]` (all), `[0]`
-(indexed), `index()` map to FEL's `@current`, `[*]`, `[1]` (1-based),
-`@index`.
-
-**Shape structure and composition.** Identical: named shapes with id, path,
-severity, constraint, message, code, and logical composition (and/or/not/xone).
-
-**`when` on shapes.** UDF's `when` is identical to Formspec's `activeWhen`
-(Appendix C, §C.1.4).
-
-**Severity semantics.** Identical: error blocks submission, warning/info
-do not. `isValid` = zero error-severity results.
-
-**Non-relevant field handling.** Identical five-point rule set.
-
-**ValidationReport structure.** Identical: `isValid`, `timestamp`, `counts`,
-`results` array.
-
-**External validation injection.** Identical: same result structure, merged
-into unified report, affects `isValid`.
-
-**Form-level and cross-form scope.** UDF's `"$form"` maps to Formspec's `"#"`;
-cross-form references use secondary instances in both specs.
-
-**Assembly.** Both define `$include`/`$ref` resolved at publish time with
-`assembledFrom` provenance.
-
-### F.3 Design Divergences (No Action)
-
-**Weak typing vs strict typing.** UEL uses implicit coercion (null→0,
-""→0, ""→false). FEL requires explicit casting. This is Formspec's most
-deliberate design choice — implicit coercion causes subtle bugs in financial
-calculations where `null` silently becomes `0`. Form authors must write
-`coalesce($field, 0)` to explicitly handle missing values. No change.
-
-**NaN vs null propagation.** UEL produces `NaN` from invalid arithmetic
-and uses `isNaN()` to test. FEL produces `null` and uses `isNull()`.
-FEL's approach is simpler (one "absent" sentinel, not two) and avoids the
-`NaN != NaN` paradox. No change.
-
-**Zero-based vs 1-based repeat indexing.** UEL's `index()` returns 0-based.
-FEL's `@index` returns 1-based. 1-based matches XForms, spreadsheets, and
-human counting. No change.
-
-**`prior()` shorthand.** UDF provides `prior(path)` as sugar for
-`$instances.prior_year.path`. This hard-codes the instance name `prior_year`.
-FEL's `@instance('prior_year').path` is more general — the instance name is
-explicit. No change.
-
-**Both-branches-evaluated `if()`.** UDF notes `if()` evaluates both branches
-(with optional optimization). FEL specifies short-circuit evaluation: only the
-selected branch is evaluated (§3.5). Short-circuit is correct for expressions
-that may error on one branch (e.g., `if(@count > 0, $items[1].value, 0)` —
-evaluating the then-branch when `@count = 0` would be an index error). No
-change.
-
-**`onBlur` validation timing.** UDF includes `onBlur` as a validation mode.
-This is a UI-specific concept (focus leaving a field) that doesn't exist in
-API-only or PDF contexts. Formspec's `timing` values (`continuous`, `submit`,
-`demand`) are rendering-agnostic. No change.
-
-**EBNF vs PEG grammar notation.** UDF uses EBNF; Formspec uses PEG. Both
-are unambiguous grammar formalisms. No change.
-
-
-
----
-
-## Appendix G: UDF Cross-Analysis (Routing, Extensions, Conformance)
-
-This appendix completes the UDF cross-analysis covering screener routing,
-extension semantics, and conformance requirements. This appendix is
-informative except where noted as normative.
-
-### G.1 Features Adopted as Amendments
-
-#### G.1.1 Formal Screener Routing (Normative)
-
-UDF defines a first-class `screener` section with an ordered `routes` array
-where each route has a `condition` expression and a `target` definition URL.
-Formspec handles routing via calculated fields and examples (§7.5) but has
-no dedicated routing structure. The calculate-field approach works but
-requires the implementor to invent the pattern each time.
-
-**Amendment.** Formspec adds an optional `screener` property to the Definition:
+Formspec adds an optional `screener` property to the Definition:
 
 ```json
 {
-  "$formspec": "1.0",
-  "url": "https://grants.gov/forms/sf-425-screener",
-  "version": "1.0.0",
-  "status": "active",
   "screener": {
     "items": [
       {
@@ -5554,18 +4722,11 @@ requires the implementor to invent the pattern each time.
         "type": "field",
         "dataType": "money",
         "label": "Total federal award amount"
-      },
-      {
-        "key": "frequency",
-        "type": "field",
-        "dataType": "choice",
-        "optionSet": "reporting_frequencies",
-        "label": "Required reporting frequency"
       }
     ],
     "routes": [
       {
-        "condition": "moneyAmount($award_amount) < 250000 and $frequency = 'annual'",
+        "condition": "moneyAmount($award_amount) < 250000",
         "target": "https://grants.gov/forms/sf-425-short|1.0.0",
         "label": "SF-425 Short Form"
       },
@@ -5581,171 +4742,84 @@ requires the implementor to invent the pattern each time.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `screener.items` | array of Item | Fields presented to the user for routing classification. These items use the standard Item schema (§4.2) and their values are available to route conditions. |
-| `screener.routes` | array of Route | Ordered list of routing rules. |
-| `screener.routes[].condition` | string (FEL → boolean) | Expression evaluated against screener item values. |
-| `screener.routes[].target` | string (URI) | Canonical reference (`url\|version`) to the target FormDefinition. |
-| `screener.routes[].label` | string (OPTIONAL) | Human-readable description of this route. |
+| `screener.items` | array of Item | Fields for routing classification (standard Item schema). |
+| `screener.routes` | array of Route | Ordered routing rules. First `true` condition wins. |
+| `screener.routes[].condition` | string (FEL → boolean) | Expression evaluated against screener items. |
+| `screener.routes[].target` | string (URI) | Canonical reference (`url\|version`) to the target Definition. |
+| `screener.routes[].label` | string (OPTIONAL) | Human-readable route description. |
 
-Routes are evaluated in declaration order. The first route whose `condition`
-evaluates to `true` wins. A route with `"condition": "true"` acts as a
-default/fallback.
+Screener items are NOT part of the form's instance data.
 
-Screener items are NOT part of the form's instance data — they exist only for
-routing purposes. The consuming application is responsible for launching the
-target definition after routing.
+---
 
-A Definition with a `screener` section MAY also contain regular `items` and
-`binds`. In this case the screener acts as a gating step before the main form.
+### B.8 Extensions & Conformance
 
-#### G.1.2 `mustUnderstand` on Extensions (Normative)
+#### B.8.1 `mustUnderstand` on Extensions
 
-UDF's §8.4 specifies that extensions may be marked `mustUnderstand: true`,
-requiring engines to report an error if they cannot process the extension.
-Formspec's current rule (§8.4) says processors "MUST ignore extension
-properties they do not understand." This is safe for decorative extensions
-but dangerous for behavioral ones — a custom constraint component that is
-silently ignored produces a false sense of validation.
+*Source: UDF (G.1.2)*
 
-**Amendment.** Any extension object (in `extensions.dataTypes`,
-`extensions.functions`, `extensions.constraints`, or item-level `extensions`)
-MAY include:
+Any extension object MAY include:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `mustUnderstand` | boolean | `false` | When `true`, a processor that does not recognize or cannot evaluate this extension MUST report a definition error and MUST NOT proceed with evaluation. When `false` (default), the processor MAY ignore the extension. |
+| `mustUnderstand` | boolean | `false` | When `true`, a processor that cannot evaluate this extension MUST report a definition error and MUST NOT proceed. |
 
-```json
-{
-  "extensions": {
-    "functions": {
-      "x-verify-npi": {
-        "description": "Verify NPI checksum using the Luhn algorithm",
-        "parameters": [{ "name": "npi", "type": "string" }],
-        "returns": "boolean",
-        "implementation": "external",
-        "mustUnderstand": true
-      }
-    }
-  }
-}
-```
+This amends §8.4: processors MUST ignore extensions they do not understand
+**unless `mustUnderstand` is `true`**.
 
-The existing rule that processors "MUST ignore extension properties they do
-not understand" (§8.4) is amended to: processors MUST ignore extension
-properties they do not understand **unless `mustUnderstand` is `true`**.
+#### B.8.2 Conformance Tiers
 
-This enables critical extensions (custom validation functions, domain-required
-type checks) to fail loudly rather than silently.
+*Source: UDF (G.1.3)*
 
-#### G.1.3 Conformance Tiers (Normative)
+Formspec defines two conformance tiers:
 
-UDF defines Core and Extended conformance levels. Formspec's §1.4 defines a
-single conformance level. Tiered conformance enables lightweight processors
-(e.g., a validation-only API) to claim conformance without implementing
-every feature.
-
-**Amendment.** Formspec defines two conformance tiers:
-
-**Formspec Core** — A conformant Core processor MUST support:
+**Formspec Core** — MUST support:
 
 1. Parsing and validating FormDefinition documents
-2. All core data types (§4.2.3), including `money` (Appendix C)
-3. All five Bind MIPs: `calculate`, `relevant`, `required`, `readonly`,
-   `constraint`
+2. All core data types (§4.2.3), including `money` (§B.1.1)
+3. All five Bind MIPs: `calculate`, `relevant`, `required`, `readonly`, `constraint`
 4. The full FEL expression language (§3), including all built-in functions
 5. Validation shapes with severity levels and ValidationReport generation (§5)
 6. The four-phase processing model (§2.4)
 7. Canonical identity, versioning, and response pinning (§6)
-8. Named option sets (Appendix E)
+8. Named option sets (§B.5.2)
 
-**Formspec Extended** — A conformant Extended processor MUST support Formspec
-Core plus:
+**Formspec Extended** — MUST support Core plus:
 
 1. Extension data types, functions, and constraint components (§8)
-2. `mustUnderstand` extension processing (Appendix G, §G.1.2)
-3. Screener routing (Appendix G, §G.1.1)
+2. `mustUnderstand` extension processing (§B.8.1)
+3. Screener routing (§B.7.2)
 4. Modular composition and assembly (§6.6)
-5. Version migration maps (Appendix E, §E.1.2)
-6. Pre-population declarations (Appendix E, §E.1.3)
+5. Version migration maps (§B.6.1)
+6. Pre-population declarations (§B.3.6)
 
-A processor MAY claim "Formspec Core" or "Formspec Extended" conformance.
-A processor claiming Extended conformance implicitly claims Core conformance.
+#### B.8.3 Conformance Prohibitions
 
-#### G.1.4 Conformance Prohibitions (Normative)
+*Source: UDF (G.1.4)*
 
-In addition to the positive requirements in §1.4, a conformant Formspec
-processor (Core or Extended) MUST NOT:
+A conformant Formspec processor (Core or Extended) MUST NOT:
 
 1. **Silently substitute definition versions.** When validating a Response
-   pinned to version X, the processor MUST use version X. If version X is
-   unavailable, the processor MUST report an error.
-2. **Produce validation results for non-relevant fields.** Non-relevant
-   fields are exempt from all validation (§5.6 rule 1).
-3. **Block data persistence based on validation state.** Validation and
-   persistence are independent operations. A processor MUST allow saving
-   instance data regardless of whether the data is valid (§5.5).
-4. **Silently drop unknown `mustUnderstand` extensions.** If an extension
-   has `mustUnderstand: true` and the processor does not support it, the
-   processor MUST report an error.
+   pinned to version X, the processor MUST use version X.
+2. **Produce validation results for non-relevant fields.** (§5.6 rule 1)
+3. **Block data persistence based on validation state.** (§5.5)
+4. **Silently drop unknown `mustUnderstand` extensions.** (§B.8.1)
 
-### G.2 Features Already Covered
+---
 
-**Worked examples (§9.1–9.6).** All six UDF examples map to existing
-Formspec examples (§7.1–7.6): budget line items with calculated totals,
-conditional sections with dependent validation, year-over-year warnings,
-screener routing, external validation injection, and repeatable rows with
-per-row and cross-row constraints.
+### B.9 Path Semantics Clarification
 
-**Extension points (§8.1–8.3).** Custom field types, custom functions, and
-custom constraint components — all structurally equivalent to Formspec §8.
+#### B.9.1 FieldRef vs Resolved Instance Path
 
-**Extension namespacing via URIs.** UDF uses URIs for extension identifiers;
-Formspec uses `x-` prefixed names. Both prevent collisions. Formspec's
-approach is simpler for common cases; UDF's is more formal.
+*Source: JDFM (C.1.5)*
 
-**Lineage documentation (§10).** UDF's lineage tables are structurally
-identical to Formspec §9, attributing the same sources (XForms, SHACL,
-FHIR R5, ODK, SurveyJS, JSON Forms, CommonGrants).
+Formspec clarifies the distinction between definition-time and runtime paths:
 
-**`when` on shapes.** UDF's `when` is identical to Formspec's `activeWhen`
-(Appendix C, §C.1.4).
+- **Bind `path` and Shape `target`** use **FieldRef** syntax: dot-notation
+  with `[*]` wildcards. These are definition-time addresses.
+- **ValidationResult `path`** uses **resolved instance paths** with concrete
+  1-based indexes: `line_items[3].amount`. This unambiguously identifies
+  the specific data node that failed.
 
-**`validationMode` per shape.** UDF's `validationMode` (onChange/onBlur/
-onSubmit/onDemand) is addressed by Formspec's `timing` (continuous/submit/
-demand) from Appendix F, §F.1.3.
-
-**`constraintComponent` on results.** UDF's `constraintComponent` is
-addressed by Formspec's `constraintKind` from Appendix F, §F.1.1.
-
-**`context` map on ValidationResult.** Already present in Formspec §5.3.
-
-### G.3 Design Divergences (No Action)
-
-**`$form` and `$cross` as magic path targets.** UDF uses `"$form"` for
-form-level shapes and `"$cross"` for cross-form shapes. Formspec uses `"#"`
-for root-level targeting and cross-instance references via `@instance()` in
-expressions. The `$cross` concept conflates targeting with data access —
-a shape still needs to specify *which* cross-form data to compare. Formspec's
-approach of using standard instance references within shape expressions is
-more explicit. No change.
-
-**Inline constraint objects on binds.** UDF allows
-`"constraint": { "expression": "...", "message": "..." }` on binds. Formspec
-uses separate `constraint` (expression) and `constraintMessage` (string)
-properties. Both work. No change.
-
-**Presentation Hints as separate optional layer.** UDF explicitly separates
-labels/descriptions into an optional layer. Formspec embeds them on items
-but doesn't require them for structural validity (§4.2.1: `label` is
-REQUIRED but a headless processor can ignore it). The practical difference
-is minimal. No change.
-
-**`code` required on all ValidationResults.** UDF makes `code` required
-(not optional) on every result. With the standard built-in codes from
-Appendix F (§F.1.2), this is achievable — every result has either a
-shape-specific code or a built-in code. Formspec's §5.3 already lists
-`code` as optional. Given that §F.1.2 now provides standard fallback codes,
-this appendix upgrades `code` to RECOMMENDED (processors SHOULD include it,
-using built-in codes from §F.1.2 when no specific code is declared).
-
+This distinction was implicit in existing examples (§7.3.3 shows
+`"path": "categories[1]"`) and is now explicitly normative.
