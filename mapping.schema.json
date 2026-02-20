@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/mapping/1.0",
+  "title": "Formspec Mapping Document",
+  "description": "A Formspec Mapping DSL v1.0 document describing bidirectional data transformation between a Formspec Response and an external schema (§3).",
+  "type": "object",
+  "required": ["version", "definitionRef", "definitionVersion", "targetSchema", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "URI identifying the version of the Mapping DSL specification this document conforms to."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semantic version of this Mapping Document (e.g. '1.0.0')."
+    },
+    "definitionRef": {
+      "type": "string",
+      "minLength": 1,
+      "description": "URI or stable identifier of the target Formspec Definition (§3.1)."
+    },
+    "definitionVersion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semver range of compatible Formspec Definition versions (e.g. '>=1.0.0 <2.0.0') per node-semver syntax (§3.1)."
+    },
+    "targetSchema": {
+      "$ref": "#/$defs/TargetSchema"
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["forward", "reverse", "both"],
+      "default": "both",
+      "description": "Execution direction: 'forward' (source→target), 'reverse' (target→source), or 'both' (§3.1.2)."
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Leaf values applied to target fields not covered by any Field Rule. Keys are valid target paths (§3.1)."
+    },
+    "autoMap": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, fields not mentioned in rules are mapped by matching path using 'preserve' (§3.5)."
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/FieldRule" },
+      "description": "Ordered array of Field Rule objects (§3.3). MUST contain at least one element."
+    },
+    "adapters": {
+      "type": "object",
+      "description": "Adapter-specific configuration keyed by adapter identifier (§6).",
+      "properties": {
+        "json": { "$ref": "#/$defs/JsonAdapter" },
+        "xml": { "$ref": "#/$defs/XmlAdapter" },
+        "csv": { "$ref": "#/$defs/CsvAdapter" }
+      },
+      "patternProperties": {
+        "^x-": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "$defs": {
+
+    "TargetSchema": {
+      "type": "object",
+      "required": ["format"],
+      "description": "Descriptor for the external target schema (§3.2).",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["json", "xml", "csv"],
+          "description": "Structural format of the target."
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name of the target schema (e.g. 'FHIR Patient R4')."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Canonical URL of the target schema definition."
+        },
+        "rootElement": {
+          "type": "string",
+          "description": "Root XML element name. REQUIRED when format is 'xml' (§3.2.1)."
+        },
+        "namespaces": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "XML namespace prefix→URI map. Empty string key is the default namespace (§3.2.1)."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "format": { "const": "xml" } },
+            "required": ["format"]
+          },
+          "then": {
+            "required": ["rootElement"]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+
+    "FieldRule": {
+      "type": "object",
+      "required": ["transform"],
+      "description": "A single field mapping rule (§3.3). At least one of sourcePath or targetPath MUST be present.",
+      "properties": {
+        "sourcePath": {
+          "type": "string",
+          "description": "Dot-notation path in the source document. REQUIRED for all transforms except 'constant' and 'drop' (§3.3)."
+        },
+        "targetPath": {
+          "type": "string",
+          "description": "Dot-notation path in the target document. REQUIRED for all transforms except 'drop' (§3.3)."
+        },
+        "transform": {
+          "type": "string",
+          "enum": [
+            "preserve", "drop", "expression", "coerce",
+            "valueMap", "flatten", "nest", "constant",
+            "concat", "split"
+          ],
+          "description": "Transform type (§3.3.1)."
+        },
+        "expression": {
+          "type": "string",
+          "description": "FEL expression. $ = source value, @source = full source document. REQUIRED for expression/constant/concat/split transforms (§4.4, §4.9, §4.10, §4.11)."
+        },
+        "coerce": {
+          "oneOf": [
+            { "$ref": "#/$defs/Coerce" },
+            { "type": "string", "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"] }
+          ],
+          "description": "Type conversion descriptor (object form per §3.3.2) or shorthand target-type string. REQUIRED when transform is 'coerce' (§4.5)."
+        },
+        "valueMap": {
+          "oneOf": [
+            { "$ref": "#/$defs/ValueMap" },
+            { "type": "object", "not": { "required": ["forward"] }, "description": "Shorthand: flat object treated as forward lookup map." }
+          ],
+          "description": "Lookup table (full form per §3.3.3) or shorthand flat object. REQUIRED when transform is 'valueMap' (§4.6)."
+        },
+        "reverse": {
+          "$ref": "#/$defs/ReverseOverride",
+          "description": "Explicit override for reverse-direction execution (§5.3)."
+        },
+        "bidirectional": {
+          "type": "boolean",
+          "default": true,
+          "description": "If false, rule is skipped during reverse execution (§5.2)."
+        },
+        "condition": {
+          "type": "string",
+          "description": "FEL boolean guard expression. Rule executes only when true (§4.13)."
+        },
+        "default": {
+          "description": "Fallback value when sourcePath resolves to undefined/null/absent (§3.3)."
+        },
+        "array": {
+          "$ref": "#/$defs/ArrayDescriptor",
+          "description": "Array handling descriptor (§4.12)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description. Ignored during execution."
+        },
+        "priority": {
+          "type": "integer",
+          "default": 0,
+          "description": "Execution priority. Higher values execute first (§3.4)."
+        },
+        "reversePriority": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reverse-direction precedence when multiple rules write to same Response path. Highest wins (§5.6)."
+        }
+      },
+      "anyOf": [
+        { "required": ["sourcePath"] },
+        { "required": ["targetPath"] }
+      ],
+      "additionalProperties": false
+    },
+
+    "Coerce": {
+      "type": "object",
+      "required": ["from", "to"],
+      "description": "Type conversion descriptor (§3.3.2, §4.5).",
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"],
+          "description": "Source data type."
+        },
+        "to": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"],
+          "description": "Target data type."
+        },
+        "format": {
+          "type": "string",
+          "description": "Format pattern applied during coercion (e.g. 'YYYY-MM-DD', 'MM/DD/YYYY')."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "ValueMap": {
+      "type": "object",
+      "required": ["forward"],
+      "description": "Lookup table for value translation (§3.3.3, §4.6).",
+      "properties": {
+        "forward": {
+          "type": "object",
+          "description": "Forward-direction lookup: source value (key) → target value (value)."
+        },
+        "reverse": {
+          "type": "object",
+          "description": "Reverse-direction lookup. If omitted, auto-inferred by inverting forward. Error if forward is not injective and reverse omitted (§4.6)."
+        },
+        "unmapped": {
+          "type": "string",
+          "enum": ["error", "drop", "passthrough", "default"],
+          "default": "error",
+          "description": "Strategy for source values with no matching key (§4.6)."
+        },
+        "default": {
+          "description": "Fallback value when unmapped is 'drop' or 'default', or when source is null."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "ArrayDescriptor": {
+      "type": "object",
+      "required": ["mode"],
+      "description": "Array handling descriptor (§4.12).",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["each", "whole", "indexed"],
+          "description": "Array iteration strategy: 'each' (per-element), 'whole' (entire array), 'indexed' (positional) (§4.12)."
+        },
+        "separator": {
+          "type": "string",
+          "description": "Delimiter for string serialization. Valid with 'whole' mode (§4.12.1)."
+        },
+        "innerRules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/InnerRule" },
+          "description": "Nested Field Rules with element-relative paths (§4.12)."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "InnerRule": {
+      "description": "A Field Rule used inside array.innerRules. Same as FieldRule with optional 'index' for indexed mode (§4.12.4).",
+      "type": "object",
+      "required": ["transform"],
+      "properties": {
+        "sourcePath": { "type": "string" },
+        "targetPath": { "type": "string" },
+        "transform": {
+          "type": "string",
+          "enum": [
+            "preserve", "drop", "expression", "coerce",
+            "valueMap", "flatten", "nest", "constant",
+            "concat", "split"
+          ]
+        },
+        "expression": { "type": "string" },
+        "coerce": {
+          "oneOf": [
+            { "$ref": "#/$defs/Coerce" },
+            { "type": "string", "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"] }
+          ]
+        },
+        "valueMap": {
+          "oneOf": [
+            { "$ref": "#/$defs/ValueMap" },
+            { "type": "object" }
+          ]
+        },
+        "reverse": { "$ref": "#/$defs/ReverseOverride" },
+        "bidirectional": { "type": "boolean", "default": true },
+        "condition": { "type": "string" },
+        "default": {},
+        "array": { "$ref": "#/$defs/ArrayDescriptor" },
+        "description": { "type": "string" },
+        "priority": { "type": "integer", "default": 0 },
+        "reversePriority": { "type": "integer", "minimum": 0 },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based positional index. REQUIRED when parent array.mode is 'indexed' (§4.12.4)."
+        }
+      },
+      "anyOf": [
+        { "required": ["sourcePath"] },
+        { "required": ["targetPath"] }
+      ],
+      "additionalProperties": false
+    },
+
+    "ReverseOverride": {
+      "type": "object",
+      "description": "Explicit reverse-direction override (§5.3). MUST NOT contain sourcePath, targetPath, or reverse.",
+      "properties": {
+        "transform": {
+          "type": "string",
+          "enum": [
+            "preserve", "drop", "expression", "coerce",
+            "valueMap", "flatten", "nest", "constant",
+            "concat", "split"
+          ]
+        },
+        "expression": { "type": "string" },
+        "coerce": {
+          "oneOf": [
+            { "$ref": "#/$defs/Coerce" },
+            { "type": "string", "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"] }
+          ]
+        },
+        "valueMap": {
+          "oneOf": [
+            { "$ref": "#/$defs/ValueMap" },
+            { "type": "object" }
+          ]
+        },
+        "condition": { "type": "string" },
+        "default": {},
+        "bidirectional": { "type": "boolean" },
+        "array": { "$ref": "#/$defs/ArrayDescriptor" },
+        "priority": { "type": "integer" },
+        "description": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "JsonAdapter": {
+      "type": "object",
+      "description": "JSON format adapter configuration (§6.2).",
+      "properties": {
+        "pretty": { "type": "boolean", "default": false, "description": "Emit indented JSON." },
+        "sortKeys": { "type": "boolean", "default": false, "description": "Sort object keys lexicographically." },
+        "nullHandling": {
+          "type": "string",
+          "enum": ["include", "omit"],
+          "default": "include",
+          "description": "Whether to include or suppress null-valued keys."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "XmlAdapter": {
+      "type": "object",
+      "description": "XML format adapter configuration (§6.3).",
+      "properties": {
+        "declaration": { "type": "boolean", "default": true, "description": "Include <?xml?> declaration." },
+        "indent": { "type": "integer", "minimum": 0, "default": 2, "description": "Spaces per indentation level. 0 disables indentation." },
+        "cdata": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Target paths whose content is wrapped in CDATA sections."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "CsvAdapter": {
+      "type": "object",
+      "description": "CSV format adapter configuration (§6.4).",
+      "properties": {
+        "delimiter": { "type": "string", "default": ",", "maxLength": 1, "description": "Field delimiter character." },
+        "quote": { "type": "string", "default": "\"", "maxLength": 1, "description": "Quote character." },
+        "header": { "type": "boolean", "default": true, "description": "Whether to emit a header row." },
+        "encoding": { "type": "string", "default": "utf-8", "description": "Character encoding." },
+        "lineEnding": {
+          "type": "string",
+          "enum": ["crlf", "lf"],
+          "default": "crlf",
+          "description": "Line ending style."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
