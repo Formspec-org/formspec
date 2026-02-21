@@ -1,0 +1,635 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/component/1.0",
+  "title": "Formspec Component Document",
+  "type": "object",
+  "required": ["$formspecComponent", "version", "targetDefinition", "tree"],
+  "additionalProperties": false,
+  "properties": {
+    "$formspecComponent": { "type": "string", "const": "1.0" },
+    "url": { "type": "string", "format": "uri" },
+    "version": { "type": "string", "minLength": 1 },
+    "targetDefinition": { "$ref": "#/$defs/TargetDefinition" },
+    "breakpoints": { "$ref": "#/$defs/Breakpoints" },
+    "tokens": { "$ref": "#/$defs/Tokens" },
+    "components": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/CustomComponentDef" }
+    },
+    "tree": { "$ref": "#/$defs/AnyComponent" }
+  },
+  "$defs": {
+    "TargetDefinition": {
+      "type": "object",
+      "required": ["url"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "compatibleVersions": { "type": "string" }
+      }
+    },
+    "Tokens": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [{ "type": "string" }, { "type": "number" }]
+      }
+    },
+    "Breakpoints": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "StyleMap": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [{ "type": "string" }, { "type": "number" }]
+      }
+    },
+    "ResponsiveOverrides": {
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "ChildrenArray": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnyComponent" }
+    },
+    "CustomComponentDef": {
+      "type": "object",
+      "required": ["params", "tree"],
+      "additionalProperties": false,
+      "properties": {
+        "params": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "tree": { "$ref": "#/$defs/AnyComponent" }
+      }
+    },
+    "AnyComponent": {
+      "type": "object",
+      "required": ["component"],
+      "properties": {
+        "component": { "type": "string" }
+      },
+      "allOf": [
+        { "if": { "properties": { "component": { "const": "Page" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Page" } },
+        { "if": { "properties": { "component": { "const": "Stack" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Stack" } },
+        { "if": { "properties": { "component": { "const": "Grid" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Grid" } },
+        { "if": { "properties": { "component": { "const": "Wizard" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Wizard" } },
+        { "if": { "properties": { "component": { "const": "Spacer" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Spacer" } },
+        { "if": { "properties": { "component": { "const": "TextInput" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/TextInput" } },
+        { "if": { "properties": { "component": { "const": "NumberInput" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/NumberInput" } },
+        { "if": { "properties": { "component": { "const": "DatePicker" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/DatePicker" } },
+        { "if": { "properties": { "component": { "const": "Select" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Select" } },
+        { "if": { "properties": { "component": { "const": "CheckboxGroup" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/CheckboxGroup" } },
+        { "if": { "properties": { "component": { "const": "Toggle" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Toggle" } },
+        { "if": { "properties": { "component": { "const": "FileUpload" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/FileUpload" } },
+        { "if": { "properties": { "component": { "const": "Heading" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Heading" } },
+        { "if": { "properties": { "component": { "const": "Text" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Text" } },
+        { "if": { "properties": { "component": { "const": "Divider" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Divider" } },
+        { "if": { "properties": { "component": { "const": "Card" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Card" } },
+        { "if": { "properties": { "component": { "const": "Collapsible" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Collapsible" } },
+        { "if": { "properties": { "component": { "const": "ConditionalGroup" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/ConditionalGroup" } },
+        { "if": { "properties": { "component": { "const": "Columns" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Columns" } },
+        { "if": { "properties": { "component": { "const": "Tabs" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Tabs" } },
+        { "if": { "properties": { "component": { "const": "Accordion" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Accordion" } },
+        { "if": { "properties": { "component": { "const": "RadioGroup" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/RadioGroup" } },
+        { "if": { "properties": { "component": { "const": "MoneyInput" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/MoneyInput" } },
+        { "if": { "properties": { "component": { "const": "Slider" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Slider" } },
+        { "if": { "properties": { "component": { "const": "Rating" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Rating" } },
+        { "if": { "properties": { "component": { "const": "Signature" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Signature" } },
+        { "if": { "properties": { "component": { "const": "Alert" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Alert" } },
+        { "if": { "properties": { "component": { "const": "Badge" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Badge" } },
+        { "if": { "properties": { "component": { "const": "ProgressBar" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/ProgressBar" } },
+        { "if": { "properties": { "component": { "const": "Summary" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Summary" } },
+        { "if": { "properties": { "component": { "const": "DataTable" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/DataTable" } },
+        { "if": { "properties": { "component": { "const": "Panel" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Panel" } },
+        { "if": { "properties": { "component": { "const": "Modal" } }, "required": ["component"] }, "then": { "$ref": "#/$defs/Modal" } },
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "type": "string",
+                "not": {
+                  "enum": [
+                    "Page", "Stack", "Grid", "Wizard", "Spacer",
+                    "TextInput", "NumberInput", "DatePicker", "Select", "CheckboxGroup", "Toggle", "FileUpload",
+                    "Heading", "Text", "Divider",
+                    "Card", "Collapsible", "ConditionalGroup",
+                    "Columns", "Tabs", "Accordion",
+                    "RadioGroup", "MoneyInput", "Slider", "Rating", "Signature",
+                    "Alert", "Badge", "ProgressBar", "Summary", "DataTable",
+                    "Panel", "Modal"
+                  ]
+                }
+              }
+            },
+            "required": ["component"]
+          },
+          "then": { "$ref": "#/$defs/CustomComponentRef" }
+        }
+      ]
+    },
+
+    "Page": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Page" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "Stack": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Stack" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "direction": { "type": "string", "enum": ["vertical", "horizontal"], "default": "vertical" },
+        "gap": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
+        "align": { "type": "string", "enum": ["start", "center", "end", "stretch"] },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "Grid": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Grid" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "columns": { "oneOf": [{ "type": "string" }, { "type": "integer" }] },
+        "gap": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "Wizard": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Wizard" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "showProgress": { "type": "boolean" },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "Spacer": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Spacer" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "size": { "oneOf": [{ "type": "string" }, { "type": "number" }] }
+      }
+    },
+
+    "TextInput": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "TextInput" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "placeholder": { "type": "string" },
+        "maxLines": { "type": "integer", "minimum": 1 },
+        "inputMode": { "type": "string" }
+      }
+    },
+    "NumberInput": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "NumberInput" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "step": { "type": "number" },
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      }
+    },
+    "DatePicker": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "DatePicker" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "format": { "type": "string" },
+        "minDate": { "type": "string" },
+        "maxDate": { "type": "string" }
+      }
+    },
+    "Select": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Select" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "searchable": { "type": "boolean" },
+        "placeholder": { "type": "string" }
+      }
+    },
+    "CheckboxGroup": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "CheckboxGroup" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "columns": { "type": "integer", "minimum": 1 },
+        "selectAll": { "type": "boolean" }
+      }
+    },
+    "Toggle": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Toggle" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "onLabel": { "type": "string" },
+        "offLabel": { "type": "string" }
+      }
+    },
+    "FileUpload": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "FileUpload" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "accept": { "type": "string" },
+        "maxSize": { "type": "integer" },
+        "multiple": { "type": "boolean" }
+      }
+    },
+
+    "Heading": {
+      "type": "object",
+      "required": ["component", "level", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Heading" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "text": { "type": "string" }
+      }
+    },
+    "Text": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Text" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "text": { "type": "string" },
+        "format": { "type": "string", "enum": ["plain", "markdown"] }
+      }
+    },
+    "Divider": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Divider" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "label": { "type": "string" }
+      }
+    },
+
+    "Card": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Card" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "Collapsible": {
+      "type": "object",
+      "required": ["component", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Collapsible" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "title": { "type": "string" },
+        "defaultOpen": { "type": "boolean" },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "ConditionalGroup": {
+      "type": "object",
+      "required": ["component", "when"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "ConditionalGroup" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "fallback": { "type": "string" },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+
+    "Columns": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Columns" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "widths": {
+          "type": "array",
+          "items": { "oneOf": [{ "type": "string" }, { "type": "number" }] }
+        },
+        "gap": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "Tabs": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Tabs" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "position": { "type": "string", "enum": ["top", "bottom", "left", "right"], "default": "top" },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "Accordion": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Accordion" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "allowMultiple": { "type": "boolean" },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+
+    "RadioGroup": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "RadioGroup" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "columns": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "MoneyInput": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "MoneyInput" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "currency": { "type": "string" },
+        "prefix": { "type": "string" },
+        "suffix": { "type": "string" }
+      }
+    },
+    "Slider": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Slider" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "step": { "type": "number" }
+      }
+    },
+    "Rating": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Rating" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "max": { "type": "integer", "minimum": 1 },
+        "icon": { "type": "string" }
+      }
+    },
+    "Signature": {
+      "type": "object",
+      "required": ["component", "bind"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Signature" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "strokeColor": { "type": "string" },
+        "clearable": { "type": "boolean" }
+      }
+    },
+
+    "Alert": {
+      "type": "object",
+      "required": ["component", "severity", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Alert" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "severity": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "text": { "type": "string" }
+      }
+    },
+    "Badge": {
+      "type": "object",
+      "required": ["component", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Badge" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "text": { "type": "string" },
+        "variant": { "type": "string" }
+      }
+    },
+    "ProgressBar": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "ProgressBar" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "value": { "type": "number" },
+        "max": { "type": "number" },
+        "label": { "type": "string" }
+      }
+    },
+    "Summary": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Summary" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "bind"],
+            "additionalProperties": false,
+            "properties": {
+              "label": { "type": "string" },
+              "bind": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "DataTable": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "DataTable" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "bind": { "type": "string" },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["header", "bind"],
+            "additionalProperties": false,
+            "properties": {
+              "header": { "type": "string" },
+              "bind": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "Panel": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Panel" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "position": { "type": "string", "enum": ["left", "right"], "default": "left" },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "Modal": {
+      "type": "object",
+      "required": ["component", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "const": "Modal" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "title": { "type": "string" },
+        "size": { "type": "string", "enum": ["sm", "md", "lg", "xl", "full"] },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      }
+    },
+    "CustomComponentRef": {
+      "type": "object",
+      "required": ["component"],
+      "additionalProperties": false,
+      "properties": {
+        "component": { "type": "string" },
+        "when": { "type": "string" },
+        "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
+        "style": { "$ref": "#/$defs/StyleMap" },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    }
+  }
+}

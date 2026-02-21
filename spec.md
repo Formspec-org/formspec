@@ -2160,8 +2160,9 @@ keys inside `presentation` without breaking existing validators.
 > - The [Formspec Theme Specification](theme-spec.md) (Tier 2) defines
 >   sidecar theme documents that override inline hints with a 3-level
 >   selector cascade, design tokens, and responsive page layouts.
-> - Future **Component specifications** (Tier 3) may define full
->   presentation trees with slot bindings to Definition items.
+> - The [Formspec Component Specification](component-spec.md) (Tier 3)
+>   defines component documents for full presentation-tree control,
+>   including custom parameterized components and slot bindings.
 >
 > Companion specifications treat inline `presentation` hints as
 > author-specified defaults that may be overridden by higher tiers.

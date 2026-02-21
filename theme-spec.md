@@ -212,8 +212,8 @@ interoperability. These categories are RECOMMENDED, not required.
 
 ### 3.3 Token Reference Syntax
 
-Tokens are referenced in `style` objects and `widgetConfig` string
-values using the `$token.` prefix:
+Tokens are referenced in `style` objects, `widgetConfig` string
+values, and Tier 3 Component Documents using the `$token.` prefix:
 
 ```
 $token.<key>
