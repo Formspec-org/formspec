@@ -183,7 +183,7 @@ in the grammar (closer to the start symbol).
 Expression     ← _ LetExpr _
 
 # --- Let binding ---
-LetExpr        ← 'let' _ Identifier _ '=' _ LetExpr _ 'in' _ LetExpr
+LetExpr        ← 'let' _ Identifier _ '=' _ IfExpr _ 'in' _ LetExpr
                / IfExpr
 
 # --- If-then-else (keyword form) ---
@@ -220,10 +220,15 @@ Multiplication ← Unary ((_ '*' / _ '/' / _ '%') _ Unary)*
 
 # --- Unary prefix (precedence 10, right-associative) ---
 Unary          ← 'not' !IdContinue _ Unary
-               / Atom
+               / '-' _ Unary
+               / Postfix
+
+# --- Postfix (dot/index access after any atom) ---
+Postfix        ← Atom PathTail*
 
 # --- Atoms ---
-Atom           ← FunctionCall
+Atom           ← IfCall
+               / FunctionCall
                / FieldRef
                / ObjectLiteral
                / ArrayLiteral
@@ -237,13 +242,18 @@ IdContinue     ← [a-zA-Z0-9_]
 ### 4.1 Function Calls
 
 ```peg
+IfCall         ← 'if' _ '(' _ ArgList? _ ')'
 FunctionCall   ← Identifier '(' _ ArgList? _ ')'
 ArgList        ← Expression (_ ',' _ Expression)*
 ```
 
-The function name is an `Identifier` and MUST NOT be a reserved word (§3.3).
-Note: `if(cond, a, b)` is a built-in function call, **not** the keyword
-`if-then-else` form — the opening parenthesis disambiguates.
+The `IfCall` production handles `if(cond, a, b)` as a built-in function call.
+Because `if` is a reserved word (§3.3), it cannot match the `Identifier`
+production in `FunctionCall`. The parser MUST try `IfCall` before
+`FunctionCall`. The opening parenthesis disambiguates `if(...)` (function
+call) from `if ... then ... else ...` (keyword conditional).
+
+All other function names are `Identifier`s and MUST NOT be reserved words.
 
 ### 4.2 Object Literals
 
@@ -298,9 +308,11 @@ precedence. This table is normative and matches the structural encoding in §4.
 | 7 | `??` | Null-coalescing| Left | `$x ?? 0` |
 | 8 | `+` `-` `&` | Add / Concat | Left | `$a + $b`, `$s & '!'` |
 | 9 | `*` `/` `%` | Multiply | Left | `$a * $b` |
-| 10 | `not` (prefix) | Logical NOT | Right | `not $flag` |
+| 10 | `not` (prefix), `-` (negate) | Unary | Right | `not $flag`, `-$x` |
 
 Parenthesised sub-expressions (`( … )`) override precedence as usual.
+Postfix operators (`.field`, `[index]`) bind tighter than all prefix
+operators, enabling `prev().field` and `(expr).field`.
 
 ## 6. Path Expressions
 

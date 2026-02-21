@@ -1023,7 +1023,7 @@ noted.
 | 7 | `??` | Null-coalescing | Left |
 | 8 | `+`, `-`, `&` | Addition / concatenation | Left |
 | 9 | `*`, `/`, `%` | Multiplication | Left |
-| 10 (highest) | `not` (prefix) | Logical negation | Right (unary) |
+| 10 (highest) | `not` (prefix), `-` (negate) | Unary | Right |
 
 #### Operator Semantics
 
@@ -1431,7 +1431,13 @@ The grammar uses the following PEG conventions:
 # Formspec Expression Language (FEL) — PEG Grammar (Informative)
 # ============================================================
 
-Expression     ← _ Ternary _
+Expression     ← _ LetExpr _
+
+LetExpr        ← 'let' _ Identifier _ '=' _ IfExpr _ 'in' _ LetExpr
+               / IfExpr
+
+IfExpr         ← 'if' _ Ternary _ 'then' _ IfExpr _ 'else' _ IfExpr
+               / Ternary
 
 Ternary        ← LogicalOr (_ '?' _ Expression _ ':' _ Expression)?
 
@@ -1452,19 +1458,34 @@ Addition       ← Multiplication ((_ '+' / _ '-' / _ '&') _ Multiplication)*
 Multiplication ← Unary ((_ '*' / _ '/' / _ '%') _ Unary)*
 
 Unary          ← 'not' _ Unary
-               / Atom
+               / '-' _ Unary
+               / Postfix
 
-Atom           ← FunctionCall
+Postfix        ← Atom PathTail*
+
+PathTail       ← '.' Identifier
+               / '[' _ ( Integer / '*' ) _ ']'
+
+Atom           ← IfCall
+               / FunctionCall
                / FieldRef
+               / ObjectLiteral
                / ArrayLiteral
                / Literal
                / '(' _ Expression _ ')'
 
-FieldRef       ← '$' Identifier ('.' Identifier)* ('[' _ ( Integer / '*' ) _ ']' ('.' Identifier)*)*
+IfCall         ← 'if' _ '(' _ ArgList? _ ')'
+
+FieldRef       ← '$' Identifier PathTail*
                / '$'
                / '@' Identifier ('(' _ StringLiteral _ ')')? ('.' Identifier)*
 
-FunctionCall   ← Identifier '(' _ (Expression (_ ',' _ Expression)*)? _ ')'
+FunctionCall   ← Identifier '(' _ ArgList? _ ')'
+ArgList        ← Expression (_ ',' _ Expression)*
+
+ObjectLiteral  ← '{' _ ObjectEntries? _ '}'
+ObjectEntries  ← ObjectEntry (_ ',' _ ObjectEntry)*
+ObjectEntry    ← (Identifier / StringLiteral) _ ':' _ Expression
 
 ArrayLiteral   ← '[' _ (Expression (_ ',' _ Expression)*)? _ ']'
 
@@ -1495,8 +1516,9 @@ _              ← [ \t\n\r]*              # Optional whitespace
 ```
 
 > *Informative note:* This grammar intentionally omits Unicode escape sequences
-> in string literals, detailed whitespace rules, and comment syntax. A full
-> formal grammar will be published as a companion document.
+> in string literals, detailed whitespace rules, and comment syntax. The
+> normative grammar is defined in the companion document *FEL Normative
+> Grammar v1.0*.
 
 ### 3.8 Null Propagation
 
