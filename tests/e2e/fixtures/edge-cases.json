@@ -1,0 +1,18 @@
+{
+  "$formspec": "1.0",
+  "items": [
+    {
+      "type": "group",
+      "name": "parent",
+      "visible": "showParent == true",
+      "children": [
+        { "type": "string", "name": "child", "label": "Child Field" }
+      ]
+    },
+    { "type": "boolean", "name": "showParent", "label": "Show Parent" },
+    { "type": "number", "name": "price", "label": "Price" },
+    { "type": "number", "name": "quantity", "label": "Quantity" },
+    { "type": "number", "name": "total", "calculate": "price * quantity" },
+    { "type": "string", "name": "requiredIfVisible", "label": "Required if visible", "valid": "present(requiredIfVisible) || !relevant(requiredIfVisible)" }
+  ]
+}

@@ -116,18 +116,63 @@ export class FormspecRender extends HTMLElement {
             label.textContent = item.label || item.name;
             fieldWrapper.appendChild(label);
 
-            const input = document.createElement('input');
-            input.type = item.type === 'number' ? 'number' : 'text';
-            input.name = fullName;
+            let input: HTMLInputElement | HTMLSelectElement;
+
+            if (item.type === 'choice') {
+                input = document.createElement('select');
+                input.name = fullName;
+                if (item.options) {
+                    for (const opt of item.options) {
+                        const option = document.createElement('option');
+                        option.value = opt.value;
+                        option.textContent = opt.label;
+                        input.appendChild(option);
+                    }
+                }
+            } else {
+                input = document.createElement('input');
+                input.name = fullName;
+                if (item.type === 'number') {
+                    input.type = 'number';
+                } else if (item.type === 'boolean') {
+                    input.type = 'checkbox';
+                } else if (item.type === 'date') {
+                    input.type = 'date';
+                } else {
+                    input.type = 'text';
+                }
+            }
+
             if (item.readonly || item.calculate) {
-                input.readOnly = true;
+                if (input instanceof HTMLInputElement) {
+                    input.readOnly = true;
+                } else {
+                    input.disabled = true;
+                }
             }
 
             input.addEventListener('input', (e) => {
-                const target = e.target as HTMLInputElement;
-                let val: any = target.value;
-                if (item.type === 'number') {
-                    val = parseFloat(val) || 0;
+                const target = e.target as any;
+                let val: any;
+                if (item.type === 'boolean') {
+                    val = target.checked;
+                } else if (item.type === 'number') {
+                    val = parseFloat(target.value) || 0;
+                } else {
+                    val = target.value;
+                }
+                this.engine!.setValue(fullName, val);
+            });
+
+            // For select and checkbox, 'change' is often better, but 'input' works on many browsers too.
+            // Let's add 'change' just in case.
+            input.addEventListener('change', (e) => {
+                const target = e.target as any;
+                let val: any;
+                if (item.type === 'boolean') {
+                    val = target.checked;
+                } else {
+                    val = target.value;
                 }
                 this.engine!.setValue(fullName, val);
             });
@@ -147,7 +192,11 @@ export class FormspecRender extends HTMLElement {
                 if (!signal) return;
                 const val = signal.value;
                 if (document.activeElement !== input) {
-                    input.value = val;
+                    if (item.type === 'boolean') {
+                        (input as HTMLInputElement).checked = !!val;
+                    } else {
+                        input.value = val;
+                    }
                 }
             }));
 

@@ -1,0 +1,25 @@
+{
+  "$formspec": "1.0",
+  "items": [
+    {
+      "type": "boolean",
+      "name": "isAgreed",
+      "label": "I agree to terms"
+    },
+    {
+      "type": "choice",
+      "name": "color",
+      "label": "Favorite Color",
+      "options": [
+        {"label": "Red", "value": "red"},
+        {"label": "Blue", "value": "blue"},
+        {"label": "Green", "value": "green"}
+      ]
+    },
+    {
+      "type": "date",
+      "name": "birthDate",
+      "label": "Birth Date"
+    }
+  ]
+}

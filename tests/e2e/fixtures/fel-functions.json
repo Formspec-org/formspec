@@ -1,0 +1,24 @@
+{
+  "$formspec": "1.0",
+  "items": [
+    {
+      "type": "group",
+      "name": "prices",
+      "repeatable": true,
+      "children": [
+        { "type": "number", "name": "val", "label": "Value" }
+      ]
+    },
+    { "type": "number", "name": "totalSum", "calculate": "sum(prices.val)" },
+    { "type": "string", "name": "rawText", "label": "Text" },
+    { "type": "string", "name": "upperText", "calculate": "upper(rawText)" },
+    { "type": "number", "name": "rawNum", "label": "Number" },
+    { "type": "number", "name": "roundedNum", "calculate": "round(rawNum, 2)" },
+    { "type": "date", "name": "testDate", "label": "Date" },
+    { "type": "number", "name": "dateYear", "calculate": "year(testDate)" },
+    { "type": "string", "name": "opt1", "label": "Option 1" },
+    { "type": "string", "name": "opt2", "label": "Option 2" },
+    { "type": "string", "name": "coalesced", "calculate": "coalesce(opt1, opt2, 'Default')" },
+    { "type": "boolean", "name": "isOpt1Null", "calculate": "isNull(opt1)" }
+  ]
+}
