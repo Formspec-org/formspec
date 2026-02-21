@@ -72,7 +72,8 @@ export class FormspecRender extends HTMLElement {
             addBtn.type = 'button';
             addBtn.textContent = `Add ${item.label || item.name}`;
             addBtn.addEventListener('click', () => {
-                this.engine!.addRepeatInstance(fullName);
+                const index = this.engine!.addRepeatInstance(fullName);
+                // The effect will handle rendering the new instance
             });
             groupWrapper.appendChild(addBtn);
 
@@ -86,6 +87,7 @@ export class FormspecRender extends HTMLElement {
                     instanceWrapper.style.border = '1px solid #ccc';
                     instanceWrapper.style.margin = '10px';
                     instanceWrapper.style.padding = '10px';
+                    instanceWrapper.dataset.index = String(i);
                     
                     if (item.children) {
                         for (const child of item.children) {

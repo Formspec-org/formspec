@@ -1,0 +1,120 @@
+{
+  "$formspec": "1.0",
+  "items": [
+    {
+      "type": "group",
+      "name": "invoice",
+      "label": "Project Invoice",
+      "children": [
+        {
+          "type": "string",
+          "name": "clientName",
+          "label": "Client Name"
+        },
+        {
+          "type": "group",
+          "name": "phases",
+          "label": "Project Phases",
+          "repeatable": true,
+          "children": [
+            {
+              "type": "string",
+              "name": "phaseName",
+              "label": "Phase Name"
+            },
+            {
+              "type": "group",
+              "name": "tasks",
+              "label": "Tasks in Phase",
+              "repeatable": true,
+              "children": [
+                {
+                  "type": "string",
+                  "name": "taskDescription",
+                  "label": "Description"
+                },
+                {
+                  "type": "number",
+                  "name": "hours",
+                  "label": "Hours"
+                },
+                {
+                  "type": "number",
+                  "name": "rate",
+                  "label": "Hourly Rate"
+                },
+                {
+                  "type": "number",
+                  "name": "taskTotal",
+                  "label": "Task Cost",
+                  "calculate": "hours * rate"
+                }
+              ]
+            },
+            {
+              "type": "number",
+              "name": "phaseSubtotal",
+              "label": "Phase Subtotal",
+              "calculate": "sum(tasks.taskTotal)"
+            }
+          ]
+        },
+        {
+          "type": "number",
+          "name": "invoiceTotal",
+          "label": "Total Invoice Amount",
+          "calculate": "sum(phases.phaseSubtotal)"
+        },
+        {
+          "type": "number",
+          "name": "taxRate",
+          "label": "Tax Rate (%)",
+          "calculate": "if(invoiceTotal > 1000, 15, 10)"
+        },
+        {
+          "type": "number",
+          "name": "finalAmount",
+          "label": "Final Amount (with Tax)",
+          "calculate": "invoiceTotal * (1 + taxRate / 100)"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "name": "itinerary",
+      "label": "Travel Itinerary",
+      "repeatable": true,
+      "children": [
+        {
+          "type": "string",
+          "name": "destination",
+          "label": "Destination"
+        },
+        {
+          "type": "date",
+          "name": "arrival",
+          "label": "Arrival Date"
+        },
+        {
+          "type": "date",
+          "name": "departure",
+          "label": "Departure Date",
+          "valid": "departure >= arrival"
+        },
+        {
+          "type": "number",
+          "name": "stayDuration",
+          "label": "Days in City",
+          "calculate": "dateDiff(departure, arrival, 'days')"
+        },
+        {
+          "type": "string",
+          "name": "travelConflict",
+          "label": "Sequence Status",
+          "calculate": "if(isNull(prev('departure')), 'First Stop', if(arrival < prev('departure'), 'CONFLICT', 'OK'))",
+          "visible": "present(arrival)"
+        }
+      ]
+    }
+  ]
+}

@@ -79,16 +79,9 @@ export class FormEngine {
 
     private initRepeatInstance(item: FormspecItem, fullName: string, index: number) {
         if (!item.children) return;
+        const prefix = `${fullName}[${index}]`;
         for (const child of item.children) {
-            const childName = `${fullName}[${index}].${child.name}`;
-            const initialValue = child.type === 'number' ? 0 : '';
-            this.signals[childName] = signal(initialValue);
-            this.visibleSignals[childName] = signal(true);
-            this.errorSignals[childName] = signal(null);
-
-            if (child.calculate) {
-                this.signals[childName] = computed(this.compileFEL(child.calculate, childName, index, false));
-            }
+            this.initItem(child, prefix);
         }
     }
 
@@ -98,6 +91,7 @@ export class FormEngine {
             const index = this.repeats[itemName].value;
             this.initRepeatInstance(item, itemName, index);
             this.repeats[itemName].value++;
+            return index;
         }
     }
 
@@ -112,7 +106,6 @@ export class FormEngine {
             if (foundItem.children) {
                 currentItems = foundItem.children;
             } else {
-                // If we have more parts but no children, it's not found
                 if (parts.indexOf(part) !== parts.length - 1) return undefined;
             }
         }
@@ -137,11 +130,7 @@ export class FormEngine {
             coalesce: (...args: any[]) => args.find(a => a !== null && a !== undefined && a !== ''),
             isNull: (a: any) => a === null || a === undefined || a === '',
             present: (a: any) => a !== null && a !== undefined && a !== '',
-            relevant: (path: string) => {
-                return this.visibleSignals[path]?.value ?? true;
-            },
-
-            // Re-adding previous functions
+            relevant: (path: string) => this.visibleSignals[path]?.value ?? true,
             contains: (s: string, sub: string) => (s || '').includes(sub || ''),
             abs: (n: number) => Math.abs(n || 0),
             power: (b: number, e: number) => Math.pow(b || 0, e || 0),
@@ -158,11 +147,9 @@ export class FormEngine {
                 const t2 = new Date(d2).getTime();
                 const diff = t1 - t2;
                 if (unit === 'days') return Math.floor(diff / (1000 * 60 * 60 * 24));
-                return 0; // Simplified
+                return 0;
             },
             fel_if: (cond: boolean, t: any, f: any) => cond ? t : f,
-
-            // New functions
             count: (arr: any[]) => Array.isArray(arr) ? arr.length : 0,
             avg: (arr: any[]) => {
                 if (!Array.isArray(arr) || arr.length === 0) return 0;
@@ -179,10 +166,7 @@ export class FormEngine {
                 const valid = arr.map(a => typeof a === 'string' ? parseFloat(a) : a).filter(a => Number.isFinite(a));
                 return valid.length ? Math.max(...valid) : 0;
             },
-            countWhere: (arr: any[], pred: any) => {
-                if (!Array.isArray(arr)) return 0;
-                return arr.filter(pred).length;
-            },
+            countWhere: (arr: any[], pred: any) => Array.isArray(arr) ? arr.filter(pred).length : 0,
             length: (s: string) => (s || '').length,
             startsWith: (s: string, sub: string) => (s || '').startsWith(sub || ''),
             endsWith: (s: string, sub: string) => (s || '').endsWith(sub || ''),
@@ -214,17 +198,12 @@ export class FormEngine {
                 if (unit === 'seconds') return Math.floor(diff / 1000);
                 return diff;
             },
-            selected: (val: any, opt: any) => {
-                if (Array.isArray(val)) return val.includes(opt);
-                return val === opt;
-            },
+            selected: (val: any, opt: any) => Array.isArray(val) ? val.includes(opt) : val === opt,
             isNumber: (v: any) => typeof v === 'number' && !isNaN(v),
             isString: (v: any) => typeof v === 'string',
             isDate: (v: any) => !isNaN(Date.parse(v)),
             typeOf: (v: any) => Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v,
             number: (v: any) => { const n = Number(v); return isNaN(n) ? null : n; },
-            
-            // Money
             money: (amount: number, currency: string) => ({ amount, currency }),
             moneyAmount: (m: any) => m && m.amount !== undefined ? m.amount : null,
             moneyCurrency: (m: any) => m && m.currency !== undefined ? m.currency : null,
@@ -245,136 +224,130 @@ export class FormEngine {
                 }, 0);
                 return { amount: sum, currency };
             },
-            
-            // Context functions
             prev: (name: string) => {
-                if (index === undefined || index <= 0) return null;
-                const parts = currentItemName.split('.');
-                const groupPart = parts[0].replace(/\[\d+\]/, `[${index - 1}]`);
-                const path = `${groupPart}.${name}`;
-                return this.signals[path]?.value;
+                const parts = currentItemName.split(/[\[\].]/).filter(Boolean);
+                let lastNumIndex = -1;
+                for (let i = parts.length - 1; i >= 0; i--) {
+                    if (!isNaN(parseInt(parts[i]))) { lastNumIndex = i; break; }
+                }
+                if (lastNumIndex === -1) return null;
+                const idx = parseInt(parts[lastNumIndex]);
+                if (idx <= 0) return null;
+                const siblingsPath = parts.slice(0, lastNumIndex).join('.') + `[${idx-1}].` + name;
+                return this.signals[siblingsPath]?.value;
             },
             next: (name: string) => {
-                if (index === undefined) return null;
-                const parts = currentItemName.split('.');
-                const groupPart = parts[0].replace(/\[\d+\]/, `[${index + 1}]`);
-                const path = `${groupPart}.${name}`;
-                return this.signals[path]?.value;
+                const parts = currentItemName.split(/[\[\].]/).filter(Boolean);
+                let lastNumIndex = -1;
+                for (let i = parts.length - 1; i >= 0; i--) {
+                    if (!isNaN(parseInt(parts[i]))) { lastNumIndex = i; break; }
+                }
+                if (lastNumIndex === -1) return null;
+                const idx = parseInt(parts[lastNumIndex]);
+                const siblingsPath = parts.slice(0, lastNumIndex).join('.') + `[${idx+1}].` + name;
+                return this.signals[siblingsPath]?.value;
             },
             parent: (name: string) => {
-                const parts = currentItemName.split('.');
-                if (parts.length <= 1) return null;
-                // If it's a repeatable group, parts[0] is like "group[0]"
-                // We want to look for "name" at the root level if not found in parent
-                // Simplified: look at root level
+                const parts = currentItemName.split(/[\[\].]/).filter(Boolean);
+                for (let i = parts.length - 2; i >= 0; i--) {
+                    const path = parts.slice(0, i).join('.') + (i > 0 ? '.' : '') + name;
+                    if (this.signals[path]) return this.signals[path].value;
+                }
                 return this.signals[name]?.value;
-            },
-
-
+            }
         };
 
         const stdLibKeys = Object.keys(felStdLib);
         const stdLibValues = Object.values(felStdLib);
 
         let expr = expression;
-        if (index !== undefined) {
-            expr = expr.replace(/\$index/g, index.toString());
-        }
-
-        const mipRegex = /(relevant|valid|readonly|required)\(([a-zA-Z0-9_.\[\]]+)\)/g;
+        const mipRegex = /(relevant|valid|readonly|required)\(([a-zA-Z0-9_.\\\[\\\]]+)\)/g;
         expr = expr.replace(mipRegex, "$1('$2')");
         expr = expr.replace(/\bif\s*\(/g, "fel_if(");
-        const countWhereRegex = /\bcountWhere\(([^,]+),\s*(.+)\)/g;
-        expr = expr.replace(countWhereRegex, "countWhere($1, ($) => $2)");
+        expr = expr.replace(/\bcountWhere\(([^,]+),\s*(.+)\)/g, "countWhere($1, ($) => $2)");
 
         const pathRegex = /([a-zA-Z][a-zA-Z0-9_]*)\.([a-zA-Z0-9_]+)/g;
         const groupMatches = Array.from(expr.matchAll(pathRegex)).map(m => ({
-            full: m[0],
-            group: m[1],
-            field: m[2]
+            full: m[0], group: m[1], field: m[2]
         }));
 
         for (const m of groupMatches) {
-            expr = expr.replace(m.full, m.full.replace(/[\[\].]/g, '_'));
+            expr = expr.replace(m.full, m.full.replace(/[\\\[\\\]\.]/g, '_'));
         }
 
         const finalExpr = expr.replace(/([a-zA-Z][a-zA-Z0-9_]*)\.([a-zA-Z0-9_]+)/g, '$1_$2')
-                             .replace(/\[/g, '_')
-                             .replace(/\]/g, '_');
+                             .replace(/[\\\[\\\]]/g, '_');
 
-        // Determine potential dependencies once outside the reactive evaluator
         const potentialNames = Object.keys(this.signals).filter(n => {
             if (n === currentItemName && !includeSelf) return false;
-            
-            const safeN = n.replace(/[\[\].]/g, '_');
-            if (new RegExp(`\\b${safeN}\\b`).test(finalExpr)) return true;
-
-            // Check if it's a local field in the same group instance
-            if (index !== undefined) {
-                const parts = n.split(/[\[\].]/).filter(Boolean);
-                const currentParts = currentItemName.split(/[\[\].]/).filter(Boolean);
-                if (parts.length === 3 && currentParts.length === 3 && parts[0] === currentParts[0] && parts[1] === currentParts[1]) {
-                    const fieldName = parts[2];
-                    if (new RegExp(`\\b${fieldName}\\b`).test(finalExpr)) return true;
+            if (new RegExp(`\\b${n.replace(/[\\\[\\\]\.]/g, '_')}\\b`).test(finalExpr)) return true;
+            const parts = n.split(/[\\\[\\\]\.]/).filter(Boolean);
+            const currentParts = currentItemName.split(/[\\\[\\\]\.]/).filter(Boolean);
+            if (parts.length > 1 && currentParts.length > 1) {
+                if (parts.slice(0, -1).join('.') === currentParts.slice(0, -1).join('.')) {
+                    if (new RegExp(`\\b${parts[parts.length - 1]}\\b`).test(finalExpr)) return true;
                 }
             }
-
             return false;
         });
 
         return () => {
-            if (index !== undefined) {
-                const group = currentItemName.split(/[\[\].]/)[0];
-                if (this.repeats[group]) this.repeats[group].value;
+            const currentParts = currentItemName.split(/[\\\[\\\]\.]/).filter(Boolean);
+            for (let i = 0; i < currentParts.length; i++) {
+                const subPath = currentParts.slice(0, i + 1).join('.');
+                if (this.repeats[subPath]) this.repeats[subPath].value;
             }
+
             const pathArrays: Record<string, any[]> = {};
             for (const m of groupMatches) {
                 if (this.repeats[m.group]) this.repeats[m.group].value;
-                pathArrays[m.full.replace(/[\[\].]/g, '_')] = Object.keys(this.signals)
-                    .filter(k => k.startsWith(`${m.group}[`) && k.endsWith(`].${m.field}`))
+                const matches = Object.keys(this.signals).filter(k => k.endsWith(`].${m.field}`));
+                pathArrays[m.full.replace(/[\\\[\\\]\.]/g, '_')] = matches
+                    .filter(k => {
+                        const kParts = k.split(/[\\\[\\\]\.]/).filter(Boolean);
+                        const groupIndexInK = kParts.indexOf(m.group);
+                        if (groupIndexInK === -1) return false;
+                        for (let i = 0; i < groupIndexInK; i++) {
+                            if (kParts[i] !== currentParts[i]) return false;
+                        }
+                        return true;
+                    })
                     .map(k => this.signals[k].value);
             }
 
             const values = potentialNames.map(n => this.signals[n].value);
             const localValues: Record<string, any> = {};
-            if (index !== undefined) {
-                const currentParts = currentItemName.split(/[\[\].]/).filter(Boolean);
-                const group = currentParts[0];
-                for (let i = 0; i < potentialNames.length; i++) {
-                    const n = potentialNames[i];
-                    const parts = n.split(/[\[\].]/).filter(Boolean);
-                    if (parts[0] === group && parts[1] === String(index)) {
-                        localValues[parts[2]] = values[i];
-                    }
+            const currentParentPath = currentParts.slice(0, -1).join('.');
+
+            for (let i = 0; i < potentialNames.length; i++) {
+                const n = potentialNames[i];
+                const parts = n.split(/[\\\[\\\]\.]/).filter(Boolean);
+                if (parts.slice(0, -1).join('.') === currentParentPath) {
+                    localValues[parts[parts.length - 1]] = values[i];
                 }
             }
 
             try {
                 const pathArrayKeys = Object.keys(pathArrays);
                 const pathArrayValues = pathArrayKeys.map(k => pathArrays[k]);
-
                 const localKeys = Object.keys(localValues);
                 const localVals = localKeys.map(k => localValues[k]);
-
-                const argNames = [...stdLibKeys, 'pathArrays', ...pathArrayKeys, ...potentialNames.map(n => n.replace(/[\[\].]/g, '_')), ...localKeys];
-                const argValues = [...stdLibValues, pathArrays, ...pathArrayValues, ...values, ...localVals];
-                
+                const argNames = [...stdLibKeys, ...pathArrayKeys, ...potentialNames.map(n => n.replace(/[\\\[\\\]\.]/g, '_')), ...localKeys];
+                const argValues = [...stdLibValues, ...pathArrayValues, ...values, ...localVals];
                 const f = new Function(...argNames, `return ${finalExpr}`);
                 return f(...argValues);
             } catch (e) {
-                // Return null on cycle or other errors per spec
                 return null;
             }
         };
     }
 
     public setValue(name: string, value: any) {
-        const baseName = name.replace(/\[\d+\]/g, ''); // strip array indices to find the schema definition
+        const baseName = name.replace(/\\\[\\d+\\\]/g, '');
         const item = this.findItem(this.definition.items, baseName);
         if (item && item.type === 'number' && typeof value === 'string') {
             value = value === '' ? null : Number(value);
         }
-        
         if (this.signals[name] && !(this.signals[name] instanceof computed)) {
             this.signals[name].value = value;
         }
@@ -384,11 +357,8 @@ export class FormEngine {
         const data: any = {};
         const isPathVisible = (path: string): boolean => {
             if (this.visibleSignals[path] && !this.visibleSignals[path].value) return false;
-            // Check parent paths
-            const parts = path.split(/[\[\].]/).filter(Boolean);
+            const parts = path.split(/[\\\[\\\]\.]/).filter(Boolean);
             if (parts.length > 1) {
-                // This is a bit simplified for E2E, but check root part
-                // In real implementation we'd check all parent groups
                 const rootPart = parts[0];
                 if (this.visibleSignals[rootPart] && !this.visibleSignals[rootPart].value) return false;
             }
@@ -396,10 +366,8 @@ export class FormEngine {
         };
 
         for (const key of Object.keys(this.signals)) {
-            if (!isPathVisible(key)) {
-                continue;
-            }
-            const parts = key.split(/[\[\].]/).filter(Boolean);
+            if (!isPathVisible(key)) continue;
+            const parts = key.split(/[\\\[\\\]\.]/).filter(Boolean);
             let current = data;
             for (let i = 0; i < parts.length - 1; i++) {
                 const part = parts[i];
