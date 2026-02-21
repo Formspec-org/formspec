@@ -12,7 +12,8 @@ family of JSON Schemas (draft 2020-12).
 | `mapping.schema.json` | `test_mapping_schema.py` | 91 |
 | `registry.schema.json` | `test_registry_schema.py` | 72 |
 | All spec examples (Layer 2) | `test_spec_examples.py` | 153 |
-| **Total** | | **516** |
+| Property-based / generative (Layer 3) | `test_property_based.py` | 50 |
+| **Total** | | **566** |
 
 ## Test Layers
 
@@ -45,6 +46,18 @@ Layer 1 test files cover:
 - **oneOf/anyOf discrimination** — Shape rules, Instance source/data, OptionSet options/source, coerce object/string, valueMap full/flat
 - **Recursive structures** — nested Item children
 - **Extensions** — `x-` prefix enforcement via `propertyNames` pattern
+
+### Layer 3: Property-Based / Generative Testing (50 tests)
+Uses Hypothesis to generate random valid documents for all 5 schemas,
+verify they pass validation, then apply targeted mutations (delete required
+fields, inject bad enum values, add extra properties, empty arrays, break
+extension key patterns) and verify the schema rejects them.
+
+Four test classes:
+- **TestGeneratorsProduceValid** — 10 generators × 100 random examples each
+- **TestMutationsDetected** — 14 mutation × schema combinations × 50 examples
+- **TestConditionalInteractions** — 20 targeted tests for if/then + oneOf + anyOf combinatorics
+- **TestExtensionKeyEnforcement** — 6 tests for `propertyNames` vs `patternProperties` mechanisms
 
 ## Prerequisites
 
