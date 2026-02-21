@@ -1,9 +1,10 @@
 import { signal, computed, Signal } from '@preact/signals-core';
 
 export interface FormspecItem {
+    key: string;
     type: string;
-    name: string;
     label?: string;
+    dataType?: string;
     calculate?: string;
     visible?: string;
     valid?: string;
@@ -11,6 +12,7 @@ export interface FormspecItem {
     readonly?: boolean;
     repeatable?: boolean;
     children?: FormspecItem[];
+    [key: string]: any;
 }
 
 export interface FormspecDefinition {
@@ -36,7 +38,8 @@ export class FormEngine {
     private discoverAllNames(items: FormspecItem[], prefix = ''): string[] {
         let names: string[] = [];
         for (const item of items) {
-            const fullName = prefix ? `${prefix}.${item.name}` : item.name;
+            const key = item.key || item.name; // Fallback for transition
+            const fullName = prefix ? `${prefix}.${key}` : key;
             names.push(fullName);
             if (item.children) {
                 names.push(...this.discoverAllNames(item.children, fullName));
@@ -81,23 +84,42 @@ export class FormEngine {
     }
 
     private initItem(item: FormspecItem, prefix = '') {
-        const fullName = prefix ? `${prefix}.${item.name}` : item.name;
+        const key = item.key || item.name;
+        if (!key) throw new Error("Item missing required 'key'");
+        const fullName = prefix ? `${prefix}.${key}` : key;
 
-        if (item.type === 'group' && item.repeatable) {
-            this.repeats[fullName] = signal(1);
-            this.initRepeatInstance(item, fullName, 0);
-        } else if (item.type === 'group' && item.children) {
-            this.visibleSignals[fullName] = signal(true);
-            if (item.visible) {
-                this.visibleSignals[fullName] = computed(() => !!this.compileFEL(item.visible!, fullName, undefined, true)());
+        let itemType = item.type;
+        let itemDataType = item.dataType;
+
+        if (!['group', 'field', 'display'].includes(itemType)) {
+            itemDataType = itemDataType || itemType;
+            itemType = 'field';
+        }
+
+        if (itemType === 'group') {
+            if (item.repeatable) {
+                this.repeats[fullName] = signal(1);
+                this.initRepeatInstance(item, fullName, 0);
+            } else if (item.children) {
+                this.visibleSignals[fullName] = signal(true);
+                if (item.visible) {
+                    this.visibleSignals[fullName] = computed(() => !!this.compileFEL(item.visible!, fullName, undefined, true)());
+                }
+                for (const child of item.children) {
+                    this.initItem(child, fullName);
+                }
             }
-            for (const child of item.children) {
-                this.initItem(child, fullName);
+        } else if (itemType === 'field') {
+            let initialValue: any = item.initialValue !== undefined ? item.initialValue : '';
+            const dataType = itemDataType;
+            if (!dataType) throw new Error(`Field '${fullName}' missing required 'dataType'`);
+
+            if (initialValue === '' && (dataType === 'number' || dataType === 'integer' || dataType === 'decimal')) {
+                initialValue = null;
             }
-        } else {
-            let initialValue: any = '';
-            if (item.type === 'number') initialValue = 0;
-            if (item.type === 'boolean') initialValue = false;
+            if (initialValue === '' && dataType === 'boolean') {
+                initialValue = false;
+            }
             
             this.signals[fullName] = signal(initialValue);
             this.visibleSignals[fullName] = signal(true);
@@ -117,6 +139,13 @@ export class FormEngine {
                     if (regex && !regex.test(this.signals[fullName].value)) return "Pattern mismatch";
                     return null;
                 });
+            }
+        } else if (item.type === 'display') {
+            // Display items don't have values or visibility signals in the same way for now, 
+            // but we might want to support visibility.
+            this.visibleSignals[fullName] = signal(true);
+            if (item.visible) {
+                this.visibleSignals[fullName] = computed(() => !!this.compileFEL(item.visible!, fullName, undefined, true)());
             }
         }
     }
@@ -147,7 +176,7 @@ export class FormEngine {
 
         for (const part of parts) {
             const cleanPart = part.replace(/\[\d+\]/g, '');
-            foundItem = currentItems.find(i => i.name === cleanPart);
+            foundItem = currentItems.find(i => (i.key || i.name) === cleanPart);
             if (!foundItem) return undefined;
             if (foundItem.children) {
                 currentItems = foundItem.children;
@@ -156,6 +185,10 @@ export class FormEngine {
             }
         }
         return foundItem;
+    }
+
+    public compileExpression(expression: string, currentItemName: string = '') {
+        return this.compileFEL(expression, currentItemName, undefined, true);
     }
 
     private compileFEL(expression: string, currentItemName: string, index?: number, includeSelf = false) {
@@ -321,6 +354,12 @@ export class FormEngine {
         expr = expr.replace(/\bif\s*\(/g, "fel_if(");
         expr = expr.replace(/\bcountWhere\(([^,]+),\s*(.+)\)/g, "countWhere($1, ($) => $2)");
 
+        // Replace $identifier with identifier
+        expr = expr.replace(/\$([a-zA-Z][a-zA-Z0-9_]*)/g, "$1");
+
+        // Replace single = with == for comparison, but avoid >=, <=, !=, ==, =>
+        expr = expr.replace(/(?<![=<>!])=(?![=>])/g, "==");
+
         const pathRegex = /([a-zA-Z][a-zA-Z0-9_]*)\.([a-zA-Z0-9_]+)/g;
         const groupMatches = Array.from(expr.matchAll(pathRegex)).map(m => ({
             full: m[0], group: m[1], field: m[2]
@@ -411,13 +450,14 @@ export class FormEngine {
                 }
             }
 
+            const pathArrayKeys = Object.keys(pathArrays);
+            const pathArrayValues = pathArrayKeys.map(k => pathArrays[k]);
+            const localKeys = Object.keys(localValues);
+            const localVals = localKeys.map(k => localValues[k]);
+            const argNames = [...stdLibKeys, ...pathArrayKeys, ...potentialNames.map(n => n.replace(/[\\\[\\\]\.]/g, '_')), ...localKeys];
+            const argValues = [...stdLibValues, ...pathArrayValues, ...values, ...localVals];
+
             try {
-                const pathArrayKeys = Object.keys(pathArrays);
-                const pathArrayValues = pathArrayKeys.map(k => pathArrays[k]);
-                const localKeys = Object.keys(localValues);
-                const localVals = localKeys.map(k => localValues[k]);
-                const argNames = [...stdLibKeys, ...pathArrayKeys, ...potentialNames.map(n => n.replace(/[\\\[\\\]\.]/g, '_')), ...localKeys];
-                const argValues = [...stdLibValues, ...pathArrayValues, ...values, ...localVals];
                 const f = new Function(...argNames, `return ${finalExpr}`);
                 return f(...argValues);
             } catch (e) {
@@ -429,10 +469,11 @@ export class FormEngine {
     public setValue(name: string, value: any) {
         const baseName = name.replace(/\[\d+\]/g, '');
         const item = this.findItem(this.definition.items, baseName);
-        if (item && item.type === 'number' && typeof value === 'string') {
+        const dataType = item ? (item.dataType || item.type) : null;
+        if (dataType && (dataType === 'number' || dataType === 'integer' || dataType === 'decimal') && typeof value === 'string') {
             value = value === '' ? null : Number(value);
         }
-        if (this.signals[name] && !(this.signals[name] instanceof computed)) {
+        if (this.signals[name]) {
             this.signals[name].value = value;
         }
     }
@@ -462,7 +503,8 @@ export class FormEngine {
                 }
                 current = current[part];
             }
-            current[parts[parts.length - 1]] = this.signals[key].value;
+            const val = this.signals[key].value;
+            current[parts[parts.length - 1]] = Array.isArray(val) ? [...val] : (typeof val === 'object' && val !== null ? {...val} : val);
         }
         return {
             definitionUrl: this.definition.url || "http://example.org/form",

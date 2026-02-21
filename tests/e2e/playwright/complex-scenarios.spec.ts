@@ -7,6 +7,9 @@ const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
 test.describe('Formspec Complex Scenarios', () => {
   test('nested repeatable groups and complex calculations', async ({ page }) => {
+    page.on('console', msg => {
+        console.log(`BROWSER [${msg.type()}]: ${msg.text()}`);
+    });
     await page.goto('http://127.0.0.1:8080/');
     await page.waitForSelector('formspec-render', { state: 'attached' });
 

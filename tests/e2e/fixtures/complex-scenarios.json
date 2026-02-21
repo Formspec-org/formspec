@@ -75,7 +75,7 @@
           "type": "number",
           "name": "finalAmount",
           "label": "Final Amount (with Tax)",
-          "calculate": "invoiceTotal * (1 + taxRate / 100)"
+          "calculate": "round(invoiceTotal * (1 + taxRate / 100), 2)"
         }
       ]
     },
