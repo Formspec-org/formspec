@@ -63,5 +63,65 @@ test.describe('Formspec FEL Functions', () => {
 
     // Test Logical: if
     await expect(page.locator('input[name="ifExpr"]')).toHaveValue('yes');
+
+    // --- New Standard Library Functions ---
+
+    // Aggregate functions
+    await expect(page.locator('input[name="valCount"]')).toHaveValue('2');
+    await expect(page.locator('input[name="valAvg"]')).toHaveValue('17.5');
+    await expect(page.locator('input[name="valMin"]')).toHaveValue('10');
+    await expect(page.locator('input[name="valMax"]')).toHaveValue('25');
+    await expect(page.locator('input[name="valCountWhere"]')).toHaveValue('1');
+
+    // String functions
+    await expect(page.locator('input[name="strLength"]')).toHaveValue('11');
+    await expect(page.locator('input[name="strStartsWith"]')).toBeChecked();
+    await expect(page.locator('input[name="strEndsWith"]')).toBeChecked();
+    await expect(page.locator('input[name="strSubstring"]')).toHaveValue('hello');
+    await expect(page.locator('input[name="strReplace"]')).toHaveValue('hello there');
+    await expect(page.locator('input[name="strLower"]')).toHaveValue('hello');
+    await expect(page.locator('input[name="strTrim"]')).toHaveValue('trimmed');
+    await expect(page.locator('input[name="strMatches"]')).toBeChecked();
+    await expect(page.locator('input[name="strFormat"]')).toHaveValue('Value: 12.3456');
+
+    // Math functions
+    await expect(page.locator('input[name="numFloor"]')).toHaveValue('12');
+    await expect(page.locator('input[name="numCeil"]')).toHaveValue('13');
+
+    // Date/Time functions
+    const todayStr = new Date().toISOString().split('T')[0];
+    await expect(page.locator('input[name="dtToday"]')).toHaveValue(todayStr);
+    await expect(page.locator('input[name="dtNow"]')).not.toHaveValue('');
+    await expect(page.locator('input[name="dtMonth"]')).toHaveValue('5');
+    await expect(page.locator('input[name="dtDay"]')).toHaveValue('20');
+    await expect(page.locator('input[name="dtHours"]')).toHaveValue('15');
+    await expect(page.locator('input[name="dtMinutes"]')).toHaveValue('30');
+    await expect(page.locator('input[name="dtSeconds"]')).toHaveValue('45');
+    await expect(page.locator('input[name="dtTime"]')).toHaveValue('15:30:45');
+    await expect(page.locator('input[name="dtTimeDiff"]')).toHaveValue('60');
+
+    // Type/Logical functions
+    await expect(page.locator('input[name="valSelected"]')).toBeChecked();
+    await expect(page.locator('input[name="valIsNumber"]')).toBeChecked();
+    await expect(page.locator('input[name="valIsString"]')).toBeChecked();
+    await expect(page.locator('input[name="valIsDate"]')).toBeChecked();
+    await expect(page.locator('input[name="valTypeOf"]')).toHaveValue('number');
+    await expect(page.locator('input[name="valToNumber"]')).toHaveValue('123.45');
+
+    // Money functions
+    await expect(page.locator('input[name="mAmount"]')).toHaveValue('100');
+    await expect(page.locator('input[name="mCurrency"]')).toHaveValue('USD');
+    await expect(page.locator('input[name="mAdd"]')).toHaveValue('150');
+
+    // Money Aggregate
+    await page.fill('input[name="ledger[0].amount"]', '10');
+    await page.click('button:has-text("Add ledger")');
+    await page.fill('input[name="ledger[1].amount"]', '20');
+    await expect(page.locator('input[name="totalLedger"]')).toHaveValue('30');
+
+    // Context functions
+    await expect(page.locator('input[name="prices[1].prevVal"]')).toHaveValue('10');
+    await expect(page.locator('input[name="prices[0].nextVal"]')).toHaveValue('25');
+    await expect(page.locator('input[name="parentGroup.parentVal"]')).toHaveValue('hello world');
   });
 });

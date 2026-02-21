@@ -102,14 +102,21 @@ export class FormEngine {
     }
 
     private findItem(items: FormspecItem[], name: string): FormspecItem | undefined {
-        for (const item of items) {
-            if (item.name === name) return item;
-            if (item.children) {
-                const found = this.findItem(item.children, name);
-                if (found) return found;
+        const parts = name.split('.');
+        let currentItems = items;
+        let foundItem: FormspecItem | undefined;
+
+        for (const part of parts) {
+            foundItem = currentItems.find(i => i.name === part);
+            if (!foundItem) return undefined;
+            if (foundItem.children) {
+                currentItems = foundItem.children;
+            } else {
+                // If we have more parts but no children, it's not found
+                if (parts.indexOf(part) !== parts.length - 1) return undefined;
             }
         }
-        return undefined;
+        return foundItem;
     }
 
     private compileFEL(expression: string, currentItemName: string, index?: number, includeSelf = false) {
@@ -132,7 +139,138 @@ export class FormEngine {
             present: (a: any) => a !== null && a !== undefined && a !== '',
             relevant: (path: string) => {
                 return this.visibleSignals[path]?.value ?? true;
-            }
+            },
+
+            // Re-adding previous functions
+            contains: (s: string, sub: string) => (s || '').includes(sub || ''),
+            abs: (n: number) => Math.abs(n || 0),
+            power: (b: number, e: number) => Math.pow(b || 0, e || 0),
+            empty: (v: any) => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0),
+            dateAdd: (d: string, n: number, unit: string) => {
+                const date = new Date(d);
+                if (unit === 'days') date.setDate(date.getDate() + n);
+                else if (unit === 'months') date.setMonth(date.getMonth() + n);
+                else if (unit === 'years') date.setFullYear(date.getFullYear() + n);
+                return date.toISOString().split('T')[0];
+            },
+            dateDiff: (d1: string, d2: string, unit: string) => {
+                const t1 = new Date(d1).getTime();
+                const t2 = new Date(d2).getTime();
+                const diff = t1 - t2;
+                if (unit === 'days') return Math.floor(diff / (1000 * 60 * 60 * 24));
+                return 0; // Simplified
+            },
+            fel_if: (cond: boolean, t: any, f: any) => cond ? t : f,
+
+            // New functions
+            count: (arr: any[]) => Array.isArray(arr) ? arr.length : 0,
+            avg: (arr: any[]) => {
+                if (!Array.isArray(arr) || arr.length === 0) return 0;
+                const valid = arr.map(a => typeof a === 'string' ? parseFloat(a) : a).filter(a => Number.isFinite(a));
+                return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+            },
+            min: (arr: any[]) => {
+                if (!Array.isArray(arr) || arr.length === 0) return 0;
+                const valid = arr.map(a => typeof a === 'string' ? parseFloat(a) : a).filter(a => Number.isFinite(a));
+                return valid.length ? Math.min(...valid) : 0;
+            },
+            max: (arr: any[]) => {
+                if (!Array.isArray(arr) || arr.length === 0) return 0;
+                const valid = arr.map(a => typeof a === 'string' ? parseFloat(a) : a).filter(a => Number.isFinite(a));
+                return valid.length ? Math.max(...valid) : 0;
+            },
+            countWhere: (arr: any[], pred: any) => {
+                if (!Array.isArray(arr)) return 0;
+                return arr.filter(pred).length;
+            },
+            length: (s: string) => (s || '').length,
+            startsWith: (s: string, sub: string) => (s || '').startsWith(sub || ''),
+            endsWith: (s: string, sub: string) => (s || '').endsWith(sub || ''),
+            substring: (s: string, start: number, len?: number) => len === undefined ? (s || '').substring(start) : (s || '').substring(start, start + len),
+            replace: (s: string, old: string, nw: string) => (s || '').split(old || '').join(nw || ''),
+            lower: (s: string) => (s || '').toLowerCase(),
+            trim: (s: string) => (s || '').trim(),
+            matches: (s: string, pat: string) => new RegExp(pat).test(s || ''),
+            format: (s: string, ...args: any[]) => {
+                let i = 0;
+                return (s || '').replace(/%s/g, () => String(args[i++] || ''));
+            },
+            floor: (n: number) => Math.floor(n || 0),
+            ceil: (n: number) => Math.ceil(n || 0),
+            today: () => new Date().toISOString().split('T')[0],
+            now: () => new Date().toISOString(),
+            month: (d: string) => d ? new Date(d).getMonth() + 1 : null,
+            day: (d: string) => d ? new Date(d).getDate() : null,
+            hours: (d: string) => d ? new Date(d).getHours() : null,
+            minutes: (d: string) => d ? new Date(d).getMinutes() : null,
+            seconds: (d: string) => d ? new Date(d).getSeconds() : null,
+            time: (d: string) => d ? new Date(d).toTimeString().split(' ')[0] : null,
+            timeDiff: (t1: string, t2: string, unit: string) => {
+                const d1 = new Date(`1970-01-01T${t1}Z`);
+                const d2 = new Date(`1970-01-01T${t2}Z`);
+                const diff = d1.getTime() - d2.getTime();
+                if (unit === 'hours') return Math.floor(diff / (1000 * 60 * 60));
+                if (unit === 'minutes') return Math.floor(diff / (1000 * 60));
+                if (unit === 'seconds') return Math.floor(diff / 1000);
+                return diff;
+            },
+            selected: (val: any, opt: any) => {
+                if (Array.isArray(val)) return val.includes(opt);
+                return val === opt;
+            },
+            isNumber: (v: any) => typeof v === 'number' && !isNaN(v),
+            isString: (v: any) => typeof v === 'string',
+            isDate: (v: any) => !isNaN(Date.parse(v)),
+            typeOf: (v: any) => Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v,
+            number: (v: any) => { const n = Number(v); return isNaN(n) ? null : n; },
+            
+            // Money
+            money: (amount: number, currency: string) => ({ amount, currency }),
+            moneyAmount: (m: any) => m && m.amount !== undefined ? m.amount : null,
+            moneyCurrency: (m: any) => m && m.currency !== undefined ? m.currency : null,
+            moneyAdd: (m1: any, m2: any) => {
+                if (m1 && m2 && m1.currency === m2.currency) {
+                    const a1 = typeof m1.amount === 'string' ? parseFloat(m1.amount) : (m1.amount || 0);
+                    const a2 = typeof m2.amount === 'string' ? parseFloat(m2.amount) : (m2.amount || 0);
+                    return { amount: a1 + a2, currency: m1.currency };
+                }
+                return null;
+            },
+            moneySum: (arr: any[]) => {
+                if (!Array.isArray(arr) || arr.length === 0) return { amount: 0, currency: 'USD' };
+                const currency = arr[0]?.currency || 'USD';
+                const sum = arr.reduce((acc, m) => {
+                    const amt = typeof m?.amount === 'string' ? parseFloat(m.amount) : (m?.amount || 0);
+                    return acc + (m?.currency === currency ? amt : 0);
+                }, 0);
+                return { amount: sum, currency };
+            },
+            
+            // Context functions
+            prev: (name: string) => {
+                if (index === undefined || index <= 0) return null;
+                const parts = currentItemName.split('.');
+                const groupPart = parts[0].replace(/\[\d+\]/, `[${index - 1}]`);
+                const path = `${groupPart}.${name}`;
+                return this.signals[path]?.value;
+            },
+            next: (name: string) => {
+                if (index === undefined) return null;
+                const parts = currentItemName.split('.');
+                const groupPart = parts[0].replace(/\[\d+\]/, `[${index + 1}]`);
+                const path = `${groupPart}.${name}`;
+                return this.signals[path]?.value;
+            },
+            parent: (name: string) => {
+                const parts = currentItemName.split('.');
+                if (parts.length <= 1) return null;
+                // If it's a repeatable group, parts[0] is like "group[0]"
+                // We want to look for "name" at the root level if not found in parent
+                // Simplified: look at root level
+                return this.signals[name]?.value;
+            },
+
+
         };
 
         const stdLibKeys = Object.keys(felStdLib);
@@ -145,8 +283,11 @@ export class FormEngine {
 
         const mipRegex = /(relevant|valid|readonly|required)\(([a-zA-Z0-9_.\[\]]+)\)/g;
         expr = expr.replace(mipRegex, "$1('$2')");
+        expr = expr.replace(/\bif\s*\(/g, "fel_if(");
+        const countWhereRegex = /\bcountWhere\(([^,]+),\s*(.+)\)/g;
+        expr = expr.replace(countWhereRegex, "countWhere($1, ($) => $2)");
 
-        const pathRegex = /([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)/g;
+        const pathRegex = /([a-zA-Z][a-zA-Z0-9_]*)\.([a-zA-Z0-9_]+)/g;
         const groupMatches = Array.from(expr.matchAll(pathRegex)).map(m => ({
             full: m[0],
             group: m[1],
@@ -157,16 +298,35 @@ export class FormEngine {
             expr = expr.replace(m.full, m.full.replace(/[\[\].]/g, '_'));
         }
 
-        const finalExpr = expr.replace(/[\[\].]/g, '_');
+        const finalExpr = expr.replace(/([a-zA-Z][a-zA-Z0-9_]*)\.([a-zA-Z0-9_]+)/g, '$1_$2')
+                             .replace(/\[/g, '_')
+                             .replace(/\]/g, '_');
 
         // Determine potential dependencies once outside the reactive evaluator
         const potentialNames = Object.keys(this.signals).filter(n => {
             if (n === currentItemName && !includeSelf) return false;
+            
             const safeN = n.replace(/[\[\].]/g, '_');
-            return new RegExp(`\\b${safeN}\\b`).test(finalExpr);
+            if (new RegExp(`\\b${safeN}\\b`).test(finalExpr)) return true;
+
+            // Check if it's a local field in the same group instance
+            if (index !== undefined) {
+                const parts = n.split(/[\[\].]/).filter(Boolean);
+                const currentParts = currentItemName.split(/[\[\].]/).filter(Boolean);
+                if (parts.length === 3 && currentParts.length === 3 && parts[0] === currentParts[0] && parts[1] === currentParts[1]) {
+                    const fieldName = parts[2];
+                    if (new RegExp(`\\b${fieldName}\\b`).test(finalExpr)) return true;
+                }
+            }
+
+            return false;
         });
 
         return () => {
+            if (index !== undefined) {
+                const group = currentItemName.split(/[\[\].]/)[0];
+                if (this.repeats[group]) this.repeats[group].value;
+            }
             const pathArrays: Record<string, any[]> = {};
             for (const m of groupMatches) {
                 if (this.repeats[m.group]) this.repeats[m.group].value;
@@ -176,13 +336,28 @@ export class FormEngine {
             }
 
             const values = potentialNames.map(n => this.signals[n].value);
+            const localValues: Record<string, any> = {};
+            if (index !== undefined) {
+                const currentParts = currentItemName.split(/[\[\].]/).filter(Boolean);
+                const group = currentParts[0];
+                for (let i = 0; i < potentialNames.length; i++) {
+                    const n = potentialNames[i];
+                    const parts = n.split(/[\[\].]/).filter(Boolean);
+                    if (parts[0] === group && parts[1] === String(index)) {
+                        localValues[parts[2]] = values[i];
+                    }
+                }
+            }
 
             try {
                 const pathArrayKeys = Object.keys(pathArrays);
                 const pathArrayValues = pathArrayKeys.map(k => pathArrays[k]);
 
-                const argNames = [...stdLibKeys, 'pathArrays', ...pathArrayKeys, ...potentialNames.map(n => n.replace(/[\[\].]/g, '_'))];
-                const argValues = [...stdLibValues, pathArrays, ...pathArrayValues, ...values];
+                const localKeys = Object.keys(localValues);
+                const localVals = localKeys.map(k => localValues[k]);
+
+                const argNames = [...stdLibKeys, 'pathArrays', ...pathArrayKeys, ...potentialNames.map(n => n.replace(/[\[\].]/g, '_')), ...localKeys];
+                const argValues = [...stdLibValues, pathArrays, ...pathArrayValues, ...values, ...localVals];
                 
                 const f = new Function(...argNames, `return ${finalExpr}`);
                 return f(...argValues);

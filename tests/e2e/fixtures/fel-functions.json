@@ -10,6 +10,16 @@
           "type": "number",
           "name": "val",
           "label": "Value"
+        },
+        {
+          "type": "number",
+          "name": "prevVal",
+          "calculate": "prev('val')"
+        },
+        {
+          "type": "number",
+          "name": "nextVal",
+          "calculate": "next('val')"
         }
       ]
     },
@@ -109,6 +119,209 @@
       "name": "ifExpr",
       "calculate": "if(1 > 0, 'yes', 'no')",
       "readonly": true
+    },
+    {
+      "type": "number",
+      "name": "valCount",
+      "calculate": "count(prices.val)"
+    },
+    {
+      "type": "number",
+      "name": "valAvg",
+      "calculate": "avg(prices.val)"
+    },
+    {
+      "type": "number",
+      "name": "valMin",
+      "calculate": "min(prices.val)"
+    },
+    {
+      "type": "number",
+      "name": "valMax",
+      "calculate": "max(prices.val)"
+    },
+    {
+      "type": "number",
+      "name": "valCountWhere",
+      "calculate": "countWhere(prices.val, $ > 10)"
+    },
+    {
+      "type": "number",
+      "name": "strLength",
+      "calculate": "length(rawText)"
+    },
+    {
+      "type": "boolean",
+      "name": "strStartsWith",
+      "calculate": "startsWith(rawText, 'hello')"
+    },
+    {
+      "type": "boolean",
+      "name": "strEndsWith",
+      "calculate": "endsWith(rawText, 'world')"
+    },
+    {
+      "type": "string",
+      "name": "strSubstring",
+      "calculate": "substring(rawText, 0, 5)"
+    },
+    {
+      "type": "string",
+      "name": "strReplace",
+      "calculate": "replace(rawText, 'world', 'there')"
+    },
+    {
+      "type": "string",
+      "name": "strLower",
+      "calculate": "lower('HELLO')"
+    },
+    {
+      "type": "string",
+      "name": "strTrim",
+      "calculate": "trim('  trimmed  ')"
+    },
+    {
+      "type": "boolean",
+      "name": "strMatches",
+      "calculate": "matches(rawText, '^hello')"
+    },
+    {
+      "type": "string",
+      "name": "strFormat",
+      "calculate": "format('Value: %s', rawNum)"
+    },
+    {
+      "type": "number",
+      "name": "numFloor",
+      "calculate": "floor(12.9)"
+    },
+    {
+      "type": "number",
+      "name": "numCeil",
+      "calculate": "ceil(12.1)"
+    },
+    {
+      "type": "string",
+      "name": "dtToday",
+      "calculate": "today()"
+    },
+    {
+      "type": "string",
+      "name": "dtNow",
+      "calculate": "now()"
+    },
+    {
+      "type": "number",
+      "name": "dtMonth",
+      "calculate": "month('2025-05-20')"
+    },
+    {
+      "type": "number",
+      "name": "dtDay",
+      "calculate": "day('2025-05-20')"
+    },
+    {
+      "type": "number",
+      "name": "dtHours",
+      "calculate": "hours('2025-05-20T15:30:00')"
+    },
+    {
+      "type": "number",
+      "name": "dtMinutes",
+      "calculate": "minutes('2025-05-20T15:30:00')"
+    },
+    {
+      "type": "number",
+      "name": "dtSeconds",
+      "calculate": "seconds('2025-05-20T15:30:45')"
+    },
+    {
+      "type": "string",
+      "name": "dtTime",
+      "calculate": "time('2025-05-20T15:30:45')"
+    },
+    {
+      "type": "number",
+      "name": "dtTimeDiff",
+      "calculate": "timeDiff('15:30:00', '14:30:00', 'minutes')"
+    },
+    {
+      "type": "boolean",
+      "name": "valSelected",
+      "calculate": "selected('a', 'a')"
+    },
+    {
+      "type": "boolean",
+      "name": "valIsNumber",
+      "calculate": "isNumber(rawNum)"
+    },
+    {
+      "type": "boolean",
+      "name": "valIsString",
+      "calculate": "isString(rawText)"
+    },
+    {
+      "type": "boolean",
+      "name": "valIsDate",
+      "calculate": "isDate(testDate)"
+    },
+    {
+      "type": "string",
+      "name": "valTypeOf",
+      "calculate": "typeOf(rawNum)"
+    },
+    {
+      "type": "number",
+      "name": "valToNumber",
+      "calculate": "number('123.45')"
+    },
+    {
+      "type": "number",
+      "name": "mAmount",
+      "calculate": "moneyAmount(money(100, 'USD'))"
+    },
+    {
+      "type": "string",
+      "name": "mCurrency",
+      "calculate": "moneyCurrency(money(100, 'USD'))"
+    },
+    {
+      "type": "number",
+      "name": "mAdd",
+      "calculate": "moneyAmount(moneyAdd(money(100, 'USD'), money(50, 'USD')))"
+    },
+    {
+      "type": "group",
+      "name": "ledger",
+      "repeatable": true,
+      "children": [
+        {
+          "type": "number",
+          "name": "amount",
+          "label": "Amount"
+        },
+        {
+          "type": "string",
+          "name": "entryMoney",
+          "calculate": "money(amount, 'USD')"
+        }
+      ]
+    },
+    {
+      "type": "number",
+      "name": "totalLedger",
+      "calculate": "moneyAmount(moneySum(ledger.entryMoney))"
+    },
+    {
+      "type": "group",
+      "name": "parentGroup",
+      "children": [
+        {
+          "type": "string",
+          "name": "parentVal",
+          "calculate": "parent('rawText')"
+        }
+      ]
     }
   ]
 }
