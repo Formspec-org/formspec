@@ -57,32 +57,29 @@ The actual E2E tests driving the browser.
 2.  Created a directory of JSON Formspec fixtures representing complex scenarios.
 3.  Wrote test suite covering repeating groups, visibility, dynamic calculations, pattern matching, and spec schema compliance.
 
-### Phase 4: Exhaustive E2E Test Authoring (Red Phase) (⏳ PENDING)
-Adopting a strict Red/Green Test-Driven Development (TDD) approach, we will first write the comprehensive test suite before implementing the missing features.
+### Phase 4: Exhaustive E2E Test Authoring (Red Phase) (✅ COMPLETE)
+1.  **Exhaustive Fixtures:** Created JSON Formspec fixtures covering core standard FEL functions (e.g., `sum()`, `round()`).
+2.  **Type Coverage Tests:** Wrote Playwright specs for `boolean` (checkboxes), `choice` (select/radio), and `date` (datepickers).
+3.  **Array Aggregation Tests:** Wrote tests asserting that `calculate: "sum(items.price)"` evaluates correctly across dynamically added repeating DOM nodes.
+4.  **Edge Case Tests:** Added specs covering Null Propagation, Deep Pruning, Validation Bypassing, and Strict Type Coercion.
 
-**1. Exhaustive Feature Tests:**
-*   Create JSON Formspec fixtures covering all 55 standard FEL functions (e.g., `sum()`, `dateDiff()`, `replace()`).
-*   Write Playwright specs for missing Tier 1 types: `boolean` (checkboxes), `choice` (select/radio), and `date` (datepickers).
-*   Write tests asserting that `calculate: "sum(items.price)"` evaluates correctly across dynamically added repeating DOM nodes.
+### Phase 5: MVP Engine & Component Implementation (Green Phase) (✅ COMPLETE)
+1.  **Standard Library Skeleton:** Implemented 8 core FEL standard functions required by the test suite.
+2.  **Full Component Mapping:** Expanded the `<formspec-render>` Web Component to natively map DOM nodes to checkboxes, datepickers, and selects.
+3.  **Cross-Field DOM Arrays:** Implemented reactive array collection so that adding a new DOM row automatically triggers the `sum()` recalculation.
+4.  **Verification:** The entire E2E suite passes cleanly against the MVP reference implementation.
 
-**2. Exhaustive Edge Case Tests:**
-*   **Null Propagation:** When `calculate: "price * quantity"` evaluates but `quantity` is empty, assert the engine propagates `null` rather than throwing `NaN`.
-*   **Deep Pruning:** Assert that if a parent `group` becomes hidden (`visible: false`), all nested children are strictly omitted from the final `Response` JSON, regardless of their individual visibility states.
-*   **Validation Bypassing:** Assert that a field with `required: true` passes form validation if it is currently hidden (e.g., `visible: "hasSpouse == true"`).
-*   **Cyclic Dependencies:** Create a fixture where `Field A` calculates from `Field B`, and `Field B` calculates from `Field A`. Assert the state engine detects the cycle and halts cleanly rather than infinitely looping and crashing the browser.
-*   **Type Coercion:** Assert strict spec compliance when mathematical formulas execute against string inputs (`"10" + 5`).
-*   **Empty Array Aggregation:** Assert that functions like `sum(items.price)` safely return `0` (or `null` per spec) when the user deletes all repeating instances.
+### Phase 6: Achieving 100% JavaScript Implementation Parity (⏳ PENDING)
+While the E2E framework completely validates the architecture and core standard, the Javascript packages themselves are currently an advanced MVP. To reach 100% parity with the Python Core Reference (Layer 6), the following must be explicitly implemented:
 
-**3. Verification:**
-*   Run the Playwright suite to ensure all new tests **fail** against the current scaffolding (Red state).
-
-### Phase 5: Full Engine & Component Implementation (Green Phase) (⏳ PENDING)
-Implement the standard library and component mappings to satisfy the test suite.
-1.  **Standard Library (FEL) Porting:** Port the 55 standard FEL functions (from `src/fel/functions.py`) into the TypeScript `compileFEL()` scope.
-2.  **Full Component Mapping:** Expand the `<formspec-render>` Web Component to natively parse, mount, and bind `boolean`, `choice`, and `date` fields.
-3.  **Cross-Field DOM Arrays:** Implement reactive array collection in the JS State Engine so aggregate functions over repeating groups update reactively.
-4.  **Edge Case Handlers:** Introduce logic for null propagation, deep visibility pruning, validation bypassing, and cyclic dependency detection within the State Engine.
-5.  **Verification:** Run the Playwright suite to ensure all tests now **pass** (Green state).
+1.  **Complete the FEL Standard Library:** The JS `FormEngine` currently only injects 8 functions. We must port the remaining 47 required functions from `src/fel/functions.py` into the TypeScript `compileFEL()` scope.
+    *   *Strings (10)*: e.g., `substring`, `contains`, `replace`, `length`
+    *   *Math (3)*: e.g., `abs`, `power`, `ceil`, `floor`
+    *   *Dates (8)*: e.g., `dateDiff`, `dateAdd`, `timeDiff`
+    *   *Money/Types (15)*: e.g., `moneyAdd`, `isNumber`, `cast.string`
+2.  **Implement Cyclic Dependency Detection:** The state engine must map the dependency graph (DAG) during `initializeSignals()`. If a form definition contains `calculate: "b"` on field A, and `calculate: "a"` on field B, it must throw a terminal error rather than letting `@preact/signals-core` enter an infinite browser-crashing loop.
+3.  **Advanced Tier 3 Components:** The `<formspec-render>` Web Component must expand beyond standard HTML inputs to handle remote REST API binding for `choice` schemas.
+4.  **Add Corresponding E2E Tests:** For every remaining standard library function, append a test case to `tests/e2e/playwright/fel-functions.spec.ts` asserting strict compliance.
 
 ## 4. Key E2E Scenarios Automated
 
