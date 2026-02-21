@@ -1,41 +1,22 @@
 # Tier 1 Revised Plan: Presentation Hints
 
-**Status:** Revised after dual review
-**Key decision:** Companion spec vs core spec (see §0)
+**Status:** Revised after dual review — ready to execute
+**Approach:** Amend core spec (`spec.md` + `definition.schema.json`)
 
 ---
 
-## §0. Core Spec vs Companion Spec — The Threshold Question
+## §0. Decision: Amend the Core Spec
 
-AD-02 says: *"This specification defines the first two [structure, behavior] and explicitly excludes the third [presentation]."*
+Presentation hints go directly into `spec.md` and `definition.schema.json`.
 
-The existing spec already has presentation-adjacent properties scattered across Items and Binds:
-- `prefix`/`suffix` on Fields — pure display hints
-- `semanticType` on Fields — widget selection hint
-- `disabledDisplay` on Binds — rendering behavior for non-relevant items
-- `labels` on Items — context-specific display labels
-- `hint`/`description` on Items — instructional display text
+AD-02 currently says: *"This specification defines the first two [structure, behavior] and explicitly excludes the third [presentation]."* Since v1.0 hasn't shipped, we rewrite AD-02 to say what we actually mean: structure and behavior are normative; presentation hints are advisory; rendering engines are out of scope.
 
-These exist because the boundary between "structural metadata" and "presentation" is fuzzy. A `label` is structural (it names the field) but also presentational (it's displayed text). The spec already crossed the line — it just didn't name a section for it.
+**Why this is the right call:**
 
-### Three options:
-
-| Option | Mechanism | Pros | Cons |
-|--------|-----------|------|------|
-| **A. Amend core spec** | Add `presentation` to Items + `formPresentation` to root in `spec.md` + `definition.schema.json` | Single document; discoverable; no new files | Contradicts AD-02 as written; mixes concerns |
-| **B. Companion spec** | New `presentation-spec.md` + `presentation.schema.json`; Definition carries an optional `presentation` key whose value conforms to the companion schema | Clean separation; AD-02 preserved; independent versioning | Two files to read; new schema to validate |
-| **C. Extension** | Use existing `extensions` mechanism (`x-presentation` key on Items) | Zero spec changes; works today | No standardized vocabulary; no interop; no schema validation |
-
-### Recommendation: **Option A — Amend the core spec**
-
-Rationale:
-1. The spec is greenfield (v1.0 hasn't shipped). There are no deployed implementations to break. We can rewrite AD-02.
-2. The properties we're adding (`widgetHint`, `layout`, `accessibility`) are the same kind of metadata as `prefix`/`suffix`/`hint`/`labels` — they belong in the same place.
-3. Option B creates a companion spec for ~15 optional properties. That's overhead without proportionate value. Companion specs earn their weight when they have independent lifecycles (like mapping-spec.md, which maps to external systems). Presentation hints are intrinsic to the form definition.
-4. Option C gives zero interoperability. The whole point is a shared vocabulary.
-5. Since this is greenfield, we rewrite AD-02 to say what we actually mean: *"Structure and behavior are normative. Presentation hints are advisory. Rendering is out of scope."*
-
-**If the user disagrees and prefers Option B**, the implementation is nearly identical — the `presentation` object just lives in a separate schema file and is referenced via `$ref`. The spec prose moves to `presentation-spec.md`. Everything below works either way; I'll note the delta where it matters.
+1. **Greenfield.** No deployed implementations to break. We can rewrite any part of the spec.
+2. **The spec already has presentation properties.** `prefix`, `suffix`, `hint`, `description`, `labels`, `semanticType`, `disabledDisplay` — these are all presentation metadata scattered across Items and Binds. Adding a `presentation` object is consolidating, not crossing a new line.
+3. **~15 optional properties don't warrant a companion spec.** Companion specs earn their weight with independent lifecycles (like `mapping-spec.md`, which maps to external systems). Presentation hints are intrinsic to the form definition.
+4. **Discoverability.** Authors see hints inline next to the items they affect — no cross-referencing a separate file.
 
 ---
 
@@ -586,7 +567,7 @@ Estimated: +5 lines.
 | Q5 | Section numbers? | `formPresentation` → §4.1.1. `presentation` → §4.2.5. |
 | Q6 | Normative compatibility table? | **Yes.** Incompatible widgetHint MUST be ignored. |
 | Q7 | Relationship to existing hint properties? | **Complementary.** `prefix`/`suffix`/`hint`/`description`/`labels`/`semanticType`/`disabledDisplay` retain their semantics. Not superseded. |
-| Q8 | Core spec or companion? | **Core spec** (see §0). This is greenfield; we rewrite AD-02. |
+| Q8 | Core spec or companion? | **Core spec** (§0). Decided: amend `spec.md` + `definition.schema.json` directly. |
 | Q9 | Processing model impact? | **None.** Presentation is metadata. FEL cannot reference it. Not in Responses. |
 | Q10 | Cross-tier contract normative? | **No.** Informative note only. Future specs are not bound. |
 
