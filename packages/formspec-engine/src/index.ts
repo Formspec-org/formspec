@@ -24,15 +24,59 @@ export class FormEngine {
     public visibleSignals: Record<string, Signal<boolean>> = {};
     public errorSignals: Record<string, Signal<string | null>> = {};
     public repeats: Record<string, Signal<number>> = {};
+    public dependencies: Record<string, string[]> = {};
+    private knownNames: Set<string> = new Set();
+    public structureVersion = signal(0);
 
     constructor(definition: FormspecDefinition) {
         this.definition = definition;
         this.initializeSignals();
     }
 
+    private discoverAllNames(items: FormspecItem[], prefix = ''): string[] {
+        let names: string[] = [];
+        for (const item of items) {
+            const fullName = prefix ? `${prefix}.${item.name}` : item.name;
+            names.push(fullName);
+            if (item.children) {
+                names.push(...this.discoverAllNames(item.children, fullName));
+            }
+        }
+        return names;
+    }
+
     private initializeSignals() {
+        this.knownNames = new Set(this.discoverAllNames(this.definition.items));
         for (const item of this.definition.items) {
             this.initItem(item);
+        }
+        this.detectCycles();
+        this.structureVersion.value++;
+    }
+
+    private detectCycles() {
+        const visited = new Set<string>();
+        const recursionStack = new Set<string>();
+
+        const visit = (node: string) => {
+            if (recursionStack.has(node)) {
+                throw new Error(`Cyclic dependency detected involving field: ${node}`);
+            }
+            if (visited.has(node)) return;
+
+            visited.add(node);
+            recursionStack.add(node);
+
+            const deps = this.dependencies[node] || [];
+            for (const dep of deps) {
+                visit(dep);
+            }
+
+            recursionStack.delete(node);
+        };
+
+        for (const node of Object.keys(this.dependencies)) {
+            visit(node);
         }
     }
 
@@ -91,6 +135,7 @@ export class FormEngine {
             const index = this.repeats[itemName].value;
             this.initRepeatInstance(item, itemName, index);
             this.repeats[itemName].value++;
+            this.structureVersion.value++;
             return index;
         }
     }
@@ -101,7 +146,8 @@ export class FormEngine {
         let foundItem: FormspecItem | undefined;
 
         for (const part of parts) {
-            foundItem = currentItems.find(i => i.name === part);
+            const cleanPart = part.replace(/\[\d+\]/g, '');
+            foundItem = currentItems.find(i => i.name === cleanPart);
             if (!foundItem) return undefined;
             if (foundItem.children) {
                 currentItems = foundItem.children;
@@ -261,6 +307,15 @@ export class FormEngine {
         const stdLibValues = Object.values(felStdLib);
 
         let expr = expression;
+
+        if (expr.includes('$index')) {
+            const parts = currentItemName.split(/[\[\]]/).filter(p => !isNaN(parseInt(p)));
+            const currentIndex = parts.length > 0 ? parseInt(parts[parts.length - 1]) : -1;
+            if (currentIndex >= 0) {
+                expr = expr.replace(/\$index/g, currentIndex.toString());
+            }
+        }
+
         const mipRegex = /(relevant|valid|readonly|required)\(([a-zA-Z0-9_.\\\[\\\]]+)\)/g;
         expr = expr.replace(mipRegex, "$1('$2')");
         expr = expr.replace(/\bif\s*\(/g, "fel_if(");
@@ -275,24 +330,53 @@ export class FormEngine {
             expr = expr.replace(m.full, m.full.replace(/[\\\[\\\]\.]/g, '_'));
         }
 
-        const finalExpr = expr.replace(/([a-zA-Z][a-zA-Z0-9_]*)\.([a-zA-Z0-9_]+)/g, '$1_$2')
-                             .replace(/[\\\[\\\]]/g, '_');
+        // Replace array access notation: array[index].field -> array_index__field
+        let sanitizedExpr = expr.replace(/([a-zA-Z][a-zA-Z0-9_]*)\[(\d+)\]\.([a-zA-Z0-9_]+)/g, '$1_$2__$3');
+        // Handle normal dot notation: group.field -> group_field
+        sanitizedExpr = sanitizedExpr.replace(/([a-zA-Z][a-zA-Z0-9_]*)\.([a-zA-Z0-9_]+)/g, '$1_$2');
+        // Handle any remaining brackets
+        const finalExpr = sanitizedExpr.replace(/[\[\]]/g, '_');
 
-        const potentialNames = Object.keys(this.signals).filter(n => {
-            if (n === currentItemName && !includeSelf) return false;
-            if (new RegExp(`\\b${n.replace(/[\\\[\\\]\.]/g, '_')}\\b`).test(finalExpr)) return true;
+        const currentPartsForDeps = currentItemName.replace(/\[\d+\]/g, '').split(/[\\\[\\\]\.]/).filter(Boolean);
+        const currentParentPathForDeps = currentPartsForDeps.slice(0, -1).join('.');
+        const baseCurrentItemName = currentItemName.replace(/\[\d+\]/g, '');
+
+        const potentialDeps = Array.from(this.knownNames).filter(n => {
+            if (n === baseCurrentItemName && !includeSelf) return false;
+            const safeN = n.replace(/[\\\[\\\]\.]/g, '_');
+            if (new RegExp(`\\b${safeN}\\b`).test(finalExpr)) return true;
             const parts = n.split(/[\\\[\\\]\.]/).filter(Boolean);
-            const currentParts = currentItemName.split(/[\\\[\\\]\.]/).filter(Boolean);
-            if (parts.length > 1 && currentParts.length > 1) {
-                if (parts.slice(0, -1).join('.') === currentParts.slice(0, -1).join('.')) {
-                    if (new RegExp(`\\b${parts[parts.length - 1]}\\b`).test(finalExpr)) return true;
-                }
+            if (parts.slice(0, -1).join('.') === currentParentPathForDeps) {
+                if (new RegExp(`\\b${parts[parts.length - 1]}\\b`).test(finalExpr)) return true;
             }
             return false;
         });
 
+        if (!this.dependencies[baseCurrentItemName]) {
+            this.dependencies[baseCurrentItemName] = [];
+        }
+        potentialDeps.forEach(d => {
+            if (!this.dependencies[baseCurrentItemName].includes(d)) {
+                this.dependencies[baseCurrentItemName].push(d);
+            }
+        });
+
         return () => {
+            this.structureVersion.value;
             const currentParts = currentItemName.split(/[\\\[\\\]\.]/).filter(Boolean);
+            const currentParentPath = currentParts.slice(0, -1).join('.');
+
+            const potentialNames = Object.keys(this.signals).filter(n => {
+                if (n === currentItemName && !includeSelf) return false;
+                if (new RegExp(`\\b${n.replace(/[\\\[\\\]\.]/g, '_')}\\b`).test(finalExpr)) return true;
+                const parts = n.split(/[\\\[\\\]\.]/).filter(Boolean);
+                if (parts.length > 1 && currentParts.length > 1) {
+                    if (parts.slice(0, -1).join('.') === currentParentPath) {
+                        if (new RegExp(`\\b${parts[parts.length - 1]}\\b`).test(finalExpr)) return true;
+                    }
+                }
+                return false;
+            });
             for (let i = 0; i < currentParts.length; i++) {
                 const subPath = currentParts.slice(0, i + 1).join('.');
                 if (this.repeats[subPath]) this.repeats[subPath].value;
@@ -317,7 +401,7 @@ export class FormEngine {
 
             const values = potentialNames.map(n => this.signals[n].value);
             const localValues: Record<string, any> = {};
-            const currentParentPath = currentParts.slice(0, -1).join('.');
+            // currentParentPath is already defined above
 
             for (let i = 0; i < potentialNames.length; i++) {
                 const n = potentialNames[i];
@@ -343,7 +427,7 @@ export class FormEngine {
     }
 
     public setValue(name: string, value: any) {
-        const baseName = name.replace(/\\\[\\d+\\\]/g, '');
+        const baseName = name.replace(/\[\d+\]/g, '');
         const item = this.findItem(this.definition.items, baseName);
         if (item && item.type === 'number' && typeof value === 'string') {
             value = value === '' ? null : Number(value);
