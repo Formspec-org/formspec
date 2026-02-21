@@ -5,7 +5,7 @@ import pathlib
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
 
-SCHEMA_PATH = pathlib.Path(__file__).resolve().parent.parent / "mapping.schema.json"
+SCHEMA_PATH = pathlib.Path(__file__).resolve().parent.parent / "schemas/mapping.schema.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
 
 

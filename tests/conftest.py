@@ -3,7 +3,7 @@ import json
 import os
 import pytest
 
-SCHEMA_DIR = os.path.join(os.path.dirname(__file__), "..")
+SCHEMA_DIR = os.path.join(os.path.dirname(__file__), "..", "schemas")
 
 
 def _load_schema(name):

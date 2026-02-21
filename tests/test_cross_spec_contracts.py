@@ -12,7 +12,9 @@ from pathlib import Path
 
 import pytest
 
-SCHEMA_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent
+SCHEMA_DIR = ROOT_DIR / "schemas"
+SPEC_DIR = ROOT_DIR / "specs"
 
 
 def _load(name):
@@ -885,7 +887,7 @@ class TestFelSpecContracts:
         import json as json_mod
         from fel.parser import parse as fel_parse
 
-        spec_path = SCHEMA_DIR / 'spec.md'
+        spec_path = SPEC_DIR / 'core' / 'spec.md'
         content = spec_path.read_text()
 
         # Find §7
@@ -937,7 +939,7 @@ class TestFelSpecContracts:
         import re
         from fel.parser import RESERVED_WORDS
 
-        content = (SCHEMA_DIR / 'spec.md').read_text()
+        content = (SPEC_DIR / 'core' / 'spec.md').read_text()
         s311_start = content.find('### 3.11 Reserved Words')
         s311_end = content.find('### 3.12', s311_start)
         s311 = content[s311_start:s311_end]
@@ -955,7 +957,7 @@ class TestFelSpecContracts:
         import re
         from fel.functions import build_default_registry
 
-        content = (SCHEMA_DIR / 'spec.md').read_text()
+        content = (SPEC_DIR / 'core' / 'spec.md').read_text()
 
         # §3.5 function tables
         s35_start = content.find('### 3.5 Built-in Functions')
@@ -1007,7 +1009,7 @@ class TestFelSpecContracts:
         import json as json_mod
         from fel import extract_dependencies
 
-        content = (SCHEMA_DIR / 'spec.md').read_text()
+        content = (SPEC_DIR / 'core' / 'spec.md').read_text()
         s73_start = content.find('### 7.3')
         s73_end = content.find('### 7.4', s73_start)
         s73 = content[s73_start:s73_end]
@@ -1069,7 +1071,7 @@ class TestFelSpecContracts:
         import re
         from fel.functions import build_default_registry
 
-        content = (SCHEMA_DIR / 'spec.md').read_text()
+        content = (SPEC_DIR / 'core' / 'spec.md').read_text()
 
         # Collect all function names from spec (both §3.5 tables and §3.4.3 casts)
         spec_funcs = set()

@@ -2,7 +2,7 @@ import json
 import pytest
 from jsonschema import validate, ValidationError
 
-with open("component.schema.json", "r") as f:
+with open("schemas/component.schema.json", "r") as f:
     SCHEMA = json.load(f)
 
 def test_minimal_document():
@@ -511,7 +511,7 @@ def test_summary_items_valid():
 
 def test_all_progressive_fallbacks_present_in_spec():
     # Meta-test to ensure all 15 progressive components have fallbacks defined in the spec
-    with open("component-spec.md", "r") as f:
+    with open("specs/component/component-spec.md", "r") as f:
         content = f.read()
     
     progressive = [

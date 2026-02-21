@@ -13,7 +13,7 @@ import jsonschema
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parent.parent
-SCHEMA = json.loads((ROOT / "definition.schema.json").read_text())
+SCHEMA = json.loads((ROOT / "schemas/definition.schema.json").read_text())
 VALIDATOR = Draft202012Validator(SCHEMA)
 
 

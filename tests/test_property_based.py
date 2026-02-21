@@ -22,7 +22,7 @@ from referencing.jsonschema import DRAFT202012
 # Schema loading + shared validator registry
 # ---------------------------------------------------------------------------
 
-SCHEMA_DIR = Path(__file__).resolve().parent.parent
+SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
 
 
 def _load(name):

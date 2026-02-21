@@ -12,7 +12,7 @@ from jsonschema import Draft202012Validator, ValidationError, validate
 # Schema loading
 # ---------------------------------------------------------------------------
 
-_SCHEMA_DIR = Path(__file__).resolve().parent.parent
+_SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
 
 
 def _load_schema(name: str) -> dict:

@@ -25,12 +25,13 @@ from referencing.jsonschema import DRAFT202012
 # Helpers
 # ---------------------------------------------------------------------------
 
-SCHEMA_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent
+SCHEMA_DIR = ROOT_DIR / "schemas"
 SPEC_FILES = [
-    "spec.md",
-    "mapping-spec.md",
-    "changelog-spec.md",
-    "extension-registry.md",
+    "specs/core/spec.md",
+    "specs/mapping/mapping-spec.md",
+    "specs/registry/changelog-spec.md",
+    "specs/registry/extension-registry.md",
 ]
 
 
@@ -46,7 +47,7 @@ def _extract_json_blocks(filepath):
     Blocks that use markdown blockquote '>' prefix are cleaned automatically.
     Blocks that are not valid JSON are returned with obj=None.
     """
-    with open(SCHEMA_DIR / filepath) as f:
+    with open(ROOT_DIR / filepath) as f:
         content = f.read()
 
     results = []

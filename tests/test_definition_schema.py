@@ -16,7 +16,7 @@ from jsonschema import Draft202012Validator, ValidationError, validate
 # Fixtures
 # ---------------------------------------------------------------------------
 
-SCHEMA_PATH = pathlib.Path(__file__).resolve().parent.parent / "definition.schema.json"
+SCHEMA_PATH = pathlib.Path(__file__).resolve().parent.parent / "schemas/definition.schema.json"
 
 
 @pytest.fixture(scope="session")

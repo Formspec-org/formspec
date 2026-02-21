@@ -540,7 +540,7 @@ class TestAdapterSchemaAlignment:
     def mapping_schema(self):
         import json as json_mod
         from pathlib import Path
-        p = Path(__file__).resolve().parent.parent / 'mapping.schema.json'
+        p = Path(__file__).resolve().parent.parent / 'schemas/mapping.schema.json'
         with open(p) as f:
             return json_mod.load(f)
 

@@ -14,8 +14,8 @@ import jsonschema
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parent.parent
-THEME_SCHEMA = json.loads((ROOT / "theme.schema.json").read_text())
-DEF_SCHEMA = json.loads((ROOT / "definition.schema.json").read_text())
+THEME_SCHEMA = json.loads((ROOT / "schemas/theme.schema.json").read_text())
+DEF_SCHEMA = json.loads((ROOT / "schemas/definition.schema.json").read_text())
 THEME_V = Draft202012Validator(THEME_SCHEMA)
 DEF_V = Draft202012Validator(DEF_SCHEMA)
 

@@ -6,7 +6,7 @@ import os
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
 
-SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "registry.schema.json")
+SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "schemas", "registry.schema.json")
 
 with open(SCHEMA_PATH) as f:
     SCHEMA = json.load(f)
