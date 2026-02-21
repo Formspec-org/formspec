@@ -57,19 +57,19 @@ The actual E2E tests driving the browser.
 2.  Created a directory of JSON Formspec fixtures representing complex scenarios.
 3.  Wrote test suite covering repeating groups, visibility, dynamic calculations, pattern matching, and spec schema compliance.
 
-### Phase 4: Full Standard Coverage & FEL Parity (⏳ PENDING)
-To bring the JS Reference Implementation to complete parity with the Formspec Standard and Python Core, we must expand test coverage across the entire specification:
+### Phase 4: Exhaustive E2E Test Authoring (Red Phase) (⏳ PENDING)
+Adopting a strict Red/Green Test-Driven Development (TDD) approach, we will first write the comprehensive test suite before implementing the missing features.
+1.  **Exhaustive Fixtures:** Create JSON Formspec fixtures covering all 55 standard FEL functions (e.g., `sum()`, `dateDiff()`, `replace()`).
+2.  **Type Coverage Tests:** Write Playwright specs for missing Tier 1 types: `boolean` (checkboxes), `choice` (select/radio), and `date` (datepickers).
+3.  **Array Aggregation Tests:** Write tests asserting that `calculate: "sum(items.price)"` evaluates correctly across dynamically added repeating DOM nodes.
+4.  **Verification:** Run the Playwright suite to ensure all new tests **fail** against the current scaffolding (Red state).
 
-1.  **Standard Library (FEL) Porting:** Port all 55 standard FEL functions (from `src/fel/functions.py`) into the TypeScript `compileFEL()` scope. This includes:
-    *   *Aggregates:* `sum()`, `count()`, `avg()`, `min()`, `max()`
-    *   *Strings:* `length()`, `contains()`, `replace()`, `trim()`, `matches()`
-    *   *Math:* `round()`, `abs()`, `power()`
-    *   *Dates:* `dateDiff()`, `dateAdd()`, `year()`, `month()`
-2.  **Full Component Mapping:** Expand the `<formspec-render>` Web Component to natively parse and mount all Tier 1 Types:
-    *   `boolean` (Checkboxes)
-    *   `choice` / `options` (Select dropdowns & radio groups)
-    *   `date` & `time` (Native datepickers)
-3.  **Cross-Field DOM Arrays:** Ensure expressions like `calculate: "sum(items.price)"` natively map over repeating `[0], [1], [n]` nested groups and update reactively.
+### Phase 5: Full Engine & Component Implementation (Green Phase) (⏳ PENDING)
+Implement the standard library and component mappings to satisfy the test suite.
+1.  **Standard Library (FEL) Porting:** Port the 55 standard FEL functions (from `src/fel/functions.py`) into the TypeScript `compileFEL()` scope.
+2.  **Full Component Mapping:** Expand the `<formspec-render>` Web Component to natively parse, mount, and bind `boolean`, `choice`, and `date` fields.
+3.  **Cross-Field DOM Arrays:** Implement reactive array collection in the JS State Engine so aggregate functions over repeating groups update reactively.
+4.  **Verification:** Run the Playwright suite to ensure all tests now **pass** (Green state).
 
 ## 4. Key E2E Scenarios Automated
 
