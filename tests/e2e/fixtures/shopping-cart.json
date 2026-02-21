@@ -1,0 +1,36 @@
+{
+  "$formspec": "1.0",
+  "url": "http://example.org/forms/shopping-cart",
+  "version": "1.0.0",
+  "status": "draft",
+  "title": "Shopping Cart",
+  "items": [
+    {
+      "type": "number",
+      "key": "price",
+      "name": "price",
+      "label": "Price"
+    },
+    {
+      "type": "number",
+      "key": "quantity",
+      "name": "quantity",
+      "label": "Quantity"
+    },
+    {
+      "type": "number",
+      "key": "total",
+      "name": "total",
+      "label": "Total",
+      "readonly": true,
+      "calculate": "price * quantity"
+    },
+    {
+      "type": "string",
+      "key": "discountCode",
+      "name": "discountCode",
+      "label": "Discount Code",
+      "visible": "total > 50"
+    }
+  ]
+}
