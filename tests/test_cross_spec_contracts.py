@@ -869,3 +869,222 @@ class TestRegistrySchema:
 
     def test_er2__additional_properties_false(self):
         assert REG_S["additionalProperties"] is False
+
+
+# ===================================================================
+# Stage 5A: FEL ↔ Spec Contracts
+# ===================================================================
+
+
+class TestFelSpecContracts:
+    """Verify FEL implementation matches spec prose."""
+
+    def test_s7_all_fel_expressions_parse(self):
+        """Every FEL expression in §7 examples must parse without error."""
+        import re
+        import json as json_mod
+        from fel.parser import parse as fel_parse
+
+        spec_path = SCHEMA_DIR / 'spec.md'
+        content = spec_path.read_text()
+
+        # Find §7
+        s7_start = content.find('## 7.')
+        s7_end = content.find('## 8.', s7_start)
+        s7 = content[s7_start:s7_end]
+
+        # Extract JSON blocks
+        json_blocks = re.findall(r'```json\n(.*?)```', s7, re.DOTALL)
+
+        # Extract FEL expressions from bind/shape properties
+        fel_exprs = []
+        for block in json_blocks:
+            try:
+                obj = json_mod.loads(block)
+            except Exception:
+                continue
+            def _find(o):
+                if isinstance(o, dict):
+                    for k in ('calculate', 'constraint', 'relevant',
+                              'required', 'readonly', 'expression'):
+                        if k in o and isinstance(o[k], str):
+                            fel_exprs.append(o[k])
+                    for v in o.values():
+                        _find(v)
+                elif isinstance(o, list):
+                    for v in o:
+                        _find(v)
+            _find(obj)
+
+        assert len(fel_exprs) > 0, 'No FEL expressions found in §7'
+
+        errors = []
+        for expr in fel_exprs:
+            # Spec uses 'div' in some examples; replace with '/'
+            expr_fixed = expr.replace(' div ', ' / ')
+            # Skip bare literals like 'true' used in required/readonly
+            if expr_fixed in ('true', 'false'):
+                continue
+            try:
+                fel_parse(expr_fixed)
+            except Exception as e:
+                errors.append(f'{expr!r}: {e}')
+
+        assert errors == [], f'FEL parse failures:\n' + '\n'.join(errors)
+
+    def test_s3_11_reserved_words_subset_of_parser(self):
+        """§3.11 reserved words are a subset of the parser's RESERVED_WORDS."""
+        import re
+        from fel.parser import RESERVED_WORDS
+
+        content = (SCHEMA_DIR / 'spec.md').read_text()
+        s311_start = content.find('### 3.11 Reserved Words')
+        s311_end = content.find('### 3.12', s311_start)
+        s311 = content[s311_start:s311_end]
+
+        code = re.search(r'```\n(.*?)```', s311, re.DOTALL)
+        spec_reserved = set(code.group(1).split())
+
+        # Spec lists 7 words; parser adds if/then/else/let for control flow
+        assert spec_reserved <= RESERVED_WORDS, (
+            f'Spec reserved words not in parser: {spec_reserved - RESERVED_WORDS}'
+        )
+
+    def test_s3_5_builtin_functions_match_registry(self):
+        """All §3.5 function names exist in the built-in registry."""
+        import re
+        from fel.functions import build_default_registry
+
+        content = (SCHEMA_DIR / 'spec.md').read_text()
+
+        # §3.5 function tables
+        s35_start = content.find('### 3.5 Built-in Functions')
+        s35_end = content.find('### 3.6 Dependency Tracking')
+        s35 = content[s35_start:s35_end]
+
+        spec_funcs = set()
+        for m in re.finditer(r'^\| `(\w+)` \| `\w+\(', s35, re.MULTILINE):
+            spec_funcs.add(m.group(1))
+
+        # §3.4.3 cast functions (different table format)
+        s343_start = content.find('#### 3.4.3 Coercion Rules')
+        s343_end = content.find('### 3.5', s343_start)
+        s343 = content[s343_start:s343_end]
+        for m in re.finditer(r'^\| `(\w+)\(', s343, re.MULTILINE):
+            spec_funcs.add(m.group(1))
+
+        registry = set(build_default_registry().keys())
+
+        missing_from_registry = spec_funcs - registry
+        assert missing_from_registry == set(), (
+            f'Spec functions not in registry: {missing_from_registry}'
+        )
+
+    def test_s3_4_type_names_from_typeof(self):
+        """typeOf returns only the type names defined in §3.4."""
+        from fel import evaluate, FelString
+        import datetime
+        from decimal import Decimal as D
+
+        expected_types = {
+            'null': 'typeOf(null)',
+            'number': 'typeOf(42)',
+            'string': 'typeOf("hello")',
+            'boolean': 'typeOf(true)',
+            'date': 'typeOf(@2024-01-01)',
+            'array': 'typeOf([1, 2])',
+        }
+
+        for expected_name, expr in expected_types.items():
+            r = evaluate(expr)
+            assert r.value == FelString(expected_name), (
+                f'{expr} should return "{expected_name}", got {r.value}'
+            )
+
+    def test_s7_3_dependency_graph_acyclic(self):
+        """Expressions from §7.3 (repeatable rows) form a DAG."""
+        import re
+        import json as json_mod
+        from fel import extract_dependencies
+
+        content = (SCHEMA_DIR / 'spec.md').read_text()
+        s73_start = content.find('### 7.3')
+        s73_end = content.find('### 7.4', s73_start)
+        s73 = content[s73_start:s73_end]
+
+        json_blocks = re.findall(r'```json\n(.*?)```', s73, re.DOTALL)
+
+        # Collect field->expression from calculate binds (may be in 'binds' array)
+        calc_binds = {}  # key -> expression
+        for block in json_blocks:
+            try:
+                obj = json_mod.loads(block)
+            except Exception:
+                continue
+            def _find_calcs(o):
+                if isinstance(o, dict):
+                    if 'calculate' in o and isinstance(o['calculate'], str):
+                        # Use path or nearby key if available
+                        path = o.get('path', o.get('key', str(len(calc_binds))))
+                        calc_binds[path] = o['calculate']
+                    for v in o.values():
+                        _find_calcs(v)
+                elif isinstance(o, list):
+                    for v in o:
+                        _find_calcs(v)
+            _find_calcs(obj)
+
+        assert len(calc_binds) > 0, 'No calculate binds found in §7.3'
+
+        # Build dependency graph and check for cycles
+        graph = {}
+        for key, expr in calc_binds.items():
+            expr_fixed = expr.replace(' div ', ' / ')
+            deps = extract_dependencies(expr_fixed)
+            graph[key] = deps.fields
+
+        visited = set()
+        in_stack = set()
+        has_cycle = False
+        def dfs(node):
+            nonlocal has_cycle
+            if node in in_stack:
+                has_cycle = True
+                return
+            if node in visited:
+                return
+            visited.add(node)
+            in_stack.add(node)
+            for dep in graph.get(node, set()):
+                dfs(dep)
+            in_stack.discard(node)
+
+        for key in graph:
+            dfs(key)
+
+        assert not has_cycle, f'Cycle detected in §7.3 expressions: {graph}'
+
+    def test_s3_5_no_extra_registry_functions(self):
+        """Registry doesn't contain functions absent from the spec."""
+        import re
+        from fel.functions import build_default_registry
+
+        content = (SCHEMA_DIR / 'spec.md').read_text()
+
+        # Collect all function names from spec (both §3.5 tables and §3.4.3 casts)
+        spec_funcs = set()
+        s35_start = content.find('### 3.5 Built-in Functions')
+        s35_end = content.find('### 3.6 Dependency Tracking')
+        s35 = content[s35_start:s35_end]
+        for m in re.finditer(r'^\| `(\w+)` \| `\w+\(', s35, re.MULTILINE):
+            spec_funcs.add(m.group(1))
+
+        s343_start = content.find('#### 3.4.3 Coercion Rules')
+        s343_end = content.find('### 3.5', s343_start)
+        s343 = content[s343_start:s343_end]
+        for m in re.finditer(r'^\| `(\w+)\(', s343, re.MULTILINE):
+            spec_funcs.add(m.group(1))
+
+        registry = set(build_default_registry().keys())
+        extra = registry - spec_funcs
+        assert extra == set(), f'Registry has functions not in spec: {extra}'

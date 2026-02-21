@@ -286,3 +286,146 @@ class TestMoneyFunctions:
 
     def test_moneyAdd_currency_mismatch(self):
         assert is_null(val("moneyAdd(money(10, 'USD'), money(20, 'EUR'))"))
+
+
+# ===================================================================
+# Stage 2A: Function coverage gaps
+# ===================================================================
+
+
+class TestSelectedFunction:
+
+    def test_string_found(self):
+        assert pv("selected(['a', 'b', 'c'], 'b')") is True
+
+    def test_string_not_found(self):
+        assert pv("selected(['a', 'b', 'c'], 'x')") is False
+
+    def test_null_array(self):
+        assert is_null(val('selected(null, "x")'))
+
+    def test_number_found(self):
+        assert pv('selected([1, 2, 3], 2)') is True
+
+    def test_empty_array(self):
+        assert pv('selected([], "a")') is False
+
+
+class TestMoneySum:
+
+    def test_basic_sum(self):
+        from fel import FelMoney
+        r = val("moneySum([money(10, 'USD'), money(20, 'USD')])")
+        assert isinstance(r, FelMoney)
+        assert r.amount == Decimal('30') and r.currency == 'USD'
+
+    def test_empty_array_is_null(self):
+        assert is_null(val('moneySum([])'))
+
+    def test_currency_mismatch_returns_null(self):
+        assert is_null(val("moneySum([money(10, 'USD'), money(20, 'EUR')])"))
+
+
+class TestFormatFunction:
+
+    def test_two_placeholders(self):
+        assert pv("format('{0} and {1}', 'hello', 'world')") == 'hello and world'
+
+    def test_number_arg(self):
+        assert pv("format('value: {0}', 42)") == 'value: 42'
+
+
+class TestDateDiffExtra:
+
+    def test_months(self):
+        assert pv("dateDiff(@2024-06-15, @2024-01-15, 'months')") == Decimal('5')
+
+    def test_negative_days(self):
+        assert pv("dateDiff(@2024-01-01, @2024-06-01, 'days')") == Decimal('-152')
+
+
+class TestDateAddExtra:
+
+    def test_add_years(self):
+        assert pv("dateAdd(@2020-03-01, 4, 'years')") == date(2024, 3, 1)
+
+    def test_leap_year_feb29_plus_one_year(self):
+        """Feb 29 + 1 year clamps to Feb 28."""
+        assert pv("dateAdd(@2024-02-29, 1, 'years')") == date(2025, 2, 28)
+
+
+class TestStringEdgeCases:
+
+    def test_matches_anchored_no_match(self):
+        assert pv("matches('abc123', '^[a-z]+$')") is False
+
+    def test_matches_anchored_match(self):
+        assert pv("matches('abc', '^[a-z]+$')") is True
+
+    def test_substring_zero_length(self):
+        assert pv("substring('hello', 1, 0)") == ''
+
+    def test_replace_no_match(self):
+        assert pv("replace('hello', 'xyz', 'abc')") == 'hello'
+
+    def test_trim_tabs(self):
+        assert pv("trim('\thello\t')") == 'hello'
+
+
+class TestNumericEdgeCases:
+
+    def test_power_zero_exponent(self):
+        assert pv('power(5, 0)') == Decimal('1')
+
+    def test_power_negative_exponent(self):
+        assert pv('power(2, -1)') == Decimal('0.5')
+
+    def test_floor_negative(self):
+        assert pv('floor(-3.2)') == Decimal('-4')
+
+    def test_ceil_negative(self):
+        assert pv('ceil(-3.2)') == Decimal('-3')
+
+
+class TestCastEdgeCases:
+
+    def test_number_invalid_string(self):
+        assert is_null(val("number('abc')"))
+
+    def test_date_invalid_string(self):
+        assert is_null(val("date('not-a-date')"))
+
+    def test_boolean_from_true_string(self):
+        assert pv("boolean('true')") is True
+
+    def test_boolean_from_false_string(self):
+        assert pv("boolean('false')") is False
+
+    def test_boolean_from_empty_string(self):
+        assert is_null(val("boolean('')"))
+
+
+class TestNumberToStrRegression:
+
+    def test_small_decimal(self):
+        assert pv('string(0.001)') == '0.001'
+
+    def test_large_number(self):
+        assert pv('string(10000000)') == '10000000'
+
+
+class TestNowFunction:
+
+    def test_now_returns_date_type(self):
+        from fel import FelDate
+        r = val('now()')
+        assert isinstance(r, FelDate)
+
+
+class TestIsDateFunction:
+
+    def test_positive(self):
+        assert pv('isDate(@2024-01-01)') is True
+
+    def test_negative(self):
+        assert pv('isDate(42)') is False

@@ -353,3 +353,159 @@ class TestReviewBugFixes:
         from fel.types import from_python, FelObject
         r = from_python({'amount': 'not-a-number', 'currency': 'USD'})
         assert isinstance(r, FelObject)
+
+
+# ===================================================================
+# Stage 1C + 6B: Evaluator edge cases and error paths
+# ===================================================================
+
+
+class TestScalarBroadcast:
+    """Element-wise and scalar broadcast operations on arrays."""
+
+    def test_array_times_scalar(self):
+        r = evaluate('[1, 2, 3] * 10')
+        assert isinstance(r.value, FelArray)
+        assert [e.value for e in r.value.elements] == [
+            Decimal('10'), Decimal('20'), Decimal('30'),
+        ]
+
+    def test_scalar_times_array(self):
+        r = evaluate('10 * [1, 2, 3]')
+        assert isinstance(r.value, FelArray)
+        assert [e.value for e in r.value.elements] == [
+            Decimal('10'), Decimal('20'), Decimal('30'),
+        ]
+
+    def test_elementwise_null_propagation(self):
+        r = evaluate('[1, null, 3] + [4, 5, 6]')
+        elems = r.value.elements
+        assert elems[0].value == Decimal('5')
+        assert is_null(elems[1])
+        assert elems[2].value == Decimal('9')
+
+    def test_elementwise_comparison(self):
+        r = evaluate('[1, 2, 3] > [0, 2, 4]')
+        assert [e.value for e in r.value.elements] == [True, False, False]
+
+    def test_elementwise_string_concat(self):
+        r = evaluate('["a", "b"] & ["x", "y"]')
+        assert [e.value for e in r.value.elements] == ['ax', 'by']
+
+    def test_empty_array_add(self):
+        r = evaluate('[] + []')
+        assert isinstance(r.value, FelArray)
+        assert len(r.value.elements) == 0
+
+
+class TestEvaluatorEdgeCases:
+
+    def test_ternary_untaken_branch_not_evaluated(self):
+        """true ? 1 : (1/0) must yield 1 with no diagnostics."""
+        r = evaluate('true ? 1 : (1/0)')
+        assert r.value == FelNumber(Decimal('1'))
+        assert len(r.diagnostics) == 0
+
+    def test_deeply_nested_field_refs(self):
+        data = {'a': {'b': {'c': {'d': {'e': 99}}}}}
+        assert pyval('$a.b.c.d.e', data) == Decimal('99')
+
+    def test_multiple_null_coalesce_chain(self):
+        data = {'a': None, 'b': None, 'c': None}
+        assert pyval('$a ?? $b ?? $c ?? 0', data) == Decimal('0')
+
+    def test_date_comparison_gt(self):
+        assert pyval('@2024-01-15 > @2024-01-01') is True
+
+    def test_boolean_equality_true(self):
+        assert pyval('true = true') is True
+
+    def test_boolean_equality_false(self):
+        assert pyval('true = false') is False
+
+    def test_membership_null_propagation(self):
+        r = evaluate('"x" in null')
+        assert is_null(r.value)
+
+    def test_unary_minus_null(self):
+        assert is_null(val('-null'))
+
+    def test_string_membership_in_array(self):
+        assert pyval('"b" in ["a", "b", "c"]') is True
+
+
+class TestObjectLiteralEval:
+
+    def test_simple_field_access(self):
+        assert pyval('{a: 1, b: 2}.a') == Decimal('1')
+
+    def test_nested_object_access(self):
+        assert pyval('{x: {y: 3}}.x.y') == Decimal('3')
+
+
+class TestPostfixWildcard:
+
+    def test_wildcard_via_let_binding(self):
+        data = {'items': [{'val': 10}, {'val': 20}, {'val': 30}]}
+        assert pyval('let arr = $items in sum(arr[*].val)', data) == Decimal('60')
+
+    def test_nested_index_then_wildcard(self):
+        data = {'items': [{'sub': [{'val': 1}, {'val': 2}]}, {'sub': [{'val': 3}]}]}
+        r = val('$items[1].sub[*].val', data)
+        assert isinstance(r, FelArray)
+        assert [e.value for e in r.elements] == [Decimal('1'), Decimal('2')]
+
+
+class TestCommentEval:
+
+    def test_block_comment(self):
+        assert pyval('1 + /* add */ 2') == Decimal('3')
+
+    def test_line_comment(self):
+        assert pyval('1 + 2 // trailing') == Decimal('3')
+
+
+class TestEvaluatorErrors:
+    """Stage 6B: diagnostic messages from runtime errors."""
+
+    def test_unknown_function(self):
+        r = evaluate('nonexistent(1)')
+        assert is_null(r.value)
+        assert len(r.diagnostics) >= 1
+
+    def test_wrong_arity(self):
+        r = evaluate('length("a", "b")')
+        assert is_null(r.value)
+        assert len(r.diagnostics) >= 1
+
+    def test_countWhere_non_array(self):
+        r = evaluate('countWhere(42, $ > 0)')
+        assert is_null(r.value)
+        assert len(r.diagnostics) >= 1
+
+    def test_countWhere_non_boolean_predicate(self):
+        """Non-boolean predicate silently skips — returns 0 with no diagnostic."""
+        r = evaluate('countWhere([1, 2], $ + 1)')
+        assert r.value == FelNumber(Decimal('0'))
+        assert len(r.diagnostics) == 0
+
+    def test_division_by_zero_diagnostic_content(self):
+        r = evaluate('1 / 0')
+        assert is_null(r.value)
+        msg = r.diagnostics[0].message.lower()
+        assert 'division' in msg or 'zero' in msg
+
+    def test_avg_empty_diagnostic_content(self):
+        r = evaluate('avg([])')
+        assert is_null(r.value)
+        assert len(r.diagnostics) >= 1
+
+    def test_moneyAdd_currency_mismatch_no_diagnostic(self):
+        r = evaluate("moneyAdd(money(10, 'USD'), money(20, 'EUR'))")
+        assert is_null(r.value)
+        assert len(r.diagnostics) == 0
+
+    def test_moneySum_currency_mismatch_no_diagnostic(self):
+        r = evaluate("moneySum([money(10, 'USD'), money(20, 'EUR')])")
+        assert is_null(r.value)
+        assert len(r.diagnostics) == 0

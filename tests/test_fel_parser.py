@@ -494,3 +494,40 @@ class TestEdgeCases:
             'true', 'false', 'null', 'and', 'or', 'not', 'in',
             'if', 'then', 'else', 'let'
         }
+
+
+# ===================================================================
+# Stage 6A: Parser error-path tests
+# ===================================================================
+
+
+class TestParserErrors:
+    """Verify parser produces clear FelSyntaxError for malformed inputs."""
+
+    def test_unmatched_paren(self):
+        with pytest.raises(FelSyntaxError):
+            parse('(1 + 2')
+
+    def test_unmatched_bracket(self):
+        with pytest.raises(FelSyntaxError):
+            parse('[1, 2')
+
+    def test_trailing_garbage(self):
+        with pytest.raises(FelSyntaxError):
+            parse('1 + 2 xyz')
+
+    def test_empty_function_args_with_comma(self):
+        with pytest.raises(FelSyntaxError):
+            parse('foo(,)')
+
+    def test_object_literal_missing_colon(self):
+        with pytest.raises(FelSyntaxError):
+            parse('{a 1}')
+
+    def test_object_literal_missing_value(self):
+        with pytest.raises(FelSyntaxError):
+            parse('{a:}')
+
+    def test_unterminated_block_comment_error(self):
+        with pytest.raises(FelSyntaxError):
+            parse('1 + /* oops')

@@ -610,7 +610,9 @@ def _make_mip_fn(attr: str):
             path = '.'.join(s.name for s in arg.segments if isinstance(s, ast.DotSegment))
             if path in evaluator.env.mip_states:
                 return fel_bool(getattr(evaluator.env.mip_states[path], attr))
-            return FelTrue if attr == 'valid' else FelFalse
+            # Spec §4.3.2 defaults: valid=true, relevant=true, readonly=false, required=false
+            _MIP_DEFAULTS = {'valid': True, 'relevant': True, 'readonly': False, 'required': False}
+            return fel_bool(_MIP_DEFAULTS[attr])
         evaluator._diag(f"{attr}() requires a field reference argument", pos)
         return FelNull
     return _mip_fn
