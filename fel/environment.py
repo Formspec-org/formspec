@@ -62,7 +62,11 @@ class Environment:
         Returns FelNull for missing paths.
         """
         if not path:
-            # Bare $ — self-reference. In repeat context, refers to current row.
+            # Bare $ — check scope stack first (countWhere binds $ per-element)
+            dollar_val = self.lookup_let_binding('')
+            if dollar_val is not None:
+                return dollar_val
+            # Then repeat context
             if self.repeat_context:
                 return self.repeat_context.current
             return from_python(self.data)

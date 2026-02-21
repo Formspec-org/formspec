@@ -187,6 +187,9 @@ def from_python(val) -> FelValue:
     if isinstance(val, dict):
         # Check if it's a money value
         if 'amount' in val and 'currency' in val and len(val) == 2:
-            return FelMoney(fel_decimal(val['amount']), val['currency'])
+            try:
+                return FelMoney(fel_decimal(val['amount']), val['currency'])
+            except (decimal.InvalidOperation, TypeError, ValueError):
+                pass  # Fall through to object
         return FelObject({k: from_python(v) for k, v in val.items()})
     return FelNull

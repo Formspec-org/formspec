@@ -15,7 +15,6 @@ from typing import Callable
 from . import ast_nodes as ast
 from .errors import Diagnostic, FelSyntaxError, SourcePos, Severity
 from .types import (
-
     FelArray, FelBoolean, FelDate, FelMoney, FelNull, FelNumber,
     FelObject, FelString, FelTrue, FelFalse, FelValue,
     _FelNullType, fel_bool, fel_decimal, from_python, is_null, typeof,
@@ -201,7 +200,7 @@ class Evaluator:
             return FelNull
 
         # Arithmetic
-        if op in '+-*/%':
+        if op in ('+', '-', '*', '/', '%'):
             return self._eval_arithmetic(op, left, right, pos)
         # String concatenation
         if op == '&':
@@ -424,9 +423,23 @@ class Evaluator:
                     return FelNull
             elif isinstance(seg, ast.WildcardSegment):
                 if isinstance(val, FelArray):
-                    # Apply remaining segments to each element
-                    # For simplicity, just return the array
-                    pass
+                    # Wildcard on a FelArray: collect remaining-path from each element
+                    remaining = node.segments[node.segments.index(seg) + 1:]
+                    if not remaining:
+                        continue  # No further segments, val is already the array
+                    results = []
+                    for elem in val.elements:
+                        cur = elem
+                        for rseg in remaining:
+                            if is_null(cur):
+                                break
+                            if isinstance(rseg, ast.DotSegment) and isinstance(cur, FelObject):
+                                cur = cur.fields.get(rseg.name, FelNull)
+                            else:
+                                cur = FelNull
+                                break
+                        results.append(cur)
+                    return FelArray(tuple(results))
                 else:
                     return FelNull
         return val

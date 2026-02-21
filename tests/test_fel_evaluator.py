@@ -315,10 +315,41 @@ class TestElementWiseArrays:
         assert is_null(val('$a * $b', data))  # Can't do element-wise on raw arrays via field ref
 
 
-class TestPostfixAccess:
-    def test_object_dot_access(self):
-        """Object literals support dot access."""
-        # We test via let binding with object
-        r = evaluate('let obj = {a: 1, b: 2} in obj')
-        # Object access via evaluator needs PostfixAccess
-        pass  # Complex to test in isolation
+class TestCountWhere:
+    def test_basic(self):
+        """countWhere rebinds $ to each element."""
+        assert pyval('countWhere([1, 2, 3, 4, 5], $ > 3)') == Decimal('2')
+
+    def test_all_match(self):
+        assert pyval('countWhere([10, 20, 30], $ > 0)') == Decimal('3')
+
+    def test_none_match(self):
+        assert pyval('countWhere([1, 2, 3], $ > 100)') == Decimal('0')
+
+    def test_empty_array(self):
+        assert pyval('countWhere([], $ > 0)') == Decimal('0')
+
+    def test_with_field_data(self):
+        data = {'items': [{'amount': 10}, {'amount': 5000}, {'amount': 20000}]}
+        assert pyval('countWhere($items[*].amount, $ > 10000)', data) == Decimal('1')
+
+
+class TestReviewBugFixes:
+    def test_avg_empty_diagnostic(self):
+        """avg([]) must signal an error (division by zero)."""
+        r = evaluate('avg([])')
+        assert is_null(r.value)
+        assert len(r.diagnostics) >= 1
+
+    def test_string_of_100(self):
+        """string(100) should be '100', not '1E+2'."""
+        assert pyval('string(100)') == '100'
+
+    def test_string_of_large_number(self):
+        assert pyval('string(1000000)') == '1000000'
+
+    def test_from_python_bad_money(self):
+        """Dicts with amount/currency but bad amount should be objects."""
+        from fel.types import from_python, FelObject
+        r = from_python({'amount': 'not-a-number', 'currency': 'USD'})
+        assert isinstance(r, FelObject)

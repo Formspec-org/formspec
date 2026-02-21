@@ -65,7 +65,10 @@ def _fn_avg(arr: FelValue) -> FelValue:
         return FelNull
     non_null = [e for e in arr.elements if not is_null(e)]
     if not non_null:
-        return FelNull  # avg([]) signals error → null
+        # avg([]) is a division-by-zero error per spec.
+        # We can't record a diagnostic from a non-special-form function,
+        # so we raise and let the evaluator catch it.
+        raise ValueError("avg() of empty array (division by zero)")
     total = Decimal(0)
     ctx = _ctx()
     for e in non_null:
@@ -127,9 +130,7 @@ def _fn_countWhere(evaluator, args, pos) -> FelValue:
     count = 0
     pred_ast = args[1]
     for elem in arr.elements:
-        evaluator.env.push_scope({'': elem})  # $ resolves to elem
-        old_data = None
-        # Temporarily make bare $ resolve to this element
+        evaluator.env.push_scope({'': elem})  # bare $ resolves to elem
         try:
             result = evaluator.evaluate(pred_ast)
             if isinstance(result, FelBoolean) and result is FelTrue:
@@ -492,13 +493,16 @@ def _fn_cast_number(val: FelValue) -> FelValue:
 
 def _number_to_str(d: Decimal) -> str:
     """Convert Decimal to string, no trailing zeros."""
-    # Normalize removes trailing zeros; but 0 should be '0'
-    s = str(d.normalize())
-    if s == '0E+0' or s == '0e+0':
+    # Remove trailing zeros
+    normalized = d.normalize()
+    # Use fixed-point notation to avoid scientific notation like '1E+2'
+    # Decimal.__format__ with 'f' gives fixed-point
+    if normalized == 0:
         return '0'
-    # Avoid scientific notation for reasonable numbers
-    if 'E' in s or 'e' in s:
-        return str(d)
+    s = format(normalized, 'f')
+    # Remove unnecessary trailing zeros after decimal point
+    if '.' in s:
+        s = s.rstrip('0').rstrip('.')
     return s
 
 
