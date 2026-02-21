@@ -102,10 +102,13 @@ export class FormEngine {
     }
 
     private findItem(items: FormspecItem[], name: string): FormspecItem | undefined {
+        // Handle baseName format like "lineItems.price"
+        const parts = name.split('.');
+        const searchName = parts[parts.length - 1];
         for (const item of items) {
-            if (item.name === name) return item;
+            if (item.name === searchName) return item;
             if (item.children) {
-                const found = this.findItem(item.children, name);
+                const found = this.findItem(item.children, searchName);
                 if (found) return found;
             }
         }
@@ -194,6 +197,12 @@ export class FormEngine {
     }
 
     public setValue(name: string, value: any) {
+        const baseName = name.replace(/\[\d+\]/g, ''); // strip array indices to find the schema definition
+        const item = this.findItem(this.definition.items, baseName);
+        if (item && item.type === 'number' && typeof value === 'string') {
+            value = value === '' ? null : Number(value);
+        }
+        
         if (this.signals[name] && !(this.signals[name] instanceof computed)) {
             this.signals[name].value = value;
         }

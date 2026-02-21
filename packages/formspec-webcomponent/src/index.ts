@@ -157,7 +157,7 @@ export class FormspecRender extends HTMLElement {
                 if (item.type === 'boolean') {
                     val = target.checked;
                 } else if (item.type === 'number') {
-                    val = parseFloat(target.value) || 0;
+                    val = target.value === '' ? null : Number(target.value);
                 } else {
                     val = target.value;
                 }
