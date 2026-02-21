@@ -13,7 +13,8 @@ family of JSON Schemas (draft 2020-12).
 | `registry.schema.json` | `test_registry_schema.py` | 72 |
 | All spec examples (Layer 2) | `test_spec_examples.py` | 153 |
 | Property-based / generative (Layer 3) | `test_property_based.py` | 50 |
-| **Total** | | **566** |
+| Cross-spec contract (Layer 5) | `test_cross_spec_contracts.py` | 149 |
+| **Total** | | **715** |
 
 ## Test Layers
 
@@ -58,6 +59,20 @@ Four test classes:
 - **TestMutationsDetected** — 14 mutation × schema combinations × 50 examples
 - **TestConditionalInteractions** — 20 targeted tests for if/then + oneOf + anyOf combinatorics
 - **TestExtensionKeyEnforcement** — 6 tests for `propertyNames` vs `patternProperties` mechanisms
+
+### Layer 5: Cross-Spec Contract Tests (149 tests)
+Verifies normative spec prose matches actual JSON schema structure.
+Pure schema introspection — no document generation, no validation calls.
+
+15 test classes covering:
+- **Cross-schema consistency** — draft uniformity, `$id` presence, `additionalProperties: false` on all top-level objects, cross-file `$ref` integrity (validationReport → response), extension mechanism divergence (propertyNames vs patternProperties)
+- **Closed-world property sets** — every `additionalProperties: false` object asserts its exact set of declared properties, catching property additions/removals
+- **Required arrays** — exact match against spec-declared required fields
+- **Enum values** — exact match for every enum in every schema
+- **Pattern constraints** — key, name, id regex patterns
+- **Format constraints** — uri, date, date-time, uri-template
+- **Default values** — every spec-declared default matches schema
+- **Conditional structure** — if/then branches navigated by scanning `if` conditions (not positional index), verifying required fields in `then` clauses
 
 ## Prerequisites
 

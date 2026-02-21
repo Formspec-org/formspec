@@ -1,0 +1,871 @@
+"""Layer 5: Cross-Spec Contract Tests.
+
+Verifies that normative prose in spec markdown files matches the actual
+JSON schemas.  Each test reads the schema programmatically and asserts
+structural properties (required arrays, enum values, patterns, defaults,
+conditionals, property sets) match what the spec documents claim.
+
+Naming convention: test_s{section}__{assertion}
+"""
+import json
+from pathlib import Path
+
+import pytest
+
+SCHEMA_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load(name):
+    with open(SCHEMA_DIR / name) as f:
+        return json.load(f)
+
+
+DEF_S = _load("definition.schema.json")
+RESP_S = _load("response.schema.json")
+VR_S = _load("validationReport.schema.json")
+MAP_S = _load("mapping.schema.json")
+REG_S = _load("registry.schema.json")
+
+ALL_SCHEMAS = {
+    "definition": DEF_S,
+    "response": RESP_S,
+    "validationReport": VR_S,
+    "mapping": MAP_S,
+    "registry": REG_S,
+}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _def(schema, name):
+    """Get a $defs sub-schema."""
+    return schema["$defs"][name]
+
+
+def _find_allof_branch(allof_list, type_field, type_value):
+    """Find the allOf branch whose if.properties.{type_field}.const == type_value."""
+    for branch in allof_list:
+        if "if" in branch:
+            props = branch["if"].get("properties", {})
+            if props.get(type_field, {}).get("const") == type_value:
+                return branch
+            # Also check enum
+            if type_value in props.get(type_field, {}).get("enum", []):
+                return branch
+    pytest.fail(
+        f"No allOf branch found with if.properties.{type_field}.const == {type_value!r}"
+    )
+
+
+def _prop_keys(schema_obj):
+    """Get the set of declared property names on a schema object."""
+    return set(schema_obj.get("properties", {}).keys())
+
+
+# ===========================================================================
+# Cross-Schema Consistency
+# ===========================================================================
+
+
+class TestCrossSchemaConsistency:
+    """Assertions that span multiple schemas."""
+
+    @pytest.mark.parametrize("name,schema", list(ALL_SCHEMAS.items()))
+    def test_all_schemas_use_draft_2020_12(self, name, schema):
+        assert schema.get("$schema") == "https://json-schema.org/draft/2020-12/schema"
+
+    @pytest.mark.parametrize("name,schema", list(ALL_SCHEMAS.items()))
+    def test_all_top_level_objects_closed(self, name, schema):
+        """Every top-level schema has additionalProperties: false."""
+        assert schema.get("additionalProperties") is False, f"{name} missing additionalProperties:false"
+
+    def test_validation_report_refs_response_validation_result(self):
+        """validationReport.results.items.$ref -> response ValidationResult."""
+        ref = VR_S["properties"]["results"]["items"]["$ref"]
+        # Must point to response schema's ValidationResult
+        assert "response" in ref.lower() or "Response" in ref
+        assert ref.endswith("#/$defs/ValidationResult")
+        # The target $id must match the ref prefix
+        resp_id = RESP_S["$id"]
+        ref_base = ref.split("#")[0]
+        assert ref_base == resp_id
+        # And the target def must exist
+        assert "ValidationResult" in RESP_S["$defs"]
+
+    def test_definition_response_use_propertynames_extensions(self):
+        """Definition, Response, Registry use extensions.propertyNames pattern."""
+        for name, schema in [("definition", DEF_S), ("response", RESP_S), ("registry", REG_S)]:
+            ext = schema["properties"].get("extensions", {})
+            pn = ext.get("propertyNames", {}).get("pattern")
+            assert pn == "^x-", f"{name} extensions missing propertyNames ^x-"
+
+    def test_mapping_uses_pattern_properties_not_extensions_object(self):
+        """Mapping schema uses patternProperties, not an extensions sub-object."""
+        assert "^x-" in MAP_S.get("patternProperties", {})
+        # Mapping does NOT have an 'extensions' property
+        assert "extensions" not in MAP_S.get("properties", {})
+
+    @pytest.mark.parametrize("name,schema", list(ALL_SCHEMAS.items()))
+    def test_all_schemas_have_id(self, name, schema):
+        assert "$id" in schema, f"{name} missing $id"
+
+
+# ===========================================================================
+# Definition Schema — Top Level (§4.1)
+# ===========================================================================
+
+
+class TestDefinitionTopLevel:
+    """spec.md §4.1 — Top-Level Structure."""
+
+    def test_s4_1__required_fields(self):
+        assert set(DEF_S["required"]) == {
+            "$formspec", "url", "version", "status", "title", "items"
+        }
+
+    def test_s4_1__formspec_const(self):
+        assert DEF_S["properties"]["$formspec"]["const"] == "1.0"
+
+    def test_s4_1__status_enum(self):
+        assert DEF_S["properties"]["status"]["enum"] == ["draft", "active", "retired"]
+
+    def test_s4_1__version_algorithm_enum_and_default(self):
+        va = DEF_S["properties"]["versionAlgorithm"]
+        assert va["enum"] == ["semver", "date", "integer", "natural"]
+        assert va.get("default") == "semver"
+
+    def test_s4_1__non_relevant_behavior_enum_and_default(self):
+        nrb = DEF_S["properties"]["nonRelevantBehavior"]
+        assert nrb["enum"] == ["remove", "empty", "keep"]
+        assert nrb.get("default") == "remove"
+
+    def test_s4_1__name_pattern(self):
+        assert DEF_S["properties"]["name"]["pattern"] == r"^[a-zA-Z][a-zA-Z0-9\-]*$"
+
+    def test_s4_1__url_format_uri(self):
+        assert DEF_S["properties"]["url"]["format"] == "uri"
+
+    def test_s4_1__date_format(self):
+        assert DEF_S["properties"]["date"]["format"] == "date"
+
+    def test_s4_1__derived_from_format_and_optional(self):
+        assert DEF_S["properties"]["derivedFrom"]["format"] == "uri"
+        assert "derivedFrom" not in DEF_S["required"]
+
+    def test_s4_1__items_is_array(self):
+        assert DEF_S["properties"]["items"]["type"] == "array"
+
+    def test_s4_1__extensions_property_names(self):
+        ext = DEF_S["properties"]["extensions"]
+        assert ext["propertyNames"]["pattern"] == "^x-"
+
+    def test_s4_1__additional_properties_false(self):
+        assert DEF_S["additionalProperties"] is False
+
+    def test_s4_1__optional_fields_not_required(self):
+        optional = {"name", "description", "date", "derivedFrom", "versionAlgorithm",
+                    "nonRelevantBehavior", "binds", "shapes", "instances",
+                    "variables", "optionSets", "screener", "migrations", "extensions"}
+        for field in optional:
+            assert field not in DEF_S["required"], f"{field} should not be required"
+
+    def test_s4_1__closed_world_property_set(self):
+        expected = {
+            "$formspec", "url", "version", "versionAlgorithm", "status",
+            "derivedFrom", "name", "title", "description", "date",
+            "items", "binds", "shapes", "instances", "variables",
+            "nonRelevantBehavior", "optionSets", "screener", "migrations",
+            "extensions",
+        }
+        assert _prop_keys(DEF_S) == expected
+
+# ===========================================================================
+# Definition Schema — Item (§4.2)
+# ===========================================================================
+
+
+class TestDefinitionItem:
+    """spec.md §4.2 — Item Schema."""
+
+    ITEM = _def(DEF_S, "Item")
+
+    def test_s4_2__required_fields(self):
+        assert set(self.ITEM["required"]) == {"key", "type", "label"}
+
+    def test_s4_2__key_pattern(self):
+        assert self.ITEM["properties"]["key"]["pattern"] == r"^[a-zA-Z][a-zA-Z0-9_]*$"
+
+    def test_s4_2__type_enum(self):
+        assert self.ITEM["properties"]["type"]["enum"] == ["group", "field", "display"]
+
+    def test_s4_2__three_allof_branches(self):
+        assert len(self.ITEM["allOf"]) == 3
+
+    # -- Group conditional --
+
+    def test_s4_2_2__group_requires_children_or_ref(self):
+        branch = _find_allof_branch(self.ITEM["allOf"], "type", "group")
+        then = branch["then"]
+        # anyOf: [{required: ["children"]}, {required: ["$ref"]}]
+        reqs = [set(alt["required"]) for alt in then["anyOf"]]
+        assert {"children"} in reqs
+        assert {"$ref"} in reqs
+
+    def test_s4_2_2__group_repeatable_default(self):
+        branch = _find_allof_branch(self.ITEM["allOf"], "type", "group")
+        rep = branch["then"]["properties"]["repeatable"]
+        assert rep["type"] == "boolean"
+        assert rep["default"] is False
+
+    def test_s4_2_2__group_additional_properties_false(self):
+        branch = _find_allof_branch(self.ITEM["allOf"], "type", "group")
+        assert branch["then"]["additionalProperties"] is False
+
+    # -- Field conditional --
+
+    def test_s4_2_3__field_requires_datatype(self):
+        branch = _find_allof_branch(self.ITEM["allOf"], "type", "field")
+        assert "dataType" in branch["then"]["required"]
+
+    def test_s4_2_3__datatype_enum_13_values(self):
+        branch = _find_allof_branch(self.ITEM["allOf"], "type", "field")
+        dt = branch["then"]["properties"]["dataType"]
+        expected = [
+            "string", "text", "integer", "decimal", "boolean",
+            "date", "dateTime", "time", "uri", "attachment",
+            "choice", "multiChoice", "money",
+        ]
+        assert dt["enum"] == expected
+
+    def test_s4_2_3__field_additional_properties_false(self):
+        branch = _find_allof_branch(self.ITEM["allOf"], "type", "field")
+        assert branch["then"]["additionalProperties"] is False
+
+    # -- Display conditional --
+
+    def test_s4_2_4__display_additional_properties_false(self):
+        branch = _find_allof_branch(self.ITEM["allOf"], "type", "display")
+        assert branch["then"]["additionalProperties"] is False
+
+
+# ===========================================================================
+# Definition Schema — Bind (§4.3)
+# ===========================================================================
+
+
+class TestDefinitionBind:
+    """spec.md §4.3 — Bind Schema."""
+
+    BIND = _def(DEF_S, "Bind")
+
+    def test_s4_3__path_required_with_min_length(self):
+        assert "path" in self.BIND["required"]
+        assert self.BIND["properties"]["path"]["minLength"] == 1
+
+    def test_s4_3__whitespace_enum_and_default(self):
+        ws = self.BIND["properties"]["whitespace"]
+        assert ws["enum"] == ["preserve", "trim", "normalize", "remove"]
+        assert ws.get("default") == "preserve"
+
+    def test_s4_3__excluded_value_enum_and_default(self):
+        ev = self.BIND["properties"]["excludedValue"]
+        assert ev["enum"] == ["preserve", "null"]
+        assert ev.get("default") == "preserve"
+
+    def test_s4_3__disabled_display_enum_and_default(self):
+        dd = self.BIND["properties"]["disabledDisplay"]
+        assert dd["enum"] == ["hidden", "protected"]
+        assert dd.get("default") == "hidden"
+
+    def test_s4_3__non_relevant_behavior_enum(self):
+        nrb = self.BIND["properties"]["nonRelevantBehavior"]
+        assert nrb["enum"] == ["remove", "empty", "keep"]
+
+    def test_s4_3__additional_properties_false(self):
+        assert self.BIND["additionalProperties"] is False
+
+    def test_s4_3__closed_world_property_set(self):
+        expected = {
+            "path", "required", "relevant", "readonly", "calculate",
+            "constraint", "constraintMessage", "default", "whitespace",
+            "excludedValue", "nonRelevantBehavior", "disabledDisplay",
+            "extensions",
+        }
+        assert _prop_keys(self.BIND) == expected
+
+
+# ===========================================================================
+# Definition Schema — Shape (§5.2)
+# ===========================================================================
+
+
+class TestDefinitionShape:
+    """spec.md §5.2 — Validation Shape Schema."""
+
+    SHAPE = _def(DEF_S, "Shape")
+
+    def test_s5_2__required_fields(self):
+        assert set(self.SHAPE["required"]) == {"id", "target", "message"}
+
+    def test_s5_2__id_pattern(self):
+        assert self.SHAPE["properties"]["id"]["pattern"] == r"^[a-zA-Z][a-zA-Z0-9_\-]*$"
+
+    def test_s5_2__severity_enum_and_default(self):
+        sev = self.SHAPE["properties"]["severity"]
+        assert sev["enum"] == ["error", "warning", "info"]
+        assert sev.get("default") == "error"
+
+    def test_s5_2__timing_enum_and_default(self):
+        tim = self.SHAPE["properties"]["timing"]
+        assert tim["enum"] == ["continuous", "submit", "demand"]
+        assert tim.get("default") == "continuous"
+
+    def test_s5_2__anyof_requires_operator(self):
+        """Shape anyOf requires at least one of constraint/and/or/not/xone."""
+        operators = set()
+        for branch in self.SHAPE["anyOf"]:
+            for key in branch.get("required", []):
+                operators.add(key)
+        assert operators == {"constraint", "and", "or", "not", "xone"}
+
+    def test_s5_2__additional_properties_false(self):
+        assert self.SHAPE["additionalProperties"] is False
+
+    def test_s5_2__closed_world_property_set(self):
+        expected = {
+            "id", "target", "severity", "constraint", "message", "code",
+            "context", "activeWhen", "timing",
+            "and", "or", "not", "xone",
+            "extensions",
+        }
+        assert _prop_keys(self.SHAPE) == expected
+
+# ===========================================================================
+# Definition Schema — Variable (§4.5)
+# ===========================================================================
+
+
+class TestDefinitionVariable:
+    """spec.md §4.5 — Variables."""
+
+    VAR = _def(DEF_S, "Variable")
+
+    def test_s4_5__required_fields(self):
+        assert set(self.VAR["required"]) == {"name", "expression"}
+
+    def test_s4_5__name_pattern(self):
+        assert self.VAR["properties"]["name"]["pattern"] == r"^[a-zA-Z][a-zA-Z0-9_]*$"
+
+    def test_s4_5__additional_properties_false(self):
+        assert self.VAR["additionalProperties"] is False
+
+
+# ===========================================================================
+# Definition Schema — Instance (§4.4)
+# ===========================================================================
+
+
+class TestDefinitionInstance:
+    """spec.md §4.4 — Instance Schema."""
+
+    INST = _def(DEF_S, "Instance")
+
+    def test_s4_4__anyof_requires_source_or_data(self):
+        reqs = [set(alt["required"]) for alt in self.INST["anyOf"]]
+        assert {"source"} in reqs
+        assert {"data"} in reqs
+
+    def test_s4_4__source_format_uri_template(self):
+        assert self.INST["properties"]["source"]["format"] == "uri-template"
+
+    def test_s4_4__additional_properties_false(self):
+        assert self.INST["additionalProperties"] is False
+
+
+# ===========================================================================
+# Definition Schema — OptionSet / OptionEntry (§4.6)
+# ===========================================================================
+
+
+class TestDefinitionOptionSet:
+    """spec.md §4.6 — Option Sets."""
+
+    OS = _def(DEF_S, "OptionSet")
+    OE = _def(DEF_S, "OptionEntry")
+
+    def test_s4_6__anyof_requires_options_or_source(self):
+        reqs = [set(alt["required"]) for alt in self.OS["anyOf"]]
+        assert {"options"} in reqs
+        assert {"source"} in reqs
+
+    def test_s4_6__source_format_uri(self):
+        assert self.OS["properties"]["source"]["format"] == "uri"
+
+    def test_s4_6__option_entry_required(self):
+        assert set(self.OE["required"]) == {"value", "label"}
+
+    def test_s4_6__option_entry_additional_properties_false(self):
+        assert self.OE["additionalProperties"] is False
+
+
+# ===========================================================================
+# Definition Schema — Screener / Route (§4.7)
+# ===========================================================================
+
+
+class TestDefinitionScreener:
+    """spec.md §4.7 — Screener Routing."""
+
+    SCR = _def(DEF_S, "Screener")
+    ROUTE = _def(DEF_S, "Route")
+
+    def test_s4_7__screener_required(self):
+        assert set(self.SCR["required"]) == {"items", "routes"}
+
+    def test_s4_7__routes_min_items(self):
+        assert self.SCR["properties"]["routes"]["minItems"] == 1
+
+    def test_s4_7__route_required(self):
+        assert set(self.ROUTE["required"]) == {"condition", "target"}
+
+    def test_s4_7__route_target_format_uri(self):
+        assert self.ROUTE["properties"]["target"]["format"] == "uri"
+
+
+# ===========================================================================
+# Definition Schema — Migrations (§6.7)
+# ===========================================================================
+
+
+class TestDefinitionMigrations:
+    """spec.md §6.7 — Version Migrations."""
+
+    MIG = _def(DEF_S, "MigrationDescriptor")
+
+    def test_s6_7__field_map_item_required(self):
+        fm_item = self.MIG["properties"]["fieldMap"]["items"]
+        assert set(fm_item["required"]) == {"source", "target", "transform"}
+
+    def test_s6_7__transform_enum_3_values(self):
+        fm_item = self.MIG["properties"]["fieldMap"]["items"]
+        assert fm_item["properties"]["transform"]["enum"] == [
+            "preserve", "drop", "expression"
+        ]
+
+    def test_s6_7__target_allows_null(self):
+        """MigrationDescriptor target is [string, null]."""
+        fm_item = self.MIG["properties"]["fieldMap"]["items"]
+        target_type = fm_item["properties"]["target"]["type"]
+        assert "null" in target_type
+        assert "string" in target_type
+
+
+# ===========================================================================
+# Response Schema (§2.1.6, §5.3)
+# ===========================================================================
+
+
+class TestResponseSchema:
+    """spec.md §2.1.6 + §5.3 — Response + ValidationResult."""
+
+    def test_s2_1_6__required_fields(self):
+        assert set(RESP_S["required"]) == {
+            "definitionUrl", "definitionVersion", "status", "data", "authored"
+        }
+
+    def test_s2_1_6__status_enum(self):
+        assert RESP_S["properties"]["status"]["enum"] == [
+            "in-progress", "completed", "amended", "stopped"
+        ]
+
+    def test_s2_1_6__authored_format_datetime(self):
+        assert RESP_S["properties"]["authored"]["format"] == "date-time"
+
+    def test_s2_1_6__definition_url_format_uri(self):
+        assert RESP_S["properties"]["definitionUrl"]["format"] == "uri"
+
+    def test_s2_1_6__data_type_object(self):
+        assert RESP_S["properties"]["data"]["type"] == "object"
+
+    def test_s2_1_6__author_requires_id(self):
+        author = RESP_S["properties"]["author"]
+        assert "id" in author["required"]
+        assert author["additionalProperties"] is False
+
+    def test_s2_1_6__subject_requires_id(self):
+        subject = RESP_S["properties"]["subject"]
+        assert "id" in subject["required"]
+        assert subject["additionalProperties"] is False
+
+    def test_s2_1_6__additional_properties_false(self):
+        assert RESP_S["additionalProperties"] is False
+
+    def test_s5_3__validation_result_required(self):
+        vr = _def(RESP_S, "ValidationResult")
+        assert set(vr["required"]) == {"path", "severity", "constraintKind", "message"}
+
+    def test_s5_3__severity_enum(self):
+        vr = _def(RESP_S, "ValidationResult")
+        assert vr["properties"]["severity"]["enum"] == ["error", "warning", "info"]
+
+    def test_s5_3__constraint_kind_enum(self):
+        vr = _def(RESP_S, "ValidationResult")
+        assert vr["properties"]["constraintKind"]["enum"] == [
+            "required", "type", "cardinality", "constraint", "shape", "external"
+        ]
+
+    def test_s5_3__source_enum(self):
+        vr = _def(RESP_S, "ValidationResult")
+        assert vr["properties"]["source"]["enum"] == ["bind", "shape", "external"]
+
+    def test_s5_3__validation_result_additional_properties_false(self):
+        vr = _def(RESP_S, "ValidationResult")
+        assert vr["additionalProperties"] is False
+
+    def test_s2_1_6__closed_world_property_set(self):
+        expected = {
+            "definitionUrl", "definitionVersion", "status", "data",
+            "authored", "id", "author", "subject",
+            "validationResults", "extensions",
+        }
+        assert _prop_keys(RESP_S) == expected
+
+
+# ===========================================================================
+# ValidationReport Schema (§5.4)
+# ===========================================================================
+
+
+class TestValidationReportSchema:
+    """spec.md §5.4 — Validation Report."""
+
+    def test_s5_4__required_fields(self):
+        assert set(VR_S["required"]) == {"valid", "results", "counts", "timestamp"}
+
+    def test_s5_4__counts_required(self):
+        counts = VR_S["properties"]["counts"]
+        assert set(counts["required"]) == {"error", "warning", "info"}
+
+    def test_s5_4__counts_additional_properties_false(self):
+        assert VR_S["properties"]["counts"]["additionalProperties"] is False
+
+    def test_s5_4__timestamp_format_datetime(self):
+        assert VR_S["properties"]["timestamp"]["format"] == "date-time"
+
+    def test_s5_4__valid_is_boolean(self):
+        assert VR_S["properties"]["valid"]["type"] == "boolean"
+
+    def test_s5_4__additional_properties_false(self):
+        assert VR_S["additionalProperties"] is False
+
+# ===========================================================================
+# Mapping Schema — Top Level (mapping-spec.md §3.1)
+# ===========================================================================
+
+
+class TestMappingTopLevel:
+    """mapping-spec.md §3.1 — Mapping Document."""
+
+    def test_ms3_1__required_fields(self):
+        assert set(MAP_S["required"]) == {
+            "version", "definitionRef", "definitionVersion",
+            "targetSchema", "rules",
+        }
+
+    def test_ms3_1__direction_enum_and_default(self):
+        d = MAP_S["properties"]["direction"]
+        assert d["enum"] == ["forward", "reverse", "both"]
+        assert d.get("default") == "both"
+
+    def test_ms3_1__auto_map_default_false(self):
+        am = MAP_S["properties"]["autoMap"]
+        assert am["type"] == "boolean"
+        assert am.get("default") is False
+
+    def test_ms3_1__rules_min_items_1(self):
+        assert MAP_S["properties"]["rules"]["minItems"] == 1
+
+    def test_ms3_1__additional_properties_false(self):
+        assert MAP_S["additionalProperties"] is False
+
+    def test_ms3_1__pattern_properties_x_prefix(self):
+        assert "^x-" in MAP_S.get("patternProperties", {})
+
+    def test_ms3_1__closed_world_property_set(self):
+        expected = {
+            "version", "$schema", "definitionRef", "definitionVersion",
+            "targetSchema", "direction", "autoMap", "defaults", "rules",
+            "adapters",
+        }
+        assert _prop_keys(MAP_S) == expected
+
+
+# ===========================================================================
+# Mapping Schema — TargetSchema (mapping-spec.md §3.2)
+# ===========================================================================
+
+
+class TestMappingTargetSchema:
+    """mapping-spec.md §3.2 — Target Schema."""
+
+    TS = _def(MAP_S, "TargetSchema")
+
+    def test_ms3_2__format_required(self):
+        assert "format" in self.TS["required"]
+
+    def test_ms3_2__format_anyof_enum_and_x_pattern(self):
+        anyof = self.TS["properties"]["format"]["anyOf"]
+        enums = [b["enum"] for b in anyof if "enum" in b]
+        patterns = [b["pattern"] for b in anyof if "pattern" in b]
+        assert ["json", "xml", "csv"] in enums
+        assert "^x-" in patterns
+
+    def test_ms3_2__xml_requires_root_element(self):
+        branch = _find_allof_branch(self.TS["allOf"], "format", "xml")
+        assert "rootElement" in branch["then"]["required"]
+
+    def test_ms3_2__additional_properties_false(self):
+        assert self.TS["additionalProperties"] is False
+
+
+# ===========================================================================
+# Mapping Schema — FieldRule (mapping-spec.md §3.3)
+# ===========================================================================
+
+
+class TestMappingFieldRule:
+    """mapping-spec.md §3.3 — Field Rules."""
+
+    FR = _def(MAP_S, "FieldRule")
+
+    def test_ms3_3__transform_required(self):
+        assert "transform" in self.FR["required"]
+
+    def test_ms3_3__transform_enum_10_values(self):
+        assert self.FR["properties"]["transform"]["enum"] == [
+            "preserve", "drop", "expression", "coerce", "valueMap",
+            "flatten", "nest", "constant", "concat", "split",
+        ]
+
+    def test_ms3_3__anyof_source_or_target(self):
+        reqs = [set(alt["required"]) for alt in self.FR["anyOf"]]
+        assert {"sourcePath"} in reqs
+        assert {"targetPath"} in reqs
+
+    def test_ms3_3__target_path_allows_null(self):
+        tp = self.FR["properties"]["targetPath"]
+        tp_type = tp["type"]
+        assert "null" in tp_type
+        assert "string" in tp_type
+
+    def test_ms3_3__expression_conditional(self):
+        branch = _find_allof_branch(self.FR["allOf"], "transform", "expression")
+        assert "expression" in branch["then"]["required"]
+
+    def test_ms3_3__coerce_conditional(self):
+        branch = _find_allof_branch(self.FR["allOf"], "transform", "coerce")
+        assert "coerce" in branch["then"]["required"]
+
+    def test_ms3_3__valuemap_conditional(self):
+        branch = _find_allof_branch(self.FR["allOf"], "transform", "valueMap")
+        assert "valueMap" in branch["then"]["required"]
+
+    def test_ms3_3__additional_properties_false(self):
+        assert self.FR["additionalProperties"] is False
+
+    def test_ms3_3__pattern_properties_x_prefix(self):
+        assert "^x-" in self.FR.get("patternProperties", {})
+
+
+# ===========================================================================
+# Mapping Schema — Coerce, ValueMap, ArrayDescriptor (mapping-spec.md §3.3)
+# ===========================================================================
+
+
+class TestMappingCoerceValueMapArray:
+    """mapping-spec.md §3.3.2–3.3.4."""
+
+    COERCE = _def(MAP_S, "Coerce")
+    VMAP = _def(MAP_S, "ValueMap")
+    ARR = _def(MAP_S, "ArrayDescriptor")
+
+    def test_ms3_3_2__coerce_required(self):
+        assert set(self.COERCE["required"]) == {"from", "to"}
+
+    def test_ms3_3_2__coerce_type_enum(self):
+        expected = ["string", "number", "boolean", "date", "datetime",
+                    "integer", "array", "object", "money"]
+        assert self.COERCE["properties"]["from"]["enum"] == expected
+        assert self.COERCE["properties"]["to"]["enum"] == expected
+
+    def test_ms3_3_3__valuemap_requires_forward(self):
+        assert "forward" in self.VMAP["required"]
+
+    def test_ms3_3_3__unmapped_enum_and_default(self):
+        um = self.VMAP["properties"]["unmapped"]
+        assert um["enum"] == ["error", "drop", "passthrough", "default"]
+        assert um.get("default") == "error"
+
+    def test_ms3_3_4__array_mode_enum(self):
+        assert self.ARR["properties"]["mode"]["enum"] == ["each", "whole", "indexed"]
+
+    def test_ms3_3_4__array_mode_required(self):
+        assert "mode" in self.ARR["required"]
+
+
+# ===========================================================================
+# Mapping Schema — InnerRule, ReverseOverride (mapping-spec.md §4.12, §5.3)
+# ===========================================================================
+
+
+class TestMappingInnerRuleAndReverseOverride:
+    """mapping-spec.md §4.12 + §5.3."""
+
+    IR = _def(MAP_S, "InnerRule")
+    RO = _def(MAP_S, "ReverseOverride")
+
+    def test_ms4_12__inner_rule_has_index_field(self):
+        assert "index" in self.IR["properties"]
+        assert self.IR["properties"]["index"]["type"] == "integer"
+
+    def test_ms4_12__inner_rule_mirrors_field_rule_transform_enum(self):
+        fr_enum = _def(MAP_S, "FieldRule")["properties"]["transform"]["enum"]
+        assert self.IR["properties"]["transform"]["enum"] == fr_enum
+
+    def test_ms4_12__inner_rule_has_same_3_conditionals(self):
+        fr_allof = _def(MAP_S, "FieldRule")["allOf"]
+        ir_allof = self.IR["allOf"]
+        assert len(ir_allof) == len(fr_allof) == 3
+
+    def test_ms5_3__reverse_override_has_transform_enum(self):
+        fr_enum = _def(MAP_S, "FieldRule")["properties"]["transform"]["enum"]
+        assert self.RO["properties"]["transform"]["enum"] == fr_enum
+
+    def test_ms5_3__reverse_override_additional_properties_false(self):
+        assert self.RO["additionalProperties"] is False
+
+
+# ===========================================================================
+# Mapping Schema — Adapters (mapping-spec.md §6)
+# ===========================================================================
+
+
+class TestMappingAdapters:
+    """mapping-spec.md §6.2–6.4 — Adapters."""
+
+    JSON_A = _def(MAP_S, "JsonAdapter")
+    XML_A = _def(MAP_S, "XmlAdapter")
+    CSV_A = _def(MAP_S, "CsvAdapter")
+
+    def test_ms6_2__json_null_handling_enum_and_default(self):
+        nh = self.JSON_A["properties"]["nullHandling"]
+        assert nh["enum"] == ["include", "omit"]
+        assert nh.get("default") == "include"
+
+    def test_ms6_3__xml_declaration_default(self):
+        assert self.XML_A["properties"]["declaration"].get("default") is True
+
+    def test_ms6_3__xml_indent_default(self):
+        assert self.XML_A["properties"]["indent"].get("default") == 2
+
+    def test_ms6_4__csv_delimiter_default_and_min_length(self):
+        d = self.CSV_A["properties"]["delimiter"]
+        assert d.get("default") == ","
+        assert d.get("minLength") == 1
+
+    def test_ms6_4__csv_line_ending_enum_and_default(self):
+        le = self.CSV_A["properties"]["lineEnding"]
+        assert le["enum"] == ["crlf", "lf"]
+        assert le.get("default") == "crlf"
+
+    def test_ms6_4__csv_quote_min_length(self):
+        assert self.CSV_A["properties"]["quote"].get("minLength") == 1
+
+    @pytest.mark.parametrize("adapter", ["JsonAdapter", "XmlAdapter", "CsvAdapter"])
+    def test_adapters_additional_properties_false(self, adapter):
+        assert _def(MAP_S, adapter)["additionalProperties"] is False
+
+
+# ===========================================================================
+# Registry Schema (extension-registry.md §2–4)
+# ===========================================================================
+
+
+class TestRegistrySchema:
+    """extension-registry.md §2–4."""
+
+    def test_er2__required_fields(self):
+        assert set(REG_S["required"]) == {
+            "$formspecRegistry", "publisher", "published", "entries"
+        }
+
+    def test_er2__formspec_registry_const(self):
+        assert REG_S["properties"]["$formspecRegistry"]["const"] == "1.0"
+
+    def test_er2_1__publisher_required(self):
+        pub = _def(REG_S, "Publisher")
+        assert set(pub["required"]) == {"name", "url"}
+
+    def test_er2_1__publisher_url_format_uri(self):
+        pub = _def(REG_S, "Publisher")
+        assert pub["properties"]["url"]["format"] == "uri"
+
+    def test_er3__entry_required_fields(self):
+        entry = _def(REG_S, "RegistryEntry")
+        assert set(entry["required"]) == {
+            "name", "category", "version", "status",
+            "description", "compatibility",
+        }
+
+    def test_er3__category_enum(self):
+        entry = _def(REG_S, "RegistryEntry")
+        assert entry["properties"]["category"]["enum"] == [
+            "dataType", "function", "constraint", "property", "namespace"
+        ]
+
+    def test_er3__status_enum(self):
+        entry = _def(REG_S, "RegistryEntry")
+        assert entry["properties"]["status"]["enum"] == [
+            "draft", "stable", "deprecated", "retired"
+        ]
+
+    def test_er4__name_pattern(self):
+        entry = _def(REG_S, "RegistryEntry")
+        assert entry["properties"]["name"]["pattern"] == \
+            r"^x-[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$"
+
+    def test_er3_1__compatibility_requires_formspec_version(self):
+        entry = _def(REG_S, "RegistryEntry")
+        compat = entry["properties"]["compatibility"]
+        assert "formspecVersion" in compat["required"]
+        assert compat["additionalProperties"] is False
+
+    def test_er3_2__datatype_conditional_requires_basetype(self):
+        entry = _def(REG_S, "RegistryEntry")
+        branch = _find_allof_branch(entry["allOf"], "category", "dataType")
+        assert "baseType" in branch["then"]["required"]
+
+    def test_er3_2__function_conditional_requires_params_and_returns(self):
+        entry = _def(REG_S, "RegistryEntry")
+        branch = _find_allof_branch(entry["allOf"], "category", "function")
+        assert set(branch["then"]["required"]) == {"parameters", "returns"}
+
+    def test_er3_2__constraint_conditional_requires_params(self):
+        entry = _def(REG_S, "RegistryEntry")
+        branch = _find_allof_branch(entry["allOf"], "category", "constraint")
+        assert "parameters" in branch["then"]["required"]
+
+    def test_er3_2__basetype_enum(self):
+        entry = _def(REG_S, "RegistryEntry")
+        assert entry["properties"]["baseType"]["enum"] == [
+            "string", "integer", "decimal", "boolean",
+            "date", "dateTime", "time", "uri",
+        ]
+
+    def test_er3__entry_additional_properties_false(self):
+        assert _def(REG_S, "RegistryEntry")["additionalProperties"] is False
+
+    def test_er2__additional_properties_false(self):
+        assert REG_S["additionalProperties"] is False
