@@ -59,17 +59,30 @@ The actual E2E tests driving the browser.
 
 ### Phase 4: Exhaustive E2E Test Authoring (Red Phase) (⏳ PENDING)
 Adopting a strict Red/Green Test-Driven Development (TDD) approach, we will first write the comprehensive test suite before implementing the missing features.
-1.  **Exhaustive Fixtures:** Create JSON Formspec fixtures covering all 55 standard FEL functions (e.g., `sum()`, `dateDiff()`, `replace()`).
-2.  **Type Coverage Tests:** Write Playwright specs for missing Tier 1 types: `boolean` (checkboxes), `choice` (select/radio), and `date` (datepickers).
-3.  **Array Aggregation Tests:** Write tests asserting that `calculate: "sum(items.price)"` evaluates correctly across dynamically added repeating DOM nodes.
-4.  **Verification:** Run the Playwright suite to ensure all new tests **fail** against the current scaffolding (Red state).
+
+**1. Exhaustive Feature Tests:**
+*   Create JSON Formspec fixtures covering all 55 standard FEL functions (e.g., `sum()`, `dateDiff()`, `replace()`).
+*   Write Playwright specs for missing Tier 1 types: `boolean` (checkboxes), `choice` (select/radio), and `date` (datepickers).
+*   Write tests asserting that `calculate: "sum(items.price)"` evaluates correctly across dynamically added repeating DOM nodes.
+
+**2. Exhaustive Edge Case Tests:**
+*   **Null Propagation:** When `calculate: "price * quantity"` evaluates but `quantity` is empty, assert the engine propagates `null` rather than throwing `NaN`.
+*   **Deep Pruning:** Assert that if a parent `group` becomes hidden (`visible: false`), all nested children are strictly omitted from the final `Response` JSON, regardless of their individual visibility states.
+*   **Validation Bypassing:** Assert that a field with `required: true` passes form validation if it is currently hidden (e.g., `visible: "hasSpouse == true"`).
+*   **Cyclic Dependencies:** Create a fixture where `Field A` calculates from `Field B`, and `Field B` calculates from `Field A`. Assert the state engine detects the cycle and halts cleanly rather than infinitely looping and crashing the browser.
+*   **Type Coercion:** Assert strict spec compliance when mathematical formulas execute against string inputs (`"10" + 5`).
+*   **Empty Array Aggregation:** Assert that functions like `sum(items.price)` safely return `0` (or `null` per spec) when the user deletes all repeating instances.
+
+**3. Verification:**
+*   Run the Playwright suite to ensure all new tests **fail** against the current scaffolding (Red state).
 
 ### Phase 5: Full Engine & Component Implementation (Green Phase) (⏳ PENDING)
 Implement the standard library and component mappings to satisfy the test suite.
 1.  **Standard Library (FEL) Porting:** Port the 55 standard FEL functions (from `src/fel/functions.py`) into the TypeScript `compileFEL()` scope.
 2.  **Full Component Mapping:** Expand the `<formspec-render>` Web Component to natively parse, mount, and bind `boolean`, `choice`, and `date` fields.
 3.  **Cross-Field DOM Arrays:** Implement reactive array collection in the JS State Engine so aggregate functions over repeating groups update reactively.
-4.  **Verification:** Run the Playwright suite to ensure all tests now **pass** (Green state).
+4.  **Edge Case Handlers:** Introduce logic for null propagation, deep visibility pruning, validation bypassing, and cyclic dependency detection within the State Engine.
+5.  **Verification:** Run the Playwright suite to ensure all tests now **pass** (Green state).
 
 ## 4. Key E2E Scenarios Automated
 
