@@ -674,3 +674,60 @@ def test_extended_component_props(component_name, props, extra_keys):
         "tree": item,
     }
     validate(instance=doc, schema=SCHEMA)
+
+
+@pytest.mark.parametrize("component_name, base_props", [
+    ("Page", {"children": []}),
+    ("TextInput", {"bind": "k"}),
+    ("Heading", {"level": 1, "text": "Hi"}),
+    ("Alert", {"severity": "info", "text": "Note"}),
+])
+def test_accessibility_block_accepted(component_name, base_props):
+    """Every component accepts an optional accessibility block."""
+    item = {
+        "component": component_name,
+        **base_props,
+        "accessibility": {
+            "role": "region",
+            "description": "Main form section",
+            "liveRegion": "polite",
+        },
+    }
+    doc = {
+        "$formspecComponent": "1.0",
+        "version": "1.0.0",
+        "targetDefinition": {"url": "https://example.com/def"},
+        "tree": item,
+    }
+    validate(instance=doc, schema=SCHEMA)
+
+
+def test_accessibility_block_invalid_live_region():
+    """Invalid liveRegion value is rejected."""
+    doc = {
+        "$formspecComponent": "1.0",
+        "version": "1.0.0",
+        "targetDefinition": {"url": "https://example.com/def"},
+        "tree": {
+            "component": "Page",
+            "children": [],
+            "accessibility": {"liveRegion": "rude"},
+        },
+    }
+    with pytest.raises(ValidationError):
+        validate(instance=doc, schema=SCHEMA)
+
+
+def test_accessibility_block_empty_valid():
+    """Empty accessibility block is valid (all properties optional)."""
+    doc = {
+        "$formspecComponent": "1.0",
+        "version": "1.0.0",
+        "targetDefinition": {"url": "https://example.com/def"},
+        "tree": {
+            "component": "Page",
+            "children": [],
+            "accessibility": {},
+        },
+    }
+    validate(instance=doc, schema=SCHEMA)

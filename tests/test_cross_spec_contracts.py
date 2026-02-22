@@ -1146,3 +1146,31 @@ class TestBucket1SchemaStructure:
         assert any("A-Z" in key for key in pp), \
             "components should have PascalCase patternProperties"
         assert comps.get("additionalProperties") is False
+
+    def test_component_accessibility_block_exists(self):
+        COMP_S = _load("component.schema.json")
+        assert "AccessibilityBlock" in COMP_S["$defs"], \
+            "component schema should define AccessibilityBlock"
+        ab = COMP_S["$defs"]["AccessibilityBlock"]
+        assert "role" in ab["properties"]
+        assert "description" in ab["properties"]
+        assert "liveRegion" in ab["properties"]
+        assert ab["properties"]["liveRegion"]["enum"] == ["off", "polite", "assertive"]
+
+    def test_component_all_builtins_have_accessibility(self):
+        COMP_S = _load("component.schema.json")
+        builtins = [
+            "Page", "Stack", "Grid", "Wizard", "Spacer",
+            "TextInput", "NumberInput", "DatePicker", "Select",
+            "CheckboxGroup", "Toggle", "FileUpload",
+            "Heading", "Text", "Divider",
+            "Card", "Collapsible", "ConditionalGroup",
+            "Columns", "Tabs", "Accordion",
+            "RadioGroup", "MoneyInput", "Slider", "Rating", "Signature",
+            "Alert", "Badge", "ProgressBar", "Summary", "DataTable",
+            "Panel", "Modal",
+        ]
+        for name in builtins:
+            props = COMP_S["$defs"][name]["properties"]
+            assert "accessibility" in props, \
+                f"{name} should have accessibility property"

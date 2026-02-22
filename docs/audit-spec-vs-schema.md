@@ -48,7 +48,7 @@
 | Feature | Schema | Notes |
 |---------|--------|-------|
 | Item types: field, group, display | ✅ | |
-| `key` pattern | ⚠️ | Spec internally inconsistent (leading `_` allowed in one section, not another). Schema matches stricter version |
+| `key` pattern | ✅ | **RESOLVED** — Spec and schema both use `^[a-zA-Z][a-zA-Z0-9_]*$` (no leading underscore) |
 | `key` global uniqueness | 🔵 | Cannot enforce in JSON Schema |
 | `label` (required) | ✅ | |
 | `description`, `hint` | ✅ | |
@@ -72,7 +72,7 @@
 | Feature | Schema | Notes |
 |---------|--------|-------|
 | `dataType` (13 extended types) | ✅ | |
-| Conceptual `number` dataType | ⚠️ | Spec's conceptual model uses `number`; schema uses `decimal` |
+| Conceptual `number` dataType | ✅ | **RESOLVED** — LLM spec updated to use `decimal`. FEL runtime type `number` is a separate concept from the field `dataType` enum. |
 | `precision` | ✅ | |
 | `prefix` / `suffix` | ✅ | |
 | `options` (array or URI) | ✅ | |
@@ -260,9 +260,9 @@
 | Single root constraint | ✅ | `tree` is single object |
 | Category nesting (children vs. no children) | ✅ | |
 | `bind` on Stack/Grid/Card/Collapsible for repeatable groups | 🔵 | **RESOLVED** — Removed from spec. Repeatable group binding only allowed on DataTable. Layout/container `bind` conflated data binding with visual structure. |
-| Max nesting depth (20) | ❌ | Not enforceable in JSON Schema |
-| Wizard children must all be Page | ❌ | No type constraint on children |
-| Accessibility properties | ❌ | No accessibility block on components |
+| Max nesting depth (20) | 🔵 | **DEFERRED TO LINT** — Not enforceable in JSON Schema; better as a lint rule |
+| Wizard children must all be Page | 🔵 | **DEFERRED TO LINT** — Recursive component tree makes this awkward in JSON Schema; enforce via lint |
+| Accessibility properties | ✅ | **RESOLVED** — `AccessibilityBlock` (role, description, liveRegion) added to all components |
 
 ### 6.3 Built-In Components — Core (18)
 
@@ -312,7 +312,7 @@
 | Feature | Schema | Notes |
 |---------|--------|-------|
 | `components` registry with `params`/`tree` | ✅ | **RESOLVED** — Made `params` optional in schema (only `tree` required) |
-| PascalCase naming convention | ❌ | No pattern validation on keys |
+| PascalCase naming convention | ✅ | **RESOLVED** — `patternProperties` with `^[A-Z][a-zA-Z0-9]*$` and `additionalProperties: false` |
 | Custom component instantiation (`CustomComponentRef`) | ✅ | |
 
 ### 6.6 Responsive Design
@@ -331,9 +331,9 @@
 | Feature | Schema | Notes |
 |---------|--------|-------|
 | `$schema` | ✅ | |
-| `version` | ⚠️ | No SemVer pattern enforcement |
-| `definitionRef` | ⚠️ | No URI format enforcement |
-| `definitionVersion` | ⚠️ | No semver-range validation |
+| `version` | ✅ | **RESOLVED** — SemVer pattern added |
+| `definitionRef` | ✅ | **RESOLVED** — URI format added |
+| `definitionVersion` | ⚠️ | Semver range — not practically validatable via regex; defer to runtime |
 | `targetSchema` (format, rootElement, namespaces) | ✅ | Includes conditional for XML rootElement |
 | `direction` | ✅ | **RESOLVED** — Schema default fixed to `"forward"` to match spec |
 | `defaults` | ✅ | |
@@ -370,7 +370,7 @@
 
 | Feature | Schema | Notes |
 |---------|--------|-------|
-| Conformance levels (Core/Bidirectional/Extended) | ❌ | No property to declare level |
+| Conformance levels (Core/Bidirectional/Extended) | ✅ | **RESOLVED** — `conformanceLevel` enum added |
 | Execution pipeline (7-step) | 🔵 | Runtime |
 | Bidirectional semantics / round-trip fidelity | 🔵 | Runtime |
 
@@ -400,7 +400,7 @@
 | `description` | ✅ | |
 | `compatibility` | ✅ | |
 | `specUrl` / `schemaUrl` | ✅ | |
-| `license` (SPDX) | ⚠️ | No SPDX pattern validation |
+| `license` (SPDX) | ✅ | **RESOLVED** — SPDX-like pattern added |
 
 ### 8.3 Category-Specific Properties
 
@@ -418,7 +418,7 @@
 | `x-formspec-` prefix reserved | ❌ | Schema doesn't prevent third-party use |
 | `(name, version)` uniqueness | ❌ | JSON Schema limitation |
 | Valid state transitions | ❌ | Cannot enforce ordering |
-| Deprecation notice when `status: deprecated` | ❌ | No conditional requirement |
+| Deprecation notice when `status: deprecated` | ✅ | **RESOLVED** — Conditional `if/then` requires `deprecationNotice` when status is `deprecated` |
 
 ---
 
@@ -443,18 +443,18 @@
 
 | Spec Area | ✅ Full | ⚠️ Partial | ❌ Missing | 🔵 N/A |
 |-----------|---------|-----------|-----------|--------|
-| **Core Definition** | 55 | 4 | 0 | 13 |
+| **Core Definition** | 57 | 2 | 0 | 13 |
 | **Response** | 10 | 1 | 0 | 0 |
 | **Validation Report** | 4 | 0 | 0 | 0 |
 | **FEL Grammar** | 2 | 1 | 0 | 5 |
 | **Theme** | 18 | 3 | 0 | 6 |
-| **Component (structure)** | 10 | 0 | 3 | 4 |
+| **Component (structure)** | 11 | 0 | 0 | 6 |
 | **Component (33 built-ins)** | 33 | 0 | 0 | 0 |
-| **Component (custom/responsive)** | 3 | 1 | 1 | 0 |
-| **Mapping** | 25 | 3 | 1 | 10 |
-| **Extension Registry** | 23 | 1 | 4 | 8 |
+| **Component (custom/responsive)** | 4 | 1 | 0 | 0 |
+| **Mapping** | 27 | 1 | 0 | 10 |
+| **Extension Registry** | 25 | 0 | 3 | 8 |
 | **Changelog** | 9 | 0 | 0 | 1 |
-| **TOTAL** | **192** | **14** | **9** | **47** |
+| **TOTAL** | **200** | **9** | **3** | **49** |
 
 **Delta from original audit**: ✅ +45, ⚠️ -34, ❌ -19, 🔵 +11
 

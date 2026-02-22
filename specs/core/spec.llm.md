@@ -59,7 +59,7 @@ A node in the definition's structural tree. Every item has a `key` (unique among
 | `group` | Container, optionally repeatable | No | Yes |
 | `display` | Read-only content (headings, help) | No | No |
 
-**Field dataTypes**: `string`, `number`, `integer`, `boolean`, `date`, `dateTime`, `time`, `choice` (string), `multiChoice` (array of strings), `attachment` (object with url/contentType/size).
+**Field dataTypes**: `string`, `text`, `integer`, `decimal`, `boolean`, `date`, `dateTime`, `time`, `uri`, `choice` (string), `multiChoice` (array of strings), `attachment` (object with url/contentType/size), `money` (object with amount/currency).
 
 ### 4. Bind
 Behavioral declaration attached to data nodes by path. Each bind has a `target` (dot-separated key path) and one or more FEL expressions:
