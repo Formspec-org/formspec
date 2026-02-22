@@ -1,5 +1,10 @@
 import { effect, signal } from '@preact/signals-core';
 import { FormEngine } from 'formspec-engine';
+import { globalRegistry } from './registry';
+import { registerDefaultComponents } from './components';
+import { RenderContext, ComponentPlugin } from './types';
+
+registerDefaultComponents();
 
 export class FormspecRender extends HTMLElement {
     private _definition: any;
@@ -9,8 +14,14 @@ export class FormspecRender extends HTMLElement {
     private cleanupFns: Array<() => void> = [];
 
     set definition(val: any) {
+        console.log("Setting definition", val);
         this._definition = val;
-        this.engine = new FormEngine(val);
+        try {
+            this.engine = new FormEngine(val);
+            console.log("Engine initialized");
+        } catch (e) {
+            console.error("Engine initialization failed", e);
+        }
         this.render();
     }
 
@@ -92,7 +103,7 @@ export class FormspecRender extends HTMLElement {
         this.appendChild(container);
     }
 
-    private findItemByKey(key: string, items: any[] = this._definition.items): any | null {
+    private findItemByKey = (key: string, items: any[] = this._definition.items): any | null => {
         for (const item of items) {
             if (item.key === key) return item;
             if (item.children) {
@@ -103,7 +114,7 @@ export class FormspecRender extends HTMLElement {
         return null;
     }
 
-    private resolveToken(val: any): any {
+    private resolveToken = (val: any): any => {
         if (typeof val === 'string' && val.startsWith('$token.')) {
             const tokenKey = val.substring(7);
             if (this._componentDocument?.tokens && this._componentDocument.tokens[tokenKey] !== undefined) {
@@ -116,7 +127,7 @@ export class FormspecRender extends HTMLElement {
         return val;
     }
 
-    private applyStyle(el: HTMLElement, style: any) {
+    private applyStyle = (el: HTMLElement, style: any) => {
         if (!style) return;
         for (const [key, val] of Object.entries(style)) {
             const resolved = this.resolveToken(val);
@@ -124,16 +135,7 @@ export class FormspecRender extends HTMLElement {
         }
     }
 
-    private renderDataTableCell(td: HTMLElement, fieldName: string) {
-        const signal = this.engine!.signals[fieldName];
-        if (signal) {
-            this.cleanupFns.push(effect(() => {
-                td.textContent = signal.value;
-            }));
-        }
-    }
-
-    private renderComponent(comp: any, parent: HTMLElement, prefix = '') {
+    private renderComponent = (comp: any, parent: HTMLElement, prefix = '') => {
         // Handle 'when' condition (§8)
         if (comp.when) {
             const wrapper = document.createElement('div');
@@ -150,7 +152,7 @@ export class FormspecRender extends HTMLElement {
         const componentType = comp.component;
         
         // Handle Repeatable Group Binding (§4.4)
-        if (comp.bind) {
+        if (comp.bind && comp.component !== 'DataTable') {
             const item = this.findItemByKey(comp.bind);
             if (item && item.type === 'group' && item.repeatable) {
                 const fullName = prefix ? `${prefix}.${comp.bind}` : comp.bind;
@@ -160,9 +162,6 @@ export class FormspecRender extends HTMLElement {
 
                 this.cleanupFns.push(effect(() => {
                     const count = this.engine!.repeats[fullName]?.value || 0;
-                    // For simplicity in this implementation, we'll re-render when count changes
-                    // but a more efficient way would be to only add/remove instances.
-                    // Given the reactive nature, we'll try to be efficient.
                     while (container.children.length > count) {
                         container.removeChild(container.lastChild!);
                     }
@@ -172,10 +171,8 @@ export class FormspecRender extends HTMLElement {
                         instanceWrapper.style.display = 'contents';
                         container.appendChild(instanceWrapper);
                         
-                        // We need a separate function or closure to render the instance
-                        // because prefix changes for each instance.
                         const instancePrefix = `${fullName}[${idx}]`;
-                        this.renderActualComponent(comp, instanceWrapper, instancePrefix, true);
+                        this.renderActualComponent(comp, instanceWrapper, instancePrefix);
                     }
                 }));
                 return;
@@ -185,253 +182,30 @@ export class FormspecRender extends HTMLElement {
         this.renderActualComponent(comp, parent, prefix);
     }
 
-    private renderActualComponent(comp: any, parent: HTMLElement, prefix = '', isRepeatInstance = false) {
+    private renderActualComponent(comp: any, parent: HTMLElement, prefix = '') {
         const componentType = comp.component;
-        let el: HTMLElement | null = null;
+        const plugin = globalRegistry.get(componentType);
 
-        switch (componentType) {
-            case 'Page': // §5.1
-                el = document.createElement('section');
-                el.className = 'formspec-page';
-                if (comp.title) {
-                    const h2 = document.createElement('h2');
-                    h2.textContent = comp.title;
-                    el.appendChild(h2);
-                }
-                if (comp.description) {
-                    const p = document.createElement('p');
-                    p.className = 'page-description';
-                    p.textContent = comp.description;
-                    el.appendChild(p);
-                }
-                break;
-
-            case 'Stack': // §5.2
-                el = document.createElement('div');
-                el.className = 'formspec-stack';
-                el.style.display = 'flex';
-                el.style.flexDirection = comp.direction === 'horizontal' ? 'row' : 'column';
-                el.style.gap = this.resolveToken(comp.gap) || '0';
-                el.style.alignItems = comp.align || 'stretch';
-                if (comp.wrap && comp.direction === 'horizontal') {
-                    el.style.flexWrap = 'wrap';
-                }
-                break;
-
-            case 'Grid': // §5.3
-                el = document.createElement('div');
-                el.className = 'formspec-grid';
-                el.style.display = 'grid';
-                const cols = comp.columns || 2;
-                el.style.gridTemplateColumns = typeof cols === 'number' ? `repeat(${cols}, 1fr)` : this.resolveToken(cols);
-                el.style.gap = this.resolveToken(comp.gap) || '0';
-                if (comp.rowGap) {
-                    el.style.rowGap = this.resolveToken(comp.rowGap);
-                }
-                break;
-
-            case 'TextInput':
-            case 'NumberInput':
-            case 'DatePicker':
-            case 'Select':
-            case 'Toggle':
-            case 'Checkbox':
-            case 'CheckboxGroup':
-            case 'RadioGroup':
-                // All these are Input components (§5.6-§5.11)
-                if (comp.bind) {
-                    const item = this.findItemByKey(comp.bind);
-                    if (item) {
-                        const itemFullName = prefix ? `${prefix}.${comp.bind}` : comp.bind;
-                        const fieldWrapper = this.renderInputComponent(comp, item, itemFullName);
-                        parent.appendChild(fieldWrapper);
-                        return;
-                    }
-                }
-                break;
-
-            case 'Heading': // §5.13
-                el = document.createElement(`h${comp.level || 1}`);
-                el.textContent = comp.text || '';
-                break;
-
-            case 'Text': // §5.14
-                el = document.createElement('p');
-                el.className = `text-variant-${comp.variant || 'body'}`;
-                if (comp.bind) {
-                    const itemFullName = prefix ? `${prefix}.${comp.bind}` : comp.bind;
-                    this.cleanupFns.push(effect(() => {
-                        const sig = this.engine!.signals[itemFullName];
-                        el!.textContent = sig ? String(sig.value ?? '') : '';
-                    }));
-                } else {
-                    el.textContent = comp.text || '';
-                }
-                break;
-
-            case 'Card':
-                el = document.createElement('div');
-                el.className = 'formspec-card';
-                el.style.border = '1px solid #ddd';
-                el.style.borderRadius = this.resolveToken('$token.border.radius') || '8px';
-                el.style.padding = this.resolveToken('$token.spacing.md') || '1rem';
-                if (comp.title) {
-                    const h3 = document.createElement('h3');
-                    h3.textContent = comp.title;
-                    el.appendChild(h3);
-                }
-                break;
-
-            case 'Spacer':
-                el = document.createElement('div');
-                el.style.height = this.resolveToken(comp.size) || '1rem';
-                break;
-
-            case 'Alert':
-                el = document.createElement('div');
-                el.className = `formspec-alert alert-${comp.severity || 'info'}`;
-                el.style.padding = '0.75rem 1.25rem';
-                el.style.marginBottom = '1rem';
-                el.style.border = '1px solid transparent';
-                el.style.borderRadius = '0.25rem';
-                if (comp.severity === 'error') {
-                    el.style.color = '#721c24';
-                    el.style.backgroundColor = '#f8d7da';
-                    el.style.borderColor = '#f5c6cb';
-                } else if (comp.severity === 'warning') {
-                    el.style.color = '#856404';
-                    el.style.backgroundColor = '#fff3cd';
-                    el.style.borderColor = '#ffeeba';
-                } else if (comp.severity === 'success') {
-                    el.style.color = '#155724';
-                    el.style.backgroundColor = '#d4edda';
-                    el.style.borderColor = '#c3e6cb';
-                } else {
-                    el.style.color = '#0c5460';
-                    el.style.backgroundColor = '#d1ecf1';
-                    el.style.borderColor = '#bee5eb';
-                }
-                el.textContent = comp.text || '';
-                break;
-
-            case 'Badge':
-                el = document.createElement('span');
-                el.className = `formspec-badge badge-${comp.variant || 'default'}`;
-                el.style.padding = '0.25em 0.4em';
-                el.style.fontSize = '75%';
-                el.style.fontWeight = '700';
-                el.style.borderRadius = '0.25rem';
-                el.style.backgroundColor = '#6c757d';
-                el.style.color = '#fff';
-                el.textContent = comp.text || '';
-                break;
-
-            case 'Wizard':
-                el = document.createElement('div');
-                el.className = 'formspec-wizard';
-                const currentStep = signal(0);
-                const wizardContent = document.createElement('div');
-                el.appendChild(wizardContent);
-
-                const nav = document.createElement('div');
-                nav.style.marginTop = '1rem';
-                const prevBtn = document.createElement('button');
-                prevBtn.textContent = 'Previous';
-                prevBtn.addEventListener('click', () => { if (currentStep.value > 0) currentStep.value--; });
-                const nextBtn = document.createElement('button');
-                nextBtn.textContent = 'Next';
-                nextBtn.addEventListener('click', () => { if (currentStep.value < (comp.children?.length || 1) - 1) currentStep.value++; });
-                nav.appendChild(prevBtn);
-                nav.appendChild(nextBtn);
-                el.appendChild(nav);
-
-                if (comp.children) {
-                    comp.children.forEach((child: any, idx: number) => {
-                        const stepContent = document.createElement('div');
-                        stepContent.style.display = 'contents';
-                        this.cleanupFns.push(effect(() => {
-                            stepContent.style.display = currentStep.value === idx ? 'contents' : 'none';
-                        }));
-                        this.renderComponent(child, stepContent, prefix);
-                        wizardContent.appendChild(stepContent);
-                    });
-                }
-                this.cleanupFns.push(effect(() => {
-                    prevBtn.disabled = currentStep.value === 0;
-                    nextBtn.disabled = currentStep.value === (comp.children?.length || 1) - 1;
-                }));
-                this.applyStyle(el, comp.style);
-                parent.appendChild(el);
-                return;
-
-            case 'Tabs':
-                el = document.createElement('div');
-                el.className = 'formspec-tabs';
-                const tabList = document.createElement('div');
-                tabList.style.display = 'flex';
-                tabList.style.borderBottom = '1px solid #ccc';
-                el.appendChild(tabList);
-                const tabsContentArea = document.createElement('div');
-                el.appendChild(tabsContentArea);
-
-                const activeTab = signal(comp.defaultTab || 0);
-                if (comp.children) {
-                    comp.children.forEach((child: any, idx: number) => {
-                        const btn = document.createElement('button');
-                        btn.textContent = comp.tabLabels?.[idx] || child.title || `Tab ${idx + 1}`;
-                        btn.style.padding = '0.5rem 1rem';
-                        btn.style.border = 'none';
-                        btn.style.background = 'none';
-                        btn.style.cursor = 'pointer';
-                        this.cleanupFns.push(effect(() => {
-                            btn.style.borderBottom = activeTab.value === idx ? '2px solid blue' : 'none';
-                            btn.style.fontWeight = activeTab.value === idx ? 'bold' : 'normal';
-                        }));
-                        btn.addEventListener('click', () => activeTab.value = idx);
-                        tabList.appendChild(btn);
-
-                        const tabContent = document.createElement('div');
-                        this.cleanupFns.push(effect(() => {
-                            tabContent.style.display = activeTab.value === idx ? 'block' : 'none';
-                        }));
-                        this.renderComponent(child, tabContent, prefix);
-                        tabsContentArea.appendChild(tabContent);
-                    });
-                }
-                this.applyStyle(el, comp.style);
-                parent.appendChild(el);
-                return;
-
-            case 'ConditionalGroup':
-                if (comp.children) {
-                    for (const child of comp.children) {
-                        this.renderComponent(child, parent, prefix);
-                    }
-                }
-                return;
-
-            case 'DataTable':
-                this.renderDataTableComponent(comp, parent, prefix);
-                return;
-
-            default:
-                console.warn(`Unknown component type: ${componentType}`);
-                return;
-        }
-
-        if (el) {
-            if (comp.id) el.id = comp.id;
-            this.applyStyle(el, comp.style);
-            parent.appendChild(el);
-            if (comp.children) {
-                for (const child of comp.children) {
-                    this.renderComponent(child, el, prefix);
-                }
-            }
+        if (plugin) {
+            const ctx: RenderContext = {
+                engine: this.engine!,
+                componentDocument: this._componentDocument,
+                themeDocument: this._themeDocument,
+                prefix,
+                renderComponent: this.renderComponent,
+                resolveToken: this.resolveToken,
+                applyStyle: this.applyStyle,
+                cleanupFns: this.cleanupFns,
+                findItemByKey: this.findItemByKey,
+                renderInputComponent: this.renderInputComponent
+            };
+            plugin.render(comp, parent, ctx);
+        } else {
+            console.warn(`Unknown component type: ${componentType}`);
         }
     }
 
-    private renderInputComponent(comp: any, item: any, fullName: string): HTMLElement {
+    private renderInputComponent = (comp: any, item: any, fullName: string): HTMLElement => {
         const dataType = item.dataType;
         const componentType = comp.component;
 
@@ -583,45 +357,6 @@ export class FormspecRender extends HTMLElement {
 
         this.applyStyle(fieldWrapper, comp.style);
         return fieldWrapper;
-    }
-
-    private renderDataTableComponent(comp: any, parent: HTMLElement, prefix = '') {
-        const el = document.createElement('div');
-        el.className = 'formspec-datatable';
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const tr = document.createElement('tr');
-        if (comp.columns) {
-            for (const col of comp.columns) {
-                const th = document.createElement('th');
-                th.textContent = col.header;
-                tr.appendChild(th);
-            }
-        }
-        thead.appendChild(tr);
-        table.appendChild(thead);
-        const tbody = document.createElement('tbody');
-        table.appendChild(tbody);
-
-        const fullName = prefix ? `${prefix}.${comp.bind}` : comp.bind;
-        this.cleanupFns.push(effect(() => {
-            const count = this.engine!.repeats[fullName]?.value || 0;
-            tbody.innerHTML = '';
-            for (let i = 0; i < count; i++) {
-                const row = document.createElement('tr');
-                if (comp.columns) {
-                    for (const col of comp.columns) {
-                        const td = document.createElement('td');
-                        const fieldName = `${fullName}[${i}].${col.bind}`;
-                        this.renderDataTableCell(td, fieldName);
-                        row.appendChild(td);
-                    }
-                }
-                tbody.appendChild(row);
-            }
-        }));
-        el.appendChild(table);
-        parent.appendChild(el);
     }
 
     private renderItem(item: any, parent: HTMLElement, prefix = '') {
