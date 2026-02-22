@@ -25,7 +25,9 @@ Do not preserve bad code. Do not work around problems. Do not add layers to avoi
 - **`packages/formspec-webcomponent/`** — `<formspec-render>` custom element that binds FormEngine to the DOM. Component registry pattern for extensibility.
 - **`src/`** — Python reference implementation and tooling backend. Contains `src/fel/` (a standalone Python parser, AST, and evaluator for FEL) and `src/adapters/` (Mapping spec implementations for JSON/XML/CSV). This powers the Python conformance suite and acts as a server-side validation/linting engine.
 - **`schemas/`** — JSON Schema files (definition, response, validationReport, mapping, theme, component, registry).
-- **`specs/`** — Markdown specification documents organized by tier. Each spec has a compact `*.llm.md` version optimized for LLM context — **always prefer reading the `.llm.md` files** over the full specs:
+- **`specs/`** — Markdown specification documents organized by tier. Each spec has a compact `*.llm.md` version optimized for LLM context — **prefer reading the `.llm.md` files** for fast context.
+  - `*.llm.md` files are generated artifacts. Do not hand-edit them.
+  - For spec changes, edit canonical `*.md` files and regenerate `*.llm.md` via the docs generation workflow.
   - `specs/core/spec.llm.md` — Core specification (items, binds, FEL, validation shapes, processing model)
   - `specs/fel/fel-grammar.llm.md` — FEL normative grammar (lexical rules, operator precedence, path references)
   - `specs/theme/theme-spec.llm.md` — Theme specification (tokens, widget catalog, selector cascade, page layout)
@@ -41,6 +43,12 @@ Do not preserve bad code. Do not work around problems. Do not add layers to avoi
 ```bash
 # Build TypeScript packages
 npm run build                    # runs tsc in each package
+
+# Generate llm-friendly spec docs from canonical specs/*.md
+npm run docs:generate
+
+# Verify generated llm docs are up to date (fails on drift)
+npm run docs:check
 
 # Start Vite dev server (serves demo pages and test fixtures)
 npm run start:test-server        # http://127.0.0.1:8080
