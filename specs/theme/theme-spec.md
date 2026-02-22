@@ -364,7 +364,7 @@ MUST use the specified fallback or the `fallback` array from the theme.
 | `timePicker` | time | `format`, `step` | `textInput` |
 | `timeInput` | time | `format` | `textInput` |
 | `camera` | attachment | `facing` (`"user"`, `"environment"`) | `fileUpload` |
-| `signature` | attachment | `penColor`, `height` (integer, pixels) | `fileUpload` |
+| `signature` | attachment | `strokeColor`, `height` (integer, pixels) | `fileUpload` |
 
 Group and Display widgets (`section`, `card`, `accordion`, `tab`,
 `heading`, `paragraph`, `divider`, `banner`) have no `widgetConfig`
@@ -379,7 +379,7 @@ MUST try each fallback in order and use the first it supports.
 ```json
 {
   "widget": "signature",
-  "widgetConfig": { "penColor": "#000" },
+  "widgetConfig": { "strokeColor": "#000" },
   "fallback": ["camera", "fileUpload"]
 }
 ```
@@ -533,11 +533,6 @@ function resolve(item, definition, theme):
   if theme.items[item.key] exists:
     merge(resolved, theme.items[item.key])
 
-  // Null suppression
-  for each key in resolved:
-    if resolved[key] is null:
-      delete resolved[key]
-
   return resolved
 ```
 
@@ -559,22 +554,27 @@ This means:
 When **no theme** is applied, Tier 1 hints and `formPresentation` are
 the only presentation input. This is the "null theme" baseline.
 
-#### Null Suppression
+#### Property Suppression
 
-A property set to `null` at any level removes it from the resolved
-result, suppressing any value inherited from a lower level:
+To suppress an inherited value, use the sentinel string `"none"` for
+properties that accept it (`widget`, `labelPosition`), or omit the
+entire nested object (`style`, `widgetConfig`, `accessibility`):
 
 ```json
 {
   "items": {
-    "fieldWithNoWidget": { "widget": null }
+    "fieldWithNoWidget": { "widget": "none" }
   }
 }
 ```
 
-This removes `widget` from the resolved PresentationBlock for
+This removes the `widget` from the resolved PresentationBlock for
 `fieldWithNoWidget`, regardless of what defaults, selectors, or Tier 1
-hints specified.
+hints specified. Omitting a property entirely leaves it unset,
+inheriting from lower cascade levels.
+
+> **Note:** JSON `null` values MUST NOT be used in PresentationBlock
+> properties. Validators SHOULD reject `null` values.
 
 #### Property Name Alignment
 
@@ -968,7 +968,7 @@ This appendix is **informative**.
     },
     "approverSignature": {
       "widget": "signature",
-      "widgetConfig": { "penColor": "#000", "height": 150 },
+      "widgetConfig": { "strokeColor": "#000", "height": 150 },
       "fallback": ["camera", "fileUpload"]
     },
     "priorityLevel": {

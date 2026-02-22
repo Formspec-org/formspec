@@ -168,9 +168,8 @@ not implement, rather than silently ignoring the call.
 
 A conformant **Extended** processor MUST support Formspec Core plus:
 
-1. Extension data types, functions, and constraint components (§8).
-2. `mustUnderstand` extension processing (§8.4).
-3. Screener routing (§4.7).
+1. Extension properties (§8).
+2. Screener routing (§4.7).
 4. Modular composition and assembly (§6.6).
 5. Version migration maps (§6.7).
 6. Pre-population declarations (§4.2.3, `prePopulate`).
@@ -188,9 +187,6 @@ A conformant Formspec processor (Core or Extended) MUST NOT:
    fields are exempt from all validation (§5.6 rule 1).
 3. **Block data persistence based on validation state.** Validation and
    persistence are independent operations (§5.5).
-4. **Silently drop unknown `mustUnderstand` extensions.** If an extension
-   has `mustUnderstand: true` and the processor does not support it, the
-   processor MUST report an error (§8.4).
 
 ***
 
@@ -513,21 +509,18 @@ A **Data Source** is a declaration within a Definition that makes external or
 supplemental data available to FEL expressions at runtime. Data Sources are the
 mechanism by which secondary instances (§2.1.2) are populated.
 
-Each Data Source MUST have:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `name` | string | A unique identifier within the Definition. This is the key used in `@instance('name')` references. MUST match `^[a-zA-Z_][a-zA-Z0-9_]*$`. |
-| `type` | string | One of `"inline"`, `"url"`, or `"function"`. See below. |
+Each Data Source MUST have a `name` (string, unique identifier within the
+Definition, used in `@instance('name')` references, MUST match
+`^[a-zA-Z_][a-zA-Z0-9_]*$`).
 
 Each Data Source MUST also declare its content via one of the following
-mechanisms, depending on `type`:
+mechanisms:
 
-| `type` | Additional property | Description |
-|--------|-------------------|-------------|
-| `"inline"` | `data` (JSON object or array) | The data is embedded directly in the Definition document. Suitable for small, static lookup tables (e.g., country codes, status enums). |
-| `"url"` | `url` (string, URI) | The data is fetched from an external endpoint at form-load time. The response MUST be a JSON document. The processor MUST fetch the data before the first Rebuild phase. If the fetch fails, the processor MUST signal a load error. |
-| `"function"` | `functionName` (string) | The data is supplied by the host environment via a named callback registered with the processor. This allows integration with application-specific data layers without embedding URLs in the Definition. |
+| Mechanism | Property | Description |
+|-----------|----------|-------------|
+| **Inline** | `data` (JSON object or array) | The data is embedded directly in the Definition document. Suitable for small, static lookup tables (e.g., country codes, status enums). |
+| **URL** | `source` (string, URI) | The data is fetched from an external endpoint at form-load time. The response MUST be a JSON document. The processor MUST fetch the data before the first Rebuild phase. If the fetch fails, the processor MUST signal a load error. |
+| **Host function** | `source` (string, `formspec-fn:` URI) | The data is supplied by the host environment via a named callback. The URI scheme `formspec-fn:` identifies a host-registered function (e.g., `"formspec-fn:lookupPatient"`). The host maps the function name to a callback. This allows integration with application-specific data layers without embedding external URLs in the Definition. |
 
 A Data Source MAY include a `schema` property describing the expected shape of
 the data (field names and types). This schema is informative — it aids tooling
@@ -546,7 +539,6 @@ is encountered.
 >   "dataSources": [
 >     {
 >       "name": "countryCodes",
->       "type": "inline",
 >       "data": [
 >         { "code": "US", "label": "United States" },
 >         { "code": "GB", "label": "United Kingdom" },
@@ -555,13 +547,11 @@ is encountered.
 >     },
 >     {
 >       "name": "priorYear",
->       "type": "url",
->       "url": "https://api.example.org/responses/2024/{{respondentId}}"
+>       "source": "https://api.example.org/responses/2024/{{respondentId}}"
 >     },
 >     {
 >       "name": "inventory",
->       "type": "function",
->       "functionName": "loadInventoryData"
+>       "source": "formspec-fn:loadInventoryData"
 >     }
 >   ]
 > }
@@ -1834,7 +1824,7 @@ The properties are defined as follows:
 | `version` | string | **1..1** (REQUIRED) | Business version of the Definition. The format and comparison semantics are determined by `versionAlgorithm`. Together with `url`, the pair (`url`, `version`) MUST be globally unique. |
 | `versionAlgorithm` | string | **0..1** (OPTIONAL) | Algorithm that governs interpretation and ordering of `version` strings. MUST be one of: `"semver"`, `"date"`, `"integer"`, `"natural"`. Default: `"semver"`. See §6.2 for semantics. |
 | `status` | string | **1..1** (REQUIRED) | Publication status. MUST be one of: `"draft"`, `"active"`, `"retired"`. Only Definitions with status `"active"` SHOULD be used when creating new Responses. See §6.3 for lifecycle rules. |
-| `derivedFrom` | string (URI) | **0..1** (OPTIONAL) | Canonical URL of a parent Definition from which this Definition was derived. MAY be version-pinned using the `url|version` syntax (e.g., `"https://example.gov/forms/annual-report|2024.1.0"`). See §6.5 for semantics. |
+| `derivedFrom` | string (URI) or object | **0..1** (OPTIONAL) | Parent Definition from which this one was derived. Either a URI string (unversioned) or an object `{ "url": "...", "version": "..." }` for version-pinned derivation. See §6.5 for semantics. |
 | `title` | string | **1..1** (REQUIRED) | Human-readable name of the form. Implementations SHOULD display this to end users. |
 | `description` | string | **0..1** (OPTIONAL) | Human-readable description. MAY contain Markdown formatting; implementations are NOT REQUIRED to render Markdown. |
 | `items` | array of Item | **1..1** (REQUIRED) | The item tree. Contains the root-level Items that define the form's structure. The array MAY be empty for a skeleton Definition, but the property itself MUST be present. See §4.2. |
@@ -1848,7 +1838,7 @@ The properties are defined as follows:
 | `migrations` | object | **0..1** (OPTIONAL) | Maps for transforming Responses from prior Definition versions to this version. See §6.7. |
 | `date` | string (ISO 8601 date) | **0..1** (OPTIONAL) | The date this version of the Definition was published or last updated. |
 | `name` | string | **0..1** (OPTIONAL) | A machine-friendly short identifier (ASCII letters, digits, hyphens). Intended for code generation and programmatic reference. MUST match `[a-zA-Z][a-zA-Z0-9\-]*`. |
-| `extensions` | object | **0..1** (OPTIONAL) | Extension namespace. Keys MUST be URIs identifying the extension. Implementations that do not recognize an extension MUST ignore it unless `mustUnderstand` is `true` (§8.4). |
+| `extensions` | object | **0..1** (OPTIONAL) | Extension namespace. Keys MUST be `x-` prefixed identifiers. Implementations that do not recognize an extension MUST ignore it. Processors MUST preserve unrecognized extensions on round-trip. See §8. |
 | `formPresentation` | object | **0..1** (OPTIONAL) | Form-wide presentation defaults. All properties within are OPTIONAL and advisory. See §4.1.1. |
 
 Implementations MUST preserve unrecognized top-level properties during
@@ -2812,8 +2802,9 @@ references are context-dependent:
 
 - In a Response's `definition` property, the version MUST be specified.
   Unversioned references are invalid in this context (§6.4).
-- In `derivedFrom`, an unversioned reference indicates derivation from the
-  logical form in general, without pinning to a specific version.
+- In `derivedFrom`, a plain URI string indicates derivation from the
+  logical form in general. An object form `{ "url": "...", "version": "..." }`
+  pins derivation to a specific version.
 - In `$ref` composition, an unversioned reference SHOULD resolve to the
   latest `"active"` version at assembly time.
 
@@ -2919,12 +2910,12 @@ immutable reference.
 A Definition MAY declare `derivedFrom` to indicate it is a variant of another
 Definition. Common derivation scenarios include:
 
-- **Year-over-year updates** — `annual-report|2025.1.0` derived from
-  `annual-report|2024.1.0`.
-- **Long form / short form** — `annual-report-short|1.0.0` derived from
-  `annual-report|2025.1.0`.
-- **Domain-specific specialization** — `annual-report-healthcare|1.0.0`
-  derived from `annual-report|2025.1.0`.
+- **Year-over-year updates** — `annual-report` version `2025.1.0` derived
+  from `{ "url": "https://example.gov/forms/annual-report", "version": "2024.1.0" }`.
+- **Long form / short form** — `annual-report-short` derived from the
+  `annual-report` definition (unversioned URI string).
+- **Domain-specific specialization** — `annual-report-healthcare` derived
+  from a specific version via the object form.
 
 **Semantics:** `derivedFrom` is **informational only**. It does NOT imply
 behavioral inheritance, structural inclusion, or any runtime linkage between
@@ -4151,188 +4142,33 @@ it does not recognize MUST treat it as a specification error.
 
 ***
 
-### 8.1 Custom Data Types
+### 8.1 Custom Data Types, Functions, and Constraints
 
-Implementors MAY register custom data types beyond the core set defined
-in this specification. Custom data types extend the type system for
-domain-specific value semantics.
+Custom data types, functions, and validation constraint components are
+declared and published through the **Extension Registry** system (see the
+Extension Registry specification). The registry provides structured
+metadata including parameter signatures, base types, compatibility
+information, and versioning for each extension.
 
-```json
-{
-  "extensions": {
-    "dataTypes": {
-      "x-currency-usd": {
-        "baseType": "decimal",
-        "precision": 2,
-        "constraints": {
-          "minimum": 0
-        },
-        "metadata": {
-          "prefix": "$",
-          "thousandsSeparator": true
-        }
-      },
-      "x-federal-fiscal-year": {
-        "baseType": "integer",
-        "constraints": {
-          "minimum": 1900,
-          "maximum": 2100
-        },
-        "metadata": {
-          "display": "FY ${value}"
-        }
-      }
-    }
-  }
-}
-```
+Definitions that use custom extensions SHOULD reference them in the
+top-level `extensions` object for discoverability. The following
+general requirements apply:
 
-The following requirements apply to custom data types:
+1. All custom identifiers MUST be prefixed with `x-`.
 
-1. Custom type names MUST be prefixed with `x-`.
+2. Processors that encounter a custom data type they do not support
+   MUST fall back to the declared `baseType` and SHOULD log an
+   informational notice.
 
-2. Custom types MUST declare a `baseType` from the core type set
-   (`string`, `integer`, `decimal`, `boolean`, `date`, `dateTime`,
-   `time`, `uri`). The `baseType` serves as a fallback: processors
-   that do not understand the custom type MUST treat the field as
-   having the `baseType` and SHOULD log an informational notice.
+3. Processors that encounter a custom function or constraint they do
+   not support MUST raise a clear, actionable error. Processors MUST
+   NOT silently skip unsupported functions or constraints.
 
-3. Custom types MAY declare `constraints` that further restrict the
-   base type's value space. These constraints MUST be expressible in
-   terms of the base type's comparison operators.
+4. Custom functions MUST be pure (side-effect-free) with respect to
+   Instance data.
 
-4. Custom types MAY declare `metadata` for presentation-layer
-   consumption. Processors MUST ignore `metadata` properties they do
-   not understand. Metadata MUST NOT alter validation semantics.
-
-5. A Definition that references a custom data type MUST declare that
-   type in its `extensions.dataTypes` object. Processors encountering
-   a reference to an undeclared custom type MUST raise a specification
-   error.
-
-***
-
-### 8.2 Custom Functions
-
-Implementors MAY register custom functions for use in FEL expressions.
-Custom functions extend the expression language for domain-specific
-computations.
-
-```json
-{
-  "extensions": {
-    "functions": {
-      "x-fiscal-quarter": {
-        "description": "Returns the federal fiscal quarter (1–4) for a given date. The federal fiscal year begins October 1.",
-        "parameters": [
-          { "name": "date", "type": "date" }
-        ],
-        "returns": "integer",
-        "implementation": "external"
-      },
-      "x-cfda-lookup": {
-        "description": "Returns the program title for a CFDA number from the SAM.gov catalog.",
-        "parameters": [
-          { "name": "cfda_number", "type": "string" }
-        ],
-        "returns": "string",
-        "implementation": "external"
-      }
-    }
-  }
-}
-```
-
-The following requirements apply to custom functions:
-
-1. Custom function names MUST be prefixed with `x-`.
-
-2. A Definition using custom functions in any FEL expression MUST
-   declare those functions in its `extensions.functions` object.
-
-3. Each function declaration MUST include `parameters` (an array of
-   `{name, type}` objects) and `returns` (a core data type name).
-
-4. The `implementation` property MUST be one of:
-   - `"external"` — the processor delegates to an external service or
-     host-language callback. The mechanism for registration is outside
-     the scope of this specification.
-   - `"expression"` — the function body is a FEL expression provided
-     in a `body` property. Parameters are available as `$name`
-     references within the body.
-
-5. Processors that encounter a call to a custom function they do not
-   support MUST raise a clear, actionable error identifying the
-   function name and the Definition that references it. Processors
-   MUST NOT silently skip the function call or substitute a default
-   value.
-
-6. Custom functions MUST be pure (side-effect-free) with respect to
-   Instance data. A custom function MUST NOT modify any field value
-   as a side effect of evaluation.
-
-***
-
-### 8.3 Custom Validation Constraint Components
-
-Borrowing from SHACL's constraint component architecture, implementors
-MAY define reusable constraint patterns that can be applied across
-multiple shapes.
-
-```json
-{
-  "extensions": {
-    "constraints": {
-      "x-unique-within": {
-        "description": "Value must be unique within the specified collection path. No two items in the collection may have the same value for the targeted field.",
-        "parameters": [
-          { "name": "collection", "type": "string", "description": "Path to the repeatable group" }
-        ],
-        "implementation": "external"
-      },
-      "x-sum-not-exceeds": {
-        "description": "The sum of the specified fields must not exceed a given maximum.",
-        "parameters": [
-          { "name": "fields", "type": "array",   "description": "Array of field paths to sum" },
-          { "name": "max",    "type": "decimal", "description": "Maximum allowed sum" }
-        ],
-        "implementation": "external"
-      }
-    }
-  }
-}
-```
-
-Usage within a shape:
-
-```json
-{
-  "id": "unique-category-names",
-  "severity": "error",
-  "target": "categories[*].category_name",
-  "x-unique-within": {
-    "collection": "categories"
-  },
-  "message": "Category name must be unique. '${$}' is used more than once."
-}
-```
-
-The following requirements apply to custom constraint components:
-
-1. Custom constraint names MUST be prefixed with `x-`.
-
-2. A Definition using custom constraints MUST declare them in
-   `extensions.constraints`.
-
-3. When a custom constraint appears as a property on a shape object,
-   the property name MUST match the declared constraint name, and its
-   value MUST be an object whose keys correspond to the declared
-   parameters.
-
-4. Processors that do not support a custom constraint MUST raise an
-   error. Processors MUST NOT silently ignore an unsupported
-   constraint, as doing so would produce a false-positive validation
-   report.
+5. Custom constraints MUST NOT produce false-positive validation
+   results when unsupported — processors MUST fail rather than skip.
 
 ***
 
@@ -4369,13 +4205,9 @@ The following requirements apply to extension properties:
 
 1. All keys within an `extensions` object MUST be prefixed with `x-`.
 
-2. Processors MUST ignore extension properties they do not understand
-   **unless `mustUnderstand` is `true`**. Unrecognized extension properties
-   without `mustUnderstand: true` MUST NOT cause a processing error,
-   warning, or behavioral change. Any extension object MAY include a
-   `mustUnderstand` boolean property (default: `false`). When `true`, a
-   processor that does not recognize or cannot evaluate the extension MUST
-   report a definition error and MUST NOT proceed with evaluation.
+2. Processors MUST ignore extension properties they do not understand.
+   Unrecognized extension properties MUST NOT cause a processing error,
+   warning, or behavioral change.
 
 3. Extension properties MUST NOT alter the core semantics defined by
    this specification. Specifically:

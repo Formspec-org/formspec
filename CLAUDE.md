@@ -8,12 +8,30 @@ Formspec is a JSON-native declarative form specification with a TypeScript refer
 
 The specification is organized into three tiers: Core (data & logic), Theme (presentation), and Components (interaction). FEL (Formspec Expression Language) is a built-in expression language for calculated values and conditional logic.
 
+## Development Philosophy — READ THIS FIRST
+
+**This is a greenfield, unreleased project. There are ZERO users, ZERO backwards compatibility constraints, ZERO production deployments. Any code can and should be thrown away and rebuilt if it isn't right.**
+
+Do not preserve bad code. Do not work around problems. Do not add layers to avoid touching existing code. Rip it out and redo it.
+
+- **ZERO tech debt tolerance** — if something is wrong, delete it and rebuild it correctly. Never band-aid, never "fix later", never leave TODOs. There is no legacy to protect.
+- **DRY where it doesn't add complexity** — duplicated logic is a smell. Extract shared code when the abstraction is natural and makes things clearer. But don't force DRY if the shared abstraction is harder to understand than the duplication — three similar lines are better than one confusing helper.
+- **KISS where appropriate** — prefer the simplest solution that works, but don't oversimplify. Simple does not mean naive. If the problem is genuinely complex, the solution should handle that complexity cleanly — not pretend it doesn't exist.
+- **Eliminate unnecessary complexity** — if a simpler approach exists, use it. If code isn't pulling its weight, delete it. Fewer lines = fewer bugs = faster iteration. But keep an eye on **extensibility** — Formspec is a spec-driven system with extension points by design. Build clean seams where the spec calls for them.
+
 ## Monorepo Structure
 
 - **`packages/formspec-engine/`** — Core form state management. FormEngine class, FEL lexer/parser/interpreter, path resolution, validation. Uses `@preact/signals-core` for reactivity and `chevrotain` for parsing.
 - **`packages/formspec-webcomponent/`** — `<formspec-render>` custom element that binds FormEngine to the DOM. Component registry pattern for extensibility.
 - **`schemas/`** — JSON Schema files (definition, response, validationReport, mapping, theme, component, registry).
-- **`specs/`** — Markdown specification documents organized by tier.
+- **`specs/`** — Markdown specification documents organized by tier. Each spec has a compact `*.llm.md` version optimized for LLM context — **always prefer reading the `.llm.md` files** over the full specs:
+  - `specs/core/spec.llm.md` — Core specification (items, binds, FEL, validation shapes, processing model)
+  - `specs/fel/fel-grammar.llm.md` — FEL normative grammar (lexical rules, operator precedence, path references)
+  - `specs/theme/theme-spec.llm.md` — Theme specification (tokens, widget catalog, selector cascade, page layout)
+  - `specs/component/component-spec.llm.md` — Component specification (33 built-in components, slot binding, custom components, responsive design)
+  - `specs/mapping/mapping-spec.llm.md` — Mapping DSL (bidirectional transforms, coercion, value maps, adapters)
+  - `specs/registry/extension-registry.llm.md` — Extension registry (publishing, discovery, lifecycle)
+  - `specs/registry/changelog-spec.llm.md` — Changelog format (change objects, impact classification, migration generation)
 - **`tests/`** — Python conformance test suite (pytest + jsonschema + hypothesis).
 - **`tests/e2e/`** — Playwright E2E tests and JSON fixtures.
 

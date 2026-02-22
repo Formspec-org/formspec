@@ -43,7 +43,7 @@ Custom widgets: `x-` prefixed, must always have fallback chain ending with stand
 
 **Merge**: Shallow per-property (not deep-merged). Nested objects like `widgetConfig`, `style`, `accessibility` replaced as a whole.
 
-**Null suppression**: Setting a property to `null` removes it from resolved result, suppressing inherited values.
+**Property suppression**: Omitting a property from a higher-level block leaves it unset, inheriting from lower levels. To explicitly suppress an inherited value, set it to the sentinel string `"none"` (for widget, labelPosition) or omit the entire nested object (for style, widgetConfig, accessibility).
 
 **Property alignment with Tier 1**: `widget` = `widgetHint`, `style` = `styleHints` (but richer), `accessibility` same structure. `widgetConfig` and `fallback` are theme-only.
 

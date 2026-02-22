@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/changelog/v1",
+  "title": "Formspec Changelog Document",
+  "description": "Enumerates differences between two versions of a Formspec Definition. Supports automated migration generation, impact analysis, and human review.",
+  "type": "object",
+  "required": ["definitionUrl", "fromVersion", "toVersion", "semverImpact", "changes"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "definitionUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the Definition."
+    },
+    "fromVersion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Base semver version."
+    },
+    "toVersion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Target semver version."
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of generation."
+    },
+    "semverImpact": {
+      "type": "string",
+      "enum": ["major", "minor", "patch"],
+      "description": "Maximum impact across all changes (breaking → major, compatible → minor, cosmetic → patch)."
+    },
+    "summary": {
+      "type": "string",
+      "description": "Human-readable summary of changes."
+    },
+    "changes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Change" },
+      "description": "Ordered array of Change objects."
+    }
+  },
+  "$defs": {
+    "Change": {
+      "type": "object",
+      "required": ["type", "target", "path", "impact"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["added", "removed", "modified", "moved", "renamed"],
+          "description": "Kind of change."
+        },
+        "target": {
+          "type": "string",
+          "enum": ["item", "bind", "shape", "optionSet", "dataSource", "screener", "migration", "metadata"],
+          "description": "Category of affected element."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dot-path to the affected element."
+        },
+        "key": {
+          "type": "string",
+          "description": "Item key when target is 'item'."
+        },
+        "impact": {
+          "type": "string",
+          "enum": ["breaking", "compatible", "cosmetic"],
+          "description": "Severity of this change."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the change."
+        },
+        "before": {
+          "description": "Previous value or fragment (for modified, removed, renamed, moved)."
+        },
+        "after": {
+          "description": "New value or fragment (for added, modified, renamed, moved)."
+        },
+        "migrationHint": {
+          "type": "string",
+          "description": "Suggested transform: FEL expression, 'drop', or 'preserve'."
+        }
+      }
+    }
+  }
+}

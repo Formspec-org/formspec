@@ -44,8 +44,28 @@
       ]
     },
     "derivedFrom": {
-      "type": "string",
-      "format": "uri"
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "object",
+          "required": ["url"],
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ],
+      "description": "Parent definition. Either a URI string or an object with url and optional version."
     },
     "name": {
       "type": "string",
@@ -507,7 +527,9 @@
           "type": "string"
         },
         "context": {
-          "type": "object"
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Additional context data as FEL expressions. Keys are context names, values are FEL expression strings."
         },
         "activeWhen": {
           "type": "string"

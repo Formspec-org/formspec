@@ -18,9 +18,9 @@ Inspired by XForms (reactive model), SHACL (composable validation), and FHIR Que
 
 **Core** processors must: parse definitions, support all data types including `money`, implement all 5 Bind MIPs (`calculate`, `relevant`, `required`, `readonly`, `constraint`), implement full FEL, implement validation shapes, implement 4-phase processing model, support versioning/response pinning, support named option sets, reject circular dependencies.
 
-**Extended** processors must additionally: support extensions + `mustUnderstand`, screener routing, modular composition, version migration maps, pre-population.
+**Extended** processors must additionally: support extensions, screener routing, modular composition, version migration maps, pre-population.
 
-**Prohibitions**: no silent version substitution, no validation of non-relevant fields, no blocking persistence on validation state, no silently dropping `mustUnderstand` extensions.
+**Prohibitions**: no silent version substitution, no validation of non-relevant fields, no blocking persistence on validation state.
 
 ## Six Core Abstractions
 
@@ -92,13 +92,13 @@ Optional: `id` (UUID), `author`, `subject` (entity the response is about), `vali
 ### 7. Data Source
 Declares external/supplemental data available to FEL expressions at runtime. Populates secondary instances.
 
-Required properties: `name` (unique identifier, used in `@instance('name')`), `type` (one of `inline`, `url`, `function`).
+Required properties: `name` (unique identifier, used in `@instance('name')`).
 
-| Type | Mechanism |
-|------|-----------|
-| `inline` | Data embedded in definition via `data` property |
-| `url` | Fetched from endpoint at form-load time; must be JSON |
-| `function` | Supplied by host environment via named callback |
+| Source | Mechanism |
+|--------|-----------|
+| `data` (inline) | Data embedded in definition via `data` property |
+| `source` (URL) | Fetched from endpoint at form-load time; must be JSON |
+| `source` with `formspec-fn:` URI | Host-provided function data source (e.g., `"source": "formspec-fn:lookupPatient"`) — host environment maps URI to a callback |
 
 Secondary instances are **read-only** — calculate binds must not target them.
 
@@ -259,7 +259,7 @@ Must: not collide with builtins, be pure, be total (return value for all valid i
 
 Required: `$formspec` ("1.0"), `url` (canonical URI, doesn't change between versions), `version`, `status` ("draft"/"active"/"retired"), `title`, `items` (array).
 
-Optional: `versionAlgorithm` ("semver"/"date"/"integer"/"natural", default "semver"), `derivedFrom` (parent URL, optionally version-pinned with `url|version`), `description`, `binds`, `shapes`, `instances` (secondary data sources), `variables` (named computed values), `nonRelevantBehavior` ("remove"/"empty"/"keep", default "remove"), `optionSets`, `screener`, `migrations`, `date`, `name` (machine-friendly), `extensions`, `formPresentation`.
+Optional: `versionAlgorithm` ("semver"/"date"/"integer"/"natural", default "semver"), `derivedFrom` (parent definition — either a URI string or `{url, version}` object), `description`, `binds`, `shapes`, `instances` (secondary data sources), `variables` (named computed values), `nonRelevantBehavior` ("remove"/"empty"/"keep", default "remove"), `optionSets`, `screener`, `migrations`, `date`, `name` (machine-friendly), `extensions`, `formPresentation`.
 
 ### Form Presentation (advisory)
 
@@ -400,13 +400,12 @@ Responses always validated against their pinned version. Published versions must
 
 All extension identifiers must be prefixed with `x-`.
 
-- **Custom data types**: `x-` prefixed, must declare `baseType` (fallback), may have `constraints` and `metadata`
-- **Custom functions**: `x-` prefixed, must declare `parameters` and `returns`, implementation "external" or "expression"
-- **Custom constraints**: `x-` prefixed, reusable constraint patterns applied to shapes (like SHACL constraint components)
-- **Extension properties**: `extensions` object on any Formspec object; `mustUnderstand: true` forces error if unsupported
+- **Extension properties**: `extensions` object on any Formspec object; processors must preserve unrecognized extensions on round-trip
 - **Extension namespaces**: `x-{org}-{domain}` convention, should include `version`
 
-Extensions must NOT alter core semantics (required, relevant, readonly, calculate, FEL evaluation, valid flag). Processors must preserve unrecognized extensions on round-trip.
+Custom data types, functions, and constraints are declared via the **Extension Registry** (see `extension-registry.llm.md`) rather than inline in definitions. The registry provides structured metadata for discovery and validation.
+
+Extensions must NOT alter core semantics (required, relevant, readonly, calculate, FEL evaluation, valid flag).
 
 ## Lineage
 

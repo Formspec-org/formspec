@@ -356,21 +356,6 @@ Example of a fully-specified component object:
 Processors MUST ignore unrecognized properties on component objects.
 This enables forward-compatible extension.
 
-#### Label and Hint Overrides
-
-Input components MAY include the following override properties:
-
-| Property | Type | Description |
-|---|---|---|
-| `labelOverride` | string | Overrides the bound item's `label` for display purposes. |
-| `hintOverride` | string | Overrides the bound item's `hint` for display purposes. |
-| `descriptionOverride` | string | Overrides the bound item's `description` for display purposes. |
-
-These overrides affect visual rendering only. They MUST NOT alter the
-Definition item's metadata or affect validation messages. When absent,
-the renderer MUST use the label, hint, and description from the
-Definition item.
-
 ### 3.2 Component Tree Semantics (single root)
 
 The `tree` property MUST contain exactly **one** component object. This
@@ -487,10 +472,8 @@ The meaning and requirement of `bind` varies by component category:
 
 When an Input component is bound to a field item:
 
-1. **Label:** The renderer MUST display the item's `label`. The component
-   MAY override this with `labelOverride`.
+1. **Label:** The renderer MUST display the item's `label`.
 2. **Hint:** The renderer SHOULD display the item's `hint` when available.
-   The component MAY override this with `hintOverride`.
 3. **Required indicator:** The renderer MUST indicate required state when
    the item's Bind `required` expression evaluates to `true`.
 4. **Read-only state:** The renderer MUST disable editing when the item's
@@ -546,14 +529,11 @@ The renderer MUST:
 3. Provide affordances for adding and removing repeat instances, subject
    to `minRepeat` and `maxRepeat` constraints from the Definition.
 
-Repeatable group binding is available on:
+Repeatable group binding is available on **DataTable** (§6.13), where each
+repeat instance becomes a table row.
 
-- **Stack**, **Grid**, **Card**, and **Collapsible** — the component and
-  its children are repeated.
-- **DataTable** (§6.13) — each repeat instance becomes a table row.
-
-Layout components other than Stack and Grid MUST NOT bind to repeatable
-groups. Processors MUST reject such bindings.
+Other layout and container components MUST NOT bind to repeatable groups.
+Processors MUST reject such bindings.
 
 ### 4.5 Unbound Required Items
 
@@ -680,7 +660,7 @@ also be used standalone within a Stack for single-page sectioned forms.
 **Category:** Layout 
 **Level:** Core 
 **Accepts children:** Yes 
-**Bind:** Forbidden (unless binding a repeatable group, see §4.4)
+**Bind:** Forbidden
 
 #### Description
 
@@ -726,7 +706,7 @@ primitive and is typically used as the root component.
 **Category:** Layout 
 **Level:** Core 
 **Accepts children:** Yes 
-**Bind:** Forbidden (unless binding a repeatable group, see §4.4)
+**Bind:** Forbidden
 
 #### Description
 
@@ -1290,7 +1270,7 @@ A horizontal rule used to visually separate sections of the form.
 **Category:** Container 
 **Level:** Core 
 **Accepts children:** Yes 
-**Bind:** Forbidden (unless binding a repeatable group, see §4.4)
+**Bind:** Forbidden
 
 #### Description
 
@@ -1332,7 +1312,7 @@ a visual boundary with optional title and subtitle.
 **Category:** Container 
 **Level:** Core 
 **Accepts children:** Yes 
-**Bind:** Forbidden (unless binding a repeatable group, see §4.4)
+**Bind:** Forbidden
 
 #### Description
 
@@ -1502,6 +1482,7 @@ props or from the `tabLabels` array.
 
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
+| `position` | string | `"top"` | No | Tab bar position. MUST be one of `"top"`, `"bottom"`, `"left"`, or `"right"`. |
 | `tabLabels` | array of strings | — | No | Explicit tab labels. When absent, the renderer reads `title` from each child (children SHOULD be Page components). |
 | `defaultTab` | integer | `0` | No | Zero-based index of the initially active tab. |
 
@@ -1820,9 +1801,10 @@ attachment.
 
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
-| `penColor` | string | `"#000000"` | Yes | Stroke color for the signature pen. |
+| `strokeColor` | string | `"#000000"` | Yes | Stroke color for the signature pen. |
 | `height` | integer | `150` | No | Height of the signature pad in pixels. |
 | `penWidth` | number | `2` | No | Stroke width in pixels. |
+| `clearable` | boolean | `true` | No | Whether to show a clear/reset control. |
 
 #### Rendering Requirements
 
@@ -1844,7 +1826,7 @@ Core processors MUST replace Signature with **FileUpload** with
 {
   "component": "Signature",
   "bind": "approverSignature",
-  "penColor": "#000",
+  "strokeColor": "#000",
   "height": 200
 }
 ```
@@ -2096,7 +2078,7 @@ are rendered as TextInput or appropriate Core components.
 
 #### Description
 
-A sidebar or inline panel used for supplementary content, help text,
+A side panel used for supplementary content, help text,
 or contextual actions. Panels may be positioned alongside the main
 content.
 
@@ -2104,15 +2086,14 @@ content.
 
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
-| `position` | string | `"inline"` | No | Panel position. MUST be one of `"sidebar"` or `"inline"`. |
+| `position` | string | `"left"` | No | Panel position. MUST be one of `"left"` or `"right"`. |
 | `title` | string | — | No | Panel header title. |
-| `width` | string | `"300px"` | Yes | Width when `position` is `"sidebar"`. |
+| `width` | string | `"300px"` | Yes | Panel width. |
 
 #### Rendering Requirements
 
-- When `position` is `"sidebar"`, MUST render the panel alongside
-  (not within) the main content flow.
-- When `position` is `"inline"`, MUST render within the normal flow.
+- MUST render the panel alongside (not within) the main content flow,
+  positioned according to the `position` property.
 - MUST render children within the panel body.
 
 #### Fallback Behavior
@@ -2125,7 +2106,7 @@ is preserved. The `position` and `width` props are discarded.
 ```json
 {
   "component": "Panel",
-  "position": "sidebar",
+  "position": "left",
   "title": "Help",
   "width": "280px",
   "children": [
@@ -2154,6 +2135,7 @@ main form. Modals require explicit user action to open and close.
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
 | `title` | string | — (REQUIRED) | No | Modal dialog title. |
+| `size` | string | `"md"` | No | Modal size. MUST be one of `"sm"`, `"md"`, `"lg"`, `"xl"`, or `"full"`. |
 | `trigger` | string | `"button"` | No | How the modal is triggered. MUST be `"button"` (a dedicated open button) or `"auto"` (opens automatically based on `when`). |
 | `triggerLabel` | string | `"Open"` | No | Label for the trigger button when `trigger` is `"button"`. |
 | `closable` | boolean | `true` | No | Whether the modal can be dismissed by the user. |
@@ -2725,8 +2707,8 @@ Specific interactions:
 
 - **Widget selection:** Tier 3 component type overrides Tier 2 widget
   assignment, which overrides Tier 1 `widgetHint`.
-- **Label display:** Tier 3 `labelOverride` overrides Tier 1 `label`
-  (but the underlying item label is unchanged).
+- **Label display:** Tier 1 item `label` is the source of truth.
+  Context-specific labels use the `labels` map on the Definition item.
 - **Layout:** Tier 3 component tree completely replaces Tier 2 page
   layout for bound items.
 - **Tokens:** Tier 3 tokens override Tier 2 tokens of the same key;
@@ -3115,7 +3097,7 @@ information, budget line items, and approval.
               {
                 "component": "Signature",
                 "bind": "approverSignature",
-                "penColor": "#000",
+                "strokeColor": "#000",
                 "height": 150
               }
             ]
@@ -3151,8 +3133,8 @@ classification and key characteristics.
 | # | Component | Category | Level | Children | Bind | Description |
 |---|-----------|----------|-------|----------|------|-------------|
 | 1 | Page | Layout | Core | Yes | Forbidden | Top-level page/section container. |
-| 2 | Stack | Layout | Core | Yes | Forbidden¹ | Flexbox vertical/horizontal stacking. |
-| 3 | Grid | Layout | Core | Yes | Forbidden¹ | Multi-column grid layout. |
+| 2 | Stack | Layout | Core | Yes | Forbidden | Flexbox vertical/horizontal stacking. |
+| 3 | Grid | Layout | Core | Yes | Forbidden | Multi-column grid layout. |
 | 4 | Wizard | Layout | Core | Yes (Page only) | Forbidden | Sequential step navigation. |
 | 5 | Spacer | Layout | Core | No | Forbidden | Empty spacing element. |
 | 6 | TextInput | Input | Core | No | Required | Single/multi-line text input. |
@@ -3165,8 +3147,8 @@ classification and key characteristics.
 | 13 | Heading | Display | Core | No | Forbidden | Section heading (h1–h6). |
 | 14 | Text | Display | Core | No | Optional | Static or data-bound text. |
 | 15 | Divider | Display | Core | No | Forbidden | Horizontal rule separator. |
-| 16 | Card | Container | Core | Yes | Forbidden¹ | Bordered surface grouping. |
-| 17 | Collapsible | Container | Core | Yes | Forbidden¹ | Expandable/collapsible section. |
+| 16 | Card | Container | Core | Yes | Forbidden | Bordered surface grouping. |
+| 17 | Collapsible | Container | Core | Yes | Forbidden | Expandable/collapsible section. |
 | 18 | ConditionalGroup | Container | Core | Yes | Forbidden | Condition-based visibility group. |
 | 19 | Columns | Layout | Progressive | Yes | Forbidden | Explicit column widths layout. |
 | 20 | Tabs | Layout | Progressive | Yes | Forbidden | Tabbed navigation container. |
@@ -3181,10 +3163,9 @@ classification and key characteristics.
 | 29 | ProgressBar | Display | Progressive | No | Optional | Visual progress indicator. |
 | 30 | Summary | Display | Progressive | No | Forbidden | Key-value summary display. |
 | 31 | DataTable | Display | Progressive | No | Optional² | Tabular repeatable data. |
-| 32 | Panel | Container | Progressive | Yes | Forbidden | Sidebar or inline panel. |
+| 32 | Panel | Container | Progressive | Yes | Forbidden | Side panel. |
 | 33 | Modal | Container | Progressive | Yes | Forbidden | Dialog overlay. |
 
-¹ May bind to a repeatable group for repeat-template semantics (§4.4). 
 ² DataTable binds to a repeatable group key, not a field key.
 
 ---

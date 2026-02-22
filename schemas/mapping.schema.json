@@ -34,7 +34,7 @@
     "direction": {
       "type": "string",
       "enum": ["forward", "reverse", "both"],
-      "default": "both",
+      "default": "forward",
       "description": "Execution direction: 'forward' (source→target), 'reverse' (target→source), or 'both' (§3.1.2)."
     },
     "defaults": {

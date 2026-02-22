@@ -5,9 +5,13 @@
   "type": "object",
   "required": ["$formspecComponent", "version", "targetDefinition", "tree"],
   "additionalProperties": false,
+  "patternProperties": { "^x-": {} },
   "properties": {
     "$formspecComponent": { "type": "string", "const": "1.0" },
     "url": { "type": "string", "format": "uri" },
+    "name": { "type": "string", "description": "Machine-friendly short identifier." },
+    "title": { "type": "string", "description": "Human-readable name." },
+    "description": { "type": "string", "description": "Human-readable description." },
     "version": { "type": "string", "minLength": 1 },
     "targetDefinition": { "$ref": "#/$defs/TargetDefinition" },
     "breakpoints": { "$ref": "#/$defs/Breakpoints" },
@@ -54,7 +58,7 @@
     },
     "CustomComponentDef": {
       "type": "object",
-      "required": ["params", "tree"],
+      "required": ["tree"],
       "additionalProperties": false,
       "properties": {
         "params": {
@@ -156,6 +160,7 @@
         "direction": { "type": "string", "enum": ["vertical", "horizontal"], "default": "vertical" },
         "gap": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
         "align": { "type": "string", "enum": ["start", "center", "end", "stretch"] },
+        "wrap": { "type": "boolean" },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       }
     },
@@ -170,6 +175,7 @@
         "style": { "$ref": "#/$defs/StyleMap" },
         "columns": { "oneOf": [{ "type": "string" }, { "type": "integer", "minimum": 1 }] },
         "gap": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
+        "rowGap": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       }
     },
@@ -183,6 +189,7 @@
         "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
         "style": { "$ref": "#/$defs/StyleMap" },
         "showProgress": { "type": "boolean" },
+        "allowSkip": { "type": "boolean" },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       }
     },
@@ -211,7 +218,9 @@
         "bind": { "type": "string" },
         "placeholder": { "type": "string" },
         "maxLines": { "type": "integer", "minimum": 1 },
-        "inputMode": { "type": "string" }
+        "inputMode": { "type": "string" },
+        "prefix": { "type": "string" },
+        "suffix": { "type": "string" }
       }
     },
     "NumberInput": {
@@ -226,7 +235,9 @@
         "bind": { "type": "string" },
         "step": { "type": "number" },
         "min": { "type": "number" },
-        "max": { "type": "number" }
+        "max": { "type": "number" },
+        "showStepper": { "type": "boolean" },
+        "locale": { "type": "string" }
       }
     },
     "DatePicker": {
@@ -241,7 +252,8 @@
         "bind": { "type": "string" },
         "format": { "type": "string" },
         "minDate": { "type": "string" },
-        "maxDate": { "type": "string" }
+        "maxDate": { "type": "string" },
+        "showTime": { "type": "boolean" }
       }
     },
     "Select": {
@@ -255,7 +267,8 @@
         "style": { "$ref": "#/$defs/StyleMap" },
         "bind": { "type": "string" },
         "searchable": { "type": "boolean" },
-        "placeholder": { "type": "string" }
+        "placeholder": { "type": "string" },
+        "clearable": { "type": "boolean" }
       }
     },
     "CheckboxGroup": {
@@ -298,7 +311,8 @@
         "bind": { "type": "string" },
         "accept": { "type": "string" },
         "maxSize": { "type": "integer" },
-        "multiple": { "type": "boolean" }
+        "multiple": { "type": "boolean" },
+        "dragDrop": { "type": "boolean" }
       }
     },
 
@@ -353,6 +367,7 @@
         "style": { "$ref": "#/$defs/StyleMap" },
         "title": { "type": "string" },
         "subtitle": { "type": "string" },
+        "elevation": { "type": "integer", "minimum": 0 },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       }
     },
@@ -411,6 +426,8 @@
         "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
         "style": { "$ref": "#/$defs/StyleMap" },
         "position": { "type": "string", "enum": ["top", "bottom", "left", "right"], "default": "top" },
+        "tabLabels": { "type": "array", "items": { "type": "string" } },
+        "defaultTab": { "type": "integer", "minimum": 0 },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       }
     },
@@ -424,6 +441,7 @@
         "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
         "style": { "$ref": "#/$defs/StyleMap" },
         "allowMultiple": { "type": "boolean" },
+        "defaultOpen": { "type": "integer", "minimum": 0 },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       }
     },
@@ -438,7 +456,8 @@
         "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
         "style": { "$ref": "#/$defs/StyleMap" },
         "bind": { "type": "string" },
-        "columns": { "type": "integer", "minimum": 1 }
+        "columns": { "type": "integer", "minimum": 1 },
+        "orientation": { "type": "string", "enum": ["horizontal", "vertical"] }
       }
     },
     "MoneyInput": {
@@ -452,8 +471,8 @@
         "style": { "$ref": "#/$defs/StyleMap" },
         "bind": { "type": "string" },
         "currency": { "type": "string" },
-        "prefix": { "type": "string" },
-        "suffix": { "type": "string" }
+        "showCurrency": { "type": "boolean" },
+        "locale": { "type": "string" }
       }
     },
     "Slider": {
@@ -468,7 +487,9 @@
         "bind": { "type": "string" },
         "min": { "type": "number" },
         "max": { "type": "number" },
-        "step": { "type": "number" }
+        "step": { "type": "number" },
+        "showValue": { "type": "boolean" },
+        "showTicks": { "type": "boolean" }
       }
     },
     "Rating": {
@@ -482,7 +503,8 @@
         "style": { "$ref": "#/$defs/StyleMap" },
         "bind": { "type": "string" },
         "max": { "type": "integer", "minimum": 1 },
-        "icon": { "type": "string" }
+        "icon": { "type": "string", "enum": ["star", "heart", "circle"] },
+        "allowHalf": { "type": "boolean" }
       }
     },
     "Signature": {
@@ -496,6 +518,8 @@
         "style": { "$ref": "#/$defs/StyleMap" },
         "bind": { "type": "string" },
         "strokeColor": { "type": "string" },
+        "height": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
+        "penWidth": { "type": "number" },
         "clearable": { "type": "boolean" }
       }
     },
@@ -510,7 +534,8 @@
         "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
         "style": { "$ref": "#/$defs/StyleMap" },
         "severity": { "type": "string", "enum": ["info", "success", "warning", "error"] },
-        "text": { "type": "string" }
+        "text": { "type": "string" },
+        "dismissible": { "type": "boolean" }
       }
     },
     "Badge": {
@@ -523,7 +548,7 @@
         "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
         "style": { "$ref": "#/$defs/StyleMap" },
         "text": { "type": "string" },
-        "variant": { "type": "string" }
+        "variant": { "type": "string", "enum": ["default", "primary", "success", "warning", "error"] }
       }
     },
     "ProgressBar": {
@@ -538,7 +563,8 @@
         "bind": { "type": "string" },
         "value": { "type": "number" },
         "max": { "type": "number" },
-        "label": { "type": "string" }
+        "label": { "type": "string" },
+        "showPercent": { "type": "boolean" }
       }
     },
     "Summary": {
@@ -585,7 +611,10 @@
               "bind": { "type": "string" }
             }
           }
-        }
+        },
+        "showRowNumbers": { "type": "boolean" },
+        "allowAdd": { "type": "boolean" },
+        "allowRemove": { "type": "boolean" }
       }
     },
 
@@ -599,6 +628,8 @@
         "responsive": { "$ref": "#/$defs/ResponsiveOverrides" },
         "style": { "$ref": "#/$defs/StyleMap" },
         "position": { "type": "string", "enum": ["left", "right"], "default": "left" },
+        "title": { "type": "string" },
+        "width": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       }
     },
@@ -613,6 +644,9 @@
         "style": { "$ref": "#/$defs/StyleMap" },
         "title": { "type": "string" },
         "size": { "type": "string", "enum": ["sm", "md", "lg", "xl", "full"] },
+        "trigger": { "type": "string", "enum": ["button", "auto"] },
+        "triggerLabel": { "type": "string" },
+        "closable": { "type": "boolean" },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       }
     },

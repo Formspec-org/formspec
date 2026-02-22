@@ -588,7 +588,7 @@ The root of a Mapping Document is a JSON object. The following table enumerates 
 | `definitionRef` | `string` | REQUIRED | — | URI or stable identifier of the target Formspec Definition. |
 | `definitionVersion` | `string` | REQUIRED | — | Semver range (per [node-semver](https://github.com/npm/node-semver) syntax) of compatible Formspec Definition versions (e.g. `">=1.0.0 <2.0.0"`). |
 | `targetSchema` | `object` | REQUIRED | — | Descriptor for the external schema. See [§ 3.2](#32-target-schema-descriptor). |
-| `direction` | `string` | OPTIONAL | `"both"` | Execution direction. One of `"forward"` (source → target), `"reverse"` (target → source), or `"both"`. |
+| `direction` | `string` | OPTIONAL | `"forward"` | Execution direction. One of `"forward"` (source → target), `"reverse"` (target → source), or `"both"`. |
 | `defaults` | `object` | OPTIONAL | `{}` | A flat or nested object whose leaf values are applied to target fields that are not covered by any Field Rule. Keys MUST be valid target paths. |
 | `autoMap` | `boolean` | OPTIONAL | `false` | When `true`, fields not mentioned in `rules` are mapped by matching path using the `"preserve"` transform. See [§ 3.5](#35-auto-mapping). |
 | `rules` | `array` | REQUIRED | — | Ordered array of Field Rule objects. See [§ 3.3](#33-field-rule-structure). The array MUST contain at least one element. |
