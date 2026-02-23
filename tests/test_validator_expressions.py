@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from validator.dependencies import analyze_dependencies
-from validator.expressions import compile_expressions
+from formspec.validator.dependencies import analyze_dependencies
+from formspec.validator.expressions import compile_expressions
 
 
 def _definition_with_binds(binds: list[dict]) -> dict:

@@ -6,8 +6,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from fel.errors import FelSyntaxError
-from fel.parser import parse
+from formspec.fel.errors import FelSyntaxError
+from formspec.fel.parser import parse
 
 from .diagnostic import LintDiagnostic
 from .references import canonical_item_path

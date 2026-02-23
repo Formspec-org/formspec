@@ -4,8 +4,8 @@ import pytest
 from decimal import Decimal
 from datetime import date
 
-import fel
-from fel import (
+import formspec.fel as fel
+from formspec.fel import (
     evaluate, FelNull, FelNumber, FelString, FelBoolean, FelDate,
     FelArray, FelTrue, FelFalse, is_null,
 )
@@ -270,7 +270,7 @@ class TestFieldRefs:
         """Bare $ outside repeat context resolves to the entire data object."""
         r = val('$', {'x': 1})
         # Returns a FelObject wrapping the data
-        from fel import FelObject
+        from formspec.fel import FelObject
         assert isinstance(r, FelObject)
 
     def test_wildcard(self):
@@ -350,7 +350,7 @@ class TestReviewBugFixes:
 
     def test_from_python_bad_money(self):
         """Dicts with amount/currency but bad amount should be objects."""
-        from fel.types import from_python, FelObject
+        from formspec.fel.types import from_python, FelObject
         r = from_python({'amount': 'not-a-number', 'currency': 'USD'})
         assert isinstance(r, FelObject)
 

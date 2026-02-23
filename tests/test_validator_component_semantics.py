@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from validator.component import lint_component_semantics
+from formspec.validator.component import lint_component_semantics
 
 
 def _definition() -> dict:

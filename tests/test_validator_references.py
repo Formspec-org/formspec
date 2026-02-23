@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from validator.references import check_references
-from validator.tree import build_item_index
+from formspec.validator.references import check_references
+from formspec.validator.tree import build_item_index
 
 
 def _doc_with_repeat_group() -> dict:

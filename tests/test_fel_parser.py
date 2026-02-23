@@ -4,14 +4,14 @@ import pytest
 from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal
 
-from fel.parser import parse, RESERVED_WORDS
-from fel.ast_nodes import (
+from formspec.fel.parser import parse, RESERVED_WORDS
+from formspec.fel.ast_nodes import (
     ArrayLiteral, BinaryOp, BooleanLiteral, ContextRef, DateLiteral,
     DotSegment, FieldRef, FunctionCall, IfThenElse, IndexSegment,
     LetBinding, MembershipOp, NullLiteral, NumberLiteral, ObjectLiteral,
     PostfixAccess, StringLiteral, TernaryOp, UnaryOp, WildcardSegment,
 )
-from fel.errors import FelSyntaxError
+from formspec.fel.errors import FelSyntaxError
 
 
 class TestLiterals:

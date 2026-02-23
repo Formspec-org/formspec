@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from validator.__main__ import main
+from formspec.validator.__main__ import main
 
 
 def test_cli_json_output_and_exit_code(tmp_path, capsys) -> None:

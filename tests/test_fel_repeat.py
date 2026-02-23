@@ -10,11 +10,11 @@ these tests construct Evaluator + Environment directly.
 import pytest
 from decimal import Decimal
 
-from fel.parser import parse
-from fel.evaluator import Evaluator
-from fel.environment import Environment, RepeatContext
-from fel.functions import build_default_registry
-from fel.types import (
+from formspec.fel.parser import parse
+from formspec.fel.evaluator import Evaluator
+from formspec.fel.environment import Environment, RepeatContext
+from formspec.fel.functions import build_default_registry
+from formspec.fel.types import (
     FelNull, FelNumber, FelString, FelObject, FelArray,
     FelTrue, FelFalse, FelValue, fel_bool, from_python, is_null,
     fel_decimal,

@@ -900,7 +900,7 @@ class TestFelSpecContracts:
         """Every FEL expression in §7 examples must parse without error."""
         import re
         import json as json_mod
-        from fel.parser import parse as fel_parse
+        from formspec.fel.parser import parse as fel_parse
 
         spec_path = SPEC_DIR / 'core' / 'spec.md'
         content = spec_path.read_text()
@@ -952,7 +952,7 @@ class TestFelSpecContracts:
     def test_s3_11_reserved_words_subset_of_parser(self):
         """§3.11 reserved words are a subset of the parser's RESERVED_WORDS."""
         import re
-        from fel.parser import RESERVED_WORDS
+        from formspec.fel.parser import RESERVED_WORDS
 
         content = (SPEC_DIR / 'core' / 'spec.md').read_text()
         s311_start = content.find('### 3.11 Reserved Words')
@@ -970,7 +970,7 @@ class TestFelSpecContracts:
     def test_s3_5_builtin_functions_match_registry(self):
         """All §3.5 function names exist in the built-in registry."""
         import re
-        from fel.functions import build_default_registry
+        from formspec.fel.functions import build_default_registry
 
         content = (SPEC_DIR / 'core' / 'spec.md').read_text()
 
@@ -999,7 +999,7 @@ class TestFelSpecContracts:
 
     def test_s3_4_type_names_from_typeof(self):
         """typeOf returns only the type names defined in §3.4."""
-        from fel import evaluate, FelString
+        from formspec.fel import evaluate, FelString
         import datetime
         from decimal import Decimal as D
 
@@ -1022,7 +1022,7 @@ class TestFelSpecContracts:
         """Expressions from §7.3 (repeatable rows) form a DAG."""
         import re
         import json as json_mod
-        from fel import extract_dependencies
+        from formspec.fel import extract_dependencies
 
         content = (SPEC_DIR / 'core' / 'spec.md').read_text()
         s73_start = content.find('### 7.3')
@@ -1084,7 +1084,7 @@ class TestFelSpecContracts:
     def test_s3_5_no_extra_registry_functions(self):
         """Registry doesn't contain functions absent from the spec."""
         import re
-        from fel.functions import build_default_registry
+        from formspec.fel.functions import build_default_registry
 
         content = (SPEC_DIR / 'core' / 'spec.md').read_text()
 

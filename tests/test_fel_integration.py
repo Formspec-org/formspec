@@ -8,14 +8,14 @@ exercising parsing → environment → evaluation → typed results.
 import pytest
 from decimal import Decimal
 
-from fel import (
+from formspec.fel import (
     evaluate, parse, extract_dependencies,
     FelNull, FelNumber, FelString, FelBoolean, FelTrue, FelFalse,
     FelArray, FelMoney, FelObject, is_null, from_python,
     Environment, RepeatContext, MipState, Evaluator, EvalResult,
 )
-from fel.functions import build_default_registry
-from fel.types import fel_decimal, _FEL_CONTEXT
+from formspec.fel.functions import build_default_registry
+from formspec.fel.types import fel_decimal, _FEL_CONTEXT
 
 
 class TestTaxFormCalculation:

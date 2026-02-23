@@ -12,8 +12,8 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from adapters import get_adapter, JsonAdapter, XmlAdapter, CsvAdapter
-from adapters.base import Adapter
+from formspec.adapters import get_adapter, JsonAdapter, XmlAdapter, CsvAdapter
+from formspec.adapters.base import Adapter
 
 
 # ===================================================================

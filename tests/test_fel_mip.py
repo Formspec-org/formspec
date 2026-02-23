@@ -6,11 +6,11 @@ evaluate correctly against the MipState entries in the environment.
 
 import pytest
 
-from fel.parser import parse
-from fel.evaluator import Evaluator
-from fel.environment import Environment, MipState
-from fel.functions import build_default_registry
-from fel.types import FelNull, FelTrue, FelFalse, FelString, is_null
+from formspec.fel.parser import parse
+from formspec.fel.evaluator import Evaluator
+from formspec.fel.environment import Environment, MipState
+from formspec.fel.functions import build_default_registry
+from formspec.fel.types import FelNull, FelTrue, FelFalse, FelString, is_null
 
 
 def _eval_with_mip(expr_str, mip_states, data=None):

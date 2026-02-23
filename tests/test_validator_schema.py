@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from validator.schema import SchemaValidator
+from formspec.validator.schema import SchemaValidator
 
 
 def test_detect_definition_doc_type() -> None:

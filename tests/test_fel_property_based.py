@@ -10,13 +10,13 @@ from decimal import Decimal
 from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
 
-from fel import (
+from formspec.fel import (
     evaluate, parse,
     FelNull, FelNumber, FelString, FelBoolean, FelTrue, FelFalse,
     FelArray, FelObject, FelMoney, is_null, from_python, to_python,
 )
-from fel.types import fel_decimal
-from fel.errors import FelSyntaxError
+from formspec.fel.types import fel_decimal
+from formspec.fel.errors import FelSyntaxError
 
 
 # ---------------------------------------------------------------------------

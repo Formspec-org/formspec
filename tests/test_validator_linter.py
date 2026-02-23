@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from validator.linter import FormspecLinter
-from validator.policy import LintPolicy
+from formspec.validator.linter import FormspecLinter
+from formspec.validator.policy import LintPolicy
 
 
 def test_schema_only_skips_semantic_passes() -> None:

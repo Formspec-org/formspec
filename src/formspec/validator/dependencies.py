@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from fel.dependencies import extract_dependencies as extract_ast_dependencies
+from formspec.fel.dependencies import extract_dependencies as extract_ast_dependencies
 
 from .diagnostic import LintDiagnostic
 from .expressions import CompiledExpression

@@ -4,7 +4,7 @@ import pytest
 from decimal import Decimal
 from datetime import date
 
-from fel import evaluate, FelNull, FelNumber, FelString, FelArray, is_null
+from formspec.fel import evaluate, FelNull, FelNumber, FelString, FelArray, is_null
 
 
 def val(expr, data=None):
@@ -15,7 +15,7 @@ def pv(expr, data=None):
     v = val(expr, data)
     if isinstance(v, FelNumber): return v.value
     if isinstance(v, FelString): return v.value
-    from fel import FelBoolean, FelDate
+    from formspec.fel import FelBoolean, FelDate
     if isinstance(v, FelBoolean): return v.value
     if isinstance(v, FelDate): return v.value
     if is_null(v): return None
@@ -267,7 +267,7 @@ class TestCastFunctions:
 
 class TestMoneyFunctions:
     def test_money_construct(self):
-        from fel import FelMoney
+        from formspec.fel import FelMoney
         r = val("money(100, 'USD')")
         assert isinstance(r, FelMoney)
         assert r.amount == Decimal('100') and r.currency == 'USD'
@@ -279,7 +279,7 @@ class TestMoneyFunctions:
         assert pv("moneyCurrency(money(50, 'USD'))") == 'USD'
 
     def test_moneyAdd(self):
-        from fel import FelMoney
+        from formspec.fel import FelMoney
         r = val("moneyAdd(money(10, 'USD'), money(20, 'USD'))")
         assert isinstance(r, FelMoney)
         assert r.amount == Decimal('30')
@@ -314,7 +314,7 @@ class TestSelectedFunction:
 class TestMoneySum:
 
     def test_basic_sum(self):
-        from fel import FelMoney
+        from formspec.fel import FelMoney
         r = val("moneySum([money(10, 'USD'), money(20, 'USD')])")
         assert isinstance(r, FelMoney)
         assert r.amount == Decimal('30') and r.currency == 'USD'
@@ -417,7 +417,7 @@ class TestNumberToStrRegression:
 class TestNowFunction:
 
     def test_now_returns_date_type(self):
-        from fel import FelDate
+        from formspec.fel import FelDate
         r = val('now()')
         assert isinstance(r, FelDate)
 

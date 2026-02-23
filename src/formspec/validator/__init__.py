@@ -1,5 +1,7 @@
-"""Compatibility namespace for `python -m formspec.validator`."""
+"""Formspec static linter API."""
 
-from validator import FormspecLinter, LintDiagnostic, LintPolicy, lint, make_policy
+from .diagnostic import LintDiagnostic
+from .linter import FormspecLinter, lint
+from .policy import LintPolicy, make_policy
 
 __all__ = ["FormspecLinter", "LintDiagnostic", "LintPolicy", "make_policy", "lint"]

@@ -3,22 +3,22 @@
 import pytest
 from decimal import Decimal
 
-import fel
-from fel import (
+import formspec.fel as fel
+from formspec.fel import (
     parse, evaluate, extract_dependencies,
     FelNull, FelNumber, FelString, FelTrue, FelFalse,
     is_null, EvalResult, DependencySet,
 )
-from fel.errors import FelSyntaxError, FelDefinitionError
-from fel.extensions import register_extension
-from fel.functions import build_default_registry, BUILTIN_NAMES
-from fel.parser import RESERVED_WORDS
+from formspec.fel.errors import FelSyntaxError, FelDefinitionError
+from formspec.fel.extensions import register_extension
+from formspec.fel.functions import build_default_registry, BUILTIN_NAMES
+from formspec.fel.parser import RESERVED_WORDS
 
 
 class TestPublicAPI:
     def test_parse_returns_ast(self):
         ast = parse('1 + 2')
-        from fel.ast_nodes import BinaryOp
+        from formspec.fel.ast_nodes import BinaryOp
         assert isinstance(ast, BinaryOp)
 
     def test_evaluate_returns_eval_result(self):
@@ -102,7 +102,7 @@ class TestExtensions:
             register_extension(reg, 'sum', lambda: None, 1)
 
     def test_extension_function_called(self):
-        from fel.functions import FuncDef
+        from formspec.fel.functions import FuncDef
         def double(x):
             return FelNumber(x.value * 2)
         ext = {'double': FuncDef('double', double, 1, 1, True, False)}
@@ -165,7 +165,7 @@ class TestConformanceGrammar:
 
     def test_point7_precedence_preserved(self):
         ast = parse('1 + 2 * 3')
-        from fel.ast_nodes import BinaryOp
+        from formspec.fel.ast_nodes import BinaryOp
         assert ast.op == '+'
         assert ast.right.op == '*'
 
@@ -246,7 +246,7 @@ class TestSpecExamples:
 
     def test_today_returns_date(self):
         from datetime import date
-        from fel import FelDate
+        from formspec.fel import FelDate
         r = evaluate('today()')
         assert isinstance(r.value, FelDate)
 
@@ -268,7 +268,7 @@ class TestSpecSection3Examples:
         """$lineItems[*].amount extracts an array of amounts."""
         data = {'lineItems': [{'amount': 100}, {'amount': 200}, {'amount': 300}]}
         r = evaluate('$lineItems[*].amount', data)
-        from fel import FelArray, FelNumber
+        from formspec.fel import FelArray, FelNumber
         assert isinstance(r.value, FelArray)
         assert len(r.value.elements) == 3
         assert r.value.elements[1].value == Decimal('200')
@@ -319,7 +319,7 @@ class TestSpecSection3Examples:
             'taxRate': 2,
         }
         r = evaluate('$lineItems[*].amount * $taxRate', data)
-        from fel import FelArray
+        from formspec.fel import FelArray
         assert isinstance(r.value, FelArray)
         vals = [e.value for e in r.value.elements]
         assert vals[0] == Decimal('400')

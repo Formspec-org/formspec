@@ -39,7 +39,7 @@ SCHEMA_FILES: dict[DocumentType, str] = {
 
 
 def _schemas_dir() -> Path:
-    return Path(__file__).resolve().parents[2] / "schemas"
+    return Path(__file__).resolve().parents[3] / "schemas"
 
 
 def _load_schema(path: Path) -> dict[str, Any]:
