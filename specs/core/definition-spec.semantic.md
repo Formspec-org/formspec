@@ -1,0 +1,10 @@
+- Definition identity is immutable at `(url, version)` and governs response pinning, compatibility checks, and migration lineage.
+- Item tree semantics: `items` declare structure with stable `key` identifiers; keys are the primary binding surface across rendering, validation, and mapping layers.
+- Behavioral model is declarative: binds and shapes encode required/readonly/relevant/constraint/calculate logic evaluated by conformant processors at runtime.
+- Publication lifecycle (`status`) and version metadata (`versionAlgorithm`, `derivedFrom`, migrations) determine how definitions advance and interoperate.
+- Default processing behavior (for example `nonRelevantBehavior`) affects runtime data retention semantics for non-relevant fields.
+- Presentation hints (`formPresentation` and per-item presentation metadata) are advisory and subordinate to higher-tier theme/component layers.
+- External composition points (instances, optionSets, extensions, optional `$ref` assembly mechanisms) expand authoring capability while preserving core validation contracts.
+- Closed-world validation still applies: unknown non-extension properties should be rejected even when processors support additional extension namespaces.
+- Conformance expectation: processor evaluation phases must remain deterministic so equal input state yields equal computed binds/shapes/validation outputs.
+- Migration semantics: changelog/migration artifacts should preserve key intent and avoid silent destructive transforms unless explicitly declared.

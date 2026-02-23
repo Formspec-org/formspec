@@ -15,15 +15,33 @@
   "properties": {
     "$formspec": {
       "type": "string",
-      "const": "1.0"
+      "const": "1.0",
+      "description": "Definition specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for definition schema compatibility."
+      }
     },
     "url": {
       "type": "string",
-      "format": "uri"
+      "format": "uri",
+      "description": "Canonical URI identifier of the logical form.",
+      "examples": ["https://example.gov/forms/annual-report"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Stable identifier of the form across versions."
+      }
     },
     "version": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Version identifier of this specific Definition document.",
+      "examples": ["2025.1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version component of the immutable (url, version) identity tuple."
+      }
     },
     "versionAlgorithm": {
       "type": "string",
@@ -41,7 +59,13 @@
         "draft",
         "active",
         "retired"
-      ]
+      ],
+      "description": "Definition lifecycle state.",
+      "examples": ["draft", "active"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Controls publication lifecycle and authoring/production usage."
+      }
     },
     "derivedFrom": {
       "oneOf": [
@@ -72,7 +96,13 @@
       "pattern": "^[a-zA-Z][a-zA-Z0-9\\-]*$"
     },
     "title": {
-      "type": "string"
+      "type": "string",
+      "description": "Human-readable definition title.",
+      "examples": ["Annual Financial Report"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Display name used by authoring and rendering tools."
+      }
     },
     "description": {
       "type": "string"
@@ -85,6 +115,21 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/Item"
+      },
+      "description": "Root item tree defining fields, groups, and display nodes.",
+      "examples": [
+        [
+          {
+            "key": "projectName",
+            "type": "field",
+            "label": "Project Name",
+            "dataType": "string"
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Primary structural definition of the form content."
       }
     },
     "binds": {

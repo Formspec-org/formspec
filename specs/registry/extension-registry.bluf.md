@@ -1,0 +1,4 @@
+- This document defines the registry format for publishing Formspec extension metadata.
+- A valid registry document requires `$formspecRegistry`, `publisher`, `published`, and `entries`.
+- Registry entries standardize naming, lifecycle, and compatibility bounds for extension interoperability.
+- This BLUF is governed by `schemas/registry.schema.json`; generated references are the structural contract.

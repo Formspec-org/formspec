@@ -12,23 +12,66 @@
   "properties": {
     "$formspecRegistry": {
       "type": "string",
-      "const": "1.0"
+      "const": "1.0",
+      "description": "Registry specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for registry document compatibility."
+      }
     },
     "$schema": {
       "type": "string",
       "format": "uri"
     },
     "publisher": {
-      "$ref": "#/$defs/Publisher"
+      "$ref": "#/$defs/Publisher",
+      "description": "Organization publishing this registry document.",
+      "examples": [
+        {
+          "name": "Example Standards Group",
+          "url": "https://example.org"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Publisher identity and contact provenance for this registry."
+      }
     },
     "published": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "ISO 8601 timestamp indicating when this registry version was published.",
+      "examples": ["2025-07-10T14:30:00Z"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Publication timestamp used for freshness and cache validation."
+      }
     },
     "entries": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/RegistryEntry"
+      },
+      "description": "Array of extension registry entries.",
+      "examples": [
+        [
+          {
+            "name": "x-example-currency",
+            "category": "dataType",
+            "version": "1.0.0",
+            "status": "stable",
+            "description": "Example custom currency data type.",
+            "compatibility": {
+              "formspecVersion": ">=1.0.0 <2.0.0"
+            },
+            "baseType": "decimal"
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Primary catalog of extension definitions exposed by the registry."
       }
     },
     "extensions": {

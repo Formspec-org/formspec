@@ -1,0 +1,4 @@
+- This section defines the standalone ValidationReport artifact for aggregated validation state.
+- A valid validation report requires `valid`, `results`, `counts`, and `timestamp`.
+- The `valid` flag is derived from error-level findings, while `counts` provides severity totals.
+- This BLUF is governed by `schemas/validationReport.schema.json`; generated references are the structural contract.

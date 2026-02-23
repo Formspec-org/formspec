@@ -1,0 +1,9 @@
+- Registry scope: documents are metadata catalogs, not centralized authorities; interoperability comes from shared format and naming rules.
+- Entry identity: extension identity is effectively `(name, version)` and must be collision-free within a published registry set.
+- Category semantics: categories constrain expected metadata fields and consumer behavior (data type, function, constraint, property, namespace).
+- Naming contract: `x-` prefix and category-aware naming patterns are mandatory for portable extension discovery.
+- Lifecycle handling: `draft`, `stable`, `deprecated`, and `retired` states should drive renderer/tool warnings and adoption policies.
+- Compatibility bounds: extension compatibility metadata should be enforced at consumption time with clear diagnostics on mismatch.
+- Publisher provenance: publisher metadata establishes trust and support contact paths for extension consumers.
+- Discovery behavior: well-known registry endpoints are advisory discovery mechanisms; offline/local registry bundles remain valid.
+- Processor conformance: malformed entries, duplicate identities, and invalid category fields must be rejected instead of silently accepted.

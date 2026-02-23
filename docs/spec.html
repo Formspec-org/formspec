@@ -95,6 +95,8 @@ Extension Functions</a></li>
 <li><a href="#definition-schema" id="toc-definition-schema">4.
 Definition Schema</a>
 <ul>
+<li><a href="#bottom-line-up-front" id="toc-bottom-line-up-front">4.0
+Bottom Line Up Front</a></li>
 <li><a href="#top-level-structure" id="toc-top-level-structure">4.1
 Top-Level Structure</a></li>
 <li><a href="#item-schema" id="toc-item-schema">4.2 Item Schema</a></li>
@@ -169,13 +171,9 @@ Failure</a></li>
 <li><a href="#extension-points" id="toc-extension-points">8. Extension
 Points</a>
 <ul>
-<li><a href="#custom-data-types" id="toc-custom-data-types">8.1 Custom
-Data Types</a></li>
-<li><a href="#custom-functions" id="toc-custom-functions">8.2 Custom
-Functions</a></li>
-<li><a href="#custom-validation-constraint-components"
-id="toc-custom-validation-constraint-components">8.3 Custom Validation
-Constraint Components</a></li>
+<li><a href="#custom-data-types-functions-and-constraints"
+id="toc-custom-data-types-functions-and-constraints">8.1 Custom Data
+Types, Functions, and Constraints</a></li>
 <li><a href="#extension-properties" id="toc-extension-properties">8.4
 Extension Properties</a></li>
 <li><a href="#extension-namespaces" id="toc-extension-namespaces">8.5
@@ -443,9 +441,7 @@ call.</p>
 <p>A conformant <strong>Extended</strong> processor MUST support
 Formspec Core plus:</p>
 <ol type="1">
-<li>Extension data types, functions, and constraint components
-(§8).</li>
-<li><code>mustUnderstand</code> extension processing (§8.4).</li>
+<li>Extension properties (§8).</li>
 <li>Screener routing (§4.7).</li>
 <li>Modular composition and assembly (§6.6).</li>
 <li>Version migration maps (§6.7).</li>
@@ -464,10 +460,6 @@ error.</li>
 Non-relevant fields are exempt from all validation (§5.6 rule 1).</li>
 <li><strong>Block data persistence based on validation state.</strong>
 Validation and persistence are independent operations (§5.5).</li>
-<li><strong>Silently drop unknown <code>mustUnderstand</code>
-extensions.</strong> If an extension has
-<code>mustUnderstand: true</code> and the processor does not support it,
-the processor MUST report an error (§8.4).</li>
 </ol>
 <hr />
 <h2 id="conceptual-model">2. Conceptual Model</h2>
@@ -937,90 +929,119 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="
 <p>A <strong>Response</strong> is a completed or in-progress Instance
 pinned to a specific Definition version. It is the unit of data capture
 — the filled-in form.</p>
-<p>A Response MUST contain:</p>
-<table>
+<p>The canonical structural contract for Response properties is
+generated from <code>schemas/response.schema.json</code>:</p>
+<!-- schema-ref:start id=core-response-top-level schema=schemas/response.schema.json pointers=# -->
+<!-- generated:schema-ref id=core-response-top-level -->
+<table style="width:100%;">
 <colgroup>
-<col style="width: 34%" />
-<col style="width: 20%" />
-<col style="width: 44%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th>Property</th>
+<th>Pointer</th>
+<th>Field</th>
 <th>Type</th>
+<th>Required</th>
+<th>Notes</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>definitionUrl</code></td>
-<td>string (URI)</td>
-<td>The canonical URL of the Definition.</td>
-</tr>
-<tr class="even">
-<td><code>definitionVersion</code></td>
-<td>string (semver)</td>
-<td>The exact version of the Definition against which this Response was
-created.</td>
-</tr>
-<tr class="odd">
-<td><code>status</code></td>
-<td>string</td>
-<td>One of: <code>"in-progress"</code>, <code>"completed"</code>,
-<code>"amended"</code>, <code>"stopped"</code>.</td>
-</tr>
-<tr class="even">
-<td><code>data</code></td>
-<td>object</td>
-<td>The primary Instance — the form data.</td>
-</tr>
-<tr class="odd">
-<td><code>authored</code></td>
-<td>string (ISO 8601 date-time)</td>
-<td>When the Response was last modified.</td>
-</tr>
-</tbody>
-</table>
-<p>A Response MAY contain:</p>
-<table>
-<colgroup>
-<col style="width: 34%" />
-<col style="width: 20%" />
-<col style="width: 44%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Property</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>id</code></td>
-<td>string</td>
-<td>A globally unique identifier (e.g., UUID).</td>
-</tr>
-<tr class="even">
+<td><code>#/properties/author</code></td>
 <td><code>author</code></td>
-<td>object</td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
 <td>Identifier and display name of the person or system that authored
 the Response.</td>
 </tr>
+<tr class="even">
+<td><code>#/properties/authored</code></td>
+<td><code>authored</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>When the Response was last modified (ISO 8601 date-time).</td>
+</tr>
 <tr class="odd">
-<td><code>subject</code></td>
-<td>object</td>
-<td>The entity this response is about. Contains <code>id</code> (string,
-REQUIRED) and <code>type</code> (string, OPTIONAL). E.g.,
-<code>{ "id": "grant-12345", "type": "Grant" }</code>.</td>
+<td><code>#/properties/data</code></td>
+<td><code>data</code></td>
+<td><code>object</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>The primary Instance — the form data.</td>
 </tr>
 <tr class="even">
+<td><code>#/properties/definitionUrl</code></td>
+<td><code>definitionUrl</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>The canonical URL of the Definition.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/definitionVersion</code></td>
+<td><code>definitionVersion</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>The exact version of the Definition against which this Response was
+created.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/extensions</code></td>
+<td><code>extensions</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/id</code></td>
+<td><code>id</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>A globally unique identifier (e.g., UUID).</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/status</code></td>
+<td><code>status</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>enum: <code>“in-progress”</code>, <code>“completed”</code>,
+<code>“amended”</code>, <code>“stopped”</code>; critical</td>
+<td>The current status of this Response.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/subject</code></td>
+<td><code>subject</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>The entity this Response is about.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/validationResults</code></td>
 <td><code>validationResults</code></td>
-<td>array</td>
-<td>The most recent set of ValidationResult entries.</td>
+<td><code>array</code></td>
+<td>no</td>
+<td>—</td>
+<td>The most recent set of ValidationResult entries (§2.5.1).</td>
 </tr>
 </tbody>
 </table>
+<!-- schema-ref:end -->
+<p>The generated table above defines required and optional properties.
+In this spec section, prose requirements describe semantics that the
+schema alone cannot express.</p>
 <p>A Response references exactly one Definition by the tuple
 <code>(definitionUrl, definitionVersion)</code>. A conformant processor
 MUST reject a Response whose <code>definitionVersion</code> does not
@@ -1045,73 +1066,48 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="
 that makes external or supplemental data available to FEL expressions at
 runtime. Data Sources are the mechanism by which secondary instances
 (§2.1.2) are populated.</p>
-<p>Each Data Source MUST have:</p>
-<table>
-<colgroup>
-<col style="width: 34%" />
-<col style="width: 20%" />
-<col style="width: 44%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Property</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>name</code></td>
-<td>string</td>
-<td>A unique identifier within the Definition. This is the key used in
-<code>@instance('name')</code> references. MUST match
-<code>^[a-zA-Z_][a-zA-Z0-9_]*$</code>.</td>
-</tr>
-<tr class="even">
-<td><code>type</code></td>
-<td>string</td>
-<td>One of <code>"inline"</code>, <code>"url"</code>, or
-<code>"function"</code>. See below.</td>
-</tr>
-</tbody>
-</table>
+<p>Each Data Source MUST have a <code>name</code> (string, unique
+identifier within the Definition, used in <code>@instance('name')</code>
+references, MUST match <code>^[a-zA-Z_][a-zA-Z0-9_]*$</code>).</p>
 <p>Each Data Source MUST also declare its content via one of the
-following mechanisms, depending on <code>type</code>:</p>
+following mechanisms:</p>
 <table>
 <colgroup>
-<col style="width: 20%" />
-<col style="width: 47%" />
 <col style="width: 32%" />
+<col style="width: 29%" />
+<col style="width: 38%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th><code>type</code></th>
-<th>Additional property</th>
+<th>Mechanism</th>
+<th>Property</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>"inline"</code></td>
+<td><strong>Inline</strong></td>
 <td><code>data</code> (JSON object or array)</td>
 <td>The data is embedded directly in the Definition document. Suitable
 for small, static lookup tables (e.g., country codes, status
 enums).</td>
 </tr>
 <tr class="even">
-<td><code>"url"</code></td>
-<td><code>url</code> (string, URI)</td>
+<td><strong>URL</strong></td>
+<td><code>source</code> (string, URI)</td>
 <td>The data is fetched from an external endpoint at form-load time. The
 response MUST be a JSON document. The processor MUST fetch the data
 before the first Rebuild phase. If the fetch fails, the processor MUST
 signal a load error.</td>
 </tr>
 <tr class="odd">
-<td><code>"function"</code></td>
-<td><code>functionName</code> (string)</td>
-<td>The data is supplied by the host environment via a named callback
-registered with the processor. This allows integration with
-application-specific data layers without embedding URLs in the
+<td><strong>Host function</strong></td>
+<td><code>source</code> (string, <code>formspec-fn:</code> URI)</td>
+<td>The data is supplied by the host environment via a named callback.
+The URI scheme <code>formspec-fn:</code> identifies a host-registered
+function (e.g., <code>"formspec-fn:lookupPatient"</code>). The host maps
+the function name to a callback. This allows integration with
+application-specific data layers without embedding external URLs in the
 Definition.</td>
 </tr>
 </tbody>
@@ -1133,25 +1129,22 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb8-1"><a href="
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;dataSources&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;countryCodes&quot;</span><span class="fu">,</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;inline&quot;</span><span class="fu">,</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;data&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="fu">{</span> <span class="dt">&quot;code&quot;</span><span class="fu">:</span> <span class="st">&quot;US&quot;</span><span class="fu">,</span> <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;United States&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">{</span> <span class="dt">&quot;code&quot;</span><span class="fu">:</span> <span class="st">&quot;GB&quot;</span><span class="fu">,</span> <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;United Kingdom&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">{</span> <span class="dt">&quot;code&quot;</span><span class="fu">:</span> <span class="st">&quot;CA&quot;</span><span class="fu">,</span> <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;Canada&quot;</span> <span class="fu">}</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>      <span class="ot">]</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;priorYear&quot;</span><span class="fu">,</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;url&quot;</span><span class="fu">,</span></span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;url&quot;</span><span class="fu">:</span> <span class="st">&quot;https://api.example.org/responses/2024/{{respondentId}}&quot;</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;inventory&quot;</span><span class="fu">,</span></span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;function&quot;</span><span class="fu">,</span></span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;functionName&quot;</span><span class="fu">:</span> <span class="st">&quot;loadInventoryData&quot;</span></span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
-<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;data&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">{</span> <span class="dt">&quot;code&quot;</span><span class="fu">:</span> <span class="st">&quot;US&quot;</span><span class="fu">,</span> <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;United States&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="fu">{</span> <span class="dt">&quot;code&quot;</span><span class="fu">:</span> <span class="st">&quot;GB&quot;</span><span class="fu">,</span> <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;United Kingdom&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">{</span> <span class="dt">&quot;code&quot;</span><span class="fu">:</span> <span class="st">&quot;CA&quot;</span><span class="fu">,</span> <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;Canada&quot;</span> <span class="fu">}</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>      <span class="ot">]</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;priorYear&quot;</span><span class="fu">,</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;source&quot;</span><span class="fu">:</span> <span class="st">&quot;https://api.example.org/responses/2024/{{respondentId}}&quot;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;inventory&quot;</span><span class="fu">,</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;source&quot;</span><span class="fu">:</span> <span class="st">&quot;formspec-fn:loadInventoryData&quot;</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <p>These data sources are then referenced in FEL expressions:</p>
 <pre><code>@instance(&#39;priorYear&#39;).totalIncome
 @instance(&#39;countryCodes&#39;)  </code></pre>
@@ -3453,6 +3446,21 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb24-1"><a href=
 <hr />
 <hr />
 <h2 id="definition-schema">4. Definition Schema</h2>
+<h3 id="bottom-line-up-front">4.0 Bottom Line Up Front</h3>
+<!-- bluf:start file=definition-spec.bluf.md -->
+<ul>
+<li>This section defines the canonical Definition document shape for
+form structure and behavior declarations.</li>
+<li>A valid definition requires <code>$formspec</code>,
+<code>url</code>, <code>version</code>, <code>status</code>,
+<code>title</code>, and <code>items</code>.</li>
+<li>Definition identity is the immutable tuple
+<code>(url, version)</code>; processors must not silently substitute
+versions.</li>
+<li>This BLUF is governed by
+<code>schemas/definition.schema.json</code>; generated references are
+the structural contract. <!-- bluf:end --></li>
+</ul>
 <h3 id="top-level-structure">4.1 Top-Level Structure</h3>
 <p>A Formspec Definition is a JSON object. Conforming implementations
 MUST recognize the following top-level properties and MUST reject any
@@ -3478,191 +3486,211 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb25-1"><a href=
 <span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
 <span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{}</span></span>
 <span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<p>The properties are defined as follows:</p>
-<table>
+<p>The canonical structural contract for Definition top-level properties
+is generated from <code>schemas/definition.schema.json</code>:</p>
+<!-- schema-ref:start id=core-definition-top-level schema=schemas/definition.schema.json pointers=# -->
+<!-- generated:schema-ref id=core-definition-top-level -->
+<table style="width:100%;">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th>Property</th>
+<th>Pointer</th>
+<th>Field</th>
 <th>Type</th>
-<th>Cardinality</th>
+<th>Required</th>
+<th>Notes</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td><code>#/properties/$formspec</code></td>
 <td><code>$formspec</code></td>
-<td>string</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Specification version this Definition conforms to. MUST be the
-string <code>"1.0"</code> for Definitions governed by this
-specification. Implementations MUST reject Definitions whose
-<code>$formspec</code> value they do not support.</td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>const: <code>“1.0”</code>; critical</td>
+<td>Definition specification version. MUST be ‘1.0’.</td>
 </tr>
 <tr class="even">
-<td><code>url</code></td>
-<td>string (URI)</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Canonical identifier for this Definition. MUST be a syntactically
-valid URI as defined by <a
-href="https://www.ietf.org/rfc/rfc3986.txt">RFC 3986</a>. MUST be
-globally unique across all Formspec Definitions. The <code>url</code>
-does NOT change between versions of the same logical form — it
-identifies the <em>form</em>, not the <em>version</em>.</td>
-</tr>
-<tr class="odd">
-<td><code>version</code></td>
-<td>string</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Business version of the Definition. The format and comparison
-semantics are determined by <code>versionAlgorithm</code>. Together with
-<code>url</code>, the pair (<code>url</code>, <code>version</code>) MUST
-be globally unique.</td>
-</tr>
-<tr class="even">
-<td><code>versionAlgorithm</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Algorithm that governs interpretation and ordering of
-<code>version</code> strings. MUST be one of: <code>"semver"</code>,
-<code>"date"</code>, <code>"integer"</code>, <code>"natural"</code>.
-Default: <code>"semver"</code>. See §6.2 for semantics.</td>
-</tr>
-<tr class="odd">
-<td><code>status</code></td>
-<td>string</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Publication status. MUST be one of: <code>"draft"</code>,
-<code>"active"</code>, <code>"retired"</code>. Only Definitions with
-status <code>"active"</code> SHOULD be used when creating new Responses.
-See §6.3 for lifecycle rules.</td>
-</tr>
-<tr class="even">
-<td><code>derivedFrom</code></td>
-<td>string (URI)</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Canonical URL of a parent Definition from which this Definition was
-derived. MAY be version-pinned using the <code>url|version</code> syntax
-(e.g., <code>"https://example.gov/forms/annual-report|2024.1.0"</code>).
-See §6.5 for semantics.</td>
-</tr>
-<tr class="odd">
-<td><code>title</code></td>
-<td>string</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Human-readable name of the form. Implementations SHOULD display this
-to end users.</td>
-</tr>
-<tr class="even">
-<td><code>description</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Human-readable description. MAY contain Markdown formatting;
-implementations are NOT REQUIRED to render Markdown.</td>
-</tr>
-<tr class="odd">
-<td><code>items</code></td>
-<td>array of Item</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>The item tree. Contains the root-level Items that define the form’s
-structure. The array MAY be empty for a skeleton Definition, but the
-property itself MUST be present. See §4.2.</td>
-</tr>
-<tr class="even">
+<td><code>#/properties/binds</code></td>
 <td><code>binds</code></td>
-<td>array of Bind</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Behavioral declarations that attach expressions to data nodes. See
-§4.3.</td>
+<td><code>array</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
-<td><code>shapes</code></td>
-<td>array of Shape</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Validation rule sets. See §5.2.</td>
-</tr>
-<tr class="even">
-<td><code>instances</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Named secondary data sources. Keys are instance names; values are
-Instance objects. See §4.4.</td>
-</tr>
-<tr class="odd">
-<td><code>variables</code></td>
-<td>array of Variable</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Named computed values with lexical scoping. See §4.5.</td>
-</tr>
-<tr class="even">
-<td><code>nonRelevantBehavior</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Controls how non-relevant field values are handled in the submitted
-Response. MUST be one of <code>"remove"</code> (exclude non-relevant
-nodes — <strong>DEFAULT</strong>), <code>"empty"</code> (retain
-structure but set values to <code>null</code>), or <code>"keep"</code>
-(retain with current values intact). Individual Binds MAY override this
-per-path. See §5.6.</td>
-</tr>
-<tr class="odd">
-<td><code>optionSets</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Named, reusable option lists. Keys are set names; values are
-OptionSet objects. See §4.6.</td>
-</tr>
-<tr class="even">
-<td><code>screener</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Routing logic that classifies respondents and directs them to a
-target Definition. See §4.7.</td>
-</tr>
-<tr class="odd">
-<td><code>migrations</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Maps for transforming Responses from prior Definition versions to
-this version. See §6.7.</td>
-</tr>
-<tr class="even">
+<td><code>#/properties/date</code></td>
 <td><code>date</code></td>
-<td>string (ISO 8601 date)</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>The date this version of the Definition was published or last
-updated.</td>
-</tr>
-<tr class="odd">
-<td><code>name</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>A machine-friendly short identifier (ASCII letters, digits,
-hyphens). Intended for code generation and programmatic reference. MUST
-match <code>[a-zA-Z][a-zA-Z0-9\-]*</code>.</td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
-<td><code>extensions</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Extension namespace. Keys MUST be URIs identifying the extension.
-Implementations that do not recognize an extension MUST ignore it unless
-<code>mustUnderstand</code> is <code>true</code> (§8.4).</td>
+<td><code>#/properties/derivedFrom</code></td>
+<td><code>derivedFrom</code></td>
+<td><code>composite</code></td>
+<td>no</td>
+<td>—</td>
+<td>Parent definition. Either a URI string or an object with url and
+optional version.</td>
 </tr>
 <tr class="odd">
+<td><code>#/properties/description</code></td>
+<td><code>description</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/extensions</code></td>
+<td><code>extensions</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/formPresentation</code></td>
 <td><code>formPresentation</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Form-wide presentation defaults. All properties within are OPTIONAL
-and advisory. See §4.1.1.</td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>Form-wide presentation defaults per §4.1.1. All properties OPTIONAL
+and advisory.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/instances</code></td>
+<td><code>instances</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/items</code></td>
+<td><code>items</code></td>
+<td><code>array</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Root item tree defining fields, groups, and display nodes.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/migrations</code></td>
+<td><code>migrations</code></td>
+<td><code>$ref</code></td>
+<td>no</td>
+<td><code>$ref</code>: <code>#/$defs/Migrations</code></td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/name</code></td>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>pattern: <code><a href="#fn1" class="footnote-ref" id="fnref1"
+role="doc-noteref"><sup>1</sup></a>[a-zA-Z0-9-]*$</code></td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/nonRelevantBehavior</code></td>
+<td><code>nonRelevantBehavior</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>enum: <code>“remove”</code>, <code>“empty”</code>,
+<code>“keep”</code>; default: <code>“remove”</code></td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/optionSets</code></td>
+<td><code>optionSets</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/screener</code></td>
+<td><code>screener</code></td>
+<td><code>$ref</code></td>
+<td>no</td>
+<td><code>$ref</code>: <code>#/$defs/Screener</code></td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/shapes</code></td>
+<td><code>shapes</code></td>
+<td><code>array</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/status</code></td>
+<td><code>status</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>enum: <code>“draft”</code>, <code>“active”</code>,
+<code>“retired”</code>; critical</td>
+<td>Definition lifecycle state.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/title</code></td>
+<td><code>title</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Human-readable definition title.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/url</code></td>
+<td><code>url</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Canonical URI identifier of the logical form.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/variables</code></td>
+<td><code>variables</code></td>
+<td><code>array</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/version</code></td>
+<td><code>version</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Version identifier of this specific Definition document.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/versionAlgorithm</code></td>
+<td><code>versionAlgorithm</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>enum: <code>“semver”</code>, <code>“date”</code>,
+<code>“integer”</code>, <code>“natural”</code>; default:
+<code>“semver”</code></td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
+<!-- schema-ref:end -->
+<p>The generated table above defines required and optional properties.
+In this section, prose requirements describe semantics beyond structural
+constraints.</p>
 <p>Implementations MUST preserve unrecognized top-level properties
 during round-tripping but MUST NOT assign semantics to them.</p>
 <h4 id="form-presentation">4.1.1 Form Presentation</h4>
@@ -5542,55 +5570,90 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb41-1"><a href=
 <span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <h4 id="validationreport-properties">5.4.1 ValidationReport
 Properties</h4>
-<table>
+<p>The canonical structural contract for ValidationReport properties is
+generated from <code>schemas/validationReport.schema.json</code>:</p>
+<!-- schema-ref:start id=core-validation-report-top-level schema=schemas/validationReport.schema.json pointers=# -->
+<!-- generated:schema-ref id=core-validation-report-top-level -->
+<table style="width:100%;">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th>Property</th>
+<th>Pointer</th>
+<th>Field</th>
 <th>Type</th>
-<th>Cardinality</th>
+<th>Required</th>
+<th>Notes</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>valid</code></td>
-<td>boolean</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td><code>true</code> if and only if the <code>results</code> array
-contains zero entries with severity <code>"error"</code>. Warning-level
-and info-level results do NOT affect this determination.</td>
+<td><code>#/properties/counts</code></td>
+<td><code>counts</code></td>
+<td><code>object</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Counts of results by severity level.</td>
 </tr>
 <tr class="even">
-<td><code>results</code></td>
-<td>array of ValidationResult</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>All validation results, regardless of severity. The array MUST
-include results from Bind constraints, Shape constraints, type checks,
-required checks, repeat cardinality checks, and any external validation
-results (§5.7).</td>
+<td><code>#/properties/definitionUrl</code></td>
+<td><code>definitionUrl</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>The canonical URL of the Definition that was validated against.</td>
 </tr>
 <tr class="odd">
-<td><code>counts</code></td>
-<td>object</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Counts of results by severity level. MUST contain the keys
-<code>"error"</code>, <code>"warning"</code>, and <code>"info"</code>,
-each with an integer value ≥ 0.</td>
+<td><code>#/properties/definitionVersion</code></td>
+<td><code>definitionVersion</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>The version of the Definition that was validated against.</td>
 </tr>
 <tr class="even">
+<td><code>#/properties/extensions</code></td>
+<td><code>extensions</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/results</code></td>
+<td><code>results</code></td>
+<td><code>array</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>All validation results regardless of severity.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/timestamp</code></td>
 <td><code>timestamp</code></td>
-<td>string (dateTime)</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
 <td>ISO 8601 date-time indicating when validation was performed.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/valid</code></td>
+<td><code>valid</code></td>
+<td><code>boolean</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>true if and only if the results array contains zero entries with
+severity ‘error’.</td>
 </tr>
 </tbody>
 </table>
+<!-- schema-ref:end -->
 <p>Implementations MUST ensure that <code>valid</code> is consistent
 with <code>counts.error</code>: <code>valid</code> MUST be
 <code>true</code> when <code>counts.error</code> is <code>0</code> and
@@ -5797,8 +5860,9 @@ of unversioned references are context-dependent:</p>
 <li>In a Response’s <code>definition</code> property, the version MUST
 be specified. Unversioned references are invalid in this context
 (§6.4).</li>
-<li>In <code>derivedFrom</code>, an unversioned reference indicates
-derivation from the logical form in general, without pinning to a
+<li>In <code>derivedFrom</code>, a plain URI string indicates derivation
+from the logical form in general. An object form
+<code>{ "url": "...", "version": "..." }</code> pins derivation to a
 specific version.</li>
 <li>In <code>$ref</code> composition, an unversioned reference SHOULD
 resolve to the latest <code>"active"</code> version at assembly
@@ -5953,15 +6017,15 @@ the <code>url|version</code> pair is a stable, immutable reference.</p>
 <p>A Definition MAY declare <code>derivedFrom</code> to indicate it is a
 variant of another Definition. Common derivation scenarios include:</p>
 <ul>
-<li><strong>Year-over-year updates</strong> —
-<code>annual-report|2025.1.0</code> derived from
-<code>annual-report|2024.1.0</code>.</li>
+<li><strong>Year-over-year updates</strong> — <code>annual-report</code>
+version <code>2025.1.0</code> derived from
+<code>{ "url": "https://example.gov/forms/annual-report", "version": "2024.1.0" }</code>.</li>
 <li><strong>Long form / short form</strong> —
-<code>annual-report-short|1.0.0</code> derived from
-<code>annual-report|2025.1.0</code>.</li>
+<code>annual-report-short</code> derived from the
+<code>annual-report</code> definition (unversioned URI string).</li>
 <li><strong>Domain-specific specialization</strong> —
-<code>annual-report-healthcare|1.0.0</code> derived from
-<code>annual-report|2025.1.0</code>.</li>
+<code>annual-report-healthcare</code> derived from a specific version
+via the object form.</li>
 </ul>
 <p><strong>Semantics:</strong> <code>derivedFrom</code> is
 <strong>informational only</strong>. It does NOT imply behavioral
@@ -7225,207 +7289,65 @@ of this specification. A processor encountering a non-prefixed
 identifier it does not recognize MUST treat it as a specification
 error.</p>
 <hr />
-<h3 id="custom-data-types">8.1 Custom Data Types</h3>
-<p>Implementors MAY register custom data types beyond the core set
-defined in this specification. Custom data types extend the type system
-for domain-specific value semantics.</p>
-<div class="sourceCode" id="cb69"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;dataTypes&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;x-currency-usd&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;baseType&quot;</span><span class="fu">:</span> <span class="st">&quot;decimal&quot;</span><span class="fu">,</span></span>
-<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;precision&quot;</span><span class="fu">:</span> <span class="dv">2</span><span class="fu">,</span></span>
-<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;constraints&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>          <span class="dt">&quot;minimum&quot;</span><span class="fu">:</span> <span class="dv">0</span></span>
-<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>        <span class="fu">},</span></span>
-<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;metadata&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>          <span class="dt">&quot;prefix&quot;</span><span class="fu">:</span> <span class="st">&quot;$&quot;</span><span class="fu">,</span></span>
-<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a>          <span class="dt">&quot;thousandsSeparator&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
-<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
-<span id="cb69-14"><a href="#cb69-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">},</span></span>
-<span id="cb69-15"><a href="#cb69-15" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;x-federal-fiscal-year&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb69-16"><a href="#cb69-16" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;baseType&quot;</span><span class="fu">:</span> <span class="st">&quot;integer&quot;</span><span class="fu">,</span></span>
-<span id="cb69-17"><a href="#cb69-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;constraints&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb69-18"><a href="#cb69-18" aria-hidden="true" tabindex="-1"></a>          <span class="dt">&quot;minimum&quot;</span><span class="fu">:</span> <span class="dv">1900</span><span class="fu">,</span></span>
-<span id="cb69-19"><a href="#cb69-19" aria-hidden="true" tabindex="-1"></a>          <span class="dt">&quot;maximum&quot;</span><span class="fu">:</span> <span class="dv">2100</span></span>
-<span id="cb69-20"><a href="#cb69-20" aria-hidden="true" tabindex="-1"></a>        <span class="fu">},</span></span>
-<span id="cb69-21"><a href="#cb69-21" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;metadata&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb69-22"><a href="#cb69-22" aria-hidden="true" tabindex="-1"></a>          <span class="dt">&quot;display&quot;</span><span class="fu">:</span> <span class="st">&quot;FY ${value}&quot;</span></span>
-<span id="cb69-23"><a href="#cb69-23" aria-hidden="true" tabindex="-1"></a>        <span class="fu">}</span></span>
-<span id="cb69-24"><a href="#cb69-24" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
-<span id="cb69-25"><a href="#cb69-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
-<span id="cb69-26"><a href="#cb69-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
-<span id="cb69-27"><a href="#cb69-27" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<p>The following requirements apply to custom data types:</p>
+<h3 id="custom-data-types-functions-and-constraints">8.1 Custom Data
+Types, Functions, and Constraints</h3>
+<p>Custom data types, functions, and validation constraint components
+are declared and published through the <strong>Extension
+Registry</strong> system (see the Extension Registry specification). The
+registry provides structured metadata including parameter signatures,
+base types, compatibility information, and versioning for each
+extension.</p>
+<p>Definitions that use custom extensions SHOULD reference them in the
+top-level <code>extensions</code> object for discoverability. The
+following general requirements apply:</p>
 <ol type="1">
-<li><p>Custom type names MUST be prefixed with <code>x-</code>.</p></li>
-<li><p>Custom types MUST declare a <code>baseType</code> from the core
-type set (<code>string</code>, <code>integer</code>,
-<code>decimal</code>, <code>boolean</code>, <code>date</code>,
-<code>dateTime</code>, <code>time</code>, <code>uri</code>). The
-<code>baseType</code> serves as a fallback: processors that do not
-understand the custom type MUST treat the field as having the
-<code>baseType</code> and SHOULD log an informational notice.</p></li>
-<li><p>Custom types MAY declare <code>constraints</code> that further
-restrict the base type’s value space. These constraints MUST be
-expressible in terms of the base type’s comparison operators.</p></li>
-<li><p>Custom types MAY declare <code>metadata</code> for
-presentation-layer consumption. Processors MUST ignore
-<code>metadata</code> properties they do not understand. Metadata MUST
-NOT alter validation semantics.</p></li>
-<li><p>A Definition that references a custom data type MUST declare that
-type in its <code>extensions.dataTypes</code> object. Processors
-encountering a reference to an undeclared custom type MUST raise a
-specification error.</p></li>
-</ol>
-<hr />
-<h3 id="custom-functions">8.2 Custom Functions</h3>
-<p>Implementors MAY register custom functions for use in FEL
-expressions. Custom functions extend the expression language for
-domain-specific computations.</p>
-<div class="sourceCode" id="cb70"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;functions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;x-fiscal-quarter&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;Returns the federal fiscal quarter (1–4) for a given date. The federal fiscal year begins October 1.&quot;</span><span class="fu">,</span></span>
-<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;parameters&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
-<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a>          <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;date&quot;</span><span class="fu">,</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;date&quot;</span> <span class="fu">}</span></span>
-<span id="cb70-8"><a href="#cb70-8" aria-hidden="true" tabindex="-1"></a>        <span class="ot">]</span><span class="fu">,</span></span>
-<span id="cb70-9"><a href="#cb70-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;returns&quot;</span><span class="fu">:</span> <span class="st">&quot;integer&quot;</span><span class="fu">,</span></span>
-<span id="cb70-10"><a href="#cb70-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;implementation&quot;</span><span class="fu">:</span> <span class="st">&quot;external&quot;</span></span>
-<span id="cb70-11"><a href="#cb70-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">},</span></span>
-<span id="cb70-12"><a href="#cb70-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;x-cfda-lookup&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb70-13"><a href="#cb70-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;Returns the program title for a CFDA number from the SAM.gov catalog.&quot;</span><span class="fu">,</span></span>
-<span id="cb70-14"><a href="#cb70-14" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;parameters&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
-<span id="cb70-15"><a href="#cb70-15" aria-hidden="true" tabindex="-1"></a>          <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;cfda_number&quot;</span><span class="fu">,</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;string&quot;</span> <span class="fu">}</span></span>
-<span id="cb70-16"><a href="#cb70-16" aria-hidden="true" tabindex="-1"></a>        <span class="ot">]</span><span class="fu">,</span></span>
-<span id="cb70-17"><a href="#cb70-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;returns&quot;</span><span class="fu">:</span> <span class="st">&quot;string&quot;</span><span class="fu">,</span></span>
-<span id="cb70-18"><a href="#cb70-18" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;implementation&quot;</span><span class="fu">:</span> <span class="st">&quot;external&quot;</span></span>
-<span id="cb70-19"><a href="#cb70-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
-<span id="cb70-20"><a href="#cb70-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
-<span id="cb70-21"><a href="#cb70-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
-<span id="cb70-22"><a href="#cb70-22" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<p>The following requirements apply to custom functions:</p>
-<ol type="1">
-<li><p>Custom function names MUST be prefixed with
+<li><p>All custom identifiers MUST be prefixed with
 <code>x-</code>.</p></li>
-<li><p>A Definition using custom functions in any FEL expression MUST
-declare those functions in its <code>extensions.functions</code>
-object.</p></li>
-<li><p>Each function declaration MUST include <code>parameters</code>
-(an array of <code>{name, type}</code> objects) and <code>returns</code>
-(a core data type name).</p></li>
-<li><p>The <code>implementation</code> property MUST be one of:</p>
-<ul>
-<li><code>"external"</code> — the processor delegates to an external
-service or host-language callback. The mechanism for registration is
-outside the scope of this specification.</li>
-<li><code>"expression"</code> — the function body is a FEL expression
-provided in a <code>body</code> property. Parameters are available as
-<code>$name</code> references within the body.</li>
-</ul></li>
-<li><p>Processors that encounter a call to a custom function they do not
-support MUST raise a clear, actionable error identifying the function
-name and the Definition that references it. Processors MUST NOT silently
-skip the function call or substitute a default value.</p></li>
+<li><p>Processors that encounter a custom data type they do not support
+MUST fall back to the declared <code>baseType</code> and SHOULD log an
+informational notice.</p></li>
+<li><p>Processors that encounter a custom function or constraint they do
+not support MUST raise a clear, actionable error. Processors MUST NOT
+silently skip unsupported functions or constraints.</p></li>
 <li><p>Custom functions MUST be pure (side-effect-free) with respect to
-Instance data. A custom function MUST NOT modify any field value as a
-side effect of evaluation.</p></li>
-</ol>
-<hr />
-<h3 id="custom-validation-constraint-components">8.3 Custom Validation
-Constraint Components</h3>
-<p>Borrowing from SHACL’s constraint component architecture,
-implementors MAY define reusable constraint patterns that can be applied
-across multiple shapes.</p>
-<div class="sourceCode" id="cb71"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;constraints&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;x-unique-within&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;Value must be unique within the specified collection path. No two items in the collection may have the same value for the targeted field.&quot;</span><span class="fu">,</span></span>
-<span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;parameters&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
-<span id="cb71-7"><a href="#cb71-7" aria-hidden="true" tabindex="-1"></a>          <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;collection&quot;</span><span class="fu">,</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;string&quot;</span><span class="fu">,</span> <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;Path to the repeatable group&quot;</span> <span class="fu">}</span></span>
-<span id="cb71-8"><a href="#cb71-8" aria-hidden="true" tabindex="-1"></a>        <span class="ot">]</span><span class="fu">,</span></span>
-<span id="cb71-9"><a href="#cb71-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;implementation&quot;</span><span class="fu">:</span> <span class="st">&quot;external&quot;</span></span>
-<span id="cb71-10"><a href="#cb71-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">},</span></span>
-<span id="cb71-11"><a href="#cb71-11" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;x-sum-not-exceeds&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb71-12"><a href="#cb71-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;The sum of the specified fields must not exceed a given maximum.&quot;</span><span class="fu">,</span></span>
-<span id="cb71-13"><a href="#cb71-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;parameters&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
-<span id="cb71-14"><a href="#cb71-14" aria-hidden="true" tabindex="-1"></a>          <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;fields&quot;</span><span class="fu">,</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;array&quot;</span><span class="fu">,</span>   <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;Array of field paths to sum&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
-<span id="cb71-15"><a href="#cb71-15" aria-hidden="true" tabindex="-1"></a>          <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;max&quot;</span><span class="fu">,</span>    <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;decimal&quot;</span><span class="fu">,</span> <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;Maximum allowed sum&quot;</span> <span class="fu">}</span></span>
-<span id="cb71-16"><a href="#cb71-16" aria-hidden="true" tabindex="-1"></a>        <span class="ot">]</span><span class="fu">,</span></span>
-<span id="cb71-17"><a href="#cb71-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;implementation&quot;</span><span class="fu">:</span> <span class="st">&quot;external&quot;</span></span>
-<span id="cb71-18"><a href="#cb71-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
-<span id="cb71-19"><a href="#cb71-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
-<span id="cb71-20"><a href="#cb71-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
-<span id="cb71-21"><a href="#cb71-21" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<p>Usage within a shape:</p>
-<div class="sourceCode" id="cb72"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;id&quot;</span><span class="fu">:</span> <span class="st">&quot;unique-category-names&quot;</span><span class="fu">,</span></span>
-<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;severity&quot;</span><span class="fu">:</span> <span class="st">&quot;error&quot;</span><span class="fu">,</span></span>
-<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;target&quot;</span><span class="fu">:</span> <span class="st">&quot;categories[*].category_name&quot;</span><span class="fu">,</span></span>
-<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;x-unique-within&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;collection&quot;</span><span class="fu">:</span> <span class="st">&quot;categories&quot;</span></span>
-<span id="cb72-7"><a href="#cb72-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
-<span id="cb72-8"><a href="#cb72-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;message&quot;</span><span class="fu">:</span> <span class="st">&quot;Category name must be unique. &#39;${$}&#39; is used more than once.&quot;</span></span>
-<span id="cb72-9"><a href="#cb72-9" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<p>The following requirements apply to custom constraint components:</p>
-<ol type="1">
-<li><p>Custom constraint names MUST be prefixed with
-<code>x-</code>.</p></li>
-<li><p>A Definition using custom constraints MUST declare them in
-<code>extensions.constraints</code>.</p></li>
-<li><p>When a custom constraint appears as a property on a shape object,
-the property name MUST match the declared constraint name, and its value
-MUST be an object whose keys correspond to the declared
-parameters.</p></li>
-<li><p>Processors that do not support a custom constraint MUST raise an
-error. Processors MUST NOT silently ignore an unsupported constraint, as
-doing so would produce a false-positive validation report.</p></li>
+Instance data.</p></li>
+<li><p>Custom constraints MUST NOT produce false-positive validation
+results when unsupported — processors MUST fail rather than
+skip.</p></li>
 </ol>
 <hr />
 <h3 id="extension-properties">8.4 Extension Properties</h3>
 <p>Any object in a Formspec Definition, Instance, Response, or
 ValidationReport MAY carry an <code>extensions</code> property
 containing implementor-specific data.</p>
-<div class="sourceCode" id="cb73"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;key&quot;</span><span class="fu">:</span> <span class="st">&quot;ein&quot;</span><span class="fu">,</span></span>
-<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;field&quot;</span><span class="fu">,</span></span>
-<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;dataType&quot;</span><span class="fu">:</span> <span class="st">&quot;string&quot;</span><span class="fu">,</span></span>
-<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;Employer Identification Number&quot;</span><span class="fu">,</span></span>
-<span id="cb73-6"><a href="#cb73-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;x-irs-validation&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;endpoint&quot;</span><span class="fu">:</span> <span class="st">&quot;https://api.irs.gov/validate-ein&quot;</span><span class="fu">,</span></span>
-<span id="cb73-9"><a href="#cb73-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;timeout&quot;</span><span class="fu">:</span> <span class="dv">5000</span><span class="fu">,</span></span>
-<span id="cb73-10"><a href="#cb73-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;retryPolicy&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb73-11"><a href="#cb73-11" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;maxAttempts&quot;</span><span class="fu">:</span> <span class="dv">3</span><span class="fu">,</span></span>
-<span id="cb73-12"><a href="#cb73-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;backoffMs&quot;</span><span class="fu">:</span> <span class="dv">1000</span></span>
-<span id="cb73-13"><a href="#cb73-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
-<span id="cb73-14"><a href="#cb73-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
-<span id="cb73-15"><a href="#cb73-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;x-analytics&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb73-16"><a href="#cb73-16" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;trackFocus&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
-<span id="cb73-17"><a href="#cb73-17" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;trackDuration&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
-<span id="cb73-18"><a href="#cb73-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
-<span id="cb73-19"><a href="#cb73-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
-<span id="cb73-20"><a href="#cb73-20" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb69"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;key&quot;</span><span class="fu">:</span> <span class="st">&quot;ein&quot;</span><span class="fu">,</span></span>
+<span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;field&quot;</span><span class="fu">,</span></span>
+<span id="cb69-4"><a href="#cb69-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;dataType&quot;</span><span class="fu">:</span> <span class="st">&quot;string&quot;</span><span class="fu">,</span></span>
+<span id="cb69-5"><a href="#cb69-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;label&quot;</span><span class="fu">:</span> <span class="st">&quot;Employer Identification Number&quot;</span><span class="fu">,</span></span>
+<span id="cb69-6"><a href="#cb69-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;x-irs-validation&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;endpoint&quot;</span><span class="fu">:</span> <span class="st">&quot;https://api.irs.gov/validate-ein&quot;</span><span class="fu">,</span></span>
+<span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;timeout&quot;</span><span class="fu">:</span> <span class="dv">5000</span><span class="fu">,</span></span>
+<span id="cb69-10"><a href="#cb69-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;retryPolicy&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb69-11"><a href="#cb69-11" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;maxAttempts&quot;</span><span class="fu">:</span> <span class="dv">3</span><span class="fu">,</span></span>
+<span id="cb69-12"><a href="#cb69-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;backoffMs&quot;</span><span class="fu">:</span> <span class="dv">1000</span></span>
+<span id="cb69-13"><a href="#cb69-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
+<span id="cb69-14"><a href="#cb69-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb69-15"><a href="#cb69-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;x-analytics&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb69-16"><a href="#cb69-16" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;trackFocus&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb69-17"><a href="#cb69-17" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;trackDuration&quot;</span><span class="fu">:</span> <span class="kw">true</span></span>
+<span id="cb69-18"><a href="#cb69-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb69-19"><a href="#cb69-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb69-20"><a href="#cb69-20" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <p>The following requirements apply to extension properties:</p>
 <ol type="1">
 <li><p>All keys within an <code>extensions</code> object MUST be
 prefixed with <code>x-</code>.</p></li>
 <li><p>Processors MUST ignore extension properties they do not
-understand <strong>unless <code>mustUnderstand</code> is
-<code>true</code></strong>. Unrecognized extension properties without
-<code>mustUnderstand: true</code> MUST NOT cause a processing error,
-warning, or behavioral change. Any extension object MAY include a
-<code>mustUnderstand</code> boolean property (default:
-<code>false</code>). When <code>true</code>, a processor that does not
-recognize or cannot evaluate the extension MUST report a definition
-error and MUST NOT proceed with evaluation.</p></li>
+understand. Unrecognized extension properties MUST NOT cause a
+processing error, warning, or behavioral change.</p></li>
 <li><p>Extension properties MUST NOT alter the core semantics defined by
 this specification. Specifically:</p>
 <ul>
@@ -7450,22 +7372,22 @@ conforming processor MUST NOT strip unrecognized extensions.</p></li>
 <p>Organizations publishing multiple related extensions SHOULD use a
 namespace convention to group them under a single
 <code>x-{namespace}</code> key.</p>
-<div class="sourceCode" id="cb74"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;x-gov-grants&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="st">&quot;2.0&quot;</span><span class="fu">,</span></span>
-<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;cfda-number&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
-<span id="cb74-6"><a href="#cb74-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;sam-registration-required&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
-<span id="cb74-7"><a href="#cb74-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;single-audit-threshold&quot;</span><span class="fu">:</span> <span class="dv">750000</span></span>
-<span id="cb74-8"><a href="#cb74-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
-<span id="cb74-9"><a href="#cb74-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;x-org-branding&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb74-10"><a href="#cb74-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="st">&quot;1.3&quot;</span><span class="fu">,</span></span>
-<span id="cb74-11"><a href="#cb74-11" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;theme&quot;</span><span class="fu">:</span> <span class="st">&quot;agency-dark&quot;</span><span class="fu">,</span></span>
-<span id="cb74-12"><a href="#cb74-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;logoUrl&quot;</span><span class="fu">:</span> <span class="st">&quot;https://example.gov/assets/logo.svg&quot;</span></span>
-<span id="cb74-13"><a href="#cb74-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
-<span id="cb74-14"><a href="#cb74-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
-<span id="cb74-15"><a href="#cb74-15" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb70"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;x-gov-grants&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="st">&quot;2.0&quot;</span><span class="fu">,</span></span>
+<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;cfda-number&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;sam-registration-required&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;single-audit-threshold&quot;</span><span class="fu">:</span> <span class="dv">750000</span></span>
+<span id="cb70-8"><a href="#cb70-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb70-9"><a href="#cb70-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;x-org-branding&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb70-10"><a href="#cb70-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="st">&quot;1.3&quot;</span><span class="fu">,</span></span>
+<span id="cb70-11"><a href="#cb70-11" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;theme&quot;</span><span class="fu">:</span> <span class="st">&quot;agency-dark&quot;</span><span class="fu">,</span></span>
+<span id="cb70-12"><a href="#cb70-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;logoUrl&quot;</span><span class="fu">:</span> <span class="st">&quot;https://example.gov/assets/logo.svg&quot;</span></span>
+<span id="cb70-13"><a href="#cb70-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb70-14"><a href="#cb70-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb70-15"><a href="#cb70-15" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <p>The following requirements apply to extension namespaces:</p>
 <ol type="1">
 <li><p>A namespace key MUST follow the pattern
@@ -8305,5 +8227,13 @@ statement</td>
 </tr>
 </tbody>
 </table>
+<aside id="footnotes" class="footnotes footnotes-end-of-document"
+role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>a-zA-Z<a href="#fnref1" class="footnote-back"
+role="doc-backlink">↩︎</a></p></li>
+</ol>
+</aside>
 </body>
 </html>

@@ -70,6 +70,15 @@ JSON. Property names in monospace (`widget`) refer to JSON keys.
 Section references (§N) refer to this document unless prefixed with
 "core" (e.g., "core §4.2.5").
 
+## Bottom Line Up Front
+
+<!-- bluf:start file=theme-spec.bluf.md -->
+- This document defines the Tier 2 sidecar theme model for Formspec presentation behavior.
+- A valid theme requires `$formspecTheme`, `version`, and `targetDefinition`.
+- Effective rendering is resolved through a 3-level cascade: `defaults` -> `selectors` -> `items`.
+- This BLUF is governed by `schemas/theme.schema.json`; generated tables should be treated as canonical structural reference.
+<!-- bluf:end -->
+
 ## 2. Theme Document Structure
 
 A Formspec Theme is a JSON object. Conforming implementations MUST
@@ -101,23 +110,28 @@ that omits a REQUIRED property.
 
 ### 2.1 Top-Level Properties
 
-| Property | Type | Cardinality | Description |
-|---|---|---|---|
-| `$formspecTheme` | string | **1..1** (REQUIRED) | Specification version. MUST be `"1.0"`. |
-| `version` | string | **1..1** (REQUIRED) | Version of this theme document. |
-| `targetDefinition` | object | **1..1** (REQUIRED) | Identifies the Definition this theme targets. See §2.2. |
-| `url` | string (URI) | **0..1** (OPTIONAL) | Canonical identifier for this theme. |
-| `name` | string | **0..1** (OPTIONAL) | Machine-friendly short identifier. |
-| `title` | string | **0..1** (OPTIONAL) | Human-readable name. |
-| `description` | string | **0..1** (OPTIONAL) | Human-readable description. |
-| `platform` | string | **0..1** (OPTIONAL) | Target platform. See §2.3. |
-| `tokens` | object | **0..1** (OPTIONAL) | Design tokens. See §3. |
-| `defaults` | object | **0..1** (OPTIONAL) | Cascade level 1 — baseline. See §5.2. |
-| `selectors` | array | **0..1** (OPTIONAL) | Cascade level 2 — type/dataType overrides. See §5.3. |
-| `items` | object | **0..1** (OPTIONAL) | Cascade level 3 — per-item overrides. See §5.4. |
-| `pages` | array | **0..1** (OPTIONAL) | Page layout. See §6. |
-| `breakpoints` | object | **0..1** (OPTIONAL) | Named responsive breakpoints. See §6.4. |
-| `extensions` | object | **0..1** (OPTIONAL) | Extension namespace. Keys MUST be `x-` prefixed. See §8. |
+<!-- schema-ref:start id=theme-top-level schema=schemas/theme.schema.json pointers=# -->
+<!-- generated:schema-ref id=theme-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/$formspecTheme` | `$formspecTheme` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Theme specification version. MUST be '1.0'. |
+| `#/properties/breakpoints` | `breakpoints` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Breakpoints</code> | — |
+| `#/properties/defaults` | `defaults` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/PresentationBlock</code> | Cascade level 1: baseline applied to all items. |
+| `#/properties/description` | `description` | <code>string</code> | no | — | Human-readable description. |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | Extension namespace. Keys MUST be x- prefixed. |
+| `#/properties/items` | `items` | <code>object</code> | no | — | Cascade level 3: per-item overrides keyed by item key. |
+| `#/properties/name` | `name` | <code>string</code> | no | — | Machine-friendly short identifier. |
+| `#/properties/pages` | `pages` | <code>array</code> | no | — | Page layout — ordered list of pages with region assignments. |
+| `#/properties/platform` | `platform` | <code>string</code> | no | — | Target platform. Well-known: 'web', 'mobile', 'pdf', 'print', 'kiosk'. |
+| `#/properties/selectors` | `selectors` | <code>array</code> | no | — | Cascade level 2: type/dataType-based overrides. |
+| `#/properties/targetDefinition` | `targetDefinition` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/TargetDefinition</code>; critical | Binding to the target Formspec Definition and compatible version range. |
+| `#/properties/title` | `title` | <code>string</code> | no | — | Human-readable name. |
+| `#/properties/tokens` | `tokens` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Tokens</code> | — |
+| `#/properties/url` | `url` | <code>string</code> | no | — | Canonical identifier for this theme. |
+| `#/properties/version` | `version` | <code>string</code> | yes | critical | Version of this theme document. |
+<!-- schema-ref:end -->
+
+The generated table above is the canonical structural contract for top-level properties.
 
 ### 2.2 Target Definition Binding
 

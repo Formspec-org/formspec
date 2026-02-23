@@ -51,6 +51,15 @@ Additional terms:
   additionally understands the Registry Document format and uses it for
   extension discovery and validation.
 
+## Bottom Line Up Front
+
+<!-- bluf:start file=extension-registry.bluf.md -->
+- This document defines the registry format for publishing Formspec extension metadata.
+- A valid registry document requires `$formspecRegistry`, `publisher`, `published`, and `entries`.
+- Registry entries standardize naming, lifecycle, and compatibility bounds for extension interoperability.
+- This BLUF is governed by `schemas/registry.schema.json`; generated references are the structural contract.
+<!-- bluf:end -->
+
 ---
 
 ## 1. Purpose and Scope
@@ -81,14 +90,20 @@ centralized authority.
 A Registry Document is a JSON object at the top level with the following
 properties:
 
-| Property | Type | Req | Description |
-|---|---|---|---|
-| `$formspecRegistry` | string | REQUIRED | Version of this specification. MUST be `"1.0"`. |
-| `$schema` | string (URI) | RECOMMENDED | URI of the Registry Document JSON Schema. |
-| `publisher` | object | REQUIRED | Organization publishing this registry. See §2.1. |
-| `published` | string (date-time) | REQUIRED | ISO 8601 timestamp of last publication. |
-| `entries` | array | REQUIRED | Array of Registry Entry objects. See §3. |
-| `extensions` | object | OPTIONAL | Extension properties (all keys `x-`-prefixed). |
+<!-- schema-ref:start id=registry-top-level schema=schemas/registry.schema.json pointers=# -->
+<!-- generated:schema-ref id=registry-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/$formspecRegistry` | `$formspecRegistry` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Registry specification version. MUST be '1.0'. |
+| `#/properties/$schema` | `$schema` | <code>string</code> | no | — | — |
+| `#/properties/entries` | `entries` | <code>array</code> | yes | critical | Array of extension registry entries. |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | — |
+| `#/properties/published` | `published` | <code>string</code> | yes | critical | ISO 8601 timestamp indicating when this registry version was published. |
+| `#/properties/publisher` | `publisher` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/Publisher</code>; critical | Organization publishing this registry document. |
+<!-- schema-ref:end -->
+
+The generated table above is the canonical structural contract for Registry
+Document top-level properties.
 
 ### 2.1 Publisher Object
 

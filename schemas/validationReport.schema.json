@@ -18,12 +18,22 @@
     },
     "valid": {
       "type": "boolean",
-      "description": "true if and only if the results array contains zero entries with severity 'error'."
+      "description": "true if and only if the results array contains zero entries with severity 'error'.",
+      "examples": [true, false],
+      "x-lm": {
+        "critical": true,
+        "intent": "Aggregate pass/fail indicator derived from error-level validation results."
+      }
     },
     "results": {
       "type": "array",
       "description": "All validation results regardless of severity.",
-      "items": { "$ref": "https://formspec.org/schemas/response.schema.json#/$defs/ValidationResult" }
+      "items": { "$ref": "https://formspec.org/schemas/response.schema.json#/$defs/ValidationResult" },
+      "examples": [[]],
+      "x-lm": {
+        "critical": true,
+        "intent": "Complete set of validation findings for the evaluated response."
+      }
     },
     "counts": {
       "type": "object",
@@ -34,12 +44,28 @@
         "error": { "type": "integer", "minimum": 0 },
         "warning": { "type": "integer", "minimum": 0 },
         "info": { "type": "integer", "minimum": 0 }
+      },
+      "examples": [
+        {
+          "error": 0,
+          "warning": 2,
+          "info": 1
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Severity breakdown used for summary display and report QA."
       }
     },
     "timestamp": {
       "type": "string",
       "format": "date-time",
-      "description": "ISO 8601 date-time indicating when validation was performed."
+      "description": "ISO 8601 date-time indicating when validation was performed.",
+      "examples": ["2025-01-15T10:30:00Z"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Validation execution timestamp for traceability."
+      }
     },
     "extensions": {
       "type": "object",

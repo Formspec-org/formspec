@@ -1,0 +1,4 @@
+- This document defines bidirectional Mapping DSL transforms between Formspec Responses and external schemas.
+- A valid mapping requires `version`, `definitionRef`, `definitionVersion`, `targetSchema`, and at least one `rules` entry.
+- Field rules are declarative and can compose transforms for preserve/drop/expression/coerce/value map/array reshaping.
+- This BLUF is governed by `schemas/mapping.schema.json`; generated schema references are the canonical structural contract.

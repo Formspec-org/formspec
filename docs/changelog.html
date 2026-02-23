@@ -38,6 +38,8 @@ v1.0</a>
 <ul>
 <li><a href="#introduction" id="toc-introduction">1.
 Introduction</a></li>
+<li><a href="#bottom-line-up-front" id="toc-bottom-line-up-front">Bottom
+Line Up Front</a></li>
 <li><a href="#changelog-document-schema"
 id="toc-changelog-document-schema">2. Changelog Document Schema</a>
 <ul>
@@ -95,76 +97,114 @@ breaking changes on minor branches.</li>
 <p>Terminology and Definition structure (items, binds, shapes, etc.)
 follow Formspec v1.0. Semver semantics follow §6.2; migration objects
 follow §6.7.</p>
+<h2 id="bottom-line-up-front">Bottom Line Up Front</h2>
+<!-- bluf:start file=changelog-spec.bluf.md -->
+<ul>
+<li>This document defines changelog records for structural diffs between
+form definition versions.</li>
+<li>A valid changelog requires <code>definitionUrl</code>,
+<code>fromVersion</code>, <code>toVersion</code>,
+<code>semverImpact</code>, and <code>changes</code>.</li>
+<li>Changelog impact classification drives migration planning and semver
+governance.</li>
+<li>This BLUF is governed by <code>schemas/changelog.schema.json</code>;
+generated references are the structural contract. <!-- bluf:end --></li>
+</ul>
 <h2 id="changelog-document-schema">2. Changelog Document Schema</h2>
 <p>A Changelog Document is a JSON object at the top level.</p>
-<table>
+<!-- schema-ref:start id=changelog-top-level schema=schemas/changelog.schema.json pointers=# -->
+<!-- generated:schema-ref id=changelog-top-level -->
+<table style="width:100%;">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th>Property</th>
+<th>Pointer</th>
+<th>Field</th>
 <th>Type</th>
-<th>Req</th>
+<th>Required</th>
+<th>Notes</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td><code>#/properties/$schema</code></td>
 <td><code>$schema</code></td>
-<td>string (URI)</td>
-<td>RECOMMENDED</td>
-<td>URI of this specification’s JSON Schema.</td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
+<td><code>#/properties/changes</code></td>
+<td><code>changes</code></td>
+<td><code>array</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Ordered array of Change objects.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/definitionUrl</code></td>
 <td><code>definitionUrl</code></td>
-<td>string (URI)</td>
-<td>REQUIRED</td>
-<td>The <code>url</code> of the Definition this changelog
-describes.</td>
-</tr>
-<tr class="odd">
-<td><code>fromVersion</code></td>
-<td>string (semver)</td>
-<td>REQUIRED</td>
-<td>Base version being compared.</td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>URL of the Definition.</td>
 </tr>
 <tr class="even">
-<td><code>toVersion</code></td>
-<td>string (semver)</td>
-<td>REQUIRED</td>
-<td>Target version being compared.</td>
+<td><code>#/properties/fromVersion</code></td>
+<td><code>fromVersion</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Base semver version.</td>
 </tr>
 <tr class="odd">
+<td><code>#/properties/generatedAt</code></td>
 <td><code>generatedAt</code></td>
-<td>string (date-time)</td>
-<td>RECOMMENDED</td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
 <td>ISO 8601 timestamp of generation.</td>
 </tr>
 <tr class="even">
+<td><code>#/properties/semverImpact</code></td>
 <td><code>semverImpact</code></td>
-<td>enum</td>
-<td>REQUIRED</td>
-<td>Computed overall impact: <code>"major"</code>, <code>"minor"</code>,
-or <code>"patch"</code>.</td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>enum: <code>“major”</code>, <code>“minor”</code>,
+<code>“patch”</code>; critical</td>
+<td>Maximum impact across all changes (breaking → major, compatible →
+minor, cosmetic → patch).</td>
 </tr>
 <tr class="odd">
+<td><code>#/properties/summary</code></td>
 <td><code>summary</code></td>
-<td>string</td>
-<td>OPTIONAL</td>
-<td>Human-readable summary of the change set.</td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>Human-readable summary of changes.</td>
 </tr>
 <tr class="even">
-<td><code>changes</code></td>
-<td>array of Change</td>
-<td>REQUIRED</td>
-<td>Ordered list of Change objects (§3).</td>
+<td><code>#/properties/toVersion</code></td>
+<td><code>toVersion</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Target semver version.</td>
 </tr>
 </tbody>
 </table>
+<!-- schema-ref:end -->
+<p>The generated table above is the canonical structural contract for
+Changelog Document top-level properties.</p>
 <p><code>semverImpact</code> MUST equal the maximum impact across all
 entries in <code>changes</code> (breaking → major, compatible → minor,
 cosmetic → patch).</p>

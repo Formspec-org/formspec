@@ -1,0 +1,4 @@
+- This document defines changelog records for structural diffs between form definition versions.
+- A valid changelog requires `definitionUrl`, `fromVersion`, `toVersion`, `semverImpact`, and `changes`.
+- Changelog impact classification drives migration planning and semver governance.
+- This BLUF is governed by `schemas/changelog.schema.json`; generated references are the structural contract.

@@ -1,0 +1,4 @@
+- This section defines the canonical Response document shape for persisted form submissions.
+- A valid response requires `definitionUrl`, `definitionVersion`, `status`, `data`, and `authored`.
+- Response validation and replay must always honor the pinned `(definitionUrl, definitionVersion)` tuple.
+- This BLUF is governed by `schemas/response.schema.json`; generated references are the structural contract.

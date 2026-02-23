@@ -10,7 +10,12 @@
     "$formspecTheme": {
       "type": "string",
       "const": "1.0",
-      "description": "Theme specification version. MUST be '1.0'."
+      "description": "Theme specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for theme document compatibility."
+      }
     },
     "url": {
       "type": "string",
@@ -20,7 +25,12 @@
     "version": {
       "type": "string",
       "minLength": 1,
-      "description": "Version of this theme document."
+      "description": "Version of this theme document.",
+      "examples": ["1.0.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Schema-agnostic theme revision identifier."
+      }
     },
     "name": {
       "type": "string",
@@ -35,7 +45,18 @@
       "description": "Human-readable description."
     },
     "targetDefinition": {
-      "$ref": "#/$defs/TargetDefinition"
+      "$ref": "#/$defs/TargetDefinition",
+      "description": "Binding to the target Formspec Definition and compatible version range.",
+      "examples": [
+        {
+          "url": "https://agency.gov/forms/budget",
+          "compatibleVersions": ">=1.0.0 <2.0.0"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declares which form definition this theme can be applied to."
+      }
     },
     "platform": {
       "type": "string",

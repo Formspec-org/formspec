@@ -48,6 +48,15 @@ redefined.
 
 ---
 
+## Bottom Line Up Front
+
+<!-- bluf:start file=mapping-spec.bluf.md -->
+- This document defines bidirectional Mapping DSL transforms between Formspec Responses and external schemas.
+- A valid mapping requires `version`, `definitionRef`, `definitionVersion`, `targetSchema`, and at least one `rules` entry.
+- Field rules are declarative and can compose transforms for preserve/drop/expression/coerce/value map/array reshaping.
+- This BLUF is governed by `schemas/mapping.schema.json`; generated schema references are the canonical structural contract.
+<!-- bluf:end -->
+
 ## 1. Introduction
 
 ### 1.1 Purpose
@@ -581,18 +590,24 @@ All property names are case-sensitive. Implementations MUST reject documents con
 
 The root of a Mapping Document is a JSON object. The following table enumerates all recognized properties.
 
-| Property | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `$schema` | `string` | RECOMMENDED | — | URI identifying the version of this specification the document conforms to. |
-| `version` | `string` | REQUIRED | — | Semantic version of *this* Mapping Document (e.g. `"1.0.0"`). |
-| `definitionRef` | `string` | REQUIRED | — | URI or stable identifier of the target Formspec Definition. |
-| `definitionVersion` | `string` | REQUIRED | — | Semver range (per [node-semver](https://github.com/npm/node-semver) syntax) of compatible Formspec Definition versions (e.g. `">=1.0.0 <2.0.0"`). |
-| `targetSchema` | `object` | REQUIRED | — | Descriptor for the external schema. See [§ 3.2](#32-target-schema-descriptor). |
-| `direction` | `string` | OPTIONAL | `"forward"` | Execution direction. One of `"forward"` (source → target), `"reverse"` (target → source), or `"both"`. |
-| `defaults` | `object` | OPTIONAL | `{}` | A flat or nested object whose leaf values are applied to target fields that are not covered by any Field Rule. Keys MUST be valid target paths. |
-| `autoMap` | `boolean` | OPTIONAL | `false` | When `true`, fields not mentioned in `rules` are mapped by matching path using the `"preserve"` transform. See [§ 3.5](#35-auto-mapping). |
-| `rules` | `array` | REQUIRED | — | Ordered array of Field Rule objects. See [§ 3.3](#33-field-rule-structure). The array MUST contain at least one element. |
-| `adapters` | `object` | OPTIONAL | `{}` | Adapter-specific configuration keyed by adapter identifier. Semantics are defined by each Adapter implementation. |
+<!-- schema-ref:start id=mapping-top-level schema=schemas/mapping.schema.json pointers=# -->
+<!-- generated:schema-ref id=mapping-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/$schema` | `$schema` | <code>string</code> | no | — | URI identifying the version of the Mapping DSL specification this document conforms to. |
+| `#/properties/adapters` | `adapters` | <code>object</code> | no | — | Adapter-specific configuration keyed by adapter identifier (§6). |
+| `#/properties/autoMap` | `autoMap` | <code>boolean</code> | no | default: <code>false</code> | When true, fields not mentioned in rules are mapped by matching path using 'preserve' (§3.5). |
+| `#/properties/conformanceLevel` | `conformanceLevel` | <code>string</code> | no | enum: <code>"core"</code>, <code>"bidirectional"</code>, <code>"extended"</code> | Declares the conformance level of this mapping document (§2.1). |
+| `#/properties/defaults` | `defaults` | <code>object</code> | no | — | Leaf values applied to target fields not covered by any Field Rule. Keys are valid target paths (§3.1). |
+| `#/properties/definitionRef` | `definitionRef` | <code>string</code> | yes | critical | URI or stable identifier of the target Formspec Definition (§3.1). |
+| `#/properties/definitionVersion` | `definitionVersion` | <code>string</code> | yes | critical | Semver range of compatible Formspec Definition versions (e.g. '>=1.0.0 <2.0.0') per node-semver syntax (§3.1). |
+| `#/properties/direction` | `direction` | <code>string</code> | no | enum: <code>"forward"</code>, <code>"reverse"</code>, <code>"both"</code>; default: <code>"forward"</code> | Execution direction: 'forward' (source→target), 'reverse' (target→source), or 'both' (§3.1.2). |
+| `#/properties/rules` | `rules` | <code>array</code> | yes | critical | Ordered array of Field Rule objects (§3.3). MUST contain at least one element. |
+| `#/properties/targetSchema` | `targetSchema` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/TargetSchema</code>; critical | Descriptor for the external system schema targeted by this mapping. |
+| `#/properties/version` | `version` | <code>string</code> | yes | pattern: <code>^(0&#124;[1-9]\d*)\.(0&#124;[1-9]\d*)\.(0&#124;[1-9]\d*)&#36;</code>; critical | Semantic version of this Mapping Document (e.g. '1.0.0'). |
+<!-- schema-ref:end -->
+
+The generated table above is the canonical structural contract for top-level mapping properties.
 
 #### 3.1.1 Versioning
 

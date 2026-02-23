@@ -1,0 +1,12 @@
+- Cascade core: effective presentation resolves in order `defaults` -> matching `selectors` (document order) -> `items` overrides.
+- Full-tier precedence model: Theme-level cascade sits above Tier 1 item/form hints and renderer defaults; effective order is item overrides -> selectors -> defaults -> Tier 1 hints -> renderer baseline.
+- Selector semantics: selectors match item metadata (`type`, `dataType`, tags, extension hints) and later matching selectors override earlier ones at the same specificity tier.
+- Merge/suppression semantics: merges are shallow and property-oriented; higher-level omission inherits lower-level values while explicit sentinels/null-style suppression must be handled consistently.
+- Widget resolution: requested widgets must be validated against dataType compatibility, then fallback chains are applied before renderer-native defaults.
+- Token behavior: token references are resolved at apply/render time; unresolved tokens must degrade to renderer defaults with diagnostics.
+- Platform hint model: `platform` is advisory and open-ended; unknown platforms should not block application of otherwise valid theme rules.
+- Page/layout model: page declarations and region assignment are presentation structures and must not alter core item ordering or data semantics.
+- Tier interaction: Theme (Tier 2) can override Tier 1 hints, but neither tier may override Definition behavioral logic.
+- Error handling: malformed selectors, unknown widget configs, and invalid token refs should emit actionable warnings while preserving best-effort rendering.
+- Compatibility binding: `targetDefinition.compatibleVersions` should be checked pre-apply, with warn-and-continue behavior on mismatch.
+- Null theme behavior: absence of theme (or unsupported theme elements) must fall back to Tier 1 and renderer defaults, not to invalid states.

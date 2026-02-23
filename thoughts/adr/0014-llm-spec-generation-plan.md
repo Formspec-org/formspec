@@ -14,6 +14,14 @@ The previous workflow treated full markdown specs as the primary editable source
 
 Given current usage, richer schema annotations improve downstream model output quality. The system should treat documentation as compiled views over canonical contracts, not parallel sources.
 
+## Retrospective Update (2026-02-23)
+Manual review of generated `*.llm.md` outputs after rollout showed:
+1. Strong gains in structural consistency and anti-drift behavior.
+2. Significant compression in some domains (especially Component and Mapping), reducing operational context useful for LLM-driven generation.
+3. Need for a controlled semantic layer that restores high-value behavioral detail without duplicating schema structure.
+
+Therefore this ADR is amended to require a generated semantic capsule for high-entropy domains.
+
 ## Decision
 Adopt a schema-centric compilation pipeline with strict source boundaries:
 1. `schemas/*.json` are canonical for structural constraints and LM-facing field guidance.
@@ -86,8 +94,16 @@ Generated `<spec-file>.llm.md` files must include, at minimum:
 2. Critical schema fields table.
 3. Behavioral essentials (3-8 bullets covering non-schema semantics such as processing, direction/cascade behavior, and error behavior).
 4. Conformance essentials (required capabilities and major prohibitions).
+5. Semantic capsule section (when configured for that spec) capturing domain-critical operational details that are not represented by schema structure alone.
 
 This contract prevents over-compression while keeping LLM references short.
+
+## Semantic Capsule Policy
+For specs with high behavioral entropy (for example Component, Mapping, Theme):
+1. Add `<spec-file>.semantic.md` as a concise, source-controlled semantic capsule.
+2. Keep capsule content focused on operational semantics (execution model, fallbacks, compatibility edges, error/null behavior, precedence rules).
+3. Do not duplicate schema-derived property listings in capsule files.
+4. Generator injects capsule content into `*.llm.md`; files are not hand-edited post-generation.
 
 ## JSON Pointer Linking Policy
 Pointers are mandatory in generated content and selective in hand-authored prose:
@@ -179,6 +195,11 @@ Before enabling full generation for components:
    - edit schemas for structural truth
    - do not hand-edit generated blocks/files
 
+### Phase 6: Semantic Context Recovery
+1. Introduce generated semantic capsules for high-entropy specs.
+2. Ensure regenerated `*.llm.md` recover critical operational guidance lost through compression.
+3. Validate outputs via manual editorial pass plus existing `docs:check` gates.
+
 ## Acceptance Criteria
 1. For migrated sections, structural tables in specs are generated from schema and duplicate manual structural tables are removed.
 2. One rich schema exists per domain (no duplicate lean schema).
@@ -186,6 +207,7 @@ Before enabling full generation for components:
 4. Generated `*.llm.md` satisfy the LLM minimum content contract.
 5. Generated table formatting meets readability policy.
 6. At least one full pilot spec passes editorial review for readability and no normative loss.
+7. High-entropy specs include semantic capsules with preserved operational context.
 
 ## Risks and Mitigations
 1. Risk: schema bloat harms readability.

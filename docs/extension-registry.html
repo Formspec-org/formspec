@@ -42,6 +42,8 @@ id="toc-status-of-this-document">Status of This Document</a></li>
 <li><a href="#conventions-and-terminology"
 id="toc-conventions-and-terminology">Conventions and
 Terminology</a></li>
+<li><a href="#bottom-line-up-front" id="toc-bottom-line-up-front">Bottom
+Line Up Front</a></li>
 <li><a href="#purpose-and-scope" id="toc-purpose-and-scope">1. Purpose
 and Scope</a></li>
 <li><a href="#registry-document-format"
@@ -129,6 +131,19 @@ Registry Document.</li>
 processor that additionally understands the Registry Document format and
 uses it for extension discovery and validation.</li>
 </ul>
+<h2 id="bottom-line-up-front">Bottom Line Up Front</h2>
+<!-- bluf:start file=extension-registry.bluf.md -->
+<ul>
+<li>This document defines the registry format for publishing Formspec
+extension metadata.</li>
+<li>A valid registry document requires <code>$formspecRegistry</code>,
+<code>publisher</code>, <code>published</code>, and
+<code>entries</code>.</li>
+<li>Registry entries standardize naming, lifecycle, and compatibility
+bounds for extension interoperability.</li>
+<li>This BLUF is governed by <code>schemas/registry.schema.json</code>;
+generated references are the structural contract. <!-- bluf:end --></li>
+</ul>
 <hr />
 <h2 id="purpose-and-scope">1. Purpose and Scope</h2>
 <p>Formspec v1.0 §8 defines five extension categories and requires all
@@ -158,60 +173,82 @@ format, not through centralized authority.</p>
 <h2 id="registry-document-format">2. Registry Document Format</h2>
 <p>A Registry Document is a JSON object at the top level with the
 following properties:</p>
-<table>
+<!-- schema-ref:start id=registry-top-level schema=schemas/registry.schema.json pointers=# -->
+<!-- generated:schema-ref id=registry-top-level -->
+<table style="width:100%;">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th>Property</th>
+<th>Pointer</th>
+<th>Field</th>
 <th>Type</th>
-<th>Req</th>
+<th>Required</th>
+<th>Notes</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td><code>#/properties/$formspecRegistry</code></td>
 <td><code>$formspecRegistry</code></td>
-<td>string</td>
-<td>REQUIRED</td>
-<td>Version of this specification. MUST be <code>"1.0"</code>.</td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>const: <code>“1.0”</code>; critical</td>
+<td>Registry specification version. MUST be ‘1.0’.</td>
 </tr>
 <tr class="even">
+<td><code>#/properties/$schema</code></td>
 <td><code>$schema</code></td>
-<td>string (URI)</td>
-<td>RECOMMENDED</td>
-<td>URI of the Registry Document JSON Schema.</td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
-<td><code>publisher</code></td>
-<td>object</td>
-<td>REQUIRED</td>
-<td>Organization publishing this registry. See §2.1.</td>
-</tr>
-<tr class="even">
-<td><code>published</code></td>
-<td>string (date-time)</td>
-<td>REQUIRED</td>
-<td>ISO 8601 timestamp of last publication.</td>
-</tr>
-<tr class="odd">
+<td><code>#/properties/entries</code></td>
 <td><code>entries</code></td>
-<td>array</td>
-<td>REQUIRED</td>
-<td>Array of Registry Entry objects. See §3.</td>
+<td><code>array</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Array of extension registry entries.</td>
 </tr>
 <tr class="even">
+<td><code>#/properties/extensions</code></td>
 <td><code>extensions</code></td>
-<td>object</td>
-<td>OPTIONAL</td>
-<td>Extension properties (all keys <code>x-</code>-prefixed).</td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/published</code></td>
+<td><code>published</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>ISO 8601 timestamp indicating when this registry version was
+published.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/publisher</code></td>
+<td><code>publisher</code></td>
+<td><code>$ref</code></td>
+<td>yes</td>
+<td><code>$ref</code>: <code>#/$defs/Publisher</code>; critical</td>
+<td>Organization publishing this registry document.</td>
 </tr>
 </tbody>
 </table>
+<!-- schema-ref:end -->
+<p>The generated table above is the canonical structural contract for
+Registry Document top-level properties.</p>
 <h3 id="publisher-object">2.1 Publisher Object</h3>
 <table>
 <thead>

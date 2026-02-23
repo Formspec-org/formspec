@@ -16,20 +16,35 @@ between two versions of a Formspec Definition. It supports:
 Terminology and Definition structure (items, binds, shapes, etc.) follow Formspec v1.0.
 Semver semantics follow §6.2; migration objects follow §6.7.
 
+## Bottom Line Up Front
+
+<!-- bluf:start file=changelog-spec.bluf.md -->
+- This document defines changelog records for structural diffs between form definition versions.
+- A valid changelog requires `definitionUrl`, `fromVersion`, `toVersion`, `semverImpact`, and `changes`.
+- Changelog impact classification drives migration planning and semver governance.
+- This BLUF is governed by `schemas/changelog.schema.json`; generated references are the structural contract.
+<!-- bluf:end -->
+
 ## 2. Changelog Document Schema
 
 A Changelog Document is a JSON object at the top level.
 
-| Property | Type | Req | Description |
-|---|---|---|---|
-| `$schema` | string (URI) | RECOMMENDED | URI of this specification's JSON Schema. |
-| `definitionUrl` | string (URI) | REQUIRED | The `url` of the Definition this changelog describes. |
-| `fromVersion` | string (semver) | REQUIRED | Base version being compared. |
-| `toVersion` | string (semver) | REQUIRED | Target version being compared. |
-| `generatedAt` | string (date-time) | RECOMMENDED | ISO 8601 timestamp of generation. |
-| `semverImpact` | enum | REQUIRED | Computed overall impact: `"major"`, `"minor"`, or `"patch"`. |
-| `summary` | string | OPTIONAL | Human-readable summary of the change set. |
-| `changes` | array of Change | REQUIRED | Ordered list of Change objects (§3). |
+<!-- schema-ref:start id=changelog-top-level schema=schemas/changelog.schema.json pointers=# -->
+<!-- generated:schema-ref id=changelog-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/$schema` | `$schema` | <code>string</code> | no | — | — |
+| `#/properties/changes` | `changes` | <code>array</code> | yes | critical | Ordered array of Change objects. |
+| `#/properties/definitionUrl` | `definitionUrl` | <code>string</code> | yes | critical | URL of the Definition. |
+| `#/properties/fromVersion` | `fromVersion` | <code>string</code> | yes | critical | Base semver version. |
+| `#/properties/generatedAt` | `generatedAt` | <code>string</code> | no | — | ISO 8601 timestamp of generation. |
+| `#/properties/semverImpact` | `semverImpact` | <code>string</code> | yes | enum: <code>"major"</code>, <code>"minor"</code>, <code>"patch"</code>; critical | Maximum impact across all changes (breaking → major, compatible → minor, cosmetic → patch). |
+| `#/properties/summary` | `summary` | <code>string</code> | no | — | Human-readable summary of changes. |
+| `#/properties/toVersion` | `toVersion` | <code>string</code> | yes | critical | Target semver version. |
+<!-- schema-ref:end -->
+
+The generated table above is the canonical structural contract for Changelog
+Document top-level properties.
 
 `semverImpact` MUST equal the maximum impact across all entries in `changes`
 (breaking → major, compatible → minor, cosmetic → patch).

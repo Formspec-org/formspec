@@ -7,13 +7,44 @@
   "additionalProperties": false,
   "patternProperties": { "^x-": {} },
   "properties": {
-    "$formspecComponent": { "type": "string", "const": "1.0" },
+    "$formspecComponent": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Component specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for component document compatibility."
+      }
+    },
     "url": { "type": "string", "format": "uri" },
     "name": { "type": "string", "description": "Machine-friendly short identifier." },
     "title": { "type": "string", "description": "Human-readable name." },
     "description": { "type": "string", "description": "Human-readable description." },
-    "version": { "type": "string", "minLength": 1 },
-    "targetDefinition": { "$ref": "#/$defs/TargetDefinition" },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Version of this Component Document.",
+      "examples": ["1.0.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Revision identifier for the component tree document."
+      }
+    },
+    "targetDefinition": {
+      "$ref": "#/$defs/TargetDefinition",
+      "description": "Binding to the target Formspec Definition and optional compatibility range.",
+      "examples": [
+        {
+          "url": "https://agency.gov/forms/budget",
+          "compatibleVersions": ">=1.0.0 <2.0.0"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declares which definition this component tree is designed to render."
+      }
+    },
     "breakpoints": { "$ref": "#/$defs/Breakpoints" },
     "tokens": { "$ref": "#/$defs/Tokens" },
     "components": {
@@ -23,7 +54,25 @@
       },
       "additionalProperties": false
     },
-    "tree": { "$ref": "#/$defs/AnyComponent" }
+    "tree": {
+      "$ref": "#/$defs/AnyComponent",
+      "description": "Root component node of the presentation tree.",
+      "examples": [
+        {
+          "component": "Stack",
+          "children": [
+            {
+              "component": "TextInput",
+              "bind": "name"
+            }
+          ]
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Entry point for all component layout and binding declarations."
+      }
+    }
   },
   "$defs": {
     "TargetDefinition": {

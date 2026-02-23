@@ -34,8 +34,18 @@ Section references (§N) refer to this document unless prefixed with
 
 ---
 
+## Bottom Line Up Front
+
+<!-- bluf:start file=component-spec.bluf.md -->
+- This document defines Tier 3 Component Documents for explicit, tree-based Formspec rendering.
+- A valid component document requires `$formspecComponent`, `version`, `targetDefinition`, and `tree`.
+- Component trees control layout and widget selection but cannot override core behavioral semantics from the Definition.
+- This BLUF is governed by `schemas/component.schema.json`; generated schema references are the canonical structural contract.
+<!-- bluf:end -->
+
 ## Table of Contents
 
+- [Bottom Line Up Front](#bottom-line-up-front)
 - [§1 Introduction](#1-introduction)
   - [§1.1 Purpose and Scope](#11-purpose-and-scope)
   - [§1.2 Relationship to Formspec Core, Theme Spec, and FEL](#12-relationship-to-formspec-core-theme-spec-and-fel)
@@ -228,19 +238,25 @@ Component Document that omits a REQUIRED property.
 
 ### 2.1 Top-Level Properties
 
-| Property | Type | Cardinality | Description |
-|---|---|---|---|
-| `$formspecComponent` | string | **1..1** (REQUIRED) | Specification version. MUST be `"1.0"`. Processors MUST reject documents with an unrecognized version. |
-| `version` | string | **1..1** (REQUIRED) | Version of this Component Document. Semantic versioning (SemVer) is RECOMMENDED. |
-| `targetDefinition` | object | **1..1** (REQUIRED) | Identifies the Definition this component tree targets. See §2.2. |
-| `url` | string (URI) | **0..1** (OPTIONAL) | Canonical identifier for this Component Document. The pair (`url`, `version`) SHOULD be unique across all published versions. |
-| `name` | string | **0..1** (OPTIONAL) | Machine-friendly short identifier (e.g., `"budget-wizard"`). |
-| `title` | string | **0..1** (OPTIONAL) | Human-readable name (e.g., `"Budget Form — Wizard Layout"`). |
-| `description` | string | **0..1** (OPTIONAL) | Human-readable description of this Component Document's purpose. |
-| `breakpoints` | object | **0..1** (OPTIONAL) | Named responsive breakpoints. See §9.1. |
-| `tokens` | object | **0..1** (OPTIONAL) | Design tokens (flat key-value map). See §10.1. |
-| `components` | object | **0..1** (OPTIONAL) | Custom component registry. See §7.1. |
-| `tree` | object | **1..1** (REQUIRED) | The root component of the presentation tree. See §3. |
+<!-- schema-ref:start id=component-top-level schema=schemas/component.schema.json pointers=# -->
+<!-- generated:schema-ref id=component-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/$formspecComponent` | `$formspecComponent` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Component specification version. MUST be '1.0'. |
+| `#/properties/breakpoints` | `breakpoints` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Breakpoints</code> | — |
+| `#/properties/components` | `components` | <code>object</code> | no | — | — |
+| `#/properties/description` | `description` | <code>string</code> | no | — | Human-readable description. |
+| `#/properties/name` | `name` | <code>string</code> | no | — | Machine-friendly short identifier. |
+| `#/properties/targetDefinition` | `targetDefinition` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/TargetDefinition</code>; critical | Binding to the target Formspec Definition and optional compatibility range. |
+| `#/properties/title` | `title` | <code>string</code> | no | — | Human-readable name. |
+| `#/properties/tokens` | `tokens` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Tokens</code> | — |
+| `#/properties/tree` | `tree` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/AnyComponent</code>; critical | Root component node of the presentation tree. |
+| `#/properties/url` | `url` | <code>string</code> | no | — | — |
+| `#/properties/version` | `version` | <code>string</code> | yes | critical | Version of this Component Document. |
+<!-- schema-ref:end -->
+
+The generated table above is the canonical structural contract for Component
+Document top-level properties.
 
 Processors MUST ignore unrecognized top-level properties whose keys begin
 with `x-`. Processors MUST reject unrecognized top-level properties that

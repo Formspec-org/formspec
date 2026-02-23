@@ -1,0 +1,15 @@
+repos:
+  - repo: local
+    hooks:
+      - id: spec-artifacts-check
+        name: check schema-driven spec artifacts and contracts
+        entry: npm run docs:check
+        language: system
+        pass_filenames: false
+        files: ^(schemas/.*\.json|specs/.*\.md|scripts/generate-spec-artifacts\.mjs|scripts/spec-artifacts\.config\.json|tests/test_cross_spec_contracts\.py|package\.json|package-lock\.json)$
+      - id: html-docs-check
+        name: check HTML docs freshness
+        entry: ./scripts/check-html-docs.sh
+        language: system
+        pass_filenames: false
+        files: ^(specs/.*\.md|docs/template\.html)$

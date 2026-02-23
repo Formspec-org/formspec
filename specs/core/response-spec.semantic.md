@@ -1,0 +1,7 @@
+- Identity pinning is mandatory: `definitionUrl` + `definitionVersion` must map to an exact known definition revision for validation and replay.
+- Response lifecycle semantics: `status` captures process state (`in-progress`, `completed`, `amended`, `stopped`) but does not change base payload shape requirements.
+- Completion expectations: responses marked completed should satisfy error-level validation constraints even when warning/info findings remain.
+- `data` is canonical instance payload; auxiliary metadata (`author`, `subject`, `id`) must not alter structural validity or interpretation rules.
+- `validationResults` is an optional embedded snapshot channel and should be treated as evidence, not an alternate source of truth for response content.
+- Extension handling: extension content should remain namespaced and must not override core response semantics.
+- Replay behavior: processors must not silently remap pinned responses to different definition versions during load or migration steps.

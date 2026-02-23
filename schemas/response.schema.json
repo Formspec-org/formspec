@@ -16,26 +16,56 @@
     "definitionUrl": {
       "type": "string",
       "format": "uri",
-      "description": "The canonical URL of the Definition."
+      "description": "The canonical URL of the Definition.",
+      "examples": ["https://example.org/forms/intake"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Canonical identifier of the form definition used to produce this response."
+      }
     },
     "definitionVersion": {
       "type": "string",
-      "description": "The exact version of the Definition against which this Response was created."
+      "description": "The exact version of the Definition against which this Response was created.",
+      "examples": ["2.1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Exact pinned definition version for validation and replay."
+      }
     },
     "status": {
       "type": "string",
       "enum": ["in-progress", "completed", "amended", "stopped"],
-      "description": "The current status of this Response."
+      "description": "The current status of this Response.",
+      "examples": ["in-progress", "completed"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Lifecycle state controlling completion semantics."
+      }
     },
     "data": {
       "type": "object",
       "description": "The primary Instance — the form data.",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "examples": [
+        {
+          "firstName": "Ada",
+          "lastName": "Lovelace"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Primary response payload captured from the form instance."
+      }
     },
     "authored": {
       "type": "string",
       "format": "date-time",
-      "description": "When the Response was last modified (ISO 8601 date-time)."
+      "description": "When the Response was last modified (ISO 8601 date-time).",
+      "examples": ["2025-07-10T14:30:00Z"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Last-modified timestamp for this response record."
+      }
     },
     "id": {
       "type": "string",

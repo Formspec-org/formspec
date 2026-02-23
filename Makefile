@@ -7,7 +7,16 @@ SPECS_DIR = specs
 
 all: docs
 
-docs: $(DOCS_DIR)/spec.html \
+spec-artifacts:
+	npm run docs:generate
+
+docs-check:
+	npm run docs:check
+
+check: docs-check
+
+docs: spec-artifacts \
+      $(DOCS_DIR)/spec.html \
       $(DOCS_DIR)/mapping.html \
       $(DOCS_DIR)/fel-grammar.html \
       $(DOCS_DIR)/changelog.html \
@@ -36,6 +45,11 @@ $(DOCS_DIR)/theme-spec.html: $(SPECS_DIR)/theme/theme-spec.md $(TEMPLATE)
 $(DOCS_DIR)/component-spec.html: $(SPECS_DIR)/component/component-spec.md $(TEMPLATE)
 	$(PANDOC) -s --toc --template=$(TEMPLATE) --metadata title="Formspec Component Specification" -o $@ $<
 
+setup:
+	python3 -m venv .venv
+	.venv/bin/pip install pre-commit
+	.venv/bin/pre-commit install
+
 serve:
 	busybox httpd -f -p 8000 -h docs
 
@@ -48,4 +62,4 @@ clean:
 	      $(DOCS_DIR)/theme-spec.html \
 	      $(DOCS_DIR)/component-spec.html
 
-.PHONY: all docs serve clean
+.PHONY: all spec-artifacts docs-check check docs setup serve clean

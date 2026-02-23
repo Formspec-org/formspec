@@ -1,0 +1,15 @@
+- Execution model: mapping resolves direction first, applies defaults, then executes eligible rules in deterministic priority/document order.
+- Conformance levels: Core covers forward JSON mapping + full transform/FEL support; Bidirectional adds reverse fidelity rules; Extended adds XML/CSV adapter behavior.
+- Rule gating: `condition` guards are evaluated before transforms; false/unknown conditions skip writes for that rule.
+- Transform pipeline behavior: forward and reverse directions may diverge through explicit reverse declarations and one-way/non-reversible transform flags.
+- Structural transforms: flatten/nest and array operations must preserve predictable target path semantics and reject ambiguous path writes.
+- Coercion discipline: coercions are explicit and type-safe; invalid coercions are hard errors unless rule-level fallbacks are declared.
+- Value translation: value-map transforms must support asymmetric external/internal code systems and deterministic default handling for unmapped values.
+- Null and absent semantics: processors must distinguish missing-path, explicit null, and empty-collection states during both forward and reverse mapping.
+- Conflict handling: competing writes to the same target path must follow deterministic precedence and emit diagnostics when data loss risk exists.
+- Adapter boundary: core mapping evaluates against normalized structured data, with JSON/XML/CSV adapters handling format-specific serialization concerns afterward.
+- Adapter detail: XML handling includes namespace/root-element constraints and attribute/element mapping; CSV handling requires flat column semantics and deterministic row expansion for repeats.
+- Error handling policy: unknown transform kinds, invalid FEL expressions, and unresolvable required paths are rejection conditions rather than silent pass-through.
+- Error taxonomy should remain stable and actionable (for example invalid document, version mismatch, path resolution, coercion/value-map failures, adapter failures) for downstream tooling.
+- Migration relationship: Mapping DSL generalizes core migration field maps, so preserve/drop/expression parity must remain intact for interoperability.
+- Round-trip expectations: reverse execution through lossy transforms must be blocked or explicitly marked non-reversible to avoid false fidelity.

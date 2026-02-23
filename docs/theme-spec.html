@@ -52,6 +52,8 @@ Core</a></li>
 <li><a href="#notational-conventions"
 id="toc-notational-conventions">1.4 Notational Conventions</a></li>
 </ul></li>
+<li><a href="#bottom-line-up-front" id="toc-bottom-line-up-front">Bottom
+Line Up Front</a></li>
 <li><a href="#theme-document-structure"
 id="toc-theme-document-structure">2. Theme Document Structure</a>
 <ul>
@@ -300,6 +302,20 @@ each item (§5).</td>
 are not valid JSON. Property names in monospace (<code>widget</code>)
 refer to JSON keys. Section references (§N) refer to this document
 unless prefixed with “core” (e.g., “core §4.2.5”).</p>
+<h2 id="bottom-line-up-front">Bottom Line Up Front</h2>
+<!-- bluf:start file=theme-spec.bluf.md -->
+<ul>
+<li>This document defines the Tier 2 sidecar theme model for Formspec
+presentation behavior.</li>
+<li>A valid theme requires <code>$formspecTheme</code>,
+<code>version</code>, and <code>targetDefinition</code>.</li>
+<li>Effective rendering is resolved through a 3-level cascade:
+<code>defaults</code> -&gt; <code>selectors</code> -&gt;
+<code>items</code>.</li>
+<li>This BLUF is governed by <code>schemas/theme.schema.json</code>;
+generated tables should be treated as canonical structural reference.
+<!-- bluf:end --></li>
+</ul>
 <h2 id="theme-document-structure">2. Theme Document Structure</h2>
 <p>A Formspec Theme is a JSON object. Conforming implementations MUST
 recognize the following top-level properties and MUST reject any Theme
@@ -326,115 +342,156 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="
 <span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;extensions&quot;</span><span class="fu">:</span> <span class="fu">{}</span></span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <h3 id="top-level-properties">2.1 Top-Level Properties</h3>
-<table>
+<!-- schema-ref:start id=theme-top-level schema=schemas/theme.schema.json pointers=# -->
+<!-- generated:schema-ref id=theme-top-level -->
+<table style="width:100%;">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th>Property</th>
+<th>Pointer</th>
+<th>Field</th>
 <th>Type</th>
-<th>Cardinality</th>
+<th>Required</th>
+<th>Notes</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td><code>#/properties/$formspecTheme</code></td>
 <td><code>$formspecTheme</code></td>
-<td>string</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Specification version. MUST be <code>"1.0"</code>.</td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>const: <code>“1.0”</code>; critical</td>
+<td>Theme specification version. MUST be ‘1.0’.</td>
 </tr>
 <tr class="even">
-<td><code>version</code></td>
-<td>string</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Version of this theme document.</td>
+<td><code>#/properties/breakpoints</code></td>
+<td><code>breakpoints</code></td>
+<td><code>$ref</code></td>
+<td>no</td>
+<td><code>$ref</code>: <code>#/$defs/Breakpoints</code></td>
+<td>—</td>
 </tr>
 <tr class="odd">
-<td><code>targetDefinition</code></td>
-<td>object</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Identifies the Definition this theme targets. See §2.2.</td>
+<td><code>#/properties/defaults</code></td>
+<td><code>defaults</code></td>
+<td><code>$ref</code></td>
+<td>no</td>
+<td><code>$ref</code>: <code>#/$defs/PresentationBlock</code></td>
+<td>Cascade level 1: baseline applied to all items.</td>
 </tr>
 <tr class="even">
-<td><code>url</code></td>
-<td>string (URI)</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Canonical identifier for this theme.</td>
+<td><code>#/properties/description</code></td>
+<td><code>description</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>Human-readable description.</td>
 </tr>
 <tr class="odd">
+<td><code>#/properties/extensions</code></td>
+<td><code>extensions</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>Extension namespace. Keys MUST be x- prefixed.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/items</code></td>
+<td><code>items</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>Cascade level 3: per-item overrides keyed by item key.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/name</code></td>
 <td><code>name</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
 <td>Machine-friendly short identifier.</td>
 </tr>
 <tr class="even">
+<td><code>#/properties/pages</code></td>
+<td><code>pages</code></td>
+<td><code>array</code></td>
+<td>no</td>
+<td>—</td>
+<td>Page layout — ordered list of pages with region assignments.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/platform</code></td>
+<td><code>platform</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>Target platform. Well-known: ‘web’, ‘mobile’, ‘pdf’, ‘print’,
+‘kiosk’.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/selectors</code></td>
+<td><code>selectors</code></td>
+<td><code>array</code></td>
+<td>no</td>
+<td>—</td>
+<td>Cascade level 2: type/dataType-based overrides.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/targetDefinition</code></td>
+<td><code>targetDefinition</code></td>
+<td><code>$ref</code></td>
+<td>yes</td>
+<td><code>$ref</code>: <code>#/$defs/TargetDefinition</code>;
+critical</td>
+<td>Binding to the target Formspec Definition and compatible version
+range.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/title</code></td>
 <td><code>title</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
 <td>Human-readable name.</td>
 </tr>
 <tr class="odd">
-<td><code>description</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Human-readable description.</td>
-</tr>
-<tr class="even">
-<td><code>platform</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Target platform. See §2.3.</td>
-</tr>
-<tr class="odd">
+<td><code>#/properties/tokens</code></td>
 <td><code>tokens</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Design tokens. See §3.</td>
+<td><code>$ref</code></td>
+<td>no</td>
+<td><code>$ref</code>: <code>#/$defs/Tokens</code></td>
+<td>—</td>
 </tr>
 <tr class="even">
-<td><code>defaults</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Cascade level 1 — baseline. See §5.2.</td>
+<td><code>#/properties/url</code></td>
+<td><code>url</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>Canonical identifier for this theme.</td>
 </tr>
 <tr class="odd">
-<td><code>selectors</code></td>
-<td>array</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Cascade level 2 — type/dataType overrides. See §5.3.</td>
-</tr>
-<tr class="even">
-<td><code>items</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Cascade level 3 — per-item overrides. See §5.4.</td>
-</tr>
-<tr class="odd">
-<td><code>pages</code></td>
-<td>array</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Page layout. See §6.</td>
-</tr>
-<tr class="even">
-<td><code>breakpoints</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Named responsive breakpoints. See §6.4.</td>
-</tr>
-<tr class="odd">
-<td><code>extensions</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Extension namespace. Keys MUST be <code>x-</code> prefixed. See
-§8.</td>
+<td><code>#/properties/version</code></td>
+<td><code>version</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Version of this theme document.</td>
 </tr>
 </tbody>
 </table>
+<!-- schema-ref:end -->
+<p>The generated table above is the canonical structural contract for
+top-level properties.</p>
 <h3 id="target-definition-binding">2.2 Target Definition Binding</h3>
 <p>The <code>targetDefinition</code> object binds this theme to a
 specific Definition.</p>
@@ -1012,7 +1069,7 @@ array from the theme.</p>
 <tr class="odd">
 <td><code>signature</code></td>
 <td>attachment</td>
-<td><code>penColor</code>, <code>height</code> (integer, pixels)</td>
+<td><code>strokeColor</code>, <code>height</code> (integer, pixels)</td>
 <td><code>fileUpload</code></td>
 </tr>
 </tbody>
@@ -1029,7 +1086,7 @@ first it supports.</p>
 <div class="sourceCode" id="cb4"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;widget&quot;</span><span class="fu">:</span> <span class="st">&quot;signature&quot;</span><span class="fu">,</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;widgetConfig&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;penColor&quot;</span><span class="fu">:</span> <span class="st">&quot;#000&quot;</span> <span class="fu">},</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;widgetConfig&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;strokeColor&quot;</span><span class="fu">:</span> <span class="st">&quot;#000&quot;</span> <span class="fu">},</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;fallback&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;camera&quot;</span><span class="ot">,</span> <span class="st">&quot;fileUpload&quot;</span><span class="ot">]</span></span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <p>If no widget in the chain is supported, the renderer MUST use its
@@ -1223,11 +1280,6 @@ computed as follows:</p>
   if theme.items[item.key] exists:
     merge(resolved, theme.items[item.key])
 
-  // Null suppression
-  for each key in resolved:
-    if resolved[key] is null:
-      delete resolved[key]
-
   return resolved</code></pre>
 <p>The <code>merge</code> operation is <strong>shallow
 per-property</strong> — each property in the source replaces the same
@@ -1250,18 +1302,27 @@ everything.</li>
 <p>When <strong>no theme</strong> is applied, Tier 1 hints and
 <code>formPresentation</code> are the only presentation input. This is
 the “null theme” baseline.</p>
-<h4 id="null-suppression">Null Suppression</h4>
-<p>A property set to <code>null</code> at any level removes it from the
-resolved result, suppressing any value inherited from a lower level:</p>
+<h4 id="property-suppression">Property Suppression</h4>
+<p>To suppress an inherited value, use the sentinel string
+<code>"none"</code> for properties that accept it (<code>widget</code>,
+<code>labelPosition</code>), or omit the entire nested object
+(<code>style</code>, <code>widgetConfig</code>,
+<code>accessibility</code>):</p>
 <div class="sourceCode" id="cb9"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;items&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;fieldWithNoWidget&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;widget&quot;</span><span class="fu">:</span> <span class="kw">null</span> <span class="fu">}</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;fieldWithNoWidget&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;widget&quot;</span><span class="fu">:</span> <span class="st">&quot;none&quot;</span> <span class="fu">}</span></span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<p>This removes <code>widget</code> from the resolved PresentationBlock
-for <code>fieldWithNoWidget</code>, regardless of what defaults,
-selectors, or Tier 1 hints specified.</p>
+<p>This removes the <code>widget</code> from the resolved
+PresentationBlock for <code>fieldWithNoWidget</code>, regardless of what
+defaults, selectors, or Tier 1 hints specified. Omitting a property
+entirely leaves it unset, inheriting from lower cascade levels.</p>
+<blockquote>
+<p><strong>Note:</strong> JSON <code>null</code> values MUST NOT be used
+in PresentationBlock properties. Validators SHOULD reject
+<code>null</code> values.</p>
+</blockquote>
 <h4 id="property-name-alignment">Property Name Alignment</h4>
 <p>Theme PresentationBlock property names align with Tier 1 as
 follows:</p>
@@ -1786,7 +1847,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb17-1"><a href=
 <span id="cb17-75"><a href="#cb17-75" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
 <span id="cb17-76"><a href="#cb17-76" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;approverSignature&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
 <span id="cb17-77"><a href="#cb17-77" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;widget&quot;</span><span class="fu">:</span> <span class="st">&quot;signature&quot;</span><span class="fu">,</span></span>
-<span id="cb17-78"><a href="#cb17-78" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;widgetConfig&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;penColor&quot;</span><span class="fu">:</span> <span class="st">&quot;#000&quot;</span><span class="fu">,</span> <span class="dt">&quot;height&quot;</span><span class="fu">:</span> <span class="dv">150</span> <span class="fu">},</span></span>
+<span id="cb17-78"><a href="#cb17-78" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;widgetConfig&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;strokeColor&quot;</span><span class="fu">:</span> <span class="st">&quot;#000&quot;</span><span class="fu">,</span> <span class="dt">&quot;height&quot;</span><span class="fu">:</span> <span class="dv">150</span> <span class="fu">},</span></span>
 <span id="cb17-79"><a href="#cb17-79" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;fallback&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;camera&quot;</span><span class="ot">,</span> <span class="st">&quot;fileUpload&quot;</span><span class="ot">]</span></span>
 <span id="cb17-80"><a href="#cb17-80" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
 <span id="cb17-81"><a href="#cb17-81" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;priorityLevel&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>

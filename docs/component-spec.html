@@ -41,6 +41,8 @@ id="toc-status-of-this-document">Status of This Document</a></li>
 <li><a href="#conventions-and-terminology"
 id="toc-conventions-and-terminology">Conventions and
 Terminology</a></li>
+<li><a href="#bottom-line-up-front" id="toc-bottom-line-up-front">Bottom
+Line Up Front</a></li>
 <li><a href="#table-of-contents" id="toc-table-of-contents">Table of
 Contents</a></li>
 <li><a href="#introduction" id="toc-introduction">1. Introduction</a>
@@ -283,8 +285,23 @@ refer to JSON keys. Section references (§N) refer to this document
 unless prefixed with “core” (e.g., “core §4.2.5”) or “theme” (e.g.,
 “theme §3”).</p>
 <hr />
+<h2 id="bottom-line-up-front">Bottom Line Up Front</h2>
+<!-- bluf:start file=component-spec.bluf.md -->
+<ul>
+<li>This document defines Tier 3 Component Documents for explicit,
+tree-based Formspec rendering.</li>
+<li>A valid component document requires <code>$formspecComponent</code>,
+<code>version</code>, <code>targetDefinition</code>, and
+<code>tree</code>.</li>
+<li>Component trees control layout and widget selection but cannot
+override core behavioral semantics from the Definition.</li>
+<li>This BLUF is governed by <code>schemas/component.schema.json</code>;
+generated schema references are the canonical structural contract.
+<!-- bluf:end --></li>
+</ul>
 <h2 id="table-of-contents">Table of Contents</h2>
 <ul>
+<li><a href="#bottom-line-up-front">Bottom Line Up Front</a></li>
 <li><a href="#1-introduction">§1 Introduction</a>
 <ul>
 <li><a href="#11-purpose-and-scope">§1.1 Purpose and Scope</a></li>
@@ -631,98 +648,123 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;tree&quot;</span><span class="fu">:</span> <span class="fu">{}</span></span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <h3 id="top-level-properties">2.1 Top-Level Properties</h3>
-<table>
+<!-- schema-ref:start id=component-top-level schema=schemas/component.schema.json pointers=# -->
+<!-- generated:schema-ref id=component-top-level -->
+<table style="width:100%;">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th>Property</th>
+<th>Pointer</th>
+<th>Field</th>
 <th>Type</th>
-<th>Cardinality</th>
+<th>Required</th>
+<th>Notes</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
+<td><code>#/properties/$formspecComponent</code></td>
 <td><code>$formspecComponent</code></td>
-<td>string</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Specification version. MUST be <code>"1.0"</code>. Processors MUST
-reject documents with an unrecognized version.</td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>const: <code>“1.0”</code>; critical</td>
+<td>Component specification version. MUST be ‘1.0’.</td>
 </tr>
 <tr class="even">
-<td><code>version</code></td>
-<td>string</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Version of this Component Document. Semantic versioning (SemVer) is
-RECOMMENDED.</td>
-</tr>
-<tr class="odd">
-<td><code>targetDefinition</code></td>
-<td>object</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>Identifies the Definition this component tree targets. See
-§2.2.</td>
-</tr>
-<tr class="even">
-<td><code>url</code></td>
-<td>string (URI)</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Canonical identifier for this Component Document. The pair
-(<code>url</code>, <code>version</code>) SHOULD be unique across all
-published versions.</td>
-</tr>
-<tr class="odd">
-<td><code>name</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Machine-friendly short identifier (e.g.,
-<code>"budget-wizard"</code>).</td>
-</tr>
-<tr class="even">
-<td><code>title</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Human-readable name (e.g.,
-<code>"Budget Form — Wizard Layout"</code>).</td>
-</tr>
-<tr class="odd">
-<td><code>description</code></td>
-<td>string</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Human-readable description of this Component Document’s
-purpose.</td>
-</tr>
-<tr class="even">
+<td><code>#/properties/breakpoints</code></td>
 <td><code>breakpoints</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Named responsive breakpoints. See §9.1.</td>
+<td><code>$ref</code></td>
+<td>no</td>
+<td><code>$ref</code>: <code>#/$defs/Breakpoints</code></td>
+<td>—</td>
 </tr>
 <tr class="odd">
-<td><code>tokens</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Design tokens (flat key-value map). See §10.1.</td>
+<td><code>#/properties/components</code></td>
+<td><code>components</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
-<td><code>components</code></td>
-<td>object</td>
-<td><strong>0..1</strong> (OPTIONAL)</td>
-<td>Custom component registry. See §7.1.</td>
+<td><code>#/properties/description</code></td>
+<td><code>description</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>Human-readable description.</td>
 </tr>
 <tr class="odd">
+<td><code>#/properties/name</code></td>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>Machine-friendly short identifier.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/targetDefinition</code></td>
+<td><code>targetDefinition</code></td>
+<td><code>$ref</code></td>
+<td>yes</td>
+<td><code>$ref</code>: <code>#/$defs/TargetDefinition</code>;
+critical</td>
+<td>Binding to the target Formspec Definition and optional compatibility
+range.</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/title</code></td>
+<td><code>title</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>Human-readable name.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/tokens</code></td>
+<td><code>tokens</code></td>
+<td><code>$ref</code></td>
+<td>no</td>
+<td><code>$ref</code>: <code>#/$defs/Tokens</code></td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/tree</code></td>
 <td><code>tree</code></td>
-<td>object</td>
-<td><strong>1..1</strong> (REQUIRED)</td>
-<td>The root component of the presentation tree. See §3.</td>
+<td><code>$ref</code></td>
+<td>yes</td>
+<td><code>$ref</code>: <code>#/$defs/AnyComponent</code>; critical</td>
+<td>Root component node of the presentation tree.</td>
+</tr>
+<tr class="even">
+<td><code>#/properties/url</code></td>
+<td><code>url</code></td>
+<td><code>string</code></td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>#/properties/version</code></td>
+<td><code>version</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>critical</td>
+<td>Version of this Component Document.</td>
 </tr>
 </tbody>
 </table>
+<!-- schema-ref:end -->
+<p>The generated table above is the canonical structural contract for
+Component Document top-level properties.</p>
 <p>Processors MUST ignore unrecognized top-level properties whose keys
 begin with <code>x-</code>. Processors MUST reject unrecognized
 top-level properties that do NOT begin with <code>x-</code>.</p>
@@ -903,46 +945,6 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb3-1"><a href="
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <p>Processors MUST ignore unrecognized properties on component objects.
 This enables forward-compatible extension.</p>
-<h4 id="label-and-hint-overrides">Label and Hint Overrides</h4>
-<p>Input components MAY include the following override properties:</p>
-<table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Property</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>labelOverride</code></td>
-<td>string</td>
-<td>Overrides the bound item’s <code>label</code> for display
-purposes.</td>
-</tr>
-<tr class="even">
-<td><code>hintOverride</code></td>
-<td>string</td>
-<td>Overrides the bound item’s <code>hint</code> for display
-purposes.</td>
-</tr>
-<tr class="odd">
-<td><code>descriptionOverride</code></td>
-<td>string</td>
-<td>Overrides the bound item’s <code>description</code> for display
-purposes.</td>
-</tr>
-</tbody>
-</table>
-<p>These overrides affect visual rendering only. They MUST NOT alter the
-Definition item’s metadata or affect validation messages. When absent,
-the renderer MUST use the label, hint, and description from the
-Definition item.</p>
 <h3 id="component-tree-semantics-single-root">3.2 Component Tree
 Semantics (single root)</h3>
 <p>The <code>tree</code> property MUST contain exactly
@@ -1111,11 +1113,9 @@ to a repeatable group.</td>
 <p>When an Input component is bound to a field item:</p>
 <ol type="1">
 <li><strong>Label:</strong> The renderer MUST display the item’s
-<code>label</code>. The component MAY override this with
-<code>labelOverride</code>.</li>
+<code>label</code>.</li>
 <li><strong>Hint:</strong> The renderer SHOULD display the item’s
-<code>hint</code> when available. The component MAY override this with
-<code>hintOverride</code>.</li>
+<code>hint</code> when available.</li>
 <li><strong>Required indicator:</strong> The renderer MUST indicate
 required state when the item’s Bind <code>required</code> expression
 evaluates to <code>true</code>.</li>
@@ -1172,16 +1172,10 @@ they resolve within the current repeat instance.</li>
 subject to <code>minRepeat</code> and <code>maxRepeat</code> constraints
 from the Definition.</li>
 </ol>
-<p>Repeatable group binding is available on:</p>
-<ul>
-<li><strong>Stack</strong>, <strong>Grid</strong>,
-<strong>Card</strong>, and <strong>Collapsible</strong> — the component
-and its children are repeated.</li>
-<li><strong>DataTable</strong> (§6.13) — each repeat instance becomes a
-table row.</li>
-</ul>
-<p>Layout components other than Stack and Grid MUST NOT bind to
-repeatable groups. Processors MUST reject such bindings.</p>
+<p>Repeatable group binding is available on <strong>DataTable</strong>
+(§6.13), where each repeat instance becomes a table row.</p>
+<p>Other layout and container components MUST NOT bind to repeatable
+groups. Processors MUST reject such bindings.</p>
 <h3 id="unbound-required-items">4.5 Unbound Required Items</h3>
 <p>A Component Document is NOT required to bind every item in the
 Definition. However, the renderer MUST ensure that all
@@ -1363,8 +1357,8 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="
 <hr />
 <h3 id="stack">5.2 Stack</h3>
 <p><strong>Category:</strong> Layout <strong>Level:</strong> Core
-<strong>Accepts children:</strong> Yes <strong>Bind:</strong> Forbidden
-(unless binding a repeatable group, see §4.4)</p>
+<strong>Accepts children:</strong> Yes <strong>Bind:</strong>
+Forbidden</p>
 <h4 id="description-1">Description</h4>
 <p>A flexbox-style stacking container that arranges its children in a
 vertical or horizontal sequence. Stack is the most common layout
@@ -1445,8 +1439,8 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb8-1"><a href="
 <hr />
 <h3 id="grid">5.3 Grid</h3>
 <p><strong>Category:</strong> Layout <strong>Level:</strong> Core
-<strong>Accepts children:</strong> Yes <strong>Bind:</strong> Forbidden
-(unless binding a repeatable group, see §4.4)</p>
+<strong>Accepts children:</strong> Yes <strong>Bind:</strong>
+Forbidden</p>
 <h4 id="description-2">Description</h4>
 <p>A multi-column grid layout that distributes children across columns.
 Children are placed in source order, wrapping to new rows as needed.</p>
@@ -2352,8 +2346,8 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb21-1"><a href=
 <hr />
 <h3 id="card">5.16 Card</h3>
 <p><strong>Category:</strong> Container <strong>Level:</strong> Core
-<strong>Accepts children:</strong> Yes <strong>Bind:</strong> Forbidden
-(unless binding a repeatable group, see §4.4)</p>
+<strong>Accepts children:</strong> Yes <strong>Bind:</strong>
+Forbidden</p>
 <h4 id="description-15">Description</h4>
 <p>A bordered surface that visually groups related content. Cards
 provide a visual boundary with optional title and subtitle.</p>
@@ -2420,8 +2414,8 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb22-1"><a href=
 <hr />
 <h3 id="collapsible">5.17 Collapsible</h3>
 <p><strong>Category:</strong> Container <strong>Level:</strong> Core
-<strong>Accepts children:</strong> Yes <strong>Bind:</strong> Forbidden
-(unless binding a repeatable group, see §4.4)</p>
+<strong>Accepts children:</strong> Yes <strong>Bind:</strong>
+Forbidden</p>
 <h4 id="description-16">Description</h4>
 <p>An expandable/collapsible section. The user can toggle visibility of
 the children. Useful for optional sections or advanced options.</p>
@@ -2667,6 +2661,15 @@ content of one tab. Tab labels are derived from child Page
 </thead>
 <tbody>
 <tr class="odd">
+<td><code>position</code></td>
+<td>string</td>
+<td><code>"top"</code></td>
+<td>No</td>
+<td>Tab bar position. MUST be one of <code>"top"</code>,
+<code>"bottom"</code>, <code>"left"</code>, or
+<code>"right"</code>.</td>
+</tr>
+<tr class="even">
 <td><code>tabLabels</code></td>
 <td>array of strings</td>
 <td>—</td>
@@ -2675,7 +2678,7 @@ content of one tab. Tab labels are derived from child Page
 <code>title</code> from each child (children SHOULD be Page
 components).</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>defaultTab</code></td>
 <td>integer</td>
 <td><code>0</code></td>
@@ -3131,7 +3134,7 @@ attachment.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>penColor</code></td>
+<td><code>strokeColor</code></td>
 <td>string</td>
 <td><code>"#000000"</code></td>
 <td>Yes</td>
@@ -3150,6 +3153,13 @@ attachment.</p>
 <td><code>2</code></td>
 <td>No</td>
 <td>Stroke width in pixels.</td>
+</tr>
+<tr class="even">
+<td><code>clearable</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td>No</td>
+<td>Whether to show a clear/reset control.</td>
 </tr>
 </tbody>
 </table>
@@ -3171,7 +3181,7 @@ attachment.</p>
 class="sourceCode json"><code class="sourceCode json"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;Signature&quot;</span><span class="fu">,</span></span>
 <span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;bind&quot;</span><span class="fu">:</span> <span class="st">&quot;approverSignature&quot;</span><span class="fu">,</span></span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;penColor&quot;</span><span class="fu">:</span> <span class="st">&quot;#000&quot;</span><span class="fu">,</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;strokeColor&quot;</span><span class="fu">:</span> <span class="st">&quot;#000&quot;</span><span class="fu">,</span></span>
 <span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;height&quot;</span><span class="fu">:</span> <span class="dv">200</span></span>
 <span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <hr />
@@ -3538,9 +3548,8 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb37-1"><a href=
 Progressive <strong>Accepts children:</strong> Yes
 <strong>Bind:</strong> Forbidden <strong>Fallback:</strong> Card</p>
 <h4 id="description-31">Description</h4>
-<p>A sidebar or inline panel used for supplementary content, help text,
-or contextual actions. Panels may be positioned alongside the main
-content.</p>
+<p>A side panel used for supplementary content, help text, or contextual
+actions. Panels may be positioned alongside the main content.</p>
 <h4 id="props-31">Props</h4>
 <table>
 <colgroup>
@@ -3563,10 +3572,10 @@ content.</p>
 <tr class="odd">
 <td><code>position</code></td>
 <td>string</td>
-<td><code>"inline"</code></td>
+<td><code>"left"</code></td>
 <td>No</td>
-<td>Panel position. MUST be one of <code>"sidebar"</code> or
-<code>"inline"</code>.</td>
+<td>Panel position. MUST be one of <code>"left"</code> or
+<code>"right"</code>.</td>
 </tr>
 <tr class="even">
 <td><code>title</code></td>
@@ -3580,16 +3589,14 @@ content.</p>
 <td>string</td>
 <td><code>"300px"</code></td>
 <td>Yes</td>
-<td>Width when <code>position</code> is <code>"sidebar"</code>.</td>
+<td>Panel width.</td>
 </tr>
 </tbody>
 </table>
 <h4 id="rendering-requirements-31">Rendering Requirements</h4>
 <ul>
-<li>When <code>position</code> is <code>"sidebar"</code>, MUST render
-the panel alongside (not within) the main content flow.</li>
-<li>When <code>position</code> is <code>"inline"</code>, MUST render
-within the normal flow.</li>
+<li>MUST render the panel alongside (not within) the main content flow,
+positioned according to the <code>position</code> property.</li>
 <li>MUST render children within the panel body.</li>
 </ul>
 <h4 id="fallback-behavior-13">Fallback Behavior</h4>
@@ -3600,7 +3607,7 @@ within the normal flow.</li>
 <div class="sourceCode" id="cb38"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
 <span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;Panel&quot;</span><span class="fu">,</span></span>
-<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;position&quot;</span><span class="fu">:</span> <span class="st">&quot;sidebar&quot;</span><span class="fu">,</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;position&quot;</span><span class="fu">:</span> <span class="st">&quot;left&quot;</span><span class="fu">,</span></span>
 <span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;title&quot;</span><span class="fu">:</span> <span class="st">&quot;Help&quot;</span><span class="fu">,</span></span>
 <span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;width&quot;</span><span class="fu">:</span> <span class="st">&quot;280px&quot;</span><span class="fu">,</span></span>
 <span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;children&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
@@ -3643,6 +3650,14 @@ main form. Modals require explicit user action to open and close.</p>
 <td>Modal dialog title.</td>
 </tr>
 <tr class="even">
+<td><code>size</code></td>
+<td>string</td>
+<td><code>"md"</code></td>
+<td>No</td>
+<td>Modal size. MUST be one of <code>"sm"</code>, <code>"md"</code>,
+<code>"lg"</code>, <code>"xl"</code>, or <code>"full"</code>.</td>
+</tr>
+<tr class="odd">
 <td><code>trigger</code></td>
 <td>string</td>
 <td><code>"button"</code></td>
@@ -3651,7 +3666,7 @@ main form. Modals require explicit user action to open and close.</p>
 dedicated open button) or <code>"auto"</code> (opens automatically based
 on <code>when</code>).</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>triggerLabel</code></td>
 <td>string</td>
 <td><code>"Open"</code></td>
@@ -3659,7 +3674,7 @@ on <code>when</code>).</td>
 <td>Label for the trigger button when <code>trigger</code> is
 <code>"button"</code>.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>closable</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
@@ -4409,9 +4424,9 @@ hints serve as baseline defaults.</td>
 <li><strong>Widget selection:</strong> Tier 3 component type overrides
 Tier 2 widget assignment, which overrides Tier 1
 <code>widgetHint</code>.</li>
-<li><strong>Label display:</strong> Tier 3 <code>labelOverride</code>
-overrides Tier 1 <code>label</code> (but the underlying item label is
-unchanged).</li>
+<li><strong>Label display:</strong> Tier 1 item <code>label</code> is
+the source of truth. Context-specific labels use the <code>labels</code>
+map on the Definition item.</li>
 <li><strong>Layout:</strong> Tier 3 component tree completely replaces
 Tier 2 page layout for bound items.</li>
 <li><strong>Tokens:</strong> Tier 3 tokens override Tier 2 tokens of the
@@ -4882,7 +4897,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb49-1"><a href=
 <span id="cb49-171"><a href="#cb49-171" aria-hidden="true" tabindex="-1"></a>              <span class="fu">{</span></span>
 <span id="cb49-172"><a href="#cb49-172" aria-hidden="true" tabindex="-1"></a>                <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;Signature&quot;</span><span class="fu">,</span></span>
 <span id="cb49-173"><a href="#cb49-173" aria-hidden="true" tabindex="-1"></a>                <span class="dt">&quot;bind&quot;</span><span class="fu">:</span> <span class="st">&quot;approverSignature&quot;</span><span class="fu">,</span></span>
-<span id="cb49-174"><a href="#cb49-174" aria-hidden="true" tabindex="-1"></a>                <span class="dt">&quot;penColor&quot;</span><span class="fu">:</span> <span class="st">&quot;#000&quot;</span><span class="fu">,</span></span>
+<span id="cb49-174"><a href="#cb49-174" aria-hidden="true" tabindex="-1"></a>                <span class="dt">&quot;strokeColor&quot;</span><span class="fu">:</span> <span class="st">&quot;#000&quot;</span><span class="fu">,</span></span>
 <span id="cb49-175"><a href="#cb49-175" aria-hidden="true" tabindex="-1"></a>                <span class="dt">&quot;height&quot;</span><span class="fu">:</span> <span class="dv">150</span></span>
 <span id="cb49-176"><a href="#cb49-176" aria-hidden="true" tabindex="-1"></a>              <span class="fu">}</span></span>
 <span id="cb49-177"><a href="#cb49-177" aria-hidden="true" tabindex="-1"></a>            <span class="ot">]</span></span>
@@ -4954,7 +4969,7 @@ classification and key characteristics.</p>
 <td>Layout</td>
 <td>Core</td>
 <td>Yes</td>
-<td>Forbidden¹</td>
+<td>Forbidden</td>
 <td>Flexbox vertical/horizontal stacking.</td>
 </tr>
 <tr class="odd">
@@ -4963,7 +4978,7 @@ classification and key characteristics.</p>
 <td>Layout</td>
 <td>Core</td>
 <td>Yes</td>
-<td>Forbidden¹</td>
+<td>Forbidden</td>
 <td>Multi-column grid layout.</td>
 </tr>
 <tr class="even">
@@ -5080,7 +5095,7 @@ classification and key characteristics.</p>
 <td>Container</td>
 <td>Core</td>
 <td>Yes</td>
-<td>Forbidden¹</td>
+<td>Forbidden</td>
 <td>Bordered surface grouping.</td>
 </tr>
 <tr class="odd">
@@ -5089,7 +5104,7 @@ classification and key characteristics.</p>
 <td>Container</td>
 <td>Core</td>
 <td>Yes</td>
-<td>Forbidden¹</td>
+<td>Forbidden</td>
 <td>Expandable/collapsible section.</td>
 </tr>
 <tr class="even">
@@ -5225,7 +5240,7 @@ classification and key characteristics.</p>
 <td>Progressive</td>
 <td>Yes</td>
 <td>Forbidden</td>
-<td>Sidebar or inline panel.</td>
+<td>Side panel.</td>
 </tr>
 <tr class="odd">
 <td>33</td>
@@ -5238,9 +5253,7 @@ classification and key characteristics.</p>
 </tr>
 </tbody>
 </table>
-<p>¹ May bind to a repeatable group for repeat-template semantics
-(§4.4). ² DataTable binds to a repeatable group key, not a field
-key.</p>
+<p>² DataTable binds to a repeatable group key, not a field key.</p>
 <hr />
 <h2 id="appendix-c-datatype-component-compatibility">Appendix C:
 DataType ↔︎ Component Compatibility</h2>

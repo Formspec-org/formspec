@@ -16,21 +16,48 @@
     "version": {
       "type": "string",
       "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
-      "description": "Semantic version of this Mapping Document (e.g. '1.0.0')."
+      "description": "Semantic version of this Mapping Document (e.g. '1.0.0').",
+      "examples": ["1.0.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version identifier for the mapping document itself."
+      }
     },
     "definitionRef": {
       "type": "string",
       "minLength": 1,
       "format": "uri",
-      "description": "URI or stable identifier of the target Formspec Definition (§3.1)."
+      "description": "URI or stable identifier of the target Formspec Definition (§3.1).",
+      "examples": ["https://clinic.example.com/forms/patient-intake"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Canonical identifier of the definition this mapping targets."
+      }
     },
     "definitionVersion": {
       "type": "string",
       "minLength": 1,
-      "description": "Semver range of compatible Formspec Definition versions (e.g. '>=1.0.0 <2.0.0') per node-semver syntax (§3.1)."
+      "description": "Semver range of compatible Formspec Definition versions (e.g. '>=1.0.0 <2.0.0') per node-semver syntax (§3.1).",
+      "examples": [">=1.0.0 <2.0.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Compatibility window for the mapped definition version."
+      }
     },
     "targetSchema": {
-      "$ref": "#/$defs/TargetSchema"
+      "$ref": "#/$defs/TargetSchema",
+      "description": "Descriptor for the external system schema targeted by this mapping.",
+      "examples": [
+        {
+          "format": "json",
+          "name": "FHIR Patient R4",
+          "url": "https://hl7.org/fhir/R4/patient.schema.json"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declares the output shape that transform rules must produce."
+      }
     },
     "direction": {
       "type": "string",
@@ -56,7 +83,20 @@
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/FieldRule" },
-      "description": "Ordered array of Field Rule objects (§3.3). MUST contain at least one element."
+      "description": "Ordered array of Field Rule objects (§3.3). MUST contain at least one element.",
+      "examples": [
+        [
+          {
+            "sourcePath": "patient_name.first",
+            "targetPath": "name[0].given[0]",
+            "transform": "preserve"
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declarative transform pipeline from source paths to target paths."
+      }
     },
     "adapters": {
       "type": "object",

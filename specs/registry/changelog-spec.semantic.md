@@ -1,0 +1,7 @@
+- Changelog intent: each entry is an atomic, ordered diff from `fromVersion` to `toVersion` for one definition lineage.
+- Change object semantics: `type`, `target`, `path`, and `impact` must be sufficient for deterministic downstream migration classification.
+- Ordering discipline: processing order is document order; consumers should not reorder changes when deriving migration plans.
+- Impact aggregation: document-level `semverImpact` must equal the maximum impact level present in `changes`.
+- Migration linkage: migration hints are advisory scaffolding and should be transformable into formal migration artifacts.
+- Version consistency: changelog version bounds must align with referenced definition identity and published release sequence.
+- Conformance behavior: invalid change records or inconsistent impact rollups are rejection conditions, not warning-only conditions.

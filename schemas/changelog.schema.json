@@ -14,17 +14,32 @@
     "definitionUrl": {
       "type": "string",
       "format": "uri",
-      "description": "URL of the Definition."
+      "description": "URL of the Definition.",
+      "examples": ["https://example.org/forms/grant-application"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Canonical identifier of the form definition whose versions are compared."
+      }
     },
     "fromVersion": {
       "type": "string",
       "minLength": 1,
-      "description": "Base semver version."
+      "description": "Base semver version.",
+      "examples": ["2.1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Starting version for the changelog diff."
+      }
     },
     "toVersion": {
       "type": "string",
       "minLength": 1,
-      "description": "Target semver version."
+      "description": "Target semver version.",
+      "examples": ["3.0.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Destination version for the changelog diff."
+      }
     },
     "generatedAt": {
       "type": "string",
@@ -34,7 +49,12 @@
     "semverImpact": {
       "type": "string",
       "enum": ["major", "minor", "patch"],
-      "description": "Maximum impact across all changes (breaking → major, compatible → minor, cosmetic → patch)."
+      "description": "Maximum impact across all changes (breaking → major, compatible → minor, cosmetic → patch).",
+      "examples": ["major", "minor", "patch"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Computed aggregate semantic-version impact for the release."
+      }
     },
     "summary": {
       "type": "string",
@@ -43,7 +63,21 @@
     "changes": {
       "type": "array",
       "items": { "$ref": "#/$defs/Change" },
-      "description": "Ordered array of Change objects."
+      "description": "Ordered array of Change objects.",
+      "examples": [
+        [
+          {
+            "type": "added",
+            "target": "item",
+            "path": "items.contact.phone",
+            "impact": "compatible"
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Atomic change records used for migration and release impact analysis."
+      }
     }
   },
   "$defs": {

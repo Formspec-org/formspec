@@ -463,24 +463,28 @@ and machine-to-machine validation pipelines.
 A **Response** is a completed or in-progress Instance pinned to a specific
 Definition version. It is the unit of data capture — the filled-in form.
 
-A Response MUST contain:
+The canonical structural contract for Response properties is generated from
+`schemas/response.schema.json`:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `definitionUrl` | string (URI) | The canonical URL of the Definition. |
-| `definitionVersion` | string (semver) | The exact version of the Definition against which this Response was created. |
-| `status` | string | One of: `"in-progress"`, `"completed"`, `"amended"`, `"stopped"`. |
-| `data` | object | The primary Instance — the form data. |
-| `authored` | string (ISO 8601 date-time) | When the Response was last modified. |
+<!-- schema-ref:start id=core-response-top-level schema=schemas/response.schema.json pointers=# -->
+<!-- generated:schema-ref id=core-response-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/author` | `author` | <code>object</code> | no | — | Identifier and display name of the person or system that authored the Response. |
+| `#/properties/authored` | `authored` | <code>string</code> | yes | critical | When the Response was last modified (ISO 8601 date-time). |
+| `#/properties/data` | `data` | <code>object</code> | yes | critical | The primary Instance — the form data. |
+| `#/properties/definitionUrl` | `definitionUrl` | <code>string</code> | yes | critical | The canonical URL of the Definition. |
+| `#/properties/definitionVersion` | `definitionVersion` | <code>string</code> | yes | critical | The exact version of the Definition against which this Response was created. |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | — |
+| `#/properties/id` | `id` | <code>string</code> | no | — | A globally unique identifier (e.g., UUID). |
+| `#/properties/status` | `status` | <code>string</code> | yes | enum: <code>"in-progress"</code>, <code>"completed"</code>, <code>"amended"</code>, <code>"stopped"</code>; critical | The current status of this Response. |
+| `#/properties/subject` | `subject` | <code>object</code> | no | — | The entity this Response is about. |
+| `#/properties/validationResults` | `validationResults` | <code>array</code> | no | — | The most recent set of ValidationResult entries (§2.5.1). |
+<!-- schema-ref:end -->
 
-A Response MAY contain:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | string | A globally unique identifier (e.g., UUID). |
-| `author` | object | Identifier and display name of the person or system that authored the Response. |
-| `subject` | object | The entity this response is about. Contains `id` (string, REQUIRED) and `type` (string, OPTIONAL). E.g., `{ "id": "grant-12345", "type": "Grant" }`. |
-| `validationResults` | array | The most recent set of ValidationResult entries. |
+The generated table above defines required and optional properties. In this
+spec section, prose requirements describe semantics that the schema alone
+cannot express.
 
 A Response references exactly one Definition by the tuple
 `(definitionUrl, definitionVersion)`. A conformant processor MUST reject a
@@ -1786,6 +1790,15 @@ time rather than at evaluation time:
 
 ## 4. Definition Schema
 
+### 4.0 Bottom Line Up Front
+
+<!-- bluf:start file=definition-spec.bluf.md -->
+- This section defines the canonical Definition document shape for form structure and behavior declarations.
+- A valid definition requires `$formspec`, `url`, `version`, `status`, `title`, and `items`.
+- Definition identity is the immutable tuple `(url, version)`; processors must not silently substitute versions.
+- This BLUF is governed by `schemas/definition.schema.json`; generated references are the structural contract.
+<!-- bluf:end -->
+
 ### 4.1 Top-Level Structure
 
 A Formspec Definition is a JSON object. Conforming implementations MUST
@@ -1815,31 +1828,38 @@ that omits a REQUIRED property.
 }
 ```
 
-The properties are defined as follows:
+The canonical structural contract for Definition top-level properties is
+generated from `schemas/definition.schema.json`:
 
-| Property | Type | Cardinality | Description |
-|---|---|---|---|
-| `$formspec` | string | **1..1** (REQUIRED) | Specification version this Definition conforms to. MUST be the string `"1.0"` for Definitions governed by this specification. Implementations MUST reject Definitions whose `$formspec` value they do not support. |
-| `url` | string (URI) | **1..1** (REQUIRED) | Canonical identifier for this Definition. MUST be a syntactically valid URI as defined by [RFC 3986](https://www.ietf.org/rfc/rfc3986.txt). MUST be globally unique across all Formspec Definitions. The `url` does NOT change between versions of the same logical form — it identifies the *form*, not the *version*. |
-| `version` | string | **1..1** (REQUIRED) | Business version of the Definition. The format and comparison semantics are determined by `versionAlgorithm`. Together with `url`, the pair (`url`, `version`) MUST be globally unique. |
-| `versionAlgorithm` | string | **0..1** (OPTIONAL) | Algorithm that governs interpretation and ordering of `version` strings. MUST be one of: `"semver"`, `"date"`, `"integer"`, `"natural"`. Default: `"semver"`. See §6.2 for semantics. |
-| `status` | string | **1..1** (REQUIRED) | Publication status. MUST be one of: `"draft"`, `"active"`, `"retired"`. Only Definitions with status `"active"` SHOULD be used when creating new Responses. See §6.3 for lifecycle rules. |
-| `derivedFrom` | string (URI) or object | **0..1** (OPTIONAL) | Parent Definition from which this one was derived. Either a URI string (unversioned) or an object `{ "url": "...", "version": "..." }` for version-pinned derivation. See §6.5 for semantics. |
-| `title` | string | **1..1** (REQUIRED) | Human-readable name of the form. Implementations SHOULD display this to end users. |
-| `description` | string | **0..1** (OPTIONAL) | Human-readable description. MAY contain Markdown formatting; implementations are NOT REQUIRED to render Markdown. |
-| `items` | array of Item | **1..1** (REQUIRED) | The item tree. Contains the root-level Items that define the form's structure. The array MAY be empty for a skeleton Definition, but the property itself MUST be present. See §4.2. |
-| `binds` | array of Bind | **0..1** (OPTIONAL) | Behavioral declarations that attach expressions to data nodes. See §4.3. |
-| `shapes` | array of Shape | **0..1** (OPTIONAL) | Validation rule sets. See §5.2. |
-| `instances` | object | **0..1** (OPTIONAL) | Named secondary data sources. Keys are instance names; values are Instance objects. See §4.4. |
-| `variables` | array of Variable | **0..1** (OPTIONAL) | Named computed values with lexical scoping. See §4.5. |
-| `nonRelevantBehavior` | string | **0..1** (OPTIONAL) | Controls how non-relevant field values are handled in the submitted Response. MUST be one of `"remove"` (exclude non-relevant nodes — **DEFAULT**), `"empty"` (retain structure but set values to `null`), or `"keep"` (retain with current values intact). Individual Binds MAY override this per-path. See §5.6. |
-| `optionSets` | object | **0..1** (OPTIONAL) | Named, reusable option lists. Keys are set names; values are OptionSet objects. See §4.6. |
-| `screener` | object | **0..1** (OPTIONAL) | Routing logic that classifies respondents and directs them to a target Definition. See §4.7. |
-| `migrations` | object | **0..1** (OPTIONAL) | Maps for transforming Responses from prior Definition versions to this version. See §6.7. |
-| `date` | string (ISO 8601 date) | **0..1** (OPTIONAL) | The date this version of the Definition was published or last updated. |
-| `name` | string | **0..1** (OPTIONAL) | A machine-friendly short identifier (ASCII letters, digits, hyphens). Intended for code generation and programmatic reference. MUST match `[a-zA-Z][a-zA-Z0-9\-]*`. |
-| `extensions` | object | **0..1** (OPTIONAL) | Extension namespace. Keys MUST be `x-` prefixed identifiers. Implementations that do not recognize an extension MUST ignore it. Processors MUST preserve unrecognized extensions on round-trip. See §8. |
-| `formPresentation` | object | **0..1** (OPTIONAL) | Form-wide presentation defaults. All properties within are OPTIONAL and advisory. See §4.1.1. |
+<!-- schema-ref:start id=core-definition-top-level schema=schemas/definition.schema.json pointers=# -->
+<!-- generated:schema-ref id=core-definition-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/$formspec` | `$formspec` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Definition specification version. MUST be '1.0'. |
+| `#/properties/binds` | `binds` | <code>array</code> | no | — | — |
+| `#/properties/date` | `date` | <code>string</code> | no | — | — |
+| `#/properties/derivedFrom` | `derivedFrom` | <code>composite</code> | no | — | Parent definition. Either a URI string or an object with url and optional version. |
+| `#/properties/description` | `description` | <code>string</code> | no | — | — |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | — |
+| `#/properties/formPresentation` | `formPresentation` | <code>object</code> | no | — | Form-wide presentation defaults per §4.1.1. All properties OPTIONAL and advisory. |
+| `#/properties/instances` | `instances` | <code>object</code> | no | — | — |
+| `#/properties/items` | `items` | <code>array</code> | yes | critical | Root item tree defining fields, groups, and display nodes. |
+| `#/properties/migrations` | `migrations` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Migrations</code> | — |
+| `#/properties/name` | `name` | <code>string</code> | no | pattern: <code>^[a-zA-Z][a-zA-Z0-9\-]*&#36;</code> | — |
+| `#/properties/nonRelevantBehavior` | `nonRelevantBehavior` | <code>string</code> | no | enum: <code>"remove"</code>, <code>"empty"</code>, <code>"keep"</code>; default: <code>"remove"</code> | — |
+| `#/properties/optionSets` | `optionSets` | <code>object</code> | no | — | — |
+| `#/properties/screener` | `screener` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Screener</code> | — |
+| `#/properties/shapes` | `shapes` | <code>array</code> | no | — | — |
+| `#/properties/status` | `status` | <code>string</code> | yes | enum: <code>"draft"</code>, <code>"active"</code>, <code>"retired"</code>; critical | Definition lifecycle state. |
+| `#/properties/title` | `title` | <code>string</code> | yes | critical | Human-readable definition title. |
+| `#/properties/url` | `url` | <code>string</code> | yes | critical | Canonical URI identifier of the logical form. |
+| `#/properties/variables` | `variables` | <code>array</code> | no | — | — |
+| `#/properties/version` | `version` | <code>string</code> | yes | critical | Version identifier of this specific Definition document. |
+| `#/properties/versionAlgorithm` | `versionAlgorithm` | <code>string</code> | no | enum: <code>"semver"</code>, <code>"date"</code>, <code>"integer"</code>, <code>"natural"</code>; default: <code>"semver"</code> | — |
+<!-- schema-ref:end -->
+
+The generated table above defines required and optional properties. In this
+section, prose requirements describe semantics beyond structural constraints.
 
 Implementations MUST preserve unrecognized top-level properties during
 round-tripping but MUST NOT assign semantics to them.
@@ -2649,12 +2669,21 @@ at a point in time.
 
 #### 5.4.1 ValidationReport Properties
 
-| Property | Type | Cardinality | Description |
-|---|---|---|---|
-| `valid` | boolean | **1..1** (REQUIRED) | `true` if and only if the `results` array contains zero entries with severity `"error"`. Warning-level and info-level results do NOT affect this determination. |
-| `results` | array of ValidationResult | **1..1** (REQUIRED) | All validation results, regardless of severity. The array MUST include results from Bind constraints, Shape constraints, type checks, required checks, repeat cardinality checks, and any external validation results (§5.7). |
-| `counts` | object | **1..1** (REQUIRED) | Counts of results by severity level. MUST contain the keys `"error"`, `"warning"`, and `"info"`, each with an integer value ≥ 0. |
-| `timestamp` | string (dateTime) | **1..1** (REQUIRED) | ISO 8601 date-time indicating when validation was performed. |
+The canonical structural contract for ValidationReport properties is generated
+from `schemas/validationReport.schema.json`:
+
+<!-- schema-ref:start id=core-validation-report-top-level schema=schemas/validationReport.schema.json pointers=# -->
+<!-- generated:schema-ref id=core-validation-report-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/counts` | `counts` | <code>object</code> | yes | critical | Counts of results by severity level. |
+| `#/properties/definitionUrl` | `definitionUrl` | <code>string</code> | no | — | The canonical URL of the Definition that was validated against. |
+| `#/properties/definitionVersion` | `definitionVersion` | <code>string</code> | no | — | The version of the Definition that was validated against. |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | — |
+| `#/properties/results` | `results` | <code>array</code> | yes | critical | All validation results regardless of severity. |
+| `#/properties/timestamp` | `timestamp` | <code>string</code> | yes | critical | ISO 8601 date-time indicating when validation was performed. |
+| `#/properties/valid` | `valid` | <code>boolean</code> | yes | critical | true if and only if the results array contains zero entries with severity 'error'. |
+<!-- schema-ref:end -->
 
 Implementations MUST ensure that `valid` is consistent with `counts.error`:
 `valid` MUST be `true` when `counts.error` is `0` and `false` otherwise.
@@ -4579,5 +4608,3 @@ that address them. This appendix is informative.
 | PR-05 | Form-wide defaults | §4.1.1 `formPresentation` — `pageMode`, `labelPosition`, `density` |
 | PR-06 | No impact on data semantics | §2.4 "Presentation Hints and Processing"; §4.2.5 normative statement |
 | PR-07 | Forward compatibility for richer systems | §4.2.5.6 `additionalProperties: true` on `presentation` |
-
-

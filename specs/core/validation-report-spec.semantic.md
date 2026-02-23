@@ -1,0 +1,7 @@
+- ValidationReport is a point-in-time artifact and should be treated as an immutable validation snapshot.
+- `valid` must be computed from error-level findings only; warning/info severities cannot flip overall validity.
+- `results` should preserve deterministic ordering and stable targeting so downstream UIs and audit pipelines remain reproducible.
+- `counts` must be internally consistent with `results` for each severity bucket.
+- Result entries are schema-coupled to shared ValidationResult semantics from the response schema and should not diverge.
+- Timestamp semantics: `timestamp` marks execution time of the validation pass, not submission time of the response.
+- Conformance behavior: reports missing required severity accounting or malformed result entries should be rejected.
