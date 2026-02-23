@@ -4,5 +4,11 @@ test-results/
 playwright-report/
 blob-report/
 .venv/
-__pycache__/
+**/__pycache__/
 .hypothesis/
+.env
+test-results/
+project/
+.pytest_cache/
+.claude
+.serena/
