@@ -346,6 +346,7 @@ are recognized on all component objects:
 | `when` | string (FEL) | **0..1** (OPTIONAL) | FEL boolean expression for conditional rendering. See §8. |
 | `responsive` | object | **0..1** (OPTIONAL) | Breakpoint-keyed prop overrides. See §9. |
 | `style` | object | **0..1** (OPTIONAL) | Flat style map. Values MAY contain `$token.path` references. See §10.2. |
+| `cssClass` | string \| array of strings | **0..1** (OPTIONAL) | CSS class name(s) that web renderers SHOULD apply to the component's root element. Additive to renderer-generated classes. Non-web renderers MAY ignore. Values MAY contain `$token.` references. |
 | `children` | array | **0..1** (varies) | Array of child component objects. Only components that accept children (§3.4) MAY include this property. |
 
 In addition to these base properties, each component type defines its own
@@ -2670,6 +2671,35 @@ When a `$token.` reference cannot be resolved through the cascade
 2. The processor SHOULD emit a warning identifying the unresolved
    token reference.
 3. The processor MUST NOT fail or halt rendering.
+
+### 10.5 CSS Custom Property Emission (Web Renderers)
+
+Web renderers SHOULD emit resolved theme tokens as CSS custom properties
+on the form's root container element. The recommended naming convention
+is:
+
+```
+--formspec-{token-key-with-dots-replaced-by-hyphens}
+```
+
+For example, a theme token `color.primary` with value `#005ea2` SHOULD
+be emitted as:
+
+```css
+--formspec-color-primary: #005ea2;
+```
+
+This enables external CSS — including design-system bridge stylesheets
+and author-defined overrides — to reference theme tokens without
+JavaScript coupling. Bridge CSS can use `var(--formspec-color-primary)`
+to stay in sync with the active theme.
+
+Renderers that emit CSS custom properties SHOULD update them when the
+theme document changes. Renderers MAY also emit tokens from the
+Component Document's `tokens` map, with component tokens taking
+precedence over theme tokens for identically named properties.
+
+Non-web renderers (PDF, native) MAY ignore this convention entirely.
 
 ---
 

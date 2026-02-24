@@ -98,6 +98,9 @@ that omits a REQUIRED property.
     "compatibleVersions": ">=1.0.0 <2.0.0"
   },
   "platform": "web",
+  "stylesheets": [
+    "https://cdn.example.com/design-system/3.0/styles.css"
+  ],
   "tokens": {},
   "defaults": {},
   "selectors": [],
@@ -124,6 +127,7 @@ that omits a REQUIRED property.
 | `#/properties/pages` | `pages` | <code>array</code> | no | — | Page layout — ordered list of pages with region assignments. |
 | `#/properties/platform` | `platform` | <code>string</code> | no | — | Target platform. Well-known: 'web', 'mobile', 'pdf', 'print', 'kiosk'. |
 | `#/properties/selectors` | `selectors` | <code>array</code> | no | — | Cascade level 2: type/dataType-based overrides. |
+| `#/properties/stylesheets` | `stylesheets` | <code>array</code> | no | — | External CSS stylesheet URIs. Web renderers SHOULD load these before rendering. Loaded in array order. |
 | `#/properties/targetDefinition` | `targetDefinition` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/TargetDefinition</code>; critical | Binding to the target Formspec Definition and compatible version range. |
 | `#/properties/title` | `title` | <code>string</code> | no | — | Human-readable name. |
 | `#/properties/tokens` | `tokens` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Tokens</code> | — |
@@ -169,6 +173,33 @@ not recognize a `platform` value SHOULD apply the theme regardless.
 The `version` property is a free-form string. Semantic versioning
 (SemVer) is RECOMMENDED. The pair (`url`, `version`) SHOULD be unique
 across all published versions of a theme.
+
+### 2.5 External Stylesheets
+
+The optional `stylesheets` property is an array of URI strings
+pointing to external CSS files.
+
+```json
+{
+  "stylesheets": [
+    "https://cdn.example.com/uswds/3.11/uswds.min.css",
+    "https://cdn.example.com/custom/form-overrides.css"
+  ]
+}
+```
+
+Normative requirements:
+
+- Web renderers SHOULD load declared stylesheets before rendering the
+  form. Stylesheets are loaded in array order; later sheets take CSS
+  precedence over earlier sheets.
+- Renderers MAY cache stylesheets, load them lazily, or scope them
+  to the form container.
+- Renderers MUST NOT fail if a stylesheet cannot be loaded; they
+  SHOULD warn and continue rendering.
+- Non-web renderers (PDF, native) MAY ignore `stylesheets`.
+- `stylesheets` URLs are subject to the host application's security
+  policy (CSP, CORS, etc.).
 
 ## 3. Design Tokens
 
@@ -525,6 +556,7 @@ computed as follows:
 ```
 function resolve(item, definition, theme):
   resolved = {}
+  cssClasses = []    // accumulator for cssClass union
 
   // Level -1: Tier 1 formPresentation globals
   if definition.formPresentation exists:
@@ -537,15 +569,22 @@ function resolve(item, definition, theme):
   // Level 1: Theme defaults
   if theme.defaults exists:
     merge(resolved, theme.defaults)
+    unionAppend(cssClasses, theme.defaults.cssClass)
 
   // Level 2: Matching selectors (in document order)
   for each selector in theme.selectors:
     if matches(selector.match, item):
       merge(resolved, selector.apply)
+      unionAppend(cssClasses, selector.apply.cssClass)
 
   // Level 3: Item key override
   if theme.items[item.key] exists:
     merge(resolved, theme.items[item.key])
+    unionAppend(cssClasses, theme.items[item.key].cssClass)
+
+  // cssClass uses union semantics (not shallow replace)
+  if cssClasses is not empty:
+    resolved.cssClass = deduplicate(cssClasses)
 
   return resolved
 ```
@@ -555,6 +594,32 @@ source replaces the same property in the target. Nested objects
 (`widgetConfig`, `style`, `accessibility`) are replaced as a whole,
 not deep-merged. This avoids the complexity of recursive merge
 semantics.
+
+**Exception — `cssClass` merge semantics:** The `cssClass` property
+uses **union** semantics instead of replacement. When multiple cascade
+levels specify `cssClass`, the resolved value is the union of all
+class names across all matching levels (duplicates removed, order
+preserved — defaults first, then selectors in document order, then
+item overrides). This differs from all other PresentationBlock
+properties because CSS classes are inherently additive — a selector
+adding `usa-input` should not remove a default-level `formspec-field`.
+
+Example:
+
+```json
+{
+  "defaults": { "cssClass": "formspec-field" },
+  "selectors": [
+    { "match": { "dataType": "money" }, "apply": { "cssClass": ["usa-input", "usa-input--currency"] } }
+  ],
+  "items": {
+    "totalBudget": { "cssClass": "budget-highlight" }
+  }
+}
+```
+
+For item `totalBudget` with `dataType: "money"`, the resolved
+`cssClass` is `["formspec-field", "usa-input", "usa-input--currency", "budget-highlight"]`.
 
 ### 5.6 Interaction with Tier 1 Hints
 

@@ -4,14 +4,20 @@
   "title": "Formspec Theme Document",
   "description": "A Formspec Theme document per the Formspec Theme Specification v1.0.",
   "type": "object",
-  "required": ["$formspecTheme", "version", "targetDefinition"],
+  "required": [
+    "$formspecTheme",
+    "version",
+    "targetDefinition"
+  ],
   "additionalProperties": false,
   "properties": {
     "$formspecTheme": {
       "type": "string",
       "const": "1.0",
       "description": "Theme specification version. MUST be '1.0'.",
-      "examples": ["1.0"],
+      "examples": [
+        "1.0"
+      ],
       "x-lm": {
         "critical": true,
         "intent": "Version pin for theme document compatibility."
@@ -26,7 +32,9 @@
       "type": "string",
       "minLength": 1,
       "description": "Version of this theme document.",
-      "examples": ["1.0.0"],
+      "examples": [
+        "1.0.0"
+      ],
       "x-lm": {
         "critical": true,
         "intent": "Schema-agnostic theme revision identifier."
@@ -88,7 +96,7 @@
       "items": {
         "$ref": "#/$defs/Page"
       },
-      "description": "Page layout — ordered list of pages with region assignments."
+      "description": "Page layout \u2014 ordered list of pages with region assignments."
     },
     "breakpoints": {
       "$ref": "#/$defs/Breakpoints"
@@ -99,12 +107,22 @@
         "pattern": "^x-"
       },
       "description": "Extension namespace. Keys MUST be x- prefixed."
+    },
+    "stylesheets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      },
+      "description": "External CSS stylesheet URIs. Web renderers SHOULD load these before rendering. Loaded in array order."
     }
   },
   "$defs": {
     "TargetDefinition": {
       "type": "object",
-      "required": ["url"],
+      "required": [
+        "url"
+      ],
       "additionalProperties": false,
       "properties": {
         "url": {
@@ -122,8 +140,12 @@
       "type": "object",
       "additionalProperties": {
         "oneOf": [
-          { "type": "string" },
-          { "type": "number" }
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
         ]
       },
       "description": "Flat key-value token map. Keys are dot-path names (e.g., 'color.primary'). Values are strings or numbers. Referenced as $token.<key> in widgetConfig and style."
@@ -134,24 +156,32 @@
       "properties": {
         "widget": {
           "type": "string",
-          "description": "Widget identifier (same vocabulary as Tier 1 widgetHint §4.2.5.1)."
+          "description": "Widget identifier (same vocabulary as Tier 1 widgetHint \u00a74.2.5.1)."
         },
         "widgetConfig": {
           "type": "object",
           "additionalProperties": true,
-          "description": "Widget-specific configuration. Properties depend on the widget. See spec prose §4.2 for per-widget schemas."
+          "description": "Widget-specific configuration. Properties depend on the widget. See spec prose \u00a74.2 for per-widget schemas."
         },
         "labelPosition": {
           "type": "string",
-          "enum": ["top", "start", "hidden"],
+          "enum": [
+            "top",
+            "start",
+            "hidden"
+          ],
           "description": "Label placement for this item or selector scope."
         },
         "style": {
           "type": "object",
           "additionalProperties": {
             "oneOf": [
-              { "type": "string" },
-              { "type": "number" }
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
             ]
           },
           "description": "Flat style overrides. Values may contain $token references (e.g., '$token.color.primary'). Keys are renderer-interpreted style names."
@@ -161,8 +191,24 @@
         },
         "fallback": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Ordered fallback widget identifiers if preferred widget is unavailable."
+        },
+        "cssClass": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "CSS class name(s) applied to matching items. Merged (unioned) across cascade levels, not replaced."
         }
       }
     },
@@ -180,14 +226,21 @@
         },
         "liveRegion": {
           "type": "string",
-          "enum": ["off", "polite", "assertive"],
+          "enum": [
+            "off",
+            "polite",
+            "assertive"
+          ],
           "description": "How aggressively to announce value changes."
         }
       }
     },
     "Selector": {
       "type": "object",
-      "required": ["match", "apply"],
+      "required": [
+        "match",
+        "apply"
+      ],
       "additionalProperties": false,
       "properties": {
         "match": {
@@ -204,27 +257,52 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["group", "field", "display"],
+          "enum": [
+            "group",
+            "field",
+            "display"
+          ],
           "description": "Match items of this type."
         },
         "dataType": {
           "type": "string",
           "enum": [
-            "string", "text", "integer", "decimal", "boolean",
-            "date", "dateTime", "time", "uri",
-            "attachment", "choice", "multiChoice", "money"
+            "string",
+            "text",
+            "integer",
+            "decimal",
+            "boolean",
+            "date",
+            "dateTime",
+            "time",
+            "uri",
+            "attachment",
+            "choice",
+            "multiChoice",
+            "money"
           ],
           "description": "Match fields of this dataType."
         }
       },
       "anyOf": [
-        { "required": ["type"] },
-        { "required": ["dataType"] }
+        {
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "required": [
+            "dataType"
+          ]
+        }
       ]
     },
     "Page": {
       "type": "object",
-      "required": ["id", "title"],
+      "required": [
+        "id",
+        "title"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -251,7 +329,9 @@
     },
     "Region": {
       "type": "object",
-      "required": ["key"],
+      "required": [
+        "key"
+      ],
       "additionalProperties": false,
       "properties": {
         "key": {
@@ -263,7 +343,7 @@
           "minimum": 1,
           "maximum": 12,
           "default": 12,
-          "description": "Grid column span (1–12). Default: full width."
+          "description": "Grid column span (1\u201312). Default: full width."
         },
         "start": {
           "type": "integer",
