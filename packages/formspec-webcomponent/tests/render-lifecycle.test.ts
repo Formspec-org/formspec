@@ -30,7 +30,7 @@ describe('render lifecycle', () => {
         expect(el.querySelector('.formspec-field')).not.toBeNull();
     });
 
-    it('setting definition again re-renders (old DOM removed)', () => {
+    it('setting definition again re-renders in place (root container preserved)', () => {
         el.definition = singleFieldDef();
         const firstContainer = el.querySelector('.formspec-container');
         expect(firstContainer).not.toBeNull();
@@ -39,8 +39,8 @@ describe('render lifecycle', () => {
             { key: 'a', dataType: 'string' },
             { key: 'b', dataType: 'integer' },
         ]);
-        // Old container replaced
-        expect(el.querySelector('.formspec-container')).not.toBe(firstContainer);
+        // Root container remains stable; children are refreshed.
+        expect(el.querySelector('.formspec-container')).toBe(firstContainer);
         // Two fields now
         expect(el.querySelectorAll('.formspec-field').length).toBe(2);
     });

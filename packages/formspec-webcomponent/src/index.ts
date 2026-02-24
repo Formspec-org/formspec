@@ -80,6 +80,7 @@ export class FormspecRender extends HTMLElement {
     private customComponentStack: Set<string> = new Set();
     private stylesheetHrefs: string[] = [];
     private static stylesheetRefCounts: Map<string, number> = new Map();
+    private rootContainer: HTMLDivElement | null = null;
 
     set definition(val: any) {
         this._definition = val;
@@ -150,7 +151,6 @@ export class FormspecRender extends HTMLElement {
             fn();
         }
         this.cleanupFns = [];
-        this.innerHTML = '';
     }
 
     private cleanupStylesheets() {
@@ -241,8 +241,15 @@ export class FormspecRender extends HTMLElement {
             }
         }
 
-        const container = document.createElement('div');
+        if (!this.rootContainer) {
+            this.rootContainer = document.createElement('div');
+            this.rootContainer.className = 'formspec-container';
+            this.appendChild(this.rootContainer);
+        }
+
+        const container = this.rootContainer;
         container.className = 'formspec-container';
+        container.replaceChildren();
 
         // §10.5 Emit CSS custom properties from theme/component tokens
         this.emitTokenProperties(container);
@@ -268,7 +275,6 @@ export class FormspecRender extends HTMLElement {
         });
         container.appendChild(submitBtn);
 
-        this.appendChild(container);
     }
 
     private findItemByKey = (key: string, items: any[] = this._definition.items): any | null => {
@@ -500,20 +506,50 @@ export class FormspecRender extends HTMLElement {
         wrapper.style.cssText = 'display: contents';
         parent.appendChild(wrapper);
 
-        let scopedCleanups: Array<() => void> = [];
-        const dispose = () => { for (const fn of scopedCleanups) fn(); scopedCleanups = []; };
+        type ResponsiveVariant = {
+            mount: HTMLElement;
+            cleanups: Array<() => void>;
+        };
+        const variants = new Map<string, ResponsiveVariant>();
+        const keyFor = (bp: string | null): string => bp ?? '__base__';
 
-        const effectDispose = effect(() => {
-            const bp = this._activeBreakpointSignal.value;
-            dispose();
-            wrapper.innerHTML = '';
+        const ensureVariant = (bp: string | null): string => {
+            const key = keyFor(bp);
+            if (variants.has(key)) return key;
+
+            const mount = document.createElement('div');
+            mount.style.cssText = 'display: contents';
+            wrapper.appendChild(mount);
+
+            const cleanups: Array<() => void> = [];
             const resolved = resolveResponsiveProps(comp, bp);
             // Strip `responsive` to prevent re-entry into this method
             const { responsive: _ignored, ...resolvedWithout } = resolved;
-            this.withCleanupScope(scopedCleanups, () => this.renderComponentInner(resolvedWithout, wrapper, prefix));
+            this.withCleanupScope(cleanups, () => this.renderComponentInner(resolvedWithout, mount, prefix));
+            variants.set(key, { mount, cleanups });
+            return key;
+        };
+
+        const setVisibleVariant = (activeKey: string) => {
+            for (const [key, variant] of variants.entries()) {
+                variant.mount.style.display = key === activeKey ? 'contents' : 'none';
+            }
+        };
+
+        const effectDispose = effect(() => {
+            const bp = this._activeBreakpointSignal.value;
+            const activeKey = ensureVariant(bp);
+            setVisibleVariant(activeKey);
         });
 
-        this.cleanupFns.push(() => { dispose(); effectDispose(); });
+        this.cleanupFns.push(() => {
+            effectDispose();
+            for (const variant of variants.values()) {
+                for (const fn of variant.cleanups) fn();
+            }
+            variants.clear();
+            wrapper.replaceChildren();
+        });
     }
 
     /** Temporarily redirects cleanupFns to a scoped array, then restores it. */
@@ -1064,5 +1100,9 @@ export class FormspecRender extends HTMLElement {
         this.cleanupStylesheets();
         for (const fn of this.breakpointCleanups) fn();
         this.breakpointCleanups = [];
+        if (this.rootContainer) {
+            this.rootContainer.remove();
+            this.rootContainer = null;
+        }
     }
 }
