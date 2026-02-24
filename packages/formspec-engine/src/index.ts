@@ -3,7 +3,6 @@ import { FelLexer } from './fel/lexer';
 import { parser } from './fel/parser';
 import { interpreter, FelContext } from './fel/interpreter';
 import { dependencyVisitor } from './fel/dependency-visitor';
-import { PathResolver } from './path-resolver';
 
 export { assembleDefinition, assembleDefinitionSync } from './assembler';
 export type { AssemblyProvenance, AssemblyResult, DefinitionResolver } from './assembler';
