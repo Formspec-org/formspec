@@ -30,7 +30,7 @@
 | 0019 | [0019-theme-cascade-default-theme.md](adr/0019-theme-cascade-default-theme.md) | Implemented | 5-level cascade resolver + `default-theme.json` + ARIA fixes |
 | 0020 | [0020-css-integration-and-design-system-interop.md](adr/0020-css-integration-and-design-system-interop.md) | Implemented | `cssClass`/`stylesheets` in schemas + renderer |
 | 0021 | [0021-holistic-kitchen-sink-e2e-conformance-plan.md](adr/0021-holistic-kitchen-sink-e2e-conformance-plan.md) | Implemented | All phases implemented (Python runner + Playwright) |
-| 0022 | [0022-component-playground-strategy.md](adr/0022-component-playground-strategy.md) | Implemented | Custom playground shipped with diagnostics, deterministic runtime controls, mapping/replay tooling, and Playwright `/playground` + `/demo` convergence coverage |
+| 0022 | [0022-component-playground-strategy.md](adr/0022-component-playground-strategy.md) | Superseded | Implemented then removed; runtime/library capabilities retained and ADR now records rollback lessons |
 
 ---
 
@@ -352,80 +352,4 @@ Component test gap remains significant:
 
 ### Open actions
 
-**Engine / FEL**
-
-**#1 — Remove debug `console.log` calls** *(task #1)*
-Remove 3 stray debug logs from `packages/formspec-engine/src/index.ts`:
-- Line 478: `console.log("Detecting cycles for", ...)` in `detectCycles()`
-- Line 504: `console.log("Cycle detection complete")` in `detectCycles()`
-- Line 927: `console.log(\`Compiling FEL: ...\`)` in `compileFEL()`
-No tests cover these; just delete the lines.
-
-**#2 — Implement `boolean()`, `date()`, `time(h,m,s)` in FEL interpreter** *(task #3)*
-Parity gap: Python has all three implemented and tested; TypeScript is missing `boolean()` and `date()` entirely, and `time()` has the wrong signature (1-arg extractor, not 3-arg constructor).
-- `boolean(v)` — null→false, `"true"`/`"false"`→boolean, non-zero number→true
-- `date(v)` — parse ISO date string; null→null
-- `time(h, m, s)` — construct `"HH:MM:SS"` from three number args (replace/rename the existing 1-arg `time(d)` extractor)
-Work order: (1) add failing unit tests in `packages/formspec-engine/tests/` mirroring `tests/unit/runtime/fel/test_fel_functions.py::TestCastFunctions`; (2) add cases to `tests/e2e/fixtures/fel-functions.json`; (3) add failing Playwright assertions in `tests/e2e/playwright/integration/fel-standard-library-ui.spec.ts` (which already tests `time(d)` and `number(v)` as models); (4) implement; (5) confirm green.
-The E2E fixture `fel-functions.json` and the Playwright spec `fel-standard-library-ui.spec.ts` exist and cover 45+ functions — `boolean`, `date`, and `time(h,m,s)` are the only missing cast functions.
-
-**#3 — Delete dead `PathResolver` class** *(task #4)*
-`packages/formspec-engine/src/path-resolver.ts` is imported in `index.ts` but never called. The engine has 16+ inline path splits (`path.split(/[.\[\]]/)` etc.) that do the actual work. Delete the file, remove the import, confirm `npm run build` passes. Do NOT attempt to consolidate the inline splits — that is a larger design decision for ADR-0016 path-handling work.
-
-**#4 — Execute ADR-0016 remaining phases (3–9, 11)** *(task #9)*
-Phases 1, 2, 10, 12 are in progress (`assembler.ts` added, `mapping/` added, `registry.py`/`changelog.py` added). Remaining phases in dependency order:
-- Phase 3: Core bind features (required, constraint, readonly, calculate — full spec compliance)
-- Phase 4: FEL completeness and `$variables` block evaluation
-- Phase 5: Shape composition + submit/draft semantics (`getResponse()` must run submit-timed validation)
-- Phase 6: Instances and pre-population (`instance()` function, host-provided data)
-- Phase 7: WebComponent props fixes (Wizard multi-page, accessible labels, etc.)
-- Phase 8: New components — all 12 previously missing are now implemented; verify and mark done
-- Phase 9: Accessibility, responsive overrides, custom components (`{param}` interpolation)
-- Phase 11: Extended engine features (screener routing, `mustUnderstand`)
-Phases 3, 4, 5 can proceed in parallel after Phase 2. Phases 7–9 sequential. Full change tables per phase in `thoughts/adr/0016-feature-completeness-remediation.md`.
-
----
-
-**Web Component**
-
-**#5 — Fix reactive reconciliation** *(task #5)*
-`packages/formspec-webcomponent/src/index.ts` calls `this.innerHTML = ''` on every render, wiping and rebuilding the full DOM. This causes input focus loss on every state change and full teardown/rebuild on every signal update. Replace with incremental DOM updates. Options: lit-html, Preact/htm, or hand-rolled diffing. Prefer minimal — avoid a full framework if a small diffing utility suffices. Referenced in ADR-0011 (the last unresolved of its 4 pillars).
-
----
-
-**Spec / Schema**
-
-**#6 — Add `accessibility` to component-spec §3.1** *(task #2)*
-`AccessibilityBlock` (`role`, `description`, `liveRegion`) is defined in `schemas/component.schema.json` for all 34 components but is completely absent from `specs/component/component-spec.md`. The §3.1 base properties table currently lists 7 properties (`component`, `bind`, `when`, `responsive`, `style`, `cssClass`, `children`) — `accessibility` must be added as the 8th. Also add a cross-spec contract test in `tests/unit/schema/contracts/test_cross_spec_contracts.py` that extracts the §3.1 table and asserts all schema-defined base properties are present, to prevent silent drift. Run `npm run docs:generate && npm run docs:check` after.
-No automated check currently catches this gap — the §3.1 table is hand-maintained with no `schema-ref` block.
-
----
-
-**Components**
-
-**#7 — Add `Popover` component** *(task #6)*
-Was in the original ADR-0009 plan; never implemented. Needs all three layers:
-1. Schema — add discriminated `Popover` variant to `schemas/component.schema.json` (props: trigger bind, content slot, placement). Model on `Modal` and `Collapsible`.
-2. Spec — add to `specs/component/component-spec.md` Progressive section with property table and examples.
-3. Renderer — register in `packages/formspec-webcomponent/src/components/interactive.ts`. Consider the HTML Popover API (`popover` attribute) for the implementation.
-Run `npm run docs:generate && npm run docs:check` after schema/spec changes.
-
----
-
-**Tests**
-
-**#8 — Close component E2E test gap (~118 tests)** *(task #7)*
-~111 tests delivered vs ~229 planned (ADR-0010). Missing categories:
-1. Repeatable group binding — components inside repeat groups with indexed paths (`items[0].name`), add/remove rows, bind resolution per instance
-2. Cross-tier interaction — theme selector cascade + component document together; `when` vs theme `widgetHint` interaction
-3. Responsive override merge — breakpoint overrides in component documents at the right viewport width
-4. Exhaustive compatibility matrix — 18 Core components × supported `dataType` values → correct default widget + bind wiring
-Tests go in `tests/e2e/playwright/components/` (ADR-0017 structure). Use harness helpers (`gotoHarness`, `mountDefinition`, `submitAndGetResponse`) from `tests/e2e/playwright/helpers/`.
-
-**#9 — Remote REST API binding for `choice` components** *(task #8)*
-`choice` and `multiChoice` fields support a `remoteOptions` bind for fetching option lists from a REST endpoint at runtime. Was in ADR-0015 Phase 6 scope; never built.
-1. Engine (`packages/formspec-engine/src/index.ts`) — handle `bind.remoteOptions`: fetch URL, parse `{ value, label }` pairs, store in a signal, expose via engine API.
-2. Web component — wire fetched options into `Select`, `RadioGroup`, `CheckboxGroup` renderers.
-3. Error handling — loading state, fetch failure fallback.
-4. Tests — use Playwright `page.route()` to mock the fetch; assert options appear in the rendered component.
-Check `specs/component/component-spec.md` and `specs/core/spec.md` for the exact field name and response shape before implementing.
+All previously listed actions have been removed from this summary and recorded in their source ADRs with updated completion status.

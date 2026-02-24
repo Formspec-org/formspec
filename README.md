@@ -129,8 +129,6 @@ python3 -m formspec.validator --definition definition.json component.json
 
 ```bash
 npm run build              # Build TypeScript packages
-npm run start:playground   # Run unified runtime shell at http://127.0.0.1:8081/playground (and /demo)
-npm run build:playground   # Build the playground/demo app into dist-playground/
 npm run docs:generate      # Regenerate spec artifacts (BLUF, schema refs, LLM docs)
 npm run docs:check         # Enforce doc/schema freshness gates (used in CI)
 make docs                  # Build HTML documentation (requires pandoc)
