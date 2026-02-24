@@ -102,7 +102,10 @@ export class FelInterpreter extends BaseVisitor {
     hours: (d: string) => d ? new Date(d).getHours() : null,
     minutes: (d: string) => d ? new Date(d).getMinutes() : null,
     seconds: (d: string) => d ? new Date(d).getSeconds() : null,
-    time: (d: string) => d ? new Date(d).toTimeString().split(' ')[0] : null,
+    time: (h: number, m: number, s: number) => {
+        const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
+        return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    },
     selected: (val: any, opt: any) => Array.isArray(val) ? val.includes(opt) : val === opt,
     isNumber: (v: any) => typeof v === 'number' && !isNaN(v),
     string: (v: any) => v === null || v === undefined ? '' : String(v),
@@ -110,6 +113,20 @@ export class FelInterpreter extends BaseVisitor {
     isDate: (v: any) => !isNaN(Date.parse(v)),
     typeOf: (v: any) => Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v,
     number: (v: any) => { const n = Number(v); return isNaN(n) ? null : n; },
+    boolean: (v: any) => {
+        if (v === null || v === undefined) return false;
+        if (typeof v === 'number') return v !== 0;
+        if (typeof v === 'boolean') return v;
+        if (v === 'true') return true;
+        if (v === 'false') return false;
+        throw new Error(`boolean(): cannot convert "${v}" to boolean`);
+    },
+    date: (v: any) => {
+        if (v === null || v === undefined) return null;
+        const d = new Date(v);
+        if (isNaN(d.getTime())) throw new Error(`date(): "${v}" is not a valid ISO 8601 date`);
+        return v;
+    },
     money: (amount: number, currency: string) => ({ amount, currency }),
     moneyAmount: (m: any) => m && m.amount !== undefined ? m.amount : null,
     moneyCurrency: (m: any) => m && m.currency !== undefined ? m.currency : null,

@@ -102,6 +102,13 @@ test.describe('Integration: FEL Standard Library in UI', () => {
     await expect(page.locator('input[name="valTypeOf"]')).toHaveValue('number');
     await expect(page.locator('input[name="valToNumber"]')).toHaveValue('123.45');
 
+    // Cast functions
+    await expect(page.locator('input[name="castBoolFromString"]')).toBeChecked();
+    await expect(page.locator('input[name="castBoolFromNumber"]')).not.toBeChecked();
+    await expect(page.locator('input[name="castBoolFromNull"]')).not.toBeChecked();
+    await expect(page.locator('input[name="castDate"]')).toHaveValue('2025-05-20');
+    await expect(page.locator('input[name="castTime"]')).toHaveValue('09:05:03');
+
     // Money functions
     await expect(page.locator('input[name="mAmount"]')).toHaveValue('100');
     await expect(page.locator('input[name="mCurrency"]')).toHaveValue('USD');

@@ -223,6 +223,26 @@
       "key": "valToNumber"
     },
     {
+      "type": "field", "dataType": "boolean",
+      "key": "castBoolFromString"
+    },
+    {
+      "type": "field", "dataType": "boolean",
+      "key": "castBoolFromNumber"
+    },
+    {
+      "type": "field", "dataType": "boolean",
+      "key": "castBoolFromNull"
+    },
+    {
+      "type": "field", "dataType": "date",
+      "key": "castDate"
+    },
+    {
+      "type": "field", "dataType": "string",
+      "key": "castTime"
+    },
+    {
       "type": "field", "dataType": "decimal",
       "key": "mAmount"
     },
@@ -303,7 +323,7 @@
     { "path": "dtHours", "calculate": "hours('2025-05-20T15:30:00')" },
     { "path": "dtMinutes", "calculate": "minutes('2025-05-20T15:30:00')" },
     { "path": "dtSeconds", "calculate": "seconds('2025-05-20T15:30:45')" },
-    { "path": "dtTime", "calculate": "time('2025-05-20T15:30:45')" },
+    { "path": "dtTime", "calculate": "time(15, 30, 45)" },
     { "path": "dtTimeDiff", "calculate": "timeDiff('15:30:00', '14:30:00', 'minutes')" },
     { "path": "valSelected", "calculate": "selected('a', 'a')" },
     { "path": "valIsNumber", "calculate": "isNumber(rawNum)" },
@@ -311,6 +331,11 @@
     { "path": "valIsDate", "calculate": "isDate(testDate)" },
     { "path": "valTypeOf", "calculate": "typeOf(rawNum)" },
     { "path": "valToNumber", "calculate": "number('123.45')" },
+    { "path": "castBoolFromString", "calculate": "boolean('true')" },
+    { "path": "castBoolFromNumber", "calculate": "boolean(0)" },
+    { "path": "castBoolFromNull", "calculate": "boolean(null)" },
+    { "path": "castDate", "calculate": "date('2025-05-20')" },
+    { "path": "castTime", "calculate": "time(9, 5, 3)" },
     { "path": "mAmount", "calculate": "moneyAmount(money(100, 'USD'))" },
     { "path": "mCurrency", "calculate": "moneyCurrency(money(100, 'USD'))" },
     { "path": "mAdd", "calculate": "moneyAmount(moneyAdd(money(100, 'USD'), money(50, 'USD')))" },
