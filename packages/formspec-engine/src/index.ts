@@ -475,7 +475,6 @@ export class FormEngine {
     }
 
     private detectCycles() {
-        console.log("Detecting cycles for", Object.keys(this.dependencies).length, "nodes");
         const visited = new Set<string>();
         const recursionStack = new Set<string>();
 
@@ -501,7 +500,6 @@ export class FormEngine {
         for (const node of Object.keys(this.dependencies)) {
             visit(node);
         }
-        console.log("Cycle detection complete");
     }
 
     private validateDataType(value: any, dataType: string): boolean {
@@ -924,7 +922,6 @@ export class FormEngine {
         const cacheKey = `${expression}|${currentItemName}|${includeSelf}`;
         if (this.compiledExpressions[cacheKey]) return this.compiledExpressions[cacheKey];
 
-        console.log(`Compiling FEL: "${expression}" for ${currentItemName}`);
         const lexResult = FelLexer.tokenize(expression);
         parser.input = lexResult.tokens;
         const cst = parser.expression();
