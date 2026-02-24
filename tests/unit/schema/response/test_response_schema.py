@@ -1,29 +1,19 @@
 """Conformance tests for Formspec response.schema.json and validationReport.schema.json."""
 
 import json
-import os
 from copy import deepcopy
-from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
 
-from conftest import build_schema_registry
+from tests.unit.support.schema_fixtures import build_schema_registry, load_schema
 
 # ---------------------------------------------------------------------------
 # Schema loading
 # ---------------------------------------------------------------------------
 
-_SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
-
-
-def _load_schema(name: str) -> dict:
-    with open(_SCHEMA_DIR / name) as f:
-        return json.load(f)
-
-
-RESPONSE_SCHEMA = _load_schema("response.schema.json")
-VALIDATION_REPORT_SCHEMA = _load_schema("validationReport.schema.json")
+RESPONSE_SCHEMA = load_schema("response.schema.json")
+VALIDATION_REPORT_SCHEMA = load_schema("validationReport.schema.json")
 
 # Build a resolver/registry so validation-report can resolve response refs.
 _REGISTRY = build_schema_registry(RESPONSE_SCHEMA, VALIDATION_REPORT_SCHEMA)
@@ -350,4 +340,3 @@ class TestValidationReportFormats:
         with pytest.raises(ValidationError):
             v = Draft202012Validator(VALIDATION_REPORT_SCHEMA, registry=_REGISTRY, format_checker=Draft202012Validator.FORMAT_CHECKER)
             v.validate(doc)
-

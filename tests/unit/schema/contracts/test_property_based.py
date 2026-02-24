@@ -7,8 +7,6 @@ if/then, oneOf, anyOf, and additionalProperties interactions.
 """
 import copy
 import json
-import os
-from pathlib import Path
 
 import hypothesis
 import pytest
@@ -16,25 +14,17 @@ from hypothesis import HealthCheck, assume, given, note, settings
 from hypothesis import strategies as st
 from jsonschema import Draft202012Validator, ValidationError
 
-from conftest import build_schema_registry
+from tests.unit.support.schema_fixtures import build_schema_registry, load_schema
 
 # ---------------------------------------------------------------------------
 # Schema loading + shared validator registry
 # ---------------------------------------------------------------------------
 
-SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
-
-
-def _load(name):
-    with open(SCHEMA_DIR / name) as f:
-        return json.load(f)
-
-
-DEFINITION_SCHEMA = _load("definition.schema.json")
-RESPONSE_SCHEMA = _load("response.schema.json")
-VALIDATION_REPORT_SCHEMA = _load("validationReport.schema.json")
-MAPPING_SCHEMA = _load("mapping.schema.json")
-REGISTRY_SCHEMA = _load("registry.schema.json")
+DEFINITION_SCHEMA = load_schema("definition.schema.json")
+RESPONSE_SCHEMA = load_schema("response.schema.json")
+VALIDATION_REPORT_SCHEMA = load_schema("validationReport.schema.json")
+MAPPING_SCHEMA = load_schema("mapping.schema.json")
+REGISTRY_SCHEMA = load_schema("registry.schema.json")
 
 # Pre-build referencing registry so cross-file $refs resolve.
 _REF_REGISTRY = build_schema_registry(

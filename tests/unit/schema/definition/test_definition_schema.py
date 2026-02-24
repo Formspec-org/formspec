@@ -6,31 +6,26 @@ directly; every negative test asserts that ``ValidationError`` is raised.
 """
 
 import copy
-import json
-import pathlib
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
 
-from tests.helpers import (
+from tests.unit.support.helpers import (
     base_definition as _base_doc,
     minimal_display as _minimal_display,
     minimal_field as _shared_minimal_field,
     minimal_group as _minimal_group,
 )
+from tests.unit.support.schema_fixtures import load_schema
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
-SCHEMA_PATH = pathlib.Path(__file__).resolve().parent.parent / "schemas/definition.schema.json"
-
-
 @pytest.fixture(scope="session")
 def schema():
     """Load and return the Formspec definition JSON Schema."""
-    with open(SCHEMA_PATH) as fh:
-        return json.load(fh)
+    return load_schema("definition.schema.json")
 
 
 def _validate(instance, schema):

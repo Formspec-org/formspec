@@ -1,12 +1,11 @@
 """Conformance tests for the Formspec mapping.schema.json."""
-import json
-import pathlib
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
 
-SCHEMA_PATH = pathlib.Path(__file__).resolve().parent.parent / "schemas/mapping.schema.json"
-SCHEMA = json.loads(SCHEMA_PATH.read_text())
+from tests.unit.support.schema_fixtures import load_schema
+
+SCHEMA = load_schema("mapping.schema.json")
 
 
 def _validate(instance):
@@ -577,5 +576,4 @@ class TestFieldRuleAdvanced:
     def test_rule_with_reverse_priority(self):
         rule = _minimal_rule(reversePriority=5)
         _validate(_minimal_mapping(rules=[rule]))
-
 

@@ -7,20 +7,19 @@ layout semantics, accessibility, precedence, and integration.
 import json
 import copy
 import pytest
-from pathlib import Path
 
 import jsonschema
 from jsonschema import Draft202012Validator
 
-from tests.helpers import (
+from tests.unit.support.helpers import (
     base_definition as _base_doc,
     minimal_display as _shared_minimal_display,
     minimal_field as _shared_minimal_field,
     minimal_group as _shared_minimal_group,
 )
+from tests.unit.support.schema_fixtures import load_schema
 
-ROOT = Path(__file__).resolve().parent.parent
-SCHEMA = json.loads((ROOT / "schemas/definition.schema.json").read_text())
+SCHEMA = load_schema("definition.schema.json")
 VALIDATOR = Draft202012Validator(SCHEMA)
 
 

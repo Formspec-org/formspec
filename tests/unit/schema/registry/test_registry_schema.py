@@ -1,15 +1,12 @@
 """Conformance tests for registry.schema.json."""
 import copy
-import json
-import os
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
 
-SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "schemas", "registry.schema.json")
+from tests.unit.support.schema_fixtures import load_schema
 
-with open(SCHEMA_PATH) as f:
-    SCHEMA = json.load(f)
+SCHEMA = load_schema("registry.schema.json")
 
 
 def _validate(instance):

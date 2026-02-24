@@ -3,22 +3,31 @@
 Machine-readable test suite validating JSON documents against the Formspec
 family of JSON Schemas (draft 2020-12).
 
+## Layout
+
+- `tests/unit/schema/` — schema conformance and schema/spec contract tests
+- `tests/unit/runtime/` — Python runtime package tests (`formspec.*`)
+- `tests/unit/support/` — shared builders + schema fixtures
+- `tests/e2e/` — browser/integration suites
+- `packages/formspec-engine/tests/` — JavaScript engine unit tests (Node test runner)
+
 ## Coverage
 
 | Schema | Test File | Tests |
 |---|---|---|
-| `definition.schema.json` | `test_definition_schema.py` | 139 |
-| `response.schema.json` + `validationReport.schema.json` | `test_response_schema.py` | 61 |
-| `mapping.schema.json` | `test_mapping_schema.py` | 91 |
-| `registry.schema.json` | `test_registry_schema.py` | 72 |
-| All spec examples (Layer 2) | `test_spec_examples.py` | 153 |
-| Property-based / generative (Layer 3) | `test_property_based.py` | 50 |
-| Cross-spec contract (Layer 5) | `test_cross_spec_contracts.py` | 149 |
-| FEL parser (Layer 6) | `test_fel_parser.py` | 102 |
-| FEL evaluator (Layer 6) | `test_fel_evaluator.py` | 68 |
-| FEL functions (Layer 6) | `test_fel_functions.py` | 76 |
-| FEL API & conformance (Layer 6) | `test_fel_api.py` | 40 |
-| **Total** | | **1001** |
+| `definition.schema.json` | `unit/schema/definition/test_definition_schema.py` | 139 |
+| `response.schema.json` + `validationReport.schema.json` | `unit/schema/response/test_response_schema.py` | 61 |
+| `mapping.schema.json` | `unit/schema/mapping/test_mapping_schema.py` | 91 |
+| Mapping adapter `$defs` contracts | `unit/schema/contracts/test_mapping_adapter_schema_contracts.py` | 6 |
+| `registry.schema.json` | `unit/schema/registry/test_registry_schema.py` | 72 |
+| All spec examples (Layer 2) | `unit/schema/contracts/test_spec_examples.py` | 153 |
+| Property-based / generative (Layer 3) | `unit/schema/contracts/test_property_based.py` | 50 |
+| Cross-spec contract (Layer 5) | `unit/schema/contracts/test_cross_spec_contracts.py` | 149 |
+| FEL parser (Layer 6) | `unit/runtime/fel/test_fel_parser.py` | 102 |
+| FEL evaluator (Layer 6) | `unit/runtime/fel/test_fel_evaluator.py` | 68 |
+| FEL functions (Layer 6) | `unit/runtime/fel/test_fel_functions.py` | 76 |
+| FEL API & conformance (Layer 6) | `unit/runtime/fel/test_fel_api.py` | 40 |
+| **Total** | | **1007** |
 
 ## Test Layers
 
@@ -82,19 +91,19 @@ Pure schema introspection — no document generation, no validation calls.
 End-to-end tests for the FEL Python reference implementation (`fel/` package).
 
 Four test files:
-- **test_fel_parser.py** (102) — scannerless parser: literals, field refs, context refs,
+- **unit/runtime/fel/test_fel_parser.py** (102) — scannerless parser: literals, field refs, context refs,
   operators, precedence, membership, ternary, if-then-else, let bindings, function calls,
   postfix access, arrays, objects, comments, edge cases, reserved words, conformance
-- **test_fel_evaluator.py** (68) — evaluator: arithmetic, comparison, equality, logical
+- **unit/runtime/fel/test_fel_evaluator.py** (68) — evaluator: arithmetic, comparison, equality, logical
   operators, null propagation (§3.8), string concatenation, membership, ternary,
   if-then-else, let bindings, field refs, element-wise arrays (§3.9), postfix access
-- **test_fel_functions.py** (76) — all 55 built-in functions: aggregates (sum/count/avg/
+- **unit/runtime/fel/test_fel_functions.py** (76) — all 55 built-in functions: aggregates (sum/count/avg/
   min/max), string (length/contains/startsWith/endsWith/substring/replace/upper/lower/
   trim/matches/format), numeric (round/floor/ceil/abs/power), date (year/month/day/
   dateDiff/dateAdd/hours/minutes/seconds/time/timeDiff), logical (if/coalesce/empty/
   present), type-checking (isNumber/isString/isNull/typeOf), cast (number/string/
   boolean/date), money (money/moneyAmount/moneyCurrency/moneyAdd)
-- **test_fel_api.py** (40) — public API, dependency extraction, extension registration,
+- **unit/runtime/fel/test_fel_api.py** (40) — public API, dependency extraction, extension registration,
   grammar conformance (§7 all 7 points), semantic conformance, spec examples
 
 ## Prerequisites
@@ -109,8 +118,25 @@ pip install pytest jsonschema
 # From the repository root:
 python3 -m pytest tests/ -v
 
+# JavaScript engine unit tests:
+npm run test:unit
+
+# Playwright E2E:
+npm run test:e2e
+npm run test:e2e:integration
+npm run test:e2e:components
+npm run test:e2e:smoke
+
 # Single schema:
-python3 -m pytest tests/test_definition_schema.py -v
+python3 -m pytest tests/unit/schema/definition/test_definition_schema.py -v
+
+# Ownership-group runs:
+python3 -m pytest tests/unit/schema/ -v
+python3 -m pytest tests/unit/runtime/fel/ -v
+
+# Marker-based runs:
+python3 -m pytest tests/ -m schema -v
+python3 -m pytest tests/ -m "runtime and fel" -v
 
 # With coverage (if pytest-cov installed):
 python3 -m pytest tests/ --cov=. --cov-report=term

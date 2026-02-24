@@ -7,7 +7,7 @@ on:
       - "specs/**"
       - "scripts/generate-spec-artifacts.mjs"
       - "scripts/spec-artifacts.config.json"
-      - "tests/test_cross_spec_contracts.py"
+      - "tests/unit/schema/contracts/test_cross_spec_contracts.py"
       - "package.json"
       - "package-lock.json"
   push:
@@ -18,7 +18,7 @@ on:
       - "specs/**"
       - "scripts/generate-spec-artifacts.mjs"
       - "scripts/spec-artifacts.config.json"
-      - "tests/test_cross_spec_contracts.py"
+      - "tests/unit/schema/contracts/test_cross_spec_contracts.py"
       - "package.json"
       - "package-lock.json"
 

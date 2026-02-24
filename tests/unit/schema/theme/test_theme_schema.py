@@ -8,14 +8,14 @@ extensibility, and edge cases.
 import json
 import copy
 import pytest
-from pathlib import Path
 
 import jsonschema
 from jsonschema import Draft202012Validator
 
-ROOT = Path(__file__).resolve().parent.parent
-THEME_SCHEMA = json.loads((ROOT / "schemas/theme.schema.json").read_text())
-DEF_SCHEMA = json.loads((ROOT / "schemas/definition.schema.json").read_text())
+from tests.unit.support.schema_fixtures import load_schema
+
+THEME_SCHEMA = load_schema("theme.schema.json")
+DEF_SCHEMA = load_schema("definition.schema.json")
 THEME_V = Draft202012Validator(THEME_SCHEMA)
 DEF_V = Draft202012Validator(DEF_SCHEMA)
 
@@ -1085,4 +1085,3 @@ class TestEdgeCases:
             tokens={}, defaults={}, selectors=[], items={}, pages=[],
             breakpoints={}, extensions={}
         ))
-

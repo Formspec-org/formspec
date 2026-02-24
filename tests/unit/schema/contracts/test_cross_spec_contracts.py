@@ -8,13 +8,10 @@ conditionals, property sets) match what the spec documents claim.
 Naming convention: test_s{section}__{assertion}
 """
 import json
-from pathlib import Path
 
 import pytest
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-SCHEMA_DIR = ROOT_DIR / "schemas"
-SPEC_DIR = ROOT_DIR / "specs"
+from tests.unit.support.schema_fixtures import ROOT_DIR, SCHEMA_DIR, SPEC_DIR
 
 
 def _load(name):

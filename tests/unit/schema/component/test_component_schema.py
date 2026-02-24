@@ -2,8 +2,9 @@ import json
 import pytest
 from jsonschema import validate, ValidationError
 
-with open("schemas/component.schema.json", "r") as f:
-    SCHEMA = json.load(f)
+from tests.unit.support.schema_fixtures import load_schema
+
+SCHEMA = load_schema("component.schema.json")
 
 def test_minimal_document():
     doc = {

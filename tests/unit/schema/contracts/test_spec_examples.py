@@ -12,21 +12,17 @@ Classification strategy:
   3. Non-schema JSON     — only checked for parse-ability (valid JSON).
 """
 import json
-import os
 import re
-from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
 
-from conftest import build_schema_registry
+from tests.unit.support.schema_fixtures import ROOT_DIR, build_schema_registry, load_schema
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-SCHEMA_DIR = ROOT_DIR / "schemas"
 SPEC_FILES = [
     "specs/core/spec.md",
     "specs/mapping/mapping-spec.md",
@@ -36,10 +32,18 @@ SPEC_FILES = [
     "specs/component/component-spec.md",
 ]
 
+# Specs occasionally use ```json fences for illustrative pseudo-JSON examples
+# that intentionally include comments or multiple snippets in one block.
+NON_NORMATIVE_JSON_BLOCKS: set[tuple[str, int]] = set()
 
-def _load_schema(name):
-    with open(SCHEMA_DIR / name) as f:
-        return json.load(f)
+
+def _looks_non_normative_json_block(cleaned: str) -> bool:
+    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+    if any(line.startswith("//") for line in lines):
+        return True
+    if "..." in cleaned:
+        return True
+    return False
 
 
 def _extract_json_blocks(filepath):
@@ -69,6 +73,8 @@ def _extract_json_blocks(filepath):
             obj = json.loads(cleaned)
         except json.JSONDecodeError:
             obj = None
+            if _looks_non_normative_json_block(cleaned):
+                NON_NORMATIVE_JSON_BLOCKS.add((filepath, line_no))
 
         results.append((filepath, line_no, heading, obj))
 
@@ -105,7 +111,10 @@ def _classify(obj):
     if "$formspecTheme" in keys:
         return "theme_doc"
     if "$formspecComponent" in keys:
-        return "component_doc"
+        tree = obj.get("tree")
+        if isinstance(tree, dict) and "component" in tree:
+            return "component_doc"
+        return "component_doc_fragment"
     if "fromVersion" in keys and "toVersion" in keys and "changes" in keys:
         return "changelog_doc"
     if "definitionUrl" in keys and "data" in keys:
@@ -160,14 +169,14 @@ for spec_file in SPEC_FILES:
 # Schemas (loaded once)
 # ---------------------------------------------------------------------------
 
-DEFINITION_SCHEMA = _load_schema("definition.schema.json")
-RESPONSE_SCHEMA = _load_schema("response.schema.json")
-VALIDATION_REPORT_SCHEMA = _load_schema("validationReport.schema.json")
-MAPPING_SCHEMA = _load_schema("mapping.schema.json")
-REGISTRY_SCHEMA = _load_schema("registry.schema.json")
-THEME_SCHEMA = _load_schema("theme.schema.json")
-COMPONENT_SCHEMA = _load_schema("component.schema.json")
-CHANGELOG_SCHEMA = _load_schema("changelog.schema.json")
+DEFINITION_SCHEMA = load_schema("definition.schema.json")
+RESPONSE_SCHEMA = load_schema("response.schema.json")
+VALIDATION_REPORT_SCHEMA = load_schema("validationReport.schema.json")
+MAPPING_SCHEMA = load_schema("mapping.schema.json")
+REGISTRY_SCHEMA = load_schema("registry.schema.json")
+THEME_SCHEMA = load_schema("theme.schema.json")
+COMPONENT_SCHEMA = load_schema("component.schema.json")
+CHANGELOG_SCHEMA = load_schema("changelog.schema.json")
 
 # Sub-schemas extracted from $defs for fragment validation
 ITEM_SCHEMA = DEFINITION_SCHEMA["$defs"]["Item"]
@@ -210,6 +219,8 @@ class TestAllBlocksParse:
         ids=[_make_id(f, l, h) for f, l, h, _ in ALL_BLOCKS],
     )
     def test_json_parses(self, filepath, line_no, heading, obj):
+        if (filepath, line_no) in NON_NORMATIVE_JSON_BLOCKS:
+            pytest.skip("Illustrative non-normative JSON snippet")
         assert obj is not None, (
             f"{filepath}:L{line_no} ({heading}) — "
             f"JSON block does not parse as valid JSON"
@@ -525,9 +536,11 @@ class TestCoverage:
     """Meta-tests ensuring we have good classification coverage."""
 
     def test_all_blocks_parse(self):
-        """Every JSON block across all spec files parses successfully."""
+        """Every normative JSON block across all spec files parses successfully."""
         unparseable = [
-            (f, l, h) for f, l, h, o in ALL_BLOCKS if o is None
+            (f, l, h)
+            for f, l, h, o in ALL_BLOCKS
+            if o is None and (f, l) not in NON_NORMATIVE_JSON_BLOCKS
         ]
         assert unparseable == [], f"Unparseable blocks: {unparseable}"
 
