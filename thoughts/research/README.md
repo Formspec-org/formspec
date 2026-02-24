@@ -44,6 +44,27 @@ Using Claude Opus 4.6 via [Shelly](https://exe.dev) (AI coding agent on exe.dev)
 | [`analysis/fhir-conceptual-model.md`](analysis/fhir-conceptual-model.md) | FHIR R5 Questionnaire & SDC — versioning, identity, response pinning, modular composition |
 | [`analysis/other-spec-analysis.md`](analysis/other-spec-analysis.md) | Secondary influences — ODK XLSForm, SurveyJS, JSON Forms, CommonGrants |
 
+Each analysis was also distilled into a feature exploration matrix — a structured inventory of every distinct feature/pattern with priority classification:
+
+| File | Source | Features |
+|------|--------|----------|
+| [`analysis/xforms-spec-analysis.feature-exploration-matrix.md`](analysis/xforms-spec-analysis.feature-exploration-matrix.md) | XForms 1.1 | 110 (XF-001–110) |
+| [`analysis/xforms-conceptual-model.feature-exploration-matrix.md`](analysis/xforms-conceptual-model.feature-exploration-matrix.md) | XForms 1.1 (conceptual) | 88 (XCM-001–088) |
+| [`analysis/xforms2-spec-analysis.feature-exploration-matrix.md`](analysis/xforms2-spec-analysis.feature-exploration-matrix.md) | XForms 2.0 | 74 (XF2-001–074) |
+| [`analysis/shacl-spec-analysis.feature-exploration-matrix.md`](analysis/shacl-spec-analysis.feature-exploration-matrix.md) | SHACL | 70 (SH-001–070) |
+| [`analysis/fhir-conceptual-model.feature-exploration-matrix.md`](analysis/fhir-conceptual-model.feature-exploration-matrix.md) | FHIR R5/SDC | 80 (FH-001–080) |
+| [`analysis/other-spec-analysis.feature-exploration-matrix.md`](analysis/other-spec-analysis.feature-exploration-matrix.md) | Secondary influences | 95 (SI-001–095) |
+
+**Total: 517 features extracted** (98 Critical, 181 High, 151 Medium, 87 Low).
+
+## Phase 3: Comparative Analysis
+
+The [`comparative-analysis.md`](comparative-analysis.md) cross-references all research artifacts against the implemented spec in two parts:
+
+**Part 1 — Prior Art vs. Synthesized Proposal:** Maps all 517 extracted features against the synthesized proposal. Result: 241 Adopted (46.6%), 123 Adapted (23.8%), 153 Missing (29.6%). Zero Critical-priority features are missing from the synthesis.
+
+**Part 2 — Synthesis + Prior Art vs. Implemented Core Spec:** Compares the full research pipeline against what actually shipped in [`specs/core/spec.md`](../../specs/core/spec.md). Result: 259 Implemented (50.1%), 90 Partially Implemented (17.4%), 168 Not Implemented (32.5%). 92% of Critical-priority features are implemented. Identifies 16 novel features unique to the real spec that weren't in any prior art. Provides prioritized actionable recommendations (must-add / should-add / consider / defer).
+
 ## Outcome
 
 All of this research culminated in the formal Formspec Core Specification: [`specs/core/spec.md`](../../specs/core/spec.md).
