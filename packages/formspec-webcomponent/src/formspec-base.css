@@ -1,0 +1,446 @@
+/*
+ * formspec-base.css — Structural-only default stylesheet
+ *
+ * Provides layout (flex, grid, display toggling) for the formspec-*
+ * class contract. No colors, fonts, or decoration — those belong in
+ * theme bridge CSS or the design system stylesheet.
+ */
+
+/* ── Visibility ────────────────────────────────────────────────── */
+.formspec-hidden {
+  display: none !important;
+}
+
+/* ── Container ─────────────────────────────────────────────────── */
+.formspec-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Screen reader only (labelPosition: hidden) ───────────────── */
+.formspec-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Fields ────────────────────────────────────────────────────── */
+.formspec-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.formspec-field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.formspec-label {
+  display: block;
+}
+
+.formspec-hint {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.formspec-error:not(:empty) {
+  font-size: 0.85rem;
+}
+
+.formspec-input {
+  display: block;
+}
+
+.formspec-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ── Toggle ────────────────────────────────────────────────────── */
+.formspec-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Checkbox / Radio groups ───────────────────────────────────── */
+.formspec-checkbox-group,
+.formspec-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.formspec-checkbox-group[data-columns] {
+  display: grid;
+  gap: 0.25rem;
+}
+.formspec-checkbox-group[data-columns="2"] { grid-template-columns: repeat(2, 1fr); }
+.formspec-checkbox-group[data-columns="3"] { grid-template-columns: repeat(3, 1fr); }
+.formspec-checkbox-group[data-columns="4"] { grid-template-columns: repeat(4, 1fr); }
+
+/* ── Money ─────────────────────────────────────────────────────── */
+.formspec-money {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Stack ─────────────────────────────────────────────────────── */
+.formspec-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formspec-stack--horizontal {
+  flex-direction: row;
+}
+
+.formspec-stack--wrap {
+  flex-wrap: wrap;
+}
+
+.formspec-stack[data-align="start"]   { align-items: flex-start; }
+.formspec-stack[data-align="center"]  { align-items: center; }
+.formspec-stack[data-align="end"]     { align-items: flex-end; }
+.formspec-stack[data-align="stretch"] { align-items: stretch; }
+
+/* ── Grid ──────────────────────────────────────────────────────── */
+.formspec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+.formspec-grid[data-columns="1"] { grid-template-columns: 1fr; }
+.formspec-grid[data-columns="2"] { grid-template-columns: repeat(2, 1fr); }
+.formspec-grid[data-columns="3"] { grid-template-columns: repeat(3, 1fr); }
+.formspec-grid[data-columns="4"] { grid-template-columns: repeat(4, 1fr); }
+.formspec-grid[data-columns="5"] { grid-template-columns: repeat(5, 1fr); }
+.formspec-grid[data-columns="6"] { grid-template-columns: repeat(6, 1fr); }
+
+/* ── Columns ───────────────────────────────────────────────────── */
+.formspec-columns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.formspec-columns[data-columns="1"] { grid-template-columns: 1fr; }
+.formspec-columns[data-columns="2"] { grid-template-columns: repeat(2, 1fr); }
+.formspec-columns[data-columns="3"] { grid-template-columns: repeat(3, 1fr); }
+.formspec-columns[data-columns="4"] { grid-template-columns: repeat(4, 1fr); }
+.formspec-columns[data-columns="5"] { grid-template-columns: repeat(5, 1fr); }
+.formspec-columns[data-columns="6"] { grid-template-columns: repeat(6, 1fr); }
+
+/* ── Divider ───────────────────────────────────────────────────── */
+.formspec-divider--labeled {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.formspec-divider-line {
+  flex: 1;
+  border: none;
+  border-top: 1px solid currentColor;
+  opacity: 0.3;
+}
+
+.formspec-divider-label {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+/* ── Panel ─────────────────────────────────────────────────────── */
+.formspec-panel {
+  border: 1px solid;
+  border-radius: 0.25rem;
+}
+
+.formspec-panel-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid;
+  font-weight: bold;
+}
+
+.formspec-panel-body {
+  padding: 1rem;
+}
+
+/* ── Card ──────────────────────────────────────────────────────── */
+.formspec-card {
+  border: 1px solid;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+.formspec-card[data-elevation="1"] { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.formspec-card[data-elevation="2"] { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12); }
+.formspec-card[data-elevation="3"] { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.14); }
+.formspec-card[data-elevation="4"] { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16); }
+.formspec-card[data-elevation="5"] { box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18); }
+
+.formspec-card-subtitle {
+  margin-top: -0.5rem;
+  opacity: 0.75;
+}
+
+/* ── Alert ─────────────────────────────────────────────────────── */
+.formspec-alert {
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  border-radius: 0.25rem;
+  position: relative;
+}
+
+.formspec-alert--dismissible {
+  padding-right: 2.5rem;
+}
+
+.formspec-alert-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* ── Badge ─────────────────────────────────────────────────────── */
+.formspec-badge {
+  display: inline-block;
+  padding: 0.2em 0.5em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 0.25rem;
+}
+
+/* ── Progress bar ──────────────────────────────────────────────── */
+.formspec-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.formspec-progress-bar progress {
+  flex: 1;
+}
+
+/* ── Summary ───────────────────────────────────────────────────── */
+.formspec-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+}
+
+.formspec-summary dd {
+  margin: 0;
+}
+
+/* ── Collapsible ───────────────────────────────────────────────── */
+.formspec-collapsible summary {
+  cursor: pointer;
+}
+
+.formspec-collapsible-content {
+  padding-top: 0.5rem;
+}
+
+/* ── Accordion ─────────────────────────────────────────────────── */
+.formspec-accordion-item summary {
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
+.formspec-accordion-content {
+  padding: 0.5rem 0;
+}
+
+/* ── Modal ─────────────────────────────────────────────────────── */
+.formspec-modal {
+  border: 1px solid;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.formspec-modal[data-size="sm"] { max-width: 400px; }
+.formspec-modal[data-size="md"] { max-width: 600px; }
+.formspec-modal[data-size="lg"] { max-width: 800px; }
+.formspec-modal[data-size="xl"] { max-width: 1000px; }
+.formspec-modal[data-size="full"] { max-width: none; }
+
+.formspec-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────── */
+.formspec-tab-bar {
+  display: flex;
+}
+
+.formspec-tabs[data-position="left"],
+.formspec-tabs[data-position="right"] {
+  display: flex;
+}
+
+.formspec-tabs[data-position="right"] {
+  flex-direction: row-reverse;
+}
+
+.formspec-tabs[data-position="left"] .formspec-tab-bar,
+.formspec-tabs[data-position="right"] .formspec-tab-bar {
+  flex-direction: column;
+}
+
+.formspec-tabs[data-position="left"] .formspec-tab-panels,
+.formspec-tabs[data-position="right"] .formspec-tab-panels {
+  flex: 1;
+}
+
+.formspec-tab {
+  cursor: pointer;
+}
+
+/* ── Wizard ────────────────────────────────────────────────────── */
+.formspec-wizard-steps {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.formspec-wizard-step {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.85rem;
+}
+
+.formspec-wizard-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* ── Slider ────────────────────────────────────────────────────── */
+.formspec-slider-track {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.formspec-slider-track input[type="range"] {
+  flex: 1;
+}
+
+/* ── Rating ────────────────────────────────────────────────────── */
+.formspec-rating-stars {
+  display: flex;
+  gap: 0.25rem;
+  cursor: pointer;
+  font-size: 1.5rem;
+}
+
+.formspec-rating-star {
+  color: rgb(204, 204, 204);
+}
+
+.formspec-rating-star--selected {
+  color: rgb(245, 166, 35);
+}
+
+/* ── File Upload ───────────────────────────────────────────────── */
+.formspec-drop-zone {
+  border: 2px dashed;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.formspec-drop-zone--active {
+  opacity: 1;
+}
+
+/* ── Signature ─────────────────────────────────────────────────── */
+.formspec-signature-canvas {
+  border: 1px solid;
+  border-radius: 0.25rem;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ── Conditional Group ─────────────────────────────────────────── */
+.formspec-conditional-group {
+  display: contents;
+}
+
+/* ── Repeat ────────────────────────────────────────────────────── */
+.formspec-repeat {
+  display: flex;
+  flex-direction: column;
+}
+
+.formspec-repeat-instance {
+  display: contents;
+}
+
+/* ── Group (definition-only fallback) ──────────────────────────── */
+.formspec-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Data Table ────────────────────────────────────────────────── */
+.formspec-data-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.formspec-data-table th,
+.formspec-data-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.formspec-datatable-input {
+  width: 100%;
+  min-width: 4rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.2rem 0.35rem;
+  font: inherit;
+}
+
+.formspec-datatable-input:disabled {
+  border-color: transparent;
+  background: transparent;
+  padding-left: 0;
+  color: inherit;
+}
+
+/* ── Spacer ────────────────────────────────────────────────────── */
+.formspec-spacer {
+  height: 1rem; /* default, overridden by size prop */
+}

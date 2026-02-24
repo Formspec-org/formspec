@@ -4,12 +4,16 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "formspec-engine": "*"
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "happy-dom": "^17.6.1",
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -6,7 +6,10 @@ export const HeadingPlugin: ComponentPlugin = {
     render: (comp, parent, ctx) => {
         const el = document.createElement(`h${comp.level || 1}`);
         if (comp.id) el.id = comp.id;
+        el.className = 'formspec-heading';
         el.textContent = comp.text || '';
+        ctx.applyCssClass(el, comp);
+        ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
         parent.appendChild(el);
     }
@@ -17,7 +20,8 @@ export const TextPlugin: ComponentPlugin = {
     render: (comp, parent, ctx) => {
         const el = document.createElement('p');
         if (comp.id) el.id = comp.id;
-        el.className = `text-variant-${comp.variant || 'body'}`;
+        el.className = 'formspec-text';
+        if (comp.format === 'markdown') el.classList.add('formspec-text--markdown');
         if (comp.bind) {
             const itemFullName = ctx.prefix ? `${ctx.prefix}.${comp.bind}` : comp.bind;
             ctx.cleanupFns.push(effect(() => {
@@ -27,6 +31,8 @@ export const TextPlugin: ComponentPlugin = {
         } else {
             el.textContent = comp.text || '';
         }
+        ctx.applyCssClass(el, comp);
+        ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
         parent.appendChild(el);
     }
@@ -38,14 +44,23 @@ export const CardPlugin: ComponentPlugin = {
         const el = document.createElement('div');
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-card';
-        el.style.border = '1px solid #ddd';
-        el.style.borderRadius = ctx.resolveToken('$token.border.radius') || '8px';
-        el.style.padding = ctx.resolveToken('$token.spacing.md') || '1rem';
+        if (comp.elevation != null && comp.elevation > 0) {
+            el.dataset.elevation = String(comp.elevation);
+        }
         if (comp.title) {
             const h3 = document.createElement('h3');
+            h3.className = 'formspec-card-title';
             h3.textContent = comp.title;
             el.appendChild(h3);
         }
+        if (comp.subtitle) {
+            const sub = document.createElement('p');
+            sub.className = 'formspec-card-subtitle';
+            sub.textContent = comp.subtitle;
+            el.appendChild(sub);
+        }
+        ctx.applyCssClass(el, comp);
+        ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
         parent.appendChild(el);
         if (comp.children) {
@@ -61,7 +76,10 @@ export const SpacerPlugin: ComponentPlugin = {
     render: (comp, parent, ctx) => {
         const el = document.createElement('div');
         if (comp.id) el.id = comp.id;
-        el.style.height = ctx.resolveToken(comp.size) || '1rem';
+        el.className = 'formspec-spacer';
+        // Spacer height from size prop (only structural inline style kept)
+        if (comp.size) el.style.height = String(ctx.resolveToken(comp.size));
+        ctx.applyCssClass(el, comp);
         ctx.applyStyle(el, comp.style);
         parent.appendChild(el);
     }
@@ -70,31 +88,27 @@ export const SpacerPlugin: ComponentPlugin = {
 export const AlertPlugin: ComponentPlugin = {
     type: 'Alert',
     render: (comp, parent, ctx) => {
+        const severity = comp.severity || 'info';
         const el = document.createElement('div');
         if (comp.id) el.id = comp.id;
-        el.className = `formspec-alert alert-${comp.severity || 'info'}`;
-        el.style.padding = '0.75rem 1.25rem';
-        el.style.marginBottom = '1rem';
-        el.style.border = '1px solid transparent';
-        el.style.borderRadius = '0.25rem';
-        if (comp.severity === 'error') {
-            el.style.color = '#721c24';
-            el.style.backgroundColor = '#f8d7da';
-            el.style.borderColor = '#f5c6cb';
-        } else if (comp.severity === 'warning') {
-            el.style.color = '#856404';
-            el.style.backgroundColor = '#fff3cd';
-            el.style.borderColor = '#ffeeba';
-        } else if (comp.severity === 'success') {
-            el.style.color = '#155724';
-            el.style.backgroundColor = '#d4edda';
-            el.style.borderColor = '#c3e6cb';
-        } else {
-            el.style.color = '#0c5460';
-            el.style.backgroundColor = '#d1ecf1';
-            el.style.borderColor = '#bee5eb';
+        el.className = `formspec-alert formspec-alert--${severity}`;
+        if (comp.dismissible) {
+            el.classList.add('formspec-alert--dismissible');
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'formspec-alert-close';
+            closeBtn.textContent = '\u00d7';
+            closeBtn.setAttribute('aria-label', 'Dismiss');
+            closeBtn.addEventListener('click', () => {
+                el.remove();
+            });
+            el.appendChild(closeBtn);
         }
-        el.textContent = comp.text || '';
+        const textSpan = document.createElement('span');
+        textSpan.textContent = comp.text || '';
+        el.appendChild(textSpan);
+        ctx.applyCssClass(el, comp);
+        ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
         parent.appendChild(el);
     }
@@ -105,16 +119,57 @@ export const BadgePlugin: ComponentPlugin = {
     render: (comp, parent, ctx) => {
         const el = document.createElement('span');
         if (comp.id) el.id = comp.id;
-        el.className = `formspec-badge badge-${comp.variant || 'default'}`;
-        el.style.padding = '0.25em 0.4em';
-        el.style.fontSize = '75%';
-        el.style.fontWeight = '700';
-        el.style.borderRadius = '0.25rem';
-        el.style.backgroundColor = '#6c757d';
-        el.style.color = '#fff';
+        el.className = `formspec-badge formspec-badge--${comp.variant || 'default'}`;
         el.textContent = comp.text || '';
+        ctx.applyCssClass(el, comp);
+        ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
         parent.appendChild(el);
+    }
+};
+
+export const ProgressBarPlugin: ComponentPlugin = {
+    type: 'ProgressBar',
+    render: (comp, parent, ctx) => {
+        const wrapper = document.createElement('div');
+        if (comp.id) wrapper.id = comp.id;
+        wrapper.className = 'formspec-progress-bar';
+
+        const progressEl = document.createElement('progress');
+        const maxVal = comp.max || 100;
+        progressEl.max = maxVal;
+
+        if (comp.bind) {
+            const fullName = ctx.prefix ? `${ctx.prefix}.${comp.bind}` : comp.bind;
+            const percentLabel = document.createElement('span');
+            percentLabel.className = 'formspec-progress-percent';
+
+            ctx.cleanupFns.push(effect(() => {
+                const sig = ctx.engine.signals[fullName];
+                const val = Number(sig?.value ?? comp.value ?? 0);
+                progressEl.value = val;
+                if (comp.showPercent) {
+                    percentLabel.textContent = `${Math.round((val / maxVal) * 100)}%`;
+                }
+            }));
+
+            wrapper.appendChild(progressEl);
+            if (comp.showPercent) wrapper.appendChild(percentLabel);
+        } else {
+            progressEl.value = comp.value || 0;
+            wrapper.appendChild(progressEl);
+            if (comp.showPercent) {
+                const percentLabel = document.createElement('span');
+                percentLabel.className = 'formspec-progress-percent';
+                percentLabel.textContent = `${Math.round(((comp.value || 0) / maxVal) * 100)}%`;
+                wrapper.appendChild(percentLabel);
+            }
+        }
+
+        ctx.applyCssClass(wrapper, comp);
+        ctx.applyAccessibility(wrapper, comp);
+        ctx.applyStyle(wrapper, comp.style);
+        parent.appendChild(wrapper);
     }
 };
 
@@ -124,16 +179,16 @@ export const SummaryPlugin: ComponentPlugin = {
         const el = document.createElement('dl');
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-summary';
-        
+
         if (comp.items) {
             for (const item of comp.items) {
                 const dt = document.createElement('dt');
                 dt.textContent = item.label || '';
                 el.appendChild(dt);
-                
+
                 const dd = document.createElement('dd');
                 el.appendChild(dd);
-                
+
                 if (item.bind) {
                     const fullName = ctx.prefix ? `${ctx.prefix}.${item.bind}` : item.bind;
                     ctx.cleanupFns.push(effect(() => {
@@ -143,7 +198,9 @@ export const SummaryPlugin: ComponentPlugin = {
                 }
             }
         }
-        
+
+        ctx.applyCssClass(el, comp);
+        ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
         parent.appendChild(el);
     }

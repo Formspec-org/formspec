@@ -10,6 +10,10 @@ export class ComponentRegistry {
     get(type: string): ComponentPlugin | undefined {
         return this.plugins.get(type);
     }
+
+    get size(): number {
+        return this.plugins.size;
+    }
 }
 
 export const globalRegistry = new ComponentRegistry();
