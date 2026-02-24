@@ -1,5 +1,5 @@
 import { globalRegistry } from '../registry';
-import { PagePlugin, StackPlugin, GridPlugin, DividerPlugin, CollapsiblePlugin, ColumnsPlugin, PanelPlugin, AccordionPlugin, ModalPlugin } from './layout';
+import { PagePlugin, StackPlugin, GridPlugin, DividerPlugin, CollapsiblePlugin, ColumnsPlugin, PanelPlugin, AccordionPlugin, ModalPlugin, PopoverPlugin } from './layout';
 import { InputPlugins } from './inputs';
 import { HeadingPlugin, TextPlugin, CardPlugin, SpacerPlugin, AlertPlugin, BadgePlugin, ProgressBarPlugin, SummaryPlugin } from './display';
 import { WizardPlugin, TabsPlugin } from './interactive';
@@ -15,6 +15,7 @@ export function registerDefaultComponents() {
     globalRegistry.register(PanelPlugin);
     globalRegistry.register(AccordionPlugin);
     globalRegistry.register(ModalPlugin);
+    globalRegistry.register(PopoverPlugin);
     InputPlugins.forEach(p => globalRegistry.register(p));
     globalRegistry.register(HeadingPlugin);
     globalRegistry.register(TextPlugin);

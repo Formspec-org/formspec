@@ -280,3 +280,63 @@ export const ModalPlugin: ComponentPlugin = {
         parent.appendChild(triggerBtn);
     }
 };
+
+export const PopoverPlugin: ComponentPlugin = {
+    type: 'Popover',
+    render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
+        const wrapper = document.createElement('div');
+        if (comp.id) wrapper.id = comp.id;
+        wrapper.className = 'formspec-popover';
+
+        const triggerBtn = document.createElement('button');
+        triggerBtn.type = 'button';
+        triggerBtn.className = 'formspec-popover-trigger';
+
+        const triggerPath = comp.triggerBind
+            ? (ctx.prefix ? `${ctx.prefix}.${comp.triggerBind}` : comp.triggerBind)
+            : null;
+        const triggerSignal = triggerPath ? ctx.engine.signals[triggerPath] : null;
+        const fallbackLabel = comp.triggerLabel || 'Open';
+        if (triggerSignal) {
+            ctx.cleanupFns.push(effect(() => {
+                const val = triggerSignal.value;
+                triggerBtn.textContent = val === undefined || val === null || val === ''
+                    ? fallbackLabel
+                    : String(val);
+            }));
+        } else {
+            triggerBtn.textContent = fallbackLabel;
+        }
+
+        const content = document.createElement('div');
+        content.className = 'formspec-popover-content';
+        content.setAttribute('role', 'dialog');
+        if (comp.placement) {
+            content.dataset.placement = comp.placement;
+        }
+
+        if (comp.children) {
+            for (const child of comp.children) {
+                ctx.renderComponent(child, content, ctx.prefix);
+            }
+        }
+
+        const contentAny = content as any;
+        if (typeof contentAny.showPopover === 'function') {
+            contentAny.popover = 'auto';
+            triggerBtn.addEventListener('click', () => contentAny.togglePopover());
+        } else {
+            content.hidden = true;
+            triggerBtn.addEventListener('click', () => {
+                content.hidden = !content.hidden;
+            });
+        }
+
+        wrapper.appendChild(triggerBtn);
+        wrapper.appendChild(content);
+        ctx.applyCssClass(wrapper, comp);
+        ctx.applyAccessibility(wrapper, comp);
+        ctx.applyStyle(wrapper, comp.style);
+        parent.appendChild(wrapper);
+    }
+};

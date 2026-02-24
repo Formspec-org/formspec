@@ -36,7 +36,7 @@ describe('ComponentRegistry', () => {
 
         const expectedTypes = [
             // Layout
-            'Page', 'Stack', 'Grid', 'Divider', 'Collapsible', 'Columns', 'Panel', 'Accordion', 'Modal',
+            'Page', 'Stack', 'Grid', 'Divider', 'Collapsible', 'Columns', 'Panel', 'Accordion', 'Modal', 'Popover',
             // Inputs
             'TextInput', 'NumberInput', 'Select', 'Toggle', 'Checkbox', 'DatePicker',
             'RadioGroup', 'CheckboxGroup', 'Slider', 'Rating', 'FileUpload', 'Signature', 'MoneyInput',

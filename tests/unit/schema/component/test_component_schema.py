@@ -78,7 +78,8 @@ def test_progressive_components():
                 { "component": "Summary", "items": [{"label": "Name", "bind": "name"}] },
                 { "component": "DataTable", "bind": "rows", "columns": [{"header": "Col 1", "bind": "c1"}] },
                 { "component": "Panel", "children": [] },
-                { "component": "Modal", "title": "Popup", "children": [] }
+                { "component": "Modal", "title": "Popup", "children": [] },
+                { "component": "Popover", "triggerLabel": "More", "children": [] }
             ]
         }
     }
@@ -193,6 +194,7 @@ def test_token_references():
     ("DataTable", {"bind": "r", "columns": [{"header": "H", "bind": "k"}]}, []),
     ("Panel", {"position": "right"}, ["children"]),
     ("Modal", {"title": "M", "size": "lg"}, ["children"]),
+    ("Popover", {"triggerLabel": "Details", "placement": "right"}, ["children"]),
 ])
 def test_all_component_types_valid(component_name, props, extra_keys):
     item = {"component": component_name, **props}
@@ -495,7 +497,7 @@ def test_summary_items_valid():
     validate(instance=doc, schema=SCHEMA)
 
 def test_all_progressive_fallbacks_present_in_spec():
-    # Meta-test to ensure all 15 progressive components have fallbacks defined in the spec
+    # Meta-test to ensure all progressive components have fallbacks defined in the spec
     with open("specs/component/component-spec.md", "r") as f:
         content = f.read()
     
@@ -503,7 +505,7 @@ def test_all_progressive_fallbacks_present_in_spec():
         "Columns", "Tabs", "Accordion",
         "RadioGroup", "MoneyInput", "Slider", "Rating", "Signature",
         "Alert", "Badge", "ProgressBar", "Summary", "DataTable",
-        "Panel", "Modal"
+        "Panel", "Modal", "Popover"
     ]
     for comp in progressive:
         # Check for Fallback: or fallback: in the component's section
@@ -551,6 +553,7 @@ def test_responsive_grid_overrides():
     ("CheckboxGroup", "columns", 0), # Min 1
     ("Rating", "max", 0), # Min 1
     ("Modal", "size", "massive"), # Invalid enum
+    ("Popover", "placement", "middle"), # Invalid enum
     ("Panel", "position", "top"), # Invalid enum
     ("Alert", "severity", "critical"), # Invalid enum
 ])

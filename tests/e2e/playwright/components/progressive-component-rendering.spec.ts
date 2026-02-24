@@ -179,6 +179,44 @@ test.describe('Components: Progressive Component Rendering', () => {
         await expect(dialog).not.toBeVisible();
     });
 
+    test('should render popover content and support triggerBind-driven label updates', async ({ page }) => {
+        await page.evaluate(() => {
+            const el = document.querySelector('formspec-render') as any;
+            el.definition = {
+                "$formspec": "1.0", "url": "http://example.org/test",
+                "version": "1.0.0", "title": "Popover Test",
+                "items": [{ "key": "name", "type": "field", "dataType": "string", "label": "Name" }]
+            };
+            el.componentDocument = {
+                "$formspecComponent": "1.0",
+                "tree": {
+                    "component": "Stack",
+                    "children": [
+                        { "component": "TextInput", "bind": "name" },
+                        {
+                            "component": "Popover",
+                            "triggerBind": "name",
+                            "triggerLabel": "Open Details",
+                            "placement": "right",
+                            "children": [{ "component": "Text", "text": "Popover content" }]
+                        }
+                    ]
+                }
+            };
+        });
+
+        const nameInput = page.locator('input[name="name"]');
+        await nameInput.fill('Alice');
+
+        const trigger = page.locator('.formspec-popover-trigger');
+        await expect(trigger).toHaveText('Alice');
+        await trigger.click();
+
+        const popover = page.locator('.formspec-popover-content');
+        await expect(popover).toContainText('Popover content');
+        await expect(popover).toBeVisible();
+    });
+
     test('should update the bound numeric value when Slider input changes', async ({ page }) => {
         await page.evaluate(() => {
             const el = document.querySelector('formspec-render') as any;

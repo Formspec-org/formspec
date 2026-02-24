@@ -716,6 +716,21 @@
           "if": {
             "properties": {
               "component": {
+                "const": "Popover"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/Popover"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "component": {
                 "type": "string",
                 "not": {
                   "enum": [
@@ -751,7 +766,8 @@
                     "Summary",
                     "DataTable",
                     "Panel",
-                    "Modal"
+                    "Modal",
+                    "Popover"
                   ]
                 }
               }
@@ -2568,6 +2584,66 @@
         },
         "closable": {
           "type": "boolean"
+        },
+        "children": {
+          "$ref": "#/$defs/ChildrenArray"
+        }
+      }
+    },
+    "Popover": {
+      "type": "object",
+      "required": [
+        "component"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "const": "Popover"
+        },
+        "when": {
+          "type": "string"
+        },
+        "responsive": {
+          "$ref": "#/$defs/ResponsiveOverrides"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleMap"
+        },
+        "accessibility": {
+          "$ref": "#/$defs/AccessibilityBlock"
+        },
+        "cssClass": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
+        },
+        "triggerBind": {
+          "type": "string",
+          "description": "Optional bind key whose live value is used as trigger text."
+        },
+        "triggerLabel": {
+          "type": "string",
+          "description": "Fallback label for the popover trigger control."
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "top",
+            "right",
+            "bottom",
+            "left"
+          ],
+          "default": "bottom",
+          "description": "Preferred popover placement relative to the trigger."
         },
         "children": {
           "$ref": "#/$defs/ChildrenArray"

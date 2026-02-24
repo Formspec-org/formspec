@@ -1171,7 +1171,7 @@ class TestBucket1SchemaStructure:
             "Columns", "Tabs", "Accordion",
             "RadioGroup", "MoneyInput", "Slider", "Rating", "Signature",
             "Alert", "Badge", "ProgressBar", "Summary", "DataTable",
-            "Panel", "Modal",
+            "Panel", "Modal", "Popover",
         ]
         for name in builtins:
             props = COMP_S["$defs"][name]["properties"]

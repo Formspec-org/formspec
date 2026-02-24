@@ -293,6 +293,34 @@
   cursor: pointer;
 }
 
+/* ── Popover ───────────────────────────────────────────────────── */
+.formspec-popover {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.formspec-popover-content {
+  border: 1px solid;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  max-width: 28rem;
+}
+
+.formspec-popover-content[data-placement="top"] {
+  margin-bottom: 0.5rem;
+}
+.formspec-popover-content[data-placement="right"] {
+  margin-left: 0.5rem;
+}
+.formspec-popover-content[data-placement="left"] {
+  margin-right: 0.5rem;
+}
+.formspec-popover-content[data-placement="bottom"] {
+  margin-top: 0.5rem;
+}
+
 /* ── Tabs ──────────────────────────────────────────────────────── */
 .formspec-tab-bar {
   display: flex;

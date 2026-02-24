@@ -69,7 +69,7 @@ Section references (§N) refer to this document unless prefixed with
   - [§4.5 Unbound Required Items](#45-unbound-required-items)
   - [§4.6 Bind/dataType Compatibility Matrix](#46-binddatatype-compatibility-matrix)
 - [§5 Built-In Components — Core (18)](#5-built-in-components--core-18)
-- [§6 Built-In Components — Progressive (15)](#6-built-in-components--progressive-15)
+- [§6 Built-In Components — Progressive (16)](#6-built-in-components--progressive-16)
 - [§7 Custom Components](#7-custom-components)
   - [§7.1 The components Registry](#71-the-components-registry)
   - [§7.2 {param} Interpolation Grammar (ABNF)](#72-param-interpolation-grammar-abnf)
@@ -137,7 +137,7 @@ A Component Document:
   rules, required state, and relevance from the Definition.
 - Uses FEL expressions for conditional rendering (`when` property).
 - Supports responsive breakpoint overrides and design tokens.
-- Defines a fixed catalog of 33 built-in components (18 Core + 15
+- Defines a fixed catalog of 34 built-in components (18 Core + 16
   Progressive) plus a custom component registry for reuse.
 
 Multiple Component Documents MAY target the same Definition. This enables
@@ -179,14 +179,14 @@ This specification defines two conformance levels:
 
 | Level | Components | Requirement |
 |-------|-----------|-------------|
-| **Core Conformant** | 18 Core components (§5) | MUST support all 18 Core components. MUST apply fallback rules (§6.16) when encountering Progressive components. |
-| **Complete Conformant** | All 33 components (§5 + §6) | MUST support all 18 Core components and all 15 Progressive components. |
+| **Core Conformant** | 18 Core components (§5) | MUST support all 18 Core components. MUST apply fallback rules (§6.17) when encountering Progressive components. |
+| **Complete Conformant** | All 34 components (§5 + §6) | MUST support all 18 Core components and all 16 Progressive components. |
 
 A processor that claims Core conformance MUST, upon encountering a
-Progressive component, substitute the specified Core fallback (§6.16)
+Progressive component, substitute the specified Core fallback (§6.17)
 and SHOULD emit an informative warning.
 
-A processor that claims Complete conformance MUST render all 33 built-in
+A processor that claims Complete conformance MUST render all 34 built-in
 components natively.
 
 Both levels MUST support the custom component mechanism (§7).
@@ -205,7 +205,7 @@ Both levels MUST support the custom component mechanism (§7).
 | **Token** | A named design value (color, spacing, typography) defined in the `tokens` map. |
 | **Slot binding** | The association between a component and a Definition item via the `bind` property. |
 | **Core component** | One of the 18 components that all conforming processors MUST support. |
-| **Progressive component** | One of the 15 additional components that Complete processors MUST support, with defined fallbacks for Core processors. |
+| **Progressive component** | One of the 16 additional components that Complete processors MUST support, with defined fallbacks for Core processors. |
 | **Custom component** | A reusable component template defined in the `components` registry. |
 
 ---
@@ -426,7 +426,7 @@ the category:
 | Category | Accepts `children` | Examples |
 |----------|-------------------|----------|
 | **Layout** | Yes | Page, Stack, Grid, Wizard, Columns, Tabs, Accordion |
-| **Container** | Yes | Card, Collapsible, ConditionalGroup, Panel, Modal |
+| **Container** | Yes | Card, Collapsible, ConditionalGroup, Panel, Modal, Popover |
 | **Input** | No | TextInput, NumberInput, Select, Toggle, … |
 | **Display** | No | Heading, Text, Divider, Alert, Badge, … |
 
@@ -1438,16 +1438,16 @@ children.
 
 ---
 
-## 6. Built-In Components — Progressive (15)
+## 6. Built-In Components — Progressive (16)
 
-This section defines the 15 Progressive components. A **Complete
+This section defines the 16 Progressive components. A **Complete
 Conformant** processor MUST support all 15. A **Core Conformant**
 processor MUST substitute the specified Core fallback for each
 Progressive component and SHOULD emit an informative warning.
 
 Each Progressive component entry includes a **Fallback** line
 identifying the Core component that replaces it in Core-level
-processors. §6.16 provides a consolidated fallback table.
+processors. §6.17 provides a consolidated fallback table.
 
 ---
 
@@ -2208,7 +2208,58 @@ collapsible body, initially collapsed (`defaultOpen: false`).
 
 ---
 
-### 6.16 Fallback Requirements
+### 6.16 Popover
+
+**Category:** Container
+**Level:** Progressive
+**Accepts children:** Yes
+**Bind:** Forbidden
+**Fallback:** Collapsible
+
+#### Description
+
+A lightweight anchored overlay that shows contextual content when the
+trigger is activated.
+
+#### Props
+
+| Prop | Type | Default | Token-able | Description |
+|------|------|---------|------------|-------------|
+| `triggerBind` | string | — | No | Optional bind key whose current value is shown as the trigger label. |
+| `triggerLabel` | string | `"Open"` | No | Fallback trigger label when `triggerBind` has no value. |
+| `placement` | string | `"bottom"` | No | Preferred popover placement. MUST be one of `"top"`, `"right"`, `"bottom"`, or `"left"`. |
+
+#### Rendering Requirements
+
+- MUST render a trigger control and a content surface.
+- MUST render `children` inside the content surface.
+- SHOULD use native popover behavior when available.
+- MUST provide a usable toggle fallback when native popover behavior is
+  unavailable.
+
+#### Fallback Behavior
+
+Core processors MUST replace Popover with **Collapsible**. The
+`triggerLabel` value SHOULD map to Collapsible `title`. The `placement`
+property is discarded.
+
+#### Example
+
+```json
+{
+  "component": "Popover",
+  "triggerBind": "projectName",
+  "triggerLabel": "Show details",
+  "placement": "right",
+  "children": [
+    { "component": "Text", "text": "Additional context for this field." }
+  ]
+}
+```
+
+---
+
+### 6.17 Fallback Requirements
 
 The following table defines the complete set of Progressive → Core
 fallback substitutions. A Core Conformant processor MUST apply these
@@ -2231,6 +2282,7 @@ fallbacks when it encounters a Progressive component.
 | DataTable | Stack of Card | One Card per repeat instance with child inputs. |
 | Panel | Card | `title` preserved; position/width discarded. |
 | Modal | Collapsible | `title` preserved; `defaultOpen: false`. |
+| Popover | Collapsible | `triggerLabel` mapped to `title`; placement discarded. |
 
 Fallback substitution MUST preserve:
 
@@ -2892,7 +2944,7 @@ A processor declares conformance at one of two levels:
 - MUST parse and validate all Component Document properties defined
   in this specification.
 - MUST render all 18 Core components (§5) with full prop support.
-- MUST apply fallback substitution (§6.16) for all 15 Progressive
+- MUST apply fallback substitution (§6.17) for all 16 Progressive
   components.
 - MUST support custom component expansion (§7).
 - MUST evaluate `when` expressions (§8).
@@ -2903,7 +2955,7 @@ A processor declares conformance at one of two levels:
 **Complete Conformant:**
 
 - MUST satisfy all Core Conformant requirements.
-- MUST additionally render all 15 Progressive components (§6)
+- MUST additionally render all 16 Progressive components (§6)
   natively, without fallback substitution.
 
 Processors SHOULD declare their conformance level in their
@@ -3192,7 +3244,7 @@ This example demonstrates:
 
 This appendix is **normative**.
 
-The following table lists all 33 built-in components with their
+The following table lists all 34 built-in components with their
 classification and key characteristics.
 
 | # | Component | Category | Level | Children | Bind | Description |
@@ -3230,6 +3282,7 @@ classification and key characteristics.
 | 31 | DataTable | Display | Progressive | No | Optional² | Tabular repeatable data. |
 | 32 | Panel | Container | Progressive | Yes | Forbidden | Side panel. |
 | 33 | Modal | Container | Progressive | Yes | Forbidden | Dialog overlay. |
+| 34 | Popover | Container | Progressive | Yes | Forbidden | Anchored contextual overlay. |
 
 ² DataTable binds to a repeatable group key, not a field key.
 
