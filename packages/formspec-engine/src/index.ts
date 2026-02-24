@@ -49,6 +49,17 @@ export interface FormspecBind {
     nonRelevantBehavior?: 'remove' | 'empty' | 'keep';
     disabledDisplay?: 'hidden' | 'protected';
     precision?: number;
+    remoteOptions?: string;
+}
+
+export interface FormspecOption {
+    value: string;
+    label: string;
+}
+
+export interface RemoteOptionsState {
+    loading: boolean;
+    error: string | null;
 }
 
 export interface FormspecShape {
@@ -92,7 +103,7 @@ export interface FormspecDefinition {
     shapes?: FormspecShape[];
     variables?: FormspecVariable[];
     instances?: Record<string, FormspecInstance>;
-    optionSets?: Record<string, { value: string; label: string }[]>;
+    optionSets?: Record<string, FormspecOption[]>;
     nonRelevantBehavior?: 'remove' | 'empty' | 'keep';
     formPresentation?: any;
     screener?: { routes: Array<{ condition?: string; target: string; label?: string }> };
@@ -193,12 +204,15 @@ export class FormEngine {
     public validationResults: Record<string, Signal<ValidationResult[]>> = {};
     public shapeResults: Record<string, Signal<ValidationResult[]>> = {};
     public repeats: Record<string, Signal<number>> = {};
+    public optionSignals: Record<string, Signal<FormspecOption[]>> = {};
+    public optionStateSignals: Record<string, Signal<RemoteOptionsState>> = {};
     public variableSignals: Record<string, Signal<any>> = {};  // keyed by "scope:name"
     public instanceData: Record<string, any> = {};
     public dependencies: Record<string, string[]> = {};
     private knownNames: Set<string> = new Set();
     private bindConfigs: Record<string, FormspecBind> = {};
     private compiledExpressions: Record<string, () => any> = {};
+    private remoteOptionsTasks: Array<Promise<void>> = [];
     private runtimeContext: {
         nowProvider: () => Date;
         locale?: string;
@@ -215,6 +229,7 @@ export class FormEngine {
             this.setRuntimeContext(runtimeContext);
         }
         this.resolveOptionSets();
+        this.initializeOptionSignals();
         this.initializeInstances();
         this.initializeBindConfigs(definition.items);
         if (definition.binds) {
@@ -224,6 +239,7 @@ export class FormEngine {
                 this.bindConfigs[normalizedPath] = { ...this.bindConfigs[normalizedPath], ...bind, path: normalizedPath };
             }
         }
+        this.initializeRemoteOptions();
         this.initializeSignals();
         this.initializeShapes();
         this.initializeVariables();
@@ -288,6 +304,106 @@ export class FormEngine {
                 this.resolveOptionSetsRecursive(item.children);
             }
         }
+    }
+
+    private initializeOptionSignals() {
+        this.initializeOptionSignalsRecursive(this.definition.items);
+    }
+
+    private initializeOptionSignalsRecursive(items: FormspecItem[], prefix = '') {
+        for (const item of items) {
+            const fullName = prefix ? `${prefix}.${item.key}` : item.key;
+            if (item.type === 'field') {
+                const options = Array.isArray(item.options) ? item.options.map((opt) => ({
+                    value: String(opt.value),
+                    label: String(opt.label),
+                })) : [];
+                this.optionSignals[fullName] = signal(options);
+                this.optionStateSignals[fullName] = signal({ loading: false, error: null });
+            }
+            if (item.children) {
+                this.initializeOptionSignalsRecursive(item.children, fullName);
+            }
+        }
+    }
+
+    private normalizeRemoteOptions(payload: any): FormspecOption[] {
+        const rawOptions = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.options)
+                ? payload.options
+                : null;
+        if (!rawOptions) {
+            throw new Error('Remote options response must be an array or { options: [...] }');
+        }
+        return rawOptions
+            .filter((opt: any) => opt && typeof opt === 'object' && opt.value !== undefined && opt.label !== undefined)
+            .map((opt: any) => ({
+                value: String(opt.value),
+                label: String(opt.label),
+            }));
+    }
+
+    private initializeRemoteOptions() {
+        if (!this.definition.binds) return;
+        for (const bind of this.definition.binds) {
+            if (!bind.remoteOptions) continue;
+
+            const path = bind.path.replace(/\[\*\]/g, '');
+            if (!this.optionSignals[path]) {
+                this.optionSignals[path] = signal([]);
+            }
+            if (!this.optionStateSignals[path]) {
+                this.optionStateSignals[path] = signal({ loading: false, error: null });
+            }
+
+            this.optionStateSignals[path].value = { loading: true, error: null };
+            const task = fetch(bind.remoteOptions)
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Remote options fetch failed (${response.status})`);
+                    }
+                    return response.json();
+                })
+                .then((payload) => {
+                    const normalized = this.normalizeRemoteOptions(payload);
+                    this.optionSignals[path].value = normalized;
+                    this.optionStateSignals[path].value = { loading: false, error: null };
+                })
+                .catch((error) => {
+                    const message = error instanceof Error ? error.message : String(error);
+                    this.optionStateSignals[path].value = { loading: false, error: message };
+                });
+            this.remoteOptionsTasks.push(task);
+        }
+    }
+
+    public getOptions(path: string): FormspecOption[] {
+        const baseName = path.replace(/\[\d+\]/g, '');
+        if (this.optionSignals[baseName]) {
+            return this.optionSignals[baseName].value;
+        }
+        return [];
+    }
+
+    public getOptionsSignal(path: string): Signal<FormspecOption[]> | undefined {
+        const baseName = path.replace(/\[\d+\]/g, '');
+        return this.optionSignals[baseName];
+    }
+
+    public getOptionsState(path: string): RemoteOptionsState {
+        const baseName = path.replace(/\[\d+\]/g, '');
+        return this.optionStateSignals[baseName]?.value || { loading: false, error: null };
+    }
+
+    public getOptionsStateSignal(path: string): Signal<RemoteOptionsState> | undefined {
+        const baseName = path.replace(/\[\d+\]/g, '');
+        return this.optionStateSignals[baseName];
+    }
+
+    public async waitForRemoteOptions(): Promise<void> {
+        if (this.remoteOptionsTasks.length === 0) return;
+        await Promise.allSettled(this.remoteOptionsTasks);
     }
 
     private initializeInstances() {

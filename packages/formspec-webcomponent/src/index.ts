@@ -619,6 +619,23 @@ export class FormspecRender extends HTMLElement {
         // Theme widget resolution only applies in the definition-fallback renderItem path.
         const componentType = comp.component;
 
+        const optionSignal = this.engine!.getOptionsSignal?.(fullName);
+        const optionStateSignal = this.engine!.getOptionsStateSignal?.(fullName);
+        if (optionSignal || optionStateSignal) {
+            let initialized = false;
+            this.cleanupFns.push(effect(() => {
+                optionSignal?.value;
+                optionStateSignal?.value;
+                if (!initialized) {
+                    initialized = true;
+                    return;
+                }
+                this.render();
+            }));
+        }
+        const options = this.engine!.getOptions?.(fullName) || item.options || [];
+        const remoteOptionsState = this.engine!.getOptionsState?.(fullName) || { loading: false, error: null };
+
         // §4.6 Bind/dataType Compatibility Matrix
         const matrix: Record<string, string[]> = {
             'string': ['TextInput', 'Select', 'RadioGroup'],
@@ -694,8 +711,8 @@ export class FormspecRender extends HTMLElement {
             const container = document.createElement('div');
             container.className = 'formspec-radio-group';
             container.setAttribute('role', 'radiogroup');
-            if (item.options) {
-                for (const opt of item.options) {
+            if (options.length > 0) {
+                for (const opt of options) {
                     const lbl = document.createElement('label');
                     const rb = document.createElement('input');
                     rb.type = 'radio';
@@ -716,7 +733,7 @@ export class FormspecRender extends HTMLElement {
             if (comp.columns && comp.columns > 1) {
                 container.dataset.columns = String(comp.columns);
             }
-            if (item.options) {
+            if (options.length > 0) {
                 // CheckboxGroup selectAll prop
                 if (comp.selectAll) {
                     const selectAllLbl = document.createElement('label');
@@ -734,7 +751,7 @@ export class FormspecRender extends HTMLElement {
                     selectAllLbl.appendChild(document.createTextNode(' Select All'));
                     container.appendChild(selectAllLbl);
                 }
-                for (const opt of item.options) {
+                for (const opt of options) {
                     const lbl = document.createElement('label');
                     const cb = document.createElement('input');
                     cb.type = 'checkbox';
@@ -794,8 +811,8 @@ export class FormspecRender extends HTMLElement {
                  clearOpt.textContent = '\u2014 Clear \u2014';
                  select.appendChild(clearOpt);
              }
-             if (item.options) {
-                 for (const opt of item.options) {
+             if (options.length > 0) {
+                 for (const opt of options) {
                      const option = document.createElement('option');
                      option.value = opt.value;
                      option.textContent = opt.label;
@@ -877,6 +894,19 @@ export class FormspecRender extends HTMLElement {
         }
 
         fieldWrapper.appendChild(input);
+
+        if (remoteOptionsState.loading || remoteOptionsState.error) {
+            const status = document.createElement('div');
+            status.className = 'formspec-hint formspec-remote-options-status';
+            if (remoteOptionsState.loading) {
+                status.textContent = 'Loading options...';
+            } else if (remoteOptionsState.error) {
+                status.textContent = options.length > 0
+                    ? 'Remote options unavailable; using fallback options.'
+                    : 'Failed to load options.';
+            }
+            fieldWrapper.appendChild(status);
+        }
 
         // Set ID on the actual input element for label[for] and ARIA
         const actualInputEl = input.querySelector('input') || input.querySelector('select') || input.querySelector('textarea') || input;
