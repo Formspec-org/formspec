@@ -4,6 +4,7 @@
   "theme": "theme.json",
   "component": "component.json",
   "mapping": "mapping.json",
+  "trace": "trace.json",
   "registry": "registry.json",
   "changelog": "changelog.json",
   "parityCases": "parity-cases.json"

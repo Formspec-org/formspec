@@ -30,7 +30,7 @@
 | 0019 | [0019-theme-cascade-default-theme.md](adr/0019-theme-cascade-default-theme.md) | Implemented | 5-level cascade resolver + `default-theme.json` + ARIA fixes |
 | 0020 | [0020-css-integration-and-design-system-interop.md](adr/0020-css-integration-and-design-system-interop.md) | Implemented | `cssClass`/`stylesheets` in schemas + renderer |
 | 0021 | [0021-holistic-kitchen-sink-e2e-conformance-plan.md](adr/0021-holistic-kitchen-sink-e2e-conformance-plan.md) | Implemented | All phases implemented (Python runner + Playwright) |
-| 0022 | [0022-component-playground-strategy.md](adr/0022-component-playground-strategy.md) | Proposed | Choose custom first-party playground over Storybook-first approach |
+| 0022 | [0022-component-playground-strategy.md](adr/0022-component-playground-strategy.md) | Implemented | Custom playground shipped with diagnostics, deterministic runtime controls, mapping/replay tooling, and Playwright `/playground` + `/demo` convergence coverage |
 
 ---
 

@@ -6,6 +6,8 @@ import { dependencyVisitor } from './fel/dependency-visitor';
 
 export { assembleDefinition, assembleDefinitionSync } from './assembler';
 export type { AssemblyProvenance, AssemblyResult, DefinitionResolver } from './assembler';
+export { RuntimeMappingEngine } from './runtime-mapping';
+export type { MappingDirection, RuntimeMappingResult } from './runtime-mapping';
 
 export interface FormspecItem {
     key: string;
@@ -121,6 +123,66 @@ export interface ValidationReport {
     timestamp: string;
 }
 
+export type EngineNowInput = Date | string | number;
+
+export interface FormEngineRuntimeContext {
+    now?: (() => EngineNowInput) | EngineNowInput;
+    locale?: string;
+    timeZone?: string;
+    seed?: string | number;
+}
+
+export interface FormEngineDiagnosticsSnapshot {
+    definition: {
+        url: string;
+        version: string;
+        title: string;
+    };
+    timestamp: string;
+    structureVersion: number;
+    repeats: Record<string, number>;
+    values: Record<string, any>;
+    mips: Record<string, {
+        relevant: boolean;
+        required: boolean;
+        readonly: boolean;
+        error: string | null;
+    }>;
+    dependencies: Record<string, string[]>;
+    validation: ValidationReport;
+    runtimeContext: {
+        now: string;
+        locale?: string;
+        timeZone?: string;
+        seed?: string | number;
+    };
+}
+
+export type EngineReplayEvent =
+    | { type: 'setValue'; path: string; value: any }
+    | { type: 'addRepeatInstance'; path: string }
+    | { type: 'removeRepeatInstance'; path: string; index: number }
+    | { type: 'evaluateShape'; shapeId: string }
+    | { type: 'getValidationReport'; mode?: 'continuous' | 'submit' }
+    | { type: 'getResponse'; mode?: 'continuous' | 'submit' };
+
+export interface EngineReplayApplyResult {
+    ok: boolean;
+    event: EngineReplayEvent;
+    output?: any;
+    error?: string;
+}
+
+export interface EngineReplayResult {
+    applied: number;
+    results: EngineReplayApplyResult[];
+    errors: Array<{
+        index: number;
+        event: EngineReplayEvent;
+        error: string;
+    }>;
+}
+
 export class FormEngine {
     private definition: FormspecDefinition;
     public signals: Record<string, any> = {};
@@ -137,10 +199,21 @@ export class FormEngine {
     private knownNames: Set<string> = new Set();
     private bindConfigs: Record<string, FormspecBind> = {};
     private compiledExpressions: Record<string, () => any> = {};
+    private runtimeContext: {
+        nowProvider: () => Date;
+        locale?: string;
+        timeZone?: string;
+        seed?: string | number;
+    } = {
+        nowProvider: () => new Date(),
+    };
     public structureVersion = signal(0);
 
-    constructor(definition: FormspecDefinition) {
+    constructor(definition: FormspecDefinition, runtimeContext?: FormEngineRuntimeContext) {
         this.definition = definition;
+        if (runtimeContext) {
+            this.setRuntimeContext(runtimeContext);
+        }
         this.resolveOptionSets();
         this.initializeInstances();
         this.initializeBindConfigs(definition.items);
@@ -154,6 +227,48 @@ export class FormEngine {
         this.initializeSignals();
         this.initializeShapes();
         this.initializeVariables();
+    }
+
+    private coerceDate(value: EngineNowInput): Date {
+        if (value instanceof Date) {
+            return new Date(value.getTime());
+        }
+        const coerced = new Date(value);
+        if (isNaN(coerced.getTime())) {
+            return new Date();
+        }
+        return coerced;
+    }
+
+    private resolveNowProvider(now: FormEngineRuntimeContext['now']): () => Date {
+        if (typeof now === 'function') {
+            const provider = now as () => EngineNowInput;
+            return () => this.coerceDate(provider());
+        }
+        if (now !== undefined) {
+            const fixed = this.coerceDate(now as EngineNowInput);
+            return () => new Date(fixed.getTime());
+        }
+        return () => new Date();
+    }
+
+    private nowISO(): string {
+        return this.runtimeContext.nowProvider().toISOString();
+    }
+
+    public setRuntimeContext(context: FormEngineRuntimeContext = {}) {
+        if (Object.prototype.hasOwnProperty.call(context, 'now')) {
+            this.runtimeContext.nowProvider = this.resolveNowProvider(context.now);
+        }
+        if (Object.prototype.hasOwnProperty.call(context, 'locale')) {
+            this.runtimeContext.locale = context.locale;
+        }
+        if (Object.prototype.hasOwnProperty.call(context, 'timeZone')) {
+            this.runtimeContext.timeZone = context.timeZone;
+        }
+        if (Object.prototype.hasOwnProperty.call(context, 'seed')) {
+            this.runtimeContext.seed = context.seed;
+        }
     }
 
     /**
@@ -1202,7 +1317,7 @@ export class FormEngine {
             valid: counts.error === 0,
             results: allResults,
             counts,
-            timestamp: new Date().toISOString()
+            timestamp: this.nowISO()
         };
     }
 
@@ -1279,7 +1394,7 @@ export class FormEngine {
             status: report.valid ? "completed" : "in-progress",
             data,
             validationResults: report.results,
-            authored: new Date().toISOString()
+            authored: this.nowISO()
         };
 
         if (meta?.id) response.id = meta.id;
@@ -1287,6 +1402,110 @@ export class FormEngine {
         if (meta?.subject) response.subject = meta.subject;
 
         return response;
+    }
+
+    public getDiagnosticsSnapshot(options?: { mode?: 'continuous' | 'submit' }): FormEngineDiagnosticsSnapshot {
+        const mode = options?.mode || 'continuous';
+        const values: Record<string, any> = {};
+        const mips: FormEngineDiagnosticsSnapshot['mips'] = {};
+        const repeats: Record<string, number> = {};
+
+        for (const [path, repeatSignal] of Object.entries(this.repeats)) {
+            repeats[path] = repeatSignal.value;
+        }
+
+        const signalPaths = Object.keys(this.signals).sort();
+        for (const path of signalPaths) {
+            values[path] = this.cloneValue(this.signals[path]?.value);
+            mips[path] = {
+                relevant: this.relevantSignals[path]?.value ?? true,
+                required: this.requiredSignals[path]?.value ?? false,
+                readonly: this.readonlySignals[path]?.value ?? false,
+                error: this.errorSignals[path]?.value ?? null,
+            };
+        }
+
+        const timestamp = this.nowISO();
+        return {
+            definition: {
+                url: this.definition.url,
+                version: this.definition.version,
+                title: this.definition.title,
+            },
+            timestamp,
+            structureVersion: this.structureVersion.value,
+            repeats,
+            values,
+            mips,
+            dependencies: this.cloneValue(this.dependencies),
+            validation: this.getValidationReport({ mode }),
+            runtimeContext: {
+                now: timestamp,
+                locale: this.runtimeContext.locale,
+                timeZone: this.runtimeContext.timeZone,
+                seed: this.runtimeContext.seed,
+            },
+        };
+    }
+
+    public applyReplayEvent(event: EngineReplayEvent): EngineReplayApplyResult {
+        try {
+            switch (event.type) {
+                case 'setValue':
+                    this.setValue(event.path, event.value);
+                    return { ok: true, event };
+                case 'addRepeatInstance':
+                    return { ok: true, event, output: this.addRepeatInstance(event.path) };
+                case 'removeRepeatInstance':
+                    this.removeRepeatInstance(event.path, event.index);
+                    return { ok: true, event };
+                case 'evaluateShape':
+                    return { ok: true, event, output: this.evaluateShape(event.shapeId) };
+                case 'getValidationReport':
+                    return { ok: true, event, output: this.getValidationReport({ mode: event.mode }) };
+                case 'getResponse':
+                    return { ok: true, event, output: this.getResponse({ mode: event.mode }) };
+                default: {
+                    const neverType: never = event;
+                    throw new Error(`Unsupported replay event: ${(neverType as any).type}`);
+                }
+            }
+        } catch (error) {
+            return {
+                ok: false,
+                event,
+                error: error instanceof Error ? error.message : String(error),
+            };
+        }
+    }
+
+    public replay(events: EngineReplayEvent[], options?: { stopOnError?: boolean }): EngineReplayResult {
+        const results: EngineReplayApplyResult[] = [];
+        const errors: EngineReplayResult['errors'] = [];
+        let applied = 0;
+
+        for (let i = 0; i < events.length; i++) {
+            const result = this.applyReplayEvent(events[i]);
+            results.push(result);
+            if (result.ok) {
+                applied++;
+            } else {
+                errors.push({
+                    index: i,
+                    event: events[i],
+                    error: result.error || 'Unknown replay error',
+                });
+                if (options?.stopOnError) {
+                    break;
+                }
+            }
+        }
+
+        return {
+            applied,
+            results,
+            errors,
+        };
     }
 
     // === Extended Features (Phase 11) ===

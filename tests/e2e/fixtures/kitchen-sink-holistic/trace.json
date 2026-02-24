@@ -1,0 +1,22 @@
+{
+  "events": [
+    { "type": "setValue", "path": "fullName", "value": "Trace User" },
+    { "type": "setValue", "path": "profileMode", "value": "advanced" },
+    { "type": "setValue", "path": "vipEnabled", "value": true },
+    { "type": "setValue", "path": "vipCode", "value": "TRACE-001" },
+    { "type": "setValue", "path": "lineItems[0].lineName", "value": "Trace Item 1" },
+    { "type": "setValue", "path": "lineItems[0].lineQty", "value": 2 },
+    { "type": "setValue", "path": "lineItems[0].linePrice", "value": 120 },
+    { "type": "addRepeatInstance", "path": "lineItems" },
+    { "type": "setValue", "path": "lineItems[1].lineName", "value": "Trace Item 2" },
+    { "type": "setValue", "path": "lineItems[1].lineQty", "value": 1 },
+    { "type": "setValue", "path": "lineItems[1].linePrice", "value": 60 },
+    { "type": "setValue", "path": "budget", "value": 500 },
+    { "type": "setValue", "path": "startDate", "value": "2026-03-10" },
+    { "type": "setValue", "path": "endDate", "value": "2026-03-20" },
+    { "type": "setValue", "path": "website", "value": "https://trace.example" },
+    { "type": "setValue", "path": "tags", "value": ["new", "priority"] },
+    { "type": "getValidationReport", "mode": "submit" },
+    { "type": "getResponse", "mode": "submit" }
+  ]
+}

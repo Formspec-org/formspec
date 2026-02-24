@@ -33,18 +33,19 @@ test.describe('Smoke: Kitchen Sink Flow', () => {
     await page.locator('.formspec-wizard-next').click();
     await expect(page.locator('h2', { hasText: 'Inventory Management' })).toBeVisible();
 
-    const price = page.locator('input[name="inventory[0].price"]');
-    const quantity = page.locator('input[name="inventory[0].quantity"]');
-    const itemName = page.locator('input[name="inventory[0].itemName"]');
+    const repeatSection = page.locator('.formspec-repeat').first();
+    const price = repeatSection.locator('input[name="inventory[0].price"]');
+    const quantity = repeatSection.locator('input[name="inventory[0].quantity"]');
+    const itemName = repeatSection.locator('input[name="inventory[0].itemName"]');
     await itemName.fill('Laptop');
     await price.fill('100');
     await quantity.fill('2');
 
     const addRow = page.locator('.formspec-repeat-add').first();
     await addRow.click();
-    await page.fill('input[name="inventory[1].itemName"]', 'Monitor');
-    await page.fill('input[name="inventory[1].price"]', '50');
-    await page.fill('input[name="inventory[1].quantity"]', '1');
+    await repeatSection.locator('input[name="inventory[1].itemName"]').fill('Monitor');
+    await repeatSection.locator('input[name="inventory[1].price"]').fill('50');
+    await repeatSection.locator('input[name="inventory[1].quantity"]').fill('1');
 
     const summary = page.locator('.formspec-summary');
     await expect(summary.locator('dd')).toHaveText('250');

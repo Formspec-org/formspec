@@ -1,6 +1,6 @@
 # ADR-0022: Component Playground Strategy (Off-the-Shelf vs Custom)
 
-**Status**: Proposed  
+**Status**: Implemented  
 **Date**: 2026-02-24  
 **Authors**: Codex (AI), exedev  
 **Deciders**: exedev  
@@ -83,6 +83,16 @@ Storybook (or another off-the-shelf catalog) is deferred and may be added later 
 
 Formspec’s highest-risk defects are behavioral and cross-document (MIPs, FEL, relevance, submission semantics), not static visual props. A custom playground maps directly to those semantics and can share fixtures and execution patterns with ADR-0021 conformance flows. This gives higher signal per engineering hour than adapting a generic story framework into a stateful form-runtime debugger.
 
+### Capability Placement Rule
+
+If a capability is required for system correctness (not just playground UX), it must live in runtime libraries, not only in the playground app:
+
+- `packages/formspec-engine`: semantic/runtime capabilities (deterministic replay primitives, diagnostics snapshots, mapping runtime logic, comparator policy, execution controls).
+- `packages/formspec-webcomponent`: browser/DOM binding of engine capabilities (rendering, events, adapter glue, visibility/state projection).
+- `playground/` app: tooling UX only (editors, controls, dashboards, export/copy affordances, guided demo flows).
+
+This prevents semantic drift between playground behavior and production/runtime consumers.
+
 ## 5. Decision Details
 
 The playground must treat these as first-class inputs:
@@ -90,7 +100,7 @@ The playground must treat these as first-class inputs:
 - Definition document
 - Theme document
 - Component document
-- Optional mapping document
+- Optional mapping document (engine-backed when TS runtime mapping is available)
 - Scenario event trace
 
 And expose these as first-class outputs:
@@ -102,24 +112,31 @@ And expose these as first-class outputs:
 
 ## 6. Implementation Plan (Phased)
 
-1. **Phase 1: Shell + Fixture Loader**
+1. **Phase 0: Runtime Capability Foundations (library-first)** *(implemented)*
+   - Add/extend engine APIs for diagnostics snapshots and deterministic replay controls.
+   - Keep semantic logic in `formspec-engine`; expose browser integration points through `formspec-webcomponent`.
+   - Avoid implementing semantic-only logic exclusively in `playground/`.
+
+2. **Phase 1: Shell + Fixture Loader** *(implemented)*
    - Add a dedicated playground entry (Vite route/app).
    - Load fixture bundles from `tests/e2e/fixtures/*`.
    - Render through `<formspec-render>` with hot reload.
 
-2. **Phase 2: Inspector + Artifact Panels**
+3. **Phase 2: Inspector + Artifact Panels** *(implemented)*
    - Add panels for response JSON, validation report JSON, engine diagnostics.
    - Add one-click copy/export for artifacts.
+   - Support mapping document input and mapped output view when runtime mapping API is available.
 
-3. **Phase 3: Scenario Replay**
+4. **Phase 3: Scenario Replay** *(implemented)*
    - Add deterministic replay controls (play/pause/step/reset).
    - Support fixed clock/locale/timezone mode for reproducible runs.
+   - Drive replay from event-trace documents, not ad-hoc button scripts.
 
-4. **Phase 4: Test Convergence**
+5. **Phase 4: Test Convergence** *(implemented)*
    - Ensure Playwright can drive the playground directly for selected conformance checks.
    - Reuse scenario fixtures between manual playground and e2e tests.
 
-5. **Phase 5: Optional Catalog Evaluation (Deferred)**
+6. **Phase 5: Optional Catalog Evaluation (Deferred)**
    - Reassess Storybook (or equivalent) only if static component documentation needs become a bottleneck.
 
 ## 7. Consequences
@@ -130,12 +147,14 @@ And expose these as first-class outputs:
 - Tighter loop between authoring, runtime diagnosis, and e2e verification.
 - Lower dependency and upgrade burden.
 - Better alignment with JSON-centric Formspec workflows.
+- Clear ownership boundaries reduce duplication and prevent playground-only semantics.
 
 ### Negative / Tradeoffs
 
 - We must build and maintain playground UX ourselves.
 - Documentation polish features come later unless prioritized.
 - No immediate access to off-the-shelf visual addon ecosystem.
+- Library-first capability placement adds up-front API design work before UI iteration.
 
 ## 8. Non-Goals
 
@@ -153,7 +172,9 @@ Re-open this ADR if any of the following occur:
 
 ## 10. References
 
+- `packages/formspec-engine/` (runtime semantics + deterministic/control APIs)
 - `packages/formspec-webcomponent/` (`<formspec-render>` runtime)
+- `playground/` (tooling UX shell)
 - `tests/e2e/fixtures/` (scenario fixtures)
 - `tests/e2e/playwright/` (automation harness and runtime assertions)
 - `specs/component/component-spec.llm.md`
