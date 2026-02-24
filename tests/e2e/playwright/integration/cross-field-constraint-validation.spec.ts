@@ -1,27 +1,23 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { gotoHarness, mountDefinition } from '../helpers/harness';
 
-const fixturePath = path.resolve(__dirname, '../fixtures/validation.json');
+const fixturePath = path.resolve(__dirname, '../../fixtures/validation.json');
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
-test.describe('Formspec Validation', () => {
-  test('cross-field validation between startDate and endDate', async ({ page }) => {
+test.describe('Integration: Cross-Field Constraint Validation', () => {
+  test('should show and clear cross-field errors when startDate and endDate values change', async ({ page }) => {
     page.on('console', msg => console.log('Browser log:', msg.text()));
     page.on('pageerror', err => console.log('Browser err:', err));
 
-    await page.goto('http://127.0.0.1:8080/');
-    await page.waitForSelector('formspec-render', { state: 'attached' });
-
-    await page.evaluate((data) => {
-      const renderer: any = document.querySelector('formspec-render');
-      renderer.definition = data;
-    }, fixture);
+    await gotoHarness(page);
+    await mountDefinition(page, fixture);
 
     const startDateInput = page.locator('input[name="startDate"]');
     const endDateInput = page.locator('input[name="endDate"]');
-    const endDateWrapper = page.locator('.form-field[data-name="endDate"]');
-    const errorDisplay = endDateWrapper.locator('.error-message');
+    const endDateWrapper = page.locator('.formspec-field[data-name="endDate"]');
+    const errorDisplay = endDateWrapper.locator('.formspec-error');
 
     // Initial state: 0 >= 0 is true, so no error
     await expect(errorDisplay).toHaveText('');

@@ -1,0 +1,10 @@
+{
+  "definitionV1": "definition.v1.json",
+  "definitionV2": "definition.v2.json",
+  "theme": "theme.json",
+  "component": "component.json",
+  "mapping": "mapping.json",
+  "registry": "registry.json",
+  "changelog": "changelog.json",
+  "parityCases": "parity-cases.json"
+}

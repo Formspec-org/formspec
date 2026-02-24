@@ -32,12 +32,12 @@
   ],
   "binds": [
     {
-      "target": "total",
+      "path": "total",
       "calculate": "price * quantity",
       "readonly": true
     },
     {
-      "target": "discountCode",
+      "path": "discountCode",
       "relevant": "total > 50"
     }
   ]

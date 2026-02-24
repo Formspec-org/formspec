@@ -1,20 +1,16 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { gotoHarness, mountDefinition } from '../helpers/harness';
 
-const fixturePath = path.resolve(__dirname, '../fixtures/fel-functions.json');
+const fixturePath = path.resolve(__dirname, '../../fixtures/fel-functions.json');
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
-test.describe('Formspec FEL Functions', () => {
-  test('standard library functions evaluate correctly', async ({ page }) => {
+test.describe('Integration: FEL Standard Library in UI', () => {
+  test('should display expected FEL outputs when users edit source fields in the UI', async ({ page }) => {
     page.on('console', msg => console.log('Browser log:', msg.text()));
-    await page.goto('http://127.0.0.1:8080/');
-    await page.waitForSelector('formspec-render', { state: 'attached' });
-
-    await page.evaluate((data) => {
-      const renderer: any = document.querySelector('formspec-render');
-      renderer.definition = data;
-    }, fixture);
+    await gotoHarness(page);
+    await mountDefinition(page, fixture);
 
     // Test String: upper()
     await page.fill('input[name="rawText"]', 'hello world');

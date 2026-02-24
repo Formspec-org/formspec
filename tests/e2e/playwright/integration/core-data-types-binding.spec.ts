@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
-import * as path from 'path';
-import * as fs from 'fs';
+import { gotoHarness, mountDefinition, submitAndGetResponse } from '../helpers/harness';
 
 const fixture = {
   "$formspec": "1.0",
@@ -35,15 +34,10 @@ const fixture = {
   ]
 };
 
-test.describe('Formspec Data Types (Standard)', () => {
-  test('rendering and binding with standard key/type/dataType', async ({ page }) => {
-    await page.goto('http://127.0.0.1:8080/');
-    await page.waitForSelector('formspec-render', { state: 'attached' });
-
-    await page.evaluate((data) => {
-      const renderer: any = document.querySelector('formspec-render');
-      renderer.definition = data;
-    }, fixture);
+test.describe('Integration: Core Data Types Bind and Submit', () => {
+  test('should capture boolean choice and date values when submitting standard data-type fields', async ({ page }) => {
+    await gotoHarness(page);
+    await mountDefinition(page, fixture);
 
     // Check Boolean (Checkbox)
     const checkbox = page.locator('input[name="isAgreed"][type="checkbox"]');
@@ -61,14 +55,7 @@ test.describe('Formspec Data Types (Standard)', () => {
     await dateInput.fill('1990-01-01');
 
     // Submit and verify data
-    const response = await page.evaluate(() => {
-        return new Promise((resolve) => {
-            document.addEventListener('formspec-submit', (e: any) => resolve(e.detail), { once: true });
-            const buttons = Array.from(document.querySelectorAll('button'));
-            const submitBtn = buttons.find(b => b.textContent === 'Submit');
-            submitBtn?.click();
-        });
-    }) as any;
+    const response = await submitAndGetResponse<any>(page);
 
     expect(response.data).toEqual({
         isAgreed: true,
@@ -77,7 +64,7 @@ test.describe('Formspec Data Types (Standard)', () => {
     });
   });
 
-  test('rendering and binding with multiChoice and money', async ({ page }) => {
+  test('should capture multiChoice arrays and money objects when submitting complex data-type fields', async ({ page }) => {
     const multiFixture = {
       "$formspec": "1.0",
       "url": "http://example.org/form",
@@ -105,13 +92,8 @@ test.describe('Formspec Data Types (Standard)', () => {
       ]
     };
 
-    await page.goto('http://127.0.0.1:8080/');
-    await page.waitForSelector('formspec-render', { state: 'attached' });
-
-    await page.evaluate((data) => {
-      const renderer: any = document.querySelector('formspec-render');
-      renderer.definition = data;
-    }, multiFixture);
+    await gotoHarness(page);
+    await mountDefinition(page, multiFixture);
 
     // Test multiChoice
     await page.locator('input[value="a"]').click();
@@ -122,14 +104,7 @@ test.describe('Formspec Data Types (Standard)', () => {
     await page.fill('input[placeholder="Currency"]', 'EUR');
 
     // Submit and verify
-    const response = await page.evaluate(() => {
-        return new Promise((resolve) => {
-            document.addEventListener('formspec-submit', (e: any) => resolve(e.detail), { once: true });
-            const buttons = Array.from(document.querySelectorAll('button'));
-            const submitBtn = buttons.find(b => b.textContent === 'Submit');
-            submitBtn?.click();
-        });
-    }) as any;
+    const response = await submitAndGetResponse<any>(page);
 
     expect(response.data).toEqual({
         tags: ['a', 'c'],

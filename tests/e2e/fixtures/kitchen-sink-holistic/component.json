@@ -1,0 +1,124 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "name": "holistic-component",
+  "title": "Holistic Component Tree",
+  "description": "Component fixture for kitchen-sink conformance checks.",
+  "targetDefinition": {
+    "url": "https://example.org/forms/kitchen-sink-holistic",
+    "compatibleVersions": ">=1.0.0 <3.0.0"
+  },
+  "breakpoints": {
+    "mobile": 480,
+    "tablet": 768,
+    "desktop": 1024
+  },
+  "tokens": {
+    "radius.md": "10px",
+    "surface.card": "#f3f7fa"
+  },
+  "components": {
+    "NoticeCard": {
+      "tree": {
+        "component": "Card",
+        "children": [
+          {
+            "component": "Text",
+            "text": "{message}"
+          }
+        ]
+      }
+    }
+  },
+  "tree": {
+    "component": "Wizard",
+    "allowSkip": true,
+    "children": [
+      {
+        "component": "Page",
+        "title": "Profile",
+        "children": [
+          {
+            "component": "Stack",
+            "children": [
+              { "component": "Heading", "level": 2, "text": "Profile Details" },
+              { "component": "TextInput", "bind": "fullName", "placeholder": "Jane Doe" },
+              { "component": "TextInput", "bind": "website", "placeholder": "https://example.org" },
+              { "component": "Select", "bind": "profileMode" },
+              { "component": "Toggle", "bind": "vipEnabled" },
+              {
+                "component": "ConditionalGroup",
+                "when": "vipEnabled = true",
+                "children": [
+                  { "component": "TextInput", "bind": "vipCode" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Page",
+        "title": "Financial",
+        "children": [
+          {
+            "component": "Grid",
+            "columns": 2,
+            "children": [
+              { "component": "NumberInput", "bind": "budget", "min": 0, "step": 1 },
+              { "component": "NumberInput", "bind": "grandTotal", "min": 0, "step": 1 },
+              { "component": "ProgressBar", "bind": "grandTotal", "max": 5000, "showPercent": true },
+              { "component": "Badge", "text": "Finance" }
+            ]
+          },
+          {
+            "component": "DataTable",
+            "bind": "lineItems",
+            "showRowNumbers": true,
+            "allowAdd": true,
+            "allowRemove": true,
+            "columns": [
+              { "header": "Name", "bind": "lineName" },
+              { "header": "Qty", "bind": "lineQty" },
+              { "header": "Price", "bind": "linePrice" },
+              { "header": "Subtotal", "bind": "lineSubtotal" }
+            ]
+          },
+          {
+            "component": "Summary",
+            "items": [
+              { "label": "Grand Total", "bind": "grandTotal" }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Page",
+        "title": "Schedule",
+        "children": [
+          {
+            "component": "Tabs",
+            "tabLabels": ["Dates", "Tags"],
+            "children": [
+              {
+                "component": "Stack",
+                "children": [
+                  { "component": "DatePicker", "bind": "startDate" },
+                  { "component": "DatePicker", "bind": "endDate" },
+                  { "component": "DatePicker", "bind": "visitTime" }
+                ]
+              },
+              {
+                "component": "Stack",
+                "children": [
+                  { "component": "CheckboxGroup", "bind": "tags", "columns": 2 },
+                  { "component": "Alert", "severity": "info", "text": "Tags support multi-select." }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

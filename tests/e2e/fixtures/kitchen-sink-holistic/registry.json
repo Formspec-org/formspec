@@ -1,0 +1,77 @@
+{
+  "$formspecRegistry": "1.0",
+  "publisher": {
+    "name": "Example Formspec Lab",
+    "url": "https://example.org",
+    "contact": "labs@example.org"
+  },
+  "published": "2026-02-24T00:00:00Z",
+  "entries": [
+    {
+      "name": "x-example-money-cents",
+      "category": "dataType",
+      "version": "1.0.0",
+      "status": "stable",
+      "description": "Money stored in cents",
+      "compatibility": {
+        "formspecVersion": ">=1.0.0 <2.0.0"
+      },
+      "baseType": "decimal",
+      "license": "MIT"
+    },
+    {
+      "name": "x-example-risk-score",
+      "category": "function",
+      "version": "1.1.0",
+      "status": "stable",
+      "description": "Compute risk score",
+      "compatibility": {
+        "formspecVersion": ">=1.0.0 <2.0.0"
+      },
+      "parameters": [
+        { "name": "age", "type": "number" },
+        { "name": "income", "type": "number" }
+      ],
+      "returns": "number",
+      "specUrl": "https://example.org/extensions/risk-score"
+    },
+    {
+      "name": "x-example-luhn",
+      "category": "constraint",
+      "version": "1.0.0",
+      "status": "deprecated",
+      "description": "Luhn constraint helper",
+      "compatibility": {
+        "formspecVersion": ">=1.0.0 <2.0.0"
+      },
+      "parameters": [
+        { "name": "value", "type": "string" }
+      ],
+      "deprecationNotice": "Use x-example-checksum instead"
+    },
+    {
+      "name": "x-example-cardinality-hint",
+      "category": "property",
+      "version": "1.0.0",
+      "status": "draft",
+      "description": "Property extension hint",
+      "compatibility": {
+        "formspecVersion": ">=1.0.0 <2.0.0"
+      }
+    },
+    {
+      "name": "x-example-finance",
+      "category": "namespace",
+      "version": "1.0.0",
+      "status": "stable",
+      "description": "Finance namespace",
+      "compatibility": {
+        "formspecVersion": ">=1.0.0 <2.0.0"
+      },
+      "members": [
+        "x-example-money-cents",
+        "x-example-risk-score"
+      ]
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "url": "http://example.org/forms/kitchen-sink",
   "version": "1.0.0",
   "status": "active",
-  "title": "Formspec Kitchen Sink Demo",
+  "title": "Formspec Kitchen Sink Fixture",
   "items": [
     {
       "type": "field",
@@ -19,32 +19,25 @@
       "label": "Show Advanced Options"
     },
     {
-      "type": "group",
-      "key": "advancedOptions",
-      "label": "Advanced Settings",
-      "children": [
-        {
-          "type": "field",
-          "dataType": "choice",
-          "key": "theme",
-          "label": "Preferred Theme",
-          "options": [
-            { "label": "Light", "value": "light" },
-            { "label": "Dark", "value": "dark" },
-            { "label": "High Contrast", "value": "hc" }
-          ]
-        },
-        {
-          "type": "field",
-          "dataType": "multiChoice",
-          "key": "notifications",
-          "label": "Notification Preferences",
-          "options": [
-            { "label": "Email", "value": "email" },
-            { "label": "SMS", "value": "sms" },
-            { "label": "Push", "value": "push" }
-          ]
-        }
+      "type": "field",
+      "dataType": "choice",
+      "key": "theme",
+      "label": "Preferred Theme",
+      "options": [
+        { "label": "Light", "value": "light" },
+        { "label": "Dark", "value": "dark" },
+        { "label": "High Contrast", "value": "hc" }
+      ]
+    },
+    {
+      "type": "field",
+      "dataType": "multiChoice",
+      "key": "notifications",
+      "label": "Notification Preferences",
+      "options": [
+        { "label": "Email", "value": "email" },
+        { "label": "SMS", "value": "sms" },
+        { "label": "Push", "value": "push" }
       ]
     },
     {
@@ -88,9 +81,10 @@
     },
     {
       "type": "field",
-      "dataType": "money",
+      "dataType": "decimal",
       "key": "budget",
-      "label": "Budget Allocation"
+      "label": "Budget Allocation",
+      "initialValue": 0
     },
     {
       "type": "field",
@@ -107,24 +101,36 @@
   ],
   "binds": [
     {
-      "target": "advancedOptions",
+      "path": "userName",
+      "required": true
+    },
+    {
+      "path": "theme",
       "relevant": "showAdvanced == true"
     },
     {
-      "target": "inventory.subtotal",
+      "path": "notifications",
+      "relevant": "showAdvanced == true"
+    },
+    {
+      "path": "inventory.subtotal",
       "calculate": "price * quantity",
       "readonly": true
     },
     {
-      "target": "grandTotal",
+      "path": "grandTotal",
       "calculate": "sum(inventory.subtotal)",
       "readonly": true
     },
     {
-      "target": "endDate",
+      "path": "budget",
+      "constraint": "budget >= grandTotal",
+      "constraintMessage": "Budget must be greater than or equal to grand total"
+    },
+    {
+      "path": "endDate",
       "constraint": "endDate >= startDate",
-      "calculate": "dateAdd(startDate, 30, 'days')",
-      "message": "End date must be after start date"
+      "constraintMessage": "End date must be after start date"
     }
   ]
 }

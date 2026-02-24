@@ -32,12 +32,9 @@
                 "severity": "info",
                 "text": "You are now editing advanced settings."
               },
-              { "component": "Select", "bind": "theme" },
-              { "component": "Stack", "children": [
-                  { "component": "Badge", "text": "New Feature", "variant": "success" },
-                  { "component": "TextInput", "bind": "notifications" }
-                ]
-              }
+              { "component": "Select", "bind": "theme", "placeholder": "Choose a theme", "clearable": true },
+              { "component": "Badge", "text": "New Feature", "variant": "success" },
+              { "component": "CheckboxGroup", "bind": "notifications", "columns": 2, "selectAll": true }
             ]
           }
         ]
@@ -47,8 +44,21 @@
         "title": "Inventory Management",
         "children": [
           {
+            "component": "Stack",
+            "bind": "inventory",
+            "children": [
+              { "component": "TextInput", "bind": "itemName", "placeholder": "Item name" },
+              { "component": "NumberInput", "bind": "price", "min": 0, "step": 0.01 },
+              { "component": "NumberInput", "bind": "quantity", "min": 0, "step": 1 },
+              { "component": "NumberInput", "bind": "subtotal", "step": 0.01 }
+            ]
+          },
+          {
             "component": "DataTable",
             "bind": "inventory",
+            "showRowNumbers": true,
+            "allowAdd": true,
+            "allowRemove": true,
             "columns": [
               { "header": "Item", "bind": "itemName" },
               { "header": "Price", "bind": "price" },
@@ -59,7 +69,7 @@
           {
             "component": "Summary",
             "items": [
-              { "label": "Total Calculated Sum", "bind": "grandTotal" }
+              { "label": "Grand Total", "bind": "grandTotal" }
             ]
           }
         ]
@@ -75,7 +85,8 @@
               {
                 "component": "Stack",
                 "children": [
-                  { "component": "NumberInput", "bind": "budget" }
+                  { "component": "NumberInput", "bind": "budget", "min": 0, "step": 100 },
+                  { "component": "ProgressBar", "bind": "grandTotal", "max": 10000, "showPercent": true }
                 ]
               },
               {

@@ -1,0 +1,77 @@
+{
+  "$formspecTheme": "1.0",
+  "version": "1.0.0",
+  "name": "holistic-theme",
+  "title": "Holistic Theme",
+  "description": "Theme fixture for kitchen-sink conformance checks.",
+  "platform": "web",
+  "targetDefinition": {
+    "url": "https://example.org/forms/kitchen-sink-holistic",
+    "compatibleVersions": ">=1.0.0 <3.0.0"
+  },
+  "stylesheets": [
+    "https://example.org/assets/formspec-holistic.css"
+  ],
+  "tokens": {
+    "color.primary": "#0b4f6c",
+    "color.accent": "#01baef",
+    "space.md": 12
+  },
+  "defaults": {
+    "labelPosition": "top",
+    "cssClass": "theme-default",
+    "style": {
+      "borderColor": "$token.color.primary"
+    }
+  },
+  "selectors": [
+    {
+      "match": { "type": "field" },
+      "apply": {
+        "cssClass": ["theme-field"]
+      }
+    },
+    {
+      "match": { "dataType": "decimal" },
+      "apply": {
+        "widget": "NumberInput",
+        "style": {
+          "color": "$token.color.primary"
+        }
+      }
+    },
+    {
+      "match": { "dataType": "choice" },
+      "apply": {
+        "widget": "Select",
+        "fallback": ["TextInput"]
+      }
+    }
+  ],
+  "items": {
+    "budget": {
+      "cssClass": ["theme-budget", "theme-important"],
+      "style": {
+        "fontWeight": 700
+      }
+    },
+    "fullName": {
+      "labelPosition": "start"
+    }
+  },
+  "breakpoints": {
+    "mobile": 480,
+    "tablet": 768,
+    "desktop": 1024
+  },
+  "pages": [
+    {
+      "id": "main",
+      "title": "Main",
+      "regions": [
+        { "key": "primary", "span": 8, "start": 1 },
+        { "key": "sidebar", "span": 4, "start": 9 }
+      ]
+    }
+  ]
+}

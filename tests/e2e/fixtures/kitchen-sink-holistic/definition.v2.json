@@ -1,0 +1,350 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.org/forms/kitchen-sink-holistic",
+  "version": "2.0.0",
+  "versionAlgorithm": "semver",
+  "status": "active",
+  "title": "Kitchen Sink Holistic v2",
+  "description": "Holistic kitchen-sink fixture for cross-layer conformance testing.",
+  "date": "2026-02-24",
+  "name": "kitchen-sink-holistic-v2",
+  "derivedFrom": {
+    "url": "https://example.org/forms/kitchen-sink-holistic",
+    "version": "1.0.0"
+  },
+  "nonRelevantBehavior": "remove",
+  "formPresentation": {
+    "pageMode": "wizard",
+    "labelPosition": "top",
+    "density": "comfortable"
+  },
+  "optionSets": {
+    "communicationModes": {
+      "options": [
+        { "value": "email", "label": "Email" },
+        { "value": "sms", "label": "SMS" },
+        { "value": "push", "label": "Push" }
+      ]
+    }
+  },
+  "instances": {
+    "referenceData": {
+      "description": "Inline reference data",
+      "readonly": true,
+      "data": {
+        "countries": [
+          { "code": "US", "name": "United States" },
+          { "code": "CA", "name": "Canada" }
+        ]
+      }
+    },
+    "liveRates": {
+      "description": "Host-provided data source",
+      "source": "formspec-fn:lookupRates",
+      "readonly": true
+    }
+  },
+  "variables": [
+    { "name": "taxRate", "expression": "0.1" },
+    { "name": "projectedTotal", "expression": "grandTotal * (1 + @taxRate)" }
+  ],
+  "items": [
+    {
+      "type": "display",
+      "key": "intro",
+      "label": "Welcome to the holistic kitchen-sink flow"
+    },
+    {
+      "type": "field",
+      "dataType": "string",
+      "key": "fullName",
+      "label": "Full Name",
+      "hint": "Enter your legal name.",
+      "initialValue": "  Alice Example  "
+    },
+    {
+      "type": "field",
+      "dataType": "text",
+      "key": "notes",
+      "label": "Notes"
+    },
+    {
+      "type": "field",
+      "dataType": "uri",
+      "key": "website",
+      "label": "Website"
+    },
+    {
+      "type": "field",
+      "dataType": "boolean",
+      "key": "agreed",
+      "label": "Accepted Terms"
+    },
+    {
+      "type": "field",
+      "dataType": "choice",
+      "key": "profileMode",
+      "label": "Profile Mode",
+      "options": [
+        { "value": "basic", "label": "Basic" },
+        { "value": "advanced", "label": "Advanced" }
+      ]
+    },
+    {
+      "type": "field",
+      "dataType": "choice",
+      "key": "priorityLevel",
+      "label": "Priority Level",
+      "options": [
+        { "value": "low", "label": "Low" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "high", "label": "High" }
+      ]
+    },
+    {
+      "type": "field",
+      "dataType": "choice",
+      "key": "contactMethod",
+      "label": "Preferred Contact",
+      "optionSet": "communicationModes"
+    },
+    {
+      "type": "field",
+      "dataType": "multiChoice",
+      "key": "tags",
+      "label": "Tags",
+      "options": [
+        { "value": "new", "label": "New" },
+        { "value": "priority", "label": "Priority" },
+        { "value": "followup", "label": "Follow-up" }
+      ]
+    },
+    {
+      "type": "field",
+      "dataType": "date",
+      "key": "startDate",
+      "label": "Start Date"
+    },
+    {
+      "type": "field",
+      "dataType": "date",
+      "key": "endDate",
+      "label": "End Date"
+    },
+    {
+      "type": "field",
+      "dataType": "time",
+      "key": "visitTime",
+      "label": "Visit Time"
+    },
+    {
+      "type": "field",
+      "dataType": "dateTime",
+      "key": "visitDateTime",
+      "label": "Visit DateTime"
+    },
+    {
+      "type": "field",
+      "dataType": "decimal",
+      "key": "budget",
+      "label": "Budget",
+      "initialValue": 0
+    },
+    {
+      "type": "group",
+      "key": "lineItems",
+      "label": "Line Items",
+      "repeatable": true,
+      "minRepeat": 1,
+      "maxRepeat": 3,
+      "children": [
+        {
+          "type": "field",
+          "dataType": "string",
+          "key": "lineName",
+          "label": "Line Name"
+        },
+        {
+          "type": "field",
+          "dataType": "integer",
+          "key": "lineQty",
+          "label": "Quantity"
+        },
+        {
+          "type": "field",
+          "dataType": "decimal",
+          "key": "linePrice",
+          "label": "Unit Price"
+        },
+        {
+          "type": "field",
+          "dataType": "decimal",
+          "key": "lineSubtotal",
+          "label": "Line Subtotal"
+        }
+      ]
+    },
+    {
+      "type": "field",
+      "dataType": "decimal",
+      "key": "grandTotal",
+      "label": "Grand Total"
+    },
+    {
+      "type": "field",
+      "dataType": "boolean",
+      "key": "vipEnabled",
+      "label": "VIP Enabled"
+    },
+    {
+      "type": "field",
+      "dataType": "string",
+      "key": "vipCode",
+      "label": "VIP Code"
+    },
+    {
+      "type": "field",
+      "dataType": "attachment",
+      "key": "upload",
+      "label": "Attachment"
+    },
+    {
+      "type": "field",
+      "dataType": "money",
+      "key": "salary",
+      "label": "Salary"
+    }
+  ],
+  "binds": [
+    {
+      "path": "fullName",
+      "required": "true",
+      "whitespace": "trim"
+    },
+    {
+      "path": "notes",
+      "whitespace": "normalize"
+    },
+    {
+      "path": "profileMode",
+      "required": "true"
+    },
+    {
+      "path": "priorityLevel",
+      "required": "profileMode = 'advanced'"
+    },
+    {
+      "path": "contactMethod",
+      "relevant": "profileMode = 'advanced'",
+      "default": "email"
+    },
+    {
+      "path": "tags",
+      "relevant": "profileMode = 'advanced'",
+      "nonRelevantBehavior": "keep"
+    },
+    {
+      "path": "lineItems.lineSubtotal",
+      "calculate": "lineQty * linePrice",
+      "readonly": "true"
+    },
+    {
+      "path": "grandTotal",
+      "calculate": "sum(lineItems.lineSubtotal)",
+      "readonly": "true"
+    },
+    {
+      "path": "vipCode",
+      "relevant": "vipEnabled = true",
+      "required": "vipEnabled = true",
+      "default": "AUTO-VIP",
+      "disabledDisplay": "protected",
+      "excludedValue": "null"
+    }
+  ],
+  "shapes": [
+    {
+      "id": "date_order",
+      "target": "endDate",
+      "severity": "error",
+      "message": "End date must not precede start date",
+      "constraint": "endDate >= startDate"
+    },
+    {
+      "id": "website_https",
+      "target": "website",
+      "severity": "error",
+      "message": "Website must use https",
+      "constraint": "startsWith(website, 'https://')"
+    },
+    {
+      "id": "budget_error",
+      "target": "budget",
+      "severity": "error",
+      "message": "Budget must be greater than or equal to grand total",
+      "constraint": "budget >= grandTotal"
+    },
+    {
+      "id": "budget_warning",
+      "target": "budget",
+      "severity": "warning",
+      "message": "Budget is close to grand total",
+      "constraint": "budget > grandTotal + 100"
+    },
+    {
+      "id": "profile_info",
+      "target": "profileMode",
+      "severity": "info",
+      "message": "Advanced profile mode selected",
+      "constraint": "profileMode = 'basic'"
+    },
+    {
+      "id": "submit_total_positive",
+      "target": "grandTotal",
+      "severity": "error",
+      "timing": "submit",
+      "message": "Grand total must be positive on submit",
+      "constraint": "grandTotal > 0"
+    },
+    {
+      "id": "demand_name_present",
+      "target": "fullName",
+      "severity": "error",
+      "timing": "demand",
+      "message": "Full name is required for demand checks",
+      "constraint": "length(fullName) > 0"
+    },
+    {
+      "id": "composite_guard",
+      "target": "budget",
+      "severity": "error",
+      "message": "Composite guard must hold",
+      "and": [
+        "budget >= grandTotal",
+        "endDate >= startDate"
+      ]
+    }
+  ],
+  "screener": {
+    "items": [
+      {
+        "type": "field",
+        "dataType": "integer",
+        "key": "triageScore",
+        "label": "Triage Score"
+      }
+    ],
+    "routes": [
+      {
+        "condition": "triageScore >= 50",
+        "target": "https://example.org/forms/high-risk",
+        "label": "High Risk"
+      },
+      {
+        "condition": "true",
+        "target": "https://example.org/forms/standard",
+        "label": "Standard"
+      }
+    ]
+  }
+}

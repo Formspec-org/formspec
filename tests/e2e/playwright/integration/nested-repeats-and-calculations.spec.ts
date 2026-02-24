@@ -1,22 +1,18 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { gotoHarness, mountDefinition } from '../helpers/harness';
 
-const fixturePath = path.resolve(__dirname, '../fixtures/complex-scenarios.json');
+const fixturePath = path.resolve(__dirname, '../../fixtures/complex-scenarios.json');
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
-test.describe('Formspec Complex Scenarios', () => {
-  test('nested repeatable groups and complex calculations', async ({ page }) => {
+test.describe('Integration: Nested Repeats and Cross-Group Calculations', () => {
+  test('should recompute invoice and itinerary outputs when nested repeat values are edited', async ({ page }) => {
     page.on('console', msg => {
         console.log(`BROWSER [${msg.type()}]: ${msg.text()}`);
     });
-    await page.goto('http://127.0.0.1:8080/');
-    await page.waitForSelector('formspec-render', { state: 'attached' });
-
-    await page.evaluate((data) => {
-      const renderer: any = document.querySelector('formspec-render');
-      renderer.definition = data;
-    }, fixture);
+    await gotoHarness(page);
+    await mountDefinition(page, fixture);
 
     // Scenario 1: Nested Invoice
     // Phase 1, Task 1

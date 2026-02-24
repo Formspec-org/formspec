@@ -1,0 +1,52 @@
+{
+  "cases": [
+    {
+      "id": "arith_basic",
+      "expression": "1 + 2",
+      "comparator": "tolerant-decimal",
+      "fields": []
+    },
+    {
+      "id": "field_math",
+      "expression": "budget + grandTotal",
+      "comparator": "tolerant-decimal",
+      "fields": [
+        { "key": "budget", "dataType": "decimal", "value": 100 },
+        { "key": "grandTotal", "dataType": "decimal", "value": 250 }
+      ]
+    },
+    {
+      "id": "if_function",
+      "expression": "if(agreed, 'yes', 'no')",
+      "comparator": "exact",
+      "fields": [
+        { "key": "agreed", "dataType": "boolean", "value": true }
+      ]
+    },
+    {
+      "id": "coalesce_function",
+      "expression": "coalesce(null, vipCode, 'NONE')",
+      "comparator": "exact",
+      "fields": [
+        { "key": "vipCode", "dataType": "string", "value": "VIP-42" }
+      ]
+    },
+    {
+      "id": "membership",
+      "expression": "'priority' in tags",
+      "comparator": "exact",
+      "fields": [
+        { "key": "tags", "dataType": "multiChoice", "value": ["new", "priority"] }
+      ]
+    },
+    {
+      "id": "date_compare",
+      "expression": "endDate >= startDate",
+      "comparator": "exact",
+      "fields": [
+        { "key": "startDate", "dataType": "date", "value": "2026-01-01" },
+        { "key": "endDate", "dataType": "date", "value": "2026-01-15" }
+      ]
+    }
+  ]
+}

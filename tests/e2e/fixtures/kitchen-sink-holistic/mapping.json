@@ -1,0 +1,95 @@
+{
+  "$schema": "https://formspec.org/schemas/mapping/v1",
+  "version": "1.0.0",
+  "definitionRef": "https://example.org/forms/kitchen-sink-holistic",
+  "definitionVersion": ">=1.0.0 <3.0.0",
+  "targetSchema": {
+    "format": "json",
+    "name": "Holistic External Payload"
+  },
+  "direction": "both",
+  "conformanceLevel": "bidirectional",
+  "defaults": {
+    "meta.source": "formspec"
+  },
+  "autoMap": false,
+  "rules": [
+    {
+      "sourcePath": "fullName",
+      "targetPath": "subject.name",
+      "transform": "preserve",
+      "priority": 20
+    },
+    {
+      "sourcePath": "profileMode",
+      "targetPath": "subject.mode",
+      "transform": "valueMap",
+      "valueMap": {
+        "advanced": "ADV",
+        "basic": "BSC"
+      },
+      "reverse": {
+        "transform": "valueMap",
+        "valueMap": {
+          "ADV": "advanced",
+          "BSC": "basic"
+        }
+      },
+      "priority": 15,
+      "reversePriority": 15
+    },
+    {
+      "sourcePath": "budget",
+      "targetPath": "finance.budget",
+      "transform": "coerce",
+      "coerce": "number",
+      "priority": 10
+    },
+    {
+      "targetPath": "meta.version",
+      "transform": "constant",
+      "expression": "\"1\"",
+      "priority": 10
+    },
+    {
+      "sourcePath": "tags",
+      "targetPath": "subject.tags",
+      "transform": "preserve",
+      "priority": 5
+    },
+    {
+      "sourcePath": "lineItems",
+      "targetPath": "items",
+      "transform": "preserve",
+      "array": {
+        "mode": "whole"
+      },
+      "priority": 5
+    },
+    {
+      "sourcePath": "vipCode",
+      "targetPath": "subject.vip",
+      "transform": "preserve",
+      "condition": "source.vipEnabled = true",
+      "priority": 5
+    },
+    {
+      "sourcePath": "hiddenMirror",
+      "targetPath": null,
+      "transform": "drop",
+      "priority": 1
+    }
+  ],
+  "adapters": {
+    "json": {
+      "pretty": true,
+      "sortKeys": true,
+      "nullHandling": "include"
+    },
+    "csv": {
+      "delimiter": ",",
+      "header": true,
+      "lineEnding": "lf"
+    }
+  }
+}

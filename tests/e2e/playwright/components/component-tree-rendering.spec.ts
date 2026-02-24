@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Formspec Component Layer (Tier 3)', () => {
-  test('rendering with basic component tree (Stack, Heading, TextInput)', async ({ page }) => {
+test.describe('Components: Component Tree Rendering', () => {
+  test('should render basic bound components when mounting a simple component tree', async ({ page }) => {
     await page.goto('http://127.0.0.1:8080/');
     await page.waitForSelector('formspec-render', { state: 'attached' });
 
@@ -51,7 +51,7 @@ test.describe('Formspec Component Layer (Tier 3)', () => {
     await expect(lastNameInput).toBeVisible();
   });
 
-  test('rendering with ConditionalGroup and when expressions', async ({ page }) => {
+  test('should show and hide ConditionalGroup content when its expression result changes', async ({ page }) => {
     await page.goto('http://127.0.0.1:8080/');
     await page.waitForSelector('formspec-render', { state: 'attached' });
 
@@ -106,7 +106,7 @@ test.describe('Formspec Component Layer (Tier 3)', () => {
     await expect(page.locator('input[name="details"]')).toBeVisible();
   });
 
-  test('rendering with complex components (DataTable, Summary, Tabs)', async ({ page }) => {
+  test('should keep DataTable and Summary synchronized when switching between tabs', async ({ page }) => {
     await page.goto('http://127.0.0.1:8080/');
     await page.waitForSelector('formspec-render', { state: 'attached' });
 

@@ -32,7 +32,7 @@
   ],
   "binds": [
     {
-      "target": "lineItems.subtotal",
+      "path": "lineItems.subtotal",
       "calculate": "price * quantity"
     }
   ]

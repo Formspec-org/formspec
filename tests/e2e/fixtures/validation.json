@@ -18,9 +18,9 @@
   ],
   "binds": [
     {
-      "target": "endDate",
+      "path": "endDate",
       "constraint": "endDate >= startDate",
-      "message": "End date must be >= start date"
+      "constraintMessage": "End date must be >= start date"
     }
   ]
 }

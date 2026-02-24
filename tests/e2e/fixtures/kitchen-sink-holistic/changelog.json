@@ -1,0 +1,34 @@
+{
+  "definitionUrl": "https://example.org/forms/kitchen-sink-holistic",
+  "fromVersion": "1.0.0",
+  "toVersion": "2.0.0",
+  "generatedAt": "2026-02-24T00:00:00Z",
+  "semverImpact": "major",
+  "summary": "Remove hiddenMirror and add priorityLevel",
+  "changes": [
+    {
+      "type": "removed",
+      "target": "item",
+      "path": "items.hiddenMirror",
+      "key": "hiddenMirror",
+      "impact": "breaking",
+      "description": "Removed hidden mirror field"
+    },
+    {
+      "type": "added",
+      "target": "item",
+      "path": "items.priorityLevel",
+      "key": "priorityLevel",
+      "impact": "compatible",
+      "description": "Added priority level field"
+    },
+    {
+      "type": "modified",
+      "target": "metadata",
+      "path": "title",
+      "impact": "cosmetic",
+      "before": "Kitchen Sink Holistic v1",
+      "after": "Kitchen Sink Holistic v2"
+    }
+  ]
+}
