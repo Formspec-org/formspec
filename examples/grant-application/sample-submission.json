@@ -1,0 +1,56 @@
+{
+  "definitionUrl": "https://example.gov/forms/grant-application",
+  "definitionVersion": "1.0.0",
+  "status": "completed",
+  "authored": "2026-02-25T12:00:00.000Z",
+  "author": {
+    "id": "user-001",
+    "name": "Jane Smith"
+  },
+  "data": {
+    "applicantInfo": {
+      "orgName": "Community Health Partners, Inc.",
+      "ein": "47-1234567",
+      "orgType": "nonprofit",
+      "contactName": "Jane Smith",
+      "contactEmail": "jane.smith@chp.example.org",
+      "contactPhone": "202-555-0142"
+    },
+    "projectNarrative": {
+      "projectTitle": "Rural Telehealth Access Initiative",
+      "abstract": "This project will expand telehealth services to underserved rural communities in three counties, providing access to primary care, mental health, and chronic disease management for an estimated 4,200 residents currently lacking regular healthcare access.",
+      "startDate": "2026-09-01",
+      "endDate": "2027-08-31",
+      "duration": 12,
+      "indirectRate": 20
+    },
+    "budget": {
+      "lineItems": [
+        {
+          "category": "personnel",
+          "description": "Program Director (0.5 FTE) + Care Coordinator (1.5 FTE)",
+          "quantity": 2,
+          "unitCost": { "amount": "50000.00", "currency": "USD" },
+          "subtotal":  { "amount": "100000.00", "currency": "USD" }
+        },
+        {
+          "category": "travel",
+          "description": "Site visits and stakeholder meetings",
+          "quantity": 1,
+          "unitCost": { "amount": "5000.00", "currency": "USD" },
+          "subtotal":  { "amount": "5000.00", "currency": "USD" }
+        }
+      ],
+      "requestedAmount": { "amount": "126000.00", "currency": "USD" },
+      "usesSubcontractors": true
+    },
+    "subcontractors": [
+      {
+        "subName": "Dr. Maria Gonzalez",
+        "subOrg": "Regional Medical Consulting Group",
+        "subAmount": { "amount": "40000.00", "currency": "USD" },
+        "subScope": "Clinical protocol development and physician oversight for telehealth platform deployment."
+      }
+    ]
+  }
+}
