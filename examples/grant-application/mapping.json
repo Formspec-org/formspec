@@ -47,7 +47,7 @@
       "priority": 70
     },
     {
-      "sourcePath": "lineItems",
+      "sourcePath": "budget.lineItems",
       "targetPath": "budget.line_items",
       "transform": "preserve",
       "array": { "mode": "whole" },
@@ -58,7 +58,7 @@
       "targetPath": "subcontractors",
       "transform": "preserve",
       "array": { "mode": "whole" },
-      "condition": "present($budget.usesSubcontractors)",
+      "condition": "$budget.usesSubcontractors = true",
       "priority": 50
     }
   ]
