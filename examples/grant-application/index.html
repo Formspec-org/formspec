@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Federal Grant Application — Formspec Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-primary:      #005ea2;
+      --color-primary-dark: #1a4480;
+      --color-primary-light:#d9e8f6;
+      --color-success:      #00a91c;
+      --color-warning:      #ffbe2e;
+      --color-error:        #e52207;
+      --color-neutral-50:   #f9f9f9;
+      --color-neutral-100:  #f0f0f0;
+      --color-neutral-200:  #dfe1e2;
+      --color-neutral-700:  #565c65;
+      --color-text:         #1b1b1b;
+      --font:               -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --radius:             4px;
+    }
+
+    body {
+      font-family: var(--font);
+      font-size: 16px;
+      color: var(--color-text);
+      background: var(--color-neutral-50);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      background: var(--color-primary);
+      color: #fff;
+      padding: 12px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .site-header .gov-logo {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.6);
+      padding: 3px 8px;
+      border-radius: 2px;
+    }
+    .site-header h1 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* ── Layout ── */
+    .app-body {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 0;
+      flex: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 32px 40px;
+      align-items: start;
+    }
+
+    /* ── Sidebar progress nav ── */
+    .progress-nav {
+      position: sticky;
+      top: 24px;
+      background: #fff;
+      border: 1px solid var(--color-neutral-200);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .progress-nav h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-neutral-700);
+      margin-bottom: 12px;
+    }
+    .progress-nav ol {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .progress-nav li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      padding: 6px 8px;
+      border-radius: var(--radius);
+      color: var(--color-neutral-700);
+    }
+    .progress-nav li.active {
+      background: var(--color-primary-light);
+      color: var(--color-primary-dark);
+      font-weight: 600;
+    }
+    .progress-nav li .step-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .progress-nav li.valid .step-icon::after { content: "✓"; }
+    .progress-nav li.invalid .step-icon { border-color: var(--color-error); color: var(--color-error); }
+    .progress-nav li.invalid .step-icon::after { content: "!"; }
+
+    /* ── Main form area ── */
+    .form-area {
+      background: #fff;
+      border: 1px solid var(--color-neutral-200);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-left: 24px;
+    }
+
+    formspec-render {
+      display: block;
+    }
+
+    /* ── Shape error callout ── */
+    .shape-errors {
+      margin-top: 24px;
+      display: none;
+    }
+    .shape-errors.visible { display: block; }
+    .shape-error-callout {
+      background: #fff3f2;
+      border-left: 4px solid var(--color-error);
+      padding: 12px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--color-error);
+    }
+    .shape-warning-callout {
+      background: #faf3d1;
+      border-left: 4px solid var(--color-warning);
+      padding: 12px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #7a4f00;
+    }
+
+    /* ── Submit button ── */
+    .submit-area {
+      margin-top: 32px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-submit {
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      padding: 12px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font);
+    }
+    .btn-submit:hover { background: var(--color-primary-dark); }
+    .btn-submit:focus { outline: 0 0 0 3px #2491ff; }
+    .btn-submit:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Sticky footer totals bar ── */
+    .totals-bar {
+      position: sticky;
+      bottom: 0;
+      background: var(--color-primary-dark);
+      color: #fff;
+      padding: 12px 40px;
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      font-size: 14px;
+      z-index: 100;
+    }
+    .totals-bar .totals-label { color: rgba(255,255,255,0.75); margin-right: 8px; }
+    .totals-bar .totals-amount { font-weight: 700; font-size: 16px; }
+    .totals-bar .totals-match { margin-left: auto; font-size: 13px; }
+    .totals-bar .totals-match.ok { color: #9ef0a3; }
+    .totals-bar .totals-match.mismatch { color: #ff8c7c; }
+
+    /* ── Server response panel ── */
+    .server-response {
+      margin-top: 24px;
+      display: none;
+    }
+    .server-response.visible { display: block; }
+    .server-response h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--color-neutral-700);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .server-response pre {
+      background: #f6f8fa;
+      border: 1px solid var(--color-neutral-200);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-size: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <span class="gov-logo">U.S. Gov</span>
+  <h1>Federal Grant Application Portal</h1>
+</header>
+
+<div class="app-body">
+  <!-- Progress sidebar -->
+  <nav class="progress-nav" aria-label="Form progress">
+    <h3>Progress</h3>
+    <ol id="progress-steps">
+      <li data-page="Applicant Info">
+        <span class="step-icon"></span>
+        Applicant Info
+      </li>
+      <li data-page="Project Narrative">
+        <span class="step-icon"></span>
+        Project Narrative
+      </li>
+      <li data-page="Budget">
+        <span class="step-icon"></span>
+        Budget
+      </li>
+      <li data-page="Subcontractors">
+        <span class="step-icon"></span>
+        Subcontractors
+      </li>
+    </ol>
+  </nav>
+
+  <!-- Main form content -->
+  <main class="form-area">
+    <formspec-render id="form"></formspec-render>
+
+    <!-- Shape-level error/warning callouts -->
+    <div class="shape-errors" id="shape-errors" aria-live="polite"></div>
+
+    <!-- Submit -->
+    <div class="submit-area">
+      <button class="btn-submit" id="btn-submit">Submit Application</button>
+    </div>
+
+    <!-- Server response -->
+    <div class="server-response" id="server-response">
+      <h3>Server Response</h3>
+      <pre id="server-response-pre"></pre>
+    </div>
+  </main>
+</div>
+
+<!-- Sticky totals footer -->
+<footer class="totals-bar" aria-live="polite" aria-label="Budget totals">
+  <span>
+    <span class="totals-label">Grand Total</span>
+    <span class="totals-amount" id="footer-grand-total">—</span>
+  </span>
+  <span>
+    <span class="totals-label">Requested</span>
+    <span class="totals-amount" id="footer-requested">—</span>
+  </span>
+  <span class="totals-match" id="footer-match"></span>
+</footer>
+
+<script type="module">
+  import { FormEngine, effect } from '../../packages/formspec-engine/dist/index.js';
+  import '../../packages/formspec-webcomponent/dist/index.js';
+
+  const SERVER = 'http://localhost:8000';
+
+  async function loadJSON(path) {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
+    return res.json();
+  }
+
+  function formatMoney(moneyVal) {
+    if (!moneyVal || moneyVal.amount == null) return '—';
+    const n = parseFloat(moneyVal.amount);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: moneyVal.currency || 'USD' }).format(n);
+  }
+
+  const formEl = document.getElementById('form');
+  const btnSubmit = document.getElementById('btn-submit');
+  const shapeErrorsEl = document.getElementById('shape-errors');
+  const serverResponseEl = document.getElementById('server-response');
+  const serverResponsePre = document.getElementById('server-response-pre');
+  const footerGrandTotal = document.getElementById('footer-grand-total');
+  const footerRequested = document.getElementById('footer-requested');
+  const footerMatch = document.getElementById('footer-match');
+
+  // Load all artifacts in parallel
+  const [definition, componentDoc, themeDoc] = await Promise.all([
+    loadJSON('./definition.json'),
+    loadJSON('./component.json'),
+    loadJSON('./theme.json'),
+  ]);
+
+  formEl.definition = definition;
+  formEl.componentDocument = componentDoc;
+  formEl.themeDocument = themeDoc;
+
+  const engine = formEl.getEngine();
+
+  // ── Reactive footer totals ──
+  effect(() => {
+    // Touch structureVersion to re-run on structural changes
+    engine.structureVersion.value;
+
+    const grandTotalSignal = engine.variableSignals['#:grandTotal'];
+    const requestedSignal  = engine.signals['budget.requestedAmount'];
+
+    const gt = grandTotalSignal?.value;
+    const rq = requestedSignal?.value;
+
+    footerGrandTotal.textContent = formatMoney(gt);
+    footerRequested.textContent  = formatMoney(rq);
+
+    if (gt && rq && gt.amount != null && rq.amount != null) {
+      const diff = Math.abs(parseFloat(gt.amount) - parseFloat(rq.amount));
+      if (diff < 1) {
+        footerMatch.textContent = '✓ Amounts match';
+        footerMatch.className = 'totals-match ok';
+      } else {
+        footerMatch.textContent = `⚠ Difference: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(diff)}`;
+        footerMatch.className = 'totals-match mismatch';
+      }
+    } else {
+      footerMatch.textContent = '';
+    }
+  });
+
+  // ── Shape error display ──
+  function refreshShapeErrors() {
+    const report = engine.getValidationReport({ mode: 'submit' });
+    const shapeResults = report.results.filter(r => r.source === 'shape' || r.constraintKind === 'shape');
+    shapeErrorsEl.innerHTML = '';
+    if (shapeResults.length === 0) {
+      shapeErrorsEl.classList.remove('visible');
+      return;
+    }
+    shapeErrorsEl.classList.add('visible');
+    for (const r of shapeResults) {
+      const div = document.createElement('div');
+      div.className = r.severity === 'warning' ? 'shape-warning-callout' : 'shape-error-callout';
+      div.textContent = r.message;
+      shapeErrorsEl.appendChild(div);
+    }
+  }
+
+  effect(() => {
+    engine.structureVersion.value;
+    refreshShapeErrors();
+  });
+
+  // ── Submit ──
+  btnSubmit.addEventListener('click', async () => {
+    const report = engine.getValidationReport({ mode: 'submit' });
+    if (!report.valid) {
+      refreshShapeErrors();
+      alert(`Please fix ${report.counts.error} error(s) before submitting.`);
+      return;
+    }
+
+    const response = engine.getResponse({ mode: 'submit' });
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Submitting…';
+
+    try {
+      const res = await fetch(`${SERVER}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(response),
+      });
+      const result = await res.json();
+      serverResponsePre.textContent = JSON.stringify(result, null, 2);
+      serverResponseEl.classList.add('visible');
+      serverResponseEl.scrollIntoView({ behavior: 'smooth' });
+    } catch (e) {
+      serverResponsePre.textContent = `Error contacting server: ${e.message}\n\nMake sure the server is running:\n  cd examples/grant-application\n  pip install -r server/requirements.txt\n  PYTHONPATH=../../src uvicorn server.main:app --port 8000`;
+      serverResponseEl.classList.add('visible');
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Submit Application';
+    }
+  });
+</script>
+</body>
+</html>
