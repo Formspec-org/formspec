@@ -29,21 +29,21 @@
       "sourcePath": "projectNarrative.indirectRate",
       "targetPath": "budget.indirect_rate_pct",
       "transform": "expression",
-      "expression": "string(@source) & '%'",
+      "expression": "string(@source.projectNarrative.indirectRate) & '%'",
       "priority": 70
     },
     {
       "sourcePath": "budget.requestedAmount",
       "targetPath": "budget.requested_amount",
       "transform": "expression",
-      "expression": "@source.amount",
+      "expression": "@source.budget.requestedAmount.amount",
       "priority": 70
     },
     {
       "sourcePath": "budget.requestedAmount",
       "targetPath": "budget.currency",
       "transform": "expression",
-      "expression": "@source.currency",
+      "expression": "@source.budget.requestedAmount.currency",
       "priority": 70
     },
     {
