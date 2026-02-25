@@ -174,7 +174,7 @@
                     "items": [
                       { "label": "Organization Name", "bind": "applicantInfo.orgName" },
                       { "label": "EIN",               "bind": "applicantInfo.ein" },
-                      { "label": "Organization Type", "bind": "applicantInfo.orgType" },
+                      { "label": "Organization Type", "bind": "applicantInfo.orgType", "optionSet": "orgTypes" },
                       { "label": "Contact Name",      "bind": "applicantInfo.contactName" },
                       { "label": "Contact Email",     "bind": "applicantInfo.contactEmail" },
                       { "label": "Contact Phone",     "bind": "applicantInfo.contactPhone" }

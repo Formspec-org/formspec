@@ -802,6 +802,20 @@ export class FormspecRender extends HTMLElement {
             };
             amountInput.addEventListener('input', updateMoney);
             currencyInput.addEventListener('input', updateMoney);
+            // Sync signal value back to sub-inputs (handles default bind and external updates)
+            this.cleanupFns.push(effect(() => {
+                const sig = this.engine!.signals[fullName];
+                if (!sig) return;
+                const v = sig.value;
+                if (document.activeElement !== amountInput && document.activeElement !== currencyInput) {
+                    if (v !== null && v !== undefined && typeof v === 'object' && 'amount' in v) {
+                        amountInput.value = v.amount !== null && v.amount !== undefined ? String(v.amount) : '';
+                        currencyInput.value = (v as any).currency || '';
+                    } else if (typeof v === 'number') {
+                        amountInput.value = String(v);
+                    }
+                }
+            }));
             container.appendChild(amountInput);
             container.appendChild(currencyInput);
             input = container;

@@ -205,6 +205,12 @@ export const SummaryPlugin: ComponentPlugin = {
                         if (v != null && typeof v === 'object' && 'amount' in v) {
                             const n = parseFloat(v.amount);
                             dd.textContent = isNaN(n) ? '' : new Intl.NumberFormat('en-US', { style: 'currency', currency: (v as any).currency || 'USD' }).format(n);
+                        } else if (v != null && item.optionSet) {
+                            const def = (ctx.engine as any).getDefinition?.();
+                            const entry = def?.optionSets?.[item.optionSet];
+                            const opts: Array<{ value: string; label: string }> = Array.isArray(entry) ? entry : (entry?.options ?? []);
+                            const match = opts.find((o: any) => o.value === String(v));
+                            dd.textContent = match ? match.label : String(v);
                         } else {
                             dd.textContent = v != null ? String(v) : '';
                         }

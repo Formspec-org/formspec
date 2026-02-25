@@ -174,8 +174,10 @@ path references (<code>$unitCost</code>, <code>$quantity</code>) resolve
 relative to each repeat instance:</p>
 <pre><code>money(moneyAmount($unitCost) * $quantity, moneyCurrency($unitCost))</code></pre>
 <p><strong>Date arithmetic.</strong> The <code>duration</code> field is
-auto-calculated and read-only in practice:</p>
-<pre><code>dateDiff($projectNarrative.startDate, $projectNarrative.endDate, &#39;months&#39;)</code></pre>
+auto-calculated and read-only in practice. <code>dateDiff(d1, d2)</code>
+computes <code>d1 − d2</code>, so the arguments are ordered end-first to
+produce a positive month count:</p>
+<pre><code>dateDiff($projectNarrative.endDate, $projectNarrative.startDate, &#39;months&#39;)</code></pre>
 <p>Variables are evaluated lazily and cached reactively.
 <code>@grandTotal</code> depends on <code>@indirectCosts</code> which
 depends on <code>@totalDirect</code> — the engine wires these

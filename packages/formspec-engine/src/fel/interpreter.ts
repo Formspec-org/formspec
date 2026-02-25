@@ -2,6 +2,19 @@ import { parser } from './parser';
 
 const BaseVisitor = parser.getBaseCstVisitorConstructor();
 
+/** Merge per-type operator token arrays and return them sorted by source position. */
+function sortedOperators(tokenMap: Record<string, any[] | undefined>): string[] {
+  const all: Array<{ image: string; offset: number }> = [];
+  for (const [, tokens] of Object.entries(tokenMap)) {
+    if (!tokens) continue;
+    for (const tok of tokens) {
+      all.push({ image: tok.image, offset: tok.startOffset });
+    }
+  }
+  all.sort((a, b) => a.offset - b.offset);
+  return all.map(t => t.image);
+}
+
 export interface FelContext {
   getSignalValue: (path: string) => any;
   getRepeatsValue: (path: string) => number;
@@ -323,22 +336,28 @@ export class FelInterpreter extends BaseVisitor {
 
   addition(ctx: any) {
     let result = this.visit(ctx.multiplication[0]);
+    if (ctx.multiplication.length <= 1) return result;
+    const ops = sortedOperators({ Plus: ctx.Plus, Minus: ctx.Minus, Ampersand: ctx.Ampersand });
     for (let i = 1; i < ctx.multiplication.length; i++) {
         const next = this.visit(ctx.multiplication[i]);
-        if (ctx.Plus && ctx.Plus[i-1]) result = result + next;
-        else if (ctx.Minus && ctx.Minus[i-1]) result = result - next;
-        else if (ctx.Ampersand && ctx.Ampersand[i-1]) result = String(result) + String(next);
+        const op = ops[i - 1];
+        if (op === '+') result = result + next;
+        else if (op === '-') result = result - next;
+        else if (op === '&') result = String(result) + String(next);
     }
     return result;
   }
 
   multiplication(ctx: any) {
     let result = this.visit(ctx.unary[0]);
+    if (ctx.unary.length <= 1) return result;
+    const ops = sortedOperators({ Asterisk: ctx.Asterisk, Slash: ctx.Slash, Percent: ctx.Percent });
     for (let i = 1; i < ctx.unary.length; i++) {
         const next = this.visit(ctx.unary[i]);
-        if (ctx.Asterisk && ctx.Asterisk[i-1]) result = result * next;
-        else if (ctx.Slash && ctx.Slash[i-1]) result = result / next;
-        else if (ctx.Percent && ctx.Percent[i-1]) result = result % next;
+        const op = ops[i - 1];
+        if (op === '*') result = result * next;
+        else if (op === '/') result = result / next;
+        else if (op === '%') result = result % next;
     }
     return result;
   }

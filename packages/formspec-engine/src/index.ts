@@ -740,8 +740,11 @@ export class FormEngine {
                 return Number.isInteger(value);
             case 'number':
             case 'decimal':
-            case 'money':
                 return typeof value === 'number' && !isNaN(value);
+            case 'money':
+                if (typeof value === 'number') return !isNaN(value);
+                return typeof value === 'object' && 'amount' in value &&
+                    (value.amount === null || (typeof value.amount === 'number' && !isNaN(value.amount)));
             case 'boolean':
                 return typeof value === 'boolean';
             case 'date':

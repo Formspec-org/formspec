@@ -199,8 +199,27 @@
 .formspec-alert {
   padding: 0.75rem 1.25rem;
   margin-bottom: 1rem;
+  border-left: 4px solid transparent;
   border-radius: 0.25rem;
   position: relative;
+}
+
+.formspec-alert--info {
+  background-color: #e8f4fd;
+  border-left-color: #0969da;
+  color: #0550ae;
+}
+
+.formspec-alert--warning {
+  background-color: #fff8c5;
+  border-left-color: #9a6700;
+  color: #7d4e00;
+}
+
+.formspec-alert--error {
+  background-color: #ffebe9;
+  border-left-color: #cf222e;
+  color: #82071e;
 }
 
 .formspec-alert--dismissible {

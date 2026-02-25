@@ -56,7 +56,7 @@ export const DataTablePlugin: ComponentPlugin = {
                 const parsed = Number.parseInt(trimmed, 10);
                 return Number.isFinite(parsed) ? parsed : null;
             }
-            if (dataType === 'decimal' || dataType === 'number' || dataType === 'money') {
+            if (dataType === 'decimal' || dataType === 'number') {
                 const parsed = Number.parseFloat(trimmed);
                 return Number.isFinite(parsed) ? parsed : null;
             }
@@ -122,7 +122,7 @@ export const DataTablePlugin: ComponentPlugin = {
                         const input = document.createElement('input');
                         input.className = 'formspec-datatable-input';
                         input.name = sigPath;
-                        input.type = (dataType === 'integer' || dataType === 'decimal' || dataType === 'number' || dataType === 'money')
+                        input.type = (dataType === 'integer' || dataType === 'decimal' || dataType === 'number')
                             ? 'number'
                             : 'text';
                         if (input.type === 'number') {
@@ -137,9 +137,12 @@ export const DataTablePlugin: ComponentPlugin = {
                         const syncInput = effect(() => {
                             const value = sig.value;
                             const readonly = readonlySig?.value ?? false;
-                            const next = value === null || value === undefined ? '' : String(value);
                             if (document.activeElement !== input) {
-                                input.value = next;
+                                if (value !== null && value !== undefined && typeof value === 'object' && 'amount' in value) {
+                                    input.value = value.amount !== null ? String(value.amount) : '';
+                                } else {
+                                    input.value = value === null || value === undefined ? '' : String(value);
+                                }
                             }
                             input.disabled = readonly;
                         });
@@ -148,7 +151,13 @@ export const DataTablePlugin: ComponentPlugin = {
                         const valueEl = document.createElement('span');
                         td.appendChild(valueEl);
                         const syncText = effect(() => {
-                            valueEl.textContent = String(sig.value ?? '');
+                            const v = sig.value;
+                            if (v !== null && v !== undefined && typeof v === 'object' && 'amount' in v) {
+                                const n = Number(v.amount);
+                                valueEl.textContent = isNaN(n) ? '' : new Intl.NumberFormat('en-US', { style: 'currency', currency: (v as any).currency || 'USD' }).format(n);
+                            } else {
+                                valueEl.textContent = v === null || v === undefined ? '' : String(v);
+                            }
                         });
                         cellEffectDisposers.push(syncText);
                     } else {

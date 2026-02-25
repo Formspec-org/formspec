@@ -68,8 +68,8 @@
           { "sourcePath": "category",    "targetPath": "cat",        "transform": "preserve" },
           { "sourcePath": "description", "targetPath": "desc",       "transform": "preserve" },
           { "sourcePath": "quantity",    "targetPath": "qty",        "transform": "coerce", "coerce": "number" },
-          { "sourcePath": "unitCost",    "targetPath": "unit_cost",  "transform": "expression", "expression": "moneyAmount(@source.unitCost)" },
-          { "sourcePath": "subtotal",    "targetPath": "line_total", "transform": "expression", "expression": "moneyAmount(@source.subtotal)" }
+          { "sourcePath": "unitCost",    "targetPath": "unit_cost",  "transform": "preserve" },
+          { "sourcePath": "subtotal",    "targetPath": "line_total", "transform": "preserve" }
         ]
       },
       "priority": 60

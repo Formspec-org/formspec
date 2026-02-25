@@ -101,10 +101,12 @@ path references (`$unitCost`, `$quantity`) resolve relative to each repeat insta
 money(moneyAmount($unitCost) * $quantity, moneyCurrency($unitCost))
 ```
 
-**Date arithmetic.** The `duration` field is auto-calculated and read-only in practice:
+**Date arithmetic.** The `duration` field is auto-calculated and read-only in practice.
+`dateDiff(d1, d2)` computes `d1 − d2`, so the arguments are ordered end-first to produce a
+positive month count:
 
 ```
-dateDiff($projectNarrative.startDate, $projectNarrative.endDate, 'months')
+dateDiff($projectNarrative.endDate, $projectNarrative.startDate, 'months')
 ```
 
 Variables are evaluated lazily and cached reactively. `@grandTotal` depends on `@indirectCosts`

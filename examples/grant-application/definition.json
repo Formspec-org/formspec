@@ -37,7 +37,7 @@
   "variables": [
     {
       "name": "totalDirect",
-      "expression": "moneySum($budget.lineItems[*].subtotal)"
+      "expression": "money(sum($budget.lineItems[*].subtotal), 'USD')"
     },
     {
       "name": "indirectCosts",
@@ -95,8 +95,8 @@
             { "type": "field", "key": "category",    "label": "Category",    "dataType": "choice",  "optionSet": "budgetCategories" },
             { "type": "field", "key": "description", "label": "Description", "dataType": "string" },
             { "type": "field", "key": "quantity",    "label": "Qty",         "dataType": "integer" },
-            { "type": "field", "key": "unitCost",    "label": "Unit Cost",   "dataType": "money" },
-            { "type": "field", "key": "subtotal",    "label": "Subtotal",    "dataType": "money" }
+            { "type": "field", "key": "unitCost",    "label": "Unit Cost",   "dataType": "decimal" },
+            { "type": "field", "key": "subtotal",    "label": "Subtotal",    "dataType": "decimal" }
           ]
         },
         { "type": "field", "key": "requestedAmount",    "label": "Total Requested Amount",               "dataType": "money",   "hint": "Must match the calculated grand total." },
@@ -114,7 +114,7 @@
       "children": [
         { "type": "field", "key": "subName",   "label": "Contact Name",       "dataType": "string" },
         { "type": "field", "key": "subOrg",    "label": "Organization",       "dataType": "string" },
-        { "type": "field", "key": "subAmount", "label": "Contracted Amount",  "dataType": "money" },
+        { "type": "field", "key": "subAmount", "label": "Contracted Amount",  "dataType": "decimal" },
         { "type": "field", "key": "subScope",  "label": "Scope of Work",      "dataType": "text" }
       ]
     },
@@ -163,7 +163,7 @@
     },
     {
       "path": "projectNarrative.duration",
-      "calculate": "dateDiff($projectNarrative.startDate, $projectNarrative.endDate, 'months')",
+      "calculate": "dateDiff($projectNarrative.endDate, $projectNarrative.startDate, 'months')",
       "readonly": "true"
     },
     {
@@ -172,7 +172,7 @@
     },
     {
       "path": "budget.lineItems[*].subtotal",
-      "calculate": "money(moneyAmount($unitCost) * $quantity, moneyCurrency($unitCost))",
+      "calculate": "$unitCost * $quantity",
       "readonly": "true"
     },
     {
@@ -230,7 +230,7 @@
       "target": "#",
       "severity": "error",
       "activeWhen": "$budget.usesSubcontractors",
-      "constraint": "moneyAmount(moneySum($subcontractors[*].subAmount)) <= moneyAmount(@grandTotal) * 0.49",
+      "constraint": "sum($subcontractors[*].subAmount) <= moneyAmount(@grandTotal) * 0.49",
       "message": "Subcontractor costs may not exceed 49% of the total project budget (federal requirement).",
       "code": "SUBCONTRACTOR_CAP_EXCEEDED"
     }
