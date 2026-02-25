@@ -1,0 +1,160 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "name": "grant-application-component",
+  "title": "Grant Application Layout",
+  "targetDefinition": {
+    "url": "https://example.gov/forms/grant-application",
+    "compatibleVersions": ">=1.0.0 <2.0.0"
+  },
+  "tree": {
+    "component": "Wizard",
+    "allowSkip": false,
+    "children": [
+      {
+        "component": "Page",
+        "title": "Applicant Info",
+        "children": [
+          {
+            "component": "Stack",
+            "gap": "lg",
+            "children": [
+              { "component": "Heading", "level": 2, "text": "Applicant Information" },
+              {
+                "component": "Grid",
+                "columns": 2,
+                "children": [
+                  { "component": "TextInput",  "bind": "orgName",      "placeholder": "Acme Nonprofit, Inc." },
+                  { "component": "TextInput",  "bind": "ein",          "placeholder": "12-3456789" },
+                  { "component": "RadioGroup", "bind": "orgType" },
+                  { "component": "Spacer" },
+                  { "component": "TextInput",  "bind": "contactName",  "placeholder": "Jane Smith" },
+                  { "component": "TextInput",  "bind": "contactEmail", "placeholder": "jane@example.org" }
+                ]
+              },
+              {
+                "component": "Grid",
+                "columns": 2,
+                "children": [
+                  { "component": "TextInput", "bind": "contactPhone", "placeholder": "202-555-0100" },
+                  { "component": "Spacer" }
+                ]
+              },
+              { "component": "Text", "bind": "nonprofitPhoneHint" }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Page",
+        "title": "Project Narrative",
+        "children": [
+          {
+            "component": "Stack",
+            "gap": "lg",
+            "children": [
+              { "component": "Heading", "level": 2, "text": "Project Narrative" },
+              { "component": "TextInput", "bind": "projectTitle", "placeholder": "Community Health Outreach Initiative" },
+              { "component": "TextInput", "bind": "abstract",     "maxLines": 8 },
+              {
+                "component": "Grid",
+                "columns": 2,
+                "children": [
+                  { "component": "DatePicker",  "bind": "startDate" },
+                  { "component": "DatePicker",  "bind": "endDate" },
+                  { "component": "NumberInput", "bind": "duration" },
+                  { "component": "NumberInput", "bind": "indirectRate" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Page",
+        "title": "Budget",
+        "children": [
+          {
+            "component": "Stack",
+            "gap": "lg",
+            "children": [
+              { "component": "Heading", "level": 2, "text": "Project Budget" },
+              { "component": "Text", "text": "Add one row per budget line item. Subtotals are calculated automatically." },
+              {
+                "component": "DataTable",
+                "bind": "lineItems",
+                "columns": [
+                  { "header": "Category",    "bind": "category" },
+                  { "header": "Description", "bind": "description" },
+                  { "header": "Qty",         "bind": "quantity" },
+                  { "header": "Unit Cost",   "bind": "unitCost" },
+                  { "header": "Subtotal",    "bind": "subtotal" }
+                ]
+              },
+              {
+                "component": "Card",
+                "style": { "background": "$token.color.primaryLight", "padding": "$token.space.lg" },
+                "children": [
+                  { "component": "Heading", "level": 4, "text": "Budget Summary" },
+                  {
+                    "component": "Grid",
+                    "columns": 2,
+                    "children": [
+                      { "component": "Text", "text": "Total Direct Costs" },
+                      { "component": "Text", "bind": "totalDirect",   "style": { "textAlign": "right", "fontWeight": "bold" } },
+                      { "component": "Text", "text": "Indirect Costs" },
+                      { "component": "Text", "bind": "indirectCosts", "style": { "textAlign": "right" } },
+                      { "component": "Divider" },
+                      { "component": "Divider" },
+                      { "component": "Text", "text": "Grand Total", "style": { "fontWeight": "bold" } },
+                      { "component": "Text", "bind": "grandTotal",    "style": { "textAlign": "right", "fontWeight": "bold" } }
+                    ]
+                  }
+                ]
+              },
+              {
+                "component": "Grid",
+                "columns": 2,
+                "children": [
+                  { "component": "MoneyInput", "bind": "requestedAmount" },
+                  { "component": "Spacer" }
+                ]
+              },
+              { "component": "Toggle", "bind": "usesSubcontractors" }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Page",
+        "title": "Subcontractors",
+        "children": [
+          {
+            "component": "ConditionalGroup",
+            "when": "$budget.usesSubcontractors",
+            "children": [
+              {
+                "component": "Stack",
+                "gap": "lg",
+                "children": [
+                  { "component": "Heading", "level": 2, "text": "Subcontractors" },
+                  { "component": "Text", "text": "List all subcontractors. Total subcontractor costs may not exceed 49% of the project budget." },
+                  {
+                    "component": "DataTable",
+                    "bind": "subcontractors",
+                    "columns": [
+                      { "header": "Contact Name",  "bind": "subName" },
+                      { "header": "Organization",  "bind": "subOrg" },
+                      { "header": "Amount",        "bind": "subAmount" },
+                      { "header": "Scope of Work", "bind": "subScope" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
