@@ -178,6 +178,7 @@
     }
     .btn-submit:hover { background: var(--color-primary-dark); }
     .btn-submit:focus { outline: none; box-shadow: 0 0 0 3px #2491ff; }
+    @media (forced-colors: active) { .btn-submit:focus { outline: 3px solid Highlight; } }
     .btn-submit:disabled { opacity: 0.5; cursor: default; }
 
     /* ── Sticky footer totals bar ── */
@@ -264,11 +265,11 @@
 
     <!-- Submit -->
     <div class="submit-area">
-      <button class="btn-submit" id="btn-submit">Submit Application</button>
+      <button class="btn-submit" id="btn-submit" type="button">Submit Application</button>
     </div>
 
     <!-- Server response -->
-    <div class="server-response" id="server-response">
+    <div class="server-response" id="server-response" aria-live="polite">
       <h3>Server Response</h3>
       <pre id="server-response-pre"></pre>
     </div>
