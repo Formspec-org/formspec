@@ -12,7 +12,12 @@ from formspec.fel.parser import parse
 from .diagnostic import LintDiagnostic
 from .references import canonical_item_path
 
-_BIND_EXPRESSION_FIELDS = ("calculate", "relevant", "readonly", "required", "constraint")
+# Fields that contribute to the data-flow dependency graph (value → value).
+_BIND_DATAFLOW_FIELDS = ("calculate", "relevant", "readonly", "required")
+# Fields that are validation predicates; they may freely reference their own target
+# without creating a real dependency cycle, so they are compiled without bind_target.
+_BIND_VALIDATION_FIELDS = ("constraint",)
+_BIND_EXPRESSION_FIELDS = _BIND_DATAFLOW_FIELDS + _BIND_VALIDATION_FIELDS
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +48,7 @@ def compile_expressions(document: dict) -> ExpressionCompilationResult:
             bind_target = canonical_item_path(bind_path_value) if isinstance(bind_path_value, str) else None
             bind_path_pointer = f"$.binds[{bind_index}].path" if bind_target else None
 
-            for field_name in _BIND_EXPRESSION_FIELDS:
+            for field_name in _BIND_DATAFLOW_FIELDS:
                 expression = bind.get(field_name)
                 if isinstance(expression, str):
                     _parse_one(
@@ -53,6 +58,20 @@ def compile_expressions(document: dict) -> ExpressionCompilationResult:
                         "bind",
                         bind_target,
                         bind_path_pointer,
+                    )
+
+            # Validation predicates: parse for syntax but do not wire into the
+            # dependency graph, so self-referential constraints are not flagged.
+            for field_name in _BIND_VALIDATION_FIELDS:
+                expression = bind.get(field_name)
+                if isinstance(expression, str):
+                    _parse_one(
+                        result,
+                        expression,
+                        f"$.binds[{bind_index}].{field_name}",
+                        "bind",
+                        bind_target=None,
+                        bind_path_pointer=None,
                     )
 
             if isinstance(bind.get("default"), str):

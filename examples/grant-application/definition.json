@@ -1,0 +1,183 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.gov/forms/grant-application",
+  "version": "1.0.0",
+  "status": "active",
+  "title": "Federal Grant Application",
+  "description": "Standard federal grant application demonstrating the full Formspec feature set.",
+  "date": "2026-02-25",
+  "name": "grant-application",
+  "nonRelevantBehavior": "remove",
+  "formPresentation": {
+    "pageMode": "wizard",
+    "labelPosition": "top",
+    "density": "comfortable"
+  },
+  "optionSets": {
+    "budgetCategories": {
+      "options": [
+        { "value": "personnel",    "label": "Personnel" },
+        { "value": "fringe",       "label": "Fringe Benefits" },
+        { "value": "travel",       "label": "Travel" },
+        { "value": "equipment",    "label": "Equipment" },
+        { "value": "supplies",     "label": "Supplies" },
+        { "value": "contractual",  "label": "Contractual" },
+        { "value": "other",        "label": "Other Direct Costs" }
+      ]
+    },
+    "orgTypes": {
+      "options": [
+        { "value": "nonprofit",    "label": "Nonprofit Organization" },
+        { "value": "university",   "label": "University / Research Institution" },
+        { "value": "government",   "label": "State / Local Government" },
+        { "value": "forprofit",    "label": "For-Profit Entity" }
+      ]
+    }
+  },
+  "variables": [
+    {
+      "name": "totalDirect",
+      "expression": "moneySum($lineItems[*].subtotal)"
+    },
+    {
+      "name": "indirectCosts",
+      "expression": "if($orgType = 'government') then money(0, 'USD') else money(moneyAmount(@totalDirect) * ($indirectRate ?? 0) / 100, moneyCurrency(@totalDirect))"
+    },
+    {
+      "name": "grandTotal",
+      "expression": "moneyAdd(@totalDirect, @indirectCosts)"
+    }
+  ],
+  "items": [
+    {
+      "type": "group",
+      "key": "applicantInfo",
+      "label": "Applicant Information",
+      "presentation": { "page": "Applicant Info" },
+      "children": [
+        { "type": "field", "key": "orgName",      "label": "Organization Name",                  "dataType": "string", "hint": "Legal name of the applying organization." },
+        { "type": "field", "key": "ein",           "label": "Employer Identification Number (EIN)", "dataType": "string", "hint": "Format: XX-XXXXXXX" },
+        { "type": "field", "key": "orgType",       "label": "Organization Type",                  "dataType": "choice", "optionSet": "orgTypes" },
+        { "type": "field", "key": "contactName",   "label": "Primary Contact Name",               "dataType": "string" },
+        { "type": "field", "key": "contactEmail",  "label": "Contact Email",                      "dataType": "string" },
+        { "type": "field", "key": "contactPhone",  "label": "Contact Phone",                      "dataType": "string" },
+        { "type": "display", "key": "nonprofitPhoneHint", "label": "Include area code for nonprofit reporting requirements (e.g. 202-555-0100)." }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "projectNarrative",
+      "label": "Project Narrative",
+      "presentation": { "page": "Project Narrative" },
+      "children": [
+        { "type": "field", "key": "projectTitle",  "label": "Project Title",         "dataType": "string" },
+        { "type": "field", "key": "abstract",      "label": "Project Abstract",      "dataType": "text",    "hint": "Summarize your project in 500 words or fewer." },
+        { "type": "field", "key": "startDate",     "label": "Project Start Date",    "dataType": "date" },
+        { "type": "field", "key": "endDate",       "label": "Project End Date",      "dataType": "date" },
+        { "type": "field", "key": "duration",      "label": "Duration (months)",     "dataType": "integer" },
+        { "type": "field", "key": "indirectRate",  "label": "Indirect Cost Rate (%)", "dataType": "decimal", "hint": "Enter your organization's negotiated indirect cost rate. Government entities are not eligible." }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "budget",
+      "label": "Budget",
+      "presentation": { "page": "Budget" },
+      "children": [
+        {
+          "type": "group",
+          "key": "lineItems",
+          "label": "Budget Line Items",
+          "repeatable": true,
+          "minRepeat": 1,
+          "maxRepeat": 20,
+          "children": [
+            { "type": "field", "key": "category",    "label": "Category",    "dataType": "choice",  "optionSet": "budgetCategories" },
+            { "type": "field", "key": "description", "label": "Description", "dataType": "string" },
+            { "type": "field", "key": "quantity",    "label": "Qty",         "dataType": "integer" },
+            { "type": "field", "key": "unitCost",    "label": "Unit Cost",   "dataType": "money" },
+            { "type": "field", "key": "subtotal",    "label": "Subtotal",    "dataType": "money" }
+          ]
+        },
+        { "type": "field", "key": "requestedAmount",    "label": "Total Requested Amount",               "dataType": "money",   "hint": "Must match the calculated grand total." },
+        { "type": "field", "key": "usesSubcontractors", "label": "Does this project use subcontractors?", "dataType": "boolean" }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "subcontractors",
+      "label": "Subcontractors",
+      "presentation": { "page": "Subcontractors" },
+      "repeatable": true,
+      "minRepeat": 1,
+      "maxRepeat": 10,
+      "children": [
+        { "type": "field", "key": "subName",   "label": "Contact Name",      "dataType": "string" },
+        { "type": "field", "key": "subOrg",    "label": "Organization",      "dataType": "string" },
+        { "type": "field", "key": "subAmount", "label": "Contracted Amount", "dataType": "money" },
+        { "type": "field", "key": "subScope",  "label": "Scope of Work",     "dataType": "text" }
+      ]
+    }
+  ],
+  "binds": [
+    {
+      "path": "applicantInfo.nonprofitPhoneHint",
+      "relevant": "$applicantInfo.orgType = 'nonprofit'"
+    },
+    {
+      "path": "applicantInfo.ein",
+      "constraint": "matches($applicantInfo.ein, '^[0-9]{2}-[0-9]{7}$')",
+      "constraintMessage": "EIN must be in the format XX-XXXXXXX (e.g. 12-3456789)."
+    },
+    {
+      "path": "projectNarrative.endDate",
+      "constraint": "$projectNarrative.endDate > $projectNarrative.startDate",
+      "constraintMessage": "End date must be after start date."
+    },
+    {
+      "path": "projectNarrative.duration",
+      "calculate": "dateDiff($projectNarrative.startDate, $projectNarrative.endDate, 'months')",
+      "readonly": "true"
+    },
+    {
+      "path": "projectNarrative.indirectRate",
+      "relevant": "$applicantInfo.orgType != 'government'"
+    },
+    {
+      "path": "lineItems[*].subtotal",
+      "calculate": "money(moneyAmount($unitCost) * $quantity, moneyCurrency($unitCost))",
+      "readonly": "true"
+    },
+    {
+      "path": "subcontractors",
+      "relevant": "$budget.usesSubcontractors"
+    }
+  ],
+  "shapes": [
+    {
+      "id": "budgetMatch",
+      "target": "budget.requestedAmount",
+      "severity": "error",
+      "constraint": "abs(moneyAmount($budget.requestedAmount) - moneyAmount(@grandTotal)) < 1",
+      "message": "Requested amount must match the calculated grand total (within $1). Check your line items.",
+      "code": "BUDGET_MISMATCH"
+    },
+    {
+      "id": "budgetReasonable",
+      "target": "#",
+      "severity": "warning",
+      "constraint": "moneyAmount(@grandTotal) < 500000",
+      "message": "Projects over $500,000 require additional narrative justification in the abstract.",
+      "code": "BUDGET_OVER_THRESHOLD"
+    },
+    {
+      "id": "subcontractorCap",
+      "target": "#",
+      "severity": "error",
+      "activeWhen": "$budget.usesSubcontractors",
+      "constraint": "moneyAmount(moneySum($subcontractors[*].subAmount)) <= moneyAmount(@grandTotal) * 0.49",
+      "message": "Subcontractor costs may not exceed 49% of the total project budget (federal requirement).",
+      "code": "SUBCONTRACTOR_CAP_EXCEEDED"
+    }
+  ]
+}

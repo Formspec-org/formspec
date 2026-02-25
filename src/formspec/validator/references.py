@@ -8,7 +8,9 @@ from .diagnostic import LintDiagnostic
 from .tree import ItemTreeIndex, ItemRef
 
 _SEGMENT_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_]*)(?:\[(\*|\d+)\])?$")
-_OPTIONSET_COMPATIBLE_TYPES = {"string", "integer", "decimal"}
+# Per spec §4.3.1, optionSet is valid on choice and multiChoice fields in addition to
+# plain scalar types that use inline option lists.
+_OPTIONSET_COMPATIBLE_TYPES = {"string", "integer", "decimal", "choice", "multiChoice"}
 
 
 def check_references(document: dict, index: ItemTreeIndex) -> list[LintDiagnostic]:
@@ -76,6 +78,10 @@ def canonical_item_path(path: str) -> str:
 
 def validate_item_path(path: str, index: ItemTreeIndex) -> str | None:
     """Return an error message when the path does not resolve; otherwise None."""
+    # "#" is the spec-defined sentinel for the form root scope (shapes §5.2).
+    if path.strip() == "#":
+        return None
+
     normalized = canonical_item_path(path)
     if not normalized:
         return "Path is empty"
