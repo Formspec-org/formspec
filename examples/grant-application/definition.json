@@ -61,6 +61,10 @@
     {
       "name": "grandTotal",
       "expression": "moneyAdd(@totalDirect, @indirectCosts)"
+    },
+    {
+      "name": "projectPhasesTotal",
+      "expression": "money(sum($projectPhases[*].phaseTotal), 'USD')"
     }
   ],
   "items": [
@@ -106,7 +110,9 @@
         { "type": "field",   "key": "contactName",   "label": "Primary Contact Name",                 "dataType": "string" },
         { "type": "field",   "key": "contactEmail",  "label": "Contact Email",                        "dataType": "string", "semanticType": "email" },
         { "type": "field",   "key": "contactPhone",  "label": "Contact Phone",                        "dataType": "string", "semanticType": "phone", "initialValue": "202-555-0100" },
-        { "type": "display", "key": "nonprofitPhoneHint", "label": "Include area code for nonprofit reporting requirements (e.g. 202-555-0100)." }
+        { "type": "display", "key": "nonprofitPhoneHint", "label": "Include area code for nonprofit reporting requirements (e.g. 202-555-0100)." },
+        { "type": "display", "key": "orgNameUpper",        "label": "Org Name (uppercase)" },
+        { "type": "display", "key": "contactPhoneFallback", "label": "Contact Phone (or N/A)" }
       ]
     },
     {
@@ -134,7 +140,10 @@
             { "value": "infrastructure", "label": "Infrastructure & Housing" },
             { "value": "equity",         "label": "Equity & Civil Rights" }
           ]
-        }
+        },
+        { "type": "display", "key": "indirectRateRounded",  "label": "Indirect Rate (rounded)" },
+        { "type": "display", "key": "projectYear",           "label": "Project Start Year" },
+        { "type": "field",   "key": "projectedEndDate",      "label": "Projected End Date", "dataType": "date" }
       ]
     },
     {
@@ -158,8 +167,37 @@
             { "type": "field", "key": "subtotal",    "label": "Subtotal",    "dataType": "decimal", "precision": 2 }
           ]
         },
-        { "type": "field", "key": "requestedAmount",    "label": "Total Requested Amount",               "dataType": "money",   "hint": "Must match the calculated grand total." },
-        { "type": "field", "key": "usesSubcontractors", "label": "Does this project use subcontractors?", "dataType": "boolean" }
+        { "type": "field",   "key": "requestedAmount",    "label": "Total Requested Amount",               "dataType": "money",   "hint": "Must match the calculated grand total." },
+        { "type": "field",   "key": "usesSubcontractors", "label": "Does this project use subcontractors?", "dataType": "boolean" },
+        { "type": "field",   "key": "budgetDeviation",    "label": "Budget Deviation",                      "dataType": "money" },
+        { "type": "display", "key": "hasLineItems",        "label": "Has line items" }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "projectPhases",
+      "label": "Project Phases",
+      "presentation": { "page": "Project Phases" },
+      "repeatable": true,
+      "minRepeat": 1,
+      "maxRepeat": 10,
+      "children": [
+        { "type": "field", "key": "phaseName", "label": "Phase Name", "dataType": "string" },
+        {
+          "type": "group",
+          "key": "phaseTasks",
+          "label": "Phase Tasks",
+          "repeatable": true,
+          "minRepeat": 1,
+          "maxRepeat": 20,
+          "children": [
+            { "type": "field", "key": "taskName",   "label": "Task Name",    "dataType": "string" },
+            { "type": "field", "key": "hours",      "label": "Hours",        "dataType": "decimal", "precision": 2 },
+            { "type": "field", "key": "hourlyRate", "label": "Hourly Rate",  "dataType": "money" },
+            { "type": "field", "key": "taskCost",   "label": "Task Cost",    "dataType": "money" }
+          ]
+        },
+        { "type": "field", "key": "phaseTotal", "label": "Phase Total", "dataType": "money" }
       ]
     },
     {
@@ -246,6 +284,16 @@
       "readonly": "true"
     },
     {
+      "path": "projectPhases[*].phaseTasks[*].taskCost",
+      "calculate": "money($hours * moneyAmount($hourlyRate), moneyCurrency($hourlyRate ?? money(0, 'USD')))",
+      "readonly": "true"
+    },
+    {
+      "path": "projectPhases[*].phaseTotal",
+      "calculate": "money(sum($phaseTasks[*].taskCost), 'USD')",
+      "readonly": "true"
+    },
+    {
       "path": "budget.requestedAmount",
       "required": "true",
       "default": "money(0, 'USD')",
@@ -255,6 +303,36 @@
       "path": "subcontractors",
       "relevant": "$budget.usesSubcontractors",
       "nonRelevantBehavior": "keep"
+    },
+    {
+      "path": "applicantInfo.orgNameUpper",
+      "calculate": "upper($applicantInfo.orgName)"
+    },
+    {
+      "path": "applicantInfo.contactPhoneFallback",
+      "calculate": "coalesce($applicantInfo.contactPhone, 'N/A')"
+    },
+    {
+      "path": "projectNarrative.indirectRateRounded",
+      "calculate": "round($projectNarrative.indirectRate, 0)"
+    },
+    {
+      "path": "projectNarrative.projectYear",
+      "calculate": "year($projectNarrative.startDate)"
+    },
+    {
+      "path": "projectNarrative.projectedEndDate",
+      "calculate": "dateAdd($projectNarrative.startDate, $projectNarrative.duration, 'months')",
+      "readonly": "true"
+    },
+    {
+      "path": "budget.budgetDeviation",
+      "calculate": "money(abs(moneyAmount($budget.requestedAmount) - moneyAmount(@grandTotal)), 'USD')",
+      "readonly": "true"
+    },
+    {
+      "path": "budget.hasLineItems",
+      "calculate": "string(!isNull($budget.lineItems[0].category))"
     },
     { "path": "applicantInfo.orgName",         "required": "true" },
     { "path": "applicantInfo.ein",             "required": "true" },

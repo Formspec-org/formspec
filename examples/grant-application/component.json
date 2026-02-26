@@ -124,6 +124,46 @@
       },
       {
         "component": "Page",
+        "title": "Project Phases",
+        "children": [
+          {
+            "component": "Stack",
+            "gap": "$token.space.lg",
+            "children": [
+              {
+                "component": "Text",
+                "text": "Add one phase per project phase. Tasks and costs are calculated automatically."
+              },
+              {
+                "component": "DataTable",
+                "bind": "projectPhases",
+                "allowAdd": true,
+                "allowRemove": true,
+                "columns": [
+                  { "header": "Phase Name",  "bind": "phaseName" },
+                  { "header": "Phase Total", "bind": "phaseTotal" }
+                ]
+              },
+              {
+                "component": "Card",
+                "children": [
+                  { "component": "Heading", "level": 4, "text": "Phases Summary" },
+                  {
+                    "component": "Grid",
+                    "columns": 2,
+                    "children": [
+                      { "component": "Text", "text": "Total Phases Cost" },
+                      { "component": "Text", "bind": "projectPhasesTotal", "style": { "textAlign": "right", "fontWeight": "bold" } }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Page",
         "title": "Subcontractors",
         "children": [
           {
@@ -212,6 +252,18 @@
                       { "label": "Indirect Costs",     "bind": "indirectCosts" },
                       { "label": "Grand Total",        "bind": "grandTotal" },
                       { "label": "Requested Amount",   "bind": "budget.requestedAmount" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "component": "Collapsible",
+                "title": "Project Phases",
+                "children": [
+                  {
+                    "component": "Summary",
+                    "items": [
+                      { "label": "Total Phases Cost", "bind": "projectPhasesTotal" }
                     ]
                   }
                 ]
