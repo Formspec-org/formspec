@@ -1,3 +1,5 @@
+// ADR-0023 Exception: Tests platform-level a11y attribute plumbing and custom component
+// recursive detection — framework concerns not representable in a real-world business form.
 import { test, expect } from '@playwright/test';
 
 test.describe('Components: Accessibility, Responsive Overrides, and Custom Components', () => {

@@ -1,3 +1,5 @@
+// ADR-0023 Exception: Tests the remoteOptions data-loading infrastructure contract
+// (fetch + 500 error fallback). Requires a mock server; not representable in domain data.
 import { test, expect } from '@playwright/test';
 import { gotoHarness, mountDefinition, submitAndGetResponse } from '../helpers/harness';
 

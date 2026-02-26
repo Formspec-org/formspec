@@ -1,3 +1,5 @@
+// ADR-0023 Exception: Tests Modal, Popover, Signature, Rating, Slider, Accordion, and
+// ProgressBar display/interactive components that have no natural home in a grant application.
 import { test, expect } from '@playwright/test';
 
 test.describe('Components: Progressive Component Rendering', () => {
