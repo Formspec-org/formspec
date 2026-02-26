@@ -372,12 +372,18 @@ As additional example applications are added (e.g., a tax filing form, an insura
 
 This ADR is considered implemented when:
 
-- [ ] T-01 through T-09 are complete
+- [x] T-01 through T-09 are complete
 - [ ] `npx playwright test` passes with no failures
-- [ ] All `integration/` and `smoke/` spec files use `mountGrantApplication` or are annotated with an ADR-0023 exception comment
-- [ ] All `components/` spec files either use `mountGrantApplication` or are annotated with an ADR-0023 exception comment
-- [ ] `tests/e2e/fixtures/` contains only: `kitchen-sink-holistic/`, `edge-cases.json` (until T-03 done), `complex-scenarios.json` (until T-05 done), `fel-functions.json` (until T-06 done), and `kitchen-sink-smoke.*` (until T-02 done)
-- [ ] No spec file imports `mountDefinition` from `helpers/harness.ts` except files with ADR-0023 exception annotations
+- [x] All `integration/` and `smoke/` spec files use `mountGrantApplication` or are annotated with an ADR-0023 exception comment
+- [x] All `components/` spec files either use `mountGrantApplication` or are annotated with an ADR-0023 exception comment
+- [x] `tests/e2e/fixtures/` contains only: `kitchen-sink-holistic/` (all transitional fixtures deleted)
+- [x] No spec file imports `mountDefinition` from `helpers/harness.ts` except files with ADR-0023 exception annotations
+
+**Implementation notes (deviations from original task descriptions):**
+- T-10 skipped: Adding Tabs to the grant app would distort its Wizard UX model; tab-sync test remains as ADR-0023 exception
+- T-11 partial: Tests 1-2 migrated to grant app; test 3 (DataTable+Summary tab-sync) kept synthetic per T-10 skip
+- T-12 partial: Test 1 migrated to `budget.lineItems`; test 2 dropped (redundant with grant-app-conformance coverage); test 3 (compatibility matrix) kept synthetic
+- T-13 amended: `harness.ts` retained with ADR-0023 header comment; deletion deferred until all synthetic tests are resolved
 
 ---
 
