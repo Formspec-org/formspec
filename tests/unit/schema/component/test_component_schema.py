@@ -496,6 +496,47 @@ def test_summary_items_valid():
     }
     validate(instance=doc, schema=SCHEMA)
 
+def test_summary_item_with_option_set_valid():
+    """A Summary item may specify optionSet to resolve choice labels.
+
+    This test FAILS until the component schema adds 'optionSet' to the
+    Summary item properties (currently additionalProperties: false with
+    only 'label' and 'bind' allowed).
+    """
+    doc = {
+        "$formspecComponent": "1.0",
+        "version": "1.0.0",
+        "targetDefinition": {"url": "https://example.com/def"},
+        "tree": {
+            "component": "Summary",
+            "items": [
+                {"label": "Org Type", "bind": "orgType", "optionSet": "orgTypes"}
+            ],
+        },
+    }
+    validate(instance=doc, schema=SCHEMA)
+
+
+def test_summary_item_without_option_set_still_valid():
+    """A Summary item without optionSet continues to pass schema validation.
+
+    Regression guard: adding optionSet support must not break the existing
+    required-fields contract (label + bind still sufficient).
+    """
+    doc = {
+        "$formspecComponent": "1.0",
+        "version": "1.0.0",
+        "targetDefinition": {"url": "https://example.com/def"},
+        "tree": {
+            "component": "Summary",
+            "items": [
+                {"label": "Full Name", "bind": "fullName"}
+            ],
+        },
+    }
+    validate(instance=doc, schema=SCHEMA)
+
+
 def test_all_progressive_fallbacks_present_in_spec():
     # Meta-test to ensure all progressive components have fallbacks defined in the spec
     with open("specs/component/component-spec.md", "r") as f:

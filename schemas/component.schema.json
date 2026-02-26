@@ -2385,6 +2385,10 @@
               },
               "bind": {
                 "type": "string"
+              },
+              "optionSet": {
+                "type": "string",
+                "description": "Name of an option set defined in the form definition. When set, the bound value is resolved to its display label rather than rendered as the raw value."
               }
             }
           }

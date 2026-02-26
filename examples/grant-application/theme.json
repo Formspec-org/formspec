@@ -8,6 +8,10 @@
     "url": "https://example.gov/forms/grant-application",
     "compatibleVersions": ">=1.0.0 <2.0.0"
   },
+  "stylesheets": [
+    "/packages/formspec-webcomponent/examples/formspec-uswds-bridge.css",
+    "/examples/grant-application/grant-bridge.css"
+  ],
   "tokens": {
     "color.primary":       "#005ea2",
     "color.primaryDark":   "#1a4480",
@@ -27,38 +31,58 @@
     "space.md":            "16px",
     "space.lg":            "24px",
     "space.xl":            "40px",
-    "type.fontFamily":     "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    "type.fontFamily":     "Source Sans Pro Web, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     "type.baseSize":       "16px",
     "type.lineHeight":     "1.5",
     "radius.sm":           "4px",
     "radius.md":           "8px",
-    "focusRing":           "0 0 0 3px #2491ff"
+    "focusRing":           "0 0 0 0.25rem #2491ff",
+    "uswds.formGroup":     "usa-form-group",
+    "uswds.label":         "usa-label",
+    "uswds.input":         "usa-input",
+    "uswds.hint":          "usa-hint",
+    "uswds.error":         "usa-error-message"
   },
   "defaults": {
     "labelPosition": "top",
-    "style": {
-      "fontFamily": "$token.type.fontFamily",
-      "fontSize":   "$token.type.baseSize"
+    "widgetConfig": {
+      "x-classes": {
+        "root":    "$token.uswds.formGroup",
+        "label":   "$token.uswds.label",
+        "control": "$token.uswds.input",
+        "hint":    "$token.uswds.hint",
+        "error":   "$token.uswds.error"
+      }
     }
   },
   "selectors": [
-    {
-      "match": { "dataType": "text" },
-      "apply": {
-        "style": { "lineHeight": "$token.type.lineHeight" }
-      }
-    },
     {
       "match": { "dataType": "money" },
       "apply": { "widget": "MoneyInput" }
     },
     {
       "match": { "dataType": "choice" },
-      "apply": { "widget": "RadioGroup" }
+      "apply": {
+        "widget": "RadioGroup",
+        "widgetConfig": {
+          "x-classes": {
+            "control": null
+          }
+        }
+      }
     },
     {
       "match": { "dataType": "boolean" },
-      "apply": { "widget": "Toggle" }
+      "apply": {
+        "widget": "Toggle",
+        "labelPosition": "start",
+        "widgetConfig": {
+          "x-classes": {
+            "control": null,
+            "label":   null
+          }
+        }
+      }
     }
   ]
 }

@@ -119,6 +119,9 @@ export const DataTablePlugin: ComponentPlugin = {
                     const dataType = fieldByKey.get(col.bind)?.dataType as string | undefined;
 
                     if (sig && editableCells) {
+                        const fieldDef = fieldByKey.get(col.bind);
+                        const prefix = fieldDef?.prefix;
+                        const suffix = fieldDef?.suffix;
                         const input = document.createElement('input');
                         input.className = 'formspec-datatable-input';
                         input.name = sigPath;
@@ -131,7 +134,26 @@ export const DataTablePlugin: ComponentPlugin = {
                         input.addEventListener('input', () => {
                             ctx.engine.setValue(sigPath, coerceInputValue(input.value, dataType));
                         });
-                        td.appendChild(input);
+                        if (prefix || suffix) {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'formspec-datatable-cell-wrapper';
+                            if (prefix) {
+                                const pre = document.createElement('span');
+                                pre.className = 'formspec-datatable-prefix';
+                                pre.textContent = prefix;
+                                wrapper.appendChild(pre);
+                            }
+                            wrapper.appendChild(input);
+                            if (suffix) {
+                                const suf = document.createElement('span');
+                                suf.className = 'formspec-datatable-prefix';
+                                suf.textContent = suffix;
+                                wrapper.appendChild(suf);
+                            }
+                            td.appendChild(wrapper);
+                        } else {
+                            td.appendChild(input);
+                        }
 
                         const readonlySig = ctx.engine.readonlySignals[sigPath];
                         const syncInput = effect(() => {

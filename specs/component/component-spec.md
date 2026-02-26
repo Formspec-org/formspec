@@ -2016,7 +2016,15 @@ their current values in a structured list. Useful for review pages.
 
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
-| `items` | array | — (REQUIRED) | No | Array of summary items. Each element is an object with `label` (string, REQUIRED) and `bind` (string, REQUIRED — item key). |
+| `items` | array | — (REQUIRED) | No | Array of summary items. Each element is an object with `label` (string, REQUIRED), `bind` (string, REQUIRED — item key), and optional `optionSet` (string). |
+
+Each item object in the `items` array supports:
+
+| Item Field | Type | Required | Description |
+|------------|------|----------|-------------|
+| `label` | string | Yes | Display label shown next to the value. |
+| `bind` | string | Yes | Path to the field whose value to display. |
+| `optionSet` | string | No | Name of an option set defined in the form definition. When present, the raw bound value is resolved to its display label via the named option set. Use for `choice` and `multiChoice` fields. |
 
 #### Rendering Requirements
 
@@ -2025,6 +2033,9 @@ their current values in a structured list. Useful for review pages.
 - For each entry in `items`, MUST display the `label` and the
   current value of the bound item.
 - Values MUST be formatted according to the item's `dataType`.
+- When `optionSet` is set on an item, renderers MUST look up the
+  bound value in the named option set and display the matching
+  `label`. If no match is found, the raw value SHOULD be displayed.
 
 #### Fallback Behavior
 
@@ -2040,7 +2051,7 @@ one **Text** component per item, with `text` set to
   "items": [
     { "label": "Project Name", "bind": "projectName" },
     { "label": "Total Budget", "bind": "totalBudget" },
-    { "label": "Start Date", "bind": "startDate" }
+    { "label": "Organization Type", "bind": "orgType", "optionSet": "orgTypes" }
   ]
 }
 ```

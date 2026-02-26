@@ -253,6 +253,40 @@ class TestDefinitionItem:
         ]
         assert dt["enum"] == expected
 
+    def test_s4_2_3__money_datatype_has_description(self):
+        """The dataType property (or a MoneyValue $def) must document the money
+        value shape ({amount, currency}).
+
+        This test FAILS until the definition schema adds either:
+          - a 'description' field on the dataType property that mentions the
+            {amount, currency} object shape, OR
+          - a 'MoneyValue' entry in $defs with description + examples.
+
+        Currently the dataType schema is a bare enum with no per-value docs.
+        """
+        branch = _find_allof_branch(self.ITEM["allOf"], "type", "field")
+        dt = branch["then"]["properties"]["dataType"]
+
+        # Prefer a dedicated MoneyValue $def (richer; description + examples).
+        has_money_def = (
+            "MoneyValue" in DEF_S.get("$defs", {})
+            and "description" in DEF_S["$defs"]["MoneyValue"]
+        )
+
+        # Fallback: the dataType property itself has a description that
+        # mentions the money shape.
+        dt_description = dt.get("description", "")
+        has_dt_description = (
+            "money" in dt_description.lower()
+            and ("amount" in dt_description.lower() or "currency" in dt_description.lower())
+        )
+
+        assert has_money_def or has_dt_description, (
+            "definition.schema.json must document the 'money' dataType's "
+            "{amount, currency} object shape — either via a MoneyValue $def "
+            "with description+examples or via a description on the dataType property."
+        )
+
     def test_s4_2_3__field_additional_properties_false(self):
         branch = _find_allof_branch(self.ITEM["allOf"], "type", "field")
         assert branch["then"]["additionalProperties"] is False

@@ -1,4 +1,4 @@
-import { signal, computed, effect, Signal } from '@preact/signals-core';
+import { signal, computed, effect, batch, Signal } from '@preact/signals-core';
 import { FelLexer } from './fel/lexer';
 import { parser } from './fel/parser';
 import { interpreter, FelContext } from './fel/interpreter';
@@ -14,6 +14,7 @@ export interface FormspecItem {
     type: "field" | "group" | "display";
     label: string;
     dataType?: "string" | "text" | "integer" | "decimal" | "number" | "boolean" | "date" | "dateTime" | "time" | "uri" | "attachment" | "choice" | "multiChoice" | "money";
+    currency?: string;
     description?: string;
     hint?: string;
     repeatable?: boolean;
@@ -667,7 +668,7 @@ export class FormEngine {
         for (const item of items) {
             const fullName = prefix ? `${prefix}.${item.key}` : item.key;
             const relevant = item.relevant || item.visible;
-            if (relevant || item.required || item.calculate || item.readonly || item.constraint) {
+            if (relevant || item.required || item.calculate || item.readonly || item.constraint || item.precision !== undefined) {
                 this.bindConfigs[fullName] = {
                     path: fullName,
                     relevant: relevant,
@@ -675,7 +676,8 @@ export class FormEngine {
                     calculate: item.calculate,
                     readonly: item.readonly,
                     constraint: item.constraint,
-                    constraintMessage: item.message
+                    constraintMessage: item.message,
+                    precision: item.precision,
                 };
             }
             if (item.children) {
@@ -851,7 +853,18 @@ export class FormEngine {
             // so the computed captures the correct signal references.
             if (bind) {
                 if (bind.calculate) {
-                    this.signals[fullName] = computed(this.compileFEL(bind.calculate, fullName, undefined, false));
+                    const compiledCalc = this.compileFEL(bind.calculate, fullName, undefined, false);
+                    if (bind.precision !== undefined) {
+                        const factor = Math.pow(10, bind.precision);
+                        this.signals[fullName] = computed(() => {
+                            const raw = compiledCalc();
+                            return typeof raw === 'number' && !isNaN(raw)
+                                ? Math.round(raw * factor) / factor
+                                : raw;
+                        });
+                    } else {
+                        this.signals[fullName] = computed(compiledCalc);
+                    }
                 }
                 if (bind.required) {
                     if (typeof bind.required === 'string') {
@@ -985,9 +998,11 @@ export class FormEngine {
         const item = this.findItem(this.definition.items, itemName);
         if (item && item.repeatable) {
             const index = this.repeats[itemName].value;
-            this.initRepeatInstance(item, itemName, index);
-            this.repeats[itemName].value++;
-            this.structureVersion.value++;
+            batch(() => {
+                this.initRepeatInstance(item!, itemName, index);
+                this.repeats[itemName].value++;
+                this.structureVersion.value++;
+            });
             return index;
         }
     }
@@ -1105,15 +1120,15 @@ export class FormEngine {
         }
         snapshots.splice(index, 1);
 
-        this.clearRepeatSubtree(itemName);
-
-        this.repeats[itemName].value = snapshots.length;
-        for (let i = 0; i < snapshots.length; i++) {
-            this.initRepeatInstance(item, itemName, i);
-            this.applyGroupChildrenSnapshot(item.children, `${itemName}[${i}]`, snapshots[i]);
-        }
-
-        this.structureVersion.value++;
+        batch(() => {
+            this.clearRepeatSubtree(itemName);
+            this.repeats[itemName].value = snapshots.length;
+            for (let i = 0; i < snapshots.length; i++) {
+                this.initRepeatInstance(item!, itemName, i);
+                this.applyGroupChildrenSnapshot(item!.children!, `${itemName}[${i}]`, snapshots[i]);
+            }
+            this.structureVersion.value++;
+        });
     }
 
     private collectFieldKeys(items: FormspecItem[], prefix = ''): string[] {
@@ -1394,6 +1409,10 @@ export class FormEngine {
         if (dataType && (dataType === 'integer' || dataType === 'decimal' || dataType === 'number') && typeof value === 'string') {
             value = value === '' ? null : Number(value);
         }
+        if (dataType === 'money' && typeof value === 'number') {
+            const currency = item?.currency || this.definition.formPresentation?.defaultCurrency || '';
+            value = { amount: value, currency };
+        }
 
         // Precision enforcement
         if (bind?.precision !== undefined && typeof value === 'number' && !isNaN(value)) {
@@ -1481,8 +1500,21 @@ export class FormEngine {
         for (const key of Object.keys(this.signals)) {
             const isRelevant = this.isPathRelevant(key);
             const baseName = key.replace(/\[\d+\]/g, '');
-            const bind = this.bindConfigs[baseName];
-            const nrb = bind?.nonRelevantBehavior || defaultNRB;
+            let nrb = defaultNRB;
+            const ownBind = this.bindConfigs[baseName];
+            if (ownBind?.nonRelevantBehavior) {
+                nrb = ownBind.nonRelevantBehavior;
+            } else {
+                const nrbParts = baseName.split('.');
+                for (let ai = nrbParts.length - 1; ai >= 1; ai--) {
+                    const ancestor = nrbParts.slice(0, ai).join('.');
+                    const ancestorBind = this.bindConfigs[ancestor];
+                    if (ancestorBind?.nonRelevantBehavior) {
+                        nrb = ancestorBind.nonRelevantBehavior;
+                        break;
+                    }
+                }
+            }
 
             if (!isRelevant) {
                 if (nrb === 'remove') continue;
@@ -1494,6 +1526,11 @@ export class FormEngine {
                 const part = parts[i];
                 const nextPart = parts[i+1];
                 const isNextNumber = !isNaN(parseInt(nextPart));
+                if (current[part] !== undefined && (typeof current[part] !== 'object' || current[part] === null)) {
+                    // Parent segment already holds a scalar (e.g. a field with child items).
+                    // Flatten child to the current container level to avoid clobbering the scalar.
+                    break;
+                }
                 if (!current[part]) {
                     current[part] = isNextNumber ? [] : {};
                 }

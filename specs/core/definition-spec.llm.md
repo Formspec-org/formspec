@@ -17,6 +17,7 @@ Source schema: `schemas/definition.schema.json`
 | Pointer | Required | Type | Guidance | Description |
 |---|---|---|---|---|
 | `#/properties/$formspec` | yes | string | Version pin for definition schema compatibility. | Definition specification version. MUST be '1.0'. |
+| `#/properties/formPresentation/properties/defaultCurrency` | no | string | Prevents authors from repeating the currency code in every money() FEL expression and every MoneyInput component. | Default ISO 4217 currency code applied to all money fields that do not declare their own currency. When set, the currency input on MoneyInput widgets is pre-filled and locked to this value. |
 | `#/properties/items` | yes | array | Primary structural definition of the form content. | Root item tree defining fields, groups, and display nodes. |
 | `#/properties/status` | yes | string | Controls publication lifecycle and authoring/production usage. | Definition lifecycle state. |
 | `#/properties/title` | yes | string | Display name used by authoring and rendering tools. | Human-readable definition title. |

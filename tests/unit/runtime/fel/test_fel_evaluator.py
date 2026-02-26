@@ -87,6 +87,34 @@ class TestArithmetic:
         assert diags("'hello' + 5") == 1
 
 
+class TestMixedOperators:
+    """Regression tests for mixed arithmetic operators evaluated left-to-right."""
+
+    def test_multiply_then_divide(self):
+        """2 * 3 / 4 must equal 1.5, not 6 (dropping the /4 is the bug)."""
+        assert pyval('2 * 3 / 4') == Decimal('1.5')
+
+    def test_divide_then_multiply(self):
+        """10 / 2 * 3 must equal 15.0, not 1.666… (premature stopping)."""
+        assert pyval('10 / 2 * 3') == Decimal('15.0')
+
+    def test_add_then_subtract(self):
+        """5 + 3 - 2 must equal 6."""
+        assert pyval('5 + 3 - 2') == Decimal('6')
+
+    def test_subtract_then_add(self):
+        """10 - 3 + 1 must equal 8."""
+        assert pyval('10 - 3 + 1') == Decimal('8')
+
+    def test_field_multiply_divide(self):
+        """100 * $rate / 100 with rate=10 must equal 10.0.
+
+        This is the real-world case from the grant application indirect-costs
+        calculation bug where the /100 step was silently dropped.
+        """
+        assert pyval('100 * $rate / 100', {'rate': 10}) == Decimal('10.0')
+
+
 class TestComparison:
     def test_less_than(self):
         assert pyval('1 < 2') is True

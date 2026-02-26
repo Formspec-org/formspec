@@ -283,6 +283,44 @@
           "key": "parentVal"
         }
       ]
+    },
+    {
+      "type": "field", "dataType": "decimal",
+      "key": "mixA",
+      "label": "A"
+    },
+    {
+      "type": "field", "dataType": "decimal",
+      "key": "mixB",
+      "label": "B"
+    },
+    {
+      "type": "field", "dataType": "decimal",
+      "key": "mixC",
+      "label": "C"
+    },
+    {
+      "type": "field", "dataType": "decimal",
+      "key": "mixMultiplyDivide"
+    },
+    {
+      "type": "field", "dataType": "decimal",
+      "key": "mixTotal",
+      "label": "Total"
+    },
+    {
+      "type": "field", "dataType": "decimal",
+      "key": "mixBonus",
+      "label": "Bonus"
+    },
+    {
+      "type": "field", "dataType": "decimal",
+      "key": "mixTax",
+      "label": "Tax"
+    },
+    {
+      "type": "field", "dataType": "decimal",
+      "key": "mixAddSubtract"
     }
   ],
   "binds": [
@@ -341,6 +379,8 @@
     { "path": "mAdd", "calculate": "moneyAmount(moneyAdd(money(100, 'USD'), money(50, 'USD')))" },
     { "path": "ledger.entryMoney", "calculate": "money(amount, 'USD')" },
     { "path": "totalLedger", "calculate": "moneyAmount(moneySum(ledger.entryMoney))" },
-    { "path": "parentGroup.parentVal", "calculate": "parent('rawText')" }
+    { "path": "parentGroup.parentVal", "calculate": "parent('rawText')" },
+    { "path": "mixMultiplyDivide", "calculate": "mixA * mixB / mixC" },
+    { "path": "mixAddSubtract", "calculate": "mixTotal + mixBonus - mixTax" }
   ]
 }

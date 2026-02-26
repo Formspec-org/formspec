@@ -3746,6 +3746,17 @@ MUST remain in accessible markup.</td>
 <td><code>"comfortable"</code></td>
 <td>Spacing density hint.</td>
 </tr>
+<tr class="even">
+<td><code>defaultCurrency</code></td>
+<td>string</td>
+<td>ISO 4217 (e.g. <code>"USD"</code>)</td>
+<td>(none)</td>
+<td>Default currency code applied to all <code>money</code> fields that
+do not declare their own <code>currency</code> property. When set,
+MoneyInput widgets MUST pre-fill the currency to this value and lock it.
+FEL <code>money()</code> calls that omit the currency argument MAY
+inherit this default.</td>
+</tr>
 </tbody>
 </table>
 <p>Example:</p>
@@ -3957,6 +3968,17 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb29-1"><a href=
 defined below.</td>
 </tr>
 <tr class="even">
+<td><code>currency</code></td>
+<td>string</td>
+<td><strong>0..1</strong> (OPTIONAL)</td>
+<td>ISO 4217 currency code. Applicable only when <code>dataType</code>
+is <code>"money"</code>. Overrides
+<code>formPresentation.defaultCurrency</code> for this field
+specifically. When neither <code>currency</code> nor
+<code>defaultCurrency</code> is set, the currency is captured directly
+from user input.</td>
+</tr>
+<tr class="odd">
 <td><code>precision</code></td>
 <td>integer</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -3964,7 +3986,7 @@ defined below.</td>
 is <code>"decimal"</code>. Implementations SHOULD round or constrain
 input to this precision.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>prefix</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -3972,7 +3994,7 @@ input to this precision.</td>
 This is a presentation hint only; the prefix MUST NOT appear in the
 stored data value.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>suffix</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -3980,7 +4002,7 @@ stored data value.</td>
 This is a presentation hint only; the suffix MUST NOT appear in the
 stored data value.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>options</code></td>
 <td>array | string (URI)</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -3990,7 +4012,7 @@ with at least <code>value</code> (string, REQUIRED) and
 <code>label</code> (string, REQUIRED) properties. If a string, it MUST
 be a URI referencing an external option set.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>optionSet</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -4000,7 +4022,7 @@ or <code>"multiChoice"</code>. When both <code>options</code> and
 <code>optionSet</code> are present, <code>optionSet</code> takes
 precedence.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>initialValue</code></td>
 <td>any | string</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -4015,7 +4037,7 @@ dependencies change (use <code>calculate</code> on a Bind for continuous
 recalculation). Distinct from the Bind <code>default</code> property
 (see §4.3).</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>semanticType</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -4026,7 +4048,7 @@ semantics. Supports intelligent widget selection, data classification,
 and interoperability mapping. Implementations SHOULD use URIs or
 namespaced identifiers to avoid collisions.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>prePopulate</code></td>
 <td>object</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -4040,7 +4062,7 @@ expression plus a <code>readonly</code> bind. When both
 <code>prePopulate</code> and <code>initialValue</code> are present,
 <code>prePopulate</code> takes precedence.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>children</code></td>
 <td>array of Item</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>

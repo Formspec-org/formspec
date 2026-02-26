@@ -28,10 +28,13 @@ npm run build
 
 ```bash
 # From repo root
-npm run start:test-server
+npm run start:demo
 ```
 
-Then open: `http://127.0.0.1:8080/examples/grant-application/index.html`
+Then open: `http://127.0.0.1:8082/examples/grant-application/index.html`
+
+> **Note:** The `start:test-server` script (port 8080) serves the Playwright test harness,
+> not the project root. Use `start:demo` (port 8082) for the grant application demo.
 
 ### 3. Start the API server (separate terminal)
 

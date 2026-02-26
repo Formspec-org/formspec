@@ -16,6 +16,88 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── Base form element styles (replaces USWDS) ── */
+    input, textarea, select {
+      display: block;
+      width: 100%;
+      padding: 0.5rem 0.625rem;
+      border: 1px solid var(--color-neutral-200);
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 1rem;
+      color: var(--color-text);
+      background: #fff;
+      line-height: 1.5;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 0;
+      border-color: var(--color-primary);
+    }
+    input[type="radio"], input[type="checkbox"] {
+      display: inline-block;
+      width: auto;
+      padding: 0;
+      border: none;
+      accent-color: var(--color-primary);
+    }
+    button {
+      font-family: var(--font);
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    /* ── Wizard step indicators ── */
+    .formspec-wizard-step {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-700);
+      font-weight: 700;
+      min-width: 2rem;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+    .formspec-wizard-step--active {
+      background: var(--color-primary);
+      color: #fff;
+    }
+    .formspec-wizard-step--completed {
+      background: var(--color-success);
+      color: #fff;
+    }
+    .formspec-wizard-step--completed::after {
+      content: '✓';
+    }
+    .formspec-wizard-step--completed { font-size: 0; }
+    .formspec-wizard-step--completed::after { font-size: 0.85rem; }
+
+    /* ── Wizard nav buttons ── */
+    .formspec-wizard-next {
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      padding: 10px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius);
+    }
+    .formspec-wizard-next:hover { background: var(--color-primary-dark); }
+    .formspec-wizard-prev {
+      background: transparent;
+      color: var(--color-primary);
+      border: 2px solid var(--color-primary);
+      padding: 8px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius);
+    }
+    .formspec-wizard-prev:hover { background: var(--color-primary-light); }
+    .formspec-wizard-prev:disabled,
+    .formspec-wizard-next:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Error / hint text ── */
+    .formspec-error:not(:empty) { color: var(--color-error); }
+    .formspec-hint { color: var(--color-neutral-700); }
+
     :root {
       --color-primary:      #005ea2;
       --color-primary-dark: #1a4480;
@@ -40,7 +122,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      padding-bottom: 56px; /* clearance for fixed totals bar */
+      padding-bottom: 72px; /* clearance for fixed totals bar */
     }
 
     /* ── Header ── */
@@ -138,6 +220,69 @@
       border-radius: var(--radius);
       padding: 32px;
       margin-left: 24px;
+    }
+
+    /* ── Mobile layout ── */
+    @media (max-width: 700px) {
+      body { padding-bottom: 100px; }
+
+      .site-header { padding: 10px 16px; }
+      .site-header h1 { font-size: 15px; }
+
+      .app-body {
+        grid-template-columns: 1fr;
+        padding: 12px 16px;
+        gap: 12px;
+      }
+
+      /* Collapse sidebar into a horizontal stepper strip */
+      .progress-nav {
+        position: static;
+        padding: 8px 12px;
+      }
+      .progress-nav h3 { display: none; }
+      .progress-nav ol {
+        flex-direction: row;
+        gap: 0;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .progress-nav ol::-webkit-scrollbar { display: none; }
+      .progress-nav li {
+        flex-direction: column;
+        gap: 3px;
+        font-size: 10px;
+        padding: 4px 6px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        text-align: center;
+        min-width: 64px;
+      }
+      .progress-nav li .step-icon {
+        width: 18px;
+        height: 18px;
+        margin: 0 auto;
+      }
+
+      .form-area {
+        margin-left: 0;
+        padding: 16px;
+      }
+
+      /* Stack 2-column grids to single column on mobile */
+      .formspec-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      .totals-bar {
+        gap: 12px;
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+      .totals-bar .totals-amount { font-size: 14px; }
+      .totals-bar .totals-match { margin-left: auto; font-size: 12px; }
     }
 
     formspec-render {
@@ -380,9 +525,42 @@
     }
   });
 
+  // ── Wizard page tracking ──
+  const progressStepEls = Array.from(document.querySelectorAll('#progress-steps li'));
+  const submitAreaEl = document.querySelector('.submit-area');
+  const PAGE_TITLES = progressStepEls.map(li => li.getAttribute('data-page'));
+  const LAST_PAGE = PAGE_TITLES[PAGE_TITLES.length - 1];
+
+  function getCurrentPageTitle() {
+    const panel = formEl.querySelector('.formspec-wizard-panel:not(.formspec-hidden)');
+    return panel?.querySelector('h2')?.textContent?.trim() ?? '';
+  }
+
+  function updateWizardUI() {
+    const current = getCurrentPageTitle();
+    const currentIdx = PAGE_TITLES.indexOf(current);
+    const isLastPage = current === LAST_PAGE;
+
+    progressStepEls.forEach((li, i) => {
+      li.classList.toggle('active', i === currentIdx);
+      li.classList.toggle('valid', i < currentIdx);
+      li.classList.toggle('invalid', false);
+    });
+
+    // Show our submit button only on last page
+    submitAreaEl.style.display = isLastPage ? '' : 'none';
+
+    // Hide the wizard's "Finish" nav button on last page — our Submit button handles it
+    const wizardNextBtn = formEl.querySelector('button.formspec-wizard-next');
+    if (wizardNextBtn) wizardNextBtn.style.display = isLastPage ? 'none' : '';
+  }
+
+  new MutationObserver(updateWizardUI).observe(formEl, { subtree: true, attributeFilter: ['class'] });
+  requestAnimationFrame(updateWizardUI);
+
   // ── Shape error display ──
-  function refreshShapeErrors() {
-    const report = engine.getValidationReport({ mode: 'submit' });
+  function refreshShapeErrors(mode = 'continuous') {
+    const report = engine.getValidationReport({ mode });
     const shapeResults = report.results.filter(r => r.source === 'shape' || r.constraintKind === 'shape');
     shapeErrorsEl.innerHTML = '';
     if (shapeResults.length === 0) {
@@ -400,14 +578,14 @@
 
   effect(() => {
     engine.structureVersion.value;
-    refreshShapeErrors();
+    refreshShapeErrors('continuous');
   });
 
   // ── Submit ──
   btnSubmit.addEventListener('click', async () => {
     const report = engine.getValidationReport({ mode: 'submit' });
     if (!report.valid) {
-      refreshShapeErrors();
+      refreshShapeErrors('submit');
       alert(`Please fix ${report.counts.error} error(s) before submitting.`);
       return;
     }

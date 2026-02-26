@@ -630,6 +630,61 @@ test.describe('Components: Core Props and Regression Fixes', () => {
         await expect(allCheckboxes).toHaveCount(5);
     });
 
+    test('should resolve option set label in Summary when optionSet is configured on the item', async ({ page }) => {
+        await page.evaluate(() => {
+            const el = document.querySelector('formspec-render') as any;
+            el.definition = {
+                "$formspec": "1.0",
+                "url": "http://example.org/test",
+                "version": "1.0.0",
+                "title": "Summary optionSet Test",
+                "optionSets": {
+                    "orgTypes": {
+                        "options": [
+                            { "value": "nonprofit", "label": "Nonprofit Organization" },
+                            { "value": "forprofit", "label": "For-Profit Corporation" }
+                        ]
+                    }
+                },
+                "items": [
+                    {
+                        "key": "orgType",
+                        "type": "field",
+                        "dataType": "choice",
+                        "label": "Organization Type",
+                        "optionSet": "orgTypes"
+                    }
+                ]
+            };
+            el.componentDocument = {
+                "$formspecComponent": "1.0",
+                "tree": {
+                    "component": "Page",
+                    "children": [
+                        {
+                            "component": "Summary",
+                            "items": [
+                                { "label": "Org Type", "bind": "orgType", "optionSet": "orgTypes" }
+                            ]
+                        },
+                        { "component": "Select", "bind": "orgType" }
+                    ]
+                }
+            };
+        });
+
+        // Set the choice field to "nonprofit" via the engine
+        await page.evaluate(() => {
+            const el = document.querySelector('formspec-render') as any;
+            el.getEngine().setValue('orgType', 'nonprofit');
+        });
+
+        // The Summary dd should show the label, not the raw value
+        const dd = page.locator('.formspec-summary dd');
+        await expect(dd).toHaveText('Nonprofit Organization');
+        await expect(dd).not.toHaveText('nonprofit');
+    });
+
     test('should shift remaining row values when removeRepeatInstance deletes a middle row', async ({ page }) => {
         const result = await page.evaluate(() => {
             const FormEngine = (window as any).FormEngine;

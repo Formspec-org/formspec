@@ -17,7 +17,7 @@
         "children": [
           {
             "component": "Stack",
-            "gap": "lg",
+            "gap": "$token.space.lg",
             "children": [
               {
                 "component": "Grid",
@@ -26,7 +26,7 @@
                   { "component": "TextInput",  "bind": "applicantInfo.orgName",      "placeholder": "Acme Nonprofit, Inc." },
                   { "component": "TextInput",  "bind": "applicantInfo.ein",          "placeholder": "12-3456789" },
                   { "component": "RadioGroup", "bind": "applicantInfo.orgType" },
-                  { "component": "Spacer" },
+                  { "component": "TextInput",  "bind": "applicantInfo.orgType.orgSubType", "placeholder": "e.g. 501(c)(3)" },
                   { "component": "TextInput",  "bind": "applicantInfo.contactName",  "placeholder": "Jane Smith" },
                   { "component": "TextInput",  "bind": "applicantInfo.contactEmail", "placeholder": "jane@example.org" },
                   { "component": "TextInput",  "bind": "applicantInfo.contactPhone", "placeholder": "202-555-0100" },
@@ -48,7 +48,7 @@
         "children": [
           {
             "component": "Stack",
-            "gap": "lg",
+            "gap": "$token.space.lg",
             "children": [
               { "component": "TextInput",  "bind": "projectNarrative.projectTitle", "placeholder": "Community Health Outreach Initiative" },
               { "component": "TextInput",  "bind": "projectNarrative.abstract",     "maxLines": 8 },
@@ -61,7 +61,8 @@
                   { "component": "NumberInput", "bind": "projectNarrative.duration" },
                   { "component": "NumberInput", "bind": "projectNarrative.indirectRate" }
                 ]
-              }
+              },
+              { "component": "CheckboxGroup", "bind": "projectNarrative.focusAreas" }
             ]
           }
         ]
@@ -72,7 +73,7 @@
         "children": [
           {
             "component": "Stack",
-            "gap": "lg",
+            "gap": "$token.space.lg",
             "children": [
               { "component": "Text", "text": "Add one row per budget line item. Subtotals are calculated automatically." },
               {
@@ -131,7 +132,7 @@
             "children": [
               {
                 "component": "Stack",
-                "gap": "lg",
+                "gap": "$token.space.lg",
                 "children": [
                   { "component": "Text", "text": "List all subcontractors. Total subcontractor costs may not exceed 49% of the project budget." },
                   {
@@ -158,7 +159,7 @@
         "children": [
           {
             "component": "Stack",
-            "gap": "lg",
+            "gap": "$token.space.lg",
             "children": [
               {
                 "component": "Alert",
@@ -175,6 +176,7 @@
                       { "label": "Organization Name", "bind": "applicantInfo.orgName" },
                       { "label": "EIN",               "bind": "applicantInfo.ein" },
                       { "label": "Organization Type", "bind": "applicantInfo.orgType", "optionSet": "orgTypes" },
+                      { "label": "Sub-Type",          "bind": "applicantInfo.orgType.orgSubType" },
                       { "label": "Contact Name",      "bind": "applicantInfo.contactName" },
                       { "label": "Contact Email",     "bind": "applicantInfo.contactEmail" },
                       { "label": "Contact Phone",     "bind": "applicantInfo.contactPhone" }
@@ -193,7 +195,8 @@
                       { "label": "Start Date",      "bind": "projectNarrative.startDate" },
                       { "label": "End Date",        "bind": "projectNarrative.endDate" },
                       { "label": "Duration",        "bind": "projectNarrative.duration" },
-                      { "label": "Indirect Rate",   "bind": "projectNarrative.indirectRate" }
+                      { "label": "Indirect Rate",   "bind": "projectNarrative.indirectRate" },
+                      { "label": "Focus Areas",    "bind": "projectNarrative.focusAreas" }
                     ]
                   }
                 ]
@@ -215,7 +218,7 @@
               },
               {
                 "component": "Stack",
-                "gap": "md",
+                "gap": "$token.space.md",
                 "children": [
                   { "component": "Heading", "level": 3, "text": "Supporting Documents" },
                   {

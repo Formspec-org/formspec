@@ -6,6 +6,30 @@ import { gotoHarness, mountDefinition } from '../helpers/harness';
 const fixturePath = path.resolve(__dirname, '../../fixtures/fel-functions.json');
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
+test.describe('FEL: mixed arithmetic operators', () => {
+  test('should correctly evaluate multiply-then-divide: a * b / c', async ({ page }) => {
+    await gotoHarness(page);
+    await mountDefinition(page, fixture);
+
+    // a=100, b=10, c=100 → 100 * 10 / 100 = 10
+    await page.fill('input[name="mixA"]', '100');
+    await page.fill('input[name="mixB"]', '10');
+    await page.fill('input[name="mixC"]', '100');
+    await expect(page.locator('input[name="mixMultiplyDivide"]')).toHaveValue('10');
+  });
+
+  test('should correctly evaluate add-then-subtract: total + bonus - tax', async ({ page }) => {
+    await gotoHarness(page);
+    await mountDefinition(page, fixture);
+
+    // total=1000, bonus=100, tax=150 → 1000 + 100 - 150 = 950
+    await page.fill('input[name="mixTotal"]', '1000');
+    await page.fill('input[name="mixBonus"]', '100');
+    await page.fill('input[name="mixTax"]', '150');
+    await expect(page.locator('input[name="mixAddSubtract"]')).toHaveValue('950');
+  });
+});
+
 test.describe('Integration: FEL Standard Library in UI', () => {
   test('should display expected FEL outputs when users edit source fields in the UI', async ({ page }) => {
     page.on('console', msg => console.log('Browser log:', msg.text()));

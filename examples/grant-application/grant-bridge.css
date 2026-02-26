@@ -1,0 +1,251 @@
+/*
+ * grant-bridge.css — USWDS bridge for the grant application demo.
+ *
+ * USWDS is loaded as a static stylesheet in index.html.
+ * This file handles formspec-specific components that don't have
+ * direct USWDS class equivalents.
+ */
+
+/* ── Spacing overrides ────────────────────────────────────────── */
+
+.formspec-stack {
+  gap: 1.25rem;
+}
+
+.formspec-grid {
+  gap: 1.5rem 2rem;
+}
+
+.formspec-field.usa-form-group {
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+}
+
+/* ── Page heading ─────────────────────────────────────────────── */
+
+.formspec-page > h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1b1b1b;
+  border-bottom: 2px solid #dfe1e2;
+  padding-bottom: 0.75rem;
+}
+
+/* ── Money input ──────────────────────────────────────────────── */
+
+.formspec-money {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.formspec-money .formspec-input {
+  flex: 1;
+}
+
+.formspec-money .formspec-money-currency-input {
+  flex: 0 0 6rem;
+}
+
+/* ── Card (Budget Summary) ────────────────────────────────────── */
+
+.formspec-card {
+  border-color: #dfe1e2;
+  background: #f9f9f9;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+}
+
+.formspec-card .formspec-grid {
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+/* ── Collapsible (Review section accordions) ──────────────────── */
+
+.formspec-collapsible {
+  border: 1px solid #dfe1e2;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.formspec-collapsible + .formspec-collapsible {
+  margin-top: 0.5rem;
+}
+
+.formspec-collapsible summary {
+  list-style: none;
+  padding: 0.875rem 1rem;
+  font-weight: 700;
+  font-size: 1rem;
+  background: #f0f0f0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.formspec-collapsible summary::-webkit-details-marker { display: none; }
+
+.formspec-collapsible summary::after {
+  content: "+";
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #005ea2;
+  font-weight: 400;
+}
+
+.formspec-collapsible[open] summary {
+  border-bottom: 1px solid #dfe1e2;
+  background: #fff;
+}
+
+.formspec-collapsible[open] summary::after {
+  content: "−";
+}
+
+.formspec-collapsible summary:hover {
+  background: #dfe1e2;
+}
+
+.formspec-collapsible-content {
+  padding: 1.25rem;
+}
+
+/* ── Summary (description list) ──────────────────────────────── */
+
+.formspec-summary {
+  gap: 0.5rem 2rem;
+}
+
+.formspec-summary dt {
+  font-weight: 700;
+  color: #565c65;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.formspec-summary dd {
+  font-size: 1rem;
+  color: #1b1b1b;
+}
+
+/* ── Headings inside form area ────────────────────────────────── */
+
+.formspec-heading {
+  color: #1b1b1b;
+}
+
+/* ── DataTable ────────────────────────────────────────────────── */
+
+.formspec-data-table th {
+  background: #f0f0f0;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #565c65;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 2px solid #dfe1e2;
+}
+
+.formspec-data-table tr:hover td {
+  background: #f9f9f9;
+}
+
+.formspec-datatable-input {
+  border-color: #565c65;
+  border-radius: 0.25rem;
+  padding: 0.375rem 0.5rem;
+}
+
+.formspec-datatable-input:focus {
+  outline: 0.25rem solid #2491ff;
+  outline-offset: 0;
+  border-color: #005ea2;
+}
+
+/* ── DataTable action buttons ─────────────────────────────────── */
+
+.formspec-datatable-add {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #005ea2;
+  border: 1px dashed #005ea2;
+  border-radius: 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+
+.formspec-datatable-add:hover {
+  background: #d9e8f6;
+}
+
+.formspec-datatable-add:focus {
+  outline: 0.25rem solid #2491ff;
+  outline-offset: 0;
+}
+
+.formspec-datatable-remove {
+  padding: 0.25rem 0.625rem;
+  background: transparent;
+  color: #e52207;
+  border: 1px solid #e52207;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.formspec-datatable-remove:hover {
+  background: #e52207;
+  color: #fff;
+}
+
+.formspec-datatable-remove:focus {
+  outline: 0.25rem solid #2491ff;
+  outline-offset: 0;
+}
+
+/* ── DataTable prefix cell ────────────────────────────────────── */
+
+.formspec-datatable-cell-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.formspec-datatable-prefix {
+  color: #565c65;
+  font-size: 0.9375rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ── FileUpload ───────────────────────────────────────────────── */
+
+.formspec-file-upload .formspec-input[type="file"] {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0;
+  font-size: 0.875rem;
+  color: #565c65;
+}
+
+/* ── Alert overrides ──────────────────────────────────────────── */
+
+.formspec-alert {
+  border-radius: 0.25rem;
+  margin-bottom: 0;
+}

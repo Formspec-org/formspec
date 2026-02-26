@@ -81,6 +81,16 @@ export class FormspecRender extends HTMLElement {
     private stylesheetHrefs: string[] = [];
     private static stylesheetRefCounts: Map<string, number> = new Map();
     private rootContainer: HTMLDivElement | null = null;
+    private _renderPending = false;
+
+    private scheduleRender() {
+        if (this._renderPending) return;
+        this._renderPending = true;
+        Promise.resolve().then(() => {
+            this._renderPending = false;
+            this.render();
+        });
+    }
 
     set definition(val: any) {
         this._definition = val;
@@ -90,7 +100,7 @@ export class FormspecRender extends HTMLElement {
             console.error("Engine initialization failed", e);
             throw e;
         }
-        this.render();
+        this.scheduleRender();
     }
 
     get definition() {
@@ -99,7 +109,7 @@ export class FormspecRender extends HTMLElement {
 
     set componentDocument(val: any) {
         this._componentDocument = val;
-        this.render();
+        this.scheduleRender();
     }
 
     get componentDocument() {
@@ -109,7 +119,7 @@ export class FormspecRender extends HTMLElement {
     set themeDocument(val: ThemeDocument | null) {
         this._themeDocument = val;
         this.loadStylesheets();
-        this.render();
+        this.scheduleRender();
     }
 
     get themeDocument(): ThemeDocument | null {
@@ -788,36 +798,61 @@ export class FormspecRender extends HTMLElement {
             const amountInput = document.createElement('input');
             amountInput.type = 'number';
             amountInput.className = 'formspec-input';
-            amountInput.placeholder = 'Amount';
+            amountInput.placeholder = comp.placeholder || 'Amount';
             amountInput.name = `${fullName}__amount`;
-            const currencyInput = document.createElement('input');
-            currencyInput.type = 'text';
-            currencyInput.className = 'formspec-input';
-            currencyInput.placeholder = 'Currency';
-            currencyInput.name = `${fullName}__currency`;
+            const resolvedCurrency = item.currency || this._definition?.formPresentation?.defaultCurrency || null;
+            let currencyEl: HTMLElement;
+            let getCurrency: () => string;
+            if (resolvedCurrency) {
+                // Fixed currency: render as a read-only badge, not an input
+                const badge = document.createElement('span');
+                badge.className = 'formspec-money-currency';
+                badge.textContent = resolvedCurrency;
+                badge.setAttribute('aria-label', `Currency: ${resolvedCurrency}`);
+                currencyEl = badge;
+                getCurrency = () => resolvedCurrency;
+            } else {
+                // Unknown currency: render editable input
+                const currencyInput = document.createElement('input');
+                currencyInput.type = 'text';
+                currencyInput.className = 'formspec-input formspec-money-currency-input';
+                currencyInput.placeholder = 'Currency';
+                currencyInput.name = `${fullName}__currency`;
+                currencyInput.addEventListener('input', () => {
+                    const amount = amountInput.value === '' ? null : Number(amountInput.value);
+                    this.engine!.setValue(fullName, { amount, currency: currencyInput.value });
+                });
+                this.cleanupFns.push(effect(() => {
+                    const sig = this.engine!.signals[fullName];
+                    if (!sig) return;
+                    const v = sig.value;
+                    if (document.activeElement !== currencyInput && v != null && typeof v === 'object' && 'currency' in v) {
+                        currencyInput.value = (v as any).currency || '';
+                    }
+                }));
+                currencyEl = currencyInput;
+                getCurrency = () => currencyInput.value;
+            }
             const updateMoney = () => {
                 const amount = amountInput.value === '' ? null : Number(amountInput.value);
-                const currency = currencyInput.value || '';
-                this.engine!.setValue(fullName, { amount, currency });
+                this.engine!.setValue(fullName, { amount, currency: getCurrency() });
             };
             amountInput.addEventListener('input', updateMoney);
-            currencyInput.addEventListener('input', updateMoney);
-            // Sync signal value back to sub-inputs (handles default bind and external updates)
+            // Sync signal value back to amount input
             this.cleanupFns.push(effect(() => {
                 const sig = this.engine!.signals[fullName];
                 if (!sig) return;
                 const v = sig.value;
-                if (document.activeElement !== amountInput && document.activeElement !== currencyInput) {
+                if (document.activeElement !== amountInput) {
                     if (v !== null && v !== undefined && typeof v === 'object' && 'amount' in v) {
                         amountInput.value = v.amount !== null && v.amount !== undefined ? String(v.amount) : '';
-                        currencyInput.value = (v as any).currency || '';
                     } else if (typeof v === 'number') {
                         amountInput.value = String(v);
                     }
                 }
             }));
             container.appendChild(amountInput);
-            container.appendChild(currencyInput);
+            container.appendChild(currencyEl);
             input = container;
         } else if (componentType === 'Select' || (dataType === 'choice' && componentType === 'TextInput')) {
              const select = document.createElement('select');
@@ -938,7 +973,11 @@ export class FormspecRender extends HTMLElement {
         const actualInputEl = input.querySelector('input') || input.querySelector('select') || input.querySelector('textarea') || input;
         if (actualInputEl instanceof HTMLElement) {
             actualInputEl.id = fieldId;
-            this.applyClassValue(actualInputEl, widgetClassSlots.control);
+            if (componentType === 'RadioGroup' || componentType === 'CheckboxGroup') {
+                input.querySelectorAll('input').forEach(el => this.applyClassValue(el, widgetClassSlots.control));
+            } else {
+                this.applyClassValue(actualInputEl, widgetClassSlots.control);
+            }
         }
 
         const errorDisplay = document.createElement('div');

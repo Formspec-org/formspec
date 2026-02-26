@@ -1876,6 +1876,7 @@ these properties.
 | `pageMode` | string | `"single"`, `"wizard"`, `"tabs"` | `"single"` | Suggests how top-level groups are paginated. `"wizard"`: sequential steps with navigation controls. `"tabs"`: tabbed sections. `"single"`: all items on one page. Processors that do not support the declared mode SHOULD fall back to `"single"`. |
 | `labelPosition` | string | `"top"`, `"start"`, `"hidden"` | `"top"` | Default label placement for all Fields. `"top"`: label above input. `"start"`: label to the leading side (left in LTR, right in RTL). `"hidden"`: label suppressed visually but MUST remain in accessible markup. |
 | `density` | string | `"compact"`, `"comfortable"`, `"spacious"` | `"comfortable"` | Spacing density hint. |
+| `defaultCurrency` | string | ISO 4217 (e.g. `"USD"`) | (none) | Default currency code applied to all `money` fields that do not declare their own `currency` property. When set, MoneyInput widgets MUST pre-fill the currency to this value and lock it. FEL `money()` calls that omit the currency argument MAY inherit this default. |
 
 Example:
 
@@ -1975,6 +1976,7 @@ Field-specific properties:
 | Property | Type | Cardinality | Description |
 |---|---|---|---|
 | `dataType` | string | **1..1** (REQUIRED) | The value type of this Field. MUST be one of the core data types defined below. |
+| `currency` | string | **0..1** (OPTIONAL) | ISO 4217 currency code. Applicable only when `dataType` is `"money"`. Overrides `formPresentation.defaultCurrency` for this field specifically. When neither `currency` nor `defaultCurrency` is set, the currency is captured directly from user input. |
 | `precision` | integer | **0..1** (OPTIONAL) | Number of decimal places. Applicable only when `dataType` is `"decimal"`. Implementations SHOULD round or constrain input to this precision. |
 | `prefix` | string | **0..1** (OPTIONAL) | Display prefix rendered before the input (e.g., `"$"`). This is a presentation hint only; the prefix MUST NOT appear in the stored data value. |
 | `suffix` | string | **0..1** (OPTIONAL) | Display suffix rendered after the input (e.g., `"%"`). This is a presentation hint only; the suffix MUST NOT appear in the stored data value. |

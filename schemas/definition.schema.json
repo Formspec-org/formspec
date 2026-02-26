@@ -217,6 +217,16 @@
           ],
           "default": "comfortable",
           "description": "Spacing density hint."
+        },
+        "defaultCurrency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Default ISO 4217 currency code applied to all money fields that do not declare their own currency. When set, the currency input on MoneyInput widgets is pre-filled and locked to this value.",
+          "examples": ["USD", "EUR", "GBP"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Prevents authors from repeating the currency code in every money() FEL expression and every MoneyInput component."
+          }
         }
       }
     }
@@ -353,6 +363,7 @@
               "extensions": true,
               "dataType": {
                 "type": "string",
+                "description": "The semantic data type of the field. Most types map to scalar JSON values. The 'money' type stores a {\"amount\": string, \"currency\": string} object (e.g. {\"amount\": \"50000.00\", \"currency\": \"USD\"}); use the money() FEL function to produce money values.",
                 "enum": [
                   "string",
                   "text",
@@ -368,6 +379,12 @@
                   "multiChoice",
                   "money"
                 ]
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$",
+                "description": "ISO 4217 currency code for this money field. Overrides formPresentation.defaultCurrency. Only meaningful when dataType is 'money'.",
+                "examples": ["USD", "EUR"]
               },
               "precision": {
                 "type": "integer",

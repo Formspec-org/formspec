@@ -39,7 +39,7 @@ export const StackPlugin: ComponentPlugin = {
         if (comp.direction === 'horizontal') el.classList.add('formspec-stack--horizontal');
         if (comp.align) el.dataset.align = comp.align;
         if (comp.wrap) el.classList.add('formspec-stack--wrap');
-        if (comp.gap) el.style.gap = String(comp.gap);
+        if (comp.gap) el.style.gap = String(ctx.resolveToken(comp.gap));
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
@@ -59,7 +59,7 @@ export const GridPlugin: ComponentPlugin = {
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-grid';
         if (comp.columns) el.dataset.columns = String(comp.columns);
-        if (comp.gap) el.style.gap = String(comp.gap);
+        if (comp.gap) el.style.gap = String(ctx.resolveToken(comp.gap));
         if (comp.rowGap) el.style.rowGap = String(comp.rowGap);
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);
@@ -146,7 +146,7 @@ export const ColumnsPlugin: ComponentPlugin = {
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-columns';
         if (comp.columnCount) el.dataset.columns = String(comp.columnCount);
-        if (comp.gap) el.style.gap = String(comp.gap);
+        if (comp.gap) el.style.gap = String(ctx.resolveToken(comp.gap));
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
