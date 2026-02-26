@@ -276,7 +276,7 @@ test.describe('Components: Accessibility, Responsive Overrides, and Custom Compo
         });
 
         // At 1200px width, desktop breakpoint -> should use base columns=4
-        const grid = page.locator('.formspec-grid');
+        const grid = page.locator('.formspec-grid').first();
         let colCount = await grid.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length);
         expect(colCount).toBe(4);
 

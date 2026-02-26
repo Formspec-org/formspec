@@ -92,7 +92,7 @@ test.describe('Integration: Grant App Conformance', () => {
       (r: any) => r.path === 'applicantInfo.ein' && r.severity === 'error'
     );
     expect(einError).toBeDefined();
-    expect(einError.kind).toBeDefined();
+    expect(einError.constraintKind).toBeDefined();
   });
 
   test('should report endDate-before-startDate as a shape-level error', async ({ page }) => {

@@ -49,7 +49,9 @@ export class FelInterpreter extends BaseVisitor {
     sum: (arr: any[]) => {
         if (!Array.isArray(arr)) return 0;
         return arr.reduce((a, b) => {
-            const val = typeof b === 'string' ? parseFloat(b) : b;
+            // Extract numeric amount from money objects so sum works on money arrays
+            const raw = (b !== null && typeof b === 'object' && typeof b.amount === 'number') ? b.amount : b;
+            const val = typeof raw === 'string' ? parseFloat(raw) : raw;
             return a + (Number.isFinite(val) ? val : 0);
         }, 0);
     },
@@ -384,7 +386,7 @@ export class FelInterpreter extends BaseVisitor {
 
   pathTail(ctx: any) {
     if (ctx.Identifier) return ctx.Identifier[0].image;
-    if (ctx.NumberLiteral) return parseInt(ctx.NumberLiteral[0].image);
+    if (ctx.NumberLiteral) return `[${parseInt(ctx.NumberLiteral[0].image)}]`;
     return '*';
   }
 
@@ -412,13 +414,18 @@ export class FelInterpreter extends BaseVisitor {
     if (ctx.DateTimeLiteral) return ctx.DateTimeLiteral[0].image.substring(1);
   }
 
+  private appendPathTail(name: string, tailVal: string): string {
+    // Bracket indices like [0] are appended without a dot separator
+    if (tailVal.startsWith('[')) return name + tailVal;
+    return name ? `${name}.${tailVal}` : tailVal;
+  }
+
   fieldRef(ctx: any) {
     if (ctx.Dollar) {
         let name = ctx.Identifier ? ctx.Identifier[0].image : '';
         if (ctx.pathTail) {
             for (const tail of ctx.pathTail) {
-                const tailVal = this.visit(tail);
-                name += (name ? '.' : '') + tailVal;
+                name = this.appendPathTail(name, this.visit(tail));
             }
         }
 
@@ -438,8 +445,7 @@ export class FelInterpreter extends BaseVisitor {
         let name = ctx.Identifier[0].image;
         if (ctx.pathTail) {
             for (const tail of ctx.pathTail) {
-                const tailVal = this.visit(tail);
-                name += (name ? '.' : '') + tailVal;
+                name = this.appendPathTail(name, this.visit(tail));
             }
         }
         const parentPath = this.getParentPath(this.context.currentItemPath);

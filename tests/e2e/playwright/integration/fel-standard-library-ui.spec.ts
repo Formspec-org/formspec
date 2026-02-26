@@ -69,7 +69,7 @@ test.describe('FEL Standard Library: Numeric Functions', () => {
     // Set up a line item so grandTotal > 0
     await addRepeatInstance(page, 'budget.lineItems');
     await engineSetValue(page, 'budget.lineItems[0].quantity', 1);
-    await engineSetValue(page, 'budget.lineItems[0].unitCost', { amount: 1000, currency: 'USD' });
+    await engineSetValue(page, 'budget.lineItems[0].unitCost', 1000);
     // Request less than grand total → deviation = grandTotal - requested
     await engineSetValue(page, 'budget.requestedAmount', { amount: 800, currency: 'USD' });
     await page.waitForTimeout(100);
@@ -133,11 +133,11 @@ test.describe('FEL Standard Library: Aggregate Functions', () => {
   test('sum() (money) — @totalDirect aggregates line item subtotals', async ({ page }) => {
     await addRepeatInstance(page, 'budget.lineItems');
     await engineSetValue(page, 'budget.lineItems[0].quantity', 2);
-    await engineSetValue(page, 'budget.lineItems[0].unitCost', { amount: 500, currency: 'USD' });
+    await engineSetValue(page, 'budget.lineItems[0].unitCost', 500);
 
     await addRepeatInstance(page, 'budget.lineItems');
     await engineSetValue(page, 'budget.lineItems[1].quantity', 3);
-    await engineSetValue(page, 'budget.lineItems[1].unitCost', { amount: 200, currency: 'USD' });
+    await engineSetValue(page, 'budget.lineItems[1].unitCost', 200);
     await page.waitForTimeout(100);
 
     const total = await engineVariable(page, 'totalDirect');
@@ -151,11 +151,11 @@ test.describe('FEL Standard Library: Arithmetic Operators', () => {
   test('multiply-then-divide precedence — subtotal = quantity × unitCost', async ({ page }) => {
     await addRepeatInstance(page, 'budget.lineItems');
     await engineSetValue(page, 'budget.lineItems[0].quantity', 4);
-    await engineSetValue(page, 'budget.lineItems[0].unitCost', { amount: 250, currency: 'USD' });
+    await engineSetValue(page, 'budget.lineItems[0].unitCost', 250);
     await page.waitForTimeout(100);
 
     const subtotal = await engineValue(page, 'budget.lineItems[0].subtotal');
-    expect(subtotal).toMatchObject({ amount: 1000, currency: 'USD' });
+    expect(subtotal).toBe(1000);
   });
 
   test('add-then-multiply — @grandTotal = totalDirect + indirectCosts', async ({ page }) => {
@@ -163,7 +163,7 @@ test.describe('FEL Standard Library: Arithmetic Operators', () => {
     await engineSetValue(page, 'projectNarrative.indirectRate', 10);
     await addRepeatInstance(page, 'budget.lineItems');
     await engineSetValue(page, 'budget.lineItems[0].quantity', 1);
-    await engineSetValue(page, 'budget.lineItems[0].unitCost', { amount: 1000, currency: 'USD' });
+    await engineSetValue(page, 'budget.lineItems[0].unitCost', 1000);
     await page.waitForTimeout(100);
 
     const indirect = await engineVariable(page, 'indirectCosts');

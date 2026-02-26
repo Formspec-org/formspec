@@ -373,7 +373,7 @@ As additional example applications are added (e.g., a tax filing form, an insura
 This ADR is considered implemented when:
 
 - [x] T-01 through T-09 are complete
-- [ ] `npx playwright test` passes with no failures
+- [x] `npx playwright test` passes with no failures
 - [x] All `integration/` and `smoke/` spec files use `mountGrantApplication` or are annotated with an ADR-0023 exception comment
 - [x] All `components/` spec files either use `mountGrantApplication` or are annotated with an ADR-0023 exception comment
 - [x] `tests/e2e/fixtures/` contains only: `kitchen-sink-holistic/` (all transitional fixtures deleted)

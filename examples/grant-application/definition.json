@@ -111,8 +111,8 @@
         { "type": "field",   "key": "contactEmail",  "label": "Contact Email",                        "dataType": "string", "semanticType": "email" },
         { "type": "field",   "key": "contactPhone",  "label": "Contact Phone",                        "dataType": "string", "semanticType": "phone", "initialValue": "202-555-0100" },
         { "type": "display", "key": "nonprofitPhoneHint", "label": "Include area code for nonprofit reporting requirements (e.g. 202-555-0100)." },
-        { "type": "display", "key": "orgNameUpper",        "label": "Org Name (uppercase)" },
-        { "type": "display", "key": "contactPhoneFallback", "label": "Contact Phone (or N/A)" }
+        { "type": "field", "key": "orgNameUpper", "dataType": "string", "label": "Org Name (uppercase)" },
+        { "type": "field", "key": "contactPhoneFallback", "dataType": "string", "label": "Contact Phone (or N/A)" }
       ]
     },
     {
@@ -141,8 +141,8 @@
             { "value": "equity",         "label": "Equity & Civil Rights" }
           ]
         },
-        { "type": "display", "key": "indirectRateRounded",  "label": "Indirect Rate (rounded)" },
-        { "type": "display", "key": "projectYear",           "label": "Project Start Year" },
+        { "type": "field", "key": "indirectRateRounded", "dataType": "integer", "label": "Indirect Rate (rounded)" },
+        { "type": "field", "key": "projectYear", "dataType": "integer", "label": "Project Start Year" },
         { "type": "field",   "key": "projectedEndDate",      "label": "Projected End Date", "dataType": "date" }
       ]
     },
@@ -170,7 +170,7 @@
         { "type": "field",   "key": "requestedAmount",    "label": "Total Requested Amount",               "dataType": "money",   "hint": "Must match the calculated grand total." },
         { "type": "field",   "key": "usesSubcontractors", "label": "Does this project use subcontractors?", "dataType": "boolean" },
         { "type": "field",   "key": "budgetDeviation",    "label": "Budget Deviation",                      "dataType": "money" },
-        { "type": "display", "key": "hasLineItems",        "label": "Has line items" }
+        { "type": "field", "key": "hasLineItems", "dataType": "string", "label": "Has line items" }
       ]
     },
     {
@@ -332,7 +332,7 @@
     },
     {
       "path": "budget.hasLineItems",
-      "calculate": "string(!isNull($budget.lineItems[0].category))"
+      "calculate": "string(not isNull($budget.lineItems[0].category))"
     },
     { "path": "applicantInfo.orgName",         "required": "true" },
     { "path": "applicantInfo.ein",             "required": "true" },
