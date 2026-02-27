@@ -242,7 +242,7 @@ export interface EngineReplayResult {
  * - **Screener evaluation** for conditional form routing.
  */
 export class FormEngine {
-    private definition: FormspecDefinition;
+    readonly definition: FormspecDefinition;
 
     /** Reactive signals holding current field values, keyed by full dotted path (e.g. `"group[0].field"`). */
     public signals: Record<string, any> = {};
