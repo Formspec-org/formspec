@@ -7,7 +7,7 @@ import formspec.fel as fel
 from formspec.fel import (
     parse, evaluate, extract_dependencies,
     FelNull, FelNumber, FelString, FelTrue, FelFalse,
-    is_null, EvalResult, DependencySet,
+    is_null, to_python, EvalResult, DependencySet,
 )
 from formspec.fel.errors import FelSyntaxError, FelDefinitionError
 from formspec.fel.extensions import register_extension
@@ -370,3 +370,30 @@ class TestDependencyEdgeCases:
         d = extract_dependencies('{a: $x, b: $y}.a')
         assert 'x' in d.fields
         assert 'y' in d.fields
+
+
+class TestEvaluate:
+
+    def test_evaluate_variable_ref(self):
+        """@name should resolve to the passed variable value, not FelNull."""
+        from formspec.fel.types import FelMoney, fel_decimal
+        variables = {'grandTotal': FelMoney(fel_decimal('50000'), 'USD')}
+        result = evaluate('@grandTotal', data={}, variables=variables)
+        assert to_python(result.value) == {'amount': '50000', 'currency': 'USD'}
+
+    def test_evaluate_variable_ref_unknown_still_null(self):
+        """Unknown @name with no variables dict stays FelNull."""
+        result = evaluate('@unknownVar', data={})
+        assert is_null(result.value)
+
+    def test_evaluate_variable_ref_in_shape_constraint(self):
+        """Shape-style constraint referencing a pre-computed variable."""
+        from formspec.fel.types import FelMoney, fel_decimal, FelTrue
+        variables = {'grandTotal': FelMoney(fel_decimal('50000'), 'USD')}
+        data = {'budget': {'requestedAmount': {'amount': '50000', 'currency': 'USD'}}}
+        result = evaluate(
+            'abs(moneyAmount($budget.requestedAmount) - moneyAmount(@grandTotal)) < 1',
+            data=data,
+            variables=variables,
+        )
+        assert result.value is FelTrue

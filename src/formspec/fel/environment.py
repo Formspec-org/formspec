@@ -1,4 +1,11 @@
-"""FEL evaluation environment — field resolution, scoping, repeat context."""
+"""FEL evaluation environment -- the data layer beneath the evaluator.
+
+Resolves ``$field`` paths against primary instance data, manages a push/pop
+scope stack for ``let``-bindings, provides ``RepeatContext`` for
+``@current``/``@index``/``@count``, serves ``MipState`` lookups for
+``valid()``/``relevant()``/``readonly()``/``required()``, and exposes named
+secondary instances via ``@instance('name')``.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +17,7 @@ from .types import FelNull, FelValue, FelObject, from_python, is_null
 
 @dataclass
 class RepeatContext:
-    """State for @current, @index, @count within a repeat."""
+    """Per-iteration state for repeat groups: backs @current, @index (1-based), @count, parent(), and prev()/next() navigation."""
     current: FelValue  # The current row object
     index: int  # 1-based
     count: int
@@ -20,7 +27,7 @@ class RepeatContext:
 
 @dataclass
 class MipState:
-    """Model Item Property state for a field."""
+    """XForms-style Model Item Properties for a single field, queried by valid()/relevant()/etc. special forms."""
     valid: bool = True
     relevant: bool = True
     readonly: bool = False
@@ -28,41 +35,52 @@ class MipState:
 
 
 class Environment:
-    """Evaluation context for FEL expressions."""
+    """Evaluation context providing field resolution, lexical scoping, repeat iteration, and MIP state.
+
+    Primary data dict backs ``$field`` refs; scope stack backs ``let``-bindings;
+    ``RepeatContext`` backs ``@current``/``@index``/``@count``; named instances
+    back ``@instance('name')``.
+    """
 
     def __init__(
         self,
         data: dict | None = None,
         instances: dict[str, dict] | None = None,
         mip_states: dict[str, MipState] | None = None,
+        variables: dict[str, 'FelValue'] | None = None,
     ):
+        """Set up with primary instance data, optional named secondary instances, optional per-field MIP states, and optional pre-computed named variables."""
         self.data = data or {}
         self.instances = instances or {}
         self.mip_states = mip_states or {}
+        self.variables = variables or {}
         self._scope_stack: list[dict[str, FelValue]] = []
         self.repeat_context: RepeatContext | None = None
 
     def push_scope(self, bindings: dict[str, FelValue]) -> None:
+        """Push a lexical scope frame. Key '' rebinds bare ``$`` (used by countWhere predicates)."""
         self._scope_stack.append(bindings)
 
     def pop_scope(self) -> None:
+        """Pop the most recent lexical scope."""
         self._scope_stack.pop()
 
     def lookup_let_binding(self, name: str) -> FelValue | None:
-        """Look up a let-bound variable. Returns None if not found."""
+        """Search scope stack innermost-first for a let-bound variable. Returns None if unbound."""
         for scope in reversed(self._scope_stack):
             if name in scope:
                 return scope[name]
         return None
 
     def resolve_field(self, path: list[str]) -> FelValue:
-        """Resolve a dotted field path against instance data.
+        """Resolve a ``$field`` path through the resolution chain.
 
-        path is a list of string segments, e.g. ['address', 'city'].
-        Returns FelNull for missing paths.
+        Empty path (bare ``$``): scope stack -> repeat current -> full data dict.
+        Non-empty: first segment checked against let-bindings, then walks primary
+        instance data. Returns FelNull for missing paths.
         """
         if not path:
-            # Bare $ — check scope stack first (countWhere binds $ per-element)
+            # Bare $ -- check scope stack first (countWhere binds $ per-element)
             dollar_val = self.lookup_let_binding('')
             if dollar_val is not None:
                 return dollar_val
@@ -80,7 +98,12 @@ class Environment:
         return self._resolve_path(self.data, path)
 
     def resolve_context(self, name: str, arg: str | None, tail: list[str]) -> FelValue:
-        """Resolve a context reference (@current, @index, @instance(...), etc)."""
+        """Resolve ``@name(arg).tail`` context references.
+
+        Supported: @current/.tail (repeat row), @index/@count (repeat metadata),
+        @instance('name')/.tail (secondary data), @source/@target (mapping DSL).
+        Unknown names -> FelNull.
+        """
         if name == 'current':
             if self.repeat_context is None:
                 return FelNull
@@ -103,10 +126,12 @@ class Environment:
         if name in ('source', 'target'):
             # Mapping DSL context references
             return self._resolve_path(self.data, [name] + tail)
+        if name in self.variables:
+            return self._resolve_tail(self.variables[name], tail)
         return FelNull
 
     def _resolve_path(self, obj: Any, path: list[str]) -> FelValue:
-        """Walk a dict/list by string keys."""
+        """Walk nested dicts by string keys, converting the leaf to FelValue via from_python(). Missing key at any level -> FelNull."""
         current = obj
         for segment in path:
             if isinstance(current, dict):
@@ -118,7 +143,7 @@ class Environment:
         return from_python(current)
 
     def _resolve_tail(self, val: FelValue, tail: list[str]) -> FelValue:
-        """Resolve remaining path segments on a FelValue."""
+        """Walk remaining dot segments on a FelObject chain. Non-object or missing key -> FelNull."""
         if not tail:
             return val
         if isinstance(val, FelObject):
