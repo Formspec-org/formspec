@@ -397,3 +397,11 @@ class TestEvaluate:
             variables=variables,
         )
         assert result.value is FelTrue
+
+    def test_evaluate_variable_ref_with_tail(self):
+        """@varName.field should traverse tail on FelObject variable values."""
+        from formspec.fel.types import FelObject, FelString
+        variables = {'orgProfile': FelObject({'ein': FelString('12-3456789')})}
+        result = evaluate('@orgProfile.ein', data={}, variables=variables)
+        from formspec.fel.types import FelString as FS
+        assert result.value == FS('12-3456789')

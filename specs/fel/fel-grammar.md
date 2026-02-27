@@ -349,6 +349,7 @@ ContextRef     ← '@' Identifier ('(' _ StringLiteral _ ')')? ('.' Identifier)*
 | `@current` | Explicit reference to the current repeat instance. | `@current.amount` |
 | `@index` | 1-based position of current repeat instance. | `@index = 1` |
 | `@count` | Total instances in current repeat collection. | `@count >= 1` |
+| `@name`             | Value of named variable declared in `variables` |
 | `@instance('n')` | Secondary data-source instance. | `@instance('prior').income` |
 | `@source` | Source binding in mapping DSL. | `@source.fieldA` |
 | `@target` | Target binding in mapping DSL. | `@target.fieldB` |
