@@ -2580,17 +2580,29 @@ borrowed from SHACL's logical constraint components:
 
 | Operator | Type | Semantics |
 |---|---|---|
-| `and` | array of string (Shape `id` references) | The Shape passes if and only if **all** referenced Shapes pass. |
-| `or` | array of string (Shape `id` references) | The Shape passes if and only if **at least one** referenced Shape passes. |
-| `not` | string (Shape `id` reference) | The Shape passes if and only if the referenced Shape **does NOT** pass. |
-| `xone` | array of string (Shape `id` references) | The Shape passes if and only if **exactly one** referenced Shape passes. |
+| `and` | array of string | The Shape passes if and only if **all** elements pass. |
+| `or` | array of string | The Shape passes if and only if **at least one** element passes. |
+| `not` | string | The Shape passes if and only if the element **does NOT** pass. |
+| `xone` | array of string | The Shape passes if and only if **exactly one** element passes. |
+
+Each element in a composition operator (and the single string value of `not`)
+may be either:
+
+- A shape `id` string referencing another defined shape in the definition's
+  `shapes` array — the referenced shape is evaluated and its pass/fail result
+  is used; or
+- An inline FEL boolean expression string — the expression is evaluated
+  directly and its boolean result is used.
+
+A shape `id` is resolved by looking it up in the definition's `shapes` array;
+if not found, the element is treated as an inline FEL expression.
 
 When a composition operator is present, the `constraint` property is OPTIONAL.
 If both `constraint` and a composition operator are present, they are combined
 with implicit AND: the Shape passes only if the `constraint` evaluates to
 `true` AND the composition operator's condition is met.
 
-Example — disjunctive composition:
+Example — disjunctive composition using shape `id` references:
 
 ```json
 {
@@ -2601,6 +2613,22 @@ Example — disjunctive composition:
   "or": ["has_email", "has_phone"]
 }
 ```
+
+Example — disjunctive composition using inline FEL expressions:
+
+```json
+{
+  "id": "contact_info_complete",
+  "target": "#",
+  "severity": "error",
+  "message": "Provide either email or phone number",
+  "or": ["present($email)", "present($phone)"]
+}
+```
+
+Inline FEL is simpler and more ergonomic when the condition does not need to
+be reused across multiple shapes. Shape `id` references remain useful for
+sharing named constraints and for nested composition.
 
 Composition MAY be nested: a referenced Shape MAY itself use composition
 operators. Implementations MUST detect circular references among Shapes and

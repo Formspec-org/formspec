@@ -21,13 +21,13 @@ class TestEvaluateVariables:
         defn = {
             'variables': [
                 {'name': 'indirectCosts', 'expression': 'moneyAmount(@totalDirect) * 0.1'},
-                {'name': 'totalDirect',   'expression': 'sum($items[*].amount)'},
+                {'name': 'totalDirect',   'expression': 'money(sum($items[*].amount), "USD")'},
             ]
         }
         ev = DefinitionEvaluator(defn)
         data = {'items': [{'amount': 1000}]}
         variables = ev.evaluate_variables(data)
-        assert to_python(variables['totalDirect']) == pytest.approx(1000)
+        assert to_python(variables['totalDirect']) == {'amount': '1000', 'currency': 'USD'}
         assert to_python(variables['indirectCosts']) == pytest.approx(100)
 
     def test_no_variables(self):

@@ -11,29 +11,6 @@ Usage::
 from __future__ import annotations
 
 from .fel import evaluate, extract_dependencies, FelTrue, FelValue
-from .fel.types import FelMoney, FelNumber, FelNull
-from .fel.functions import FuncDef
-
-
-def _moneyAmount_coerce(m: FelValue) -> FelValue:
-    """Extended moneyAmount: returns numeric amount from FelMoney or passes FelNumber through."""
-    if isinstance(m, FelMoney):
-        return FelNumber(m.amount)
-    if isinstance(m, FelNumber):
-        return m
-    return FelNull
-
-
-# Extension overrides provided to every evaluate() call in this module.
-_EXTENSIONS: dict[str, FuncDef] = {
-    'moneyAmount': FuncDef(
-        name='moneyAmount',
-        impl=_moneyAmount_coerce,
-        min_args=1,
-        max_args=1,
-        propagate_null=True,
-    ),
-}
 
 
 class DefinitionEvaluator:
@@ -69,8 +46,8 @@ class DefinitionEvaluator:
         return resolved
 
     def _evaluate(self, expr: str, data: dict, variables: dict[str, FelValue]):
-        """Evaluate a FEL expression with this evaluator's extensions."""
-        return evaluate(expr, data, variables=variables, extensions=_EXTENSIONS)
+        """Evaluate a FEL expression."""
+        return evaluate(expr, data, variables=variables)
 
     def evaluate_variables(self, data: dict) -> dict[str, FelValue]:
         """Evaluate all definition variables in dependency order."""
