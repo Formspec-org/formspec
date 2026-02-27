@@ -1,8 +1,6 @@
 import { FormspecDefinition, FormspecItem, FormspecBind, FormspecShape } from './index';
 
-/**
- * Provenance entry for an assembled $ref inclusion.
- */
+/** Provenance record for a single `$ref` inclusion resolved during definition assembly, tracking origin URL, version, prefix, and fragment. */
 export interface AssemblyProvenance {
     url: string;
     version: string;
@@ -11,12 +9,13 @@ export interface AssemblyProvenance {
 }
 
 /**
- * A resolver that maps a (url, version?) pair to a FormspecDefinition.
- * Implementations may resolve from an in-memory registry, local filesystem,
- * or network fetch.
+ * A function that resolves a `(url, version?)` pair to a {@link FormspecDefinition}.
+ * Implementations may resolve from an in-memory registry, local filesystem, or network fetch.
+ * May return synchronously or asynchronously.
  */
 export type DefinitionResolver = (url: string, version?: string) => FormspecDefinition | Promise<FormspecDefinition>;
 
+/** The output of definition assembly: a self-contained definition with all `$ref` inclusions inlined, plus provenance records. */
 export interface AssemblyResult {
     definition: FormspecDefinition;
     assembledFrom: AssemblyProvenance[];
@@ -126,11 +125,13 @@ function prefixShapes(shapes: FormspecShape[], prefix: string, importedKeys: Set
 }
 
 /**
- * Assembles a FormspecDefinition by resolving all $ref inclusions recursively.
- *
- * This produces a self-contained definition with no external references.
- * Assembly should be performed at publish time (when a definition transitions
- * from "draft" to "active").
+ * Assembles a {@link FormspecDefinition} by recursively resolving all `$ref` inclusions.
+ * Produces a self-contained definition with no external references, suitable for runtime use.
+ * Assembly is intended to run at publish time (when a definition transitions from "draft" to "active").
+ * Detects circular references and key collisions, and rewrites bind/shape paths with keyPrefix when specified.
+ * @param definition - The root definition containing `$ref` group items to resolve.
+ * @param resolver - A function that fetches referenced definitions by URL and optional version.
+ * @returns The assembled definition and provenance records for all resolved references.
  */
 export async function assembleDefinition(
     definition: FormspecDefinition,
@@ -153,7 +154,11 @@ export async function assembleDefinition(
 }
 
 /**
- * Synchronous version for in-memory resolution.
+ * Synchronous variant of {@link assembleDefinition} for use when all referenced definitions
+ * are available in-memory (e.g. during testing or pre-cached scenarios).
+ * @param definition - The root definition containing `$ref` group items to resolve.
+ * @param resolver - A synchronous function that returns referenced definitions.
+ * @returns The assembled definition and provenance records.
  */
 export function assembleDefinitionSync(
     definition: FormspecDefinition,
@@ -175,6 +180,7 @@ export function assembleDefinitionSync(
     return { definition: assembled, assembledFrom };
 }
 
+/** Recursively walks the item tree, resolving any group items with `$ref` via the async resolver. */
 async function resolveItems(
     items: FormspecItem[],
     parentPath: string,
@@ -202,6 +208,7 @@ async function resolveItems(
     return result;
 }
 
+/** Synchronous variant of resolveItems for in-memory resolvers. */
 function resolveItemsSync(
     items: FormspecItem[],
     parentPath: string,
@@ -229,6 +236,7 @@ function resolveItemsSync(
     return result;
 }
 
+/** Resolves a single `$ref` group item: fetches the referenced definition, assembles it into the host, and recurses. */
 async function resolveRef(
     groupItem: FormspecItem,
     parentPath: string,
@@ -259,6 +267,7 @@ async function resolveRef(
     return result;
 }
 
+/** Synchronous variant of resolveRef for in-memory resolvers. */
 function resolveRefSync(
     groupItem: FormspecItem,
     parentPath: string,
@@ -289,6 +298,10 @@ function resolveRefSync(
     return result;
 }
 
+/**
+ * Core assembly logic: imports items from a referenced definition into a host group,
+ * applying keyPrefix, rewriting bind/shape paths, detecting key collisions, and recording provenance.
+ */
 function performAssembly(
     groupItem: FormspecItem,
     parentPath: string,
@@ -389,6 +402,7 @@ function performAssembly(
     return assembled;
 }
 
+/** Recursively collects all item keys (including nested children) into a Set for path rewriting. */
 function collectAllKeys(item: FormspecItem, keys: Set<string>) {
     keys.add(item.key);
     if (item.children) {

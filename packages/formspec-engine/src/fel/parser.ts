@@ -1,12 +1,45 @@
+/**
+ * @module fel/parser
+ *
+ * Chevrotain CstParser for the Formspec Expression Language (FEL).
+ *
+ * This is the second stage of the FEL pipeline (Lexer -> Parser -> Interpreter).
+ * It consumes the token vector produced by {@link FelLexer} and builds a
+ * Concrete Syntax Tree (CST) that the {@link FelInterpreter} (stage 3) or
+ * {@link FelDependencyVisitor} can walk.
+ *
+ * The grammar defines ~25 rules implementing standard operator precedence from
+ * loosest to tightest: let -> if/then/else -> ternary -> logicalOr -> logicalAnd
+ * -> equality -> comparison -> membership -> nullCoalesce -> addition ->
+ * multiplication -> unary -> postfix -> atom.
+ */
 import { CstParser } from 'chevrotain';
 import * as t from './lexer';
 
+/**
+ * Chevrotain CstParser that produces a Concrete Syntax Tree from FEL token streams.
+ *
+ * Instantiate once and reuse — Chevrotain parsers are stateful but re-entrant after
+ * calling `this.input = tokens`. Grammar rules are defined as class properties
+ * using `this.RULE()` so Chevrotain can perform static analysis at construction time.
+ *
+ * All grammar rules are private except {@link expression}, which is the top-level
+ * entry point consumed by the interpreter and dependency visitor.
+ */
 export class FelParser extends CstParser {
   constructor() {
     super(t.allTokens);
     this.performSelfAnalysis();
   }
 
+  /**
+   * Top-level grammar rule and the only public entry point into the parser.
+   *
+   * Every FEL expression string is parsed starting from this rule. It delegates
+   * to `letExpr`, which cascades through the full precedence hierarchy.
+   * The resulting CST node is passed to {@link FelInterpreter.evaluate} or
+   * {@link FelDependencyVisitor.getDependencies}.
+   */
   public expression = this.RULE('expression', () => {
     this.SUBRULE(this.letExpr);
   });
@@ -25,6 +58,16 @@ export class FelParser extends CstParser {
     ]);
   });
 
+  /**
+   * Parses `if condition then thenExpr else elseExpr` with a lookahead GATE.
+   *
+   * Because `if` is also categorized as an {@link Identifier} (allowing `if(...)`
+   * function-call syntax), the parser cannot decide between the if-then-else form
+   * and a bare function call using standard LL(k) lookahead. The GATE scans forward
+   * (up to 100 tokens) looking for a `then` keyword at the top paren-nesting level.
+   * If found, this is the statement form; otherwise, it falls through to ternary
+   * and eventually to a function call via atom.
+   */
   private ifExpr = this.RULE('ifExpr', () => {
     this.OR([
       {
@@ -296,4 +339,12 @@ export class FelParser extends CstParser {
   });
 }
 
+/**
+ * Pre-instantiated FEL parser singleton.
+ *
+ * Shared across the engine to avoid the cost of repeated Chevrotain self-analysis.
+ * Usage: set `parser.input = FelLexer.tokenize(expr).tokens`, then call
+ * `parser.expression()` to obtain a CST node. The CST is then passed to the
+ * {@link interpreter} or {@link dependencyVisitor} for evaluation or analysis.
+ */
 export const parser = new FelParser();

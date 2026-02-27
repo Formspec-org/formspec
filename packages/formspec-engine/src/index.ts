@@ -9,6 +9,7 @@ export type { AssemblyProvenance, AssemblyResult, DefinitionResolver } from './a
 export { RuntimeMappingEngine } from './runtime-mapping';
 export type { MappingDirection, RuntimeMappingResult } from './runtime-mapping';
 
+/** A single item in a Formspec definition tree: a field (data-bearing), group (container), or display (read-only content). */
 export interface FormspecItem {
     key: string;
     type: "field" | "group" | "display";
@@ -36,6 +37,7 @@ export interface FormspecItem {
     [key: string]: any;
 }
 
+/** A bind configuration that attaches FEL-driven logic (relevance, required, calculate, readonly, constraint) to a field path. */
 export interface FormspecBind {
     path: string;
     relevant?: string;
@@ -53,16 +55,22 @@ export interface FormspecBind {
     remoteOptions?: string;
 }
 
+/** A selectable option for choice/multiChoice fields, consisting of a machine-readable value and a display label. */
 export interface FormspecOption {
     value: string;
     label: string;
 }
 
+/** Loading/error state for a field whose options are fetched from a remote URL via the `remoteOptions` bind. */
 export interface RemoteOptionsState {
     loading: boolean;
     error: string | null;
 }
 
+/**
+ * A cross-field validation rule evaluated against one or more target paths.
+ * Shapes support composition operators (and/or/not/xone) and timing modes (continuous, submit, demand).
+ */
 export interface FormspecShape {
     id: string;
     target: string;
@@ -79,12 +87,14 @@ export interface FormspecShape {
     context?: Record<string, string>;
 }
 
+/** A named computed variable defined by a FEL expression, scoped to a specific item or the entire definition ('#'). */
 export interface FormspecVariable {
     name: string;
     expression: string;
     scope?: string; // item key or "#" for definition-wide (default)
 }
 
+/** A named data instance that provides external data for pre-population and FEL `instance()` lookups. */
 export interface FormspecInstance {
     description?: string;
     source?: string;
@@ -94,6 +104,11 @@ export interface FormspecInstance {
     readonly?: boolean;
 }
 
+/**
+ * The top-level Formspec definition document describing a complete form.
+ * Contains the item tree, bind constraints, shape rules, variables, instances, option sets,
+ * and optional screener/migration/presentation configuration.
+ */
 export interface FormspecDefinition {
     $formspec: string;
     url: string;
@@ -112,6 +127,7 @@ export interface FormspecDefinition {
     [key: string]: any;
 }
 
+/** A single validation finding (error, warning, or info) targeting a specific field path. */
 export interface ValidationResult {
     severity: "error" | "warning" | "info";
     path: string;
@@ -124,6 +140,10 @@ export interface ValidationResult {
     context?: Record<string, any>;
 }
 
+/**
+ * Aggregated validation output for the entire form, including all bind-level and shape-level results.
+ * A report is `valid` when it contains zero errors; warnings and infos do not affect validity.
+ */
 export interface ValidationReport {
     valid: boolean;
     results: ValidationResult[];
@@ -135,8 +155,10 @@ export interface ValidationReport {
     timestamp: string;
 }
 
+/** Accepted input types for the engine's "now" provider: a Date object, an ISO string, or a Unix timestamp. */
 export type EngineNowInput = Date | string | number;
 
+/** Runtime configuration injected into the engine to control time, locale, timezone, and deterministic seeding. */
 export interface FormEngineRuntimeContext {
     now?: (() => EngineNowInput) | EngineNowInput;
     locale?: string;
@@ -144,6 +166,7 @@ export interface FormEngineRuntimeContext {
     seed?: string | number;
 }
 
+/** A complete point-in-time snapshot of engine state for debugging: all values, MIP states, dependencies, and validation. */
 export interface FormEngineDiagnosticsSnapshot {
     definition: {
         url: string;
@@ -170,6 +193,7 @@ export interface FormEngineDiagnosticsSnapshot {
     };
 }
 
+/** A discriminated union of events that can be replayed against a FormEngine instance (setValue, repeat operations, validation, response). */
 export type EngineReplayEvent =
     | { type: 'setValue'; path: string; value: any }
     | { type: 'addRepeatInstance'; path: string }
@@ -178,6 +202,7 @@ export type EngineReplayEvent =
     | { type: 'getValidationReport'; mode?: 'continuous' | 'submit' }
     | { type: 'getResponse'; mode?: 'continuous' | 'submit' };
 
+/** The result of applying a single replay event, including success/failure status and optional output. */
 export interface EngineReplayApplyResult {
     ok: boolean;
     event: EngineReplayEvent;
@@ -185,6 +210,7 @@ export interface EngineReplayApplyResult {
     error?: string;
 }
 
+/** Aggregate result of replaying a sequence of events, with per-event results and any errors encountered. */
 export interface EngineReplayResult {
     applied: number;
     results: EngineReplayApplyResult[];
@@ -195,20 +221,66 @@ export interface EngineReplayResult {
     }>;
 }
 
+/**
+ * Central reactive form state manager for Formspec definitions.
+ *
+ * FormEngine parses a {@link FormspecDefinition} and builds a network of Preact signals
+ * representing field values, relevance (visibility), required/readonly state, validation
+ * results, repeat group counts, option lists, and computed variables. All signals update
+ * automatically when dependencies change.
+ *
+ * Key capabilities:
+ * - **FEL compilation** with caching and dependency tracking for calculated fields, constraints, and shapes.
+ * - **Bind constraint evaluation** (field-level: required, readonly, calculate, constraint, relevance).
+ * - **Shape evaluation** (cross-field rules with composition operators, supporting continuous/submit/demand timing).
+ * - **Repeat group lifecycle** (add/remove instances with automatic signal initialization and cleanup).
+ * - **Response serialization** honoring nonRelevantBehavior settings.
+ * - **Diagnostics snapshots** for debugging.
+ * - **Event replay** for testing and deterministic reproduction.
+ * - **Version migrations** for evolving definitions.
+ * - **Remote options** fetching from bind-configured URLs.
+ * - **Screener evaluation** for conditional form routing.
+ */
 export class FormEngine {
     private definition: FormspecDefinition;
+
+    /** Reactive signals holding current field values, keyed by full dotted path (e.g. `"group[0].field"`). */
     public signals: Record<string, any> = {};
+
+    /** Reactive boolean signals indicating whether each field/group is currently relevant (visible). */
     public relevantSignals: Record<string, Signal<boolean>> = {};
+
+    /** Reactive boolean signals indicating whether each field is currently required. */
     public requiredSignals: Record<string, Signal<boolean>> = {};
+
+    /** Reactive boolean signals indicating whether each field is currently readonly. */
     public readonlySignals: Record<string, Signal<boolean>> = {};
+
+    /** Reactive signals holding the first error message (or null) for each field, derived from validationResults. */
     public errorSignals: Record<string, Signal<string | null>> = {};
+
+    /** Reactive signals holding bind-level validation results for each field path. */
     public validationResults: Record<string, Signal<ValidationResult[]>> = {};
+
+    /** Reactive signals holding shape-level validation results, keyed by shape ID. */
     public shapeResults: Record<string, Signal<ValidationResult[]>> = {};
+
+    /** Reactive signals holding the current instance count for each repeatable group path. */
     public repeats: Record<string, Signal<number>> = {};
+
+    /** Reactive signals holding the resolved option lists for choice/multiChoice fields. */
     public optionSignals: Record<string, Signal<FormspecOption[]>> = {};
+
+    /** Reactive signals holding the loading/error state for fields with remote options. */
     public optionStateSignals: Record<string, Signal<RemoteOptionsState>> = {};
-    public variableSignals: Record<string, Signal<any>> = {};  // keyed by "scope:name"
+
+    /** Reactive signals holding computed variable values, keyed by `"scope:name"` (e.g. `"#:totalDirect"`). */
+    public variableSignals: Record<string, Signal<any>> = {};
+
+    /** Static instance data loaded from the definition's `instances` section, keyed by instance name. */
     public instanceData: Record<string, any> = {};
+
+    /** Dependency graph mapping each field path to the paths it depends on, built during FEL compilation. */
     public dependencies: Record<string, string[]> = {};
     private knownNames: Set<string> = new Set();
     private bindConfigs: Record<string, FormspecBind> = {};
@@ -222,8 +294,18 @@ export class FormEngine {
     } = {
         nowProvider: () => new Date(),
     };
+    /** Monotonically increasing counter that increments whenever repeat instances are added or removed, enabling reactive UI rebuilds. */
     public structureVersion = signal(0);
 
+    /**
+     * Creates a new FormEngine from a Formspec definition.
+     *
+     * Initializes all reactive signals, resolves option sets, loads instance data,
+     * compiles bind expressions, fetches remote options, and wires up shape evaluation.
+     *
+     * @param definition - The complete Formspec definition document.
+     * @param runtimeContext - Optional runtime overrides for time, locale, timezone, and seed.
+     */
     constructor(definition: FormspecDefinition, runtimeContext?: FormEngineRuntimeContext) {
         this.definition = definition;
         if (runtimeContext) {
@@ -273,6 +355,10 @@ export class FormEngine {
         return this.runtimeContext.nowProvider().toISOString();
     }
 
+    /**
+     * Updates the engine's runtime context (now provider, locale, timezone, seed).
+     * Only explicitly provided keys are changed; omitted keys are left as-is.
+     */
     public setRuntimeContext(context: FormEngineRuntimeContext = {}) {
         if (Object.prototype.hasOwnProperty.call(context, 'now')) {
             this.runtimeContext.nowProvider = this.resolveNowProvider(context.now);
@@ -380,6 +466,10 @@ export class FormEngine {
         }
     }
 
+    /**
+     * Returns the current resolved options array for a choice/multiChoice field.
+     * @param path - Full field path (repeat indices are stripped to find the base options).
+     */
     public getOptions(path: string): FormspecOption[] {
         const baseName = path.replace(/\[\d+\]/g, '');
         if (this.optionSignals[baseName]) {
@@ -388,21 +478,25 @@ export class FormEngine {
         return [];
     }
 
+    /** Returns the reactive signal holding the options array for a field, or undefined if no options exist. */
     public getOptionsSignal(path: string): Signal<FormspecOption[]> | undefined {
         const baseName = path.replace(/\[\d+\]/g, '');
         return this.optionSignals[baseName];
     }
 
+    /** Returns the current loading/error state for a field's remote options. */
     public getOptionsState(path: string): RemoteOptionsState {
         const baseName = path.replace(/\[\d+\]/g, '');
         return this.optionStateSignals[baseName]?.value || { loading: false, error: null };
     }
 
+    /** Returns the reactive signal holding the remote options loading/error state, or undefined. */
     public getOptionsStateSignal(path: string): Signal<RemoteOptionsState> | undefined {
         const baseName = path.replace(/\[\d+\]/g, '');
         return this.optionStateSignals[baseName];
     }
 
+    /** Waits for all in-flight remote options fetches to settle (resolve or reject). */
     public async waitForRemoteOptions(): Promise<void> {
         if (this.remoteOptionsTasks.length === 0) return;
         await Promise.allSettled(this.remoteOptionsTasks);
@@ -418,7 +512,10 @@ export class FormEngine {
     }
 
     /**
-     * Get data from a named instance, optionally at a path.
+     * Retrieves data from a named instance, optionally navigating to a nested path.
+     * Used by FEL's `instance()` function and the pre-population system.
+     * @param name - The instance name as declared in the definition's `instances` section.
+     * @param path - Optional dot-separated path into the instance data.
      */
     public getInstanceData(name: string, path?: string): any {
         const data = this.instanceData[name];
@@ -435,9 +532,9 @@ export class FormEngine {
     }
 
     /**
-     * Returns the disabledDisplay mode for a field path.
-     * "hidden" means the field wrapper should be display:none when non-relevant.
-     * "protected" means the field should be visible but grayed out / disabled.
+     * Returns the disabledDisplay mode for a field path from its bind configuration.
+     * - `"hidden"` (default): the field wrapper is display:none when non-relevant.
+     * - `"protected"`: the field remains visible but grayed out / disabled when non-relevant.
      */
     public getDisabledDisplay(path: string): 'hidden' | 'protected' {
         const baseName = path.replace(/\[\d+\]/g, '');
@@ -513,8 +610,11 @@ export class FormEngine {
     }
 
     /**
-     * Resolve a variable by name using lexical scope lookup.
-     * Searches from the given scope path upward to the global scope (#).
+     * Resolves a computed variable by name using lexical scope lookup.
+     * Searches from the given scope path upward through ancestor scopes to the global scope (`#`).
+     * @param name - The variable name (without the `@` prefix used in FEL).
+     * @param scopePath - The dot-separated path of the current evaluation context.
+     * @returns The computed variable value, or `undefined` if not found.
      */
     public getVariableValue(name: string, scopePath: string): any {
         // Try exact scope first, then walk up ancestors, then global
@@ -994,6 +1094,12 @@ export class FormEngine {
         }
     }
 
+    /**
+     * Adds a new repeat instance to a repeatable group, initializing all child signals.
+     * Does not enforce maxRepeat; exceeding the maximum produces a validation error instead.
+     * @param itemName - The full path of the repeatable group.
+     * @returns The zero-based index of the newly created instance, or undefined if the item is not repeatable.
+     */
     public addRepeatInstance(itemName: string) {
         const item = this.findItem(this.definition.items, itemName);
         if (item && item.repeatable) {
@@ -1107,6 +1213,12 @@ export class FormEngine {
         }
     }
 
+    /**
+     * Removes a repeat instance at the given index, shifting subsequent instances down.
+     * Does not enforce minRepeat; going below the minimum produces a validation error instead.
+     * @param itemName - The full path of the repeatable group.
+     * @param index - The zero-based index of the instance to remove.
+     */
     public removeRepeatInstance(itemName: string, index: number) {
         const count = this.repeats[itemName]?.value;
         if (count == null || index < 0 || index >= count) return;
@@ -1163,6 +1275,13 @@ export class FormEngine {
         return foundItem;
     }
 
+    /**
+     * Compiles a FEL expression into a callable function that evaluates against the engine's current state.
+     * Results are cached; subsequent calls with the same expression and context return the cached function.
+     * @param expression - The FEL expression string to compile.
+     * @param currentItemName - The field path providing evaluation context for relative references.
+     * @returns A zero-argument function that returns the expression's current value.
+     */
     public compileExpression(expression: string, currentItemName: string = '') {
         return this.compileFEL(expression, currentItemName, undefined, true);
     }
@@ -1390,6 +1509,12 @@ export class FormEngine {
         }
     }
 
+    /**
+     * Sets a field's value, applying whitespace transforms, type coercion, and precision enforcement
+     * as configured by the field's bind and data type.
+     * @param name - Full field path including repeat indices (e.g. `"expenses[0].amount"`).
+     * @param value - The new value to set.
+     */
     public setValue(name: string, value: any) {
         const baseName = name.replace(/\[\d+\]/g, '');
         const item = this.findItem(this.definition.items, baseName);
@@ -1425,6 +1550,13 @@ export class FormEngine {
         }
     }
 
+    /**
+     * Builds and returns the current validation report, aggregating bind-level and shape-level results.
+     * In `"continuous"` mode (default), only continuous-timing shapes are included.
+     * In `"submit"` mode, submit-timing shapes are also evaluated.
+     * Non-relevant fields are excluded from the report.
+     * @param options - Optional mode selection (`"continuous"` or `"submit"`).
+     */
     public getValidationReport(options?: { mode?: 'continuous' | 'submit' }): ValidationReport {
         const mode = options?.mode || 'continuous';
         const allResults: ValidationResult[] = [];
@@ -1464,7 +1596,10 @@ export class FormEngine {
     }
 
     /**
-     * Evaluate a specific demand-timing shape by ID.
+     * Evaluates a specific shape by ID on demand, returning any resulting validation findings.
+     * Typically used for demand-timing shapes that are not automatically evaluated.
+     * @param shapeId - The shape's unique identifier from the definition.
+     * @returns An array of validation results (empty if the shape passes or is not found).
      */
     public evaluateShape(shapeId: string): ValidationResult[] {
         const shape = this.definition.shapes?.find(s => s.id === shapeId);
@@ -1491,6 +1626,13 @@ export class FormEngine {
         return true;
     }
 
+    /**
+     * Serializes the current form state into a Formspec response document.
+     * Respects nonRelevantBehavior settings (remove, empty, or keep) when building the data tree.
+     * Includes a full validation report and metadata (definitionUrl, definitionVersion, status, authored timestamp).
+     * @param meta - Optional metadata: response id, author, subject, and validation mode.
+     * @returns A Formspec response object ready for submission or persistence.
+     */
     public getResponse(meta?: { id?: string; author?: { id: string; name?: string }; subject?: { id: string; type?: string }; mode?: 'continuous' | 'submit' }) {
         const data: any = {};
         const mode = meta?.mode || 'continuous';
@@ -1564,6 +1706,12 @@ export class FormEngine {
         return response;
     }
 
+    /**
+     * Captures a complete point-in-time snapshot of the engine's internal state for debugging.
+     * Includes all field values, MIP states (relevant/required/readonly/error), dependency graph,
+     * repeat counts, validation report, and runtime context.
+     * @param options - Optional validation mode for the included report.
+     */
     public getDiagnosticsSnapshot(options?: { mode?: 'continuous' | 'submit' }): FormEngineDiagnosticsSnapshot {
         const mode = options?.mode || 'continuous';
         const values: Record<string, any> = {};
@@ -1608,6 +1756,12 @@ export class FormEngine {
         };
     }
 
+    /**
+     * Applies a single replay event to the engine, dispatching to the appropriate method.
+     * Catches errors and returns them in the result rather than throwing.
+     * @param event - The replay event to apply.
+     * @returns A result indicating success/failure, with optional output and error message.
+     */
     public applyReplayEvent(event: EngineReplayEvent): EngineReplayApplyResult {
         try {
             switch (event.type) {
@@ -1639,6 +1793,12 @@ export class FormEngine {
         }
     }
 
+    /**
+     * Replays a sequence of events against the engine in order, for deterministic state reproduction.
+     * @param events - The ordered list of replay events to apply.
+     * @param options - If `stopOnError` is true, replay halts on the first failed event.
+     * @returns Aggregate results with per-event outcomes and any errors.
+     */
     public replay(events: EngineReplayEvent[], options?: { stopOnError?: boolean }): EngineReplayResult {
         const results: EngineReplayApplyResult[] = [];
         const errors: EngineReplayResult['errors'] = [];
@@ -1670,20 +1830,30 @@ export class FormEngine {
 
     // === Extended Features (Phase 11) ===
 
+    /** Returns the loaded Formspec definition document. */
     public getDefinition(): FormspecDefinition {
         return this.definition;
     }
 
+    /** Returns the definition's `formPresentation` block (layout, wizard, default currency, etc.), or null if absent. */
     get formPresentation(): any {
         return this.definition.formPresentation || null;
     }
 
     private labelContext: string | null = null;
 
+    /**
+     * Sets the active label context key, used by {@link getLabel} to select alternate label strings.
+     * @param context - A label context key (e.g. `"short"`, `"print"`), or null to use the default label.
+     */
     public setLabelContext(context: string | null) {
         this.labelContext = context;
     }
 
+    /**
+     * Returns the label for an item, honoring the current label context if one is set.
+     * Falls back to the item's default `label` property when no context match is found.
+     */
     public getLabel(item: FormspecItem): string {
         if (this.labelContext && item.labels && item.labels[this.labelContext]) {
             return item.labels[this.labelContext];
@@ -1691,6 +1861,11 @@ export class FormEngine {
         return item.label;
     }
 
+    /**
+     * Evaluates the definition's screener routes against the current form state.
+     * Returns the first route whose condition is truthy (or unconditional), or null if no route matches.
+     * Used for conditional form routing before the main form is presented.
+     */
     public evaluateScreener(): { target: string; label?: string } | null {
         const screener = this.definition.screener;
         if (!screener?.routes) return null;
@@ -1707,6 +1882,13 @@ export class FormEngine {
         return null;
     }
 
+    /**
+     * Applies version migrations to response data, transforming it from `fromVersion` to the current definition version.
+     * Supports rename, remove, add, and FEL-based transform operations as defined in the definition's `migrations` array.
+     * @param responseData - The response data object to migrate.
+     * @param fromVersion - The version string the response data was created against.
+     * @returns The migrated response data.
+     */
     public migrateResponse(responseData: Record<string, any>, fromVersion: string): Record<string, any> {
         const migrations = this.definition.migrations;
         if (!migrations || !Array.isArray(migrations)) return responseData;
@@ -1745,6 +1927,8 @@ export class FormEngine {
         return data;
     }
 }
+
+/** A node in the component tree describing which UI component to render, with optional binding, conditional visibility, and children. */
 export interface ComponentObject {
     component: string;
     bind?: string;
@@ -1754,6 +1938,10 @@ export interface ComponentObject {
     [key: string]: any;
 }
 
+/**
+ * A Formspec Component Document that defines the UI component tree, breakpoints, tokens,
+ * and custom component specifications for rendering a specific definition.
+ */
 export interface ComponentDocument {
     $formspecComponent: string;
     version: string;

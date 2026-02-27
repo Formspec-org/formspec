@@ -1,5 +1,7 @@
+/** The direction of a mapping operation: `"forward"` maps Formspec data to an external format, `"reverse"` maps back. */
 export type MappingDirection = 'forward' | 'reverse';
 
+/** The result of executing a mapping operation, including the transformed output, rule count, and any diagnostics. */
 export interface RuntimeMappingResult {
     direction: MappingDirection;
     output: any;
@@ -7,6 +9,7 @@ export interface RuntimeMappingResult {
     diagnostics: string[];
 }
 
+/** Internal representation of a single mapping rule with source/target paths, transform type, and optional reverse override. */
 type MappingRule = {
     sourcePath?: string | null;
     targetPath?: string | null;
@@ -20,11 +23,13 @@ type MappingRule = {
     reversePriority?: number;
 };
 
+/** Splits a dot-separated path string into an array of segments, filtering out empty parts. */
 function splitPath(path: string): string[] {
     if (!path) return [];
     return path.split('.').filter(Boolean);
 }
 
+/** Navigates into a nested object by a dot-separated path, returning `undefined` if any segment is missing. */
 function getByPath(obj: any, path?: string | null): any {
     if (!path) return undefined;
     const parts = splitPath(path);
@@ -36,6 +41,7 @@ function getByPath(obj: any, path?: string | null): any {
     return current;
 }
 
+/** Sets a value in a nested object at a dot-separated path, creating intermediate objects as needed. */
 function setByPath(obj: any, path: string, value: any): void {
     const parts = splitPath(path);
     if (parts.length === 0) return;
@@ -50,6 +56,7 @@ function setByPath(obj: any, path: string, value: any): void {
     current[parts[parts.length - 1]] = value;
 }
 
+/** Parses a simple literal value from a string: quoted strings, booleans, null, or numbers. Falls back to the raw string. */
 function parseSimpleLiteral(expression: string): any {
     const trimmed = expression.trim();
     if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
@@ -63,6 +70,7 @@ function parseSimpleLiteral(expression: string): any {
     return trimmed;
 }
 
+/** Evaluates a simple condition string against the source object. Supports `source.path = literal`, `source.path != literal`, and boolean literals. */
 function evaluateCondition(condition: string, source: any): boolean {
     // Supported forms:
     // - source.path = literal
@@ -80,6 +88,7 @@ function evaluateCondition(condition: string, source: any): boolean {
     return op === '=' ? left === right : left !== right;
 }
 
+/** Deep-clones a value using structuredClone (if available) or JSON round-trip as fallback. */
 function clone<T>(value: T): T {
     if (value === null || value === undefined || typeof value !== 'object') return value;
     const cloner = (globalThis as any).structuredClone;
@@ -89,19 +98,40 @@ function clone<T>(value: T): T {
     return JSON.parse(JSON.stringify(value));
 }
 
+/**
+ * Bidirectional data transform engine driven by a Formspec mapping document.
+ *
+ * Rules are priority-ordered and support conditions, transform types (drop, constant, valueMap,
+ * coerce, preserve), and per-rule reverse overrides. Forward mapping transforms Formspec response
+ * data into an external format; reverse mapping transforms external data back into Formspec shape.
+ */
 export class RuntimeMappingEngine {
     private readonly doc: any;
     private readonly rules: MappingRule[];
 
+    /**
+     * Creates a RuntimeMappingEngine from a mapping document.
+     * @param mappingDocument - The mapping document containing rules, defaults, and metadata.
+     */
     constructor(mappingDocument: any) {
         this.doc = mappingDocument || {};
         this.rules = Array.isArray(this.doc.rules) ? this.doc.rules : [];
     }
 
+    /**
+     * Executes a forward mapping: transforms Formspec response data into an external format.
+     * Applies document defaults before processing rules.
+     * @param source - The Formspec response data to transform.
+     */
     public forward(source: any): RuntimeMappingResult {
         return this.execute('forward', source ?? {});
     }
 
+    /**
+     * Executes a reverse mapping: transforms external-format data back into Formspec response shape.
+     * Uses each rule's `reverse` override when available, otherwise swaps source/target paths.
+     * @param source - The external-format data to transform.
+     */
     public reverse(source: any): RuntimeMappingResult {
         return this.execute('reverse', source ?? {});
     }

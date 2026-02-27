@@ -1,8 +1,24 @@
+/**
+ * @module fel/interpreter
+ *
+ * Chevrotain CstVisitor that evaluates FEL Concrete Syntax Trees at runtime.
+ *
+ * This is the third stage of the FEL pipeline (Lexer -> Parser -> Interpreter).
+ * It walks the CST produced by {@link FelParser} and evaluates each node against
+ * a {@link FelContext} that provides reactive signal values from the FormEngine.
+ * Includes `felStdLib` — a record of 40+ built-in functions covering aggregation,
+ * string manipulation, date arithmetic, type coercion, money, MIP queries, and more.
+ */
 import { parser } from './parser';
 
 const BaseVisitor = parser.getBaseCstVisitorConstructor();
 
-/** Merge per-type operator token arrays and return them sorted by source position. */
+/**
+ * Merge per-type operator token arrays and return their `image` strings
+ * sorted by source offset. Used by addition/multiplication visitors to
+ * determine the correct operator when multiple operator types are interleaved
+ * (e.g. `a + b - c * d`).
+ */
 function sortedOperators(tokenMap: Record<string, any[] | undefined>): string[] {
   const all: Array<{ image: string; offset: number }> = [];
   for (const [, tokens] of Object.entries(tokenMap)) {
@@ -15,17 +31,44 @@ function sortedOperators(tokenMap: Record<string, any[] | undefined>): string[] 
   return all.map(t => t.image);
 }
 
+/**
+ * Runtime context provided to the interpreter for each FEL evaluation.
+ *
+ * Bridges the interpreter to the FormEngine's reactive signal graph. Each
+ * callback reads from a Preact signal so that evaluations are automatically
+ * tracked as signal dependencies, enabling reactive re-computation when
+ * upstream values change.
+ */
 export interface FelContext {
+  /** Read the current value of a field signal at the given dotted path. */
   getSignalValue: (path: string) => any;
+  /** Read the current repeat instance count for a repeatable group. */
   getRepeatsValue: (path: string) => number;
+  /** Read whether the field at the given path is currently relevant (visible). */
   getRelevantValue: (path: string) => boolean;
+  /** Read whether the field at the given path is currently required. */
   getRequiredValue: (path: string) => boolean;
+  /** Read whether the field at the given path is currently readonly. */
   getReadonlyValue: (path: string) => boolean;
+  /** Read the count of validation errors for the field at the given path. */
   getValidationErrors: (path: string) => number;
+  /** The fully-qualified dotted path of the item whose bind expression is being evaluated. Used for relative `$` field references. */
   currentItemPath: string;
+  /** Reference to the FormEngine instance. Used by stdlib functions that need engine-level APIs (e.g. `instance()`, variable lookup). */
   engine: any;
 }
 
+/**
+ * Chevrotain CstVisitor that evaluates a FEL CST against a live {@link FelContext}.
+ *
+ * Visitor methods mirror the grammar rules in {@link FelParser}. Each method
+ * receives a CST node context object and returns the evaluated JavaScript value.
+ * The class also houses {@link felStdLib}, a record of 40+ built-in functions
+ * available to FEL expressions (e.g. `sum(...)`, `today()`, `money(...)`).
+ *
+ * Instantiate once and reuse via {@link interpreter}. Not thread-safe — the
+ * `context` field is mutated on each call to {@link evaluate}.
+ */
 export class FelInterpreter extends BaseVisitor {
   private context!: FelContext;
 
@@ -34,18 +77,48 @@ export class FelInterpreter extends BaseVisitor {
     this.validateVisitor();
   }
 
+  /** Extract the parent segment of a dotted path (everything before the last `.`). Returns `''` for root-level paths. */
   private getParentPath(itemPath: string): string {
     const lastDot = itemPath.lastIndexOf('.');
     if (lastDot === -1) return '';
     return itemPath.substring(0, lastDot);
   }
 
+  /**
+   * Evaluate a FEL CST and return the computed value.
+   *
+   * This is the main entry point for stage 3 of the FEL pipeline. The caller
+   * provides the CST (from `parser.expression()`) and a {@link FelContext}
+   * wired to the FormEngine's signal graph. The returned value is used for
+   * calculated fields, conditional relevance, validation constraints, etc.
+   */
   public evaluate(cst: any, context: FelContext) {
     this.context = context;
     return this.visit(cst);
   }
 
+  /**
+   * FEL standard library — 40+ built-in functions available in any FEL expression.
+   *
+   * Categories:
+   * - **Aggregation**: sum, avg, min, max, count, countWhere
+   * - **Strings**: upper, lower, length, substring, startsWith, endsWith, contains, replace, trim, matches, format
+   * - **Dates/Times**: today, now, year, month, day, hours, minutes, seconds, dateAdd, dateDiff, time, timeDiff
+   * - **Math**: abs, round, floor, ceil, power
+   * - **Type checking/conversion**: isNumber, isString, isDate, typeOf, string, number, boolean, date
+   * - **Null/Presence**: isNull, present, empty, coalesce
+   * - **Money**: money, moneyAmount, moneyCurrency, moneyAdd, moneySum
+   * - **Selection**: selected
+   * - **Navigation**: prev, next, parent
+   * - **MIP queries**: valid, relevant, readonly, required
+   * - **Instance data**: instance
+   *
+   * Functions are looked up by name at runtime in the `functionCall` visitor.
+   * Each function receives already-evaluated arguments (except MIP queries and
+   * countWhere, which use special argument handling).
+   */
   private felStdLib: Record<string, Function> = {
+    /** Sums an array of numbers. Extracts `.amount` from money objects. Non-finite values are treated as 0. */
     sum: (arr: any[]) => {
         if (!Array.isArray(arr)) return 0;
         return arr.reduce((a, b) => {
@@ -56,18 +129,24 @@ export class FelInterpreter extends BaseVisitor {
         }, 0);
     },
     upper: (s: string) => (s || '').toUpperCase(),
+    /** Rounds a number to `p` decimal places (default 0). Uses banker's-style Math.round. */
     round: (n: number, p: number = 0) => {
         const factor = Math.pow(10, p);
         return Math.round(n * factor) / factor;
     },
     year: (d: string) => d ? new Date(d).getFullYear() : null,
+    /** Returns the first argument that is not null, undefined, or empty string. */
     coalesce: (...args: any[]) => args.find(a => a !== null && a !== undefined && a !== ''),
+    /** Returns true if the value is null, undefined, or empty string. Broader than JS nullish. */
     isNull: (a: any) => a === null || a === undefined || a === '',
+    /** Inverse of isNull — returns true if the value is non-null, defined, and non-empty. */
     present: (a: any) => a !== null && a !== undefined && a !== '',
     contains: (s: string, sub: string) => (s || '').includes(sub || ''),
     abs: (n: number) => Math.abs(n || 0),
     power: (b: number, e: number) => Math.pow(b || 0, e || 0),
+    /** Returns true if the value is null, undefined, empty string, or an empty array. */
     empty: (v: any) => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0),
+    /** Adds `n` units (days/months/years) to an ISO date string. Returns an ISO date string or null. */
     dateAdd: (d: string, n: number, unit: string) => {
         if (!d) return null;
         const date = new Date(d);
@@ -77,6 +156,7 @@ export class FelInterpreter extends BaseVisitor {
         else if (unit === 'years') date.setFullYear(date.getFullYear() + n);
         return date.toISOString().split('T')[0];
     },
+    /** Returns the difference between two ISO dates in the given unit (days/months/years). Result is `d1 - d2`. */
     dateDiff: (d1: string, d2: string, unit: string) => {
         const a = new Date(d1);
         const b = new Date(d2);
@@ -134,17 +214,23 @@ export class FelInterpreter extends BaseVisitor {
     hours: (d: string) => d ? new Date(d).getHours() : null,
     minutes: (d: string) => d ? new Date(d).getMinutes() : null,
     seconds: (d: string) => d ? new Date(d).getSeconds() : null,
+    /** Constructs an `HH:MM:SS` time string from numeric hour, minute, and second components. */
     time: (h: number, m: number, s: number) => {
         const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
         return `${pad(h)}:${pad(m)}:${pad(s)}`;
     },
+    /** Tests whether `opt` is the current selection. For multi-select (array), checks inclusion; for single-select, checks equality. */
     selected: (val: any, opt: any) => Array.isArray(val) ? val.includes(opt) : val === opt,
     isNumber: (v: any) => typeof v === 'number' && !isNaN(v),
+    /** Coerces any value to a string. Null/undefined become empty string. */
     string: (v: any) => v === null || v === undefined ? '' : String(v),
     isString: (v: any) => typeof v === 'string',
     isDate: (v: any) => !isNaN(Date.parse(v)),
+    /** Returns the FEL type name: `'array'`, `'null'`, `'string'`, `'number'`, `'boolean'`, or `'object'`. */
     typeOf: (v: any) => Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v,
+    /** Coerces a value to a number. Returns null if coercion fails. */
     number: (v: any) => { const n = Number(v); return isNaN(n) ? null : n; },
+    /** Coerces a value to a boolean. Accepts booleans, numbers (0 = false), and `'true'`/`'false'` strings. Throws on unconvertible values. */
     boolean: (v: any) => {
         if (v === null || v === undefined) return false;
         if (typeof v === 'number') return v !== 0;
@@ -153,15 +239,20 @@ export class FelInterpreter extends BaseVisitor {
         if (v === 'false') return false;
         throw new Error(`boolean(): cannot convert "${v}" to boolean`);
     },
+    /** Validates and returns an ISO 8601 date string. Throws if the input is not a valid date. */
     date: (v: any) => {
         if (v === null || v === undefined) return null;
         const d = new Date(v);
         if (isNaN(d.getTime())) throw new Error(`date(): "${v}" is not a valid ISO 8601 date`);
         return v;
     },
+    /** Constructs a money object `{ amount, currency }` from numeric amount and currency code. */
     money: (amount: number, currency: string) => ({ amount, currency }),
+    /** Extracts the numeric amount from a money object, or null if the input is not a money object. */
     moneyAmount: (m: any) => m && m.amount !== undefined ? m.amount : null,
+    /** Extracts the currency code from a money object, or null if the input is not a money object. */
     moneyCurrency: (m: any) => m && m.currency !== undefined ? m.currency : null,
+    /** Returns the value of a sibling field from the previous repeat instance (index - 1). Returns null if at the first instance or not inside a repeat. */
     prev: (name: string) => {
         const parts = this.context.currentItemPath.split(/[\[\].]/).filter(Boolean);
         let lastNumIndex = -1;
@@ -174,6 +265,7 @@ export class FelInterpreter extends BaseVisitor {
         const siblingsPath = parts.slice(0, lastNumIndex).join('.') + `[${idx-1}].` + name;
         return this.context.getSignalValue(siblingsPath);
     },
+    /** Returns the value of a sibling field from the next repeat instance (index + 1). Returns null if not inside a repeat. */
     next: (name: string) => {
         const parts = this.context.currentItemPath.split(/[\[\].]/).filter(Boolean);
         let lastNumIndex = -1;
@@ -185,12 +277,15 @@ export class FelInterpreter extends BaseVisitor {
         const siblingsPath = parts.slice(0, lastNumIndex).join('.') + `[${idx+1}].` + name;
         return this.context.getSignalValue(siblingsPath);
     },
+    /** Functional if: returns `thenVal` when `cond` is truthy, `elseVal` otherwise. Alternative to the `if ... then ... else` syntax. */
     if: (cond: any, thenVal: any, elseVal: any) => cond ? thenVal : elseVal,
+    /** Sprintf-style formatting. Replaces `%s` placeholders in the format string with successive arguments. */
     format: (fmt: string, ...args: any[]) => {
         if (!fmt) return '';
         let i = 0;
         return fmt.replace(/%s/g, () => args[i] !== undefined ? String(args[i++]) : '');
     },
+    /** Returns the absolute difference between two `HH:MM:SS` time strings in the given unit (seconds/minutes/hours). */
     timeDiff: (t1: string, t2: string, unit: string) => {
         const parse = (t: string) => {
             const parts = t.split(':').map(Number);
@@ -202,16 +297,19 @@ export class FelInterpreter extends BaseVisitor {
         if (unit === 'hours') return Math.floor(diff / 3600);
         return diff;
     },
+    /** Adds two money objects, returning a new money object. Uses the currency from the first non-null operand. */
     moneyAdd: (a: any, b: any) => {
         if (!a || !b) return null;
         return { amount: (a.amount || 0) + (b.amount || 0), currency: a.currency || b.currency };
     },
+    /** Sums an array of money objects. Returns a money object with the currency from the first element. */
     moneySum: (arr: any[]) => {
         if (!Array.isArray(arr)) return null;
         const valid = arr.filter(m => m && m.amount !== undefined);
         if (valid.length === 0) return null;
         return { amount: valid.reduce((s, m) => s + (m.amount || 0), 0), currency: valid[0].currency };
     },
+    /** Walks up the path hierarchy from the current item, returning the value of the first ancestor field matching `name`. */
     parent: (name: string) => {
         const parts = this.context.currentItemPath.split(/[\[\].]/).filter(Boolean);
         for (let i = parts.length - 2; i >= 0; i--) {
@@ -221,24 +319,30 @@ export class FelInterpreter extends BaseVisitor {
         }
         return this.context.getSignalValue(name);
     },
+    /** MIP query: returns true if the field at `path` has zero validation errors. Argument is extracted as a path string, not evaluated. */
     valid: (path: string) => {
         return this.context.getValidationErrors(path) === 0;
     },
+    /** MIP query: returns the relevance (visibility) state of the field at `path`. Argument is extracted as a path string, not evaluated. */
     relevant: (path: string) => {
         return this.context.getRelevantValue(path);
     },
+    /** MIP query: returns the readonly state of the field at `path`. Argument is extracted as a path string, not evaluated. */
     readonly: (path: string) => {
         return this.context.getReadonlyValue(path);
     },
+    /** MIP query: returns the required state of the field at `path`. Argument is extracted as a path string, not evaluated. */
     required: (path: string) => {
         return this.context.getRequiredValue(path);
     },
+    /** Retrieves inline instance data by name, optionally drilling into a sub-path. Delegates to `engine.getInstanceData()`. */
     instance: (name: string, path?: string) => {
         if (this.context.engine?.getInstanceData) {
             return this.context.engine.getInstanceData(name, path);
         }
         return undefined;
     },
+    /** Counts array elements matching a predicate. The predicate receives each element and is evaluated with `$` rebound. See special handling in `functionCall` visitor. */
     countWhere: (arr: any[], predicate: Function) => {
         if (!Array.isArray(arr)) return 0;
         return arr.filter(item => predicate(item)).length;
@@ -487,9 +591,22 @@ export class FelInterpreter extends BaseVisitor {
     return null;
   }
 
-  // MIP query functions receive a path string, not a resolved value
+  /**
+   * Set of stdlib function names whose first argument should be extracted as a
+   * raw path string rather than evaluated as a normal expression. This is
+   * because MIP query functions (`valid`, `relevant`, `readonly`, `required`)
+   * need the field path — not the field's value — to query the engine state.
+   */
   private static MIP_QUERY_FUNCTIONS = new Set(['valid', 'relevant', 'readonly', 'required']);
 
+  /**
+   * Reconstructs a dotted field path string from an unevaluated CST argument node.
+   *
+   * Used by MIP query functions to extract the path the user wrote (e.g. `valid(email)`
+   * yields `"email"`, `valid($group.field)` yields `"group.field"`) instead of evaluating
+   * the argument to its runtime value. Walks the CST collecting tokens, sorts by offset,
+   * strips `$` and `.` tokens, then joins identifiers with dots.
+   */
   private extractPathFromArgTokens(argCstNode: any): string {
     // Collect all tokens from the argument CST node to reconstruct the path string.
     // This handles bare identifiers (email), dollar refs ($email), and dotted paths (group.field).
@@ -620,4 +737,12 @@ export class FelInterpreter extends BaseVisitor {
   }
 }
 
+/**
+ * Pre-instantiated FEL interpreter singleton.
+ *
+ * Shared across the engine to avoid repeated Chevrotain visitor validation.
+ * Usage: call `interpreter.evaluate(cst, context)` where `cst` is the output
+ * of `parser.expression()` and `context` is a {@link FelContext} wired to
+ * the FormEngine's signal graph.
+ */
 export const interpreter = new FelInterpreter();
