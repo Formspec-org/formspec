@@ -24,6 +24,8 @@ class DefinitionEvaluator:
     def __init__(self, definition: dict) -> None:
         self._variables = {v['name']: v for v in definition.get('variables', [])}
         self._shapes = definition.get('shapes', [])
+        self._shapes_by_id = {s['id']: s for s in self._shapes}
+        self._var_order = self._topo_sort_variables()
 
     def _topo_sort_variables(self) -> list[str]:
         """Return variable names in evaluation order (dependencies before dependents)."""
@@ -45,17 +47,12 @@ class DefinitionEvaluator:
                 raise ValueError(f"Circular variable dependencies: {remaining}")
         return resolved
 
-    def _evaluate(self, expr: str, data: dict, variables: dict[str, FelValue]):
-        """Evaluate a FEL expression."""
-        return evaluate(expr, data, variables=variables)
-
     def evaluate_variables(self, data: dict) -> dict[str, FelValue]:
         """Evaluate all definition variables in dependency order."""
-        var_order = self._topo_sort_variables()
         variables: dict[str, FelValue] = {}
-        for name in var_order:
+        for name in self._var_order:
             expr = self._variables[name]['expression']
-            result = self._evaluate(expr, data, variables)
+            result = evaluate(expr, data, variables=variables)
             variables[name] = result.value
         return variables
 
@@ -76,14 +73,14 @@ class DefinitionEvaluator:
     ) -> bool:
         """Evaluate one shape. Appends to out on failure. Returns True if shape passes."""
         if 'activeWhen' in shape:
-            guard = self._evaluate(shape['activeWhen'], data, variables)
+            guard = evaluate(shape['activeWhen'], data, variables=variables)
             if guard.value is not FelTrue:
                 return True
 
         passed = True
 
         if 'constraint' in shape:
-            result = self._evaluate(shape['constraint'], data, variables)
+            result = evaluate(shape['constraint'], data, variables=variables)
             passed = result.value is FelTrue
 
         if passed and 'and' in shape:
@@ -113,6 +110,10 @@ class DefinitionEvaluator:
         return passed
 
     def _eval_expr(self, expr: str, data: dict, variables: dict[str, FelValue]) -> bool:
-        """Evaluate a FEL expression string as a boolean. Non-true result → False."""
-        result = self._evaluate(expr, data, variables)
+        """Evaluate a composition element: shape id reference or inline FEL boolean."""
+        shape = self._shapes_by_id.get(expr)
+        if shape is not None:
+            out: list[dict] = []
+            return self._eval_shape(shape, data, variables, out)
+        result = evaluate(expr, data, variables=variables)
         return result.value is FelTrue

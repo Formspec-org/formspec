@@ -41,9 +41,8 @@ class TestEvaluateVariables:
                 {'name': 'b', 'expression': '@a + 1'},
             ]
         }
-        ev = DefinitionEvaluator(defn)
         with pytest.raises(ValueError, match="Circular"):
-            ev.evaluate_variables({})
+            DefinitionEvaluator(defn)
 
 
 # ── Shape evaluation ─────────────────────────────────────────────────────────
@@ -164,3 +163,38 @@ class TestValidate:
         results = ev.validate(data)
         assert len(results) == 1
         assert results[0]['code'] == 'BM'
+
+    def test_or_composition_with_shape_id_reference(self):
+        """Composition element that is a shape id recurses into that shape."""
+        ev = self._ev([
+            {
+                'id': 'hasEmail', 'target': '#', 'severity': 'error',
+                'message': 'No email', 'code': 'E',
+                'constraint': 'present($email)',
+            },
+            {
+                'id': 'hasPhone', 'target': '#', 'severity': 'error',
+                'message': 'No phone', 'code': 'P',
+                'constraint': 'present($phone)',
+            },
+            {
+                'id': 'contactProvided', 'target': '#', 'severity': 'warning',
+                'message': 'Need one contact method', 'code': 'C',
+                'or': ['hasEmail', 'hasPhone'],
+            },
+        ])
+        # email present → contactProvided passes (only contactProvided emits, not hasEmail/hasPhone)
+        results = ev.validate({'email': 'x@y.com', 'phone': None})
+        assert not any(r['code'] == 'C' for r in results)
+        # neither present → contactProvided fails
+        results = ev.validate({'email': None, 'phone': None})
+        assert any(r['code'] == 'C' for r in results)
+
+    def test_not_composition(self):
+        ev = self._ev([{
+            'id': 's1', 'target': '#', 'severity': 'warning',
+            'message': 'Contains placeholder', 'code': 'PH',
+            'not': 'contains($text, "TBD")',
+        }])
+        assert ev.validate({'text': 'Real content'}) == []      # not contains → passes
+        assert ev.validate({'text': 'Content TBD'}) != []       # contains → fails
