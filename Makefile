@@ -15,6 +15,13 @@ docs-check:
 
 check: docs-check
 
+api-docs:
+	PYTHONPATH=src pdoc formspec --output-directory $(DOCS_DIR)/api/formspec
+	npx typedoc --entryPoints packages/formspec-engine/src/index.ts --tsconfig packages/formspec-engine/tsconfig.json --out $(DOCS_DIR)/api/formspec-engine
+	npx typedoc --entryPoints packages/formspec-webcomponent/src/index.ts --tsconfig packages/formspec-webcomponent/tsconfig.json --out $(DOCS_DIR)/api/formspec-webcomponent
+	PYTHONPATH=src python3 scripts/generate-api-markdown.py src/formspec/API.llm.md
+	node scripts/generate-ts-api-markdown.mjs
+
 docs: spec-artifacts \
       $(DOCS_DIR)/spec.html \
       $(DOCS_DIR)/mapping.html \
@@ -23,7 +30,8 @@ docs: spec-artifacts \
       $(DOCS_DIR)/extension-registry.html \
       $(DOCS_DIR)/theme-spec.html \
       $(DOCS_DIR)/component-spec.html \
-      $(DOCS_DIR)/grant-application.html
+      $(DOCS_DIR)/grant-application.html \
+      api-docs
 
 $(DOCS_DIR)/spec.html: $(SPECS_DIR)/core/spec.md $(TEMPLATE)
 	$(PANDOC) -s --toc --template=$(TEMPLATE) --metadata title="Formspec Core Specification" -o $@ $<
@@ -66,5 +74,9 @@ clean:
 	      $(DOCS_DIR)/theme-spec.html \
 	      $(DOCS_DIR)/component-spec.html \
 	      $(DOCS_DIR)/grant-application.html
+	rm -rf $(DOCS_DIR)/api
+	rm -f src/formspec/API.llm.md \
+	      packages/formspec-engine/API.llm.md \
+	      packages/formspec-webcomponent/API.llm.md
 
-.PHONY: all spec-artifacts docs-check check docs setup serve clean
+.PHONY: all spec-artifacts docs-check check docs api-docs setup serve clean

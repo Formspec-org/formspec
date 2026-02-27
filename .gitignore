@@ -14,3 +14,8 @@ project/
 .serena/
 dist-playground/
 .playwright-mcp/
+
+# Generated API docs (make api-docs)
+docs/api/
+**/API.llm.md
+
