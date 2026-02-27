@@ -56,7 +56,7 @@
     },
     {
       "name": "indirectCosts",
-      "expression": "if($applicantInfo.orgType = 'government') then money(0, 'USD') else money(moneyAmount(@totalDirect) * ($projectNarrative.indirectRate ?? 0) / 100, moneyCurrency(@totalDirect))"
+      "expression": "if $applicantInfo.orgType = 'government' then money(0, 'USD') else money(moneyAmount(@totalDirect) * ($projectNarrative.indirectRate ?? 0) / 100, moneyCurrency(@totalDirect))"
     },
     {
       "name": "grandTotal",
