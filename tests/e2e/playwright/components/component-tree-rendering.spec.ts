@@ -19,7 +19,7 @@ test.describe('Components: Component Tree Rendering', () => {
 
     // Bound TextInputs are visible on page 1 without any navigation
     await expect(page.locator('input[name="applicantInfo.orgName"]')).toBeVisible();
-    await expect(page.locator('input[name="applicantInfo.contactEmail"]')).toBeVisible();
+    await expect(page.locator('input[name="applicantInfo.ein"]')).toBeVisible();
   });
 
   test('should show and hide ConditionalGroup content when its when-expression changes', async ({ page }) => {

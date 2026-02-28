@@ -17,7 +17,7 @@ test.describe('Smoke: Grant Application Happy Path', () => {
     const heading = page.locator('.formspec-wizard-panel:not(.formspec-hidden) h2').first();
     await expect(heading).toHaveText('Applicant Info');
     await expect(page.locator('[data-name="applicantInfo.orgName"]')).toBeVisible();
-    await expect(page.locator('[data-name="applicantInfo.contactName"]')).toBeVisible();
+    await expect(page.locator('[data-name="applicantInfo.ein"]')).toBeVisible();
 
     // 3. Fill Applicant Info fields
     await engineSetValue(page, 'applicantInfo.contactName', 'Jane Smith');
