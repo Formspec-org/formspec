@@ -409,7 +409,12 @@
           "key": "requestedAmount",
           "label": "Total Requested Amount",
           "dataType": "money",
-          "hint": "Must match the calculated grand total."
+          "hint": "Must match the calculated grand total.",
+          "presentation": {
+            "layout": {
+              "colSpan": 2
+            }
+          }
         },
         {
           "type": "field",

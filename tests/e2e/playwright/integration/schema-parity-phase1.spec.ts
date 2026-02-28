@@ -148,6 +148,23 @@ test.describe('Schema Parity Phase 1: Definition Enrichment', () => {
     expect(hasLayout).toBe(true);
   });
 
+  test('layout.colSpan is set on at least one child item inside a grid group', async ({ page }) => {
+    const hasColSpan = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      const engine = el.getEngine();
+      let found = false;
+      function walk(items: any[]) {
+        for (const item of items) {
+          if (item.presentation?.layout?.colSpan) found = true;
+          if (item.children) walk(item.children);
+        }
+      }
+      walk(engine.definition.items);
+      return found;
+    });
+    expect(hasColSpan).toBe(true);
+  });
+
   test('styleHints exist on at least one group', async ({ page }) => {
     const hasStyleHints = await page.evaluate(() => {
       const el: any = document.querySelector('formspec-render');
