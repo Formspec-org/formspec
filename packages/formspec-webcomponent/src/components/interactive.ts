@@ -34,12 +34,25 @@ export const WizardPlugin: ComponentPlugin = {
                 const step = currentStep.value;
                 progress.innerHTML = '';
                 for (let i = 0; i < children.length; i++) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'formspec-wizard-step-wrapper';
+
                     const indicator = document.createElement('span');
                     indicator.className = 'formspec-wizard-step';
                     if (i === step) indicator.classList.add('formspec-wizard-step--active');
                     if (i < step) indicator.classList.add('formspec-wizard-step--completed');
                     indicator.textContent = `${i + 1}`;
-                    progress.appendChild(indicator);
+                    wrapper.appendChild(indicator);
+
+                    if (children[i]?.title) {
+                        const label = document.createElement('span');
+                        label.className = 'formspec-wizard-step-label';
+                        if (i === step) label.classList.add('formspec-wizard-step-label--active');
+                        label.textContent = children[i].title;
+                        wrapper.appendChild(label);
+                    }
+
+                    progress.appendChild(wrapper);
                 }
             }));
         }

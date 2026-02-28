@@ -151,7 +151,11 @@ export const ColumnsPlugin: ComponentPlugin = {
         const el = document.createElement('div');
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-columns';
-        if (comp.columnCount) el.dataset.columns = String(comp.columnCount);
+        if (Array.isArray(comp.widths) && comp.widths.length > 0) {
+            el.style.gridTemplateColumns = comp.widths.join(' ');
+        } else if (comp.columnCount) {
+            el.dataset.columns = String(comp.columnCount);
+        }
         if (comp.gap) el.style.gap = String(ctx.resolveToken(comp.gap));
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);

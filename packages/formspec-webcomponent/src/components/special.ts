@@ -31,13 +31,17 @@ export const ConditionalGroupPlugin: ComponentPlugin = {
 export const DataTablePlugin: ComponentPlugin = {
     type: 'DataTable',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'formspec-data-table-wrapper';
+        parent.appendChild(wrapper);
+
         const table = document.createElement('table');
         if (comp.id) table.id = comp.id;
         table.className = 'formspec-data-table';
         ctx.applyCssClass(table, comp);
         ctx.applyAccessibility(table, comp);
         ctx.applyStyle(table, comp.style);
-        parent.appendChild(table);
+        wrapper.appendChild(table);
 
         const columns: { header: string; bind: string }[] = comp.columns || [];
         const bindKey = comp.bind;
@@ -140,19 +144,55 @@ export const DataTablePlugin: ComponentPlugin = {
                         const fieldDef = fieldByKey.get(col.bind);
                         const prefix = fieldDef?.prefix;
                         const suffix = fieldDef?.suffix;
-                        const input = document.createElement('input');
-                        input.className = 'formspec-datatable-input';
-                        input.name = sigPath;
-                        input.type = (dataType === 'integer' || dataType === 'decimal' || dataType === 'number' || dataType === 'money')
-                            ? 'number'
-                            : 'text';
-                        if (input.type === 'number') {
-                            input.step = dataType === 'integer' ? '1' : 'any';
-                            input.min = '0';
+                        const isChoice = fieldDef?.dataType === 'choice' && (fieldDef.optionSet || fieldDef.options);
+
+                        let inputEl: HTMLInputElement | HTMLSelectElement;
+
+                        if (isChoice) {
+                            const select = document.createElement('select');
+                            select.className = 'formspec-datatable-input';
+                            select.name = sigPath;
+                            // Empty option
+                            const emptyOpt = document.createElement('option');
+                            emptyOpt.value = '';
+                            emptyOpt.textContent = '';
+                            select.appendChild(emptyOpt);
+                            // Resolve options from optionSet or inline options
+                            let options: Array<{ value: string; label: string }> = [];
+                            if (fieldDef.optionSet) {
+                                const def = ctx.engine.definition;
+                                const entry = def?.optionSets?.[fieldDef.optionSet];
+                                options = Array.isArray(entry) ? entry : ((entry as any)?.options ?? []);
+                            } else if (Array.isArray(fieldDef.options)) {
+                                options = fieldDef.options;
+                            }
+                            for (const opt of options) {
+                                const optEl = document.createElement('option');
+                                optEl.value = opt.value;
+                                optEl.textContent = opt.label || opt.value;
+                                select.appendChild(optEl);
+                            }
+                            select.addEventListener('change', () => {
+                                ctx.engine.setValue(sigPath, select.value || null);
+                            });
+                            inputEl = select;
+                        } else {
+                            const input = document.createElement('input');
+                            input.className = 'formspec-datatable-input';
+                            input.name = sigPath;
+                            input.type = (dataType === 'integer' || dataType === 'decimal' || dataType === 'number' || dataType === 'money')
+                                ? 'number'
+                                : 'text';
+                            if (input.type === 'number') {
+                                input.step = dataType === 'integer' ? '1' : 'any';
+                                input.min = '0';
+                            }
+                            input.addEventListener('input', () => {
+                                ctx.engine.setValue(sigPath, coerceInputValue(input.value, dataType, fieldDef));
+                            });
+                            inputEl = input;
                         }
-                        input.addEventListener('input', () => {
-                            ctx.engine.setValue(sigPath, coerceInputValue(input.value, dataType, fieldDef));
-                        });
+
                         if (prefix || suffix) {
                             const wrapper = document.createElement('div');
                             wrapper.className = 'formspec-datatable-cell-wrapper';
@@ -162,7 +202,7 @@ export const DataTablePlugin: ComponentPlugin = {
                                 pre.textContent = prefix;
                                 wrapper.appendChild(pre);
                             }
-                            wrapper.appendChild(input);
+                            wrapper.appendChild(inputEl);
                             if (suffix) {
                                 const suf = document.createElement('span');
                                 suf.className = 'formspec-datatable-prefix';
@@ -171,21 +211,21 @@ export const DataTablePlugin: ComponentPlugin = {
                             }
                             td.appendChild(wrapper);
                         } else {
-                            td.appendChild(input);
+                            td.appendChild(inputEl);
                         }
 
                         const readonlySig = ctx.engine.readonlySignals[sigPath];
                         const syncInput = effect(() => {
                             const value = sig.value;
                             const readonly = readonlySig?.value ?? false;
-                            if (document.activeElement !== input) {
+                            if (document.activeElement !== inputEl) {
                                 if (value !== null && value !== undefined && typeof value === 'object' && 'amount' in value) {
-                                    input.value = value.amount !== null ? String(value.amount) : '';
+                                    (inputEl as HTMLInputElement).value = value.amount !== null ? String(value.amount) : '';
                                 } else {
-                                    input.value = value === null || value === undefined ? '' : String(value);
+                                    inputEl.value = (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) ? '' : String(value);
                                 }
                             }
-                            input.disabled = readonly;
+                            inputEl.disabled = readonly;
                         });
                         cellEffectDisposers.push(syncInput);
                     } else if (sig) {

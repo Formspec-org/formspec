@@ -140,6 +140,8 @@ export class FormspecRender extends HTMLElement {
     private static stylesheetRefCounts: Map<string, number> = new Map();
     private rootContainer: HTMLDivElement | null = null;
     private _renderPending = false;
+    /** Fields the user has interacted with (blur). Validation errors are hidden until touched. */
+    private touchedFields: Set<string> = new Set();
 
     private scheduleRender() {
         if (this._renderPending) return;
@@ -265,6 +267,25 @@ export class FormspecRender extends HTMLElement {
             fn();
         }
         this.cleanupFns = [];
+        this.touchedFields.clear();
+    }
+
+    /** Mark all registered fields as touched so validation errors become visible. */
+    private touchAllFields() {
+        if (!this.engine) return;
+        for (const key of Object.keys(this.engine.errorSignals)) {
+            this.touchedFields.add(key);
+        }
+        // Force re-render of all error displays
+        const errorEls = this.querySelectorAll('.formspec-error');
+        for (const el of errorEls) {
+            const field = el.closest('.formspec-field');
+            const name = field?.getAttribute('data-name');
+            if (name) {
+                const error = this.engine.errorSignals[name]?.value;
+                el.textContent = error || '';
+            }
+        }
     }
 
     private cleanupStylesheets() {
@@ -390,6 +411,8 @@ export class FormspecRender extends HTMLElement {
         submitBtn.className = 'formspec-submit';
         submitBtn.textContent = 'Submit';
         submitBtn.addEventListener('click', () => {
+            // Touch all fields so validation errors become visible
+            this.touchAllFields();
             const response = this.engine!.getResponse({ mode: 'submit' });
             const validationReport = this.engine!.getValidationReport({ mode: 'submit' });
             this.dispatchEvent(new CustomEvent('formspec-submit', {
@@ -581,10 +604,18 @@ export class FormspecRender extends HTMLElement {
             const wrapper = document.createElement('div');
             wrapper.className = 'formspec-when';
             parent.appendChild(wrapper);
+            let fallbackEl: HTMLElement | null = null;
+            if (comp.fallback) {
+                fallbackEl = document.createElement('p');
+                fallbackEl.className = 'formspec-conditional-fallback';
+                fallbackEl.textContent = comp.fallback;
+                parent.appendChild(fallbackEl);
+            }
             const exprFn = this.engine!.compileExpression(comp.when, prefix);
             this.cleanupFns.push(effect(() => {
                 const visible = !!exprFn();
                 wrapper.classList.toggle('formspec-hidden', !visible);
+                if (fallbackEl) fallbackEl.classList.toggle('formspec-hidden', visible);
             }));
             parent = wrapper;
         }
@@ -729,7 +760,7 @@ export class FormspecRender extends HTMLElement {
                 const customDef = this._componentDocument.components[componentType];
                 const template = JSON.parse(JSON.stringify(customDef.tree));
                 // Interpolate {param} references
-                this.interpolateParams(template, comp);
+                this.interpolateParams(template, comp.params || comp);
                 this.renderComponent(template, parent, prefix);
             } finally {
                 this.customComponentStack.delete(componentType);
@@ -847,6 +878,7 @@ export class FormspecRender extends HTMLElement {
             const container = document.createElement('div');
             container.className = 'formspec-radio-group';
             container.setAttribute('role', 'radiogroup');
+            if (comp.orientation) container.dataset.orientation = comp.orientation;
             if (options.length > 0) {
                 for (const opt of options) {
                     const lbl = document.createElement('label');
@@ -1157,6 +1189,22 @@ export class FormspecRender extends HTMLElement {
             }));
         }
 
+        // Mark field as touched on blur (shows validation errors after first interaction)
+        const markTouched = () => {
+            if (!this.touchedFields.has(fullName)) {
+                this.touchedFields.add(fullName);
+                // Re-evaluate error display now that field is touched
+                const error = this.engine!.errorSignals[fullName]?.value;
+                errorDisplay.textContent = error || '';
+                if (actualInputEl instanceof HTMLElement) {
+                    actualInputEl.setAttribute('aria-invalid', String(!!error));
+                }
+            }
+        };
+        fieldWrapper.addEventListener('focusout', markTouched);
+        // Also mark touched on change (for radios, checkboxes, selects that may not blur intuitively)
+        fieldWrapper.addEventListener('change', markTouched);
+
         // Relevancy, Readonly, Error signals (§4.2) with ARIA attributes
         this.cleanupFns.push(effect(() => {
             const isRelevant = this.engine!.relevantSignals[fullName]?.value ?? true;
@@ -1189,9 +1237,11 @@ export class FormspecRender extends HTMLElement {
 
         this.cleanupFns.push(effect(() => {
             const error = this.engine!.errorSignals[fullName]?.value;
-            errorDisplay.textContent = error || '';
+            // Only show errors for fields the user has interacted with
+            const showError = this.touchedFields.has(fullName) ? (error || '') : '';
+            errorDisplay.textContent = showError;
             if (actualInputEl instanceof HTMLElement) {
-                actualInputEl.setAttribute('aria-invalid', String(!!error));
+                actualInputEl.setAttribute('aria-invalid', String(!!showError));
             }
         }));
 

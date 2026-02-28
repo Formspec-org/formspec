@@ -2,6 +2,65 @@ import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
 import { formatMoney } from '../format';
 
+/**
+ * Minimal markdown-to-HTML converter for Text component `format: 'markdown'`.
+ * Handles: **bold**, *italic*, `code`, ordered/unordered lists, line breaks.
+ * Output is pre-sanitized (no raw HTML passthrough).
+ */
+function renderMarkdown(src: string): string {
+    // Escape HTML entities first to prevent injection
+    let html = src
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Split into lines for block-level processing
+    const lines = html.split('\n');
+    const out: string[] = [];
+    let inUl = false;
+    let inOl = false;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+
+        // Unordered list item
+        if (/^[-*]\s+/.test(trimmed)) {
+            if (!inUl) { out.push('<ul>'); inUl = true; }
+            if (inOl) { out.push('</ol>'); inOl = false; }
+            out.push(`<li>${trimmed.replace(/^[-*]\s+/, '')}</li>`);
+            continue;
+        }
+
+        // Ordered list item
+        if (/^\d+\.\s+/.test(trimmed)) {
+            if (!inOl) { out.push('<ol>'); inOl = true; }
+            if (inUl) { out.push('</ul>'); inUl = false; }
+            out.push(`<li>${trimmed.replace(/^\d+\.\s+/, '')}</li>`);
+            continue;
+        }
+
+        // Close open lists on non-list line
+        if (inUl) { out.push('</ul>'); inUl = false; }
+        if (inOl) { out.push('</ol>'); inOl = false; }
+
+        if (trimmed === '') {
+            out.push('<br>');
+        } else {
+            out.push(`<p>${trimmed}</p>`);
+        }
+    }
+    if (inUl) out.push('</ul>');
+    if (inOl) out.push('</ol>');
+
+    // Inline formatting
+    let result = out.join('\n');
+    result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    result = result.replace(/`(.+?)`/g, '<code>$1</code>');
+
+    return result;
+}
+
 /** Renders an `<h1>`-`<h6>` heading element based on the `level` prop (defaults to h1). */
 export const HeadingPlugin: ComponentPlugin = {
     type: 'Heading',
@@ -28,6 +87,7 @@ export const TextPlugin: ComponentPlugin = {
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-text';
         if (comp.format === 'markdown') el.classList.add('formspec-text--markdown');
+        const isMarkdown = comp.format === 'markdown';
         if (comp.bind) {
             const itemFullName = ctx.prefix ? `${ctx.prefix}.${comp.bind}` : comp.bind;
             const varKey = `#:${comp.bind}`;
@@ -36,10 +96,14 @@ export const TextPlugin: ComponentPlugin = {
                 const v = sig?.value;
                 if (v != null && typeof v === 'object' && 'amount' in v) {
                     el.textContent = formatMoney(v as any);
+                } else if (isMarkdown && v != null) {
+                    el.innerHTML = renderMarkdown(String(v));
                 } else {
                     el.textContent = v != null ? String(v) : '';
                 }
             }));
+        } else if (isMarkdown && comp.text) {
+            el.innerHTML = renderMarkdown(comp.text);
         } else {
             el.textContent = comp.text || '';
         }
@@ -228,7 +292,7 @@ export const SummaryPlugin: ComponentPlugin = {
                             const match = opts.find((o: any) => o.value === String(v));
                             dd.textContent = match ? match.label : String(v);
                         } else {
-                            dd.textContent = v != null ? String(v) : '';
+                            dd.textContent = v != null ? String(v) : '\u2014';
                         }
                     }));
                 }

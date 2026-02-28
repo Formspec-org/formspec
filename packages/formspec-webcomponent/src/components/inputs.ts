@@ -137,6 +137,23 @@ const SliderPlugin: ComponentPlugin = {
         if (comp.min != null) input.min = String(comp.min);
         if (comp.max != null) input.max = String(comp.max);
         if (comp.step != null) input.step = String(comp.step);
+
+        if (comp.showTicks && comp.min != null && comp.max != null && comp.step != null) {
+            const tickCount = Math.floor((comp.max - comp.min) / comp.step) + 1;
+            if (tickCount > 0 && tickCount <= 200) {
+                const listId = `formspec-ticks-${fullName.replace(/\./g, '-')}`;
+                const datalist = document.createElement('datalist');
+                datalist.id = listId;
+                for (let v = comp.min; v <= comp.max; v += comp.step) {
+                    const opt = document.createElement('option');
+                    opt.value = String(v);
+                    datalist.appendChild(opt);
+                }
+                sliderContainer.appendChild(datalist);
+                input.setAttribute('list', listId);
+            }
+        }
+
         sliderContainer.appendChild(input);
 
         const valueDisplay = document.createElement('span');
@@ -157,7 +174,8 @@ const SliderPlugin: ComponentPlugin = {
             if (!sig) return;
             const val = sig.value;
             if (document.activeElement !== input) input.value = val ?? '';
-            valueDisplay.textContent = val != null ? String(val) : '';
+            // Show signal value, or fall back to the native input value (range defaults to midpoint)
+            valueDisplay.textContent = val != null ? String(val) : input.value;
         }));
 
         ctx.cleanupFns.push(effect(() => {
