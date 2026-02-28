@@ -289,8 +289,8 @@ class LintDiagnostic:
 
 ### Pipeline Passes
 
-1. **Schema validation** (always) — `jsonschema` `Draft202012Validator` against the appropriate schema. 8 supported document types: `definition`, `response`, `validation_report`, `mapping`, `registry`, `theme`, `component`, `changelog`.
-2. **Document type detection** — sentinel keys: `$formspec` → definition, `$formspecTheme` → theme, `$formspecComponent` → component, `$formspecRegistry` → registry.
+1. **Schema validation** (always) — `jsonschema` `Draft202012Validator` against the appropriate schema. 10 supported document types: `definition`, `response`, `validation_report`, `validation_result`, `mapping`, `registry`, `theme`, `component`, `changelog`, `fel_functions`.
+2. **Document type detection** — sentinel keys: `$formspec` → definition, `$formspecTheme` → theme, `$formspecComponent` → component, `$formspecRegistry` → registry; structural key sets detect `validation_result` (`path`, `severity`, `constraintKind`, `message`) and `fel_functions` (`version`, `functions`).
 3. **Structural error gate** — structural schema errors halt further passes.
 4. **For `definition` documents:**
    - Tree indexing (item key/path index, duplicate detection)

@@ -1,5 +1,7 @@
 """Conformance tests for registry.schema.json."""
 import copy
+import json
+from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
@@ -7,10 +9,32 @@ from jsonschema import Draft202012Validator, ValidationError, validate
 from tests.unit.support.schema_fixtures import load_schema
 
 SCHEMA = load_schema("registry.schema.json")
+GRANT_REGISTRY_PATH = (
+    Path(__file__).resolve().parents[4]
+    / "examples"
+    / "grant-application"
+    / "registry.json"
+)
 
 
 def _validate(instance):
     validate(instance, SCHEMA, cls=Draft202012Validator)
+
+
+def _load_grant_registry():
+    return json.loads(GRANT_REGISTRY_PATH.read_text(encoding="utf-8"))
+
+
+def _find_entry(doc, *, category=None, status=None):
+    for entry in doc["entries"]:
+        if category is not None and entry.get("category") != category:
+            continue
+        if status is not None and entry.get("status") != status:
+            continue
+        return entry
+    raise AssertionError(
+        f"Could not find registry entry matching category={category!r} status={status!r}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -350,3 +374,35 @@ class TestEntryUrls:
             schemaUrl="https://example.com/schemas/x-acme-widget.json",
         )
         _validate(_minimal_registry(entries=[entry]))
+
+
+# ===================================================================
+# TestGrantRegistryConditionals
+# ===================================================================
+class TestGrantRegistryConditionals:
+    def test_grant_registry_fixture_is_valid(self):
+        _validate(_load_grant_registry())
+
+    @pytest.mark.parametrize(
+        ("category", "status", "missing_field"),
+        [
+            ("dataType", None, "baseType"),
+            ("function", None, "parameters"),
+            ("function", None, "returns"),
+            ("constraint", None, "parameters"),
+            (None, "deprecated", "deprecationNotice"),
+        ],
+    )
+    def test_grant_registry_missing_conditional_field_fails(
+        self,
+        category,
+        status,
+        missing_field,
+    ):
+        doc = _load_grant_registry()
+        entry = _find_entry(doc, category=category, status=status)
+        entry.pop(missing_field, None)
+
+        with pytest.raises(ValidationError) as exc_info:
+            _validate(doc)
+        assert missing_field in str(exc_info.value)

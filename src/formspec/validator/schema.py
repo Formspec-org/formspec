@@ -1,4 +1,4 @@
-"""Pass 1: JSON Schema validation against the 8 Formspec document types (E100, E101).
+"""Pass 1: JSON Schema validation against Formspec document schemas (E100, E101).
 
 Loads all schemas from the schemas/ directory into a jsonschema registry, detects
 document type by heuristic, and classifies structural errors that gate downstream passes.
@@ -23,22 +23,26 @@ DocumentType = Literal[
     "definition",
     "response",
     "validation_report",
+    "validation_result",
     "mapping",
     "registry",
     "theme",
     "component",
     "changelog",
+    "fel_functions",
 ]
 
 SCHEMA_FILES: dict[DocumentType, str] = {
     "definition": "definition.schema.json",
     "response": "response.schema.json",
     "validation_report": "validationReport.schema.json",
+    "validation_result": "validationResult.schema.json",
     "mapping": "mapping.schema.json",
     "registry": "registry.schema.json",
     "theme": "theme.schema.json",
     "component": "component.schema.json",
     "changelog": "changelog.schema.json",
+    "fel_functions": "fel-functions.schema.json",
 }
 
 
@@ -76,7 +80,7 @@ class SchemaValidationResult:
 
 
 class SchemaValidator:
-    """Loads all 8 Formspec JSON schemas into a Draft 2020-12 registry and validates documents against them."""
+    """Loads all Formspec JSON schemas into a Draft 2020-12 registry and validates documents against them."""
 
     def __init__(self, schema_dir: Path | None = None):
         """Load all schemas, build cross-referencing validator registry."""
@@ -121,6 +125,10 @@ class SchemaValidator:
             return "registry"
 
         keys = set(document.keys())
+        if {"path", "severity", "constraintKind", "message"}.issubset(keys):
+            return "validation_result"
+        if {"version", "functions"}.issubset(keys):
+            return "fel_functions"
         if {"fromVersion", "toVersion", "changes"}.issubset(keys):
             return "changelog"
         if {"definitionUrl", "data"}.issubset(keys):
