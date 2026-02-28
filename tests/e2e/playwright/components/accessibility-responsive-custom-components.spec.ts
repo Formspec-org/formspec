@@ -44,7 +44,12 @@ test.describe('Components: Accessibility, Responsive Overrides, and Custom Compo
         await expect(nameInput).toHaveAttribute('aria-required', 'true');
         // email is readonly
         await expect(emailInput).toHaveAttribute('aria-readonly', 'true');
-        // name starts empty and required -> has validation error -> aria-invalid
+        // name starts empty but untouched -> aria-invalid is false (errors hidden until interaction)
+        await expect(nameInput).toHaveAttribute('aria-invalid', 'false');
+
+        // Click into name, then blur without filling -> now touched and invalid
+        await nameInput.click();
+        await emailInput.click(); // blur name by focusing another field
         await expect(nameInput).toHaveAttribute('aria-invalid', 'true');
 
         // Fill name -> aria-invalid should become false

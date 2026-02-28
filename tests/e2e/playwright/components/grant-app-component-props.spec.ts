@@ -143,4 +143,81 @@ test.describe('Components: Grant App Component Props', () => {
     await expect(summary).toContainText('Nonprofit Organization');
     await expect(summary).not.toContainText('"nonprofit"');
   });
+
+  test('should render RadioGroup with horizontal orientation using flex-direction row', async ({ page }) => {
+    // Page 1 has orgType RadioGroup with orientation: "horizontal"
+    const radioGroup = page.locator('.formspec-radio-group[data-orientation="horizontal"]');
+    await expect(radioGroup).toHaveCount(1);
+    // Verify CSS flex-direction is row (horizontal layout)
+    const direction = await radioGroup.evaluate(el => getComputedStyle(el).flexDirection);
+    expect(direction).toBe('row');
+  });
+
+  test('should render Rating stars using unicode star character, not text "star"', async ({ page }) => {
+    await goToPage(page, 'Project Narrative');
+    const stars = page.locator('.formspec-rating-star');
+    await expect(stars).toHaveCount(5);
+    // Each star should contain the ★ character, not the word "star"
+    const firstStarText = await stars.first().textContent();
+    expect(firstStarText).toBe('★');
+  });
+
+  test('should show fallback text when ConditionalGroup condition is false', async ({ page }) => {
+    // Subcontractors page — usesSubcontractors defaults to false
+    await goToPage(page, 'Subcontractors');
+    // The fallback text should be visible
+    const fallback = page.locator('.formspec-conditional-fallback');
+    await expect(fallback).toBeVisible();
+    await expect(fallback).toContainText('subcontractor');
+  });
+
+  test('should constrain Signature canvas width to container with max-width CSS', async ({ page }) => {
+    await goToPage(page, 'Review & Submit');
+    const canvas = page.locator('.formspec-signature-canvas');
+    await expect(canvas).toBeVisible();
+    // Canvas should not exceed its container width
+    const { canvasWidth, containerWidth } = await canvas.evaluate(el => ({
+      canvasWidth: el.getBoundingClientRect().width,
+      containerWidth: (el.parentElement?.getBoundingClientRect().width || 9999),
+    }));
+    expect(canvasWidth).toBeLessThanOrEqual(containerWidth);
+    // Canvas should have a reasonable height (not giant)
+    const height = await canvas.evaluate(el => el.getBoundingClientRect().height);
+    expect(height).toBeLessThanOrEqual(200);
+  });
+
+  test('should render Accordion with meaningful label from component labels prop', async ({ page }) => {
+    await goToPage(page, 'Project Phases');
+    // Accordion should NOT show generic "Section 1"
+    const accordion = page.locator('.formspec-accordion-item summary');
+    await expect(accordion.first()).toBeVisible();
+    const text = await accordion.first().textContent();
+    expect(text).not.toContain('Section 1');
+  });
+
+  test('should render Tab buttons with tab-like styling (border-bottom or background)', async ({ page }) => {
+    await goToPage(page, 'Project Narrative');
+    const activeTab = page.locator('.formspec-tab--active');
+    await expect(activeTab).toHaveCount(1);
+    // Active tab should have distinguishing visual style
+    const bg = await activeTab.evaluate(el => getComputedStyle(el).borderBottom);
+    // Should have SOME border-bottom styling (not "0px none")
+    expect(bg).not.toContain('0px');
+  });
+
+  test('should render Badge with background color styling', async ({ page }) => {
+    await goToPage(page, 'Project Narrative');
+    const badge = page.locator('.formspec-badge').first();
+    await expect(badge).toBeVisible();
+    // Badge should have a visible background (not transparent/white)
+    const bg = await badge.evaluate(el => getComputedStyle(el).backgroundColor);
+    expect(bg).not.toBe('rgba(0, 0, 0, 0)');
+  });
+
+  test('should render both FileUpload components with drag-drop zones on Review page', async ({ page }) => {
+    await goToPage(page, 'Review & Submit');
+    const dropZones = page.locator('.formspec-drop-zone');
+    // Both narrativeDoc and budgetJustification should have drop zones
+    await expect(dropZones).toHaveCount(2);
+  });
 });
