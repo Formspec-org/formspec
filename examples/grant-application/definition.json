@@ -280,6 +280,13 @@
           "key": "projectedEndDate",
           "label": "Projected End Date",
           "dataType": "date"
+        },
+        {
+          "type": "field",
+          "key": "selfAssessment",
+          "label": "Proposal Confidence",
+          "dataType": "integer",
+          "hint": "Rate your confidence in this proposal from 1 (low) to 5 (high)."
         }
       ]
     },
@@ -480,6 +487,13 @@
           "label": "Budget Justification",
           "dataType": "attachment",
           "hint": "Upload a spreadsheet or PDF with budget detail (max 5 MB)."
+        },
+        {
+          "type": "field",
+          "key": "approverSignature",
+          "label": "Authorizing Official Signature",
+          "dataType": "attachment",
+          "hint": "Draw your signature to certify this application."
         }
       ]
     }
