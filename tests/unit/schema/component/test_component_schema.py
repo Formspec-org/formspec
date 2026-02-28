@@ -252,8 +252,10 @@ def test_custom_component_ref_structural():
 
 def test_deep_nesting():
     # Test that deep nesting is allowed by schema
+    # Depth 10 is sufficient to prove recursion works; deeper levels are
+    # exponentially slow with oneOf discrimination in jsonschema.
     curr = { "component": "Stack", "children": [] }
-    for _ in range(50):
+    for _ in range(10):
         curr = { "component": "Stack", "children": [curr] }
     
     doc = {

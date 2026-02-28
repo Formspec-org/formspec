@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://formspec.org/schemas/response.schema.json",
   "title": "Formspec Response",
-  "description": "A Formspec Response document — a completed or in-progress Instance pinned to a specific Definition version (§2.1.6).",
+  "description": "A Formspec Response document — a completed or in-progress Instance pinned to a specific Definition version (§2.1.6). A Response is the unit of data capture: the filled-in form. It references exactly one Definition by the immutable tuple (definitionUrl, definitionVersion). A conformant processor MUST reject a Response whose definitionVersion does not match any known Definition at the given definitionUrl. Responses are always validated against their pinned Definition version, even if a newer version exists (Response Pinning Rule VP-01). The tuple (definitionUrl, definitionVersion) combined with the Response 'id' uniquely identifies a single form submission across all systems.",
   "type": "object",
   "required": [
     "definitionUrl",
@@ -16,163 +16,188 @@
     "definitionUrl": {
       "type": "string",
       "format": "uri",
-      "description": "The canonical URL of the Definition.",
-      "examples": ["https://example.org/forms/intake"],
+      "description": "The canonical URL of the Definition this Response was created against. This is the stable logical-form identifier shared across all versions of the same form. Combined with definitionVersion to form the immutable identity reference. MUST match the 'url' property of a known Definition.",
+      "examples": [
+        "https://example.org/forms/intake",
+        "https://grants.example.gov/forms/sf-425",
+        "https://example.gov/forms/annual-report"
+      ],
       "x-lm": {
         "critical": true,
-        "intent": "Canonical identifier of the form definition used to produce this response."
+        "intent": "Canonical identifier of the form definition used to produce this response. Stable across definition versions."
       }
     },
     "definitionVersion": {
       "type": "string",
-      "description": "The exact version of the Definition against which this Response was created.",
-      "examples": ["2.1.0"],
+      "minLength": 1,
+      "description": "The exact version of the Definition against which this Response was created. Interpretation of the version string is governed by the Definition's versionAlgorithm (default: semver). A Response is always validated against this specific version, never against a newer version — even if one exists (Pinning Rule VP-01). Once set, this value MUST NOT change for the lifetime of the Response.",
+      "examples": [
+        "2.1.0",
+        "1.0.0-rc.1",
+        "2025.06.01",
+        "42"
+      ],
       "x-lm": {
         "critical": true,
-        "intent": "Exact pinned definition version for validation and replay."
+        "intent": "Exact pinned definition version for validation and replay. Immutable after creation."
       }
     },
     "status": {
       "type": "string",
       "enum": ["in-progress", "completed", "amended", "stopped"],
-      "description": "The current status of this Response.",
-      "examples": ["in-progress", "completed"],
+      "description": "The current lifecycle status of this Response. 'in-progress': actively being edited, MAY contain validation errors. 'completed': all error-severity validation results resolved, form submitted — a Response with one or more error-severity results MUST NOT be marked completed. 'amended': previously completed, reopened for modification. 'stopped': abandoned before completion, data preserved for audit. Saving data MUST never be blocked by validation status (VE-05) — only the transition to 'completed' requires zero error-level results.",
+      "examples": ["in-progress", "completed", "amended", "stopped"],
       "x-lm": {
         "critical": true,
-        "intent": "Lifecycle state controlling completion semantics."
+        "intent": "Lifecycle state controlling completion semantics and submission eligibility."
       }
     },
     "data": {
       "type": "object",
-      "description": "The primary Instance — the form data.",
+      "description": "The primary Instance — the form data. Structure mirrors the Definition's item tree: field Items produce scalar properties, non-repeatable group Items produce nested objects, repeatable group Items produce arrays of objects, display Items have no representation. Non-relevant fields are handled per the Definition's nonRelevantBehavior setting: 'remove' (default) omits them entirely, 'empty' retains the key with null value, 'keep' retains the last value. Calculated fields (those with a 'calculate' Bind) are included with their computed values.",
       "additionalProperties": true,
       "examples": [
         {
           "firstName": "Ada",
           "lastName": "Lovelace"
+        },
+        {
+          "has_subcontracts": true,
+          "subcontracting": [
+            {
+              "subcontractor_name": "Acme Analytics, LLC",
+              "subcontractor_ein": "84-1234567",
+              "subcontract_amount": 45000.00,
+              "work_description": "Statistical modeling and data analysis."
+            }
+          ],
+          "subcontract_total": 45000.00
+        },
+        {
+          "has_subcontracts": false
         }
       ],
       "x-lm": {
         "critical": true,
-        "intent": "Primary response payload captured from the form instance."
+        "intent": "Primary response payload captured from the form instance. Shape determined by the Definition's item tree."
       }
     },
     "authored": {
       "type": "string",
       "format": "date-time",
-      "description": "When the Response was last modified (ISO 8601 date-time).",
-      "examples": ["2025-07-10T14:30:00Z"],
+      "description": "When the Response was last modified (ISO 8601 date-time with timezone). Updated on every save, not just on status transitions. Used for conflict detection, audit trails, and ordering Responses chronologically.",
+      "examples": [
+        "2025-07-10T14:30:00Z",
+        "2025-12-01T09:15:30-05:00"
+      ],
       "x-lm": {
         "critical": true,
-        "intent": "Last-modified timestamp for this response record."
+        "intent": "Last-modified timestamp for conflict detection and audit."
       }
     },
     "id": {
       "type": "string",
-      "description": "A globally unique identifier (e.g., UUID)."
+      "description": "A globally unique identifier for this Response (e.g., UUID v4). While optional in the schema, implementations SHOULD generate an id for every Response to support cross-system correlation, audit trails, amendment chains, and deduplication.",
+      "examples": [
+        "550e8400-e29b-41d4-a716-446655440000",
+        "resp-2025-00042"
+      ]
     },
     "author": {
       "type": "object",
-      "description": "Identifier and display name of the person or system that authored the Response.",
+      "description": "Identifier and display name of the person or system that authored the Response. For human authors, 'id' is typically a user account identifier; for automated systems, 'id' identifies the service or integration.",
       "required": ["id"],
       "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier of the author."
+          "description": "Unique identifier of the author within the host system.",
+          "examples": ["user-42", "system:batch-import", "urn:oid:2.16.840.1.113883.4.6"]
         },
         "name": {
           "type": "string",
-          "description": "Display name of the author."
+          "description": "Display name of the author. For human authors, typically their full name.",
+          "examples": ["Dr. Grace Hopper", "Batch Import Service"]
         }
-      }
+      },
+      "examples": [
+        { "id": "user-42", "name": "Dr. Grace Hopper" },
+        { "id": "system:etl-pipeline" }
+      ]
     },
     "subject": {
       "type": "object",
-      "description": "The entity this Response is about.",
+      "description": "The entity this Response is about — the grant, patient, project, or other domain object the form data describes. Distinct from 'author' (who filled in the form).",
       "required": ["id"],
       "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier of the subject entity."
+          "description": "Unique identifier of the subject entity within the host system.",
+          "examples": ["grant-2025-04817", "patient-12345", "org-northwind"]
         },
         "type": {
           "type": "string",
-          "description": "The type of the subject entity (e.g., 'Grant', 'Patient')."
+          "description": "The type of the subject entity. Implementations SHOULD use consistent type labels within a system.",
+          "examples": ["Grant", "Patient", "Organization", "Project"]
         }
-      }
+      },
+      "examples": [
+        { "id": "grant-2025-04817", "type": "Grant" },
+        { "id": "patient-12345", "type": "Patient" }
+      ]
     },
     "validationResults": {
       "type": "array",
-      "description": "The most recent set of ValidationResult entries (§2.5.1).",
+      "description": "The most recent set of ValidationResult entries for this Response. Includes results from all sources: bind constraints, validation shapes, required checks, type checks, and external validation. Only error-severity results block the transition to 'completed' status. Warning and info results are advisory. Non-relevant fields MUST NOT produce results. When persisted alongside the Response, this array represents a snapshot — it may be stale if the data has changed since the last validation run.",
       "items": {
-        "$ref": "#/$defs/ValidationResult"
-      }
+        "$ref": "https://formspec.org/schemas/validationResult/1.0"
+      },
+      "examples": [
+        [],
+        [
+          {
+            "path": "ssn",
+            "severity": "error",
+            "constraintKind": "constraint",
+            "message": "SSN must be in the format 000-00-0000.",
+            "code": "CONSTRAINT_FAILED",
+            "source": "bind",
+            "constraint": "matches($, '^[0-9]{3}-[0-9]{2}-[0-9]{4}$')"
+          }
+        ],
+        [
+          {
+            "path": "budget_justification",
+            "severity": "error",
+            "constraintKind": "required",
+            "message": "This field is required.",
+            "code": "REQUIRED",
+            "source": "bind"
+          },
+          {
+            "path": "total_expenditure",
+            "severity": "warning",
+            "constraintKind": "shape",
+            "message": "Proposed expenditure differs from prior year by 40%. Changes exceeding 25% require additional justification.",
+            "code": "YOY_VARIANCE",
+            "source": "shape",
+            "shapeId": "yoy-variance-warning",
+            "value": 280000.00
+          }
+        ]
+      ]
     },
     "extensions": {
       "type": "object",
-      "propertyNames": { "pattern": "^x-" }
-    }
-  },
-  "$defs": {
-    "ValidationResult": {
-      "type": "object",
-      "description": "A single validation finding produced by constraint evaluation (§2.5.1).",
-      "required": ["path", "severity", "constraintKind", "message"],
-      "additionalProperties": false,
-      "properties": {
-        "path": {
-          "type": "string",
-          "description": "Dot-notation path to the data node that produced this result."
-        },
-        "severity": {
-          "type": "string",
-          "enum": ["error", "warning", "info"],
-          "description": "The severity level of this finding (§5.1)."
-        },
-        "constraintKind": {
-          "type": "string",
-          "enum": ["required", "type", "cardinality", "constraint", "shape", "external"],
-          "description": "The category of constraint that produced this result."
-        },
-        "message": {
-          "type": "string",
-          "description": "A human-readable description of the finding."
-        },
-        "code": {
-          "type": "string",
-          "description": "A machine-readable identifier for this class of finding."
-        },
-        "shapeId": {
-          "type": "string",
-          "description": "If the source is a Validation Shape, the identifier of that shape."
-        },
-        "source": {
-          "type": "string",
-          "enum": ["bind", "shape", "external"],
-          "description": "The origin category of this finding."
-        },
-        "sourceId": {
-          "type": "string",
-          "description": "Identifies the origin of the finding (e.g., bind or shape identifier)."
-        },
-        "value": {
-          "description": "The value that was evaluated when this finding was produced."
-        },
-        "constraint": {
-          "type": "string",
-          "description": "The FEL constraint expression that failed. Included for diagnostic purposes."
-        },
-        "context": {
-          "type": "object",
-          "description": "Additional context data from the Shape's context expressions."
-        },
-        "extensions": {
-          "type": "object",
-          "propertyNames": { "pattern": "^x-" }
+      "description": "Implementor-specific extension data. All keys MUST be prefixed with 'x-'. Processors MUST ignore unrecognized extensions and MUST preserve them during round-tripping. Extensions MUST NOT alter core semantics (validation, calculation, relevance, required state).",
+      "propertyNames": { "pattern": "^x-" },
+      "examples": [
+        {
+          "x-audit": { "submittedBy": "user-42", "ipAddress": "10.0.0.1" },
+          "x-workflow": { "stage": "review", "assignee": "reviewer-7" }
         }
-      }
+      ]
     }
   }
 }

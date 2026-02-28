@@ -67,7 +67,7 @@
       ],
       "conformanceEssentials": [
         "A conforming validation report must include valid, results, counts, and timestamp.",
-        "ValidationReport results entries must conform to the shared ValidationResult definition from response schema.",
+        "ValidationReport results entries must conform to the shared validationResult.schema.json schema.",
         "Processors should reject reports where required severity counts are missing or invalid."
       ]
     },

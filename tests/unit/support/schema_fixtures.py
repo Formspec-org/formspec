@@ -78,10 +78,16 @@ def changelog_schema() -> dict:
 
 
 @pytest.fixture(scope="session")
+def validation_result_schema() -> dict:
+    return load_schema("validationResult.schema.json")
+
+
+@pytest.fixture(scope="session")
 def schema_registry(
     definition_schema: dict,
     response_schema: dict,
     validation_report_schema: dict,
+    validation_result_schema: dict,
     mapping_schema: dict,
     registry_schema: dict,
     theme_schema: dict,
@@ -92,6 +98,7 @@ def schema_registry(
         definition_schema,
         response_schema,
         validation_report_schema,
+        validation_result_schema,
         mapping_schema,
         registry_schema,
         theme_schema,

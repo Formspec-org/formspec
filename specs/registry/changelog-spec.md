@@ -34,13 +34,13 @@ A Changelog Document is a JSON object at the top level.
 | Pointer | Field | Type | Required | Notes | Description |
 |---|---|---|---|---|---|
 | `#/properties/$schema` | `$schema` | <code>string</code> | no | — | — |
-| `#/properties/changes` | `changes` | <code>array</code> | yes | critical | Ordered array of Change objects. |
-| `#/properties/definitionUrl` | `definitionUrl` | <code>string</code> | yes | critical | URL of the Definition. |
-| `#/properties/fromVersion` | `fromVersion` | <code>string</code> | yes | critical | Base semver version. |
-| `#/properties/generatedAt` | `generatedAt` | <code>string</code> | no | — | ISO 8601 timestamp of generation. |
-| `#/properties/semverImpact` | `semverImpact` | <code>string</code> | yes | enum: <code>"major"</code>, <code>"minor"</code>, <code>"patch"</code>; critical | Maximum impact across all changes (breaking → major, compatible → minor, cosmetic → patch). |
-| `#/properties/summary` | `summary` | <code>string</code> | no | — | Human-readable summary of changes. |
-| `#/properties/toVersion` | `toVersion` | <code>string</code> | yes | critical | Target semver version. |
+| `#/properties/changes` | `changes` | <code>array</code> | yes | critical | Ordered array of Change objects. Each entry describes one atomic modification to a definition element. |
+| `#/properties/definitionUrl` | `definitionUrl` | <code>string</code> | yes | critical | Canonical URL of the Definition whose versions are compared. Must match the definition's top-level 'url' property. |
+| `#/properties/fromVersion` | `fromVersion` | <code>string</code> | yes | critical | Base version (before changes). Interpreted per the definition's versionAlgorithm (default: semver). |
+| `#/properties/generatedAt` | `generatedAt` | <code>string</code> | no | — | ISO 8601 timestamp when this changelog was generated. |
+| `#/properties/semverImpact` | `semverImpact` | <code>string</code> | yes | enum: <code>"major"</code>, <code>"minor"</code>, <code>"patch"</code>; critical | Maximum impact across all changes. Must equal the highest impact in the changes array: breaking → major, compatible → minor, cosmetic → patch. |
+| `#/properties/summary` | `summary` | <code>string</code> | no | — | Human-readable summary of changes for release notes. |
+| `#/properties/toVersion` | `toVersion` | <code>string</code> | yes | critical | Target version (after changes). Interpreted per the definition's versionAlgorithm (default: semver). |
 <!-- schema-ref:end -->
 
 The generated table above is the canonical structural contract for Changelog

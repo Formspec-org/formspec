@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://formspec.org/schemas/component/1.0",
   "title": "Formspec Component Document",
+  "description": "A Formspec Component Document per the Component Specification v1.0. Defines a Tier 3 parallel presentation tree of UI components bound to a Formspec Definition's items via slot binding. The component tree controls layout and widget selection but cannot override core behavioral semantics (required, relevant, readonly, calculate, constraint) from the Definition. Multiple Component Documents MAY target the same Definition for platform-specific presentations.",
   "type": "object",
   "required": [
     "$formspecComponent",
@@ -18,9 +19,7 @@
       "type": "string",
       "const": "1.0",
       "description": "Component specification version. MUST be '1.0'.",
-      "examples": [
-        "1.0"
-      ],
+      "examples": ["1.0"],
       "x-lm": {
         "critical": true,
         "intent": "Version pin for component document compatibility."
@@ -28,7 +27,8 @@
     },
     "url": {
       "type": "string",
-      "format": "uri"
+      "format": "uri",
+      "description": "Canonical URI identifier for this Component Document."
     },
     "name": {
       "type": "string",
@@ -46,9 +46,7 @@
       "type": "string",
       "minLength": 1,
       "description": "Version of this Component Document.",
-      "examples": [
-        "1.0.0"
-      ],
+      "examples": ["1.0.0"],
       "x-lm": {
         "critical": true,
         "intent": "Revision identifier for the component tree document."
@@ -58,10 +56,7 @@
       "$ref": "#/$defs/TargetDefinition",
       "description": "Binding to the target Formspec Definition and optional compatibility range.",
       "examples": [
-        {
-          "url": "https://agency.gov/forms/budget",
-          "compatibleVersions": ">=1.0.0 <2.0.0"
-        }
+        { "url": "https://agency.gov/forms/budget", "compatibleVersions": ">=1.0.0 <2.0.0" }
       ],
       "x-lm": {
         "critical": true,
@@ -69,31 +64,52 @@
       }
     },
     "breakpoints": {
-      "$ref": "#/$defs/Breakpoints"
+      "$ref": "#/$defs/Breakpoints",
+      "description": "Named viewport breakpoints for responsive prop overrides. Keys are breakpoint names; values are minimum viewport widths in pixels. Mobile-first cascade: base props apply to all widths, then overrides merge in ascending order.",
+      "examples": [
+        { "sm": 576, "md": 768, "lg": 1024 }
+      ]
     },
     "tokens": {
-      "$ref": "#/$defs/Tokens"
+      "$ref": "#/$defs/Tokens",
+      "description": "Flat key-value map of design tokens. Referenced in style objects and token-able props via $token.key syntax. Tier 3 tokens override Tier 2 theme tokens of the same key.",
+      "examples": [
+        { "color.primary": "#0057B7", "spacing.md": "16px", "border.radius": "6px" }
+      ]
     },
     "components": {
       "type": "object",
+      "description": "Registry of custom component templates. Keys are PascalCase names (MUST NOT collide with built-in names). Each template has params and a tree that is instantiated with {param} interpolation.",
       "patternProperties": {
         "^[A-Z][a-zA-Z0-9]*$": {
           "$ref": "#/$defs/CustomComponentDef"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "LabeledField": {
+            "params": ["field", "label"],
+            "tree": {
+              "component": "Stack",
+              "gap": "$token.spacing.sm",
+              "children": [
+                { "component": "Heading", "level": 4, "text": "{label}" },
+                { "component": "TextInput", "bind": "{field}" }
+              ]
+            }
+          }
+        }
+      ]
     },
     "tree": {
       "$ref": "#/$defs/AnyComponent",
-      "description": "Root component node of the presentation tree.",
+      "description": "Root component node of the presentation tree. MUST be a single component object (wrap multiple children in Stack or Page).",
       "examples": [
         {
           "component": "Stack",
           "children": [
-            {
-              "component": "TextInput",
-              "bind": "name"
-            }
+            { "component": "TextInput", "bind": "name" }
           ]
         }
       ],
@@ -103,2600 +119,1292 @@
       }
     }
   },
+
   "$defs": {
     "TargetDefinition": {
       "type": "object",
-      "required": [
-        "url"
-      ],
+      "required": ["url"],
       "additionalProperties": false,
       "properties": {
         "url": {
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "description": "Canonical URL of the target Definition (its url property)."
         },
         "compatibleVersions": {
-          "type": "string"
+          "type": "string",
+          "description": "Semver range expression describing which Definition versions this document supports. When absent, compatible with any version."
         }
       }
     },
+
     "Tokens": {
       "type": "object",
+      "description": "Flat design token map. Keys are dot-delimited names (e.g. color.primary, spacing.md). Values are strings or numbers. Referenced via $token.key syntax. MUST NOT contain nested objects, arrays, booleans, or null.",
       "additionalProperties": {
         "oneOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "number"
-          }
+          { "type": "string" },
+          { "type": "number" }
         ]
       }
     },
+
     "Breakpoints": {
       "type": "object",
+      "description": "Named viewport breakpoints. Keys are breakpoint names; values are minimum viewport widths in pixels (non-negative integers).",
       "additionalProperties": {
         "type": "integer",
         "minimum": 0
       }
     },
+
     "StyleMap": {
       "type": "object",
+      "description": "Flat style map. Values MAY contain $token.path references (e.g. $token.color.primary). Not CSS — renderers map to platform equivalents.",
       "additionalProperties": {
         "oneOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "number"
-          }
+          { "type": "string" },
+          { "type": "number" }
         ]
       }
     },
+
     "AccessibilityBlock": {
       "type": "object",
+      "description": "Accessibility overrides applied to the component's root element. Supplements or replaces renderer defaults.",
       "additionalProperties": false,
       "properties": {
         "role": {
           "type": "string",
-          "description": "ARIA role override."
+          "description": "ARIA role override (e.g. 'region', 'group', 'status'). Replaces renderer-default role."
         },
         "description": {
           "type": "string",
-          "description": "Accessible description (aria-description)."
+          "description": "Accessible description text. Renderers SHOULD wire to aria-describedby."
         },
         "liveRegion": {
           "type": "string",
-          "enum": [
-            "off",
-            "polite",
-            "assertive"
-          ],
-          "description": "ARIA live region politeness."
+          "enum": ["off", "polite", "assertive"],
+          "description": "Sets aria-live on root element. Renderers MUST NOT apply live-region semantics unless explicitly set."
         }
       }
     },
+
     "ResponsiveOverrides": {
       "type": "object",
+      "description": "Breakpoint-keyed prop overrides. Keys are breakpoint names; values are objects of component-specific props to shallow-merge at that breakpoint. MUST NOT contain component, bind, when, children, or responsive.",
       "additionalProperties": {
         "type": "object"
       }
     },
+
     "ChildrenArray": {
       "type": "array",
+      "description": "Ordered list of child components. Renderers MUST preserve array order.",
       "items": {
         "$ref": "#/$defs/AnyComponent"
       }
     },
+
     "CustomComponentDef": {
       "type": "object",
-      "required": [
-        "tree"
-      ],
+      "description": "A reusable component template. Instantiated by using the registry key as the component value and providing params. Templates MUST NOT reference themselves (directly or indirectly).",
+      "required": ["tree"],
       "additionalProperties": false,
       "properties": {
         "params": {
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": { "type": "string" },
+          "description": "Parameter names accepted by this template. Each name MUST match [a-zA-Z][a-zA-Z0-9_]*. Referenced in allowed string props via {paramName} interpolation."
         },
         "tree": {
-          "$ref": "#/$defs/AnyComponent"
+          "$ref": "#/$defs/AnyComponent",
+          "description": "Component subtree instantiated when this custom component is used."
         }
       }
     },
-    "AnyComponent": {
+
+    "ComponentBase": {
       "type": "object",
-      "required": [
-        "component"
-      ],
+      "description": "Base properties shared by all component objects. Every component inherits these via $ref.",
+      "required": ["component"],
       "properties": {
         "component": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "description": "Component type name. MUST be a built-in name or a key in the components registry."
+        },
+        "when": {
+          "type": "string",
+          "description": "FEL boolean expression for conditional rendering. false/null hides the component and all children. Presentation-only — does NOT affect data (unlike Bind relevant which may clear data). When BOTH when and relevant apply: relevant=false always wins; when=false hides but preserves data."
+        },
+        "responsive": {
+          "$ref": "#/$defs/ResponsiveOverrides",
+          "description": "Breakpoint-keyed prop overrides for responsive design. Mobile-first cascade."
+        },
+        "style": {
+          "$ref": "#/$defs/StyleMap",
+          "description": "Flat style map. Values MAY contain $token.path references."
+        },
+        "accessibility": {
+          "$ref": "#/$defs/AccessibilityBlock",
+          "description": "Accessibility overrides for the component's root element."
+        },
+        "cssClass": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" } }
+          ],
+          "description": "CSS class name(s) applied to root element. Additive to renderer-generated classes. Non-web renderers MAY ignore. Values MAY contain $token. references."
         }
+      }
+    },
+
+    "AnyComponent": {
+      "type": "object",
+      "required": ["component"],
+      "properties": {
+        "component": { "type": "string", "minLength": 1 }
       },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Page"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Page"
-          }
+      "oneOf": [
+        { "$ref": "#/$defs/Page" },
+        { "$ref": "#/$defs/Stack" },
+        { "$ref": "#/$defs/Grid" },
+        { "$ref": "#/$defs/Wizard" },
+        { "$ref": "#/$defs/Spacer" },
+        { "$ref": "#/$defs/TextInput" },
+        { "$ref": "#/$defs/NumberInput" },
+        { "$ref": "#/$defs/DatePicker" },
+        { "$ref": "#/$defs/Select" },
+        { "$ref": "#/$defs/CheckboxGroup" },
+        { "$ref": "#/$defs/Toggle" },
+        { "$ref": "#/$defs/FileUpload" },
+        { "$ref": "#/$defs/Heading" },
+        { "$ref": "#/$defs/Text" },
+        { "$ref": "#/$defs/Divider" },
+        { "$ref": "#/$defs/Card" },
+        { "$ref": "#/$defs/Collapsible" },
+        { "$ref": "#/$defs/ConditionalGroup" },
+        { "$ref": "#/$defs/Columns" },
+        { "$ref": "#/$defs/Tabs" },
+        { "$ref": "#/$defs/Accordion" },
+        { "$ref": "#/$defs/RadioGroup" },
+        { "$ref": "#/$defs/MoneyInput" },
+        { "$ref": "#/$defs/Slider" },
+        { "$ref": "#/$defs/Rating" },
+        { "$ref": "#/$defs/Signature" },
+        { "$ref": "#/$defs/Alert" },
+        { "$ref": "#/$defs/Badge" },
+        { "$ref": "#/$defs/ProgressBar" },
+        { "$ref": "#/$defs/Summary" },
+        { "$ref": "#/$defs/DataTable" },
+        { "$ref": "#/$defs/Panel" },
+        { "$ref": "#/$defs/Modal" },
+        { "$ref": "#/$defs/Popover" },
+        { "$ref": "#/$defs/CustomComponentRef" }
+      ]
+    },
+
+    "Page": {
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Top-level page/section container. In a multi-step form, each Page is one step. When used inside a Wizard, Pages define wizard steps. Pages MAY also be used standalone within a Stack for sectioned single-page forms.",
+      "x-lm": {
+        "category": "layout",
+        "level": "core",
+        "children": true,
+        "bind": "forbidden"
+      },
+      "properties": {
+        "component": { "const": "Page" },
+        "title": {
+          "type": "string",
+          "description": "Page heading displayed at the top of the section."
         },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Stack"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Stack"
-          }
+        "description": {
+          "type": "string",
+          "description": "Subtitle or description text rendered below the title."
         },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
         {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Grid"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Grid"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Wizard"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Wizard"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Spacer"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Spacer"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "TextInput"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/TextInput"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "NumberInput"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/NumberInput"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "DatePicker"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/DatePicker"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Select"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Select"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "CheckboxGroup"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/CheckboxGroup"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Toggle"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Toggle"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "FileUpload"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/FileUpload"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Heading"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Heading"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Text"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Text"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Divider"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Divider"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Card"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Card"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Collapsible"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Collapsible"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "ConditionalGroup"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/ConditionalGroup"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Columns"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Columns"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Tabs"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Tabs"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Accordion"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Accordion"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "RadioGroup"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/RadioGroup"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "MoneyInput"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/MoneyInput"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Slider"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Slider"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Rating"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Rating"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Signature"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Signature"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Alert"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Alert"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Badge"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Badge"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "ProgressBar"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/ProgressBar"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Summary"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Summary"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "DataTable"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/DataTable"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Panel"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Panel"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Modal"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Modal"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "const": "Popover"
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/Popover"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "component": {
-                "type": "string",
-                "not": {
-                  "enum": [
-                    "Page",
-                    "Stack",
-                    "Grid",
-                    "Wizard",
-                    "Spacer",
-                    "TextInput",
-                    "NumberInput",
-                    "DatePicker",
-                    "Select",
-                    "CheckboxGroup",
-                    "Toggle",
-                    "FileUpload",
-                    "Heading",
-                    "Text",
-                    "Divider",
-                    "Card",
-                    "Collapsible",
-                    "ConditionalGroup",
-                    "Columns",
-                    "Tabs",
-                    "Accordion",
-                    "RadioGroup",
-                    "MoneyInput",
-                    "Slider",
-                    "Rating",
-                    "Signature",
-                    "Alert",
-                    "Badge",
-                    "ProgressBar",
-                    "Summary",
-                    "DataTable",
-                    "Panel",
-                    "Modal",
-                    "Popover"
-                  ]
-                }
-              }
-            },
-            "required": [
-              "component"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/CustomComponentRef"
-          }
+          "component": "Page",
+          "title": "Project Information",
+          "description": "Enter basic details about your project.",
+          "children": [
+            { "component": "TextInput", "bind": "projectName" }
+          ]
         }
       ]
     },
-    "Page": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "component": {
-          "const": "Page"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "title": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
-        }
-      }
-    },
+
     "Stack": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Flexbox stacking container arranging children vertically or horizontally. The most common layout primitive — typically used as the root component.",
+      "x-lm": {
+        "category": "layout",
+        "level": "core",
+        "children": true,
+        "bind": "forbidden"
+      },
       "properties": {
-        "component": {
-          "const": "Stack"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Stack" },
         "direction": {
           "type": "string",
-          "enum": [
-            "vertical",
-            "horizontal"
-          ],
-          "default": "vertical"
+          "enum": ["vertical", "horizontal"],
+          "default": "vertical",
+          "description": "Stack axis."
         },
         "gap": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
-          ]
+          "oneOf": [{ "type": "string" }, { "type": "number" }],
+          "description": "Spacing between children. String for CSS values or $token refs, number for pixels."
         },
         "align": {
           "type": "string",
-          "enum": [
-            "start",
-            "center",
-            "end",
-            "stretch"
-          ]
+          "enum": ["start", "center", "end", "stretch"],
+          "description": "Cross-axis alignment."
         },
         "wrap": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether children wrap to new lines when direction is horizontal."
         },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
-        }
-      }
-    },
-    "Grid": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "component": {
-          "const": "Grid"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "columns": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Stack", "direction": "vertical", "gap": "$token.spacing.md",
+          "children": [
+            { "component": "TextInput", "bind": "firstName" },
+            { "component": "TextInput", "bind": "lastName" }
           ]
+        }
+      ]
+    },
+
+    "Grid": {
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Multi-column grid layout distributing children across columns in source order, wrapping to new rows as needed.",
+      "x-lm": {
+        "category": "layout",
+        "level": "core",
+        "children": true,
+        "bind": "forbidden"
+      },
+      "properties": {
+        "component": { "const": "Grid" },
+        "columns": {
+          "oneOf": [{ "type": "string" }, { "type": "integer", "minimum": 1 }],
+          "description": "Column count (integer) or CSS grid-template-columns value (string, e.g. '1fr 2fr 1fr')."
         },
         "gap": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
-          ]
+          "oneOf": [{ "type": "string" }, { "type": "number" }],
+          "description": "Spacing between grid cells."
         },
         "rowGap": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
+          "oneOf": [{ "type": "string" }, { "type": "number" }],
+          "description": "Vertical spacing between rows. Inherits gap if absent."
+        },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Grid", "columns": 3, "gap": "$token.spacing.md",
+          "children": [
+            { "component": "TextInput", "bind": "firstName" },
+            { "component": "TextInput", "bind": "middleName" },
+            { "component": "TextInput", "bind": "lastName" }
           ]
-        },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
         }
-      }
+      ]
     },
+
     "Wizard": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Sequential step-by-step navigation container. Each child MUST be a Page component representing one wizard step. Manages step progression, progress indication, and navigation controls.",
+      "x-lm": {
+        "category": "layout",
+        "level": "core",
+        "children": true,
+        "bind": "forbidden",
+        "childConstraint": "Page only"
+      },
       "properties": {
-        "component": {
-          "const": "Wizard"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Wizard" },
         "showProgress": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether to display a progress indicator (step counter, bar, or breadcrumb)."
         },
         "allowSkip": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether users may navigate to non-adjacent steps directly."
         },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
-        }
-      }
-    },
-    "Spacer": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "component": {
-          "const": "Spacer"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "size": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Wizard", "showProgress": true,
+          "children": [
+            { "component": "Page", "title": "Step 1: Basics", "children": [
+              { "component": "TextInput", "bind": "name" }
+            ]},
+            { "component": "Page", "title": "Step 2: Details", "children": [
+              { "component": "DatePicker", "bind": "startDate" }
+            ]}
           ]
         }
-      }
+      ]
     },
-    "TextInput": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+
+    "Spacer": {
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Empty spacing element inserting visual space between siblings. Leaf component — no children, no binding.",
+      "x-lm": {
+        "category": "layout",
+        "level": "core",
+        "children": false,
+        "bind": "forbidden"
+      },
       "properties": {
-        "component": {
-          "const": "TextInput"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Spacer" },
+        "size": {
+          "oneOf": [{ "type": "string" }, { "type": "number" }],
+          "description": "Space amount. String for CSS/$token values, number for pixels."
+        }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Spacer", "size": "$token.spacing.lg" }
+      ]
+    },
+
+    "TextInput": {
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Single-line or multi-line text input. Default input for string-type fields. When maxLines > 1, renders as textarea.",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "core",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["string"]
+      },
+      "properties": {
+        "component": { "const": "TextInput" },
         "bind": {
-          "type": "string"
+          "type": "string",
+          "description": "Item key from the target Definition. Renderer inherits label, required, readonly, relevant, and validation."
         },
         "placeholder": {
-          "type": "string"
+          "type": "string",
+          "description": "Placeholder text displayed when the field is empty."
         },
         "maxLines": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Maximum visible lines. 1 = single-line input, >1 = multi-line textarea."
         },
         "inputMode": {
-          "type": "string"
+          "type": "string",
+          "enum": ["text", "email", "tel", "url", "search"],
+          "description": "Input mode hint for virtual keyboards."
         },
         "prefix": {
-          "type": "string"
+          "type": "string",
+          "description": "Static text rendered before the input (e.g. 'https://')."
         },
         "suffix": {
-          "type": "string"
+          "type": "string",
+          "description": "Static text rendered after the input (e.g. '.com')."
         }
-      }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "TextInput", "bind": "email", "placeholder": "you@example.com", "inputMode": "email" }
+      ]
     },
+
     "NumberInput": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Numeric input with optional step controls. Suitable for integers, decimals, and monetary values (when paired with prefix/suffix).",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "core",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["integer", "number"]
+      },
       "properties": {
-        "component": {
-          "const": "NumberInput"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "step": {
-          "type": "number"
-        },
-        "min": {
-          "type": "number"
-        },
-        "max": {
-          "type": "number"
-        },
-        "showStepper": {
-          "type": "boolean"
-        },
-        "locale": {
-          "type": "string"
-        }
-      }
+        "component": { "const": "NumberInput" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "step": { "type": "number", "description": "Increment/decrement step value." },
+        "min": { "type": "number", "description": "Minimum allowed value." },
+        "max": { "type": "number", "description": "Maximum allowed value." },
+        "showStepper": { "type": "boolean", "description": "Whether to show increment/decrement buttons." },
+        "locale": { "type": "string", "description": "Locale for number formatting (e.g. 'en-US')." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "NumberInput", "bind": "quantity", "min": 1, "max": 100, "step": 1, "showStepper": true }
+      ]
     },
+
     "DatePicker": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Date, datetime, or time picker. Mode is automatically determined by the bound item's dataType (date → date picker, dateTime → date+time, time → time picker).",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "core",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["date", "dateTime", "time"]
+      },
       "properties": {
-        "component": {
-          "const": "DatePicker"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "format": {
-          "type": "string"
-        },
-        "minDate": {
-          "type": "string"
-        },
-        "maxDate": {
-          "type": "string"
-        },
-        "showTime": {
-          "type": "boolean"
-        }
-      }
+        "component": { "const": "DatePicker" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "format": { "type": "string", "description": "Display format hint (e.g. 'MM/DD/YYYY'). Does not affect stored value (always ISO 8601)." },
+        "minDate": { "type": "string", "description": "Earliest selectable date (ISO 8601)." },
+        "maxDate": { "type": "string", "description": "Latest selectable date (ISO 8601)." },
+        "showTime": { "type": "boolean", "description": "Whether to include time selection (relevant for dateTime)." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "DatePicker", "bind": "startDate", "format": "MM/DD/YYYY", "minDate": "2025-01-01" }
+      ]
     },
+
     "Select": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Dropdown selection control. Options are read from the bound item's options array or optionSet reference in the Definition.",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "core",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["choice"]
+      },
       "properties": {
-        "component": {
-          "const": "Select"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "searchable": {
-          "type": "boolean"
-        },
-        "placeholder": {
-          "type": "string"
-        },
-        "clearable": {
-          "type": "boolean"
-        }
-      }
+        "component": { "const": "Select" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "searchable": { "type": "boolean", "description": "Enable type-ahead search/filtering of options." },
+        "placeholder": { "type": "string", "description": "Placeholder text when no option is selected." },
+        "clearable": { "type": "boolean", "description": "Whether the user can clear the selection to null." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Select", "bind": "department", "searchable": true, "placeholder": "Choose a department" }
+      ]
     },
+
     "CheckboxGroup": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Group of checkboxes for multi-select fields. Options are read from the bound item's options or optionSet.",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "core",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["multiChoice"]
+      },
       "properties": {
-        "component": {
-          "const": "CheckboxGroup"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "columns": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "selectAll": {
-          "type": "boolean"
-        }
-      }
+        "component": { "const": "CheckboxGroup" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "columns": { "type": "integer", "minimum": 1, "description": "Number of columns to arrange checkboxes in." },
+        "selectAll": { "type": "boolean", "description": "Whether to display a 'Select All' control." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "CheckboxGroup", "bind": "interests", "columns": 2, "selectAll": true }
+      ]
     },
+
     "Toggle": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Boolean switch/toggle control for yes/no, on/off, or true/false fields.",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "core",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["boolean"]
+      },
       "properties": {
-        "component": {
-          "const": "Toggle"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "onLabel": {
-          "type": "string"
-        },
-        "offLabel": {
-          "type": "string"
-        }
-      }
+        "component": { "const": "Toggle" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "onLabel": { "type": "string", "description": "Label displayed when toggle is true." },
+        "offLabel": { "type": "string", "description": "Label displayed when toggle is false." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Toggle", "bind": "agreeToTerms", "onLabel": "I agree", "offLabel": "I do not agree" }
+      ]
     },
+
     "FileUpload": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "File upload control for attachment-type fields. Supports single or multiple file selection with optional type and size constraints.",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "core",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["attachment"]
+      },
       "properties": {
-        "component": {
-          "const": "FileUpload"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "accept": {
-          "type": "string"
-        },
-        "maxSize": {
-          "type": "integer"
-        },
-        "multiple": {
-          "type": "boolean"
-        },
-        "dragDrop": {
-          "type": "boolean"
-        }
-      }
+        "component": { "const": "FileUpload" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "accept": { "type": "string", "description": "Accepted MIME types (comma-separated, e.g. 'image/*,application/pdf')." },
+        "maxSize": { "type": "integer", "description": "Maximum file size in bytes." },
+        "multiple": { "type": "boolean", "description": "Whether multiple files may be uploaded." },
+        "dragDrop": { "type": "boolean", "description": "Whether to display a drag-and-drop zone." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "FileUpload", "bind": "supportingDocs", "accept": "application/pdf,image/*", "maxSize": 10485760, "multiple": true }
+      ]
     },
+
     "Heading": {
-      "type": "object",
-      "required": [
-        "component",
-        "level",
-        "text"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Section heading element for visual hierarchy. Purely presentational — does not bind to data.",
+      "required": ["component", "level", "text"],
+      "x-lm": {
+        "category": "display",
+        "level": "core",
+        "children": false,
+        "bind": "forbidden"
+      },
       "properties": {
-        "component": {
-          "const": "Heading"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Heading" },
         "level": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 6
+          "maximum": 6,
+          "description": "Heading level 1–6. Corresponds to HTML <h1>–<h6> semantics."
         },
         "text": {
-          "type": "string"
+          "type": "string",
+          "description": "Heading text content."
         }
-      }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Heading", "level": 2, "text": "Budget Details" }
+      ]
     },
+
     "Text": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Static or data-bound text block. When bind is present, displays the bound item's current value as read-only. When absent, displays the static text prop.",
+      "x-lm": {
+        "category": "display",
+        "level": "core",
+        "children": false,
+        "bind": "optional"
+      },
       "properties": {
-        "component": {
-          "const": "Text"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "text": {
-          "type": "string"
-        },
+        "component": { "const": "Text" },
+        "bind": { "type": "string", "description": "Item key. When present, displays the bound item's formatted value (read-only)." },
+        "text": { "type": "string", "description": "Static text content. Ignored when bind is present." },
         "format": {
           "type": "string",
-          "enum": [
-            "plain",
-            "markdown"
+          "enum": ["plain", "markdown"],
+          "description": "Text format. 'markdown' enables basic Markdown rendering (bold, italic, links, lists). Renderers MUST sanitize to prevent script injection."
+        }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Text", "text": "Please review before submitting.", "format": "markdown" },
+        { "component": "Text", "bind": "totalBudget" }
+      ]
+    },
+
+    "Divider": {
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Horizontal rule separating sections of the form.",
+      "x-lm": {
+        "category": "display",
+        "level": "core",
+        "children": false,
+        "bind": "forbidden"
+      },
+      "properties": {
+        "component": { "const": "Divider" },
+        "label": { "type": "string", "description": "Optional label text centered on the divider line." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Divider", "label": "Section Break" }
+      ]
+    },
+
+    "Card": {
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Bordered surface that visually groups related content with optional header.",
+      "x-lm": {
+        "category": "container",
+        "level": "core",
+        "children": true,
+        "bind": "forbidden"
+      },
+      "properties": {
+        "component": { "const": "Card" },
+        "title": { "type": "string", "description": "Card header title." },
+        "subtitle": { "type": "string", "description": "Card header subtitle, rendered below the title." },
+        "elevation": { "type": "integer", "minimum": 0, "description": "Shadow depth level." },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Card", "title": "Contact Information",
+          "children": [
+            { "component": "TextInput", "bind": "email" },
+            { "component": "TextInput", "bind": "phone" }
           ]
         }
-      }
+      ]
     },
-    "Divider": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "component": {
-          "const": "Divider"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "label": {
-          "type": "string"
-        }
-      }
-    },
-    "Card": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "component": {
-          "const": "Card"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "title": {
-          "type": "string"
-        },
-        "subtitle": {
-          "type": "string"
-        },
-        "elevation": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
-        }
-      }
-    },
+
     "Collapsible": {
-      "type": "object",
-      "required": [
-        "component",
-        "title"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Expandable/collapsible section. User toggles child visibility via clickable header. Collapsed children stay in DOM — bound data is preserved.",
+      "required": ["component", "title"],
+      "x-lm": {
+        "category": "container",
+        "level": "core",
+        "children": true,
+        "bind": "forbidden"
+      },
       "properties": {
-        "component": {
-          "const": "Collapsible"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "title": {
-          "type": "string"
-        },
-        "defaultOpen": {
-          "type": "boolean"
-        },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
+        "component": { "const": "Collapsible" },
+        "title": { "type": "string", "description": "Collapsible section header. Visible regardless of open/closed state." },
+        "defaultOpen": { "type": "boolean", "description": "Whether the section is initially expanded." },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Collapsible", "title": "Advanced Options", "defaultOpen": false,
+          "children": [
+            { "component": "Toggle", "bind": "enableNotifications" }
+          ]
         }
-      }
+      ]
     },
+
     "ConditionalGroup": {
-      "type": "object",
-      "required": [
-        "component",
-        "when"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Container whose visibility is controlled by a REQUIRED when expression. Exists solely to conditionally show/hide a group of children. Data-bound children retain values when hidden (unlike Bind relevant).",
+      "required": ["component", "when"],
+      "x-lm": {
+        "category": "container",
+        "level": "core",
+        "children": true,
+        "bind": "forbidden"
+      },
       "properties": {
-        "component": {
-          "const": "ConditionalGroup"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "fallback": {
-          "type": "string"
-        },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
+        "component": { "const": "ConditionalGroup" },
+        "fallback": { "type": "string", "description": "Text displayed when the condition is false." },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "ConditionalGroup",
+          "when": "$hasEmployer = true",
+          "fallback": "Employer details not required for this application type.",
+          "children": [
+            { "component": "TextInput", "bind": "employerName" }
+          ]
         }
-      }
+      ]
     },
+
     "Columns": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Explicit multi-column layout with per-child column widths. Unlike Grid which auto-distributes into equal cells, Columns gives precise per-column sizing.",
+      "x-lm": {
+        "category": "layout",
+        "level": "progressive",
+        "children": true,
+        "bind": "forbidden",
+        "fallback": "Grid",
+        "fallbackNotes": "columns set to child count; gap preserved."
+      },
       "properties": {
-        "component": {
-          "const": "Columns"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Columns" },
         "widths": {
           "type": "array",
-          "items": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "number"
-              }
-            ]
-          }
+          "items": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
+          "description": "Per-child column widths as CSS values (e.g. ['1fr', '2fr', '1fr']). Array length SHOULD match child count."
         },
         "gap": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
+          "oneOf": [{ "type": "string" }, { "type": "number" }],
+          "description": "Spacing between columns."
+        },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Columns", "widths": ["2fr", "1fr"], "gap": "$token.spacing.md",
+          "children": [
+            { "component": "TextInput", "bind": "address" },
+            { "component": "TextInput", "bind": "zipCode" }
           ]
-        },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
         }
-      }
+      ]
     },
+
     "Tabs": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Tabbed navigation container. Each child is one tab's content. Tab labels from child Page titles or tabLabels array. All children stay mounted — switching changes visibility, not lifecycle.",
+      "x-lm": {
+        "category": "layout",
+        "level": "progressive",
+        "children": true,
+        "bind": "forbidden",
+        "fallback": "Stack",
+        "fallbackNotes": "Each child preceded by a Heading (level 3) with tab label. All children rendered visibly."
+      },
       "properties": {
-        "component": {
-          "const": "Tabs"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Tabs" },
         "position": {
           "type": "string",
-          "enum": [
-            "top",
-            "bottom",
-            "left",
-            "right"
-          ],
-          "default": "top"
+          "enum": ["top", "bottom", "left", "right"],
+          "default": "top",
+          "description": "Tab bar position."
         },
         "tabLabels": {
           "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "items": { "type": "string" },
+          "description": "Explicit tab labels. When absent, reads title from each child Page."
         },
         "defaultTab": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Zero-based index of the initially active tab."
         },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Tabs", "tabLabels": ["Personal", "Employment"],
+          "children": [
+            { "component": "Stack", "children": [{ "component": "TextInput", "bind": "firstName" }] },
+            { "component": "Stack", "children": [{ "component": "TextInput", "bind": "employer" }] }
+          ]
         }
-      }
+      ]
     },
+
     "Accordion": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Vertical list of collapsible sections. By default only one expanded at a time. Children SHOULD have title props (Page, Card, Collapsible) for section headers.",
+      "x-lm": {
+        "category": "layout",
+        "level": "progressive",
+        "children": true,
+        "bind": "forbidden",
+        "fallback": "Stack",
+        "fallbackNotes": "Each child wrapped in Collapsible. First defaults open; rest closed."
+      },
       "properties": {
-        "component": {
-          "const": "Accordion"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Accordion" },
         "allowMultiple": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether multiple sections may be expanded simultaneously. When false, expanding one collapses others."
         },
         "defaultOpen": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Zero-based index of the initially expanded section."
         },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
+        "labels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Section header labels. labels[i] is the summary text for children[i]. Falls back to 'Section {i+1}' when absent."
+        },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Accordion", "allowMultiple": false,
+          "children": [
+            { "component": "Page", "title": "Section A", "children": [{ "component": "TextInput", "bind": "fieldA" }] },
+            { "component": "Page", "title": "Section B", "children": [{ "component": "TextInput", "bind": "fieldB" }] }
+          ]
         }
-      }
+      ]
     },
+
     "RadioGroup": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Radio buttons for single-select choice fields. All options visible simultaneously — suitable for short lists (typically ≤7 items).",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "progressive",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["choice"],
+        "fallback": "Select",
+        "fallbackNotes": "columns discarded."
+      },
       "properties": {
-        "component": {
-          "const": "RadioGroup"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "columns": {
-          "type": "integer",
-          "minimum": 1
-        },
+        "component": { "const": "RadioGroup" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "columns": { "type": "integer", "minimum": 1, "description": "Number of columns to arrange radio buttons in." },
         "orientation": {
           "type": "string",
-          "enum": [
-            "horizontal",
-            "vertical"
-          ]
+          "enum": ["horizontal", "vertical"],
+          "description": "Layout direction of the radio buttons."
         }
-      }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "RadioGroup", "bind": "priority", "columns": 3, "orientation": "horizontal" }
+      ]
     },
+
     "MoneyInput": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Currency-aware numeric input displaying currency symbol and formatted number. Stores raw numeric value without formatting.",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "progressive",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["number", "integer"],
+        "fallback": "NumberInput",
+        "fallbackNotes": "Currency symbol rendered as prefix if bound item has prefix hint."
+      },
       "properties": {
-        "component": {
-          "const": "MoneyInput"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "currency": {
-          "type": "string"
-        },
-        "showCurrency": {
-          "type": "boolean"
-        },
-        "locale": {
-          "type": "string"
-        }
-      }
+        "component": { "const": "MoneyInput" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "currency": { "type": "string", "description": "ISO 4217 currency code (e.g. 'USD', 'EUR', 'GBP')." },
+        "showCurrency": { "type": "boolean", "description": "Whether to display the currency symbol." },
+        "locale": { "type": "string", "description": "Locale for number/currency formatting (e.g. 'en-US')." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "MoneyInput", "bind": "totalBudget", "currency": "USD", "showCurrency": true }
+      ]
     },
+
     "Slider": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Range slider for selecting a numeric value within a continuous range.",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "progressive",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["integer", "number"],
+        "fallback": "NumberInput",
+        "fallbackNotes": "min, max, step preserved."
+      },
       "properties": {
-        "component": {
-          "const": "Slider"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "min": {
-          "type": "number"
-        },
-        "max": {
-          "type": "number"
-        },
-        "step": {
-          "type": "number"
-        },
-        "showValue": {
-          "type": "boolean"
-        },
-        "showTicks": {
-          "type": "boolean"
-        }
-      }
+        "component": { "const": "Slider" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "min": { "type": "number", "description": "Minimum value." },
+        "max": { "type": "number", "description": "Maximum value." },
+        "step": { "type": "number", "description": "Step increment." },
+        "showValue": { "type": "boolean", "description": "Whether to display the current numeric value adjacent to the slider." },
+        "showTicks": { "type": "boolean", "description": "Whether to display tick marks at step intervals." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Slider", "bind": "satisfaction", "min": 1, "max": 10, "step": 1, "showValue": true }
+      ]
     },
+
     "Rating": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Star (or icon) rating control for selecting an integer value within a small range (typically 1–5 or 1–10).",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "progressive",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["integer"],
+        "fallback": "NumberInput",
+        "fallbackNotes": "min: 1, max preserved, step: 1."
+      },
       "properties": {
-        "component": {
-          "const": "Rating"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "max": {
-          "type": "integer",
-          "minimum": 1
-        },
+        "component": { "const": "Rating" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "max": { "type": "integer", "minimum": 1, "description": "Maximum rating value (number of icons)." },
         "icon": {
           "type": "string",
-          "enum": [
-            "star",
-            "heart",
-            "circle"
-          ]
+          "enum": ["star", "heart", "circle"],
+          "description": "Icon type. Renderers MAY support additional icons."
         },
-        "allowHalf": {
-          "type": "boolean"
-        }
-      }
+        "allowHalf": { "type": "boolean", "description": "Whether half-values are allowed (stored as decimal, e.g. 3.5)." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Rating", "bind": "serviceRating", "max": 5, "icon": "star" }
+      ]
     },
+
     "Signature": {
-      "type": "object",
-      "required": [
-        "component",
-        "bind"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Signature capture pad recording a drawn signature as an image attachment.",
+      "required": ["component", "bind"],
+      "x-lm": {
+        "category": "input",
+        "level": "progressive",
+        "children": false,
+        "bind": "required",
+        "compatibleDataTypes": ["attachment"],
+        "fallback": "FileUpload",
+        "fallbackNotes": "accept set to 'image/*'."
+      },
       "properties": {
-        "component": {
-          "const": "Signature"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "strokeColor": {
-          "type": "string"
-        },
+        "component": { "const": "Signature" },
+        "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "strokeColor": { "type": "string", "description": "Stroke color for the signature pen (e.g. '#000000')." },
         "height": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
-          ]
+          "oneOf": [{ "type": "string" }, { "type": "number" }],
+          "description": "Height of the signature pad. Number for pixels, string for CSS value."
         },
-        "penWidth": {
-          "type": "number"
-        },
-        "clearable": {
-          "type": "boolean"
-        }
-      }
+        "penWidth": { "type": "number", "description": "Stroke width in pixels." },
+        "clearable": { "type": "boolean", "description": "Whether to show a clear/reset control." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Signature", "bind": "approverSignature", "strokeColor": "#000", "height": 200 }
+      ]
     },
+
     "Alert": {
-      "type": "object",
-      "required": [
-        "component",
-        "severity",
-        "text"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Status message block for informational banners, warnings, error summaries, or success messages.",
+      "required": ["component", "severity", "text"],
+      "x-lm": {
+        "category": "display",
+        "level": "progressive",
+        "children": false,
+        "bind": "forbidden",
+        "fallback": "Text",
+        "fallbackNotes": "Text prefixed with severity in brackets (e.g. '[Warning] ...')."
+      },
       "properties": {
-        "component": {
-          "const": "Alert"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Alert" },
         "severity": {
           "type": "string",
-          "enum": [
-            "info",
-            "success",
-            "warning",
-            "error"
-          ]
+          "enum": ["info", "success", "warning", "error"],
+          "description": "Alert severity. Determines visual styling and ARIA role (alert for error/warning, status for info/success)."
         },
-        "text": {
-          "type": "string"
-        },
-        "dismissible": {
-          "type": "boolean"
-        }
-      }
+        "text": { "type": "string", "description": "Alert message text." },
+        "dismissible": { "type": "boolean", "description": "Whether the user can dismiss the alert." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Alert", "severity": "warning", "text": "Budget exceeds department limit. Approval required." }
+      ]
     },
+
     "Badge": {
-      "type": "object",
-      "required": [
-        "component",
-        "text"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Small label badge for status indicators, counts, or tags.",
+      "required": ["component", "text"],
+      "x-lm": {
+        "category": "display",
+        "level": "progressive",
+        "children": false,
+        "bind": "forbidden",
+        "fallback": "Text",
+        "fallbackNotes": "Same text prop."
+      },
       "properties": {
-        "component": {
-          "const": "Badge"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "text": {
-          "type": "string"
-        },
+        "component": { "const": "Badge" },
+        "text": { "type": "string", "description": "Badge label text." },
         "variant": {
           "type": "string",
-          "enum": [
-            "default",
-            "primary",
-            "success",
-            "warning",
-            "error"
-          ]
+          "enum": ["default", "primary", "success", "warning", "error"],
+          "description": "Visual variant controlling color/style."
         }
-      }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "Badge", "text": "Draft", "variant": "warning" }
+      ]
     },
+
     "ProgressBar": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Visual progress indicator. When bound, reads value from data. When unbound, uses static value prop.",
+      "x-lm": {
+        "category": "display",
+        "level": "progressive",
+        "children": false,
+        "bind": "optional",
+        "fallback": "Text",
+        "fallbackNotes": "Shows '<value> / <max> (<percent>%)'."
+      },
       "properties": {
-        "component": {
-          "const": "ProgressBar"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
-        "value": {
-          "type": "number"
-        },
-        "max": {
-          "type": "number"
-        },
-        "label": {
-          "type": "string"
-        },
-        "showPercent": {
-          "type": "boolean"
-        }
-      }
+        "component": { "const": "ProgressBar" },
+        "bind": { "type": "string", "description": "Item key. When present, reads current value from data." },
+        "value": { "type": "number", "description": "Current progress value. Ignored when bind is present." },
+        "max": { "type": "number", "description": "Maximum value (100% completion)." },
+        "label": { "type": "string", "description": "Accessible label for the progress bar." },
+        "showPercent": { "type": "boolean", "description": "Whether to display percentage text." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "ProgressBar", "bind": "completionScore", "max": 100, "label": "Form completion" }
+      ]
     },
+
     "Summary": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Key-value summary display showing multiple field labels and current values. Useful for review pages.",
+      "x-lm": {
+        "category": "display",
+        "level": "progressive",
+        "children": false,
+        "bind": "forbidden",
+        "fallback": "Stack",
+        "fallbackNotes": "One Text per item showing '<label>: <value>'."
+      },
       "properties": {
-        "component": {
-          "const": "Summary"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Summary" },
         "items": {
           "type": "array",
+          "description": "Array of summary entries. Each has a display label, a bind key for the value, and optional optionSet for resolving choice values to labels.",
           "items": {
             "type": "object",
-            "required": [
-              "label",
-              "bind"
-            ],
+            "required": ["label", "bind"],
             "additionalProperties": false,
             "properties": {
-              "label": {
-                "type": "string"
-              },
-              "bind": {
-                "type": "string"
-              },
+              "label": { "type": "string", "description": "Display label shown next to the value." },
+              "bind": { "type": "string", "description": "Item key whose current value to display." },
               "optionSet": {
                 "type": "string",
-                "description": "Name of an option set defined in the form definition. When set, the bound value is resolved to its display label rather than rendered as the raw value."
+                "description": "Named option set from the Definition. When set, the raw bound value is resolved to its display label."
               }
             }
           }
         }
-      }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Summary",
+          "items": [
+            { "label": "Project Name", "bind": "projectName" },
+            { "label": "Organization Type", "bind": "orgType", "optionSet": "orgTypes" }
+          ]
+        }
+      ]
     },
+
     "DataTable": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Tabular display of repeatable group data. Each repeat instance becomes a row; each column displays a field within the repeat. One of the few components that MAY bind to a repeatable group.",
+      "x-lm": {
+        "category": "display",
+        "level": "progressive",
+        "children": false,
+        "bind": "optional",
+        "bindNote": "Binds to a repeatable group key, not a field key.",
+        "fallback": "Stack",
+        "fallbackNotes": "One Card per repeat instance with child inputs."
+      },
       "properties": {
-        "component": {
-          "const": "DataTable"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "bind": {
-          "type": "string"
-        },
+        "component": { "const": "DataTable" },
+        "bind": { "type": "string", "description": "Repeatable group item key. Each repeat instance becomes a table row." },
         "columns": {
           "type": "array",
+          "description": "Column definitions. Each specifies a header label and a field key within the repeat group.",
           "items": {
             "type": "object",
-            "required": [
-              "header",
-              "bind"
-            ],
+            "required": ["header", "bind"],
             "additionalProperties": false,
             "properties": {
-              "header": {
-                "type": "string"
-              },
-              "bind": {
-                "type": "string"
-              }
+              "header": { "type": "string", "description": "Column header text." },
+              "bind": { "type": "string", "description": "Item key within the repeat group." }
             }
           }
         },
-        "showRowNumbers": {
-          "type": "boolean"
-        },
-        "allowAdd": {
-          "type": "boolean"
-        },
-        "allowRemove": {
-          "type": "boolean"
+        "showRowNumbers": { "type": "boolean", "description": "Whether to display row numbers." },
+        "allowAdd": { "type": "boolean", "description": "Whether to show an 'Add row' control." },
+        "allowRemove": { "type": "boolean", "description": "Whether to show per-row 'Remove' controls." }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "DataTable", "bind": "lineItems",
+          "columns": [
+            { "header": "Description", "bind": "description" },
+            { "header": "Amount", "bind": "amount" }
+          ]
         }
-      }
+      ]
     },
+
     "Panel": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Side panel for supplementary content, help text, or contextual actions. Positioned alongside the main content.",
+      "x-lm": {
+        "category": "container",
+        "level": "progressive",
+        "children": true,
+        "bind": "forbidden",
+        "fallback": "Card",
+        "fallbackNotes": "title preserved; position and width discarded."
+      },
       "properties": {
-        "component": {
-          "const": "Panel"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Panel" },
         "position": {
           "type": "string",
-          "enum": [
-            "left",
-            "right"
-          ],
-          "default": "left"
+          "enum": ["left", "right"],
+          "default": "left",
+          "description": "Panel position relative to main content."
         },
-        "title": {
-          "type": "string"
-        },
+        "title": { "type": "string", "description": "Panel header title." },
         "width": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            }
-          ]
+          "oneOf": [{ "type": "string" }, { "type": "number" }],
+          "description": "Panel width. String for CSS value, number for pixels."
         },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Panel", "position": "left", "title": "Help", "width": "280px",
+          "children": [{ "component": "Text", "text": "Need help? Contact support." }]
         }
-      }
+      ]
     },
+
     "Modal": {
-      "type": "object",
-      "required": [
-        "component",
-        "title"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Dialog overlay displaying content above the main form. Requires explicit user action to open/close. Traps focus while open.",
+      "required": ["component", "title"],
+      "x-lm": {
+        "category": "container",
+        "level": "progressive",
+        "children": true,
+        "bind": "forbidden",
+        "fallback": "Collapsible",
+        "fallbackNotes": "title preserved; defaultOpen: false."
+      },
       "properties": {
-        "component": {
-          "const": "Modal"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
-        "title": {
-          "type": "string"
-        },
+        "component": { "const": "Modal" },
+        "title": { "type": "string", "description": "Modal dialog title." },
         "size": {
           "type": "string",
-          "enum": [
-            "sm",
-            "md",
-            "lg",
-            "xl",
-            "full"
-          ]
+          "enum": ["sm", "md", "lg", "xl", "full"],
+          "description": "Modal size."
         },
         "trigger": {
           "type": "string",
-          "enum": [
-            "button",
-            "auto"
-          ]
+          "enum": ["button", "auto"],
+          "description": "'button': dedicated open button. 'auto': opens automatically based on when."
         },
-        "triggerLabel": {
-          "type": "string"
-        },
-        "closable": {
-          "type": "boolean"
-        },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
+        "triggerLabel": { "type": "string", "description": "Label for the trigger button when trigger is 'button'." },
+        "closable": { "type": "boolean", "description": "Whether the modal can be dismissed by the user." },
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Modal", "title": "Terms and Conditions", "trigger": "button", "triggerLabel": "View Terms",
+          "children": [{ "component": "Text", "text": "By submitting, you agree to...", "format": "markdown" }]
         }
-      }
+      ]
     },
+
     "Popover": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Lightweight anchored overlay showing contextual content when trigger is activated.",
+      "x-lm": {
+        "category": "container",
+        "level": "progressive",
+        "children": true,
+        "bind": "forbidden",
+        "fallback": "Collapsible",
+        "fallbackNotes": "triggerLabel mapped to title; placement discarded."
+      },
       "properties": {
-        "component": {
-          "const": "Popover"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
-        },
+        "component": { "const": "Popover" },
         "triggerBind": {
           "type": "string",
-          "description": "Optional bind key whose live value is used as trigger text."
+          "description": "Bind key whose live value is used as trigger text."
         },
         "triggerLabel": {
           "type": "string",
-          "description": "Fallback label for the popover trigger control."
+          "description": "Fallback label for the trigger control."
         },
         "placement": {
           "type": "string",
-          "enum": [
-            "top",
-            "right",
-            "bottom",
-            "left"
-          ],
+          "enum": ["top", "right", "bottom", "left"],
           "default": "bottom",
           "description": "Preferred popover placement relative to the trigger."
         },
-        "children": {
-          "$ref": "#/$defs/ChildrenArray"
+        "children": { "$ref": "#/$defs/ChildrenArray" }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        {
+          "component": "Popover", "triggerLabel": "Show details", "placement": "right",
+          "children": [{ "component": "Text", "text": "Additional context." }]
         }
-      }
+      ]
     },
+
     "CustomComponentRef": {
-      "type": "object",
-      "required": [
-        "component"
-      ],
-      "additionalProperties": false,
+      "$ref": "#/$defs/ComponentBase",
+      "description": "Reference to a custom component defined in the components registry. The component name is looked up in the registry, params are interpolated into the template, and the resolved subtree replaces this reference.",
+      "x-lm": {
+        "category": "custom",
+        "level": "core"
+      },
       "properties": {
         "component": {
-          "type": "string"
-        },
-        "when": {
-          "type": "string"
-        },
-        "responsive": {
-          "$ref": "#/$defs/ResponsiveOverrides"
-        },
-        "style": {
-          "$ref": "#/$defs/StyleMap"
-        },
-        "accessibility": {
-          "$ref": "#/$defs/AccessibilityBlock"
-        },
-        "cssClass": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "CSS class name(s) applied to the component's root element. Additive to renderer-generated classes."
+          "type": "string",
+          "not": {
+            "enum": [
+              "Page", "Stack", "Grid", "Wizard", "Spacer",
+              "TextInput", "NumberInput", "DatePicker", "Select", "CheckboxGroup", "Toggle", "FileUpload",
+              "Heading", "Text", "Divider",
+              "Card", "Collapsible", "ConditionalGroup",
+              "Columns", "Tabs", "Accordion",
+              "RadioGroup", "MoneyInput", "Slider", "Rating", "Signature",
+              "Alert", "Badge", "ProgressBar", "Summary", "DataTable",
+              "Panel", "Modal", "Popover"
+            ]
+          },
+          "description": "Custom component name. MUST be a key in the components registry. MUST NOT be a built-in component name."
         },
         "params": {
           "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
+          "additionalProperties": { "type": "string" },
+          "description": "Parameter values to interpolate into the template. Keys MUST match the template's declared params. Values MUST be strings."
         }
-      }
+      },
+      "unevaluatedProperties": false,
+      "examples": [
+        { "component": "AddressBlock", "params": { "prefix": "home", "title": "Home Address" } }
+      ]
     }
   }
 }

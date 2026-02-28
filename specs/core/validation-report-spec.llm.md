@@ -16,10 +16,10 @@ Source schema: `schemas/validationReport.schema.json`
 
 | Pointer | Required | Type | Guidance | Description |
 |---|---|---|---|---|
-| `#/properties/counts` | yes | object | Severity breakdown used for summary display and report QA. | Counts of results by severity level. |
-| `#/properties/results` | yes | array | Complete set of validation findings for the evaluated response. | All validation results regardless of severity. |
-| `#/properties/timestamp` | yes | string | Validation execution timestamp for traceability. | ISO 8601 date-time indicating when validation was performed. |
-| `#/properties/valid` | yes | boolean | Aggregate pass/fail indicator derived from error-level validation results. | true if and only if the results array contains zero entries with severity 'error'. |
+| `#/properties/counts` | yes | object | Severity breakdown for summary display, progress indicators, and structural QA. The error count alone determines validity. | Pre-aggregated counts of results by severity level. Invariant: counts.error + counts.warning + counts.info = results.length. Invariant: valid = (counts.error === 0). Processors MUST ensure both invariants hold. Useful for summary badges, progress indicators, and report-level QA without iterating the full results array. |
+| `#/properties/results` | yes | array | Complete set of validation findings — the primary payload consumers iterate for error display, reporting, and programmatic handling. | Complete ordered set of validation findings across all sources: Bind constraints, Bind required checks, type checks, repeatable group cardinality checks, Validation Shapes (including composed shapes), and external validation injections. Empty array means no findings of any severity — the Response is fully clean. Results for non-relevant fields are guaranteed absent. Each entry is a self-contained ValidationResult with path, severity, constraintKind, and human-readable message. Consumers can filter by severity, constraintKind, source, path prefix, or shapeId to build targeted error displays. |
+| `#/properties/timestamp` | yes | string | Validation execution timestamp for staleness detection, audit trails, and chronological ordering. | ISO 8601 date-time (with timezone) indicating when this validation run was performed. Used for staleness detection when a report is persisted alongside its Response — if the Response's 'authored' timestamp is later than this timestamp, the report may be stale. Also serves as an audit trail element and ordering key when multiple reports exist for the same Response. |
+| `#/properties/valid` | yes | boolean | Aggregate pass/fail indicator. Only error-severity results make this false; warnings and info never block submission. | true if and only if the results array contains zero entries with severity 'error'. This is the sole conformance indicator — warning and info results do NOT affect validity (deliberate divergence from SHACL, where any result indicates non-conformance). A Response with valid=false MUST NOT transition to 'completed' status. A Response with valid=true MAY have warning and info results and is still submittable. Invariant: valid = (counts.error === 0). Processors MUST ensure this invariant holds. |
 
 ## Behavioral Essentials
 
@@ -40,5 +40,5 @@ Source schema: `schemas/validationReport.schema.json`
 ## Conformance Essentials
 
 - A conforming validation report must include valid, results, counts, and timestamp.
-- ValidationReport results entries must conform to the shared ValidationResult definition from response schema.
+- ValidationReport results entries must conform to the shared validationResult.schema.json schema.
 - Processors should reject reports where required severity counts are missing or invalid.

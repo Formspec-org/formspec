@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://formspec.org/schemas/validationReport/1.0",
   "title": "Formspec Validation Report",
-  "description": "A standalone Validation Report aggregating all validation results for a Response at a point in time (§5.4).",
+  "description": "A standalone Validation Report aggregating all validation results for a Response at a point in time (§5.4). The report is the primary output of the Revalidate phase (§2.4 Phase 3) and is the sole input to conformance determination: valid = (zero error-severity results). Reports are produced by evaluating all Bind constraints, required checks, type checks, cardinality checks, and Validation Shapes against the current Instance data, then merging any external validation results injected by server-side systems. Non-relevant fields are guaranteed absent — the processor MUST suppress all validation for fields whose 'relevant' Bind evaluates to false (§5.6 rule 1). Reports MAY be persisted alongside the Response as a snapshot, but consumers SHOULD treat persisted reports as potentially stale if the Response data has changed since the timestamp. The three validation modes — continuous (evaluate on every change), deferred (evaluate on explicit request), disabled (skip entirely) — control when reports are generated but not their structure (§5.5).",
   "type": "object",
   "required": ["valid", "results", "counts", "timestamp"],
   "additionalProperties": false,
@@ -10,66 +10,150 @@
     "definitionUrl": {
       "type": "string",
       "format": "uri",
-      "description": "The canonical URL of the Definition that was validated against."
+      "description": "The canonical URL of the Definition that was validated against. Matches the Response's definitionUrl. Together with definitionVersion, identifies the exact Definition whose Binds, Shapes, and item tree governed this validation run. Enables consumers to retrieve the Definition for constraint introspection or re-validation.",
+      "examples": [
+        "https://example.org/forms/intake",
+        "https://grants.example.gov/forms/sf-425",
+        "https://example.gov/forms/annual-report"
+      ]
     },
     "definitionVersion": {
       "type": "string",
-      "description": "The version of the Definition that was validated against."
+      "description": "The version of the Definition that was validated against. A report is always produced against the Response's pinned version (Pinning Rule VP-01), never against a newer version. Version string interpretation depends on the Definition's versionAlgorithm (semver, date, integer, natural).",
+      "examples": [
+        "2.1.0",
+        "1.0.0-rc.1",
+        "2025.06.01"
+      ]
     },
     "valid": {
       "type": "boolean",
-      "description": "true if and only if the results array contains zero entries with severity 'error'.",
+      "description": "true if and only if the results array contains zero entries with severity 'error'. This is the sole conformance indicator — warning and info results do NOT affect validity (deliberate divergence from SHACL, where any result indicates non-conformance). A Response with valid=false MUST NOT transition to 'completed' status. A Response with valid=true MAY have warning and info results and is still submittable. Invariant: valid = (counts.error === 0). Processors MUST ensure this invariant holds.",
       "examples": [true, false],
       "x-lm": {
         "critical": true,
-        "intent": "Aggregate pass/fail indicator derived from error-level validation results."
+        "intent": "Aggregate pass/fail indicator. Only error-severity results make this false; warnings and info never block submission."
       }
     },
     "results": {
       "type": "array",
-      "description": "All validation results regardless of severity.",
-      "items": { "$ref": "https://formspec.org/schemas/response.schema.json#/$defs/ValidationResult" },
-      "examples": [[]],
+      "description": "Complete ordered set of validation findings across all sources: Bind constraints, Bind required checks, type checks, repeatable group cardinality checks, Validation Shapes (including composed shapes), and external validation injections. Empty array means no findings of any severity — the Response is fully clean. Results for non-relevant fields are guaranteed absent. Each entry is a self-contained ValidationResult with path, severity, constraintKind, and human-readable message. Consumers can filter by severity, constraintKind, source, path prefix, or shapeId to build targeted error displays.",
+      "items": { "$ref": "https://formspec.org/schemas/validationResult/1.0" },
+      "examples": [
+        [],
+        [
+          {
+            "path": "ein",
+            "severity": "error",
+            "constraintKind": "constraint",
+            "message": "EIN must be in XX-XXXXXXX format (e.g., 12-3456789).",
+            "code": "CONSTRAINT_FAILED",
+            "source": "bind",
+            "constraint": "matches($, '^[0-9]{2}-[0-9]{7}$')",
+            "value": "123456"
+          }
+        ],
+        [
+          {
+            "path": "budget_justification",
+            "severity": "error",
+            "constraintKind": "required",
+            "message": "This field is required.",
+            "code": "REQUIRED",
+            "source": "bind",
+            "value": ""
+          },
+          {
+            "path": "total_expenditure",
+            "severity": "warning",
+            "constraintKind": "shape",
+            "message": "Proposed expenditure ($280,000) differs from prior year actual ($200,000) by 40%. Changes exceeding 25% require additional justification.",
+            "code": "YOY_VARIANCE",
+            "source": "shape",
+            "shapeId": "yoy-variance-warning",
+            "value": 280000.00,
+            "context": {
+              "prior_year_value": 200000.00,
+              "change_percentage": 40
+            }
+          },
+          {
+            "path": "ein",
+            "severity": "error",
+            "constraintKind": "external",
+            "message": "EIN 99-0000001 was not found in the IRS database. Verify the number and try again.",
+            "code": "EIN_NOT_FOUND",
+            "source": "external",
+            "sourceId": "x-irs-validation",
+            "value": "99-0000001",
+            "context": {
+              "endpoint": "https://api.irs.gov/validate-ein",
+              "response_code": 404,
+              "checked_at": "2025-06-15T14:32:07Z"
+            }
+          }
+        ]
+      ],
       "x-lm": {
         "critical": true,
-        "intent": "Complete set of validation findings for the evaluated response."
+        "intent": "Complete set of validation findings — the primary payload consumers iterate for error display, reporting, and programmatic handling."
       }
     },
     "counts": {
       "type": "object",
-      "description": "Counts of results by severity level.",
+      "description": "Pre-aggregated counts of results by severity level. Invariant: counts.error + counts.warning + counts.info = results.length. Invariant: valid = (counts.error === 0). Processors MUST ensure both invariants hold. Useful for summary badges, progress indicators, and report-level QA without iterating the full results array.",
       "required": ["error", "warning", "info"],
       "additionalProperties": false,
       "properties": {
-        "error": { "type": "integer", "minimum": 0 },
-        "warning": { "type": "integer", "minimum": 0 },
-        "info": { "type": "integer", "minimum": 0 }
+        "error": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of error-severity results. When > 0, valid MUST be false and the Response MUST NOT transition to 'completed'."
+        },
+        "warning": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of warning-severity results. Warnings flag suspect data but never block submission."
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of info-severity results. Informational observations requiring no user action."
+        }
       },
       "examples": [
-        {
-          "error": 0,
-          "warning": 2,
-          "info": 1
-        }
+        { "error": 0, "warning": 0, "info": 0 },
+        { "error": 2, "warning": 1, "info": 0 },
+        { "error": 0, "warning": 3, "info": 1 }
       ],
       "x-lm": {
         "critical": true,
-        "intent": "Severity breakdown used for summary display and report QA."
+        "intent": "Severity breakdown for summary display, progress indicators, and structural QA. The error count alone determines validity."
       }
     },
     "timestamp": {
       "type": "string",
       "format": "date-time",
-      "description": "ISO 8601 date-time indicating when validation was performed.",
-      "examples": ["2025-01-15T10:30:00Z"],
+      "description": "ISO 8601 date-time (with timezone) indicating when this validation run was performed. Used for staleness detection when a report is persisted alongside its Response — if the Response's 'authored' timestamp is later than this timestamp, the report may be stale. Also serves as an audit trail element and ordering key when multiple reports exist for the same Response.",
+      "examples": [
+        "2025-01-15T10:30:00Z",
+        "2025-12-01T09:15:30-05:00"
+      ],
       "x-lm": {
         "critical": true,
-        "intent": "Validation execution timestamp for traceability."
+        "intent": "Validation execution timestamp for staleness detection, audit trails, and chronological ordering."
       }
     },
     "extensions": {
       "type": "object",
-      "propertyNames": { "pattern": "^x-" }
+      "description": "Implementor-specific extension data on the report itself. All keys MUST be prefixed with 'x-'. Processors MUST ignore unrecognized extensions and MUST preserve them during round-tripping. Extensions MUST NOT alter the valid flag or core validation semantics. Common uses: workflow metadata, audit annotations, performance metrics.",
+      "propertyNames": { "pattern": "^x-" },
+      "examples": [
+        {
+          "x-audit": { "validatedBy": "system:validation-service", "durationMs": 42 },
+          "x-workflow": { "stage": "pre-submit", "triggeredBy": "user-42" }
+        }
+      ]
     }
   }
 }

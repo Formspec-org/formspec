@@ -243,15 +243,15 @@ Component Document that omits a REQUIRED property.
 | Pointer | Field | Type | Required | Notes | Description |
 |---|---|---|---|---|---|
 | `#/properties/$formspecComponent` | `$formspecComponent` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Component specification version. MUST be '1.0'. |
-| `#/properties/breakpoints` | `breakpoints` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Breakpoints</code> | — |
-| `#/properties/components` | `components` | <code>object</code> | no | — | — |
+| `#/properties/breakpoints` | `breakpoints` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Breakpoints</code> | Named viewport breakpoints for responsive prop overrides. Keys are breakpoint names; values are minimum viewport widths in pixels. Mobile-first cascade: base props apply to all widths, then overrides merge in ascending order. |
+| `#/properties/components` | `components` | <code>object</code> | no | — | Registry of custom component templates. Keys are PascalCase names (MUST NOT collide with built-in names). Each template has params and a tree that is instantiated with {param} interpolation. |
 | `#/properties/description` | `description` | <code>string</code> | no | — | Human-readable description. |
 | `#/properties/name` | `name` | <code>string</code> | no | — | Machine-friendly short identifier. |
 | `#/properties/targetDefinition` | `targetDefinition` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/TargetDefinition</code>; critical | Binding to the target Formspec Definition and optional compatibility range. |
 | `#/properties/title` | `title` | <code>string</code> | no | — | Human-readable name. |
-| `#/properties/tokens` | `tokens` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Tokens</code> | — |
-| `#/properties/tree` | `tree` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/AnyComponent</code>; critical | Root component node of the presentation tree. |
-| `#/properties/url` | `url` | <code>string</code> | no | — | — |
+| `#/properties/tokens` | `tokens` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Tokens</code> | Flat key-value map of design tokens. Referenced in style objects and token-able props via $token.key syntax. Tier 3 tokens override Tier 2 theme tokens of the same key. |
+| `#/properties/tree` | `tree` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/AnyComponent</code>; critical | Root component node of the presentation tree. MUST be a single component object (wrap multiple children in Stack or Page). |
+| `#/properties/url` | `url` | <code>string</code> | no | — | Canonical URI identifier for this Component Document. |
 | `#/properties/version` | `version` | <code>string</code> | yes | critical | Version of this Component Document. |
 <!-- schema-ref:end -->
 

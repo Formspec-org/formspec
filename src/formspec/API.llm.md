@@ -146,22 +146,54 @@ compatible->minor, cosmetic->patch).
 
 ## `formspec.evaluator`
 
-Server-side definition evaluator: computes variables and evaluates shape constraints.
+Server-side form processor: 4-phase batch evaluation of definitions.
+
+Phases: rebuild (init) → recalculate → revalidate → apply NRB.
 
 Usage::
 
-    from formspec.evaluator import DefinitionEvaluator
+    from formspec.evaluator import DefinitionEvaluator, ProcessingResult
 
     ev = DefinitionEvaluator(definition)
-    results = ev.validate(response_data)   # list of ValidationResult-format dicts
+    result = ev.process(submitted_data)  # ProcessingResult
+    results = ev.validate(submitted_data)  # list[dict] convenience
+
+#### class `ItemInfo`
+
+Metadata for a single item in the definition tree.
+
+##### `__init__(
+    self,
+    item_type: str,
+    data_type: str | None,
+    repeatable: bool,
+    min_repeat: int | None,
+    max_repeat: int | None,
+    parent: str | None,
+    children: list[str],
+    precision: int | None
+)`
+
+
+#### class `ProcessingResult`
+
+Output of DefinitionEvaluator.process().
+
+##### `__init__(
+    self,
+    valid: bool,
+    results: list[dict],
+    data: dict,
+    variables: dict[str, typing.Union[_FelNullType, FelNumber, FelString, FelBoolean, FelDate, FelArray, FelMoney, FelObject]],
+    counts: dict[str, int]
+)`
+
 
 #### class `DefinitionEvaluator`
 
-Evaluates a definition's variables and shape constraints against submitted data.
+4-phase batch processor for formspec definitions.
 
-Instantiate once per definition; call validate() for each submitted response.
-Variable expressions are evaluated in dependency order (topologically sorted).
-Shape constraints and composition (and/or/not/xone) use the FEL evaluator.
+Instantiate once per definition; call process() for each submission.
 
 ##### `__init__(self, definition: dict)`
 
@@ -172,9 +204,18 @@ Shape constraints and composition (and/or/not/xone) use the FEL evaluator.
 
 Evaluate all definition variables in dependency order.
 
-##### `validate(self, data: dict) -> list[dict]`
+##### `process(
+    self,
+    data: dict,
+    *,
+    mode: str = 'submit'
+) -> ProcessingResult`
 
-Evaluate all shape constraints against data. Returns ValidationResult-format dicts.
+Run all 4 phases and return a ProcessingResult.
+
+##### `validate(self, data: dict, *, mode: str = 'submit') -> list[dict]`
+
+Convenience: return just the validation results.
 
 
 ## `formspec.fel`

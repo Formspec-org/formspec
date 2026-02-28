@@ -22,6 +22,7 @@ def _load(name):
 DEF_S = _load("definition.schema.json")
 RESP_S = _load("response.schema.json")
 VR_S = _load("validationReport.schema.json")
+VR_RESULT_S = _load("validationResult.schema.json")
 MAP_S = _load("mapping.schema.json")
 REG_S = _load("registry.schema.json")
 THEME_S = _load("theme.schema.json")
@@ -32,6 +33,7 @@ ALL_SCHEMAS = {
     "definition": DEF_S,
     "response": RESP_S,
     "validationReport": VR_S,
+    "validationResult": VR_RESULT_S,
     "mapping": MAP_S,
     "registry": REG_S,
     "theme": THEME_S,
@@ -86,18 +88,19 @@ class TestCrossSchemaConsistency:
         """Every top-level schema has additionalProperties: false."""
         assert schema.get("additionalProperties") is False, f"{name} missing additionalProperties:false"
 
-    def test_validation_report_refs_response_validation_result(self):
-        """validationReport.results.items.$ref -> response ValidationResult."""
-        ref = VR_S["properties"]["results"]["items"]["$ref"]
-        # Must point to response schema's ValidationResult
-        assert "response" in ref.lower() or "Response" in ref
-        assert ref.endswith("#/$defs/ValidationResult")
-        # The target $id must match the ref prefix
-        resp_id = RESP_S["$id"]
-        ref_base = ref.split("#")[0]
-        assert ref_base == resp_id
-        # And the target def must exist
-        assert "ValidationResult" in RESP_S["$defs"]
+    def test_validation_result_is_shared_schema(self):
+        """Both response and validationReport $ref the shared validationResult schema."""
+        vr_result_id = VR_RESULT_S["$id"]
+        # validationReport.results.items must ref the shared schema
+        report_ref = VR_S["properties"]["results"]["items"]["$ref"]
+        assert report_ref == vr_result_id, \
+            f"validationReport results ref {report_ref!r} != shared schema {vr_result_id!r}"
+        # response.validationResults.items must ref the shared schema
+        resp_ref = RESP_S["properties"]["validationResults"]["items"]["$ref"]
+        assert resp_ref == vr_result_id, \
+            f"response validationResults ref {resp_ref!r} != shared schema {vr_result_id!r}"
+        # The shared schema must have the expected required fields
+        assert set(VR_RESULT_S["required"]) == {"path", "severity", "constraintKind", "message"}
 
     def test_definition_response_use_propertynames_extensions(self):
         """Definition, Response, Registry use extensions.propertyNames pattern."""
@@ -551,26 +554,21 @@ class TestResponseSchema:
         assert RESP_S["additionalProperties"] is False
 
     def test_s5_3__validation_result_required(self):
-        vr = _def(RESP_S, "ValidationResult")
-        assert set(vr["required"]) == {"path", "severity", "constraintKind", "message"}
+        assert set(VR_RESULT_S["required"]) == {"path", "severity", "constraintKind", "message"}
 
     def test_s5_3__severity_enum(self):
-        vr = _def(RESP_S, "ValidationResult")
-        assert vr["properties"]["severity"]["enum"] == ["error", "warning", "info"]
+        assert VR_RESULT_S["properties"]["severity"]["enum"] == ["error", "warning", "info"]
 
     def test_s5_3__constraint_kind_enum(self):
-        vr = _def(RESP_S, "ValidationResult")
-        assert vr["properties"]["constraintKind"]["enum"] == [
+        assert VR_RESULT_S["properties"]["constraintKind"]["enum"] == [
             "required", "type", "cardinality", "constraint", "shape", "external"
         ]
 
     def test_s5_3__source_enum(self):
-        vr = _def(RESP_S, "ValidationResult")
-        assert vr["properties"]["source"]["enum"] == ["bind", "shape", "external"]
+        assert VR_RESULT_S["properties"]["source"]["enum"] == ["bind", "shape", "external"]
 
     def test_s5_3__validation_result_additional_properties_false(self):
-        vr = _def(RESP_S, "ValidationResult")
-        assert vr["additionalProperties"] is False
+        assert VR_RESULT_S["additionalProperties"] is False
 
     def test_s2_1_6__closed_world_property_set(self):
         expected = {
@@ -1207,10 +1205,12 @@ class TestBucket1SchemaStructure:
             "Alert", "Badge", "ProgressBar", "Summary", "DataTable",
             "Panel", "Modal", "Popover",
         ]
+        base_props = COMP_S["$defs"].get("ComponentBase", {}).get("properties", {})
         for name in builtins:
-            props = COMP_S["$defs"][name]["properties"]
-            assert "accessibility" in props, \
-                f"{name} should have accessibility property"
+            own_props = COMP_S["$defs"][name].get("properties", {})
+            has_accessibility = "accessibility" in own_props or "accessibility" in base_props
+            assert has_accessibility, \
+                f"{name} should have accessibility property (directly or via ComponentBase)"
 
     def test_component_base_properties_documented_in_spec(self):
         """All schema-defined base properties must appear in the §3.1 table in component-spec.md."""

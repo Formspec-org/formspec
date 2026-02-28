@@ -95,11 +95,11 @@ properties:
 | Pointer | Field | Type | Required | Notes | Description |
 |---|---|---|---|---|---|
 | `#/properties/$formspecRegistry` | `$formspecRegistry` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Registry specification version. MUST be '1.0'. |
-| `#/properties/$schema` | `$schema` | <code>string</code> | no | — | — |
-| `#/properties/entries` | `entries` | <code>array</code> | yes | critical | Array of extension registry entries. |
-| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | — |
-| `#/properties/published` | `published` | <code>string</code> | yes | critical | ISO 8601 timestamp indicating when this registry version was published. |
-| `#/properties/publisher` | `publisher` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/Publisher</code>; critical | Organization publishing this registry document. |
+| `#/properties/$schema` | `$schema` | <code>string</code> | no | — | Optional JSON Schema URI for editor validation and autocompletion. |
+| `#/properties/entries` | `entries` | <code>array</code> | yes | critical | Array of extension registry entries. Each entry describes one extension with its category, version, compatibility bounds, and category-specific metadata. Within a single document, the (name, version) tuple MUST be unique. |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | Registry-level extension properties for vendor-specific metadata. All property keys MUST be x-prefixed. |
+| `#/properties/published` | `published` | <code>string</code> | yes | critical | ISO 8601 timestamp indicating when this registry version was published. Used for freshness checks and conditional GET cache validation. |
+| `#/properties/publisher` | `publisher` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/Publisher</code>; critical | Organization publishing this registry document. Provides provenance and contact information for all entries unless overridden at the entry level. |
 <!-- schema-ref:end -->
 
 The generated table above is the canonical structural contract for Registry
@@ -131,6 +131,7 @@ Each element of the `entries` array is a JSON object describing one extension.
 | `schemaUrl` | string (URI) | RECOMMENDED | Link to a JSON Schema for the extension's data. |
 | `compatibility` | object | REQUIRED | Version compatibility bounds. See §3.1. |
 | `license` | string | RECOMMENDED | SPDX license identifier (e.g. `"Apache-2.0"`). |
+| `deprecationNotice` | string | CONDITIONAL | Human-readable deprecation message. REQUIRED when `status` is `"deprecated"`. See §6. |
 | `examples` | array | OPTIONAL | Array of JSON values demonstrating usage. |
 | `extensions` | object | OPTIONAL | Extension properties (all keys `x-`-prefixed). |
 
@@ -247,7 +248,7 @@ following lifecycle states and transition rules are **normative**.
 | Transition | Rule |
 |---|---|
 | draft → stable | The publisher asserts the extension's interface is frozen for the given major version. |
-| stable → deprecated | The publisher MUST publish a `deprecation` notice (human-readable string) in the entry's `extensions` under the key `x-formspec-deprecation`. The publisher SHOULD identify a replacement extension if one exists. |
+| stable → deprecated | The publisher MUST provide a `deprecationNotice` (human-readable string) on the entry explaining why the extension is deprecated. The publisher SHOULD identify a replacement extension if one exists. |
 | deprecated → retired | The publisher asserts the extension SHOULD NOT be used and MAY stop supporting it. Processors encountering a `retired` extension SHOULD emit a warning. |
 | (any) → draft | A new `version` (with incremented major version) MAY re-enter `draft`. |
 
@@ -442,6 +443,11 @@ the top-level `$formspecRegistry`, `publisher`, and `published` properties.
     "license": {
       "type": "string"
     },
+    "deprecationNotice": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable deprecation message. REQUIRED when status is 'deprecated'."
+    },
     "examples": {
       "type": "array",
       "items": true
@@ -495,6 +501,10 @@ the top-level `$formspecRegistry`, `publisher`, and `published` properties.
     {
       "if": { "properties": { "category": { "const": "constraint" } } },
       "then": { "required": ["parameters"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "deprecated" } }, "required": ["status"] },
+      "then": { "required": ["deprecationNotice"] }
     }
   ],
   "additionalProperties": false,

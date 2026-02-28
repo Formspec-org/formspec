@@ -43,6 +43,7 @@ _CONTAINER_COMPONENTS = {
     "Accordion",
     "Panel",
     "Modal",
+    "Popover",
     "DataTable",
 }
 
@@ -80,6 +81,7 @@ _BUILTIN_COMPONENTS = {
     "DataTable",
     "Panel",
     "Modal",
+    "Popover",
 }
 
 
