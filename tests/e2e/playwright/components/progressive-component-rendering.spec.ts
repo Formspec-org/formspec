@@ -289,6 +289,40 @@ test.describe('Components: Progressive Component Rendering', () => {
         await expect(stars.nth(3)).not.toHaveClass(/formspec-rating-star--selected/);
     });
 
+    test('should support icon mapping and half-step selection when allowHalf is true', async ({ page }) => {
+        await page.evaluate(() => {
+            const el = document.querySelector('formspec-render') as any;
+            el.definition = {
+                "$formspec": "1.0", "url": "http://example.org/test",
+                "version": "1.0.0", "title": "Rating Half Test",
+                "items": [{ "key": "score", "type": "field", "dataType": "integer", "label": "Score" }]
+            };
+            el.componentDocument = {
+                "$formspecComponent": "1.0",
+                "tree": {
+                    "component": "Page",
+                    "children": [
+                        { "component": "Rating", "bind": "score", "max": 5, "icon": "heart", "allowHalf": true }
+                    ]
+                }
+            };
+        });
+
+        const stars = page.locator('.formspec-rating-star');
+        await expect(stars).toHaveCount(5);
+        await expect(stars.first()).toHaveText('♥');
+
+        await stars.first().click({ position: { x: 2, y: 8 } });
+
+        const value = await page.evaluate(() => {
+            const el = document.querySelector('formspec-render') as any;
+            return el.getEngine().signals['score'].value;
+        });
+        expect(value).toBe(0.5);
+        await expect(stars.first()).toHaveClass(/formspec-rating-star--half/);
+        await expect(stars.nth(1)).not.toHaveClass(/formspec-rating-star--selected/);
+    });
+
     test('should render drop zone and accept filters when FileUpload dragDrop and accept are configured', async ({ page }) => {
         await page.evaluate(() => {
             const el = document.querySelector('formspec-render') as any;

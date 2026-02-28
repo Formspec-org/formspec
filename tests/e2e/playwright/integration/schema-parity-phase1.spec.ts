@@ -270,6 +270,30 @@ test.describe('Schema Parity Phase 1: Definition Enrichment', () => {
     expect(hasInterpolation).toBe(true);
   });
 
+  test('shape composition via shape ID references is used', async ({ page }) => {
+    const hasShapeIdComposition = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      const engine = el.getEngine();
+      const shapes = engine.definition.shapes ?? [];
+      const shapeIds = new Set(shapes.map((s: any) => s.id));
+
+      for (const shape of shapes) {
+        for (const key of ['and', 'or', 'xone']) {
+          const values = shape[key];
+          if (Array.isArray(values) && values.some((v: any) => typeof v === 'string' && shapeIds.has(v))) {
+            return true;
+          }
+        }
+
+        if (typeof shape.not === 'string' && shapeIds.has(shape.not)) {
+          return true;
+        }
+      }
+      return false;
+    });
+    expect(hasShapeIdComposition).toBe(true);
+  });
+
   // ── A7: derivedFrom ───────────────────────────────────────────────
 
   test('derivedFrom is present as {url, version} object', async ({ page }) => {
@@ -580,13 +604,103 @@ test.describe('Schema Parity Phase 1: Component Enrichment', () => {
     expect(hasNumberProps).toBe(true);
   });
 
+  test('DatePicker with minDate and maxDate props exists', async ({ page }) => {
+    const hasDateBounds = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      const comp = el.componentDocument;
+      let found = false;
+      function walk(node: any) {
+        if (!node) return;
+        if (node.component === 'DatePicker' && node.minDate && node.maxDate) found = true;
+        if (node.children) {
+          if (Array.isArray(node.children)) node.children.forEach(walk);
+          else walk(node.children);
+        }
+      }
+      walk(comp.tree);
+      return found;
+    });
+    expect(hasDateBounds).toBe(true);
+  });
+
+  test('FileUpload with multiple: true exists', async ({ page }) => {
+    const hasMultipleUpload = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      const comp = el.componentDocument;
+      let found = false;
+      function walk(node: any) {
+        if (!node) return;
+        if (node.component === 'FileUpload' && node.multiple === true) found = true;
+        if (node.children) {
+          if (Array.isArray(node.children)) node.children.forEach(walk);
+          else walk(node.children);
+        }
+      }
+      walk(comp.tree);
+      return found;
+    });
+    expect(hasMultipleUpload).toBe(true);
+  });
+
+  test('MoneyInput with locale exists', async ({ page }) => {
+    const hasMoneyLocale = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      const comp = el.componentDocument;
+      let found = false;
+      function walk(node: any) {
+        if (!node) return;
+        if (node.component === 'MoneyInput' && typeof node.locale === 'string' && node.locale.length > 0) found = true;
+        if (node.children) {
+          if (Array.isArray(node.children)) node.children.forEach(walk);
+          else walk(node.children);
+        }
+      }
+      walk(comp.tree);
+      return found;
+    });
+    expect(hasMoneyLocale).toBe(true);
+  });
+
   test('Alert with severity success and error exist', async ({ page }) => {
     const hasSeverities = await page.evaluate(() => {
       const el: any = document.querySelector('formspec-render');
       const json = JSON.stringify(el.componentDocument);
-      return json.includes('"severity":"success"') || json.includes('"severity": "success"');
+      const hasSuccess = json.includes('"severity":"success"') || json.includes('"severity": "success"');
+      const hasError = json.includes('"severity":"error"') || json.includes('"severity": "error"');
+      return hasSuccess && hasError;
     });
     expect(hasSeverities).toBe(true);
+  });
+
+  test('Badge variants default, primary, success, and error exist', async ({ page }) => {
+    const hasBadgeVariants = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      const json = JSON.stringify(el.componentDocument);
+      const variants = ['default', 'primary', 'success', 'error'];
+      return variants.every((variant) =>
+        json.includes(`"variant":"${variant}"`) || json.includes(`"variant": "${variant}"`)
+      );
+    });
+    expect(hasBadgeVariants).toBe(true);
+  });
+
+  test('ProgressBar with bind exists', async ({ page }) => {
+    const hasBoundProgressBar = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      const comp = el.componentDocument;
+      let found = false;
+      function walk(node: any) {
+        if (!node) return;
+        if (node.component === 'ProgressBar' && typeof node.bind === 'string' && node.bind.length > 0) found = true;
+        if (node.children) {
+          if (Array.isArray(node.children)) node.children.forEach(walk);
+          else walk(node.children);
+        }
+      }
+      walk(comp.tree);
+      return found;
+    });
+    expect(hasBoundProgressBar).toBe(true);
   });
 
   test('Card with subtitle exists', async ({ page }) => {

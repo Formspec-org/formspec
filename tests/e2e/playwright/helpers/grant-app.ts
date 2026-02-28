@@ -20,6 +20,7 @@ export async function mountGrantApplication(page: Page): Promise<void> {
   await page.evaluate(({ def, comp, thm }) => {
     const el: any = document.querySelector('formspec-render');
     el.definition        = def;
+    el.skipScreener();   // Skip screener so tests go directly to the main form
     el.componentDocument = comp;
     el.themeDocument     = thm;
   }, { def: definition, comp: component, thm: theme });
@@ -103,4 +104,20 @@ export async function getInstanceData(page: Page, instanceName: string): Promise
     const el: any = document.querySelector('formspec-render');
     return el.getEngine().instanceData?.[name];
   }, instanceName);
+}
+
+/** Set a value on a writable instance via engine. */
+export async function setInstanceValue(page: Page, name: string, path: string | undefined, value: any): Promise<void> {
+  await page.evaluate(({ n, p, v }) => {
+    const el: any = document.querySelector('formspec-render');
+    el.getEngine().setInstanceValue(n, p, v);
+  }, { n: name, p: path, v: value });
+}
+
+/** Get the engine's instanceVersion signal value. */
+export async function instanceVersion(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const el: any = document.querySelector('formspec-render');
+    return el.getEngine().instanceVersion.value;
+  });
 }

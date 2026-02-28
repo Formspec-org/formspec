@@ -132,6 +132,11 @@ test.describe('Integration: Kitchen Sink Holistic Conformance', () => {
     try {
       await gotoHarness(page);
       await mountDefinition(page, DEFINITION_V1_RUNTIME);
+      // Skip the screener to go directly to the main form for conformance checks
+      await page.evaluate(() => {
+        const renderer: any = document.querySelector('formspec-render');
+        renderer.skipScreener();
+      });
       await page.evaluate((themeDoc) => {
         const renderer: any = document.querySelector('formspec-render');
         renderer.themeDocument = themeDoc;
@@ -354,8 +359,7 @@ test.describe('Integration: Kitchen Sink Holistic Conformance', () => {
             };
 
             const screenerEngine = new FormEngine(def);
-            screenerEngine.setValue('triageScore', 55);
-            const screener = screenerEngine.evaluateScreener();
+            const screener = screenerEngine.evaluateScreener({ triageScore: 55 });
 
             const imported = {
               $formspec: '1.0',
@@ -418,6 +422,10 @@ test.describe('Integration: Kitchen Sink Holistic Conformance', () => {
         async () => {
           await gotoHarness(page);
           await mountDefinition(page, DEFINITION_V1_RUNTIME);
+          await page.evaluate(() => {
+            const renderer: any = document.querySelector('formspec-render');
+            renderer.skipScreener();
+          });
           await page.evaluate(
             ({ themeDoc, componentDoc }) => {
               const renderer: any = document.querySelector('formspec-render');
@@ -468,6 +476,10 @@ test.describe('Integration: Kitchen Sink Holistic Conformance', () => {
 
           await gotoHarness(page);
           await mountDefinition(page, DEFINITION_V1_RUNTIME);
+          await page.evaluate(() => {
+            const renderer: any = document.querySelector('formspec-render');
+            renderer.skipScreener();
+          });
           await page.evaluate(
             ({ themeDoc, componentDoc: nextComponentDoc }) => {
               const renderer: any = document.querySelector('formspec-render');
