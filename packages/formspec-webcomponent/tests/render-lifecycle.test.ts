@@ -25,6 +25,7 @@ describe('render lifecycle', () => {
 
     it('setting definition creates engine and renders container + fields', () => {
         el.definition = singleFieldDef();
+        el.render();
         expect(el.getEngine()).not.toBeNull();
         expect(el.querySelector('.formspec-container')).not.toBeNull();
         expect(el.querySelector('.formspec-field')).not.toBeNull();
@@ -32,6 +33,7 @@ describe('render lifecycle', () => {
 
     it('setting definition again re-renders in place (root container preserved)', () => {
         el.definition = singleFieldDef();
+        el.render();
         const firstContainer = el.querySelector('.formspec-container');
         expect(firstContainer).not.toBeNull();
 
@@ -39,6 +41,7 @@ describe('render lifecycle', () => {
             { key: 'a', dataType: 'string' },
             { key: 'b', dataType: 'integer' },
         ]);
+        el.render();
         // Root container remains stable; children are refreshed.
         expect(el.querySelector('.formspec-container')).toBe(firstContainer);
         // Two fields now
@@ -47,6 +50,7 @@ describe('render lifecycle', () => {
 
     it('submit button dispatches formspec-submit event with response payload', async () => {
         el.definition = singleFieldDef();
+        el.render();
         el.getEngine().setValue('name', 'Alice');
 
         const received = new Promise<any>((resolve) => {
@@ -76,6 +80,7 @@ describe('render lifecycle', () => {
         el.componentDocument = minimalComponentDoc({
             component: 'TotallyFakeWidget',
         });
+        el.render();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('TotallyFakeWidget'));
         warn.mockRestore();
     });
@@ -98,12 +103,14 @@ describe('render lifecycle', () => {
                 SelfRef: { tree: { component: 'SelfRef' } },
             },
         };
+        el.render();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('Recursive'));
         warn.mockRestore();
     });
 
     it('disconnectedCallback drains cleanup functions', () => {
         el.definition = singleFieldDef();
+        el.render();
         // After setting a definition, there should be reactive effects in cleanupFns
         // disconnectedCallback should clear them
         el.remove();
@@ -125,12 +132,14 @@ describe('render lifecycle', () => {
 
         el.themeDocument = theme;
         el.definition = singleFieldDef();
+        el.render();
         expect(document.head.querySelectorAll('link[data-formspec-theme]').length).toBe(1);
 
         const el2 = document.createElement('formspec-render') as InstanceType<any>;
         document.body.appendChild(el2);
         el2.themeDocument = theme;
         el2.definition = singleFieldDef();
+        el2.render();
         expect(document.head.querySelectorAll('link[data-formspec-theme]').length).toBe(1);
 
         el.remove();

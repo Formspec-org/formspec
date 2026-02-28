@@ -709,6 +709,7 @@ hr.formspec-divider {
 }
 
 .formspec-rating-star {
+  display: inline-block;
   color: rgb(204, 204, 204);
   cursor: pointer;
   transition: color 0.15s;
@@ -720,6 +721,13 @@ hr.formspec-divider {
 
 .formspec-rating-star--selected {
   color: rgb(245, 166, 35);
+}
+
+.formspec-rating-star--half {
+  background: linear-gradient(90deg, rgb(245, 166, 35) 50%, rgb(204, 204, 204) 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* ── File Upload ───────────────────────────────────────────────── */

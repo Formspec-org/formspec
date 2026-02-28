@@ -41,7 +41,7 @@ describe('ComponentRegistry', () => {
             'TextInput', 'NumberInput', 'Select', 'Toggle', 'Checkbox', 'DatePicker',
             'RadioGroup', 'CheckboxGroup', 'Slider', 'Rating', 'FileUpload', 'Signature', 'MoneyInput',
             // Display
-            'Heading', 'Text', 'Card', 'Spacer', 'Alert', 'Badge', 'ProgressBar', 'Summary',
+            'Heading', 'Text', 'Card', 'Spacer', 'Alert', 'Badge', 'ProgressBar', 'Summary', 'ValidationSummary',
             // Interactive
             'Wizard', 'Tabs',
             // Special

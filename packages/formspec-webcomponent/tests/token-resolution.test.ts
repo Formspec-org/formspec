@@ -62,6 +62,7 @@ describe('emitTokenProperties (via FormspecRender)', () => {
             title: 'Test',
             items: [{ key: 'f', type: 'field', label: 'F', dataType: 'string' }],
         };
+        el.render();
 
         const container = el.querySelector('.formspec-container') as HTMLElement;
         expect(container).not.toBeNull();
@@ -101,6 +102,7 @@ describe('emitTokenProperties (via FormspecRender)', () => {
             title: 'Test',
             items: [],
         };
+        el.render();
 
         const container = el.querySelector('.formspec-container') as HTMLElement;
         // Component tokens override theme tokens

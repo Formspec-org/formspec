@@ -922,6 +922,10 @@
       },
       "properties": {
         "component": { "const": "Accordion" },
+        "bind": {
+          "type": "string",
+          "description": "Optional bind path to a repeating group. When provided, each instance becomes one accordion section."
+        },
         "allowMultiple": {
           "type": "boolean",
           "description": "Whether multiple sections may be expanded simultaneously. When false, expanding one collapses others."

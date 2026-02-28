@@ -190,10 +190,21 @@ const SliderPlugin: ComponentPlugin = {
     }
 };
 
+const RATING_ICON_MAP: Record<string, string> = {
+    star: '\u2605',
+    heart: '\u2665',
+    circle: '\u25cf',
+};
+
+function resolveRatingIcon(icon?: string): string {
+    if (!icon) return RATING_ICON_MAP.star;
+    return RATING_ICON_MAP[icon] || icon;
+}
+
 /**
- * Renders a star-rating control using clickable `<span>` elements.
- * Supports configurable max rating and icon character. Subscribes to the field signal
- * to toggle a selected CSS class on each star.
+ * Renders an icon-rating control using clickable `<span>` elements.
+ * Supports configurable max count, icon mapping, and optional half-step selection.
+ * Subscribes to the field signal to toggle selected/half-selected CSS classes.
  */
 const RatingPlugin: ComponentPlugin = {
     type: 'Rating',
@@ -213,7 +224,8 @@ const RatingPlugin: ComponentPlugin = {
         wrapper.appendChild(label);
 
         const maxRating = comp.max || 5;
-        const icon = comp.icon || '\u2605'; // star
+        const allowHalf = comp.allowHalf === true;
+        const icon = resolveRatingIcon(comp.icon);
         const container = document.createElement('div');
         container.className = 'formspec-rating-stars';
 
@@ -223,8 +235,14 @@ const RatingPlugin: ComponentPlugin = {
             star.className = 'formspec-rating-star';
             star.textContent = icon;
             star.dataset.value = String(i);
-            star.addEventListener('click', () => {
-                ctx.engine.setValue(fullName, i);
+            star.addEventListener('click', (event: MouseEvent) => {
+                let value = i;
+                if (allowHalf) {
+                    const rect = star.getBoundingClientRect();
+                    const clickedLeftHalf = rect.width > 0 && (event.clientX - rect.left) < rect.width / 2;
+                    value = clickedLeftHalf ? i - 0.5 : i;
+                }
+                ctx.engine.setValue(fullName, value);
             });
             container.appendChild(star);
             stars.push(star);
@@ -236,7 +254,12 @@ const RatingPlugin: ComponentPlugin = {
             const sig = ctx.engine.signals[fullName];
             const val = sig?.value ?? 0;
             stars.forEach((star, idx) => {
-                star.classList.toggle('formspec-rating-star--selected', (idx + 1) <= val);
+                const fullValue = idx + 1;
+                const halfValue = idx + 0.5;
+                const isSelected = fullValue <= val;
+                const isHalfSelected = allowHalf && !isSelected && halfValue <= val;
+                star.classList.toggle('formspec-rating-star--selected', isSelected);
+                star.classList.toggle('formspec-rating-star--half', isHalfSelected);
             });
         }));
 

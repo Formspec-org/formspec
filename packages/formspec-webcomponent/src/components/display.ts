@@ -222,6 +222,7 @@ export const ProgressBarPlugin: ComponentPlugin = {
         const progressEl = document.createElement('progress');
         const maxVal = comp.max || 100;
         progressEl.max = maxVal;
+        if (comp.label) progressEl.setAttribute('aria-label', comp.label);
 
         if (comp.bind) {
             const fullName = ctx.prefix ? `${ctx.prefix}.${comp.bind}` : comp.bind;

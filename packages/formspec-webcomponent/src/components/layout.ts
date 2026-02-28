@@ -61,7 +61,13 @@ export const GridPlugin: ComponentPlugin = {
         const el = document.createElement('div');
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-grid';
-        if (comp.columns) el.dataset.columns = String(comp.columns);
+        if (comp.columns != null) {
+            if (typeof comp.columns === 'number') {
+                el.dataset.columns = String(comp.columns);
+            } else {
+                el.style.gridTemplateColumns = comp.columns;
+            }
+        }
         if (comp.gap) el.style.gap = String(ctx.resolveToken(comp.gap));
         if (comp.rowGap) el.style.rowGap = String(comp.rowGap);
         ctx.applyCssClass(el, comp);
@@ -176,6 +182,11 @@ export const PanelPlugin: ComponentPlugin = {
         const el = document.createElement('div');
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-panel';
+        if (comp.position) {
+            el.dataset.position = comp.position;
+            // Keep panel placement deterministic when mixed with main content in grid/flex containers.
+            el.style.order = comp.position === 'left' ? '-1' : '1';
+        }
         if (comp.width) el.style.width = comp.width;
 
         if (comp.title) {
@@ -287,6 +298,26 @@ export const ModalPlugin: ComponentPlugin = {
         ctx.applyAccessibility(dialog, comp);
         ctx.applyStyle(dialog, comp.style);
         parent.appendChild(dialog);
+
+        const triggerMode = comp.trigger || 'button';
+        if (triggerMode === 'auto') {
+            if (comp.when) {
+                const exprFn = ctx.engine.compileExpression(comp.when, ctx.prefix);
+                ctx.cleanupFns.push(effect(() => {
+                    const shouldOpen = !!exprFn();
+                    if (shouldOpen && !dialog.open) {
+                        dialog.showModal();
+                    } else if (!shouldOpen && dialog.open) {
+                        dialog.close();
+                    }
+                }));
+            } else {
+                queueMicrotask(() => {
+                    if (!dialog.open) dialog.showModal();
+                });
+            }
+            return;
+        }
 
         const triggerBtn = document.createElement('button');
         triggerBtn.type = 'button';

@@ -22,6 +22,7 @@ function renderWithTree(tree: any) {
         title: 'Test',
         items: [],
     };
+    el.render();
     return el;
 }
 

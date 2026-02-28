@@ -6,8 +6,8 @@ import { WizardPlugin, TabsPlugin } from './interactive';
 import { ConditionalGroupPlugin, DataTablePlugin } from './special';
 
 /**
- * Registers all 35 built-in component plugins with the global registry.
- * Includes layout (10), input (13), display (8), interactive (2), and special (2) plugins.
+ * Registers all 36 built-in component plugins with the global registry.
+ * Includes layout (10), input (13), display (9), interactive (2), and special (2) plugins.
  */
 export function registerDefaultComponents() {
     globalRegistry.register(PagePlugin);

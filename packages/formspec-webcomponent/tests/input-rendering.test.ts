@@ -34,6 +34,7 @@ function renderField(
     }
 
     el.definition = def;
+    el.render();
     return el;
 }
 
@@ -167,6 +168,8 @@ describe('input rendering — reactive signals', () => {
         engine.setValue('name', 'test');
         const errorEl = el.querySelector('.formspec-error') as HTMLElement;
         const input = el.querySelector('input') as HTMLInputElement;
+        // Errors are displayed after the field is touched.
+        input.dispatchEvent(new Event('focusout', { bubbles: true }));
         expect(input.getAttribute('aria-invalid')).toBe('true');
         expect(errorEl.textContent).toBe('Bad value');
     });

@@ -142,6 +142,10 @@ export class FormspecRender extends HTMLElement {
     private _renderPending = false;
     /** Fields the user has interacted with (blur). Validation errors are hidden until touched. */
     private touchedFields: Set<string> = new Set();
+    /** Whether the screener has been completed (route selected). */
+    private _screenerCompleted = false;
+    /** The route selected by the screener, if any. */
+    private _screenerRoute: { target: string; label?: string; extensions?: Record<string, any> } | null = null;
 
     private scheduleRender() {
         if (this._renderPending) return;
@@ -158,6 +162,8 @@ export class FormspecRender extends HTMLElement {
      */
     set definition(val: any) {
         this._definition = val;
+        this._screenerCompleted = false;
+        this._screenerRoute = null;
         try {
             this.engine = new FormEngine(val);
         } catch (e) {
@@ -398,6 +404,12 @@ export class FormspecRender extends HTMLElement {
         // §10.5 Emit CSS custom properties from theme/component tokens
         this.emitTokenProperties(container);
 
+        // Screener: if definition has a screener and it hasn't been completed, render it
+        if (this._definition.screener?.items && !this._screenerCompleted) {
+            this.renderScreener(container);
+            return;
+        }
+
         if (this._componentDocument && this._componentDocument.tree) {
             this.renderComponent(this._componentDocument.tree, container);
         } else {
@@ -422,6 +434,139 @@ export class FormspecRender extends HTMLElement {
         });
         container.appendChild(submitBtn);
 
+    }
+
+    /**
+     * Render the screener UI: simple inputs for each screener item plus a Continue button.
+     * On submit, evaluates screener routes and dispatches a `formspec-screener-route` event.
+     * If the matched route targets the current definition, transitions to the main form.
+     */
+    private renderScreener(container: HTMLElement) {
+        const screener = this._definition.screener;
+        const panel = document.createElement('div');
+        panel.className = 'formspec-screener';
+
+        const heading = document.createElement('h2');
+        heading.className = 'formspec-screener-heading';
+        heading.textContent = this._definition.title || 'Screening Questions';
+        panel.appendChild(heading);
+
+        // Track screener field values
+        const answers: Record<string, any> = {};
+
+        for (const item of screener.items) {
+            const fieldWrapper = document.createElement('div');
+            fieldWrapper.className = 'formspec-field formspec-screener-field';
+            fieldWrapper.dataset.name = item.key;
+
+            const label = document.createElement('label');
+            label.textContent = this.engine!.getLabel(item);
+            fieldWrapper.appendChild(label);
+
+            if (item.hint) {
+                const hint = document.createElement('span');
+                hint.className = 'formspec-hint';
+                hint.textContent = item.hint;
+                fieldWrapper.appendChild(hint);
+            }
+
+            if (item.dataType === 'choice' && item.options) {
+                const select = document.createElement('select');
+                select.className = 'formspec-input';
+                const emptyOpt = document.createElement('option');
+                emptyOpt.value = '';
+                emptyOpt.textContent = '-- Select --';
+                select.appendChild(emptyOpt);
+                for (const opt of item.options) {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.textContent = opt.label || opt.value;
+                    select.appendChild(option);
+                }
+                select.addEventListener('change', () => {
+                    answers[item.key] = select.value || null;
+                });
+                fieldWrapper.appendChild(select);
+            } else if (item.dataType === 'boolean') {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'formspec-input';
+                checkbox.addEventListener('change', () => {
+                    answers[item.key] = checkbox.checked;
+                });
+                fieldWrapper.appendChild(checkbox);
+            } else if (item.dataType === 'money') {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'formspec-input';
+                input.placeholder = 'Amount';
+                input.addEventListener('input', () => {
+                    const val = parseFloat(input.value);
+                    answers[item.key] = isNaN(val) ? null : { amount: val, currency: this._definition.formPresentation?.defaultCurrency || 'USD' };
+                });
+                fieldWrapper.appendChild(input);
+            } else {
+                const input = document.createElement('input');
+                input.type = item.dataType === 'integer' || item.dataType === 'decimal' || item.dataType === 'number' ? 'number' : 'text';
+                input.className = 'formspec-input';
+                input.addEventListener('input', () => {
+                    const val = input.value;
+                    if (item.dataType === 'integer') {
+                        answers[item.key] = val ? parseInt(val, 10) : null;
+                    } else if (item.dataType === 'decimal' || item.dataType === 'number') {
+                        answers[item.key] = val ? parseFloat(val) : null;
+                    } else {
+                        answers[item.key] = val || null;
+                    }
+                });
+                fieldWrapper.appendChild(input);
+            }
+
+            panel.appendChild(fieldWrapper);
+        }
+
+        const continueBtn = document.createElement('button');
+        continueBtn.type = 'button';
+        continueBtn.className = 'formspec-screener-continue';
+        continueBtn.textContent = 'Continue';
+        continueBtn.addEventListener('click', () => {
+            const route = this.engine!.evaluateScreener(answers);
+            this._screenerRoute = route;
+
+            this.dispatchEvent(new CustomEvent('formspec-screener-route', {
+                detail: { route, answers },
+                bubbles: true,
+                composed: true,
+            }));
+
+            // If the route target matches this definition's URL, show the main form
+            if (route) {
+                const defUrl = this._definition.url;
+                const target = route.target;
+                if (target === defUrl || target.startsWith(defUrl + '/') || target.split('|')[0] === defUrl) {
+                    this._screenerCompleted = true;
+                    this.render();
+                    return;
+                }
+            }
+
+            // For non-matching routes (external redirect), mark complete but don't render main form
+            this._screenerCompleted = true;
+        });
+        panel.appendChild(continueBtn);
+
+        container.appendChild(panel);
+    }
+
+    /** Returns the screener route selected during the screening phase, or null. */
+    getScreenerRoute() {
+        return this._screenerRoute;
+    }
+
+    /** Programmatically skip the screener and proceed to the main form. */
+    skipScreener() {
+        this._screenerCompleted = true;
+        this.scheduleRender();
     }
 
     private findItemByKey = (key: string, items: any[] = this._definition.items): any | null => {
@@ -1058,7 +1203,10 @@ export class FormspecRender extends HTMLElement {
                 if (comp.min != null) htmlInput.min = String(comp.min);
                 if (comp.max != null) htmlInput.max = String(comp.max);
             } else if (componentType === 'DatePicker' || ['date', 'dateTime', 'time'].includes(dataType)) {
-                htmlInput.type = dataType === 'date' ? 'date' : (dataType === 'time' ? 'time' : 'datetime-local');
+                let dateType = dataType === 'date' ? 'date' : (dataType === 'time' ? 'time' : 'datetime-local');
+                if (comp.showTime === true && dateType === 'date') dateType = 'datetime-local';
+                if (comp.showTime === false && dateType === 'datetime-local') dateType = 'date';
+                htmlInput.type = dateType;
                 if (comp.minDate) htmlInput.min = comp.minDate;
                 if (comp.maxDate) htmlInput.max = comp.maxDate;
             } else {
