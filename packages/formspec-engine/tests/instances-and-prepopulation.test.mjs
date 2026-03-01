@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';
+import { createGrantEngine } from './helpers/grant-app.mjs';
 
 test('should read inline instance data when engine code queries instance paths', () => {
   const engine = new FormEngine({
@@ -128,4 +129,25 @@ test('should compose prePopulate readonly and bind readonly rules when editable 
   assert.equal(field1Readonly, true);
   assert.equal(field2ReadonlyBefore, false);
   assert.equal(field2ReadonlyAfter, true);
+});
+
+test('should make grant-app agencyData instance data accessible', () => {
+  const engine = createGrantEngine();
+  const data = engine.instanceData?.agencyData;
+
+  assert.ok(data);
+  assert.equal(data.maxAward, 500000);
+  assert.equal(data.fiscalYear, 'FY2026');
+});
+
+test('should have prePopulate property on orgName referencing agencyData instance', () => {
+  const engine = createGrantEngine();
+  const applicantInfo = engine.definition.items.find(item => item.key === 'applicantInfo');
+  const orgName = applicantInfo?.children?.find(field => field.key === 'orgName');
+  const prePop = orgName?.prePopulate;
+
+  assert.ok(prePop);
+  assert.equal(prePop.instance, 'agencyData');
+  assert.equal(prePop.path, 'orgName');
+  assert.equal(prePop.editable, true);
 });

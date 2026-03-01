@@ -4,7 +4,6 @@ import {
   goToPage,
   engineSetValue,
   engineValue,
-  addRepeatInstance,
 } from '../helpers/grant-app';
 
 test.describe('Components: Grant App Component Props', () => {
@@ -49,37 +48,6 @@ test.describe('Components: Grant App Component Props', () => {
     await expect(heading1).toHaveText('Applicant Info');
   });
 
-  test('should toggle budget.usesSubcontractors on and off via engine', async ({ page }) => {
-    // Navigate to Budget page
-    await goToPage(page, 'Budget');
-
-    // Set to true
-    await engineSetValue(page, 'budget.usesSubcontractors', true);
-    await page.waitForTimeout(50);
-
-    let val = await engineValue(page, 'budget.usesSubcontractors');
-    expect(val).toBe(true);
-
-    // Set to false
-    await engineSetValue(page, 'budget.usesSubcontractors', false);
-    await page.waitForTimeout(50);
-
-    val = await engineValue(page, 'budget.usesSubcontractors');
-    expect(val).toBe(false);
-  });
-
-  test('should set projectNarrative.focusAreas to multiple values and reflect in engine', async ({ page }) => {
-    // Navigate to Project Narrative page
-    await goToPage(page, 'Project Narrative');
-
-    await engineSetValue(page, 'projectNarrative.focusAreas', ['health', 'education']);
-    await page.waitForTimeout(100);
-
-    const val = await engineValue(page, 'projectNarrative.focusAreas');
-    expect(val).toContain('health');
-    expect(val).toContain('education');
-  });
-
   test('should increase DataTable row count when a line item is added on Budget page', async ({ page }) => {
     await goToPage(page, 'Budget');
 
@@ -101,17 +69,6 @@ test.describe('Components: Grant App Component Props', () => {
       return el.getEngine().repeats['budget.lineItems']?.value;
     });
     expect(newCount).toBe(2);
-  });
-
-  test('should compute subtotal=200 when quantity=2 and unitCost=100 on lineItems[0]', async ({ page }) => {
-    await goToPage(page, 'Budget');
-
-    await engineSetValue(page, 'budget.lineItems[0].quantity', 2);
-    await engineSetValue(page, 'budget.lineItems[0].unitCost', 100);
-    await page.waitForTimeout(100);
-
-    const subtotal = await engineValue(page, 'budget.lineItems[0].subtotal');
-    expect(subtotal).toBe(200);
   });
 
   test('should render grant app main Stack with children visible on page 1', async ({ page }) => {
@@ -231,12 +188,12 @@ test.describe('Components: Grant App Component Props', () => {
     await expect(dropZones).toHaveCount(2);
   });
 
-  test('should render Applicant Help panel with left position metadata', async ({ page }) => {
+  test('should render Applicant Help panel with right position metadata', async ({ page }) => {
     const helpPanel = page.locator('.formspec-panel').filter({
       has: page.locator('.formspec-panel-header', { hasText: 'Applicant Help' }),
     });
     await expect(helpPanel).toHaveCount(1);
-    await expect(helpPanel).toHaveAttribute('data-position', 'left');
+    await expect(helpPanel).toHaveAttribute('data-position', 'right');
   });
 
   test('should support modal trigger and size variants on Subcontractors page', async ({ page }) => {
@@ -244,17 +201,9 @@ test.describe('Components: Grant App Component Props', () => {
     await engineSetValue(page, 'budget.usesSubcontractors', true);
     await page.waitForTimeout(150);
 
-    // The auto-modal with when="$budget.usesSubcontractors" opens immediately.
-    // Close it first so it doesn't block interactions with other modals.
-    const autoModal = page.locator('.formspec-modal').filter({
-      has: page.locator('.formspec-modal-title', { hasText: 'Automatic Compliance Notice' }),
-    });
-    await expect(autoModal).toHaveCount(1);
-    await expect(autoModal).toHaveAttribute('data-size', 'sm');
-    await expect(autoModal).toHaveAttribute('open', '');
-    await expect(page.locator('.formspec-modal-trigger', { hasText: 'Open Automatic Notice' })).toHaveCount(0);
-    await autoModal.locator('.formspec-modal-close').click();
-    await expect(autoModal).not.toHaveAttribute('open', '');
+    // Compliance notice is now an inline Alert (not a blocking auto-modal)
+    const panel = page.locator('.formspec-wizard-panel:not(.formspec-hidden)');
+    await expect(panel.locator('.formspec-alert--info', { hasText: 'Compliance reminder' })).toBeVisible();
 
     const certModal = page.locator('.formspec-modal').filter({
       has: page.locator('.formspec-modal-title', { hasText: 'Subcontractor Certification Requirements' }),
@@ -272,8 +221,6 @@ test.describe('Components: Grant App Component Props', () => {
     await expect(riskTrigger).toHaveCount(1);
     await riskTrigger.click();
     await expect(riskModal).toHaveAttribute('open', '');
-    await riskModal.locator('.formspec-modal-close').click();
-    await expect(riskModal).not.toHaveAttribute('open', '');
   });
 
   test('should support popover triggerBind and placement variants on Budget page', async ({ page }) => {

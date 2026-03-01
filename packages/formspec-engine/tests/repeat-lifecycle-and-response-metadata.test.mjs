@@ -132,3 +132,51 @@ test('should compact nested repeat subtree state when removing a parent repeat i
   assert.equal(engine.signals['rows[0].sub[0].val'].value, 'B');
   assert.equal(engine.signals['rows[1].sub[0].val'], undefined);
 });
+
+test('should shift remaining row values when removeRepeatInstance deletes a middle row', () => {
+  const engine = new FormEngine({
+    $formspec: '1.0',
+    url: 'http://example.org/test',
+    version: '1.0.0',
+    title: 'Remove Instance Test',
+    items: [
+      {
+        key: 'items',
+        type: 'group',
+        label: 'Items',
+        repeatable: true,
+        minRepeat: 3,
+        children: [
+          { key: 'name', type: 'field', dataType: 'string', label: 'Name' }
+        ]
+      }
+    ]
+  });
+
+  engine.setValue('items[0].name', 'A');
+  engine.setValue('items[1].name', 'B');
+  engine.setValue('items[2].name', 'C');
+
+  const before = {
+    count: engine.repeats.items.value,
+    v0: engine.signals['items[0].name'].value,
+    v1: engine.signals['items[1].name'].value,
+    v2: engine.signals['items[2].name'].value
+  };
+
+  engine.removeRepeatInstance('items', 1);
+
+  const after = {
+    count: engine.repeats.items.value,
+    v0: engine.signals['items[0].name'].value,
+    v1: engine.signals['items[1].name'].value
+  };
+
+  assert.equal(before.count, 3);
+  assert.equal(before.v0, 'A');
+  assert.equal(before.v1, 'B');
+  assert.equal(before.v2, 'C');
+  assert.equal(after.count, 2);
+  assert.equal(after.v0, 'A');
+  assert.equal(after.v1, 'C');
+});

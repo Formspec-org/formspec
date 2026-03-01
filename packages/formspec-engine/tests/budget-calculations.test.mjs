@@ -155,3 +155,29 @@ test('should update @totalDirect when a second line item is added and filled', (
   const totalDirect = engineVariable(engine, 'totalDirect');
   assert.deepEqual(totalDirect, { amount: 2000, currency: 'USD' });
 });
+
+test('should compute subtotal=200 when quantity=2 and unitCost=100 on lineItems[0]', () => {
+  const engine = createGrantEngine();
+  engine.setValue('budget.lineItems[0].quantity', 2);
+  engine.setValue('budget.lineItems[0].unitCost', 100);
+
+  assert.equal(engineValue(engine, 'budget.lineItems[0].subtotal'), 200);
+});
+
+test('repeatable group bindings resolve per-instance paths across add/remove', () => {
+  const engine = createGrantEngine();
+
+  engine.setValue('budget.lineItems[0].category', 'Personnel');
+  addRepeatInstance(engine, 'budget.lineItems');
+  engine.setValue('budget.lineItems[1].category', 'Travel');
+
+  let response = engine.getResponse({ mode: 'continuous' });
+  assert.equal(response.data.budget.lineItems[0].category, 'Personnel');
+  assert.equal(response.data.budget.lineItems[1].category, 'Travel');
+
+  removeRepeatInstance(engine, 'budget.lineItems', 0);
+
+  response = engine.getResponse({ mode: 'continuous' });
+  assert.equal(response.data.budget.lineItems.length, 1);
+  assert.equal(response.data.budget.lineItems[0].category, 'Travel');
+});

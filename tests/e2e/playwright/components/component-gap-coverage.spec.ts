@@ -2,40 +2,9 @@
 // synthetic fixture (all 13 dataType × 6 component permutations). No real-world form
 // naturally exercises every incompatible pair, so it is kept as an inline fixture.
 import { test, expect } from '@playwright/test';
-import {
-  mountGrantApplication,
-  engineSetValue,
-  addRepeatInstance,
-  getResponse,
-} from '../helpers/grant-app';
 import { gotoHarness } from '../helpers/harness';
 
 test.describe('Components: Coverage Gap Closure', () => {
-  test('repeatable group bindings resolve per-instance paths across add/remove', async ({ page }) => {
-    await mountGrantApplication(page);
-
-    // budget.lineItems starts with 1 instance (minRepeat:1); use it directly
-    await engineSetValue(page, 'budget.lineItems[0].category', 'Personnel');
-
-    await addRepeatInstance(page, 'budget.lineItems'); // now 2 instances total
-    await engineSetValue(page, 'budget.lineItems[1].category', 'Travel');
-
-    let response = await getResponse(page, 'continuous');
-    expect(response.data.budget.lineItems[0].category).toBe('Personnel');
-    expect(response.data.budget.lineItems[1].category).toBe('Travel');
-
-    // Remove first instance — second slides to index 0
-    await page.evaluate(() => {
-      const el: any = document.querySelector('formspec-render');
-      el.getEngine().removeRepeatInstance('budget.lineItems', 0);
-    });
-    await page.waitForTimeout(50);
-
-    response = await getResponse(page, 'continuous');
-    expect(response.data.budget.lineItems).toHaveLength(1);
-    expect(response.data.budget.lineItems[0].category).toBe('Travel');
-  });
-
   // ADR-0023 Exception: This test requires a synthetic fixture because it exercises all
   // 13 dataType × 6 component permutations — a non-business scenario not representable
   // in a real-world application.

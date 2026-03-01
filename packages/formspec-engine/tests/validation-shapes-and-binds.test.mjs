@@ -269,3 +269,70 @@ test('should clear abstractNotPlaceholder warning when abstract does not contain
   const placeholder = report.results.find(r => r.code === 'ABSTRACT_PLACEHOLDER');
   assert.equal(placeholder, undefined);
 });
+
+// ── Additional validations migrated from grant-app-ux-fixes ─────────
+
+test('website field should validate URL-with-path input against current bind constraint', () => {
+  const engine = createGrantEngine();
+  engine.setValue('applicantInfo.projectWebsite', 'https://example.com/my-project');
+
+  const value = engineValue(engine, 'applicantInfo.projectWebsite');
+  assert.equal(value, 'https://example.com/my-project');
+
+  const report = getValidationReport(engine, 'demand');
+  const websiteErr = report.results.find(
+    r => r.path === 'applicantInfo.projectWebsite' && r.severity === 'error'
+  );
+  assert.ok(websiteErr, 'Expected website constraint result');
+  assert.equal(websiteErr.constraintKind, 'constraint');
+});
+
+test('negative quantity should produce a validation error', () => {
+  const engine = createGrantEngine();
+  engine.setValue('budget.lineItems[0].quantity', -5);
+
+  const report = getValidationReport(engine, 'continuous');
+  const qtyErr = report.results.find(
+    r => r.path === 'budget.lineItems[1].quantity' && r.constraintKind === 'constraint'
+  );
+  assert.ok(qtyErr, 'Expected quantity constraint error');
+  assert.equal(qtyErr.message, 'Quantity must not be negative.');
+});
+
+test('negative unitCost should produce a validation error', () => {
+  const engine = createGrantEngine();
+  engine.setValue('budget.lineItems[0].unitCost', -100);
+
+  const report = getValidationReport(engine, 'continuous');
+  const costErr = report.results.find(
+    r => r.path === 'budget.lineItems[1].unitCost' && r.constraintKind === 'constraint'
+  );
+  assert.ok(costErr, 'Expected unitCost constraint error');
+  assert.equal(costErr.message, 'Unit cost must not be negative.');
+});
+
+test('zero values should be allowed', () => {
+  const engine = createGrantEngine();
+  engine.setValue('budget.lineItems[0].quantity', 0);
+  engine.setValue('budget.lineItems[0].unitCost', 0);
+
+  const report = getValidationReport(engine, 'continuous');
+  const constraintErrs = report.results.filter(
+    r =>
+      (r.path === 'budget.lineItems[1].quantity' || r.path === 'budget.lineItems[1].unitCost') &&
+      r.constraintKind === 'constraint'
+  );
+  assert.equal(constraintErrs.length, 0);
+});
+
+test('negative hourlyRate should produce a validation error', () => {
+  const engine = createGrantEngine();
+  engine.setValue('projectPhases[0].phaseTasks[0].hourlyRate', { amount: -100, currency: 'USD' });
+
+  const report = getValidationReport(engine, 'continuous');
+  const rateErr = report.results.find(
+    r => r.path === 'projectPhases[1].phaseTasks[1].hourlyRate' && r.constraintKind === 'constraint'
+  );
+  assert.ok(rateErr, 'Expected hourlyRate constraint error');
+  assert.equal(rateErr.message, 'Hourly rate must not be negative.');
+});

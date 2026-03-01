@@ -5,11 +5,11 @@
 
 ## Current Status
 
-- **Current Phase:** 3
+- **Current Phase:** 4
 - **Blockers:** None
-- **Engine tests:** 138 pass (2026-03-01)
+- **Engine tests:** 27 files pass (2026-03-01, post-Phase 3 gate)
 - **Webcomponent tests:** Unknown
-- **Playwright tests:** 174 pass, 2 pre-existing failures (grant-app-component-props.spec.ts modal close + grant-app-ux-fixes.spec.ts website URL constraint — both in files not touched by Phase 2)
+- **Playwright tests:** 105 pass (2026-03-01, post-Phase 3 gate)
 
 ---
 
@@ -56,15 +56,15 @@ Port these 4 complete Playwright files to engine unit tests, then delete each Pl
 
 ## Phase 3: Engine migrations — remaining files (~72 tests, 6 new engine files + overflow into existing)
 
-- [ ] **3.1** Create `packages/formspec-engine/tests/writable-instances.test.mjs`. Port all 15 tests from `writable-instances.spec.ts`. The 3 "inline engine" tests at the end use minimal inline definitions — keep them inline. Delete the Playwright file.
-- [ ] **3.2** Create `packages/formspec-engine/tests/nested-repeats.test.mjs`. Port all 5 from `nested-repeats-and-calculations.spec.ts`. Delete the Playwright file.
-- [ ] **3.3** Create `packages/formspec-engine/tests/date-constraint-null-handling.test.mjs`. Port the 7 date-null-handling tests plus 2 additional INTEGRATION-MIGRATE tests (test 8: phaseTasks data storage, test 11: taskCost computation) from `grant-app-discovered-issues.spec.ts` — 9 tests total. Remove those 9 tests from the Playwright file (keep only the 3 E2E-KEEP tests: tests 9, 10, 12 — DOM text assertions for computed values).
-- [ ] **3.4** Create `packages/formspec-engine/tests/data-type-round-trips.test.mjs`. Port 11 INTEGRATION-MIGRATE tests from `grant-app-data-types.spec.ts` plus the 5 remaining tests from `schema-parity-phase1.spec.ts` (dateTime/time/uri round-trips, initialValue today, prePopulate readonly). Delete both Playwright files entirely.
-- [ ] **3.5** Create `packages/formspec-engine/tests/visibility-and-pruning.test.mjs`. Port 8 INTEGRATION-MIGRATE tests from `grant-app-visibility-and-pruning.spec.ts`. Drop the 2 in-file duplicates (tests 9-10). Trim Playwright file to keep only the 2 E2E-KEEP tests (DOM class assertions for indirectRate).
-- [ ] **3.6** Create `packages/formspec-engine/tests/edge-case-coercion.test.mjs`. Port 1 test from `edge-case-behaviors.spec.ts`. Delete the Playwright file.
-- [ ] **3.7** Port the 1 UNIT-MIGRATE test from `core-component-props-and-fixes.spec.ts` (removeRepeatInstance row shifting) into an appropriate engine test file.
-- [ ] **3.8** Remove remaining INTEGRATION-MIGRATE tests from Playwright files that still have E2E-KEEP tests: `grant-app-wizard-flow.spec.ts` (4 engine-read tests: orgSubType value, agencyData instance, versionAlgorithm, prePopulate), `grant-app-ux-fixes.spec.ts` (5 validation-error tests: website URL, negative quantity/unitCost/hourlyRate, zero values), `grant-app-component-props.spec.ts` (3 engine-only tests: toggle, focusAreas, subtotal), `component-tree-engine-alignment.spec.ts` (2 signal checks: requiredSignals, relevantSignals), `component-gap-coverage.spec.ts` (1 repeat path test), `renderer-parity-gaps.spec.ts` (1 engine round-trip: DatePicker.showTime datetime value). Port each to the appropriate engine test file created in this or the previous phase.
-- [ ] **GATE** Engine tests pass: `npm run test:unit --workspace=packages/formspec-engine` AND Playwright passes: `npx playwright test`
+- [x] **3.1** Create `packages/formspec-engine/tests/writable-instances.test.mjs`. Port all 15 tests from `writable-instances.spec.ts`. The 3 "inline engine" tests at the end use minimal inline definitions — keep them inline. Delete the Playwright file.
+- [x] **3.2** Create `packages/formspec-engine/tests/nested-repeats.test.mjs`. Port all 5 from `nested-repeats-and-calculations.spec.ts`. Delete the Playwright file.
+- [x] **3.3** Create `packages/formspec-engine/tests/date-constraint-null-handling.test.mjs`. Port the 7 date-null-handling tests plus 2 additional INTEGRATION-MIGRATE tests (test 8: phaseTasks data storage, test 11: taskCost computation) from `grant-app-discovered-issues.spec.ts` — 9 tests total. Remove those 9 tests from the Playwright file (keep only the 3 E2E-KEEP tests: tests 9, 10, 12 — DOM text assertions for computed values).
+- [x] **3.4** Create `packages/formspec-engine/tests/data-type-round-trips.test.mjs`. Port 11 INTEGRATION-MIGRATE tests from `grant-app-data-types.spec.ts` plus the 5 remaining tests from `schema-parity-phase1.spec.ts` (dateTime/time/uri round-trips, initialValue today, prePopulate readonly). Delete both Playwright files entirely.
+- [x] **3.5** Create `packages/formspec-engine/tests/visibility-and-pruning.test.mjs`. Port 8 INTEGRATION-MIGRATE tests from `grant-app-visibility-and-pruning.spec.ts`. Drop the 2 in-file duplicates (tests 9-10). Trim Playwright file to keep only the 2 E2E-KEEP tests (DOM class assertions for indirectRate).
+- [x] **3.6** Create `packages/formspec-engine/tests/edge-case-coercion.test.mjs`. Port 1 test from `edge-case-behaviors.spec.ts`. Delete the Playwright file.
+- [x] **3.7** Port the 1 UNIT-MIGRATE test from `core-component-props-and-fixes.spec.ts` (removeRepeatInstance row shifting) into an appropriate engine test file.
+- [x] **3.8** Remove remaining INTEGRATION-MIGRATE tests from Playwright files that still have E2E-KEEP tests: `grant-app-wizard-flow.spec.ts` (4 engine-read tests: orgSubType value, agencyData instance, versionAlgorithm, prePopulate), `grant-app-ux-fixes.spec.ts` (5 validation-error tests: website URL, negative quantity/unitCost/hourlyRate, zero values), `grant-app-component-props.spec.ts` (3 engine-only tests: toggle, focusAreas, subtotal), `component-tree-engine-alignment.spec.ts` (2 signal checks: requiredSignals, relevantSignals), `component-gap-coverage.spec.ts` (1 repeat path test), `renderer-parity-gaps.spec.ts` (1 engine round-trip: DatePicker.showTime datetime value). Port each to the appropriate engine test file created in this or the previous phase.
+- [x] **GATE** Engine tests pass: `npm run test:unit --workspace=packages/formspec-engine` AND Playwright passes: `npx playwright test`
 
 **Commit:** `test: migrate remaining ~47 engine-only tests; trim E2E files to browser-only assertions`
 

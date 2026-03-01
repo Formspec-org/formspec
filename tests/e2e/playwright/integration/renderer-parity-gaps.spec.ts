@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 import {
   mountGrantApplication,
   engineSetValue,
-  engineValue,
   goToPage,
 } from '../helpers/grant-app';
 
@@ -20,14 +19,6 @@ test.describe('Phase 3F: Renderer/Engine Parity Gaps', () => {
     const input = page.locator('[data-name="projectNarrative.submissionDeadline"] input');
     const inputType = await input.getAttribute('type');
     expect(inputType).toBe('datetime-local');
-  });
-
-  test('DatePicker.showTime field accepts datetime value', async ({ page }) => {
-    await goToPage(page, 'Project Narrative');
-    await engineSetValue(page, 'projectNarrative.submissionDeadline', '2026-12-31T23:59:00');
-    await page.waitForTimeout(50);
-    const val = await engineValue(page, 'projectNarrative.submissionDeadline');
-    expect(val).toBe('2026-12-31T23:59:00');
   });
 
   // ── ProgressBar.bind ─────────────────────────────────────────────
@@ -69,51 +60,33 @@ test.describe('Phase 3F: Renderer/Engine Parity Gaps', () => {
     expect(percentText).toBe('80%');  // 4/5 = 80%
   });
 
-  // ── Modal.trigger: "auto" with when ──────────────────────────────
+  // ── Compliance Alert (replaces former auto-triggered modal) ──────
 
-  test('Modal with trigger:auto does not open when when-condition is false', async ({ page }) => {
+  test('Compliance alert is not visible when usesSubcontractors is false', async ({ page }) => {
     await goToPage(page, 'Subcontractors');
     await page.waitForTimeout(100);
 
-    // usesSubcontractors is false by default, so the auto-modal should not be open
-    const dialogOpen = await page.evaluate(() => {
-      const dialogs = document.querySelectorAll('dialog.formspec-modal');
-      for (const d of dialogs) {
-        if ((d as HTMLDialogElement).open) return true;
+    // usesSubcontractors is false by default, so the conditional group (and alert) should be hidden
+    const alertVisible = await page.evaluate(() => {
+      const alerts = document.querySelectorAll('.formspec-alert--info');
+      for (const a of alerts) {
+        if (a.textContent?.includes('Compliance reminder') && a.offsetParent !== null) return true;
       }
       return false;
     });
-    expect(dialogOpen).toBe(false);
+    expect(alertVisible).toBe(false);
   });
 
-  test('Modal with trigger:auto opens when when-condition becomes true', async ({ page }) => {
+  test('Compliance alert appears when usesSubcontractors becomes true', async ({ page }) => {
     await goToPage(page, 'Subcontractors');
     await page.waitForTimeout(100);
 
-    // Enable subcontractors to trigger the auto-modal
+    // Enable subcontractors to show the compliance alert
     await engineSetValue(page, 'budget.usesSubcontractors', true);
     await page.waitForTimeout(200);
 
-    const dialogOpen = await page.evaluate(() => {
-      const dialogs = document.querySelectorAll('dialog.formspec-modal');
-      for (const d of dialogs) {
-        if ((d as HTMLDialogElement).open) return true;
-      }
-      return false;
-    });
-    expect(dialogOpen).toBe(true);
-
-    // Verify it's the compliance notice
-    const title = await page.evaluate(() => {
-      const dialogs = document.querySelectorAll('dialog.formspec-modal');
-      for (const d of dialogs) {
-        if ((d as HTMLDialogElement).open) {
-          return d.querySelector('.formspec-modal-title')?.textContent;
-        }
-      }
-      return null;
-    });
-    expect(title).toBe('Automatic Compliance Notice');
+    const panel = page.locator('.formspec-wizard-panel:not(.formspec-hidden)');
+    await expect(panel.locator('.formspec-alert--info', { hasText: 'Compliance reminder' })).toBeVisible();
   });
 
   // ── Popover.triggerBind ──────────────────────────────────────────

@@ -16,22 +16,6 @@ test.describe('Components: Component Tree and Engine Alignment', () => {
     await expect(orgNameField).toBeVisible();
   });
 
-  test('should report applicantInfo.orgName as required via engine requiredSignals', async ({ page }) => {
-    const isRequired = await page.evaluate(() => {
-      const el: any = document.querySelector('formspec-render');
-      return el.getEngine().requiredSignals['applicantInfo.orgName']?.value;
-    });
-    expect(isRequired).toBe(true);
-  });
-
-  test('should report applicantInfo.orgName as relevant via engine relevantSignals', async ({ page }) => {
-    const isRelevant = await page.evaluate(() => {
-      const el: any = document.querySelector('formspec-render');
-      return el.getEngine().relevantSignals['applicantInfo.orgName']?.value;
-    });
-    expect(isRelevant).toBe(true);
-  });
-
   test('should reflect engine setValue in the DOM input for applicantInfo.orgName', async ({ page }) => {
     await engineSetValue(page, 'applicantInfo.orgName', 'Test Organization');
     await page.waitForTimeout(100);
