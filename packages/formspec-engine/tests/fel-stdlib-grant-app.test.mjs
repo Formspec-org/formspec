@@ -6,8 +6,8 @@
  * Tests FEL stdlib functions through real computed fields in the grant
  * application. Each test sets source field(s) and asserts the computed result.
  *
- * Functions covered: upper, coalesce, round, year, dateAdd, dateDiff,
- * abs, isNull, sum (money aggregate), money arithmetic, matches, contains.
+ * Functions covered: upper, coalesce, round, year, dateAdd, abs, isNull,
+ * sum (money aggregate), money arithmetic.
  */
 
 import test from 'node:test';
@@ -17,7 +17,6 @@ import {
   engineValue,
   engineVariable,
   addRepeatInstance,
-  getValidationReport,
 } from './helpers/grant-app.mjs';
 
 // ── String Functions ─────────────────────────────────────────────────
@@ -72,13 +71,6 @@ test('year() — projectYear extracts year from startDate', () => {
   const engine = createGrantEngine();
   engine.setValue('projectNarrative.startDate', '2027-06-15');
   assert.equal(engineValue(engine, 'projectNarrative.projectYear'), 2027);
-});
-
-test('dateDiff() — duration computes months between startDate and endDate', () => {
-  const engine = createGrantEngine();
-  engine.setValue('projectNarrative.startDate', '2027-01-01');
-  engine.setValue('projectNarrative.endDate', '2027-07-01');
-  assert.equal(engineValue(engine, 'projectNarrative.duration'), 6);
 });
 
 test('dateAdd() — projectedEndDate adds duration months to startDate', () => {
@@ -141,32 +133,4 @@ test('add-then-multiply — @grandTotal = totalDirect + indirectCosts', () => {
   const grand = engineVariable(engine, 'grandTotal');
   assert.deepEqual(indirect, { amount: 100, currency: 'USD' });
   assert.deepEqual(grand, { amount: 1100, currency: 'USD' });
-});
-
-// ── Pattern Matching ─────────────────────────────────────────────────
-
-test('matches() — EIN constraint rejects wrong format', () => {
-  const engine = createGrantEngine();
-  engine.setValue('applicantInfo.ein', 'INVALID');
-  const report = getValidationReport(engine, 'continuous');
-  const einError = report.results.find(r => r.path === 'applicantInfo.ein');
-  assert.ok(einError, 'Expected EIN validation error');
-});
-
-test('matches() — EIN constraint accepts correct format (XX-XXXXXXX)', () => {
-  const engine = createGrantEngine();
-  engine.setValue('applicantInfo.ein', '12-3456789');
-  const report = getValidationReport(engine, 'continuous');
-  const einError = report.results.find(
-    r => r.path === 'applicantInfo.ein' && r.severity === 'error'
-  );
-  assert.equal(einError, undefined);
-});
-
-test('contains() — email constraint rejects address missing @', () => {
-  const engine = createGrantEngine();
-  engine.setValue('applicantInfo.contactEmail', 'notanemail');
-  const report = getValidationReport(engine, 'continuous');
-  const emailError = report.results.find(r => r.path === 'applicantInfo.contactEmail');
-  assert.ok(emailError, 'Expected email validation error');
 });

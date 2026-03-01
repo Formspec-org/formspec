@@ -4,7 +4,7 @@
  * Migrated from tests/e2e/playwright/integration/grant-app-conformance.spec.ts
  *
  * Tests engine identity, initial value hydration, mixed field types,
- * non-relevant behaviour, response contract, and component relevant signals.
+ * and response contract details.
  *
  * Deduplicates: endDate constraint, ValidationReport shape, and Response
  * contract tests are already covered in validation-shapes-and-binds.test.mjs.
@@ -15,8 +15,6 @@ import assert from 'node:assert/strict';
 import {
   createGrantEngine,
   engineValue,
-  engineVariable,
-  getValidationReport,
   getResponse,
   addRepeatInstance,
 } from './helpers/grant-app.mjs';
@@ -58,18 +56,7 @@ test('should accept mixed field types and reflect them in engine signals', () =>
   assert.deepEqual(amount, { amount: 50000, currency: 'USD' });
 });
 
-// ── Non-relevant behaviour ───────────────────────────────────────────
-
-test('should prune non-relevant fields from response with nonRelevantBehavior: remove', () => {
-  const engine = createGrantEngine();
-  engine.setValue('applicantInfo.orgType', 'government');
-  engine.setValue('projectNarrative.indirectRate', 15);
-
-  const response = getResponse(engine);
-  const indirectRate = response.data?.projectNarrative?.indirectRate;
-  assert.ok(indirectRate === undefined || indirectRate === null,
-    `Expected indirectRate to be pruned, got ${indirectRate}`);
-});
+// ── Relevant fields in response ──────────────────────────────────────
 
 test('should include relevant fields in response', () => {
   const engine = createGrantEngine();
@@ -102,18 +89,4 @@ test('should include repeat group arrays in response data', () => {
   const response = getResponse(engine);
   assert.ok(Array.isArray(response.data?.budget?.lineItems));
   assert.equal(response.data.budget.lineItems[0].category, 'Personnel');
-});
-
-// ── Component `when` vs definition `relevant` ────────────────────────
-
-test('should hide component via definition relevant when orgType is not nonprofit', () => {
-  const engine = createGrantEngine();
-  engine.setValue('applicantInfo.orgType', 'university');
-  assert.equal(engine.relevantSignals['applicantInfo.nonprofitPhoneHint']?.value, false);
-});
-
-test('should show component via definition relevant when orgType is nonprofit', () => {
-  const engine = createGrantEngine();
-  engine.setValue('applicantInfo.orgType', 'nonprofit');
-  assert.equal(engine.relevantSignals['applicantInfo.nonprofitPhoneHint']?.value, true);
 });

@@ -74,14 +74,6 @@ test('should store startDate and endDate as ISO date strings', () => {
   assert.equal(engineValue(engine, 'projectNarrative.endDate'), '2028-06-30');
 });
 
-test('should calculate duration in months from date range (readonly calculate bind)', () => {
-  const engine = createGrantEngine();
-  engine.setValue('projectNarrative.startDate', '2027-01-01');
-  engine.setValue('projectNarrative.endDate', '2028-01-01');
-
-  assert.equal(engineValue(engine, 'projectNarrative.duration'), 12);
-});
-
 test('should report duration field as readonly via engine readonlySignals (disabledDisplay: protected)', () => {
   const engine = createGrantEngine();
 

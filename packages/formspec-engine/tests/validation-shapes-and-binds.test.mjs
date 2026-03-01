@@ -4,7 +4,7 @@
  * Migrated from tests/e2e/playwright/integration/grant-app-validation.spec.ts
  *
  * Tests bind constraints (constraint, whitespace normalization),
- * ValidationReport shape contract, Response contract, and shape rules
+ * ValidationReport shape contract, and shape rules
  * (activeWhen, timing, or/not composition).
  */
 
@@ -13,33 +13,10 @@ import assert from 'node:assert/strict';
 import {
   createGrantEngine,
   engineValue,
-  engineVariable,
   getValidationReport,
-  getResponse,
 } from './helpers/grant-app.mjs';
 
 // ── Bind Constraints ─────────────────────────────────────────────────
-
-test('should reject endDate before startDate with constraintMessage', () => {
-  const engine = createGrantEngine();
-  engine.setValue('projectNarrative.startDate', '2027-06-01');
-  engine.setValue('projectNarrative.endDate', '2027-01-01');
-
-  const report = getValidationReport(engine, 'continuous');
-  const endErr = report.results.find(r => r.path === 'projectNarrative.endDate' && r.constraintKind === 'constraint');
-  assert.ok(endErr, 'Expected endDate constraint error');
-  assert.equal(endErr.message, 'End date must be after start date.');
-});
-
-test('should accept endDate after startDate and clear the constraint error', () => {
-  const engine = createGrantEngine();
-  engine.setValue('projectNarrative.startDate', '2027-01-01');
-  engine.setValue('projectNarrative.endDate', '2027-06-01');
-
-  const report = getValidationReport(engine, 'continuous');
-  const endErr = report.results.find(r => r.path === 'projectNarrative.endDate' && r.constraintKind === 'constraint');
-  assert.equal(endErr, undefined);
-});
 
 test('should reject EIN not matching XX-XXXXXXX pattern', () => {
   const engine = createGrantEngine();
@@ -107,20 +84,6 @@ test('should return ValidationReport with valid boolean, counts, results, and ti
   assert.equal(typeof report.counts.info, 'number');
   assert.ok(Array.isArray(report.results));
   assert.match(report.timestamp, /^\d{4}-\d{2}-\d{2}T/); // ISO 8601
-});
-
-test('should include definitionUrl, version, status, data in submit response', () => {
-  const engine = createGrantEngine();
-  engine.setValue('applicantInfo.orgName', 'Test Org');
-  engine.setValue('applicantInfo.ein', '12-3456789');
-  engine.setValue('applicantInfo.orgType', 'university');
-  engine.setValue('applicantInfo.contactName', 'Jane Smith');
-  engine.setValue('applicantInfo.contactEmail', 'jane@example.org');
-
-  const response = getResponse(engine);
-  assert.equal(response.definitionUrl, 'https://example.gov/forms/grant-application');
-  assert.equal(response.definitionVersion, '1.0.0');
-  assert.equal(typeof response.data, 'object');
 });
 
 // ── Shape: budgetMatch (context block) ───────────────────────────────

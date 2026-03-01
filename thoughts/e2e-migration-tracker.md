@@ -5,11 +5,11 @@
 
 ## Current Status
 
-- **Current Phase:** 6
+- **Current Phase:** COMPLETE
 - **Blockers:** None
-- **Engine tests:** 205 pass (2026-03-01, post-Phase 4 gate)
-- **Webcomponent tests:** 121 pass (2026-03-01, post-Phase 4 gate)
-- **Playwright tests:** 81 pass (2026-03-01, post-Phase 5 gate)
+- **Engine tests:** 194 pass (2026-03-01, post-Phase 6 gate)
+- **Webcomponent tests:** 121 pass (2026-03-01, post-Phase 6 gate)
+- **Playwright tests:** 81 pass (2026-03-01, post-Phase 6 gate)
 
 ---
 
@@ -101,7 +101,7 @@ Port these 4 complete Playwright files to engine unit tests, then delete each Pl
 
 ## Phase 6: Final cleanup
 
-- [ ] **6.1** Audit for remaining cross-file duplicate assertions. The report identified 8 specific duplicates — verify each was resolved during migration:
+- [x] **6.1** Audit for remaining cross-file duplicate assertions. The report identified 8 specific duplicates — verify each was resolved during migration:
   - endDate constraint (was in 3 files → should be 1 in engine tests)
   - nonprofitPhoneHint visibility (was 4 tests → should be 2 in engine tests)
   - ValidationReport shape (was in 2 files → should be 1)
@@ -110,11 +110,11 @@ Port these 4 complete Playwright files to engine unit tests, then delete each Pl
   - contactEmail constraint (was in 2 files → should be 1)
   - duration calculation (was in 3 files → should be 1)
   - Response contract definitionUrl/version (was in 2 files → should be 1)
-- [ ] **6.2** Run full suite: `npm run build && npm run test:unit --workspace=packages/formspec-engine && npx vitest run --config packages/formspec-webcomponent/vitest.config.ts && npx playwright test`
-- [ ] **6.3** Update `thoughts/e2e-test-review-report.md` with final counts (actual E2E tests remaining, total migrated, total deleted).
-- [ ] **GATE** All three test layers pass. No fixture-audit or engine-only tests remain in Playwright.
+- [x] **6.2** Run full suite: `npm run build --workspace=formspec-engine && npm run build --workspace=formspec-webcomponent && npm run test:unit --workspace=packages/formspec-engine && npm run test --workspace=formspec-webcomponent -- --config vitest.config.ts && npx playwright test`
+- [x] **6.3** Update `thoughts/e2e-test-review-report.md` with final counts (actual E2E tests remaining, total migrated, total deleted).
+- [x] **GATE** All three test layers pass. No fixture-audit or engine-only tests remain in Playwright.
 
-**Commit:** `test: complete E2E test migration — N tests migrated, M deleted, K genuine E2E remain`
+**Commit:** `test: complete E2E test migration — 157 tests migrated, 56 deleted, 81 genuine E2E remain`
 
 ---
 
