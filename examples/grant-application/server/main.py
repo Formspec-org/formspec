@@ -16,6 +16,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -23,6 +25,7 @@ from pydantic import BaseModel
 from formspec.validator.linter import lint
 from formspec.mapping.engine import MappingEngine
 from formspec.evaluator import DefinitionEvaluator
+from formspec.fel import evaluate as fel_evaluate, to_python, typeof, FelSyntaxError
 
 EXAMPLE_DIR = Path(__file__).resolve().parent.parent
 DEFINITION_PATH = EXAMPLE_DIR / "definition.json"
@@ -60,6 +63,17 @@ class SubmitResponse(BaseModel):
     diagnostics: list[str]
 
 
+class EvaluateRequest(BaseModel):
+    expression: str
+    data: dict
+
+
+class EvaluateResponse(BaseModel):
+    value: Any
+    type: str
+    diagnostics: list[str]
+
+
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -68,6 +82,39 @@ def health():
 @app.get("/definition")
 def get_definition():
     return _definition
+
+
+@app.get("/api/prior-year-data")
+def prior_year_data():
+    """Mock prior-year performance data (replaces external agency API)."""
+    return {
+        "priorAwardAmount": 250000,
+        "performanceRating": "satisfactory",
+        "programYear": "FY2025",
+        "completionRate": 0.92,
+        "reportingStatus": "compliant",
+    }
+
+
+def _json_safe(val: Any) -> Any:
+    """Convert Decimals to int/float so Pydantic serialises them as JSON numbers."""
+    from decimal import Decimal
+    if isinstance(val, Decimal):
+        return int(val) if val == val.to_integral_value() else float(val)
+    return val
+
+
+@app.post("/evaluate", response_model=EvaluateResponse)
+def evaluate(request: EvaluateRequest):
+    try:
+        result = fel_evaluate(request.expression, data=request.data)
+    except FelSyntaxError as exc:
+        raise HTTPException(status_code=400, detail={"error": str(exc)})
+    return EvaluateResponse(
+        value=_json_safe(to_python(result.value)),
+        type=typeof(result.value),
+        diagnostics=[str(d) for d in result.diagnostics],
+    )
 
 
 @app.post("/submit", response_model=SubmitResponse)
