@@ -19,11 +19,13 @@ if str(_REPO_ROOT / "src") not in sys.path:
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from formspec.validator.linter import lint
 from formspec.mapping.engine import MappingEngine
+from formspec.adapters import get_adapter
 from formspec.evaluator import DefinitionEvaluator
 from formspec.fel import evaluate as fel_evaluate, to_python, typeof, FelSyntaxError
 
@@ -35,6 +37,18 @@ _definition: dict = json.loads(DEFINITION_PATH.read_text())
 _mapping_doc: dict = json.loads(MAPPING_PATH.read_text())
 _mapping_engine = MappingEngine(_mapping_doc)
 _evaluator = DefinitionEvaluator(_definition)
+
+MAPPING_CSV_PATH = EXAMPLE_DIR / "mapping-csv.json"
+MAPPING_XML_PATH = EXAMPLE_DIR / "mapping-xml.json"
+
+_mapping_docs = {
+    "json": _mapping_doc,
+    "csv": json.loads(MAPPING_CSV_PATH.read_text()),
+    "xml": json.loads(MAPPING_XML_PATH.read_text()),
+}
+_mapping_engines = {fmt: MappingEngine(doc) for fmt, doc in _mapping_docs.items()}
+
+_CONTENT_TYPES = {"json": "application/json", "csv": "text/csv", "xml": "application/xml"}
 
 app = FastAPI(title="Grant Application — Formspec Reference Server")
 
@@ -72,6 +86,10 @@ class EvaluateResponse(BaseModel):
     value: Any
     type: str
     diagnostics: list[str]
+
+
+class ExportRequest(BaseModel):
+    data: dict
 
 
 @app.get("/health")
@@ -115,6 +133,18 @@ def evaluate(request: EvaluateRequest):
         type=typeof(result.value),
         diagnostics=[str(d) for d in result.diagnostics],
     )
+
+
+@app.post("/export/{format}")
+def export(format: str, request: ExportRequest):
+    if format not in _mapping_engines:
+        raise HTTPException(status_code=400, detail=f"Unsupported format: {format}. Use json, csv, or xml.")
+    mapped = _mapping_engines[format].forward(request.data)
+    adapter_config = _mapping_docs[format].get("adapters", {}).get(format)
+    target_schema = _mapping_docs[format].get("targetSchema")
+    adapter = get_adapter(format, config=adapter_config, target_schema=target_schema)
+    content = adapter.serialize(mapped)
+    return Response(content=content, media_type=_CONTENT_TYPES[format])
 
 
 @app.post("/submit", response_model=SubmitResponse)
