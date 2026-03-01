@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 import {
   mountGrantApplication,
   goToPage,
+  addRepeatInstance,
   engineSetValue,
   engineVariable,
-  addRepeatInstance,
   getResponse,
 } from '../helpers/grant-app';
 
@@ -19,12 +19,13 @@ test.describe('Smoke: Grant Application Happy Path', () => {
     await expect(page.locator('[data-name="applicantInfo.orgName"]')).toBeVisible();
     await expect(page.locator('[data-name="applicantInfo.ein"]')).toBeVisible();
 
-    // 3. Fill Applicant Info fields
-    await engineSetValue(page, 'applicantInfo.contactName', 'Jane Smith');
-    await engineSetValue(page, 'applicantInfo.orgName', 'Community Health Nonprofit');
+    // 3. Fill Applicant Info fields using real page interactions where possible
+    await page.locator('input[name="applicantInfo.orgName"]').fill('Community Health Nonprofit');
+    // EIN has an input mask (readonly DOM attribute) — must go through engine
     await engineSetValue(page, 'applicantInfo.ein', '12-3456789');
+    await page.locator('input[name="applicantInfo.contactName"]').fill('Jane Smith');
 
-    // 4. Navigate to Budget page (page 3)
+    // 4. Navigate to Budget page via wizard Next buttons
     await goToPage(page, 'Budget');
     const budgetHeading = page.locator('.formspec-wizard-panel:not(.formspec-hidden) h2').first();
     await expect(budgetHeading).toHaveText('Budget');
@@ -33,9 +34,11 @@ test.describe('Smoke: Grant Application Happy Path', () => {
     await addRepeatInstance(page, 'budget.lineItems');
     await page.waitForTimeout(50);
 
-    // 6. Set quantity and unitCost on lineItems[0]
-    await engineSetValue(page, 'budget.lineItems[0].quantity', 4);
-    await engineSetValue(page, 'budget.lineItems[0].unitCost', 250);
+    // 6. Set quantity and unitCost on lineItems[0] via real inputs
+    const quantityInput = page.locator('input.formspec-datatable-input[name="budget.lineItems[0].quantity"]');
+    const unitCostInput = page.locator('input.formspec-datatable-input[name="budget.lineItems[0].unitCost"]');
+    await quantityInput.fill('4');
+    await unitCostInput.fill('250');
     await page.waitForTimeout(100);
 
     // 7. Verify @totalDirect variable is non-zero

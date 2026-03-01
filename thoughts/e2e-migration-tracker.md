@@ -5,11 +5,11 @@
 
 ## Current Status
 
-- **Current Phase:** 5
+- **Current Phase:** 6
 - **Blockers:** None
 - **Engine tests:** 205 pass (2026-03-01, post-Phase 4 gate)
 - **Webcomponent tests:** 121 pass (2026-03-01, post-Phase 4 gate)
-- **Playwright tests:** 81 pass (2026-03-01, post-Phase 4 gate)
+- **Playwright tests:** 81 pass (2026-03-01, post-Phase 5 gate)
 
 ---
 
@@ -87,13 +87,13 @@ Port these 4 complete Playwright files to engine unit tests, then delete each Pl
 
 ## Phase 5: E2E restructuring
 
-- [ ] **5.1** Create new directory structure under `tests/e2e/playwright/`: `grant-app/`, `screener/`, `components/`, `conformance/`, `smoke/`
-- [ ] **5.2** Move as-is files: `screener-routing.spec.ts` → `screener/`, `remote-options-binding.spec.ts` → `components/remote-options.spec.ts`, `kitchen-sink-holistic-conformance.spec.ts` → `conformance/kitchen-sink-holistic.spec.ts`. Note: kitchen-sink-holistic contains mixed sub-checks (some UNIT-MIGRATE, some E2E-KEEP) but MUST remain monolithic — complex setup dependencies between sub-checks make splitting counterproductive.
-- [ ] **5.3** Consolidate remaining grant-app E2E tests into: `grant-app/wizard-navigation.spec.ts`, `grant-app/field-interaction.spec.ts`, `grant-app/readonly-and-styling.spec.ts`, `grant-app/conditional-visibility.spec.ts`, `grant-app/budget-ui.spec.ts`, `grant-app/project-phases-ui.spec.ts`, `grant-app/review-and-submit.spec.ts`
-- [ ] **5.4** Consolidate remaining component E2E tests into: `components/interactive-components.spec.ts`, `components/responsive-and-a11y.spec.ts`, `components/grant-app-component-rendering.spec.ts`
-- [ ] **5.5** Rewrite `kitchen-sink-smoke.spec.ts` → `smoke/happy-path.spec.ts` using real `page.fill()` / `page.click()` instead of `engineSetValue()`
-- [ ] **5.6** Delete all now-empty original files and old `integration/` and `components/` directories
-- [ ] **GATE** Playwright passes: `npx playwright test`. No old files remain.
+- [x] **5.1** Create new directory structure under `tests/e2e/playwright/`: `grant-app/`, `screener/`, `components/`, `conformance/`, `smoke/`
+- [x] **5.2** Move as-is files: `screener-routing.spec.ts` → `screener/`, `remote-options-binding.spec.ts` → `components/remote-options.spec.ts`, `kitchen-sink-holistic-conformance.spec.ts` → `conformance/kitchen-sink-holistic.spec.ts`. Note: kitchen-sink-holistic contains mixed sub-checks (some UNIT-MIGRATE, some E2E-KEEP) but MUST remain monolithic — complex setup dependencies between sub-checks make splitting counterproductive.
+- [x] **5.3** Consolidate remaining grant-app E2E tests into: `grant-app/wizard-navigation.spec.ts`, `grant-app/field-interaction.spec.ts`, `grant-app/readonly-and-styling.spec.ts`, `grant-app/conditional-visibility.spec.ts`, `grant-app/budget-ui.spec.ts`, `grant-app/project-phases-ui.spec.ts`, `grant-app/review-and-submit.spec.ts`
+- [x] **5.4** Consolidate remaining component E2E tests into: `components/interactive-components.spec.ts`, `components/responsive-and-a11y.spec.ts`, `components/grant-app-component-rendering.spec.ts`
+- [x] **5.5** Rewrite `kitchen-sink-smoke.spec.ts` → `smoke/happy-path.spec.ts` using real `page.fill()` / `page.click()` instead of `engineSetValue()`
+- [x] **5.6** Delete all now-empty original files and old `integration/` and `components/` directories
+- [x] **GATE** Playwright passes: `npx playwright test`. No old files remain.
 
 **Commit:** `refactor: restructure E2E tests by user-facing concern`
 

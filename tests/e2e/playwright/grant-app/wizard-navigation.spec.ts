@@ -5,7 +5,7 @@ import {
   engineSetValue,
 } from '../helpers/grant-app';
 
-test.describe('Grant Application: Wizard Flow', () => {
+test.describe('Grant App: Wizard Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await mountGrantApplication(page);
   });
@@ -37,6 +37,26 @@ test.describe('Grant Application: Wizard Flow', () => {
     await goToPage(page, 'Budget');
     const heading = await page.locator('.formspec-wizard-panel:not(.formspec-hidden) h2').first().textContent();
     expect(heading?.trim()).toBe('Budget');
+  });
+
+  test('should navigate from page 1 to page 2 via Wizard Next and back via Previous', async ({ page }) => {
+    // Page 1 should be visible
+    const panels = page.locator('.formspec-wizard-panel');
+    await expect(panels.nth(0)).toBeVisible();
+
+    // Click Next → go to page 2 (Project Narrative)
+    await page.locator('button.formspec-wizard-next').first().click();
+    await page.waitForTimeout(150);
+
+    const heading = page.locator('.formspec-wizard-panel:not(.formspec-hidden) h2').first();
+    await expect(heading).toHaveText('Project Narrative');
+
+    // Click Previous → back to page 1 (Applicant Info)
+    await page.locator('button.formspec-wizard-prev').first().click();
+    await page.waitForTimeout(150);
+
+    const heading1 = page.locator('.formspec-wizard-panel:not(.formspec-hidden) h2').first();
+    await expect(heading1).toHaveText('Applicant Info');
   });
 
   test('should render orgSubType as a child field nested under orgType on Applicant Info page', async ({ page }) => {

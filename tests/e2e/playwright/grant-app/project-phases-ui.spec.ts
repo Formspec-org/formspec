@@ -8,7 +8,7 @@ import {
   addRepeatInstance,
 } from '../helpers/grant-app';
 
-test.describe('Grant Application: Project Phases UI Completeness', () => {
+test.describe('Grant App: Project Phases UI', () => {
   test.beforeEach(async ({ page }) => {
     await mountGrantApplication(page);
   });
@@ -93,5 +93,48 @@ test.describe('Grant Application: Project Phases UI Completeness', () => {
 
     const summaryCard = page.locator('.formspec-wizard-panel:not(.formspec-hidden)');
     await expect(summaryCard).toContainText('$1,500.00');
+  });
+});
+
+test.describe('Grant App: ProgressBar on Project Narrative', () => {
+  test.beforeEach(async ({ page }) => {
+    await mountGrantApplication(page);
+  });
+
+  test('ProgressBar with bind reactively updates from field signal', async ({ page }) => {
+    await goToPage(page, 'Project Narrative');
+
+    // Set selfAssessment (bound to ProgressBar with max=5)
+    await engineSetValue(page, 'projectNarrative.selfAssessment', 3);
+    await page.waitForTimeout(50);
+
+    const progressValue = await page.evaluate(() => {
+      const progress = document.querySelector('.formspec-progress-bar progress') as HTMLProgressElement | null;
+      return progress?.value;
+    });
+    expect(progressValue).toBe(3);
+  });
+
+  test('ProgressBar label is applied as aria-label', async ({ page }) => {
+    await goToPage(page, 'Project Narrative');
+
+    const ariaLabel = await page.evaluate(() => {
+      const progress = document.querySelector('.formspec-progress-bar progress') as HTMLProgressElement | null;
+      return progress?.getAttribute('aria-label');
+    });
+    expect(ariaLabel).toBe('Proposal confidence');
+  });
+
+  test('ProgressBar showPercent displays percentage text', async ({ page }) => {
+    await goToPage(page, 'Project Narrative');
+
+    await engineSetValue(page, 'projectNarrative.selfAssessment', 4);
+    await page.waitForTimeout(50);
+
+    const percentText = await page.evaluate(() => {
+      const span = document.querySelector('.formspec-progress-bar .formspec-progress-percent');
+      return span?.textContent;
+    });
+    expect(percentText).toBe('80%');  // 4/5 = 80%
   });
 });

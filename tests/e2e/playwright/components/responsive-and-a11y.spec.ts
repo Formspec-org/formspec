@@ -1,8 +1,6 @@
-// ADR-0023 Exception: Tests platform-level a11y attribute plumbing and responsive
-// overrides — framework concerns not representable in a real-world business form.
 import { test, expect } from '@playwright/test';
 
-test.describe('Components: Accessibility, Responsive Overrides, and Custom Components', () => {
+test.describe('Components: Accessibility and Responsive Overrides', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('http://127.0.0.1:8080/');
         await page.waitForSelector('formspec-render', { state: 'attached' });
