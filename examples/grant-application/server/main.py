@@ -24,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from formspec.changelog import generate_changelog
+from formspec.registry import Registry
 from formspec.validator.linter import lint
 from formspec.mapping.engine import MappingEngine
 from formspec.adapters import get_adapter
@@ -41,6 +42,9 @@ _evaluator = DefinitionEvaluator(_definition)
 
 MAPPING_CSV_PATH = EXAMPLE_DIR / "mapping-csv.json"
 MAPPING_XML_PATH = EXAMPLE_DIR / "mapping-xml.json"
+
+REGISTRY_PATH = EXAMPLE_DIR / "registry.json"
+_registry = Registry(json.loads(REGISTRY_PATH.read_text()))
 
 _mapping_docs = {
     "json": _mapping_doc,
@@ -178,6 +182,24 @@ def submit(request: SubmitRequest):
         mapped=mapped,
         diagnostics=diagnostics,
     )
+
+
+@app.get("/registry/validate")
+def registry_validate():
+    return {"errors": _registry.validate()}
+
+
+@app.get("/registry")
+def registry(name: str | None = None, category: str | None = None, status: str | None = None):
+    if name:
+        entries = _registry.find(name, category=category, status=status)
+    elif category:
+        entries = _registry.list_by_category(category)
+    elif status:
+        entries = _registry.list_by_status(status)
+    else:
+        entries = _registry.entries
+    return {"entries": [e.raw for e in entries]}
 
 
 @app.post("/changelog")
