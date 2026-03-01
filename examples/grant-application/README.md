@@ -13,7 +13,7 @@ A complete vertical slice demonstrating the full Formspec lifecycle and nearly e
 | `component.json` | Component | Wizard layout tree with 33 components, custom components, responsive design |
 | `theme.json` | Theme | USWDS-flavored web theme: tokens, selectors, cascade, pages |
 | `theme-pdf.json` | Theme | PDF-specific theme with print-first tokens and static selectors |
-| `mapping.json` | Mapping | Bidirectional JSON transform (18 rules, valueMap, coerce, expression, array modes) |
+| `mapping.json` | Mapping | Bidirectional JSON transform (23 rules, valueMap, coerce, expression, array modes) |
 | `mapping-csv.json` | Mapping | CSV export adapter (6 rules, flatten, column mapping) |
 | `mapping-xml.json` | Mapping | XML export with namespaces, CDATA, element/attribute mapping |
 | `changelog.json` | Changelog | Version 1.0→1.1 migration guide (8 change entries, impact levels) |
@@ -217,7 +217,10 @@ curl -X POST http://localhost:8000/submit \
 
 ### Mapping DSL (data transforms)
 
-<!-- filled by Task 7 -->
+- **JSON mapping (mapping.json)** — direction: both (bidirectional conformance), 23 top-level rules + 7 inner rules, targetSchema format: json (Grants Management System Payload). Transforms exercised: preserve, valueMap (orgType with forward/reverse maps + unmapped passthrough + default), coerce (object-form with from/to/format and shorthand string), concat (FEL expression composing display name), split (expression with `upper()`), nest (date string to tree by separator), flatten (multiselect to pipe-delimited with reverse nest), constant (static mapping version), expression (FEL-based forward + reverse), drop (attachments stripped for privacy). Array modes: each (lineItems, 5 inner rules with condition guard), indexed (projectPhases, slots 0/1), whole (subcontractors with separator). Priorities and reversePriorities on most rules; `bidirectional: false` on forward-only rules. Top-level defaults (meta.source, meta.profile, submission.channel), per-rule defaults (contactPhone, abstract). Version range `>=1.0.0 <2.0.0`, autoMap enabled.
+- **CSV adapter (mapping-csv.json)** — direction: forward, 6 rules. Adapter config: encoding utf-8, lineEnding lf, delimiter `,`, quote `"`, header row enabled. Transforms: preserve (3), coerce (1, date with format), flatten (2, pipe and semicolon separators for multiselect and repeat arrays).
+- **XML adapter (mapping-xml.json)** — direction: forward, 6 rules. Root element `GrantApplication`, namespaces: default (`https://example.gov/ns/grants/application/v1`) + `xsi`. Adapter config: XML declaration enabled, indent 2, CDATA section on `GrantApplication.Project.Abstract`. Element mapping via dotted paths; attribute mapping via `@` prefix (`RequestedAmount.@currency`). All transforms are preserve.
+- **Server-side execution** — Python `MappingEngine` in `server/main.py` loads `mapping.json` at startup. `POST /submit` runs Python FEL re-validation via `DefinitionEvaluator`, then applies `_mapping_engine.forward()` to produce the grants-management JSON output returned in the `mapped` field.
 
 ### Registry & Changelog (extensions & versioning)
 
