@@ -1,6 +1,5 @@
-// ADR-0023 Exception (test 3 only): DataTable+Summary tab-sync requires a Tabs component,
-// which is absent from the grant application (Wizard is used instead). Tests 1-2 use
-// the real grant application; test 3 is kept as an inline synthetic fixture.
+// ADR-0023 Exception (E2E-KEEP tests only): Tests use the real grant application
+// for realistic rendering context and genuine DOM/engine interaction.
 import { test, expect } from '@playwright/test';
 import {
   mountGrantApplication,
@@ -39,103 +38,5 @@ test.describe('Components: Component Tree Rendering', () => {
 
     // Content should now be visible
     await expect(wrapper).not.toHaveClass(/formspec-hidden/);
-  });
-
-  // ADR-0023 Exception: DataTable+Summary tab-sync requires a Tabs component. The grant
-  // application uses Wizard navigation; adding a Tabs page would distort the UX model.
-  test('should keep DataTable and Summary synchronized when switching between tabs', async ({ page }) => {
-    await page.goto('http://127.0.0.1:8080/');
-    await page.waitForSelector('formspec-render', { state: 'attached' });
-
-    const definition = {
-      "$formspec": "1.0",
-      "url": "http://example.org/form-complex",
-      "version": "1.0.0",
-      "status": "active",
-      "title": "Complex Test",
-      "items": [
-        { "key": "projectName", "type": "field", "dataType": "string", "label": "Project Name" },
-        {
-          "key": "lineItems",
-          "type": "group",
-          "repeatable": true,
-          "label": "Line Items",
-          "children": [
-            { "key": "desc", "type": "field", "dataType": "string", "label": "Description" },
-            { "key": "amount", "type": "field", "dataType": "number", "label": "Amount" }
-          ]
-        }
-      ]
-    };
-
-    const componentDocument = {
-      "$formspecComponent": "1.0",
-      "version": "1.0.0",
-      "targetDefinition": { "url": "http://example.org/form-complex" },
-      "tree": {
-        "component": "Tabs",
-        "tabLabels": ["Input", "Review"],
-        "children": [
-          {
-            "component": "Stack",
-            "children": [
-              { "component": "TextInput", "bind": "projectName" },
-              {
-                "component": "DataTable",
-                "bind": "lineItems",
-                "columns": [
-                  { "header": "Description", "bind": "desc" },
-                  { "header": "Amount", "bind": "amount" }
-                ]
-              }
-            ]
-          },
-          {
-            "component": "Summary",
-            "items": [
-              { "label": "Project Name", "bind": "projectName" }
-            ]
-          }
-        ]
-      }
-    };
-
-    await page.evaluate(({ def, comp }) => {
-      const renderer: any = document.querySelector('formspec-render');
-      renderer.definition = def;
-      renderer.componentDocument = comp;
-    }, { def: definition, comp: componentDocument });
-
-    // Verify Tab 1 is active
-    await expect(page.locator('input[name="projectName"]')).toBeVisible();
-
-    // Set values for the first (default) line item via engine
-    await page.evaluate(() => {
-        const renderer: any = document.querySelector('formspec-render');
-        renderer.getEngine().setValue('lineItems[0].desc', 'Item 1');
-        renderer.getEngine().setValue('lineItems[0].amount', 100);
-    });
-
-    // Verify DataTable has one row
-    const table = page.locator('table');
-    await expect(table.locator('tbody tr')).toHaveCount(1);
-    await expect(table.locator('tbody td').first()).toHaveText('Item 1');
-
-    // Switch to Tab 2 (Review)
-    await page.locator('button', { hasText: 'Review' }).click();
-
-    // Verify Summary has Project Name
-    const summary = page.locator('.formspec-summary');
-    await expect(summary).toBeVisible();
-    await expect(summary.locator('dt')).toHaveText('Project Name');
-
-    // Update Project Name in Tab 1 (though hidden, engine signal should update)
-    await page.evaluate(() => {
-        const renderer: any = document.querySelector('formspec-render');
-        renderer.getEngine().setValue('projectName', 'New Project');
-    });
-
-    // Summary should update
-    await expect(summary.locator('dd')).toHaveText('New Project');
   });
 });

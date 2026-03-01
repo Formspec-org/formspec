@@ -1,0 +1,116 @@
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
+
+let FormspecRender: any;
+
+beforeAll(async () => {
+    const mod = await import('../src/index');
+    FormspecRender = mod.FormspecRender;
+    if (!customElements.get('formspec-render')) {
+        customElements.define('formspec-render', FormspecRender);
+    }
+});
+
+afterEach(() => {
+    document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+});
+
+describe('core input compatibility matrix', () => {
+    it('emits warnings only for unsupported dataType/component pairs', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const coreInputComponents = [
+            'TextInput',
+            'NumberInput',
+            'DatePicker',
+            'Select',
+            'CheckboxGroup',
+            'Toggle',
+        ];
+
+        const dataTypes = [
+            'string',
+            'text',
+            'decimal',
+            'integer',
+            'boolean',
+            'date',
+            'dateTime',
+            'time',
+            'uri',
+            'choice',
+            'multiChoice',
+            'attachment',
+            'money',
+        ];
+
+        const compatibility: Record<string, string[]> = {
+            string: ['TextInput', 'Select'],
+            text: ['TextInput'],
+            decimal: ['NumberInput', 'TextInput'],
+            integer: ['NumberInput', 'TextInput'],
+            boolean: ['Toggle'],
+            date: ['DatePicker', 'TextInput'],
+            dateTime: ['DatePicker', 'TextInput'],
+            time: ['DatePicker', 'TextInput'],
+            uri: ['TextInput'],
+            choice: ['Select', 'TextInput'],
+            multiChoice: ['CheckboxGroup'],
+            attachment: ['FileUpload'],
+            money: ['NumberInput', 'TextInput'],
+        };
+
+        for (const dataType of dataTypes) {
+            for (const component of coreInputComponents) {
+                const warningsBefore = warn.mock.calls.length;
+
+                const el = document.createElement('formspec-render') as any;
+                document.body.appendChild(el);
+                el.componentDocument = {
+                    $formspecComponent: '1.0',
+                    version: '1.0.0',
+                    targetDefinition: { url: 'urn:test:form' },
+                    tree: {
+                        component: 'Page',
+                        children: [{ component, bind: 'field' }],
+                    },
+                };
+                el.definition = {
+                    $formspec: '1.0',
+                    url: 'urn:test:form',
+                    version: '1.0.0',
+                    title: 'Matrix Test',
+                    items: [
+                        {
+                            key: 'field',
+                            type: 'field',
+                            dataType,
+                            label: 'Field',
+                            options: [
+                                { value: 'a', label: 'A' },
+                                { value: 'b', label: 'B' },
+                            ],
+                        },
+                    ],
+                };
+                el.render();
+
+                const compatible = compatibility[dataType]?.includes(component) ?? false;
+                const newCalls = warn.mock.calls.slice(warningsBefore);
+                const hasPairWarning = newCalls.some((args) =>
+                    typeof args[0] === 'string' &&
+                    args[0].includes(`Incompatible component ${component} for dataType ${dataType}.`),
+                );
+
+                if (compatible) {
+                    expect(hasPairWarning, `${component}/${dataType} should NOT warn`).toBe(false);
+                } else {
+                    expect(hasPairWarning, `${component}/${dataType} should warn`).toBe(true);
+                }
+
+                el.remove();
+            }
+        }
+
+        warn.mockRestore();
+    });
+});
