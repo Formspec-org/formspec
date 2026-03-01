@@ -23,6 +23,7 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from formspec.changelog import generate_changelog
 from formspec.validator.linter import lint
 from formspec.mapping.engine import MappingEngine
 from formspec.adapters import get_adapter
@@ -90,6 +91,11 @@ class EvaluateResponse(BaseModel):
 
 class ExportRequest(BaseModel):
     data: dict
+
+
+class ChangelogRequest(BaseModel):
+    old: dict
+    new: dict
 
 
 @app.get("/health")
@@ -172,3 +178,9 @@ def submit(request: SubmitRequest):
         mapped=mapped,
         diagnostics=diagnostics,
     )
+
+
+@app.post("/changelog")
+def changelog(request: ChangelogRequest):
+    url = request.new.get("url", request.old.get("url", ""))
+    return generate_changelog(request.old, request.new, url)
