@@ -204,7 +204,16 @@ curl -X POST http://localhost:8000/submit \
 
 ### Components (interaction)
 
-<!-- filled by Task 6 -->
+- **Wizard layout** — Wizard root (showProgress, no skip) with 6 Pages: Applicant Info, Project Narrative, Budget, Project Phases, Subcontractors, Review & Submit
+- **Core components (17 types)** — Stack (11), Grid (6), Columns (2), TextInput (8), NumberInput (1), DatePicker (3), Select (1), CheckboxGroup (1), Toggle (1), FileUpload (2), Heading (2), Text (20), Divider (2), Card (3), Collapsible (4), ConditionalGroup (2), Spacer (2)
+- **Progressive components (15 types)** — Tabs (1), Accordion (1), RadioGroup (1), MoneyInput (1), Slider (1), Rating (1), Alert (6), Badge (5), ProgressBar (1), DataTable (3), Panel (1), Modal (3), Popover (4), Signature (1), Summary (5)
+- **Custom components** — ContactField (parameterized: `field`) used 3x for contact inputs; SummaryRow (parameterized: `label`, `field`) used 2x for inline key-value display
+- **Slot binding** — `bind` property on input components linking to definition item keys (50 bindings total: 23 direct input binds, 17 Summary item binds, 3 DataTable binds, plus display and repeat binds)
+- **Conditional rendering** — 12 `when` expressions: ConditionalGroup for orgSubType visibility and subcontractor section, Text for nonprofit phone hint, Slider hidden for government orgs, 5 Badge components with status conditions (Draft, Initialized, Ready for Review, High Confidence, Needs Work), Alert for budget success/error, Modal auto-trigger on subcontractor toggle
+- **Responsive design** — 3 breakpoints (sm 576, md 768, lg 1024); Grid column adaptation (3->2->1 at md/sm for contacts, 2->1 at sm for org fields)
+- **Token references** — `$token.space.lg`, `$token.space.md`, `$token.space.sm` used throughout for consistent spacing in Stack gaps and Grid gutters
+- **Local tokens** — 3 component-level token definitions: `space.lg` (32px), `color.accent` (#2e7d32), `border.card` (1px solid #dfe1e2)
+- **Total** — 118 component nodes across 36 distinct types (17 core + 15 progressive + 2 custom + Wizard + Page)
 
 ### Mapping DSL (data transforms)
 
