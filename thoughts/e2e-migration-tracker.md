@@ -5,11 +5,11 @@
 
 ## Current Status
 
-- **Current Phase:** 2
+- **Current Phase:** 3
 - **Blockers:** None
-- **Engine tests:** Pass (2026-03-01)
+- **Engine tests:** 138 pass (2026-03-01)
 - **Webcomponent tests:** Unknown
-- **Playwright tests:** 235 pass, 2 pre-existing failures (grant-app-component-props.spec.ts modal close + grant-app-ux-fixes.spec.ts website URL constraint — both in files not touched by Phase 1)
+- **Playwright tests:** 174 pass, 2 pre-existing failures (grant-app-component-props.spec.ts modal close + grant-app-ux-fixes.spec.ts website URL constraint — both in files not touched by Phase 2)
 
 ---
 
@@ -41,14 +41,14 @@
 
 Port these 4 complete Playwright files to engine unit tests, then delete each Playwright file:
 
-- [ ] **2.1** Create `packages/formspec-engine/tests/fel-stdlib-grant-app.test.mjs`. Port all 17 tests from `fel-standard-library-ui.spec.ts` (upper, coalesce, round, year, dateDiff, dateAdd, abs, isNull, sum, precedence, matches, contains).
-- [ ] **2.2** Create `packages/formspec-engine/tests/validation-shapes-and-binds.test.mjs`. Port all 21 tests from `grant-app-validation.spec.ts` (bind constraints, whitespace normalization, ValidationReport shape, Response contract, shape rules with activeWhen/timing/or/not composition).
-- [ ] **2.3** Create `packages/formspec-engine/tests/budget-calculations.test.mjs`. Port all 11 tests from `grant-app-budget-calculations.spec.ts` (subtotal, precision, variables, repeat add/remove, cardinality validation).
-- [ ] **2.4** Create `packages/formspec-engine/tests/conformance-contract.test.mjs`. Port all 12 tests from `grant-app-conformance.spec.ts`. Deduplicate: drop tests already covered by 2.2 (endDate constraint, ValidationReport shape, Response contract).
-- [ ] **2.5** Run engine tests — all new tests pass: `npm run test:unit --workspace=packages/formspec-engine`
-- [ ] **2.6** Delete the 4 Playwright source files: `fel-standard-library-ui.spec.ts`, `grant-app-validation.spec.ts`, `grant-app-budget-calculations.spec.ts`, `grant-app-conformance.spec.ts`
-- [ ] **2.7** Playwright still passes: `npx playwright test`
-- [ ] **GATE** Both engine and Playwright pass
+- [x] **2.1** Create `packages/formspec-engine/tests/fel-stdlib-grant-app.test.mjs`. Port all 17 tests from `fel-standard-library-ui.spec.ts` (upper, coalesce, round, year, dateDiff, dateAdd, abs, isNull, sum, precedence, matches, contains).
+- [x] **2.2** Create `packages/formspec-engine/tests/validation-shapes-and-binds.test.mjs`. Port all 21 tests from `grant-app-validation.spec.ts` (bind constraints, whitespace normalization, ValidationReport shape, Response contract, shape rules with activeWhen/timing/or/not composition).
+- [x] **2.3** Create `packages/formspec-engine/tests/budget-calculations.test.mjs`. Port all 11 tests from `grant-app-budget-calculations.spec.ts` (subtotal, precision, variables, repeat add/remove, cardinality validation).
+- [x] **2.4** Create `packages/formspec-engine/tests/conformance-contract.test.mjs`. Port all 12 tests from `grant-app-conformance.spec.ts`. Deduplicate: drop tests already covered by 2.2 (endDate constraint, ValidationReport shape, Response contract).
+- [x] **2.5** Run engine tests — all new tests pass: `npm run test:unit --workspace=packages/formspec-engine`
+- [x] **2.6** Delete the 4 Playwright source files: `fel-standard-library-ui.spec.ts`, `grant-app-validation.spec.ts`, `grant-app-budget-calculations.spec.ts`, `grant-app-conformance.spec.ts`
+- [x] **2.7** Playwright still passes: `npx playwright test`
+- [x] **GATE** Both engine and Playwright pass
 
 **Commit:** `test: migrate 61 FEL/validation/budget/conformance tests from E2E to engine unit tests`
 
