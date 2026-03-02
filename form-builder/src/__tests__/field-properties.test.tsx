@@ -12,23 +12,37 @@ const baseItem: FormspecItem = {
   dataType: 'string',
 } as FormspecItem;
 
-function clickTab(name: string) {
-  const tab = screen.getByRole('tab', { name });
-  fireEvent.click(tab);
-}
-
 describe('FieldProperties', () => {
   beforeEach(() => {
     resetState();
   });
 
-  // General tab (default)
-  test('renders Key label on General tab', () => {
+  test('renders section title Identity', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Identity')).toBeTruthy();
+  });
+
+  test('renders section title Data', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Data')).toBeTruthy();
+  });
+
+  test('renders section title Behavior', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Behavior')).toBeTruthy();
+  });
+
+  test('renders section title Validation', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Validation')).toBeTruthy();
+  });
+
+  test('renders Key label', () => {
     render(<FieldProperties item={baseItem} />);
     expect(screen.getByText('Key')).toBeTruthy();
   });
 
-  test('renders Label label on General tab', () => {
+  test('renders Label label', () => {
     render(<FieldProperties item={baseItem} />);
     expect(screen.getByText('Label')).toBeTruthy();
   });
@@ -47,20 +61,199 @@ describe('FieldProperties', () => {
     expect(labelInput).toBeTruthy();
   });
 
-  test('renders Placeholder label on General tab', () => {
+  test('renders Data Type select with item dataType value', () => {
+    render(<FieldProperties item={baseItem} />);
+    const select = document.querySelector('select') as HTMLSelectElement;
+    expect(select).toBeTruthy();
+    expect(select.value).toBe('string');
+  });
+
+  test('renders all 14 data type options', () => {
+    render(<FieldProperties item={baseItem} />);
+    const select = document.querySelector('select') as HTMLSelectElement;
+    const options = Array.from(select.options).map((o) => o.value);
+    const expected = [
+      'string',
+      'text',
+      'integer',
+      'decimal',
+      'number',
+      'boolean',
+      'date',
+      'dateTime',
+      'time',
+      'choice',
+      'multiChoice',
+      'money',
+      'uri',
+      'attachment',
+    ];
+    expect(options).toEqual(expected);
+  });
+
+  test('renders Placeholder label', () => {
     render(<FieldProperties item={baseItem} />);
     expect(screen.getByText('Placeholder')).toBeTruthy();
   });
 
-  test('renders Relevant label on General tab', () => {
+  test('renders Required label', () => {
     render(<FieldProperties item={baseItem} />);
-    expect(screen.getByText('Relevant (Conditional)')).toBeTruthy();
+    expect(screen.getByText('Required')).toBeTruthy();
   });
 
+  test('renders Read Only label', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Read Only')).toBeTruthy();
+  });
+
+  test('renders Calculate label', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Calculate')).toBeTruthy();
+  });
+
+  test('renders Relevant label', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Relevant')).toBeTruthy();
+  });
+
+  test('renders Constraint label', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Constraint')).toBeTruthy();
+  });
+
+  test('renders Message label', () => {
+    render(<FieldProperties item={baseItem} />);
+    expect(screen.getByText('Message')).toBeTruthy();
+  });
+
+  // Options editor — only visible for choice / multiChoice
   test('does not show Options section for string dataType', () => {
     render(<FieldProperties item={baseItem} />);
-    clickTab('Data & Validation');
     const optionsSections = document.querySelectorAll('.options-editor');
     expect(optionsSections.length).toBe(0);
+  });
+
+  test('shows Options section for choice dataType', () => {
+    const choiceItem: FormspecItem = {
+      key: 'choiceField',
+      type: 'field',
+      label: 'Pick One',
+      dataType: 'choice',
+    } as FormspecItem;
+    render(<FieldProperties item={choiceItem} />);
+    expect(document.querySelector('.options-editor')).toBeTruthy();
+    expect(screen.getByText('Options')).toBeTruthy();
+  });
+
+  test('shows Options section for multiChoice dataType', () => {
+    const multiItem: FormspecItem = {
+      key: 'multiField',
+      type: 'field',
+      label: 'Pick Many',
+      dataType: 'multiChoice',
+    } as FormspecItem;
+    render(<FieldProperties item={multiItem} />);
+    expect(document.querySelector('.options-editor')).toBeTruthy();
+    expect(screen.getByText('Options')).toBeTruthy();
+  });
+
+  test('renders existing options as editable rows', () => {
+    const choiceItem = {
+      key: 'choiceField',
+      type: 'field',
+      label: 'Pick One',
+      dataType: 'choice',
+      options: [
+        { value: 'yes', label: 'Yes' },
+        { value: 'no', label: 'No' },
+      ],
+    } as unknown as FormspecItem;
+    render(<FieldProperties item={choiceItem} />);
+    const valueInputs = screen.getAllByRole('textbox', { name: /Option \d+ value/ });
+    expect(valueInputs.length).toBe(2);
+    expect((valueInputs[0] as HTMLInputElement).value).toBe('yes');
+    expect((valueInputs[1] as HTMLInputElement).value).toBe('no');
+    const labelInputs = screen.getAllByRole('textbox', { name: /Option \d+ label/ });
+    expect((labelInputs[0] as HTMLInputElement).value).toBe('Yes');
+    expect((labelInputs[1] as HTMLInputElement).value).toBe('No');
+  });
+
+  test('shows Add Option button for choice field', () => {
+    const choiceItem: FormspecItem = {
+      key: 'choiceField',
+      type: 'field',
+      label: 'Pick One',
+      dataType: 'choice',
+    } as FormspecItem;
+    render(<FieldProperties item={choiceItem} />);
+    expect(screen.getByText('+ Add Option')).toBeTruthy();
+  });
+
+  test('clicking Add Option adds an option to definition', () => {
+    const def = createEmptyDefinition();
+    const choiceItem = {
+      key: 'choiceField',
+      type: 'field',
+      label: 'Pick One',
+      dataType: 'choice',
+    };
+    def.items = [choiceItem as FormspecItem];
+    setDefinition(def);
+
+    render(<FieldProperties item={choiceItem as FormspecItem} />);
+    const addBtn = screen.getByText('+ Add Option');
+    fireEvent.click(addBtn);
+
+    const { item } = findItemByKey('choiceField')!;
+    const opts = (item as any).options as { value: string; label?: string }[];
+    expect(opts).toBeTruthy();
+    expect(opts.length).toBe(1);
+  });
+
+  test('clicking Remove button removes the option from definition', () => {
+    const def = createEmptyDefinition();
+    const choiceItem = {
+      key: 'choiceField',
+      type: 'field',
+      label: 'Pick One',
+      dataType: 'choice',
+      options: [
+        { value: 'yes', label: 'Yes' },
+        { value: 'no', label: 'No' },
+      ],
+    };
+    def.items = [choiceItem as unknown as FormspecItem];
+    setDefinition(def);
+
+    render(<FieldProperties item={choiceItem as unknown as FormspecItem} />);
+    const removeBtns = screen.getAllByRole('button', { name: /Remove option/ });
+    expect(removeBtns.length).toBe(2);
+    fireEvent.click(removeBtns[0]);
+
+    const { item } = findItemByKey('choiceField')!;
+    const opts = (item as any).options as { value: string; label?: string }[];
+    expect(opts.length).toBe(1);
+    expect(opts[0].value).toBe('no');
+  });
+
+  test('editing option value input updates definition', () => {
+    const def = createEmptyDefinition();
+    const choiceItem = {
+      key: 'choiceField',
+      type: 'field',
+      label: 'Pick One',
+      dataType: 'choice',
+      options: [{ value: 'old', label: 'Old Label' }],
+    };
+    def.items = [choiceItem as unknown as FormspecItem];
+    setDefinition(def);
+
+    render(<FieldProperties item={choiceItem as unknown as FormspecItem} />);
+    const valueInput = screen.getByRole('textbox', { name: 'Option 1 value' }) as HTMLInputElement;
+    fireEvent.input(valueInput, { target: { value: 'new' } });
+
+    const { item } = findItemByKey('choiceField')!;
+    const opts = (item as any).options as { value: string; label?: string }[];
+    expect(opts[0].value).toBe('new');
   });
 });

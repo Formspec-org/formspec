@@ -4,7 +4,6 @@ import { dropTarget, draggedKey, executeDrop } from './drag-drop';
 import { InsertionGap } from './inline-add';
 import { findItemByKey, updateDefinition } from '../../state/definition';
 import { inlineAddState, selectedPath } from '../../state/selection';
-import { extractToComponent } from '../../state/project';
 
 const NODE_TYPE_COLORS: Record<string, string> = {
   field: '#D4A34A',
@@ -57,9 +56,9 @@ export function TreeNode({ item, depth, parentKey, index }: TreeNodeProps) {
 
   const dropClass =
     currentDrop &&
-      ((currentDrop.mode === 'above' && currentDrop.parentKey === parentKey && currentDrop.insertIndex === index) ||
-        (currentDrop.mode === 'below' && currentDrop.parentKey === parentKey && currentDrop.insertIndex === index + 1) ||
-        (currentDrop.mode === 'inside' && currentDrop.parentKey === item.key))
+    ((currentDrop.mode === 'above' && currentDrop.parentKey === parentKey && currentDrop.insertIndex === index) ||
+      (currentDrop.mode === 'below' && currentDrop.parentKey === parentKey && currentDrop.insertIndex === index + 1) ||
+      (currentDrop.mode === 'inside' && currentDrop.parentKey === item.key))
       ? currentDrop.mode === 'above'
         ? 'drop-above'
         : currentDrop.mode === 'below'
@@ -194,22 +193,6 @@ export function TreeNode({ item, depth, parentKey, index }: TreeNodeProps) {
         )}
 
         <span class="tree-node-actions">
-          <button
-            class="tree-action"
-            title="Make Reusable Component"
-            onClick={(event) => {
-              event.stopPropagation();
-              const name = prompt('Name for this reusable component:');
-              if (name) {
-                // In a real app we would do a deep clone and replace with a ref.
-                // For this prototype, we just copy it to the schema.
-                extractToComponent(item.key, name, JSON.parse(JSON.stringify(item)));
-                alert(`Extracted as "${name}" to Library!`);
-              }
-            }}
-          >
-            ⭐
-          </button>
           <button
             class="tree-action"
             title="Move up"

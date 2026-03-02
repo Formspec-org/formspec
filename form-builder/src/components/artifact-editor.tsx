@@ -82,7 +82,7 @@ export function ArtifactEditor({ kind }: { kind: ArtifactKind }) {
 
   function applyChanges() {
     try {
-      const parsed = JSON.parse(jsonText.value as string);
+      const parsed = JSON.parse(jsonText.value);
       project.value = { ...project.value, [kind]: parsed };
       // Update the editor text to the canonical re-serialized form
       jsonText.value = JSON.stringify(parsed, null, 2);
@@ -118,7 +118,7 @@ export function ArtifactEditor({ kind }: { kind: ArtifactKind }) {
           status.value = 'idle';
           errorMsg.value = '';
         }}
-        spellcheck={false}
+        spellCheck={false}
       />
       <div class="json-editor-actions">
         <button class="btn-primary" onClick={applyChanges}>

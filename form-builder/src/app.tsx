@@ -9,8 +9,7 @@ import { Splitter } from './components/splitter';
 import { ToastContainer } from './components/toast';
 import { Topbar } from './components/topbar';
 import { TreeEditor } from './components/tree/tree-editor';
-import { activeTool } from './components/sidebar';
-import { activeArtifact, project } from './state/project';
+import { activeArtifact, editorMode, project } from './state/project';
 import './state/definition';
 
 const propertiesCollapsed = signal(false);
@@ -28,14 +27,34 @@ export function App() {
       <div class="studio-workspace">
         <Sidebar />
         <div class="studio-editor">
-          {activeTool.value === 'build' && (
+          {showEmpty ? (
+            <EmptyTab kind={artifact} />
+          ) : isDefinition ? (
             <>
+              <div class="editor-mode-bar">
+                <button
+                  class={editorMode.value === 'guided' ? 'active' : ''}
+                  onClick={() => {
+                    editorMode.value = 'guided';
+                  }}
+                >
+                  Guided
+                </button>
+                <button
+                  class={editorMode.value === 'json' ? 'active' : ''}
+                  onClick={() => {
+                    editorMode.value = 'json';
+                  }}
+                >
+                  JSON
+                </button>
+              </div>
               <div class="studio-editor-panes">
                 <div
                   class="studio-tree-pane"
                   style={{ flex: `0 0 ${splitPercent.value}%` }}
                 >
-                  <TreeEditor />
+                  {editorMode.value === 'guided' ? <TreeEditor /> : <JsonEditor />}
                 </div>
                 <Splitter
                   onResize={(delta) => {
@@ -57,42 +76,8 @@ export function App() {
                 </div>
               </div>
             </>
-          )}
-
-          {activeTool.value === 'library' && (
-            <div class="studio-editor-panes" style={{ padding: '24px' }}>
-              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-2)', width: '100%' }}>
-                <h2 style={{ color: 'var(--text-0)', marginBottom: '12px' }}>Component Library</h2>
-                <p>Drag and drop reusable form components.</p>
-                <div style={{ marginTop: '24px', display: 'flex', gap: '16px', justifyContent: 'center' }}>
-                  <div style={{ width: '150px', height: '100px', border: '1px dashed var(--border-focus)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    Address Block
-                  </div>
-                  <div style={{ width: '150px', height: '100px', border: '1px dashed var(--border-focus)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    Payment Details
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTool.value === 'design' && (
-            <div class="studio-editor-panes" style={{ padding: '24px' }}>
-              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-2)', width: '100%' }}>
-                <h2 style={{ color: 'var(--text-0)', marginBottom: '12px' }}>Global Design</h2>
-                <p>Configure the global theme settings for this form.</p>
-                <div style={{ marginTop: '24px', maxWidth: '400px', margin: '24px auto', textAlign: 'left' }}>
-                  <div class="property-row" style={{ marginBottom: '16px' }}>
-                    <label class="property-label">Form Density</label>
-                    <input type="range" class="studio-input" min="1" max="3" value="2" />
-                  </div>
-                  <div class="property-row">
-                    <label class="property-label">Primary Color Config</label>
-                    <input type="color" class="studio-input" value="#d4a34a" />
-                  </div>
-                </div>
-              </div>
-            </div>
+          ) : (
+            <ArtifactEditor kind={artifact} />
           )}
         </div>
         <PropertiesPanel

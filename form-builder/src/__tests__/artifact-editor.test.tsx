@@ -30,7 +30,7 @@ describe('ArtifactEditor', () => {
     const { ArtifactEditor } = await import('../components/artifact-editor');
     const { container } = render(<ArtifactEditor kind="component" />);
 
-    const textarea = within(container as HTMLElement).getByRole('textbox') as HTMLTextAreaElement;
+    const textarea = within(container).getByRole('textbox') as HTMLTextAreaElement;
     expect(textarea.value).toBe(JSON.stringify(data, null, 2));
   });
 
@@ -38,7 +38,7 @@ describe('ArtifactEditor', () => {
     const { ArtifactEditor } = await import('../components/artifact-editor');
     const { container } = render(<ArtifactEditor kind="theme" />);
 
-    const textarea = within(container as HTMLElement).getByRole('textbox') as HTMLTextAreaElement;
+    const textarea = within(container).getByRole('textbox') as HTMLTextAreaElement;
     expect(textarea.value).toBe('');
   });
 
@@ -50,7 +50,7 @@ describe('ArtifactEditor', () => {
     const { container } = render(<ArtifactEditor kind="theme" />);
 
     const updated = { $formspecTheme: '1.0', version: '2.0.0', tokens: { color: 'red' } };
-    const textarea = within(container as HTMLElement).getByRole('textbox') as HTMLTextAreaElement;
+    const textarea = within(container).getByRole('textbox') as HTMLTextAreaElement;
 
     // Directly set the textarea value and fire the input event
     await act(async () => {
@@ -59,7 +59,7 @@ describe('ArtifactEditor', () => {
     });
 
     await act(async () => {
-      within(container as HTMLElement).getByText('Apply Changes').click();
+      within(container).getByText('Apply Changes').click();
     });
 
     expect(project.value.theme).toEqual(updated);
@@ -72,7 +72,7 @@ describe('ArtifactEditor', () => {
     const { ArtifactEditor } = await import('../components/artifact-editor');
     const { container } = render(<ArtifactEditor kind="component" />);
 
-    const textarea = within(container as HTMLElement).getByRole('textbox') as HTMLTextAreaElement;
+    const textarea = within(container).getByRole('textbox') as HTMLTextAreaElement;
 
     await act(async () => {
       textarea.value = 'not valid json{{{';
@@ -80,7 +80,7 @@ describe('ArtifactEditor', () => {
     });
 
     await act(async () => {
-      within(container as HTMLElement).getByText('Apply Changes').click();
+      within(container).getByText('Apply Changes').click();
     });
 
     const statusSpan = container.querySelector('.json-editor-status.error');
@@ -96,7 +96,7 @@ describe('ArtifactEditor', () => {
     const { ArtifactEditor } = await import('../components/artifact-editor');
     const { container } = render(<ArtifactEditor kind="mapping" />);
 
-    const textarea = within(container as HTMLElement).getByRole('textbox') as HTMLTextAreaElement;
+    const textarea = within(container).getByRole('textbox') as HTMLTextAreaElement;
 
     // Enter some garbage text
     await act(async () => {
@@ -106,11 +106,11 @@ describe('ArtifactEditor', () => {
 
     // Click Revert
     await act(async () => {
-      within(container as HTMLElement).getByText('Revert').click();
+      within(container).getByText('Revert').click();
     });
 
     // After revert, textarea should show original project data
-    const updatedTextarea = within(container as HTMLElement).getByRole('textbox') as HTMLTextAreaElement;
+    const updatedTextarea = within(container).getByRole('textbox') as HTMLTextAreaElement;
     expect(updatedTextarea.value).toBe(JSON.stringify(data, null, 2));
   });
 
@@ -122,7 +122,7 @@ describe('ArtifactEditor', () => {
     const { container } = render(<ArtifactEditor kind="registry" />);
 
     await act(async () => {
-      within(container as HTMLElement).getByText('Remove').click();
+      within(container).getByText('Remove').click();
     });
 
     expect(project.value.registry).toBeNull();
@@ -136,7 +136,7 @@ describe('ArtifactEditor', () => {
     const { container } = render(<ArtifactEditor kind="changelog" />);
 
     await act(async () => {
-      within(container as HTMLElement).getByText('Remove').click();
+      within(container).getByText('Remove').click();
     });
 
     expect(toasts.value.length).toBeGreaterThan(0);

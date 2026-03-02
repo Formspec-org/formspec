@@ -52,25 +52,6 @@ export function Topbar() {
       <div class="topbar-actions">
         <button
           class="btn-ghost"
-          aria-label="Manage Extensions"
-          onClick={() => {
-            const extName = prompt('Enter Extension ID to install (e.g. "@formspec/ext-stripe"):');
-            if (extName) {
-              let regObj = project.value.registry as any;
-              if (!regObj || typeof regObj !== 'object') {
-                regObj = { $formspecRegistry: '1.0', version: '1.0.0', extensions: [] };
-              }
-              if (!regObj.extensions) regObj.extensions = [];
-              regObj.extensions.push({ id: extName, version: 'latest' });
-              project.value = { ...project.value, registry: regObj };
-              alert(`Extension "${extName}" installed!`);
-            }
-          }}
-        >
-          <span aria-hidden="true">🧩</span> Add-ons
-        </button>
-        <button
-          class="btn-ghost"
           aria-label="Import project"
           onClick={handleImport}
         >
@@ -78,38 +59,10 @@ export function Topbar() {
         </button>
         <button
           class="btn-primary"
-          aria-label="Publish project"
-          onClick={() => {
-            const msg = prompt('Enter a changelog message for this version:');
-            if (msg) {
-              // Bump version (naive)
-              const parts = (def?.version || '0.1.0').split('.');
-              parts[2] = String(Number(parts[2]) + 1);
-              const newVersion = parts.join('.');
-
-              updateDefinition((d) => {
-                d.version = newVersion;
-              });
-
-              // Update changelog schema
-              let logObj = project.value.changelog as any;
-              if (!logObj || typeof logObj !== 'object') {
-                logObj = { $formspecChangelog: '1.0', version: '1.0.0', entries: [] };
-              }
-              if (!logObj.entries) logObj.entries = [];
-              logObj.entries.unshift({
-                version: newVersion,
-                date: new Date().toISOString().split('T')[0],
-                changes: [{ type: 'feature', description: msg }]
-              });
-              project.value = { ...project.value, changelog: logObj };
-
-              alert(`Published version ${newVersion}!\nChangelog updated.`);
-              handleExport();
-            }
-          }}
+          aria-label="Export project"
+          onClick={handleExport}
         >
-          <span aria-hidden="true">🚀</span> Publish
+          <span aria-hidden="true">↑</span> Export
         </button>
       </div>
     </header>
