@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import { project } from '../state/project';
-import { showToast } from '../state/toast';
+import { handleImport, handleExport } from '../logic/import-export-actions';
 
 const formTitle = signal('Untitled Form');
 
@@ -53,18 +53,14 @@ export function Topbar() {
         <button
           class="btn-ghost"
           aria-label="Import project"
-          onClick={() => {
-            showToast('Import flow is planned for Phase 2', 'info');
-          }}
+          onClick={handleImport}
         >
           <span aria-hidden="true">↓</span> Import
         </button>
         <button
           class="btn-primary"
           aria-label="Export project"
-          onClick={() => {
-            showToast('Export flow is planned for Phase 2', 'info');
-          }}
+          onClick={handleExport}
         >
           <span aria-hidden="true">↑</span> Export
         </button>

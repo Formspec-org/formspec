@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --port 8082 --open",
     "build": "tsc && vite build",
-    "preview": "vite preview --port 8082"
+    "preview": "vite preview --port 8082",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@preact/signals": "^2.0.0",
@@ -16,6 +18,9 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.0.0",
-    "typescript": "^5.0.0"
+    "@testing-library/preact": "^3.2.4",
+    "happy-dom": "^20.7.0",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.18"
   }
 }
