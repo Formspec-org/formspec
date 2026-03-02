@@ -43,6 +43,53 @@ function hideResult(id) {
 }
 
 // ── 1. Expression Tester ──
+
+// Pre-populate with a real grant-app formula
+const EVAL_EXAMPLES = {
+  budget: {
+    expression: "money(sum($budget.lineItems[*].subtotal), 'USD')",
+    data: {
+      budget: {
+        lineItems: [
+          { category: "Personnel", subtotal: { amount: "75000", currency: "USD" } },
+          { category: "Equipment", subtotal: { amount: "25000", currency: "USD" } },
+          { category: "Travel", subtotal: { amount: "8500", currency: "USD" } }
+        ]
+      }
+    }
+  },
+  date: {
+    expression: "dateAdd(today(), 6, 'months')",
+    data: {}
+  },
+  text: {
+    expression: "upper('community health partners')",
+    data: {}
+  },
+  conditional: {
+    expression: "if $score >= 80 then 'pass' else 'fail'",
+    data: { score: 85 }
+  }
+};
+
+// Set initial "Budget Total" example on load
+function setEvalExample(name) {
+  const example = EVAL_EXAMPLES[name];
+  if (!example) return;
+  document.getElementById('eval-expression').value = example.expression;
+  document.getElementById('eval-data').value = JSON.stringify(example.data, null, 2);
+}
+setEvalExample('budget');
+
+// Wire up example buttons
+document.querySelectorAll('.eval-example-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    setEvalExample(btn.dataset.example);
+    hideError('eval-error');
+    hideResult('eval-result');
+  });
+});
+
 document.getElementById('btn-evaluate')?.addEventListener('click', async () => {
   const expression = document.getElementById('eval-expression').value.trim();
   const dataStr = document.getElementById('eval-data').value.trim();
@@ -142,9 +189,24 @@ async function loadDefinitionForChangelog() {
     const res = await fetch(`${SERVER}/definition`);
     if (res.ok) {
       const defn = await res.json();
-      const text = JSON.stringify(defn, null, 2);
-      document.getElementById('changelog-old').value = text;
-      document.getElementById('changelog-new').value = text;
+      const oldText = JSON.stringify(defn, null, 2);
+      document.getElementById('changelog-old').value = oldText;
+
+      // Create a modified "new" version with a meaningful diff so users
+      // see an interesting comparison result when they click "Compare Versions".
+      // Only auto-modify when the definition has real content (items present).
+      const newDef = JSON.parse(oldText);
+      if (newDef.items && newDef.items.length > 0) {
+        newDef.version = '1.1.0';
+        newDef.items.push({
+          key: 'diversityStatement',
+          type: 'field',
+          dataType: 'string',
+          label: 'Diversity, Equity & Inclusion Statement',
+          hint: 'Describe how your project promotes diversity, equity, and inclusion.'
+        });
+      }
+      document.getElementById('changelog-new').value = JSON.stringify(newDef, null, 2);
     }
   } catch { /* server not running, user can paste manually */ }
 }

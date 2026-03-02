@@ -444,15 +444,22 @@
 
   <!-- 1. Expression Tester -->
   <div class="tools-panel active" id="panel-evaluate" role="tabpanel">
-    <p class="panel-description">Test the formulas that power calculated fields, validation rules, and conditional logic.</p>
+    <p class="panel-description">This tool lets you test the formulas used throughout the grant application &mdash; from budget calculations to eligibility rules. Type any expression, provide sample data, and see the result instantly.</p>
+    <div class="eval-examples" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <span style="font-size:0.85rem;font-weight:600;color:var(--color-neutral-700);align-self:center">Try an example:</span>
+      <button class="btn btn-outline eval-example-btn" data-example="budget" style="font-size:12px;padding:4px 12px">Budget Total</button>
+      <button class="btn btn-outline eval-example-btn" data-example="date" style="font-size:12px;padding:4px 12px">Date Math</button>
+      <button class="btn btn-outline eval-example-btn" data-example="text" style="font-size:12px;padding:4px 12px">Text Transform</button>
+      <button class="btn btn-outline eval-example-btn" data-example="conditional" style="font-size:12px;padding:4px 12px">Conditional</button>
+    </div>
     <div class="eval-form">
       <div>
         <label for="eval-expression">Expression</label>
-        <textarea id="eval-expression" rows="2" placeholder="e.g. sum($budget.lineItems[*].amount)">1 + 2</textarea>
+        <textarea id="eval-expression" rows="2" placeholder="e.g. sum($budget.lineItems[*].amount)"></textarea>
       </div>
       <div>
         <label for="eval-data">Sample Data (JSON)</label>
-        <textarea id="eval-data" rows="4" placeholder='{"price": 10, "quantity": 5}'>{}</textarea>
+        <textarea id="eval-data" rows="6" placeholder='{"price": 10, "quantity": 5}'></textarea>
       </div>
       <div>
         <button class="btn btn-primary" id="btn-evaluate">Run</button>
@@ -470,21 +477,21 @@
 
   <!-- 2. Download & Export -->
   <div class="tools-panel" id="panel-export" role="tabpanel">
-    <p class="panel-description">Download a sample application in different formats for integration testing.</p>
+    <p class="panel-description">Download a completed sample grant application in different formats. JSON for API integration, CSV for spreadsheets, or XML for government grant systems like Grants.gov.</p>
     <div class="export-cards">
       <div class="export-card">
         <h4>JSON</h4>
-        <p>Standard data interchange format. Compatible with REST APIs and web services.</p>
+        <p>The native format for web APIs and modern integrations. Use this when sending application data to your backend, building dashboards, or integrating with other web services.</p>
         <button class="btn btn-primary" data-format="json">Download JSON</button>
       </div>
       <div class="export-card">
         <h4>CSV</h4>
-        <p>Comma-separated values. Opens in Excel, Google Sheets, and database tools.</p>
+        <p>Spreadsheet-friendly format that opens directly in Excel, Google Sheets, or any database tool. Best for bulk analysis, reporting, or importing into existing tracking systems.</p>
         <button class="btn btn-primary" data-format="csv">Download CSV</button>
       </div>
       <div class="export-card">
         <h4>XML</h4>
-        <p>Structured markup format. Required by many government grant systems.</p>
+        <p>Structured markup required by many federal grant portals (Grants.gov, SAM.gov). Use this when submitting to government systems that mandate XML-formatted applications.</p>
         <button class="btn btn-primary" data-format="xml">Download XML</button>
       </div>
     </div>
@@ -500,7 +507,7 @@
 
   <!-- 3. Version Comparison -->
   <div class="tools-panel" id="panel-changelog" role="tabpanel">
-    <p class="panel-description">See what changed between two versions of the form definition.</p>
+    <p class="panel-description">When a form definition is updated &mdash; adding new fields, changing validation rules, or restructuring sections &mdash; this tool shows exactly what changed and how it affects existing submissions.</p>
     <div class="changelog-editors">
       <div>
         <label for="changelog-old">Previous Version</label>
@@ -525,7 +532,7 @@
 
   <!-- 4. Extensions -->
   <div class="tools-panel" id="panel-registry" role="tabpanel">
-    <p class="panel-description">Browse custom data types, functions, and validators registered for this form.</p>
+    <p class="panel-description">Extensions add custom capabilities to Formspec &mdash; specialized data types like SSNs, custom validation functions, or new form components. Browse what's available for this form.</p>
     <div class="registry-filters">
       <div class="filter-group">
         <label for="registry-category">Type</label>
@@ -554,7 +561,21 @@
 
   <!-- 5. Field Relationships -->
   <div class="tools-panel" id="panel-dependencies" role="tabpanel">
-    <p class="panel-description">Visualize how fields depend on each other &mdash; which values feed into which calculations.</p>
+    <p class="panel-description">This interactive graph shows how form fields are connected. Calculated fields (yellow nodes) automatically update when their source fields (blue nodes) change. Click any node to see its formula and dependencies.</p>
+    <div class="deps-legend" style="display:flex;gap:16px;margin-bottom:16px;font-size:0.85rem;color:var(--color-neutral-700)">
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--color-primary-light);border:2px solid var(--color-primary)"></span>
+        Input field
+      </span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#fef3c7;border:2px solid #b45309"></span>
+        Calculated field
+      </span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:20px;height:0;border-top:2px solid var(--color-neutral-200)"></span>
+        Feeds into
+      </span>
+    </div>
     <div class="deps-layout">
       <div class="deps-graph-container" id="deps-graph">
         <svg id="deps-svg"></svg>
