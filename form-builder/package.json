@@ -1,0 +1,21 @@
+{
+  "name": "formspec-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 8082 --open",
+    "build": "tsc && vite build",
+    "preview": "vite preview --port 8082"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.0.0",
+    "formspec-engine": "*",
+    "formspec-webcomponent": "*",
+    "preact": "^10.0.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.0.0",
+    "typescript": "^5.0.0"
+  }
+}
