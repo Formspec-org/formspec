@@ -66,9 +66,15 @@ describe('Topbar', () => {
     expect(importBtn).toBeTruthy();
   });
 
-  test('renders Export button', () => {
+  test('renders Publish button', () => {
     render(<Topbar />);
-    const exportBtn = screen.getByRole('button', { name: /Export project/ });
-    expect(exportBtn).toBeTruthy();
+    const publishBtn = screen.getByRole('button', { name: /Publish project/ });
+    expect(publishBtn).toBeTruthy();
+  });
+
+  test('renders Add-ons button', () => {
+    render(<Topbar />);
+    const extendBtn = screen.getByRole('button', { name: /Manage Extensions/ });
+    expect(extendBtn).toBeTruthy();
   });
 });
