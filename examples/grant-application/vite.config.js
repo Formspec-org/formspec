@@ -6,6 +6,13 @@ const repoRoot = path.resolve(__dirname, '../..');
 
 export default defineConfig({
   server: {
+    allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        rewrite: (p) => p.replace(/^\/api/, ''),
+      },
+    },
     fs: {
       allow: [repoRoot],
     },

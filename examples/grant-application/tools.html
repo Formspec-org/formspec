@@ -231,8 +231,14 @@
       margin-top: 12px;
     }
     .error-msg.hidden { display: none; }
+    .hidden { display: none; }
 
     /* ── Expression Tester ── */
+    .eval-example-btn.active-example {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
     .eval-form { display: grid; gap: 12px; }
     .eval-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .eval-result-value {
@@ -252,13 +258,13 @@
       border: 1px solid var(--color-neutral-200);
       border-radius: 8px;
       padding: 20px;
-      text-align: center;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .export-card:hover {
       border-color: var(--color-primary);
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
+    .export-card { text-align: left; }
     .export-card h4 {
       font-size: 1.1rem;
       margin-bottom: 6px;
@@ -269,6 +275,47 @@
       color: var(--color-neutral-700);
       margin-bottom: 12px;
       line-height: 1.4;
+    }
+    .export-card .mapping-meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .export-card .mapping-rules {
+      margin-bottom: 12px;
+      border: 1px solid var(--color-neutral-200);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .export-card .mapping-rule {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border-bottom: 1px solid var(--color-neutral-100);
+    }
+    .export-card .mapping-rule:last-child { border-bottom: none; }
+    .export-card .mapping-rule:nth-child(odd) { background: var(--color-neutral-50); }
+    .mapping-rule-source, .mapping-rule-target {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.72rem;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .mapping-rule-arrow { color: var(--color-neutral-700); flex-shrink: 0; }
+    .mapping-rule-transform {
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: var(--color-primary-light);
+      color: var(--color-primary-dark);
+      flex-shrink: 0;
     }
 
     /* ── Changelog ── */
@@ -330,6 +377,42 @@
       font-size: 0.825rem;
       color: var(--color-neutral-700);
       line-height: 1.45;
+    }
+    .registry-details {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--color-neutral-200);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .registry-detail {
+      font-size: 0.8rem;
+      color: var(--color-text);
+      line-height: 1.4;
+    }
+    .registry-detail-label {
+      font-weight: 600;
+      color: var(--color-neutral-700);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-right: 6px;
+    }
+    .registry-detail code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.78rem;
+      background: var(--color-neutral-100);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .registry-deprecation {
+      font-size: 0.8rem;
+      color: #92400e;
+      background: #fef3c7;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      border-left: 3px solid #f59e0b;
     }
 
     /* ── Dependencies graph ── */
@@ -445,12 +528,8 @@
   <!-- 1. Expression Tester -->
   <div class="tools-panel active" id="panel-evaluate" role="tabpanel">
     <p class="panel-description">This tool lets you test the formulas used throughout the grant application &mdash; from budget calculations to eligibility rules. Type any expression, provide sample data, and see the result instantly.</p>
-    <div class="eval-examples" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <span style="font-size:0.85rem;font-weight:600;color:var(--color-neutral-700);align-self:center">Try an example:</span>
-      <button class="btn btn-outline eval-example-btn" data-example="budget" style="font-size:12px;padding:4px 12px">Budget Total</button>
-      <button class="btn btn-outline eval-example-btn" data-example="date" style="font-size:12px;padding:4px 12px">Date Math</button>
-      <button class="btn btn-outline eval-example-btn" data-example="text" style="font-size:12px;padding:4px 12px">Text Transform</button>
-      <button class="btn btn-outline eval-example-btn" data-example="conditional" style="font-size:12px;padding:4px 12px">Conditional</button>
+    <div class="eval-examples" id="eval-examples" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+      <span style="font-size:0.85rem;font-weight:600;color:var(--color-neutral-700);align-self:center">Try:</span>
     </div>
     <div class="eval-form">
       <div>
@@ -477,24 +556,15 @@
 
   <!-- 2. Download & Export -->
   <div class="tools-panel" id="panel-export" role="tabpanel">
-    <p class="panel-description">Download a completed sample grant application in different formats. JSON for API integration, CSV for spreadsheets, or XML for government grant systems like Grants.gov.</p>
-    <div class="export-cards">
-      <div class="export-card">
-        <h4>JSON</h4>
-        <p>The native format for web APIs and modern integrations. Use this when sending application data to your backend, building dashboards, or integrating with other web services.</p>
-        <button class="btn btn-primary" data-format="json">Download JSON</button>
-      </div>
-      <div class="export-card">
-        <h4>CSV</h4>
-        <p>Spreadsheet-friendly format that opens directly in Excel, Google Sheets, or any database tool. Best for bulk analysis, reporting, or importing into existing tracking systems.</p>
-        <button class="btn btn-primary" data-format="csv">Download CSV</button>
-      </div>
-      <div class="export-card">
-        <h4>XML</h4>
-        <p>Structured markup required by many federal grant portals (Grants.gov, SAM.gov). Use this when submitting to government systems that mandate XML-formatted applications.</p>
-        <button class="btn btn-primary" data-format="xml">Download XML</button>
-      </div>
+    <p class="panel-description">Export form data through mapping rules that transform field paths, coerce types, and restructure data for each target system. Edit the input data below, then export to any format.</p>
+
+    <div style="margin-bottom:20px">
+      <label for="export-input-data">Input Data</label>
+      <textarea id="export-input-data" rows="8" style="font-size:0.8rem"></textarea>
     </div>
+
+    <div class="export-cards" id="export-cards"></div>
+
     <div class="error-msg hidden" id="export-error"></div>
     <div class="result-area hidden" id="export-result">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">

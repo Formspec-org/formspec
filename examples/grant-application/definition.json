@@ -109,7 +109,7 @@
     },
     "priorYearData": {
       "description": "Prior-year performance data fetched from agency API",
-      "source": "https://api.example.gov/responses/2024/{entityId}",
+      "source": "http://localhost:8000/api/prior-year-data",
       "static": true,
       "data": {
         "priorAwardAmount": 250000,

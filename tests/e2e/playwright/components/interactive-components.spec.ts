@@ -287,7 +287,7 @@ test.describe('Components: Progressive Component Rendering', () => {
             el.definition = {
                 "$formspec": "1.0", "url": "http://example.org/test",
                 "version": "1.0.0", "title": "Rating Half Test",
-                "items": [{ "key": "score", "type": "field", "dataType": "integer", "label": "Score" }]
+                "items": [{ "key": "score", "type": "field", "dataType": "decimal", "label": "Score" }]
             };
             el.componentDocument = {
                 "$formspecComponent": "1.0",

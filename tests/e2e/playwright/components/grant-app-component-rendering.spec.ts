@@ -20,7 +20,7 @@ test.describe('Components: Grant App Component Rendering', () => {
     expect(direction).toBe('row');
   });
 
-  test('should render Rating using configured icon and support half-value selection', async ({ page }) => {
+  test('should render Rating using configured icon and integer value selection', async ({ page }) => {
     const stars = page.locator('.formspec-rating-star');
     await expect(stars).toHaveCount(5);
 
@@ -28,15 +28,17 @@ test.describe('Components: Grant App Component Rendering', () => {
     const firstStarText = await stars.first().textContent();
     expect(firstStarText).toBe('♥');
 
-    // Programmatically setting a half value should render a half-selected icon.
-    await engineSetValue(page, 'projectNarrative.selfAssessment', 0.5);
+    // selfAssessment is dataType: "integer", so setting 3 should select first 3 stars.
+    await engineSetValue(page, 'projectNarrative.selfAssessment', 3);
     await page.waitForTimeout(50);
 
     const value = await engineValue(page, 'projectNarrative.selfAssessment');
-    expect(value).toBe(0.5);
+    expect(value).toBe(3);
 
-    await expect(stars.first()).toHaveClass(/formspec-rating-star--half/);
-    await expect(stars.nth(1)).not.toHaveClass(/formspec-rating-star--selected/);
+    await expect(stars.nth(0)).toHaveClass(/formspec-rating-star--selected/);
+    await expect(stars.nth(1)).toHaveClass(/formspec-rating-star--selected/);
+    await expect(stars.nth(2)).toHaveClass(/formspec-rating-star--selected/);
+    await expect(stars.nth(3)).not.toHaveClass(/formspec-rating-star--selected/);
   });
 
   test('should render Accordion with meaningful label from component labels prop', async ({ page }) => {

@@ -224,6 +224,7 @@ const RatingPlugin: ComponentPlugin = {
         wrapper.appendChild(label);
 
         const maxRating = comp.max || 5;
+        const isInteger = item.dataType === 'integer';
         const allowHalf = comp.allowHalf === true;
         const icon = resolveRatingIcon(comp.icon);
         const container = document.createElement('div');
@@ -242,6 +243,7 @@ const RatingPlugin: ComponentPlugin = {
                     const clickedLeftHalf = rect.width > 0 && (event.clientX - rect.left) < rect.width / 2;
                     value = clickedLeftHalf ? i - 0.5 : i;
                 }
+                if (isInteger) value = Math.round(value);
                 ctx.engine.setValue(fullName, value);
             });
             container.appendChild(star);

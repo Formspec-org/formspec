@@ -6,9 +6,17 @@ pretty-printing, key sorting, and null stripping.
 """
 
 import json
+from decimal import Decimal
 from typing import Any
 
 from .base import Adapter, JsonValue
+
+
+def _default(obj: Any) -> Any:
+    """Handle types that stdlib json cannot serialize (e.g. Decimal)."""
+    if isinstance(obj, Decimal):
+        return int(obj) if obj == obj.to_integral_value() else float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 def _strip_nulls(value: Any) -> Any:
@@ -44,6 +52,7 @@ class JsonAdapter(Adapter):
             indent=indent,
             sort_keys=self.sort_keys,
             ensure_ascii=False,
+            default=_default,
         ).encode('utf-8')
 
     def deserialize(self, data: bytes) -> JsonValue:

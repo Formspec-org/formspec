@@ -5,7 +5,7 @@
  * Each tab talks to the Python backend at SERVER_URL.
  */
 
-const SERVER = 'http://localhost:8000';
+const SERVER = '/api';
 
 // ── Tab switching ──
 const tabs = document.querySelectorAll('.tools-tab');
@@ -44,50 +44,131 @@ function hideResult(id) {
 
 // ── 1. Expression Tester ──
 
-// Pre-populate with a real grant-app formula
+// Pre-populate with working FEL examples across every category
 const EVAL_EXAMPLES = {
-  budget: {
-    expression: "money(sum($budget.lineItems[*].subtotal), 'USD')",
-    data: {
-      budget: {
-        lineItems: [
-          { category: "Personnel", subtotal: { amount: "75000", currency: "USD" } },
-          { category: "Equipment", subtotal: { amount: "25000", currency: "USD" } },
-          { category: "Travel", subtotal: { amount: "8500", currency: "USD" } }
-        ]
-      }
-    }
+  sum: {
+    label: 'sum()',
+    expression: "sum($budget.lineItems[*].amount)",
+    data: { budget: { lineItems: [{ amount: 75000 }, { amount: 25000 }, { amount: 8500 }] } }
   },
-  date: {
-    expression: "dateAdd(today(), 6, 'months')",
+  avg: {
+    label: 'avg()',
+    expression: "avg($grades)",
+    data: { grades: [88, 92, 76, 95] }
+  },
+  count: {
+    label: 'count()',
+    expression: "count($applicants)",
+    data: { applicants: ["Alice", "Bob", "Carol", "Dave"] }
+  },
+  round: {
+    label: 'round()',
+    expression: "round(3.14159, 2)",
     data: {}
   },
-  text: {
+  power: {
+    label: 'power()',
+    expression: "power(2, 10)",
+    data: {}
+  },
+  abs: {
+    label: 'abs()',
+    expression: "abs($balance)",
+    data: { balance: -4200 }
+  },
+  upper: {
+    label: 'upper()',
     expression: "upper('community health partners')",
     data: {}
   },
+  replace: {
+    label: 'replace()',
+    expression: "replace('FY2025-Q1 Report', 'Q1', 'Q2')",
+    data: {}
+  },
+  contains: {
+    label: 'contains()',
+    expression: "contains($title, 'grant')",
+    data: { title: "Federal grant application" }
+  },
+  length: {
+    label: 'length()',
+    expression: "length($description)",
+    data: { description: "Improving rural healthcare access in underserved communities" }
+  },
+  dateAdd: {
+    label: 'dateAdd()',
+    expression: "dateAdd(today(), 6, 'months')",
+    data: {}
+  },
+  dateDiff: {
+    label: 'dateDiff()',
+    expression: "dateDiff($start, $end, 'days')",
+    data: { start: "2026-01-15", end: "2026-06-30" }
+  },
+  year: {
+    label: 'year()',
+    expression: "year(today())",
+    data: {}
+  },
   conditional: {
-    expression: "if $score >= 80 then 'pass' else 'fail'",
+    label: 'if/then/else',
+    expression: "if $score >= 80 then 'Approved' else 'Needs Review'",
     data: { score: 85 }
-  }
+  },
+  coalesce: {
+    label: 'coalesce()',
+    expression: "coalesce($nickname, $fullName, 'Anonymous')",
+    data: { nickname: null, fullName: "Jane Doe" }
+  },
+  typeOf: {
+    label: 'typeOf()',
+    expression: "typeOf($amount)",
+    data: { amount: 50000 }
+  },
+  cast: {
+    label: 'number()',
+    expression: "number('42.5') * 2",
+    data: {}
+  },
+  empty: {
+    label: 'empty()',
+    expression: "empty($notes)",
+    data: { notes: "" }
+  },
 };
 
-// Set initial "Budget Total" example on load
+// Build example buttons dynamically
+const examplesContainer = document.getElementById('eval-examples');
+for (const [key, ex] of Object.entries(EVAL_EXAMPLES)) {
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-outline eval-example-btn';
+  btn.dataset.example = key;
+  btn.style.cssText = 'font-size:11px;padding:3px 10px;font-family:"SF Mono","Fira Code",monospace';
+  btn.textContent = ex.label;
+  examplesContainer.appendChild(btn);
+}
+
 function setEvalExample(name) {
   const example = EVAL_EXAMPLES[name];
   if (!example) return;
   document.getElementById('eval-expression').value = example.expression;
-  document.getElementById('eval-data').value = JSON.stringify(example.data, null, 2);
+  document.getElementById('eval-data').value = Object.keys(example.data).length
+    ? JSON.stringify(example.data, null, 2) : '';
+  // highlight active button
+  examplesContainer.querySelectorAll('.eval-example-btn').forEach((b) => {
+    b.classList.toggle('active-example', b.dataset.example === name);
+  });
 }
-setEvalExample('budget');
+setEvalExample('sum');
 
 // Wire up example buttons
-document.querySelectorAll('.eval-example-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    setEvalExample(btn.dataset.example);
-    hideError('eval-error');
-    hideResult('eval-result');
-  });
+examplesContainer.addEventListener('click', (e) => {
+  const btn = e.target.closest('.eval-example-btn');
+  if (!btn) return;
+  setEvalExample(btn.dataset.example);
+  hideError('eval-error');
+  hideResult('eval-result');
 });
 
 document.getElementById('btn-evaluate')?.addEventListener('click', async () => {
@@ -134,22 +215,115 @@ document.getElementById('btn-evaluate')?.addEventListener('click', async () => {
 let lastExportData = null;
 let lastExportFormat = '';
 
-document.querySelectorAll('.export-card button[data-format]').forEach((btn) => {
-  btn.addEventListener('click', async () => {
+const EXPORT_SAMPLE_DATA = {
+  applicantInfo: {
+    orgName: 'Community Health Partners',
+    ein: '47-1234567',
+    orgType: 'nonprofit',
+    contactName: 'Jane Doe',
+    contactEmail: 'jane@chp.org',
+    contactPhone: '555-123-4567',
+  },
+  projectNarrative: {
+    abstract: 'Improving rural healthcare access in underserved communities through mobile clinics.',
+    projectTitle: 'Rural Mobile Health Initiative',
+  },
+  budget: {
+    totalDirect: 95000,
+    totalIndirect: 13500,
+    lineItems: [
+      { category: 'Personnel', amount: 75000 },
+      { category: 'Equipment', amount: 12000 },
+      { category: 'Travel', amount: 8000 },
+    ],
+  },
+};
+
+const MAPPING_FILES = {
+  json: { file: 'mapping.json', label: 'JSON', desc: 'Native format for web APIs and modern integrations.' },
+  csv:  { file: 'mapping-csv.json', label: 'CSV', desc: 'Spreadsheet-friendly format for Excel and databases.' },
+  xml:  { file: 'mapping-xml.json', label: 'XML', desc: 'Structured markup for federal grant portals (Grants.gov).' },
+};
+
+// Pre-fill the input data textarea
+document.getElementById('export-input-data').value = JSON.stringify(EXPORT_SAMPLE_DATA, null, 2);
+
+// Load mapping docs and build cards
+async function initExportCards() {
+  const cardsEl = document.getElementById('export-cards');
+
+  for (const [fmt, info] of Object.entries(MAPPING_FILES)) {
+    let mappingDoc = null;
+    try {
+      const res = await fetch(`./${info.file}`);
+      if (res.ok) mappingDoc = await res.json();
+    } catch { /* static file not reachable */ }
+
+    const card = document.createElement('div');
+    card.className = 'export-card';
+
+    let metaHtml = '';
+    let rulesHtml = '';
+
+    if (mappingDoc) {
+      const target = mappingDoc.targetSchema || {};
+      metaHtml = `<div class="mapping-meta">
+        <span class="badge badge-stable">v${mappingDoc.version || '?'}</span>
+        <span class="badge" style="background:var(--color-neutral-100);color:var(--color-neutral-700)">${mappingDoc.direction || 'forward'}</span>
+        <span class="badge" style="background:var(--color-neutral-100);color:var(--color-neutral-700)">${mappingDoc.conformanceLevel || '?'}</span>
+      </div>`;
+
+      if (target.name) {
+        metaHtml += `<div style="font-size:0.78rem;color:var(--color-neutral-700);margin-bottom:8px">
+          <strong>Target:</strong> ${target.name}
+        </div>`;
+      }
+
+      const rules = mappingDoc.rules || [];
+      if (rules.length) {
+        const ruleRows = rules.map((r) => `
+          <div class="mapping-rule">
+            <span class="mapping-rule-source" title="${r.sourcePath || ''}">${r.sourcePath || '?'}</span>
+            <span class="mapping-rule-arrow">\u2192</span>
+            <span class="mapping-rule-target" title="${r.targetPath || ''}">${r.targetPath || '?'}</span>
+            <span class="mapping-rule-transform">${r.transform || '?'}</span>
+          </div>
+        `).join('');
+        rulesHtml = `<div class="mapping-rules">${ruleRows}</div>`;
+      }
+    }
+
+    card.innerHTML = `
+      <h4>${info.label}</h4>
+      <p>${info.desc}</p>
+      ${metaHtml}
+      ${rulesHtml}
+      <button class="btn btn-primary" data-format="${fmt}">Export ${info.label}</button>
+    `;
+    cardsEl.appendChild(card);
+  }
+
+  // Wire up export buttons (delegated)
+  cardsEl.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-format]');
+    if (!btn) return;
     const format = btn.dataset.format;
     hideError('export-error');
     hideResult('export-result');
 
-    const sampleData = {
-      applicantInfo: { orgName: 'Community Health Partners', ein: '47-1234567' },
-      projectNarrative: { abstract: 'Sample project abstract.' },
-    };
+    let data;
+    try {
+      data = JSON.parse(document.getElementById('export-input-data').value);
+    } catch {
+      showError('export-error', 'Invalid JSON in Input Data field.');
+      return;
+    }
 
     try {
       const res = await fetch(`${SERVER}/export/${format}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: sampleData }),
+        body: JSON.stringify({ data }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -169,7 +343,8 @@ document.querySelectorAll('.export-card button[data-format]').forEach((btn) => {
       showError('export-error', `Cannot reach server: ${e.message}`);
     }
   });
-});
+}
+initExportCards();
 
 document.getElementById('btn-export-download')?.addEventListener('click', () => {
   if (!lastExportData) return;
@@ -192,20 +367,60 @@ async function loadDefinitionForChangelog() {
       const oldText = JSON.stringify(defn, null, 2);
       document.getElementById('changelog-old').value = oldText;
 
-      // Create a modified "new" version with a meaningful diff so users
-      // see an interesting comparison result when they click "Compare Versions".
-      // Only auto-modify when the definition has real content (items present).
+      // Build a heavily modified "new" version that exercises every change
+      // category the changelog engine supports: items (add/remove/modify),
+      // binds (new required, changed constraint), shapes (add/remove),
+      // optionSets (add/modify), metadata, and screener.
       const newDef = JSON.parse(oldText);
+      newDef.version = '2.0.0';
+      newDef.title = (newDef.title || 'Grant Application') + ' — Revised';
+      newDef.description = 'Updated grant application with enhanced equity requirements and streamlined budget.';
+
       if (newDef.items && newDef.items.length > 0) {
-        newDef.version = '1.1.0';
-        newDef.items.push({
-          key: 'diversityStatement',
-          type: 'field',
-          dataType: 'string',
-          label: 'Diversity, Equity & Inclusion Statement',
-          hint: 'Describe how your project promotes diversity, equity, and inclusion.'
-        });
+        // Add new fields
+        newDef.items.push(
+          { key: 'diversityStatement', type: 'field', dataType: 'string', label: 'Diversity, Equity & Inclusion Statement', hint: 'Describe how your project promotes DEI.' },
+          { key: 'environmentalImpact', type: 'field', dataType: 'string', label: 'Environmental Impact Assessment' },
+        );
+        // Remove an existing item (take the last real field before our additions)
+        const removeIdx = newDef.items.findIndex((it) => it.key === 'certifications' || it.key === 'signatoryName');
+        if (removeIdx >= 0) newDef.items.splice(removeIdx, 1);
+        // Modify an item's dataType (breaking change)
+        const budgetField = newDef.items.find((it) => it.key === 'requestedAmount' || it.key === 'totalBudget');
+        if (budgetField) { budgetField.dataType = 'integer'; budgetField.label = (budgetField.label || '') + ' (whole dollars only)'; }
+        // Modify a label only (cosmetic change)
+        const abstractField = newDef.items.find((it) => it.key === 'abstract' || it.key === 'projectAbstract');
+        if (abstractField) abstractField.label = 'Executive Summary';
       }
+
+      // Add a new required bind (breaking)
+      if (!newDef.binds) newDef.binds = [];
+      newDef.binds.push(
+        { path: 'diversityStatement', required: true, constraint: 'length(.) >= 100', constraintMsg: 'Must be at least 100 characters.' },
+        { path: 'environmentalImpact', required: false, relevant: "$requestedAmount > 50000" },
+      );
+      // Modify an existing bind's constraint
+      const existingBind = newDef.binds.find((b) => b.path === 'abstract' || b.path === 'projectAbstract' || b.path === 'projectNarrative.abstract');
+      if (existingBind) existingBind.constraint = "length(.) >= 200 and length(.) <= 5000";
+
+      // Add/modify shapes
+      if (!newDef.shapes) newDef.shapes = [];
+      newDef.shapes.push({ name: 'equity-completeness', rule: "present($diversityStatement) and length($diversityStatement) >= 100", severity: 'error', message: 'DEI statement is required and must be substantive.' });
+      // Remove a shape if one exists
+      if (newDef.shapes.length > 1) newDef.shapes.splice(0, 1);
+
+      // Add a new optionSet
+      if (!newDef.optionSets) newDef.optionSets = {};
+      newDef.optionSets['impactLevel'] = [
+        { value: 'low', label: 'Low Impact' },
+        { value: 'medium', label: 'Medium Impact' },
+        { value: 'high', label: 'High Impact' },
+        { value: 'transformative', label: 'Transformative' },
+      ];
+
+      // Add a screener
+      newDef.screener = { rule: "$applicantInfo.orgType != 'forprofit'", message: 'For-profit organizations are not eligible for this grant.' };
+
       document.getElementById('changelog-new').value = JSON.stringify(newDef, null, 2);
     }
   } catch { /* server not running, user can paste manually */ }
@@ -249,12 +464,41 @@ document.getElementById('btn-changelog')?.addEventListener('click', async () => 
     if (!body.changes || body.changes.length === 0) {
       changesList.innerHTML = '<li class="change-item" style="color:var(--color-neutral-700)">No changes detected.</li>';
     } else {
+      const impactBadge = (impact) => {
+        const cls = impact === 'breaking' ? 'major' : impact === 'compatible' ? 'minor' : 'patch';
+        return `<span class="badge badge-${cls}">${impact}</span>`;
+      };
       for (const c of body.changes) {
         const li = document.createElement('li');
         li.className = 'change-item';
-        li.innerHTML = `<span class="change-type change-type-${c.type}">${c.type}</span>` +
-          `<strong>${c.path || c.key || ''}</strong> &mdash; ${c.description || ''}` +
-          (c.impact ? ` <span class="badge badge-${c.impact === 'breaking' ? 'major' : 'patch'}">${c.impact}</span>` : '');
+
+        // Auto-generate a description from the change data
+        let desc = c.description || '';
+        if (!desc) {
+          if (c.type === 'added') desc = `New ${c.target} added`;
+          else if (c.type === 'removed') desc = `${c.target} removed`;
+          else if (c.type === 'modified') desc = `${c.target} updated`;
+          // Add detail for specific cases
+          if (c.after?.dataType && c.before?.dataType && c.after.dataType !== c.before.dataType) {
+            desc += ` — dataType changed from "${c.before.dataType}" to "${c.after.dataType}"`;
+          } else if (c.after?.label && c.before?.label && c.after.label !== c.before.label) {
+            desc += ` — label: "${c.before.label}" → "${c.after.label}"`;
+          } else if (c.after?.required && !c.before?.required) {
+            desc += ' — now required';
+          } else if (c.after?.constraint && c.after.constraint !== c.before?.constraint) {
+            desc += ` — constraint updated`;
+          }
+        }
+
+        li.innerHTML =
+          `<span class="change-type change-type-${c.type}">${c.type}</span>` +
+          `<span class="badge" style="background:var(--color-neutral-100);color:var(--color-neutral-700);font-size:0.68rem;margin-right:6px">${c.target}</span>` +
+          `<strong style="font-family:'SF Mono','Fira Code',monospace;font-size:0.82rem">${c.path || c.key || ''}</strong>` +
+          `<span style="color:var(--color-neutral-700);margin:0 6px">&mdash;</span>` +
+          `<span style="flex:1">${desc}</span> ` +
+          (c.impact ? impactBadge(c.impact) : '');
+
+        li.style.cssText = 'display:flex;align-items:center;flex-wrap:wrap;gap:4px';
         changesList.appendChild(li);
       }
     }
@@ -295,6 +539,40 @@ function renderRegistryCards(entries) {
     card.className = 'registry-card';
     card.dataset.category = entry.category || '';
     card.dataset.status = entry.status || '';
+
+    // Build detail sections
+    const details = [];
+
+    if (entry.baseType) {
+      details.push(`<div class="registry-detail"><span class="registry-detail-label">Base type</span> <code>${entry.baseType}</code></div>`);
+    }
+    if (entry.constraints) {
+      const parts = Object.entries(entry.constraints).map(([k, v]) => `<code>${k}: ${v}</code>`);
+      details.push(`<div class="registry-detail"><span class="registry-detail-label">Constraints</span> ${parts.join(', ')}</div>`);
+    }
+    if (entry.parameters?.length) {
+      const params = entry.parameters.map((p) =>
+        `<span class="dep-chip">${p.name}: ${p.type}</span>`
+      ).join('');
+      details.push(`<div class="registry-detail"><span class="registry-detail-label">Parameters</span> ${params}</div>`);
+    }
+    if (entry.returns) {
+      details.push(`<div class="registry-detail"><span class="registry-detail-label">Returns</span> <code>${entry.returns}</code></div>`);
+    }
+    if (entry.members?.length) {
+      const chips = entry.members.map((m) => `<span class="dep-chip">${m}</span>`).join('');
+      details.push(`<div class="registry-detail"><span class="registry-detail-label">Members</span> ${chips}</div>`);
+    }
+    if (entry.license) {
+      details.push(`<div class="registry-detail"><span class="registry-detail-label">License</span> ${entry.license}</div>`);
+    }
+    if (entry.compatibility?.formspecVersion) {
+      details.push(`<div class="registry-detail"><span class="registry-detail-label">Compatibility</span> <code>formspec ${entry.compatibility.formspecVersion}</code></div>`);
+    }
+    if (entry.deprecationNotice) {
+      details.push(`<div class="registry-deprecation">${entry.deprecationNotice}</div>`);
+    }
+
     card.innerHTML = `
       <h4>${entry.name}</h4>
       <div class="registry-meta">
@@ -303,6 +581,7 @@ function renderRegistryCards(entries) {
         <span style="font-size:0.75rem;color:var(--color-neutral-700)">v${entry.version || '?'}</span>
       </div>
       <p>${entry.description || ''}</p>
+      ${details.length ? '<div class="registry-details">' + details.join('') + '</div>' : ''}
     `;
     cardsEl.appendChild(card);
   }
@@ -399,20 +678,22 @@ function renderD3Graph(d3, nodes, links, rawData) {
     .attr('d', 'M0,-5L10,0L0,5')
     .attr('class', 'edge-arrow');
 
+  const world = svg.append('g').attr('class', 'zoom-layer');
+
   const simulation = d3.forceSimulation(nodes)
     .force('link', d3.forceLink(links).id((d) => d.id).distance(80))
     .force('charge', d3.forceManyBody().strength(-200))
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collision', d3.forceCollide(30));
 
-  const link = svg.append('g')
+  const link = world.append('g')
     .selectAll('line')
     .data(links)
     .join('line')
     .attr('class', 'edge')
     .attr('marker-end', 'url(#arrow)');
 
-  const nodeGroup = svg.append('g')
+  const nodeGroup = world.append('g')
     .selectAll('g')
     .data(nodes)
     .join('g')
@@ -453,7 +734,7 @@ function renderD3Graph(d3, nodes, links, rawData) {
   const zoom = d3.zoom()
     .scaleExtent([0.3, 3])
     .on('zoom', (e) => {
-      svg.selectAll('g').attr('transform', e.transform);
+      world.attr('transform', e.transform);
     });
   svg.call(zoom);
 }

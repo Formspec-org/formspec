@@ -35,15 +35,17 @@ A complete vertical slice demonstrating the full Formspec lifecycle and nearly e
 |---|---|
 | `index.html` | Portal page: gov header, sidebar progress nav, grid layout, sticky totals footer |
 | `main.js` | Entry point: loads artifacts, wires reactive footer, handles wizard nav + submit |
+| `tools.html` | Form Intelligence Dashboard: 5-tab developer tools page |
+| `tools.js` | Dashboard controller: expression tester, export, changelog, registry, dependency graph |
 | `grant-bridge.css` | Component styling layered on formspec-base.css (cards, tables, popovers, etc.) |
-| `vite.config.js` | Dev server (port 8081) with repo-root middleware |
+| `vite.config.js` | Dev server (port 8081) with repo-root middleware and API proxy to port 8000 |
 | `package.json` | Workspace config |
 
 **Server:**
 
 | File | Purpose |
 |---|---|
-| `server/main.py` | FastAPI: POST /submit → Python FEL re-validation + mapping output |
+| `server/main.py` | FastAPI with 9 endpoints (see Server API below) |
 | `server/requirements.txt` | Python dependencies (fastapi, uvicorn, jsonschema, pydantic) |
 
 **Documentation:**
@@ -77,19 +79,54 @@ Open: http://localhost:8081
 
 ### 3. Start the API server (separate terminal)
 
+The server powers the tools dashboard and handles form submission with server-side re-validation and mapping.
+
 ```bash
 cd examples/grant-application
 pip install -r server/requirements.txt
-PYTHONPATH=../../src uvicorn server.main:app --reload --port 8000
+PYTHONPATH=../../src python3 -m uvicorn server.main:app --reload --reload-dir ../../src --port 8000
 ```
 
-### 4. Test with curl (no browser needed)
+> The form works without the server (instance data falls back to inline defaults), but the tools dashboard and submit require it.
+> Vite proxies `/api/*` to port 8000, so the dashboard works through any hostname (including exe.dev).
+
+### 4. Open the tools dashboard
+
+Navigate to http://localhost:8081/tools.html (or click "Form Intelligence Dashboard" from the header).
+
+Five tabs are available:
+
+| Tab | What it does |
+|---|---|
+| **Expression Tester** | Run any FEL expression with sample data. 18 pre-built examples across aggregates, math, strings, dates, conditionals, and type utilities. |
+| **Download & Export** | Export form data through mapping rules. Shows mapping metadata, all source→target rules with transform types, and editable input data. Supports JSON, CSV, and XML. |
+| **Version Comparison** | Diff two definition versions. Pre-loaded with a v1.0.0→v2.0.0 diff touching items (add/remove/modify), binds (required changes), shapes, optionSets, screener, and metadata across all impact levels (breaking/compatible/cosmetic). |
+| **Extensions** | Browse the extension registry with type/status filters. Cards show base types, constraints, parameters, return types, namespace members, license, compatibility ranges, and deprecation notices. |
+| **Field Relationships** | Interactive d3-force dependency graph. Calculated fields (yellow) and input fields (blue) with directional edges. Click any node to see its expression and dependencies. Supports zoom and drag. |
+
+### 5. Test with curl (no browser needed)
 
 ```bash
 curl -X POST http://localhost:8000/submit \
   -H "Content-Type: application/json" \
   -d @sample-submission.json | python3 -m json.tool
 ```
+
+## Server API
+
+The FastAPI server (`server/main.py`) exposes these endpoints:
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/health` | Health check |
+| GET | `/definition` | Returns the loaded definition.json |
+| GET | `/api/prior-year-data` | Mock prior-year performance data (instance source) |
+| POST | `/evaluate` | Evaluate a FEL expression with sample data |
+| POST | `/export/{format}` | Run mapping engine + adapter for json/csv/xml export |
+| POST | `/submit` | Full submission: Python FEL re-validation + mapping output |
+| POST | `/changelog` | Diff two definition versions into a semver-classified changelog |
+| GET | `/registry` | Query extension registry (optional `name`, `category`, `status` filters) |
+| GET | `/dependencies` | Extract field dependency graph from definition binds |
 
 ## Feature coverage by spec tier
 
@@ -142,7 +179,7 @@ curl -X POST http://localhost:8000/submit \
 **Instance data**
 - **Readonly** — agencyData (maxAward, fiscalYear, ein) with readonly: true
 - **Writable with schema** — scratchPad (lastSavedTotal, budgetNotes) with typed schema and readonly: false
-- **Source-based static** — priorYearData fetched from external API URL with static: true
+- **Source-based static** — priorYearData fetched from the local API server (`GET /api/prior-year-data`) with static: true and inline fallback data
 
 **Pre-population**
 - **orgName** — pre-populated from agencyData with editable: true (user can override)
@@ -246,7 +283,7 @@ curl -X POST http://localhost:8000/submit \
 These Formspec features are defined in the specifications but not exercised by this example:
 
 - **External option set sources** — all `optionSets` and inline `options` use static inline values; none use the `source` URI mechanism for fetching options from an external endpoint.
-- **`formspec-fn:` data sources** — instance data uses inline `data` or an `https://` source URL; the host-provided `formspec-fn:` function URI scheme for dynamic data injection is not demonstrated.
+- **`formspec-fn:` data sources** — instance data uses inline `data` or a local `http://` source URL; the host-provided `formspec-fn:` function URI scheme for dynamic data injection is not demonstrated.
 - **Some FEL stdlib functions** — unused functions include: `countWhere()`, `min()`, `max()`, `avg()`, `floor()`, `ceil()`, `power()`, `selected()`, repeat navigation (`prev()`, `next()`, `parent()`), and MIP state queries (`readonly()`, `required()`, `relevant()`).
 - **Recursive custom components** — the two custom components (`ContactField`, `SummaryRow`) use only built-in components in their trees; custom components nesting other custom components is not shown.
 
