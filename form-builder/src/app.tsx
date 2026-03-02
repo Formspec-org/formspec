@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals';
 import { EmptyTab } from './components/empty-tab';
 import { JsonEditor } from './components/json-editor';
+import { Preview } from './components/preview';
 import { PropertiesPanel } from './components/properties/properties-panel';
 import { Sidebar } from './components/sidebar';
 import { Splitter } from './components/splitter';
@@ -78,15 +79,7 @@ export function App() {
                   }}
                 />
                 <div class="studio-preview-pane" style={{ flex: 1 }}>
-                  <p
-                    style={{
-                      color: 'var(--text-2)',
-                      padding: '24px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Live Preview (Phase 2)
-                  </p>
+                  <Preview />
                 </div>
               </div>
             </>
