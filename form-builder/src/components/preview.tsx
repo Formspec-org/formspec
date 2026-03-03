@@ -1,7 +1,18 @@
 import { useEffect, useRef } from 'preact/hooks';
+import { FormspecRender } from 'formspec-webcomponent';
 import { definition, definitionVersion } from '../state/definition';
 import { engine } from '../state/project';
 import { selectedPath } from '../state/selection';
+import uswdsTheme from '../../../packages/formspec-webcomponent/examples/uswds-theme.json';
+
+if (!customElements.get('formspec-render')) {
+  customElements.define('formspec-render', FormspecRender);
+}
+
+const previewTheme = {
+  ...uswdsTheme,
+  stylesheets: ['/assets/formspec-uswds-bridge.css'],
+};
 
 export function Preview() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -9,15 +20,10 @@ export function Preview() {
 
   // On mount, create the web component and append it
   useEffect(() => {
-    import('formspec-webcomponent');
-    const el = document.createElement('formspec-render');
-    el.style.display = 'block';
-    el.style.height = '100%';
-    el.style.overflow = 'auto';
-    el.style.padding = '24px';
-    el.style.background = '#fff';
+    const el = document.createElement('formspec-render') as any;
     containerRef.current?.appendChild(el);
     renderRef.current = el;
+    el.themeDocument = previewTheme;
 
     // Click handler: preview -> tree selection
     const handleClick = (event: MouseEvent) => {
@@ -39,9 +45,9 @@ export function Preview() {
     };
   }, []);
 
-  // Debounced definition sync — runs after every render due to no deps array
+  // Debounced definition sync
   useEffect(() => {
-    const _version = definitionVersion.value; // subscribe to version changes
+    const _version = definitionVersion.value;
     const def = definition.value;
     const timer = setTimeout(() => {
       if (renderRef.current) {

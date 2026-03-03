@@ -1,8 +1,11 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
 import { Preview } from '../components/preview';
 
 // Mock formspec-webcomponent to avoid browser-only custom element registration
-vi.mock('formspec-webcomponent', () => ({}));
+vi.mock('formspec-webcomponent', () => ({
+  FormspecRender: class extends HTMLElement {},
+}));
 
 // Mock state modules with simple signal-like objects (plain objects with .value)
 vi.mock('../state/definition', () => ({
