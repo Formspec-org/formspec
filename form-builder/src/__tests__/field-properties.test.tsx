@@ -256,4 +256,72 @@ describe('FieldProperties', () => {
     const opts = (item as any).options as { value: string; label?: string }[];
     expect(opts[0].value).toBe('new');
   });
+
+  test('FEL autocomplete suggests $ variables and inserts selection', () => {
+    const def = createEmptyDefinition();
+    def.items = [
+      {
+        key: 'targetField',
+        type: 'field',
+        label: 'Target',
+        dataType: 'string',
+      } as FormspecItem,
+      {
+        key: 'organizationName',
+        type: 'field',
+        label: 'Organization',
+        dataType: 'string',
+      } as FormspecItem,
+    ];
+    setDefinition(def);
+    const selected = findItemByKey('targetField')!.item;
+
+    render(<FieldProperties item={selected} />);
+
+    const relevantLabel = screen.getByText('Relevant');
+    const relevantRow = relevantLabel.closest('.property-row') as HTMLElement;
+    const relevantInput = relevantRow.querySelector('.fel-input-wrap input') as HTMLInputElement;
+
+    relevantInput.focus();
+    relevantInput.value = '$org';
+    relevantInput.setSelectionRange(4, 4);
+    fireEvent.input(relevantInput, { target: { value: '$org' } });
+
+    const option = screen.getByText('$organizationName').closest('[role="option"]') as HTMLElement;
+    fireEvent.mouseDown(option);
+
+    const { item } = findItemByKey('targetField')!;
+    expect((item as Record<string, unknown>).relevant).toBe('$organizationName');
+  });
+
+  test('FEL autocomplete suggests @ functions and inserts call syntax', () => {
+    const def = createEmptyDefinition();
+    def.items = [
+      {
+        key: 'targetField',
+        type: 'field',
+        label: 'Target',
+        dataType: 'string',
+      } as FormspecItem,
+    ];
+    setDefinition(def);
+    const selected = findItemByKey('targetField')!.item;
+
+    render(<FieldProperties item={selected} />);
+
+    const relevantLabel = screen.getByText('Relevant');
+    const relevantRow = relevantLabel.closest('.property-row') as HTMLElement;
+    const relevantInput = relevantRow.querySelector('.fel-input-wrap input') as HTMLInputElement;
+
+    relevantInput.focus();
+    relevantInput.value = '@su';
+    relevantInput.setSelectionRange(3, 3);
+    fireEvent.input(relevantInput, { target: { value: '@su' } });
+
+    const option = screen.getByText('@sum').closest('[role="option"]') as HTMLElement;
+    fireEvent.mouseDown(option);
+
+    const { item } = findItemByKey('targetField')!;
+    expect((item as Record<string, unknown>).relevant).toBe('sum()');
+  });
 });

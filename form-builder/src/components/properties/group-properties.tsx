@@ -1,6 +1,8 @@
 import type { ComponentChildren } from 'preact';
 import type { FormspecItem } from 'formspec-engine';
 import { findItemByKey, updateDefinition } from '../../state/definition';
+import { FelExpressionInput } from './fel-expression-input';
+import { FelHelper } from './fel-helper';
 
 export function GroupProperties({ item }: { item: FormspecItem }) {
   function updateGroup(field: string, value: string) {
@@ -55,20 +57,18 @@ export function GroupProperties({ item }: { item: FormspecItem }) {
       </PropertyRow>
 
       <div class="section-title">Behavior</div>
-      <PropertyRow label="Relevant">
-        <input
-          class="studio-input studio-input-mono"
+      <PropertyRow label={<span class="label-with-helper">Relevant <FelHelper /></span>}>
+        <FelExpressionInput
           value={item.relevant || ''}
           placeholder="FEL expression"
-          onInput={(event) => updateGroup('relevant', (event.target as HTMLInputElement).value)}
+          onValueChange={(value) => updateGroup('relevant', value)}
         />
       </PropertyRow>
-      <PropertyRow label="Read Only">
-        <input
-          class="studio-input studio-input-mono"
+      <PropertyRow label={<span class="label-with-helper">Read Only <FelHelper /></span>}>
+        <FelExpressionInput
           value={typeof item.readonly === 'string' ? item.readonly : ''}
           placeholder="FEL expression"
-          onInput={(event) => updateGroup('readonly', (event.target as HTMLInputElement).value)}
+          onValueChange={(value) => updateGroup('readonly', value)}
         />
       </PropertyRow>
 
@@ -105,7 +105,7 @@ export function GroupProperties({ item }: { item: FormspecItem }) {
   );
 }
 
-function PropertyRow({ label, children }: { label: string; children: ComponentChildren }) {
+function PropertyRow({ label, children }: { label: string | ComponentChildren; children: ComponentChildren }) {
   return (
     <div class="property-row">
       <label class="property-label">{label}</label>

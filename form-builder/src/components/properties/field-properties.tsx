@@ -1,6 +1,8 @@
 import type { ComponentChildren } from 'preact';
 import type { FormspecItem } from 'formspec-engine';
 import { findItemByKey, updateDefinition } from '../../state/definition';
+import { FelExpressionInput } from './fel-expression-input';
+import { FelHelper } from './fel-helper';
 
 export function FieldProperties({ item }: { item: FormspecItem }) {
   function updateField(field: string, value: string) {
@@ -154,46 +156,41 @@ export function FieldProperties({ item }: { item: FormspecItem }) {
       )}
 
       <div class="section-title">Behavior</div>
-      <PropertyRow label="Relevant">
-        <input
-          class="studio-input studio-input-mono"
+      <PropertyRow label={<span class="label-with-helper">Relevant <FelHelper /></span>}>
+        <FelExpressionInput
           value={item.relevant || ''}
           placeholder="FEL expression"
-          onInput={(event) => updateField('relevant', (event.target as HTMLInputElement).value)}
+          onValueChange={(value) => updateField('relevant', value)}
         />
       </PropertyRow>
-      <PropertyRow label="Required">
-        <input
-          class="studio-input studio-input-mono"
+      <PropertyRow label={<span class="label-with-helper">Required <FelHelper /></span>}>
+        <FelExpressionInput
           value={typeof item.required === 'string' ? item.required : ''}
           placeholder="FEL expression or true()"
-          onInput={(event) => updateField('required', (event.target as HTMLInputElement).value)}
+          onValueChange={(value) => updateField('required', value)}
         />
       </PropertyRow>
-      <PropertyRow label="Read Only">
-        <input
-          class="studio-input studio-input-mono"
+      <PropertyRow label={<span class="label-with-helper">Read Only <FelHelper /></span>}>
+        <FelExpressionInput
           value={typeof item.readonly === 'string' ? item.readonly : ''}
           placeholder="FEL expression"
-          onInput={(event) => updateField('readonly', (event.target as HTMLInputElement).value)}
+          onValueChange={(value) => updateField('readonly', value)}
         />
       </PropertyRow>
-      <PropertyRow label="Calculate">
-        <input
-          class="studio-input studio-input-mono"
+      <PropertyRow label={<span class="label-with-helper">Calculate <FelHelper /></span>}>
+        <FelExpressionInput
           value={item.calculate || ''}
           placeholder="FEL expression"
-          onInput={(event) => updateField('calculate', (event.target as HTMLInputElement).value)}
+          onValueChange={(value) => updateField('calculate', value)}
         />
       </PropertyRow>
 
       <div class="section-title">Validation</div>
-      <PropertyRow label="Constraint">
-        <input
-          class="studio-input studio-input-mono"
+      <PropertyRow label={<span class="label-with-helper">Constraint <FelHelper /></span>}>
+        <FelExpressionInput
           value={item.constraint || ''}
           placeholder="FEL expression"
-          onInput={(event) => updateField('constraint', (event.target as HTMLInputElement).value)}
+          onValueChange={(value) => updateField('constraint', value)}
         />
       </PropertyRow>
       <PropertyRow label="Message">
@@ -208,7 +205,7 @@ export function FieldProperties({ item }: { item: FormspecItem }) {
   );
 }
 
-function PropertyRow({ label, children }: { label: string; children: ComponentChildren }) {
+function PropertyRow({ label, children }: { label: string | ComponentChildren; children: ComponentChildren }) {
   return (
     <div class="property-row">
       <label class="property-label">{label}</label>
