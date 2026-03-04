@@ -13,16 +13,16 @@ export default defineConfig({
   },
   plugins: [
     {
-      name: 'serve-grant-app-tools',
+      name: 'serve-studio-dist',
       configureServer(server) {
-        const MIME: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
-        const grantDir = path.resolve(__dirname, 'examples/grant-application');
+        const MIME: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
+        const studioDir = path.resolve(__dirname, 'form-builder/dist');
         server.middlewares.use((req, res, next) => {
-          if (req.url !== '/tools.html' && !req.url?.startsWith('/tools.js')) return next();
-          const filePath = path.join(grantDir, req.url.split('?')[0]);
+          if (!req.url?.startsWith('/studio')) return next();
+          const relPath = req.url.replace(/^\/studio/, '').split('?')[0] || '/index.html';
+          const filePath = path.join(studioDir, relPath);
           const ext = path.extname(filePath).toLowerCase();
-          const mime = MIME[ext];
-          if (!mime) return next();
+          const mime = MIME[ext] || 'application/octet-stream';
           fs.readFile(filePath, (err, data) => {
             if (err) return next();
             res.setHeader('Content-Type', mime);

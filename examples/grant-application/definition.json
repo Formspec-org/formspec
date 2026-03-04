@@ -671,8 +671,7 @@
           "type": "field",
           "key": "subAmount",
           "label": "Contracted Amount",
-          "dataType": "decimal",
-          "currency": "EUR"
+          "dataType": "decimal"
         },
         {
           "type": "field",

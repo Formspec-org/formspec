@@ -134,22 +134,32 @@ Two mechanisms: **bind constraints** (field-level: required, constraint, readonl
 ### Repeatable Groups
 Tracked via separate `repeats` signals mapping group names to instance counts. Uses indexed paths like `group[0].field`. Supports nesting and min/max cardinality validation.
 
-## Development Workflow — Rapid Red-Green-Refactor
+## Development Workflow — Red-Green-Refactor
 
-Every feature or bugfix follows this loop:
+Every feature or bugfix follows this loop. Do NOT write implementation before a failing test exists.
 
-1. **Red — write one basic failing test** that captures the core requirement. Keep it minimal: one assertion, simplest possible setup. Run it, confirm it fails for the right reason.
-2. **Green — make it pass** with the simplest change that works. No polish, no extras.
-3. **Flesh out — add tests for the complete requirement.** Edge cases, null handling, UI rendering, validation interactions. Run them, see which fail.
-4. **Finish — implement the remaining changes** to pass all tests. Then run the full suite to confirm zero regressions.
+1. **Red** — Write one minimal failing test. Run it, confirm it fails for the right reason.
+2. **Green** — Make it pass with the simplest change that works.
+3. **Expand** — Add tests for edge cases and the full requirement. See which fail, make them pass.
+4. **Verify** — Run the full suite to confirm zero regressions.
 
-Do NOT write all tests upfront. Do NOT write implementation before a failing test exists. The loop is: one test → pass it → expand tests → pass them → verify full suite. This is non-negotiable.
+## Testing Philosophy
 
-## Testing Layers
+**The goal is confidence in correctness, not test quantity.** Write the fewest tests that give you high confidence the code works. One well-chosen integration test that exercises the real path is worth more than ten unit tests mocking every seam.
 
-**Python conformance suite** (`tests/`): Schema conformance, spec example extraction, property-based generative testing (hypothesis), cross-spec contracts, FEL implementation validation.
+**When to use each layer:**
 
-**Playwright E2E** (`tests/e2e/playwright/`): Browser automation tests loading JSON fixture definitions, filling inputs, and asserting DOM state and engine output. Fixtures live in `tests/e2e/fixtures/`.
+- **Unit tests** — Pure logic with no dependencies: parsers, transformers, expression evaluators, utility functions. Use when the function is complex enough that its behavior isn't obvious from reading it, or when it has meaningful edge cases.
+- **Integration tests** — Components interacting with real collaborators (engine + signals, store + rendering, assembler + resolver). This is the default and most valuable layer. Test through the public API surface, not internal wiring.
+- **E2E tests** (Playwright) — User-visible behavior in the browser: form rendering, navigation, submission, validation feedback. Use for workflows that cross the component/engine/DOM boundary. Don't duplicate what integration tests already cover.
+
+**What NOT to test:** Trivial getters/setters, framework glue, type-system-enforced invariants, or implementation details that would break on any reasonable refactor. If a test only passes because it knows about internal structure, it's testing the wrong thing.
+
+**Test locations:**
+- `tests/` — Python conformance suite (schema, FEL, cross-spec contracts, hypothesis)
+- `tests/e2e/playwright/` — Browser E2E tests (fixtures in `tests/e2e/fixtures/`)
+- `form-builder/src/__tests__/` — Form builder unit/integration tests (Vitest)
+- `packages/formspec-engine/tests/` — Engine unit/integration tests
 
 ## Commit Convention
 

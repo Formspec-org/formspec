@@ -10,14 +10,28 @@
  */
 
 import ts from 'typescript';
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
+import { resolve, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
 // No shared output dir needed — each package writes to its own folder.
+
+/** Recursively collect all .d.ts files under a directory. */
+function collectDtsFiles(dir) {
+  const results = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = resolve(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...collectDtsFiles(full));
+    } else if (entry.name.endsWith('.d.ts')) {
+      results.push(full);
+    }
+  }
+  return results.sort();
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -315,39 +329,45 @@ const packages = [
     name: 'formspec-engine',
     title: 'formspec-engine — API Reference',
     description: 'Core form state management engine. Parses a FormspecDefinition and builds a reactive signal network for field values, relevance, validation, repeat groups, computed variables, and response serialization. Includes FEL expression compilation, definition assembly, and bidirectional runtime mapping.',
-    entrypoint: 'packages/formspec-engine/dist/index.d.ts',
-    output: 'packages/formspec-engine/API.llm.md',
-    extraFiles: [
-      'packages/formspec-engine/dist/assembler.d.ts',
-      'packages/formspec-engine/dist/runtime-mapping.d.ts',
-    ],
+    dir: 'packages/formspec-engine',
+  },
+  {
+    name: 'formspec-layout',
+    title: 'formspec-layout — API Reference',
+    description: 'Layout planning engine. Resolves theme tokens, computes responsive breakpoints, and produces a flat layout plan (widths, order, visibility) from a component tree and theme definition.',
+    dir: 'packages/formspec-layout',
   },
   {
     name: 'formspec-webcomponent',
     title: 'formspec-webcomponent — API Reference',
-    description: '`<formspec-render>` custom element that binds a FormEngine to the DOM. Provides a component registry, theme cascade resolver, token resolution, responsive breakpoints, and accessibility attributes. Ships with 35 built-in component plugins.',
-    entrypoint: 'packages/formspec-webcomponent/dist/index.d.ts',
-    output: 'packages/formspec-webcomponent/API.llm.md',
-    extraFiles: [
-      'packages/formspec-webcomponent/dist/registry.d.ts',
-      'packages/formspec-webcomponent/dist/theme-resolver.d.ts',
-      'packages/formspec-webcomponent/dist/types.d.ts',
-    ],
+    description: '`<formspec-render>` custom element that binds a FormEngine to the DOM. Provides a component registry, styling pipeline, navigation (wizard/field focus), and accessibility attributes.',
+    dir: 'packages/formspec-webcomponent',
   },
 ];
 
 for (const pkg of packages) {
+  const distDir = resolve(ROOT, pkg.dir, 'dist');
+  const allDts = collectDtsFiles(distDir);
+  if (allDts.length === 0) {
+    console.warn(`  SKIP ${pkg.name}: no .d.ts files in ${distDir}`);
+    continue;
+  }
+
+  // Process index.d.ts first (if it exists), then everything else.
+  const entrypoint = resolve(distDir, 'index.d.ts');
+  const files = allDts.filter(f => f === entrypoint);
+  for (const f of allDts) {
+    if (f !== entrypoint) files.push(f);
+  }
+
   const lines = [];
   lines.push(`# ${pkg.title}\n`);
   lines.push(`*Auto-generated from TypeScript declarations — do not hand-edit.*\n`);
   lines.push(`${pkg.description}\n`);
 
-  // Collect all files: entrypoint first, then extras (skip re-exported modules already in entrypoint)
-  const files = [pkg.entrypoint, ...pkg.extraFiles];
   const seen = new Set();
 
-  for (const relPath of files) {
-    const absPath = resolve(ROOT, relPath);
+  for (const absPath of files) {
     const sourceFile = ts.createSourceFile(
       absPath,
       readFileSync(absPath, 'utf8'),
@@ -392,7 +412,7 @@ for (const pkg of packages) {
     }
   }
 
-  const outPath = resolve(ROOT, pkg.output);
+  const outPath = resolve(ROOT, pkg.dir, 'API.llm.md');
   writeFileSync(outPath, lines.join('\n') + '\n');
   console.log(`  ${outPath}`);
 }
