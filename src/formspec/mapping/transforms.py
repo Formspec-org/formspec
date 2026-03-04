@@ -134,7 +134,7 @@ def transform_value_map(value: Any, rule: dict, ctx: TransformContext) -> Any:
         unmapped = 'error'
         default = None
 
-    key = str(value) if value is not None else None
+    key = str(value).lower() if isinstance(value, bool) else (str(value) if value is not None else None)
     if key in lookup:
         return lookup[key]
 
