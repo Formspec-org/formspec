@@ -353,10 +353,12 @@ export class FormspecRender extends HTMLElement {
             this.rootContainer.className = 'formspec-container';
             this.appendChild(this.rootContainer);
 
-            const baseStyles = document.createElement('link');
-            baseStyles.rel = 'stylesheet';
-            baseStyles.href = new URL('./formspec-base.css', import.meta.url).href;
-            this.shadowRoot!.prepend(baseStyles);
+            if (typeof navigator !== 'undefined' && !/happydom|jsdom/i.test(navigator.userAgent || '')) {
+                const baseStyles = document.createElement('link');
+                baseStyles.rel = 'stylesheet';
+                baseStyles.href = new URL('./formspec-base.css', import.meta.url).href;
+                this.shadowRoot!.prepend(baseStyles);
+            }
         }
 
         const container = this.rootContainer;
