@@ -10,7 +10,7 @@
  * these paths to wire Preact signal dependencies, ensuring that computed fields
  * and bind expressions automatically re-evaluate when their upstream fields change.
  */
-import { parser } from './parser';
+import { parser } from './parser.js';
 
 /**
  * Walks a FEL Concrete Syntax Tree to extract the set of field paths referenced

@@ -1,13 +1,13 @@
 import { signal, computed, effect, batch, Signal } from '@preact/signals-core';
-import { FelLexer } from './fel/lexer';
-import { parser } from './fel/parser';
-import { interpreter, FelContext } from './fel/interpreter';
-import { dependencyVisitor } from './fel/dependency-visitor';
+import { FelLexer } from './fel/lexer.js';
+import { parser } from './fel/parser.js';
+import { interpreter, FelContext } from './fel/interpreter.js';
+import { dependencyVisitor } from './fel/dependency-visitor.js';
 
-export { assembleDefinition, assembleDefinitionSync } from './assembler';
-export type { AssemblyProvenance, AssemblyResult, DefinitionResolver } from './assembler';
-export { RuntimeMappingEngine } from './runtime-mapping';
-export type { MappingDirection, RuntimeMappingResult } from './runtime-mapping';
+export { assembleDefinition, assembleDefinitionSync, rewriteFEL, rewriteMessageTemplate } from './assembler.js';
+export type { AssemblyProvenance, AssemblyResult, DefinitionResolver, RewriteMap } from './assembler.js';
+export { RuntimeMappingEngine } from './runtime-mapping.js';
+export type { MappingDirection, RuntimeMappingResult } from './runtime-mapping.js';
 
 /** A single item in a Formspec definition tree: a field (data-bearing), group (container), or display (read-only content). */
 export interface FormspecItem {

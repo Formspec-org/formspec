@@ -376,7 +376,7 @@ Each shape in `definition.shapes[]`:
 
 `packages/formspec-engine/src/assembler.ts`
 
-Resolves `$ref` inclusions in definitions (publish-time assembly).
+Resolves `$ref` inclusions in definitions (publish-time assembly). Produces a self-contained definition with all external references inlined.
 
 ```typescript
 // $ref URI format: "url|version#fragment"
@@ -398,7 +398,63 @@ interface AssemblyResult {
 }
 ```
 
-Assembly walks group items with `type: 'group'` and a `$ref`. Applies `keyPrefix` if specified (prepends to imported item keys and bind paths). Detects circular `$ref` chains and key collisions (throws errors).
+### Assembly Pipeline
+
+For each group item with `$ref`, the assembler:
+
+1. **Resolves** — fetches the referenced definition via the resolver
+2. **Selects fragment** — if `#fragment` specified, extracts the matching top-level item
+3. **Prefixes keys** — applies `keyPrefix` to all imported item keys recursively
+4. **Rewrites bind paths** — scopes imported bind `path` values under the host group
+5. **Rewrites shape targets** — same scoping for shape `target` values
+6. **Rewrites FEL expressions** — updates `$`-prefixed path references in all FEL-bearing properties
+7. **Imports variables** — brings in referenced definition's variables with rewritten expressions/scopes
+8. **Detects collisions** — throws on key collisions and variable name collisions
+9. **Handles shape ID collisions** — auto-prefixes with group key; updates composition references
+10. **Records provenance** — appends to `assembledFrom` array
+11. **Recurses** — resolves any nested `$ref` items within the imported subtree
+
+### FEL Path Rewriting
+
+```typescript
+// Exported for direct use / testing
+function rewriteFEL(expression: string, map: RewriteMap): string
+function rewriteMessageTemplate(message: string, map: RewriteMap): string
+
+interface RewriteMap {
+  fragmentRootKey: string;   // e.g. "budget"
+  hostGroupKey: string;      // e.g. "projectBudget"
+  importedKeys: Set<string>; // all keys in the fragment subtree
+  keyPrefix: string;         // e.g. "proj_"
+}
+```
+
+`rewriteFEL` transforms path references in FEL expression strings:
+
+| Reference type | Example | Rewritten to |
+|---|---|---|
+| Fragment root path | `$budget.totalDirect` | `$projectBudget.proj_totalDirect` |
+| Imported key path | `$budget.lineItems[*].amount` | `$projectBudget.proj_lineItems[*].proj_amount` |
+| `@current.field` | `@current.amount` | `@current.proj_amount` |
+| `prev/next/parent('field')` | `prev('runningTotal')` | `prev('proj_runningTotal')` |
+| Bare `$` (current-node) | `$ >= 0` | unchanged |
+| External paths | `$externalField` | unchanged |
+| Context vars (`@index`, `@count`) | `@index > 0` | unchanged |
+| Variable refs (`#:name`) | `#:budgetComplete` | unchanged |
+| `@instance(...)` | `@instance('data').field` | unchanged |
+
+**Properties rewritten during assembly:**
+
+- **Binds:** `calculate`, `constraint`, `relevant`, `readonly`, `required` (FEL strings), `default` (when string starting with `=`, the `=` prefix is preserved)
+- **Shapes:** `constraint`, `activeWhen` (FEL strings), `context` values (each is FEL), `message` (FEL inside `{{...}}` interpolation), `and[]`/`or[]`/`xone[]` entries and `not` (inline FEL rewritten; shape ID references use rename map)
+- **Variables:** `expression` (FEL), `scope` (item key — uses key rename, not FEL rewriting)
+
+### Error Detection
+
+- **Circular `$ref`**: throws `"Circular $ref detected: url|version"`
+- **Key collision**: throws `"Key collision after assembly: "path" already exists in host definition"`
+- **Fragment not found**: throws `"Fragment key "name" not found in referenced definition url"`
+- **Variable name collision**: throws `"Variable name collision during assembly: "name" already exists in host definition"`
 
 ---
 
@@ -495,11 +551,16 @@ All reactive wiring happens inside `compileFEL` closures: the closure reads `str
 
 ## Tests
 
-15 test files in `tests/`, using Node.js built-in test runner (`node:test`, `.mjs` files):
+20 test files in `tests/`, using Node.js built-in test runner (`node:test`, `.mjs` files):
 
 - `bind-behaviors` — whitespace normalization, precision, nonRelevantBehavior, optionSets
 - `bind-defaults-and-expression-context` — defaults on relevance, compileExpression, variable lookup
 - `definition-assembly` / `assembler-async` — sync/async assembly, fragments, keyPrefix, circular refs
+- `assembler-fel-rewrite` — rewriteFEL unit tests: `$path` rewriting, `@current.path`, `prev/next/parent('field')`, bare `$`, external paths, `@index`/`@count`/`@instance`, `#:varName`, indexed/wildcard paths, literals
+- `assembler-bind-fel` — bind FEL integration: calculate, constraint, relevant, readonly, required rewriting; `=`-prefixed default; literal default passthrough; bare `$` constraint
+- `assembler-shape-fel` — shape FEL integration: constraint, activeWhen, context values, `{{...}}` message templates, composition operators (and/or/xone/not), shape ID vs inline FEL disambiguation, collision rename tracking
+- `assembler-variable-import` — variable import: expression rewriting, scope rewriting, `#` scope passthrough, name collision detection, fragment scope filtering
+- `assembler-integration` — full integration: budget template end-to-end, double import with different prefixes, nested `$ref` recursive FEL rewriting
 - `fel-completeness-and-variables` — valid() reactivity, @count/@index, countWhere, scoped variables, cycle detection
 - `fel-cast-functions` — boolean(), date(), time() casting
 - `instances-and-prepopulation` — instance data, instance() FEL, prePopulate, readonly composition

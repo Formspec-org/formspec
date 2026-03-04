@@ -14,7 +14,7 @@
  * multiplication -> unary -> postfix -> atom.
  */
 import { CstParser } from 'chevrotain';
-import * as t from './lexer';
+import * as t from './lexer.js';
 
 /**
  * Chevrotain CstParser that produces a Concrete Syntax Tree from FEL token streams.

@@ -1,4 +1,4 @@
-import { FormspecDefinition, FormspecItem, FormspecBind, FormspecShape } from './index';
+import { FormspecDefinition, FormspecItem, FormspecBind, FormspecShape, FormspecVariable } from './index.js';
 
 /** Provenance record for a single `$ref` inclusion resolved during definition assembly, tracking origin URL, version, prefix, and fragment. */
 export interface AssemblyProvenance {
@@ -19,6 +19,21 @@ export type DefinitionResolver = (url: string, version?: string) => FormspecDefi
 export interface AssemblyResult {
     definition: FormspecDefinition;
     assembledFrom: AssemblyProvenance[];
+}
+
+/**
+ * Lookup structure for FEL path rewriting during assembly.
+ * Built once per `$ref` resolution from the imported fragment.
+ */
+export interface RewriteMap {
+    /** The top-level key of the selected fragment item (e.g. "budget"). Empty string when no fragment. */
+    fragmentRootKey: string;
+    /** The host group's key that replaces the fragment root in path references (e.g. "projectBudget"). */
+    hostGroupKey: string;
+    /** All item keys (recursively collected) in the imported fragment subtree, used for prefix matching. */
+    importedKeys: Set<string>;
+    /** The key prefix applied to imported item keys (e.g. "proj_"). */
+    keyPrefix: string;
 }
 
 /**
@@ -43,6 +58,248 @@ function parseRef(ref: string): { url: string; version?: string; fragment?: stri
     }
 
     return { url, version, fragment };
+}
+
+// ---------------------------------------------------------------------------
+// FEL path rewriting
+// ---------------------------------------------------------------------------
+
+/**
+ * Rewrites `$`-prefixed path references in a FEL expression according to a {@link RewriteMap}.
+ *
+ * Three kinds of references are handled:
+ * 1. `$path` references — `$budget.lineItems[*].amount` → `$projectBudget.proj_lineItems[*].proj_amount`
+ * 2. `@current.path` references — `@current.amount` → `@current.proj_amount`
+ * 3. `prev('name')`, `next('name')`, `parent('name')` — string literal field names are prefixed
+ *
+ * Bare `$` (current-node), `@index`, `@count`, `@instance('...')`, `#:varName`,
+ * literal values, and paths outside the imported fragment are left untouched.
+ */
+export function rewriteFEL(expression: string, map: RewriteMap): string {
+    const replacements: Array<{ start: number; end: number; text: string }> = [];
+
+    // 1. $path references
+    const dollarPathRe = /\$([a-zA-Z_]\w*(?:\[(?:\d+|\*)\])?(?:\.[a-zA-Z_]\w*(?:\[(?:\d+|\*)\])?)*)/g;
+    let m: RegExpExecArray | null;
+    while ((m = dollarPathRe.exec(expression)) !== null) {
+        const pathStr = m[1];
+        const rewritten = rewriteDollarPath(pathStr, map);
+        if (rewritten !== pathStr) {
+            replacements.push({ start: m.index, end: m.index + m[0].length, text: '$' + rewritten });
+        }
+    }
+
+    // 2. @current.path references
+    const currentPathRe = /@current\.([a-zA-Z_]\w*(?:\[(?:\d+|\*)\])?(?:\.[a-zA-Z_]\w*(?:\[(?:\d+|\*)\])?)*)/g;
+    while ((m = currentPathRe.exec(expression)) !== null) {
+        const pathStr = m[1];
+        const rewritten = rewriteCurrentSegments(pathStr, map);
+        if (rewritten !== pathStr) {
+            replacements.push({ start: m.index, end: m.index + m[0].length, text: '@current.' + rewritten });
+        }
+    }
+
+    // 3. prev/next/parent('fieldName') — single or double quoted
+    const navFuncRe = /\b(prev|next|parent)\s*\(\s*(?:'([^']*)'|"([^"]*)")\s*\)/g;
+    while ((m = navFuncRe.exec(expression)) !== null) {
+        const funcName = m[1];
+        const fieldName = m[2] !== undefined ? m[2] : m[3];
+        const quote = m[2] !== undefined ? "'" : '"';
+        if (map.importedKeys.has(fieldName)) {
+            replacements.push({
+                start: m.index,
+                end: m.index + m[0].length,
+                text: `${funcName}(${quote}${map.keyPrefix}${fieldName}${quote})`
+            });
+        }
+    }
+
+    // Apply replacements right-to-left to preserve positions
+    replacements.sort((a, b) => b.start - a.start);
+    let result = expression;
+    for (const r of replacements) {
+        result = result.slice(0, r.start) + r.text + result.slice(r.end);
+    }
+    return result;
+}
+
+/** Rewrites segments of a `$`-prefixed path. Fragment root → hostGroupKey; imported keys → prefixed. */
+function rewriteDollarPath(pathStr: string, map: RewriteMap): string {
+    const segments = pathStr.split('.');
+    let changed = false;
+    const result = segments.map((seg, index) => {
+        const bracketIdx = seg.indexOf('[');
+        const baseName = bracketIdx !== -1 ? seg.substring(0, bracketIdx) : seg;
+        const suffix = bracketIdx !== -1 ? seg.substring(bracketIdx) : '';
+
+        if (index === 0 && baseName === map.fragmentRootKey && map.fragmentRootKey !== '') {
+            changed = true;
+            return map.hostGroupKey + suffix;
+        }
+        if (map.importedKeys.has(baseName)) {
+            changed = true;
+            return map.keyPrefix + baseName + suffix;
+        }
+        return seg;
+    });
+    return changed ? result.join('.') : pathStr;
+}
+
+/** Rewrites segments after `@current.` — only applies keyPrefix to imported keys. */
+function rewriteCurrentSegments(pathStr: string, map: RewriteMap): string {
+    const segments = pathStr.split('.');
+    let changed = false;
+    const result = segments.map(seg => {
+        const bracketIdx = seg.indexOf('[');
+        const baseName = bracketIdx !== -1 ? seg.substring(0, bracketIdx) : seg;
+        const suffix = bracketIdx !== -1 ? seg.substring(bracketIdx) : '';
+
+        if (map.importedKeys.has(baseName)) {
+            changed = true;
+            return map.keyPrefix + baseName + suffix;
+        }
+        return seg;
+    });
+    return changed ? result.join('.') : pathStr;
+}
+
+/**
+ * Rewrites FEL expressions inside `{{...}}` interpolation sequences in a message string.
+ * Literal text outside `{{...}}` is preserved.
+ */
+export function rewriteMessageTemplate(message: string, map: RewriteMap): string {
+    return message.replace(/\{\{(.*?)\}\}/g, (_full, expr: string) => {
+        return '{{' + rewriteFEL(expr, map) + '}}';
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Bind / Shape / Variable FEL rewriting helpers
+// ---------------------------------------------------------------------------
+
+const FEL_BIND_PROPERTIES = ['calculate', 'constraint', 'relevant', 'readonly', 'required'] as const;
+
+/** Rewrites all FEL-bearing properties of an imported bind. */
+function rewriteBindFEL(bind: FormspecBind, map: RewriteMap): FormspecBind {
+    const newBind = { ...bind };
+    for (const prop of FEL_BIND_PROPERTIES) {
+        if (typeof (newBind as any)[prop] === 'string') {
+            (newBind as any)[prop] = rewriteFEL((newBind as any)[prop], map);
+        }
+    }
+    // default: when string starting with '=', the rest is a FEL expression
+    if (typeof newBind.default === 'string' && newBind.default.startsWith('=')) {
+        newBind.default = '=' + rewriteFEL(newBind.default.substring(1), map);
+    }
+    return newBind;
+}
+
+/** Rewrites all FEL-bearing properties of an imported shape. */
+function rewriteShapeFEL(
+    shape: FormspecShape,
+    map: RewriteMap,
+    shapeIdRenameMap: Map<string, string>,
+    importedShapeIds: Set<string>
+): FormspecShape {
+    const s = { ...shape };
+
+    if (typeof s.constraint === 'string') {
+        s.constraint = rewriteFEL(s.constraint, map);
+    }
+    if (typeof s.activeWhen === 'string') {
+        s.activeWhen = rewriteFEL(s.activeWhen, map);
+    }
+
+    // context: each value is a FEL expression
+    if (s.context) {
+        const newCtx: Record<string, string> = {};
+        for (const [key, value] of Object.entries(s.context)) {
+            newCtx[key] = rewriteFEL(value, map);
+        }
+        s.context = newCtx;
+    }
+
+    // message: FEL inside {{...}} interpolation
+    if (typeof s.message === 'string') {
+        s.message = rewriteMessageTemplate(s.message, map);
+    }
+
+    // Composition operators: and[], or[], xone[]
+    for (const op of ['and', 'or', 'xone'] as const) {
+        if (Array.isArray((s as any)[op])) {
+            (s as any)[op] = ((s as any)[op] as string[]).map(entry =>
+                rewriteCompositionEntry(entry, map, shapeIdRenameMap, importedShapeIds)
+            );
+        }
+    }
+    // not (single string)
+    if (typeof s.not === 'string') {
+        s.not = rewriteCompositionEntry(s.not, map, shapeIdRenameMap, importedShapeIds);
+    }
+
+    return s;
+}
+
+/**
+ * Rewrites a single composition entry: if it's a known shape ID, apply rename map;
+ * otherwise treat as FEL expression and rewrite paths.
+ */
+function rewriteCompositionEntry(
+    entry: string,
+    map: RewriteMap,
+    shapeIdRenameMap: Map<string, string>,
+    importedShapeIds: Set<string>
+): string {
+    if (importedShapeIds.has(entry)) {
+        return shapeIdRenameMap.get(entry) || entry;
+    }
+    return rewriteFEL(entry, map);
+}
+
+/** Imports variables from a referenced definition into the host, rewriting expressions and scopes. */
+function importVariables(
+    referencedDef: FormspecDefinition,
+    fragment: string | undefined,
+    importedKeys: Set<string>,
+    map: RewriteMap,
+    host: FormspecDefinition
+): void {
+    if (!referencedDef.variables?.length) return;
+
+    // Filter variables for fragment scope
+    const varsToImport = fragment
+        ? referencedDef.variables.filter(v => {
+            if (!v.scope || v.scope === '#') return true;
+            return importedKeys.has(v.scope);
+        })
+        : [...referencedDef.variables];
+
+    if (!varsToImport.length) return;
+
+    // Check for name collisions
+    const existingNames = new Set((host.variables || []).map(v => v.name));
+    for (const v of varsToImport) {
+        if (existingNames.has(v.name)) {
+            throw new Error(`Variable name collision during assembly: "${v.name}" already exists in host definition`);
+        }
+    }
+
+    // Rewrite and import
+    if (!host.variables) host.variables = [];
+    for (const v of varsToImport) {
+        const newVar: FormspecVariable = { ...v };
+        // Rewrite expression (FEL)
+        newVar.expression = rewriteFEL(v.expression, map);
+        // Rewrite scope (item key, not FEL)
+        if (newVar.scope && newVar.scope !== '#') {
+            if (newVar.scope === map.fragmentRootKey) {
+                newVar.scope = map.hostGroupKey;
+            } else if (map.importedKeys.has(newVar.scope)) {
+                newVar.scope = map.keyPrefix + newVar.scope;
+            }
+        }
+        host.variables.push(newVar);
+    }
 }
 
 /**
@@ -343,28 +600,57 @@ function performAssembly(
     // Build the full host path for this group
     const groupPath = parentPath ? `${parentPath}.${groupItem.key}` : groupItem.key;
 
-    // Import and rewrite binds
+    // Build RewriteMap for FEL expression rewriting
+    const rewriteMap: RewriteMap = {
+        fragmentRootKey: fragment || '',
+        hostGroupKey: groupItem.key,
+        importedKeys: originalRootKeys,
+        keyPrefix: keyPrefix || ''
+    };
+
+    // Import and rewrite binds (paths + FEL expressions)
     if (referencedDef.binds) {
         let importedBinds = filterBindsForFragment(referencedDef.binds, fragment, originalRootKeys);
         importedBinds = prefixBinds(importedBinds, keyPrefix || '', originalRootKeys, groupPath);
+        importedBinds = importedBinds.map(b => rewriteBindFEL(b, rewriteMap));
         if (!host.binds) host.binds = [];
         host.binds.push(...importedBinds);
     }
 
-    // Import and rewrite shapes
+    // Import and rewrite shapes (paths + FEL expressions)
+    const shapeIdRenameMap = new Map<string, string>();
+    const importedShapeIds = new Set<string>();
     if (referencedDef.shapes) {
         let importedShapes = filterShapesForFragment(referencedDef.shapes, fragment, originalRootKeys);
         importedShapes = prefixShapes(importedShapes, keyPrefix || '', originalRootKeys, groupPath);
-        // Ensure shape IDs don't collide
+
+        // Collect original imported shape IDs before collision handling
+        for (const shape of importedShapes) {
+            importedShapeIds.add(shape.id);
+        }
+
+        // Handle shape ID collisions, tracking renames
         const existingShapeIds = new Set((host.shapes || []).map(s => s.id));
         for (const shape of importedShapes) {
-            if (existingShapeIds.has(shape.id)) {
-                shape.id = `${groupItem.key}_${shape.id}`;
+            const originalId = shape.id;
+            if (existingShapeIds.has(originalId)) {
+                const newId = `${groupItem.key}_${originalId}`;
+                shapeIdRenameMap.set(originalId, newId);
+                shape.id = newId;
             }
         }
+
+        // Rewrite FEL expressions in shapes
+        importedShapes = importedShapes.map(s =>
+            rewriteShapeFEL(s, rewriteMap, shapeIdRenameMap, importedShapeIds)
+        );
+
         if (!host.shapes) host.shapes = [];
         host.shapes.push(...importedShapes);
     }
+
+    // Import and rewrite variables
+    importVariables(referencedDef, fragment, originalRootKeys, rewriteMap, host);
 
     // Check for key collisions with existing host items
     const hostKeys = new Set(collectKeys(host.items, ''));

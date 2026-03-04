@@ -129,11 +129,14 @@ and optional screener/migration/presentation configuration.
 - **nonRelevantBehavior?**: `'remove' | 'empty' | 'keep'`
 - **formPresentation?**: `any`
 - **screener?**: `{
+        items: FormspecItem[];
         routes: Array<{
-            condition?: string;
+            condition: string;
             target: string;
             label?: string;
+            extensions?: Record<string, any>;
         }>;
+        extensions?: Record<string, any>;
     }`
 - **migrations?**: `Array<{
         fromVersion: string;
@@ -311,6 +314,7 @@ compiles bind expressions, fetches remote options, and wires up shape evaluation
 - **optionStateSignals** (`Record<string, Signal<RemoteOptionsState>>`): Reactive signals holding the loading/error state for fields with remote options.
 - **variableSignals** (`Record<string, Signal<any>>`): Reactive signals holding computed variable values, keyed by `"scope:name"` (e.g. `"#:totalDirect"`).
 - **instanceData** (`Record<string, any>`): Static instance data loaded from the definition's `instances` section, keyed by instance name.
+- **instanceVersion** (`Signal<number>`): Version signal incremented whenever instance data changes, enabling FEL reactivity for
 - **dependencies** (`Record<string, string[]>`): Dependency graph mapping each field path to the paths it depends on, built during FEL compilation.
 - **structureVersion** (`Signal<number>`): Monotonically increasing counter that increments whenever repeat instances are added or removed, enabling reactive UI rebuilds.
 - **(get) formPresentation** (`any`): Returns the definition's `formPresentation` block (layout, wizard, default currency, etc.), or null if absent.
@@ -339,6 +343,14 @@ Returns the reactive signal holding the remote options loading/error state, or u
 ##### `waitForRemoteOptions(): Promise<void>`
 
 Waits for all in-flight remote options fetches to settle (resolve or reject).
+
+##### `waitForInstanceSources(): Promise<void>`
+
+Waits for all in-flight instance source fetches to settle (resolve or reject).
+
+##### `setInstanceValue(name: string, path: string | undefined, value: any): void`
+
+Writes to a named instance. Intended for writable (`readonly: false`) scratch-pad instances.
 
 ##### `getInstanceData(name: string, path?: string): any`
 
@@ -439,19 +451,38 @@ Sets the active label context key, used by {@link getLabel} to select alternate 
 Returns the label for an item, honoring the current label context if one is set.
 Falls back to the item's default `label` property when no context match is found.
 
-##### `evaluateScreener(): {
+##### `evaluateScreener(answers: Record<string, any>): {
         target: string;
         label?: string;
+        extensions?: Record<string, any>;
     } | null`
 
-Evaluates the definition's screener routes against the current form state.
-Returns the first route whose condition is truthy (or unconditional), or null if no route matches.
-Used for conditional form routing before the main form is presented.
+Evaluates the definition's screener routes against provided answers.
+Screener items are NOT part of the form's instance data — answers are passed
+directly and evaluated in isolation. Routes are evaluated in declaration order;
+first match wins. Returns the matching route or null if none match.
 
 ##### `migrateResponse(responseData: Record<string, any>, fromVersion: string): Record<string, any>`
 
 Applies version migrations to response data, transforming it from `fromVersion` to the current definition version.
 Supports rename, remove, add, and FEL-based transform operations as defined in the definition's `migrations` array.
+
+## `rewriteFEL(expression: string, map: RewriteMap): string`
+
+Rewrites `$`-prefixed path references in a FEL expression according to a {@link RewriteMap}.
+
+Three kinds of references are handled:
+1. `$path` references — `$budget.lineItems[*].amount` → `$projectBudget.proj_lineItems[*].proj_amount`
+2. `@current.path` references — `@current.amount` → `@current.proj_amount`
+3. `prev('name')`, `next('name')`, `parent('name')` — string literal field names are prefixed
+
+Bare `$` (current-node), `@index`, `@count`, `@instance('...')`, `#:varName`,
+literal values, and paths outside the imported fragment are left untouched.
+
+## `rewriteMessageTemplate(message: string, map: RewriteMap): string`
+
+Rewrites FEL expressions inside `{{...}}` interpolation sequences in a message string.
+Literal text outside `{{...}}` is preserved.
 
 ## `assembleDefinition(definition: FormspecDefinition, resolver: DefinitionResolver): Promise<AssemblyResult>`
 
@@ -481,6 +512,16 @@ The output of definition assembly: a self-contained definition with all `$ref` i
 - **definition**: `FormspecDefinition`
 - **assembledFrom**: `AssemblyProvenance[]`
 
+#### interface `RewriteMap`
+
+Lookup structure for FEL path rewriting during assembly.
+Built once per `$ref` resolution from the imported fragment.
+
+- **fragmentRootKey** (`string`): The top-level key of the selected fragment item (e.g. "budget"). Empty string when no fragment.
+- **hostGroupKey** (`string`): The host group's key that replaces the fragment root in path references (e.g. "projectBudget").
+- **importedKeys** (`Set<string>`): All item keys (recursively collected) in the imported fragment subtree, used for prefix matching.
+- **keyPrefix** (`string`): The key prefix applied to imported item keys (e.g. "proj_").
+
 #### type `DefinitionResolver`
 
 A function that resolves a `(url, version?)` pair to a {@link FormspecDefinition}.
@@ -490,6 +531,398 @@ May return synchronously or asynchronously.
 ```ts
 type DefinitionResolver = (url: string, version?: string) => FormspecDefinition | Promise<FormspecDefinition>;
 ```
+
+## `dependencyVisitor: FelDependencyVisitor`
+
+Pre-instantiated dependency visitor singleton.
+
+Used by FormEngine when compiling FEL expressions to determine which field
+signals each expression depends on. Call `dependencyVisitor.getDependencies(cst)`
+with the CST from `parser.expression()` to get the list of referenced field paths.
+
+#### class `FelDependencyVisitor`
+
+Walks a FEL Concrete Syntax Tree to extract the set of field paths referenced
+by an expression.
+
+Unlike the {@link FelInterpreter}, this class does not evaluate anything — it
+only performs structural analysis. It recognizes both `$`-prefixed relative
+references and bare identifier references, reconstructing dotted paths from
+`pathTail` nodes. The resulting dependency list drives the FormEngine's
+reactive dependency graph.
+
+##### `constructor()`
+
+##### `getDependencies(cst: any): string[]`
+
+Extract all unique field paths referenced in a FEL CST.
+
+Recursively walks the tree, collecting paths from `fieldRef` nodes.
+`$`-prefixed references and bare identifiers are both captured. Dotted
+paths (e.g. `group.field`) are reconstructed from `pathTail` children.
+
+## `BaseVisitor: new (...args: any[]) => import("chevrotain").ICstVisitor<any, any>`
+
+## `interpreter: FelInterpreter`
+
+Pre-instantiated FEL interpreter singleton.
+
+Shared across the engine to avoid repeated Chevrotain visitor validation.
+Usage: call `interpreter.evaluate(cst, context)` where `cst` is the output
+of `parser.expression()` and `context` is a {@link FelContext} wired to
+the FormEngine's signal graph.
+
+#### interface `FelContext`
+
+Runtime context provided to the interpreter for each FEL evaluation.
+
+Bridges the interpreter to the FormEngine's reactive signal graph. Each
+callback reads from a Preact signal so that evaluations are automatically
+tracked as signal dependencies, enabling reactive re-computation when
+upstream values change.
+
+- **getSignalValue** (`(path: string) => any`): Read the current value of a field signal at the given dotted path.
+- **getRepeatsValue** (`(path: string) => number`): Read the current repeat instance count for a repeatable group.
+- **getRelevantValue** (`(path: string) => boolean`): Read whether the field at the given path is currently relevant (visible).
+- **getRequiredValue** (`(path: string) => boolean`): Read whether the field at the given path is currently required.
+- **getReadonlyValue** (`(path: string) => boolean`): Read whether the field at the given path is currently readonly.
+- **getValidationErrors** (`(path: string) => number`): Read the count of validation errors for the field at the given path.
+- **currentItemPath** (`string`): The fully-qualified dotted path of the item whose bind expression is being evaluated. Used for relative `$` field references.
+- **engine** (`any`): Reference to the FormEngine instance. Used by stdlib functions that need engine-level APIs (e.g. `instance()`, variable lookup).
+
+#### class `FelInterpreter`
+
+Chevrotain CstVisitor that evaluates a FEL CST against a live {@link FelContext}.
+
+Visitor methods mirror the grammar rules in {@link FelParser}. Each method
+receives a CST node context object and returns the evaluated JavaScript value.
+The class also houses {@link felStdLib}, a record of 40+ built-in functions
+available to FEL expressions (e.g. `sum(...)`, `today()`, `money(...)`).
+
+Instantiate once and reuse via {@link interpreter}. Not thread-safe — the
+`context` field is mutated on each call to {@link evaluate}.
+
+##### `constructor()`
+
+##### `evaluate(cst: any, context: FelContext): any`
+
+Evaluate a FEL CST and return the computed value.
+
+This is the main entry point for stage 3 of the FEL pipeline. The caller
+provides the CST (from `parser.expression()`) and a {@link FelContext}
+wired to the FormEngine's signal graph. The returned value is used for
+calculated fields, conditional relevance, validation constraints, etc.
+
+##### `expression(ctx: any): any`
+
+##### `letExpr(ctx: any): any`
+
+##### `ifExpr(ctx: any): any`
+
+##### `ternary(ctx: any): any`
+
+##### `logicalOr(ctx: any): any`
+
+##### `logicalAnd(ctx: any): any`
+
+##### `equality(ctx: any): any`
+
+##### `comparison(ctx: any): any`
+
+##### `membership(ctx: any): any`
+
+##### `nullCoalesce(ctx: any): any`
+
+##### `addition(ctx: any): any`
+
+##### `multiplication(ctx: any): any`
+
+##### `unary(ctx: any): any`
+
+##### `postfix(ctx: any): any`
+
+##### `pathTail(ctx: any): any`
+
+##### `atom(ctx: any): any`
+
+##### `literal(ctx: any): any`
+
+##### `fieldRef(ctx: any): any`
+
+##### `contextRef(ctx: any): any`
+
+##### `functionCall(ctx: any): any`
+
+##### `ifCall(ctx: any): any`
+
+##### `argList(ctx: any): any`
+
+##### `arrayLiteral(ctx: any): any`
+
+##### `objectLiteral(ctx: any): any`
+
+##### `objectEntries(ctx: any): any`
+
+##### `objectEntry(ctx: any): {
+        key: any;
+        value: any;
+    }`
+
+fel/lexer
+
+Chevrotain-based tokenizer for the Formspec Expression Language (FEL).
+
+This is the first stage of the FEL pipeline (Lexer -> Parser -> Interpreter).
+It defines 35 token types covering whitespace/comments (skipped), keywords,
+literals, operators, and punctuation. Token ordering in {@link allTokens}
+controls Chevrotain's longest-match disambiguation — longer patterns (e.g.
+DateTimeLiteral) must precede shorter ones (e.g. DateLiteral, NumberLiteral).
+
+## `WhiteSpace: import("chevrotain").TokenType`
+
+Matches one or more whitespace characters. Skipped during tokenization.
+
+## `Comment: import("chevrotain").TokenType`
+
+Matches single-line comments starting with `//`. Skipped during tokenization.
+
+## `BlockComment: import("chevrotain").TokenType`
+
+Matches block comments delimited by `/* ... *\/`. Skipped during tokenization.
+
+## `True: import("chevrotain").TokenType`
+
+Boolean literal `true`.
+
+## `False: import("chevrotain").TokenType`
+
+Boolean literal `false`.
+
+## `Null: import("chevrotain").TokenType`
+
+Null literal `null`.
+
+## `And: import("chevrotain").TokenType`
+
+Logical AND operator (`and`). Short-circuits in the interpreter.
+
+## `Or: import("chevrotain").TokenType`
+
+Logical OR operator (`or`). Short-circuits in the interpreter.
+
+## `Not: import("chevrotain").TokenType`
+
+Logical NOT / membership negation operator (`not`). Used both as unary prefix and in `not in`.
+
+## `In: import("chevrotain").TokenType`
+
+Set membership operator (`in`). Tests whether a value exists in an array. Also used as the `in` keyword for `let ... in` bindings.
+
+## `Identifier: import("chevrotain").TokenType`
+
+General identifier matching `[a-zA-Z_][a-zA-Z0-9_]*`. Used for field names, function names, and variable references. Listed last in {@link allTokens} so keyword tokens take priority.
+
+## `If: import("chevrotain").TokenType`
+
+Conditional keyword `if`. Categorized as an {@link Identifier} so that `if(...)` can also be parsed as a function call.
+
+## `Then: import("chevrotain").TokenType`
+
+Conditional keyword `then`, used in `if ... then ... else` expressions.
+
+## `Else: import("chevrotain").TokenType`
+
+Conditional keyword `else`, used in `if ... then ... else` expressions.
+
+## `Let: import("chevrotain").TokenType`
+
+Let-binding keyword `let`, used in `let x = expr in body` expressions for local variable scoping.
+
+## `StringLiteral: import("chevrotain").TokenType`
+
+String literal enclosed in single or double quotes, with backslash escapes. Matches `"hello"` or `'world'`.
+
+## `NumberLiteral: import("chevrotain").TokenType`
+
+Numeric literal supporting integers, decimals, and scientific notation. Matches `-3`, `1.5`, `2e10`.
+
+## `DateTimeLiteral: import("chevrotain").TokenType`
+
+DateTime literal prefixed with `@`. Matches ISO 8601 datetime like `@2024-01-15T10:30:00Z`. Must precede {@link DateLiteral} in token order to win longest-match.
+
+## `DateLiteral: import("chevrotain").TokenType`
+
+Date literal prefixed with `@`. Matches ISO 8601 date like `@2024-01-15`.
+
+## `LRound: import("chevrotain").TokenType`
+
+Left parenthesis `(`. Used for grouping, function calls, and context ref parameters.
+
+## `RRound: import("chevrotain").TokenType`
+
+Right parenthesis `)`.
+
+## `LSquare: import("chevrotain").TokenType`
+
+Left square bracket `[`. Used for array literals and indexed path access (e.g. `group[0]`).
+
+## `RSquare: import("chevrotain").TokenType`
+
+Right square bracket `]`.
+
+## `LCurly: import("chevrotain").TokenType`
+
+Left curly brace `{`. Used for object literals.
+
+## `RCurly: import("chevrotain").TokenType`
+
+Right curly brace `}`.
+
+## `Comma: import("chevrotain").TokenType`
+
+Comma `,`. Separates function arguments, array elements, and object entries.
+
+## `Dot: import("chevrotain").TokenType`
+
+Dot `.`. Path separator for field references (e.g. `group.field`) and postfix member access.
+
+## `Colon: import("chevrotain").TokenType`
+
+Colon `:`. Separates keys from values in object literals and ternary false-branch.
+
+## `Question: import("chevrotain").TokenType`
+
+Single question mark `?`. Ternary operator (`cond ? a : b`).
+
+## `DoubleQuestion: import("chevrotain").TokenType`
+
+Double question mark `??`. Null-coalescing operator — returns the right operand when the left is null/undefined.
+
+## `Equals: import("chevrotain").TokenType`
+
+Equality operator `=` or `==`. Both forms are accepted; FEL uses value equality.
+
+## `NotEquals: import("chevrotain").TokenType`
+
+Inequality operator `!=`.
+
+## `LessEqual: import("chevrotain").TokenType`
+
+Less-than-or-equal operator `<=`. Must precede {@link Less} in token order.
+
+## `GreaterEqual: import("chevrotain").TokenType`
+
+Greater-than-or-equal operator `>=`. Must precede {@link Greater} in token order.
+
+## `Less: import("chevrotain").TokenType`
+
+Less-than operator `<`.
+
+## `Greater: import("chevrotain").TokenType`
+
+Greater-than operator `>`.
+
+## `Plus: import("chevrotain").TokenType`
+
+Addition operator `+`. Performs numeric addition.
+
+## `Minus: import("chevrotain").TokenType`
+
+Subtraction / unary negation operator `-`.
+
+## `Ampersand: import("chevrotain").TokenType`
+
+String concatenation operator `&`. Coerces both operands to strings before joining.
+
+## `Asterisk: import("chevrotain").TokenType`
+
+Multiplication operator `*`. Also used as a wildcard in path subscripts (`group[*].field`).
+
+## `Slash: import("chevrotain").TokenType`
+
+Division operator `/`.
+
+## `Percent: import("chevrotain").TokenType`
+
+Modulo (remainder) operator `%`.
+
+## `Dollar: import("chevrotain").TokenType`
+
+Dollar sign `$`. Prefixes relative field references that resolve from the current item's parent path.
+
+## `At: import("chevrotain").TokenType`
+
+At sign `@`. Prefixes context references like `@index`, `@current`, `@count`, and user-defined variables.
+
+## `allTokens: import("chevrotain").TokenType[]`
+
+Ordered token array passed to the Chevrotain Lexer constructor.
+
+Order matters for disambiguation: tokens listed first win when multiple
+patterns match at the same position. Key ordering constraints:
+- DateTimeLiteral before DateLiteral (both start with `@` + digits)
+- DateLiteral before NumberLiteral (the `@` prefix distinguishes dates)
+- DoubleQuestion before Question (`??` vs `?`)
+- LessEqual/GreaterEqual before Less/Greater (`<=` vs `<`)
+- All keyword tokens (True, And, If, etc.) before Identifier
+- Identifier is always last to act as a catch-all
+
+## `FelLexer: Lexer`
+
+Pre-instantiated Chevrotain Lexer configured with all FEL token types.
+
+This singleton is the entry point for the first stage of the FEL pipeline.
+Call `FelLexer.tokenize(input)` to produce a token vector that the
+{@link parser} (stage 2) consumes to build a CST.
+
+fel/parser
+
+Chevrotain CstParser for the Formspec Expression Language (FEL).
+
+This is the second stage of the FEL pipeline (Lexer -> Parser -> Interpreter).
+It consumes the token vector produced by {@link FelLexer} and builds a
+Concrete Syntax Tree (CST) that the {@link FelInterpreter} (stage 3) or
+{@link FelDependencyVisitor} can walk.
+
+The grammar defines ~25 rules implementing standard operator precedence from
+loosest to tightest: let -> if/then/else -> ternary -> logicalOr -> logicalAnd
+-> equality -> comparison -> membership -> nullCoalesce -> addition ->
+multiplication -> unary -> postfix -> atom.
+
+## `parser: FelParser`
+
+Pre-instantiated FEL parser singleton.
+
+Shared across the engine to avoid the cost of repeated Chevrotain self-analysis.
+Usage: set `parser.input = FelLexer.tokenize(expr).tokens`, then call
+`parser.expression()` to obtain a CST node. The CST is then passed to the
+{@link interpreter} or {@link dependencyVisitor} for evaluation or analysis.
+
+#### class `FelParser`
+
+Chevrotain CstParser that produces a Concrete Syntax Tree from FEL token streams.
+
+Instantiate once and reuse — Chevrotain parsers are stateful but re-entrant after
+calling `this.input = tokens`. Grammar rules are defined as class properties
+using `this.RULE()` so Chevrotain can perform static analysis at construction time.
+
+All grammar rules are private except {@link expression}, which is the top-level
+entry point consumed by the interpreter and dependency visitor.
+
+##### `constructor()`
+
+- **expression** (`import("chevrotain").ParserMethod<[], import("chevrotain").CstNode>`): Top-level grammar rule and the only public entry point into the parser.
+
+Every FEL expression string is parsed starting from this rule. It delegates
+to `letExpr`, which cascades through the full precedence hierarchy.
+The resulting CST node is passed to {@link FelInterpreter.evaluate} or
+{@link FelDependencyVisitor.getDependencies}.
+
+#### class `PathResolver`
+
+##### `resolve(currentPath: string, targetPath: string): string`
+
+##### `getParentPath(path: string): string`
 
 #### interface `RuntimeMappingResult`
 

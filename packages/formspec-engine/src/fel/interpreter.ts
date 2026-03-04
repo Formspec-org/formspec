@@ -9,7 +9,7 @@
  * Includes `felStdLib` — a record of 40+ built-in functions covering aggregation,
  * string manipulation, date arithmetic, type coercion, money, MIP queries, and more.
  */
-import { parser } from './parser';
+import { parser } from './parser.js';
 
 const BaseVisitor = parser.getBaseCstVisitorConstructor();
 
