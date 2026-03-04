@@ -1,10 +1,8 @@
-import { effect, signal } from '@preact/signals-core';
+import { signal } from '@preact/signals-core';
 import { FormEngine } from 'formspec-engine';
 import { globalRegistry } from './registry';
 import { registerDefaultComponents } from './components';
 import {
-    RenderContext,
-    ComponentPlugin,
     ValidationTargetMetadata,
     ScreenerRoute,
     ScreenerRouteType,
@@ -14,12 +12,8 @@ import {
     ThemeDocument,
     PresentationBlock,
     ItemDescriptor,
-    Tier1Hints,
-    resolvePresentation,
-    resolveToken as resolveTokenBase,
     planComponentTree,
     planDefinitionFallback,
-    type LayoutNode,
     type PlanContext,
 } from 'formspec-layout';
 import defaultThemeJson from './default-theme.json';
@@ -27,8 +21,8 @@ import './formspec-base.css';
 
 // Extracted modules
 import { renderScreener, type ScreenerHost } from './rendering/screener';
-import { renderInputComponent as renderInputComponentFn, type FieldInputHost } from './rendering/field-input';
 import { setupBreakpoints as setupBreakpointsFn, cleanupBreakpoints, createBreakpointState, type BreakpointState } from './rendering/breakpoints';
+import { emitNode as emitNodeFn } from './rendering/emit-node';
 import {
     resolveToken as resolveTokenFn,
     resolveItemPresentation as resolveItemPresentationFn,
@@ -404,11 +398,11 @@ export class FormspecRender extends HTMLElement {
 
         if (this._componentDocument && this._componentDocument.tree) {
             const plan = planComponentTree(this._componentDocument.tree, planCtx);
-            this.emitNode(plan, container, '');
+            emitNodeFn(this as any, plan, container, '');
         } else {
             const plans = planDefinitionFallback(this._definition.items, planCtx);
             for (const plan of plans) {
-                this.emitNode(plan, container, '');
+                emitNodeFn(this as any, plan, container, '');
             }
         }
     }
@@ -454,154 +448,6 @@ export class FormspecRender extends HTMLElement {
             }
         }
         return null;
-    }
-
-    /**
-     * Walk a LayoutNode tree from the planner and emit DOM.
-     */
-    private emitNode(node: LayoutNode, parent: HTMLElement, prefix: string) {
-        let target = parent;
-
-        if (node.when) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'formspec-when';
-            target.appendChild(wrapper);
-            let fallbackEl: HTMLElement | null = null;
-            if (node.fallback) {
-                fallbackEl = document.createElement('p');
-                fallbackEl.className = 'formspec-conditional-fallback';
-                fallbackEl.textContent = node.fallback;
-                target.appendChild(fallbackEl);
-            }
-            const exprFn = this.engine!.compileExpression(node.when, prefix);
-            this.cleanupFns.push(effect(() => {
-                const visible = !!exprFn();
-                wrapper.classList.toggle('formspec-hidden', !visible);
-                if (fallbackEl) fallbackEl.classList.toggle('formspec-hidden', visible);
-            }));
-            target = wrapper;
-        }
-
-        if (node.isRepeatTemplate && node.props.bind) {
-            const bindKey = node.props.bind as string;
-            const fullRepeatPath = prefix ? `${prefix}.${bindKey}` : bindKey;
-            const container = document.createElement('div');
-            container.className = 'formspec-repeat';
-            container.dataset.bind = bindKey;
-            target.appendChild(container);
-
-            this.cleanupFns.push(effect(() => {
-                const count = this.engine!.repeats[fullRepeatPath]?.value || 0;
-                while (container.children.length > count) {
-                    container.removeChild(container.lastChild!);
-                }
-                while (container.children.length < count) {
-                    const idx = container.children.length;
-                    const instanceWrapper = document.createElement('div');
-                    instanceWrapper.className = 'formspec-repeat-instance';
-                    container.appendChild(instanceWrapper);
-
-                    const instancePrefix = `${fullRepeatPath}[${idx}]`;
-                    for (const child of node.children) {
-                        this.emitNode(child, instanceWrapper, instancePrefix);
-                    }
-                }
-            }));
-
-            const item = this.findItemByKey(bindKey);
-            const addBtn = document.createElement('button');
-            addBtn.type = 'button';
-            addBtn.className = 'formspec-repeat-add';
-            addBtn.textContent = `Add ${item?.label || bindKey}`;
-            addBtn.addEventListener('click', () => {
-                this.engine!.addRepeatInstance(fullRepeatPath);
-            });
-            target.appendChild(addBtn);
-            return;
-        }
-
-        if (node.scopeChange && !node.isRepeatTemplate && node.props.bind) {
-            const bindKey = node.props.bind as string;
-            const nextPrefix = prefix ? `${prefix}.${bindKey}` : bindKey;
-            const el = document.createElement('div');
-            el.className = 'formspec-group';
-            if (node.props.title) {
-                const heading = document.createElement('h3');
-                heading.textContent = node.props.title as string;
-                el.appendChild(heading);
-            }
-            const groupFullPath = nextPrefix;
-            if (this.engine!.relevantSignals[groupFullPath]) {
-                this.cleanupFns.push(effect(() => {
-                    const isRelevant = this.engine!.relevantSignals[groupFullPath].value;
-                    el.classList.toggle('formspec-hidden', !isRelevant);
-                }));
-            }
-            target.appendChild(el);
-
-            for (const child of node.children) {
-                this.emitNode(child, el, nextPrefix);
-            }
-            return;
-        }
-
-        const comp: any = {
-            component: node.component,
-            ...node.props,
-        };
-        if (node.style) comp.style = node.style;
-        if (node.cssClasses.length > 0) comp.cssClass = node.cssClasses;
-        if (node.accessibility) comp.accessibility = node.accessibility;
-        comp.children = node.children;
-
-        this.renderActualComponent(comp, target, prefix);
-    }
-
-    private renderComponent = (comp: any, parent: HTMLElement, prefix = '') => {
-        if (comp && typeof comp === 'object' && 'category' in comp && 'id' in comp) {
-            this.emitNode(comp as LayoutNode, parent, prefix);
-            return;
-        }
-        console.warn('renderComponent called with non-LayoutNode comp — this should not happen after planner integration', comp);
-    }
-
-    private renderActualComponent(comp: any, parent: HTMLElement, prefix = '') {
-        const componentType = comp.component;
-        const plugin = globalRegistry.get(componentType);
-
-        const ctx: RenderContext = {
-            engine: this.engine!,
-            componentDocument: this._componentDocument,
-            themeDocument: this._themeDocument,
-            prefix,
-            submit: this.submit.bind(this),
-            resolveValidationTarget: this.resolveValidationTarget.bind(this),
-            focusField: this.focusField.bind(this),
-            submitPendingSignal: this._submitPendingSignal,
-            latestSubmitDetailSignal: this._latestSubmitDetailSignal,
-            setSubmitPending: this.setSubmitPending.bind(this),
-            isSubmitPending: this.isSubmitPending.bind(this),
-            renderComponent: this.renderComponent,
-            resolveToken: this.resolveToken,
-            applyStyle: this.applyStyle,
-            applyCssClass: this.applyCssClass,
-            applyAccessibility: this.applyAccessibility,
-            resolveItemPresentation: this.resolveItemPresentation,
-            cleanupFns: this.cleanupFns,
-            findItemByKey: this.findItemByKey,
-            renderInputComponent: this.renderInputComponent,
-            activeBreakpoint: this.activeBreakpoint
-        };
-
-        if (plugin) {
-            plugin.render(comp, parent, ctx);
-        } else {
-            console.warn(`Unknown component type: ${componentType} (custom components should be expanded by planner)`);
-        }
-    }
-
-    private renderInputComponent = (comp: any, item: any, fullName: string): HTMLElement => {
-        return renderInputComponentFn(this as any as FieldInputHost, comp, item, fullName);
     }
 
     /**
