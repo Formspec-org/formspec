@@ -1,26 +1,21 @@
 {
-  "name": "formspec-studio",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite --port 8082 --open",
-    "build": "tsc && vite build",
-    "preview": "vite preview --port 8082",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "@preact/signals": "^2.0.0",
-    "formspec-engine": "*",
-    "formspec-webcomponent": "*",
-    "preact": "^10.0.0"
-  },
-  "devDependencies": {
-    "@preact/preset-vite": "^2.0.0",
-    "@testing-library/preact": "^3.2.4",
-    "happy-dom": "^20.7.0",
-    "typescript": "^5.0.0",
-    "vitest": "^4.0.18"
-  }
+    "name": "formspec-studio",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite --port 8083 --open",
+        "build": "tsc && vite build",
+        "preview": "vite preview --port 8083"
+    },
+    "dependencies": {
+        "@preact/signals": "^2.0.0",
+        "formspec-engine": "*",
+        "formspec-webcomponent": "*",
+        "preact": "^10.0.0"
+    },
+    "devDependencies": {
+        "@preact/preset-vite": "^2.0.0",
+        "typescript": "^5.0.0"
+    }
 }

@@ -35,7 +35,7 @@ export function FelHelper() {
         dialogRef.current?.close();
     }
 
-    const filteredFunctions = felFunctionsSchema.functions.filter((f) => {
+    const filteredFunctions = felFunctionsSchema.functions.filter((f: any) => {
         const search = searchTerm.toLowerCase();
         return (
             f.name.toLowerCase().includes(search) ||

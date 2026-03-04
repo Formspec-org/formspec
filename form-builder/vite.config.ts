@@ -5,13 +5,13 @@ import path from 'path';
 const repoRoot = path.resolve(__dirname, '..');
 
 export default defineConfig({
-  base: './',
-  plugins: [preact()],
-  server: {
-    port: 8082,
-    allowedHosts: true,
-    fs: {
-      allow: [repoRoot],
+    base: './',
+    plugins: [preact()],
+    server: {
+        port: 8083,
+        allowedHosts: true,
+        fs: {
+            allow: [repoRoot],
+        },
     },
-  },
 });

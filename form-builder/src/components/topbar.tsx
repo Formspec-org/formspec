@@ -1,77 +1,67 @@
-import { definition, updateDefinition } from '../state/definition';
-import { project } from '../state/project';
-import { handleImport, handleExport } from '../logic/import-export-actions';
+import { definition, updateDefinition, setDefinition } from '../state/definition';
+import { commandBarOpen } from '../state/project';
+import { handleImport, handleExport } from '../logic/import-export';
 
 export function Topbar() {
-  const def = project.value.definition;
-  const version = def?.version ?? '0.1.0';
-  const status = (def as { status?: string } | null)?.status ?? 'draft';
+    const def = definition.value;
+    const version = def?.version ?? '0.1.0';
+    const status = (def as { status?: string })?.status ?? 'draft';
 
-  return (
-    <header class="studio-topbar">
-      <div class="topbar-brand">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <rect x="1" y="1" width="8" height="8" rx="2" fill="var(--accent)" opacity="1" />
-          <rect x="11" y="1" width="8" height="8" rx="2" fill="var(--accent)" opacity="0.6" />
-          <rect x="1" y="11" width="8" height="8" rx="2" fill="var(--accent)" opacity="0.6" />
-          <rect x="11" y="11" width="8" height="8" rx="2" fill="var(--accent)" opacity="0.3" />
-        </svg>
-        <span class="topbar-brand-text">
-          Formspec{' '}
-          <span
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontStyle: 'italic',
-              color: 'var(--accent)',
-            }}
-          >
-            Studio
-          </span>
-        </span>
-      </div>
+    return (
+        <header class="studio-topbar">
+            <div class="topbar-brand">
+                <div class="topbar-logo">
+                    <svg viewBox="0 0 16 16" fill="none">
+                        <rect x="1" y="1" width="6" height="6" rx="1.5" fill="#fff" opacity="1" />
+                        <rect x="9" y="1" width="6" height="6" rx="1.5" fill="#fff" opacity="0.6" />
+                        <rect x="1" y="9" width="6" height="6" rx="1.5" fill="#fff" opacity="0.6" />
+                        <rect x="9" y="9" width="6" height="6" rx="1.5" fill="#fff" opacity="0.3" />
+                    </svg>
+                </div>
+                <span class="topbar-brand-text">
+                    Formspec <span class="topbar-brand-accent">Studio</span>
+                </span>
+            </div>
 
-      <div class="topbar-center">
-        <input
-          class="topbar-title-input"
-          value={definition.value.title ?? 'Untitled Form'}
-          onInput={(event) => {
-            const next = (event.target as HTMLInputElement).value;
-            updateDefinition((d) => {
-              d.title = next;
-            });
-          }}
-          aria-label="Form title"
-        />
-        <span class="topbar-meta">
-          <span class="topbar-dot">·</span>v{version}
-          <span class="topbar-dot">·</span>
-          {status}
-        </span>
-      </div>
+            <div class="topbar-center">
+                <input
+                    class="topbar-title-input"
+                    value={def.title ?? 'Untitled Form'}
+                    onInput={(event) => {
+                        const next = (event.target as HTMLInputElement).value;
+                        updateDefinition((d) => { d.title = next; });
+                    }}
+                    aria-label="Form title"
+                />
+                <span class="topbar-meta">
+                    <span class="topbar-status">{status}</span>
+                    <span>v{version}</span>
+                </span>
+            </div>
 
-      <div class="topbar-actions">
-        <button
-          class="btn-ghost"
-          aria-label="Import project"
-          onClick={handleImport}
-        >
-          <span aria-hidden="true">↓</span> Import
-        </button>
-        <button
-          class="btn-primary"
-          aria-label="Export definition"
-          onClick={() => handleExport('definition-only')}
-        >
-          <span aria-hidden="true">↑</span> Export Definition
-        </button>
-        <button
-          class="btn-ghost"
-          aria-label="Export core bundle"
-          onClick={() => handleExport('full-bundle')}
-        >
-          <span aria-hidden="true">↑</span> Export Bundle
-        </button>
-      </div>
-    </header>
-  );
+            <div class="topbar-actions">
+                <button
+                    class="btn-ghost"
+                    onClick={() => { commandBarOpen.value = true; }}
+                    title="Command palette (⌘K)"
+                >
+                    ⌘K
+                </button>
+                <button
+                    class="btn-ghost"
+                    aria-label="Import"
+                    onClick={() => handleImport(setDefinition)}
+                >
+                    ↓ Import
+                </button>
+                <button
+                    class="btn-primary"
+                    aria-label="Export"
+                    onClick={() => handleExport(def)}
+                >
+                    ↑ Export
+                </button>
+            </div>
+        </header>
+    );
 }

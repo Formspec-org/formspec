@@ -1,79 +1,144 @@
 import { signal } from '@preact/signals';
-import { JsonEditor } from './components/json-editor';
-import { Preview } from './components/preview';
-import { PropertiesPanel } from './components/properties/properties-panel';
-import { Splitter } from './components/splitter';
-import { ToastContainer } from './components/toast';
 import { Topbar } from './components/topbar';
-import { TreeEditor } from './components/tree/tree-editor';
-import { editorMode, project } from './state/project';
-import './state/definition';
+import { TreeEditor } from './components/canvas/tree-editor';
+import { Preview } from './components/preview';
+import { InspectorPanel } from './components/inspector/inspector-panel';
+import { CommandBar } from './components/command-bar';
+import { ToastContainer } from './components/toast';
+import { editorMode } from './state/project';
+import { definition, definitionVersion, setDefinition } from './state/definition';
+import { FORM_TEMPLATES } from './logic/seed-definition';
+import './state/definition'; // ensure engine is bootstrapped
 
-// Expose state for E2E testing
-(window as any).__FORMSPEC_STUDIO_STATE__ = { project };
+const inspectorCollapsed = signal(false);
 
-const propertiesCollapsed = signal(false);
-const splitPercent = signal(50);
+/** Starts true — shows the template picker on first load */
+export const showTemplatePicker = signal(true);
 
 export function App() {
-  return (
-    <div class="studio-root">
-      <Topbar />
-      <div class="studio-workspace">
-        <div class="studio-editor">
-          <div class="editor-mode-bar">
-            <button
-              class={editorMode.value === 'guided' ? 'active' : ''}
-              onClick={() => {
-                editorMode.value = 'guided';
-              }}
-            >
-              Guided
-            </button>
-            <button
-              class={editorMode.value === 'json' ? 'active' : ''}
-              onClick={() => {
-                editorMode.value = 'json';
-              }}
-            >
-              JSON
-            </button>
-          </div>
-          <div class="studio-editor-panes">
-            <div
-              class="studio-tree-pane"
-              style={{ flex: `0 0 ${splitPercent.value}%` }}
-            >
-              {editorMode.value === 'guided' ? <TreeEditor /> : <JsonEditor />}
+    const showPicker = showTemplatePicker.value;
+
+    return (
+        <div class="studio-root">
+            <Topbar />
+            <div class="studio-workspace">
+                {/* Canvas (Tree) Panel */}
+                <div class="canvas-panel">
+                    <div class="canvas-header">
+                        <span class="canvas-header-title">Structure</span>
+                        <div class="mode-tabs">
+                            <button
+                                class={`mode-tab${editorMode.value === 'guided' ? ' active' : ''}`}
+                                onClick={() => { editorMode.value = 'guided'; }}
+                            >
+                                Tree
+                            </button>
+                            <button
+                                class={`mode-tab${editorMode.value === 'json' ? ' active' : ''}`}
+                                onClick={() => { editorMode.value = 'json'; }}
+                            >
+                                JSON
+                            </button>
+                        </div>
+                    </div>
+                    {editorMode.value === 'guided' ? (
+                        <TreeEditor />
+                    ) : (
+                        <JsonEditor />
+                    )}
+                </div>
+
+                {/* Preview Panel — or Template Picker on first launch */}
+                {showPicker ? (
+                    <EmptyState onTemplateSelect={(def) => {
+                        setDefinition(def);
+                        showTemplatePicker.value = false;
+                    }} />
+                ) : (
+                    <Preview />
+                )}
+
+                {/* Inspector Panel */}
+                {!showPicker && (
+                    <InspectorPanel
+                        collapsed={inspectorCollapsed.value}
+                        onToggle={() => { inspectorCollapsed.value = !inspectorCollapsed.value; }}
+                    />
+                )}
             </div>
-            <Splitter
-              onResize={(delta) => {
-                if (delta === 0) {
-                  splitPercent.value = 50;
-                  return;
-                }
-                const editorEl = document.querySelector('.studio-editor-panes') as HTMLElement | null;
-                if (!editorEl || editorEl.clientWidth <= 0) {
-                  return;
-                }
-                const nextPercent =
-                  splitPercent.value + (delta / editorEl.clientWidth) * 100;
-                splitPercent.value = Math.max(20, Math.min(80, nextPercent));
-              }}
-            />
-            <div class="studio-preview-pane" style={{ flex: 1 }}>
-              <Preview />
-            </div>
-          </div>
+            <CommandBar />
+            <ToastContainer />
         </div>
-        <PropertiesPanel
-          collapsed={propertiesCollapsed.value}
-          onToggle={() => {
-            propertiesCollapsed.value = !propertiesCollapsed.value;
-          }}
-        />
-      </div>
-      <ToastContainer />
-    </div>
-  );
+    );
+}
+
+/* ── Inline JSON Editor ─────────────────────────────────────── */
+
+function JsonEditor() {
+    const def = definition.value;
+    let json: string;
+    try {
+        json = JSON.stringify(def, null, 2);
+    } catch {
+        json = '{}';
+    }
+
+    return (
+        <div class="json-editor">
+            <textarea
+                class="json-editor-textarea"
+                value={json}
+                onInput={(e) => {
+                    try {
+                        const parsed = JSON.parse((e.target as HTMLTextAreaElement).value);
+                        if (parsed.$formspec) {
+                            setDefinition(parsed);
+                        }
+                    } catch {
+                        // ignore parse errors while typing
+                    }
+                }}
+                spellcheck={false}
+            />
+        </div>
+    );
+}
+
+/* ── Empty State with Template Picker ───────────────────────── */
+
+function EmptyState({ onTemplateSelect }: { onTemplateSelect: (def: any) => void }) {
+    return (
+        <div class="preview-panel">
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="12" y1="18" x2="12" y2="12" />
+                        <line x1="9" y1="15" x2="15" y2="15" />
+                    </svg>
+                </div>
+                <h1 class="empty-state-title">Build Your Form</h1>
+                <p class="empty-state-description">
+                    Choose a template to get started, or begin with a blank canvas.
+                    Use the tree panel to add fields, groups, and layout components.
+                </p>
+                <div class="empty-state-actions">
+                    {FORM_TEMPLATES.map((tmpl) => (
+                        <div
+                            key={tmpl.id}
+                            class="template-card"
+                            onClick={() => onTemplateSelect(tmpl.factory())}
+                            role="button"
+                            tabIndex={0}
+                        >
+                            <span class="template-card-icon">{tmpl.icon}</span>
+                            <span class="template-card-label">{tmpl.label}</span>
+                            <span class="template-card-desc">{tmpl.desc}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 }
