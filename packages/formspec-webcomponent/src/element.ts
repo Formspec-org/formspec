@@ -87,7 +87,8 @@ export class FormspecRender extends HTMLElement {
 
     constructor() {
         super();
-        this.attachShadow({ mode: 'open' });
+        const shadow = this.attachShadow({ mode: 'open' });
+        shadow.appendChild(document.createElement('slot'));
     }
 
     /** Fields the user has interacted with (blur). Validation errors are hidden until touched. */

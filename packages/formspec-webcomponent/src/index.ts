@@ -1,4 +1,5 @@
 // Side effects
+import './formspec-base.css';
 import { registerDefaultComponents } from './components';
 registerDefaultComponents();
 
