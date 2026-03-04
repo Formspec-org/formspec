@@ -672,6 +672,134 @@ class TestBindValidation:
         errors = [r for r in result.results if r['code'] == 'REQUIRED']
         assert len(errors) == 0
 
+    def test_bare_dollar_constraint_passes_positive(self):
+        """Regression: bare $ in constraint must resolve to the field value, not FelNull."""
+        ev = DefinitionEvaluator({
+            'items': [{'type': 'field', 'key': 'amount', 'dataType': 'integer'}],
+            'binds': [{'path': 'amount', 'constraint': '$ >= 0'}],
+        })
+        result = ev.process({'amount': 45000})
+        errors = [r for r in result.results if r['code'] == 'CONSTRAINT_FAILED']
+        assert len(errors) == 0
+
+    def test_bare_dollar_constraint_fails_negative(self):
+        """Regression: bare $ in constraint must detect actual violations."""
+        ev = DefinitionEvaluator({
+            'items': [{'type': 'field', 'key': 'amount', 'dataType': 'integer'}],
+            'binds': [{'path': 'amount', 'constraint': '$ >= 0'}],
+        })
+        result = ev.process({'amount': -5})
+        errors = [r for r in result.results if r['code'] == 'CONSTRAINT_FAILED']
+        assert len(errors) == 1
+
+    def test_bare_dollar_constraint_skipped_when_empty(self):
+        """Constraint with bare $ is skipped when field is empty/null."""
+        ev = DefinitionEvaluator({
+            'items': [{'type': 'field', 'key': 'amount', 'dataType': 'integer'}],
+            'binds': [{'path': 'amount', 'constraint': '$ >= 0'}],
+        })
+        result = ev.process({'amount': None})
+        errors = [r for r in result.results if r['code'] == 'CONSTRAINT_FAILED']
+        assert len(errors) == 0
+
+    def test_bare_dollar_wildcard_constraint(self):
+        """Regression: bare $ in wildcard bind constraints resolves to the row field value."""
+        ev = DefinitionEvaluator({
+            'items': [{
+                'type': 'group', 'key': 'rows', 'repeatable': True,
+                'children': [
+                    {'type': 'field', 'key': 'amount', 'dataType': 'integer'},
+                ]
+            }],
+            'binds': [{'path': 'rows[*].amount', 'constraint': '$ >= 0'}],
+        })
+        result = ev.process({'rows': [{'amount': 100}, {'amount': -1}]})
+        errors = [r for r in result.results if r['code'] == 'CONSTRAINT_FAILED']
+        assert len(errors) == 1
+        assert 'rows[2]' in errors[0]['path']
+
+    def test_shape_bare_dollar_with_target(self):
+        """Regression: shape constraint with target injects target value as bare $."""
+        ev = DefinitionEvaluator({
+            'items': [{'type': 'field', 'key': 'score', 'dataType': 'integer'}],
+            'shapes': [{
+                'id': 'scoreRange', 'target': 'score', 'severity': 'error',
+                'message': 'Score out of range', 'code': 'SCORE',
+                'constraint': '$ >= 0 and $ <= 100',
+            }],
+        })
+        assert ev.validate({'score': 50}) == []
+        results = ev.validate({'score': 150})
+        assert len(results) == 1
+        assert results[0]['code'] == 'SCORE'
+
+    def test_default_bind_relevance_with_numeric_constraint(self):
+        """Regression: multiChoice → relevance + default=0 + constraint $ >= 0.
+
+        When a field has default=0 (applied on re-relevance) and a constraint
+        $ >= 0, the constraint must pass for the default value. Previously the
+        evaluator passed raw Python int as $ without from_python() conversion,
+        causing the constraint to always evaluate to FelNull.
+        """
+        ev = DefinitionEvaluator({
+            'items': [
+                {
+                    'type': 'field', 'key': 'topics', 'dataType': 'multiChoice',
+                    'options': [
+                        {'value': 'employment', 'label': 'Employment'},
+                        {'value': 'housing', 'label': 'Housing'},
+                    ]
+                },
+                {
+                    'type': 'group', 'key': 'expenditures',
+                    'children': [
+                        {'type': 'field', 'key': 'employment', 'dataType': 'decimal'},
+                        {'type': 'field', 'key': 'housing', 'dataType': 'decimal'},
+                    ]
+                },
+            ],
+            'binds': [
+                {
+                    'path': 'expenditures.employment',
+                    'relevant': "selected($topics, 'employment')",
+                    'default': 0,
+                    'constraint': '$ >= 0',
+                    'constraintMessage': 'Cannot be negative',
+                },
+                {
+                    'path': 'expenditures.housing',
+                    'relevant': "selected($topics, 'housing')",
+                    'default': 0,
+                    'constraint': '$ >= 0',
+                    'constraintMessage': 'Cannot be negative',
+                },
+            ],
+        })
+        # Scenario: employment selected with default value 0 → constraint passes
+        result = ev.process({
+            'topics': ['employment'],
+            'expenditures': {'employment': 0, 'housing': 0},
+        })
+        constraint_errors = [r for r in result.results if r['code'] == 'CONSTRAINT_FAILED']
+        assert len(constraint_errors) == 0
+
+        # Scenario: employment selected with positive value → constraint passes
+        result = ev.process({
+            'topics': ['employment'],
+            'expenditures': {'employment': 45000, 'housing': 0},
+        })
+        constraint_errors = [r for r in result.results if r['code'] == 'CONSTRAINT_FAILED']
+        assert len(constraint_errors) == 0
+
+        # Scenario: negative value → constraint fails
+        result = ev.process({
+            'topics': ['employment'],
+            'expenditures': {'employment': -100, 'housing': 0},
+        })
+        constraint_errors = [r for r in result.results if r['code'] == 'CONSTRAINT_FAILED']
+        assert len(constraint_errors) == 1
+        assert 'expenditures.employment' in constraint_errors[0]['path']
+
     def test_type_validation_string(self):
         ev = DefinitionEvaluator({
             'items': [{'type': 'field', 'key': 'name', 'dataType': 'string'}],

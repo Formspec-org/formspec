@@ -398,6 +398,23 @@ class DefinitionEvaluator:
             return self._binds[path]
         return None
 
+    def _eval_constraint(
+        self, expr: str, data: dict, variables: dict[str, FelValue],
+        self_value=None, row: dict | None = None,
+    ) -> bool:
+        """Evaluate a FEL constraint. Injects self_value as bare $ (scope key '').
+        If row is provided, row fields are also pushed into scope (for wildcard binds)."""
+        if self_value is not None or row is not None:
+            scope = {}
+            if row is not None:
+                scope.update(row)
+            if self_value is not None:
+                scope[''] = self_value
+            result = self._eval_fel(expr, data, variables, scope=scope)
+        else:
+            result = self._eval_fel(expr, data, variables)
+        return result is FelTrue
+
     # ── Phase 3: Revalidate ──────────────────────────────────────────────
 
     def _validate_binds(
@@ -443,10 +460,8 @@ class DefinitionEvaluator:
                     'source': 'bind',
                 })
 
-            # Constraint check
             if bind and 'constraint' in bind and not _is_empty(val):
-                constraint_val = self._eval_fel(bind['constraint'], data, variables)
-                if constraint_val is not FelTrue:
+                if not self._eval_constraint(bind['constraint'], data, variables, self_value=val):
                     msg = bind.get('constraintMessage', f'Constraint failed for {path}')
                     results.append({
                         'severity': 'error',
@@ -528,10 +543,8 @@ class DefinitionEvaluator:
                         'source': 'bind',
                     })
 
-            # Constraint
             if 'constraint' in bind and not _is_empty(val):
-                constraint_val = self._eval_fel(bind['constraint'], data, variables, scope=row)
-                if constraint_val is not FelTrue:
+                if not self._eval_constraint(bind['constraint'], data, variables, self_value=val, row=row):
                     msg = bind.get('constraintMessage', f'Constraint failed for {concrete_path}')
                     results.append({
                         'severity': 'error',
@@ -566,8 +579,9 @@ class DefinitionEvaluator:
         passed = True
 
         if 'constraint' in shape:
-            result = evaluate(shape['constraint'], data, variables=variables, instances=self._instances)
-            passed = result.value is FelTrue
+            target = shape.get('target')
+            target_val = _get_nested(data, target) if (target and target != '#') else None
+            passed = self._eval_constraint(shape['constraint'], data, variables, self_value=target_val)
 
         if passed and 'and' in shape:
             passed = all(self._eval_expr(e, data, variables) for e in shape['and'])

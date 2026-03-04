@@ -700,7 +700,42 @@
             "required": [
               "dataType"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "not": {
+                    "properties": { "dataType": { "const": "money" } },
+                    "required": ["dataType"]
+                  }
+                },
+                "then": {
+                  "properties": { "currency": false }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": { "dataType": { "enum": ["decimal", "money"] } },
+                    "required": ["dataType"]
+                  }
+                },
+                "then": {
+                  "properties": { "precision": false }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": { "dataType": { "enum": ["choice", "multiChoice"] } },
+                    "required": ["dataType"]
+                  }
+                },
+                "then": {
+                  "properties": { "options": false, "optionSet": false }
+                }
+              }
+            ]
           }
         },
         {
