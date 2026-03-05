@@ -77,6 +77,7 @@ export class FormspecRender extends HTMLElement {
     /** @internal */ _definition: any;
     /** @internal */ _componentDocument: any;
     /** @internal */ _themeDocument: ThemeDocument | null = null;
+    /** @internal */ _registryEntries: Map<string, any> = new Map();
     /** @internal */ engine: FormEngine | null = null;
     /** @internal */ cleanupFns: Array<() => void> = [];
     private _breakpoints: BreakpointState = createBreakpointState();
@@ -178,6 +179,8 @@ export class FormspecRender extends HTMLElement {
         this._definition = val;
         this._screenerCompleted = false;
         this._screenerRoute = null;
+        this.touchedFields.clear();
+        this.touchedVersion.value += 1;
         try {
             this.engine = new FormEngine(val);
         } catch (e) {
@@ -220,6 +223,31 @@ export class FormspecRender extends HTMLElement {
     /** The currently loaded theme document, or `null` if none. */
     get themeDocument(): ThemeDocument | null {
         return this._themeDocument;
+    }
+
+    /**
+     * Set one or more extension registry documents. Builds an internal lookup
+     * map from extension name → registry entry so that field renderers can
+     * apply constraints and metadata (inputMode, autocomplete, pattern, etc.)
+     * generically instead of hardcoding per-extension behaviour.
+     */
+    set registryDocuments(docs: any | any[]) {
+        this._registryEntries.clear();
+        const docList = Array.isArray(docs) ? docs : docs ? [docs] : [];
+        for (const doc of docList) {
+            if (!doc?.entries) continue;
+            for (const entry of doc.entries) {
+                if (entry.name) {
+                    this._registryEntries.set(entry.name, entry);
+                }
+            }
+        }
+        this.scheduleRender();
+    }
+
+    /** The current registry entry lookup (extension name → entry). */
+    get registryEntries(): Map<string, any> {
+        return this._registryEntries;
     }
 
     /**
@@ -324,8 +352,6 @@ export class FormspecRender extends HTMLElement {
             fn();
         }
         this.cleanupFns = [];
-        this.touchedFields.clear();
-        this.touchedVersion.value += 1;
     }
 
     /**

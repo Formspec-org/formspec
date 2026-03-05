@@ -131,15 +131,23 @@ export const WizardPlugin: ComponentPlugin = {
         // Reactively enable/disable prev/next and emit page-change event
         ctx.cleanupFns.push(effect(() => {
             const step = currentStep.value;
+            const total = children.length;
             prevBtn.disabled = step === 0;
-            nextBtn.disabled = step === children.length - 1;
+            nextBtn.disabled = step === total - 1;
             prevBtn.classList.toggle('formspec-hidden', step === 0);
-            nextBtn.textContent = step === children.length - 1 ? 'Finish' : 'Next';
+
+            const skipBtn = el.querySelector('.formspec-wizard-skip') as HTMLButtonElement;
+            if (skipBtn) {
+                // Hide skip on the last step
+                skipBtn.classList.toggle('formspec-hidden', step === total - 1);
+            }
+
+            nextBtn.textContent = step === total - 1 ? 'Finish' : 'Next';
 
             el.dispatchEvent(new CustomEvent('formspec-page-change', {
                 detail: {
                     index: step,
-                    total: children.length,
+                    total: total,
                     title: children[step]?.title || '',
                 },
                 bubbles: true,

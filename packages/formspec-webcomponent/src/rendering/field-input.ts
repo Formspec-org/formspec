@@ -6,9 +6,11 @@ export interface FieldInputHost {
     engine: FormEngine;
     _definition: any;
     _componentDocument: any;
+    _registryEntries: Map<string, any>;
     cleanupFns: Array<() => void>;
     touchedFields: Set<string>;
     touchedVersion: Signal<number>;
+    _latestSubmitDetailSignal?: Signal<any>;
     resolveItemPresentation(itemDesc: ItemDescriptor): PresentationBlock;
     resolveWidgetClassSlots(presentation: PresentationBlock): {
         root?: unknown;
@@ -190,6 +192,10 @@ export function renderInputComponent(host: FieldInputHost, comp: any, item: any,
         amountInput.className = 'formspec-input';
         amountInput.placeholder = comp.placeholder || 'Amount';
         amountInput.name = `${fullName}__amount`;
+        // Support the same numeric constraint props as NumberInput.
+        if (comp.step != null) amountInput.step = String(comp.step);
+        if (comp.min != null) amountInput.min = String(comp.min);
+        if (comp.max != null) amountInput.max = String(comp.max);
         const resolvedCurrency = item.currency || host._definition?.formPresentation?.defaultCurrency || null;
         let currencyEl: HTMLElement;
         let getCurrency: () => string;
@@ -309,6 +315,32 @@ export function renderInputComponent(host: FieldInputHost, comp: any, item: any,
             if (comp.maxDate) htmlInput.max = comp.maxDate;
         } else {
             htmlInput.type = 'text';
+        }
+
+        // Apply registry-driven extension hints (inputMode, autocomplete, pattern, etc.)
+        const exts = item?.extensions;
+        if (htmlInput.type === 'text' && exts && typeof exts === 'object') {
+            for (const [extName, extEnabled] of Object.entries(exts)) {
+                if (!extEnabled) continue;
+                const entry = host._registryEntries.get(extName);
+                if (!entry) continue;
+                const meta = entry.metadata;
+                const constraints = entry.constraints;
+                // HTML input type: explicit inputType > inputMode-derived
+                if (meta?.inputType) {
+                    htmlInput.type = meta.inputType;
+                } else if (meta?.inputMode === 'email') {
+                    htmlInput.type = 'email';
+                } else if (meta?.inputMode === 'tel') {
+                    htmlInput.type = 'tel';
+                }
+                if (meta?.inputMode && !comp.inputMode) htmlInput.inputMode = meta.inputMode;
+                if (meta?.autocomplete) htmlInput.autocomplete = meta.autocomplete;
+                if (meta?.sensitive) htmlInput.autocomplete = 'off';
+                if (constraints?.maxLength != null) htmlInput.maxLength = constraints.maxLength;
+                if (constraints?.pattern) htmlInput.pattern = constraints.pattern;
+                if (meta?.mask && !comp.placeholder) htmlInput.placeholder = meta.mask;
+            }
         }
 
         if (componentType === 'TextInput') {
@@ -471,7 +503,17 @@ export function renderInputComponent(host: FieldInputHost, comp: any, item: any,
     host.cleanupFns.push(effect(() => {
         host.touchedVersion.value;
         const error = host.engine.errorSignals[fullName]?.value;
-        const showError = host.touchedFields.has(fullName) ? (error || '') : '';
+
+        // Check if there are any shape errors from the latest submit that target this path
+        // ValidationReport results use 1-indexed paths (external format)
+        const submitDetail = host._latestSubmitDetailSignal?.value;
+        const externalPath = fullName.replace(/\[(\d+)\]/g, (_, p1) => `[${parseInt(p1) + 1}]`);
+        const submitError = submitDetail?.validationReport?.results?.find((r: any) =>
+            r.severity === 'error' && (r.path === fullName || r.path === externalPath || r.path === `${fullName}[*]`)
+        )?.message;
+
+        const effectiveError = error || submitError;
+        const showError = host.touchedFields.has(fullName) ? (effectiveError || '') : '';
         errorDisplay.textContent = showError;
         if (actualInputEl instanceof HTMLElement) {
             actualInputEl.setAttribute('aria-invalid', String(!!showError));

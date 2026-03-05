@@ -21,6 +21,7 @@ export interface SubmitHost extends NavigationHost {
     } | null>;
     dispatchEvent(event: Event): boolean;
     findItemByKey(key: string, items?: any[]): any | null;
+    focusField?(path: string): void;
 }
 
 /**
@@ -29,7 +30,14 @@ export interface SubmitHost extends NavigationHost {
 export function touchAllFields(host: SubmitHost): void {
     if (!host.engine) return;
     let touchedAny = false;
+    // Touch all fields with error signals
     for (const key of Object.keys(host.engine.errorSignals)) {
+        if (host.touchedFields.has(key)) continue;
+        host.touchedFields.add(key);
+        touchedAny = true;
+    }
+    // Also touch any other items that have validation results (e.g. groups with cardinality errors)
+    for (const key of Object.keys(host.engine.validationResults)) {
         if (host.touchedFields.has(key)) continue;
         host.touchedFields.add(key);
         touchedAny = true;
@@ -77,6 +85,14 @@ export function submit(
             bubbles: true,
             composed: true,
         }));
+    }
+
+    // Scroll to first error if invalid
+    if (!validationReport.valid && host.focusField) {
+        const firstError = validationReport.results.find((r: any) => r.severity === 'error');
+        if (firstError) {
+            host.focusField(firstError.path);
+        }
     }
 
     return detail;

@@ -1,17 +1,27 @@
 import type { NavigationHost } from './index.js';
-import { normalizeFieldPath } from './paths.js';
+import { normalizeFieldPath, externalPathToInternal } from './paths.js';
 
 export function findFieldElement(host: NavigationHost, path: string): HTMLElement | null {
     if (!path || path === '#') return null;
-    const escapedPath = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(path) : path;
-    let fieldEl = host.querySelector(`.formspec-field[data-name="${escapedPath}"]`) as HTMLElement | null;
-    if (fieldEl) return fieldEl;
-    const allFields = Array.from(host.querySelectorAll('.formspec-field[data-name]'));
-    fieldEl = allFields.find((el) => {
-        const name = el.getAttribute('data-name');
-        return name === path || name?.startsWith(`${path}.`) || name?.startsWith(`${path}[`);
-    }) as HTMLElement | undefined || null;
-    return fieldEl;
+
+    // Try provided path first (internal format), then attempt external-to-internal conversion
+    const candidatePaths = [path, externalPathToInternal(path)];
+
+    for (const p of candidatePaths) {
+        const escapedPath = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(p) : p;
+        let fieldEl = host.querySelector(`.formspec-field[data-name="${escapedPath}"]`) as HTMLElement | null;
+        if (fieldEl) return fieldEl;
+
+        const allFields = Array.from(host.querySelectorAll('.formspec-field[data-name]'));
+        const found = allFields.find((el) => {
+            const name = el.getAttribute('data-name');
+            return name === p || name?.startsWith(`${p}.`) || name?.startsWith(`${p}[`);
+        }) as HTMLElement | undefined;
+
+        if (found) return found;
+    }
+
+    return null;
 }
 
 export function revealTabsForField(_host: NavigationHost, fieldEl: HTMLElement): void {
