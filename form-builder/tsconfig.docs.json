@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "noEmit": false,
+    "noCheck": true,
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "outDir": "./dist-types"
+  },
+  "include": ["src/index.ts", "src/state/**/*.ts", "src/components/commands.ts"]
+}

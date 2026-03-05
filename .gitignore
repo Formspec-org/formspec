@@ -17,6 +17,7 @@ dist-playground/
 .playwright-cli/
 # Generated API docs (make api-docs)
 docs/api/
+form-builder/dist-types/
 
 
 .ralph/

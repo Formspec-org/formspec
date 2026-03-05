@@ -1,0 +1,29 @@
+{
+  "name": "form-builder",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:types": "tsc -p tsconfig.docs.json",
+    "docs:api": "npm run build:types && typedoc --entryPoints src/index.ts --tsconfig tsconfig.docs.json --skipErrorChecking --out ../docs/api/form-builder",
+    "test": "vitest run",
+    "test:unit": "vitest run src/state/__tests__",
+    "test:integration": "vitest run src/components/__tests__"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.0.1",
+    "ajv": "^8.17.1",
+    "formspec-engine": "*",
+    "formspec-layout": "*",
+    "formspec-webcomponent": "*",
+    "preact": "^10.26.4"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.2",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.19",
+    "vitest": "^3.2.4"
+  }
+}

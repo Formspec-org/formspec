@@ -6,7 +6,9 @@
  *
  * Produces:
  *   - packages/formspec-engine/API.llm.md
+ *   - packages/formspec-layout/API.llm.md
  *   - packages/formspec-webcomponent/API.llm.md
+ *   - form-builder/API.llm.md
  */
 
 import ts from 'typescript';
@@ -31,6 +33,14 @@ function collectDtsFiles(dir) {
     }
   }
   return results.sort();
+}
+
+function directoryExists(dir) {
+  try {
+    return statSync(dir).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -343,10 +353,21 @@ const packages = [
     description: '`<formspec-render>` custom element that binds a FormEngine to the DOM. Provides a component registry, styling pipeline, navigation (wizard/field focus), and accessibility attributes.',
     dir: 'packages/formspec-webcomponent',
   },
+  {
+    name: 'form-builder',
+    title: 'form-builder — API Reference',
+    description: 'Formspec Studio v2 editor APIs. Includes project state model, atomic mutation helpers, diagnostics derivations, import/export flows, versioning utilities, extension registry cataloging, and command palette search helpers.',
+    dir: 'form-builder',
+    distDir: 'form-builder/dist-types',
+  },
 ];
 
 for (const pkg of packages) {
-  const distDir = resolve(ROOT, pkg.dir, 'dist');
+  const distDir = resolve(ROOT, pkg.distDir ?? `${pkg.dir}/dist`);
+  if (!directoryExists(distDir)) {
+    console.warn(`  SKIP ${pkg.name}: declaration directory not found at ${distDir}`);
+    continue;
+  }
   const allDts = collectDtsFiles(distDir);
   if (allDts.length === 0) {
     console.warn(`  SKIP ${pkg.name}: no .d.ts files in ${distDir}`);
