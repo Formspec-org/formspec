@@ -85,6 +85,247 @@ describe('FELEditor', () => {
     expect(functionToken?.getAttribute('title')).toContain('sum');
   });
 
+  it('offers @instance("name").path autocomplete and inserts selected path', async () => {
+    const baseDefinition = createInitialProjectState().definition;
+    projectSignal.value = createInitialProjectState({
+      definition: {
+        ...baseDefinition,
+        instances: {
+          priorYear: {
+            data: {
+              totalIncome: 200000,
+              household: {
+                rent: 1500
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const { host, getValue } = mountEditor();
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="fel-input"]');
+    expect(input).not.toBeNull();
+    if (!input) {
+      return;
+    }
+
+    await act(async () => {
+      input.value = "@instance('priorYear').to";
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const menu = host.querySelector('[data-testid="fel-autocomplete"]');
+    const option = host.querySelector('[data-testid="fel-autocomplete-option-0"]');
+    expect(menu).not.toBeNull();
+    expect(option?.textContent).toContain('totalIncome');
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+
+    expect(getValue()).toBe("@instance('priorYear').totalIncome");
+  });
+
+  it('offers instance name autocomplete inside instance()', async () => {
+    const baseDefinition = createInitialProjectState().definition;
+    projectSignal.value = createInitialProjectState({
+      definition: {
+        ...baseDefinition,
+        instances: {
+          priorYear: {
+            data: {
+              totalIncome: 200000
+            }
+          },
+          forecast: {
+            data: {
+              yearEnd: 2027
+            }
+          }
+        }
+      }
+    });
+
+    const { host, getValue } = mountEditor();
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="fel-input"]');
+    expect(input).not.toBeNull();
+    if (!input) {
+      return;
+    }
+
+    await act(async () => {
+      input.value = "@instance('p";
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const menu = host.querySelector('[data-testid="fel-autocomplete"]');
+    const option = host.querySelector('[data-testid="fel-autocomplete-option-0"]');
+    expect(menu).not.toBeNull();
+    expect(option?.textContent).toContain('priorYear');
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+
+    expect(getValue()).toBe("@instance('priorYear')");
+  });
+
+  it('supports double-quote instance names in autocomplete', async () => {
+    const baseDefinition = createInitialProjectState().definition;
+    projectSignal.value = createInitialProjectState({
+      definition: {
+        ...baseDefinition,
+        instances: {
+          priorYear: {
+            data: {
+              totalIncome: 200000
+            }
+          },
+          forecast: {
+            data: {
+              yearEnd: 2027
+            }
+          }
+        }
+      }
+    });
+
+    const { host } = mountEditor();
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="fel-input"]');
+    expect(input).not.toBeNull();
+    if (!input) {
+      return;
+    }
+
+    await act(async () => {
+      input.value = '@instance("p';
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const option = host.querySelector('[data-testid="fel-autocomplete-option-0"]');
+    expect(option?.textContent).toContain('priorYear');
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+
+    expect(input.value).toBe('@instance("priorYear")');
+  });
+
+  it('continues to suggest paths after selecting instance name', async () => {
+    const baseDefinition = createInitialProjectState().definition;
+    projectSignal.value = createInitialProjectState({
+      definition: {
+        ...baseDefinition,
+        instances: {
+          priorYear: {
+            data: {
+              totalIncome: 200000,
+              household: {
+                rent: 1500
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const { host } = mountEditor();
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="fel-input"]');
+    expect(input).not.toBeNull();
+    if (!input) {
+      return;
+    }
+
+    await act(async () => {
+      input.value = '@instance("p';
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+
+    await act(async () => {
+      input.value = '@instance("priorYear").ho';
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const option = host.querySelector('[data-testid="fel-autocomplete-option-0"]');
+    expect(option?.textContent).toContain('household');
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+
+    expect(input.value).toBe('@instance("priorYear").household');
+  });
+
+  it('does not offer instance name autocomplete when no instances exist', async () => {
+    projectSignal.value = createInitialProjectState();
+
+    const { host } = mountEditor();
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="fel-input"]');
+    expect(input).not.toBeNull();
+    if (!input) {
+      return;
+    }
+
+    await act(async () => {
+      input.value = '@instance("';
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const menu = host.querySelector('[data-testid="fel-autocomplete"]');
+    expect(menu).toBeNull();
+  });
+
+  it('nests autocomplete for deeper instance paths', async () => {
+    const baseDefinition = createInitialProjectState().definition;
+    projectSignal.value = createInitialProjectState({
+      definition: {
+        ...baseDefinition,
+        instances: {
+          priorYear: {
+            data: {
+              household: {
+                rent: {
+                  amount: 1500
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const { host, getValue } = mountEditor();
+    const input = host.querySelector<HTMLTextAreaElement>('[data-testid="fel-input"]');
+    expect(input).not.toBeNull();
+    if (!input) {
+      return;
+    }
+
+    await act(async () => {
+      input.value = "@instance('priorYear').household.r";
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const option = host.querySelector('[data-testid="fel-autocomplete-option-0"]');
+    expect(option?.textContent).toContain('household.rent');
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+
+    expect(getValue()).toBe("@instance('priorYear').household.rent");
+  });
+
   it('shows live validation errors for invalid FEL', async () => {
     const { host } = mountEditor();
     const input = host.querySelector<HTMLTextAreaElement>('[data-testid="fel-input"]');

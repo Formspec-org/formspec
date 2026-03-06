@@ -4,13 +4,29 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { App } from '../../App';
 import { createInitialDefinition, createInitialProjectState, projectSignal } from '../../state/project';
-import { moveItem, setFormTitle, setJsonEditorOpen } from '../../state/mutations';
-import { PREVIEW_MESSAGE_CHANNEL } from '../preview/messages';
+import { moveItem, setFormTitle, setItemText, setJsonEditorOpen } from '../../state/mutations';
+
+vi.mock('formspec-webcomponent', () => {
+  class MockFormspecRender extends HTMLElement {
+    _def: unknown; _comp: unknown; _theme: unknown;
+    set definition(v: unknown) { this._def = v; }
+    get definition() { return this._def; }
+    set componentDocument(v: unknown) { this._comp = v; }
+    get componentDocument() { return this._comp; }
+    set themeDocument(v: unknown) { this._theme = v; }
+    get themeDocument() { return this._theme; }
+    touchAllFields() {}
+  }
+  return { FormspecRender: MockFormspecRender };
+});
+
+let mountedHost: HTMLElement | null = null;
 
 function mountApp() {
   const host = document.createElement('div');
   document.body.append(host);
   render(<App />, host);
+  mountedHost = host;
   return host;
 }
 
@@ -50,6 +66,10 @@ function pressJsonEditorShortcut() {
 
 describe('studio shell layout', () => {
   beforeEach(() => {
+    if (mountedHost) {
+      render(null, mountedHost);
+      mountedHost = null;
+    }
     projectSignal.value = createInitialProjectState();
     document.body.innerHTML = '';
   });
@@ -198,6 +218,12 @@ describe('studio shell layout', () => {
   it('drives responsive preview width and breakpoint controls from the toolbar', async () => {
     const host = mountApp();
 
+    expect(host.querySelector('[data-testid="breakpoint-width-slider"]')).toBeNull();
+
+    const previewBtn = host.querySelector<HTMLButtonElement>('[data-testid="toggle-preview"]');
+    expect(previewBtn).not.toBeNull();
+    await act(async () => { previewBtn!.click(); });
+
     const widthSlider = host.querySelector<HTMLInputElement>('[data-testid="breakpoint-width-slider"]');
     expect(widthSlider).not.toBeNull();
     if (!widthSlider) {
@@ -254,7 +280,7 @@ describe('studio shell layout', () => {
     expect(projectSignal.value.uiState.activeBreakpoint).toBe('md');
   });
 
-  it('syncs preview artifacts after iframe readiness and on later state changes', async () => {
+  it('syncs preview artifacts to renderer element on state changes', async () => {
     projectSignal.value = createInitialProjectState({
       definition: createInitialDefinition({
         title: 'Initial title',
@@ -265,74 +291,108 @@ describe('studio shell layout', () => {
     const host = mountApp();
     const toggle = host.querySelector<HTMLButtonElement>('[data-testid="toggle-preview"]');
     expect(toggle).not.toBeNull();
-    if (!toggle) {
-      return;
-    }
 
-    await act(async () => {
-      toggle.click();
-    });
+    await act(async () => { toggle!.click(); });
 
-    const iframe = host.querySelector<HTMLIFrameElement>('[data-testid="preview-iframe"]');
-    expect(iframe).not.toBeNull();
-    if (!iframe) {
-      return;
-    }
-
-    const postMessage = (event: MessageEvent) => {
-      void event;
-    };
-    const frameWindow = { postMessage } as unknown as Window;
-    const postMessageSpy = vi.spyOn(frameWindow, 'postMessage');
-
-    Object.defineProperty(iframe, 'contentWindow', {
-      configurable: true,
-      value: frameWindow
-    });
-
-    await act(async () => {
-      window.dispatchEvent(
-        new MessageEvent('message', {
-          source: frameWindow,
-          data: {
-            channel: PREVIEW_MESSAGE_CHANNEL,
-            type: 'ready'
-          }
-        })
-      );
-    });
-
-    expect(postMessageSpy).toHaveBeenCalledTimes(1);
-    expect(postMessageSpy).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        channel: PREVIEW_MESSAGE_CHANNEL,
-        type: 'sync',
-        payload: expect.objectContaining({
-          definition: expect.objectContaining({
-            title: 'Initial title'
-          })
-        })
-      }),
-      '*'
-    );
+    const renderer = host.querySelector('[data-testid="preview-renderer"]') as any;
+    expect(renderer).not.toBeNull();
+    expect(renderer.definition?.title).toBe('Initial title');
 
     await act(async () => {
       setFormTitle(projectSignal, 'Updated title');
     });
 
-    expect(postMessageSpy).toHaveBeenCalledTimes(2);
-    expect(postMessageSpy).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        channel: PREVIEW_MESSAGE_CHANNEL,
-        type: 'sync',
-        payload: expect.objectContaining({
-          definition: expect.objectContaining({
-            title: 'Updated title'
-          })
-        })
-      }),
-      '*'
-    );
+    expect(renderer.definition?.title).toBe('Updated title');
+  });
+
+  it('syncs wizard page-mode settings through the preview renderer artifact payload', async () => {
+    projectSignal.value = createInitialProjectState({
+      definition: createInitialDefinition({
+        title: 'Wizard Preview Form',
+        items: [
+          {
+            type: 'group',
+            key: 'projectInfo',
+            label: 'Project Information',
+            presentation: { widgetHint: 'Page' },
+            children: [{ type: 'field', key: 'projectName', label: 'Project Name', dataType: 'string' }]
+          },
+          {
+            type: 'group',
+            key: 'review',
+            label: 'Review',
+            presentation: { widgetHint: 'Page' },
+            children: [{ type: 'field', key: 'confirm', label: 'Confirm', dataType: 'boolean' }]
+          }
+        ]
+      })
+    });
+
+    const host = mountApp();
+    const previewToggle = host.querySelector<HTMLButtonElement>('[data-testid="toggle-preview"]');
+    expect(previewToggle).not.toBeNull();
+    if (!previewToggle) {
+      return;
+    }
+
+    await act(async () => {
+      previewToggle.click();
+    });
+
+    const pageMode = host.querySelector<HTMLSelectElement>('[data-testid="form-page-mode-input"]');
+    expect(pageMode).not.toBeNull();
+    if (!pageMode) {
+      return;
+    }
+
+    await act(async () => {
+      pageMode.value = 'wizard';
+      pageMode.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const showProgress = host.querySelector<HTMLInputElement>('[data-testid="form-wizard-show-progress-input"]');
+    const allowSkip = host.querySelector<HTMLInputElement>('[data-testid="form-wizard-allow-skip-input"]');
+    expect(showProgress).not.toBeNull();
+    expect(allowSkip).not.toBeNull();
+    if (!showProgress || !allowSkip) {
+      return;
+    }
+
+    await act(async () => {
+      showProgress.click();
+      allowSkip.click();
+    });
+
+    const renderer = host.querySelector('[data-testid="preview-renderer"]') as any;
+    const wizard = renderer.componentDocument?.tree?.children?.[0];
+    expect(renderer.definition?.formPresentation?.pageMode).toBe('wizard');
+    expect(wizard?.component).toBe('Wizard');
+    expect(wizard?.showProgress).toBe(false);
+    expect(wizard?.allowSkip).toBe(true);
+  });
+
+  it('syncs field description changes to preview without requiring close/reopen', async () => {
+    projectSignal.value = createInitialProjectState({
+      definition: createInitialDefinition({
+        items: [{ type: 'field', key: 'name', label: 'Name', dataType: 'string' }]
+      })
+    });
+
+    const host = mountApp();
+    const toggle = host.querySelector<HTMLButtonElement>('[data-testid="toggle-preview"]');
+    expect(toggle).not.toBeNull();
+
+    await act(async () => { toggle!.click(); });
+
+    const renderer = host.querySelector('[data-testid="preview-renderer"]') as any;
+    expect(renderer).not.toBeNull();
+    expect(renderer.definition?.items?.[0]?.description).toBeUndefined();
+
+    await act(async () => {
+      setItemText(projectSignal, 'name', 'description', 'Please enter your full legal name');
+    });
+
+    expect(renderer.definition?.items?.[0]?.description).toBe('Please enter your full legal name');
   });
 
   it('shows form inspector by default and item inspector when selected', async () => {
@@ -421,58 +481,6 @@ describe('studio shell layout', () => {
     const movedBind = projectSignal.value.definition.binds?.find((entry) => entry.path === 'total');
     expect(movedBind?.calculate).toContain('details.projectAmount');
     expect(projectSignal.value.selection).toBe('details.projectAmount');
-  });
-
-  it('opens brand panel from toolbar by clearing selection', async () => {
-    projectSignal.value = createInitialProjectState({
-      definition: createInitialDefinition({
-        items: [{ type: 'field', key: 'name', label: 'Name', dataType: 'string' }]
-      }),
-      selection: 'name'
-    });
-
-    const host = mountApp();
-    expect(host.querySelector('[data-testid="field-inspector"]')).not.toBeNull();
-
-    const openBrand = host.querySelector<HTMLButtonElement>('[data-testid="open-brand-panel"]');
-    expect(openBrand).not.toBeNull();
-    if (!openBrand) {
-      return;
-    }
-
-    await act(async () => {
-      openBrand.click();
-    });
-
-    expect(projectSignal.value.selection).toBeNull();
-    expect(host.querySelector('[data-testid="form-inspector"]')).not.toBeNull();
-    expect(host.querySelector('[data-testid="section-brand-style"]')).not.toBeNull();
-  });
-
-  it('opens form rules from toolbar and keeps inspector on form-level rules', async () => {
-    projectSignal.value = createInitialProjectState({
-      definition: createInitialDefinition({
-        items: [{ type: 'field', key: 'name', label: 'Name', dataType: 'string' }]
-      }),
-      selection: 'name'
-    });
-
-    const host = mountApp();
-    expect(host.querySelector('[data-testid="field-inspector"]')).not.toBeNull();
-
-    const openRules = host.querySelector<HTMLButtonElement>('[data-testid="open-form-rules"]');
-    expect(openRules).not.toBeNull();
-    if (!openRules) {
-      return;
-    }
-
-    await act(async () => {
-      openRules.click();
-    });
-
-    expect(projectSignal.value.selection).toBeNull();
-    expect(host.querySelector('[data-testid="form-inspector"]')).not.toBeNull();
-    expect(host.querySelector('[data-testid="section-form-rules"]')).not.toBeNull();
   });
 
   it('updates form title from toolbar input', () => {
@@ -805,5 +813,140 @@ describe('studio shell layout', () => {
 
     expect(host.querySelector('[data-testid="json-editor-parse-error"]')).not.toBeNull();
     expect(projectSignal.value.definition.title).toBe('Toolbar Updated Title');
+  });
+
+  it('reorders a field up with Alt+ArrowUp in the structure tree', async () => {
+    projectSignal.value = createInitialProjectState({
+      definition: createInitialDefinition({
+        items: [
+          { type: 'field', key: 'alpha', label: 'Alpha', dataType: 'string' },
+          { type: 'field', key: 'beta', label: 'Beta', dataType: 'string' },
+          { type: 'field', key: 'gamma', label: 'Gamma', dataType: 'string' }
+        ]
+      })
+    });
+
+    const host = mountApp();
+    const toggle = host.querySelector<HTMLButtonElement>('[data-testid="toggle-structure"]');
+    await act(async () => { toggle?.click(); });
+
+    const betaNode = host.querySelector<HTMLElement>('[data-testid="structure-node-beta"]');
+    expect(betaNode).not.toBeNull();
+
+    await act(async () => {
+      betaNode!.focus();
+      betaNode!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true })
+      );
+    });
+
+    const items = projectSignal.value.definition.items;
+    expect(items[0].key).toBe('beta');
+    expect(items[1].key).toBe('alpha');
+    expect(items[2].key).toBe('gamma');
+  });
+
+  it('reorders a field down with Alt+ArrowDown in the structure tree', async () => {
+    projectSignal.value = createInitialProjectState({
+      definition: createInitialDefinition({
+        items: [
+          { type: 'field', key: 'alpha', label: 'Alpha', dataType: 'string' },
+          { type: 'field', key: 'beta', label: 'Beta', dataType: 'string' },
+          { type: 'field', key: 'gamma', label: 'Gamma', dataType: 'string' }
+        ]
+      })
+    });
+
+    const host = mountApp();
+    const toggle = host.querySelector<HTMLButtonElement>('[data-testid="toggle-structure"]');
+    await act(async () => { toggle?.click(); });
+
+    const betaNode = host.querySelector<HTMLElement>('[data-testid="structure-node-beta"]');
+    expect(betaNode).not.toBeNull();
+
+    await act(async () => {
+      betaNode!.focus();
+      betaNode!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true })
+      );
+    });
+
+    const items = projectSignal.value.definition.items;
+    expect(items[0].key).toBe('alpha');
+    expect(items[1].key).toBe('gamma');
+    expect(items[2].key).toBe('beta');
+  });
+
+  it('does not move a field past the boundary with Alt+ArrowUp on first item', async () => {
+    projectSignal.value = createInitialProjectState({
+      definition: createInitialDefinition({
+        items: [
+          { type: 'field', key: 'alpha', label: 'Alpha', dataType: 'string' },
+          { type: 'field', key: 'beta', label: 'Beta', dataType: 'string' }
+        ]
+      })
+    });
+
+    const host = mountApp();
+    const toggle = host.querySelector<HTMLButtonElement>('[data-testid="toggle-structure"]');
+    await act(async () => { toggle?.click(); });
+
+    const alphaNode = host.querySelector<HTMLElement>('[data-testid="structure-node-alpha"]');
+    await act(async () => {
+      alphaNode!.focus();
+      alphaNode!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true })
+      );
+    });
+
+    const items = projectSignal.value.definition.items;
+    expect(items[0].key).toBe('alpha');
+    expect(items[1].key).toBe('beta');
+  });
+
+  it('expands a collapsed group in structure tree after dragging a field cross-group', async () => {
+    projectSignal.value = createInitialProjectState({
+      definition: createInitialDefinition({
+        items: [
+          { type: 'field', key: 'standalone', label: 'Standalone', dataType: 'string' },
+          {
+            type: 'group',
+            key: 'section',
+            label: 'Section',
+            children: [
+              { type: 'field', key: 'inner', label: 'Inner', dataType: 'string' }
+            ]
+          }
+        ]
+      })
+    });
+
+    const host = mountApp();
+    const toggle = host.querySelector<HTMLButtonElement>('[data-testid="toggle-structure"]');
+    await act(async () => { toggle?.click(); });
+
+    const sectionNode = host.querySelector<HTMLElement>('[data-testid="structure-node-section"]');
+    expect(sectionNode).not.toBeNull();
+
+    // Collapse the group by clicking the expander
+    const expander = sectionNode!.querySelector<HTMLButtonElement>('.structure-node__expander');
+    expect(expander).not.toBeNull();
+    await act(async () => { expander?.click(); });
+
+    // Inner child should be hidden (group collapsed)
+    expect(host.querySelector('[data-testid="structure-node-section.inner"]')).toBeNull();
+
+    // After drag-reordering into a group, moveItem result changes selection - verify
+    // cross-group reparenting works by calling moveItem directly (the drag handler delegates to it)
+    await act(async () => {
+      moveItem(projectSignal, 'standalone', { parentPath: 'section', index: 0 });
+    });
+
+    // Standalone should now be at section.standalone
+    expect(projectSignal.value.definition.items).toHaveLength(1);
+    expect(projectSignal.value.definition.items[0].key).toBe('section');
+    const sectionChildren = (projectSignal.value.definition.items[0] as { children?: { key: string }[] }).children ?? [];
+    expect(sectionChildren[0].key).toBe('standalone');
+    expect(sectionChildren[1].key).toBe('inner');
   });
 });

@@ -257,6 +257,200 @@ describe('inspector panel', () => {
     expect(presentation?.pageMode).toBe('wizard');
   });
 
+  it('edits wizard settings from the form layout section when page mode is wizard', async () => {
+    projectSignal.value = createInitialProjectState({
+      definition: createInitialDefinition({
+        title: 'Inspector Test Form',
+        formPresentation: {
+          pageMode: 'wizard'
+        },
+        items: [
+          {
+            type: 'group',
+            key: 'projectInfo',
+            label: 'Project Information',
+            presentation: { widgetHint: 'Page' },
+            children: [{ type: 'field', key: 'projectName', label: 'Project Name', dataType: 'string' }]
+          },
+          {
+            type: 'group',
+            key: 'budget',
+            label: 'Budget',
+            presentation: { widgetHint: 'Page' },
+            children: [{ type: 'field', key: 'amount', label: 'Amount', dataType: 'money' }]
+          }
+        ]
+      }),
+      selection: null
+    });
+
+    const host = mountApp();
+    const showProgress = host.querySelector<HTMLInputElement>('[data-testid="form-wizard-show-progress-input"]');
+    const allowSkip = host.querySelector<HTMLInputElement>('[data-testid="form-wizard-allow-skip-input"]');
+    expect(showProgress).not.toBeNull();
+    expect(allowSkip).not.toBeNull();
+    if (!showProgress || !allowSkip) {
+      return;
+    }
+
+    await act(async () => {
+      showProgress.click();
+      allowSkip.click();
+    });
+
+    const wizard = projectSignal.value.component.tree.children?.[0] as Record<string, unknown> | undefined;
+    expect(wizard?.component).toBe('Wizard');
+    expect(wizard?.showProgress).toBe(false);
+    expect(wizard?.allowSkip).toBe(true);
+  });
+
+  it('edits custom component registry entries from the component document section', async () => {
+    seedState([], null);
+    const host = mountApp();
+
+    const addButton = host.querySelector<HTMLButtonElement>('[data-testid="component-registry-add-button"]');
+    expect(addButton).not.toBeNull();
+    if (!addButton) {
+      return;
+    }
+
+    await act(async () => {
+      addButton.click();
+    });
+
+    const nameInput = host.querySelector<HTMLInputElement>('[data-testid="component-registry-name-input"]');
+    const paramsInput = host.querySelector<HTMLInputElement>('[data-testid="component-registry-params-input"]');
+    const treeInput = host.querySelector<HTMLTextAreaElement>('[data-testid="component-registry-tree-input"]');
+    const saveButton = host.querySelector<HTMLButtonElement>('[data-testid="component-registry-save"]');
+    expect(nameInput).not.toBeNull();
+    expect(paramsInput).not.toBeNull();
+    expect(treeInput).not.toBeNull();
+    expect(saveButton).not.toBeNull();
+    if (!nameInput || !paramsInput || !treeInput || !saveButton) {
+      return;
+    }
+
+    await act(async () => {
+      nameInput.value = 'ApplicantNameField';
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      paramsInput.value = 'field, label';
+      paramsInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      treeInput.value = JSON.stringify(
+        {
+          component: 'Stack',
+          children: [
+            { component: 'Heading', level: 4, text: '{label}' },
+            { component: 'TextInput', bind: '{field}' }
+          ]
+        },
+        null,
+        2
+      );
+      treeInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      saveButton.click();
+    });
+
+    expect(projectSignal.value.component.components).toEqual({
+      ApplicantNameField: {
+        params: ['field', 'label'],
+        tree: {
+          component: 'Stack',
+          children: [
+            { component: 'Heading', level: 4, text: '{label}' },
+            { component: 'TextInput', bind: '{field}' }
+          ]
+        }
+      }
+    });
+  });
+
+  it('edits theme pages and region overrides from the brand panel', async () => {
+    seedState(
+      [
+        { type: 'field', key: 'firstName', label: 'First Name', dataType: 'string' },
+        { type: 'field', key: 'lastName', label: 'Last Name', dataType: 'string' }
+      ],
+      null
+    );
+    const host = mountApp();
+
+    const addPageButton = host.querySelector<HTMLButtonElement>('[data-testid="theme-page-add-button"]');
+    expect(addPageButton).not.toBeNull();
+    if (!addPageButton) {
+      return;
+    }
+
+    await act(async () => {
+      addPageButton.click();
+    });
+
+    const pageId = host.querySelector<HTMLInputElement>('[data-testid="theme-page-id-0"]');
+    const pageTitle = host.querySelector<HTMLInputElement>('[data-testid="theme-page-title-0"]');
+    const addRegionButton = host.querySelector<HTMLButtonElement>('[data-testid="theme-page-add-region-0"]');
+    expect(pageId).not.toBeNull();
+    expect(pageTitle).not.toBeNull();
+    expect(addRegionButton).not.toBeNull();
+    if (!pageId || !pageTitle || !addRegionButton) {
+      return;
+    }
+
+    await act(async () => {
+      pageId.value = 'contact';
+      pageId.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      pageTitle.value = 'Contact Information';
+      pageTitle.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      addRegionButton.click();
+    });
+
+    const regionKey = host.querySelector<HTMLInputElement>('[data-testid="theme-page-region-key-0-0"]');
+    const regionSpan = host.querySelector<HTMLInputElement>('[data-testid="theme-page-region-span-0-0"]');
+    const smHidden = host.querySelector<HTMLInputElement>('[data-testid="theme-page-region-responsive-hidden-0-0-sm"]');
+    expect(regionKey).not.toBeNull();
+    expect(regionSpan).not.toBeNull();
+    expect(smHidden).not.toBeNull();
+    if (!regionKey || !regionSpan || !smHidden) {
+      return;
+    }
+
+    await act(async () => {
+      regionKey.value = 'firstName';
+      regionKey.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      regionSpan.value = '6';
+      regionSpan.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      smHidden.click();
+    });
+
+    expect(projectSignal.value.theme.pages).toEqual([
+      {
+        id: 'contact',
+        title: 'Contact Information',
+        regions: [
+          {
+            key: 'firstName',
+            span: 6,
+            responsive: {
+              sm: { hidden: true }
+            }
+          }
+        ]
+      }
+    ]);
+  });
+
   it('imports a linked sub-form from URL in the form inspector', async () => {
     seedState([], null);
 
@@ -737,10 +931,12 @@ describe('inspector panel', () => {
         })
       })
     );
-    expect(projectSignal.value.extensions.registries).toHaveLength(1);
-    expect(host.querySelector('[data-testid="extension-summary-datatypes"]')?.textContent).toContain('1');
-    expect(host.querySelector('[data-testid="extension-summary-functions"]')?.textContent).toContain('1');
-    expect(host.querySelector('[data-testid="extension-summary-constraints"]')?.textContent).toContain('1');
+    // builtin registry (1) + loaded Acme registry (1) = 2
+    expect(projectSignal.value.extensions.registries).toHaveLength(2);
+    // combined catalog: 12 builtin dataTypes + 1 Acme = 13; 2 builtin functions + 1 Acme = 3; 1 builtin constraint + 1 Acme = 2
+    expect(host.querySelector('[data-testid="extension-summary-datatypes"]')?.textContent).toContain('13');
+    expect(host.querySelector('[data-testid="extension-summary-functions"]')?.textContent).toContain('3');
+    expect(host.querySelector('[data-testid="extension-summary-constraints"]')?.textContent).toContain('2');
     expect(host.querySelector('[data-testid="extension-entry-status-x-acme-unique"]')?.textContent).toContain(
       'deprecated'
     );
