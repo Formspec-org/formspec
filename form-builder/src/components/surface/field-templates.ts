@@ -23,7 +23,7 @@ export interface FieldTemplate {
 
 const USER_FIELD_TEMPLATES_KEY = 'formspec.studio.fieldTemplates.v1';
 
-export interface SavedUserFieldTemplate {
+interface SavedUserFieldTemplate {
   id: string;
   name: string;
   savedAt: string;
@@ -31,7 +31,7 @@ export interface SavedUserFieldTemplate {
   bindSeed?: Partial<Omit<FormspecBind, 'path'>>;
 }
 
-export function loadUserFieldTemplates(): SavedUserFieldTemplate[] {
+function loadUserFieldTemplates(): SavedUserFieldTemplate[] {
   if (typeof window === 'undefined' || !window.localStorage) {
     return [];
   }
@@ -56,7 +56,7 @@ export function saveUserFieldTemplate(template: SavedUserFieldTemplate): void {
   window.localStorage.setItem(USER_FIELD_TEMPLATES_KEY, JSON.stringify(next));
 }
 
-export function deleteUserFieldTemplate(id: string): void {
+function deleteUserFieldTemplate(id: string): void {
   if (typeof window === 'undefined' || !window.localStorage) {
     return;
   }
@@ -77,7 +77,7 @@ function isValidSavedTemplate(value: unknown): value is SavedUserFieldTemplate {
   );
 }
 
-export const FIELD_TEMPLATES: FieldTemplate[] = [
+const FIELD_TEMPLATES: FieldTemplate[] = [
   {
     id: 'short-answer',
     name: 'Short Answer',

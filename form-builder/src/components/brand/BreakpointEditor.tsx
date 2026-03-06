@@ -3,7 +3,7 @@ import type { Signal } from '@preact/signals';
 import { setThemeBreakpoint } from '../../state/mutations';
 import type { ProjectState } from '../../state/project';
 
-export interface BreakpointEditorProps {
+interface BreakpointEditorProps {
   project: Signal<ProjectState>;
 }
 

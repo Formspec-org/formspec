@@ -6,7 +6,7 @@ import type {
   ProjectState
 } from '../../state/project';
 
-export interface CustomComponentRegistryEditorProps {
+interface CustomComponentRegistryEditorProps {
   project: Signal<ProjectState>;
 }
 

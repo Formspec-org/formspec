@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 
-export interface KeyValueEditorProps {
+interface KeyValueEditorProps {
   label: string;
   value: Record<string, string | number> | undefined;
   testId?: string;

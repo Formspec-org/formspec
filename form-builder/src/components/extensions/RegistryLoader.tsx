@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 
-export interface RegistryLoaderProps {
+interface RegistryLoaderProps {
   onLoad: (payload: unknown, sourceType: 'url' | 'file', sourceLabel: string) => Promise<void> | void;
 }
 

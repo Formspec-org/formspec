@@ -1,7 +1,7 @@
 import type { Ref } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 
-export interface InlineEditableTextProps {
+interface InlineEditableTextProps {
   value?: string;
   placeholder: string;
   className: string;

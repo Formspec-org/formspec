@@ -16,7 +16,7 @@ import {
 import type { ProjectState } from '../../state/project';
 import { CompositionBuilder } from './CompositionBuilder';
 
-export interface ShapeEditorProps {
+interface ShapeEditorProps {
   project: Signal<ProjectState>;
   shape: FormspecShape;
   allShapes: FormspecShape[];

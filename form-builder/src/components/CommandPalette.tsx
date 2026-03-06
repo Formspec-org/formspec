@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { recordCommandUsed, searchCommands, type StudioCommand } from './commands';
 
-export interface CommandPaletteProps {
+interface CommandPaletteProps {
   open: boolean;
   commands: StudioCommand[];
   onClose: () => void;

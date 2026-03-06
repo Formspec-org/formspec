@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import { setThemeToken } from '../../state/mutations';
 import type { ProjectState } from '../../state/project';
 
-export interface TokenEditorProps {
+interface TokenEditorProps {
   project: Signal<ProjectState>;
 }
 

@@ -16,7 +16,7 @@ import type { FormspecInstance } from 'formspec-engine';
 import { buildExtensionCatalog } from '../../state/extensions';
 import { projectSignal } from '../../state/project';
 
-export interface FELEditorProps {
+interface FELEditorProps {
   label: string;
   value: string | undefined;
   placeholder?: string;

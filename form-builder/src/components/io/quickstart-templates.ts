@@ -1,6 +1,6 @@
 import type { FormspecDefinition } from 'formspec-engine';
 
-export interface QuickstartTemplate {
+interface QuickstartTemplate {
   id: string;
   name: string;
   description: string;

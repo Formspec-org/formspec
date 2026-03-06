@@ -1,6 +1,6 @@
 import type { CombinedDiagnostics, DiagnosticEntry } from '../state/derived';
 
-export interface DiagnosticsBarProps {
+interface DiagnosticsBarProps {
   diagnostics: CombinedDiagnostics;
   expanded: boolean;
   onToggleExpanded: () => void;

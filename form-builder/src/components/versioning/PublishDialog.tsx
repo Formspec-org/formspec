@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { SemverImpact } from '../../state/versioning';
 
-export interface PublishDialogProps {
+interface PublishDialogProps {
   open: boolean;
   recommendedBump: SemverImpact;
   pendingChangeCount: number;

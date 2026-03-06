@@ -37,11 +37,11 @@ export function getThemeItemPresentation(
   return (theme.items?.[leafKey] as Record<string, unknown>) ?? {};
 }
 
-export function getFieldString(value: unknown): string | undefined {
+function getFieldString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
-export function getFieldNumber(value: unknown): number | undefined {
+function getFieldNumber(value: unknown): number | undefined {
   return typeof value === 'number' ? value : undefined;
 }
 

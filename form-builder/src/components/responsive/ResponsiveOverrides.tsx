@@ -14,7 +14,7 @@ export interface ResponsiveOverridePatch {
   hidden?: boolean | null;
 }
 
-export interface ResponsiveOverridesProps {
+interface ResponsiveOverridesProps {
   testIdPrefix: string;
   breakpoints: Record<string, number>;
   activeBreakpoint: string;

@@ -1,15 +1,15 @@
 import type { LogicGroupOption } from './catalog';
 
-export type FormulaTemplate = 'sum' | 'count' | 'average' | 'custom';
+type FormulaTemplate = 'sum' | 'count' | 'average' | 'custom';
 
-export interface FormulaExpression {
+interface FormulaExpression {
   template: FormulaTemplate;
   groupPath: string;
   fieldPath: string;
   custom: string;
 }
 
-export interface FormulaBuilderProps {
+interface FormulaBuilderProps {
   value: FormulaExpression;
   groups: LogicGroupOption[];
   testIdPrefix: string;

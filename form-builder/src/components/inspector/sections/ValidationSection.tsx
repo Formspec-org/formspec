@@ -11,7 +11,7 @@ import { ExpressionToggle } from '../../logic/ExpressionToggle';
 import type { FELEditorFieldOption } from '../../controls/fel-utils';
 import type { LogicFieldDataType, LogicFieldOption } from '../../logic/catalog';
 
-export interface ValidationSectionProps {
+interface ValidationSectionProps {
   testIdPrefix: string;
   open: boolean;
   dataType: LogicFieldDataType;

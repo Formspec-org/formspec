@@ -4,7 +4,7 @@ import { NumberInput } from '../../controls/NumberInput';
 import { Toggle } from '../../controls/Toggle';
 import type { GroupDataTableColumn, GroupDisplayMode } from '../../../state/mutations';
 
-export interface RepeatSectionProps {
+interface RepeatSectionProps {
   testIdPrefix: string;
   open: boolean;
   repeatable: boolean;

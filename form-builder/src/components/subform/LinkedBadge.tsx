@@ -6,7 +6,7 @@ interface LinkedSubformMetadata {
   importedAt?: string;
 }
 
-export interface LinkedBadgeProps {
+interface LinkedBadgeProps {
   item: FormspecItem;
   path: string;
 }

@@ -20,7 +20,7 @@ import { PageLayoutEditor } from './PageLayoutEditor';
 import { SelectorRuleEditor } from './SelectorRuleEditor';
 import { TokenEditor } from './TokenEditor';
 
-export interface BrandPanelProps {
+interface BrandPanelProps {
   project: Signal<ProjectState>;
 }
 

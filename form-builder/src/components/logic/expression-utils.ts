@@ -1,9 +1,9 @@
-export interface ParsedFelLiteral {
+interface ParsedFelLiteral {
   kind: 'string' | 'number' | 'boolean' | 'raw';
   value: string;
 }
 
-export interface LogicalSplit {
+interface LogicalSplit {
   clauses: string[];
   operator: 'and' | 'or' | null;
   mixed: boolean;

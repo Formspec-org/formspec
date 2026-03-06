@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import { importSubform } from '../../state/mutations';
 import type { ProjectState } from '../../state/project';
 
-export interface SubFormImportProps {
+interface SubFormImportProps {
   project: Signal<ProjectState>;
 }
 

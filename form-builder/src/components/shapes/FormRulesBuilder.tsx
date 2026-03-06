@@ -6,7 +6,7 @@ import type { ProjectState } from '../../state/project';
 import { ShapeEditor } from './ShapeEditor';
 import { ShapeList } from './ShapeList';
 
-export interface FormRulesBuilderProps {
+interface FormRulesBuilderProps {
   project: Signal<ProjectState>;
 }
 

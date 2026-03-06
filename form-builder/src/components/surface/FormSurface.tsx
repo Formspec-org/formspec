@@ -21,7 +21,7 @@ import type { FieldLogicBadgeKey } from './FieldBlock';
 import { ItemBlock } from './ItemBlock';
 import { SlashCommandMenu } from './SlashCommandMenu';
 
-export interface FormSurfaceProps {
+interface FormSurfaceProps {
   project?: Signal<ProjectState>;
 }
 

@@ -1,4 +1,4 @@
-export interface ToggleProps {
+interface ToggleProps {
   label: string;
   checked: boolean;
   testId?: string;

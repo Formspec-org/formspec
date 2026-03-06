@@ -3,7 +3,7 @@ import type { MappingRule } from '../../state/project';
 import { TextInput } from '../controls/TextInput';
 import type { MappingRuleProperty } from '../../state/mutations';
 
-export interface MappingRuleDetailProps {
+interface MappingRuleDetailProps {
   ruleIndex: number;
   rule: MappingRule;
   onChange: (property: MappingRuleProperty, value: unknown) => void;

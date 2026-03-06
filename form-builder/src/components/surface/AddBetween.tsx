@@ -1,4 +1,4 @@
-export interface AddBetweenProps {
+interface AddBetweenProps {
   parentPath: string | null;
   index: number;
   onAdd: (parentPath: string | null, index: number, anchor: HTMLElement | null) => void;

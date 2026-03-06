@@ -2,7 +2,7 @@ import type { FormspecItem } from 'formspec-engine';
 import { DragHandle } from './DragHandle';
 import { InlineEditableText } from './InlineEditableText';
 
-export interface DisplayBlockProps {
+interface DisplayBlockProps {
   item: FormspecItem;
   path: string;
   selected?: boolean;

@@ -16,7 +16,7 @@ import { Collapsible } from '../controls/Collapsible';
 import { TextInput } from '../controls/TextInput';
 import { getComponentNodeByPath, getComponentResponsiveOverride, getThemeItemPresentation } from './utils';
 
-export interface DisplayInspectorProps {
+interface DisplayInspectorProps {
   project: Signal<ProjectState>;
   path: string;
   item: FormspecItem;

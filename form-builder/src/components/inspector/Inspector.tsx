@@ -7,7 +7,7 @@ import { FormInspector } from './FormInspector';
 import { GroupInspector } from './GroupInspector';
 import { findItemByPath } from './utils';
 
-export interface InspectorProps {
+interface InspectorProps {
   project?: Signal<ProjectState>;
 }
 

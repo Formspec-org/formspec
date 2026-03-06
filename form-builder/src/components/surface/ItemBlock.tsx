@@ -4,7 +4,7 @@ import { DisplayBlock } from './DisplayBlock';
 import { FieldBlock, type FieldLogicBadgeKey } from './FieldBlock';
 import { GroupBlock } from './GroupBlock';
 
-export interface ItemBlockProps {
+interface ItemBlockProps {
   item: FormspecItem;
   path: string;
   selected: boolean;

@@ -12,7 +12,7 @@ import {
 import { getPageItems } from '../../state/wiring';
 import { projectSignal, type ProjectState } from '../../state/project';
 
-export interface PagesBarProps {
+interface PagesBarProps {
   project?: Signal<ProjectState>;
 }
 

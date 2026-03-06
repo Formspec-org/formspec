@@ -37,7 +37,7 @@ import {
   getThemeItemPresentation
 } from './utils';
 
-export interface GroupInspectorProps {
+interface GroupInspectorProps {
   project: Signal<ProjectState>;
   path: string;
   item: FormspecItem;

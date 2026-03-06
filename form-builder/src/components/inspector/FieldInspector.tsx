@@ -37,7 +37,7 @@ import {
   getThemeItemPresentation
 } from './utils';
 
-export interface FieldInspectorProps {
+interface FieldInspectorProps {
   project: Signal<ProjectState>;
   path: string;
   item: FormspecItem;

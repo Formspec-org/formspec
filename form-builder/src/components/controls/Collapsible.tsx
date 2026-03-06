@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 
-export interface CollapsibleProps {
+interface CollapsibleProps {
   id: string;
   title: string;
   open: boolean;

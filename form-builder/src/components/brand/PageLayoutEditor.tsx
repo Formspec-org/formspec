@@ -10,7 +10,7 @@ import type {
   ThemePageRegionResponsiveOverride
 } from '../../state/project';
 
-export interface PageLayoutEditorProps {
+interface PageLayoutEditorProps {
   project: Signal<ProjectState>;
 }
 

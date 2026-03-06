@@ -1,6 +1,6 @@
 import type { ChangelogChange } from '../../state/versioning';
 
-export interface ChangeListProps {
+interface ChangeListProps {
   changes: ChangelogChange[];
 }
 

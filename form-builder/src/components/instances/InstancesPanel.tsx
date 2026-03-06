@@ -8,7 +8,7 @@ import {
 } from '../../state/mutations';
 import type { ProjectState } from '../../state/project';
 
-export interface InstancesPanelProps {
+interface InstancesPanelProps {
   project: Signal<ProjectState>;
 }
 

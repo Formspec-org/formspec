@@ -10,7 +10,7 @@ import {
 import { ChangeList } from './ChangeList';
 import { PublishDialog } from './PublishDialog';
 
-export interface VersionPanelProps {
+interface VersionPanelProps {
   project: Signal<ProjectState>;
 }
 

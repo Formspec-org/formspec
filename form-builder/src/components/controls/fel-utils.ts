@@ -13,7 +13,7 @@ export interface FELEditorFunctionOption {
   signature?: string;
 }
 
-export interface FELAutocompleteTrigger {
+interface FELAutocompleteTrigger {
   start: number;
   end: number;
   query: string;
@@ -22,7 +22,7 @@ export interface FELAutocompleteTrigger {
   instanceName?: string;
 }
 
-export interface FELHighlightToken {
+interface FELHighlightToken {
   key: string;
   text: string;
   kind: 'plain' | 'keyword' | 'literal' | 'operator' | 'path' | 'function';
@@ -66,7 +66,7 @@ const OPERATOR_TOKENS = new Set([
   'Dot'
 ]);
 
-export const FEL_FUNCTION_SIGNATURES: Record<string, string> = {
+const FEL_FUNCTION_SIGNATURES: Record<string, string> = {
   sum: 'sum(array)',
   avg: 'avg(array)',
   min: 'min(array)',

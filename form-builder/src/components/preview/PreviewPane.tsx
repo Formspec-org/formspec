@@ -13,7 +13,7 @@ const DEVICE_PRESETS = [
   { label: 'Desktop', width: 1280, icon: '🖥' }
 ] as const;
 
-export interface PreviewPaneProps {
+interface PreviewPaneProps {
   project: Signal<ProjectState>;
   previewWidth: number;
   activeBreakpoint: string;

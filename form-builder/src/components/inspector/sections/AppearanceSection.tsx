@@ -40,7 +40,7 @@ const LABEL_POSITION_OPTIONS: DropdownOption[] = [
   { value: 'placeholder', label: 'Placeholder' }
 ];
 
-export interface AppearanceSectionProps {
+interface AppearanceSectionProps {
   testIdPrefix: string;
   open: boolean;
   widget?: string;

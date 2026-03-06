@@ -6,7 +6,7 @@ import type { VariableDependencyEntry } from '../../state/derived';
 import type { ProjectState } from '../../state/project';
 import { VariableEditor } from './VariableEditor';
 
-export interface VariablesPanelProps {
+interface VariablesPanelProps {
   project: Signal<ProjectState>;
   dependencies: VariableDependencyEntry[];
 }

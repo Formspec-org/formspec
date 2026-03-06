@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import { deleteOptionSet, setOptionSet } from '../../state/mutations';
 import type { ProjectState } from '../../state/project';
 
-export interface OptionSetsPanelProps {
+interface OptionSetsPanelProps {
   project: Signal<ProjectState>;
 }
 

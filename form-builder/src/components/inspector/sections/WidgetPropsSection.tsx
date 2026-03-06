@@ -4,7 +4,7 @@ import { NumberInput } from '../../controls/NumberInput';
 import { TextInput } from '../../controls/TextInput';
 import { Toggle } from '../../controls/Toggle';
 
-export interface WidgetPropsSectionProps {
+interface WidgetPropsSectionProps {
   testIdPrefix: string;
   open: boolean;
   component: string;

@@ -1,4 +1,4 @@
-export interface NumberInputProps {
+interface NumberInputProps {
   label: string;
   value: number | undefined;
   min?: number;

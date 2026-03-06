@@ -41,11 +41,11 @@ export function redoProject(project: Signal<ProjectState>): boolean {
   return true;
 }
 
-export function canUndo(): boolean {
+function canUndo(): boolean {
   return undoStack.length > 0;
 }
 
-export function canRedo(): boolean {
+function canRedo(): boolean {
   return redoStack.length > 0;
 }
 

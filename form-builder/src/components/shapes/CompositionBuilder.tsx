@@ -3,7 +3,7 @@ import { FELEditor } from '../controls/FELEditor';
 import type { FELEditorFieldOption } from '../controls/fel-utils';
 import type { ShapeCompositionMode } from '../../state/mutations';
 
-export interface CompositionBuilderProps {
+interface CompositionBuilderProps {
   mode: ShapeCompositionMode;
   entries: string[];
   currentShapeId: string;

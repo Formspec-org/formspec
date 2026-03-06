@@ -152,11 +152,27 @@
   align-items: center;
   justify-content: center;
   overflow: visible;
-  transition: height 0.12s ease;
+  position: relative;
 }
 
 .add-between.is-drag-active {
-  height: 2rem;
+  height: 0.5rem;
+}
+
+.add-between.is-drag-active .add-between__button {
+  display: none;
+}
+
+.add-between.is-drag-target::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 3px;
+  background: #0f766e;
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .add-between__button {

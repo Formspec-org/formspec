@@ -8,7 +8,7 @@ import { findActivePage, getPageMode, joinPath } from '../../state/wiring';
 import { PagesBar } from './PagesBar';
 import { TreeNode } from './TreeNode';
 
-export interface StructurePanelProps {
+interface StructurePanelProps {
   project?: Signal<ProjectState>;
 }
 

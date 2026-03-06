@@ -2,7 +2,7 @@ import { useMemo, useState } from 'preact/hooks';
 import { RuntimeMappingEngine } from 'formspec-engine';
 import type { FormspecMappingDocument, MappingRule } from '../../state/project';
 
-export interface RoundTripTestProps {
+interface RoundTripTestProps {
   mapping: FormspecMappingDocument;
 }
 

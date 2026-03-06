@@ -3,7 +3,7 @@ import { useRef, useState } from 'preact/hooks';
 import { DragHandle } from './DragHandle';
 import { InlineEditableText } from './InlineEditableText';
 
-export interface FieldBlockProps {
+interface FieldBlockProps {
   item: FormspecItem;
   path: string;
   bind?: FormspecBind;

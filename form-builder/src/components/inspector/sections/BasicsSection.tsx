@@ -4,7 +4,7 @@ import { Dropdown } from '../../controls/Dropdown';
 import { TextInput } from '../../controls/TextInput';
 import { Toggle } from '../../controls/Toggle';
 
-export interface BasicsSectionProps {
+interface BasicsSectionProps {
   testIdPrefix: string;
   open: boolean;
   keyValue: string;

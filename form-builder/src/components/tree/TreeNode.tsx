@@ -1,7 +1,7 @@
 import type { JSX } from 'preact';
 import type { FormspecBind, FormspecItem } from 'formspec-engine';
 
-export interface TreeNodeProps {
+interface TreeNodeProps {
   item: FormspecItem;
   path: string;
   depth: number;

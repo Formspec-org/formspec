@@ -35,7 +35,7 @@ const FIELD_WIDGET_LABELS: Record<string, string> = {
   MoneyInput: 'Money Input'
 };
 
-export interface FieldWidgetOption {
+interface FieldWidgetOption {
   value: string;
   label: string;
 }
@@ -71,7 +71,7 @@ export function resolveDefaultFieldWidget(dataType: FormspecItem['dataType'] | u
   return 'TextInput';
 }
 
-export function getSupportedFieldWidgets(dataType: FormspecItem['dataType'] | undefined): string[] {
+function getSupportedFieldWidgets(dataType: FormspecItem['dataType'] | undefined): string[] {
   const normalizedDataType = dataType ?? 'string';
   return FIELD_WIDGET_MATRIX[normalizedDataType] ?? ['TextInput'];
 }

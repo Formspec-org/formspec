@@ -4,7 +4,7 @@ import { NumberInput } from '../../controls/NumberInput';
 import { TextInput } from '../../controls/TextInput';
 import { Toggle } from '../../controls/Toggle';
 
-export interface AdvancedSectionLabels {
+interface AdvancedSectionLabels {
   short?: string;
   pdf?: string;
   csv?: string;
@@ -17,7 +17,7 @@ export interface PrePopulateValue {
   editable?: boolean;
 }
 
-export interface AdvancedSectionProps {
+interface AdvancedSectionProps {
   testIdPrefix: string;
   open: boolean;
   defaultValue?: string;

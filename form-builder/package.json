@@ -15,14 +15,13 @@
   "dependencies": {
     "@preact/signals": "^2.0.1",
     "ajv": "^8.17.1",
-    "formspec-engine": "*",
-    "formspec-layout": "*",
-    "formspec-webcomponent": "*",
     "jszip": "^3.10.1",
     "preact": "^10.26.4"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.2",
+    "happy-dom": "^20.8.3",
+    "typedoc": "^0.28.17",
     "typescript": "^5.7.3",
     "vite": "^5.4.19",
     "vitest": "^3.2.4"

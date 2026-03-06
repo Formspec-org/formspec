@@ -27,7 +27,7 @@ import {
 import { deriveVariableDependencies } from '../../state/derived';
 import type { ProjectState } from '../../state/project';
 
-export interface FormInspectorProps {
+interface FormInspectorProps {
   project: Signal<ProjectState>;
 }
 

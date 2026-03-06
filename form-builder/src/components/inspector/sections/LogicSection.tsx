@@ -5,7 +5,7 @@ import type { FELEditorFieldOption } from '../../controls/fel-utils';
 import type { LogicFieldOption, LogicGroupOption } from '../../logic/catalog';
 import { Collapsible } from '../../controls/Collapsible';
 
-export interface LogicSectionProps {
+interface LogicSectionProps {
   testIdPrefix: string;
   open: boolean;
   fields: LogicFieldOption[];

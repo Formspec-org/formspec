@@ -16,7 +16,7 @@ export interface LogicGroupOption {
   fields: LogicFieldOption[];
 }
 
-export interface LogicCatalog {
+interface LogicCatalog {
   fields: LogicFieldOption[];
   groups: LogicGroupOption[];
 }

@@ -1,4 +1,4 @@
-export interface DragHandleProps {
+interface DragHandleProps {
   path: string;
   onDragStart?: (path: string, event: DragEvent) => void;
   onDragEnd?: () => void;

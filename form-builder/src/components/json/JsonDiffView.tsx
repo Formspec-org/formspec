@@ -1,6 +1,6 @@
 export type JsonArtifactKey = 'definition' | 'component' | 'theme';
 
-export interface JsonDiffViewProps {
+interface JsonDiffViewProps {
   baseline: Record<JsonArtifactKey, string>;
   current: Record<JsonArtifactKey, string>;
 }

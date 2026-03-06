@@ -7,7 +7,7 @@ import {
   stripOuterParens
 } from './expression-utils';
 
-export type ConstraintOperator =
+type ConstraintOperator =
   | 'atLeast'
   | 'atMost'
   | 'between'
@@ -17,14 +17,14 @@ export type ConstraintOperator =
   | 'beforeDate'
   | 'afterDate';
 
-export interface ConstraintExpression {
+interface ConstraintExpression {
   operator: ConstraintOperator;
   value: string;
   value2: string;
   values: string;
 }
 
-export interface ConstraintBuilderProps {
+interface ConstraintBuilderProps {
   value: ConstraintExpression;
   dataType: LogicFieldDataType;
   testIdPrefix: string;

@@ -3,13 +3,13 @@ import { useEffect, useState } from 'preact/hooks';
 import { FELEditor } from '../controls/FELEditor';
 import type { FELEditorFieldOption } from '../controls/fel-utils';
 
-export interface ExpressionToggleRenderArgs<TModel> {
+interface ExpressionToggleRenderArgs<TModel> {
   model: TModel;
   testIdPrefix: string;
   onChange: (next: TModel) => void;
 }
 
-export interface ExpressionToggleProps<TModel> {
+interface ExpressionToggleProps<TModel> {
   label: string;
   value: string | undefined;
   testIdPrefix: string;

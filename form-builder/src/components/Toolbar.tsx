@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { BreakpointBar } from './responsive/BreakpointBar';
 
-export interface ToolbarProps {
+interface ToolbarProps {
   formTitle: string;
   structurePanelOpen: boolean;
   mobilePanel: 'none' | 'structure' | 'inspector';

@@ -15,7 +15,7 @@ import type {
   ThemeSelectorType
 } from '../../state/project';
 
-export interface SelectorRuleEditorProps {
+interface SelectorRuleEditorProps {
   project: Signal<ProjectState>;
 }
 

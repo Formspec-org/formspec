@@ -1,6 +1,6 @@
 import type { FormspecShape } from 'formspec-engine';
 
-export interface ShapeListProps {
+interface ShapeListProps {
   shapes: FormspecShape[];
   selectedShapeId: string | null;
   onAdd: () => void;

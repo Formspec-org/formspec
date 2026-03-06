@@ -8,7 +8,7 @@ const PATH_TOKEN = '[A-Za-z0-9_.\\[\\]*-]+';
 const NUMERIC_DATA_TYPES = new Set<LogicFieldDataType>(['integer', 'decimal', 'number', 'money']);
 const TEXT_DATA_TYPES = new Set<LogicFieldDataType>(['string', 'text', 'choice', 'multiChoice', 'uri', 'attachment']);
 
-export type ConditionOperator =
+type ConditionOperator =
   | 'eq'
   | 'neq'
   | 'gt'
@@ -35,7 +35,7 @@ export interface ConditionExpression {
   rows: ConditionRow[];
 }
 
-export interface ConditionBuilderProps {
+interface ConditionBuilderProps {
   value: ConditionExpression;
   fields: LogicFieldOption[];
   testIdPrefix: string;

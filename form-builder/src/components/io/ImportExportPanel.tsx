@@ -20,7 +20,7 @@ interface StoredTemplate {
   document: StudioTemplateDocument;
 }
 
-export interface ImportExportPanelProps {
+interface ImportExportPanelProps {
   project: Signal<ProjectState>;
 }
 

@@ -13,7 +13,7 @@ import type {
 } from '../../state/project';
 import { RegistryLoader } from './RegistryLoader';
 
-export interface ExtensionBrowserProps {
+interface ExtensionBrowserProps {
   project: Signal<ProjectState>;
 }
 

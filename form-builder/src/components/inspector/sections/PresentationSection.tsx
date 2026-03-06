@@ -32,7 +32,7 @@ export interface PresentationHints {
   };
 }
 
-export interface PresentationSectionProps {
+interface PresentationSectionProps {
   testIdPrefix: string;
   open: boolean;
   isGroup?: boolean;

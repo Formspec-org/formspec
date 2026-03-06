@@ -1,6 +1,6 @@
 import { getSortedBreakpointEntries } from '../../state/project';
 
-export interface BreakpointBarProps {
+interface BreakpointBarProps {
   previewWidth: number;
   activeBreakpoint: string;
   breakpoints: Record<string, number>;

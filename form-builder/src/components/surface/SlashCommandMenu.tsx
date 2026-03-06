@@ -2,7 +2,7 @@ import type { JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { filterTemplates, type FieldTemplate } from './field-templates';
 
-export interface SlashCommandMenuProps {
+interface SlashCommandMenuProps {
   open: boolean;
   query: string;
   templates: FieldTemplate[];

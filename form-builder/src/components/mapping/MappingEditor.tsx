@@ -15,7 +15,7 @@ import { MappingRuleDetail } from './MappingRuleDetail';
 import { MappingRuleRow } from './MappingRuleRow';
 import { RoundTripTest } from './RoundTripTest';
 
-export interface MappingEditorProps {
+interface MappingEditorProps {
   project: Signal<ProjectState>;
 }
 

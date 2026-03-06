@@ -11,7 +11,7 @@ import {
 import type { VariableDependencyEntry } from '../../state/derived';
 import type { ProjectState } from '../../state/project';
 
-export interface VariableEditorProps {
+interface VariableEditorProps {
   project: Signal<ProjectState>;
   variableIndex: number;
   variable: FormspecVariable;

@@ -5,7 +5,7 @@ import { LinkedBadge } from '../subform/LinkedBadge';
 import { DragHandle } from './DragHandle';
 import { InlineEditableText } from './InlineEditableText';
 
-export interface GroupBlockProps {
+interface GroupBlockProps {
   item: FormspecItem;
   path: string;
   selected?: boolean;

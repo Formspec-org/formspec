@@ -1,6 +1,6 @@
 import type { MappingRule } from '../../state/project';
 
-export interface MappingRuleRowProps {
+interface MappingRuleRowProps {
   index: number;
   rule: MappingRule;
   selected: boolean;
@@ -105,7 +105,7 @@ export function MappingRuleRow(props: MappingRuleRowProps) {
   );
 }
 
-export function resolveReversibleLabel(rule: MappingRule): string {
+function resolveReversibleLabel(rule: MappingRule): string {
   if (rule.bidirectional === false) {
     return 'No';
   }
