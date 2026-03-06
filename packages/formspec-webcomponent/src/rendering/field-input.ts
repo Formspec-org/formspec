@@ -109,6 +109,13 @@ export function renderInputComponent(host: FieldInputHost, comp: any, item: any,
         }
     }));
 
+    if (item.description) {
+        const desc = document.createElement('div');
+        desc.className = 'formspec-description';
+        desc.textContent = item.description;
+        fieldWrapper.appendChild(desc);
+    }
+
     if (item.hint || comp.hintOverride) {
         const hint = document.createElement('div');
         hint.className = 'formspec-hint';

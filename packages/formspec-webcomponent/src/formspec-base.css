@@ -121,6 +121,12 @@ h6 {
   white-space: nowrap;
 }
 
+.formspec-description {
+  font-size: 0.875rem;
+  color: var(--formspec-description-color, #64748b);
+  line-height: 1.4;
+}
+
 .formspec-hint {
   font-size: 0.85rem;
   opacity: 0.75;
