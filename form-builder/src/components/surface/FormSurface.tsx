@@ -159,6 +159,7 @@ export function FormSurface(props: FormSurfaceProps) {
           parentPath={parentPath}
           index={0}
           active={isDropTarget(dropTarget, parentPath, 0)}
+          isDragging={draggingPath !== null}
           onAdd={(targetPath, index, anchor) => {
             openSlashMenu(targetPath, index, anchor);
           }}
@@ -190,6 +191,7 @@ export function FormSurface(props: FormSurfaceProps) {
                 item={item}
                 path={path}
                 selected={state.selection === path}
+                dragging={draggingPath === path}
                 bind={bindByPath.get(path)}
                 labelFocusToken={labelFocusRequest?.path === path ? labelFocusRequest.token : undefined}
                 onDragStart={handleDragStart}
@@ -226,6 +228,7 @@ export function FormSurface(props: FormSurfaceProps) {
                 parentPath={parentPath}
                 index={index + 1}
                 active={isDropTarget(dropTarget, parentPath, index + 1)}
+                isDragging={draggingPath !== null}
                 onAdd={(targetPath, targetIndex, anchor) => {
                   openSlashMenu(targetPath, targetIndex, anchor);
                 }}

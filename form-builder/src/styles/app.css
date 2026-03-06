@@ -2886,7 +2886,7 @@ body {
 }
 
 .structure-tree__dropzone {
-  height: 0.38rem;
+  height: 0.5rem;
   border-radius: 999px;
   transition: background-color 0.12s ease;
 }
@@ -3016,6 +3016,10 @@ body {
   background: #fff;
   padding: 0.7rem 0.8rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.surface-item-block.is-dragging {
+  opacity: 0.45;
 }
 
 .surface-item-block:hover {
@@ -3151,6 +3155,11 @@ body {
   align-items: center;
   justify-content: center;
   overflow: visible;
+  transition: height 0.12s ease;
+}
+
+.add-between.is-drag-active {
+  height: 2rem;
 }
 
 .add-between__button {

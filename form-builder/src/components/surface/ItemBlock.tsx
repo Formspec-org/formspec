@@ -8,6 +8,7 @@ export interface ItemBlockProps {
   item: FormspecItem;
   path: string;
   selected: boolean;
+  dragging?: boolean;
   bind?: FormspecBind;
   labelFocusToken?: number;
   onDragStart?: (path: string, event: DragEvent) => void;
@@ -23,7 +24,7 @@ export interface ItemBlockProps {
 }
 
 export function ItemBlock(props: ItemBlockProps) {
-  const className = `surface-item-block${props.selected ? ' is-selected' : ''}`;
+  const className = `surface-item-block${props.selected ? ' is-selected' : ''}${props.dragging ? ' is-dragging' : ''}`;
 
   return (
     <article
