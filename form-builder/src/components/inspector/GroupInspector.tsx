@@ -5,8 +5,11 @@ import {
   type GroupDataTableColumn,
   type GroupDataTablePatch,
   setActiveBreakpoint,
+  setComponentNodeProperty,
+  setDefinitionPresentationKey,
   setGroupDataTableConfig,
   setGroupDisplayMode,
+  setGroupRepeatable,
   renameItem,
   setBind,
   setComponentResponsiveOverride,
@@ -16,10 +19,17 @@ import {
   setPresentation
 } from '../../state/mutations';
 import type { ProjectState } from '../../state/project';
-import { AppearanceSection } from './sections/AppearanceSection';
+import { AppearanceSection, type AccessibilityOverride } from './sections/AppearanceSection';
 import { BasicsSection } from './sections/BasicsSection';
+import { Collapsible } from '../controls/Collapsible';
+import { Dropdown } from '../controls/Dropdown';
+import { NumberInput } from '../controls/NumberInput';
+import { TextInput } from '../controls/TextInput';
+import { Toggle } from '../controls/Toggle';
 import { LogicSection } from './sections/LogicSection';
+import { type PresentationHints, PresentationSection } from './sections/PresentationSection';
 import { RepeatSection } from './sections/RepeatSection';
+import { type GeneratedComponentNode } from '../../state/wiring';
 import {
   findBindByPath,
   getComponentNodeByPath,
@@ -64,11 +74,11 @@ export function GroupInspector(props: GroupInspectorProps) {
   };
 
   const setSectionOpen = (sectionId: string, open: boolean) => {
-    setInspectorSectionOpen(props.project, `group:${sectionId}`, open);
+    setInspectorSectionOpen(props.project, `group:${props.path}:${sectionId}`, open);
   };
   const GROUP_SECTION_DEFAULTS: Record<string, boolean> = { basics: true };
   const isSectionOpen = (sectionId: string) =>
-    props.project.value.uiState.inspectorSections[`group:${sectionId}`] ?? GROUP_SECTION_DEFAULTS[sectionId] ?? false;
+    props.project.value.uiState.inspectorSections[`group:${props.path}:${sectionId}`] ?? GROUP_SECTION_DEFAULTS[sectionId] ?? false;
 
   const updateThemePresentation = (key: string, value: unknown) => {
     const next = { ...themePresentation };
@@ -84,7 +94,6 @@ export function GroupInspector(props: GroupInspectorProps) {
 
   return (
     <div class="inspector-content" data-testid="group-inspector">
-      <p class="inspector-content__title">Group Inspector</p>
       <BasicsSection
         testIdPrefix="group"
         open={isSectionOpen('basics')}
@@ -119,10 +128,8 @@ export function GroupInspector(props: GroupInspectorProps) {
           setSectionOpen('repeat', open);
         }}
         onRepeatableToggle={(value) => {
-          setItemProperty(props.project, props.path, 'repeatable', value);
+          setGroupRepeatable(props.project, props.path, value);
           if (!value) {
-            setItemProperty(props.project, props.path, 'minRepeat', undefined);
-            setItemProperty(props.project, props.path, 'maxRepeat', undefined);
             setGroupDisplayMode(props.project, props.path, 'stack');
           }
         }}
@@ -191,11 +198,36 @@ export function GroupInspector(props: GroupInspectorProps) {
         }}
       />
 
+      <PresentationSection
+        testIdPrefix="group"
+        open={isSectionOpen('presentation')}
+        isGroup
+        hints={(props.item.presentation as PresentationHints | undefined) ?? {}}
+        onToggle={(open) => { setSectionOpen('presentation', open); }}
+        onChange={(key, value) => {
+          setDefinitionPresentationKey(props.project, props.path, key, value);
+        }}
+      />
+
+      {renderLayoutSection(
+        componentNode?.component,
+        componentNode,
+        isSectionOpen('layout-props'),
+        (open) => setSectionOpen('layout-props', open),
+        (prop, value) => setComponentNodeProperty(props.project, props.path, prop, value)
+      )}
+
       <AppearanceSection
         testIdPrefix="group"
         open={isSectionOpen('appearance')}
         widget={typeof themePresentation.widget === 'string' ? themePresentation.widget : undefined}
         cssClass={typeof themePresentation.cssClass === 'string' ? themePresentation.cssClass : undefined}
+        componentWhen={componentNode?.when}
+        accessibility={isGroupRecord(themePresentation.accessibility) ? themePresentation.accessibility as AccessibilityOverride : undefined}
+        style={isGroupRecord(themePresentation.style) ? themePresentation.style as Record<string, string | number> : undefined}
+        widgetConfig={isGroupRecord(themePresentation.widgetConfig) ? themePresentation.widgetConfig as Record<string, string | number> : undefined}
+        fallback={Array.isArray(themePresentation.fallback) ? themePresentation.fallback as string[] : undefined}
+        felFieldOptions={logicCatalog.fields.map((f) => ({ path: f.path, label: f.label }))}
         breakpoints={props.project.value.theme.breakpoints ?? {}}
         activeBreakpoint={activeBreakpoint}
         responsiveOverride={{
@@ -212,6 +244,21 @@ export function GroupInspector(props: GroupInspectorProps) {
         onCssClassInput={(value) => {
           updateThemePresentation('cssClass', value);
         }}
+        onComponentWhenChange={(value) => {
+          setComponentNodeProperty(props.project, props.path, 'when', value || undefined);
+        }}
+        onAccessibilityChange={(value) => {
+          updateThemePresentation('accessibility', value);
+        }}
+        onStyleChange={(value) => {
+          updateThemePresentation('style', value);
+        }}
+        onWidgetConfigChange={(value) => {
+          updateThemePresentation('widgetConfig', value);
+        }}
+        onFallbackChange={(value) => {
+          updateThemePresentation('fallback', value);
+        }}
         onBreakpointChange={(value) => {
           setActiveBreakpoint(props.project, value);
         }}
@@ -226,6 +273,122 @@ export function GroupInspector(props: GroupInspectorProps) {
       />
     </div>
   );
+}
+
+const LAYOUT_COMPONENT_TYPES = new Set(['Page', 'Grid', 'Columns', 'Tabs', 'Accordion']);
+
+function renderLayoutSection(
+  component: string | undefined,
+  node: GeneratedComponentNode | null,
+  open: boolean,
+  onToggle: (open: boolean) => void,
+  onChange: (prop: string, value: unknown) => void
+) {
+  if (!component || !LAYOUT_COMPONENT_TYPES.has(component)) {
+    return null;
+  }
+
+  return (
+    <Collapsible id="layout-props" title={`${component} Properties`} open={open} onToggle={onToggle}>
+      {component === 'Grid' ? (
+        <>
+          <NumberInput
+            label="Columns"
+            value={typeof node?.gridColumns === 'number' ? node.gridColumns : undefined}
+            testId="layout-grid-columns"
+            onInput={(value) => { onChange('gridColumns', value ?? undefined); }}
+          />
+          <TextInput
+            label="Gap"
+            value={node?.gap}
+            testId="layout-grid-gap"
+            placeholder="e.g. 1rem, 16px"
+            onInput={(value) => { onChange('gap', value || undefined); }}
+          />
+          <TextInput
+            label="Row gap"
+            value={node?.rowGap}
+            testId="layout-grid-rowgap"
+            placeholder="e.g. 0.5rem"
+            onInput={(value) => { onChange('rowGap', value || undefined); }}
+          />
+        </>
+      ) : null}
+
+      {component === 'Columns' ? (
+        <>
+          <TextInput
+            label="Column widths"
+            value={node?.widths}
+            testId="layout-columns-widths"
+            placeholder="e.g. 1fr 2fr 1fr"
+            onInput={(value) => { onChange('widths', value || undefined); }}
+          />
+          <TextInput
+            label="Gap"
+            value={node?.gap}
+            testId="layout-columns-gap"
+            placeholder="e.g. 1rem, 16px"
+            onInput={(value) => { onChange('gap', value || undefined); }}
+          />
+        </>
+      ) : null}
+
+      {component === 'Tabs' ? (
+        <>
+          <Dropdown
+            label="Tab bar position"
+            value={node?.position ?? ''}
+            testId="layout-tabs-position"
+            options={[
+              { value: '', label: 'Default (top)' },
+              { value: 'top', label: 'Top' },
+              { value: 'bottom', label: 'Bottom' },
+              { value: 'left', label: 'Left' },
+              { value: 'right', label: 'Right' }
+            ]}
+            onChange={(value) => { onChange('position', value || undefined); }}
+          />
+          <TextInput
+            label="Tab labels (comma-separated)"
+            value={node?.tabLabels}
+            testId="layout-tabs-labels"
+            placeholder="e.g. Step 1, Step 2, Step 3"
+            onInput={(value) => { onChange('tabLabels', value || undefined); }}
+          />
+          <TextInput
+            label="Default tab key"
+            value={node?.defaultTab}
+            testId="layout-tabs-default"
+            placeholder="e.g. step1"
+            onInput={(value) => { onChange('defaultTab', value || undefined); }}
+          />
+        </>
+      ) : null}
+
+      {component === 'Accordion' ? (
+        <>
+          <Toggle
+            label="Allow multiple open"
+            checked={node?.allowMultiple === true}
+            testId="layout-accordion-multiple"
+            onToggle={(value) => { onChange('allowMultiple', value || undefined); }}
+          />
+          <TextInput
+            label="Panel labels (comma-separated)"
+            value={node?.labels}
+            testId="layout-accordion-labels"
+            placeholder="e.g. Section A, Section B"
+            onInput={(value) => { onChange('labels', value || undefined); }}
+          />
+        </>
+      ) : null}
+    </Collapsible>
+  );
+}
+
+function isGroupRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function resolveTableColumns(

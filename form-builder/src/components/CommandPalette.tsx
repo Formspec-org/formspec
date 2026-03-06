@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { searchCommands, type StudioCommand } from './commands';
+import { recordCommandUsed, searchCommands, type StudioCommand } from './commands';
 
 export interface CommandPaletteProps {
   open: boolean;
@@ -38,6 +38,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     if (!command) {
       return;
     }
+    recordCommandUsed(command.id);
     command.run();
     props.onClose();
   };
@@ -114,7 +115,12 @@ export function CommandPalette(props: CommandPaletteProps) {
                       <span class="command-palette__result-subtitle">{result.command.subtitle}</span>
                     ) : null}
                   </span>
-                  <span class="command-palette__result-category">{result.command.category}</span>
+                  <span class="command-palette__result-meta">
+                    {result.command.shortcut ? (
+                      <kbd class="command-palette__result-shortcut">{result.command.shortcut}</kbd>
+                    ) : null}
+                    <span class="command-palette__result-category">{result.command.category}</span>
+                  </span>
                 </button>
               </li>
             ))

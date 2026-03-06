@@ -1,3 +1,4 @@
+import { Fragment } from 'preact';
 import type { JSX } from 'preact';
 import type { LogicFieldDataType, LogicFieldOption } from './catalog';
 import { parseFelLiteral, quoteFelString, splitTopLevelLogical, stripOuterParens } from './expression-utils';
@@ -99,7 +100,15 @@ export function ConditionBuilder(props: ConditionBuilderProps) {
         const normalizedOperator = ensureOperatorForType(row.operator, field?.dataType);
 
         return (
-          <div class="logic-builder__row" key={`${row.fieldPath}:${index}`}>
+          <Fragment key={`row-group-${index}`}>
+            {index > 0 ? (
+              <div class="logic-builder__connector">
+                <span class="logic-builder__connector-line" />
+                <span class="logic-builder__connector-label">{props.value.logic.toUpperCase()}</span>
+                <span class="logic-builder__connector-line" />
+              </div>
+            ) : null}
+          <div class="logic-builder__row">
             <label class="inspector-control">
               <span class="inspector-control__label">Field</span>
               <select
@@ -186,6 +195,12 @@ export function ConditionBuilder(props: ConditionBuilderProps) {
               Remove
             </button>
           </div>
+          {row.fieldPath && !fieldByPath.has(row.fieldPath) ? (
+            <p class="logic-builder__path-warning" data-testid={`${props.testIdPrefix}-row-${index}-path-warning`}>
+              ⚠ Field "{row.fieldPath}" is not in this form — this condition may never match.
+            </p>
+          ) : null}
+          </Fragment>
         );
       })}
 
@@ -228,7 +243,7 @@ export function serializeConditionExpression(expression: ConditionExpression, fi
 export function parseConditionExpression(rawExpression: string, fields: LogicFieldOption[]): ConditionExpression | null {
   const expression = rawExpression.trim();
   if (!expression.length) {
-    return { logic: 'and', rows: [] };
+    return null;
   }
 
   const split = splitTopLevelLogical(expression);

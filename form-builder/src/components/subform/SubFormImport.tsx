@@ -77,7 +77,7 @@ export function SubFormImport(props: SubFormImportProps) {
   return (
     <div class="subform-import" data-testid="subform-import">
       <p class="inspector-hint">
-        Import a Definition as a linked group. Formspec Studio resolves <code>$ref</code> using the engine assembler.
+        Import a sub-form definition as a linked group. Fields from the imported form will be embedded and kept in sync.
       </p>
 
       <label class="inspector-control">

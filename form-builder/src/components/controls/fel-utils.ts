@@ -1,5 +1,6 @@
 import { FelLexer } from '../../../../packages/formspec-engine/src/fel/lexer';
 import { parser } from '../../../../packages/formspec-engine/src/fel/parser';
+import type { FormspecInstance } from 'formspec-engine';
 
 export interface FELEditorFieldOption {
   path: string;
@@ -16,6 +17,9 @@ export interface FELAutocompleteTrigger {
   start: number;
   end: number;
   query: string;
+  insertionPrefix?: string;
+  insertionSuffix?: string;
+  instanceName?: string;
 }
 
 export interface FELHighlightToken {
@@ -209,6 +213,23 @@ export function buildFELHighlightTokens(
 }
 
 export function getFELAutocompleteTrigger(expression: string, caret: number): FELAutocompleteTrigger | null {
+  const prefix = expression.slice(0, caret);
+  const instancePathMatch = prefix.match(/@instance\s*\(\s*(['"])(.*?)\1\s*\)\s*\.([A-Za-z0-9_.\[\]*]*)$/);
+  if (instancePathMatch) {
+    const instanceName = instancePathMatch[2];
+    const query = instancePathMatch[3] || '';
+
+    if (instanceName.trim().length > 0) {
+      return {
+        start: caret - query.length,
+        end: caret,
+        query,
+        insertionPrefix: '',
+        instanceName
+      };
+    }
+  }
+
   let cursor = caret - 1;
 
   while (cursor >= 0) {
@@ -226,7 +247,8 @@ export function getFELAutocompleteTrigger(expression: string, caret: number): FE
       return {
         start: cursor,
         end: caret,
-        query: expression.slice(cursor + 1, caret)
+        query: expression.slice(cursor + 1, caret),
+        insertionPrefix: '$'
       };
     }
 
@@ -234,6 +256,48 @@ export function getFELAutocompleteTrigger(expression: string, caret: number): FE
   }
 
   return null;
+}
+
+export function getFELInstanceNameAutocompleteTrigger(
+  expression: string,
+  caret: number
+): FELAutocompleteTrigger | null {
+  const prefix = expression.slice(0, caret);
+  const match = prefix.match(/@instance\s*\(\s*(['"])([^'"]*)$/);
+  if (!match) {
+    return null;
+  }
+
+  const quote = match[1];
+  const query = match[2] || '';
+  const start = prefix.lastIndexOf(quote) + 1;
+  if (start < 0 || start > caret) {
+    return null;
+  }
+
+  return {
+    start,
+    end: caret,
+    query,
+    insertionSuffix: `${quote})`
+  };
+}
+
+export function getInstanceNameOptions(instances: Record<string, FormspecInstance> | undefined, query: string): string[] {
+  if (!instances) {
+    return [];
+  }
+
+  const trimmed = query.trim().toLowerCase();
+  const names = Object.keys(instances).sort((left, right) => left.localeCompare(right));
+
+  if (!trimmed.length) {
+    return names.slice(0, 10);
+  }
+
+  return names
+    .filter((name) => name.toLowerCase().includes(trimmed))
+    .slice(0, 10);
 }
 
 export function getFELFunctionAutocompleteTrigger(expression: string, caret: number): FELAutocompleteTrigger | null {
@@ -317,6 +381,30 @@ export function filterFELFunctionOptions(
     .slice(0, 10);
 }
 
+export function getInstanceFieldOptions(
+  instances: Record<string, FormspecInstance> | undefined,
+  instanceName: string
+): FELEditorFieldOption[] {
+  const instance = instances?.[instanceName];
+  if (!instance || !isRecord(instance)) {
+    return [];
+  }
+
+  const paths = new Set<string>();
+
+  if (isRecord(instance.schema)) {
+    collectInstancePathsFromSchema(instance.schema, '', paths, new Set());
+  }
+
+  if (instance.data !== undefined) {
+    collectInstancePathsFromData(instance.data as unknown, '', paths, new Set());
+  }
+
+  return [...paths]
+    .sort((left, right) => left.localeCompare(right))
+    .map((path) => ({ path, label: path }));
+}
+
 function classifyToken(tokenName: string, nextTokenName: string | undefined): FELHighlightToken['kind'] {
   if (tokenName === 'Dollar' || tokenName === 'At') {
     return 'path';
@@ -362,4 +450,67 @@ function isFunctionIdentifierChar(char: string | undefined): boolean {
     return false;
   }
   return /[A-Za-z0-9_]/.test(char);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function collectInstancePathsFromSchema(
+  schema: Record<string, unknown>,
+  prefix: string,
+  paths: Set<string>,
+  seen: Set<object>
+): void {
+  if (seen.has(schema)) {
+    return;
+  }
+
+  seen.add(schema);
+
+  for (const [key, value] of Object.entries(schema)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    paths.add(path);
+
+    if (isRecord(value)) {
+      collectInstancePathsFromSchema(value, path, paths, seen);
+    }
+  }
+}
+
+function collectInstancePathsFromData(
+  data: unknown,
+  prefix: string,
+  paths: Set<string>,
+  seen: Set<object>
+): void {
+  if (!isRecord(data) && !Array.isArray(data)) {
+    return;
+  }
+
+  if (Array.isArray(data)) {
+    if (data.length === 0) {
+      return;
+    }
+
+    if (prefix) {
+      paths.add(prefix);
+    }
+
+    const arrayItemPrefix = prefix ? `${prefix}[1]` : '[1]';
+    collectInstancePathsFromData(data[0], arrayItemPrefix, paths, seen);
+    return;
+  }
+
+  if (seen.has(data)) {
+    return;
+  }
+
+  seen.add(data);
+
+  for (const [key, value] of Object.entries(data)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    paths.add(path);
+    collectInstancePathsFromData(value, path, paths, seen);
+  }
 }

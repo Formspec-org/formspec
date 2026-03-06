@@ -8,6 +8,8 @@ export interface InlineEditableTextProps {
   multiline?: boolean;
   testIdPrefix: string;
   startEditingToken?: number;
+  editEnabled?: boolean;
+  onInput?: (value: string) => void;
   onCommit: (value: string) => void;
 }
 
@@ -67,7 +69,9 @@ export function InlineEditableText(props: InlineEditableTextProps) {
             event.stopPropagation();
           }}
           onInput={(event) => {
-            setDraft((event.currentTarget as HTMLTextAreaElement).value);
+            const next = (event.currentTarget as HTMLTextAreaElement).value;
+            setDraft(next);
+            props.onInput?.(next);
           }}
           onBlur={(event) => {
             commit((event.currentTarget as HTMLTextAreaElement).value);
@@ -98,7 +102,9 @@ export function InlineEditableText(props: InlineEditableTextProps) {
           event.stopPropagation();
         }}
         onInput={(event) => {
-          setDraft((event.currentTarget as HTMLInputElement).value);
+          const next = (event.currentTarget as HTMLInputElement).value;
+          setDraft(next);
+          props.onInput?.(next);
         }}
         onBlur={(event) => {
           commit((event.currentTarget as HTMLInputElement).value);
@@ -121,8 +127,9 @@ export function InlineEditableText(props: InlineEditableTextProps) {
   return (
     <button
       type="button"
-      class={`${props.className}${props.value?.trim() ? '' : ' is-placeholder'}`}
+      class={`${props.className}${props.value?.trim() ? '' : ' is-placeholder'}${props.editEnabled ? ' is-edit-enabled' : ''}`}
       data-testid={`${props.testIdPrefix}-display`}
+      title="Click to edit"
       onClick={(event) => {
         event.stopPropagation();
         setEditing(true);

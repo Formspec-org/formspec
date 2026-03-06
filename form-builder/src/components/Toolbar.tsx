@@ -5,6 +5,7 @@ export interface ToolbarProps {
   formTitle: string;
   structurePanelOpen: boolean;
   mobilePanel: 'none' | 'structure' | 'inspector';
+  inspectorVisible: boolean;
   viewMode: 'edit' | 'preview' | 'split';
   previewWidth: number;
   activeBreakpoint: string;
@@ -12,8 +13,6 @@ export interface ToolbarProps {
   onTitleInput: (value: string) => void;
   onToggleStructure: () => void;
   onToggleInspector: () => void;
-  onOpenBrand: () => void;
-  onOpenFormRules: () => void;
   onTogglePreview: () => void;
   onPreviewWidthInput: (value: number) => void;
   onActiveBreakpointInput: (value: string) => void;
@@ -65,18 +64,10 @@ export function Toolbar(props: ToolbarProps) {
 
           <ToolbarButton
             testId="toggle-inspector"
-            active={props.mobilePanel === 'inspector'}
+            active={props.inspectorVisible}
             onClick={props.onToggleInspector}
           >
-            Inspector
-          </ToolbarButton>
-
-          <ToolbarButton testId="open-brand-panel" onClick={props.onOpenBrand}>
-            Brand
-          </ToolbarButton>
-
-          <ToolbarButton testId="open-form-rules" onClick={props.onOpenFormRules}>
-            Form Rules
+            Properties
           </ToolbarButton>
 
           <ToolbarButton testId="toggle-preview" active={props.viewMode !== 'edit'} onClick={props.onTogglePreview}>

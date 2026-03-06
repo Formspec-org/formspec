@@ -2,6 +2,10 @@ export interface AddBetweenProps {
   parentPath: string | null;
   index: number;
   onAdd: (parentPath: string | null, index: number, anchor: HTMLElement | null) => void;
+  active?: boolean;
+  onDragOver?: (parentPath: string | null, index: number, event: DragEvent) => void;
+  onDragLeave?: (parentPath: string | null, index: number) => void;
+  onDrop?: (parentPath: string | null, index: number, event: DragEvent) => void;
 }
 
 function idSegment(path: string | null): string {
@@ -14,10 +18,19 @@ function idSegment(path: string | null): string {
 export function AddBetween(props: AddBetweenProps) {
   return (
     <div
-      class="add-between"
+      class={`add-between${props.active ? ' is-drag-target' : ''}`}
       data-testid={`add-between-slot-${idSegment(props.parentPath)}-${props.index}`}
       onClick={(event) => {
         event.stopPropagation();
+      }}
+      onDragOver={(event) => {
+        props.onDragOver?.(props.parentPath, props.index, event as DragEvent);
+      }}
+      onDragLeave={() => {
+        props.onDragLeave?.(props.parentPath, props.index);
+      }}
+      onDrop={(event) => {
+        props.onDrop?.(props.parentPath, props.index, event as DragEvent);
       }}
     >
       <button

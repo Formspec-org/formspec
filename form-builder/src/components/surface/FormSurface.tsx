@@ -4,6 +4,8 @@ import { useMemo, useRef, useState } from 'preact/hooks';
 import type { FormspecBind, FormspecItem } from 'formspec-engine';
 import {
   addItem,
+  moveItem,
+  setBind,
   setFieldOptions,
   setInspectorSectionOpen,
   setItemExtension,
@@ -36,14 +38,22 @@ interface LabelFocusRequest {
   token: number;
 }
 
+interface SurfaceDropTarget {
+  parentPath: string | null;
+  index: number;
+}
+
 export function FormSurface(props: FormSurfaceProps) {
   const project = props.project ?? projectSignal;
   const state = project.value;
   const bindByPath = buildBindIndex(state.definition.binds);
   const surfaceRef = useRef<HTMLElement>(null);
   const labelFocusCounterRef = useRef(0);
+  const draggingPathRef = useRef<string | null>(null);
   const [slashMenu, setSlashMenu] = useState<SlashMenuState | null>(null);
   const [labelFocusRequest, setLabelFocusRequest] = useState<LabelFocusRequest | null>(null);
+  const [draggingPath, setDraggingPath] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<SurfaceDropTarget | null>(null);
   const slashTemplates = useMemo(
     () => buildSlashTemplates(state.extensions.registries),
     [state.extensions.registries]
@@ -56,6 +66,48 @@ export function FormSurface(props: FormSurfaceProps) {
   const requestLabelFocus = (path: string) => {
     labelFocusCounterRef.current += 1;
     setLabelFocusRequest({ path, token: labelFocusCounterRef.current });
+  };
+
+  const handleDragStart = (path: string, event: DragEvent) => {
+    event.stopPropagation();
+    event.dataTransfer?.setData('text/plain', path);
+    event.dataTransfer?.setData('application/formspec-item-path', path);
+    event.dataTransfer && (event.dataTransfer.effectAllowed = 'move');
+    closeSlashMenu();
+    draggingPathRef.current = path;
+    setDraggingPath(path);
+  };
+
+  const handleDragEnd = () => {
+    draggingPathRef.current = null;
+    setDraggingPath(null);
+    setDropTarget(null);
+  };
+
+  const handleDrop = (target: SurfaceDropTarget, event: DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const draggedPath =
+      event.dataTransfer?.getData('application/formspec-item-path')
+      || event.dataTransfer?.getData('text/plain')
+      || draggingPathRef.current
+      || draggingPath;
+
+    draggingPathRef.current = null;
+    setDraggingPath(null);
+    setDropTarget(null);
+
+    if (!draggedPath) {
+      return;
+    }
+
+    try {
+      const nextPath = moveItem(project, draggedPath, target);
+      setSelection(project, nextPath);
+    } catch (error) {
+      console.warn(error);
+    }
   };
 
   const openSlashMenu = (parentPath: string | null, index: number, anchor: HTMLElement | null) => {
@@ -77,10 +129,13 @@ export function FormSurface(props: FormSurfaceProps) {
     const insertedPath = addItem(project, {
       type: template.type,
       dataType: template.dataType,
+      componentType: template.componentType,
       key: template.keyPrefix,
       label: template.defaultLabel,
       parentPath: slashMenu.parentPath,
-      index: slashMenu.index
+      index: slashMenu.index,
+      itemSeed: template.itemSeed,
+      bindSeed: template.bindSeed
     });
 
     if (template.extensionName) {
@@ -97,8 +152,27 @@ export function FormSurface(props: FormSurfaceProps) {
         <AddBetween
           parentPath={parentPath}
           index={0}
+          active={isDropTarget(dropTarget, parentPath, 0)}
           onAdd={(targetPath, index, anchor) => {
             openSlashMenu(targetPath, index, anchor);
+          }}
+          onDragOver={(targetPath, index, event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!isDropTarget(dropTarget, targetPath, index)) {
+              setDropTarget({ parentPath: targetPath, index });
+            }
+            if (event.dataTransfer) {
+              event.dataTransfer.dropEffect = 'move';
+            }
+          }}
+          onDragLeave={(targetPath, index) => {
+            if (isDropTarget(dropTarget, targetPath, index)) {
+              setDropTarget(null);
+            }
+          }}
+          onDrop={(targetPath, index, event) => {
+            handleDrop({ parentPath: targetPath, index }, event);
           }}
         />
         {items.map((item, index) => {
@@ -112,15 +186,21 @@ export function FormSurface(props: FormSurfaceProps) {
                 selected={state.selection === path}
                 bind={bindByPath.get(path)}
                 labelFocusToken={labelFocusRequest?.path === path ? labelFocusRequest.token : undefined}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
                 onSelect={(selectedPath) => {
                   closeSlashMenu();
                   setSelection(project, selectedPath);
+                  surfaceRef.current?.focus({ preventScroll: true });
                 }}
                 onLogicBadgeClick={(selectedPath, badgeKey) => {
                   closeSlashMenu();
                   setSelection(project, selectedPath);
                   const inspectorSection = resolveInspectorSectionForLogicBadge(badgeKey, bindByPath.get(selectedPath));
                   setInspectorSectionOpen(project, inspectorSection, true);
+                }}
+                onLabelInput={(targetPath, value) => {
+                  setItemText(project, targetPath, 'label', value);
                 }}
                 onLabelCommit={(targetPath, value) => {
                   setItemText(project, targetPath, 'label', value);
@@ -131,13 +211,35 @@ export function FormSurface(props: FormSurfaceProps) {
                 onOptionsCommit={(targetPath, options) => {
                   setFieldOptions(project, targetPath, options);
                 }}
+                onRequiredToggle={(targetPath, required) => {
+                  setBind(project, targetPath, 'required', required ? true : undefined);
+                }}
                 renderChildren={(children, childParentPath) => renderItemList(children, childParentPath)}
               />
               <AddBetween
                 parentPath={parentPath}
                 index={index + 1}
+                active={isDropTarget(dropTarget, parentPath, index + 1)}
                 onAdd={(targetPath, targetIndex, anchor) => {
                   openSlashMenu(targetPath, targetIndex, anchor);
+                }}
+                onDragOver={(targetPath, targetIndex, event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (!isDropTarget(dropTarget, targetPath, targetIndex)) {
+                    setDropTarget({ parentPath: targetPath, index: targetIndex });
+                  }
+                  if (event.dataTransfer) {
+                    event.dataTransfer.dropEffect = 'move';
+                  }
+                }}
+                onDragLeave={(targetPath, targetIndex) => {
+                  if (isDropTarget(dropTarget, targetPath, targetIndex)) {
+                    setDropTarget(null);
+                  }
+                }}
+                onDrop={(targetPath, targetIndex, event) => {
+                  handleDrop({ parentPath: targetPath, index: targetIndex }, event);
                 }}
               />
             </Fragment>
@@ -153,9 +255,10 @@ export function FormSurface(props: FormSurfaceProps) {
       class="surface-card form-surface"
       data-testid="form-surface-document"
       tabIndex={0}
-      onClick={() => {
+      onClick={(event) => {
         closeSlashMenu();
         setSelection(project, null);
+        (event.currentTarget as HTMLElement).focus({ preventScroll: true });
         if (project.value.uiState.mobilePanel === 'inspector') {
           setMobilePanel(project, 'inspector');
         }
@@ -178,7 +281,12 @@ export function FormSurface(props: FormSurfaceProps) {
       }}
     >
       {state.definition.items.length > 0 ? (
-        renderItemList(state.definition.items, null)
+        <Fragment>
+          {renderItemList(state.definition.items, null)}
+          <p class="form-surface__slash-hint">
+            Press <kbd>/</kbd> to insert a field
+          </p>
+        </Fragment>
       ) : (
         <div class="form-surface__empty-state">
           <h2>Start your form</h2>
@@ -212,6 +320,13 @@ export function FormSurface(props: FormSurfaceProps) {
       />
     </section>
   );
+}
+
+function isDropTarget(target: SurfaceDropTarget | null, parentPath: string | null, index: number): boolean {
+  if (!target) {
+    return false;
+  }
+  return target.parentPath === parentPath && target.index === index;
 }
 
 function buildBindIndex(binds: FormspecBind[] | undefined): Map<string, FormspecBind> {

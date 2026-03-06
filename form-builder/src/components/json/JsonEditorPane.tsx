@@ -1,5 +1,5 @@
 import type { Signal } from '@preact/signals';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import Ajv2020, { type ErrorObject } from 'ajv/dist/2020';
 import definitionSchema from '../../../../schemas/definition.schema.json';
 import componentSchema from '../../../../schemas/component.schema.json';
@@ -12,9 +12,14 @@ interface JsonEditorPaneProps {
   project: Signal<ProjectState>;
 }
 
+interface SchemaError {
+  message: string;
+  instancePath: string;
+}
+
 interface JsonValidationState {
   parseError: string | null;
-  schemaErrors: string[];
+  schemaErrors: SchemaError[];
   applyError: string | null;
 }
 
@@ -44,6 +49,42 @@ const EMPTY_VALIDATION: JsonValidationState = {
   applyError: null
 };
 
+function navigateToLine(textarea: HTMLTextAreaElement | null, gutter: HTMLDivElement | null, lineNumber: number): void {
+  if (!textarea) {
+    return;
+  }
+  const lines = textarea.value.split('\n');
+  const clampedLine = Math.max(0, Math.min(lineNumber - 1, lines.length - 1));
+  const charOffset = lines.slice(0, clampedLine).reduce((acc, line) => acc + line.length + 1, 0);
+  textarea.focus();
+  textarea.setSelectionRange(charOffset, charOffset + lines[clampedLine].length);
+  const lineHeight = textarea.scrollHeight / lines.length;
+  const scrollTarget = Math.max(0, (clampedLine - 3) * lineHeight);
+  textarea.scrollTop = scrollTarget;
+  if (gutter) {
+    gutter.scrollTop = scrollTarget;
+  }
+}
+
+function findLineForPath(jsonText: string, instancePath: string): number {
+  if (!instancePath || instancePath === '/') {
+    return 1;
+  }
+  const segments = instancePath.split('/').filter(Boolean);
+  const lastPropertySegment = [...segments].reverse().find((s) => !/^\d+$/.test(s));
+  if (!lastPropertySegment) {
+    return 1;
+  }
+  const lines = jsonText.split('\n');
+  const searchPattern = `"${lastPropertySegment}"`;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].includes(searchPattern)) {
+      return i + 1;
+    }
+  }
+  return 1;
+}
+
 export function JsonEditorPane(props: JsonEditorPaneProps) {
   const state = props.project.value;
   const isOpen = state.uiState.jsonEditorOpen;
@@ -59,6 +100,8 @@ export function JsonEditorPane(props: JsonEditorPaneProps) {
 
   const [drafts, setDrafts] = useState<Record<JsonArtifactKey, string>>(serialized);
   const [baseline, setBaseline] = useState<Record<JsonArtifactKey, string>>(serialized);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const gutterRef = useRef<HTMLDivElement | null>(null);
   const [validation, setValidation] = useState<Record<JsonArtifactKey, JsonValidationState>>({
     definition: EMPTY_VALIDATION,
     component: EMPTY_VALIDATION,
@@ -185,13 +228,28 @@ export function JsonEditorPane(props: JsonEditorPaneProps) {
 
       <div class="json-editor-pane__body">
         <div class="json-editor-pane__editor">
+          <div
+            ref={(el) => { gutterRef.current = el; }}
+            class="json-editor-pane__gutter"
+            aria-hidden="true"
+          >
+            {drafts[activeTab].split('\n').map((_, i) => (
+              <div key={i} class="json-editor-pane__line-num">{i + 1}</div>
+            ))}
+          </div>
           <textarea
+            ref={(el) => { textareaRef.current = el; }}
             class="json-editor-pane__textarea"
             data-testid="json-editor-textarea"
             spellCheck={false}
             value={drafts[activeTab]}
             onInput={(event) => {
               applyDraft(activeTab, (event.currentTarget as HTMLTextAreaElement).value);
+            }}
+            onScroll={(event) => {
+              if (gutterRef.current) {
+                gutterRef.current.scrollTop = (event.currentTarget as HTMLTextAreaElement).scrollTop;
+              }
             }}
           />
         </div>
@@ -206,8 +264,24 @@ export function JsonEditorPane(props: JsonEditorPaneProps) {
 
             {!activeValidation.parseError && activeValidation.schemaErrors.length > 0 ? (
               <ul class="json-editor-pane__schema-errors" data-testid="json-editor-schema-errors">
-                {activeValidation.schemaErrors.map((message) => (
-                  <li key={message}>{message}</li>
+                {activeValidation.schemaErrors.map((error, i) => (
+                  <li key={i}>
+                    {error.instancePath ? (
+                      <button
+                        type="button"
+                        class="json-editor-pane__error-link"
+                        title="Click to navigate to this line"
+                        onClick={() => {
+                          const lineNumber = findLineForPath(drafts[activeTab], error.instancePath);
+                          navigateToLine(textareaRef.current, gutterRef.current, lineNumber);
+                        }}
+                      >
+                        {error.message}
+                      </button>
+                    ) : (
+                      error.message
+                    )}
+                  </li>
                 ))}
               </ul>
             ) : null}
@@ -263,14 +337,17 @@ function parseJsonDocument(value: string): { ok: true; value: Record<string, unk
   }
 }
 
-function summarizeSchemaErrors(errors: ErrorObject[] | null | undefined): string[] {
+function summarizeSchemaErrors(errors: ErrorObject[] | null | undefined): SchemaError[] {
   if (!errors?.length) {
-    return ['Schema validation failed.'];
+    return [{ message: 'Schema validation failed.', instancePath: '' }];
   }
 
   return errors.slice(0, 12).map((error) => {
     const path = error.instancePath || '/';
-    return `${path}: ${error.message ?? 'schema error'}`;
+    return {
+      message: `${path}: ${error.message ?? 'schema error'}`,
+      instancePath: error.instancePath ?? ''
+    };
   });
 }
 

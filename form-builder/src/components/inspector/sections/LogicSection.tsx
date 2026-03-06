@@ -1,4 +1,4 @@
-import { ConditionBuilder, type ConditionExpression, parseConditionExpression, serializeConditionExpression } from '../../logic/ConditionBuilder';
+import { ConditionBuilder, type ConditionExpression, createDefaultConditionExpression, parseConditionExpression, serializeConditionExpression } from '../../logic/ConditionBuilder';
 import { ExpressionToggle } from '../../logic/ExpressionToggle';
 import { createDefaultFormulaExpression, FormulaBuilder, parseFormulaExpression, serializeFormulaExpression } from '../../logic/FormulaBuilder';
 import type { FELEditorFieldOption } from '../../controls/fel-utils';
@@ -51,10 +51,11 @@ export function LogicSection(props: LogicSectionProps) {
         testIdPrefix={`${props.testIdPrefix}-relevant`}
         felTestId={`${props.testIdPrefix}-relevant-input`}
         felFieldOptions={felFieldOptions}
+        otherwise="Otherwise: Hidden"
         onInput={props.onRelevantInput}
         parse={(value) => parseConditionExpression(value, props.fields)}
         serialize={(model) => serializeConditionExpression(model, props.fields)}
-        createEmpty={(): ConditionExpression => ({ logic: 'and', rows: [] })}
+        createEmpty={() => createDefaultConditionExpression(props.fields)}
         renderVisual={({ model, testIdPrefix, onChange }) => (
           <ConditionBuilder value={model} fields={props.fields} testIdPrefix={testIdPrefix} onChange={onChange} />
         )}
@@ -72,7 +73,7 @@ export function LogicSection(props: LogicSectionProps) {
           }}
           parse={(value) => parseConditionExpression(value, props.fields)}
           serialize={(model) => serializeConditionExpression(model, props.fields)}
-          createEmpty={(): ConditionExpression => ({ logic: 'and', rows: [] })}
+          createEmpty={() => createDefaultConditionExpression(props.fields)}
           renderVisual={({ model, testIdPrefix, onChange }) => (
             <ConditionBuilder value={model} fields={props.fields} testIdPrefix={testIdPrefix} onChange={onChange} />
           )}
@@ -107,7 +108,7 @@ export function LogicSection(props: LogicSectionProps) {
         onInput={props.onReadonlyInput}
         parse={(value) => parseConditionExpression(value, props.fields)}
         serialize={(model) => serializeConditionExpression(model, props.fields)}
-        createEmpty={(): ConditionExpression => ({ logic: 'and', rows: [] })}
+        createEmpty={() => createDefaultConditionExpression(props.fields)}
         renderVisual={({ model, testIdPrefix, onChange }) => (
           <ConditionBuilder value={model} fields={props.fields} testIdPrefix={testIdPrefix} onChange={onChange} />
         )}

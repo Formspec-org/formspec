@@ -1,7 +1,7 @@
 import type { FormspecBind, FormspecItem } from 'formspec-engine';
 import type { FormspecComponentDocument, FormspecThemeDocument } from '../../state/project';
 import type { GeneratedComponentNode } from '../../state/wiring';
-import { getLeafKey } from '../../state/wiring';
+import { findComponentNodeByPath, getLeafKey } from '../../state/wiring';
 
 export function findItemByPath(items: FormspecItem[], path: string): FormspecItem | null {
   const segments = path.split('.').filter(Boolean);
@@ -66,42 +66,4 @@ export function getComponentNodeByPath(
   path: string
 ): GeneratedComponentNode | null {
   return findComponentNodeByPath(definitionItems, component.tree, path);
-}
-
-function findComponentNodeByPath(
-  items: FormspecItem[],
-  root: GeneratedComponentNode,
-  path: string
-): GeneratedComponentNode | null {
-  const segments = path.split('.').filter(Boolean);
-  if (!segments.length) {
-    return null;
-  }
-
-  return findNodeLevel(items, root.children ?? [], segments, 0);
-}
-
-function findNodeLevel(
-  items: FormspecItem[],
-  nodes: GeneratedComponentNode[],
-  segments: string[],
-  depth: number
-): GeneratedComponentNode | null {
-  const key = segments[depth];
-  const index = items.findIndex((item) => item.key === key);
-  if (index < 0 || index >= nodes.length) {
-    return null;
-  }
-
-  const item = items[index];
-  const node = nodes[index];
-  if (depth === segments.length - 1) {
-    return node;
-  }
-
-  if (item.type !== 'group') {
-    return null;
-  }
-
-  return findNodeLevel(item.children ?? [], node.children ?? [], segments, depth + 1);
 }

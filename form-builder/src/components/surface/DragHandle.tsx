@@ -1,5 +1,7 @@
 export interface DragHandleProps {
   path: string;
+  onDragStart?: (path: string, event: DragEvent) => void;
+  onDragEnd?: () => void;
 }
 
 export function DragHandle(props: DragHandleProps) {
@@ -17,6 +19,11 @@ export function DragHandle(props: DragHandleProps) {
       onDragStart={(event) => {
         event.stopPropagation();
         event.dataTransfer?.setData('text/plain', props.path);
+        props.onDragStart?.(props.path, event as DragEvent);
+      }}
+      onDragEnd={(event) => {
+        event.stopPropagation();
+        props.onDragEnd?.();
       }}
     >
       ⋮⋮

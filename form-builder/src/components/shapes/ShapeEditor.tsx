@@ -131,10 +131,14 @@ export function ShapeEditor(props: ShapeEditorProps) {
         label="Message"
         value={props.shape.message}
         testId="shape-message-input"
+        placeholder="e.g. Total must equal {{$budgetAmount}}"
         onInput={(value) => {
           setShapeProperty(props.project, props.shape.id, 'message', value);
         }}
       />
+      <p class="inspector-hint" data-testid="shape-message-hint">
+        Use <code>{'{{$fieldPath}}'}</code> to interpolate field values in the message.
+      </p>
 
       <CompositionBuilder
         mode={composition.mode}

@@ -15,6 +15,8 @@ export interface ExpressionToggleProps<TModel> {
   testIdPrefix: string;
   felTestId: string;
   felFieldOptions?: FELEditorFieldOption[];
+  /** Optional text shown below the builder when a condition is active, e.g. "Otherwise: Hidden". */
+  otherwise?: string;
   onInput: (value: string) => void;
   parse: (expression: string) => TModel | null;
   serialize: (model: TModel) => string;
@@ -123,6 +125,12 @@ export function ExpressionToggle<TModel>(props: ExpressionToggleProps<TModel>) {
             }}
           />
           )}
+
+      {props.otherwise && props.value?.trim().length ? (
+        <p class="expression-toggle__otherwise" data-testid={`${props.testIdPrefix}-otherwise-hint`}>
+          {props.otherwise}
+        </p>
+      ) : null}
     </div>
   );
 }

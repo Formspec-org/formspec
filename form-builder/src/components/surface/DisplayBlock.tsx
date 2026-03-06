@@ -5,7 +5,11 @@ import { InlineEditableText } from './InlineEditableText';
 export interface DisplayBlockProps {
   item: FormspecItem;
   path: string;
+  selected?: boolean;
   labelFocusToken?: number;
+  onDragStart?: (path: string, event: DragEvent) => void;
+  onDragEnd?: () => void;
+  onLabelInput?: (value: string) => void;
   onLabelCommit: (value: string) => void;
   onDescriptionCommit: (value: string) => void;
 }
@@ -14,7 +18,7 @@ export function DisplayBlock(props: DisplayBlockProps) {
   return (
     <div class="display-block">
       <div class="item-block__top-row">
-        <DragHandle path={props.path} />
+        <DragHandle path={props.path} onDragStart={props.onDragStart} onDragEnd={props.onDragEnd} />
         <span class="item-block__type-pill">Display</span>
       </div>
 
@@ -24,6 +28,8 @@ export function DisplayBlock(props: DisplayBlockProps) {
         className="display-block__label"
         testIdPrefix={`label-${props.path}`}
         startEditingToken={props.labelFocusToken}
+        editEnabled={props.selected}
+        onInput={props.onLabelInput}
         onCommit={props.onLabelCommit}
       />
 
@@ -33,6 +39,7 @@ export function DisplayBlock(props: DisplayBlockProps) {
         className="item-block__description"
         testIdPrefix={`description-${props.path}`}
         multiline
+        editEnabled={props.selected}
         onCommit={props.onDescriptionCommit}
       />
     </div>

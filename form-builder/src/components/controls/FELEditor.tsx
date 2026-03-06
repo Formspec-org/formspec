@@ -3,12 +3,16 @@ import {
   buildFELHighlightTokens,
   FELEditorFunctionOption,
   FELEditorFieldOption,
+  getInstanceNameOptions,
+  getInstanceFieldOptions,
   filterFELFunctionOptions,
   filterFELFieldOptions,
   getFELAutocompleteTrigger,
+  getFELInstanceNameAutocompleteTrigger,
   getFELFunctionAutocompleteTrigger,
   validateFEL
 } from './fel-utils';
+import type { FormspecInstance } from 'formspec-engine';
 import { buildExtensionCatalog } from '../../state/extensions';
 import { projectSignal } from '../../state/project';
 
@@ -24,13 +28,20 @@ export interface FELEditorProps {
 }
 
 interface AutocompleteState {
-  kind: 'path' | 'function';
+  kind: 'path' | 'function' | 'instanceName';
   start: number;
   end: number;
   query: string;
+  insertionPrefix?: string;
+  insertionSuffix?: string;
+  instanceName?: string;
 }
 
 type AutocompleteOption =
+  | {
+      kind: 'instanceName';
+      name: string;
+    }
   | {
       kind: 'path';
       path: string;
@@ -51,6 +62,10 @@ export function FELEditor(props: FELEditorProps) {
   const value = props.value ?? '';
   const options = props.fieldOptions ?? [];
   const extensionCatalog = buildExtensionCatalog(projectSignal.value.extensions.registries);
+  const instanceOptions =
+    (projectSignal.value.definition as Record<string, unknown>).instances as
+      | Record<string, FormspecInstance>
+      | undefined;
   const extensionFunctionOptions: FELEditorFunctionOption[] = extensionCatalog.functions.map((entry) => ({
     name: entry.felName,
     label: `${entry.label} (${entry.name})`,
@@ -76,10 +91,21 @@ export function FELEditor(props: FELEditorProps) {
     }
 
     if (autocomplete.kind === 'path') {
-      return filterFELFieldOptions(options, autocomplete.query).map((option) => ({
+      const pathOptions = autocomplete.instanceName
+        ? getInstanceFieldOptions(instanceOptions, autocomplete.instanceName)
+        : options;
+
+      return filterFELFieldOptions(pathOptions, autocomplete.query).map((option) => ({
         kind: 'path' as const,
         path: option.path,
         label: option.label
+      }));
+    }
+
+    if (autocomplete.kind === 'instanceName') {
+      return getInstanceNameOptions(instanceOptions, autocomplete.query).map((name) => ({
+        kind: 'instanceName' as const,
+        name
       }));
     }
 
@@ -89,19 +115,42 @@ export function FELEditor(props: FELEditorProps) {
       label: option.label,
       signature: option.signature
     }));
-  }, [autocomplete, options, functionOptions]);
+  }, [autocomplete, options, functionOptions, instanceOptions]);
 
   const openAutocomplete = (nextValue: string, caret: number) => {
-    if (options.length) {
-      const pathTrigger = getFELAutocompleteTrigger(nextValue, caret);
-      if (pathTrigger) {
+    const pathTrigger = getFELAutocompleteTrigger(nextValue, caret);
+    if (pathTrigger) {
+      const pathOptions = pathTrigger.instanceName
+        ? getInstanceFieldOptions(instanceOptions, pathTrigger.instanceName)
+        : options;
+
+      if (pathOptions.length) {
         setAutocomplete({
           kind: 'path',
           ...pathTrigger
         });
         setActiveOptionIndex(0);
         return;
+      } else {
+        setAutocomplete(null);
+        return;
       }
+    }
+
+    const instanceNameTrigger = getFELInstanceNameAutocompleteTrigger(nextValue, caret);
+    if (instanceNameTrigger) {
+      const instanceNameOptions = getInstanceNameOptions(instanceOptions, instanceNameTrigger.query);
+      if (instanceNameOptions.length) {
+        setAutocomplete({
+          kind: 'instanceName',
+          ...instanceNameTrigger
+        });
+        setActiveOptionIndex(0);
+        return;
+      }
+
+      setAutocomplete(null);
+      return;
     }
 
     if (functionOptions.length) {
@@ -128,8 +177,13 @@ export function FELEditor(props: FELEditorProps) {
     let cursor = autocomplete.start;
 
     if (option.kind === 'path') {
-      nextValue = `${value.slice(0, autocomplete.start)}$${option.path}${value.slice(autocomplete.end)}`;
-      cursor = autocomplete.start + option.path.length + 1;
+      const insertionPrefix = autocomplete.insertionPrefix ?? '$';
+      nextValue = `${value.slice(0, autocomplete.start)}${insertionPrefix}${option.path}${value.slice(autocomplete.end)}`;
+      cursor = autocomplete.start + insertionPrefix.length + option.path.length;
+    } else if (option.kind === 'instanceName') {
+      const insertionSuffix = autocomplete.insertionSuffix ?? '';
+      nextValue = `${value.slice(0, autocomplete.start)}${option.name}${insertionSuffix}${value.slice(autocomplete.end)}`;
+      cursor = autocomplete.start + option.name.length + insertionSuffix.length;
     } else {
       const suffix = value.slice(autocomplete.end);
       const hasRoundOpen = suffix.startsWith('(');
@@ -211,6 +265,8 @@ export function FELEditor(props: FELEditorProps) {
                 key={
                   option.kind === 'path'
                     ? `path-${option.path}`
+                    : option.kind === 'instanceName'
+                    ? `instance-${option.name}`
                     : `function-${option.name}`
                 }
               >
@@ -223,20 +279,27 @@ export function FELEditor(props: FELEditorProps) {
                     applyAutocomplete(option);
                   }}
                 >
-                  {option.kind === 'path' ? (
-                    <>
-                      <span class="fel-editor__autocomplete-path">${option.path}</span>
-                      <span class="fel-editor__autocomplete-label">{option.label}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span class="fel-editor__autocomplete-path">{option.name}()</span>
-                      <span class="fel-editor__autocomplete-label">
-                        {option.label}
-                        {option.signature ? ` — ${option.signature}` : ''}
-                      </span>
-                    </>
-                  )}
+                {option.kind === 'path' ? (
+                  <>
+                    <span class="fel-editor__autocomplete-path">
+                      {autocomplete?.insertionPrefix === '' ? option.path : `$${option.path}`}
+                    </span>
+                    <span class="fel-editor__autocomplete-label">{option.label}</span>
+                  </>
+                ) : option.kind === 'instanceName' ? (
+                  <>
+                    <span class="fel-editor__autocomplete-path">{option.name}</span>
+                    <span class="fel-editor__autocomplete-label">instance</span>
+                  </>
+                ) : (
+                  <>
+                    <span class="fel-editor__autocomplete-path">{option.name}()</span>
+                    <span class="fel-editor__autocomplete-label">
+                      {option.label}
+                      {option.signature ? ` — ${option.signature}` : ''}
+                    </span>
+                  </>
+                )}
                 </button>
               </li>
             ))}

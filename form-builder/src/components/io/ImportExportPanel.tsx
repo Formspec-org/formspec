@@ -1,3 +1,4 @@
+import JSZip from 'jszip';
 import type { Signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { importArtifacts } from '../../state/mutations';
@@ -7,6 +8,7 @@ import {
   type StudioTemplateDocument
 } from '../../state/import-export';
 import type { ProjectState } from '../../state/project';
+import { QUICKSTART_TEMPLATES } from './quickstart-templates';
 
 const TEMPLATE_STORAGE_KEY = 'formspec.studio.templates.v1';
 
@@ -127,6 +129,29 @@ export function ImportExportPanel(props: ImportExportPanelProps) {
         Export form artifacts, import JSON bundles or individual artifacts, and save reusable templates.
       </p>
 
+      <section class="import-export-panel__quickstart" data-testid="quickstart-templates">
+        <p class="import-export-panel__section-title">Quick-start templates</p>
+        <div class="import-export-panel__quickstart-grid">
+          {QUICKSTART_TEMPLATES.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              class="import-export-panel__quickstart-card"
+              data-testid={`quickstart-${template.id}`}
+              onClick={() => {
+                runImport(template.definition);
+              }}
+            >
+              <span class="import-export-panel__quickstart-icon">{template.icon}</span>
+              <span class="import-export-panel__quickstart-name">{template.name}</span>
+              <span class="import-export-panel__quickstart-desc">{template.description}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <hr class="import-export-panel__divider" />
+
       <div class="import-export-panel__exports" data-testid="import-export-actions">
         <button
           type="button"
@@ -180,6 +205,16 @@ export function ImportExportPanel(props: ImportExportPanelProps) {
           }}
         >
           Export Bundle
+        </button>
+        <button
+          type="button"
+          class="import-export-panel__button import-export-panel__button--primary"
+          data-testid="import-export-export-zip"
+          onClick={async () => {
+            await exportBundleZip(state);
+          }}
+        >
+          Export ZIP
         </button>
       </div>
 
@@ -399,6 +434,37 @@ function canUseStorage(): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+async function exportBundleZip(state: ProjectState): Promise<void> {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const base = buildFilename(state.definition.title, '').replace(/\.$/, '');
+  const zip = new JSZip();
+
+  zip.file(`${base}.definition.json`, JSON.stringify(state.definition, null, 2));
+  zip.file(`${base}.component.json`, JSON.stringify(state.component, null, 2));
+  zip.file(`${base}.theme.json`, JSON.stringify(state.theme, null, 2));
+  zip.file(`${base}.mapping.json`, JSON.stringify(state.mapping, null, 2));
+
+  const variables = state.definition.variables;
+  if (variables && Object.keys(variables).length > 0) {
+    const variablesDoc = { $schema: 'formspec/variables', variables };
+    zip.file(`${base}.variables.json`, JSON.stringify(variablesDoc, null, 2));
+  }
+
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = `${base}.bundle.zip`;
+  anchor.rel = 'noopener';
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(href);
 }
 
 function downloadJson(payload: unknown, filename: string): void {

@@ -8,8 +8,12 @@ import { InlineEditableText } from './InlineEditableText';
 export interface GroupBlockProps {
   item: FormspecItem;
   path: string;
+  selected?: boolean;
   childrenContent: ComponentChildren;
   labelFocusToken?: number;
+  onDragStart?: (path: string, event: DragEvent) => void;
+  onDragEnd?: () => void;
+  onLabelInput?: (value: string) => void;
   onLabelCommit: (value: string) => void;
   onDescriptionCommit: (value: string) => void;
 }
@@ -20,7 +24,7 @@ export function GroupBlock(props: GroupBlockProps) {
   return (
     <section class="group-block">
       <div class="item-block__top-row">
-        <DragHandle path={props.path} />
+        <DragHandle path={props.path} onDragStart={props.onDragStart} onDragEnd={props.onDragEnd} />
         <span class="item-block__type-pill">Group</span>
         <LinkedBadge item={props.item} path={props.path} />
         {props.item.repeatable ? <span class="group-block__repeat-pill">Repeatable</span> : null}
@@ -42,6 +46,8 @@ export function GroupBlock(props: GroupBlockProps) {
         className="item-block__label"
         testIdPrefix={`label-${props.path}`}
         startEditingToken={props.labelFocusToken}
+        editEnabled={props.selected}
+        onInput={props.onLabelInput}
         onCommit={props.onLabelCommit}
       />
 
@@ -51,6 +57,7 @@ export function GroupBlock(props: GroupBlockProps) {
         className="item-block__description"
         testIdPrefix={`description-${props.path}`}
         multiline
+        editEnabled={props.selected}
         onCommit={props.onDescriptionCommit}
       />
 

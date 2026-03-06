@@ -12,6 +12,7 @@ export interface TreeNodeProps {
   dragging?: boolean;
   onSelect: (path: string) => void;
   onToggleCollapse?: (path: string) => void;
+  onReorder?: (path: string, direction: 'up' | 'down') => void;
   onDragStart: (path: string, event: DragEvent) => void;
   onDragEnd: () => void;
 }
@@ -49,6 +50,10 @@ export function TreeNode(props: TreeNodeProps) {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           props.onSelect(props.path);
+        }
+        if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+          event.preventDefault();
+          props.onReorder?.(props.path, event.key === 'ArrowUp' ? 'up' : 'down');
         }
       }}
       role="button"

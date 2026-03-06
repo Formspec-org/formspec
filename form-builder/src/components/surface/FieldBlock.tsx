@@ -1,4 +1,5 @@
 import type { FormspecBind, FormspecItem } from 'formspec-engine';
+import { useRef, useState } from 'preact/hooks';
 import { DragHandle } from './DragHandle';
 import { InlineEditableText } from './InlineEditableText';
 
@@ -6,11 +7,16 @@ export interface FieldBlockProps {
   item: FormspecItem;
   path: string;
   bind?: FormspecBind;
+  selected?: boolean;
   labelFocusToken?: number;
+  onDragStart?: (path: string, event: DragEvent) => void;
+  onDragEnd?: () => void;
   onLogicBadgeClick?: (badgeKey: FieldLogicBadgeKey) => void;
+  onLabelInput?: (value: string) => void;
   onLabelCommit: (value: string) => void;
   onDescriptionCommit: (value: string) => void;
   onOptionsCommit: (options: Array<{ value: string; label: string }>) => void;
+  onRequiredToggle?: (required: boolean) => void;
 }
 
 export type FieldLogicBadgeKey = 'required' | 'relevant' | 'calculate' | 'constraint' | 'readonly';
@@ -21,9 +27,25 @@ export function FieldBlock(props: FieldBlockProps) {
   return (
     <div class="field-block">
       <div class="item-block__top-row">
-        <DragHandle path={props.path} />
-        <span class="item-block__type-pill">{props.item.dataType ?? 'string'}</span>
+        <DragHandle path={props.path} onDragStart={props.onDragStart} onDragEnd={props.onDragEnd} />
+        <span class="item-block__type-pill">{friendlyDataType(props.item.dataType)}</span>
         <LogicBadges path={props.path} bind={props.bind} onBadgeClick={props.onLogicBadgeClick} />
+        {props.onRequiredToggle ? (
+          <button
+            type="button"
+            class={`field-block__required-toggle${typeof props.bind?.required === 'boolean' && props.bind.required ? ' is-required' : ''}`}
+            title={typeof props.bind?.required === 'boolean' && props.bind.required ? 'Remove required' : 'Mark required'}
+            aria-label={typeof props.bind?.required === 'boolean' && props.bind.required ? 'Remove required' : 'Mark required'}
+            data-testid={`required-toggle-${props.path}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              const isCurrentlyRequired = typeof props.bind?.required === 'boolean' && props.bind.required;
+              props.onRequiredToggle?.(!isCurrentlyRequired);
+            }}
+          >
+            *
+          </button>
+        ) : null}
       </div>
 
       <InlineEditableText
@@ -32,6 +54,8 @@ export function FieldBlock(props: FieldBlockProps) {
         className="item-block__label"
         testIdPrefix={`label-${props.path}`}
         startEditingToken={props.labelFocusToken}
+        editEnabled={props.selected}
+        onInput={props.onLabelInput}
         onCommit={props.onLabelCommit}
       />
 
@@ -41,6 +65,7 @@ export function FieldBlock(props: FieldBlockProps) {
         className="item-block__description"
         testIdPrefix={`description-${props.path}`}
         multiline
+        editEnabled={props.selected}
         onCommit={props.onDescriptionCommit}
       />
 
@@ -59,73 +84,127 @@ export function FieldBlock(props: FieldBlockProps) {
   );
 }
 
+type DraftOption = { label: string; value: string; _id: number };
+
 function ChoiceOptionsEditor(props: {
   path: string;
   options: Array<{ value: string; label: string }>;
   onCommit: (options: Array<{ value: string; label: string }>) => void;
 }) {
-  const hasOptions = props.options.length > 0;
+  const nextId = useRef(0);
+  const makeDraft = (opts: Array<{ value: string; label: string }>): DraftOption[] =>
+    opts.map((o) => ({ ...o, _id: nextId.current++ }));
+
+  const [draft, setDraft] = useState<DraftOption[]>(() => makeDraft(props.options));
+  const dragIndex = useRef<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<number | null>(null);
+  const justAddedRef = useRef(false);
+
+  // Sync from props when they change externally (undo/redo), but not while the user
+  // has pending new empty rows in the editor.
+  const lastPropsRef = useRef(props.options);
+  if (props.options !== lastPropsRef.current) {
+    lastPropsRef.current = props.options;
+    const hasPending = draft.some((d) => d.label === '' && d.value === '');
+    if (!hasPending) {
+      setDraft(makeDraft(props.options));
+    }
+  }
+
+  const stripIds = (d: DraftOption[]): Array<{ value: string; label: string }> =>
+    d.map(({ label, value }) => ({ label, value }));
+
+  const commitDraft = (next: DraftOption[]) => {
+    setDraft(next);
+    props.onCommit(stripIds(next));
+  };
+
+  const handleDragStart = (index: number) => {
+    dragIndex.current = index;
+  };
+
+  const handleDragOver = (event: DragEvent, index: number) => {
+    event.preventDefault();
+    setDropTarget(index);
+  };
+
+  const handleDrop = (event: DragEvent, dropIndex: number) => {
+    event.preventDefault();
+    const from = dragIndex.current;
+    if (from === null || from === dropIndex) {
+      dragIndex.current = null;
+      setDropTarget(null);
+      return;
+    }
+    const next = [...draft];
+    const [moved] = next.splice(from, 1);
+    next.splice(dropIndex, 0, moved);
+    commitDraft(next);
+    dragIndex.current = null;
+    setDropTarget(null);
+  };
+
+  const handleDragEnd = () => {
+    dragIndex.current = null;
+    setDropTarget(null);
+  };
 
   return (
     <div class="field-options-editor" data-testid={`field-options-${props.path}`}>
       <p class="field-options-editor__title">Options</p>
-      {hasOptions ? (
+      {draft.length > 0 ? (
         <ul class="field-options-editor__list">
-          {props.options.map((option, index) => (
-            <li class="field-options-editor__row" key={`${option.value}-${index}`}>
-              <button
-                type="button"
-                class="field-options-editor__order-button"
-                aria-label="Move option up"
-                disabled={index === 0}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (index === 0) {
-                    return;
-                  }
-                  const next = [...props.options];
-                  const [entry] = next.splice(index, 1);
-                  next.splice(index - 1, 0, entry);
-                  props.onCommit(next);
-                }}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                class="field-options-editor__order-button"
-                aria-label="Move option down"
-                disabled={index === props.options.length - 1}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (index >= props.options.length - 1) {
-                    return;
-                  }
-                  const next = [...props.options];
-                  const [entry] = next.splice(index, 1);
-                  next.splice(index + 1, 0, entry);
-                  props.onCommit(next);
-                }}
-              >
-                ↓
-              </button>
+          {draft.map((option, index) => (
+            <li
+              class={`field-options-editor__row${dropTarget === index ? ' is-drag-target' : ''}`}
+              key={option._id}
+              draggable
+              onDragStart={(event) => {
+                event.stopPropagation();
+                handleDragStart(index);
+              }}
+              onDragOver={(event) => {
+                event.stopPropagation();
+                handleDragOver(event as unknown as DragEvent, index);
+              }}
+              onDrop={(event) => {
+                event.stopPropagation();
+                handleDrop(event as unknown as DragEvent, index);
+              }}
+              onDragEnd={(event) => {
+                event.stopPropagation();
+                handleDragEnd();
+              }}
+            >
+              <span class="field-options-editor__drag-grip" aria-hidden>⠿</span>
               <input
                 type="text"
                 class="field-options-editor__input"
                 value={option.label}
                 aria-label="Option label"
+                placeholder="Label"
+                ref={(el) => {
+                  if (el && justAddedRef.current && index === draft.length - 1 && option.label === '' && option.value === '') {
+                    justAddedRef.current = false;
+                    el.focus();
+                  }
+                }}
                 onClick={(event) => {
                   event.stopPropagation();
                 }}
                 onInput={(event) => {
-                  const next = [...props.options];
-                  next[index] = { ...next[index], label: (event.currentTarget as HTMLInputElement).value };
-                  props.onCommit(next);
+                  const newLabel = (event.currentTarget as HTMLInputElement).value;
+                  setDraft(draft.map((o, i) => i === index ? { ...o, label: newLabel } : o));
+                }}
+                onBlur={() => {
+                  props.onCommit(stripIds(draft));
                 }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
                     event.preventDefault();
-                    props.onCommit([...props.options, { value: '', label: '' }]);
+                    props.onCommit(stripIds(draft));
+                    justAddedRef.current = true;
+                    setDraft([...draft, { value: '', label: '', _id: nextId.current++ }]);
                   }
                 }}
               />
@@ -134,13 +213,16 @@ function ChoiceOptionsEditor(props: {
                 class="field-options-editor__input"
                 value={option.value}
                 aria-label="Option value"
+                placeholder="Value (optional)"
                 onClick={(event) => {
                   event.stopPropagation();
                 }}
                 onInput={(event) => {
-                  const next = [...props.options];
-                  next[index] = { ...next[index], value: (event.currentTarget as HTMLInputElement).value };
-                  props.onCommit(next);
+                  const newValue = (event.currentTarget as HTMLInputElement).value;
+                  setDraft(draft.map((o, i) => i === index ? { ...o, value: newValue } : o));
+                }}
+                onBlur={() => {
+                  props.onCommit(stripIds(draft));
                 }}
               />
               <button
@@ -149,7 +231,7 @@ function ChoiceOptionsEditor(props: {
                 aria-label="Remove option"
                 onClick={(event) => {
                   event.stopPropagation();
-                  props.onCommit(props.options.filter((_, candidateIndex) => candidateIndex !== index));
+                  commitDraft(draft.filter((_, candidateIndex) => candidateIndex !== index));
                 }}
               >
                 ×
@@ -165,7 +247,8 @@ function ChoiceOptionsEditor(props: {
         class="field-options-editor__add"
         onClick={(event) => {
           event.stopPropagation();
-          props.onCommit([...props.options, { value: '', label: '' }]);
+          justAddedRef.current = true;
+          setDraft([...draft, { value: '', label: '', _id: nextId.current++ }]);
         }}
       >
         + Add option
@@ -220,6 +303,30 @@ function LogicBadges(props: {
       ))}
     </div>
   );
+}
+
+const DATA_TYPE_LABELS: Record<string, string> = {
+  string: 'Text',
+  text: 'Text',
+  number: 'Number',
+  integer: 'Integer',
+  decimal: 'Decimal',
+  boolean: 'Yes/No',
+  date: 'Date',
+  dateTime: 'Date & Time',
+  time: 'Time',
+  choice: 'Choice',
+  multiChoice: 'Multi-choice',
+  money: 'Money',
+  attachment: 'File',
+  uri: 'URL'
+};
+
+function friendlyDataType(dataType: string | undefined): string {
+  if (!dataType) {
+    return 'Text';
+  }
+  return DATA_TYPE_LABELS[dataType] ?? dataType;
 }
 
 function hasLogicValue(value: unknown): boolean {

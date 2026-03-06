@@ -19,8 +19,10 @@ export function ChangeList(props: ChangeListProps) {
         <li class="version-change-list__item" data-testid={`version-change-${index}`} key={`${change.path}:${change.type}:${index}`}>
           <span class={`version-impact-badge is-${change.impact}`}>{change.impact}</span>
           <span class="version-change-list__type">{change.type}</span>
-          <span class="version-change-list__target">{change.target}</span>
-          <code class="version-change-list__path">{change.path}</code>
+          <span class="version-change-list__target">{change.key ?? change.target}</span>
+          {change.description ? (
+            <span class="version-change-list__description">{change.description}</span>
+          ) : null}
         </li>
       ))}
     </ul>

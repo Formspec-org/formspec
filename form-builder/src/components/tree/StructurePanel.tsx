@@ -1,8 +1,8 @@
 import type { Signal } from '@preact/signals';
 import { Fragment } from 'preact';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { FormspecBind, FormspecItem } from 'formspec-engine';
-import { moveItem, setSelection } from '../../state/mutations';
+import { moveItem, reorderItem, setSelection } from '../../state/mutations';
 import { projectSignal, type ProjectState } from '../../state/project';
 import { joinPath } from '../../state/wiring';
 import { TreeNode } from './TreeNode';
@@ -21,6 +21,7 @@ export function StructurePanel(props: StructurePanelProps) {
   const state = project.value;
   const bindByPath = useMemo(() => buildBindIndex(state.definition.binds), [state.definition.binds]);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const draggingPathRef = useRef<string | null>(null);
   const [draggingPath, setDraggingPath] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
 
@@ -62,10 +63,12 @@ export function StructurePanel(props: StructurePanelProps) {
       transfer.setData('text/plain', path);
       transfer.effectAllowed = 'move';
     }
+    draggingPathRef.current = path;
     setDraggingPath(path);
   };
 
   const handleDragEnd = () => {
+    draggingPathRef.current = null;
     setDraggingPath(null);
     setDropTarget(null);
   };
@@ -74,7 +77,8 @@ export function StructurePanel(props: StructurePanelProps) {
     event.preventDefault();
     event.stopPropagation();
     const draggedPath = event.dataTransfer?.getData('text/plain');
-    const fromPath = (draggedPath ? draggedPath.trim() : '') || draggingPath;
+    const fromPath = (draggedPath ? draggedPath.trim() : '') || draggingPathRef.current || draggingPath;
+    draggingPathRef.current = null;
     setDropTarget(null);
     setDraggingPath(null);
 
@@ -129,7 +133,7 @@ export function StructurePanel(props: StructurePanelProps) {
         {renderDropZone(parentPath, 0)}
         {items.map((item, index) => {
           const path = joinPath(parentPath, item.key);
-          const children = item.type === 'group' ? item.children ?? [] : [];
+          const children = (item.type === 'group' || item.type === 'field') ? item.children ?? [] : [];
           const collapsed = collapsedGroups.has(path);
 
           return (
@@ -156,10 +160,18 @@ export function StructurePanel(props: StructurePanelProps) {
                       return next;
                     });
                   }}
+                  onReorder={(reorderPath, direction) => {
+                    reorderItem(project, reorderPath, direction);
+                  }}
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                 />
-                {item.type === 'group' && children.length > 0 && !collapsed ? renderLevel(children, path, depth + 1) : null}
+                {(item.type === 'group' || item.type === 'field') && (children.length > 0 && !collapsed) ? renderLevel(children, path, depth + 1) : null}
+              {(item.type === 'group' || item.type === 'field') && children.length === 0 && draggingPath && draggingPath !== path ? (
+                <ol class="structure-tree__list" data-parent-path={path}>
+                  {renderDropZone(path, 0)}
+                </ol>
+              ) : null}
               </li>
               {renderDropZone(parentPath, index + 1)}
             </Fragment>

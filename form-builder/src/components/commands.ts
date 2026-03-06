@@ -6,6 +6,8 @@ import type { Signal } from '@preact/signals';
 import type { FormspecItem } from 'formspec-engine';
 import {
   addItem,
+  deleteItem,
+  duplicateItem,
   setJsonEditorOpen,
   setInspectorSectionOpen,
   setMobilePanel,
@@ -25,6 +27,7 @@ export interface StudioCommand {
   id: string;
   title: string;
   subtitle?: string;
+  shortcut?: string;
   category: CommandCategory;
   keywords?: string[];
   run: () => void;
@@ -34,6 +37,32 @@ export interface StudioCommand {
 export interface CommandSearchResult {
   command: StudioCommand;
   score: number;
+}
+
+const RECENT_COMMANDS_KEY = 'studio_recent_commands';
+const RECENT_COMMANDS_MAX = 8;
+
+/** Records a command execution in the recency store. */
+export function recordCommandUsed(commandId: string): void {
+  try {
+    const stored = localStorage.getItem(RECENT_COMMANDS_KEY);
+    const recent: string[] = stored ? (JSON.parse(stored) as string[]) : [];
+    const filtered = recent.filter((id) => id !== commandId);
+    filtered.unshift(commandId);
+    localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(filtered.slice(0, RECENT_COMMANDS_MAX)));
+  } catch {
+    // localStorage unavailable — silently ignore
+  }
+}
+
+/** Returns recently-used command IDs in order of most recent first. */
+function loadRecentCommandIds(): string[] {
+  try {
+    const stored = localStorage.getItem(RECENT_COMMANDS_KEY);
+    return stored ? (JSON.parse(stored) as string[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 interface FieldReference {
@@ -72,7 +101,6 @@ export function buildStudioCommands(project: Signal<ProjectState>): StudioComman
     ...fieldReferences.map((field) => ({
       id: `nav-field-${field.path.replaceAll('.', '-')}`,
       title: `Go to field: ${field.label}`,
-      subtitle: field.path,
       category: 'Navigation' as const,
       keywords: [field.label, field.key, field.path, 'field', 'navigate'],
       run: () => {
@@ -99,8 +127,35 @@ export function buildStudioCommands(project: Signal<ProjectState>): StudioComman
       }
     },
     {
+      id: 'action-duplicate-field',
+      title: 'Duplicate selected field',
+      shortcut: '⌘D',
+      category: 'Actions',
+      keywords: ['duplicate', 'copy', 'clone', 'field'],
+      run: () => {
+        const sel = project.value.selection;
+        if (sel) {
+          duplicateItem(project, sel);
+        }
+      }
+    },
+    {
+      id: 'action-delete-field',
+      title: 'Delete selected field',
+      shortcut: '⌫',
+      category: 'Actions',
+      keywords: ['delete', 'remove', 'field'],
+      run: () => {
+        const sel = project.value.selection;
+        if (sel) {
+          deleteItem(project, sel);
+        }
+      }
+    },
+    {
       id: 'action-toggle-preview',
       title: 'Toggle preview',
+      shortcut: '⌘⇧P',
       category: 'Actions',
       keywords: ['preview', 'view'],
       run: () => {
@@ -110,6 +165,7 @@ export function buildStudioCommands(project: Signal<ProjectState>): StudioComman
     {
       id: 'action-toggle-structure',
       title: 'Toggle structure panel',
+      shortcut: '⌘\\',
       category: 'Actions',
       keywords: ['structure', 'tree', 'panel'],
       run: () => {
@@ -198,6 +254,7 @@ export function buildStudioCommands(project: Signal<ProjectState>): StudioComman
     {
       id: 'advanced-json-editor',
       title: 'Open JSON editor',
+      shortcut: '⌘⇧J',
       category: 'Advanced',
       keywords: ['json', 'raw', 'editor'],
       run: () => {
@@ -242,10 +299,16 @@ export function searchCommands(
 ): CommandSearchResult[] {
   const normalizedQuery = normalizeText(query);
   if (!normalizedQuery) {
-    return commands.slice(0, limit).map((command, index) => ({
-      command,
-      score: 1000 - index
-    }));
+    const recentIds = loadRecentCommandIds();
+    const recentSet = new Map(recentIds.map((id, i) => [id, recentIds.length - i]));
+    return [...commands]
+      .sort((a, b) => {
+        const ra = recentSet.get(a.id) ?? 0;
+        const rb = recentSet.get(b.id) ?? 0;
+        return rb - ra;
+      })
+      .slice(0, limit)
+      .map((command, index) => ({ command, score: 1000 - index }));
   }
 
   const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);

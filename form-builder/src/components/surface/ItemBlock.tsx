@@ -10,11 +10,15 @@ export interface ItemBlockProps {
   selected: boolean;
   bind?: FormspecBind;
   labelFocusToken?: number;
+  onDragStart?: (path: string, event: DragEvent) => void;
+  onDragEnd?: () => void;
   onSelect: (path: string) => void;
   onLogicBadgeClick: (path: string, badgeKey: FieldLogicBadgeKey) => void;
+  onLabelInput?: (path: string, value: string) => void;
   onLabelCommit: (path: string, value: string) => void;
   onDescriptionCommit: (path: string, value: string) => void;
   onOptionsCommit: (path: string, options: Array<{ value: string; label: string }>) => void;
+  onRequiredToggle?: (path: string, required: boolean) => void;
   renderChildren: (items: FormspecItem[], parentPath: string) => ComponentChildren;
 }
 
@@ -38,25 +42,44 @@ export function ItemBlock(props: ItemBlockProps) {
 
 function renderItemBody(props: ItemBlockProps) {
   if (props.item.type === 'field') {
+    const fieldChildren = Array.isArray(props.item.children) && props.item.children.length > 0
+      ? props.item.children : null;
+
     return (
-      <FieldBlock
-        item={props.item}
-        path={props.path}
-        bind={props.bind}
-        labelFocusToken={props.labelFocusToken}
-        onLogicBadgeClick={(badgeKey) => {
-          props.onLogicBadgeClick(props.path, badgeKey);
-        }}
-        onLabelCommit={(value) => {
-          props.onLabelCommit(props.path, value);
-        }}
-        onDescriptionCommit={(value) => {
-          props.onDescriptionCommit(props.path, value);
-        }}
-        onOptionsCommit={(options) => {
-          props.onOptionsCommit(props.path, options);
-        }}
-      />
+      <>
+        <FieldBlock
+          item={props.item}
+          path={props.path}
+          bind={props.bind}
+          selected={props.selected}
+          labelFocusToken={props.labelFocusToken}
+          onDragStart={props.onDragStart}
+          onDragEnd={props.onDragEnd}
+          onLogicBadgeClick={(badgeKey) => {
+            props.onLogicBadgeClick(props.path, badgeKey);
+          }}
+          onLabelInput={(value) => {
+            props.onLabelInput?.(props.path, value);
+          }}
+          onLabelCommit={(value) => {
+            props.onLabelCommit(props.path, value);
+          }}
+          onDescriptionCommit={(value) => {
+            props.onDescriptionCommit(props.path, value);
+          }}
+          onOptionsCommit={(options) => {
+            props.onOptionsCommit(props.path, options);
+          }}
+          onRequiredToggle={props.onRequiredToggle ? (required) => {
+            props.onRequiredToggle!(props.path, required);
+          } : undefined}
+        />
+        {fieldChildren ? (
+          <div class="field-block__sub-questions">
+            {props.renderChildren(fieldChildren, props.path)}
+          </div>
+        ) : null}
+      </>
     );
   }
 
@@ -65,7 +88,13 @@ function renderItemBody(props: ItemBlockProps) {
       <GroupBlock
         item={props.item}
         path={props.path}
+        selected={props.selected}
         labelFocusToken={props.labelFocusToken}
+        onDragStart={props.onDragStart}
+        onDragEnd={props.onDragEnd}
+        onLabelInput={(value) => {
+          props.onLabelInput?.(props.path, value);
+        }}
         onLabelCommit={(value) => {
           props.onLabelCommit(props.path, value);
         }}
@@ -81,7 +110,13 @@ function renderItemBody(props: ItemBlockProps) {
     <DisplayBlock
       item={props.item}
       path={props.path}
+      selected={props.selected}
       labelFocusToken={props.labelFocusToken}
+      onDragStart={props.onDragStart}
+      onDragEnd={props.onDragEnd}
+      onLabelInput={(value) => {
+        props.onLabelInput?.(props.path, value);
+      }}
       onLabelCommit={(value) => {
         props.onLabelCommit(props.path, value);
       }}

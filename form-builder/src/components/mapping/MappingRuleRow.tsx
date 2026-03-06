@@ -11,18 +11,18 @@ export interface MappingRuleRowProps {
   onTransformChange: (value: string) => void;
 }
 
-const TRANSFORM_OPTIONS = [
-  'preserve',
-  'drop',
-  'expression',
-  'coerce',
-  'valueMap',
-  'flatten',
-  'nest',
-  'constant',
-  'concat',
-  'split'
-] as const;
+const TRANSFORM_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'preserve', label: 'Copy as-is' },
+  { value: 'drop', label: 'Drop field' },
+  { value: 'expression', label: 'Custom expression' },
+  { value: 'coerce', label: 'Type coercion' },
+  { value: 'valueMap', label: 'Lookup table' },
+  { value: 'flatten', label: 'Flatten' },
+  { value: 'nest', label: 'Nest' },
+  { value: 'constant', label: 'Fixed value' },
+  { value: 'concat', label: 'Join values' },
+  { value: 'split', label: 'Split value' }
+];
 
 export function MappingRuleRow(props: MappingRuleRowProps) {
   return (
@@ -61,8 +61,8 @@ export function MappingRuleRow(props: MappingRuleRowProps) {
           }}
         >
           {TRANSFORM_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
