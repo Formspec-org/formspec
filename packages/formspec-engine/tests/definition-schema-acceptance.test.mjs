@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { FormEngine } from '../dist/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, '..', '..', '..');
+
+const fixturePaths = [
+  'tests/fixture-microgrant-screener.json',
+  'tests/fixture-household-benefits-renewal.json',
+  'tests/fixture-clinical-adverse-event.json',
+  'tests/fixture-vendor-conflict-disclosure.json',
+  'tests/fixture-multi-state-tax-filing.json',
+];
+
+function loadSharedFixture(relativePath) {
+  const definition = JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
+  if (definition.instances) {
+    for (const instance of Object.values(definition.instances)) {
+      if (instance && typeof instance === 'object') {
+        delete instance.source;
+      }
+    }
+  }
+  return definition;
+}
+
+for (const fixturePath of fixturePaths) {
+  test(`schema-valid definition fixture loads without processor setup errors: ${path.basename(fixturePath)}`, () => {
+    const definition = loadSharedFixture(fixturePath);
+    const engine = new FormEngine(definition);
+    const report = engine.getValidationReport({ mode: 'continuous' });
+
+    assert.equal(engine.definition.url, definition.url);
+    assert.ok(Object.keys(engine.signals).length > 0);
+    assert.ok(Array.isArray(report.results));
+  });
+}
