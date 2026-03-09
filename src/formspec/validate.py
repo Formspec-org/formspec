@@ -49,6 +49,11 @@ class DefinitionArtifact(ArtifactFile):
 
 
 @dataclass
+class ThemeArtifact(ArtifactFile):
+    target_def_url: str = ""
+
+
+@dataclass
 class ComponentArtifact(ArtifactFile):
     target_def_url: str = ""
 
@@ -76,7 +81,7 @@ class DiscoveredArtifacts:
     definition_versions: dict[tuple[str, str], DefinitionArtifact] = field(default_factory=dict)
     fragments: dict[str, DefinitionArtifact] = field(default_factory=dict)
     components: list[ComponentArtifact] = field(default_factory=list)
-    themes: list[ArtifactFile] = field(default_factory=list)
+    themes: list[ThemeArtifact] = field(default_factory=list)
     mappings: list[MappingArtifact] = field(default_factory=list)
     responses: list[ResponseArtifact] = field(default_factory=list)
     changelogs: list[ChangelogArtifact] = field(default_factory=list)
@@ -176,7 +181,12 @@ def discover_artifacts(
                 ComponentArtifact(path=path, doc=doc, target_def_url=target)
             )
         elif doc_type == "theme":
-            arts.themes.append(ArtifactFile(path=path, doc=doc))
+            target = ""
+            if isinstance(doc.get("targetDefinition"), dict):
+                target = doc["targetDefinition"].get("url", "")
+            arts.themes.append(
+                ThemeArtifact(path=path, doc=doc, target_def_url=target)
+            )
         elif doc_type == "mapping":
             arts.mappings.append(
                 MappingArtifact(
@@ -269,10 +279,40 @@ def _pass_definition_linting(arts: DiscoveredArtifacts) -> PassResult:
 
 def _pass_sidecar_linting(arts: DiscoveredArtifacts) -> PassResult:
     sidecars: list[ArtifactFile] = []
-    sidecars.extend(arts.themes)
     sidecars.extend(arts.mappings)
     sidecars.extend(arts.changelogs)
-    return _lint_pass("Sidecar document linting (theme, mapping, changelog)", sidecars)
+    return _lint_pass("Sidecar document linting (mapping, changelog)", sidecars)
+
+
+def _pass_theme_linting(arts: DiscoveredArtifacts) -> PassResult:
+    if not arts.themes:
+        return PassResult(title="Theme linting (with definition context)", empty=True)
+
+    all_defs = {**arts.definitions, **arts.fragments}
+    pr = PassResult(title="Theme linting (with definition context)")
+    for theme in arts.themes:
+        paired_def = all_defs.get(theme.target_def_url)
+        kwargs: dict[str, Any] = {}
+        if paired_def:
+            kwargs["component_definition"] = paired_def.doc
+
+        diags = lint(theme.doc, **kwargs)
+        errors = [d for d in diags if d.severity == "error"]
+        warnings = [d for d in diags if d.severity == "warning"]
+
+        label = theme.path.name
+        if paired_def:
+            label += f" (def: {paired_def.path.name})"
+
+        pr.items.append(
+            PassItemResult(
+                label=label,
+                error_count=len(errors),
+                warning_count=len(warnings),
+                diagnostics=diags,
+            )
+        )
+    return pr
 
 
 def _pass_component_linting(arts: DiscoveredArtifacts) -> PassResult:
@@ -775,6 +815,7 @@ def validate_all(artifacts: DiscoveredArtifacts) -> ValidationReport:
         passes=[
             _pass_definition_linting(artifacts),
             _pass_sidecar_linting(artifacts),
+            _pass_theme_linting(artifacts),
             _pass_component_linting(artifacts),
             _pass_response_schema(artifacts),
             _pass_runtime_evaluation(artifacts),

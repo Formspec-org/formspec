@@ -81,7 +81,9 @@ class FormspecLinter:
                 diagnostics.extend(dependencies.diagnostics)
 
         elif schema_result.document_type == "theme":
-            diagnostics.extend(lint_theme_semantics(document))
+            diagnostics.extend(
+                lint_theme_semantics(document, definition_doc=component_definition)
+            )
 
         elif schema_result.document_type == "component":
             diagnostics.extend(

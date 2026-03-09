@@ -1,7 +1,12 @@
-"""Theme document semantic checks: token value validation and $token.X reference integrity (W700-W704).
+"""Theme document semantic checks (W700-W711, E710).
 
-Validates that token values match their implied type (color, spacing, font-weight, line-height)
-based on naming conventions, and that all $token.X references in defaults/selectors/items resolve.
+W700-W703: token value validation by naming convention.
+W704: $token.X reference integrity.
+W705: items keys → definition item paths (cross-artifact).
+W706: page region keys → definition item paths (cross-artifact).
+W707: targetDefinition.url vs definition URL (cross-artifact).
+E710: duplicate page IDs (single-document).
+W711: responsive breakpoint keys vs declared breakpoints (single-document).
 """
 
 from __future__ import annotations
@@ -18,8 +23,11 @@ _CSS_LENGTH_RE = re.compile(r"^(?:0|(?:-?\d+(?:\.\d+)?)(?:px|rem|em|vw|vh|%|ch|e
 _UNITLESS_NUMBER_RE = re.compile(r"^-?\d+(?:\.\d+)?$")
 
 
-def lint_theme_semantics(document: dict) -> list[LintDiagnostic]:
-    """Entry point: validate token values (W700-W703) and token reference integrity (W704)."""
+def lint_theme_semantics(
+    document: dict,
+    definition_doc: dict | None = None,
+) -> list[LintDiagnostic]:
+    """Entry point: validate tokens (W700-W704), cross-artifact refs (W705-W707), and page semantics (E710, W711)."""
     diagnostics: list[LintDiagnostic] = []
 
     tokens = document.get("tokens")
@@ -27,6 +35,14 @@ def lint_theme_semantics(document: dict) -> list[LintDiagnostic]:
 
     diagnostics.extend(_validate_token_values(token_map))
     diagnostics.extend(_validate_token_references(document, token_map))
+
+    item_paths = _build_item_paths(definition_doc) if isinstance(definition_doc, dict) else None
+
+    if item_paths is not None:
+        diagnostics.extend(_validate_item_keys(document, item_paths))
+        diagnostics.extend(_validate_target_url(document, definition_doc))  # type: ignore[arg-type]
+
+    diagnostics.extend(_validate_page_semantics(document, item_paths))
 
     return diagnostics
 
@@ -236,3 +252,167 @@ def _is_unitless_line_height(value: object) -> bool:
     if not isinstance(value, str):
         return False
     return bool(_UNITLESS_NUMBER_RE.fullmatch(value.strip()))
+
+
+# ── Cross-artifact helpers (W705-W707) ───────────────────────────────────
+
+
+def _build_item_paths(definition_doc: dict | None) -> set[str]:
+    """Walk definition items to collect all full dotted paths and top-level keys."""
+    if not isinstance(definition_doc, dict):
+        return set()
+
+    paths: set[str] = set()
+
+    def walk(items: object, chain: tuple[str, ...]) -> None:
+        if not isinstance(items, list):
+            return
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            key = item.get("key")
+            if not isinstance(key, str):
+                continue
+            full = ".".join((*chain, key))
+            paths.add(full)
+            paths.add(key)
+            walk(item.get("children"), (*chain, key))
+
+    walk(definition_doc.get("items"), ())
+    return paths
+
+
+def _validate_item_keys(
+    document: dict, item_paths: set[str]
+) -> list[LintDiagnostic]:
+    """W705: items keys that don't match any definition item path."""
+    items = document.get("items")
+    if not isinstance(items, dict):
+        return []
+
+    diagnostics: list[LintDiagnostic] = []
+    for key in items:
+        if key not in item_paths:
+            diagnostics.append(
+                LintDiagnostic(
+                    severity="warning",
+                    code="W705",
+                    message=f"Theme items key '{key}' does not match any definition item path",
+                    path=f"$.items[{key!r}]",
+                    category="theme",
+                )
+            )
+    return diagnostics
+
+
+def _validate_target_url(
+    document: dict, definition_doc: dict
+) -> list[LintDiagnostic]:
+    """W707: targetDefinition.url doesn't match the paired definition's URL."""
+    target = document.get("targetDefinition")
+    if not isinstance(target, dict):
+        return []
+
+    theme_url = target.get("url")
+    if not isinstance(theme_url, str):
+        return []
+
+    def_url = definition_doc.get("url", "")
+    if theme_url == def_url:
+        return []
+
+    return [
+        LintDiagnostic(
+            severity="warning",
+            code="W707",
+            message=(
+                f"Theme targetDefinition.url '{theme_url}' does not match "
+                f"definition URL '{def_url}'"
+            ),
+            path="$.targetDefinition.url",
+            category="theme",
+        )
+    ]
+
+
+# ── Page semantics (W706, E710, W711) ────────────────────────────────────
+
+
+def _validate_page_semantics(
+    document: dict, item_paths: set[str] | None
+) -> list[LintDiagnostic]:
+    """E710: duplicate page IDs. W706: region keys vs definition. W711: responsive keys vs breakpoints."""
+    pages = document.get("pages")
+    if not isinstance(pages, list):
+        return []
+
+    diagnostics: list[LintDiagnostic] = []
+    breakpoint_names = set()
+    bp = document.get("breakpoints")
+    if isinstance(bp, dict):
+        breakpoint_names = set(bp.keys())
+
+    seen_ids: dict[str, int] = {}
+    for page_idx, page in enumerate(pages):
+        if not isinstance(page, dict):
+            continue
+
+        # E710: duplicate page IDs
+        page_id = page.get("id")
+        if isinstance(page_id, str):
+            if page_id in seen_ids:
+                diagnostics.append(
+                    LintDiagnostic(
+                        severity="error",
+                        code="E710",
+                        message=f"Duplicate page id '{page_id}' (first at pages[{seen_ids[page_id]}])",
+                        path=f"$.pages[{page_idx}].id",
+                        category="theme",
+                    )
+                )
+            else:
+                seen_ids[page_id] = page_idx
+
+        regions = page.get("regions")
+        if not isinstance(regions, list):
+            continue
+
+        for region_idx, region in enumerate(regions):
+            if not isinstance(region, dict):
+                continue
+
+            # W706: region key vs definition paths
+            region_key = region.get("key")
+            if isinstance(region_key, str) and item_paths is not None:
+                if region_key not in item_paths:
+                    diagnostics.append(
+                        LintDiagnostic(
+                            severity="warning",
+                            code="W706",
+                            message=(
+                                f"Page region key '{region_key}' does not match "
+                                "any definition item path"
+                            ),
+                            path=f"$.pages[{page_idx}].regions[{region_idx}].key",
+                            category="theme",
+                        )
+                    )
+
+            # W711: responsive keys vs breakpoints
+            responsive = region.get("responsive")
+            if isinstance(responsive, dict) and breakpoint_names:
+                for bp_key in responsive:
+                    if bp_key not in breakpoint_names:
+                        diagnostics.append(
+                            LintDiagnostic(
+                                severity="warning",
+                                code="W711",
+                                message=(
+                                    f"Responsive key '{bp_key}' is not defined in breakpoints"
+                                ),
+                                path=f"$.pages[{page_idx}].regions[{region_idx}].responsive[{bp_key!r}]",
+                                category="theme",
+                            )
+                        )
+
+    return diagnostics
