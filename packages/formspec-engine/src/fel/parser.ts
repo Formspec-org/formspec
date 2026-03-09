@@ -27,6 +27,14 @@ import * as t from './lexer.js';
  * entry point consumed by the interpreter and dependency visitor.
  */
 export class FelParser extends CstParser {
+  /**
+   * Tracks how many `let...in` value expressions are currently being parsed on
+   * the call stack. When non-zero, the `membership` rule must NOT consume an
+   * `In` token — that token belongs to the enclosing `letExpr` and is not a
+   * membership operator.
+   */
+  private _letDepth = 0;
+
   constructor() {
     super(t.allTokens);
     this.performSelfAnalysis();
@@ -50,7 +58,11 @@ export class FelParser extends CstParser {
           this.CONSUME(t.Let);
           this.CONSUME(t.Identifier);
           this.CONSUME(t.Equals);
+          // Increment depth before parsing the value so that the `membership`
+          // rule's GATE blocks In-as-membership while we're inside this value.
+          this._letDepth++;
           this.SUBRULE1(this.ifExpr, { LABEL: 'letValue' });
+          this._letDepth--;
           this.CONSUME(t.In);
           this.SUBRULE(this.letExpr, { LABEL: 'inExpr' });
       }},
@@ -150,15 +162,21 @@ export class FelParser extends CstParser {
 
   private membership = this.RULE('membership', () => {
     this.SUBRULE(this.nullCoalesce);
-    this.OPTION(() => {
-      this.OR([
-        { ALT: () => {
-            this.CONSUME(t.Not);
-            this.CONSUME(t.In);
-        }},
-        { ALT: () => this.CONSUME2(t.In) }
-      ]);
-      this.SUBRULE2(this.nullCoalesce);
+    // Gate: do not consume `in` as a membership operator when we are inside a
+    // `let...in` value expression. That `in` token belongs to the enclosing
+    // letExpr and must be left for it to consume.
+    this.OPTION({
+      GATE: () => this._letDepth === 0,
+      DEF: () => {
+        this.OR([
+          { ALT: () => {
+              this.CONSUME(t.Not);
+              this.CONSUME(t.In);
+          }},
+          { ALT: () => this.CONSUME2(t.In) }
+        ]);
+        this.SUBRULE2(this.nullCoalesce);
+      }
     });
   });
 

@@ -133,6 +133,13 @@ export interface FelContext {
 export class FelInterpreter extends BaseVisitor {
   private context!: FelContext;
 
+  /**
+   * Stack of let-binding scopes. Each entry is a Map of variable name to value.
+   * Pushed when entering a `let...in` body and popped on exit. Innermost scope
+   * takes priority (last-in wins for shadowing).
+   */
+  private letScopes: Array<Map<string, any>> = [];
+
   constructor() {
     super();
     this.validateVisitor();
@@ -198,6 +205,9 @@ export class FelInterpreter extends BaseVisitor {
    */
   public evaluate(cst: any, context: FelContext) {
     this.context = context;
+    // Reset let scopes on each top-level evaluation. The interpreter is a
+    // singleton so a previously thrown error could leave stale scope frames.
+    this.letScopes = [];
     return this.visit(cst);
   }
 
@@ -460,9 +470,9 @@ export class FelInterpreter extends BaseVisitor {
         if (v === 'false') return false;
         throw new Error(`boolean(): cannot convert "${v}" to boolean`);
     },
-    /** Validates and returns an ISO 8601 date string. Throws if the input is not a valid date. */
+    /** Validates and returns an ISO 8601 date string. Returns null for null, undefined, or empty string. Throws if the input is a non-empty string that is not a valid date. */
     date: (v: any) => {
-        if (v === null || v === undefined) return null;
+        if (v === null || v === undefined || v === '') return null;
         const d = new Date(v);
         if (isNaN(d.getTime())) throw new Error(`date(): "${v}" is not a valid ISO 8601 date`);
         return v;
@@ -571,8 +581,17 @@ export class FelInterpreter extends BaseVisitor {
 
   letExpr(ctx: any) {
     if (ctx.Let) {
-        // Implement scope/environment for let
-        return this.visit(ctx.inExpr);
+        // Evaluate the binding value, then push a new scope frame so the bound
+        // name is visible inside the body (inExpr) as a plain identifier.
+        const name = ctx.Identifier[0].image;
+        const value = this.visit(ctx.letValue);
+        const scope = new Map<string, any>([[name, value]]);
+        this.letScopes.push(scope);
+        try {
+            return this.visit(ctx.inExpr);
+        } finally {
+            this.letScopes.pop();
+        }
     }
     return this.visit(ctx.ifExpr);
   }
@@ -787,7 +806,19 @@ export class FelInterpreter extends BaseVisitor {
     }
     if (ctx.contextRef) return this.visit(ctx.contextRef);
     if (ctx.Identifier) {
-        let name = ctx.Identifier[0].image;
+        const baseName = ctx.Identifier[0].image;
+
+        // Check let-binding scopes (innermost first) before falling through
+        // to signal lookup. Let-bound variables shadow field signals.
+        if (this.letScopes.length > 0 && !ctx.pathTail) {
+            for (let i = this.letScopes.length - 1; i >= 0; i--) {
+                if (this.letScopes[i].has(baseName)) {
+                    return this.letScopes[i].get(baseName);
+                }
+            }
+        }
+
+        let name = baseName;
         if (ctx.pathTail) {
             for (const tail of ctx.pathTail) {
                 name = this.appendPathTail(name, this.visit(tail));
