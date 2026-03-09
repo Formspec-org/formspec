@@ -425,11 +425,8 @@ function resolveInspectorSectionForLogicBadge(
   badgeKey: FieldLogicBadgeKey,
   bind: FormspecBind | undefined
 ): string {
-  if (badgeKey === 'constraint') {
-    return 'field:validation';
-  }
   if (badgeKey === 'required' && typeof bind?.required === 'boolean') {
-    return 'field:basics';
+    return 'field:rules';
   }
-  return 'field:logic';
+  return 'field:rules';
 }

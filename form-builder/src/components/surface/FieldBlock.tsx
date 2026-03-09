@@ -264,19 +264,19 @@ function LogicBadges(props: {
 }) {
   const badges: Array<{ key: FieldLogicBadgeKey; label: string; title: string }> = [];
   if (hasLogicValue(props.bind?.required)) {
-    badges.push({ key: 'required', label: '●', title: 'Required' });
+    badges.push({ key: 'required', label: '✱', title: 'Required' });
   }
   if (hasLogicValue(props.bind?.relevant)) {
-    badges.push({ key: 'relevant', label: '?', title: 'Conditional visibility' });
+    badges.push({ key: 'relevant', label: '👁', title: 'Conditionally visible — has "show when" condition' });
   }
   if (hasLogicValue(props.bind?.calculate)) {
-    badges.push({ key: 'calculate', label: '=', title: 'Calculated value' });
+    badges.push({ key: 'calculate', label: '⚡', title: 'Has logic — auto-calculated value' });
   }
   if (hasLogicValue(props.bind?.constraint)) {
-    badges.push({ key: 'constraint', label: '!', title: 'Constraint' });
+    badges.push({ key: 'constraint', label: '✓', title: 'Has validation rules' });
   }
   if (hasLogicValue(props.bind?.readonly)) {
-    badges.push({ key: 'readonly', label: '🔒', title: 'Readonly' });
+    badges.push({ key: 'readonly', label: '🔒', title: 'Locked when — has readonly condition' });
   }
 
   if (!badges.length) {
