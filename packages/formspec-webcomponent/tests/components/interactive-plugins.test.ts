@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
-import { minimalComponentDoc } from '../helpers/engine-fixtures';
+import { minimalComponentDoc, multiFieldDef } from '../helpers/engine-fixtures';
 
 let FormspecRender: any;
 
@@ -166,6 +166,149 @@ describe('Wizard plugin', () => {
         expect(panels[0].classList.contains('formspec-hidden')).toBe(true);
         expect(panels[1].classList.contains('formspec-hidden')).toBe(true);
         expect(panels[2].classList.contains('formspec-hidden')).toBe(false);
+    });
+
+    it('Next click touches fields in current panel, showing inline errors', () => {
+        // Required field on page 1, no field on page 2
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.definition = multiFieldDef([
+            { key: 'name', label: 'Name', dataType: 'string', required: true },
+        ]);
+        el.componentDocument = minimalComponentDoc({
+            component: 'Wizard',
+            children: [
+                {
+                    component: 'Page',
+                    title: 'Step 1',
+                    children: [{ component: 'TextInput', bind: 'name' }],
+                },
+                {
+                    component: 'Page',
+                    title: 'Step 2',
+                    children: [{ component: 'Text', text: 'Done' }],
+                },
+            ],
+        });
+        el.render();
+
+        // Initially, no error shown (field not yet touched)
+        const errorDiv = el.querySelector('.formspec-error') as HTMLElement;
+        expect(errorDiv.textContent).toBe('');
+
+        // Click Next — should touch page-1 fields and show errors, then advance
+        const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
+        nextBtn.click();
+
+        // After Next click: error should now be visible for the required field
+        expect(errorDiv.textContent).not.toBe('');
+
+        // And we should have advanced to step 2
+        const panels = el.querySelectorAll('.formspec-wizard-panel');
+        expect(panels[0].classList.contains('formspec-hidden')).toBe(true);
+        expect(panels[1].classList.contains('formspec-hidden')).toBe(false);
+    });
+
+    it('Next click shows errors but still advances (soft validation)', () => {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.definition = multiFieldDef([
+            { key: 'step1field', label: 'Step 1 Field', dataType: 'string', required: true },
+            { key: 'step2field', label: 'Step 2 Field', dataType: 'string', required: true },
+        ]);
+        el.componentDocument = minimalComponentDoc({
+            component: 'Wizard',
+            children: [
+                {
+                    component: 'Page',
+                    title: 'Step 1',
+                    children: [{ component: 'TextInput', bind: 'step1field' }],
+                },
+                {
+                    component: 'Page',
+                    title: 'Step 2',
+                    children: [{ component: 'TextInput', bind: 'step2field' }],
+                },
+            ],
+        });
+        el.render();
+
+        const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
+        nextBtn.click();
+
+        // Should have advanced (soft — not blocked)
+        const panels = el.querySelectorAll('.formspec-wizard-panel');
+        expect(panels[0].classList.contains('formspec-hidden')).toBe(true);
+        expect(panels[1].classList.contains('formspec-hidden')).toBe(false);
+    });
+
+    it('navigating back to a touched page still shows errors', () => {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.definition = multiFieldDef([
+            { key: 'name', label: 'Name', dataType: 'string', required: true },
+        ]);
+        el.componentDocument = minimalComponentDoc({
+            component: 'Wizard',
+            children: [
+                {
+                    component: 'Page',
+                    title: 'Step 1',
+                    children: [{ component: 'TextInput', bind: 'name' }],
+                },
+                {
+                    component: 'Page',
+                    title: 'Step 2',
+                    children: [{ component: 'Text', text: 'Done' }],
+                },
+            ],
+        });
+        el.render();
+
+        const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
+        const prevBtn = el.querySelector('.formspec-wizard-prev') as HTMLButtonElement;
+        const errorDiv = el.querySelector('.formspec-error') as HTMLElement;
+
+        // Click Next to touch page 1 fields and advance
+        nextBtn.click();
+
+        // Navigate back to page 1
+        prevBtn.click();
+
+        // Error should still be visible (field remains touched)
+        expect(errorDiv.textContent).not.toBe('');
+    });
+
+    it('no errors shown on Next when all required fields are filled', () => {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.definition = multiFieldDef([
+            { key: 'name', label: 'Name', dataType: 'string', required: true },
+        ]);
+        el.componentDocument = minimalComponentDoc({
+            component: 'Wizard',
+            children: [
+                {
+                    component: 'Page',
+                    title: 'Step 1',
+                    children: [{ component: 'TextInput', bind: 'name' }],
+                },
+                {
+                    component: 'Page',
+                    title: 'Step 2',
+                    children: [{ component: 'Text', text: 'Done' }],
+                },
+            ],
+        });
+        el.render();
+        el.getEngine().setValue('name', 'Alice');
+
+        const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
+        nextBtn.click();
+
+        const errorDiv = el.querySelector('.formspec-error') as HTMLElement;
+        // Field is touched but has no error since it's filled
+        expect(errorDiv.textContent).toBe('');
     });
 });
 

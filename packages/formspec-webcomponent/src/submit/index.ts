@@ -25,6 +25,30 @@ export interface SubmitHost extends NavigationHost {
 }
 
 /**
+ * Touch all fields within a specific DOM container element (e.g. a wizard panel).
+ * Fields are identified by `.formspec-field[data-name]` elements.
+ * Used for soft per-page wizard validation: errors become visible without blocking navigation.
+ */
+export function touchFieldsInContainer(
+    container: Element,
+    touchedFields: Set<string>,
+    touchedVersion: { value: number },
+): void {
+    const fieldEls = container.querySelectorAll('.formspec-field[data-name]');
+    let touchedAny = false;
+    for (const fieldEl of fieldEls) {
+        const name = (fieldEl as HTMLElement).dataset.name;
+        if (name && !touchedFields.has(name)) {
+            touchedFields.add(name);
+            touchedAny = true;
+        }
+    }
+    if (touchedAny) {
+        touchedVersion.value += 1;
+    }
+}
+
+/**
  * Mark all registered fields as touched so validation errors become visible.
  */
 export function touchAllFields(host: SubmitHost): void {

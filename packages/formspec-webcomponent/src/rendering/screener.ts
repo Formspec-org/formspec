@@ -53,6 +53,10 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             fieldWrapper.appendChild(hint);
         }
 
+        const clearFieldError = () => {
+            fieldWrapper.querySelector('.formspec-error')?.remove();
+        };
+
         if (item.dataType === 'choice' && item.options) {
             const select = document.createElement('select');
             select.className = 'formspec-input';
@@ -69,15 +73,19 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             }
             select.addEventListener('change', () => {
                 answers[item.key] = select.value || null;
+                clearFieldError();
             });
             fieldWrapper.appendChild(select);
         } else if (item.dataType === 'boolean') {
+            // Boolean checkboxes default to false (unchecked = "no", a valid answer).
+            answers[item.key] = false;
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'formspec-input';
             checkbox.id = fieldId;
             checkbox.addEventListener('change', () => {
                 answers[item.key] = checkbox.checked;
+                clearFieldError();
             });
             fieldWrapper.appendChild(checkbox);
         } else if (item.dataType === 'money') {
@@ -89,6 +97,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             input.addEventListener('input', () => {
                 const val = parseFloat(input.value);
                 answers[item.key] = isNaN(val) ? null : { amount: val, currency: host._definition.formPresentation?.defaultCurrency || 'USD' };
+                clearFieldError();
             });
             fieldWrapper.appendChild(input);
         } else {
@@ -105,6 +114,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
                 } else {
                     answers[item.key] = val || null;
                 }
+                clearFieldError();
             });
             fieldWrapper.appendChild(input);
         }
@@ -117,6 +127,55 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
     continueBtn.className = 'formspec-screener-continue';
     continueBtn.textContent = 'Continue';
     continueBtn.addEventListener('click', () => {
+        // Clear prior errors
+        for (const err of fieldsContainer.querySelectorAll('.formspec-error')) {
+            err.remove();
+        }
+
+        // Validate: items marked required must be filled; if none are marked
+        // required, at least one answer must be provided to prevent empty routing.
+        const requiredItems = screener.items.filter((it: any) => it.required === true);
+        let valid = true;
+
+        if (requiredItems.length > 0) {
+            for (const item of requiredItems) {
+                const val = answers[item.key];
+                if (val == null || val === '') {
+                    valid = false;
+                    const wrapper = fieldsContainer.querySelector(`[data-name="${item.key}"]`);
+                    if (wrapper) {
+                        const err = document.createElement('div');
+                        err.className = 'formspec-error';
+                        err.textContent = 'Required';
+                        wrapper.appendChild(err);
+                    }
+                }
+            }
+        } else {
+            // No explicit required flags — require at least one non-null answer
+            const hasAny = screener.items.some((it: any) => {
+                const val = answers[it.key];
+                return val != null && val !== '';
+            });
+            if (!hasAny) {
+                valid = false;
+                // Show error on every unfilled field
+                for (const item of screener.items) {
+                    const val = answers[item.key];
+                    if (val == null || val === '') {
+                        const wrapper = fieldsContainer.querySelector(`[data-name="${item.key}"]`);
+                        if (wrapper) {
+                            const err = document.createElement('div');
+                            err.className = 'formspec-error';
+                            err.textContent = 'Required';
+                            wrapper.appendChild(err);
+                        }
+                    }
+                }
+            }
+        }
+        if (!valid) return;
+
         const route = host.engine.evaluateScreener(answers);
         host._screenerRoute = route;
         const routeType = host.classifyScreenerRoute(route);
@@ -136,8 +195,48 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
         }
 
         host.emitScreenerStateChange(route ? 'route-external' : 'route-none', answers);
+
+        // For external routes, replace the screener with a route result panel
+        // so the user sees feedback instead of a dead-end.
+        if (route) {
+            showExternalRouteResult(host, container, route);
+        }
     });
     panel.appendChild(continueBtn);
+
+    container.appendChild(panel);
+}
+
+function showExternalRouteResult(
+    host: ScreenerHost,
+    container: HTMLElement,
+    route: { target: string; label?: string },
+): void {
+    container.innerHTML = '';
+
+    const panel = document.createElement('div');
+    panel.className = 'formspec-screener-routed';
+
+    const heading = document.createElement('h2');
+    heading.className = 'formspec-screener-heading';
+    heading.textContent = route.label || 'Routed to another form';
+    panel.appendChild(heading);
+
+    const target = document.createElement('p');
+    target.className = 'formspec-screener-routed-target';
+    target.textContent = route.target;
+    panel.appendChild(target);
+
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'formspec-screener-continue';
+    backBtn.textContent = 'Back to screening';
+    backBtn.addEventListener('click', () => {
+        host._screenerRoute = null;
+        host.emitScreenerStateChange('restart', undefined);
+        host.render();
+    });
+    panel.appendChild(backBtn);
 
     container.appendChild(panel);
 }

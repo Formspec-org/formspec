@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals-core';
 import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
+import { touchFieldsInContainer } from '../submit/index.js';
 
 /**
  * Renders a multi-step wizard with signal-driven panel visibility.
@@ -97,7 +98,15 @@ export const WizardPlugin: ComponentPlugin = {
         nextBtn.className = 'formspec-wizard-next';
         nextBtn.textContent = 'Next';
         nextBtn.addEventListener('click', () => {
-            if (currentStep.value < children.length - 1) setStep(currentStep.value + 1);
+            if (currentStep.value < children.length - 1) {
+                // Soft validation: touch all fields in the current panel so inline
+                // errors become visible. Navigation still proceeds immediately.
+                const currentPanel = panels[currentStep.value];
+                if (currentPanel) {
+                    touchFieldsInContainer(currentPanel, ctx.touchedFields, ctx.touchedVersion);
+                }
+                setStep(currentStep.value + 1);
+            }
         });
 
         nav.appendChild(prevBtn);

@@ -189,6 +189,8 @@ export function renderActualComponent(host: RenderHost, comp: any, parent: HTMLE
         findItemByKey: (key: string) => host.findItemByKey(key),
         renderInputComponent: (comp: any, item: any, fullName: string) => renderInputComponentFn(host as any as FieldInputHost, comp, item, fullName),
         activeBreakpoint: host.activeBreakpoint,
+        touchedFields: host.touchedFields,
+        touchedVersion: host.touchedVersion,
     };
 
     if (plugin) {

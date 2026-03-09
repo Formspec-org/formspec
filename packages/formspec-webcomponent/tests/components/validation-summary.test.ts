@@ -1,0 +1,184 @@
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+
+let FormspecRender: any;
+
+beforeAll(async () => {
+    const mod = await import('../../src/index');
+    FormspecRender = mod.FormspecRender;
+    if (!customElements.get('formspec-render')) {
+        customElements.define('formspec-render', FormspecRender);
+    }
+});
+
+/** Render a form with a required field and a ValidationSummary, then return the element. */
+function renderWithValidationSummary(summaryProps: Record<string, any> = {}) {
+    const el = document.createElement('formspec-render') as any;
+    document.body.appendChild(el);
+    el.componentDocument = {
+        $formspecComponent: '1.0',
+        version: '1.0.0',
+        targetDefinition: { url: 'urn:test:form' },
+        tree: {
+            component: 'Stack',
+            children: [
+                { component: 'TextInput', bind: 'name' },
+                { component: 'ValidationSummary', ...summaryProps },
+            ],
+        },
+    };
+    el.definition = {
+        $formspec: '1.0',
+        url: 'urn:test:form',
+        version: '1.0.0',
+        title: 'Test Form',
+        items: [
+            {
+                key: 'name',
+                type: 'field',
+                label: 'Name',
+                dataType: 'string',
+            },
+        ],
+        binds: [
+            { path: 'name', required: 'true' },
+        ],
+    };
+    el.render();
+    return el;
+}
+
+describe('ValidationSummary — source: live', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('does not show the banner on initial load before submit', () => {
+        const el = renderWithValidationSummary({ source: 'live', mode: 'submit', showFieldErrors: true });
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+        expect(summary).not.toBeNull();
+        // Should not be visible — no submit has happened yet
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(false);
+        expect(summary.textContent?.trim()).toBe('');
+    });
+
+    it('shows the banner after submit is clicked with validation errors', () => {
+        const el = renderWithValidationSummary({ source: 'live', mode: 'submit', showFieldErrors: true });
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+
+        // Banner hidden before submit
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(false);
+
+        // Trigger submit — name is required but empty, so errors should appear
+        el.submit({ mode: 'submit', emitEvent: false });
+
+        // Banner should now be visible
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(true);
+        const header = summary.querySelector('.formspec-validation-summary-header');
+        expect(header).not.toBeNull();
+        expect(header?.textContent).toMatch(/error/i);
+    });
+
+    it('remains hidden on initial load when the form is valid', () => {
+        const el = renderWithValidationSummary({ source: 'live', mode: 'submit', showFieldErrors: true });
+        // Set the required field so form is valid
+        el.getEngine().setValue('name', 'Alice');
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+        // Still hidden — no submit has happened
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(false);
+    });
+
+    it('hides after submit when form becomes valid', () => {
+        const el = renderWithValidationSummary({ source: 'live', mode: 'submit', showFieldErrors: true });
+        // Submit with empty required field to make banner appear
+        el.submit({ mode: 'submit', emitEvent: false });
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(true);
+
+        // Fill the required field, then submit again
+        el.getEngine().setValue('name', 'Alice');
+        el.submit({ mode: 'submit', emitEvent: false });
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(false);
+    });
+});
+
+describe('ValidationSummary — live in wizard', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    /** Render a wizard with 2 pages: a field page and a review page with live ValidationSummary. */
+    function renderWizardWithSummary() {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.componentDocument = {
+            $formspecComponent: '1.0',
+            version: '1.0.0',
+            targetDefinition: { url: 'urn:test:wizard' },
+            tree: {
+                component: 'Wizard',
+                children: [
+                    {
+                        component: 'Page',
+                        title: 'Details',
+                        children: [
+                            { component: 'TextInput', bind: 'name' },
+                        ],
+                    },
+                    {
+                        component: 'Page',
+                        title: 'Review',
+                        children: [
+                            { component: 'ValidationSummary', source: 'live', mode: 'submit', showFieldErrors: true },
+                        ],
+                    },
+                ],
+            },
+        };
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:wizard',
+            version: '1.0.0',
+            title: 'Test Wizard',
+            items: [
+                { key: 'name', type: 'field', label: 'Name', dataType: 'string' },
+            ],
+            binds: [
+                { path: 'name', required: 'true' },
+            ],
+        };
+        el.render();
+        return el;
+    }
+
+    it('shows live validation summary after navigating to review page via Next', () => {
+        const el = renderWizardWithSummary();
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+
+        // Click Next to advance from Details to Review
+        const nextBtn = el.querySelector('button.formspec-wizard-next') as HTMLButtonElement;
+        expect(nextBtn).not.toBeNull();
+        nextBtn.click();
+
+        // The validation summary should now be visible — user navigated to review
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(true);
+    });
+});
+
+describe('ValidationSummary — source: submit', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('is hidden on initial load (no submit yet)', () => {
+        const el = renderWithValidationSummary({ source: 'submit', showFieldErrors: true });
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(false);
+    });
+
+    it('shows after submit with errors', () => {
+        const el = renderWithValidationSummary({ source: 'submit', showFieldErrors: true });
+        el.submit({ mode: 'submit', emitEvent: false });
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(true);
+    });
+});

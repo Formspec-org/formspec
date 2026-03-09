@@ -180,7 +180,7 @@ export class FormspecRender extends HTMLElement {
         this._screenerCompleted = false;
         this._screenerRoute = null;
         this.touchedFields.clear();
-        this.touchedVersion.value += 1;
+        this.touchedVersion.value = 0;
         try {
             this.engine = new FormEngine(val);
         } catch (e) {

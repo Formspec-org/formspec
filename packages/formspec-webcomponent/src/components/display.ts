@@ -346,6 +346,15 @@ export const ValidationSummaryPlugin: ComponentPlugin = {
                     ? fromReport
                     : (Array.isArray(fromResponse) ? fromResponse : []);
             } else {
+                // Gate live validation display so the banner does not appear
+                // eagerly on initial page load. Show after either:
+                // - a submit attempt, or
+                // - wizard navigation (touchedVersion > 0, meaning Next was clicked)
+                if (ctx.latestSubmitDetailSignal.value === null && ctx.touchedVersion.value === 0) {
+                    el.replaceChildren();
+                    el.classList.remove('formspec-validation-summary--visible');
+                    return;
+                }
                 ctx.engine.structureVersion.value;
                 rawResults = ctx.engine.getValidationReport({ mode }).results;
             }

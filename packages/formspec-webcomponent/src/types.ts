@@ -108,6 +108,20 @@ export interface RenderContext {
     /** Disposal callbacks for signal effects and event listeners created during this render cycle. */
     cleanupFns: Array<() => void>;
 
+    /**
+     * Set of field paths that have been interacted with (blurred/changed).
+     * Errors are only displayed for touched fields. Plugins can add paths here
+     * to force inline error display (e.g. wizard soft-validation on Next click).
+     */
+    touchedFields: Set<string>;
+
+    /**
+     * Monotonic counter that increments whenever touched state changes.
+     * Error-display effects subscribe to this so they re-run when fields are
+     * touched programmatically (e.g. wizard Next click).
+     */
+    touchedVersion: Signal<number>;
+
     /** Look up a definition item by key (supports dotted paths like `"group.field"`). Returns `null` if not found. */
     findItemByKey: (key: string, items?: any[]) => any | null;
 
