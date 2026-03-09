@@ -22,3 +22,6 @@ form-builder/dist-types/
 
 .ralph/
 *.egg-info/
+
+# Smoke test screenshots (generated artifacts)
+tests/e2e/smoke/screenshots/

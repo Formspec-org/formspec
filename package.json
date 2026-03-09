@@ -24,7 +24,8 @@
     "test:all": "npm run test:unit && npm run test:e2e",
     "docs:generate": "node scripts/generate-spec-artifacts.mjs",
     "docs:check": "node scripts/generate-spec-artifacts.mjs --check && python3 -m pytest tests/unit/schema/contracts/test_cross_spec_contracts.py -q",
-    "start:references": "npm run build --workspace=formspec-engine && npm run build --workspace=formspec-webcomponent && npm run dev --workspace=formspec-references"
+    "start:references": "npm run build --workspace=formspec-engine && npm run build --workspace=formspec-layout && npm run build --workspace=formspec-webcomponent && npm run dev --workspace=formspec-references",
+    "test:smoke": "node tests/e2e/smoke/run-all.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.0",

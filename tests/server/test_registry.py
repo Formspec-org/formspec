@@ -1,8 +1,10 @@
 """Tests for GET /registry and GET /registry/validate endpoints."""
 
+REGISTRY_FILE = "grant-application/registry.json"
+
 
 def test_registry_list_all(client):
-    r = client.get("/registry")
+    r = client.get("/registry", params={"registryFile": REGISTRY_FILE})
     assert r.status_code == 200
     body = r.json()
     assert "entries" in body
@@ -10,7 +12,7 @@ def test_registry_list_all(client):
 
 
 def test_registry_filter_by_category(client):
-    r = client.get("/registry?category=dataType")
+    r = client.get("/registry", params={"registryFile": REGISTRY_FILE, "category": "dataType"})
     assert r.status_code == 200
     body = r.json()
     for entry in body["entries"]:
@@ -18,14 +20,14 @@ def test_registry_filter_by_category(client):
 
 
 def test_registry_filter_by_status(client):
-    r = client.get("/registry?status=stable")
+    r = client.get("/registry", params={"registryFile": REGISTRY_FILE, "status": "stable"})
     assert r.status_code == 200
     for entry in r.json()["entries"]:
         assert entry["status"] == "stable"
 
 
 def test_registry_filter_by_name(client):
-    r = client.get("/registry?name=x-grants-gov-ssn")
+    r = client.get("/registry", params={"registryFile": REGISTRY_FILE, "name": "x-grants-gov-ssn"})
     assert r.status_code == 200
     body = r.json()
     assert len(body["entries"]) >= 1
@@ -33,7 +35,7 @@ def test_registry_filter_by_name(client):
 
 
 def test_registry_validate(client):
-    r = client.get("/registry/validate")
+    r = client.get("/registry/validate", params={"registryFile": REGISTRY_FILE})
     assert r.status_code == 200
     body = r.json()
     assert "errors" in body
