@@ -244,7 +244,7 @@ export interface ProjectVersioningState {
 /** Editor-only UI state persisted alongside artifacts. */
 export interface ProjectUIState {
   inspectorSections: Record<string, boolean>;
-  inspectorMode: 'simple' | 'advanced';
+  inspectorMode: 'simple' | 'standard' | 'advanced';
   viewMode: 'edit' | 'preview' | 'split';
   structurePanelOpen: boolean;
   diagnosticsOpen: boolean;

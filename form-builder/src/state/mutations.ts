@@ -1871,6 +1871,32 @@ export function setFieldWidgetComponent(
   });
 }
 
+/** Sets the answer type for a field — updates both dataType and component in one action. */
+export function setFieldAnswerType(
+  project: Signal<ProjectState> = projectSignal,
+  path: string,
+  dataType: string,
+  component: string
+): void {
+  commitProject(project, (state) => {
+    const location = findItemLocation(state.definition.items, path);
+    if (!location) {
+      throw new Error(`Cannot set answer type for missing item at path: ${path}`);
+    }
+    if (location.item.type !== 'field') {
+      throw new Error(`Cannot set answer type for non-field item at path: ${path}`);
+    }
+
+    location.item.dataType = dataType as FormspecItem['dataType'];
+
+    const node = findComponentNodeByPath(state.definition.items, state.component.tree, path);
+    if (node) {
+      node.component = component;
+    }
+    return {};
+  });
+}
+
 /** Sets or clears a single property on the component node for a field. */
 export function setComponentNodeProperty(
   project: Signal<ProjectState> = projectSignal,
@@ -2229,10 +2255,26 @@ export function toggleStructurePanel(project: Signal<ProjectState> = projectSign
   });
 }
 
-/** Cycles inspector between simple and advanced mode. */
+/** Cycles inspector mode across three tiers: Simple → Standard → Advanced. */
 export function toggleInspectorMode(project: Signal<ProjectState> = projectSignal): void {
   commitProject(project, (state) => {
-    state.uiState.inspectorMode = state.uiState.inspectorMode === 'simple' ? 'advanced' : 'simple';
+    const cycle: Record<string, 'simple' | 'standard' | 'advanced'> = {
+      simple: 'standard',
+      standard: 'advanced',
+      advanced: 'simple'
+    };
+    state.uiState.inspectorMode = cycle[state.uiState.inspectorMode] ?? 'simple';
+    return { skipHistory: true };
+  });
+}
+
+/** Sets inspector mode to a specific tier. */
+export function setInspectorMode(
+  project: Signal<ProjectState> = projectSignal,
+  mode: 'simple' | 'standard' | 'advanced'
+): void {
+  commitProject(project, (state) => {
+    state.uiState.inspectorMode = mode;
     return { skipHistory: true };
   });
 }
