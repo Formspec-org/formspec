@@ -4,22 +4,25 @@ import {
   setActiveBreakpoint,
   setComponentNodeProperty,
   setComponentResponsiveOverride,
+  setDefinitionPresentationKey,
   renameItem,
   setInspectorSectionOpen,
   setItemText,
   setPresentation
 } from '../../state/mutations';
 import type { ProjectState } from '../../state/project';
-import { AppearanceSection, type AccessibilityOverride } from './sections/AppearanceSection';
-import { BasicsSection } from './sections/BasicsSection';
+import { LayoutStyleSection, type AccessibilityOverride } from './sections/LayoutStyleSection';
+import { QuestionSection } from './sections/QuestionSection';
 import { Collapsible } from '../controls/Collapsible';
 import { TextInput } from '../controls/TextInput';
 import { getComponentNodeByPath, getComponentResponsiveOverride, getThemeItemPresentation } from './utils';
+import type { InspectorTier } from './Inspector';
 
 interface DisplayInspectorProps {
   project: Signal<ProjectState>;
   path: string;
   item: FormspecItem;
+  tier: InspectorTier;
 }
 
 export function DisplayInspector(props: DisplayInspectorProps) {
@@ -40,7 +43,7 @@ export function DisplayInspector(props: DisplayInspectorProps) {
   const setSectionOpen = (sectionId: string, open: boolean) => {
     setInspectorSectionOpen(props.project, `display:${props.path}:${sectionId}`, open);
   };
-  const DISPLAY_SECTION_DEFAULTS: Record<string, boolean> = { basics: true };
+  const DISPLAY_SECTION_DEFAULTS: Record<string, boolean> = { question: true };
   const isSectionOpen = (sectionId: string) =>
     props.project.value.uiState.inspectorSections[`display:${props.path}:${sectionId}`] ?? DISPLAY_SECTION_DEFAULTS[sectionId] ?? false;
 
@@ -56,17 +59,26 @@ export function DisplayInspector(props: DisplayInspectorProps) {
     setPresentation(props.project, props.path, Object.keys(next).length ? next : null, 'theme');
   };
 
+  // Layout & style presentation hints from definition
+  const layoutPresentation = (props.item.presentation as Record<string, unknown> | undefined) ?? {};
+  const layoutObj = (layoutPresentation.layout as Record<string, unknown> | undefined) ?? {};
+  const styleHintsObj = (layoutPresentation.styleHints as Record<string, unknown> | undefined) ?? {};
+
   return (
     <div class="inspector-content" data-testid="display-inspector">
-      <BasicsSection
+      <QuestionSection
         testIdPrefix="display"
-        open={isSectionOpen('basics')}
+        open={isSectionOpen('question')}
+        tier={props.tier}
         keyValue={props.item.key}
         label={props.item.label}
         description={props.item.description}
-        showDescription
+        hint={props.item.hint}
+        showPlaceholder={false}
+        showPrefixSuffix={false}
+        showOptionSet={false}
         onToggle={(open) => {
-          setSectionOpen('basics', open);
+          setSectionOpen('question', open);
         }}
         onKeyCommit={(value) => {
           if (!value.trim().length || value === props.item.key) {
@@ -79,6 +91,9 @@ export function DisplayInspector(props: DisplayInspectorProps) {
         }}
         onDescriptionInput={(value) => {
           setItemText(props.project, props.path, 'description', value);
+        }}
+        onHintInput={(value) => {
+          setItemText(props.project, props.path, 'hint', value);
         }}
       />
 
@@ -101,16 +116,22 @@ export function DisplayInspector(props: DisplayInspectorProps) {
         </Collapsible>
       ) : null}
 
-      <AppearanceSection
+      <LayoutStyleSection
         testIdPrefix="display"
-        open={isSectionOpen('appearance')}
-        widget={typeof themePresentation.widget === 'string' ? themePresentation.widget : undefined}
+        open={isSectionOpen('layout-style')}
+        tier={props.tier}
         cssClass={typeof themePresentation.cssClass === 'string' ? themePresentation.cssClass : undefined}
-        componentWhen={componentNode?.when}
-        accessibility={isDisplayRecord(themePresentation.accessibility) ? themePresentation.accessibility as AccessibilityOverride : undefined}
-        style={isDisplayRecord(themePresentation.style) ? themePresentation.style as Record<string, string | number> : undefined}
-        widgetConfig={isDisplayRecord(themePresentation.widgetConfig) ? themePresentation.widgetConfig as Record<string, string | number> : undefined}
+        style={isRecord(themePresentation.style) ? themePresentation.style as Record<string, string | number> : undefined}
+        accessibility={isRecord(themePresentation.accessibility) ? themePresentation.accessibility as AccessibilityOverride : undefined}
+        widgetConfig={isRecord(themePresentation.widgetConfig) ? themePresentation.widgetConfig as Record<string, string | number> : undefined}
         fallback={Array.isArray(themePresentation.fallback) ? themePresentation.fallback as string[] : undefined}
+        componentWhen={componentNode?.when}
+        presentationHints={{
+          colSpan: typeof layoutObj.colSpan === 'number' ? layoutObj.colSpan : undefined,
+          newRow: typeof layoutObj.newRow === 'boolean' ? layoutObj.newRow : undefined,
+          emphasis: typeof styleHintsObj.emphasis === 'string' ? styleHintsObj.emphasis : undefined,
+          size: typeof styleHintsObj.size === 'string' ? styleHintsObj.size : undefined
+        }}
         breakpoints={props.project.value.theme.breakpoints ?? {}}
         activeBreakpoint={activeBreakpoint}
         responsiveOverride={{
@@ -118,29 +139,33 @@ export function DisplayInspector(props: DisplayInspectorProps) {
           start: typeof responsiveOverride.start === 'number' ? responsiveOverride.start : undefined,
           hidden: typeof responsiveOverride.hidden === 'boolean' ? responsiveOverride.hidden : undefined
         }}
+        felFieldOptions={[]}
         onToggle={(open) => {
-          setSectionOpen('appearance', open);
+          setSectionOpen('layout-style', open);
         }}
-        onWidgetChange={(value) => {
-          updateThemePresentation('widget', value);
+        onLabelPositionChange={(value) => {
+          updateThemePresentation('labelPosition', value);
         }}
         onCssClassInput={(value) => {
           updateThemePresentation('cssClass', value);
         }}
-        onComponentWhenChange={(value) => {
-          setComponentNodeProperty(props.project, props.path, 'when', value || undefined);
+        onStyleChange={(value) => {
+          updateThemePresentation('style', value);
         }}
         onAccessibilityChange={(value) => {
           updateThemePresentation('accessibility', value);
-        }}
-        onStyleChange={(value) => {
-          updateThemePresentation('style', value);
         }}
         onWidgetConfigChange={(value) => {
           updateThemePresentation('widgetConfig', value);
         }}
         onFallbackChange={(value) => {
           updateThemePresentation('fallback', value);
+        }}
+        onComponentWhenChange={(value) => {
+          setComponentNodeProperty(props.project, props.path, 'when', value || undefined);
+        }}
+        onPresentationChange={(key, value) => {
+          setDefinitionPresentationKey(props.project, props.path, key, value);
         }}
         onBreakpointChange={(value) => {
           setActiveBreakpoint(props.project, value);
@@ -158,6 +183,6 @@ export function DisplayInspector(props: DisplayInspectorProps) {
   );
 }
 
-function isDisplayRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

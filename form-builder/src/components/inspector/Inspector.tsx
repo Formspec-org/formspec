@@ -90,7 +90,7 @@ export function Inspector(props: InspectorProps) {
   return (
     <>
       {modeToggle}
-      <DisplayInspector project={project} path={state.selection} item={item} />
+      <DisplayInspector project={project} path={state.selection} item={item} tier={tier} />
     </>
   );
 }

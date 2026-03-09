@@ -140,6 +140,20 @@ export function FieldInspector(props: FieldInspectorProps) {
         }}
       />
 
+      {/* Answer type settings — contextual, shown inline based on selected component */}
+      {selectedWidget ? (
+        <WidgetPropsSection
+          testIdPrefix="field"
+          open={isSectionOpen('widget-props')}
+          component={selectedWidget}
+          componentNode={componentNode ? (componentNode as unknown as Record<string, unknown>) : {}}
+          onToggle={(open) => { setSectionOpen('widget-props', open); }}
+          onChange={(property, value) => {
+            setComponentNodeProperty(props.project, currentPathRef.current, property, value);
+          }}
+        />
+      ) : null}
+
       {/* Question section (was Basics) */}
       <QuestionSection
         testIdPrefix="field"
@@ -201,20 +215,6 @@ export function FieldInspector(props: FieldInspectorProps) {
           promoteOptionsToOptionSet(props.project, currentPathRef.current, props.item.key);
         }}
       />
-
-      {/* Answer type settings — contextual, shown inline based on selected component */}
-      {selectedWidget ? (
-        <WidgetPropsSection
-          testIdPrefix="field"
-          open={isSectionOpen('widget-props')}
-          component={selectedWidget}
-          componentNode={componentNode ? (componentNode as unknown as Record<string, unknown>) : {}}
-          onToggle={(open) => { setSectionOpen('widget-props', open); }}
-          onChange={(property, value) => {
-            setComponentNodeProperty(props.project, currentPathRef.current, property, value);
-          }}
-        />
-      ) : null}
 
       {/* Rules (merged Logic + Validation) */}
       <RulesSection
