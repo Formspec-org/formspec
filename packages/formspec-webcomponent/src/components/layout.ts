@@ -263,6 +263,7 @@ export const PanelPlugin: ComponentPlugin = {
 /**
  * Renders an accordion using `<details>`/`<summary>` elements for each child.
  * Supports single-open mode (default) via toggle event listeners, or multi-open via `allowMultiple`.
+ * If `bind` is present, each instance of the repeating group becomes one accordion section.
  */
 export const AccordionPlugin: ComponentPlugin = {
     type: 'Accordion',
@@ -275,32 +276,80 @@ export const AccordionPlugin: ComponentPlugin = {
         ctx.applyStyle(el, comp.style);
         parent.appendChild(el);
 
-        const children: any[] = comp.children || [];
+        const bindKey = comp.bind;
         const labels: string[] = comp.labels || [];
         const detailsEls: HTMLDetailsElement[] = [];
 
-        for (let i = 0; i < children.length; i++) {
-            const details = document.createElement('details');
-            details.className = 'formspec-accordion-item';
-            if (comp.defaultOpen === i) details.open = true;
+        if (bindKey) {
+            const fullName = ctx.prefix ? `${ctx.prefix}.${bindKey}` : bindKey;
+            ctx.cleanupFns.push(effect(() => {
+                const count = ctx.engine.repeats[fullName]?.value || 0;
+                el.replaceChildren();
+                detailsEls.length = 0;
 
-            const summary = document.createElement('summary');
-            summary.textContent = labels[i] || `Section ${i + 1}`;
-            details.appendChild(summary);
+                for (let i = 0; i < count; i++) {
+                    const details = document.createElement('details');
+                    details.className = 'formspec-accordion-item';
+                    if (comp.defaultOpen === i) details.open = true;
 
-            const content = document.createElement('div');
-            content.className = 'formspec-accordion-content';
-            ctx.renderComponent(children[i], content, ctx.prefix);
-            details.appendChild(content);
+                    const summary = document.createElement('summary');
+                    summary.textContent = labels[i] || `Section ${i + 1}`;
+                    details.appendChild(summary);
 
-            details.addEventListener('toggle', () => {
-                if (details.open && !comp.allowMultiple) {
-                    detailsEls.forEach(d => { if (d !== details) d.open = false; });
+                    const content = document.createElement('div');
+                    content.className = 'formspec-accordion-content';
+                    const instancePrefix = `${fullName}[${i}]`;
+                    for (const child of comp.children || []) {
+                        ctx.renderComponent(child, content, instancePrefix);
+                    }
+                    details.appendChild(content);
+
+                    details.ontoggle = () => {
+                        if (details.open && !comp.allowMultiple) {
+                            detailsEls.forEach(d => { if (d !== details) d.open = false; });
+                        }
+                    };
+
+                    el.appendChild(details);
+                    detailsEls.push(details);
                 }
-            });
+            }));
 
-            el.appendChild(details);
-            detailsEls.push(details);
+            // Add repeat-add button to match planner fallback behavior
+            const item = ctx.findItemByKey(bindKey);
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'formspec-repeat-add';
+            addBtn.textContent = `Add ${item?.label || bindKey}`;
+            addBtn.addEventListener('click', () => {
+                ctx.engine.addRepeatInstance(fullName);
+            });
+            parent.appendChild(addBtn);
+        } else {
+            const children: any[] = comp.children || [];
+            for (let i = 0; i < children.length; i++) {
+                const details = document.createElement('details');
+                details.className = 'formspec-accordion-item';
+                if (comp.defaultOpen === i) details.open = true;
+
+                const summary = document.createElement('summary');
+                summary.textContent = labels[i] || `Section ${i + 1}`;
+                details.appendChild(summary);
+
+                const content = document.createElement('div');
+                content.className = 'formspec-accordion-content';
+                ctx.renderComponent(children[i], content, ctx.prefix);
+                details.appendChild(content);
+
+                details.ontoggle = () => {
+                    if (details.open && !comp.allowMultiple) {
+                        detailsEls.forEach(d => { if (d !== details) d.open = false; });
+                    }
+                };
+
+                el.appendChild(details);
+                detailsEls.push(details);
+            }
         }
     }
 };

@@ -436,7 +436,7 @@ describe('grant-application integration', () => {
 
         // First child should be a theme-defined page
         expect(node.children[0].component).toBe('Page');
-        expect(node.children[0].props.title).toBe('Applicant Information');
+        expect(node.children[0].props.title).toBe('Applicant Info');
     });
 
     it('expands custom components (ContactField)', () => {

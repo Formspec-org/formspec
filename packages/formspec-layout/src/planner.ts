@@ -184,7 +184,7 @@ export function planComponentTree(
     // Check if this is a repeat group
     const item = bindKey ? ctx.findItem(bindKey) : null;
     const isRepeatGroup = item?.type === 'group' && item?.repeatable === true
-        && componentType !== 'DataTable';
+        && componentType !== 'DataTable' && componentType !== 'Accordion';
 
     // Build the node
     const props = extractProps(comp);
@@ -563,7 +563,13 @@ function collectAssignedTopLevelKeys(items: any[], pages: any[]): Set<string> {
         for (const region of Array.isArray(page.regions) ? page.regions : []) {
             const path = findItemPathByKey(items, region.key);
             if (!path) continue;
-            assigned.add(path.split('.')[0]);
+            
+            // A top-level item is only "assigned" (and thus removed from fallback)
+            // if the region key refers exactly to that top-level item.
+            // Dotted paths (nested items) do not consume the entire top-level group.
+            if (!path.includes('.')) {
+                assigned.add(path);
+            }
         }
     }
 
@@ -581,6 +587,9 @@ function withoutThemePages(ctx: PlanContext): PlanContext {
 }
 
 function findItemPathByKey(items: any[], key: string, prefix = ''): string | null {
+    if (key.includes('.')) {
+        return findItemAtPath(items, key) ? key : null;
+    }
     for (const item of items) {
         const itemKey = item?.key || item?.name;
         if (!itemKey) continue;
@@ -618,42 +627,25 @@ function getParentPath(path: string): string {
     return segments.slice(0, -1).join('.');
 }
 
-function findComponentNodeByPath(items: any[], rootNode: any, path: string): any | null {
-    const segments = path.split('.').filter(Boolean);
-    if (!segments.length) return null;
-    return findNodeInLevel(items, rootNode.children ?? [], segments, 0);
+function findComponentNodeByPath(_items: any[], rootNode: any, path: string): any | null {
+    return findNodeByBindPath(rootNode, path, '');
 }
 
-function findNodeInLevel(items: any[], nodes: any[], segments: string[], depth: number): any | null {
-    let itemIndex = 0;
-    let nodeIndex = 0;
+function findNodeByBindPath(node: any, targetPath: string, currentPrefix: string): any | null {
+    const bindKey = node.bind as string | undefined;
+    const fullPath = bindKey
+        ? (currentPrefix ? `${currentPrefix}.${bindKey}` : bindKey)
+        : currentPrefix;
 
-    while (itemIndex < items.length && nodeIndex < nodes.length) {
-        const item = items[itemIndex];
-        const node = nodes[nodeIndex];
+    if (fullPath === targetPath && bindKey) {
+        return node;
+    }
 
-        if (node?.component === 'Wizard' && isPageItem(item)) {
-            const result = findNodeInWizardRun(items, itemIndex, node, segments, depth);
-            if (result.found) {
-                return result.node;
-            }
-            itemIndex = result.nextItemIndex;
-            nodeIndex += 1;
-            continue;
+    if (Array.isArray(node.children)) {
+        for (const child of node.children) {
+            const found = findNodeByBindPath(child, targetPath, fullPath);
+            if (found) return found;
         }
-
-        if (item?.key === segments[depth]) {
-            if (depth === segments.length - 1) {
-                return node;
-            }
-            if (!Array.isArray(item.children)) {
-                return null;
-            }
-            return findNodeInLevel(item.children, node?.children ?? [], segments, depth + 1);
-        }
-
-        itemIndex += 1;
-        nodeIndex += 1;
     }
 
     return null;
@@ -692,6 +684,19 @@ function findNodeInWizardRun(
     }
 
     return { found: false, node: null, nextItemIndex };
+}
+
+function findNodeInLevel(items: any[], nodes: any[], segments: string[], depth: number): any | null {
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const node = nodes[i] ?? null;
+        if (item?.key === segments[depth]) {
+            if (depth === segments.length - 1) return node;
+            if (!Array.isArray(item.children) || !node) return null;
+            return findNodeInLevel(item.children, node.children ?? [], segments, depth + 1);
+        }
+    }
+    return null;
 }
 
 function isPageItem(item: any): boolean {

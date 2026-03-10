@@ -235,7 +235,11 @@ export function renderInputComponent(host: FieldInputHost, comp: any, item: any,
             getCurrency = () => currencyInput.value;
         }
         const updateMoney = () => {
-            const amount = amountInput.value === '' ? null : Number(amountInput.value);
+            let amount = amountInput.value === '' ? null : Number(amountInput.value);
+            if (amount !== null && !isNaN(amount)) {
+                if (comp.min !== undefined && amount < Number(comp.min)) amount = Number(comp.min);
+                if (comp.max !== undefined && amount > Number(comp.max)) amount = Number(comp.max);
+            }
             host.engine.setValue(fullName, { amount, currency: getCurrency() });
         };
         amountInput.addEventListener('input', updateMoney);
@@ -441,6 +445,14 @@ export function renderInputComponent(host: FieldInputHost, comp: any, item: any,
                 val = target.checked;
             } else if (['integer', 'decimal', 'number'].includes(dataType)) {
                 val = target.value === '' ? null : Number(target.value);
+                if (val !== null && !isNaN(val)) {
+                    if (comp.min !== undefined && val < Number(comp.min)) val = Number(comp.min);
+                    if (comp.max !== undefined && val > Number(comp.max)) val = Number(comp.max);
+                }
+                // Sync back immediately if clamped
+                if (String(val) !== target.value) {
+                    target.value = val === null ? '' : String(val);
+                }
             } else {
                 val = target.value;
             }

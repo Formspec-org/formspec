@@ -65,24 +65,30 @@ export const DataTablePlugin: ComponentPlugin = {
         const defaultCurrency = ctx.engine.definition?.formPresentation?.defaultCurrency || 'USD';
 
         /** Coerces a raw input string to the appropriate type based on the field's dataType. */
-        const coerceInputValue = (raw: string, dataType: string | undefined, fieldDef?: any): any => {
+        const coerceInputValue = (raw: string, dataType: string | undefined, fieldDef?: any, col?: any): any => {
             const trimmed = raw.trim();
             if (trimmed === '') return null;
+            let val: any;
             if (dataType === 'integer') {
                 const parsed = Number.parseInt(trimmed, 10);
-                return Number.isFinite(parsed) ? parsed : null;
-            }
-            if (dataType === 'decimal' || dataType === 'number') {
+                val = Number.isFinite(parsed) ? parsed : null;
+            } else if (dataType === 'decimal' || dataType === 'number' || dataType === 'money') {
                 const parsed = Number.parseFloat(trimmed);
-                return Number.isFinite(parsed) ? parsed : null;
+                val = Number.isFinite(parsed) ? parsed : null;
+            } else {
+                val = raw;
             }
-            if (dataType === 'money') {
-                const parsed = Number.parseFloat(trimmed);
-                if (!Number.isFinite(parsed)) return null;
+
+            if (typeof val === 'number' && col) {
+                if (col.min !== undefined && val < col.min) val = col.min;
+                if (col.max !== undefined && val > col.max) val = col.max;
+            }
+
+            if (dataType === 'money' && val !== null) {
                 const currency = fieldDef?.currency || defaultCurrency;
-                return { amount: parsed, currency };
+                return { amount: val, currency };
             }
-            return raw;
+            return val;
         };
 
         // Header
@@ -190,8 +196,16 @@ export const DataTablePlugin: ComponentPlugin = {
                                 if (col.max != null) input.max = String(col.max);
                             }
                             input.addEventListener('input', () => {
-                                let nextValue = coerceInputValue(input.value, dataType, fieldDef);
+                                let nextValue = coerceInputValue(input.value, dataType, fieldDef, col);
                                 ctx.engine.setValue(sigPath, nextValue);
+                                // Sync back immediately if clamped or coerced
+                                if (dataType === 'integer' || dataType === 'decimal' || dataType === 'number' || dataType === 'money') {
+                                    const displayVal = (nextValue && typeof nextValue === 'object' && 'amount' in nextValue) ? nextValue.amount : nextValue;
+                                    const sVal = displayVal === null ? '' : String(displayVal);
+                                    if (sVal !== input.value) {
+                                        input.value = sVal;
+                                    }
+                                }
                             });
                             inputEl = input;
                         }
