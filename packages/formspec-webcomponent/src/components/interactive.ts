@@ -49,11 +49,12 @@ export const WizardPlugin: ComponentPlugin = {
                     indicator.textContent = `${i + 1}`;
                     wrapper.appendChild(indicator);
 
-                    if (children[i]?.title) {
+                    const stepTitle = (children[i] as any)?.props?.title;
+                    if (stepTitle) {
                         const label = document.createElement('span');
                         label.className = 'formspec-wizard-step-label';
                         if (i === step) label.classList.add('formspec-wizard-step-label--active');
-                        label.textContent = children[i].title;
+                        label.textContent = stepTitle;
                         wrapper.appendChild(label);
                     }
 
@@ -157,7 +158,7 @@ export const WizardPlugin: ComponentPlugin = {
                 detail: {
                     index: step,
                     total: total,
-                    title: children[step]?.title || '',
+                    title: (children[step] as any)?.props?.title || '',
                 },
                 bubbles: true,
                 composed: true,
