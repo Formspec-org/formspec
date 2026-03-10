@@ -285,6 +285,9 @@ def _set_path(data: dict, path: str, value: Any) -> None:
         else:
             if seg not in current or current[seg] is None:
                 current[seg] = [] if isinstance(next_seg, int) else {}
+            elif not isinstance(current[seg], (dict, list)):
+                # Promote scalar to dict with #text (XML text+attribute pattern)
+                current[seg] = {'#text': current[seg]}
             current = current[seg]
 
     last = segments[-1]

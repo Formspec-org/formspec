@@ -62,6 +62,12 @@ class XmlAdapter(Adapter):
             root_tag = self.root_element
 
         root = ET.Element(root_tag)
+
+        # If the mapped data has a single key matching the root element, unwrap it
+        # to avoid double-nesting (mapping paths include the root element name).
+        if len(value) == 1 and self.root_element in value:
+            value = value[self.root_element]
+
         self._build_element(root, value, self.root_element)
 
         # Indent if configured
@@ -99,9 +105,12 @@ class XmlAdapter(Adapter):
     # ---------------------------------------------------------------
 
     def _build_element(self, elem: ET.Element, obj: dict, path: str) -> None:
-        """Recursively populate an XML element; @-keys become attributes, lists become siblings."""
+        """Recursively populate an XML element; @-keys become attributes, #text sets text content, lists become siblings."""
         for key, val in obj.items():
-            if key.startswith('@'):
+            if key == '#text':
+                # Text content of the current element
+                elem.text = self._to_str(val)
+            elif key.startswith('@'):
                 # Attribute
                 attr_name = key[1:]
                 elem.set(attr_name, self._to_str(val))
