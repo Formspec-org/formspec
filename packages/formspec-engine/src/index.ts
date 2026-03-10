@@ -1887,6 +1887,9 @@ export class FormEngine {
             const currency = item?.currency || this.definition.formPresentation?.defaultCurrency || '';
             value = { amount: value, currency };
         }
+        if (dataType === 'money' && value && typeof value === 'object' && typeof value.amount === 'string') {
+            value = { ...value, amount: value.amount === '' ? null : Number(value.amount) };
+        }
 
         // Precision enforcement
         if (bind?.precision !== undefined && typeof value === 'number' && !isNaN(value)) {
