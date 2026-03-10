@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+const TOOLS_URL = 'http://localhost:8082/tools.html';
+
 test.describe('Version Comparison Tab', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock /definition to pre-populate changelog textareas
-    await page.route('**/definition', (route) =>
+    // Mock /definition.json to pre-populate changelog textareas
+    await page.route('**/definition.json', (route) =>
       route.fulfill({ json: { url: 'https://example.gov/forms/grant', version: '1.0.0', items: [], binds: [] } })
     );
     // Mock /changelog
@@ -33,7 +35,7 @@ test.describe('Version Comparison Tab', () => {
         });
       }
     });
-    await page.goto('/tools.html');
+    await page.goto(TOOLS_URL);
     await page.locator('.tools-tab[data-tab="changelog"]').click();
   });
 

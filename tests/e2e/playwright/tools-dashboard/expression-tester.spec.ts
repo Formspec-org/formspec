@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const TOOLS_URL = 'http://localhost:8082/tools.html';
+
 test.describe('Expression Tester Tab', () => {
   test.beforeEach(async ({ page }) => {
     // Mock the /evaluate endpoint
@@ -15,9 +17,7 @@ test.describe('Expression Tester Tab', () => {
         await route.fulfill({ json: { value: null, type: 'null', diagnostics: [] } });
       }
     });
-    // Mock /definition for changelog preload
-    await page.route('**/definition', (route) => route.fulfill({ json: { items: [], binds: [] } }));
-    await page.goto('/tools.html');
+    await page.goto(TOOLS_URL);
   });
 
   test('evaluates a simple expression and shows result', async ({ page }) => {

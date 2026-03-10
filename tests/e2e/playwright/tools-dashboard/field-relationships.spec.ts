@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const TOOLS_URL = 'http://localhost:8082/tools.html';
+
 const MOCK_DEPS = {
   'lineItemTotal': {
     depends_on: ['unitCost', 'quantity'],
@@ -17,11 +19,10 @@ const MOCK_DEPS = {
 
 test.describe('Field Relationships Tab', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/definition', (route) => route.fulfill({ json: { items: [], binds: [] } }));
-    await page.route('**/dependencies', (route) =>
+    await page.route('**/dependencies**', (route) =>
       route.fulfill({ json: MOCK_DEPS })
     );
-    await page.goto('/tools.html');
+    await page.goto(TOOLS_URL);
     await page.locator('.tools-tab[data-tab="dependencies"]').click();
   });
 

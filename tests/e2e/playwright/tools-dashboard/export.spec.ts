@@ -1,21 +1,24 @@
 import { test, expect } from '@playwright/test';
 
+const TOOLS_URL = 'http://localhost:8082/tools.html';
+
 test.describe('Download & Export Tab', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock export endpoints
-    await page.route('**/export/json', (route) =>
+    // Mock export endpoints (include ** suffix to match query params)
+    await page.route('**/export/json**', (route) =>
       route.fulfill({ contentType: 'application/json', body: '{"org_name":"Community Health Partners"}' })
     );
-    await page.route('**/export/csv', (route) =>
+    await page.route('**/export/csv**', (route) =>
       route.fulfill({ contentType: 'text/csv', body: 'org_name\n"Community Health Partners"' })
     );
-    await page.route('**/export/xml', (route) =>
+    await page.route('**/export/xml**', (route) =>
       route.fulfill({ contentType: 'application/xml', body: '<GrantApplication><Applicant><OrganizationName>Community Health Partners</OrganizationName></Applicant></GrantApplication>' })
     );
-    await page.route('**/definition', (route) => route.fulfill({ json: { items: [], binds: [] } }));
-    await page.goto('/tools.html');
+    await page.goto(TOOLS_URL);
     // Switch to Export tab
     await page.locator('.tools-tab[data-tab="export"]').click();
+    // Fill in valid JSON so export handlers don't bail on parse
+    await page.locator('#export-input-data').fill('{"orgName":"Community Health Partners"}');
   });
 
   test('shows three export format cards', async ({ page }) => {

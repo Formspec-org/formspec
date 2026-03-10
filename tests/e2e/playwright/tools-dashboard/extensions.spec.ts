@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const TOOLS_URL = 'http://localhost:8082/tools.html';
+
 const MOCK_ENTRIES = [
   { name: 'x-grants-gov-ssn', category: 'dataType', version: '1.0.0', status: 'stable', description: 'SSN with formatting.' },
   { name: 'x-grants-gov-duns', category: 'dataType', version: '1.0.0', status: 'stable', description: 'DUNS number.' },
@@ -8,8 +10,6 @@ const MOCK_ENTRIES = [
 
 test.describe('Extensions Tab', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/definition', (route) => route.fulfill({ json: { items: [], binds: [] } }));
-
     // Mock /registry with optional query params
     await page.route('**/registry?**', async (route) => {
       const url = new URL(route.request().url());
@@ -24,7 +24,7 @@ test.describe('Extensions Tab', () => {
       route.fulfill({ json: { entries: MOCK_ENTRIES } })
     );
 
-    await page.goto('/tools.html');
+    await page.goto(TOOLS_URL);
     await page.locator('.tools-tab[data-tab="registry"]').click();
   });
 

@@ -1,15 +1,17 @@
 import { test, expect } from '@playwright/test';
 
+const TOOLS_URL = 'http://localhost:8082/tools.html';
+
 test.describe('Tools Dashboard: Page Load & Tab Navigation', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/tools.html');
+    await page.goto(TOOLS_URL);
   });
 
   test('page loads with header and back link', async ({ page }) => {
     await expect(page.locator('.site-header h1')).toHaveText('Form Intelligence Dashboard');
     const backLink = page.locator('a[href="index.html"]');
     await expect(backLink).toBeVisible();
-    await expect(backLink).toHaveText(/Back to Application/);
+    await expect(backLink).toHaveText(/Back to Examples/);
   });
 
   test('all 5 tabs are visible', async ({ page }) => {
