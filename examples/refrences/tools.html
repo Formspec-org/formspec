@@ -195,6 +195,20 @@
     .change-type-added { color: var(--color-success); }
     .change-type-removed { color: var(--color-error); }
     .change-type-modified { color: #b45309; }
+    .change-type-moved { color: var(--color-primary); }
+    .change-type-renamed { color: #7c3aed; }
+    .change-detail { margin-top: 6px; padding: 8px 10px; background: var(--color-neutral-50); border-radius: var(--radius); font-size: 0.8rem; border-left: 3px solid var(--color-neutral-200); }
+    .change-detail-row { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; }
+    .change-detail-label { font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--color-neutral-700); min-width: 55px; flex-shrink: 0; }
+    .change-detail-value { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.78rem; word-break: break-word; }
+    .change-detail-value.val-removed { color: var(--color-error); text-decoration: line-through; }
+    .change-detail-value.val-added { color: var(--color-success); }
+    .change-migration { margin-top: 4px; padding: 4px 8px; background: #eff6ff; border-radius: var(--radius); font-size: 0.78rem; color: #1e40af; }
+    .change-props { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .change-prop-chip { font-size: 0.72rem; padding: 1px 7px; border-radius: 10px; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .change-prop-chip.changed { background: #fef3c7; color: #92400e; }
+    .change-prop-chip.unchanged { background: var(--color-neutral-100); color: var(--color-neutral-700); }
+    .change-rationale { font-size: 0.75rem; color: var(--color-neutral-700); font-style: italic; margin-left: 6px; }
 
     /* ── Registry cards ── */
     .registry-filters { display: flex; gap: 12px; margin-bottom: 16px; align-items: end; }
@@ -300,7 +314,10 @@
   <div class="tools-panel" id="panel-export" role="tabpanel">
     <p class="panel-description">Export form data through mapping rules. Edit the input data below, then export to any format.</p>
     <div style="margin-bottom:20px">
-      <label for="export-input-data">Input Data</label>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+        <label for="export-input-data" style="margin-bottom:0">Input Data</label>
+        <span id="export-fixture-selector"></span>
+      </div>
       <textarea id="export-input-data" rows="8" style="font-size:0.8rem"></textarea>
     </div>
     <div class="export-cards" id="export-cards"></div>
@@ -317,6 +334,48 @@
   <!-- 3. Version Comparison -->
   <div class="tools-panel" id="panel-changelog" role="tabpanel">
     <p class="panel-description">Compare two versions of a form definition to see what changed and how it affects existing submissions.</p>
+    <details class="impact-legend" style="margin-bottom:16px">
+      <summary style="cursor:pointer;font-weight:600;font-size:0.85rem;color:var(--color-primary-dark);user-select:none">Impact Classification Reference</summary>
+      <div style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:0.8rem">
+        <div style="border:1px solid var(--color-neutral-200);border-radius:var(--radius);padding:10px;border-top:3px solid var(--color-error)">
+          <div style="font-weight:700;margin-bottom:4px"><span class="badge badge-major">breaking</span> &rarr; major</div>
+          <div style="color:var(--color-neutral-700);line-height:1.4">Existing submissions may become invalid.
+            <ul style="margin:4px 0 0 16px;padding:0;list-style:disc">
+              <li>Item removed</li>
+              <li>Item key renamed</li>
+              <li>dataType changed</li>
+              <li>required added to existing field</li>
+              <li>repeat toggled</li>
+              <li>Option removed from closed optionSet</li>
+            </ul>
+          </div>
+        </div>
+        <div style="border:1px solid var(--color-neutral-200);border-radius:var(--radius);padding:10px;border-top:3px solid var(--color-warning)">
+          <div style="font-weight:700;margin-bottom:4px"><span class="badge badge-minor">compatible</span> &rarr; minor</div>
+          <div style="color:var(--color-neutral-700);line-height:1.4">Existing data stays valid; new capabilities added.
+            <ul style="margin:4px 0 0 16px;padding:0;list-style:disc">
+              <li>Optional item added</li>
+              <li>Option added to optionSet</li>
+              <li>New shape or bind added</li>
+              <li>Constraint relaxed</li>
+              <li>Item moved (key preserved)</li>
+            </ul>
+          </div>
+        </div>
+        <div style="border:1px solid var(--color-neutral-200);border-radius:var(--radius);padding:10px;border-top:3px solid var(--color-success)">
+          <div style="font-weight:700;margin-bottom:4px"><span class="badge badge-patch">cosmetic</span> &rarr; patch</div>
+          <div style="color:var(--color-neutral-700);line-height:1.4">Display-only; zero data impact.
+            <ul style="margin:4px 0 0 16px;padding:0;list-style:disc">
+              <li>label / hint / help changed</li>
+              <li>Display order changed</li>
+              <li>Shape property modified</li>
+              <li>Metadata updated</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:0.75rem;color:var(--color-neutral-700)">Per <em>Formspec Changelog Spec v1.0 &sect;4</em>. Impact drives semver: worst change wins.</div>
+    </details>
     <div class="changelog-editors">
       <div>
         <label for="changelog-old">Previous Version</label>
@@ -334,8 +393,15 @@
         <strong>Impact:</strong>
         <span class="badge" id="changelog-impact"></span>
         <span id="changelog-versions" style="color:var(--color-neutral-700);font-size:0.85rem"></span>
+        <span id="changelog-summary" style="font-size:0.82rem;color:var(--color-neutral-700);margin-left:auto"></span>
       </div>
-      <ul class="change-list" id="changelog-changes"></ul>
+      <div id="changelog-changes"></div>
+      <div style="margin-top:16px;border-top:1px solid var(--color-neutral-200);padding-top:12px">
+        <button class="btn btn-outline" id="btn-changelog-json" style="font-size:12px;padding:4px 14px">View Changelog JSON</button>
+        <div class="hidden" id="changelog-json-area" style="margin-top:10px">
+          <pre id="changelog-json-content" style="font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:0.78rem;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto;background:var(--color-neutral-100);padding:12px;border-radius:var(--radius)"></pre>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -348,9 +414,9 @@
         <select id="registry-category">
           <option value="">All types</option>
           <option value="dataType">Data Type</option>
+          <option value="constraint">Constraint</option>
           <option value="function">Function</option>
-          <option value="validator">Validator</option>
-          <option value="component">Component</option>
+          <option value="namespace">Namespace</option>
         </select>
       </div>
       <div class="filter-group">

@@ -18,7 +18,7 @@ const EXAMPLES = [
     css: 'grant-bridge.css',
     server: true,
     mappings: ['mapping.json', 'mapping-csv.json', 'mapping-xml.json'],
-    registry: 'registry.json',
+    registry: '/registries/formspec-common.registry.json',
     fixtures: [
       { id: 'sample-submission', label: 'Complete Submission', file: 'fixtures/sample-submission.json' },
       { id: 'submission-amended', label: 'Amended', file: 'fixtures/submission-amended.json' },
@@ -395,6 +395,16 @@ async function loadExample(ex, fixture = null) {
 
     mainArea.appendChild(container);
 
+    // Load registry if specified (absolute path — not relative to ex.dir)
+    if (ex.registry) {
+      try {
+        const registryDoc = await loadJSON(ex.registry);
+        formEl.registryDocuments = registryDoc;
+      } catch (err) {
+        console.warn(`Failed to load registry ${ex.registry}:`, err);
+      }
+    }
+
     // Set artifacts — this creates the engine and triggers rendering
     formEl.definition = definition;
     if (componentDoc) formEl.componentDocument = componentDoc;
@@ -427,7 +437,6 @@ async function loadExample(ex, fixture = null) {
       setActiveTab('client');
 
       if (!ex.server) return;
-      if (!vr.valid) return;
 
       try {
         const res = await fetch(`${SERVER}/submit`, {

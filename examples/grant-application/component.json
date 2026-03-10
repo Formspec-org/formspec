@@ -70,7 +70,7 @@
                     ]
                   },
                   { "component": "RadioGroup", "bind": "applicantInfo.orgType", "orientation": "horizontal", "columns": 2 },
-                  { "component": "TextInput", "bind": "applicantInfo.projectWebsite", "prefix": "https://", "inputMode": "url" },
+                  { "component": "TextInput", "bind": "applicantInfo.projectWebsite", "prefix": "https://" },
                   {
                     "component": "ConditionalGroup",
                     "when": "$applicantInfo.orgType != null",
@@ -126,11 +126,18 @@
             "children": [
               { "component": "TextInput", "bind": "projectNarrative.projectTitle", "placeholder": "Community Health Outreach Initiative" },
               { "component": "TextInput", "bind": "projectNarrative.abstract", "maxLines": 8 },
-              { "component": "Badge", "text": "Draft", "variant": "warning", "when": "empty($projectNarrative.abstract)" },
-              { "component": "Badge", "text": "Initialized", "variant": "default", "when": "not empty($projectNarrative.projectTitle)" },
-              { "component": "Badge", "text": "Ready for Review", "variant": "primary", "when": "not empty($projectNarrative.abstract)" },
-              { "component": "Badge", "text": "High Confidence", "variant": "success", "when": "$projectNarrative.selfAssessment >= 4" },
-              { "component": "Badge", "text": "Needs Work", "variant": "error", "when": "$projectNarrative.selfAssessment <= 2" },
+              {
+                "component": "Stack",
+                "direction": "horizontal",
+                "gap": "$token.space.sm",
+                "children": [
+                  { "component": "Badge", "text": "Draft", "variant": "warning", "when": "empty($projectNarrative.abstract)" },
+                  { "component": "Badge", "text": "Initialized", "variant": "default", "when": "not empty($projectNarrative.projectTitle)" },
+                  { "component": "Badge", "text": "Ready for Review", "variant": "primary", "when": "not empty($projectNarrative.abstract)" },
+                  { "component": "Badge", "text": "High Confidence", "variant": "success", "when": "$projectNarrative.selfAssessment >= 4" },
+                  { "component": "Badge", "text": "Needs Work", "variant": "error", "when": "$projectNarrative.selfAssessment <= 2" }
+                ]
+              },
               { "component": "Rating", "bind": "projectNarrative.selfAssessment", "max": 5, "icon": "heart", "allowHalf": true },
               {
                 "component": "Tabs",

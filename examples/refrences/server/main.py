@@ -122,9 +122,16 @@ def _load_mapping_doc(mapping_file: str | None, definition_url: str | None) -> d
     return None
 
 
+REGISTRIES_DIR = _REPO_ROOT / "registries"
+
+
 def _load_registry_doc(registry_file: str | None) -> dict | None:
     if not registry_file:
         return None
+    # Check repo-root registries/ dir first
+    reg_path = (REGISTRIES_DIR / registry_file).resolve()
+    if str(reg_path).startswith(str(REGISTRIES_DIR.resolve()) + os.sep) and reg_path.exists():
+        return _load_json(reg_path)
     path = _safe_examples_path(registry_file)
     return _load_json(path)
 
@@ -253,10 +260,15 @@ def submit(request: SubmitRequest):
     definition = _load_definition_from_query(None, request.definitionUrl)
     mapping_doc = _load_mapping_doc(None, request.definitionUrl)
 
-    evaluator = DefinitionEvaluator(definition)
+    # Load registry for extension constraint enforcement
+    reg_doc = _load_registry_doc("formspec-common.registry.json")
+    registries = [Registry(reg_doc)] if reg_doc else []
+
+    evaluator = DefinitionEvaluator(definition, registries=registries)
     mapping_engine = MappingEngine(mapping_doc) if mapping_doc else None
 
-    lint_diags = lint(definition, mode="authoring")
+    registry_documents = [reg_doc] if reg_doc else []
+    lint_diags = lint(definition, mode="authoring", registry_documents=registry_documents)
     diagnostics = [
         f"[{d.severity}] {d.path or '(root)'}: {d.message}"
         for d in lint_diags

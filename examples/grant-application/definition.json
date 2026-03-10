@@ -35,7 +35,6 @@
         "dataType": "choice",
         "label": "What type of organization are you?",
         "hint": "Select the category that best describes your organization.",
-        "required": true,
         "options": [
           { "value": "nonprofit", "label": "Nonprofit (501(c)(3))" },
           { "value": "government", "label": "State/Local Government" },
@@ -55,9 +54,12 @@
         "type": "field",
         "dataType": "money",
         "label": "Estimated award amount",
-        "hint": "Approximate amount you plan to request.",
-        "required": true
+        "hint": "Approximate amount you plan to request."
       }
+    ],
+    "binds": [
+      { "path": "applicantType", "required": "true" },
+      { "path": "requestedAmount", "required": "true" }
     ],
     "routes": [
       {
@@ -289,9 +291,10 @@
           "type": "field",
           "key": "projectWebsite",
           "label": "Project Website",
-          "dataType": "uri",
+          "dataType": "string",
           "description": "URL for the project's public website or information page.",
-          "hint": "e.g. https://example.org/project"
+          "hint": "e.g. https://example.org/project",
+          "extensions": { "x-formspec-url": true }
         },
         {
           "type": "field",
@@ -507,9 +510,6 @@
           "description": "Budget entry section for grant line items",
           "liveRegion": "polite"
         }
-      },
-      "extensions": {
-        "x-budget-version": "2.0"
       },
       "children": [
         {
@@ -730,11 +730,13 @@
     },
     {
       "path": "applicantInfo.ein",
-      "whitespace": "normalize"
+      "whitespace": "normalize",
+      "constraintMessage": "EIN must be in XX-XXXXXXX format."
     },
     {
       "path": "applicantInfo.contactEmail",
-      "whitespace": "trim"
+      "whitespace": "trim",
+      "constraintMessage": "Please enter a valid email address."
     },
     {
       "path": "applicantInfo.contactPhone",
@@ -742,9 +744,7 @@
     },
     {
       "path": "applicantInfo.projectWebsite",
-      "whitespace": "trim",
-      "constraint": "empty($applicantInfo.projectWebsite) or matches(lower($applicantInfo.projectWebsite), '^https?://([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.)+[a-z]{2,63}(:[0-9]{1,5})?(/[\\\\S]*)?$')",
-      "constraintMessage": "Project website must be a valid http(s) URL with a domain (e.g. https://example.org/project)."
+      "whitespace": "trim"
     },
     {
       "path": "projectNarrative.endDate",
@@ -992,18 +992,6 @@
         "$budget.usesSubcontractors",
         "count($subcontractors[*].subName) >= 1"
       ]
-    },
-    {
-      "id": "websiteFormat",
-      "target": "applicantInfo.projectWebsite",
-      "severity": "info",
-      "timing": "demand",
-      "constraint": "empty($applicantInfo.projectWebsite) or matches($applicantInfo.projectWebsite, '^https?://')",
-      "message": "Project website should start with http:// or https://. Current value: {{$applicantInfo.projectWebsite}}",
-      "code": "WEBSITE_FORMAT",
-      "extensions": {
-        "x-help-link": "https://example.gov/help/uri-format"
-      }
     },
     {
       "id": "shapeRefCoverageAlwaysTrueA",

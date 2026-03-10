@@ -25,7 +25,7 @@ export default defineConfig({
       configureServer(server) {
         const MIME = { '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json' };
         server.middlewares.use((req, res, next) => {
-          if (!req.url?.startsWith('/packages/') && !req.url?.startsWith('/examples/')) return next();
+          if (!req.url?.startsWith('/packages/') && !req.url?.startsWith('/examples/') && !req.url?.startsWith('/registries/')) return next();
           const fsPath = path.join(repoRoot, req.url.split('?')[0]);
           const mime = MIME[path.extname(fsPath).toLowerCase()];
           if (!mime) return next();

@@ -19,7 +19,13 @@ const EXAMPLES = [
       csv:  { file: 'mapping-csv.json', label: 'CSV', desc: 'Spreadsheet-friendly format.' },
       xml:  { file: 'mapping-xml.json', label: 'XML', desc: 'Structured markup for federal portals.' },
     },
-    registry: 'registry.json',
+    registry: 'formspec-common.registry.json',
+    fixtures: [
+      { id: 'sample-submission', label: 'Complete Submission', file: 'fixtures/sample-submission.json' },
+      { id: 'submission-amended', label: 'Amended', file: 'fixtures/submission-amended.json' },
+      { id: 'submission-in-progress', label: 'In Progress', file: 'fixtures/submission-in-progress.json' },
+      { id: 'submission-stopped', label: 'Stopped', file: 'fixtures/submission-stopped.json' },
+    ],
   },
   {
     id: 'tribal-short',
@@ -29,7 +35,12 @@ const EXAMPLES = [
     mappings: {
       json: { file: 'tribal-grant.mapping.json', label: 'JSON', desc: 'Native JSON mapping.' },
     },
-    registry: null,
+    registry: 'formspec-common.registry.json',
+    fixtures: [
+      { id: 'short-empty', label: 'Empty', file: 'fixtures/short-empty.response.json' },
+      { id: 'short-partial', label: 'Partial', file: 'fixtures/short-partial.response.json' },
+      { id: 'short-complete', label: 'Complete', file: 'fixtures/short-complete.response.json' },
+    ],
   },
   {
     id: 'tribal-long',
@@ -39,7 +50,11 @@ const EXAMPLES = [
     mappings: {
       json: { file: 'tribal-grant.mapping.json', label: 'JSON', desc: 'Native JSON mapping.' },
     },
-    registry: null,
+    registry: 'formspec-common.registry.json',
+    fixtures: [
+      { id: 'long-complete', label: 'Complete', file: 'fixtures/long-complete.response.json' },
+      { id: 'short-to-long-migrated', label: 'Migrated from Short', file: 'fixtures/short-to-long-migrated.response.json' },
+    ],
   },
   {
     id: 'invoice',
@@ -50,7 +65,13 @@ const EXAMPLES = [
       json: { file: 'invoice.mapping.json', label: 'JSON', desc: 'Mapping output as JSON (for debugging).' },
       csv:  { file: 'invoice.mapping.json', label: 'CSV', desc: 'Accounting-friendly row export (repeat expansion).' },
     },
-    registry: null,
+    registry: 'formspec-common.registry.json',
+    fixtures: [
+      { id: 'invoice-empty', label: 'Empty', file: 'fixtures/invoice-empty.response.json' },
+      { id: 'invoice-single', label: 'Single Item', file: 'fixtures/invoice-single.response.json' },
+      { id: 'invoice-multi', label: 'Multiple Items', file: 'fixtures/invoice-multi.response.json' },
+      { id: 'invoice-max', label: 'Max Items', file: 'fixtures/invoice-max.response.json' },
+    ],
   },
   {
     id: 'clinical-intake',
@@ -58,7 +79,13 @@ const EXAMPLES = [
     dir: '/examples/clinical-intake',
     definition: 'intake.definition.json',
     mappings: {},
-    registry: null,
+    registry: 'formspec-common.registry.json',
+    fixtures: [
+      { id: 'intake-empty', label: 'Empty', file: 'fixtures/intake-empty.response.json' },
+      { id: 'intake-partial', label: 'Partial', file: 'fixtures/intake-partial.response.json' },
+      { id: 'intake-complete', label: 'Complete', file: 'fixtures/intake-complete.response.json' },
+      { id: 'intake-nested-repeat', label: 'Nested Repeat', file: 'fixtures/intake-nested-repeat.response.json' },
+    ],
   },
 ];
 
@@ -94,7 +121,8 @@ exampleSelect.addEventListener('change', () => {
 async function onExampleChange() {
   // Re-load definition for changelog
   await loadDefinitionForChangelog();
-  // Reset export cards
+  // Reset export input and cards
+  document.getElementById('export-input-data').value = '';
   initExportCards();
   // Reset registry / deps
   document.getElementById('registry-cards').innerHTML = '';
@@ -203,11 +231,42 @@ document.getElementById('btn-evaluate')?.addEventListener('click', async () => {
 let lastExportData = null;
 let lastExportFormat = '';
 
+function initExportFixtureSelector() {
+  const container = document.getElementById('export-fixture-selector');
+  const fixtures = currentExample.fixtures || [];
+  if (!fixtures.length) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = `
+    <select id="export-fixture-select" style="width:auto;min-width:180px;padding:6px 10px;font-size:13px;font-weight:600;border:1px solid var(--color-neutral-200);border-radius:var(--radius);color:var(--color-primary-dark);background:#fff;cursor:pointer">
+      <option value="">Load fixture…</option>
+      ${fixtures.map(f => `<option value="${f.id}">${f.label}</option>`).join('')}
+    </select>
+  `;
+  container.querySelector('#export-fixture-select').addEventListener('change', async (e) => {
+    const fixtureId = e.target.value;
+    if (!fixtureId) return;
+    const fixture = fixtures.find(f => f.id === fixtureId);
+    if (!fixture) return;
+    try {
+      const res = await fetch(`${currentExample.dir}/${fixture.file}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const response = await res.json();
+      const data = response.data || response;
+      document.getElementById('export-input-data').value = JSON.stringify(data, null, 2);
+    } catch (err) {
+      showError('export-error', `Failed to load fixture: ${err.message}`);
+    }
+  });
+}
+
 async function initExportCards() {
   const cardsEl = document.getElementById('export-cards');
   cardsEl.innerHTML = '';
   hideError('export-error');
   hideResult('export-result');
+  initExportFixtureSelector();
 
   const mappings = currentExample.mappings || {};
   if (Object.keys(mappings).length === 0) {
@@ -317,16 +376,40 @@ async function loadDefinitionForChangelog() {
     const oldText = JSON.stringify(defn, null, 2);
     document.getElementById('changelog-old').value = oldText;
 
-    // Build a modified version for demo
+    // Build a modified version for demo — exercises several change types
     const newDef = JSON.parse(oldText);
     newDef.version = bumpVersion(newDef.version || '1.0.0');
-    newDef.title = (newDef.title || 'Form') + ' — Revised';
+    newDef.title = (newDef.title || 'Form') + ' — FY 2027';
 
     if (newDef.items && newDef.items.length > 0) {
-      newDef.items.push({ key: 'newField', type: 'field', dataType: 'string', label: 'New Field Added in v2' });
+      // Modify an existing item's label
+      const firstGroup = newDef.items.find(i => i.type === 'group' && i.items?.length);
+      if (firstGroup) {
+        const firstField = firstGroup.items.find(i => i.type === 'field');
+        if (firstField) {
+          firstField.label = firstField.label + ' (Updated)';
+          firstField.hint = 'Please review the updated requirements.';
+        }
+      }
+      // Add a new field
+      newDef.items.push({ key: 'complianceCert', type: 'field', dataType: 'boolean', label: 'Compliance Certification', hint: 'I certify all information is accurate.' });
     }
+
     if (!newDef.binds) newDef.binds = [];
-    newDef.binds.push({ path: 'newField', required: true });
+    // Add a required bind for the new field
+    newDef.binds.push({ path: 'complianceCert', required: true, constraint: '$complianceCert = true', constraintMessage: 'You must certify compliance before submitting.' });
+    // Modify an existing bind
+    const existingBind = newDef.binds.find(b => b.constraint);
+    if (existingBind && existingBind.constraintMessage) {
+      existingBind.constraintMessage = existingBind.constraintMessage + ' Please correct this before submitting.';
+    }
+
+    // Modify a shape
+    if (newDef.shapes?.length) {
+      const shape = newDef.shapes[0];
+      shape.severity = shape.severity === 'info' ? 'warning' : shape.severity;
+      shape.message = shape.message + ' (updated threshold)';
+    }
 
     document.getElementById('changelog-new').value = JSON.stringify(newDef, null, 2);
   } catch {}
@@ -340,9 +423,200 @@ function bumpVersion(v) {
 
 loadDefinitionForChangelog();
 
+let lastChangelogBody = null;
+
+function describeChange(c) {
+  if (c.description) return c.description;
+
+  // Scalar before/after (metadata like title, version)
+  if (c.type === 'modified' && c.before != null && c.after != null && typeof c.before !== 'object') {
+    return `${fmtShort(c.before)} → ${fmtShort(c.after)}`;
+  }
+
+  if (c.type === 'added') {
+    if (c.target === 'item') {
+      const label = c.after?.label || c.key || '?';
+      const dtype = c.after?.dataType || c.after?.type || '?';
+      return `New ${dtype} field: "${label}"`;
+    }
+    if (c.target === 'bind') {
+      const parts = [];
+      if (c.after?.required) parts.push('required');
+      if (c.after?.calculate) parts.push(`calculate = ${fmtShort(c.after.calculate)}`);
+      if (c.after?.constraint) parts.push(`constraint = ${fmtShort(c.after.constraint)}`);
+      if (c.after?.relevant) parts.push(`relevant = ${fmtShort(c.after.relevant)}`);
+      if (c.after?.readonly) parts.push('readonly');
+      return parts.length ? parts.join(', ') : 'New bind added';
+    }
+    if (c.target === 'shape') return `New validation rule: "${c.after?.message || c.after?.id || '?'}"`;
+    return `New ${c.target} added`;
+  }
+
+  if (c.type === 'removed') {
+    if (c.target === 'item') return `Field "${c.before?.label || c.key || '?'}" removed`;
+    if (c.target === 'bind') {
+      const parts = [];
+      if (c.before?.required) parts.push('required');
+      if (c.before?.calculate) parts.push('calculate');
+      if (c.before?.constraint) parts.push('constraint');
+      return parts.length ? `Bind removed (had: ${parts.join(', ')})` : 'Bind removed';
+    }
+    if (c.target === 'shape') return `Validation rule "${c.before?.message || c.before?.id || '?'}" removed`;
+    return `${c.target} removed`;
+  }
+
+  if (c.type === 'modified') {
+    const diffs = diffProps(c.before, c.after);
+    if (diffs.length === 1) {
+      const d = diffs[0];
+      if (d.added) return `${d.key} added: ${fmtShort(d.new)}`;
+      if (d.removed) return `${d.key} removed (was: ${fmtShort(d.old)})`;
+      return `${d.key}: ${fmtShort(d.old)} → ${fmtShort(d.new)}`;
+    }
+    if (diffs.length > 0) return `${diffs.length} properties changed: ${diffs.map(d => d.key).join(', ')}`;
+    return `${c.target} updated`;
+  }
+  return `${c.target} ${c.type}`;
+}
+
+function fmtShort(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'boolean') return String(v);
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'string') return v.length > 60 ? `"${v.slice(0, 57)}…"` : `"${v}"`;
+  return JSON.stringify(v).slice(0, 60);
+}
+
+function diffProps(before, after) {
+  if (!before || !after || typeof before !== 'object' || typeof after !== 'object') return [];
+  const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const diffs = [];
+  for (const key of allKeys) {
+    if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+      diffs.push({ key, old: before[key], new: after[key], added: !(key in before), removed: !(key in after) });
+    }
+  }
+  return diffs;
+}
+
+function renderChangeDetail(c) {
+  // Scalar before/after (metadata) — description already shows the diff
+  if (c.type === 'modified' && c.before != null && c.after != null && typeof c.before !== 'object') {
+    return '';
+  }
+
+  if ((c.type === 'added' || c.type === 'removed') && (c.after || c.before)) {
+    const obj = c.after || c.before;
+    if (typeof obj !== 'object') return '';
+    const cls = c.type === 'added' ? 'val-added' : 'val-removed';
+    const props = Object.entries(obj).filter(([k]) => k !== 'key' && k !== 'path' && k !== 'name');
+    if (!props.length) return '';
+    return `<div class="change-detail">
+      ${props.map(([k, v]) => `<div class="change-detail-row">
+        <span class="change-detail-label">${esc(k)}</span>
+        <span class="change-detail-value ${cls}">${esc(fmt(v))}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if (c.type === 'modified' && c.before && c.after) {
+    const diffs = diffProps(c.before, c.after);
+    if (!diffs.length) return '';
+    return `<div class="change-detail">
+      ${diffs.map(d => {
+        if (d.added) return `<div class="change-detail-row">
+          <span class="change-detail-label">${esc(d.key)}</span>
+          <span class="change-detail-value val-added">${esc(fmt(d.new))}</span>
+          <span style="font-size:0.72rem;color:var(--color-neutral-700);margin-left:4px">(added)</span>
+        </div>`;
+        if (d.removed) return `<div class="change-detail-row">
+          <span class="change-detail-label">${esc(d.key)}</span>
+          <span class="change-detail-value val-removed">${esc(fmt(d.old))}</span>
+          <span style="font-size:0.72rem;color:var(--color-neutral-700);margin-left:4px">(removed)</span>
+        </div>`;
+        return `<div class="change-detail-row">
+          <span class="change-detail-label">${esc(d.key)}</span>
+          <span class="change-detail-value val-removed">${esc(fmt(d.old))}</span>
+          <span style="color:var(--color-neutral-700);margin:0 4px">\u2192</span>
+          <span class="change-detail-value val-added">${esc(fmt(d.new))}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+  return '';
+}
+
+function fmt(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'string') return v.length > 80 ? v.slice(0, 80) + '…' : v;
+  if (typeof v === 'boolean' || typeof v === 'number') return String(v);
+  return JSON.stringify(v).slice(0, 120);
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function impactBadge(impact, rationale) {
+  if (!impact) return '';
+  const cls = impact === 'breaking' ? 'major' : impact === 'compatible' ? 'minor' : 'patch';
+  const hint = rationale ? `<span class="change-rationale">${esc(rationale)}</span>` : '';
+  return `<span class="badge badge-${cls}">${impact}</span>${hint}`;
+}
+
+/** Map a change to a spec §4 rationale explaining WHY it got its impact level. */
+function impactRationale(c) {
+  const { type, target, impact, before, after } = c;
+
+  if (impact === 'breaking') {
+    if (type === 'removed' && target === 'item') return 'Existing responses lose this field';
+    if (type === 'removed' && target === 'bind') return 'Existing responses may lose validation';
+    if (type === 'removed') return `Existing responses may reference removed ${target}`;
+    if (type === 'renamed') return 'Stored response keys no longer match';
+    if (type === 'modified' && target === 'item') {
+      if (before?.dataType !== after?.dataType) return 'dataType changed — stored values may be invalid';
+      if (before?.type !== after?.type) return 'itemType changed — structural change to stored data';
+      return 'Structural change to existing field';
+    }
+    if (type === 'modified' && target === 'bind') {
+      if (!before?.required && after?.required) return 'required added — previously valid responses may fail';
+      return 'Constraint tightened on existing field';
+    }
+    if (type === 'added' && target === 'bind' && after?.required) return 'required constraint on existing field — previously valid responses may fail';
+    return 'May invalidate existing submissions';
+  }
+
+  if (impact === 'compatible') {
+    if (type === 'added' && target === 'item') return 'No impact on existing responses';
+    if (type === 'added' && target === 'bind') return 'Additive data mapping';
+    if (type === 'added' && target === 'shape') return 'Additive validation — presentation only';
+    if (type === 'added') return 'Additive — no existing data affected';
+    if (type === 'modified' && target === 'bind') {
+      if (before?.required && !after?.required) return 'Constraint relaxed — existing data still valid';
+      if (before?.constraint !== after?.constraint) return 'Constraint changed — existing data unaffected';
+      return 'Non-breaking change to binding';
+    }
+    if (type === 'modified' && target === 'item') return 'Non-structural change — existing data intact';
+    if (type === 'modified') return 'Existing data unaffected';
+    if (type === 'moved') return 'Data intact — layout change only';
+    if (type === 'removed' && target === 'shape') return 'Loosens constraints — existing data still valid';
+    return 'Backward-compatible change';
+  }
+
+  // cosmetic
+  if (target === 'metadata') return 'Display-only — zero data impact';
+  if (type === 'modified' && target === 'item') return 'Label/hint change — display-only';
+  if (type === 'modified' && target === 'shape') return 'Presentation-only change';
+  if (type === 'modified' && target === 'bind') return 'No impact on stored data';
+  return 'Display-only change';
+}
+
 document.getElementById('btn-changelog')?.addEventListener('click', async () => {
   hideError('changelog-error');
   hideResult('changelog-result');
+  document.getElementById('changelog-json-area')?.classList.add('hidden');
 
   let oldDef, newDef;
   try { oldDef = JSON.parse(document.getElementById('changelog-old').value); newDef = JSON.parse(document.getElementById('changelog-new').value); }
@@ -353,38 +627,60 @@ document.getElementById('btn-changelog')?.addEventListener('click', async () => 
     const body = await res.json();
     if (!res.ok) { showError('changelog-error', body.detail || 'Comparison failed.'); return; }
 
+    lastChangelogBody = body;
+
     document.getElementById('changelog-impact').textContent = body.semverImpact;
     document.getElementById('changelog-impact').className = `badge badge-${body.semverImpact}`;
-    document.getElementById('changelog-versions').textContent = `${body.fromVersion || '?'} → ${body.toVersion || '?'}`;
+    document.getElementById('changelog-versions').textContent = `${body.fromVersion || '?'} \u2192 ${body.toVersion || '?'}`;
 
-    const changesList = document.getElementById('changelog-changes');
-    changesList.innerHTML = '';
+    // Summary counts
+    const counts = {};
+    for (const c of (body.changes || [])) counts[c.type] = (counts[c.type] || 0) + 1;
+    const summaryParts = Object.entries(counts).map(([t, n]) => `${n} ${t}`);
+    document.getElementById('changelog-summary').textContent = summaryParts.length ? summaryParts.join(', ') : '';
+
+    const changesEl = document.getElementById('changelog-changes');
+    changesEl.innerHTML = '';
     if (!body.changes || body.changes.length === 0) {
-      changesList.innerHTML = '<li class="change-item" style="color:var(--color-neutral-700)">No changes detected.</li>';
+      changesEl.innerHTML = '<div class="change-item" style="color:var(--color-neutral-700)">No changes detected.</div>';
     } else {
       for (const c of body.changes) {
-        const li = document.createElement('li');
-        li.className = 'change-item';
-        let desc = c.description || '';
-        if (!desc) {
-          if (c.type === 'added') desc = `New ${c.target} added`;
-          else if (c.type === 'removed') desc = `${c.target} removed`;
-          else if (c.type === 'modified') desc = `${c.target} updated`;
-        }
-        const impactBadge = c.impact ? `<span class="badge badge-${c.impact === 'breaking' ? 'major' : c.impact === 'compatible' ? 'minor' : 'patch'}">${c.impact}</span>` : '';
-        li.innerHTML = `
-          <span class="change-type change-type-${c.type}">${c.type}</span>
-          <span class="badge" style="background:var(--color-neutral-100);color:var(--color-neutral-700);font-size:0.68rem;margin-right:6px">${c.target}</span>
-          <strong style="font-family:'SF Mono','Fira Code',monospace;font-size:0.82rem">${c.path || c.key || ''}</strong>
-          <span style="color:var(--color-neutral-700);margin:0 6px">&mdash;</span>
-          <span style="flex:1">${desc}</span> ${impactBadge}
+        const item = document.createElement('div');
+        item.className = 'change-item';
+
+        const desc = describeChange(c);
+        const detail = renderChangeDetail(c);
+        const rationale = impactRationale(c);
+        const migration = c.migrationHint ? `<div class="change-migration">\u21AA Migration: <code>${esc(c.migrationHint)}</code></div>` : '';
+
+        item.innerHTML = `
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+            <span class="change-type change-type-${c.type}">${c.type}</span>
+            <span class="badge" style="background:var(--color-neutral-100);color:var(--color-neutral-700);font-size:0.68rem;margin-right:4px">${c.target}</span>
+            <strong style="font-family:'SF Mono','Fira Code',monospace;font-size:0.82rem">${esc(c.path || c.key || '')}</strong>
+            <span style="color:var(--color-neutral-700);margin:0 4px">&mdash;</span>
+            <span style="flex:1;font-size:0.875rem">${esc(desc)}</span>
+            ${impactBadge(c.impact, rationale)}
+          </div>
+          ${detail}${migration}
         `;
-        li.style.cssText = 'display:flex;align-items:center;flex-wrap:wrap;gap:4px';
-        changesList.appendChild(li);
+        changesEl.appendChild(item);
       }
     }
+
+    // Prepare JSON view
+    document.getElementById('changelog-json-content').textContent = JSON.stringify(body, null, 2);
+
     showResult('changelog-result');
   } catch (e) { showError('changelog-error', `Cannot reach server: ${e.message}`); }
+});
+
+document.getElementById('btn-changelog-json')?.addEventListener('click', () => {
+  const area = document.getElementById('changelog-json-area');
+  const btn = document.getElementById('btn-changelog-json');
+  const visible = !area.classList.contains('hidden');
+  area.classList.toggle('hidden', visible);
+  btn.textContent = visible ? 'View Changelog JSON' : 'Hide Changelog JSON';
 });
 
 // ── 4. Registry ──
@@ -403,7 +699,7 @@ async function loadRegistry() {
 
   try {
     const params = new URLSearchParams();
-    params.set('registryFile', toExamplesRelPath(currentExample.dir, currentExample.registry));
+    params.set('registryFile', currentExample.registry);
     const res = await fetch(`${SERVER}/registry?${params}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const body = await res.json();
@@ -448,7 +744,7 @@ document.getElementById('btn-registry-filter')?.addEventListener('click', async 
   const status = document.getElementById('registry-status').value;
   hideError('registry-error');
   const params = new URLSearchParams();
-  params.set('registryFile', toExamplesRelPath(currentExample.dir, currentExample.registry));
+  params.set('registryFile', currentExample.registry);
   if (category) params.set('category', category);
   if (status) params.set('status', status);
   try {
