@@ -53,6 +53,10 @@
         "hint": "Approximate amount you plan to request."
       }
     ],
+    "binds": [
+      { "path": "applicantType", "required": "true" },
+      { "path": "requestedAmount", "required": "true" }
+    ],
     "routes": [
       {
         "condition": "$applicantType = 'forprofit'",

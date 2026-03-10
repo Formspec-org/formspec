@@ -22,7 +22,7 @@ function loadSharedFixture(relativePath) {
 }
 
 test('shared microgrant fixture separates field-local bind failures from cross-field shapes', () => {
-  const engine = new FormEngine(loadSharedFixture('tests/fixture-microgrant-screener.json'));
+  const engine = new FormEngine(loadSharedFixture('tests/fixtures/fixture-microgrant-screener.json'));
 
   engine.setValue('applicant.orgEin', 'BAD EIN');
   engine.setValue('project.requestAmount', { amount: 1000, currency: 'USD' });
@@ -45,7 +45,7 @@ test('shared microgrant fixture separates field-local bind failures from cross-f
 });
 
 test('shared clinical fixture keeps field-local requiredness in binds and chronology in shapes', () => {
-  const engine = new FormEngine(loadSharedFixture('tests/fixture-clinical-adverse-event.json'));
+  const engine = new FormEngine(loadSharedFixture('tests/fixtures/fixture-clinical-adverse-event.json'));
 
   engine.setValue('event.eventTerm', 'Syncope');
   engine.setValue('event.eventSeverity', 'moderate');
@@ -66,7 +66,7 @@ test('shared clinical fixture keeps field-local requiredness in binds and chrono
 });
 
 test('shared tax fixture keeps row-local numeric constraints in binds and totals in shapes', () => {
-  const engine = new FormEngine(loadSharedFixture('tests/fixture-multi-state-tax-filing.json'));
+  const engine = new FormEngine(loadSharedFixture('tests/fixtures/fixture-multi-state-tax-filing.json'));
 
   engine.setValue('filer.filingStatus', 'single');
   engine.setValue('filer.primaryState', 'MD');

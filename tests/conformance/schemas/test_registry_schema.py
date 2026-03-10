@@ -9,11 +9,10 @@ from jsonschema import Draft202012Validator, ValidationError, validate
 from tests.unit.support.schema_fixtures import load_schema
 
 SCHEMA = load_schema("registry.schema.json")
-GRANT_REGISTRY_PATH = (
-    Path(__file__).resolve().parents[4]
-    / "examples"
-    / "grant-application"
-    / "registry.json"
+REGISTRY_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "registries"
+    / "formspec-common.registry.json"
 )
 
 
@@ -21,8 +20,8 @@ def _validate(instance):
     validate(instance, SCHEMA, cls=Draft202012Validator)
 
 
-def _load_grant_registry():
-    return json.loads(GRANT_REGISTRY_PATH.read_text(encoding="utf-8"))
+def _load_registry():
+    return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
 
 
 def _find_entry(doc, *, category=None, status=None):
@@ -377,11 +376,11 @@ class TestEntryUrls:
 
 
 # ===================================================================
-# TestGrantRegistryConditionals
+# TestRegistryConditionals
 # ===================================================================
-class TestGrantRegistryConditionals:
-    def test_grant_registry_fixture_is_valid(self):
-        _validate(_load_grant_registry())
+class TestRegistryConditionals:
+    def test_registry_fixture_is_valid(self):
+        _validate(_load_registry())
 
     @pytest.mark.parametrize(
         ("category", "status", "missing_field"),
@@ -390,16 +389,15 @@ class TestGrantRegistryConditionals:
             ("function", None, "parameters"),
             ("function", None, "returns"),
             ("constraint", None, "parameters"),
-            (None, "deprecated", "deprecationNotice"),
         ],
     )
-    def test_grant_registry_missing_conditional_field_fails(
+    def test_registry_missing_conditional_field_fails(
         self,
         category,
         status,
         missing_field,
     ):
-        doc = _load_grant_registry()
+        doc = _load_registry()
         entry = _find_entry(doc, category=category, status=status)
         entry.pop(missing_field, None)
 

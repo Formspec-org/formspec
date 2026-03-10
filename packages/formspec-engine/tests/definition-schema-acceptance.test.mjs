@@ -10,11 +10,11 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
 
 const fixturePaths = [
-  'tests/fixture-microgrant-screener.json',
-  'tests/fixture-household-benefits-renewal.json',
-  'tests/fixture-clinical-adverse-event.json',
-  'tests/fixture-vendor-conflict-disclosure.json',
-  'tests/fixture-multi-state-tax-filing.json',
+  'tests/fixtures/fixture-microgrant-screener.json',
+  'tests/fixtures/fixture-household-benefits-renewal.json',
+  'tests/fixtures/fixture-clinical-adverse-event.json',
+  'tests/fixtures/fixture-vendor-conflict-disclosure.json',
+  'tests/fixtures/fixture-multi-state-tax-filing.json',
 ];
 
 function loadSharedFixture(relativePath) {
