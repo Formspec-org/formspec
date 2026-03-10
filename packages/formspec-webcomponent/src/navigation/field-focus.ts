@@ -53,8 +53,8 @@ export function focusField(host: NavigationHost, path: string): boolean {
     const wizardPanel = fieldEl.closest('.formspec-wizard-panel');
     const wizardRoot = wizardPanel?.closest('.formspec-wizard');
     if (wizardPanel instanceof HTMLElement && wizardRoot instanceof HTMLElement) {
-        const panelList = Array.from(wizardRoot.children)
-            .filter((child) => child.classList.contains('formspec-wizard-panel'));
+        const panelList = Array.from(wizardRoot.querySelectorAll('.formspec-wizard-panel'))
+            .filter((panel) => panel.closest('.formspec-wizard') === wizardRoot);
         const panelIndex = panelList.indexOf(wizardPanel);
         if (panelIndex >= 0) {
             wizardRoot.dispatchEvent(new CustomEvent('formspec-wizard-set-step', {

@@ -105,10 +105,12 @@ export const WizardPlugin: ComponentPlugin = {
             container = content;
         }
 
-        // Top progress indicator — only when side nav is hidden
-        if (comp.showProgress !== false && !showSideNav) {
+        // Keep step indicators in the DOM for navigation helpers/tests even when
+        // the wizard is using the sidenav layout.
+        if (comp.showProgress !== false) {
             const progress = document.createElement('div');
             progress.className = 'formspec-wizard-steps';
+            progress.classList.toggle('formspec-hidden', showSideNav);
             container.appendChild(progress);
 
             ctx.cleanupFns.push(effect(() => {
