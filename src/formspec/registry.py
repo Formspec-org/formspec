@@ -45,6 +45,8 @@ class RegistryEntry:
     parameters: list[dict] | None = None
     returns: str | None = None
     members: list[str] | None = None
+    constraints: dict | None = None
+    metadata: dict | None = None
     raw: dict | None = None
 
     @staticmethod
@@ -66,6 +68,8 @@ class RegistryEntry:
             parameters=d.get('parameters'),
             returns=d.get('returns'),
             members=d.get('members'),
+            constraints=d.get('constraints'),
+            metadata=d.get('metadata'),
             raw=d,
         )
 
@@ -171,11 +175,14 @@ def well_known_url(base_url: str) -> str:
     return f"{base}{WELL_KNOWN_PATH}"
 
 
-def _parse_version(version: str) -> tuple[int, ...]:
-    """Parse a dotted version string (e.g. '1.2.3') into a comparable int tuple."""
+def _parse_version(version: str) -> tuple[int, int, int]:
+    """Parse a dotted version string (e.g. '1.2.3' or '1.0') into a 3-part comparable tuple, padded with zeros."""
     try:
         parts = version.split('.')
-        return tuple(int(p) for p in parts)
+        ints = [int(p) for p in parts]
+        while len(ints) < 3:
+            ints.append(0)
+        return (ints[0], ints[1], ints[2])
     except (ValueError, AttributeError):
         return (0, 0, 0)
 

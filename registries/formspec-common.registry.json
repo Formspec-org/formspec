@@ -337,6 +337,33 @@
       ]
     },
     {
+      "name": "x-formspec-url",
+      "category": "dataType",
+      "version": "1.0.0",
+      "status": "stable",
+      "description": "HTTPS URL with domain validation. Pattern enforces https:// scheme, valid hostname labels, optional port, and optional path. Use a manual constraint with matches() if http:// is also needed.",
+      "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+      "license": "Apache-2.0",
+      "baseType": "string",
+      "constraints": {
+        "pattern": "^https://[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*(?::[0-9]{1,5})?(?:/\\S*)?$",
+        "maxLength": 2048
+      },
+      "metadata": {
+        "inputMode": "url",
+        "displayName": "URL (HTTPS)"
+      },
+      "examples": [
+        {
+          "type": "string",
+          "key": "projectWebsite",
+          "dataType": "string",
+          "label": "Project website",
+          "extensions": { "x-formspec-url": true }
+        }
+      ]
+    },
+    {
       "name": "x-formspec-luhn",
       "category": "constraint",
       "version": "1.0.0",
@@ -433,6 +460,7 @@
         "x-formspec-color-hex",
         "x-formspec-slug",
         "x-formspec-ipv4",
+        "x-formspec-url",
         "x-formspec-luhn",
         "x-formspec-age",
         "x-formspec-mask"

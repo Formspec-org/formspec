@@ -284,10 +284,13 @@ in Formspec v1.0 §1) that additionally implements the following behaviors:
    SHOULD fetch and validate the extension's data in the Definition against
    that schema.
 
-6. **Passthrough.** A registry-aware processor that cannot locate a registry
-   entry for a given extension MUST fall back to the core §8 behavior:
-   ignore-and-preserve for properties, error for unknown types/functions/
-   constraints.
+6. **Unresolved extensions.** When an item declares an enabled extension
+   (i.e. `"extensions": { "x-example": true }`) and the processor cannot
+   locate a matching registry entry, the processor MUST emit an error with
+   code `UNRESOLVED_EXTENSION`. This applies regardless of the extension's
+   intended category, because without the registry entry the processor
+   cannot determine the extension's semantics. Disabled extensions
+   (`"x-example": false`) MUST NOT trigger this error.
 
 ---
 

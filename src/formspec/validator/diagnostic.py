@@ -14,6 +14,7 @@ LintCategory = Literal[
     "tree",
     "theme",
     "component",
+    "extension",
 ]
 
 

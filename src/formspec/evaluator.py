@@ -24,6 +24,7 @@ from .fel import (
 )
 from .fel.types import from_python, to_python
 from .fel.functions import build_default_registry
+from .registry import Registry, RegistryEntry, _version_satisfies
 
 _UNSET = object()
 
@@ -39,6 +40,7 @@ class ItemInfo:
     parent: str | None      # full path of parent, or None for top-level
     children: list[str]     # full paths of direct children
     precision: int | None   # decimal precision
+    extensions: dict | None = None
     initial_value: object = None
     pre_populate: dict | None = None
 
@@ -76,10 +78,18 @@ class DefinitionEvaluator:
     Instantiate once per definition; call process() for each submission.
     """
 
-    def __init__(self, definition: dict) -> None:
+    def __init__(self, definition: dict, registries: list[Registry] | None = None) -> None:
         self._definition = definition
         self._default_nrb = definition.get('nonRelevantBehavior', 'remove')
         self._last_relevance: dict[str, bool] = {}
+        self._registries = registries or []
+
+        # Index registry entries by name for fast lookup during validation
+        self._registry_entries: dict[str, RegistryEntry] = {}
+        for reg in self._registries:
+            for entry in reg.entries:
+                # If multiple registries provide the same entry, the last one wins
+                self._registry_entries[entry.name] = entry
 
         # Phase 1a: Build item registry
         self._items: dict[str, ItemInfo] = {}
@@ -130,6 +140,7 @@ class DefinitionEvaluator:
                 parent=parent_path,
                 children=child_paths,
                 precision=item.get('precision'),
+                extensions=item.get('extensions'),
                 initial_value=item.get('initialValue'),
                 pre_populate=item.get('prePopulate'),
             )
@@ -536,6 +547,121 @@ class DefinitionEvaluator:
                         'code': 'CONSTRAINT_FAILED',
                         'source': 'bind',
                     })
+
+            # Registry-defined constraints
+            if info.extensions:
+                for ext_name, enabled in info.extensions.items():
+                    if not enabled:
+                        continue
+                    entry = self._registry_entries.get(ext_name)
+                    if not entry:
+                        results.append({
+                            'severity': 'error',
+                            'path': path,
+                            'message': f"Unresolved extension '{ext_name}': no matching registry entry loaded",
+                            'constraintKind': 'constraint',
+                            'code': 'UNRESOLVED_EXTENSION',
+                            'source': 'bind',
+                        })
+                        continue
+
+                    # §7.3 Compatibility check
+                    formspec_version = self._definition.get('$formspec', '1.0')
+                    required_range = (entry.compatibility or {}).get('formspecVersion')
+                    if required_range and not _version_satisfies(formspec_version, required_range):
+                        results.append({
+                            'severity': 'warning',
+                            'path': path,
+                            'message': f"Extension '{ext_name}' requires formspec {required_range} but definition uses {formspec_version}",
+                            'constraintKind': 'constraint',
+                            'code': 'EXTENSION_COMPATIBILITY_MISMATCH',
+                            'source': 'bind',
+                        })
+
+                    # §7.4 Status enforcement
+                    if entry.status == 'retired':
+                        results.append({
+                            'severity': 'warning',
+                            'path': path,
+                            'message': f"Extension '{ext_name}' is retired and should not be used",
+                            'constraintKind': 'constraint',
+                            'code': 'EXTENSION_RETIRED',
+                            'source': 'bind',
+                        })
+                    elif entry.status == 'deprecated':
+                        notice = entry.deprecation_notice or f"Extension '{ext_name}' is deprecated"
+                        results.append({
+                            'severity': 'info',
+                            'path': path,
+                            'message': notice,
+                            'constraintKind': 'constraint',
+                            'code': 'EXTENSION_DEPRECATED',
+                            'source': 'bind',
+                        })
+
+                    if _is_empty(val) or not entry.constraints:
+                        continue
+                    
+                    constraints = entry.constraints
+                    
+                    # Pattern validation
+                    display_name = (entry.metadata or {}).get('displayName')
+                    pattern = constraints.get('pattern')
+                    if pattern and not re.search(pattern, str(val)):
+                        msg = bind.get('constraintMessage') if bind else None
+                        if not msg and display_name:
+                            msg = f"Must be a valid {display_name}"
+                        results.append({
+                            'severity': 'error',
+                            'path': path,
+                            'message': msg or f"Value does not match pattern: {pattern}",
+                            'constraintKind': 'constraint',
+                            'code': 'PATTERN_MISMATCH',
+                            'source': 'bind',
+                        })
+                    
+                    # MaxLength validation
+                    max_len = constraints.get('maxLength')
+                    if max_len is not None and len(str(val)) > max_len:
+                        msg = bind.get('constraintMessage') if bind else None
+                        results.append({
+                            'severity': 'error',
+                            'path': path,
+                            'message': msg or f"Value is too long (max {max_len} characters)",
+                            'constraintKind': 'constraint',
+                            'code': 'MAX_LENGTH_EXCEEDED',
+                            'source': 'bind',
+                        })
+                    
+                    # Range validation (min/max)
+                    try:
+                        num_val = float(val) if isinstance(val, (int, float, Decimal, str)) else None
+                        if num_val is not None:
+                            minimum = constraints.get('minimum')
+                            if minimum is not None and num_val < float(minimum):
+                                msg = bind.get('constraintMessage') if bind else None
+                                results.append({
+                                    'severity': 'error',
+                                    'path': path,
+                                    'message': msg or f"Value must be at least {minimum}",
+                                    'constraintKind': 'constraint',
+                                    'code': 'RANGE_UNDERFLOW',
+                                    'source': 'bind',
+                                })
+                            
+                            maximum = constraints.get('maximum')
+                            if maximum is not None and num_val > float(maximum):
+                                msg = bind.get('constraintMessage') if bind else None
+                                results.append({
+                                    'severity': 'error',
+                                    'path': path,
+                                    'message': msg or f"Value must be at most {maximum}",
+                                    'constraintKind': 'constraint',
+                                    'code': 'RANGE_OVERFLOW',
+                                    'source': 'bind',
+                                })
+                    except (ValueError, TypeError):
+                        pass
 
         # Wildcard bind validation (constraints on repeat fields)
         for bind_path, bind in self._binds.items():

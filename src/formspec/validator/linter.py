@@ -51,6 +51,7 @@ class FormspecLinter:
         schema_only: bool = False,
         no_fel: bool = False,
         component_definition: dict[str, Any] | None = None,
+        registry_documents: list[dict[str, Any]] | None = None,
     ) -> list[LintDiagnostic]:
         """Run the full gated pass pipeline. Returns sorted, policy-transformed diagnostics."""
         schema_result = self.schema_validator.validate(document)
@@ -73,6 +74,9 @@ class FormspecLinter:
             tree_index = build_item_index(document)
             diagnostics.extend(tree_index.diagnostics)
             diagnostics.extend(check_references(document, tree_index))
+            diagnostics.extend(
+                _check_extensions(tree_index, registry_documents or [])
+            )
 
             if not no_fel:
                 compilation = compile_expressions(document)
@@ -96,6 +100,39 @@ class FormspecLinter:
         return sorted(self.policy.apply(diagnostics), key=sort_key)
 
 
+def _check_extensions(
+    tree_index: "ItemTreeIndex",
+    registry_documents: list[dict[str, Any]],
+) -> list[LintDiagnostic]:
+    """Check that all enabled extensions on items resolve to a loaded registry entry (E600)."""
+    known: set[str] = set()
+    for doc in registry_documents:
+        for entry in doc.get("entries", []):
+            name = entry.get("name")
+            if name:
+                known.add(name)
+
+    diagnostics: list[LintDiagnostic] = []
+    for ref in tree_index.by_full_path.values():
+        extensions = ref.item.get("extensions")
+        if not isinstance(extensions, dict):
+            continue
+        for ext_name, ext_enabled in extensions.items():
+            if not ext_enabled:
+                continue
+            if ext_name not in known:
+                diagnostics.append(
+                    LintDiagnostic(
+                        severity="error",
+                        code="E600",
+                        message=f"Unresolved extension '{ext_name}': no matching registry entry loaded",
+                        path=ref.json_path,
+                        category="extension",
+                    )
+                )
+    return diagnostics
+
+
 def lint(
     document: Any,
     *,
@@ -103,6 +140,7 @@ def lint(
     no_fel: bool = False,
     mode: LintMode = "authoring",
     component_definition: dict[str, Any] | None = None,
+    registry_documents: list[dict[str, Any]] | None = None,
 ) -> list[LintDiagnostic]:
     """Convenience API for one-shot linting."""
     return FormspecLinter(policy=LintPolicy(mode=mode)).lint(
@@ -110,4 +148,5 @@ def lint(
         schema_only=schema_only,
         no_fel=no_fel,
         component_definition=component_definition,
+        registry_documents=registry_documents,
     )
