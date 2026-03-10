@@ -1,0 +1,282 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.org/tests/fixtures/vendor-conflict-disclosure",
+  "version": "1.0.0",
+  "versionAlgorithm": "semver",
+  "status": "draft",
+  "title": "Vendor Conflict Disclosure Fixture",
+  "description": "Fixture exercising pre-population, repeat disclosures, mixed-severity shapes, and sensitive non-relevance behavior.",
+  "date": "2026-03-05",
+  "name": "vendor-conflict-disclosure",
+  "nonRelevantBehavior": "keep",
+  "extensions": {
+    "x-agency": "procurement-office",
+    "x-scenario": "vendor-conflict"
+  },
+  "formPresentation": {
+    "pageMode": "tabs",
+    "labelPosition": "top",
+    "density": "compact",
+    "defaultCurrency": "USD"
+  },
+  "instances": {
+    "vendorMaster": {
+      "description": "Vendor registry record",
+      "readonly": true,
+      "data": {
+        "legalName": "Acme Supply Partners",
+        "ein": "987654321",
+        "contactEmail": "contracts@acme.example"
+      },
+      "schema": {
+        "legalName": "string",
+        "ein": "string",
+        "contactEmail": "string"
+      }
+    }
+  },
+  "optionSets": {
+    "relationshipKinds": {
+      "options": [
+        { "value": "family", "label": "Family relationship" },
+        { "value": "employment", "label": "Outside employment" },
+        { "value": "ownership", "label": "Ownership interest" },
+        { "value": "gift", "label": "Gift or hospitality" }
+      ]
+    }
+  },
+  "variables": [
+    {
+      "name": "officialDisclosureCount",
+      "expression": "countWhere($relationships.relatedParties[*].partyIsAgencyOfficial, $ = true)"
+    },
+    {
+      "name": "giftTotal",
+      "expression": "sum($relationships.relatedParties[*].partyGiftValue)"
+    }
+  ],
+  "items": [
+    {
+      "type": "group",
+      "key": "vendorProfile",
+      "label": "Vendor profile",
+      "presentation": {
+        "layout": {
+          "page": "Vendor"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "vendorLegalName",
+          "label": "Legal name",
+          "dataType": "string",
+          "prePopulate": {
+            "instance": "vendorMaster",
+            "path": "legalName",
+            "editable": false
+          }
+        },
+        {
+          "type": "field",
+          "key": "vendorEin",
+          "label": "Vendor EIN",
+          "dataType": "string",
+          "semanticType": "us-gov:ein",
+          "prePopulate": {
+            "instance": "vendorMaster",
+            "path": "ein",
+            "editable": false
+          }
+        },
+        {
+          "type": "field",
+          "key": "vendorContactEmail",
+          "label": "Contact email",
+          "dataType": "string",
+          "prePopulate": {
+            "instance": "vendorMaster",
+            "path": "contactEmail",
+            "editable": true
+          }
+        },
+        {
+          "type": "field",
+          "key": "vendorContactPhone",
+          "label": "Contact phone",
+          "dataType": "string"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "relationships",
+      "label": "Related parties",
+      "presentation": {
+        "layout": {
+          "page": "Disclosures"
+        }
+      },
+      "children": [
+        {
+          "type": "group",
+          "key": "relatedParties",
+          "label": "Related party disclosures",
+          "repeatable": true,
+          "minRepeat": 1,
+          "children": [
+            {
+              "type": "field",
+              "key": "partyName",
+              "label": "Related party name",
+              "dataType": "string"
+            },
+            {
+              "type": "field",
+              "key": "partyRelationshipKind",
+              "label": "Relationship type",
+              "dataType": "choice",
+              "optionSet": "relationshipKinds"
+            },
+            {
+              "type": "field",
+              "key": "partyIsAgencyOfficial",
+              "label": "Is this person an agency official",
+              "dataType": "boolean"
+            },
+            {
+              "type": "field",
+              "key": "partyAgencyName",
+              "label": "Agency name",
+              "dataType": "string"
+            },
+            {
+              "type": "field",
+              "key": "partyGiftValue",
+              "label": "Gift or hospitality value",
+              "dataType": "money",
+              "currency": "USD",
+              "precision": 2
+            },
+            {
+              "type": "field",
+              "key": "partyGiftDescription",
+              "label": "Gift description",
+              "dataType": "text"
+            },
+            {
+              "type": "field",
+              "key": "partySupportingAttachment",
+              "label": "Supporting attachment",
+              "dataType": "attachment"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "certifications",
+      "label": "Certification",
+      "presentation": {
+        "layout": {
+          "page": "Certification"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "needsAgencyReview",
+          "label": "Needs agency review",
+          "dataType": "boolean"
+        },
+        {
+          "type": "field",
+          "key": "reviewNotes",
+          "label": "Review notes",
+          "dataType": "text"
+        },
+        {
+          "type": "field",
+          "key": "attestationAccepted",
+          "label": "Attestation accepted",
+          "dataType": "boolean"
+        }
+      ]
+    }
+  ],
+  "binds": [
+    {
+      "path": "vendorProfile.vendorContactEmail",
+      "whitespace": "trim",
+      "constraint": "matches($, '^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')",
+      "constraintMessage": "Enter a valid email address."
+    },
+    {
+      "path": "vendorProfile.vendorContactPhone",
+      "whitespace": "remove",
+      "constraint": "empty($) or matches($, '^[0-9]{10}$')",
+      "constraintMessage": "Enter a 10-digit phone number."
+    },
+    {
+      "path": "relationships.relatedParties[*].partyAgencyName",
+      "relevant": "$partyIsAgencyOfficial = true",
+      "required": "$partyIsAgencyOfficial = true",
+      "excludedValue": "null"
+    },
+    {
+      "path": "relationships.relatedParties[*].partyGiftDescription",
+      "relevant": "coalesce(moneyAmount($partyGiftValue), 0) > 0",
+      "required": "coalesce(moneyAmount($partyGiftValue), 0) > 0"
+    },
+    {
+      "path": "relationships.relatedParties[*].partySupportingAttachment",
+      "relevant": "$partyIsAgencyOfficial = true or coalesce(moneyAmount($partyGiftValue), 0) > 0",
+      "nonRelevantBehavior": "remove"
+    },
+    {
+      "path": "certifications.reviewNotes",
+      "relevant": "$certifications.needsAgencyReview = true",
+      "default": ""
+    }
+  ],
+  "shapes": [
+    {
+      "id": "vendor-contact-channel",
+      "target": "#",
+      "severity": "error",
+      "or": [
+        "present($vendorProfile.vendorContactEmail)",
+        "present($vendorProfile.vendorContactPhone)"
+      ],
+      "message": "Provide a vendor contact email or phone number."
+    },
+    {
+      "id": "vendor-official-attachment-warning",
+      "target": "relationships.relatedParties[*].partySupportingAttachment",
+      "severity": "warning",
+      "activeWhen": "$partyIsAgencyOfficial = true",
+      "constraint": "present($)",
+      "message": "Agency-official disclosures should include supporting documentation."
+    },
+    {
+      "id": "vendor-gift-review",
+      "target": "#",
+      "severity": "info",
+      "constraint": "@giftTotal <= 600",
+      "message": "Total gift value exceeds the standard informational review threshold.",
+      "context": {
+        "giftTotal": "@giftTotal",
+        "officialDisclosureCount": "@officialDisclosureCount"
+      }
+    },
+    {
+      "id": "vendor-attestation",
+      "target": "#",
+      "severity": "error",
+      "timing": "submit",
+      "constraint": "$certifications.attestationAccepted = true",
+      "message": "The vendor must accept the attestation before submission."
+    }
+  ]
+}

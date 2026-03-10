@@ -1,0 +1,296 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.org/tests/fixtures/clinical-adverse-event",
+  "version": "1.0.0",
+  "versionAlgorithm": "semver",
+  "status": "draft",
+  "title": "Clinical Adverse Event Fixture",
+  "description": "Fixture exercising attachments, semantic types, calculate binds, conditional seriousness logic, and submit-time shapes.",
+  "date": "2026-03-05",
+  "name": "clinical-adverse-event",
+  "nonRelevantBehavior": "empty",
+  "formPresentation": {
+    "pageMode": "wizard",
+    "labelPosition": "top",
+    "density": "comfortable"
+  },
+  "instances": {
+    "subjectRecord": {
+      "description": "Study subject demographics",
+      "readonly": true,
+      "data": {
+        "subjectId": "SUBJ-204",
+        "siteCode": "SITE-11",
+        "dob": "1984-02-20"
+      },
+      "schema": {
+        "subjectId": "string",
+        "siteCode": "string",
+        "dob": "date"
+      }
+    }
+  },
+  "optionSets": {
+    "eventSeverities": {
+      "options": [
+        { "value": "mild", "label": "Mild" },
+        { "value": "moderate", "label": "Moderate" },
+        { "value": "severe", "label": "Severe" },
+        { "value": "critical", "label": "Critical" }
+      ]
+    },
+    "seriousnessReasons": {
+      "options": [
+        { "value": "death", "label": "Death" },
+        { "value": "lifeThreatening", "label": "Life threatening" },
+        { "value": "hospitalization", "label": "Hospitalization" },
+        { "value": "disability", "label": "Persistent disability" }
+      ]
+    }
+  },
+  "variables": [
+    {
+      "name": "hasSeriousReason",
+      "expression": "count($event.seriousnessReasons) > 0"
+    }
+  ],
+  "items": [
+    {
+      "type": "group",
+      "key": "participant",
+      "label": "Participant",
+      "presentation": {
+        "layout": {
+          "page": "Participant"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "subjectId",
+          "label": "Subject identifier",
+          "dataType": "string",
+          "semanticType": "clinical:subject-id",
+          "prePopulate": {
+            "instance": "subjectRecord",
+            "path": "subjectId",
+            "editable": false
+          }
+        },
+        {
+          "type": "field",
+          "key": "siteCode",
+          "label": "Site code",
+          "dataType": "string",
+          "prePopulate": {
+            "instance": "subjectRecord",
+            "path": "siteCode",
+            "editable": false
+          }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "event",
+      "label": "Adverse event",
+      "presentation": {
+        "layout": {
+          "page": "Event"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "eventTerm",
+          "label": "Event term",
+          "dataType": "string"
+        },
+        {
+          "type": "field",
+          "key": "eventUnexpected",
+          "label": "Unexpected event",
+          "dataType": "boolean"
+        },
+        {
+          "type": "field",
+          "key": "eventSeverity",
+          "label": "Severity",
+          "dataType": "choice",
+          "optionSet": "eventSeverities"
+        },
+        {
+          "type": "field",
+          "key": "severityScore",
+          "label": "Severity score",
+          "dataType": "integer"
+        },
+        {
+          "type": "field",
+          "key": "onsetDate",
+          "label": "Onset date",
+          "dataType": "date"
+        },
+        {
+          "type": "field",
+          "key": "onsetTime",
+          "label": "Onset time",
+          "dataType": "time"
+        },
+        {
+          "type": "field",
+          "key": "ongoing",
+          "label": "Event is ongoing",
+          "dataType": "boolean"
+        },
+        {
+          "type": "field",
+          "key": "resolutionDate",
+          "label": "Resolution date",
+          "dataType": "date"
+        },
+        {
+          "type": "field",
+          "key": "resolutionTime",
+          "label": "Resolution time",
+          "dataType": "time"
+        },
+        {
+          "type": "field",
+          "key": "resolvedOutcome",
+          "label": "Outcome",
+          "dataType": "choice",
+          "options": [
+            { "value": "recovered", "label": "Recovered" },
+            { "value": "recovering", "label": "Recovering" },
+            { "value": "fatal", "label": "Fatal" }
+          ]
+        },
+        {
+          "type": "field",
+          "key": "causedHospitalization",
+          "label": "Caused hospitalization",
+          "dataType": "boolean"
+        },
+        {
+          "type": "field",
+          "key": "seriousnessReasons",
+          "label": "Seriousness reasons",
+          "dataType": "multiChoice",
+          "optionSet": "seriousnessReasons"
+        },
+        {
+          "type": "field",
+          "key": "seriousnessNarrative",
+          "label": "Seriousness narrative",
+          "dataType": "text"
+        },
+        {
+          "type": "field",
+          "key": "eventNarrative",
+          "label": "Narrative",
+          "dataType": "text"
+        },
+        {
+          "type": "field",
+          "key": "followUpNeeded",
+          "label": "Follow-up needed",
+          "dataType": "boolean"
+        },
+        {
+          "type": "field",
+          "key": "followUpDueDate",
+          "label": "Follow-up due date",
+          "dataType": "date"
+        },
+        {
+          "type": "field",
+          "key": "reportAttachment",
+          "label": "Supporting attachment",
+          "dataType": "attachment"
+        }
+      ]
+    }
+  ],
+  "binds": [
+    {
+      "path": "event.eventTerm",
+      "required": "true"
+    },
+    {
+      "path": "event.eventNarrative",
+      "required": "true",
+      "whitespace": "normalize"
+    },
+    {
+      "path": "event.severityScore",
+      "calculate": "if($event.eventSeverity = 'mild', 1, if($event.eventSeverity = 'moderate', 2, if($event.eventSeverity = 'severe', 3, if($event.eventSeverity = 'critical', 4, null))))"
+    },
+    {
+      "path": "event.resolutionDate",
+      "relevant": "coalesce($event.ongoing, false) = false",
+      "required": "coalesce($event.ongoing, false) = false"
+    },
+    {
+      "path": "event.resolutionTime",
+      "relevant": "coalesce($event.ongoing, false) = false"
+    },
+    {
+      "path": "event.resolvedOutcome",
+      "relevant": "coalesce($event.ongoing, false) = false",
+      "required": "coalesce($event.ongoing, false) = false"
+    },
+    {
+      "path": "event.seriousnessNarrative",
+      "relevant": "@hasSeriousReason or $event.causedHospitalization = true",
+      "required": "@hasSeriousReason or $event.causedHospitalization = true",
+      "excludedValue": "null"
+    },
+    {
+      "path": "event.followUpDueDate",
+      "relevant": "$event.followUpNeeded = true",
+      "required": "$event.followUpNeeded = true",
+      "default": "=dateAdd(today(), 7, 'days')"
+    },
+    {
+      "path": "event.reportAttachment",
+      "required": "$event.eventUnexpected = true and ($event.eventSeverity = 'severe' or $event.eventSeverity = 'critical')"
+    }
+  ],
+  "shapes": [
+    {
+      "id": "ae-chronology",
+      "target": "#",
+      "severity": "error",
+      "constraint": "empty($event.resolutionDate) or $event.resolutionDate >= $event.onsetDate",
+      "message": "Resolution date cannot be before onset date."
+    },
+    {
+      "id": "ae-ongoing-outcome",
+      "target": "#",
+      "severity": "error",
+      "xone": [
+        "$event.ongoing = true",
+        "present($event.resolvedOutcome)"
+      ],
+      "message": "Mark the event as ongoing or provide an outcome, but not both."
+    },
+    {
+      "id": "ae-hospitalization-proof",
+      "target": "#",
+      "severity": "error",
+      "activeWhen": "$event.causedHospitalization = true",
+      "timing": "submit",
+      "constraint": "present($event.reportAttachment)",
+      "message": "Hospitalization events require supporting documentation at submission."
+    },
+    {
+      "id": "ae-unexpected-warning",
+      "target": "#",
+      "severity": "warning",
+      "activeWhen": "$event.eventUnexpected = true",
+      "constraint": "$event.eventSeverity = 'severe' or $event.eventSeverity = 'critical' or @hasSeriousReason",
+      "message": "Unexpected events should usually include a serious reason or elevated severity."
+    }
+  ]
+}

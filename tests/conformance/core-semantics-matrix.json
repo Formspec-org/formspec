@@ -13,14 +13,14 @@
         "specs/core/spec.llm.md:332"
       ],
       "fixtures": [
-        "tests/fixture-household-benefits-renewal.json",
-        "tests/fixture-vendor-conflict-disclosure.json"
+        "tests/fixtures/fixture-household-benefits-renewal.json",
+        "tests/fixtures/fixture-vendor-conflict-disclosure.json"
       ],
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py",
-          "tests/unit/runtime/evaluator/test_definition_edge_case_fixtures.py"
+          "tests/unit/test_definition_evaluator.py",
+          "tests/e2e/headless/test_edge_case_payloads.py"
         ]
       },
       "engine": {
@@ -43,7 +43,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py"
+          "tests/unit/test_definition_evaluator.py"
         ]
       },
       "engine": {
@@ -63,14 +63,14 @@
         "specs/core/spec.llm.md:359"
       ],
       "fixtures": [
-        "tests/fixture-microgrant-screener.json",
-        "tests/fixture-household-benefits-renewal.json",
-        "tests/fixture-vendor-conflict-disclosure.json"
+        "tests/fixtures/fixture-microgrant-screener.json",
+        "tests/fixtures/fixture-household-benefits-renewal.json",
+        "tests/fixtures/fixture-vendor-conflict-disclosure.json"
       ],
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py"
+          "tests/unit/test_definition_evaluator.py"
         ]
       },
       "engine": {
@@ -92,14 +92,14 @@
         "specs/core/spec.llm.md:360"
       ],
       "fixtures": [
-        "tests/fixture-microgrant-screener.json",
-        "tests/fixture-household-benefits-renewal.json"
+        "tests/fixtures/fixture-microgrant-screener.json",
+        "tests/fixtures/fixture-household-benefits-renewal.json"
       ],
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py",
-          "tests/unit/runtime/evaluator/test_definition_edge_case_fixtures.py"
+          "tests/unit/test_definition_evaluator.py",
+          "tests/e2e/headless/test_edge_case_payloads.py"
         ]
       },
       "engine": {
@@ -119,15 +119,15 @@
         "specs/core/spec.llm.md:353"
       ],
       "fixtures": [
-        "tests/fixture-microgrant-screener.json",
-        "tests/fixture-clinical-adverse-event.json",
-        "tests/fixture-multi-state-tax-filing.json"
+        "tests/fixtures/fixture-microgrant-screener.json",
+        "tests/fixtures/fixture-clinical-adverse-event.json",
+        "tests/fixtures/fixture-multi-state-tax-filing.json"
       ],
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py",
-          "tests/unit/runtime/evaluator/test_definition_edge_case_fixtures.py"
+          "tests/unit/test_definition_evaluator.py",
+          "tests/e2e/headless/test_edge_case_payloads.py"
         ]
       },
       "engine": {
@@ -149,7 +149,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/response/test_response_pinning_version_substitution.py"
+          "tests/unit/test_response_pinning_version_substitution.py"
         ]
       },
       "engine": {
@@ -172,7 +172,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py"
+          "tests/unit/test_definition_evaluator.py"
         ]
       },
       "engine": {
@@ -195,8 +195,8 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/fel/test_fel_evaluator.py",
-          "tests/unit/runtime/fel/test_fel_api.py"
+          "tests/unit/test_fel_evaluator.py",
+          "tests/unit/test_fel_api.py"
         ]
       },
       "engine": {
@@ -219,8 +219,8 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/fel/test_fel_evaluator.py",
-          "tests/unit/runtime/fel/test_fel_api.py"
+          "tests/unit/test_fel_evaluator.py",
+          "tests/unit/test_fel_api.py"
         ]
       },
       "engine": {
@@ -243,8 +243,8 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/fel/test_fel_evaluator.py",
-          "tests/unit/runtime/fel/test_fel_api.py"
+          "tests/unit/test_fel_evaluator.py",
+          "tests/unit/test_fel_api.py"
         ]
       },
       "engine": {
@@ -267,7 +267,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/fel/test_fel_repeat.py"
+          "tests/unit/test_fel_repeat.py"
         ]
       },
       "engine": {
@@ -293,8 +293,8 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/fel/test_fel_evaluator.py",
-          "tests/unit/runtime/fel/test_fel_mip.py"
+          "tests/unit/test_fel_evaluator.py",
+          "tests/unit/test_fel_mip.py"
         ]
       },
       "engine": {
@@ -316,7 +316,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py"
+          "tests/unit/test_definition_evaluator.py"
         ]
       },
       "engine": {
@@ -334,13 +334,13 @@
         "specs/core/spec.llm.md:274"
       ],
       "fixtures": [
-        "tests/fixture-household-benefits-renewal.json",
-        "tests/fixture-clinical-adverse-event.json"
+        "tests/fixtures/fixture-household-benefits-renewal.json",
+        "tests/fixtures/fixture-clinical-adverse-event.json"
       ],
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py"
+          "tests/unit/test_definition_evaluator.py"
         ]
       },
       "engine": {
@@ -361,16 +361,16 @@
         "specs/core/spec.llm.md:332"
       ],
       "fixtures": [
-        "tests/fixture-microgrant-screener.json",
-        "tests/fixture-household-benefits-renewal.json",
-        "tests/fixture-clinical-adverse-event.json",
-        "tests/fixture-vendor-conflict-disclosure.json",
-        "tests/fixture-multi-state-tax-filing.json"
+        "tests/fixtures/fixture-microgrant-screener.json",
+        "tests/fixtures/fixture-household-benefits-renewal.json",
+        "tests/fixtures/fixture-clinical-adverse-event.json",
+        "tests/fixtures/fixture-vendor-conflict-disclosure.json",
+        "tests/fixtures/fixture-multi-state-tax-filing.json"
       ],
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_edge_case_fixtures.py"
+          "tests/e2e/headless/test_edge_case_payloads.py"
         ]
       },
       "engine": {
@@ -391,13 +391,13 @@
         "specs/core/spec.llm.md:343"
       ],
       "fixtures": [
-        "tests/fixture-vendor-conflict-disclosure.json"
+        "tests/fixtures/fixture-vendor-conflict-disclosure.json"
       ],
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py",
-          "tests/unit/runtime/evaluator/test_definition_edge_case_fixtures.py"
+          "tests/unit/test_definition_evaluator.py",
+          "tests/e2e/headless/test_edge_case_payloads.py"
         ]
       },
       "engine": {
@@ -421,7 +421,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py"
+          "tests/unit/test_definition_evaluator.py"
         ]
       },
       "engine": {
@@ -440,16 +440,16 @@
         "specs/core/spec.md:1804"
       ],
       "fixtures": [
-        "tests/fixture-microgrant-screener.json",
-        "tests/fixture-household-benefits-renewal.json",
-        "tests/fixture-clinical-adverse-event.json",
-        "tests/fixture-vendor-conflict-disclosure.json",
-        "tests/fixture-multi-state-tax-filing.json"
+        "tests/fixtures/fixture-microgrant-screener.json",
+        "tests/fixtures/fixture-household-benefits-renewal.json",
+        "tests/fixtures/fixture-clinical-adverse-event.json",
+        "tests/fixtures/fixture-vendor-conflict-disclosure.json",
+        "tests/fixtures/fixture-multi-state-tax-filing.json"
       ],
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_schema_acceptance.py"
+          "tests/integration/test_definition_schema_acceptance.py"
         ]
       },
       "engine": {
@@ -472,7 +472,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/fel/test_fel_builtin_availability_signaling.py"
+          "tests/unit/test_fel_builtin_availability_signaling.py"
         ]
       },
       "engine": {
@@ -512,7 +512,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_screener_routing.py"
+          "tests/unit/test_screener_routing.py"
         ]
       },
       "engine": {
@@ -534,7 +534,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_extension_preservation.py"
+          "tests/unit/test_extension_preservation.py"
         ]
       },
       "engine": {
@@ -558,7 +558,7 @@
       "python": {
         "status": "implemented",
         "tests": [
-          "tests/unit/runtime/evaluator/test_definition_evaluator.py"
+          "tests/unit/test_definition_evaluator.py"
         ]
       },
       "engine": {

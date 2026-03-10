@@ -1,0 +1,349 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.org/tests/fixtures/multi-state-tax-filing",
+  "version": "1.0.0",
+  "versionAlgorithm": "semver",
+  "status": "draft",
+  "title": "Multi-State Tax Filing Fixture",
+  "description": "Fixture exercising source-backed option sets, money calculations, repeat allocations, residency periods, and submit-time consistency checks.",
+  "date": "2026-03-05",
+  "name": "multi-state-tax-filing",
+  "derivedFrom": {
+    "url": "https://example.org/forms/federal-tax-base",
+    "version": "3.2.0"
+  },
+  "nonRelevantBehavior": "remove",
+  "formPresentation": {
+    "pageMode": "wizard",
+    "labelPosition": "top",
+    "density": "comfortable",
+    "defaultCurrency": "USD"
+  },
+  "instances": {
+    "taxTables": {
+      "description": "Illustrative deduction tables",
+      "readonly": true,
+      "data": {
+        "standardDeductionSingle": 14600,
+        "standardDeductionMarried": 29200
+      },
+      "schema": {
+        "standardDeductionSingle": "number",
+        "standardDeductionMarried": "number"
+      }
+    }
+  },
+  "optionSets": {
+    "stateCodes": {
+      "source": "https://example.org/reference/us-states",
+      "valueField": "code",
+      "labelField": "name"
+    }
+  },
+  "variables": [
+    {
+      "name": "totalWageAmount",
+      "expression": "coalesce(moneyAmount($income.residentWages), 0) + coalesce(moneyAmount($income.nonResidentWages), 0)"
+    },
+    {
+      "name": "allocationPercentTotal",
+      "expression": "sum($allocations.stateAllocations[*].allocationPercent)"
+    },
+    {
+      "name": "allocationIncomeTotal",
+      "expression": "sum($allocations.stateAllocations[*].allocationIncome)"
+    }
+  ],
+  "items": [
+    {
+      "type": "group",
+      "key": "filer",
+      "label": "Filer",
+      "presentation": {
+        "layout": {
+          "page": "Filer"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "filingStatus",
+          "label": "Filing status",
+          "dataType": "choice",
+          "options": [
+            { "value": "single", "label": "Single" },
+            { "value": "marriedJoint", "label": "Married filing jointly" },
+            { "value": "marriedSeparate", "label": "Married filing separately" }
+          ]
+        },
+        {
+          "type": "field",
+          "key": "primaryState",
+          "label": "Primary resident state",
+          "dataType": "choice",
+          "optionSet": "stateCodes"
+        },
+        {
+          "type": "field",
+          "key": "secondaryStates",
+          "label": "Other filing states",
+          "dataType": "multiChoice",
+          "optionSet": "stateCodes"
+        },
+        {
+          "type": "field",
+          "key": "taxYear",
+          "label": "Tax year",
+          "dataType": "integer",
+          "initialValue": "=year(today())"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "income",
+      "label": "Income and deductions",
+      "presentation": {
+        "layout": {
+          "page": "Income"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "residentWages",
+          "label": "Resident wages",
+          "dataType": "money",
+          "precision": 2
+        },
+        {
+          "type": "field",
+          "key": "nonResidentWages",
+          "label": "Non-resident wages",
+          "dataType": "money",
+          "precision": 2
+        },
+        {
+          "type": "field",
+          "key": "totalWages",
+          "label": "Total wages",
+          "dataType": "money",
+          "precision": 2
+        },
+        {
+          "type": "field",
+          "key": "deductionMethod",
+          "label": "Deduction method",
+          "dataType": "choice",
+          "options": [
+            { "value": "standard", "label": "Standard deduction" },
+            { "value": "itemized", "label": "Itemized deductions" }
+          ]
+        },
+        {
+          "type": "field",
+          "key": "standardDeduction",
+          "label": "Standard deduction",
+          "dataType": "money",
+          "precision": 2
+        },
+        {
+          "type": "field",
+          "key": "itemizedDeductions",
+          "label": "Itemized deductions",
+          "dataType": "money",
+          "precision": 2
+        },
+        {
+          "type": "field",
+          "key": "itemizedExplanation",
+          "label": "Itemized deduction explanation",
+          "dataType": "text"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "allocations",
+      "label": "State allocations",
+      "presentation": {
+        "layout": {
+          "page": "Allocations"
+        }
+      },
+      "children": [
+        {
+          "type": "group",
+          "key": "stateAllocations",
+          "label": "Allocation rows",
+          "repeatable": true,
+          "minRepeat": 1,
+          "children": [
+            {
+              "type": "field",
+              "key": "allocationState",
+              "label": "State",
+              "dataType": "choice",
+              "optionSet": "stateCodes"
+            },
+            {
+              "type": "field",
+              "key": "allocationPercent",
+              "label": "Allocation percent",
+              "dataType": "decimal",
+              "precision": 2,
+              "suffix": "%"
+            },
+            {
+              "type": "field",
+              "key": "allocationIncome",
+              "label": "Allocated income",
+              "dataType": "money",
+              "precision": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "residency",
+      "label": "Residency periods",
+      "presentation": {
+        "layout": {
+          "page": "Residency"
+        }
+      },
+      "children": [
+        {
+          "type": "group",
+          "key": "residencyPeriods",
+          "label": "Residency periods",
+          "repeatable": true,
+          "minRepeat": 1,
+          "children": [
+            {
+              "type": "field",
+              "key": "residencyState",
+              "label": "State",
+              "dataType": "choice",
+              "optionSet": "stateCodes"
+            },
+            {
+              "type": "field",
+              "key": "residencyStart",
+              "label": "Start date",
+              "dataType": "date"
+            },
+            {
+              "type": "field",
+              "key": "residencyEnd",
+              "label": "End date",
+              "dataType": "date"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "review",
+      "label": "Review",
+      "presentation": {
+        "layout": {
+          "page": "Review"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "preparerNotes",
+          "label": "Preparer notes",
+          "dataType": "text"
+        },
+        {
+          "type": "field",
+          "key": "agreeElectronic",
+          "label": "Agree to electronic filing",
+          "dataType": "boolean"
+        }
+      ]
+    }
+  ],
+  "binds": [
+    {
+      "path": "income.totalWages",
+      "calculate": "money(coalesce(moneyAmount($income.residentWages), 0) + coalesce(moneyAmount($income.nonResidentWages), 0), 'USD')"
+    },
+    {
+      "path": "income.standardDeduction",
+      "relevant": "$income.deductionMethod = 'standard'",
+      "calculate": "if($filer.filingStatus = 'marriedJoint', money(@instance('taxTables').standardDeductionMarried, 'USD'), money(@instance('taxTables').standardDeductionSingle, 'USD'))"
+    },
+    {
+      "path": "income.itemizedDeductions",
+      "relevant": "$income.deductionMethod = 'itemized'",
+      "required": "$income.deductionMethod = 'itemized'"
+    },
+    {
+      "path": "income.itemizedExplanation",
+      "relevant": "$income.deductionMethod = 'itemized' and coalesce(moneyAmount($income.itemizedDeductions), 0) > 0",
+      "required": "$income.deductionMethod = 'itemized' and coalesce(moneyAmount($income.itemizedDeductions), 0) > 0"
+    },
+    {
+      "path": "allocations.stateAllocations",
+      "relevant": "count($filer.secondaryStates) > 0",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "allocations.stateAllocations[*].allocationPercent",
+      "constraint": "$ > 0 and $ <= 100",
+      "constraintMessage": "Each allocation percent must be greater than 0 and no more than 100."
+    },
+    {
+      "path": "review.preparerNotes",
+      "whitespace": "normalize"
+    }
+  ],
+  "shapes": [
+    {
+      "id": "tax-secondary-state-excludes-primary",
+      "target": "#",
+      "severity": "error",
+      "constraint": "not selected($filer.secondaryStates, $filer.primaryState)",
+      "message": "The primary state cannot also appear in the secondary filing states list."
+    },
+    {
+      "id": "tax-allocation-percent-total",
+      "target": "#",
+      "severity": "error",
+      "activeWhen": "count($filer.secondaryStates) > 0",
+      "constraint": "@allocationPercentTotal = 100",
+      "message": "State allocation percentages must total 100."
+    },
+    {
+      "id": "tax-allocation-income-total",
+      "target": "#",
+      "severity": "error",
+      "activeWhen": "count($filer.secondaryStates) > 0",
+      "timing": "submit",
+      "constraint": "@allocationIncomeTotal = @totalWageAmount",
+      "message": "Allocated income must equal total wages before submission."
+    },
+    {
+      "id": "tax-residency-date-order",
+      "target": "residency.residencyPeriods[*].residencyEnd",
+      "severity": "error",
+      "constraint": "$ >= $residencyStart",
+      "message": "Residency period end dates cannot be before start dates."
+    },
+    {
+      "id": "tax-electronic-consent",
+      "target": "#",
+      "severity": "error",
+      "timing": "submit",
+      "constraint": "$review.agreeElectronic = true",
+      "message": "Electronic filing requires filer consent."
+    }
+  ]
+}

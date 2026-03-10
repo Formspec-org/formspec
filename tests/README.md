@@ -1,152 +1,117 @@
 # Formspec Conformance Test Suite
 
 Machine-readable test suite validating JSON documents against the Formspec
-family of JSON Schemas (draft 2020-12).
+family of JSON Schemas (draft 2020-12) and exercising the reference
+implementations.
 
 ## Layout
 
-- `tests/unit/schema/` — schema conformance and schema/spec contract tests
-- `tests/unit/runtime/` — Python runtime package tests (`formspec.*`)
-- `tests/unit/support/` — shared builders + schema fixtures
-- `tests/e2e/` — browser/integration suites
-- `packages/formspec-engine/tests/` — JavaScript engine unit tests (Node test runner)
+The suite is organized into five functional tiers as defined in **ADR 0035**:
 
-## Coverage
+- `tests/unit/` — Pure logic, memory-bound, fast. Python-specific engine tests.
+- `tests/component/` — Isolated DOM tests for Web Components (Playwright).
+- `tests/integration/` — Cross-module plumbing, CLI, and fixture integrity.
+- `tests/e2e/` — Full-stack scenarios (Browser User Journeys and Headless).
+- `tests/conformance/` — Standards integrity, schemas, and cross-runtime parity.
 
-| Schema | Test File | Tests |
-|---|---|---|
-| `definition.schema.json` | `unit/schema/definition/test_definition_schema.py` | 139 |
-| `response.schema.json` + `validationReport.schema.json` | `unit/schema/response/test_response_schema.py` | 61 |
-| `mapping.schema.json` | `unit/schema/mapping/test_mapping_schema.py` | 91 |
-| Mapping adapter `$defs` contracts | `unit/schema/contracts/test_mapping_adapter_schema_contracts.py` | 6 |
-| `registry.schema.json` | `unit/schema/registry/test_registry_schema.py` | 72 |
-| All spec examples (Layer 2) | `unit/schema/contracts/test_spec_examples.py` | 153 |
-| Property-based / generative (Layer 3) | `unit/schema/contracts/test_property_based.py` | 50 |
-| Cross-spec contract (Layer 5) | `unit/schema/contracts/test_cross_spec_contracts.py` | 149 |
-| FEL parser (Layer 6) | `unit/runtime/fel/test_fel_parser.py` | 102 |
-| FEL evaluator (Layer 6) | `unit/runtime/fel/test_fel_evaluator.py` | 68 |
-| FEL functions (Layer 6) | `unit/runtime/fel/test_fel_functions.py` | 76 |
-| FEL API & conformance (Layer 6) | `unit/runtime/fel/test_fel_api.py` | 40 |
-| **Total** | | **1007** |
+## Coverage (Python Suite)
+
+| Category | Component | Test File | Tests |
+|---|---|---|---|
+| **Schemas** | `definition.schema.json` | `conformance/schemas/test_definition_schema.py` | 141 |
+| | `response.schema.json` | `conformance/schemas/test_response_schema.py` | 48 |
+| | `mapping.schema.json` | `conformance/schemas/test_mapping_schema.py` | 98 |
+| | `registry.schema.json` | `conformance/schemas/test_registry_schema.py` | 78 |
+| | `theme.schema.json` | `conformance/schemas/test_theme_schema.py` | 201 |
+| | `component.schema.json` | `conformance/schemas/test_component_schema.py` | 115 |
+| | Presentation Hints | `conformance/schemas/test_presentation_hints.py` | 111 |
+| **Standards** | Spec Example Extraction | `conformance/spec/test_spec_examples.py` | 227 |
+| | Cross-Spec Contract | `conformance/spec/test_cross_spec_contracts.py` | 177 |
+| | Property-Based (Fuzzing) | `conformance/fuzzing/test_property_based.py` | 50 |
+| | Round-Trip fidelity | `conformance/roundtrip/test_roundtrip_contracts.py` | 11 |
+| **Runtime** | FEL Parser | `unit/test_fel_parser.py` | 109 |
+| | FEL Evaluator | `unit/test_fel_evaluator.py` | 110 |
+| | FEL Functions | `unit/test_fel_functions.py` | 109 |
+| | FEL API | `unit/test_fel_api.py` | 27 |
+| | Mapping Engine | `unit/test_mapping_engine.py` | 50 |
+| | Registry Logic | `unit/test_registry.py` | 35 |
+| **Integration**| Fixture Integrity | `integration/fixtures/test_core_fixtures.py` | 26 |
+| | FEL Pipeline | `integration/test_fel_pipeline.py` | 13 |
+| | Validator CLI | `integration/cli/test_validator_cli.py` | 4 |
+| **E2E** | Headless Processing | `e2e/headless/` | 27 |
+| | Reference API | `e2e/api/` | 22 |
+| **Total** | | | **2110** |
+
+## Monorepo Package Tests (TypeScript/JavaScript)
+
+In addition to the root Python suite, implementation-specific unit tests reside within each package:
+
+### 🧩 `packages/formspec-engine/tests/`
+Tests the TypeScript reference implementation of the Formspec engine.
+- **FEL Semantics:** Core logic for null handling, type discipline, and complex value semantics.
+- **State Management:** Reactive calculation chains, validation triggers, and repeat group lifecycle.
+- **Data Binding:** Path resolution, value coercion, and response pruning.
+- **Conformance:** Verification against the `core-semantics-matrix.json` for parity with Python.
+
+### 🏗 `packages/formspec-webcomponent/tests/`
+Tests the Web Component renderer and UI integration logic.
+- **Component Plugins:** Isolated testing of individual widget rendering (TextInput, RadioGroup, etc.).
+- **Theme Resolver:** Correct implementation of the Tier 2 selector cascade and token resolution.
+- **Render Lifecycle:** Reactive DOM updates, focus management, and accessibility attribute injection.
+- **Registry:** Plugin registration and component discovery logic.
 
 ## Test Layers
 
-### Layer 1: Schema Conformance (363 tests)
-Hand-written positive/negative test cases. One assertion per constraint.
+### Layer 1: Schema Conformance
+Hand-written positive/negative test cases in `tests/conformance/schemas/`. One assertion per constraint.
 
-### Layer 2: Spec Example Extraction (153 tests)
-Automatically extracts every ` ```json ` block from every `.md` spec file,
-classifies it (complete document, fragment, non-schema), and validates
-against the appropriate schema. If someone edits a spec example and breaks
-it, CI catches it.
+### Layer 2: Spec Example Extraction
+Automatically extracts every ` ```json ` block from every `.md` spec file, classifies it, and validates against the appropriate schema in `tests/conformance/spec/test_spec_examples.py`.
 
-Classification categories:
-- **Complete documents** — validated against full schema (definition, response, mapping, registry)
-- **Fragments** — validated against `$defs` sub-schemas (Item, Shape, FieldRule)
-- **Near-complete** — patched with missing optional fields then validated (§7 responses missing `authored`)
-- **Non-schema** — checked for JSON parseability only (adapter configs, diagnostics, data samples)
+### Layer 3: Property-Based / Generative Testing
+Uses Hypothesis in `tests/conformance/fuzzing/` to generate random valid documents and verify they pass validation, then applies targeted mutations to verify rejections.
 
-## Test Categories
+### Layer 4: Cross-Spec Contract Tests
+Verifies normative spec prose matches actual JSON schema structure in `tests/conformance/spec/test_cross_spec_contracts.py`.
 
-Layer 1 test files cover:
+### Layer 5: Reference Implementation Tests
+Unit tests for the reference implementations. Python tests reside in `tests/unit/`, while TypeScript tests reside in `packages/*/tests/`.
 
-- **Positive validation** — minimal and full valid documents
-- **Required fields** — each required property missing individually
-- **Enum constraints** — valid values accepted, invalid values rejected
-- **Pattern constraints** — key/name/id regex enforcement
-- **Format constraints** — URI, date, date-time, uri-template
-- **additionalProperties** — unknown properties rejected at every level
-- **if/then conditionals** — type-discriminated Item dispatch, transform-dependent FieldRule requirements, XML rootElement, category-specific registry entry fields
-- **oneOf/anyOf discrimination** — Shape rules, Instance source/data, OptionSet options/source, coerce object/string, valueMap full/flat
-- **Recursive structures** — nested Item children
-- **Extensions** — `x-` prefix enforcement via `propertyNames` pattern
-
-### Layer 3: Property-Based / Generative Testing (50 tests)
-Uses Hypothesis to generate random valid documents for all 5 schemas,
-verify they pass validation, then apply targeted mutations (delete required
-fields, inject bad enum values, add extra properties, empty arrays, break
-extension key patterns) and verify the schema rejects them.
-
-Four test classes:
-- **TestGeneratorsProduceValid** — 10 generators × 100 random examples each
-- **TestMutationsDetected** — 14 mutation × schema combinations × 50 examples
-- **TestConditionalInteractions** — 20 targeted tests for if/then + oneOf + anyOf combinatorics
-- **TestExtensionKeyEnforcement** — 6 tests for `propertyNames` vs `patternProperties` mechanisms
-
-### Layer 5: Cross-Spec Contract Tests (149 tests)
-Verifies normative spec prose matches actual JSON schema structure.
-Pure schema introspection — no document generation, no validation calls.
-
-15 test classes covering:
-- **Cross-schema consistency** — draft uniformity, `$id` presence, `additionalProperties: false` on all top-level objects, cross-file `$ref` integrity (validationReport → response), extension mechanism divergence (propertyNames vs patternProperties)
-- **Closed-world property sets** — every `additionalProperties: false` object asserts its exact set of declared properties, catching property additions/removals
-- **Required arrays** — exact match against spec-declared required fields
-- **Enum values** — exact match for every enum in every schema
-- **Pattern constraints** — key, name, id regex patterns
-- **Format constraints** — uri, date, date-time, uri-template
-- **Default values** — every spec-declared default matches schema
-- **Conditional structure** — if/then branches navigated by scanning `if` conditions (not positional index), verifying required fields in `then` clauses
-
-### Layer 6: FEL Implementation Tests (286 tests)
-End-to-end tests for the FEL Python reference implementation (`fel/` package).
-
-Four test files:
-- **unit/runtime/fel/test_fel_parser.py** (102) — scannerless parser: literals, field refs, context refs,
-  operators, precedence, membership, ternary, if-then-else, let bindings, function calls,
-  postfix access, arrays, objects, comments, edge cases, reserved words, conformance
-- **unit/runtime/fel/test_fel_evaluator.py** (68) — evaluator: arithmetic, comparison, equality, logical
-  operators, null propagation (§3.8), string concatenation, membership, ternary,
-  if-then-else, let bindings, field refs, element-wise arrays (§3.9), postfix access
-- **unit/runtime/fel/test_fel_functions.py** (76) — all 55 built-in functions: aggregates (sum/count/avg/
-  min/max), string (length/contains/startsWith/endsWith/substring/replace/upper/lower/
-  trim/matches/format), numeric (round/floor/ceil/abs/power), date (year/month/day/
-  dateDiff/dateAdd/hours/minutes/seconds/time/timeDiff), logical (if/coalesce/empty/
-  present), type-checking (isNumber/isString/isNull/typeOf), cast (number/string/
-  boolean/date), money (money/moneyAmount/moneyCurrency/moneyAdd)
-- **unit/runtime/fel/test_fel_api.py** (40) — public API, dependency extraction, extension registration,
-  grammar conformance (§7 all 7 points), semantic conformance, spec examples
+### Layer 6: End-to-End (E2E)
+Full-stack validation including browser-based user journeys (`tests/e2e/browser/`) and headless pipeline executions (`tests/e2e/headless/`).
 
 ## Prerequisites
 
 ```bash
-pip install pytest jsonschema
+pip install pytest jsonschema hypothesis
 ```
 
 ## Running
 
 ```bash
-# From the repository root:
+# Run the full Python suite:
 python3 -m pytest tests/ -v
 
-# JavaScript engine unit tests:
-npm run test:unit
+# Run JavaScript package tests (Monorepo):
+npm run test:unit --workspace=formspec-engine
+npm run test:unit --workspace=formspec-webcomponent
 
-# Playwright E2E:
+# Run Playwright E2E tests:
 npm run test:e2e
-npm run test:e2e:integration
-npm run test:e2e:components
-npm run test:e2e:smoke
 
-# Single schema:
-python3 -m pytest tests/unit/schema/definition/test_definition_schema.py -v
+# Targeted runs:
+python3 -m pytest tests/unit/ -v
+python3 -m pytest tests/conformance/schemas/ -v
+python3 -m pytest tests/e2e/api/ -v
 
-# Ownership-group runs:
-python3 -m pytest tests/unit/schema/ -v
-python3 -m pytest tests/unit/runtime/fel/ -v
-
-# Marker-based runs:
-python3 -m pytest tests/ -m schema -v
-python3 -m pytest tests/ -m "runtime and fel" -v
-
-# With coverage (if pytest-cov installed):
-python3 -m pytest tests/ --cov=. --cov-report=term
+# With coverage (Python):
+python3 -m pytest tests/ --cov=src/formspec --cov-report=term
 ```
 
 ## Adding Tests
 
-Follow the existing pattern:
-1. Use `@pytest.fixture` or conftest fixtures to load schemas
-2. Use `jsonschema.validate` with `Draft202012Validator` for positive tests
-3. Use `pytest.raises(ValidationError)` for negative tests
-4. Use `@pytest.mark.parametrize` for enum/pattern value lists
-5. One test = one assertion about one schema constraint
+1. **Unit logic?** Add to `tests/unit/` (Python) or the respective package `tests/` directory (TS).
+2. **New Schema constraint?** Add to `tests/conformance/schemas/`.
+3. **Integration scenario?** Add to `tests/integration/`.
+4. **User journey?** Add to `tests/e2e/browser/` as a Playwright spec.
+5. **Standard rule?** Add to `tests/conformance/parity/` or `tests/conformance/spec/`.

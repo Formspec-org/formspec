@@ -12,17 +12,17 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     for item in items:
         path = str(item.fspath)
 
-        if "tests/unit/schema/" in path:
+        if "tests/conformance/schemas/" in path:
             item.add_marker("schema")
-        if "tests/unit/schema/contracts/" in path:
+        if "tests/conformance/spec/" in path:
             item.add_marker("schema_contract")
-        if "tests/unit/runtime/" in path:
+        if "tests/unit/" in path:
             item.add_marker("runtime")
-        if "tests/unit/runtime/fel/" in path:
+        if "test_fel_" in path:
             item.add_marker("fel")
-        if "tests/unit/runtime/validator/" in path:
+        if "test_validator_" in path:
             item.add_marker("validator")
-        if "tests/unit/runtime/mapping/" in path:
+        if "test_mapping_" in path:
             item.add_marker("mapping")
-        if "tests/unit/runtime/adapters/" in path:
+        if "test_adapters.py" in path:
             item.add_marker("adapters")
