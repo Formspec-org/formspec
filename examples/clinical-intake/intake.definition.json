@@ -40,6 +40,10 @@
         "hint": "0 = no pain, 10 = worst possible pain"
       }
     ],
+    "binds": [
+      { "path": "sChiefComplaint", "required": "true" },
+      { "path": "sPainLevel", "constraint": "$ >= 0 and $ <= 10" }
+    ],
     "routes": [
       {
         "condition": "$sChiefComplaint = 'emergency' or $sPainLevel >= 8",

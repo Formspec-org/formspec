@@ -334,9 +334,12 @@
         "label": "Triage Score"
       }
     ],
+    "binds": [
+      { "path": "triageScore", "required": "true" }
+    ],
     "routes": [
       {
-        "condition": "triageScore >= 50",
+        "condition": "$triageScore >= 50",
         "target": "https://example.org/forms/high-risk",
         "label": "High Risk"
       },

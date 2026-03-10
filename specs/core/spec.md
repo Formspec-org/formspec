@@ -2479,6 +2479,9 @@ optional `screener` property of a Definition.
         "label": "Total federal award amount"
       }
     ],
+    "binds": [
+      { "path": "award_amount", "required": "true" }
+    ],
     "routes": [
       {
         "condition": "moneyAmount($award_amount) < 250000",
@@ -2500,6 +2503,7 @@ optional `screener` property of a Definition.
 | Property | Type | Description |
 |----------|------|-------------|
 | `screener.items` | array of Item | Fields for routing classification. These use the standard Item schema (§4.2) and their values are available to route conditions. |
+| `screener.binds` | array of Bind | Bind declarations scoped to screener items. Paths reference screener item keys. Supports `required`, `relevant`, `constraint`, and `calculate`. These binds are evaluated in the screener's own scope — they do NOT interact with the main form's binds. |
 | `screener.routes` | array of Route | Ordered routing rules. |
 | `screener.routes[].condition` | string (FEL → boolean) | Expression evaluated against screener item values. |
 | `screener.routes[].target` | string (URI) | Canonical reference (`url\|version`) to the target FormDefinition. |
@@ -3899,17 +3903,17 @@ though the year-over-year warning persists.
 
 ### 7.5 Screener Routing to Form Variants
 
-This example demonstrates a short screener form that asks classification
-questions and routes the user to one of two form variants based on the
-answers. The routing decision is expressed as a calculated field whose
-value is a definition URL.
+This example demonstrates the `screener` property (§4.7) routing users to
+one of two form variants based on classification questions. Screener items
+have their own binds for validation and conditional relevance. Routes are
+evaluated in declaration order; the first match wins.
 
 **Demonstrated features:**
 
-- Choice fields driving routing logic
-- A calculated routing field producing a definition URL
+- `screener` property with `items`, `binds`, and `routes`
+- Screener-scoped binds (`required`, `constraint`, `relevant`)
+- Ordered route conditions with a default fallback
 - `derivedFrom` relationships between screener and variant forms
-- Dynamic form selection based on user input
 
 #### 7.5.1 Screener Definition
 
@@ -3920,60 +3924,63 @@ value is a definition URL.
   "status": "active",
   "title": "Progress Report — Screener",
 
-  "items": [
-    {
-      "key": "award_type",
-      "type": "field",
-      "dataType": "string",
-      "label": "What type of award is this?",
-      "options": [
-        { "value": "grant",             "label": "Grant" },
-        { "value": "cooperative_agreement", "label": "Cooperative Agreement" },
-        { "value": "contract",          "label": "Contract" }
-      ]
-    },
-    {
-      "key": "reporting_period_type",
-      "type": "field",
-      "dataType": "string",
-      "label": "Is this an interim or final report?",
-      "options": [
-        { "value": "interim", "label": "Interim (Quarterly / Semi-annual)" },
-        { "value": "final",   "label": "Final" }
-      ]
-    },
-    {
-      "key": "total_award_value",
-      "type": "field",
-      "dataType": "decimal",
-      "label": "Total award value ($)"
-    },
-    {
-      "key": "has_subawards",
-      "type": "field",
-      "dataType": "boolean",
-      "label": "Does this award include any subawards?"
-    },
-    {
-      "key": "routed_form",
-      "type": "field",
-      "dataType": "string",
-      "label": "Assigned Report Form",
-      "hint": "Determined automatically based on your answers above."
-    }
-  ],
+  "screener": {
+    "items": [
+      {
+        "key": "award_type",
+        "type": "field",
+        "dataType": "string",
+        "label": "What type of award is this?",
+        "options": [
+          { "value": "grant",                "label": "Grant" },
+          { "value": "cooperative_agreement", "label": "Cooperative Agreement" },
+          { "value": "contract",             "label": "Contract" }
+        ]
+      },
+      {
+        "key": "reporting_period_type",
+        "type": "field",
+        "dataType": "string",
+        "label": "Is this an interim or final report?",
+        "options": [
+          { "value": "interim", "label": "Interim (Quarterly / Semi-annual)" },
+          { "value": "final",   "label": "Final" }
+        ]
+      },
+      {
+        "key": "total_award_value",
+        "type": "field",
+        "dataType": "decimal",
+        "label": "Total award value ($)"
+      },
+      {
+        "key": "has_subawards",
+        "type": "field",
+        "dataType": "boolean",
+        "label": "Does this award include any subawards?"
+      }
+    ],
 
-  "binds": [
-    { "path": "award_type",            "required": "true" },
-    { "path": "reporting_period_type",  "required": "true" },
-    { "path": "total_award_value",      "required": "true", "constraint": "$ > 0" },
-    { "path": "has_subawards",          "required": "true" },
-    {
-      "path": "routed_form",
-      "readonly": "true",
-      "calculate": "if($reporting_period_type = 'final' or $total_award_value >= 500000 or $has_subawards = true, 'https://grants.example.gov/forms/full-progress-report|2025-06-01', 'https://grants.example.gov/forms/abbreviated-progress-report|2025-06-01')"
-    }
-  ]
+    "binds": [
+      { "path": "award_type",           "required": "true" },
+      { "path": "reporting_period_type", "required": "true" },
+      { "path": "total_award_value",     "required": "true", "constraint": "$ > 0" },
+      { "path": "has_subawards",         "required": "true" }
+    ],
+
+    "routes": [
+      {
+        "condition": "$reporting_period_type = 'final' or $total_award_value >= 500000 or $has_subawards = true",
+        "target": "https://grants.example.gov/forms/full-progress-report|2025-06-01",
+        "label": "Full Progress Report"
+      },
+      {
+        "condition": "true",
+        "target": "https://grants.example.gov/forms/abbreviated-progress-report|2025-06-01",
+        "label": "Abbreviated Progress Report"
+      }
+    ]
+  }
 }
 ```
 
@@ -3984,7 +3991,7 @@ the following are true:
 2. The total award value is $500,000 or more.
 3. The award includes subawards.
 
-Otherwise, the user is routed to the **abbreviated report**.
+Otherwise, the default route sends the user to the **abbreviated report**.
 
 #### 7.5.2 Variant Definitions (Headers Only)
 
@@ -4013,27 +4020,6 @@ The full and abbreviated reports declare their lineage via `derivedFrom`:
 The `derivedFrom` property is informational. Processors SHOULD use it to
 assist in traceability and auditing. Processors MUST NOT require
 `derivedFrom` to be resolvable at runtime.
-
-#### 7.5.3 Screener Response and Routing Result
-
-```json
-{
-  "definitionUrl": "https://grants.example.gov/forms/progress-screener",
-  "definitionVersion": "2025-06-01",
-  "status": "completed",
-  "data": {
-    "award_type": "grant",
-    "reporting_period_type": "interim",
-    "total_award_value": 175000.00,
-    "has_subawards": false,
-    "routed_form": "https://grants.example.gov/forms/abbreviated-progress-report|2025-06-01"
-  }
-}
-```
-
-The consuming application reads `routed_form` and navigates the user to
-the abbreviated report definition. The screener Response SHOULD be
-retained for audit purposes.
 
 ***
 

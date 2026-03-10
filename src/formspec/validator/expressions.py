@@ -1,4 +1,4 @@
-"""Pass 4: Parse all FEL expression slots in binds, shapes, and screener routes (E400).
+"""Pass 4: Parse all FEL expression slots in binds, shapes, screener binds, and screener routes (E400).
 
 Compiles each expression string via the Python FEL parser. Dataflow fields (calculate,
 relevant, readonly, required) track their bind target for dependency analysis. Validation
@@ -45,7 +45,7 @@ class ExpressionCompilationResult:
 
 
 def compile_expressions(document: dict) -> ExpressionCompilationResult:
-    """Entry point: compile all FEL expressions in binds, shapes, and screener routes. Emits E400 on syntax errors."""
+    """Entry point: compile all FEL expressions in binds, shapes, screener binds, and screener routes. Emits E400 on syntax errors."""
     result = ExpressionCompilationResult()
 
     binds = document.get("binds", [])
@@ -131,6 +131,39 @@ def compile_expressions(document: dict) -> ExpressionCompilationResult:
 
     screener = document.get("screener")
     if isinstance(screener, dict):
+        screener_binds = screener.get("binds")
+        if isinstance(screener_binds, list):
+            for bind_index, bind in enumerate(screener_binds):
+                if not isinstance(bind, dict):
+                    continue
+                bind_path_value = bind.get("path")
+                bind_target = canonical_item_path(bind_path_value) if isinstance(bind_path_value, str) else None
+                bind_path_pointer = f"$.screener.binds[{bind_index}].path" if bind_target else None
+
+                for field_name in _BIND_DATAFLOW_FIELDS:
+                    expression = bind.get(field_name)
+                    if isinstance(expression, str):
+                        _parse_one(
+                            result,
+                            expression,
+                            f"$.screener.binds[{bind_index}].{field_name}",
+                            "screener-bind",
+                            bind_target,
+                            bind_path_pointer,
+                        )
+
+                for field_name in _BIND_VALIDATION_FIELDS:
+                    expression = bind.get(field_name)
+                    if isinstance(expression, str):
+                        _parse_one(
+                            result,
+                            expression,
+                            f"$.screener.binds[{bind_index}].{field_name}",
+                            "screener-bind",
+                            bind_target=None,
+                            bind_path_pointer=None,
+                        )
+
         routes = screener.get("routes")
         if isinstance(routes, list):
             for route_index, route in enumerate(routes):

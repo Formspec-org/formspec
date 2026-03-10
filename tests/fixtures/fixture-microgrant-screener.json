@@ -1,0 +1,416 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.org/tests/fixtures/microgrant-screener",
+  "version": "1.0.0",
+  "versionAlgorithm": "semver",
+  "status": "draft",
+  "title": "Microgrant Screener and Application Fixture",
+  "description": "Fixture exercising screener routing, pre-population, money fields, repeat groups, non-relevance behavior, and shape-vs-bind interactions.",
+  "date": "2026-03-05",
+  "name": "microgrant-screener",
+  "derivedFrom": {
+    "url": "https://example.org/forms/microgrant-template",
+    "version": "2025.4.0"
+  },
+  "nonRelevantBehavior": "remove",
+  "extensions": {
+    "x-fixture-family": "definition-edge-cases",
+    "x-scenario": "microgrant"
+  },
+  "formPresentation": {
+    "pageMode": "wizard",
+    "labelPosition": "top",
+    "density": "comfortable",
+    "defaultCurrency": "USD"
+  },
+  "screener": {
+    "items": [
+      {
+        "key": "screenOrgType",
+        "type": "field",
+        "dataType": "choice",
+        "label": "Organization type",
+        "options": [
+          { "value": "school", "label": "School or district" },
+          { "value": "nonprofit", "label": "Nonprofit" },
+          { "value": "municipal", "label": "Municipal government" },
+          { "value": "other", "label": "Other" }
+        ]
+      },
+      {
+        "key": "screenReturningApplicant",
+        "type": "field",
+        "dataType": "boolean",
+        "label": "Returning applicant"
+      },
+      {
+        "key": "screenEstimatedRequest",
+        "type": "field",
+        "dataType": "money",
+        "label": "Estimated request"
+      }
+    ],
+    "binds": [
+      { "path": "screenOrgType", "required": "true" },
+      { "path": "screenEstimatedRequest", "required": "true" }
+    ],
+    "routes": [
+      {
+        "condition": "$screenReturningApplicant = true and moneyAmount($screenEstimatedRequest) <= 25000",
+        "target": "https://example.org/forms/microgrant-short/1.0.0",
+        "label": "Short renewal"
+      },
+      {
+        "condition": "$screenOrgType = 'municipal'",
+        "target": "https://example.org/forms/microgrant-government/1.0.0",
+        "label": "Municipal variant"
+      },
+      {
+        "condition": "true",
+        "target": "https://example.org/tests/fixtures/microgrant-screener/1.0.0",
+        "label": "Standard application"
+      }
+    ]
+  },
+  "instances": {
+    "orgProfile": {
+      "description": "Pre-populated organization profile",
+      "readonly": true,
+      "data": {
+        "legalName": "Neighborhood Arts Collective",
+        "ein": "123456789",
+        "contactEmail": "director@example.org"
+      },
+      "schema": {
+        "legalName": "string",
+        "ein": "string",
+        "contactEmail": "string"
+      }
+    },
+    "grantRules": {
+      "description": "Program rule thresholds",
+      "source": "https://example.org/api/grants/rules/{programYear}",
+      "static": true,
+      "readonly": true,
+      "data": {
+        "maxRequest": 50000,
+        "subawardCapPercent": 40
+      },
+      "schema": {
+        "maxRequest": "number",
+        "subawardCapPercent": "number"
+      }
+    }
+  },
+  "optionSets": {
+    "programAreas": {
+      "options": [
+        { "value": "arts", "label": "Arts Access" },
+        { "value": "youth", "label": "Youth Development" },
+        { "value": "food", "label": "Food Security" },
+        { "value": "climate", "label": "Climate Resilience" }
+      ]
+    }
+  },
+  "variables": [
+    {
+      "name": "requestedAmountValue",
+      "expression": "coalesce(moneyAmount($project.requestAmount), 0)"
+    },
+    {
+      "name": "subawardTotalValue",
+      "expression": "sum($project.subawardRows[*].subawardAmount)"
+    },
+    {
+      "name": "remainingBalance",
+      "expression": "@requestedAmountValue - @subawardTotalValue"
+    }
+  ],
+  "items": [
+    {
+      "type": "display",
+      "key": "introBanner",
+      "label": "Community Microgrant Application",
+      "presentation": {
+        "widgetHint": "banner",
+        "styleHints": {
+          "emphasis": "primary"
+        }
+      }
+    },
+    {
+      "type": "group",
+      "key": "applicant",
+      "label": "Applicant",
+      "presentation": {
+        "layout": {
+          "page": "Applicant"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "orgLegalName",
+          "label": "Legal organization name",
+          "dataType": "string",
+          "prePopulate": {
+            "instance": "orgProfile",
+            "path": "legalName",
+            "editable": false
+          }
+        },
+        {
+          "type": "field",
+          "key": "orgEin",
+          "label": "Employer identification number",
+          "dataType": "string",
+          "semanticType": "us-gov:ein",
+          "prePopulate": {
+            "instance": "orgProfile",
+            "path": "ein",
+            "editable": true
+          }
+        },
+        {
+          "type": "field",
+          "key": "applicantProgramArea",
+          "label": "Primary program area",
+          "dataType": "choice",
+          "optionSet": "programAreas"
+        },
+        {
+          "type": "field",
+          "key": "hasFiscalSponsor",
+          "label": "Using a fiscal sponsor",
+          "dataType": "boolean"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "project",
+      "label": "Project",
+      "presentation": {
+        "layout": {
+          "page": "Project"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "projectTitle",
+          "label": "Project title",
+          "dataType": "string"
+        },
+        {
+          "type": "field",
+          "key": "requestAmount",
+          "label": "Requested amount",
+          "dataType": "money",
+          "currency": "USD",
+          "precision": 2
+        },
+        {
+          "type": "field",
+          "key": "hasSubawards",
+          "label": "Includes subawards",
+          "dataType": "boolean",
+          "initialValue": false
+        },
+        {
+          "type": "group",
+          "key": "subawardRows",
+          "label": "Subawards",
+          "repeatable": true,
+          "minRepeat": 1,
+          "maxRepeat": 5,
+          "children": [
+            {
+              "type": "field",
+              "key": "subawardName",
+              "label": "Subaward recipient",
+              "dataType": "string"
+            },
+            {
+              "type": "field",
+              "key": "subawardAmount",
+              "label": "Subaward amount",
+              "dataType": "money",
+              "currency": "USD",
+              "precision": 2
+            }
+          ]
+        },
+        {
+          "type": "field",
+          "key": "indirectCostPolicy",
+          "label": "Indirect cost policy",
+          "dataType": "choice",
+          "options": [
+            { "value": "none", "label": "No indirect costs" },
+            { "value": "de-minimis", "label": "10 percent de minimis" },
+            { "value": "other", "label": "Other documented rate" }
+          ]
+        },
+        {
+          "type": "field",
+          "key": "indirectRate",
+          "label": "Indirect rate percent",
+          "dataType": "decimal",
+          "precision": 2,
+          "suffix": "%"
+        },
+        {
+          "type": "field",
+          "key": "indirectExplanation",
+          "label": "Indirect rate explanation",
+          "dataType": "text"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "contact",
+      "label": "Contact",
+      "presentation": {
+        "layout": {
+          "page": "Contact"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "contactEmail",
+          "label": "Email",
+          "dataType": "string",
+          "prePopulate": {
+            "instance": "orgProfile",
+            "path": "contactEmail",
+            "editable": true
+          }
+        },
+        {
+          "type": "field",
+          "key": "contactPhone",
+          "label": "Phone",
+          "dataType": "string"
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "key": "certifications",
+      "label": "Certifications",
+      "presentation": {
+        "layout": {
+          "page": "Review"
+        }
+      },
+      "children": [
+        {
+          "type": "field",
+          "key": "attestationAccepted",
+          "label": "I certify this request is accurate",
+          "dataType": "boolean"
+        }
+      ]
+    }
+  ],
+  "binds": [
+    {
+      "path": "applicant.orgEin",
+      "required": "true",
+      "whitespace": "remove",
+      "constraint": "matches($, '^[0-9]{9}$')",
+      "constraintMessage": "Enter a 9-digit EIN without punctuation."
+    },
+    {
+      "path": "project.requestAmount",
+      "required": "true",
+      "constraint": "moneyAmount($) > 0 and moneyAmount($) <= @instance('grantRules').maxRequest",
+      "constraintMessage": "Requested amount must be positive and within the program maximum."
+    },
+    {
+      "path": "project.subawardRows",
+      "relevant": "$project.hasSubawards = true",
+      "excludedValue": "null",
+      "nonRelevantBehavior": "remove",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "project.subawardRows[*].subawardName",
+      "required": "true"
+    },
+    {
+      "path": "project.subawardRows[*].subawardAmount",
+      "required": "true",
+      "constraint": "moneyAmount($) > 0",
+      "constraintMessage": "Subaward amounts must be positive."
+    },
+    {
+      "path": "project.indirectRate",
+      "relevant": "$project.indirectCostPolicy = 'de-minimis'",
+      "required": "$project.indirectCostPolicy = 'de-minimis'",
+      "default": 10,
+      "constraint": "$ >= 0 and $ <= 25",
+      "constraintMessage": "Indirect rate must be between 0 and 25 percent."
+    },
+    {
+      "path": "project.indirectExplanation",
+      "relevant": "$project.indirectCostPolicy = 'other'",
+      "required": "$project.indirectCostPolicy = 'other'",
+      "default": ""
+    },
+    {
+      "path": "contact.contactEmail",
+      "whitespace": "trim",
+      "constraint": "matches($, '^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')",
+      "constraintMessage": "Enter a valid email address."
+    },
+    {
+      "path": "contact.contactPhone",
+      "whitespace": "remove",
+      "constraint": "empty($) or matches($, '^[0-9]{10}$')",
+      "constraintMessage": "Enter a 10-digit phone number."
+    }
+  ],
+  "shapes": [
+    {
+      "id": "microgrant-contact-channel",
+      "target": "#",
+      "severity": "error",
+      "or": [
+        "present($contact.contactEmail)",
+        "present($contact.contactPhone)"
+      ],
+      "message": "Provide at least one contact channel."
+    },
+    {
+      "id": "microgrant-subaward-cap",
+      "target": "#",
+      "severity": "error",
+      "constraint": "@subawardTotalValue <= (@requestedAmountValue * @instance('grantRules').subawardCapPercent / 100)",
+      "message": "Total subawards cannot exceed {{@instance('grantRules').subawardCapPercent}} percent of the request.",
+      "code": "SUBAWARD_CAP"
+    },
+    {
+      "id": "microgrant-indirect-choice",
+      "target": "#",
+      "severity": "error",
+      "xone": [
+        "$project.indirectCostPolicy = 'none'",
+        "$project.indirectCostPolicy = 'de-minimis' and present($project.indirectRate)",
+        "$project.indirectCostPolicy = 'other' and present($project.indirectExplanation)"
+      ],
+      "message": "Complete exactly one indirect cost path."
+    },
+    {
+      "id": "microgrant-attestation",
+      "target": "#",
+      "severity": "error",
+      "timing": "submit",
+      "constraint": "$certifications.attestationAccepted = true",
+      "message": "The applicant must accept the attestation before submission."
+    }
+  ]
+}

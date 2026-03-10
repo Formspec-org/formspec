@@ -1327,6 +1327,13 @@
           "minItems": 1,
           "description": "Ordered routing rules. Evaluated in declaration order; first match wins."
         },
+        "binds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Bind"
+          },
+          "description": "Bind declarations scoped to screener items. Paths reference screener item keys. Supports required, relevant, constraint, and calculate expressions. These binds are evaluated in the screener's own scope — they do NOT interact with the main form's binds."
+        },
         "extensions": {
           "type": "object",
           "propertyNames": {

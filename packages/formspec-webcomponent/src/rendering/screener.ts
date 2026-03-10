@@ -132,13 +132,19 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             err.remove();
         }
 
-        // Validate: items marked required must be filled; if none are marked
-        // required, at least one answer must be provided to prevent empty routing.
-        const requiredItems = screener.items.filter((it: any) => it.required === true);
+        // Validate: check screener.binds for required fields; if no binds exist,
+        // require at least one answer to prevent empty routing.
+        const binds: any[] = screener.binds || [];
+        const requiredPaths = new Set(
+            binds
+                .filter((b: any) => b.required === 'true' || b.required === true)
+                .map((b: any) => b.path)
+        );
         let valid = true;
 
-        if (requiredItems.length > 0) {
-            for (const item of requiredItems) {
+        if (requiredPaths.size > 0) {
+            for (const item of screener.items) {
+                if (!requiredPaths.has(item.key)) continue;
                 const val = answers[item.key];
                 if (val == null || val === '') {
                     valid = false;
@@ -152,7 +158,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
                 }
             }
         } else {
-            // No explicit required flags — require at least one non-null answer
+            // No explicit required binds — require at least one non-null answer
             const hasAny = screener.items.some((it: any) => {
                 const val = answers[it.key];
                 return val != null && val !== '';
