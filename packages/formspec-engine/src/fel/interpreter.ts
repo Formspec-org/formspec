@@ -361,8 +361,9 @@ export class FelInterpreter extends BaseVisitor {
     },
     upper: (s: string) => (s || '').toUpperCase(),
     /** Rounds a number to `p` decimal places (default 0). Uses banker's-style Math.round. */
-    round: (n: number, p: number = 0) => {
-        const factor = Math.pow(10, p);
+    round: (n: any, p: any = 0) => {
+        if (n === null || n === undefined) return null;
+        const factor = Math.pow(10, p || 0);
         return Math.round(n * factor) / factor;
     },
     year: (d: string) => d ? new Date(d).getFullYear() : null,
@@ -373,8 +374,8 @@ export class FelInterpreter extends BaseVisitor {
     /** Inverse of isNull — returns true if the value is non-null, defined, and non-empty. */
     present: (a: any) => a !== null && a !== undefined && a !== '',
     contains: (s: string, sub: string) => (s || '').includes(sub || ''),
-    abs: (n: number) => Math.abs(n || 0),
-    power: (b: number, e: number) => Math.pow(b || 0, e || 0),
+    abs: (n: any) => n === null || n === undefined ? null : Math.abs(n),
+    power: (b: any, e: any) => (b === null || e === null || b === undefined || e === undefined) ? null : Math.pow(b, e),
     /** Returns true if the value is null, undefined, empty string, or an empty array. */
     empty: (v: any) => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0),
     /** Adds `n` units (days/months/years) to an ISO date string. Returns an ISO date string or null. */
@@ -436,8 +437,8 @@ export class FelInterpreter extends BaseVisitor {
     lower: (s: string) => (s || '').toLowerCase(),
     trim: (s: string) => (s || '').trim(),
     matches: (s: string, pat: string) => new RegExp(pat).test(s || ''),
-    floor: (n: number) => Math.floor(n || 0),
-    ceil: (n: number) => Math.ceil(n || 0),
+    floor: (n: any) => n === null || n === undefined ? null : Math.floor(n),
+    ceil: (n: any) => n === null || n === undefined ? null : Math.ceil(n),
     today: () => new Date().toISOString().split('T')[0],
     now: () => new Date().toISOString(),
     month: (d: string) => d ? new Date(d).getMonth() + 1 : null,
