@@ -51,7 +51,7 @@ Tests the TypeScript reference implementation of the Formspec engine.
 - **FEL Semantics:** Core logic for null handling, type discipline, and complex value semantics.
 - **State Management:** Reactive calculation chains, validation triggers, and repeat group lifecycle.
 - **Data Binding:** Path resolution, value coercion, and response pruning.
-- **Conformance:** Verification against the `core-semantics-matrix.json` for parity with Python.
+- **Conformance:** Shared-suite parity against Python via `tests/conformance/suite/*.json` and `shared-suite.test.mjs`.
 
 ### 🏗 `packages/formspec-webcomponent/tests/`
 Tests the Web Component renderer and UI integration logic.
@@ -114,4 +114,4 @@ python3 -m pytest tests/ --cov=src/formspec --cov-report=term
 2. **New Schema constraint?** Add to `tests/conformance/schemas/`.
 3. **Integration scenario?** Add to `tests/integration/`.
 4. **User journey?** Add to `tests/e2e/browser/` as a Playwright spec.
-5. **Standard rule?** Add to `tests/conformance/parity/` or `tests/conformance/spec/`.
+5. **Cross-runtime parity rule?** Add a case under `tests/conformance/suite/` and run both native shared-suite runners.

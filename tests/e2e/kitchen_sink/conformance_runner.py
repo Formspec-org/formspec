@@ -8,16 +8,13 @@ This runner covers static/schema + runtime-tooling phases:
 - Phase 6: extension registry checks
 - Phase 7: changelog/migration impact checks
 
-Browser/runtime interaction phases (2/3/4/8) are covered by Playwright.
+Browser/runtime interaction phases (2/3/4) are covered by Playwright/browser suites.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
-import subprocess
-import sys
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -408,97 +405,12 @@ class Runner:
             },
         )
 
-    def phase_8_parity_handoff(self) -> None:
-        parity_doc = self.load_fixture("parity-cases.json")
-        cases = parity_doc.get("cases")
-        if not isinstance(cases, list) or not cases:
-            self.add(
-                check_id="P8-PARITY-HANDOFF",
-                phase="phase_8",
-                matrix_sections=["11"],
-                ks_ids=["KS-064", "KS-065", "KS-075"],
-                status="fail",
-                detail="Parity handoff fixture is missing executable cases",
-                evidence={"case_count": 0 if not isinstance(cases, list) else len(cases)},
-            )
-            return
-
-        evaluator = ROOT / "tests" / "e2e" / "kitchen_sink" / "python_fel_eval.py"
-        env = os.environ.copy()
-        src_path = str(ROOT / "src")
-        existing_pythonpath = env.get("PYTHONPATH")
-        env["PYTHONPATH"] = src_path if not existing_pythonpath else f"{src_path}{os.pathsep}{existing_pythonpath}"
-
-        proc = subprocess.run(
-            [sys.executable, str(evaluator)],
-            input=json.dumps({"cases": cases}),
-            text=True,
-            capture_output=True,
-            env=env,
-            check=False,
-        )
-        if proc.returncode != 0:
-            self.add(
-                check_id="P8-PARITY-HANDOFF",
-                phase="phase_8",
-                matrix_sections=["11"],
-                ks_ids=["KS-064", "KS-065", "KS-075"],
-                status="fail",
-                detail="Python parity evaluator execution failed",
-                evidence={"returncode": proc.returncode, "stderr": proc.stderr.strip()[:400]},
-            )
-            return
-
-        try:
-            parsed = json.loads(proc.stdout)
-        except json.JSONDecodeError as exc:
-            self.add(
-                check_id="P8-PARITY-HANDOFF",
-                phase="phase_8",
-                matrix_sections=["11"],
-                ks_ids=["KS-064", "KS-065", "KS-075"],
-                status="fail",
-                detail="Python parity evaluator produced invalid JSON",
-                evidence={"error": str(exc), "stdout": proc.stdout[:400]},
-            )
-            return
-
-        results = parsed.get("results")
-        if not isinstance(results, list):
-            self.add(
-                check_id="P8-PARITY-HANDOFF",
-                phase="phase_8",
-                matrix_sections=["11"],
-                ks_ids=["KS-064", "KS-065", "KS-075"],
-                status="fail",
-                detail="Python parity evaluator output is missing results array",
-                evidence={"output_keys": sorted(parsed.keys()) if isinstance(parsed, dict) else []},
-            )
-            return
-
-        failed_ids = [result.get("id") for result in results if not result.get("ok")]
-        status = "pass" if (len(results) == len(cases) and not failed_ids) else "fail"
-        self.add(
-            check_id="P8-PARITY-HANDOFF",
-            phase="phase_8",
-            matrix_sections=["11"],
-            ks_ids=["KS-064", "KS-065", "KS-075"],
-            status=status,
-            detail="Parity handoff cases execute cleanly in Python before TS/Python replay in Playwright",
-            evidence={
-                "case_count": len(cases),
-                "result_count": len(results),
-                "failed_ids": failed_ids,
-            },
-        )
-
     def run(self) -> dict[str, Any]:
         self.phase_0_schema_validation()
         self.phase_1_lint_and_negative()
         self.phase_5_mapping()
         self.phase_6_registry()
         self.phase_7_changelog()
-        self.phase_8_parity_handoff()
 
         by_status = {"pass": 0, "fail": 0, "skip": 0}
         for check in self.checks:

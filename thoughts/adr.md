@@ -352,11 +352,11 @@ Component test gap remains significant:
 
 **What it is:** A phased plan for a single holistic end-to-end scenario that proves the full system works: authoring contracts (all 6 schema types), runtime behavior (engine + web component + FEL + validation), response artifacts, migration, and cross-implementation parity (TS vs Python).
 
-**Implementation status:** **Fully implemented.** Complete multi-document bundle in `tests/e2e/fixtures/kitchen-sink-holistic/` (definition v1+v2, theme, component, mapping, registry, changelog, parity-cases). Python conformance runner (`tests/e2e/kitchen_sink/conformance_runner.py`) covers phases 0–1 and 5–8. Playwright spec (`tests/e2e/playwright/integration/kitchen-sink-holistic-conformance.spec.ts`) covers phases 2–4 and parity replay (phase 8). Smoke fixtures and smoke spec also added.
+**Implementation status:** **Implemented and later re-homed.** The multi-document kitchen-sink bundle remains in `tests/e2e/fixtures/kitchen-sink-holistic/` for synthetic coverage, while cross-runtime parity ownership moved to the shared conformance suite (`tests/conformance/suite/*.json` with native Python/Node runners). Kitchen-sink browser coverage is now UI-focused (`tests/e2e/browser/kitchen-sink-holistic-ui.spec.ts`) and runtime-only checks were re-homed into engine `node:test` integration coverage.
 
-**Assessment:** Provides the holistic release-readiness signal the project needed. All 9 spec sections covered across the matrix.
+**Assessment:** Still provides holistic signal, but parity now lives in the native shared-suite architecture rather than browser/subprocess parity replay.
 
-**Verdict:** **Archive** — implementation complete. Run the conformance runner and Playwright suite to gate releases.
+**Verdict:** **Archive** — implementation complete. Use the shared conformance runners for parity gates and browser suites for UI workflow gates.
 
 ---
 

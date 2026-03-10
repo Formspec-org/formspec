@@ -1,0 +1,24 @@
+{
+  "id": "fel.date_compare",
+  "kind": "FEL_EVALUATION",
+  "expression": "endDate >= startDate",
+  "comparator": "exact",
+  "fields": [
+    { "key": "startDate", "dataType": "date", "value": "2026-01-01" },
+    { "key": "endDate", "dataType": "date", "value": "2026-01-15" }
+  ],
+  "inputData": {},
+  "expected": {
+    "value": true
+  },
+  "legacyCoverage": [
+    {
+      "path": "tests/e2e/fixtures/kitchen-sink-holistic/parity-cases.json",
+      "check": "date_compare"
+    },
+    {
+      "path": "tests/conformance/parity/kitchen-sink-holistic.spec.ts",
+      "check": "P8-TS-PY-FEL-PARITY"
+    }
+  ]
+}

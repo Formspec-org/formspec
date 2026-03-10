@@ -1,0 +1,23 @@
+{
+  "id": "fel.membership",
+  "kind": "FEL_EVALUATION",
+  "expression": "'priority' in tags",
+  "comparator": "exact",
+  "fields": [
+    { "key": "tags", "dataType": "multiChoice", "value": ["new", "priority"] }
+  ],
+  "inputData": {},
+  "expected": {
+    "value": true
+  },
+  "legacyCoverage": [
+    {
+      "path": "tests/e2e/fixtures/kitchen-sink-holistic/parity-cases.json",
+      "check": "membership"
+    },
+    {
+      "path": "tests/conformance/parity/kitchen-sink-holistic.spec.ts",
+      "check": "P8-TS-PY-FEL-PARITY"
+    }
+  ]
+}

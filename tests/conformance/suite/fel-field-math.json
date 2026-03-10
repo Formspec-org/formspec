@@ -1,0 +1,24 @@
+{
+  "id": "fel.field_math",
+  "kind": "FEL_EVALUATION",
+  "expression": "budget + grandTotal",
+  "comparator": "tolerant-decimal",
+  "fields": [
+    { "key": "budget", "dataType": "decimal", "value": 100 },
+    { "key": "grandTotal", "dataType": "decimal", "value": 250 }
+  ],
+  "inputData": {},
+  "expected": {
+    "value": 350
+  },
+  "legacyCoverage": [
+    {
+      "path": "tests/e2e/fixtures/kitchen-sink-holistic/parity-cases.json",
+      "check": "field_math"
+    },
+    {
+      "path": "tests/conformance/parity/kitchen-sink-holistic.spec.ts",
+      "check": "P8-TS-PY-FEL-PARITY"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "grant-application.submit-valid",
+  "kind": "RESPONSE_VALIDATION",
+  "definitionPath": "examples/grant-application/definition.json",
+  "registryPaths": [
+    "registries/formspec-common.registry.json"
+  ],
+  "payloadPath": "examples/grant-application/fixtures/sample-submission.json",
+  "mode": "submit",
+  "skipScreener": true,
+  "expected": {
+    "report": {
+      "valid": true,
+      "counts": {
+        "error": 0,
+        "warning": 0,
+        "info": 0
+      },
+      "results": []
+    },
+    "response": {
+      "validationResults": []
+    }
+  },
+  "legacyCoverage": [
+    {
+      "path": "tests/e2e/headless/test_grant_app_processing.py",
+      "check": "TestGrantApplicationIntegration::test_valid_submission_passes"
+    },
+    {
+      "path": "tests/conformance/parity/kitchen-sink-holistic.spec.ts",
+      "check": "P4-RESPONSE-AND-REPORT-CONTRACT"
+    }
+  ]
+}

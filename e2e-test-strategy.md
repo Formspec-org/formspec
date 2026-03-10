@@ -15,7 +15,7 @@ cross-field constraints, conditional visibility, and a full definition+component
 
 Synthetic fixtures are kept only where the grant-application genuinely cannot serve: deeply nested
 repeats (3+ levels), exhaustive FEL stdlib isolation, NaN coercion edge cases, types not present
-in the grant-app (`uri`, `time`, `dateTime`), and the formal holistic conformance suite.
+in the grant-app (`uri`, `time`, `dateTime`), and kitchen-sink UI/component-specific checks.
 
 ---
 
@@ -41,9 +41,9 @@ in the grant-app (`uri`, `time`, `dateTime`), and the formal holistic conformanc
 | `integration/nested-repeats-and-calculations.spec.ts` | 2-level nested repeatables (projectPhases → phaseTasks); grant-app has this but the test isolates the nesting specifically |
 | `integration/fel-standard-library-ui.spec.ts` | FEL stdlib coverage for 40+ functions — purpose-built isolation |
 | `integration/edge-case-behaviors.spec.ts` | NaN coercion, null × number stability — not realistic in grant context |
-| `integration/kitchen-sink-holistic-conformance.spec.ts` | Formal conformance: all 13 dataTypes, TS/Python parity, instance injection, migrations |
+| `browser/kitchen-sink-holistic-ui.spec.ts` | Kitchen-sink UI-only coverage for component/theme runtime and `when` vs `relevant` behavior |
 | `components/*.spec.ts` | Component unit tests on minimal inline definitions (7 files) |
-| `fixtures/kitchen-sink-holistic/` | Holistic conformance fixture |
+| `fixtures/kitchen-sink-holistic/` | Synthetic fixture for kitchen-sink UI checks and runtime re-homed engine tests |
 | `fixtures/edge-cases.json` | NaN coercion fixture |
 | `fixtures/fel-functions.json` | FEL stdlib fixture |
 | `fixtures/data-types.json` | Types not in grant-app: `dateTime`, `uri`, `time` |

@@ -1,0 +1,23 @@
+{
+  "id": "fel.coalesce_function",
+  "kind": "FEL_EVALUATION",
+  "expression": "coalesce(null, vipCode, 'NONE')",
+  "comparator": "exact",
+  "fields": [
+    { "key": "vipCode", "dataType": "string", "value": "VIP-42" }
+  ],
+  "inputData": {},
+  "expected": {
+    "value": "VIP-42"
+  },
+  "legacyCoverage": [
+    {
+      "path": "tests/e2e/fixtures/kitchen-sink-holistic/parity-cases.json",
+      "check": "coalesce_function"
+    },
+    {
+      "path": "tests/conformance/parity/kitchen-sink-holistic.spec.ts",
+      "check": "P8-TS-PY-FEL-PARITY"
+    }
+  ]
+}

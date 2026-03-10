@@ -36,7 +36,7 @@ The spec (§6.6.2 Assembly, rule 3) requires: "Binds, Shapes, and Variables from
 
 ### Test Coverage
 
-One E2E test in `tests/e2e/playwright/conformance/kitchen-sink-holistic.spec.ts` (`P2-SCREENER-AND-ASSEMBLY`) exercises basic `$ref` resolution with `keyPrefix`. No dedicated unit tests. No FEL rewriting tests (since it's not implemented).
+Engine integration coverage now includes dedicated `$ref`/assembly tests, including `packages/formspec-engine/tests/kitchen-sink-runtime-rehomed.test.mjs` for screener+assembly behavior and the assembler-focused test suite under `packages/formspec-engine/tests/assembler-*.test.mjs`.
 
 ---
 

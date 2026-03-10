@@ -1,0 +1,23 @@
+{
+  "id": "fel.if_function",
+  "kind": "FEL_EVALUATION",
+  "expression": "if(agreed, 'yes', 'no')",
+  "comparator": "exact",
+  "fields": [
+    { "key": "agreed", "dataType": "boolean", "value": true }
+  ],
+  "inputData": {},
+  "expected": {
+    "value": "yes"
+  },
+  "legacyCoverage": [
+    {
+      "path": "tests/e2e/fixtures/kitchen-sink-holistic/parity-cases.json",
+      "check": "if_function"
+    },
+    {
+      "path": "tests/conformance/parity/kitchen-sink-holistic.spec.ts",
+      "check": "P8-TS-PY-FEL-PARITY"
+    }
+  ]
+}

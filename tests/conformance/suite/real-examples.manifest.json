@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "description": "Curated example-backed shared-suite cases. Runners must not auto-discover examples/.",
+  "caseFiles": [
+    "grant-application-submit-valid.json"
+  ]
+}

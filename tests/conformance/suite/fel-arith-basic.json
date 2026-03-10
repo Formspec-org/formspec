@@ -1,0 +1,21 @@
+{
+  "id": "fel.arith_basic",
+  "kind": "FEL_EVALUATION",
+  "expression": "1 + 2",
+  "comparator": "tolerant-decimal",
+  "fields": [],
+  "inputData": {},
+  "expected": {
+    "value": 3
+  },
+  "legacyCoverage": [
+    {
+      "path": "tests/e2e/fixtures/kitchen-sink-holistic/parity-cases.json",
+      "check": "arith_basic"
+    },
+    {
+      "path": "tests/conformance/parity/kitchen-sink-holistic.spec.ts",
+      "check": "P8-TS-PY-FEL-PARITY"
+    }
+  ]
+}

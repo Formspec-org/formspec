@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/conformance-suite/1.0",
+  "title": "Formspec Shared Conformance Suite Case",
+  "description": "Canonical shared-case contract for cross-runtime conformance checks executed by both Python and TypeScript runners.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "expected", "legacyCoverage"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "Stable, unique case identifier."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "FEL_EVALUATION",
+        "ENGINE_PROCESSING",
+        "VALIDATION_REPORT",
+        "RESPONSE_VALIDATION"
+      ],
+      "description": "Execution mode for this case."
+    },
+    "definitionPath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repository-relative path to the form definition fixture."
+    },
+    "registryPaths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "description": "Optional repository-relative registry fixtures to load."
+    },
+    "payloadPath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repository-relative path to the input payload fixture."
+    },
+    "inputData": {
+      "description": "Inline input payload."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["continuous", "submit"],
+      "description": "Validation mode to run for processing/report/response kinds."
+    },
+    "skipScreener": {
+      "type": "boolean",
+      "description": "When true, runners should skip screener entry before evaluating the main definition."
+    },
+    "expression": {
+      "type": "string",
+      "minLength": 1,
+      "description": "FEL expression for FEL_EVALUATION cases."
+    },
+    "comparator": {
+      "type": "string",
+      "enum": ["exact", "normalized", "tolerant-decimal"],
+      "description": "Comparison strategy for FEL_EVALUATION cases."
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key"],
+        "properties": {
+          "key": { "type": "string", "minLength": 1 },
+          "dataType": { "type": "string", "minLength": 1 },
+          "value": {}
+        }
+      },
+      "description": "Field declarations and values for FEL_EVALUATION cases."
+    },
+    "compareResponseData": {
+      "type": "boolean",
+      "description": "When true, RESPONSE_VALIDATION compares normalized response.data in addition to validation artifacts."
+    },
+    "expected": {
+      "type": "object",
+      "description": "Canonical expected output after shared normalization."
+    },
+    "legacyCoverage": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "check"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repository-relative path of the replaced legacy test surface."
+          },
+          "check": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Legacy test id/name/check this case replaces."
+          }
+        }
+      },
+      "description": "Explicit mapping of this shared case to replaced legacy checks."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "kind": { "const": "FEL_EVALUATION" } },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["expression", "comparator"],
+        "properties": {
+          "fields": { "type": "array" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "kind": { "enum": ["ENGINE_PROCESSING", "VALIDATION_REPORT", "RESPONSE_VALIDATION"] } },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["definitionPath"],
+        "oneOf": [
+          { "required": ["payloadPath"] },
+          { "required": ["inputData"] }
+        ]
+      }
+    }
+  ]
+}
