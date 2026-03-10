@@ -16,7 +16,7 @@ test.describe('Grant App: Wizard Navigation', () => {
   });
 
   test('should render 5 wizard step indicators', async ({ page }) => {
-    const steps = page.locator('.formspec-wizard-step, [data-page], .formspec-wizard-steps li');
+    const steps = page.locator('.formspec-wizard-step, .formspec-wizard-sidenav-item, [data-page], .formspec-wizard-steps li');
     const count = await steps.count();
     expect(count).toBeGreaterThanOrEqual(4);
   });
@@ -68,5 +68,19 @@ test.describe('Grant App: Wizard Navigation', () => {
     const checkboxGroup = page.locator('.formspec-checkbox-group, [data-name="focusAreas"]');
     const exists = await checkboxGroup.count();
     expect(exists).toBeGreaterThan(0);
+  });
+
+  test('sidenav labels show page titles not "Step N" placeholders', async ({ page }) => {
+    const labels = page.locator('.formspec-wizard-sidenav-label');
+    const count = await labels.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      const text = await labels.nth(i).textContent();
+      expect(text?.trim()).not.toMatch(/^Step \d+$/);
+      expect(text?.trim().length).toBeGreaterThan(0);
+    }
+    // Spot-check first and second labels against known grant app page names
+    await expect(labels.nth(0)).toHaveText('Applicant Info');
+    await expect(labels.nth(1)).toHaveText('Project Narrative');
   });
 });
