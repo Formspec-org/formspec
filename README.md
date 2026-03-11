@@ -125,11 +125,12 @@ Neither runtime imports or wraps the other. They are independently deployable, i
 | Components | [Component Spec](specs/component/component-spec.md) | [`component`](schemas/component.schema.json) |
 | Mapping | [Mapping DSL](specs/mapping/mapping-spec.md) | [`mapping`](schemas/mapping.schema.json) |
 | Extensions | [Extension Registry](specs/registry/extension-registry.md) · [Changelog](specs/registry/changelog-spec.md) | [`registry`](schemas/registry.schema.json) · [`changelog`](schemas/changelog.schema.json) |
+| Catalogs | — | [`FEL functions`](schemas/fel-functions.schema.json) · [`Studio commands`](schemas/studio-commands.schema.json) |
 
 ## Repository Structure
 
 ```
-schemas/                        JSON Schema files (11 schemas — the structural source of truth)
+schemas/                        JSON Schema files (12 schemas + 2 catalogs — the structural source of truth)
 specs/                          Normative specifications organized by tier
 registries/                     Extension registries (common: email, phone, currency, SSN, etc.)
 
