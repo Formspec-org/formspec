@@ -139,8 +139,7 @@ packages/
   formspec-webcomponent/        <formspec-render> — component registry, theme resolver, 33 plugins
   formspec-layout/              Theme cascade resolution, responsive design, grid layout
   formspec-studio-core/         Authoring core — command model, undo/redo, queries, diagnostics (powers CLI, LLM, Form Builder)
-
-form-builder/                   Visual form editor (Preact) — drag-and-drop, inspector, logic builders
+  formspec-studio/              Visual form editor (React 19) — desktop-first authoring, inspector, logic builders
 
 src/formspec/                   Python implementation
   fel/                            FEL parser, AST, evaluator, dependency extractor

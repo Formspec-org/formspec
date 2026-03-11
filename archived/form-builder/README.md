@@ -1,6 +1,16 @@
-# Formspec Studio v2 (`form-builder`)
+# ⚠️ ARCHIVED: Formspec Studio v2 (`form-builder`)
 
-Formspec Studio v2 is a document-first authoring app for Formspec artifacts.
+**This package is archived and no longer maintained.** It has been superseded by the React 19-based `packages/formspec-studio/` implementation.
+
+For active development, use [`packages/formspec-studio/`](../../packages/formspec-studio/) instead.
+
+This code is preserved in git history for reference only. Do not use for new work.
+
+---
+
+## Historical Documentation
+
+Formspec Studio v2 was a document-first authoring app for Formspec artifacts.
 It provides a live editing surface, contextual inspector, diagnostics, and preview while keeping Definition, Component, Theme, and Mapping artifacts synchronized.
 
 ## Quick Start
