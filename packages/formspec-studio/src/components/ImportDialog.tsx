@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useDispatch } from '../state/useDispatch';
 
 interface ImportDialogProps {
   open: boolean;
@@ -8,6 +9,7 @@ interface ImportDialogProps {
 const ARTIFACT_TYPES = ['Definition', 'Component', 'Theme', 'Mapping'] as const;
 
 export function ImportDialog({ open, onClose }: ImportDialogProps) {
+  const dispatch = useDispatch();
   const [selectedType, setSelectedType] = useState<string>(ARTIFACT_TYPES[0]);
   const [jsonText, setJsonText] = useState('');
 
@@ -67,6 +69,19 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
           <button
             className="px-3 py-1.5 text-sm rounded bg-accent text-on-accent hover:opacity-90"
             disabled={!jsonText.trim()}
+            onClick={() => {
+              try {
+                const parsed = JSON.parse(jsonText);
+                const artifactKey = selectedType.toLowerCase();
+                dispatch({
+                  type: 'project.import',
+                  payload: { [artifactKey]: parsed },
+                });
+                onClose();
+              } catch (e) {
+                // ignore parse errors for now
+              }
+            }}
           >
             Load
           </button>

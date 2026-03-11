@@ -6,9 +6,10 @@ const TABS = ['Editor', 'Logic', 'Data', 'Theme', 'Mapping', 'Preview'] as const
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onImport: () => void;
 }
 
-export function Header({ activeTab, onTabChange }: HeaderProps) {
+export function Header({ activeTab, onTabChange, onImport }: HeaderProps) {
   const project = useProject();
   const state = useProjectState();
 
@@ -40,8 +41,15 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
         ))}
       </nav>
 
-      {/* Right: undo/redo */}
+      {/* Right: import + undo/redo */}
       <div className="flex items-center gap-1">
+        <button
+          data-testid="import-btn"
+          className="px-2 py-1 text-sm rounded hover:bg-surface-hover"
+          onClick={onImport}
+        >
+          Import
+        </button>
         <button
           data-testid="undo-btn"
           aria-label="Undo"

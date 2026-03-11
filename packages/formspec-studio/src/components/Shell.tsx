@@ -10,6 +10,8 @@ import { DataTab } from '../workspaces/data/DataTab';
 import { ThemeTab } from '../workspaces/theme/ThemeTab';
 import { MappingTab } from '../workspaces/mapping/MappingTab';
 import { PreviewTab } from '../workspaces/preview/PreviewTab';
+import { CommandPalette } from './CommandPalette';
+import { ImportDialog } from './ImportDialog';
 import { handleKeyboardShortcut } from '../lib/keyboard';
 import { useProject } from '../state/useProject';
 import { useSelection } from '../state/useSelection';
@@ -26,6 +28,8 @@ const WORKSPACES: Record<string, React.FC> = {
 export function Shell() {
   const [activeTab, setActiveTab] = useState<string>('Editor');
   const [activeSection, setActiveSection] = useState<string>('Structure');
+  const [showPalette, setShowPalette] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const WorkspaceComponent = WORKSPACES[activeTab];
   const project = useProject();
   const { deselect } = useSelection();
@@ -36,8 +40,8 @@ export function Shell() {
         undo: () => project.undo(),
         redo: () => project.redo(),
         delete: () => {},
-        escape: () => deselect(),
-        search: () => {},
+        escape: () => { setShowPalette(false); deselect(); },
+        search: () => setShowPalette(true),
       });
     };
     window.addEventListener('keydown', onKeyDown);
@@ -46,7 +50,7 @@ export function Shell() {
 
   return (
     <div data-testid="shell" className="h-screen flex flex-col bg-bg-default text-ink font-ui">
-      <Header activeTab={activeTab} onTabChange={setActiveTab} />
+      <Header activeTab={activeTab} onTabChange={setActiveTab} onImport={() => setShowImport(true)} />
       <div className="flex flex-1 overflow-hidden">
         <aside className="w-64 border-r border-border bg-surface overflow-y-auto flex flex-col">
           <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
@@ -69,6 +73,8 @@ export function Shell() {
         </aside>
       </div>
       <StatusBar />
+      <CommandPalette open={showPalette} onClose={() => setShowPalette(false)} />
+      <ImportDialog open={showImport} onClose={() => setShowImport(false)} />
     </div>
   );
 }

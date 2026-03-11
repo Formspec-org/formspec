@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useDefinition } from '../state/useDefinition';
+import { useSelection } from '../state/useSelection';
 import { flatItems } from '../lib/field-helpers';
 
 interface CommandPaletteProps {
@@ -9,6 +10,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const definition = useDefinition();
+  const { select } = useSelection();
   const [search, setSearch] = useState('');
 
   if (!open) return null;
@@ -47,7 +49,12 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             <div>
               <div className="px-2 py-1 text-xs text-muted font-medium uppercase">Items</div>
               {filteredItems.map((fi) => (
-                <div key={fi.path} className="px-3 py-2 text-sm rounded hover:bg-surface-hover cursor-pointer">
+                <div
+                  key={fi.path}
+                  data-testid="palette-result"
+                  className="px-3 py-2 text-sm rounded hover:bg-surface-hover cursor-pointer"
+                  onClick={() => { select(fi.path, (fi.item as any).type); onClose(); }}
+                >
                   <span className="font-medium">{fi.path}</span>
                   {(fi.item as any).label && (
                     <span className="ml-2 text-muted">{(fi.item as any).label}</span>
