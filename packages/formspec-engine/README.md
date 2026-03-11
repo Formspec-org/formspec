@@ -440,7 +440,7 @@ interface RewriteMap {
 | Bare `$` (current-node) | `$ >= 0` | unchanged |
 | External paths | `$externalField` | unchanged |
 | Context vars (`@index`, `@count`) | `@index > 0` | unchanged |
-| Variable refs (`#:name`) | `#:budgetComplete` | unchanged |
+| Variable refs (`@name`) | `@budgetComplete` | unchanged |
 | `@instance(...)` | `@instance('data').field` | unchanged |
 
 **Properties rewritten during assembly:**

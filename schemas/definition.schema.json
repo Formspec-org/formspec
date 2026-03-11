@@ -248,7 +248,7 @@
       "items": {
         "$ref": "#/$defs/Variable"
       },
-      "description": "Named computed values with lexical scoping, continuously recalculated when dependencies change. Variables provide intermediate calculations reusable across Binds, Shapes, and other expressions without repetition. Referenced in FEL as #:variableName (engine) or @variableName (spec). MUST NOT form circular dependencies.",
+      "description": "Named computed values with lexical scoping, continuously recalculated when dependencies change. Variables provide intermediate calculations reusable across Binds, Shapes, and other expressions without repetition. Referenced in FEL expressions as @variableName. MUST NOT form circular dependencies.",
       "examples": [
         [
           {
@@ -258,7 +258,7 @@
           },
           {
             "name": "indirectAmount",
-            "expression": "#:totalDirect * $indirectRate",
+            "expression": "@totalDirect * $indirectRate",
             "scope": "budgetSection"
           }
         ]
@@ -1175,7 +1175,7 @@
         "name": {
           "type": "string",
           "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
-          "description": "Variable name. Referenced in FEL expressions as #:name (engine implementation) or @name (spec notation). MUST be unique within its scope.",
+          "description": "Variable name. Referenced in FEL expressions as @name. MUST be unique within its scope.",
           "examples": [
             "totalDirect",
             "indirectAmount",
@@ -1187,7 +1187,7 @@
           "description": "FEL expression that computes this variable's value. Evaluated in the context of the scope item. Re-evaluated whenever any dependency changes.",
           "examples": [
             "sum($lineItems[*].amount)",
-            "#:totalDirect * $indirectRate",
+            "@totalDirect * $indirectRate",
             "@instance('priorYear').totalExpenditure"
           ]
         },

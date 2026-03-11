@@ -239,6 +239,7 @@ npm run test:all           # Everything
 ## Roadmap
 
 - [ ] **Rust linter core** — Rewrite the linter in Rust and expose it via PyO3 (Python bindings) and WASM (browser/Node). Single implementation, three targets: CLI, server library, in-browser studio diagnostics.
+- [ ] **Variable name shadowing validation** — FEL uses `@name` for both reserved context references (`@current`, `@index`, `@count`, `@instance`) and user-defined variable references. Variable names that collide with reserved context names silently shadow them. Add a validation rule (linter + schema `not enum`) that rejects variable names matching the reserved set.
 
 ## Status
 
