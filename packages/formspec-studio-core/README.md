@@ -2,14 +2,14 @@
 
 Pure TypeScript library for creating and editing Formspec artifact bundles. Every edit is a serializable command dispatched against a `Project` instance.
 
-This package is the authoring core for Formspec Studio and other tooling. It manages four editable artifacts together:
+This package is the **authoring core** that powers Formspec tooling — CLI tools, LLM agents, and visual editors like the Form Builder all drive it through the same command API. It uses `formspec-engine` for FEL compilation, dependency analysis, and schema validation, but has no framework bindings, no singleton state, and no UI concerns.
 
-- `definition` for form structure and behavior
-- `component` for UI tree and widget configuration
-- `theme` for presentation and cascade rules
-- `mapping` for inbound and outbound data transforms
+It manages four editable artifacts together:
 
-It has no framework bindings, no singleton state, and no UI concerns.
+- `definition` — form structure and behavior (items, binds, shapes, variables)
+- `component` — UI tree and widget configuration
+- `theme` — presentation tokens and cascade rules
+- `mapping` — inbound and outbound data transforms
 
 ## Install
 
@@ -154,9 +154,9 @@ Query helpers:
 - `previewChangelog()` — structured diff preview without publishing
 - `diffFromBaseline(fromVersion?)` — raw change list from a baseline version
 
-## Command Model
+## Command Catalog
 
-Commands are plain serializable objects:
+122 commands across 15 areas. Commands are plain serializable objects:
 
 ```ts
 {
@@ -170,17 +170,21 @@ Commands are plain serializable objects:
 }
 ```
 
-Built-in command areas currently include:
+The full command catalog — every type string, payload shape, and side effect — is machine-readable at [`schemas/studio-commands.schema.json`](../../schemas/studio-commands.schema.json). LLM agents and CLI tools can consume this catalog to discover and construct valid commands.
 
-- `definition.*` for items, binds, shapes, variables, option sets, instances, pages, screener, migrations, and metadata
-- `component.*` for component tree structure and node properties
-- `theme.*` for tokens, defaults, selectors, item overrides, pages, breakpoints, and stylesheets
-- `mapping.*` for mapping rules and document-level mapping configuration
-- `project.*` for whole-project import, subform import, registry loading, and publishing
+Command areas:
 
-Handlers self-register at module load time. Consumers usually do not interact with handlers directly; `Project` dispatch does that for you.
+| Area | Commands | Description |
+|------|----------|-------------|
+| `definition.*` | 48 | Items, binds, shapes, variables, option sets, instances, pages, screener, migrations, metadata |
+| `component.*` | 25 | Component tree structure, node properties, custom components, responsive overrides |
+| `theme.*` | 28 | Tokens, defaults, selectors, item overrides, pages, grid regions, breakpoints, stylesheets |
+| `mapping.*` | 16 | Rules, inner rules, adapter config, preview, extensions |
+| `project.*` | 5 | Import, subform import, registry loading, publishing |
 
-## History And Subscriptions
+Handlers self-register at module load time. Consumers do not interact with handlers directly; `Project.dispatch()` routes to the correct handler.
+
+## History and Subscriptions
 
 Each `Project` instance maintains its own undo stack, redo stack, and append-only command log.
 
@@ -200,9 +204,9 @@ unsubscribe();
 
 `batch()` groups multiple commands into one notification and one undo entry.
 
-## Diagnostics And Analysis
+## Diagnostics and Analysis
 
-`formspec-studio-core` is not just a mutator. It also exposes authoring-time analysis helpers:
+`formspec-studio-core` is not just a mutator. It also exposes authoring-time analysis backed by `formspec-engine`:
 
 `diagnose()` runs four passes on demand and returns grouped results:
 
@@ -222,5 +226,6 @@ npm run test
 
 Package-local references:
 
-- [API.llm.md](./API.llm.md)
-- [api-spec-v3.md](./research/api-spec-v3.md)
+- [API.llm.md](./API.llm.md) — TypeScript API reference (Project class, query methods, interfaces)
+- [Command Catalog](../../schemas/studio-commands.schema.json) — Machine-readable command catalog (122 commands, payload schemas)
+- [api-spec-v3.md](./research/api-spec-v3.md) — Design research
