@@ -1,4 +1,0 @@
-interface:
-  display_name: "Git Commit Organizer"
-  short_description: "Organize uncommitted changes into clean commits"
-  default_prompt: "Analyze my uncommitted git changes, group them into logical commits, and create the commits with concise semantic messages."
