@@ -43,6 +43,9 @@
 | 0032 | [0032-ralph-loop-execution-plan.md](adr/0032-ralph-loop-execution-plan.md) | Proposed | Ralph Loop execution plan: 3 phases x 15 iterations for schema parity |
 | 0033 | [0033-core-semantics-conformance-matrix.md](adr/0033-core-semantics-conformance-matrix.md) | — | Core semantics conformance matrix |
 | 0034 | [0034-reference-examples-smoke-test-issues.md](adr/0034-reference-examples-smoke-test-issues.md) | Proposed | Smoke test issues from reference examples: 6 parallel tracks (FEL bugs, wizard UX, fixture fixes, infra, E2E coverage, smoke test consolidation) |
+| 0035 | [0035-test-suite-reorganization-and-unification.md](adr/0035-test-suite-reorganization-and-unification.md) | Accepted | Test suite reorganization and unification |
+| 0036 | [0036-extract-formspec-studio-core-package.md](adr/0036-extract-formspec-studio-core-package.md) | Proposed | Extract `formspec-studio-core` package |
+| 0037 | [0037-move-python-into-packages-formspec-core.md](adr/0037-move-python-into-packages-formspec-core.md) | Accepted | Move `src/formspec/` into `packages/formspec-core/` with proper `pyproject.toml` |
 
 ---
 
