@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
-import { PropertiesPanel } from './PropertiesPanel';
 import { EditorCanvas } from '../workspaces/editor/EditorCanvas';
+import { ItemProperties } from '../workspaces/editor/ItemProperties';
 import { LogicTab } from '../workspaces/logic/LogicTab';
 import { DataTab } from '../workspaces/data/DataTab';
 import { ThemeTab } from '../workspaces/theme/ThemeTab';
@@ -36,8 +36,8 @@ export function Shell() {
             {WorkspaceComponent ? <WorkspaceComponent /> : activeTab}
           </div>
         </main>
-        <aside className="w-72 border-l border-border bg-surface overflow-y-auto">
-          <PropertiesPanel />
+        <aside className="w-72 border-l border-border bg-surface overflow-y-auto" data-testid="properties">
+          <ItemProperties />
         </aside>
       </div>
       <StatusBar />

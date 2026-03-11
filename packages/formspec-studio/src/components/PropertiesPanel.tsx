@@ -5,14 +5,14 @@ export function PropertiesPanel() {
 
   if (!selectedKey) {
     return (
-      <div data-testid="properties" className="p-4 text-sm text-muted">
+      <div className="p-4 text-sm text-muted">
         Select an item to inspect
       </div>
     );
   }
 
   return (
-    <div data-testid="properties" className="p-4">
+    <div className="p-4">
       <h2 className="text-sm font-medium mb-2">Properties</h2>
       <dl className="text-sm space-y-2">
         <div>
