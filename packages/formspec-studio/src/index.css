@@ -1,0 +1,28 @@
+/* Google Fonts — must precede tailwindcss import to avoid CSS ordering warning */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+
+/* PRD Design Tokens */
+@theme {
+  /* Colors */
+  --color-ink: #1e293b;
+  --color-bg-default: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-accent: #3b82f6;
+  --color-logic: #8b5cf6;
+  --color-error: #ef4444;
+  --color-muted: #94a3b8;
+  --color-subtle: #f1f5f9;
+  --color-green: #22c55e;
+  --color-amber: #f59e0b;
+
+  /* Fonts */
+  --font-ui: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Border radius */
+  --radius-sm: 3px;
+  --radius-DEFAULT: 4px;
+}
