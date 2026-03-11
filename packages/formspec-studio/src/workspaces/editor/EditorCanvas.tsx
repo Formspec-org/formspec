@@ -75,7 +75,7 @@ function renderItems(
 
 export function EditorCanvas() {
   const definition = useDefinition();
-  const { selectedKey, select } = useSelection();
+  const { selectedKey, select, deselect } = useSelection();
   const dispatch = useDispatch();
   const [showPicker, setShowPicker] = useState(false);
 
@@ -92,7 +92,13 @@ export function EditorCanvas() {
   };
 
   return (
-    <div className="flex flex-col gap-1 p-4">
+    <div
+      className="flex flex-col gap-1 p-4"
+      onClick={(e) => {
+        // Deselect when clicking the canvas background, not a field/group block
+        if (e.target === e.currentTarget) deselect();
+      }}
+    >
       <div className="flex justify-end mb-2">
         <button
           data-testid="add-item"

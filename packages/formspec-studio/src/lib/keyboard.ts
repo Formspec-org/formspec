@@ -10,15 +10,18 @@ export function handleKeyboardShortcut(event: KeyboardEvent, handlers: ShortcutH
   const { key, metaKey, ctrlKey, shiftKey } = event;
   const mod = metaKey || ctrlKey;
 
-  if (mod && shiftKey && key === 'z') {
+  if (mod && shiftKey && (key === 'z' || key === 'Z')) {
+    event.preventDefault();
     handlers.redo();
     return;
   }
-  if (mod && key === 'z') {
+  if (mod && !shiftKey && (key === 'z' || key === 'Z')) {
+    event.preventDefault();
     handlers.undo();
     return;
   }
   if (mod && key === 'k') {
+    event.preventDefault();
     handlers.search();
     return;
   }
