@@ -12,6 +12,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
   const dispatch = useDispatch();
   const [selectedType, setSelectedType] = useState<string>(ARTIFACT_TYPES[0]);
   const [jsonText, setJsonText] = useState('');
+  const [parseError, setParseError] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -51,11 +52,16 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
           <div>
             <label className="block text-xs font-medium text-muted mb-2">JSON Content</label>
             <textarea
-              className="w-full h-40 px-3 py-2 text-sm font-mono bg-bg border border-border rounded resize-none outline-none focus:border-accent"
+              className={`w-full h-40 px-3 py-2 text-sm font-mono bg-bg border rounded resize-none outline-none focus:border-accent ${
+                parseError ? 'border-red-500' : 'border-border'
+              }`}
               placeholder={`Paste ${selectedType.toLowerCase()} JSON here...`}
               value={jsonText}
-              onChange={(e) => setJsonText(e.target.value)}
+              onChange={(e) => { setJsonText(e.target.value); setParseError(null); }}
             />
+            {parseError && (
+              <p className="text-xs text-red-500 mt-1">{parseError}</p>
+            )}
           </div>
         </div>
 
@@ -79,7 +85,7 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
                 });
                 onClose();
               } catch (e) {
-                // ignore parse errors for now
+                setParseError((e as SyntaxError).message);
               }
             }}
           >

@@ -46,13 +46,13 @@ registerHandler('definition.setDefinitionProperty', (state, payload) => {
  * **definition.setFormPresentation** -- Set a property on the definition's
  * `formPresentation` object.
  *
- * Manages form-level presentation settings such as `labelPosition`, `density`,
- * `defaultCurrency`, wizard configuration, and -- critically -- page mode.
+ * Manages form-level presentation settings such as `pageMode`, `labelPosition`,
+ * `density`, `defaultCurrency`, and wizard configuration.
  *
- * For all other properties, `null`/`undefined` deletes the property.
+ * `null`/`undefined` values delete the property.
  *
  * @param payload.property - The formPresentation property to set.
- * @param payload.value - The new value (see special `pages` behavior above).
+ * @param payload.value - The new value, or null/undefined to remove.
  */
 registerHandler('definition.setFormPresentation', (state, payload) => {
   const { property, value } = payload as { property: string; value: unknown };
