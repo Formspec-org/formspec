@@ -148,4 +148,38 @@ describe('diagnose', () => {
     expect(diag.counts.error).toBe(2);    // 2 unresolved extensions
     expect(diag.counts.warning).toBe(1);  // 1 stale mapping
   });
+
+  it('warns about root-level non-group items in paged definitions', () => {
+    const project = createProject();
+    // Add root-level items BEFORE enabling pageMode (the real scenario:
+    // user has a flat form, then enables wizard mode)
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'page1', label: 'Page 1' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'rootField' } });
+    project.dispatch({ type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'wizard' } });
+
+    const diag = project.diagnose();
+    const pagedWarning = diag.consistency.find(d => d.code === 'PAGED_ROOT_NON_GROUP');
+    expect(pagedWarning).toBeDefined();
+    expect(pagedWarning!.severity).toBe('warning');
+    expect(pagedWarning!.path).toContain('rootField');
+  });
+
+  it('no paged warning when pageMode is not set', () => {
+    const project = createProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'rootField' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'g1' } });
+
+    const diag = project.diagnose();
+    expect(diag.consistency.filter(d => d.code === 'PAGED_ROOT_NON_GROUP')).toEqual([]);
+  });
+
+  it('no paged warning when all root items are groups', () => {
+    const project = createProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'page1' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'page2' } });
+    project.dispatch({ type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'tabs' } });
+
+    const diag = project.diagnose();
+    expect(diag.consistency.filter(d => d.code === 'PAGED_ROOT_NON_GROUP')).toEqual([]);
+  });
 });

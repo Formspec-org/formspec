@@ -1510,6 +1510,22 @@ export class Project {
       }
     }
 
+    // Consistency: root-level non-group items in paged definitions
+    const defPageMode = (this._state.definition as any).formPresentation?.pageMode;
+    if (defPageMode === 'wizard' || defPageMode === 'tabs') {
+      for (const item of this._state.definition.items) {
+        if (item.type !== 'group') {
+          consistency.push({
+            artifact: 'definition',
+            path: item.key,
+            severity: 'warning',
+            code: 'PAGED_ROOT_NON_GROUP',
+            message: `Root-level ${item.type} "${item.key}" is not inside a page group — it will be hidden in ${defPageMode} mode`,
+          });
+        }
+      }
+    }
+
     // Aggregate counts
     const all = [...structural, ...expressions, ...extensions, ...consistency];
     const counts = { error: 0, warning: 0, info: 0 };

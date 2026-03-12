@@ -15,12 +15,15 @@ const REGISTRY_PATH = path.resolve(__dirname, '../../../registries/formspec-comm
 function hydrateDefinition(project: any, defJson: any) {
   const actions: any[] = [];
   
-  // Metadata properties
+  // Metadata properties (defer formPresentation until after items are hydrated)
+  const deferredActions: any[] = [];
   for (const [key, value] of Object.entries(defJson)) {
     if (['items', 'binds', 'shapes', 'variables', 'optionSets', 'instances', '$formspec'].includes(key)) continue;
-    
+
     if (key === 'title') {
       actions.push({ type: 'definition.setFormTitle', payload: { title: value } });
+    } else if (key === 'formPresentation') {
+      deferredActions.push({ type: 'definition.setDefinitionProperty', payload: { property: key, value } });
     } else {
       actions.push({ type: 'definition.setDefinitionProperty', payload: { property: key, value } });
     }
@@ -116,6 +119,11 @@ function hydrateDefinition(project: any, defJson: any) {
     for (const item of defJson.items) {
       hydrateItem(item);
     }
+  }
+
+  // Apply deferred formPresentation after items exist
+  if (deferredActions.length > 0) {
+    project.batch(deferredActions);
   }
 
   // Binds

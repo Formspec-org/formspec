@@ -313,3 +313,35 @@ describe('definition.duplicateItem', () => {
     expect(project.definition.items[1].dataType).toBe('string');
   });
 });
+
+describe('definition.addItem paged mode guard', () => {
+  it('throws when adding a non-group item at root in a paged definition', () => {
+    const project = createProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'page1' } });
+    project.dispatch({ type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'wizard' } });
+
+    expect(() =>
+      project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'orphan' } }),
+    ).toThrow(/parentPath/);
+  });
+
+  it('allows adding a group at root in a paged definition', () => {
+    const project = createProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'page1' } });
+    project.dispatch({ type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'wizard' } });
+
+    expect(() =>
+      project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'page2' } }),
+    ).not.toThrow();
+  });
+
+  it('allows adding a non-group item with parentPath in a paged definition', () => {
+    const project = createProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'page1' } });
+    project.dispatch({ type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'wizard' } });
+
+    expect(() =>
+      project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'f1', parentPath: 'page1' } }),
+    ).not.toThrow();
+  });
+});
