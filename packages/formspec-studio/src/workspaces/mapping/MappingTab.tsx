@@ -3,6 +3,7 @@ import { MappingConfig } from './MappingConfig';
 import { RuleEditor } from './RuleEditor';
 import { AdapterConfig } from './AdapterConfig';
 import { MappingPreview } from './MappingPreview';
+import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 
 const tabs = [
   { id: 'config', label: 'Config' },
@@ -50,14 +51,14 @@ export function MappingTab({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex border-b border-border">
+    <WorkspacePage>
+      <WorkspacePageSection padding="px-0" className="flex border-b border-border sticky top-0 bg-bg-default z-10">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
-            className={`px-3 py-2 text-sm ${
-              active === tab.id
+            className={`px-3 py-2 text-sm cursor-pointer ${
+              activeTab === tab.id
                 ? 'border-b-2 border-accent text-ink font-medium'
                 : 'text-muted hover:text-ink'
             }`}
@@ -66,8 +67,10 @@ export function MappingTab({
             {tab.label}
           </button>
         ))}
-      </div>
-      <div className="flex-1 overflow-auto">{content}</div>
-    </div>
+      </WorkspacePageSection>
+      <WorkspacePageSection className="flex-1 overflow-auto py-4">
+        {content}
+      </WorkspacePageSection>
+    </WorkspacePage>
   );
 }

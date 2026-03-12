@@ -6,6 +6,7 @@ import { FilterBar } from './FilterBar';
 import { VariablesSection } from './VariablesSection';
 import { BindsSection } from './BindsSection';
 import { ShapesSection } from './ShapesSection';
+import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 
 function normalizeBinds(binds: unknown): Record<string, Record<string, string>> {
   if (!binds) return {};
@@ -36,19 +37,23 @@ export function LogicTab() {
   const variables = Array.isArray(definition?.variables) ? definition.variables : [];
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      <FilterBar binds={binds} activeFilter={activeFilter} onFilterSelect={setActiveFilter} />
-      {variables.length > 0 && (
-        <Section title="Variables">
-          <VariablesSection variables={variables} />
+    <WorkspacePage className="overflow-y-auto">
+      <WorkspacePageSection padding="px-0" className="sticky top-0 bg-bg-default z-10 border-b border-border">
+        <FilterBar binds={binds} activeFilter={activeFilter} onFilterSelect={setActiveFilter} />
+      </WorkspacePageSection>
+      <WorkspacePageSection className="flex-1 py-4">
+        {variables.length > 0 && (
+          <Section title="Variables">
+            <VariablesSection variables={variables} />
+          </Section>
+        )}
+        <Section title="Binds">
+          <BindsSection binds={binds} activeFilter={activeFilter} onSelectPath={(path) => select(path, 'field')} />
         </Section>
-      )}
-      <Section title="Binds">
-        <BindsSection binds={binds} activeFilter={activeFilter} onSelectPath={(path) => select(path, 'field')} />
-      </Section>
-      <Section title="Shapes">
-        <ShapesSection shapes={shapes} />
-      </Section>
-    </div>
+        <Section title="Shapes">
+          <ShapesSection shapes={shapes} />
+        </Section>
+      </WorkspacePageSection>
+    </WorkspacePage>
   );
 }

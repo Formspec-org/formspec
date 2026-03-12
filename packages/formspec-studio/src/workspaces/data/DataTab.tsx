@@ -3,6 +3,7 @@ import { ResponseSchema } from './ResponseSchema';
 import { DataSources } from './DataSources';
 import { OptionSets } from './OptionSets';
 import { TestResponse } from './TestResponse';
+import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 
 const tabs = ['Response Schema', 'Data Sources', 'Option Sets', 'Test Response'] as const;
 export type Tab = typeof tabs[number];
@@ -26,12 +27,12 @@ export function DataTab({ activeTab, onActiveTabChange }: DataTabProps = {}) {
   const ActiveComponent = tabComponents[active];
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex border-b border-border bg-surface">
+    <WorkspacePage>
+      <WorkspacePageSection padding="px-0" className="flex border-b border-border sticky top-0 bg-bg-default z-10">
         {tabs.map((tab) => (
           <button
             key={tab}
-            className={`px-3 py-1.5 text-xs ${
+            className={`px-3 py-1.5 text-xs cursor-pointer ${
               active === tab
                 ? 'border-b-2 border-accent text-accent'
                 : 'text-foreground/70 hover:text-ink'
@@ -41,10 +42,10 @@ export function DataTab({ activeTab, onActiveTabChange }: DataTabProps = {}) {
             {tab}
           </button>
         ))}
-      </div>
-      <div className="flex-1 overflow-auto">
+      </WorkspacePageSection>
+      <WorkspacePageSection className="flex-1 overflow-auto py-4">
         <ActiveComponent />
-      </div>
-    </div>
+      </WorkspacePageSection>
+    </WorkspacePage>
   );
 }

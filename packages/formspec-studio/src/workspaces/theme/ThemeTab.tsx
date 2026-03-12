@@ -5,6 +5,7 @@ import { SelectorList } from './SelectorList';
 import { ItemOverrides } from './ItemOverrides';
 import { PageLayouts } from './PageLayouts';
 import { BreakpointEditor } from './BreakpointEditor';
+import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 
 const tabs = [
   { id: 'tokens', label: 'Tokens' },
@@ -31,33 +32,33 @@ const tabContent: Record<ThemeTabId, () => React.ReactNode> = {
   breakpoints: () => <BreakpointEditor />,
 };
 
-export function ThemeTab({ activeTab, onActiveTabChange }: ThemeTabProps = {}) {
+export function ThemeTab({ activeTab: propActiveTab, onActiveTabChange }: ThemeTabProps = {}) {
   const [internalActive, setInternalActive] = useState<ThemeTabId>('tokens');
-  const active = activeTab ?? internalActive;
-  const setActive = onActiveTabChange ?? setInternalActive;
+  const activeTab = propActiveTab ?? internalActive;
+  const setActiveTab = onActiveTabChange ?? setInternalActive;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex border-b border-border">
+    <WorkspacePage>
+      <WorkspacePageSection padding="px-0" className="flex border-b border-border sticky top-0 bg-bg-default z-10">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             id={`theme-tab-${tab.id}`}
             type="button"
-            className={`px-3 py-2 text-sm ${
-              active === tab.id
+            className={`px-3 py-2 text-sm cursor-pointer ${
+              activeTab === tab.id
                 ? 'border-b-2 border-accent text-ink font-medium'
                 : 'text-muted hover:text-ink'
             }`}
-            onClick={() => setActive(tab.id)}
+            onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
           </button>
         ))}
-      </div>
-      <div className="flex-1 overflow-auto">
-        {tabContent[active]()}
-      </div>
-    </div>
+      </WorkspacePageSection>
+      <WorkspacePageSection className="flex-1 overflow-auto py-4">
+        {tabContent[activeTab]()}
+      </WorkspacePageSection>
+    </WorkspacePage>
   );
 }
