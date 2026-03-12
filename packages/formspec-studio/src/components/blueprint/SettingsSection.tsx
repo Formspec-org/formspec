@@ -6,7 +6,7 @@ import { Pill } from '../ui/Pill';
 export function SettingsSection() {
   const definition = useDefinition();
   const def = definition as any;
-  const presentation = def.presentation ?? def.formPresentation ?? {};
+  const presentation = def.formPresentation ?? {};
 
   return (
     <Section title="Settings">
