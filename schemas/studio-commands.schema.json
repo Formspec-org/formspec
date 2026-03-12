@@ -272,38 +272,11 @@
     },
 
     { "type": "definition.setFormPresentation", "area": "definition-pages",
-      "description": "Set a presentation-level property. Special handling: setting pages to true/false toggles paged mode.",
+      "description": "Set a presentation-level property (e.g. pageMode, labelPosition, density, defaultCurrency). Null value removes the property.",
       "payload": [
         { "name": "property", "type": "string", "required": true },
         { "name": "value", "type": "any", "required": true }
-      ],
-      "sideEffects": ["rebuildComponentTree"]
-    },
-
-    { "type": "definition.addPage", "area": "definition-pages",
-      "description": "Add a new page to the definition.",
-      "payload": [
-        { "name": "title", "type": "string" },
-        { "name": "insertIndex", "type": "number" }
-      ],
-      "sideEffects": ["rebuildComponentTree"]
-    },
-
-    { "type": "definition.deletePage", "area": "definition-pages",
-      "description": "Remove a page by key. Items in the page are moved to the previous page or root.",
-      "payload": [
-        { "name": "pageKey", "type": "string", "required": true }
-      ],
-      "sideEffects": ["rebuildComponentTree"]
-    },
-
-    { "type": "definition.reorderPage", "area": "definition-pages",
-      "description": "Move a page one position up or down.",
-      "payload": [
-        { "name": "pageKey", "type": "string", "required": true },
-        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
-      ],
-      "sideEffects": ["rebuildComponentTree"]
+      ]
     },
 
     { "type": "definition.setGroupRef", "area": "definition-pages",
