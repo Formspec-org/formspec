@@ -223,6 +223,134 @@ function rewriteFieldRef(expr: string, oldPath: string, newPath: string): string
   });
 }
 
+/**
+ * Rewrite all path references across definition artifacts when an item's
+ * canonical path changes (due to move or rename).
+ *
+ * Covers: binds (path + FEL props), shapes (target + FEL props + context),
+ * variables (expression), inline item expressions, screener routes, and
+ * mapping rules (sourcePath + FEL props + reverse + innerRules).
+ */
+function rewriteAllPathReferences(
+  state: ProjectState,
+  oldPath: string,
+  newPath: string,
+): void {
+  // 1. Rewrite binds — path + FEL properties
+  if (state.definition.binds) {
+    for (const bind of state.definition.binds) {
+      bind.path = rewritePathPrefix(bind.path, oldPath, newPath);
+      const b = bind as any;
+      for (const prop of ['calculate', 'relevant', 'required', 'readonly', 'constraint']) {
+        if (b[prop] && typeof b[prop] === 'string') {
+          b[prop] = rewriteFieldRef(b[prop], oldPath, newPath);
+        }
+      }
+      if (typeof b.default === 'string' && b.default.startsWith('=')) {
+        b.default = '=' + rewriteFieldRef(b.default.slice(1), oldPath, newPath);
+      }
+    }
+  }
+
+  // 2. Rewrite shapes — target + FEL properties + context
+  if (state.definition.shapes) {
+    for (const shape of state.definition.shapes) {
+      const s = shape as any;
+      if (s.target) s.target = rewritePathPrefix(s.target, oldPath, newPath);
+      if (s.constraint && typeof s.constraint === 'string') {
+        s.constraint = rewriteFieldRef(s.constraint, oldPath, newPath);
+      }
+      if (s.activeWhen && typeof s.activeWhen === 'string') {
+        s.activeWhen = rewriteFieldRef(s.activeWhen, oldPath, newPath);
+      }
+      if (s.context && typeof s.context === 'object') {
+        for (const [k, value] of Object.entries(s.context as Record<string, unknown>)) {
+          if (typeof value === 'string') {
+            s.context[k] = rewriteFieldRef(value, oldPath, newPath);
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Rewrite variables
+  if (state.definition.variables) {
+    for (const v of state.definition.variables) {
+      const va = v as any;
+      if (va.expression && typeof va.expression === 'string') {
+        va.expression = rewriteFieldRef(va.expression, oldPath, newPath);
+      }
+    }
+  }
+
+  // 4. Rewrite inline item FEL expressions (recursive walk)
+  const rewriteItemExpressions = (items: FormspecItem[]) => {
+    for (const item of items) {
+      const dynamic = item as any;
+      for (const prop of ['relevant', 'required', 'readonly', 'calculate', 'constraint']) {
+        if (typeof dynamic[prop] === 'string') {
+          dynamic[prop] = rewriteFieldRef(dynamic[prop], oldPath, newPath);
+        }
+      }
+      if (typeof dynamic.initialValue === 'string' && dynamic.initialValue.startsWith('=')) {
+        dynamic.initialValue = '=' + rewriteFieldRef(dynamic.initialValue.slice(1), oldPath, newPath);
+      }
+      if (item.children) rewriteItemExpressions(item.children);
+    }
+  };
+  rewriteItemExpressions(state.definition.items);
+
+  // 5. Rewrite screener routes
+  const screenerRoutes = state.definition.screener?.routes;
+  if (Array.isArray(screenerRoutes)) {
+    for (const route of screenerRoutes) {
+      if (typeof route.condition === 'string') {
+        route.condition = rewriteFieldRef(route.condition, oldPath, newPath);
+      }
+    }
+  }
+
+  // 6. Rewrite mapping rules (sourcePath + FEL props + reverse + innerRules)
+  const rules = (state.mapping as any).rules as any[] | undefined;
+  if (rules) {
+    for (const rule of rules) {
+      if (typeof rule.sourcePath === 'string') {
+        rule.sourcePath = rewritePathPrefix(rule.sourcePath, oldPath, newPath);
+      }
+      for (const prop of ['expression', 'condition']) {
+        if (typeof rule[prop] === 'string') {
+          rule[prop] = rewriteFieldRef(rule[prop], oldPath, newPath);
+        }
+      }
+      if (rule.reverse && typeof rule.reverse === 'object') {
+        if (typeof rule.reverse.sourcePath === 'string') {
+          rule.reverse.sourcePath = rewritePathPrefix(rule.reverse.sourcePath, oldPath, newPath);
+        }
+        if (typeof rule.reverse.targetPath === 'string') {
+          rule.reverse.targetPath = rewritePathPrefix(rule.reverse.targetPath, oldPath, newPath);
+        }
+        for (const prop of ['expression', 'condition']) {
+          if (typeof rule.reverse[prop] === 'string') {
+            rule.reverse[prop] = rewriteFieldRef(rule.reverse[prop], oldPath, newPath);
+          }
+        }
+      }
+      if (Array.isArray(rule.innerRules)) {
+        for (const inner of rule.innerRules) {
+          if (typeof inner.sourcePath === 'string') {
+            inner.sourcePath = rewritePathPrefix(inner.sourcePath, oldPath, newPath);
+          }
+          for (const prop of ['expression', 'condition']) {
+            if (typeof inner[prop] === 'string') {
+              inner[prop] = rewriteFieldRef(inner[prop], oldPath, newPath);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 // ── addItem ──────────────────────────────────────────────────────────
 
 /**
@@ -398,87 +526,10 @@ registerHandler('definition.renameItem', (state, payload) => {
   const parentPrefix = path.includes('.') ? path.slice(0, path.lastIndexOf('.') + 1) : '';
   const newPath = parentPrefix + newKey;
 
-  // Rewrite bind paths and expressions
-  if (state.definition.binds) {
-    for (const bind of state.definition.binds) {
-      if (bind.path === path) {
-        bind.path = newPath;
-      } else if (bind.path.startsWith(path + '.')) {
-        bind.path = newPath + bind.path.slice(path.length);
-      }
-      // Rewrite FEL references ($oldKey → $newKey)
-      const b = bind as any;
-      for (const prop of ['calculate', 'relevant', 'required', 'readonly', 'constraint']) {
-        if (b[prop] && typeof b[prop] === 'string') {
-          b[prop] = rewriteFieldRef(b[prop], path, newPath);
-        }
-      }
-      if (typeof b.default === 'string' && b.default.startsWith('=')) {
-        b.default = '=' + rewriteFieldRef(b.default.slice(1), path, newPath);
-      }
-    }
-  }
+  // Rewrite path references across all artifacts
+  rewriteAllPathReferences(state, path, newPath);
 
-  // Rewrite shape targets and constraint expressions
-  if (state.definition.shapes) {
-    for (const shape of state.definition.shapes) {
-      const s = shape as any;
-      if (s.target === path) s.target = newPath;
-      else if (s.target?.startsWith(path + '.')) s.target = newPath + s.target.slice(path.length);
-      if (s.constraint && typeof s.constraint === 'string') {
-        s.constraint = rewriteFieldRef(s.constraint, path, newPath);
-      }
-      if (s.activeWhen && typeof s.activeWhen === 'string') {
-        s.activeWhen = rewriteFieldRef(s.activeWhen, path, newPath);
-      }
-      if (s.context && typeof s.context === 'object') {
-        for (const [k, value] of Object.entries(s.context as Record<string, unknown>)) {
-          if (typeof value === 'string') {
-            s.context[k] = rewriteFieldRef(value, path, newPath);
-          }
-        }
-      }
-    }
-  }
-
-  // Rewrite variable expressions
-  if (state.definition.variables) {
-    for (const v of state.definition.variables) {
-      const va = v as any;
-      if (va.expression && typeof va.expression === 'string') {
-        va.expression = rewriteFieldRef(va.expression, path, newPath);
-      }
-    }
-  }
-
-  // Rewrite item-level FEL-bearing properties.
-  const rewriteItemExpressions = (items: FormspecItem[]) => {
-    for (const item of items) {
-      const dynamic = item as any;
-      for (const prop of ['relevant', 'required', 'readonly', 'calculate', 'constraint']) {
-        if (typeof dynamic[prop] === 'string') {
-          dynamic[prop] = rewriteFieldRef(dynamic[prop], path, newPath);
-        }
-      }
-      if (typeof dynamic.initialValue === 'string' && dynamic.initialValue.startsWith('=')) {
-        dynamic.initialValue = '=' + rewriteFieldRef(dynamic.initialValue.slice(1), path, newPath);
-      }
-      if (item.children) rewriteItemExpressions(item.children);
-    }
-  };
-  rewriteItemExpressions(state.definition.items);
-
-  // Rewrite screener route conditions.
-  const screenerRoutes = state.definition.screener?.routes;
-  if (Array.isArray(screenerRoutes)) {
-    for (const route of screenerRoutes) {
-      if (typeof route.condition === 'string') {
-        route.condition = rewriteFieldRef(route.condition, path, newPath);
-      }
-    }
-  }
-
-  // Rewrite component tree bind references
+  // Rename-specific: rewrite component tree bind references (key-based, not path-based)
   const tree = state.component.tree as any;
   if (tree) {
     const queue = [tree];
@@ -489,51 +540,11 @@ registerHandler('definition.renameItem', (state, payload) => {
     }
   }
 
-  // Rewrite theme per-item override keys
+  // Rename-specific: rewrite theme per-item override keys
   const themeItems = state.theme.items as Record<string, unknown> | undefined;
   if (themeItems && themeItems[oldKey]) {
     themeItems[newKey] = themeItems[oldKey];
     delete themeItems[oldKey];
-  }
-
-  // Rewrite mapping rule source paths
-  const rules = (state.mapping as any).rules as any[] | undefined;
-  if (rules) {
-    for (const rule of rules) {
-      if (typeof rule.sourcePath === 'string') {
-        rule.sourcePath = rewritePathPrefix(rule.sourcePath, path, newPath);
-      }
-      for (const prop of ['expression', 'condition']) {
-        if (typeof rule[prop] === 'string') {
-          rule[prop] = rewriteFieldRef(rule[prop], path, newPath);
-        }
-      }
-      if (rule.reverse && typeof rule.reverse === 'object') {
-        if (typeof rule.reverse.sourcePath === 'string') {
-          rule.reverse.sourcePath = rewritePathPrefix(rule.reverse.sourcePath, path, newPath);
-        }
-        if (typeof rule.reverse.targetPath === 'string') {
-          rule.reverse.targetPath = rewritePathPrefix(rule.reverse.targetPath, path, newPath);
-        }
-        for (const prop of ['expression', 'condition']) {
-          if (typeof rule.reverse[prop] === 'string') {
-            rule.reverse[prop] = rewriteFieldRef(rule.reverse[prop], path, newPath);
-          }
-        }
-      }
-      if (Array.isArray(rule.innerRules)) {
-        for (const inner of rule.innerRules) {
-          if (typeof inner.sourcePath === 'string') {
-            inner.sourcePath = rewritePathPrefix(inner.sourcePath, path, newPath);
-          }
-          for (const prop of ['expression', 'condition']) {
-            if (typeof inner[prop] === 'string') {
-              inner[prop] = rewriteFieldRef(inner[prop], path, newPath);
-            }
-          }
-        }
-      }
-    }
   }
 
   return { rebuildComponentTree: true, newPath };
@@ -586,6 +597,12 @@ registerHandler('definition.moveItem', (state, payload) => {
   }
 
   const newPath = targetParentPath ? `${targetParentPath}.${item.key}` : item.key;
+
+  // Rewrite path references if the canonical path actually changed
+  if (newPath !== sourcePath) {
+    rewriteAllPathReferences(state, sourcePath, newPath);
+  }
+
   return { rebuildComponentTree: true, newPath };
 });
 

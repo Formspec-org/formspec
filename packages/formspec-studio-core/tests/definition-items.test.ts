@@ -265,6 +265,145 @@ describe('definition.moveItem', () => {
   });
 });
 
+describe('definition.moveItem — reference rewriting', () => {
+  it('rewrites bind paths when an item moves to a new parent', () => {
+    const project = createProject();
+
+    // Build: group "a" with child "name", plus empty group "b"
+    project.dispatch({
+      type: 'definition.addItem',
+      payload: { key: 'a', type: 'group' },
+    });
+    project.dispatch({
+      type: 'definition.addItem',
+      payload: { key: 'name', type: 'field', dataType: 'string', parentPath: 'a' },
+    });
+    project.dispatch({
+      type: 'definition.addItem',
+      payload: { key: 'b', type: 'group' },
+    });
+
+    // Add a bind referencing a.name
+    project.dispatch({
+      type: 'definition.setBind',
+      payload: { path: 'a.name', properties: { required: 'true()' } },
+    });
+
+    // Move "name" from group "a" to group "b"
+    project.dispatch({
+      type: 'definition.moveItem',
+      payload: { sourcePath: 'a.name', targetParentPath: 'b' },
+    });
+
+    // The bind should now reference b.name, not a.name
+    const binds = project.definition.binds;
+    const bind = binds?.find((b: any) => b.path === 'b.name');
+    expect(bind).toBeDefined();
+    expect(bind?.required).toBe('true()');
+
+    // Old path should not exist
+    const oldBind = binds?.find((b: any) => b.path === 'a.name');
+    expect(oldBind).toBeUndefined();
+  });
+
+  it('rewrites FEL expressions in binds referencing the moved item', () => {
+    const project = createProject();
+
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'a', type: 'group' } });
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'age', type: 'field', dataType: 'integer', parentPath: 'a' } });
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'b', type: 'group' } });
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'check', type: 'field', dataType: 'string' } });
+
+    // Add a bind with a calculate expression referencing a.age
+    project.dispatch({
+      type: 'definition.setBind',
+      payload: { path: 'check', properties: { calculate: '$a.age >= 18' } },
+    });
+
+    // Move "age" from group "a" to group "b"
+    project.dispatch({
+      type: 'definition.moveItem',
+      payload: { sourcePath: 'a.age', targetParentPath: 'b' },
+    });
+
+    // The expression should now reference b.age
+    const bind = project.definition.binds?.find((b: any) => b.path === 'check');
+    expect(bind?.calculate).toBe('$b.age >= 18');
+  });
+
+  it('rewrites variable expressions referencing the moved item', () => {
+    const project = createProject();
+
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'a', type: 'group' } });
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'age', type: 'field', dataType: 'integer', parentPath: 'a' } });
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'b', type: 'group' } });
+
+    // Add a variable that references a.age
+    project.dispatch({
+      type: 'definition.addVariable',
+      payload: { name: 'isAdult', expression: '$a.age >= 18' },
+    });
+
+    // Move "age" from group "a" to group "b"
+    project.dispatch({
+      type: 'definition.moveItem',
+      payload: { sourcePath: 'a.age', targetParentPath: 'b' },
+    });
+
+    // Variable expression should now reference b.age
+    const variable = (project.definition as any).variables?.find(
+      (v: any) => v.name === 'isAdult',
+    );
+    expect(variable?.expression).toBe('$b.age >= 18');
+  });
+
+  it('rewrites shape targets and expressions when item moves', () => {
+    const project = createProject();
+
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'a', type: 'group' } });
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'score', type: 'field', dataType: 'integer', parentPath: 'a' } });
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'b', type: 'group' } });
+
+    // Add a shape targeting a.score
+    project.dispatch({
+      type: 'definition.addShape',
+      payload: { target: 'a.score', constraint: '$a.score > 0', severity: 'error' },
+    });
+
+    // Move "score" from group "a" to group "b"
+    project.dispatch({
+      type: 'definition.moveItem',
+      payload: { sourcePath: 'a.score', targetParentPath: 'b' },
+    });
+
+    const shape = (project.definition as any).shapes?.[0];
+    expect(shape?.target).toBe('b.score');
+    expect(shape?.constraint).toBe('$b.score > 0');
+  });
+
+  it('does not rewrite when path is unchanged (reorder within same parent)', () => {
+    const project = createProject();
+
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'a', type: 'field', dataType: 'string' } });
+    project.dispatch({ type: 'definition.addItem', payload: { key: 'b', type: 'field', dataType: 'string' } });
+
+    project.dispatch({
+      type: 'definition.setBind',
+      payload: { path: 'b', properties: { required: 'true()' } },
+    });
+
+    // Move 'b' to index 0 at root — path stays 'b'
+    project.dispatch({
+      type: 'definition.moveItem',
+      payload: { sourcePath: 'b', targetIndex: 0 },
+    });
+
+    const bind = project.definition.binds?.find((b: any) => b.path === 'b');
+    expect(bind).toBeDefined();
+    expect(bind?.required).toBe('true()');
+  });
+});
+
 describe('definition.reorderItem', () => {
   it('swaps with adjacent sibling downward', () => {
     const project = createProject();
