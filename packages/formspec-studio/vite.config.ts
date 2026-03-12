@@ -6,12 +6,13 @@ import path from 'path';
 const repoRoot = path.resolve(__dirname, '../..');
 
 export default defineConfig({
-  base: '/',
+  base: '/studio/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       'formspec-studio-core': path.resolve(repoRoot, 'packages/formspec-studio-core/src/index.ts'),
-      'formspec-engine': path.resolve(repoRoot, 'packages/formspec-engine/src/index.ts')
+      'formspec-engine': path.resolve(repoRoot, 'packages/formspec-engine/src/index.ts'),
+      // formspec-webcomponent: use workspace dep from node_modules so formspec-base.css?url resolves correctly
     }
   },
   server: {

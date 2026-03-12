@@ -14,7 +14,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "formspec-studio-core": "*",
-    "formspec-engine": "*"
+    "formspec-engine": "*",
+    "formspec-webcomponent": "*"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
