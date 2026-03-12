@@ -2,7 +2,7 @@ import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
-import { SelectionProvider } from '../../src/state/useSelection';
+import { SelectionProvider, useSelection } from '../../src/state/useSelection';
 import { CommandPalette } from '../../src/components/CommandPalette';
 
 const paletteDef = {
@@ -13,21 +13,50 @@ const paletteDef = {
     { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
   ],
   variables: [{ name: 'isAdult', expression: '$age >= 18' }],
+  binds: [{ path: 'age', required: '$age >= 18' }],
+  shapes: [{ name: 'adult-rule', severity: 'error', constraint: '$age >= 18', targets: ['age'] }],
 };
 
-function renderPalette() {
+function SelectionProbe() {
+  const { selectedKey } = useSelection();
+  return <div data-testid="selected-key">{selectedKey || ''}</div>;
+}
+
+function renderPalette(open = true) {
   const project = createProject({ seed: { definition: paletteDef as any } });
   const onClose = vi.fn();
+  const rendered = render(
+    <ProjectProvider project={project}>
+      <SelectionProvider>
+        <CommandPalette open={open} onClose={onClose} />
+        <SelectionProbe />
+      </SelectionProvider>
+    </ProjectProvider>
+  );
   return {
-    ...render(
-      <ProjectProvider project={project}>
-        <SelectionProvider>
-          <CommandPalette open={true} onClose={onClose} />
-        </SelectionProvider>
-      </ProjectProvider>
-    ),
+    ...rendered,
+    project,
     onClose,
+    rerenderPalette(nextOpen: boolean) {
+      rendered.rerender(
+        <ProjectProvider project={project}>
+          <SelectionProvider>
+            <CommandPalette open={nextOpen} onClose={onClose} />
+            <SelectionProbe />
+          </SelectionProvider>
+        </ProjectProvider>
+      );
+    },
   };
+}
+
+function setSearch(value: string) {
+  const input = screen.getByPlaceholderText(/search/i);
+  act(() => {
+    (input as HTMLInputElement).value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  return input;
 }
 
 describe('CommandPalette', () => {
@@ -38,10 +67,8 @@ describe('CommandPalette', () => {
 
   it('shows items when typing', async () => {
     renderPalette();
-    const input = screen.getByPlaceholderText(/search/i);
     await act(async () => {
-      (input as HTMLInputElement).value = 'first';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+      setSearch('first');
     });
     expect(screen.getByText(/firstName/)).toBeInTheDocument();
   });
@@ -51,6 +78,47 @@ describe('CommandPalette', () => {
     expect(screen.getByText(/firstName/)).toBeInTheDocument();
     expect(screen.getByText(/lastName/)).toBeInTheDocument();
     expect(screen.getByText(/age/)).toBeInTheDocument();
+  });
+
+  it('shows bind and shape results when searching for rules', async () => {
+    renderPalette();
+    await act(async () => {
+      setSearch('rule');
+    });
+    expect(screen.getByText(/adult-rule/i)).toBeInTheDocument();
+    expect(screen.getByText(/required/i)).toBeInTheDocument();
+  });
+
+  it('lets variable results be selected', async () => {
+    const { onClose } = renderPalette();
+    await act(async () => {
+      setSearch('isAdult');
+    });
+    await act(async () => {
+      screen.getByText('isAdult').click();
+    });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('supports keyboard navigation to select the highlighted result', async () => {
+    renderPalette();
+    const input = setSearch('name');
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    expect(screen.getByTestId('selected-key')).toHaveTextContent('lastName');
+  });
+
+  it('clears the search input when reopened', async () => {
+    const { rerenderPalette } = renderPalette(true);
+    await act(async () => {
+      setSearch('first');
+    });
+    rerenderPalette(false);
+    rerenderPalette(true);
+    expect(screen.getByPlaceholderText(/search/i)).toHaveValue('');
   });
 
   it('does not render when closed', () => {

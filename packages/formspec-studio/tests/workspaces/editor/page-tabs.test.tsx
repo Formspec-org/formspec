@@ -38,10 +38,9 @@ function renderPageTabs(def?: any, activeKey: string | null = 'page1') {
 describe('PageTabs', () => {
   it('renders page labels from definition', () => {
     renderPageTabs();
-    // Active tab renders label as text; inactive tabs expose label via title attribute
     expect(screen.getByText('Personal Info')).toBeInTheDocument();
-    expect(screen.getByTitle('Address')).toBeInTheDocument();
-    expect(screen.getByTitle('Review')).toBeInTheDocument();
+    expect(screen.getByText('Address')).toBeInTheDocument();
+    expect(screen.getByText('Review')).toBeInTheDocument();
   });
 
   it('highlights active page', () => {
@@ -53,9 +52,19 @@ describe('PageTabs', () => {
   it('clicking a tab calls onPageChange with key', async () => {
     const { onPageChange } = renderPageTabs();
     await act(async () => {
-      screen.getByTitle('Address').click();
+      screen.getByText('Address').click();
     });
     expect(onPageChange).toHaveBeenCalledWith('page2');
+  });
+
+  it('opens an inline rename control when a page tab is double-clicked', async () => {
+    renderPageTabs();
+    await act(async () => {
+      screen.getByText('Address').closest('button')?.dispatchEvent(
+        new MouseEvent('dblclick', { bubbles: true })
+      );
+    });
+    expect(screen.getByDisplayValue('Address')).toBeInTheDocument();
   });
 
   it('shows page numbers', () => {

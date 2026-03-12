@@ -59,6 +59,101 @@ test.describe('Interaction Patterns', () => {
       // Context menu should close
       await expect(page.locator('[data-testid="context-menu"]')).not.toBeVisible();
     });
+
+    test('clicking Wrap in Group wraps the selected field in a new group', async ({ page }) => {
+      await page.click('[data-testid="field-myField"]', { button: 'right' });
+      await expect(page.locator('[data-testid="context-menu"]')).toBeVisible();
+
+      await page.click('[data-testid="ctx-wrapInGroup"]');
+
+      await expect(page.locator('[data-testid^="group-"]')).toHaveCount(1);
+      await expect(page.locator('[data-testid="field-myField"]')).toBeVisible();
+    });
+
+    test('clicking Move Down changes the field order', async ({ page }) => {
+      await seedDefinition(page, {
+        $formspec: '1.0',
+        items: [
+          { key: 'firstField', type: 'field', dataType: 'string', label: 'First Field' },
+          { key: 'secondField', type: 'field', dataType: 'string', label: 'Second Field' },
+        ],
+      });
+      await page.waitForSelector('[data-testid="field-firstField"]');
+      await page.waitForSelector('[data-testid="field-secondField"]');
+
+      await page.click('[data-testid="field-firstField"]', { button: 'right' });
+      await page.click('[data-testid="ctx-moveDown"]');
+
+      const canvas = page.locator('[data-testid="workspace-Editor"] [data-testid^="field-"]');
+      await expect(canvas.nth(0)).toHaveAttribute('data-testid', 'field-secondField');
+      await expect(canvas.nth(1)).toHaveAttribute('data-testid', 'field-firstField');
+    });
+
+    test('right-clicking empty canvas does not show the field context menu', async ({ page }) => {
+      await page.click('[data-testid="workspace-Editor"]', { button: 'right', position: { x: 10, y: 10 } });
+      await expect(page.locator('[data-testid="context-menu"]')).not.toBeVisible();
+    });
+
+    test('context menu stays within viewport when right-clicking near bottom-right edge', async ({ page }) => {
+      // Use a small viewport so fields are easily near the edge
+      await page.setViewportSize({ width: 800, height: 500 });
+
+      // Seed a single field — we will trigger the context menu via a synthetic
+      // event fired right at the bottom-right corner of the viewport so the
+      // un-clamped placement would overflow.
+      await page.waitForSelector('[data-testid="field-myField"]', { timeout: 5000 });
+
+      // Scroll to the bottom of the canvas so the field is visible
+      await page.locator('[data-testid="field-myField"]').scrollIntoViewIfNeeded();
+
+      const viewport = page.viewportSize()!;
+
+      // Fire a synthetic contextmenu event on the field element at coordinates
+      // that are near the bottom-right of the viewport.  The menu is ~160px
+      // wide and ~170px tall; clicking within 20px of the right/bottom edge
+      // should guarantee overflow if the implementation does not clamp.
+      const clickX = viewport.width - 10;   // 10px from right edge
+      const clickY = viewport.height - 10;  // 10px from bottom edge
+
+      // Dispatch a contextmenu event directly on the field element so the
+      // React handler receives it with clientX/clientY at the edge coords.
+      await page.evaluate(
+        ({ x, y }) => {
+          const el = document.querySelector('[data-testid="field-myField"]');
+          if (!el) throw new Error('field-myField not found');
+          const evt = new MouseEvent('contextmenu', {
+            bubbles: true,
+            cancelable: true,
+            clientX: x,
+            clientY: y,
+          });
+          el.dispatchEvent(evt);
+        },
+        { x: clickX, y: clickY },
+      );
+
+      // The context menu must be visible
+      await expect(page.locator('[data-testid="context-menu"]')).toBeVisible();
+
+      // Assert: the context menu bounding box must be fully within the viewport.
+      // This is the assertion that catches the bug — currently the menu is
+      // positioned at raw clientX/clientY with no clamping, so it overflows.
+      const menuBox = await page.locator('[data-testid="context-menu"]').boundingBox();
+      expect(menuBox).not.toBeNull();
+
+      const menuRight = menuBox!.x + menuBox!.width;
+      const menuBottom = menuBox!.y + menuBox!.height;
+
+      // Bug: the menu is anchored at (clickX, clickY) = (790, 490) with no
+      // clamping.  A 160px-wide, ~170px-tall menu placed there will extend to
+      // (950, 660) — well outside the 800×500 viewport.
+      expect(menuRight).toBeLessThanOrEqual(viewport.width);
+      expect(menuBottom).toBeLessThanOrEqual(viewport.height);
+    });
+
+    test('field cards expose a drag handle or draggable affordance for reorder', async ({ page }) => {
+      await expect(page.locator('[data-testid="field-myField"]')).toHaveAttribute('draggable', 'true');
+    });
   });
 
   test.describe('Keyboard Shortcuts', () => {
@@ -103,6 +198,23 @@ test.describe('Interaction Patterns', () => {
 
       // Palette closes
       await expect(page.locator('[data-testid="command-palette"]')).not.toBeVisible();
+    });
+
+    test('Tab moves focus to the next field card instead of jumping into the inspector', async ({ page }) => {
+      await seedDefinition(page, {
+        $formspec: '1.0',
+        items: [
+          { key: 'firstField', type: 'field', dataType: 'string', label: 'First Field' },
+          { key: 'secondField', type: 'field', dataType: 'string', label: 'Second Field' },
+        ],
+      });
+      await page.waitForSelector('[data-testid="field-firstField"]');
+      await page.waitForSelector('[data-testid="field-secondField"]');
+
+      await page.click('[data-testid="field-firstField"]');
+      await page.keyboard.press('Tab');
+
+      await expect(page.locator('[data-testid="field-secondField"]')).toBeFocused();
     });
   });
 

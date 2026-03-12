@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition } from './helpers';
+import { waitForApp, switchTab, seedDefinition, dispatch } from './helpers';
 
 const IMPORT_DEFINITION = JSON.stringify({
   $formspec: '1.0',
@@ -87,5 +87,52 @@ test.describe('Import Definition', () => {
 
     // Canvas should still be empty (no fields imported)
     await expect(page.locator('[data-testid="workspace-Editor"]').locator('[data-testid^="field-"]')).toHaveCount(0);
+  });
+
+  test('Escape closes the import dialog', async ({ page }) => {
+    await page.click('[data-testid="import-btn"]');
+    await page.waitForSelector('[data-testid="import-dialog"]');
+
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('[data-testid="import-dialog"]')).not.toBeVisible();
+  });
+
+  test('import does not clear undo history (bug #18)', async ({ page }) => {
+    // Add a field so there is at least one undoable action in the history
+    await dispatch(page, {
+      type: 'definition.addItem',
+      payload: { key: 'preImportField', type: 'field', dataType: 'string' },
+    });
+    await page.waitForSelector('[data-testid="field-preImportField"]', { timeout: 5000 });
+
+    // Undo button must be enabled before the import
+    await expect(page.locator('[data-testid="undo-btn"]')).not.toBeDisabled();
+
+    // Open the import dialog and load a new definition
+    await page.click('[data-testid="import-btn"]');
+    const dialog = page.locator('[data-testid="import-dialog"]');
+    await dialog.locator('textarea').fill(IMPORT_DEFINITION);
+    await dialog.getByRole('button', { name: 'Load' }).click();
+    await expect(page.locator('[data-testid="import-dialog"]')).not.toBeVisible();
+
+    // Bug #18: after importing, undo history is cleared so the undo button becomes disabled.
+    // The correct behaviour is that the import itself is undoable (or at minimum that
+    // a confirmation prevents silent history loss). Assert that undo is still available.
+    await expect(page.locator('[data-testid="undo-btn"]')).not.toBeDisabled();
+  });
+
+  test('reopening the import dialog resets previous text and artifact type', async ({ page }) => {
+    await page.click('[data-testid="import-btn"]');
+    const dialog = page.locator('[data-testid="import-dialog"]');
+    await dialog.getByRole('button', { name: 'Mapping' }).click();
+    await dialog.locator('textarea').fill('{"stale": true}');
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.locator('[data-testid="import-dialog"]')).not.toBeVisible();
+
+    await page.click('[data-testid="import-btn"]');
+    const reopened = page.locator('[data-testid="import-dialog"]');
+    await expect(reopened.getByRole('button', { name: 'Definition' })).toHaveClass(/bg-accent/);
+    await expect(reopened.locator('textarea')).toHaveValue('');
   });
 });

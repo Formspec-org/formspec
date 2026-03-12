@@ -99,4 +99,16 @@ describe('handleKeyboardShortcut', () => {
       expect(h.delete).toHaveBeenCalled();
     });
   });
+
+  it('suppresses delete shortcuts when the active workspace is not Editor', () => {
+    const workspace = document.createElement('div');
+    workspace.setAttribute('data-workspace', 'Data');
+    const child = document.createElement('button');
+    workspace.appendChild(child);
+    const h = makeHandlers();
+
+    handleKeyboardShortcut(fireKey(child, { key: 'Delete' }), h);
+
+    expect(h.delete).not.toHaveBeenCalled();
+  });
 });

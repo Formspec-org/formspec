@@ -55,4 +55,28 @@ describe('OptionSets', () => {
     );
     expect(screen.getByText(/used by 1/i)).toBeInTheDocument();
   });
+
+  it('renders each option set card as an editable control', () => {
+    const project = createProject({ seed: { definition: dataDef as any } });
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <OptionSets />
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+    expect(screen.getByRole('button', { name: /colors/i })).toBeInTheDocument();
+  });
+
+  it('uses accessible contrast styling for option chips', () => {
+    const project = createProject({ seed: { definition: dataDef as any } });
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <OptionSets />
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+    expect(screen.getByText('Red')).toHaveClass(/text-(ink|surface|white)/);
+  });
 });

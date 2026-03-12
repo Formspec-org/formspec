@@ -4,6 +4,7 @@ import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
 import { Blueprint } from '../../src/components/Blueprint';
+import { Section } from '../../src/components/ui/Section';
 
 function renderBlueprint(onSectionChange = vi.fn()) {
   const project = createProject();
@@ -46,5 +47,37 @@ describe('Blueprint', () => {
       screen.getByText('Variables').click();
     });
     expect(onSectionChange).toHaveBeenCalledWith('Variables');
+  });
+
+  it('shows a non-zero count badge for Component Tree when a component document exists', () => {
+    const project = createProject({ seed: {
+      component: {
+        tree: {
+          component: 'Root',
+          children: [{ component: 'TextInput', bind: 'name' }],
+        },
+      } as any,
+    } });
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <Blueprint activeSection="Structure" onSectionChange={vi.fn()} />
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+    expect(screen.getByTestId('blueprint-section-Component Tree')).toHaveTextContent(/\b1\b|\b2\b|\b3\b/);
+  });
+
+  it('switches the collapse arrow glyph from collapsed to expanded when a sidebar section opens', async () => {
+    render(<Section title="Settings" defaultOpen={false}><div>Section body</div></Section>);
+
+    const toggle = screen.getByRole('button', { name: /settings/i });
+    expect(toggle).toHaveTextContent('▶');
+
+    await act(async () => {
+      toggle.click();
+    });
+
+    expect(toggle).toHaveTextContent('▼');
   });
 });

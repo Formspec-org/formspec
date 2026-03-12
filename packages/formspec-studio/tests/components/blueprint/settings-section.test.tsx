@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
@@ -52,5 +52,23 @@ describe('SettingsSection', () => {
   it('shows form title', () => {
     renderSettings();
     expect(screen.getByText('My Test Form')).toBeInTheDocument();
+  });
+
+  it('lets the title switch into an editable field when clicked', () => {
+    renderSettings();
+
+    fireEvent.click(screen.getByText('My Test Form'));
+
+    expect(screen.getByDisplayValue('My Test Form')).toBeInTheDocument();
+  });
+
+  it('preserves the full title in a tooltip when the title is long', () => {
+    const longTitle = 'This is a very long form title that should still be available in a tooltip when the sidebar truncates it';
+    renderSettings({
+      ...settingsDef,
+      title: longTitle,
+    });
+
+    expect(screen.getByText(longTitle)).toHaveAttribute('title', longTitle);
   });
 });

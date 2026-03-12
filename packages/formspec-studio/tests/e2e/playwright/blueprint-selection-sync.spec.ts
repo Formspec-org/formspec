@@ -15,6 +15,25 @@ const SEED_DEFINITION = {
   ],
 };
 
+const PAGED_BLUEPRINT_DEFINITION = {
+  $formspec: '1.0',
+  formPresentation: { pageMode: 'wizard' },
+  items: [
+    {
+      key: 'pageOne',
+      type: 'group',
+      label: 'Page One',
+      children: [{ key: 'firstName', type: 'field', dataType: 'string' }],
+    },
+    {
+      key: 'pageTwo',
+      type: 'group',
+      label: 'Page Two',
+      children: [{ key: 'email', type: 'field', dataType: 'string' }],
+    },
+  ],
+};
+
 test.describe('Blueprint Selection Sync', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
@@ -81,5 +100,31 @@ test.describe('Blueprint Selection Sync', () => {
     // Properties panel should show the empty state
     await expect(properties).toContainText('Select an item');
     await expect(properties).toContainText('inspect');
+  });
+
+  test('Clicking a structure item on another page scrolls that canvas field into view after switching pages', async ({ page }) => {
+    await seedDefinition(page, PAGED_BLUEPRINT_DEFINITION);
+    await page.waitForSelector('[role="tablist"]');
+
+    await page.evaluate(() => {
+      (window as any).__lastScrolledTestId = null;
+      const original = HTMLElement.prototype.scrollIntoView;
+      (window as any).__originalScrollIntoView = original;
+      HTMLElement.prototype.scrollIntoView = function scrollIntoViewSpy() {
+        (window as any).__lastScrolledTestId = this.getAttribute('data-testid');
+        return original.apply(this, arguments as any);
+      };
+    });
+
+    await page.getByRole('button', { name: /page two/i }).click();
+    await page.evaluate(() => {
+      (window as any).__lastScrolledTestId = null;
+    });
+
+    await page.click('[data-testid="tree-item-pageTwo.email"]');
+
+    await expect(page.getByRole('tab', { name: 'Page Two' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-testid="properties"] input[type="text"]').first()).toHaveValue('email');
+    await expect.poll(async () => page.evaluate(() => (window as any).__lastScrolledTestId)).toBe('field-email');
   });
 });

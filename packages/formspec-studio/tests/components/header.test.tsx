@@ -62,4 +62,24 @@ describe('Header', () => {
 
     expect(screen.getByRole('button', { name: /undo/i })).toBeEnabled();
   });
+
+  it('renders an Export action in the primary header controls', () => {
+    renderHeader();
+    expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
+  });
+
+  it('renders a New Form action in the primary header controls', () => {
+    renderHeader();
+    expect(screen.getByRole('button', { name: /new/i })).toBeInTheDocument();
+  });
+
+  it('exposes form metadata as an interactive control', () => {
+    renderHeader();
+    expect(screen.getByRole('button', { name: /formspec 1\.0/i })).toBeInTheDocument();
+  });
+
+  it('renders the avatar as a menu button', () => {
+    renderHeader();
+    expect(screen.getByRole('button', { name: /account|profile|avatar/i })).toBeInTheDocument();
+  });
 });

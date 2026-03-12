@@ -61,4 +61,39 @@ test.describe('Mapping Workspace', () => {
     await expect(workspace.getByText('Input', { exact: true })).toBeVisible();
     await expect(workspace.getByText('Output', { exact: true })).toBeVisible();
   });
+
+  test('clicking the config direction badge opens a direction picker', async ({ page }) => {
+    const workspace = page.locator('[data-testid="workspace-Mapping"]');
+
+    await workspace.getByText('outbound', { exact: true }).click();
+
+    await expect(workspace.getByRole('option', { name: 'inbound' })).toBeVisible();
+    await expect(workspace.getByRole('option', { name: 'outbound' })).toBeVisible();
+    await expect(workspace.getByRole('option', { name: 'bidirectional' })).toBeVisible();
+  });
+
+  test('Escape closes the direction picker after it opens', async ({ page }) => {
+    const workspace = page.locator('[data-testid="workspace-Mapping"]');
+
+    await workspace.getByText('outbound', { exact: true }).click();
+    await expect(workspace.getByRole('option', { name: 'inbound' })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+
+    await expect(workspace.getByRole('option', { name: 'inbound' })).toBeHidden();
+  });
+
+  test('Configuration stays collapsed after leaving Config and returning', async ({ page }) => {
+    const workspace = page.locator('[data-testid="workspace-Mapping"]');
+
+    await expect(workspace.getByText('Direction', { exact: true })).toBeVisible();
+
+    await workspace.getByRole('button', { name: /configuration/i }).click();
+    await expect(workspace.getByText('Direction', { exact: true })).toBeHidden();
+
+    await workspace.getByRole('button', { name: 'Rules' }).click();
+    await workspace.getByRole('button', { name: 'Config' }).click();
+
+    await expect(workspace.getByText('Direction', { exact: true })).toBeHidden();
+  });
 });

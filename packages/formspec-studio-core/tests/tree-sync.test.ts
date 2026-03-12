@@ -142,6 +142,43 @@ describe('component tree sync', () => {
     expect(rebuilt!.text).toBe('Welcome');
   });
 
+  it('preserves distinct display overrides for same-key display items in different groups across rebuilds', () => {
+    const project = createProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'group', key: 'groupA' } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'groupB' } },
+      { type: 'definition.addItem', payload: { type: 'display', key: 'header', parentPath: 'groupA', label: 'Alpha Header' } },
+      { type: 'definition.addItem', payload: { type: 'display', key: 'header', parentPath: 'groupB', label: 'Beta Header' } },
+    ]);
+
+    const tree1 = project.component.tree as any;
+    const groupANode = tree1.children.find((c: any) => c.bind === 'groupA');
+    const groupBNode = tree1.children.find((c: any) => c.bind === 'groupB');
+    const groupADisplay = groupANode.children.find((c: any) => c.nodeId === 'header');
+    const groupBDisplay = groupBNode.children.find((c: any) => c.nodeId === 'header');
+
+    groupADisplay.component = 'Alert';
+    groupADisplay.variant = 'warning';
+    groupBDisplay.component = 'Callout';
+    groupBDisplay.variant = 'info';
+
+    project.dispatch({
+      type: 'definition.addItem',
+      payload: { type: 'field', key: 'name', dataType: 'string' },
+    });
+
+    const tree2 = project.component.tree as any;
+    const rebuiltGroupA = tree2.children.find((c: any) => c.bind === 'groupA');
+    const rebuiltGroupB = tree2.children.find((c: any) => c.bind === 'groupB');
+    const rebuiltAHeader = rebuiltGroupA.children.find((c: any) => c.text === 'Alpha Header');
+    const rebuiltBHeader = rebuiltGroupB.children.find((c: any) => c.text === 'Beta Header');
+
+    expect(rebuiltAHeader.component).toBe('Alert');
+    expect(rebuiltAHeader.variant).toBe('warning');
+    expect(rebuiltBHeader.component).toBe('Callout');
+    expect(rebuiltBHeader.variant).toBe('info');
+  });
+
   it('handles batch with multiple structural changes', () => {
     const project = createProject();
     project.batch([

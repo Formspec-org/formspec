@@ -1,5 +1,5 @@
 import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider } from '../../../src/state/useSelection';
@@ -63,4 +63,85 @@ describe('StructureTree', () => {
     // Node should have selected styling (bg-accent/10 text-accent)
     expect(node.className).toContain('text-accent');
   });
+
+  it('scrolls the matching canvas block into view when a structure item is clicked', async () => {
+    const project = createProject({ seed: { definition: treeDef as any } });
+    const scrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const calls: string[] = [];
+
+    HTMLElement.prototype.scrollIntoView = function scrollIntoViewSpy() {
+      const testId = this.getAttribute('data-testid');
+      if (testId) calls.push(testId);
+    };
+
+    try {
+      render(
+        <ProjectProvider project={project}>
+          <SelectionProvider>
+            <ActivePageProvider>
+              <>
+                <div data-testid="field-name" />
+                <StructureTree />
+              </>
+            </ActivePageProvider>
+          </SelectionProvider>
+        </ProjectProvider>
+      );
+
+      const node = screen.getByTestId('tree-item-name');
+      await act(async () => {
+        node.click();
+      });
+
+      expect(calls).toContain('field-name');
+    } finally {
+      HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    }
+  });
+
+  it('selects the inserted collision-safe page key after adding a page with a colliding generated key', async () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:test',
+          version: '1.0.0',
+          formPresentation: { pageMode: 'wizard' },
+          items: [{ key: 'page1', type: 'group', label: 'Existing Page', children: [] }],
+        } as any,
+      },
+    });
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      render(
+        <ProjectProvider project={project}>
+          <SelectionProvider>
+            <ActivePageProvider>
+              <StructureTree />
+            </ActivePageProvider>
+          </SelectionProvider>
+        </ProjectProvider>
+      );
+
+      await act(async () => {
+        screen.getByTitle('Add wizard page').click();
+      });
+
+      const insertedPage = project.definition.items.find((item: any) => item.label === 'New Page');
+      expect(insertedPage?.key).toBe('page1_1');
+
+      const insertedButton = screen.getByRole('button', { name: /new page/i });
+      expect(insertedButton.className).toContain('text-accent');
+      expect(screen.getByRole('button', { name: /existing page/i }).className).not.toContain('text-accent');
+    } finally {
+      requestAnimationFrameSpy.mockRestore();
+    }
+  });
+
 });

@@ -61,4 +61,10 @@ describe('ScreenerSection', () => {
     renderScreener({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
     expect(screen.getByText(/disabled/i)).toBeInTheDocument();
   });
+
+  it('renders the disabled screener badge as an interactive control to start setup', () => {
+    renderScreener({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
+
+    expect(screen.getByRole('button', { name: /disabled/i })).toBeInTheDocument();
+  });
 });

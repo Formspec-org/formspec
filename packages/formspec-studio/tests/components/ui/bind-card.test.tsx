@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { BindCard } from '../../../src/components/ui/BindCard';
 
 describe('BindCard', () => {
@@ -23,5 +23,29 @@ describe('BindCard', () => {
     const { container } = render(<BindCard bindType="required" expression="true" />);
     // Required binds use blue/accent color
     expect(container.firstChild).toBeTruthy();
+  });
+
+  it('copies a function signature when a FEL reference entry is clicked', async () => {
+    const writeText = vi.fn();
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      clipboard: { writeText },
+    });
+
+    render(<BindCard bindType="calculate" expression="sum($members[*].mInc)" />);
+
+    await act(async () => {
+      screen.getByRole('button', { name: /fel reference/i }).click();
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: /aggregate/i }).click();
+    });
+
+    await act(async () => {
+      screen.getByText('sum').click();
+    });
+
+    expect(writeText).toHaveBeenCalledWith('sum(nodeset)');
   });
 });

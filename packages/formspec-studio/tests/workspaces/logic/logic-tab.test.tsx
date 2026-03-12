@@ -2,7 +2,7 @@ import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
-import { SelectionProvider } from '../../../src/state/useSelection';
+import { SelectionProvider, useSelection } from '../../../src/state/useSelection';
 import { LogicTab } from '../../../src/workspaces/logic/LogicTab';
 
 const logicDef = {
@@ -30,11 +30,17 @@ function renderLogic(def?: any) {
       <ProjectProvider project={project}>
         <SelectionProvider>
           <LogicTab />
+          <SelectionProbe />
         </SelectionProvider>
       </ProjectProvider>
     ),
     project,
   };
+}
+
+function SelectionProbe() {
+  const { selectedKey } = useSelection();
+  return <div data-testid="selected-key">{selectedKey || ''}</div>;
 }
 
 describe('LogicTab', () => {
@@ -63,5 +69,39 @@ describe('LogicTab', () => {
     // Should show bind info for fields with binds
     expect(screen.getByText('name')).toBeInTheDocument();
     expect(screen.getByText('age')).toBeInTheDocument();
+  });
+
+  it('filters the workspace when a bind-type pill is clicked', async () => {
+    renderLogic();
+    await act(async () => {
+      screen.getByText(/relevant \(1\)/i).click();
+    });
+    expect(screen.getByText('name')).toBeInTheDocument();
+    expect(screen.queryByText(/^age$/i)).not.toBeInTheDocument();
+  });
+
+  it('selects the related field when a bind row is clicked', async () => {
+    renderLogic();
+    await act(async () => {
+      screen.getByText(/^age$/i).click();
+    });
+    expect(screen.getByTestId('selected-key')).toHaveTextContent('age');
+  });
+
+  it('opens an expression editor when a variable expression is double-clicked', async () => {
+    renderLogic({
+      ...logicDef,
+      variables: [
+        { name: 'householdIncome', expression: 'sum($members[*].mInc)' },
+      ],
+    });
+
+    await act(async () => {
+      screen.getByText('sum($members[*].mInc)').dispatchEvent(
+        new MouseEvent('dblclick', { bubbles: true })
+      );
+    });
+
+    expect(screen.getByDisplayValue('sum($members[*].mInc)')).toBeInTheDocument();
   });
 });

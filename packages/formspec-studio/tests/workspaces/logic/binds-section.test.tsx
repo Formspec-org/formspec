@@ -25,4 +25,9 @@ describe('BindsSection', () => {
     render(<BindsSection binds={binds} />);
     expect(screen.getByText('$age >= 18')).toBeInTheDocument();
   });
+
+  it('renders bind rows as clickable controls', () => {
+    render(<BindsSection binds={binds} />);
+    expect(screen.getByRole('button', { name: /age/i })).toBeInTheDocument();
+  });
 });

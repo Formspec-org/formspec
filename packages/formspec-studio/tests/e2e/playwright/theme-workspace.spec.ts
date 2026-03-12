@@ -85,4 +85,65 @@ test.describe('Theme Workspace', () => {
     await workspace.getByRole('button', { name: 'Selectors' }).click();
     await expect(workspace.getByText('No selectors defined')).toBeVisible();
   });
+
+  // BUG-029: All Theme workspace sub-tabs are empty stubs — none have an add affordance.
+  // RED: Every sub-tab in the Theme workspace (Tokens, Defaults, Selectors, Item Overrides,
+  // Page Layouts, Breakpoints) either renders a plain read-only list or a bare empty-state
+  // message. None of them include a button or control to add a new entry. The spec requires
+  // each tab to have an add affordance so authors can create theme entries without manually
+  // editing JSON.
+  test('all theme sub-tabs provide an add affordance (button/link to add a new entry) [BUG-029]', async ({ page }) => {
+    const workspace = page.locator('[data-testid="workspace-Theme"]');
+
+    // Check each sub-tab for an add affordance (a button/link containing "add", "+", or "new").
+    // The add affordance must be present whether the tab has content or is in empty state.
+    const addPattern = /add|^\+$|new entry|new token|new selector|new default|new breakpoint/i;
+
+    // ── Tokens tab (active by default) ──────────────────────────────
+    await expect(
+      workspace.getByRole('button', { name: addPattern }).or(
+        workspace.getByRole('link', { name: addPattern })
+      )
+    ).toBeVisible({ timeout: 3000 });
+
+    // ── Defaults sub-tab ────────────────────────────────────────────
+    await workspace.getByRole('button', { name: 'Defaults' }).click();
+    await expect(
+      workspace.getByRole('button', { name: addPattern }).or(
+        workspace.getByRole('link', { name: addPattern })
+      )
+    ).toBeVisible({ timeout: 3000 });
+
+    // ── Selectors sub-tab ───────────────────────────────────────────
+    await workspace.getByRole('button', { name: 'Selectors' }).click();
+    await expect(
+      workspace.getByRole('button', { name: addPattern }).or(
+        workspace.getByRole('link', { name: addPattern })
+      )
+    ).toBeVisible({ timeout: 3000 });
+
+    // ── Item Overrides sub-tab ──────────────────────────────────────
+    await workspace.getByRole('button', { name: 'Item Overrides' }).click();
+    await expect(
+      workspace.getByRole('button', { name: addPattern }).or(
+        workspace.getByRole('link', { name: addPattern })
+      )
+    ).toBeVisible({ timeout: 3000 });
+
+    // ── Page Layouts sub-tab ────────────────────────────────────────
+    await workspace.getByRole('button', { name: 'Page Layouts' }).click();
+    await expect(
+      workspace.getByRole('button', { name: addPattern }).or(
+        workspace.getByRole('link', { name: addPattern })
+      )
+    ).toBeVisible({ timeout: 3000 });
+
+    // ── Breakpoints sub-tab ─────────────────────────────────────────
+    await workspace.getByRole('button', { name: 'Breakpoints' }).click();
+    await expect(
+      workspace.getByRole('button', { name: addPattern }).or(
+        workspace.getByRole('link', { name: addPattern })
+      )
+    ).toBeVisible({ timeout: 3000 });
+  });
 });

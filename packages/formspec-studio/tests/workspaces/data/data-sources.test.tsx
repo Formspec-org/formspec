@@ -44,4 +44,9 @@ describe('DataSources', () => {
     renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
     expect(screen.getByText(/no data sources/i)).toBeInTheDocument();
   });
+
+  it('shows a creation affordance when no data sources exist', () => {
+    renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
+    expect(screen.getByRole('button', { name: /add data source|new data source/i })).toBeInTheDocument();
+  });
 });

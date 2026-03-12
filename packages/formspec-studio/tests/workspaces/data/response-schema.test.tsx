@@ -37,8 +37,26 @@ describe('ResponseSchema', () => {
     expect(screen.getByText('street')).toBeInTheDocument();
   });
 
-  it('shows group type as object', () => {
+  it('shows repeatable group type as array', () => {
+    renderSchema({
+      $formspec: '1.0',
+      url: 'urn:test',
+      version: '1.0.0',
+      items: [
+        {
+          key: 'dependents',
+          type: 'group',
+          label: 'Dependents',
+          repeatable: true,
+          children: [{ key: 'name', type: 'field', dataType: 'string' }],
+        },
+      ],
+    });
+    expect(screen.getByText(/array/i)).toBeInTheDocument();
+  });
+
+  it('renders label values as interactive controls', () => {
     renderSchema();
-    expect(screen.getByText(/object/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Full Name' })).toBeInTheDocument();
   });
 });

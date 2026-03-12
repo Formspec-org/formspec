@@ -315,6 +315,17 @@ describe('definition.duplicateItem', () => {
 });
 
 describe('definition.addItem paged mode guard', () => {
+  it('allows adding the first root field before any pages exist in a paged definition', () => {
+    const project = createProject();
+    project.dispatch({ type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'wizard' } });
+
+    expect(() =>
+      project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'firstField' } }),
+    ).not.toThrow();
+
+    expect(project.definition.items[0]?.key).toBe('firstField');
+  });
+
   it('throws when adding a non-group item at root in a paged definition', () => {
     const project = createProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'page1' } });

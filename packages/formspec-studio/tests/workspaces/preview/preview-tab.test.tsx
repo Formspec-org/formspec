@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FormspecRender } from 'formspec-webcomponent';
 import { createProject } from 'formspec-studio-core';
@@ -20,8 +20,21 @@ const previewDef = {
   ],
 };
 
-function renderPreview(def?: any) {
-  const project = createProject({ seed: { definition: def || previewDef } });
+const calculatedPreviewDef = {
+  $formspec: '1.0',
+  url: 'urn:calculated-preview',
+  version: '1.0.0',
+  items: [
+    { key: 'grossAnnualIncome', type: 'field', dataType: 'integer', label: 'Gross Annual Income' },
+    { key: 'incomeSummary', type: 'field', dataType: 'string', label: 'Income Summary' },
+  ],
+  binds: {
+    incomeSummary: { calculate: 'string($grossAnnualIncome)' },
+  },
+};
+
+function renderPreview(seed?: Record<string, unknown>) {
+  const project = createProject({ seed: { definition: previewDef as any, ...seed } });
   return render(
     <ProjectProvider project={project}>
       <PreviewTab />
@@ -58,6 +71,25 @@ describe('PreviewTab', () => {
     expect(text).toContain('Full Name');
     expect(text).toContain('Email');
     expect(text).toContain('Biography');
+    vi.useRealTimers();
+  });
+
+  it('recalculates computed fields when the source field changes in preview', async () => {
+    vi.useFakeTimers();
+    renderPreview({ definition: calculatedPreviewDef as any });
+    await act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    const source = screen.getByLabelText('Gross Annual Income');
+    const target = screen.getByLabelText('Income Summary') as HTMLInputElement;
+
+    await act(async () => {
+      fireEvent.input(source, { target: { value: '60000' } });
+      fireEvent.blur(source);
+    });
+
+    expect(target.value).toBe('60000');
     vi.useRealTimers();
   });
 });

@@ -89,4 +89,17 @@ describe('StatusBar', () => {
 
     expect(screen.getByText(/1 field/i)).toBeInTheDocument();
   });
+
+  it('renders the definition URL as a hyperlink', () => {
+    renderStatusBar({
+      $formspec: '1.0',
+      url: 'https://example.com/forms/lease',
+      version: '1.0.0',
+      items: [],
+    });
+    expect(screen.getByRole('link', { name: 'https://example.com/forms/lease' })).toHaveAttribute(
+      'href',
+      'https://example.com/forms/lease'
+    );
+  });
 });

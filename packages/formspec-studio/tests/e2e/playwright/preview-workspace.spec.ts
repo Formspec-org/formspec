@@ -18,6 +18,36 @@ const PREVIEW_DEF = {
   ],
 };
 
+const CALCULATED_DEF = {
+  $formspec: '1.0',
+  url: 'urn:preview-calculated',
+  version: '1.0.0',
+  items: [
+    { key: 'grossAnnualIncome', type: 'field', dataType: 'integer', label: 'Gross Annual Income' },
+    { key: 'incomeSummary', type: 'field', dataType: 'string', label: 'Income Summary' },
+  ],
+  binds: {
+    incomeSummary: { calculate: 'string($grossAnnualIncome)' },
+  },
+};
+
+const REPEATABLE_DEF = {
+  $formspec: '1.0',
+  url: 'urn:preview-repeatable',
+  version: '1.0.0',
+  items: [
+    {
+      key: 'members',
+      type: 'group',
+      label: 'Members',
+      repeatable: true,
+      children: [
+        { key: 'memberName', type: 'field', dataType: 'string', label: 'Member Name' },
+      ],
+    },
+  ],
+};
+
 test.describe('Preview Workspace', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
@@ -56,6 +86,19 @@ test.describe('Preview Workspace', () => {
     expect(widthStyle).toBe('768px');
   });
 
+  test('desktop and tablet preview viewports produce measurably different rendered widths', async ({ page }) => {
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+    const container = workspace.locator('.bg-surface.rounded.border.border-border.p-4');
+
+    await workspace.getByRole('button', { name: 'Desktop' }).click();
+    const desktopWidth = await container.evaluate((el: HTMLElement) => el.getBoundingClientRect().width);
+
+    await workspace.getByRole('button', { name: 'Tablet' }).click();
+    const tabletWidth = await container.evaluate((el: HTMLElement) => el.getBoundingClientRect().width);
+
+    expect(tabletWidth).toBeLessThan(desktopWidth);
+  });
+
   test('viewport switcher changes preview container width to mobile (375px)', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Preview"]');
 
@@ -76,5 +119,112 @@ test.describe('Preview Workspace', () => {
     const container = workspace.locator('.bg-surface.rounded.border.border-border.p-4');
     const widthStyle = await container.evaluate((el: HTMLElement) => el.style.width);
     expect(widthStyle).toBe('100%');
+  });
+
+  test('calculated preview fields recalculate when the source field changes', async ({ page }) => {
+    await seedDefinition(page, CALCULATED_DEF);
+    await switchTab(page, 'Preview');
+
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+    await expect(workspace.getByRole('spinbutton', { name: 'Gross Annual Income' })).toBeVisible({ timeout: 3000 });
+
+    await workspace.getByRole('spinbutton', { name: 'Gross Annual Income' }).fill('60000');
+    await workspace.getByRole('spinbutton', { name: 'Gross Annual Income' }).press('Tab');
+
+    await expect(workspace.getByRole('textbox', { name: 'Income Summary' })).toHaveValue('60000');
+  });
+
+  test('repeatable preview groups expose a Remove action after adding an instance', async ({ page }) => {
+    await seedDefinition(page, REPEATABLE_DEF);
+    await switchTab(page, 'Preview');
+
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+    await expect(workspace.getByRole('button', { name: /add members/i })).toBeVisible({ timeout: 3000 });
+
+    await workspace.getByRole('button', { name: /add members/i }).click();
+
+    await expect(workspace.getByRole('button', { name: /remove/i })).toBeVisible();
+  });
+
+  // Bug #39: Preview JSON view has no "Copy to clipboard" button on the Definition sub-tab.
+  // The JsonDocumentsView component renders a <pre> block with JSON but provides no copy action.
+  test('bug #39: Json tab Definition sub-tab renders a copy-to-clipboard button', async ({ page }) => {
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+
+    // Switch to the JSON mode inside the Preview workspace
+    await workspace.getByTestId('preview-mode-json').click();
+
+    // The Definition sub-tab should be active by default; confirm JSON content is visible
+    await expect(workspace.getByTestId('json-doc-definition')).toBeVisible();
+
+    // A "Copy" button should be present to copy the displayed JSON to the clipboard
+    await expect(workspace.getByRole('button', { name: /copy/i })).toBeVisible();
+  });
+
+  // Bug #71: Component and Theme sub-tabs in Preview JSON view show stub placeholder
+  // objects (e.g. { "targetDefinition": { "url": "..." } }) rather than real authored
+  // content. The studio has no authoring surface for component or theme documents,
+  // so they permanently remain as stubs — only the Definition sub-tab renders real content.
+  //
+  // Root cause: Only the Definition sub-tab renders real content; Component/Theme
+  // sub-tabs show minimal stub objects because there is no authoring surface that
+  // populates these documents with real widget bindings, tokens, or theme rules.
+  test('bug #71: Component sub-tab shows a real component tree with widget bindings, not a targetDefinition stub', async ({ page }) => {
+    // Seed a definition that includes a choice-type field; a properly authored component
+    // document should bind it to a Dropdown or Select widget — not the generic TextInput
+    // fallback that the automatic rebuild assigns to every field.
+    await seedDefinition(page, {
+      $formspec: '1.0',
+      items: [
+        { key: 'fullName', type: 'field', dataType: 'string', label: 'Full Name' },
+        { key: 'status', type: 'field', dataType: 'string', label: 'Status',
+          optionSet: 'statuses' },
+      ],
+      optionSets: {
+        statuses: { options: [
+          { value: 'active', label: 'Active' },
+          { value: 'inactive', label: 'Inactive' },
+        ]},
+      },
+    });
+    await switchTab(page, 'Preview');
+
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+    await workspace.getByTestId('preview-mode-json').click();
+
+    // Switch to the Component sub-tab
+    await workspace.getByRole('button', { name: 'Component' }).click();
+
+    const componentDoc = workspace.getByTestId('json-doc-component');
+    await expect(componentDoc).toBeVisible();
+
+    // A properly authored component document should show a Dropdown (or Select) widget
+    // for the choice field "status", rather than the generic TextInput default.
+    // This will fail because the studio has no component authoring surface — all fields
+    // fall back to "TextInput" regardless of data type or option set association.
+    await expect(componentDoc).toContainText('Dropdown');
+  });
+
+  test('bug #71: Theme sub-tab shows real theme tokens and defaults, not a targetDefinition stub', async ({ page }) => {
+    // The default project has no authored theme content; the studio has no theme authoring
+    // surface that writes tokens or defaults into the theme document. The Theme sub-tab
+    // should display theme tokens and form-wide defaults — but currently only shows the
+    // bare targetDefinition stub: { "targetDefinition": { "url": "..." } }.
+
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+    await workspace.getByTestId('preview-mode-json').click();
+
+    // Switch to the Theme sub-tab
+    await workspace.getByRole('button', { name: 'Theme' }).click();
+
+    const themeDoc = workspace.getByTestId('json-doc-theme');
+    await expect(themeDoc).toBeVisible();
+
+    // The theme document should show authored token values (e.g. color tokens, font
+    // settings, spacing tokens) that make the theme document useful for inspection.
+    // This will fail because the theme document is always just the targetDefinition stub —
+    // there is no token editor, defaults editor, or selector editor that populates it.
+    // A real theme document must have at minimum a "tokens" or "defaults" section.
+    await expect(themeDoc).toContainText('"tokens"');
   });
 });
