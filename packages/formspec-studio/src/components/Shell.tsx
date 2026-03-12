@@ -27,6 +27,10 @@ import { MigrationsSection } from './blueprint/MigrationsSection';
 import { SettingsSection } from './blueprint/SettingsSection';
 import { ThemeOverview } from './blueprint/ThemeOverview';
 import { type Tab as DataWorkspaceTab, DataTab } from '../workspaces/data/DataTab';
+import { type ThemeTabId } from '../workspaces/theme/ThemeTab';
+import { type MappingTabId } from '../workspaces/mapping/MappingTab';
+import { type Viewport } from '../workspaces/preview/ViewportSwitcher';
+import { type PreviewMode } from '../workspaces/preview/PreviewTab';
 
 const WORKSPACES: Record<string, React.FC> = {
   Editor: EditorCanvas,
@@ -56,13 +60,46 @@ export function Shell() {
   const [showImport, setShowImport] = useState(false);
   const [showAppMenu, setShowAppMenu] = useState(false);
   const [activeDataTab, setActiveDataTab] = useState<DataWorkspaceTab>('Response Schema');
+  const [activeThemeTab, setActiveThemeTab] = useState<ThemeTabId>('tokens');
+  const [activeMappingTab, setActiveMappingTab] = useState<MappingTabId>('config');
+  const [mappingConfigOpen, setMappingConfigOpen] = useState(true);
+  const [previewViewport, setPreviewViewport] = useState<Viewport>('desktop');
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('form');
   const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
-  const WorkspaceComponent = activeTab === 'Data'
-    ? (() => <DataTab activeTab={activeDataTab} onActiveTabChange={setActiveDataTab} />)
-    : WORKSPACES[activeTab];
   const SidebarComponent = SIDEBAR_COMPONENTS[activeSection];
   const project = useProject();
   const { selectedKey, deselect } = useSelection();
+
+  const workspaceContent = (() => {
+    switch (activeTab) {
+      case 'Data':
+        return <DataTab activeTab={activeDataTab} onActiveTabChange={setActiveDataTab} />;
+      case 'Theme':
+        return <ThemeTab activeTab={activeThemeTab} onActiveTabChange={setActiveThemeTab} />;
+      case 'Mapping':
+        return (
+          <MappingTab
+            activeTab={activeMappingTab}
+            onActiveTabChange={setActiveMappingTab}
+            configOpen={mappingConfigOpen}
+            onConfigOpenChange={setMappingConfigOpen}
+          />
+        );
+      case 'Preview':
+        return (
+          <PreviewTab
+            viewport={previewViewport}
+            onViewportChange={setPreviewViewport}
+            mode={previewMode}
+            onModeChange={setPreviewMode}
+          />
+        );
+      default: {
+        const WorkspaceComponent = WORKSPACES[activeTab];
+        return WorkspaceComponent ? <WorkspaceComponent /> : activeTab;
+      }
+    }
+  })();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -157,7 +194,7 @@ export function Shell() {
                 if (e.target === e.currentTarget) deselect();
               }}
             >
-              {WorkspaceComponent ? <WorkspaceComponent /> : activeTab}
+              {workspaceContent}
             </div>
           </main>
           <aside

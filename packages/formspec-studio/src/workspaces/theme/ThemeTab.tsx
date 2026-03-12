@@ -15,9 +15,14 @@ const tabs = [
   { id: 'breakpoints', label: 'Breakpoints' },
 ] as const;
 
-type TabId = (typeof tabs)[number]['id'];
+export type ThemeTabId = (typeof tabs)[number]['id'];
 
-const tabContent: Record<TabId, () => React.ReactNode> = {
+interface ThemeTabProps {
+  activeTab?: ThemeTabId;
+  onActiveTabChange?: (tab: ThemeTabId) => void;
+}
+
+const tabContent: Record<ThemeTabId, () => React.ReactNode> = {
   tokens: () => <TokenEditor />,
   defaults: () => <DefaultsEditor />,
   selectors: () => <SelectorList />,
@@ -26,8 +31,10 @@ const tabContent: Record<TabId, () => React.ReactNode> = {
   breakpoints: () => <BreakpointEditor />,
 };
 
-export function ThemeTab() {
-  const [activeTab, setActiveTab] = useState<TabId>('tokens');
+export function ThemeTab({ activeTab, onActiveTabChange }: ThemeTabProps = {}) {
+  const [internalActive, setInternalActive] = useState<ThemeTabId>('tokens');
+  const active = activeTab ?? internalActive;
+  const setActive = onActiveTabChange ?? setInternalActive;
 
   return (
     <div className="flex flex-col h-full">
@@ -38,18 +45,18 @@ export function ThemeTab() {
             id={`theme-tab-${tab.id}`}
             type="button"
             className={`px-3 py-2 text-sm ${
-              activeTab === tab.id
+              active === tab.id
                 ? 'border-b-2 border-accent text-ink font-medium'
                 : 'text-muted hover:text-ink'
             }`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setActive(tab.id)}
           >
             {tab.label}
           </button>
         ))}
       </div>
       <div className="flex-1 overflow-auto">
-        {tabContent[activeTab]()}
+        {tabContent[active]()}
       </div>
     </div>
   );

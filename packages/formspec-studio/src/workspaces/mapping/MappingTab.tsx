@@ -11,16 +11,32 @@ const tabs = [
   { id: 'preview', label: 'Preview' },
 ] as const;
 
-type TabId = (typeof tabs)[number]['id'];
+export type MappingTabId = (typeof tabs)[number]['id'];
 
-export function MappingTab() {
-  const [activeTab, setActiveTab] = useState<TabId>('config');
-  const [configOpen, setConfigOpen] = useState(true);
+interface MappingTabProps {
+  activeTab?: MappingTabId;
+  onActiveTabChange?: (tab: MappingTabId) => void;
+  configOpen?: boolean;
+  onConfigOpenChange?: (open: boolean) => void;
+}
+
+export function MappingTab({
+  activeTab,
+  onActiveTabChange,
+  configOpen,
+  onConfigOpenChange,
+}: MappingTabProps = {}) {
+  const [internalActive, setInternalActive] = useState<MappingTabId>('config');
+  const [internalConfigOpen, setInternalConfigOpen] = useState(true);
+  const active = activeTab ?? internalActive;
+  const setActive = onActiveTabChange ?? setInternalActive;
+  const isConfigOpen = configOpen ?? internalConfigOpen;
+  const setConfigOpen = onConfigOpenChange ?? setInternalConfigOpen;
 
   let content: React.ReactNode;
-  switch (activeTab) {
+  switch (active) {
     case 'config':
-      content = <MappingConfig open={configOpen} onOpenChange={setConfigOpen} />;
+      content = <MappingConfig open={isConfigOpen} onOpenChange={setConfigOpen} />;
       break;
     case 'rules':
       content = <RuleEditor />;
@@ -41,11 +57,11 @@ export function MappingTab() {
             key={tab.id}
             type="button"
             className={`px-3 py-2 text-sm ${
-              activeTab === tab.id
+              active === tab.id
                 ? 'border-b-2 border-accent text-ink font-medium'
                 : 'text-muted hover:text-ink'
             }`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setActive(tab.id)}
           >
             {tab.label}
           </button>

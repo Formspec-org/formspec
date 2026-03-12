@@ -10,6 +10,7 @@ const seededDefinition = {
   $formspec: '1.0',
   url: 'urn:test-shell',
   version: '1.0.0',
+  title: 'Shell Test',
   items: [
     { key: 'name', type: 'field', dataType: 'string', label: 'Full Name' },
   ],
@@ -117,6 +118,95 @@ describe('Shell', () => {
     const dataWorkspace = screen.getByTestId('workspace-Data');
     const optionSetsBtn = within(dataWorkspace).getByRole('button', { name: /option sets/i });
     expect(optionSetsBtn.className).toMatch(/border-accent/);
+  });
+
+  it('preserves the active Theme sub-tab when navigating away and returning', async () => {
+    renderShell();
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Theme' }).click();
+    });
+
+    const themeWorkspace = screen.getByTestId('workspace-Theme');
+    await act(async () => {
+      within(themeWorkspace).getByRole('button', { name: /selectors/i }).click();
+    });
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Logic' }).click();
+    });
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Theme' }).click();
+    });
+
+    const selectorsBtn = within(screen.getByTestId('workspace-Theme')).getByRole('button', { name: /selectors/i });
+    expect(selectorsBtn.className).toMatch(/border-accent/);
+  });
+
+  it('preserves Mapping tab state when navigating away and returning', async () => {
+    renderShell();
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Mapping' }).click();
+    });
+
+    const mappingWorkspace = screen.getByTestId('workspace-Mapping');
+    await act(async () => {
+      within(mappingWorkspace).getByRole('button', { name: /configuration/i }).click();
+      within(mappingWorkspace).getByRole('button', { name: /preview/i }).click();
+    });
+    expect(within(mappingWorkspace).getByText(/input/i)).toBeInTheDocument();
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Logic' }).click();
+    });
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Mapping' }).click();
+    });
+
+    const restoredMappingWorkspace = screen.getByTestId('workspace-Mapping');
+    expect(within(restoredMappingWorkspace).getByText(/input/i)).toBeInTheDocument();
+
+    await act(async () => {
+      within(restoredMappingWorkspace).getByRole('button', { name: /config/i }).click();
+    });
+
+    expect(within(screen.getByTestId('workspace-Mapping')).queryByText('Direction')).not.toBeInTheDocument();
+  });
+
+  it('preserves Preview mode and viewport when navigating away and returning', async () => {
+    renderShell(seededDefinition);
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Preview' }).click();
+    });
+
+    const previewWorkspace = screen.getByTestId('workspace-Preview');
+    await act(async () => {
+      within(previewWorkspace).getByRole('button', { name: /mobile/i }).click();
+    });
+    await act(async () => {
+      within(previewWorkspace).getByTestId('preview-mode-json').click();
+    });
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Logic' }).click();
+    });
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Preview' }).click();
+    });
+
+    const restoredWorkspace = screen.getByTestId('workspace-Preview');
+    expect(within(restoredWorkspace).getByTestId('preview-mode-json').className).toMatch(/bg-accent/);
+
+    await act(async () => {
+      within(restoredWorkspace).getByTestId('preview-mode-form').click();
+    });
+
+    expect(within(restoredWorkspace).getByRole('button', { name: /mobile/i }).className).toMatch(/bg-accent|text-white/);
   });
 
   // Bug #1: Shell layout breaks at tablet width — sidebar + main overflow horizontally

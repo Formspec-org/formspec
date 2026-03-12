@@ -10,12 +10,28 @@ const viewportWidths: Record<Viewport, string> = {
   mobile: '375px',
 };
 
-type PreviewMode = 'form' | 'json';
+export type PreviewMode = 'form' | 'json';
 
-export function PreviewTab() {
+interface PreviewTabProps {
+  viewport?: Viewport;
+  onViewportChange?: (viewport: Viewport) => void;
+  mode?: PreviewMode;
+  onModeChange?: (mode: PreviewMode) => void;
+}
+
+export function PreviewTab({
+  viewport,
+  onViewportChange,
+  mode,
+  onModeChange,
+}: PreviewTabProps = {}) {
   const definition = useDefinition();
-  const [viewport, setViewport] = useState<Viewport>('desktop');
-  const [mode, setMode] = useState<PreviewMode>('form');
+  const [internalViewport, setInternalViewport] = useState<Viewport>('desktop');
+  const [internalMode, setInternalMode] = useState<PreviewMode>('form');
+  const activeViewport = viewport ?? internalViewport;
+  const setViewport = onViewportChange ?? setInternalViewport;
+  const activeMode = mode ?? internalMode;
+  const setMode = onModeChange ?? setInternalMode;
 
   const items = definition?.items ?? [];
 
@@ -28,7 +44,7 @@ export function PreviewTab() {
               key={m}
               type="button"
               className={`px-3 py-1 text-sm rounded capitalize ${
-                mode === m
+                activeMode === m
                   ? 'bg-accent text-white'
                   : 'text-muted hover:text-ink hover:bg-subtle'
               }`}
@@ -39,22 +55,22 @@ export function PreviewTab() {
             </button>
           ))}
         </div>
-        {mode === 'form' && (
-          <ViewportSwitcher active={viewport} onChange={setViewport} />
+        {activeMode === 'form' && (
+          <ViewportSwitcher active={activeViewport} onChange={setViewport} />
         )}
       </div>
-      {mode === 'form' ? (
+      {activeMode === 'form' ? (
         <div className="flex-1 overflow-auto flex justify-center p-2 bg-subtle/50">
           <div
             className="bg-surface rounded border border-border p-4 h-fit"
             style={{
-              width: viewportWidths[viewport],
+              width: viewportWidths[activeViewport],
               maxWidth: '100%',
-              minWidth: viewport === 'desktop' ? '800px' : undefined,
+              minWidth: activeViewport === 'desktop' ? '800px' : undefined,
             }}
           >
             {items.length > 0 ? (
-              <FormspecPreviewHost width={viewportWidths[viewport]} />
+              <FormspecPreviewHost width={viewportWidths[activeViewport]} />
             ) : (
               <div className="text-center text-muted text-sm py-8">
                 No items to preview
