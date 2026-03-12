@@ -2,7 +2,7 @@ import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
-import { SelectionProvider } from '../../../src/state/useSelection';
+import { SelectionProvider, useSelection } from '../../../src/state/useSelection';
 import { ActivePageProvider } from '../../../src/state/useActivePage';
 import { CanvasTargetsProvider, useCanvasTargets } from '../../../src/state/useCanvasTargets';
 import { StructureTree } from '../../../src/components/blueprint/StructureTree';
@@ -161,6 +161,115 @@ describe('StructureTree', () => {
     } finally {
       requestAnimationFrameSpy.mockRestore();
     }
+  });
+
+  it('selects the canonical inserted path after adding a colliding item from the palette', async () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:tree-collision-selection',
+          version: '1.0.0',
+          formPresentation: { pageMode: 'wizard' },
+          items: [
+            {
+              key: 'page1',
+              type: 'group',
+              label: 'Page 1',
+              children: [
+                { key: 'string1', type: 'field', dataType: 'string', label: 'Existing String' },
+              ],
+            },
+          ],
+        } as any,
+      },
+    });
+
+    let capturedSelectedKey: string | null = null;
+    function SelectionCapture() {
+      const { selectedKey } = useSelection();
+      capturedSelectedKey = selectedKey;
+      return null;
+    }
+
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActivePageProvider>
+            <CanvasTargetsProvider>
+              <StructureTree />
+              <SelectionCapture />
+            </CanvasTargetsProvider>
+          </ActivePageProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    await act(async () => {
+      screen.getByTitle(/add item to/i).click();
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: /^Text\b/i }).click();
+    });
+
+    const page = project.definition.items[0] as any;
+    const insertedField = page.children.find((item: any) => item.label === 'Text');
+
+    expect(insertedField).toBeTruthy();
+    expect(insertedField.key).not.toBe('string1');
+    expect(capturedSelectedKey).toBe(`page1.${insertedField.key}`);
+    expect(screen.getByTestId(`tree-item-page1.${insertedField.key}`)).toHaveClass('text-accent');
+  });
+
+  it('uses the insertedPath returned by dispatch when adding from the palette', async () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:structure-inserted-path-override',
+          version: '1.0.0',
+          items: [],
+        } as any,
+      },
+      middleware: [
+        (_state, command, next) => {
+          const result = next(command);
+          if (command.type !== 'definition.addItem') return result;
+          return { ...result, insertedPath: 'canonical.tree.path' };
+        },
+      ],
+    });
+
+    let capturedSelectedKey: string | null = null;
+    function SelectionCapture() {
+      const { selectedKey } = useSelection();
+      capturedSelectedKey = selectedKey;
+      return null;
+    }
+
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActivePageProvider>
+            <CanvasTargetsProvider>
+              <StructureTree />
+              <SelectionCapture />
+            </CanvasTargetsProvider>
+          </ActivePageProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    await act(async () => {
+      screen.getByTitle('Add item').click();
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: /^Text\b/i }).click();
+    });
+
+    expect(capturedSelectedKey).toBe('canonical.tree.path');
   });
 
 });

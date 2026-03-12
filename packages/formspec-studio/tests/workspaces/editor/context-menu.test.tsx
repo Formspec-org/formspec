@@ -103,4 +103,46 @@ describe('Editor context menu behavior', () => {
     // Expect a canvas-level context menu with an "Add Item" action.
     expect(screen.getByRole('menuitem', { name: /add item/i })).toBeInTheDocument();
   });
+
+  it('moves the item into the canonical wrapper path when Wrap in Group generates a collision-safe key', () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:wrap-group-collision',
+          version: '1.0.0',
+          items: [
+            { key: 'firstField', type: 'field', dataType: 'string', label: 'First Field' },
+            ...Array.from({ length: 80 }, (_, index) => ({
+              key: `group${index + 1}`,
+              type: 'group',
+              label: `Existing Group ${index + 1}`,
+              children: [],
+            })),
+          ],
+        } as any,
+      },
+    });
+
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActivePageProvider>
+            <EditorCanvas />
+          </ActivePageProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('field-firstField'));
+    fireEvent.click(screen.getByRole('menuitem', { name: /wrap in group/i }));
+
+    const createdGroup = project.definition.items.find((item: any) => item.label === 'Group');
+    expect(createdGroup).toBeTruthy();
+    if (!createdGroup || !createdGroup.children) {
+      throw new Error('Expected Wrap in Group to create a wrapper with children');
+    }
+    expect(createdGroup.children).toHaveLength(1);
+    expect(createdGroup.children[0].key).toBe('firstField');
+  });
 });

@@ -11,6 +11,7 @@ import { DisplayBlock } from './DisplayBlock';
 import { PageTabs } from './PageTabs';
 import { AddItemPalette, type FieldTypeOption } from '../../components/AddItemPalette';
 import { EditorContextMenu } from './EditorContextMenu';
+import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 
 interface Item {
   key: string;
@@ -179,8 +180,7 @@ export function EditorCanvas() {
   const handleAddItem = (opt: FieldTypeOption) => {
     const key = uniqueKey(opt.dataType ?? opt.itemType);
     const activeGroup = hasPaged ? topLevelGroups[activePageIndex] : null;
-    const itemPath = activeGroup ? `${activeGroup.key}.${key}` : key;
-    dispatch({
+    const result = dispatch({
       type: 'definition.addItem',
       payload: {
         key,
@@ -191,7 +191,8 @@ export function EditorCanvas() {
         ...opt.extra,
       },
     });
-    selectAndFocusInspector(itemPath, opt.itemType);
+    const insertedPath = result.insertedPath ?? (activeGroup ? `${activeGroup.key}.${key}` : key);
+    selectAndFocusInspector(insertedPath, opt.itemType);
     setShowPicker(false);
   };
 
@@ -262,7 +263,7 @@ export function EditorCanvas() {
         const location = findItemLocation(items, path);
         if (!location) break;
         const wrapperKey = uniqueKey('group');
-        dispatch({
+        const addResult = dispatch({
           type: 'definition.addItem',
           payload: {
             key: wrapperKey,
@@ -272,7 +273,8 @@ export function EditorCanvas() {
             insertIndex: location.index,
           },
         });
-        const targetParentPath = location.parentPath ? `${location.parentPath}.${wrapperKey}` : wrapperKey;
+        const targetParentPath = addResult.insertedPath
+          ?? (location.parentPath ? `${location.parentPath}.${wrapperKey}` : wrapperKey);
         dispatch({
           type: 'definition.moveItem',
           payload: { sourcePath: path, targetParentPath, targetIndex: 0 },
@@ -290,16 +292,15 @@ export function EditorCanvas() {
   const defaultCurrency = formPresentation.defaultCurrency;
 
   return (
-    <div
-      className="flex flex-col min-h-full max-w-[660px] mx-auto"
-      onClick={(e) => {
+    <WorkspacePage
+      onClick={(e: React.MouseEvent) => {
         if (e.target === e.currentTarget) deselect();
       }}
       onContextMenu={handleContextMenu}
     >
       {/* Form metadata header */}
       {(formTitle || formUrl) && (
-        <div className="px-7 pt-4 pb-3 border-b border-border bg-surface shrink-0">
+        <WorkspacePageSection className="pt-4 pb-3 border-b border-border bg-surface shrink-0">
           <div className="font-ui text-[15px] font-semibold tracking-tight text-ink leading-snug truncate">
             {formTitle || 'Untitled Form'}
           </div>
@@ -309,32 +310,32 @@ export function EditorCanvas() {
             {pageMode && <><span className="opacity-40 shrink-0">·</span><span className="shrink-0">{pageMode}</span></>}
             {defaultCurrency && <><span className="opacity-40 shrink-0">·</span><span className="shrink-0">{defaultCurrency}</span></>}
           </div>
-        </div>
+        </WorkspacePageSection>
       )}
 
       {/* Page tabs — only when in paged mode */}
       {hasPaged && (
-        <div className="px-7 border-b border-border bg-surface">
+        <WorkspacePageSection className="border-b border-border bg-surface">
           <PageTabs activePageKey={activePageKey} onPageChange={setActivePageKey} />
-        </div>
+        </WorkspacePageSection>
       )}
 
       {/* Items list */}
-      <div className="flex flex-col gap-1 px-7 pt-3 pb-20">
+      <WorkspacePageSection className="flex flex-col gap-1 pt-3 pb-20">
         <AddItemPalette
           open={showPicker}
           onClose={() => setShowPicker(false)}
           onAdd={handleAddItem}
         />
         {renderItems(displayItems, allBinds, selectedKey, select, registerCanvasTarget, 0, '')}
-      <button
+        <button
           data-testid="add-item"
           className="fixed bottom-3 left-3 right-3 z-10 flex items-center justify-center gap-1.5 rounded-[4px] border border-dashed border-border bg-surface py-2.5 font-mono text-[11.5px] text-muted shadow-sm transition-colors cursor-pointer hover:border-accent/50 hover:text-ink sm:static sm:mt-3 sm:w-full sm:bg-transparent sm:shadow-none"
           onClick={() => setShowPicker(!showPicker)}
         >
           + Add Item
         </button>
-      </div>
+      </WorkspacePageSection>
 
       {contextMenu && (
         <div
@@ -351,6 +352,6 @@ export function EditorCanvas() {
           />
         </div>
       )}
-    </div>
+    </WorkspacePage>
   );
 }

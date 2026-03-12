@@ -264,4 +264,108 @@ describe('EditorCanvas', () => {
     const keyInput = screen.getByLabelText('Key');
     expect(keyInput).toHaveFocus();
   });
+
+  it('selects the canonical inserted path after adding an item with a colliding key', async () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:editor-collision-selection',
+          version: '1.0.0',
+          formPresentation: { pageMode: 'wizard' },
+          items: [
+            {
+              key: 'page1',
+              type: 'group',
+              label: 'Page 1',
+              children: [
+                { key: 'string1', type: 'field', dataType: 'string', label: 'Existing String' },
+              ],
+            },
+          ],
+        } as any,
+      },
+    });
+
+    let capturedSelectedKey: string | null = null;
+    function SelectionCapture() {
+      const { selectedKey } = useSelection();
+      capturedSelectedKey = selectedKey;
+      return null;
+    }
+
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActivePageProvider>
+            <EditorCanvas />
+            <SelectionCapture />
+          </ActivePageProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    await act(async () => {
+      screen.getByTestId('add-item').click();
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: /^Text\b/i }).click();
+    });
+
+    const page = project.definition.items[0] as any;
+    const insertedField = page.children.find((item: any) => item.label === 'Text');
+
+    expect(insertedField).toBeTruthy();
+    expect(insertedField.key).not.toBe('string1');
+    expect(capturedSelectedKey).toBe(`page1.${insertedField.key}`);
+  });
+
+  it('uses the insertedPath returned by dispatch instead of guessing locally', async () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:editor-inserted-path-override',
+          version: '1.0.0',
+          items: [],
+        } as any,
+      },
+      middleware: [
+        (_state, command, next) => {
+          const result = next(command);
+          if (command.type !== 'definition.addItem') return result;
+          return { ...result, insertedPath: 'canonical.inserted.path' };
+        },
+      ],
+    });
+
+    let capturedSelectedKey: string | null = null;
+    function SelectionCapture() {
+      const { selectedKey } = useSelection();
+      capturedSelectedKey = selectedKey;
+      return null;
+    }
+
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActivePageProvider>
+            <EditorCanvas />
+            <SelectionCapture />
+          </ActivePageProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    await act(async () => {
+      screen.getByTestId('add-item').click();
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: /^Text\b/i }).click();
+    });
+
+    expect(capturedSelectedKey).toBe('canonical.inserted.path');
+  });
 });

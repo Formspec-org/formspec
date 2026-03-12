@@ -176,9 +176,7 @@ export function StructureTree() {
       type: 'definition.addItem',
       payload: { key, type: 'group', label: 'New Page' },
     });
-    const insertedPageKey = typeof result.insertedPath === 'string'
-      ? result.insertedPath.split('.').pop() ?? key
-      : key;
+    const insertedPageKey = result.insertedPath?.split('.').pop() ?? key;
     // If not already in paged mode, enable it
     if (!isPaged) {
       dispatch({
@@ -197,7 +195,7 @@ export function StructureTree() {
   const handleAddFromPalette = useCallback(
     (opt: FieldTypeOption) => {
       const key = uniqueKey(opt.dataType ?? opt.itemType);
-      dispatch({
+      const result = dispatch({
         type: 'definition.addItem',
         payload: {
           key,
@@ -209,8 +207,11 @@ export function StructureTree() {
           ...opt.extra,
         },
       });
+      const insertedPath = result.insertedPath
+        ?? (hasPages && activePageKey ? `${activePageKey}.${key}` : key);
+      select(insertedPath, opt.itemType);
     },
-    [dispatch, hasPages, activePageKey],
+    [dispatch, hasPages, activePageKey, select],
   );
 
   // Items section label
