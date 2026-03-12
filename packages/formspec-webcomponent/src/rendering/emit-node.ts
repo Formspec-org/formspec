@@ -82,33 +82,48 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         container.dataset.bind = bindKey;
         target.appendChild(container);
         const item = host.findItemByKey(bindKey);
+        let innerCleanupFns: Array<() => void> = [];
+
+        const disposeInner = () => {
+            for (const cleanup of innerCleanupFns.splice(0)) {
+                cleanup();
+            }
+        };
 
         host.cleanupFns.push(effect(() => {
             const count = host.engine.repeats[fullRepeatPath]?.value || 0;
-            while (container.children.length > count) {
-                container.removeChild(container.lastChild!);
-            }
-            while (container.children.length < count) {
-                const idx = container.children.length;
+            disposeInner();
+            container.replaceChildren();
+
+            const nextInnerCleanupFns: Array<() => void> = [];
+            const repeatHost = { ...host, cleanupFns: nextInnerCleanupFns };
+
+            for (let idx = 0; idx < count; idx++) {
                 const instanceWrapper = document.createElement('div');
                 instanceWrapper.className = 'formspec-repeat-instance';
                 container.appendChild(instanceWrapper);
 
                 const instancePrefix = `${fullRepeatPath}[${idx}]`;
                 for (const child of node.children) {
-                    emitNode(host, child, instanceWrapper, instancePrefix);
+                    emitNode(repeatHost, child, instanceWrapper, instancePrefix);
                 }
 
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'formspec-repeat-add';
                 removeBtn.textContent = `Remove ${item?.label || bindKey}`;
+                const removeIdx = idx;
                 removeBtn.addEventListener('click', () => {
-                    host.engine.removeRepeatInstance(fullRepeatPath, idx);
+                    host.engine.removeRepeatInstance(fullRepeatPath, removeIdx);
                 });
                 instanceWrapper.appendChild(removeBtn);
             }
+
+            innerCleanupFns = nextInnerCleanupFns;
         }));
+        host.cleanupFns.push(() => {
+            disposeInner();
+        });
         const addBtn = document.createElement('button');
         addBtn.type = 'button';
         addBtn.className = 'formspec-repeat-add';

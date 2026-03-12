@@ -177,15 +177,19 @@ export const WizardPlugin: ComponentPlugin = {
         nextBtn.className = 'formspec-wizard-next';
         nextBtn.textContent = 'Next';
         nextBtn.addEventListener('click', () => {
-            if (currentStep.value < children.length - 1) {
-                // Soft validation: touch all fields in the current panel so inline
-                // errors become visible. Navigation still proceeds immediately.
-                const currentPanel = panels[currentStep.value];
-                if (currentPanel) {
-                    touchFieldsInContainer(currentPanel, ctx.touchedFields, ctx.touchedVersion);
-                }
-                setStep(currentStep.value + 1);
+            const isLastStep = currentStep.value === children.length - 1;
+            if (isLastStep) {
+                ctx.submit({ mode: 'submit', emitEvent: true });
+                return;
             }
+
+            // Soft validation: touch all fields in the current panel so inline
+            // errors become visible. Navigation still proceeds immediately.
+            const currentPanel = panels[currentStep.value];
+            if (currentPanel) {
+                touchFieldsInContainer(currentPanel, ctx.touchedFields, ctx.touchedVersion);
+            }
+            setStep(currentStep.value + 1);
         });
 
         nav.appendChild(prevBtn);
@@ -221,7 +225,7 @@ export const WizardPlugin: ComponentPlugin = {
             const step = currentStep.value;
             const total = children.length;
             prevBtn.disabled = step === 0;
-            nextBtn.disabled = step === total - 1;
+            nextBtn.disabled = total === 0;
             prevBtn.classList.toggle('formspec-hidden', step === 0);
 
             const skipBtn = el.querySelector('.formspec-wizard-skip') as HTMLButtonElement;

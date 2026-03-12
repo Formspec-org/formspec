@@ -26,6 +26,18 @@ function findItems(items: any[], key: string): any | null {
     return null;
 }
 
+function findItemByPath(items: any[], path: string): any | null {
+    const segments = path.split('.');
+    let current = items;
+    for (let i = 0; i < segments.length; i++) {
+        const found = current.find((item: any) => item.key === segments[i]);
+        if (!found) return null;
+        if (i === segments.length - 1) return found;
+        current = found.children || [];
+    }
+    return null;
+}
+
 beforeEach(() => {
     resetNodeIdCounter();
 });
@@ -253,6 +265,46 @@ describe('planComponentTree', () => {
         const node = planComponentTree(tree, ctx);
         expect(node.bindPath).toBe('outer');
         expect(node.children[0].bindPath).toBe('outer.inner');
+    });
+
+    it('resolves scoped items by full path, not leaf key', () => {
+        const items = [
+            {
+                key: 'applicant',
+                type: 'group',
+                children: [
+                    { key: 'name', type: 'field', dataType: 'string', label: 'Applicant Name' },
+                ],
+            },
+            {
+                key: 'organization',
+                type: 'group',
+                children: [
+                    { key: 'name', type: 'field', dataType: 'string', label: 'Org Name' },
+                ],
+            },
+        ];
+
+        const tree = {
+            component: 'Stack',
+            children: [
+                {
+                    component: 'Stack',
+                    bind: 'organization',
+                    children: [
+                        { component: 'TextInput', bind: 'name' },
+                    ],
+                },
+            ],
+        };
+
+        const ctx = makeCtx({
+            items,
+            findItem: (key) => findItemByPath(items, key) ?? findItems(items, key),
+        });
+
+        const node = planComponentTree(tree, ctx);
+        expect(node.children[0].children[0].fieldItem?.label).toBe('Org Name');
     });
 
     it('resolves accessibility attributes', () => {

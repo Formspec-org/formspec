@@ -23,6 +23,14 @@
 import { registerHandler } from '../handler-registry.js';
 import type { FormspecItem } from 'formspec-engine';
 
+function getEnabledScreener(state: { definition: { screener?: { enabled?: boolean } } }) {
+  const screener = state.definition.screener;
+  if (!screener || screener.enabled === false) {
+    throw new Error('Screener is not enabled');
+  }
+  return screener;
+}
+
 /**
  * **definition.setScreener** -- Enable or disable the screener on the definition.
  *
@@ -41,8 +49,11 @@ registerHandler('definition.setScreener', (state, payload) => {
     if (!state.definition.screener) {
       state.definition.screener = { items: [], routes: [] };
     }
+    delete state.definition.screener.enabled;
   } else {
-    delete state.definition.screener;
+    if (state.definition.screener) {
+      state.definition.screener.enabled = false;
+    }
   }
 
   return { rebuildComponentTree: false };
@@ -63,8 +74,7 @@ registerHandler('definition.setScreener', (state, payload) => {
  */
 registerHandler('definition.addScreenerItem', (state, payload) => {
   const p = payload as Record<string, unknown>;
-  const screener = state.definition.screener;
-  if (!screener) throw new Error('Screener is not enabled');
+  const screener = getEnabledScreener(state);
   type ItemType = FormspecItem['type'];
   type FieldDataType = NonNullable<FormspecItem['dataType']>;
 
@@ -94,8 +104,7 @@ registerHandler('definition.addScreenerItem', (state, payload) => {
  */
 registerHandler('definition.deleteScreenerItem', (state, payload) => {
   const { key } = payload as { key: string };
-  const screener = state.definition.screener;
-  if (!screener) throw new Error('Screener is not enabled');
+  const screener = getEnabledScreener(state);
 
   screener.items = screener.items.filter(it => it.key !== key);
 
@@ -126,8 +135,7 @@ registerHandler('definition.deleteScreenerItem', (state, payload) => {
  */
 registerHandler('definition.setScreenerBind', (state, payload) => {
   const { path, properties } = payload as { path: string; properties: Record<string, unknown> };
-  const screener = state.definition.screener;
-  if (!screener) throw new Error('Screener is not enabled');
+  const screener = getEnabledScreener(state);
 
   if (!screener.binds) screener.binds = [];
 
@@ -167,8 +175,7 @@ registerHandler('definition.setScreenerBind', (state, payload) => {
  */
 registerHandler('definition.addRoute', (state, payload) => {
   const p = payload as { condition: string; target: string; label?: string; insertIndex?: number };
-  const screener = state.definition.screener;
-  if (!screener) throw new Error('Screener is not enabled');
+  const screener = getEnabledScreener(state);
 
   const route: any = { condition: p.condition, target: p.target };
   if (p.label) route.label = p.label;
@@ -197,8 +204,7 @@ registerHandler('definition.addRoute', (state, payload) => {
  */
 registerHandler('definition.setRouteProperty', (state, payload) => {
   const { index, property, value } = payload as { index: number; property: string; value: unknown };
-  const screener = state.definition.screener;
-  if (!screener) throw new Error('Screener is not enabled');
+  const screener = getEnabledScreener(state);
 
   const route = screener.routes[index];
   if (!route) throw new Error(`Route not found at index: ${index}`);
@@ -222,8 +228,7 @@ registerHandler('definition.setRouteProperty', (state, payload) => {
  */
 registerHandler('definition.deleteRoute', (state, payload) => {
   const { index } = payload as { index: number };
-  const screener = state.definition.screener;
-  if (!screener) throw new Error('Screener is not enabled');
+  const screener = getEnabledScreener(state);
 
   if (screener.routes.length <= 1) {
     throw new Error('Cannot delete the last route');
@@ -248,8 +253,7 @@ registerHandler('definition.deleteRoute', (state, payload) => {
  */
 registerHandler('definition.reorderRoute', (state, payload) => {
   const { index, direction } = payload as { index: number; direction: 'up' | 'down' };
-  const screener = state.definition.screener;
-  if (!screener) throw new Error('Screener is not enabled');
+  const screener = getEnabledScreener(state);
 
   const targetIdx = direction === 'up' ? index - 1 : index + 1;
   if (targetIdx < 0 || targetIdx >= screener.routes.length) return { rebuildComponentTree: false };

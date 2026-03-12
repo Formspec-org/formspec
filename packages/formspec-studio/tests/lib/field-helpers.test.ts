@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { flatItems, bindsFor, shapesFor, dataTypeInfo } from '../../src/lib/field-helpers';
+import { flatItems, bindsFor, arrayBindsFor, shapesFor, dataTypeInfo } from '../../src/lib/field-helpers';
 
 describe('flatItems', () => {
   it('flattens nested items with paths', () => {
@@ -37,6 +37,18 @@ describe('bindsFor', () => {
 
   it('handles undefined binds', () => {
     expect(bindsFor(undefined, 'name')).toEqual({});
+  });
+});
+
+describe('arrayBindsFor', () => {
+  it('returns binds for an exact path match', () => {
+    const binds = [{ path: 'household.name', required: 'true()' }];
+    expect(arrayBindsFor(binds as any, 'household.name')).toEqual({ required: 'true()' });
+  });
+
+  it('does not resolve a bind by leaf key when the full path does not match', () => {
+    const binds = [{ path: 'name', required: 'true()' }];
+    expect(arrayBindsFor(binds as any, 'household.name')).toEqual({});
   });
 });
 

@@ -91,7 +91,7 @@ describe('Wizard plugin', () => {
         expect(prevBtn.classList.contains('formspec-hidden')).toBe(true);
     });
 
-    it('Next disabled and shows "Finish" at last step', () => {
+    it('keeps the last-step submit button enabled', () => {
         const el = renderWithTree({
             component: 'Wizard',
             children: [
@@ -101,8 +101,30 @@ describe('Wizard plugin', () => {
         });
         const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
         nextBtn.click(); // go to last step
-        expect(nextBtn.disabled).toBe(true);
-        expect(nextBtn.textContent).toBe('Finish');
+        expect(nextBtn.disabled).toBe(false);
+        expect(nextBtn.textContent).toBe('Submit');
+    });
+
+    it('dispatches formspec-submit when clicking submit on the last step', async () => {
+        const el = renderWithTree({
+            component: 'Wizard',
+            children: [
+                { component: 'Text', text: 'Step 1' },
+                { component: 'Text', text: 'Step 2' },
+            ],
+        });
+        const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
+        nextBtn.click(); // go to last step
+
+        const submitDetail = new Promise<any>(resolve => {
+            el.addEventListener('formspec-submit', (e: CustomEvent) => resolve(e.detail), { once: true });
+        });
+
+        nextBtn.click();
+
+        const detail = await submitDetail;
+        expect(detail.response).toBeTruthy();
+        expect(detail.validationReport).toBeTruthy();
     });
 
     it('progress indicator marks active/completed steps', () => {

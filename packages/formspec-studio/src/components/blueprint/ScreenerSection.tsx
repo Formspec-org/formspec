@@ -26,7 +26,7 @@ export function ScreenerSection() {
   const definition = useDefinition();
   const dispatch = useDispatch();
   const screener = (definition as Record<string, unknown>).screener as Screener | undefined;
-  const isEnabled = Boolean(screener);
+  const isEnabled = Boolean(screener) && screener?.enabled !== false;
 
   return (
     <Section title="Screener">

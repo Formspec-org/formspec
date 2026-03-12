@@ -247,3 +247,25 @@ describe('component.unwrapNode', () => {
     expect(tree.children[1].bind).toBe('b');
   });
 });
+
+describe('component tree rebuild — orphaned display nodes', () => {
+  it('drops display nodes whose definition items no longer exist', () => {
+    const project = createProject();
+
+    project.dispatch({
+      type: 'definition.addItem',
+      payload: { key: 'notice', type: 'display', label: 'Important notice' },
+    });
+
+    const treeBefore = project.component.tree as any;
+    expect(treeBefore.children?.some((node: any) => node.nodeId === 'notice')).toBe(true);
+
+    project.dispatch({
+      type: 'definition.deleteItem',
+      payload: { path: 'notice' },
+    });
+
+    const treeAfter = project.component.tree as any;
+    expect(treeAfter.children?.some((node: any) => node.nodeId === 'notice')).toBe(false);
+  });
+});

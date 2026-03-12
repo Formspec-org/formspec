@@ -95,7 +95,28 @@ describe('ItemProperties', () => {
     expect(screen.getByRole('button', { name: /duplicate/i })).toBeInTheDocument();
   });
 
-  it('shows behavior rules for relative bind paths on nested fields', async () => {
+  it('shows behavior rules for exact nested bind paths', async () => {
+    const project = createProject({ seed: { definition: {
+      $formspec: '1.0',
+      url: 'urn:test',
+      version: '1.0.0',
+      items: [
+        {
+          key: 'household',
+          type: 'group',
+          label: 'Household',
+          children: [{ key: 'hhSize', type: 'field', dataType: 'integer' }],
+        },
+      ],
+      binds: [{ path: 'household.hhSize', required: 'count(.) > 0' }],
+    } as any } });
+    renderProps(project, { path: 'household.hhSize', type: 'field' });
+    await act(async () => { screen.getByText('Select').click(); });
+    expect(screen.getByText(/behavior rules/i)).toBeInTheDocument();
+    expect(screen.getByText(/required/i)).toBeInTheDocument();
+  });
+
+  it('does not show behavior rules for nested fields when only a leaf-key bind exists', async () => {
     const project = createProject({ seed: { definition: {
       $formspec: '1.0',
       url: 'urn:test',
@@ -112,25 +133,10 @@ describe('ItemProperties', () => {
     } as any } });
     renderProps(project, { path: 'household.hhSize', type: 'field' });
     await act(async () => { screen.getByText('Select').click(); });
-    expect(screen.getByText(/behavior rules/i)).toBeInTheDocument();
-    expect(screen.getByText(/required/i)).toBeInTheDocument();
+    expect(screen.queryByText(/behavior rules/i)).toBeNull();
   });
 
-  it('dispatches a rule action when + Add Rule is clicked', async () => {
-    const { project } = renderProps();
-    const spy = vi.spyOn(project, 'dispatch');
-
-    await act(async () => { screen.getByText('Select').click(); });
-    await act(async () => {
-      screen.getByRole('button', { name: /\+ add rule/i }).click();
-    });
-
-    expect(
-      spy.mock.calls.some(([command]) => command?.type === 'definition.setBind')
-    ).toBe(true);
-  });
-
-  it('shows cardinality controls for repeatable groups', async () => {
+  it('does not show cardinality inputs for repeatable groups', async () => {
     const project = createProject({ seed: { definition: {
       $formspec: '1.0',
       url: 'urn:test',
@@ -149,11 +155,12 @@ describe('ItemProperties', () => {
     } as any } });
     renderProps(project, { path: 'members', type: 'group' });
     await act(async () => { screen.getByText('Select').click(); });
-    expect(screen.getByLabelText(/min/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/max/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cardinality/i)).toBeNull();
+    expect(screen.queryByLabelText(/min repeat/i)).toBeNull();
+    expect(screen.queryByLabelText(/max repeat/i)).toBeNull();
   });
 
-  it('shows options editing controls for choice fields', async () => {
+  it('shows choice options as read-only values', async () => {
     const project = createProject({ seed: { definition: {
       $formspec: '1.0',
       url: 'urn:test',
@@ -174,7 +181,17 @@ describe('ItemProperties', () => {
     renderProps(project, { path: 'marital', type: 'field' });
     await act(async () => { screen.getByText('Select').click(); });
     expect(screen.getByText(/options/i)).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Single')).toBeInTheDocument();
+    expect(screen.getByText('single')).toBeInTheDocument();
+    expect(screen.getByText('Single')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/option 1 value/i)).toBeNull();
+    expect(screen.queryByLabelText(/option 1 label/i)).toBeNull();
+  });
+
+  it('does not show add-rule affordances for existing behavior rules', async () => {
+    renderProps();
+    await act(async () => { screen.getByText('Select').click(); });
+    expect(screen.queryByRole('button', { name: /\+ add rule/i })).toBeNull();
+    expect(screen.queryByLabelText(/rule expression/i)).toBeNull();
   });
 
   it('shows a label input for editable field labels', async () => {

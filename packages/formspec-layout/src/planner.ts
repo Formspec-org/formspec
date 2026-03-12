@@ -182,7 +182,7 @@ export function planComponentTree(
         : undefined;
 
     // Check if this is a repeat group
-    const item = bindKey ? ctx.findItem(bindKey) : null;
+    const item = fullBindPath ? ctx.findItem(fullBindPath) : null;
     const isRepeatGroup = item?.type === 'group' && item?.repeatable === true
         && componentType !== 'DataTable' && componentType !== 'Accordion';
 

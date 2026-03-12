@@ -1769,11 +1769,8 @@ export class Project {
       newRoot.children!.push(buildNode(item));
     }
 
-    // 3. Append preserved unbound layout nodes and unconsumed nodeId nodes at root
+    // 3. Append preserved unbound layout nodes at root
     for (const node of unboundNodes) {
-      newRoot.children!.push(node);
-    }
-    for (const node of existingDisplay.values()) {
       newRoot.children!.push(node);
     }
 
