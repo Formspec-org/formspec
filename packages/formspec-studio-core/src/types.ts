@@ -199,6 +199,12 @@ export interface CommandResult {
   rebuildComponentTree: boolean;
   /** If true, discard all undo/redo history (e.g. after a full project replacement). */
   clearHistory?: boolean;
+  /** Canonical path of a newly inserted item, returned by add-item style handlers. */
+  insertedPath?: string;
+  /** Canonical path after a move or rename operation. */
+  newPath?: string;
+  /** Extra handler-specific return data. */
+  [key: string]: unknown;
 }
 
 // ── History ──────────────────────────────────────────────────────────
