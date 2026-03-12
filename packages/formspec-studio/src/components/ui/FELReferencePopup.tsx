@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { getBuiltinFELFunctionCatalog, type FELBuiltinFunctionCatalogEntry } from 'formspec-engine';
 
 interface FELFunction {
   name: string;
@@ -11,86 +12,6 @@ interface FELCategory {
   functions: FELFunction[];
 }
 
-const FEL_CATALOG: FELCategory[] = [
-  {
-    name: 'Aggregate',
-    functions: [
-      { name: 'sum', signature: '(nodeset) → number', description: 'Sum of numeric values' },
-      { name: 'count', signature: '(nodeset) → number', description: 'Count of nodes' },
-      { name: 'min', signature: '(nodeset) → number', description: 'Minimum value' },
-      { name: 'max', signature: '(nodeset) → number', description: 'Maximum value' },
-      { name: 'avg', signature: '(nodeset) → number', description: 'Average of numeric values' },
-    ],
-  },
-  {
-    name: 'String',
-    functions: [
-      { name: 'concat', signature: '(a, b, ...) → text', description: 'Concatenate values' },
-      { name: 'contains', signature: '(haystack, needle) → boolean', description: 'Check presence' },
-      { name: 'startsWith', signature: '(val, prefix) → boolean', description: 'Check prefix' },
-      { name: 'endsWith', signature: '(val, suffix) → boolean', description: 'Check suffix' },
-      { name: 'substring', signature: '(val, start, length?) → text', description: 'Extract portion' },
-      { name: 'string-length', signature: '(val) → number', description: 'Length of value' },
-      { name: 'normalize-space', signature: '(val) → text', description: 'Normalize whitespace' },
-      { name: 'translate', signature: '(val, from, to) → text', description: 'Character translation' },
-    ],
-  },
-  {
-    name: 'Numeric',
-    functions: [
-      { name: 'round', signature: '(num, digits?) → number', description: 'Round to nearest' },
-      { name: 'floor', signature: '(num) → number', description: 'Round down' },
-      { name: 'ceil', signature: '(num) → number', description: 'Round up' },
-      { name: 'abs', signature: '(num) → number', description: 'Absolute value' },
-      { name: 'pow', signature: '(base, exp) → number', description: 'Exponentiation' },
-      { name: 'sqrt', signature: '(num) → number', description: 'Square root' },
-      { name: 'mod', signature: '(a, b) → number', description: 'Modulo remainder' },
-    ],
-  },
-  {
-    name: 'Date',
-    functions: [
-      { name: 'today', signature: '() → date', description: 'Current date' },
-      { name: 'now', signature: '() → dateTime', description: 'Current date and time' },
-      { name: 'date', signature: '(val) → date', description: 'Parse date value' },
-      { name: 'formatDate', signature: '(date, pattern) → text', description: 'Format date' },
-      { name: 'dateDiff', signature: '(a, b, unit) → number', description: 'Difference between dates' },
-    ],
-  },
-  {
-    name: 'Logical',
-    functions: [
-      { name: 'if', signature: '(cond, then, else) → any', description: 'Conditional expression' },
-      { name: 'coalesce', signature: '(a, b, ...) → any', description: 'First non-null value' },
-      { name: 'boolean', signature: '(value) → boolean', description: 'Cast to boolean' },
-      { name: 'not', signature: '(value) → boolean', description: 'Logical negation' },
-    ],
-  },
-  {
-    name: 'Type',
-    functions: [
-      { name: 'string', signature: '(value) → text', description: 'Cast to text' },
-      { name: 'number', signature: '(value) → number', description: 'Cast to number' },
-      { name: 'int', signature: '(value) → integer', description: 'Cast to integer' },
-      { name: 'boolean-from-string', signature: '(text) → boolean', description: 'Parse boolean' },
-    ],
-  },
-  {
-    name: 'Money',
-    functions: [
-      { name: 'formatMoney', signature: '(amount, currency?) → text', description: 'Format monetary value' },
-      { name: 'convertCurrency', signature: '(amount, from, to) → number', description: 'Convert currencies' },
-    ],
-  },
-  {
-    name: 'Repeat',
-    functions: [
-      { name: 'indexed-repeat', signature: '(path, group, index) → any', description: 'Access indexed repeat value' },
-      { name: 'position', signature: '() → number', description: 'Current repeat position' },
-    ],
-  },
-];
-
 const CATEGORY_COLORS: Record<string, string> = {
   Aggregate: 'text-accent',
   String: 'text-green',
@@ -100,7 +21,86 @@ const CATEGORY_COLORS: Record<string, string> = {
   Type: 'text-muted',
   Money: 'text-green',
   Repeat: 'text-amber',
+  MIP: 'text-logic',
+  Instance: 'text-muted',
+  Function: 'text-muted',
 };
+
+const CATEGORY_ORDER = ['Aggregate', 'String', 'Numeric', 'Date', 'Logical', 'Type', 'Money', 'Repeat', 'MIP', 'Instance', 'Function'];
+
+const FUNCTION_DETAILS: Record<string, { signature: string; description: string }> = {
+  abs: { signature: '(num) → number', description: 'Absolute value' },
+  avg: { signature: '(nodeset) → number', description: 'Average of numeric values' },
+  boolean: { signature: '(value) → boolean', description: 'Cast a value to boolean' },
+  coalesce: { signature: '(a, b, ...) → any', description: 'Return the first non-null value' },
+  concat: { signature: '(a, b, ...) → text', description: 'Concatenate values into a string' },
+  contains: { signature: '(haystack, needle) → boolean', description: 'Check whether text contains a value' },
+  count: { signature: '(nodeset) → number', description: 'Count matching nodes' },
+  countWhere: { signature: '(nodeset, predicate) → number', description: 'Count nodes matching a predicate' },
+  date: { signature: '(value) → date', description: 'Parse a value as a date' },
+  dateAdd: { signature: '(date, amount, unit) → date', description: 'Add time to a date' },
+  dateDiff: { signature: '(a, b, unit) → number', description: 'Compute the difference between dates' },
+  day: { signature: '(date) → number', description: 'Extract day of month' },
+  endsWith: { signature: '(value, suffix) → boolean', description: 'Check whether text ends with a suffix' },
+  empty: { signature: '(value) → boolean', description: 'Check whether a value is empty' },
+  floor: { signature: '(num) → number', description: 'Round down' },
+  format: { signature: '(template, ...) → text', description: 'Format text with positional arguments' },
+  if: { signature: '(condition, then, else) → any', description: 'Conditional expression' },
+  instance: { signature: '(name, path?) → any', description: 'Read from an external instance' },
+  isNull: { signature: '(value) → boolean', description: 'Check whether a value is nullish' },
+  length: { signature: '(value) → number', description: 'Length of a string value' },
+  lower: { signature: '(value) → text', description: 'Lowercase a string' },
+  max: { signature: '(nodeset) → number', description: 'Maximum numeric value' },
+  min: { signature: '(nodeset) → number', description: 'Minimum numeric value' },
+  money: { signature: '(amount, currency) → money', description: 'Construct a money value' },
+  moneyAdd: { signature: '(a, b) → money', description: 'Add two money values' },
+  moneyAmount: { signature: '(money) → number', description: 'Extract the numeric amount from money' },
+  moneyCurrency: { signature: '(money) → text', description: 'Extract the currency code from money' },
+  moneySum: { signature: '(nodeset) → money', description: 'Sum money values' },
+  month: { signature: '(date) → number', description: 'Extract month number' },
+  next: { signature: '(path) → any', description: 'Read the next repeat sibling value' },
+  now: { signature: '() → dateTime', description: 'Current date and time' },
+  number: { signature: '(value) → number', description: 'Cast a value to number' },
+  parent: { signature: '(path) → any', description: 'Read a parent value' },
+  power: { signature: '(base, exponent) → number', description: 'Raise a number to a power' },
+  present: { signature: '(value) → boolean', description: 'Check whether a value is present' },
+  prev: { signature: '(path) → any', description: 'Read the previous repeat sibling value' },
+  relevant: { signature: '(path) → boolean', description: 'Read current relevance state' },
+  replace: { signature: '(value, pattern, replacement) → text', description: 'Replace text using a pattern' },
+  required: { signature: '(path) → boolean', description: 'Read current required state' },
+  round: { signature: '(num, digits?) → number', description: 'Round to the nearest value' },
+  selected: { signature: '(value, candidate) → boolean', description: 'Check whether a choice is selected' },
+  startsWith: { signature: '(value, prefix) → boolean', description: 'Check whether text starts with a prefix' },
+  string: { signature: '(value) → text', description: 'Cast a value to text' },
+  substring: { signature: '(value, start, length?) → text', description: 'Extract part of a string' },
+  sum: { signature: '(nodeset) → number', description: 'Sum numeric values' },
+  time: { signature: '(value) → time', description: 'Parse a value as a time' },
+  timeDiff: { signature: '(a, b, unit) → number', description: 'Compute the difference between times' },
+  today: { signature: '() → date', description: 'Current date' },
+  trim: { signature: '(value) → text', description: 'Trim surrounding whitespace' },
+  typeOf: { signature: '(value) → text', description: 'Return the FEL type of a value' },
+  upper: { signature: '(value) → text', description: 'Uppercase a string' },
+  valid: { signature: '(path) → boolean', description: 'Read current validation state' },
+  year: { signature: '(date) → number', description: 'Extract year number' },
+};
+
+function formatCategoryName(category: string): string {
+  if (category === 'mip') return 'MIP';
+  return category
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ') || 'Function';
+}
+
+function toCatalogFunction(entry: FELBuiltinFunctionCatalogEntry): FELFunction {
+  const details = FUNCTION_DETAILS[entry.name];
+  return {
+    name: entry.name,
+    signature: details?.signature ?? '()',
+    description: details?.description ?? 'Built-in FEL function',
+  };
+}
 
 interface FELReferencePopupProps {
   /** Optional tooltip / aria-label for the trigger button */
@@ -121,6 +121,25 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
   const [query, setQuery] = useState('');
   const [activeFunction, setActiveFunction] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const catalog = useMemo<FELCategory[]>(() => {
+    const grouped = new Map<string, FELFunction[]>();
+    for (const entry of getBuiltinFELFunctionCatalog()) {
+      const category = formatCategoryName(entry.category);
+      const functions = grouped.get(category) ?? [];
+      functions.push(toCatalogFunction(entry));
+      grouped.set(category, functions);
+    }
+    return Array.from(grouped.entries())
+      .map(([name, functions]) => ({
+        name,
+        functions: functions.sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => {
+        const left = CATEGORY_ORDER.indexOf(a.name);
+        const right = CATEGORY_ORDER.indexOf(b.name);
+        return (left === -1 ? CATEGORY_ORDER.length : left) - (right === -1 ? CATEGORY_ORDER.length : right);
+      });
+  }, []);
 
   const handleFunctionClick = async (fn: FELFunction) => {
     const copyText = `${fn.name}${fn.signature.split('→')[0].trim()}`;
@@ -146,15 +165,15 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
 
   // Filter catalog by search query
   const filtered = query.trim()
-    ? FEL_CATALOG.map((cat) => ({
+    ? catalog.map((cat) => ({
         ...cat,
-        functions: cat.functions.filter(
+      functions: cat.functions.filter(
           (fn) =>
-            fn.name.toLowerCase().includes(query.toLowerCase()) ||
-            fn.description.toLowerCase().includes(query.toLowerCase()),
+            fn.name.toLowerCase().includes(query.toLowerCase())
+            || fn.description.toLowerCase().includes(query.toLowerCase()),
         ),
       })).filter((cat) => cat.functions.length > 0)
-    : FEL_CATALOG;
+    : catalog;
 
   return (
     <div ref={containerRef} className="relative inline-flex">
