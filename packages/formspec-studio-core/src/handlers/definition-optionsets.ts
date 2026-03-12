@@ -39,7 +39,11 @@ registerHandler('definition.setOptionSet', (state, payload) => {
   if (!state.definition.optionSets) {
     state.definition.optionSets = {};
   }
-  state.definition.optionSets[p.name] = p.options as any ?? p.source as any;
+  if (p.options) {
+    state.definition.optionSets[p.name] = { options: p.options } as any;
+  } else if (p.source) {
+    state.definition.optionSets[p.name] = { source: p.source } as any;
+  }
   return { rebuildComponentTree: false };
 });
 
@@ -71,8 +75,8 @@ registerHandler('definition.deleteOptionSet', (state, payload) => {
     for (const item of items) {
       if (item.optionSet === name) {
         delete item.optionSet;
-        if (Array.isArray(options)) {
-          item.options = options;
+        if (options && 'options' in (options as any) && Array.isArray((options as any).options)) {
+          item.options = (options as any).options;
         }
       }
       if (item.children) inlineRefs(item.children);
@@ -131,7 +135,7 @@ registerHandler('definition.promoteToOptionSet', (state, payload) => {
   if (!state.definition.optionSets) {
     state.definition.optionSets = {};
   }
-  state.definition.optionSets[name] = item.options as any;
+  state.definition.optionSets[name] = { options: item.options } as any;
 
   // Replace inline options with a named reference
   delete item.options;

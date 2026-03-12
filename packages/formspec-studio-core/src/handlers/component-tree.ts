@@ -15,7 +15,7 @@
  *   stable auto-generated ID.
  *
  * **Parent/child relationships:**
- * The tree root is always a synthetic `Root` node with `nodeId: 'root'`.
+ * The tree root is always a synthetic `Stack` node with `nodeId: 'root'`.
  * Layout and Container nodes may have `children`; Input and Display nodes
  * are leaf nodes. Nesting rules (component-spec S3.4) are enforced by
  * `addNode` and `moveNode` at a higher level; these handlers perform the
@@ -64,8 +64,8 @@ type TreeNode = {
 /**
  * Ensure the component document has a root tree node.
  *
- * If `component.tree` is absent, initializes it with a synthetic Root node
- * (`{ component: 'Root', nodeId: 'root', children: [] }`). All tree
+ * If `component.tree` is absent, initializes it with a `Stack` root node
+ * (`{ component: 'Stack', nodeId: 'root', children: [] }`). All tree
  * operations require a root, so this is called at the start of every handler.
  *
  * @param component - The component document to ensure a tree on.
@@ -73,7 +73,7 @@ type TreeNode = {
  */
 function ensureTree(component: FormspecComponentDocument): TreeNode {
   if (!component.tree) {
-    component.tree = { component: 'Root', nodeId: 'root', children: [] };
+    component.tree = { component: 'Stack', nodeId: 'root', children: [] };
   }
   return component.tree as TreeNode;
 }

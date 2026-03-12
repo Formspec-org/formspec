@@ -342,9 +342,15 @@ registerHandler('definition.setItemExtension', (state, payload) => {
   if (!loc) throw new Error(`Item not found: ${path}`);
 
   if (value === null) {
-    delete (loc.item as any)[extension];
+    if (loc.item.extensions) {
+      delete (loc.item.extensions as any)[extension];
+      if (Object.keys(loc.item.extensions).length === 0) {
+        delete loc.item.extensions;
+      }
+    }
   } else {
-    (loc.item as any)[extension] = value;
+    loc.item.extensions = loc.item.extensions || {};
+    (loc.item.extensions as any)[extension] = value;
   }
 
   return { rebuildComponentTree: false };

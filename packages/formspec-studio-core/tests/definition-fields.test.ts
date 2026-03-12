@@ -202,7 +202,7 @@ describe('definition.setItemExtension', () => {
       payload: { path: 'email', extension: 'x-formspec-url', value: true },
     });
 
-    expect(project.definition.items[0]['x-formspec-url']).toBe(true);
+    expect((project.definition.items[0] as any).extensions?.['x-formspec-url']).toBe(true);
   });
 
   it('removes an extension when value is null', () => {
@@ -218,6 +218,6 @@ describe('definition.setItemExtension', () => {
       payload: { path: 'email', extension: 'x-formspec-url', value: null },
     });
 
-    expect(project.definition.items[0]['x-formspec-url']).toBeUndefined();
+    expect((project.definition.items[0] as any).extensions?.['x-formspec-url']).toBeUndefined();
   });
 });

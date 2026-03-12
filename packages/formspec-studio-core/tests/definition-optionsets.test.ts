@@ -16,10 +16,9 @@ describe('definition.setOptionSet', () => {
       },
     });
 
-    expect(project.definition.optionSets?.colors).toEqual([
-      { value: 'r', label: 'Red' },
-      { value: 'g', label: 'Green' },
-    ]);
+    expect(project.definition.optionSets?.colors).toEqual({
+      options: [{ value: 'r', label: 'Red' }, { value: 'g', label: 'Green' }],
+    });
   });
 
   it('replaces an existing option set', () => {
@@ -35,7 +34,7 @@ describe('definition.setOptionSet', () => {
       payload: { name: 'sizes', options: [{ value: 'l', label: 'Large' }] },
     });
 
-    expect(project.definition.optionSets?.sizes).toEqual([{ value: 'l', label: 'Large' }]);
+    expect(project.definition.optionSets?.sizes).toEqual({ options: [{ value: 'l', label: 'Large' }] });
   });
 
   it('initializes optionSets if missing', () => {
@@ -133,9 +132,8 @@ describe('definition.promoteToOptionSet', () => {
     expect(field.options).toBeUndefined();
 
     // Named option set should exist
-    expect(project.definition.optionSets?.statusOptions).toEqual([
-      { value: 'active', label: 'Active' },
-      { value: 'inactive', label: 'Inactive' },
-    ]);
+    expect(project.definition.optionSets?.statusOptions).toEqual({
+      options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }],
+    });
   });
 });
