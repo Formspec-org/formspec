@@ -88,7 +88,7 @@ describe('LogicTab', () => {
     expect(screen.getByTestId('selected-key')).toHaveTextContent('age');
   });
 
-  it('opens an expression editor when a variable expression is double-clicked', async () => {
+  it('keeps variable expressions as read-only text', async () => {
     renderLogic({
       ...logicDef,
       variables: [
@@ -102,6 +102,7 @@ describe('LogicTab', () => {
       );
     });
 
-    expect(screen.getByDisplayValue('sum($members[*].mInc)')).toBeInTheDocument();
+    expect(screen.getByText('sum($members[*].mInc)')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('sum($members[*].mInc)')).toBeNull();
   });
 });

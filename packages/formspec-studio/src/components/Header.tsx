@@ -9,8 +9,6 @@ interface HeaderProps {
   onImport: () => void;
   onSearch: () => void;
   onHome?: () => void;
-  onNew?: () => void;
-  onExport?: () => void;
   onOpenMetadata?: () => void;
   onToggleAccountMenu?: () => void;
   isCompact?: boolean;
@@ -22,8 +20,6 @@ export function Header({
   onImport,
   onSearch,
   onHome,
-  onNew,
-  onExport,
   onOpenMetadata,
   onToggleAccountMenu,
   isCompact = false,
@@ -100,20 +96,6 @@ export function Header({
       <div className="flex items-center gap-1.5 shrink-0">
         {!isCompact && (
           <>
-            <button
-              type="button"
-              className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
-              onClick={onNew}
-            >
-              New Form
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
-              onClick={onExport}
-            >
-              Export
-            </button>
             <button
               type="button"
               aria-label={`FORMSPEC ${definition.$formspec} metadata`}

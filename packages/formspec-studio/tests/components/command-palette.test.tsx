@@ -89,15 +89,14 @@ describe('CommandPalette', () => {
     expect(screen.getByText(/required/i)).toBeInTheDocument();
   });
 
-  it('lets variable results be selected', async () => {
+  it('shows variable results as informational rows', async () => {
     const { onClose } = renderPalette();
     await act(async () => {
       setSearch('isAdult');
     });
-    await act(async () => {
-      screen.getByText('isAdult').click();
-    });
-    expect(onClose).toHaveBeenCalled();
+    expect(screen.getByText('isAdult')).toBeInTheDocument();
+    expect(screen.getByText(/read-only/i)).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('supports keyboard navigation to select the highlighted result', async () => {

@@ -27,10 +27,11 @@ function renderThemeTab() {
 }
 
 describe('ThemeTab', () => {
-  it('shows an add affordance in every empty theme sub-tab instead of only stub copy', () => {
+  it('keeps tokens informational while preserving real add affordances in other theme sub-tabs', () => {
     renderThemeTab();
 
-    expect(screen.getByRole('button', { name: /\+ add token/i })).toBeInTheDocument();
+    expect(screen.getByText(/no tokens defined/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /\+ add token/i })).toBeNull();
 
     act(() => { screen.getByRole('button', { name: /selectors/i }).click(); });
     expect(screen.getByRole('button', { name: /\+ add selector/i })).toBeInTheDocument();

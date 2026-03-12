@@ -230,62 +230,34 @@ test.describe('Logic Workspace — FEL reference popup function click (#55)', ()
   });
 });
 
-// Bug #60 — FEL expressions in Variables section are read-only
-// Double-clicking a variable's expression text should open an inline expression editor
-// (an <input> or <textarea>) pre-populated with the current expression value.
-// Currently the expression is a plain <div> with no double-click handler, so no editor
-// appears and the expression cannot be edited from the Logic workspace.
-test.describe('Logic Workspace — variable expression inline editing (#60)', () => {
+test.describe('Logic Workspace — variable expressions stay read-only', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
     await seedDefinition(page, LOGIC_DEFINITION);
     await switchTab(page, 'Logic');
   });
 
-  test('double-clicking a variable expression opens an inline editor', async ({ page }) => {
+  test('double-clicking a variable expression does not open an inline editor', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Logic"]');
 
-    // Locate the expression text for "taxRate" variable
     const expressionText = workspace.getByText('0.25', { exact: true });
     await expect(expressionText).toBeVisible();
 
-    // Double-click to trigger inline edit mode
     await expressionText.dblclick();
 
-    // An editable input or textarea should now appear, pre-filled with the expression
-    const inlineEditor = workspace.locator('input[type="text"], textarea').filter({ hasText: '' });
-    const inputWithValue = workspace.locator('input[value="0.25"], textarea');
-
-    const editorVisible =
-      (await inputWithValue.isVisible().catch(() => false)) ||
-      (await inlineEditor.count().then((n) => n > 0).catch(() => false));
-
-    expect(editorVisible).toBe(true);
+    await expect(workspace.locator('input[type="text"], textarea')).toHaveCount(0);
+    await expect(expressionText).toBeVisible();
   });
 
-  test('double-clicking a complex variable expression opens an inline editor with the expression pre-filled', async ({ page }) => {
+  test('complex variable expressions remain visible as plain text after double-click', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Logic"]');
 
-    // Locate the expression text for "netIncome" variable
     const expressionText = workspace.getByText('$income * (1 - @taxRate)', { exact: true });
     await expect(expressionText).toBeVisible();
 
-    // Double-click to trigger inline edit mode
     await expressionText.dblclick();
 
-    // An input or textarea must appear and contain the original expression
-    const inputEditor = workspace.locator('input[type="text"]');
-    const textareaEditor = workspace.locator('textarea');
-
-    const inputVisible = await inputEditor.isVisible().catch(() => false);
-    const textareaVisible = await textareaEditor.isVisible().catch(() => false);
-
-    expect(inputVisible || textareaVisible).toBe(true);
-
-    if (inputVisible) {
-      await expect(inputEditor.first()).toHaveValue('$income * (1 - @taxRate)');
-    } else {
-      await expect(textareaEditor.first()).toHaveValue('$income * (1 - @taxRate)');
-    }
+    await expect(workspace.locator('input[type="text"], textarea')).toHaveCount(0);
+    await expect(expressionText).toBeVisible();
   });
 });

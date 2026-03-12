@@ -8,7 +8,6 @@ export function TokenEditor() {
     return (
       <div className="p-4 text-sm text-muted">
         <p>No tokens defined</p>
-        <button type="button" className="mt-2 text-accent hover:underline text-sm">+ Add Token</button>
       </div>
     );
   }
@@ -21,7 +20,6 @@ export function TokenEditor() {
           <span className="text-muted">{String(value)}</span>
         </div>
       ))}
-      <button type="button" className="mt-2 text-accent hover:underline text-sm self-start px-2">+ Add Token</button>
     </div>
   );
 }

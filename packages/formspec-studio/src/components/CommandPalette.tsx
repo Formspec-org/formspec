@@ -13,8 +13,10 @@ interface PaletteResult {
   section: 'Items' | 'Variables' | 'Binds' | 'Shapes';
   title: string;
   subtitle?: string;
+  meta?: string;
   keywords: string[];
   onSelect: () => void;
+  actionable?: boolean;
 }
 
 function normalizeBinds(binds: unknown): Array<{ path: string; entries: Record<string, string> }> {
@@ -70,6 +72,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         select(fi.path, (fi.item as any).type);
         onClose();
       },
+      actionable: true,
     }));
 
     const variableResults = variables.map((variable: any) => ({
@@ -77,10 +80,12 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       section: 'Variables' as const,
       title: variable.name,
       subtitle: variable.expression || undefined,
+      meta: 'read-only',
       keywords: [variable.name ?? '', variable.expression ?? ''],
       onSelect: () => {
-        onClose();
+        return;
       },
+      actionable: false,
     }));
 
     const bindResults = binds.map((bind) => {
@@ -97,6 +102,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
           select(bind.path, 'field');
           onClose();
         },
+        actionable: true,
       };
     });
 
@@ -107,6 +113,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       subtitle: shape.constraint || undefined,
       keywords: ['rule', 'shape', shape.name ?? '', shape.constraint ?? '', shape.severity ?? ''],
       onSelect: () => onClose(),
+      actionable: true,
     }));
 
     return [...itemResults, ...variableResults, ...bindResults, ...shapeResults];
@@ -181,13 +188,23 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                   <div
                     key={result.id}
                     data-testid="palette-result"
-                    className={`px-3 py-2 text-sm rounded cursor-pointer ${highlighted ? 'bg-subtle text-ink' : 'hover:bg-surface-hover'}`}
-                    onClick={() => handleSelect(result)}
+                    className={`px-3 py-2 text-sm rounded ${
+                      result.actionable === false ? 'text-muted' : 'cursor-pointer'
+                    } ${
+                      highlighted ? 'bg-subtle text-ink' : (result.actionable === false ? '' : 'hover:bg-surface-hover')
+                    }`}
+                    onClick={() => {
+                      if (result.actionable === false) return;
+                      handleSelect(result);
+                    }}
                     title={result.subtitle}
                   >
                     <span className="font-medium">{result.title}</span>
                     {result.subtitle && showSubtitleInline ? (
                       <span className="ml-2 text-muted">{result.subtitle}</span>
+                    ) : null}
+                    {result.meta ? (
+                      <span className="ml-2 text-[11px] uppercase tracking-wide text-muted">{result.meta}</span>
                     ) : null}
                   </div>
                 );

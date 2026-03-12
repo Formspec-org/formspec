@@ -20,12 +20,6 @@ export function DataSources() {
     return (
       <div className="p-4 text-sm">
         <p className="text-muted">No data sources defined.</p>
-        <button
-          type="button"
-          className="mt-3 rounded border border-border bg-surface px-3 py-2 text-xs font-medium text-ink hover:bg-subtle"
-        >
-          Add Data Source
-        </button>
       </div>
     );
   }

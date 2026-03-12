@@ -56,7 +56,7 @@ describe('OptionSets', () => {
     expect(screen.getByText(/used by 1/i)).toBeInTheDocument();
   });
 
-  it('renders each option set card as an editable control', () => {
+  it('renders each option set card as informational content, not an editable control', () => {
     const project = createProject({ seed: { definition: dataDef as any } });
     render(
       <ProjectProvider project={project}>
@@ -65,7 +65,8 @@ describe('OptionSets', () => {
         </SelectionProvider>
       </ProjectProvider>
     );
-    expect(screen.getByRole('button', { name: /colors/i })).toBeInTheDocument();
+    expect(screen.getByTestId('option-set-colors')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /colors/i })).toBeNull();
   });
 
   it('uses accessible contrast styling for option chips', () => {

@@ -3,9 +3,9 @@ import { describe, it, expect } from 'vitest';
 import { TestResponse } from '../../../src/workspaces/data/TestResponse';
 
 describe('TestResponse', () => {
-  it('renders real test-response authoring content instead of a placeholder stub', () => {
+  it('renders an informational not-yet-implemented state without a fake run button', () => {
     render(<TestResponse />);
-    expect(screen.queryByText(/future implementation/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /run test|generate response|validate response/i })).toBeInTheDocument();
+    expect(screen.getByText(/not yet implemented/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /run test|generate response|validate response/i })).toBeNull();
   });
 });

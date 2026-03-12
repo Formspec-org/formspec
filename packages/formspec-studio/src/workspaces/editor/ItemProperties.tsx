@@ -112,8 +112,6 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
   const currentKey = path.split('.').pop() || path;
   const rawChoiceOptions = (item as any).options ?? (item as any).choices;
   const choiceOptions = Array.isArray(rawChoiceOptions) ? (rawChoiceOptions as Array<{ value: string; label?: string }>) : [];
-  const minRepeat = (item as any).minRepeat ?? (item as any).minItems ?? '';
-  const maxRepeat = (item as any).maxRepeat ?? (item as any).maxItems ?? '';
 
   return (
     <div className="h-full flex flex-col bg-surface overflow-hidden">
@@ -181,52 +179,13 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
           </Section>
         )}
 
-        {item.type === 'group' && (item.repeatable || minRepeat !== '' || maxRepeat !== '') && (
-          <Section title="Cardinality">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="font-mono text-[10px] text-muted uppercase tracking-wider block">Min Repeat</label>
-                <input
-                  type="number"
-                  aria-label="Min Repeat"
-                  name="min-repeat"
-                  data-testid="min-repeat"
-                  defaultValue={minRepeat}
-                  className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="font-mono text-[10px] text-muted uppercase tracking-wider block">Max Repeat</label>
-                <input
-                  type="number"
-                  aria-label="Max Repeat"
-                  name="max-repeat"
-                  data-testid="max-repeat"
-                  defaultValue={maxRepeat}
-                  className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
-                />
-              </div>
-            </div>
-          </Section>
-        )}
-
         {item.type === 'field' && choiceOptions.length > 0 && (
           <Section title="Options">
             <div className="space-y-2">
               {choiceOptions.map((option, index) => (
-                <div key={`${option.value}-${index}`} className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    aria-label={`Option ${index + 1} value`}
-                    defaultValue={option.value}
-                    className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none"
-                  />
-                  <input
-                    type="text"
-                    aria-label={`Option ${index + 1} label`}
-                    defaultValue={option.label ?? option.value}
-                    className="w-full px-2 py-1 text-[13px] border border-border rounded-[4px] bg-surface outline-none"
-                  />
+                <div key={`${option.value}-${index}`} className="flex items-center justify-between gap-3 rounded-[4px] border border-border bg-subtle/40 px-2 py-1.5">
+                  <span className="font-mono text-[12px] text-ink">{option.value}</span>
+                  <span className="text-[12px] text-muted">{option.label ?? option.value}</span>
                 </div>
               ))}
             </div>
@@ -245,23 +204,6 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
                 />
               ))}
             </div>
-            <button
-              className="w-full py-2 mt-1 border border-dashed border-border rounded-[4px] text-muted font-mono text-[11px] hover:border-muted/40 hover:text-ink transition-colors cursor-pointer"
-              onClick={() => {
-                dispatch({
-                  type: 'definition.setBind',
-                  payload: { path, properties: { required: binds.required ?? 'true()' } },
-                });
-              }}
-            >
-              + Add Rule
-            </button>
-            <input
-              type="text"
-              placeholder="New rule expression"
-              aria-label="Rule expression"
-              className="w-full px-2 py-1 mt-2 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
-            />
           </Section>
         )}
 

@@ -161,8 +161,8 @@ test.describe('Bug #28 — Settings Title row missing tooltip', () => {
 
 // ─── Bug #30 — Variables sidebar rows are inert ──────────────────────────────
 
-test.describe('Bug #30 — Variable rows do not navigate on click', () => {
-  test('clicking a variable row switches the main workspace to Logic', async ({ page }) => {
+test.describe('Variables sidebar rows are informational', () => {
+  test('clicking a variable row does not pretend to navigate anywhere', async ({ page }) => {
     await waitForApp(page);
     await seedDefinition(page, VARIABLES_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
@@ -173,16 +173,12 @@ test.describe('Bug #30 — Variable rows do not navigate on click', () => {
     // Confirm the Logic workspace is not yet active
     await expect(page.locator('[data-testid="workspace-Logic"]')).not.toBeVisible();
 
-    // Click the variable row.
-    // Bug: VariablesList.tsx renders each variable as a <div> with no onClick handler,
-    // so clicking does nothing. Expected: navigate to Logic workspace.
     await page.getByText('@taxRate').click();
 
-    // FAILS on the bug: the workspace tab never changes.
-    await expect(page.locator('[data-testid="workspace-Logic"]')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('[data-testid="workspace-Logic"]')).not.toBeVisible();
   });
 
-  test('each variable row is an interactive button element (accessible keyboard target)', async ({ page }) => {
+  test('each variable row is rendered as read-only text, not a button', async ({ page }) => {
     await waitForApp(page);
     await seedDefinition(page, VARIABLES_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
@@ -190,10 +186,8 @@ test.describe('Bug #30 — Variable rows do not navigate on click', () => {
     await openBlueprintSection(page, 'Variables');
     await page.waitForSelector('text=@taxRate', { timeout: 5000 });
 
-    // Variable rows must be <button> elements (or have role="button") so they are
-    // reachable by keyboard and exposed correctly to assistive technologies.
-    // FAILS on the bug: they are plain non-interactive <div> elements.
-    await expect(page.getByRole('button', { name: /@taxRate/i })).toBeVisible();
+    await expect(page.getByText('@taxRate')).toBeVisible();
+    await expect(page.getByRole('button', { name: /@taxRate/i })).toHaveCount(0);
   });
 });
 

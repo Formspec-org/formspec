@@ -36,13 +36,12 @@ export function OptionSets() {
   }
 
   return (
-    <div className="flex flex-col gap-2 p-4">
+      <div className="flex flex-col gap-2 p-4">
       {entries.map(([name, os]) => (
-        <button
+        <div
           key={name}
-          type="button"
           data-testid={`option-set-${name}`}
-          className="rounded border border-border bg-surface p-3 text-left hover:bg-subtle"
+          className="rounded border border-border bg-surface p-3 text-left"
         >
           <div className="flex items-center justify-between">
             <div className="font-medium text-sm">{name}</div>
@@ -60,7 +59,7 @@ export function OptionSets() {
               </span>
             ))}
           </div>
-        </button>
+        </div>
       ))}
     </div>
   );

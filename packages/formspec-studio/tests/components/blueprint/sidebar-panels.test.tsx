@@ -21,7 +21,7 @@ describe('VariablesList', () => {
     expect(screen.getByText('$age >= 18')).toBeInTheDocument();
   });
 
-  it('renders each variable row as a clickable control so the user can navigate to its authoring view', () => {
+  it('renders each variable row as informational display, not a clickable control', () => {
     const project = createProject({ seed: { definition: {
       $formspec: '1.0', url: 'urn:test', version: '1.0.0',
       items: [],
@@ -29,7 +29,8 @@ describe('VariablesList', () => {
     } as any }});
     render(<ProjectProvider project={project}><SelectionProvider><VariablesList /></SelectionProvider></ProjectProvider>);
 
-    expect(screen.getByRole('button', { name: /@isAdult/i })).toBeInTheDocument();
+    expect(screen.getByText('@isAdult')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /@isAdult/i })).toBeNull();
   });
 });
 

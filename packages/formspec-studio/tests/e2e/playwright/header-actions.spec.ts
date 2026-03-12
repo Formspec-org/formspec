@@ -6,11 +6,15 @@ test.describe('Header Actions', () => {
     await waitForApp(page);
   });
 
-  test('shows Export and New Form actions in the header chrome', async ({ page }) => {
+  test('shows real header actions and omits dead primary actions', async ({ page }) => {
     const header = page.locator('[data-testid="header"]');
 
-    await expect(header.getByRole('button', { name: /export/i })).toBeVisible();
-    await expect(header.getByRole('button', { name: /new/i })).toBeVisible();
+    await expect(header.getByRole('button', { name: /import/i })).toBeVisible();
+    await expect(header.getByRole('button', { name: /undo/i })).toBeVisible();
+    await expect(header.getByRole('button', { name: /redo/i })).toBeVisible();
+    await expect(header.getByRole('button', { name: /metadata/i })).toBeVisible();
+    await expect(header.getByRole('button', { name: /export/i })).toHaveCount(0);
+    await expect(header.getByRole('button', { name: /new/i })).toHaveCount(0);
   });
 
   test('exposes form metadata and avatar affordances as interactive controls', async ({ page }) => {
