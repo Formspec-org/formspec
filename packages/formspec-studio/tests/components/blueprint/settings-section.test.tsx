@@ -14,7 +14,7 @@ const settingsDef = {
   title: 'My Test Form',
   description: 'A test form',
   items: [],
-  presentation: { pageMode: 'standard', labelPosition: 'top', density: 'comfortable', defaultCurrency: 'USD' },
+  formPresentation: { pageMode: 'single', labelPosition: 'top', density: 'comfortable', defaultCurrency: 'USD' },
 };
 
 function renderSettings(def?: any) {
@@ -43,7 +43,7 @@ describe('SettingsSection', () => {
 
   it('shows presentation defaults', () => {
     renderSettings();
-    expect(screen.getByText(/standard/i)).toBeInTheDocument();
+    expect(screen.getByText(/single/i)).toBeInTheDocument();
     expect(screen.getByText(/top/i)).toBeInTheDocument();
     expect(screen.getByText(/comfortable/i)).toBeInTheDocument();
     expect(screen.getByText('USD')).toBeInTheDocument();

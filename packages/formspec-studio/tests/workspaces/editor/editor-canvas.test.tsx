@@ -55,7 +55,7 @@ describe('EditorCanvas', () => {
   it('clicking a block selects it', async () => {
     renderCanvas();
     await act(async () => {
-      screen.getByText('Full Name').closest('[data-testid]')?.click();
+      (screen.getByText('Full Name').closest('[data-testid]') as HTMLElement)?.click();
     });
     // Selected block should have visual indicator
     const block = screen.getByText('Full Name').closest('[data-testid]');
@@ -65,6 +65,6 @@ describe('EditorCanvas', () => {
   it('shows bind pills on fields', () => {
     renderCanvas();
     // name has required bind
-    expect(screen.getByText('Required')).toBeInTheDocument();
+    expect(screen.getByText('req')).toBeInTheDocument();
   });
 });

@@ -15,7 +15,7 @@ describe('FieldBlock', () => {
         onSelect={() => {}}
       />
     );
-    expect(screen.getByText('Required')).toBeInTheDocument();
+    expect(screen.getByText('req')).toBeInTheDocument();
   });
 
   it('shows Calc pill when bind has calculate', () => {
@@ -30,7 +30,9 @@ describe('FieldBlock', () => {
         onSelect={() => {}}
       />
     );
-    expect(screen.getByText(/calc/i)).toBeInTheDocument();
+    // Use exact text for the pill to avoid matching the summary strip "Auto-calculated"
+    expect(screen.getByText('ƒx')).toBeInTheDocument();
+    expect(screen.getByText(/Auto-calculated/i)).toBeInTheDocument();
   });
 
   it('shows data type icon', () => {
@@ -60,7 +62,7 @@ describe('FieldBlock', () => {
         onSelect={() => {}}
       />
     );
-    // Depth 2 should have padding
+    // Depth 2 should have style padding/margin
     expect(container.firstChild).toBeTruthy();
   });
 });

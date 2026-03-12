@@ -31,9 +31,10 @@ function renderTree() {
 describe('StructureTree', () => {
   it('renders items as indented tree', () => {
     renderTree();
-    expect(screen.getByText('name')).toBeInTheDocument();
-    expect(screen.getByText('email')).toBeInTheDocument();
-    expect(screen.getByText('phone')).toBeInTheDocument();
+    // Check by test-id instead of text, as text might be label instead of key
+    expect(screen.getByTestId('tree-item-name')).toBeInTheDocument();
+    expect(screen.getByTestId('tree-item-contact.email')).toBeInTheDocument();
+    expect(screen.getByTestId('tree-item-contact.phone')).toBeInTheDocument();
   });
 
   it('shows type icons', () => {
@@ -43,18 +44,20 @@ describe('StructureTree', () => {
     expect(icons.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows group labels', () => {
+  it('shows labels', () => {
     renderTree();
-    expect(screen.getByText('Contact')).toBeInTheDocument();
+    // Group label "Contact" appears twice (Pages and Items), use getAllByText
+    expect(screen.getAllByText('Contact').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Full Name')).toBeInTheDocument();
   });
 
   it('selecting a node updates selection', async () => {
     renderTree();
+    const node = screen.getByTestId('tree-item-name');
     await act(async () => {
-      screen.getByText('name').click();
+      node.click();
     });
-    // Node should have selected styling
-    const node = screen.getByText('name').closest('[data-testid]');
-    expect(node?.className).toContain('accent');
+    // Node should have selected styling (bg-accent/10 text-accent)
+    expect(node.className).toContain('text-accent');
   });
 });

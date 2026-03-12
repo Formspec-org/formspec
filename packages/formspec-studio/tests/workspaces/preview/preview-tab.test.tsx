@@ -1,11 +1,18 @@
 import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { FormspecRender } from 'formspec-webcomponent';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { PreviewTab } from '../../../src/workspaces/preview/PreviewTab';
 
+if (!customElements.get('formspec-render')) {
+  customElements.define('formspec-render', FormspecRender);
+}
+
 const previewDef = {
-  $formspec: '1.0', url: 'urn:test', version: '1.0.0',
+  $formspec: '1.0',
+  url: 'urn:test',
+  version: '1.0.0',
   items: [
     { key: 'name', type: 'field', dataType: 'string', label: 'Full Name' },
     { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
@@ -30,14 +37,27 @@ describe('PreviewTab', () => {
     expect(screen.getByText(/mobile/i)).toBeInTheDocument();
   });
 
-  it('renders form fields from definition', () => {
+  it('renders FormspecPreviewHost with formspec-render when definition has items', () => {
     renderPreview();
-    expect(screen.getByText('Full Name')).toBeInTheDocument();
-    expect(screen.getByText('Email')).toBeInTheDocument();
+    const host = screen.getByTestId('formspec-preview-host');
+    expect(host).toBeInTheDocument();
+    const el = host.querySelector('formspec-render');
+    expect(el).toBeTruthy();
   });
 
-  it('renders display items', () => {
+  it('syncs definition to formspec-render after debounce and renders form content', async () => {
+    vi.useFakeTimers();
     renderPreview();
-    expect(screen.getByText('Biography')).toBeInTheDocument();
+    await act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    const host = screen.getByTestId('formspec-preview-host');
+    const el = host.querySelector('formspec-render');
+    expect(el).toBeTruthy();
+    const text = el?.textContent ?? '';
+    expect(text).toContain('Full Name');
+    expect(text).toContain('Email');
+    expect(text).toContain('Biography');
+    vi.useRealTimers();
   });
 });

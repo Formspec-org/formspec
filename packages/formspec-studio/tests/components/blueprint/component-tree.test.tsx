@@ -8,12 +8,12 @@ import { ComponentTree } from '../../../src/components/blueprint/ComponentTree';
 const compDoc = {
   targetDefinition: { url: 'urn:test' },
   tree: {
-    type: 'page', children: [
-      { type: 'section', props: { title: 'Personal' }, children: [
-        { type: 'text-input', props: { bind: 'name' } },
-        { type: 'email-input', props: { bind: 'email' } },
+    component: 'Stack', nodeId: 'root', children: [
+      { component: 'Page', nodeId: 'node_1', children: [
+        { component: 'TextInput', bind: 'name' },
+        { component: 'TextInput', bind: 'email' },
       ]},
-      { type: 'button', props: { label: 'Submit' } },
+      { component: 'Button', nodeId: 'node_2' },
     ]
   },
 };
@@ -35,21 +35,20 @@ function renderCompTree() {
 describe('ComponentTree', () => {
   it('renders component nodes', () => {
     renderCompTree();
-    expect(screen.getByText(/page/i)).toBeInTheDocument();
-    expect(screen.getByText(/section/i)).toBeInTheDocument();
+    expect(screen.getByText(/Stack/i)).toBeInTheDocument();
+    expect(screen.getByText(/Page/i)).toBeInTheDocument();
   });
 
   it('shows bind key on input nodes', () => {
     renderCompTree();
-    // Bind keys appear as exact text in muted spans
     expect(screen.getByText('name')).toBeInTheDocument();
     expect(screen.getByText('email')).toBeInTheDocument();
   });
 
   it('shows node type labels', () => {
     renderCompTree();
-    expect(screen.getByText(/text-input/)).toBeInTheDocument();
-    expect(screen.getByText(/button/)).toBeInTheDocument();
+    expect(screen.getAllByText(/TextInput/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Button/)).toBeInTheDocument();
   });
 
   it('shows empty state when no tree', () => {

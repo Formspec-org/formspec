@@ -38,9 +38,10 @@ function renderPageTabs(def?: any) {
 describe('PageTabs', () => {
   it('renders page labels from definition', () => {
     renderPageTabs();
+    // Active tab renders label as text; inactive tabs expose label via title attribute
     expect(screen.getByText('Personal Info')).toBeInTheDocument();
-    expect(screen.getByText('Address')).toBeInTheDocument();
-    expect(screen.getByText('Review')).toBeInTheDocument();
+    expect(screen.getByTitle('Address')).toBeInTheDocument();
+    expect(screen.getByTitle('Review')).toBeInTheDocument();
   });
 
   it('highlights active page', () => {
@@ -52,7 +53,7 @@ describe('PageTabs', () => {
   it('clicking a tab calls onPageChange', async () => {
     const { onPageChange } = renderPageTabs();
     await act(async () => {
-      screen.getByText('Address').click();
+      screen.getByTitle('Address').click();
     });
     expect(onPageChange).toHaveBeenCalledWith(1);
   });

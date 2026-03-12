@@ -11,7 +11,7 @@ function renderHeader(project?: Project) {
   const result = render(
     <ProjectProvider project={p}>
       <SelectionProvider>
-        <Header activeTab="Editor" onTabChange={onTabChange} />
+        <Header activeTab="Editor" onTabChange={onTabChange} onImport={() => {}} onSearch={() => {}} />
       </SelectionProvider>
     </ProjectProvider>
   );
@@ -39,7 +39,7 @@ describe('Header', () => {
     const { rerender } = render(
       <ProjectProvider project={project}>
         <SelectionProvider>
-          <Header activeTab="Editor" onTabChange={() => {}} />
+          <Header activeTab="Editor" onTabChange={() => {}} onImport={() => {}} onSearch={() => {}} />
         </SelectionProvider>
       </ProjectProvider>
     );
@@ -55,7 +55,7 @@ describe('Header', () => {
     rerender(
       <ProjectProvider project={project}>
         <SelectionProvider>
-          <Header activeTab="Editor" onTabChange={() => {}} />
+          <Header activeTab="Editor" onTabChange={() => {}} onImport={() => {}} onSearch={() => {}} />
         </SelectionProvider>
       </ProjectProvider>
     );

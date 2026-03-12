@@ -21,22 +21,22 @@ function renderBlueprint(onSectionChange = vi.fn()) {
 }
 
 describe('Blueprint', () => {
-  it('renders all 11 section names', () => {
+  it('renders all 10 section names', () => {
     renderBlueprint();
     const sections = [
       'Structure', 'Component Tree', 'Theme', 'Screener', 'Variables',
-      'Data Sources', 'Option Sets', 'Mappings', 'Migrations', 'FEL Reference', 'Settings'
+      'Data Sources', 'Option Sets', 'Mappings', 'Migrations', 'Settings'
     ];
     for (const name of sections) {
       expect(screen.getByText(name)).toBeInTheDocument();
     }
   });
 
-  it('shows entity count badges', () => {
+  it('shows entity count badges only when count > 0', () => {
     renderBlueprint();
-    // Default empty project should show 0 for Structure items
-    const structureRow = screen.getByText('Structure').closest('[data-testid]') || screen.getByText('Structure').parentElement;
-    expect(structureRow).toHaveTextContent('0');
+    // Empty project: no count badge rendered (zeros are hidden by design)
+    const structureBtn = screen.getByTestId('blueprint-section-Structure');
+    expect(structureBtn).not.toHaveTextContent(/^\d+$/);
   });
 
   it('clicking a section calls onSectionChange', async () => {
