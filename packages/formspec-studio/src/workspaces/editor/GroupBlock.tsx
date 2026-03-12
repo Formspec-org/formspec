@@ -3,6 +3,8 @@ import { Pill } from '../../components/ui/Pill';
 
 interface GroupBlockProps {
   itemKey: string;
+  itemPath: string;
+  registerTarget: (path: string, element: HTMLElement | null) => void;
   label?: string;
   repeatable?: boolean;
   minRepeat?: number;
@@ -15,6 +17,8 @@ interface GroupBlockProps {
 
 export function GroupBlock({
   itemKey,
+  itemPath,
+  registerTarget,
   label,
   repeatable,
   minRepeat,
@@ -26,11 +30,14 @@ export function GroupBlock({
 }: GroupBlockProps) {
   return (
     <div
-      data-testid={`group-${itemKey}`}
       style={{ marginLeft: depth > 0 ? depth * 20 : 0 }}
       className={`mb-1 ${depth === 0 ? 'mt-6' : 'mt-3'}`}
     >
       <div
+        ref={(element) => registerTarget(itemPath, element)}
+        data-testid={`group-${itemKey}`}
+        data-item-path={itemPath}
+        data-item-type="group"
         onClick={onSelect}
         className={`flex items-center gap-2 px-0 py-2 border-b-2 cursor-pointer transition-colors group ${
           selected ? 'border-accent' : 'border-ink/80'

@@ -261,7 +261,7 @@ describe('EditorCanvas', () => {
     expect(screen.getByText('Properties')).toBeInTheDocument();
 
     // The KEY input in the inspector should be focused immediately
-    const keyInput = screen.getByRole('textbox');
+    const keyInput = screen.getByLabelText('Key');
     expect(keyInput).toHaveFocus();
   });
 });

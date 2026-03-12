@@ -251,10 +251,16 @@ registerHandler('definition.addItem', (state, payload) => {
   const parentPath = p.parentPath as string | undefined;
   const insertIndex = p.insertIndex as number | undefined;
   const itemType = p.type as string;
+  const hasTopLevelGroups = state.definition.items.some((item) => item.type === 'group');
 
   // Guard: paged definitions require non-group items to specify a parentPath
   const pageMode = (state.definition as any).formPresentation?.pageMode;
-  if ((pageMode === 'wizard' || pageMode === 'tabs') && !parentPath && itemType !== 'group') {
+  if (
+    (pageMode === 'wizard' || pageMode === 'tabs') &&
+    !parentPath &&
+    itemType !== 'group' &&
+    hasTopLevelGroups
+  ) {
     throw new Error(
       `Cannot add a "${itemType}" at root in a paged (${pageMode}) definition — provide a parentPath`,
     );

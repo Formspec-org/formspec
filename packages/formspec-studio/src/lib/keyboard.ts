@@ -6,6 +6,10 @@ export interface ShortcutHandlers {
   search: () => void;
 }
 
+interface ShortcutOptions {
+  activeWorkspace?: string;
+}
+
 /** Returns true if the event target is a text-editable element. */
 function isTextInput(event: KeyboardEvent): boolean {
   const el = event.target;
@@ -17,7 +21,23 @@ function isTextInput(event: KeyboardEvent): boolean {
   return el instanceof HTMLTextAreaElement || el.isContentEditable;
 }
 
-export function handleKeyboardShortcut(event: KeyboardEvent, handlers: ShortcutHandlers): void {
+function resolveWorkspace(event: KeyboardEvent): string | null {
+  const el = event.target;
+  if (!(el instanceof HTMLElement)) return null;
+  let current: HTMLElement | null = el;
+  while (current) {
+    const workspace = current.getAttribute('data-workspace');
+    if (workspace) return workspace;
+    current = current.parentElement;
+  }
+  return null;
+}
+
+export function handleKeyboardShortcut(
+  event: KeyboardEvent,
+  handlers: ShortcutHandlers,
+  options: ShortcutOptions = {},
+): void {
   const { key, metaKey, ctrlKey, shiftKey } = event;
   const mod = metaKey || ctrlKey;
   const editing = isTextInput(event);
@@ -52,6 +72,8 @@ export function handleKeyboardShortcut(event: KeyboardEvent, handlers: ShortcutH
   // Delete/Backspace — only when NOT editing text
   if (key === 'Delete' || key === 'Backspace') {
     if (editing) return;
+    const workspace = options.activeWorkspace ?? resolveWorkspace(event);
+    if (workspace && workspace !== 'Editor') return;
     handlers.delete();
     return;
   }

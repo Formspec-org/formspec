@@ -25,9 +25,16 @@ export function ShapeCard({ name, severity, constraint, message, code }: ShapeCa
     <div className={`border border-border border-l-[3px] ${borderClass} rounded-[4px] bg-surface p-2.5 mb-1.5`}>
       <div className="flex items-center gap-2 mb-1.5">
         <Pill text={severity} color={pillColor} size="sm" />
-        <span className="font-mono text-[9px] text-muted tracking-wide uppercase">
-          {code || name}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[9px] text-muted tracking-wide uppercase">
+            {name}
+          </span>
+          {code && (
+            <span className="font-mono text-[9px] text-muted/80 tracking-wide uppercase">
+              {code}
+            </span>
+          )}
+        </div>
       </div>
       
       {message && (

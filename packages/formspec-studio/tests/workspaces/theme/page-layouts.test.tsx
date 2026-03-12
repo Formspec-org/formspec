@@ -14,8 +14,8 @@ describe('PageLayouts', () => {
       }
     }});
     render(<ProjectProvider project={project}><PageLayouts /></ProjectProvider>);
-    // Should render something for the page layout
-    expect(screen.getByText(/page/i)).toBeInTheDocument();
+    // Should render the page layout label
+    expect(screen.getByText(/page 1/i)).toBeInTheDocument();
   });
 
   it('shows empty state when no pages', () => {

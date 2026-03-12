@@ -22,10 +22,13 @@ export async function dispatch(page: Page, command: { type: string; payload: unk
 /** Seed the project with a definition before the test starts. */
 export async function seedDefinition(page: Page, definition: unknown) {
   await page.evaluate((def) => {
-    (window as any).__testProject__.dispatch({
+    const project = (window as any).__testProject__;
+    project.dispatch({
       type: 'project.import',
       payload: { definition: def },
     });
+    // Clear undo/redo history so the seed itself is not part of authoring history.
+    project.resetHistory();
   }, definition);
 }
 
@@ -34,6 +37,8 @@ export async function seedProject(page: Page, state: Record<string, unknown>) {
   await page.evaluate((s) => {
     const project = (window as any).__testProject__;
     project.dispatch({ type: 'project.import', payload: s });
+    // Clear undo/redo history so the seed itself is not part of authoring history.
+    project.resetHistory();
   }, state);
 }
 

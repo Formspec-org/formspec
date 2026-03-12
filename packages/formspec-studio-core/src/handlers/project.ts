@@ -9,8 +9,8 @@
  *
  *   - **Import** replaces the entire project state (definition, component,
  *     theme, mapping) from external artifacts. Missing artifacts in the payload
- *     retain their current values. Import clears undo history (`clearHistory: true`)
- *     because the previous state is no longer meaningful.
+ *     retain their current values. Import preserves undo history so a load can
+ *     be reversed like any other authoring action.
  *   - **Import subform** merges a definition fragment into the current project
  *     without replacing the whole state. Items can be scoped to a target group
  *     and optionally key-prefixed to avoid collisions.
@@ -33,8 +33,7 @@ import type { FormspecItem } from 'formspec-engine';
  * the component and theme documents is synced to the definition's URL to
  * maintain cross-artifact consistency.
  *
- * Returns `clearHistory: true` because the undo stack from the previous
- * state is no longer relevant after a full import.
+ * Leaves undo history intact so users can undo an import.
  *
  * @param payload.definition - Replacement FormspecDefinition (optional).
  * @param payload.component - Replacement FormspecComponentDocument (optional).
@@ -56,7 +55,7 @@ registerHandler('project.import', (state, payload) => {
   if (!state.theme.targetDefinition) state.theme.targetDefinition = { url };
   else state.theme.targetDefinition.url = url;
 
-  return { rebuildComponentTree: true, clearHistory: true };
+  return { rebuildComponentTree: true, clearHistory: false };
 });
 
 /**

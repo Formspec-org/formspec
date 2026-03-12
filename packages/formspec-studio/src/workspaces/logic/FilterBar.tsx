@@ -10,6 +10,8 @@ interface BindEntry {
 
 interface FilterBarProps {
   binds: Record<string, BindEntry>;
+  activeFilter?: (typeof bindTypes)[number] | null;
+  onFilterSelect?: (filter: (typeof bindTypes)[number] | null) => void;
 }
 
 const bindTypes = ['required', 'relevant', 'calculate', 'constraint', 'readonly'] as const;
@@ -22,7 +24,7 @@ const pillColors: Record<string, 'accent' | 'logic' | 'green' | 'error' | 'amber
   readonly: 'amber',
 };
 
-export function FilterBar({ binds }: FilterBarProps) {
+export function FilterBar({ binds, activeFilter = null, onFilterSelect }: FilterBarProps) {
   const counts: Record<string, number> = {};
   for (const type of bindTypes) {
     counts[type] = 0;
@@ -37,7 +39,14 @@ export function FilterBar({ binds }: FilterBarProps) {
   return (
     <div className="flex gap-2 px-3 py-2 border-b border-border">
       {bindTypes.map((type) => (
-        <Pill key={type} text={`${type} (${counts[type]})`} color={pillColors[type]} size="sm" />
+        <button
+          key={type}
+          type="button"
+          onClick={() => onFilterSelect?.(activeFilter === type ? null : type)}
+          className={activeFilter === type ? 'ring-1 ring-accent/30 rounded-sm' : ''}
+        >
+          <Pill text={`${type} (${counts[type]})`} color={pillColors[type]} size="sm" />
+        </button>
       ))}
     </div>
   );

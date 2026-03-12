@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
 import { useActivePage } from '../../state/useActivePage';
 import { useDispatch } from '../../state/useDispatch';
+import { useCanvasTargets } from '../../state/useCanvasTargets';
 import { bindsFor } from '../../lib/field-helpers';
 import { FieldBlock } from './FieldBlock';
 import { GroupBlock } from './GroupBlock';
@@ -28,6 +29,7 @@ function renderItems(
   allBinds: Record<string, Record<string, string>> | undefined,
   selectedKey: string | null,
   select: (key: string, type: string) => void,
+  registerTarget: (path: string, element: HTMLElement | null) => void,
   depth: number,
   prefix: string,
 ): React.ReactNode[] {
@@ -41,6 +43,8 @@ function renderItems(
         <GroupBlock
           key={path}
           itemKey={item.key}
+          itemPath={path}
+          registerTarget={registerTarget}
           label={item.label}
           repeatable={item.repeatable}
           minRepeat={item.minRepeat}
@@ -50,7 +54,7 @@ function renderItems(
           onSelect={() => select(path, 'group')}
         >
           {item.children
-            ? renderItems(item.children, allBinds, selectedKey, select, depth + 1, path)
+            ? renderItems(item.children, allBinds, selectedKey, select, registerTarget, depth + 1, path)
             : null}
         </GroupBlock>
       );
@@ -59,6 +63,8 @@ function renderItems(
         <DisplayBlock
           key={path}
           itemKey={item.key}
+          itemPath={path}
+          registerTarget={registerTarget}
           label={item.label}
           depth={depth}
           selected={isSelected}
@@ -70,6 +76,8 @@ function renderItems(
         <FieldBlock
           key={path}
           itemKey={item.key}
+          itemPath={path}
+          registerTarget={registerTarget}
           label={item.label}
           hint={item.hint}
           dataType={item.dataType}
@@ -92,15 +100,50 @@ function uniqueKey(prefix: string): string {
 interface ContextMenuState {
   x: number;
   y: number;
+  kind: 'item' | 'canvas';
+  path?: string;
+  type?: string;
+}
+
+interface ItemLocation {
   path: string;
-  type: string;
+  parentPath: string | null;
+  index: number;
+  item: Item;
+}
+
+function findItemLocation(items: Item[], targetPath: string, prefix = ''): ItemLocation | null {
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    const path = prefix ? `${prefix}.${item.key}` : item.key;
+    if (path === targetPath) {
+      return { path, parentPath: prefix || null, index, item };
+    }
+    if (item.children?.length) {
+      const nested = findItemLocation(item.children, targetPath, path);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+function clampContextMenuPosition(x: number, y: number) {
+  const MENU_WIDTH = 160;
+  const MENU_HEIGHT = 190;
+  const maxX = Math.max(0, window.innerWidth - MENU_WIDTH);
+  const maxY = Math.max(0, window.innerHeight - MENU_HEIGHT);
+  return {
+    x: Math.min(Math.max(0, x), maxX),
+    y: Math.min(Math.max(0, y), maxY),
+  };
 }
 
 export function EditorCanvas() {
   const definition = useDefinition();
-  const { selectedKey, select, deselect } = useSelection();
+  const { selectedKey, select, selectAndFocusInspector, deselect } = useSelection();
   const { activePageKey, setActivePageKey } = useActivePage();
   const dispatch = useDispatch();
+  const { registerTarget } = useCanvasTargets();
   const [showPicker, setShowPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -111,19 +154,32 @@ export function EditorCanvas() {
   const pageMode = (definition as any)?.formPresentation?.pageMode;
   const isPaged = pageMode === 'wizard' || pageMode === 'tabs';
   const topLevelGroups = items.filter((i) => i.type === 'group');
+  const rootItems = items.filter((i) => i.type !== 'group');
   const hasPaged = isPaged && topLevelGroups.length > 0;
+
+  useEffect(() => {
+    if (!hasPaged) {
+      if (activePageKey !== null) setActivePageKey(null);
+      return;
+    }
+    const hasActivePage = topLevelGroups.some((group) => group.key === activePageKey);
+    if (!hasActivePage) {
+      setActivePageKey(topLevelGroups[0]?.key ?? null);
+    }
+  }, [activePageKey, hasPaged, setActivePageKey, topLevelGroups]);
 
   // Derive numeric index from shared activePageKey
   const activePageIndex = hasPaged
     ? Math.max(0, topLevelGroups.findIndex((g) => g.key === activePageKey))
     : 0;
   const displayItems: Item[] = hasPaged
-    ? [topLevelGroups[activePageIndex]]
+    ? [...rootItems, topLevelGroups[activePageIndex]].filter(Boolean)
     : items;
 
   const handleAddItem = (opt: FieldTypeOption) => {
     const key = uniqueKey(opt.dataType ?? opt.itemType);
     const activeGroup = hasPaged ? topLevelGroups[activePageIndex] : null;
+    const itemPath = activeGroup ? `${activeGroup.key}.${key}` : key;
     dispatch({
       type: 'definition.addItem',
       payload: {
@@ -135,22 +191,31 @@ export function EditorCanvas() {
         ...opt.extra,
       },
     });
+    selectAndFocusInspector(itemPath, opt.itemType);
     setShowPicker(false);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
     const target = e.target as Element;
-    const block = target.closest('[data-testid^="field-"], [data-testid^="group-"], [data-testid^="display-"]');
-    if (!block) return;
+    const block = target.closest<HTMLElement>('[data-item-path]');
     e.preventDefault();
-    const testId = block.getAttribute('data-testid') ?? '';
-    let itemType = 'field';
-    let itemPath = testId;
-    if (testId.startsWith('field-')) { itemType = 'field'; itemPath = testId.slice('field-'.length); }
-    else if (testId.startsWith('group-')) { itemType = 'group'; itemPath = testId.slice('group-'.length); }
-    else if (testId.startsWith('display-')) { itemType = 'display'; itemPath = testId.slice('display-'.length); }
-    setContextMenu({ x: e.clientX, y: e.clientY, path: itemPath, type: itemType });
+    const position = clampContextMenuPosition(e.clientX, e.clientY);
+    if (!block) {
+      setContextMenu({ ...position, kind: 'canvas' });
+      return;
+    }
+    const itemPath = block.dataset.itemPath;
+    const itemType = block.dataset.itemType;
+    if (!itemPath || !itemType) {
+      setContextMenu({ ...position, kind: 'canvas' });
+      return;
+    }
+    setContextMenu({ ...position, kind: 'item', path: itemPath, type: itemType });
   };
+
+  const registerCanvasTarget = useCallback((path: string, element: HTMLElement | null) => {
+    registerTarget(path, element);
+  }, [registerTarget]);
 
   // Close context menu on outside click or Escape
   useEffect(() => {
@@ -173,14 +238,47 @@ export function EditorCanvas() {
 
   const handleContextAction = (action: string) => {
     if (!contextMenu) return;
+    if (contextMenu.kind === 'canvas') {
+      if (action === 'addItem') setShowPicker(true);
+      setContextMenu(null);
+      return;
+    }
+    const path = contextMenu.path;
+    if (!path) return;
     switch (action) {
       case 'duplicate':
-        dispatch({ type: 'definition.duplicateItem', payload: { path: contextMenu.path } });
+        dispatch({ type: 'definition.duplicateItem', payload: { path } });
         break;
       case 'delete':
-        dispatch({ type: 'definition.deleteItem', payload: { path: contextMenu.path } });
+        dispatch({ type: 'definition.deleteItem', payload: { path } });
         break;
-      // moveUp, moveDown, wrapInGroup: no-op for now
+      case 'moveUp':
+        dispatch({ type: 'definition.reorderItem', payload: { path, direction: 'up' } });
+        break;
+      case 'moveDown':
+        dispatch({ type: 'definition.reorderItem', payload: { path, direction: 'down' } });
+        break;
+      case 'wrapInGroup': {
+        const location = findItemLocation(items, path);
+        if (!location) break;
+        const wrapperKey = uniqueKey('group');
+        dispatch({
+          type: 'definition.addItem',
+          payload: {
+            key: wrapperKey,
+            type: 'group',
+            label: 'Group',
+            ...(location.parentPath ? { parentPath: location.parentPath } : {}),
+            insertIndex: location.index,
+          },
+        });
+        const targetParentPath = location.parentPath ? `${location.parentPath}.${wrapperKey}` : wrapperKey;
+        dispatch({
+          type: 'definition.moveItem',
+          payload: { sourcePath: path, targetParentPath, targetIndex: 0 },
+        });
+        break;
+      }
     }
     setContextMenu(null);
   };
@@ -228,10 +326,10 @@ export function EditorCanvas() {
           onClose={() => setShowPicker(false)}
           onAdd={handleAddItem}
         />
-        {renderItems(displayItems, allBinds, selectedKey, select, 0, '')}
-        <button
+        {renderItems(displayItems, allBinds, selectedKey, select, registerCanvasTarget, 0, '')}
+      <button
           data-testid="add-item"
-          className="mt-3 w-full py-2.5 border border-dashed border-border rounded-[4px] font-mono text-[11.5px] text-muted hover:border-accent/50 hover:text-ink transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+          className="fixed bottom-3 left-3 right-3 z-10 flex items-center justify-center gap-1.5 rounded-[4px] border border-dashed border-border bg-surface py-2.5 font-mono text-[11.5px] text-muted shadow-sm transition-colors cursor-pointer hover:border-accent/50 hover:text-ink sm:static sm:mt-3 sm:w-full sm:bg-transparent sm:shadow-none"
           onClick={() => setShowPicker(!showPicker)}
         >
           + Add Item
@@ -244,10 +342,12 @@ export function EditorCanvas() {
           style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 50 }}
         >
           <EditorContextMenu
-            itemPath={contextMenu.path}
-            itemType={contextMenu.type}
             onAction={handleContextAction}
             onClose={() => setContextMenu(null)}
+            items={contextMenu.kind === 'canvas'
+              ? [{ label: 'Add Item', action: 'addItem' }]
+              : undefined}
+            testId={contextMenu.kind === 'canvas' ? 'canvas-context-menu' : 'context-menu'}
           />
         </div>
       )}

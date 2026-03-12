@@ -15,7 +15,12 @@ export function PageLayouts() {
   const pages = (theme?.pages ?? []) as PageLayout[];
 
   if (pages.length === 0) {
-    return <div className="p-4 text-sm text-muted">No page layouts defined</div>;
+    return (
+      <div className="p-4 text-sm text-muted">
+        <p>No page layouts defined</p>
+        <button type="button" className="mt-2 text-accent hover:underline text-sm">+ Add Page Layout</button>
+      </div>
+    );
   }
 
   return (
@@ -38,6 +43,7 @@ export function PageLayouts() {
           )}
         </div>
       ))}
+      <button type="button" className="mt-2 text-accent hover:underline text-sm self-start px-2">+ Add Page Layout</button>
     </div>
   );
 }

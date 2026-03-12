@@ -35,6 +35,7 @@ export function ThemeTab() {
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            id={`theme-tab-${tab.id}`}
             type="button"
             className={`px-3 py-2 text-sm ${
               activeTab === tab.id

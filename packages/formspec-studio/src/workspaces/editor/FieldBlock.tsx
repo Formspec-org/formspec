@@ -13,6 +13,8 @@ const iconBgMap: Record<string, string> = {
 
 interface FieldBlockProps {
   itemKey: string;
+  itemPath: string;
+  registerTarget: (path: string, element: HTMLElement | null) => void;
   label?: string;
   hint?: string;
   dataType?: string;
@@ -24,6 +26,8 @@ interface FieldBlockProps {
 
 export function FieldBlock({
   itemKey,
+  itemPath,
+  registerTarget,
   label,
   hint,
   dataType,
@@ -41,10 +45,33 @@ export function FieldBlock({
   const isReq = !!binds.required;
   const isReadonly = !!binds.readonly;
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return;
+
+    const fieldCards = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-item-type="field"]')
+    );
+    const currentIndex = fieldCards.indexOf(event.currentTarget);
+    if (currentIndex === -1) return;
+
+    const nextIndex = event.shiftKey ? currentIndex - 1 : currentIndex + 1;
+    const nextField = fieldCards[nextIndex];
+    if (!nextField) return;
+
+    event.preventDefault();
+    nextField.focus();
+  };
+
   return (
     <div
+      ref={(element) => registerTarget(itemPath, element)}
       data-testid={`field-${itemKey}`}
+      data-item-path={itemPath}
+      data-item-type="field"
+      draggable="true"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={handleKeyDown}
       className={`relative bg-surface border rounded-[4px] cursor-pointer transition-all ${
         selected ? 'border-accent ring-1 ring-accent/20 z-10' : 'border-border hover:border-muted/40'
       }`}

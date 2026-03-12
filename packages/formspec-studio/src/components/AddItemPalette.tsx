@@ -279,11 +279,12 @@ export function AddItemPalette({ open, onClose, onAdd }: AddItemPaletteProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50 backdrop-blur-[2px]"
+      data-testid="add-item-palette"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-3 pt-4 backdrop-blur-[2px] sm:px-0 sm:pt-20"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-xl bg-surface border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col"
+        className="mx-0 flex w-full max-w-xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-2xl"
         style={{ maxHeight: '72vh' }}
         onKeyDown={handleKeyDown}
       >
@@ -318,7 +319,7 @@ export function AddItemPalette({ open, onClose, onAdd }: AddItemPaletteProps) {
                     {cat}
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-1.5">
+                <div data-testid="add-item-grid" className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {items.map((opt) => {
                     const flatIdx = filtered.indexOf(opt);
                     const isActive = flatIdx === activeIdx;

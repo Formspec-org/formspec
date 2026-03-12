@@ -138,6 +138,47 @@ describe('layout components — Accordion defaultOpen', () => {
     });
 });
 
+describe('layout components — Accordion repeats', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('opens the newest repeat instance so its remove control is immediately available', () => {
+        const el = renderWith(
+            [
+                {
+                    key: 'members',
+                    type: 'group',
+                    label: 'Members',
+                    repeatable: true,
+                    children: [
+                        { key: 'memberName', type: 'field', dataType: 'string', label: 'Member Name' },
+                    ],
+                },
+            ],
+            {
+                component: 'Stack',
+                children: [
+                    {
+                        component: 'Accordion',
+                        bind: 'members',
+                        children: [{ component: 'TextInput', bind: 'memberName' }],
+                    },
+                ],
+            },
+        );
+
+        const addButton = Array.from(el.querySelectorAll('button')).find(button => button.textContent === 'Add Members');
+        expect(addButton).not.toBeUndefined();
+        addButton!.click();
+
+        const items = el.querySelectorAll('.formspec-accordion-item') as NodeListOf<HTMLDetailsElement>;
+        expect(items.length).toBeGreaterThan(0);
+        expect(items[items.length - 1].open).toBe(true);
+        expect(items[items.length - 1].textContent).toContain('Remove Members');
+    });
+});
+
 describe('layout components — FileUpload', () => {
     afterEach(() => {
         document.body.querySelectorAll('formspec-render').forEach(el => el.remove());

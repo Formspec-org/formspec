@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
@@ -32,16 +32,16 @@ describe('ThemeTab', () => {
 
     expect(screen.getByRole('button', { name: /\+ add token/i })).toBeInTheDocument();
 
-    screen.getByRole('button', { name: /selectors/i }).click();
+    act(() => { screen.getByRole('button', { name: /selectors/i }).click(); });
     expect(screen.getByRole('button', { name: /\+ add selector/i })).toBeInTheDocument();
 
-    screen.getByRole('button', { name: /item overrides/i }).click();
+    act(() => { screen.getByRole('button', { name: /item overrides/i }).click(); });
     expect(screen.getByRole('button', { name: /\+ add item override/i })).toBeInTheDocument();
 
-    screen.getByRole('button', { name: /page layouts/i }).click();
+    act(() => { screen.getByRole('button', { name: /page layouts/i }).click(); });
     expect(screen.getByRole('button', { name: /\+ add page layout/i })).toBeInTheDocument();
 
-    screen.getByRole('button', { name: /breakpoints/i }).click();
+    act(() => { screen.getByRole('button', { name: /breakpoints/i }).click(); });
     expect(screen.getByRole('button', { name: /\+ add breakpoint/i })).toBeInTheDocument();
   });
 });

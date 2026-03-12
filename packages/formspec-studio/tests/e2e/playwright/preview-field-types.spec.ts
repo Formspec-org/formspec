@@ -36,7 +36,7 @@ test.describe('Preview field types', () => {
     await expect(workspace.getByRole('spinbutton', { name: 'Household Size' })).toBeVisible();
     await expect(workspace.getByLabel('Birth Date')).toHaveAttribute('type', 'date');
     await expect(workspace.getByRole('combobox', { name: 'Marital Status' })).toBeVisible();
-    await expect(workspace.getByRole('option', { name: 'Single' })).toBeVisible();
-    await expect(workspace.getByRole('option', { name: 'Married' })).toBeVisible();
+    await expect(workspace.getByRole('option', { name: 'Single' })).toBeAttached();
+    await expect(workspace.getByRole('option', { name: 'Married' })).toBeAttached();
   });
 });

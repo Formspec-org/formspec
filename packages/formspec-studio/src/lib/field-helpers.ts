@@ -45,7 +45,9 @@ export function arrayBindsFor(
   path: string
 ): Record<string, string> {
   if (!binds) return {};
-  const bind = binds.find(b => b.path === path);
+  const fallbackPath = path.split('.').pop();
+  const bind = binds.find(b => b.path === path)
+    ?? binds.find(b => fallbackPath && b.path === fallbackPath);
   if (!bind) return {};
   const result: Record<string, string> = {};
   for (const [k, v] of Object.entries(bind)) {

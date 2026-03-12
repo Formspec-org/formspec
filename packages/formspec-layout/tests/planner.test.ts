@@ -498,8 +498,19 @@ describe('grant-application integration', () => {
         const nodes = planDefinitionFallback(definition.items, ctx);
         expect(nodes.length).toBeGreaterThan(0);
 
-        // First item should be the applicantInfo group
-        const applicantInfo = nodes.find(n => n.bindPath === 'applicantInfo');
+        // When formPresentation.pageMode is 'wizard', groups are wrapped in a Wizard node.
+        // Find applicantInfo either at top level or inside the wizard's children.
+        function findNode(list: LayoutNode[], bindPath: string): LayoutNode | undefined {
+            for (const n of list) {
+                if (n.bindPath === bindPath) return n;
+                if (n.children.length > 0) {
+                    const found = findNode(n.children, bindPath);
+                    if (found) return found;
+                }
+            }
+            return undefined;
+        }
+        const applicantInfo = findNode(nodes, 'applicantInfo');
         expect(applicantInfo).toBeDefined();
         expect(applicantInfo!.children.length).toBeGreaterThan(0);
     });

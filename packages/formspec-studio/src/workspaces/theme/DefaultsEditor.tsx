@@ -5,7 +5,12 @@ export function DefaultsEditor() {
   const defaults = theme?.defaults;
 
   if (!defaults || Object.keys(defaults).length === 0) {
-    return <div className="p-4 text-sm text-muted">No defaults defined</div>;
+    return (
+      <div className="p-4 text-sm text-muted">
+        <p>No defaults defined</p>
+        <button type="button" className="mt-2 text-accent hover:underline text-sm">+ Add Default</button>
+      </div>
+    );
   }
 
   return (
@@ -16,6 +21,7 @@ export function DefaultsEditor() {
           <span className="text-muted">{String(value)}</span>
         </div>
       ))}
+      <button type="button" className="mt-2 text-accent hover:underline text-sm self-start px-2">+ Add Default</button>
     </div>
   );
 }

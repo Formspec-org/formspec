@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useDefinition } from '../../state/useDefinition';
+import { useSelection } from '../../state/useSelection';
 import { Section } from '../../components/ui/Section';
 import { FilterBar } from './FilterBar';
 import { VariablesSection } from './VariablesSection';
@@ -26,6 +28,8 @@ function normalizeBinds(binds: unknown): Record<string, Record<string, string>> 
 
 export function LogicTab() {
   const definition = useDefinition();
+  const { select } = useSelection();
+  const [activeFilter, setActiveFilter] = useState<'required' | 'relevant' | 'calculate' | 'constraint' | 'readonly' | null>(null);
 
   const binds = normalizeBinds(definition?.binds);
   const shapes = Array.isArray(definition?.shapes) ? definition.shapes.map((s: any) => ({ name: s.id, ...s })) : [];
@@ -33,14 +37,14 @@ export function LogicTab() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      <FilterBar binds={binds} />
+      <FilterBar binds={binds} activeFilter={activeFilter} onFilterSelect={setActiveFilter} />
       {variables.length > 0 && (
         <Section title="Variables">
           <VariablesSection variables={variables} />
         </Section>
       )}
       <Section title="Binds">
-        <BindsSection binds={binds} />
+        <BindsSection binds={binds} activeFilter={activeFilter} onSelectPath={(path) => select(path, 'field')} />
       </Section>
       <Section title="Shapes">
         <ShapesSection shapes={shapes} />

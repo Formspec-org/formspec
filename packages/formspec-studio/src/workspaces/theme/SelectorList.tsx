@@ -10,7 +10,12 @@ export function SelectorList() {
   const selectors = (theme?.selectors ?? []) as Selector[];
 
   if (selectors.length === 0) {
-    return <div className="p-4 text-sm text-muted">No selectors defined</div>;
+    return (
+      <div className="p-4 text-sm text-muted">
+        <p>No selectors defined</p>
+        <button type="button" className="mt-2 text-accent hover:underline text-sm">+ Add Selector</button>
+      </div>
+    );
   }
 
   return (
@@ -29,6 +34,7 @@ export function SelectorList() {
           </div>
         </div>
       ))}
+      <button type="button" className="mt-2 text-accent hover:underline text-sm self-start px-2">+ Add Selector</button>
     </div>
   );
 }

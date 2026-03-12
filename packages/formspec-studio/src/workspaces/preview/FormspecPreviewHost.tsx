@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useProjectState } from '../../state/useProjectState';
 import { formspecBaseCssHref } from './formspec-base-css-url';
+import { normalizeComponentDoc, normalizeDefinitionDoc, normalizeThemeDoc } from './preview-documents';
 
 const DEBOUNCE_MS = 300;
 
@@ -25,17 +26,6 @@ function plain<T>(x: T): T {
   }
 }
 
-/** Migrate legacy `Root` root node → `Stack` so old in-memory state renders correctly. */
-function normalizeComponentDoc(doc: unknown): unknown {
-  if (!doc || typeof doc !== 'object') return doc;
-  const d = doc as Record<string, unknown>;
-  const tree = d.tree as Record<string, unknown> | undefined;
-  if (tree?.component === 'Root') {
-    return { ...d, tree: { ...tree, component: 'Stack' } };
-  }
-  return doc;
-}
-
 function syncToElement(
   el: FormspecRenderElement | null,
   state: ReturnType<typeof useProjectState>
@@ -45,9 +35,10 @@ function syncToElement(
     const registries = state.extensions?.registries ?? [];
     const registryDocs = registries.map((r: { document: unknown }) => r.document).filter(Boolean);
     el.registryDocuments = registryDocs.length > 0 ? plain(registryDocs) : (undefined as unknown);
-    el.definition = plain(state.definition);
-    el.componentDocument = plain(normalizeComponentDoc(state.component));
-    el.themeDocument = plain(state.theme);
+    const normalizedDef = normalizeDefinitionDoc(state.definition);
+    el.definition = plain(normalizedDef);
+    el.componentDocument = plain(normalizeComponentDoc(state.component, normalizedDef));
+    el.themeDocument = plain(normalizeThemeDoc(state.theme, state.definition));
   } catch (err) {
     console.error('[FormspecPreviewHost] Sync failed', err);
   }

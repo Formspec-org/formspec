@@ -21,8 +21,7 @@ describe('project.import', () => {
 
     expect(project.definition.title).toBe('Imported');
     expect(project.definition.url).toBe('urn:formspec:imported');
-    // History should be cleared
-    expect(project.canUndo).toBe(false);
+    expect(project.canUndo).toBe(true);
   });
 });
 

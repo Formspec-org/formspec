@@ -39,7 +39,7 @@ export function StatusBar() {
   return (
     <footer
       data-testid="status-bar"
-      className="h-[26px] bg-surface border-t border-border px-4 flex items-center justify-between font-mono text-[9px] text-muted shrink-0"
+      className="h-[28px] bg-surface border-t border-border px-4 flex items-center justify-between font-mono text-[11px] text-muted shrink-0"
     >
       <div className="flex items-center gap-2.5">
         {/* Version Section */}
@@ -78,7 +78,11 @@ export function StatusBar() {
       </div>
 
       <div className="truncate ml-4 max-w-[300px]">
-        {def.url}
+        {def.url ? (
+          <a href={def.url} className="hover:text-ink underline-offset-2 hover:underline">
+            {def.url}
+          </a>
+        ) : null}
       </div>
     </footer>
   );

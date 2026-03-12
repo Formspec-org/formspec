@@ -119,7 +119,18 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
   const [open, setOpen] = useState(false);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [activeFunction, setActiveFunction] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleFunctionClick = async (fn: FELFunction) => {
+    const copyText = `${fn.name}${fn.signature.split('→')[0].trim()}`;
+    try {
+      await navigator.clipboard?.writeText(copyText);
+    } catch {
+      // Clipboard access is best-effort in tests and browser sandboxes.
+    }
+    setActiveFunction(fn.name);
+  };
 
   // Close on outside click
   useEffect(() => {
@@ -223,14 +234,26 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
                     {isExpanded && (
                       <div className="pb-1">
                         {cat.functions.map((fn) => (
-                          <div key={fn.name} className="px-3 py-1 hover:bg-subtle/30 transition-colors">
+                          <button
+                            key={fn.name}
+                            type="button"
+                            aria-selected={activeFunction === fn.name}
+                            data-active={activeFunction === fn.name ? 'true' : 'false'}
+                            className={`w-full px-3 py-1 text-left hover:bg-subtle/30 transition-colors ${activeFunction === fn.name ? 'fel-fn-active bg-subtle/40' : ''}`}
+                            onClick={() => void handleFunctionClick(fn)}
+                          >
                             <div className="flex items-baseline gap-1.5 flex-wrap">
                               <span className={`font-mono text-[11px] font-semibold ${catColor}`}>{fn.name}</span>
                               <span className="font-mono text-[10px] text-muted">{fn.signature}</span>
                             </div>
                             <div className="text-[10px] text-muted/80 leading-tight mt-0.5">{fn.description}</div>
-                          </div>
+                          </button>
                         ))}
+                        {activeFunction && (
+                          <div data-testid="fel-function-detail" className="px-3 py-2 text-[10px] text-muted border-t border-border/50">
+                            Selected: {activeFunction}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

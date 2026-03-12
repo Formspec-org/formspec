@@ -230,7 +230,7 @@ export const WizardPlugin: ComponentPlugin = {
                 skipBtn.classList.toggle('formspec-hidden', step === total - 1);
             }
 
-            nextBtn.textContent = step === total - 1 ? 'Finish' : 'Next';
+            nextBtn.textContent = step === total - 1 ? 'Submit' : 'Next';
 
             el.dispatchEvent(new CustomEvent('formspec-page-change', {
                 detail: {

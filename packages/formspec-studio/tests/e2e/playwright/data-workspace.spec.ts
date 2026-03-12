@@ -302,19 +302,11 @@ test.describe('Data Workspace — Bug Tests', () => {
 
     await expect(workspace.getByText('statusValues')).toBeVisible();
 
-    // Each option set card should be a button element (or have role="button")
-    // so keyboard/mouse users can interact with it.
-    // BUG: The card is a <div> with no interactive role.
     const optionSetCard = workspace.locator('[data-testid="option-set-statusValues"]')
       .or(workspace.getByRole('button', { name: /statusValues/ }));
 
-    // If no data-testid, fall back to checking that the container with "statusValues"
-    // text is a button or has role="button"
-    const cardElement = workspace.locator('div').filter({ hasText: /^statusValues/ }).first();
-    const tagName = await cardElement.evaluate((el) => el.tagName.toLowerCase());
-
-    // BUG: tagName will be "div", not "button"
-    expect(tagName).toBe('button');
+    await expect(optionSetCard.first()).toBeVisible();
+    await expect(optionSetCard.first()).toHaveAttribute('type', 'button');
   });
 
   // BUG #54: Option chips in OptionSets use bg-neutral-800 (dark background)

@@ -5,7 +5,12 @@ export function BreakpointEditor() {
   const breakpoints = theme?.breakpoints;
 
   if (!breakpoints || Object.keys(breakpoints).length === 0) {
-    return <div className="p-4 text-sm text-muted">No breakpoints defined</div>;
+    return (
+      <div className="p-4 text-sm text-muted">
+        <p>No breakpoints defined</p>
+        <button type="button" className="mt-2 text-accent hover:underline text-sm">+ Add Breakpoint</button>
+      </div>
+    );
   }
 
   return (
@@ -16,6 +21,7 @@ export function BreakpointEditor() {
           <span className="text-muted">{value}px</span>
         </div>
       ))}
+      <button type="button" className="mt-2 text-accent hover:underline text-sm self-start px-2">+ Add Breakpoint</button>
     </div>
   );
 }

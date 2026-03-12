@@ -1,4 +1,5 @@
 import { useDefinition } from '../../state/useDefinition';
+import { useDispatch } from '../../state/useDispatch';
 import { Section } from '../ui/Section';
 import { Pill } from '../ui/Pill';
 import { FieldIcon } from '../ui/FieldIcon';
@@ -23,18 +24,25 @@ interface Screener {
 
 export function ScreenerSection() {
   const definition = useDefinition();
+  const dispatch = useDispatch();
   const screener = (definition as Record<string, unknown>).screener as Screener | undefined;
-  const isEnabled = screener?.enabled === true;
+  const isEnabled = Boolean(screener);
 
   return (
     <Section title="Screener">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <Pill
-            text={isEnabled ? 'Enabled' : 'Disabled'}
-            color={isEnabled ? 'green' : 'muted'}
-            size="sm"
-          />
+          <button
+            type="button"
+            className="cursor-pointer"
+            onClick={() => dispatch({ type: 'definition.setScreener', payload: { enabled: !isEnabled } })}
+          >
+            <Pill
+              text={isEnabled ? 'Enabled' : 'Disabled'}
+              color={isEnabled ? 'green' : 'muted'}
+              size="sm"
+            />
+          </button>
         </div>
 
         {isEnabled && screener?.items && screener.items.length > 0 && (

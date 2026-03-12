@@ -11,9 +11,15 @@ interface SectionDef {
   countFn: ((state: ReturnType<typeof useProjectState>) => number) | null;
 }
 
+function countComponentNodes(node: unknown): number {
+  if (!node || typeof node !== 'object') return 0;
+  const record = node as { children?: unknown[] };
+  return 1 + (record.children?.reduce((sum, child) => sum + countComponentNodes(child), 0) ?? 0);
+}
+
 const SECTIONS: SectionDef[] = [
   { name: 'Structure', countFn: (s) => s.definition.items?.length ?? 0 },
-  { name: 'Component Tree', countFn: () => 0 },
+  { name: 'Component Tree', countFn: (s) => countComponentNodes(s.component?.tree) },
   { name: 'Theme', countFn: (s) => Object.keys(s.theme.tokens ?? {}).length },
   { name: 'Screener', countFn: null },
   { name: 'Variables', countFn: (s) => s.definition.variables?.length ?? 0 },
@@ -34,7 +40,7 @@ export function Blueprint({ activeSection, onSectionChange }: BlueprintProps) {
   return (
     <div className="flex flex-col shrink-0">
       <div className="px-3 pt-3 pb-2 border-b border-border">
-        <h2 className="font-mono text-[9.5px] font-bold tracking-[0.15em] uppercase text-muted/70 mb-1.5 px-1">
+        <h2 className="font-mono text-[11px] font-bold tracking-[0.15em] uppercase text-muted/70 mb-1.5 px-1">
           Blueprint
         </h2>
         
@@ -56,8 +62,9 @@ export function Blueprint({ activeSection, onSectionChange }: BlueprintProps) {
                 onClick={() => onSectionChange(name)}
               >
                 <span className="truncate">{name}</span>
+                {count !== null && hasData && <span aria-hidden="true"> </span>}
                 {count !== null && hasData && (
-                  <span className={`font-mono text-[9px] tabular-nums shrink-0 px-1 rounded-[2px] transition-colors ${
+                  <span className={`font-mono text-[11px] tabular-nums shrink-0 px-1 rounded-[2px] transition-colors ${
                     isActive
                       ? 'bg-accent/10 text-accent/80'
                       : 'bg-border text-muted/70'

@@ -81,6 +81,7 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         container.className = 'formspec-repeat';
         container.dataset.bind = bindKey;
         target.appendChild(container);
+        const item = host.findItemByKey(bindKey);
 
         host.cleanupFns.push(effect(() => {
             const count = host.engine.repeats[fullRepeatPath]?.value || 0;
@@ -97,10 +98,17 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
                 for (const child of node.children) {
                     emitNode(host, child, instanceWrapper, instancePrefix);
                 }
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'formspec-repeat-add';
+                removeBtn.textContent = `Remove ${item?.label || bindKey}`;
+                removeBtn.addEventListener('click', () => {
+                    host.engine.removeRepeatInstance(fullRepeatPath, idx);
+                });
+                instanceWrapper.appendChild(removeBtn);
             }
         }));
-
-        const item = host.findItemByKey(bindKey);
         const addBtn = document.createElement('button');
         addBtn.type = 'button';
         addBtn.className = 'formspec-repeat-add';

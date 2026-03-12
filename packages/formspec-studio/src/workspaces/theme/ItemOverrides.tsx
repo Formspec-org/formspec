@@ -5,7 +5,12 @@ export function ItemOverrides() {
   const items = theme?.items as Record<string, Record<string, unknown>> | undefined;
 
   if (!items || Object.keys(items).length === 0) {
-    return <div className="p-4 text-sm text-muted">No item overrides defined</div>;
+    return (
+      <div className="p-4 text-sm text-muted">
+        <p>No item overrides defined</p>
+        <button type="button" className="mt-2 text-accent hover:underline text-sm">+ Add Item Override</button>
+      </div>
+    );
   }
 
   return (
@@ -20,6 +25,7 @@ export function ItemOverrides() {
           </div>
         </div>
       ))}
+      <button type="button" className="mt-2 text-accent hover:underline text-sm self-start px-2">+ Add Item Override</button>
     </div>
   );
 }

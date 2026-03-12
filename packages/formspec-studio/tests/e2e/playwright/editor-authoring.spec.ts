@@ -299,7 +299,7 @@ test.describe('Editor Authoring', () => {
     // The item grid should be single-column on a narrow viewport.
     // The palette uses "grid grid-cols-2 gap-1.5" — at 375px this should switch to
     // a single column but currently does not (bug: no responsive prefix).
-    const itemGrid = page.locator('.grid.grid-cols-2').first();
+    const itemGrid = page.locator('[data-testid="add-item-grid"]').first();
     await expect(itemGrid).toBeVisible();
 
     // Get the computed CSS grid-template-columns value — should be a single column

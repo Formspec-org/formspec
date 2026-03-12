@@ -320,6 +320,28 @@ export function planDefinitionFallback(
         nodes.push(planDefinitionItem(item, ctx, prefix));
     }
 
+    // Wrap top-level groups in a Wizard node when pageMode is 'wizard'
+    const pageMode = ctx.formPresentation?.pageMode;
+    if (!prefix && (pageMode === 'wizard' || pageMode === 'tabs')) {
+        const pageNodes = nodes.filter(n => n.scopeChange);
+        if (pageNodes.length > 0) {
+            const orphans = nodes.filter(n => !n.scopeChange);
+            const wizardNode: LayoutNode = {
+                id: nextId('wizard'),
+                component: pageMode === 'tabs' ? 'Tabs' : 'Wizard',
+                category: 'interactive',
+                props: {},
+                cssClasses: [],
+                children: pageNodes.map(n => ({
+                    ...n,
+                    // Each page child becomes a panel in the Wizard
+                    props: { ...n.props, title: n.props.title || n.props.bind },
+                })),
+            };
+            return [...orphans, wizardNode];
+        }
+    }
+
     return nodes;
 }
 

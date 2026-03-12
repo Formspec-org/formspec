@@ -8,9 +8,26 @@ interface HeaderProps {
   onTabChange: (tab: string) => void;
   onImport: () => void;
   onSearch: () => void;
+  onHome?: () => void;
+  onNew?: () => void;
+  onExport?: () => void;
+  onOpenMetadata?: () => void;
+  onToggleAccountMenu?: () => void;
+  isCompact?: boolean;
 }
 
-export function Header({ activeTab, onTabChange, onImport, onSearch }: HeaderProps) {
+export function Header({
+  activeTab,
+  onTabChange,
+  onImport,
+  onSearch,
+  onHome,
+  onNew,
+  onExport,
+  onOpenMetadata,
+  onToggleAccountMenu,
+  isCompact = false,
+}: HeaderProps) {
   const project = useProject();
   const state = useProjectState();
   const { definition } = state;
@@ -21,7 +38,15 @@ export function Header({ activeTab, onTabChange, onImport, onSearch }: HeaderPro
       className="flex items-center h-[50px] px-4 border-b border-border bg-surface shrink-0"
     >
       {/* Left: App Mark + Title */}
-      <div className="flex items-center gap-2 mr-6 shrink-0">
+      <button
+        type="button"
+        aria-label="The Stack home"
+        className="flex items-center gap-2 mr-6 shrink-0 text-left"
+        onClick={() => {
+          onTabChange('Editor');
+          onHome?.();
+        }}
+      >
         <div className="w-6.5 h-6.5 bg-accent rounded-[6px] flex items-center justify-center">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
@@ -35,7 +60,7 @@ export function Header({ activeTab, onTabChange, onImport, onSearch }: HeaderPro
             FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Tabs */}
       <nav className="flex h-full" role="tablist">
@@ -57,14 +82,14 @@ export function Header({ activeTab, onTabChange, onImport, onSearch }: HeaderPro
         ))}
       </nav>
 
-      {/* Center: Search Bar */}
-      <div className="flex-1 flex justify-center px-6">
+      {/* Center: Search Bar — min-w-0 allows flex shrink on narrow viewports */}
+      <div className="flex-1 min-w-0 flex justify-center px-2">
         <button
           onClick={onSearch}
           className="flex items-center gap-2 bg-subtle border border-border rounded-[4px] px-3 py-1.5 w-full max-w-[280px] text-muted hover:border-muted/40 transition-colors group"
         >
           <span className="text-[13px]">🔍</span>
-          <span className="text-[13px] font-ui">Search items, rules, FEL…</span>
+          {!isCompact && <span className="text-[13px] font-ui">Search items, rules, FEL…</span>}
           <span className="ml-auto font-mono text-[11px] border border-border rounded-[2px] px-1.5 py-0.5 group-hover:bg-surface transition-colors">
             ⌘K
           </span>
@@ -73,6 +98,32 @@ export function Header({ activeTab, onTabChange, onImport, onSearch }: HeaderPro
 
       {/* Right Actions */}
       <div className="flex items-center gap-1.5 shrink-0">
+        {!isCompact && (
+          <>
+            <button
+              type="button"
+              className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
+              onClick={onNew}
+            >
+              New Form
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
+              onClick={onExport}
+            >
+              Export
+            </button>
+            <button
+              type="button"
+              aria-label={`FORMSPEC ${definition.$formspec} metadata`}
+              className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
+              onClick={onOpenMetadata}
+            >
+              Metadata
+            </button>
+          </>
+        )}
         <button
           data-testid="undo-btn"
           aria-label="Undo"
@@ -93,7 +144,7 @@ export function Header({ activeTab, onTabChange, onImport, onSearch }: HeaderPro
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
         </button>
-        
+
         <div className="w-px h-5 bg-border mx-1" />
 
         <button
@@ -103,7 +154,12 @@ export function Header({ activeTab, onTabChange, onImport, onSearch }: HeaderPro
         >
           Import
         </button>
-        <div className="w-7 h-7 rounded-full bg-[#E2D9CF] border-2 border-border ml-1 shrink-0" />
+        <button
+          type="button"
+          aria-label="Account profile"
+          className="w-7 h-7 rounded-full bg-[#E2D9CF] border-2 border-border ml-1 shrink-0"
+          onClick={onToggleAccountMenu}
+        />
       </div>
     </header>
   );

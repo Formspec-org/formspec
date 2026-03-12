@@ -4,6 +4,7 @@ import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider } from '../../../src/state/useSelection';
 import { ActivePageProvider } from '../../../src/state/useActivePage';
+import { CanvasTargetsProvider, useCanvasTargets } from '../../../src/state/useCanvasTargets';
 import { StructureTree } from '../../../src/components/blueprint/StructureTree';
 
 const treeDef = {
@@ -24,10 +25,24 @@ function renderTree() {
     <ProjectProvider project={project}>
       <SelectionProvider>
         <ActivePageProvider>
-          <StructureTree />
+          <CanvasTargetsProvider>
+            <StructureTree />
+          </CanvasTargetsProvider>
         </ActivePageProvider>
       </SelectionProvider>
     </ProjectProvider>
+  );
+}
+
+function CanvasTarget({ path }: { path: string }) {
+  const { registerTarget } = useCanvasTargets();
+
+  return (
+    <div
+      data-item-path={path}
+      data-item-type="field"
+      ref={(element) => registerTarget(path, element)}
+    />
   );
 }
 
@@ -70,8 +85,8 @@ describe('StructureTree', () => {
     const calls: string[] = [];
 
     HTMLElement.prototype.scrollIntoView = function scrollIntoViewSpy() {
-      const testId = this.getAttribute('data-testid');
-      if (testId) calls.push(testId);
+      const itemPath = this.getAttribute('data-item-path');
+      if (itemPath) calls.push(itemPath);
     };
 
     try {
@@ -79,10 +94,12 @@ describe('StructureTree', () => {
         <ProjectProvider project={project}>
           <SelectionProvider>
             <ActivePageProvider>
-              <>
-                <div data-testid="field-name" />
-                <StructureTree />
-              </>
+              <CanvasTargetsProvider>
+                <>
+                  <CanvasTarget path="name" />
+                  <StructureTree />
+                </>
+              </CanvasTargetsProvider>
             </ActivePageProvider>
           </SelectionProvider>
         </ProjectProvider>
@@ -93,7 +110,7 @@ describe('StructureTree', () => {
         node.click();
       });
 
-      expect(calls).toContain('field-name');
+      expect(calls).toContain('name');
     } finally {
       HTMLElement.prototype.scrollIntoView = scrollIntoView;
     }
@@ -123,7 +140,9 @@ describe('StructureTree', () => {
         <ProjectProvider project={project}>
           <SelectionProvider>
             <ActivePageProvider>
-              <StructureTree />
+              <CanvasTargetsProvider>
+                <StructureTree />
+              </CanvasTargetsProvider>
             </ActivePageProvider>
           </SelectionProvider>
         </ProjectProvider>

@@ -5,7 +5,12 @@ export function TokenEditor() {
   const tokens = theme?.tokens;
 
   if (!tokens || Object.keys(tokens).length === 0) {
-    return <div className="p-4 text-sm text-muted">No tokens defined</div>;
+    return (
+      <div className="p-4 text-sm text-muted">
+        <p>No tokens defined</p>
+        <button type="button" className="mt-2 text-accent hover:underline text-sm">+ Add Token</button>
+      </div>
+    );
   }
 
   return (
@@ -16,6 +21,7 @@ export function TokenEditor() {
           <span className="text-muted">{String(value)}</span>
         </div>
       ))}
+      <button type="button" className="mt-2 text-accent hover:underline text-sm self-start px-2">+ Add Token</button>
     </div>
   );
 }

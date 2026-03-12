@@ -7,6 +7,7 @@
 @theme {
   /* Colors */
   --color-ink: #0f172a;
+  --color-foreground: #0f172a;
   --color-bg-default: #f8fafc;
   --color-surface: #ffffff;
   --color-border: #e2e8f0;

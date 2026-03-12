@@ -3,6 +3,7 @@ import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
 import { useActivePage } from '../../state/useActivePage';
 import { useDispatch } from '../../state/useDispatch';
+import { useCanvasTargets } from '../../state/useCanvasTargets';
 import { FieldIcon } from '../ui/FieldIcon';
 import { AddItemPalette, type FieldTypeOption } from '../AddItemPalette';
 
@@ -22,8 +23,19 @@ function uniqueKey(prefix: string): string {
 
 // ── Tree node (recursive item row) ──────────────────────────────────────
 
-function TreeNode({ item, depth, pathPrefix }: { item: ItemNode; depth: number; pathPrefix: string }) {
+function TreeNode({
+  item,
+  depth,
+  pathPrefix,
+  onActivatePath,
+}: {
+  item: ItemNode;
+  depth: number;
+  pathPrefix: string;
+  onActivatePath?: (path: string) => void;
+}) {
   const { selectedKey, select } = useSelection();
+  const { scrollToTarget } = useCanvasTargets();
   const fullPath = pathPrefix ? `${pathPrefix}.${item.key}` : item.key;
   const isSelected = selectedKey === fullPath;
 
@@ -34,6 +46,14 @@ function TreeNode({ item, depth, pathPrefix }: { item: ItemNode; depth: number; 
   ) : (
     <span className="text-[10px] opacity-50 text-accent font-bold">ℹ</span>
   );
+
+  const handleClick = () => {
+    onActivatePath?.(fullPath);
+    select(fullPath, item.type);
+    requestAnimationFrame(() => {
+      scrollToTarget(fullPath);
+    });
+  };
 
   return (
     <div className="flex flex-col">
@@ -46,7 +66,7 @@ function TreeNode({ item, depth, pathPrefix }: { item: ItemNode; depth: number; 
             : 'text-ink hover:bg-subtle border-l-2 border-transparent'
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        onClick={() => select(fullPath, item.type)}
+        onClick={handleClick}
       >
         <span className="shrink-0 w-4 flex justify-center">{icon}</span>
         <span className="truncate flex-1">{item.label || item.key}</span>
@@ -57,7 +77,13 @@ function TreeNode({ item, depth, pathPrefix }: { item: ItemNode; depth: number; 
         )}
       </button>
       {item.children?.map((child) => (
-        <TreeNode key={child.key} item={child} depth={depth + 1} pathPrefix={fullPath} />
+        <TreeNode
+          key={child.key}
+          item={child}
+          depth={depth + 1}
+          pathPrefix={fullPath}
+          onActivatePath={onActivatePath}
+        />
       ))}
     </div>
   );
@@ -94,6 +120,7 @@ export function StructureTree() {
   const definition = useDefinition();
   const dispatch = useDispatch();
   const { select } = useSelection();
+  const { scrollToTarget } = useCanvasTargets();
   const { activePageKey, setActivePageKey } = useActivePage();
   const items = (definition.items ?? []) as ItemNode[];
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -128,20 +155,30 @@ export function StructureTree() {
       setActivePageKey(key);
       select(key, 'group');
       requestAnimationFrame(() => {
-        document.querySelector(`[data-testid="group-${key}"]`)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        scrollToTarget(key);
       });
     },
-    [select],
+    [scrollToTarget, select, setActivePageKey],
   );
+
+  const handleActivatePath = useCallback((path: string) => {
+    if (!hasPages) return;
+    const [pageKey] = path.split('.');
+    if (pageKey && pageKey !== activePageKey) {
+      setActivePageKey(pageKey);
+    }
+  }, [activePageKey, hasPages, setActivePageKey]);
 
   // Adding a wizard page
   const handleAddPage = useCallback(() => {
     const key = uniqueKey('page');
-    dispatch({
+    const result = dispatch({
       type: 'definition.addItem',
       payload: { key, type: 'group', label: 'New Page' },
     });
+    const insertedPageKey = typeof result.insertedPath === 'string'
+      ? result.insertedPath.split('.').pop() ?? key
+      : key;
     // If not already in paged mode, enable it
     if (!isPaged) {
       dispatch({
@@ -150,8 +187,11 @@ export function StructureTree() {
       });
     }
     // Switch to the new page once it exists
-    requestAnimationFrame(() => setActivePageKey(key));
-  }, [dispatch, isPaged]);
+    requestAnimationFrame(() => {
+      setActivePageKey(insertedPageKey);
+      select(insertedPageKey, 'group');
+    });
+  }, [dispatch, isPaged, select, setActivePageKey]);
 
   // Adding an item from the palette
   const handleAddFromPalette = useCallback(
@@ -259,6 +299,7 @@ export function StructureTree() {
                   item={item}
                   depth={0}
                   pathPrefix={hasPages && activePageKey ? activePageKey : ''}
+                  onActivatePath={handleActivatePath}
                 />
               ))
             )}

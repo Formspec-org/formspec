@@ -5,7 +5,7 @@ import { OptionSets } from './OptionSets';
 import { TestResponse } from './TestResponse';
 
 const tabs = ['Response Schema', 'Data Sources', 'Option Sets', 'Test Response'] as const;
-type Tab = typeof tabs[number];
+export type Tab = typeof tabs[number];
 
 const tabComponents: Record<Tab, React.FC> = {
   'Response Schema': ResponseSchema,
@@ -14,20 +14,27 @@ const tabComponents: Record<Tab, React.FC> = {
   'Test Response': TestResponse,
 };
 
-export function DataTab() {
-  const [active, setActive] = useState<Tab>('Response Schema');
+interface DataTabProps {
+  activeTab?: Tab;
+  onActiveTabChange?: (tab: Tab) => void;
+}
+
+export function DataTab({ activeTab, onActiveTabChange }: DataTabProps = {}) {
+  const [internalActive, setInternalActive] = useState<Tab>('Response Schema');
+  const active = activeTab ?? internalActive;
+  const setActive = onActiveTabChange ?? setInternalActive;
   const ActiveComponent = tabComponents[active];
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex border-b border-neutral-700">
+      <div className="flex border-b border-border bg-surface">
         {tabs.map((tab) => (
           <button
             key={tab}
             className={`px-3 py-1.5 text-xs ${
               active === tab
-                ? 'text-accent border-b-2 border-accent'
-                : 'text-muted hover:text-foreground'
+                ? 'border-b-2 border-accent text-accent'
+                : 'text-foreground/70 hover:text-ink'
             }`}
             onClick={() => setActive(tab)}
           >

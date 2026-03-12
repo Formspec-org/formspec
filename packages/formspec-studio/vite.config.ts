@@ -12,8 +12,12 @@ export default defineConfig({
     alias: {
       'formspec-studio-core': path.resolve(repoRoot, 'packages/formspec-studio-core/src/index.ts'),
       'formspec-engine': path.resolve(repoRoot, 'packages/formspec-engine/src/index.ts'),
+      'formspec-layout': path.resolve(repoRoot, 'packages/formspec-layout/src/index.ts'),
       // formspec-webcomponent: use workspace dep from node_modules so formspec-base.css?url resolves correctly
     }
+  },
+  optimizeDeps: {
+    exclude: ['formspec-webcomponent'],
   },
   server: {
     allowedHosts: true,

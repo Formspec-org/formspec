@@ -44,10 +44,14 @@ export function PreviewTab() {
         )}
       </div>
       {mode === 'form' ? (
-        <div className="flex-1 overflow-auto flex justify-center p-4 bg-subtle/50">
+        <div className="flex-1 overflow-auto flex justify-center p-2 bg-subtle/50">
           <div
             className="bg-surface rounded border border-border p-4 h-fit"
-            style={{ width: viewportWidths[viewport], maxWidth: '100%' }}
+            style={{
+              width: viewportWidths[viewport],
+              maxWidth: '100%',
+              minWidth: viewport === 'desktop' ? '800px' : undefined,
+            }}
           >
             {items.length > 0 ? (
               <FormspecPreviewHost width={viewportWidths[viewport]} />

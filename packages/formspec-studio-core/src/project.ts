@@ -1574,6 +1574,17 @@ export class Project {
   }
 
   /**
+   * Clear both the undo and redo stacks without modifying the current state.
+   * Useful after programmatic seeding/setup operations where the resulting
+   * history entries should not be part of the authoring history.
+   * Does not trigger change listeners.
+   */
+  resetHistory(): void {
+    this._undoStack.length = 0;
+    this._redoStack.length = 0;
+  }
+
+  /**
    * Restore the most recent pre-command state snapshot.
    * Pushes the current state onto the redo stack, pops from the undo stack,
    * and notifies listeners with source `'undo'`.
@@ -1680,55 +1691,60 @@ export class Project {
     //    - Bound nodes (fields/groups) are keyed by `bind`
     //    - Display nodes are keyed by `nodeId` (no bind — bind implies reactive subscription)
     const existingBound = new Map<string, TreeNode>();
-    const existingById = new Map<string, TreeNode>();
+    const existingDisplay = new Map<string, TreeNode>();
     const unboundNodes: TreeNode[] = [];
 
-    const collectExisting = (node: TreeNode) => {
+    const collectExisting = (node: TreeNode, parentPath = '') => {
       for (const child of node.children ?? []) {
+        const identity = child.bind ?? child.nodeId;
+        const path = identity ? (parentPath ? `${parentPath}.${identity}` : identity) : parentPath;
         if (child.bind) {
-          existingBound.set(child.bind, child);
+          existingBound.set(path, child);
         } else if (child.nodeId) {
-          existingById.set(child.nodeId, child);
+          existingDisplay.set(path, child);
         } else {
           unboundNodes.push(child);
         }
         // Don't recurse into children — we'll rebuild the hierarchy from definition
         // But we do need to collect deeply nested bound/identified nodes
         if (child.children) {
-          const collectDeep = (n: TreeNode) => {
+          const collectDeep = (n: TreeNode, currentPath: string) => {
             for (const c of n.children ?? []) {
-              if (c.bind && !existingBound.has(c.bind)) {
-                existingBound.set(c.bind, c);
-              } else if (c.nodeId && !existingById.has(c.nodeId)) {
-                existingById.set(c.nodeId, c);
+              const nestedIdentity = c.bind ?? c.nodeId;
+              const nestedPath = nestedIdentity ? (currentPath ? `${currentPath}.${nestedIdentity}` : nestedIdentity) : currentPath;
+              if (c.bind && !existingBound.has(nestedPath)) {
+                existingBound.set(nestedPath, c);
+              } else if (c.nodeId && !existingDisplay.has(nestedPath)) {
+                existingDisplay.set(nestedPath, c);
               }
-              collectDeep(c);
+              collectDeep(c, nestedPath);
             }
           };
-          collectDeep(child);
+          collectDeep(child, path);
         }
       }
     };
     collectExisting(tree);
 
     // 2. Build new tree from definition
-    const buildNode = (item: FormspecItem): TreeNode => {
+    const buildNode = (item: FormspecItem, parentPath = ''): TreeNode => {
+      const itemPath = parentPath ? `${parentPath}.${item.key}` : item.key;
       let node: TreeNode;
 
       if (item.type === 'display') {
         // Display items have no field signals; store label text directly.
         // Never set bind on display nodes — bind implies reactive field value subscription.
         // Use nodeId for stable identity so overrides survive rebuilds.
-        const existing = existingById.get(item.key);
+        const existing = existingDisplay.get(itemPath);
         if (existing) {
           node = { ...existing, text: item.label ?? '' };
-          existingById.delete(item.key);
+          existingDisplay.delete(itemPath);
         } else {
           node = { component: 'Text', nodeId: item.key, text: item.label ?? '' };
         }
       } else {
         // Reuse existing node if available (preserves widget overrides, styles, etc.)
-        const existing = existingBound.get(item.key);
+        const existing = existingBound.get(itemPath);
         if (existing) {
           node = { ...existing };
         } else {
@@ -1738,7 +1754,7 @@ export class Project {
 
       // Rebuild children from definition hierarchy
       if (item.children && item.children.length > 0) {
-        node.children = item.children.map(child => buildNode(child));
+        node.children = item.children.map(child => buildNode(child, itemPath));
       } else if (item.type === 'group') {
         node.children = [];
       } else {
@@ -1757,7 +1773,7 @@ export class Project {
     for (const node of unboundNodes) {
       newRoot.children!.push(node);
     }
-    for (const node of existingById.values()) {
+    for (const node of existingDisplay.values()) {
       newRoot.children!.push(node);
     }
 
@@ -1773,8 +1789,13 @@ export class Project {
    */
   private _defaultComponent(item: FormspecItem): string {
     switch (item.type) {
-      case 'field': return 'TextInput';
-      case 'group': return 'Stack';
+      case 'field':
+        if ((item as any).optionSet || Array.isArray((item as any).options)) return 'Select';
+        if (item.dataType === 'choice') return 'Select';
+        if (item.dataType === 'multiChoice') return 'CheckboxGroup';
+        if (item.dataType === 'boolean') return 'Toggle';
+        return 'TextInput';
+      case 'group': return (item as any).repeatable ? 'Accordion' : 'Stack';
       case 'display': return 'Text';
       default: return 'TextInput';
     }

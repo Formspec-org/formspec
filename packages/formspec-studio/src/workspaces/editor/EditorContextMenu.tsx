@@ -1,8 +1,10 @@
 interface EditorContextMenuProps {
-  itemPath: string;
-  itemType: string;
+  itemPath?: string;
+  itemType?: string;
   onAction: (action: string) => void;
   onClose: () => void;
+  items?: MenuItem[];
+  testId?: string;
 }
 
 interface MenuItem {
@@ -23,18 +25,18 @@ const MENU_ITEMS: MenuItem[] = [
  * Shows actions like duplicate, delete, move, and wrap in group.
  */
 export function EditorContextMenu({
-  itemPath,
-  itemType,
   onAction,
   onClose,
+  items = MENU_ITEMS,
+  testId = 'context-menu',
 }: EditorContextMenuProps) {
   return (
     <div
-      data-testid="context-menu"
+      data-testid={testId}
       className="bg-surface border border-border rounded shadow-lg py-1 min-w-[160px]"
       role="menu"
     >
-      {MENU_ITEMS.map(({ label, action }) => (
+      {items.map(({ label, action }) => (
         <button
           key={action}
           role="menuitem"

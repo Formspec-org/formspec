@@ -24,7 +24,7 @@ export function Section({ title, children, defaultOpen = true }: SectionProps) {
           {title}
         </span>
         <span className={`text-[10px] text-muted transition-transform duration-150 ${open ? 'rotate-90' : ''}`}>
-          ▶
+          {open ? '▼' : '▶'}
         </span>
       </button>
       {open && <div className="space-y-1">{children}</div>}

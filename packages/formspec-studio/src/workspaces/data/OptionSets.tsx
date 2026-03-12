@@ -38,9 +38,11 @@ export function OptionSets() {
   return (
     <div className="flex flex-col gap-2 p-4">
       {entries.map(([name, os]) => (
-        <div
+        <button
           key={name}
-          className="border border-neutral-700 rounded p-3"
+          type="button"
+          data-testid={`option-set-${name}`}
+          className="rounded border border-border bg-surface p-3 text-left hover:bg-subtle"
         >
           <div className="flex items-center justify-between">
             <div className="font-medium text-sm">{name}</div>
@@ -52,13 +54,13 @@ export function OptionSets() {
             {os.options.map((opt) => (
               <span
                 key={opt.value}
-                className="text-xs bg-neutral-800 rounded px-2 py-0.5"
+                className="rounded bg-subtle px-2 py-0.5 text-xs text-ink"
               >
                 {opt.label}
               </span>
             ))}
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );

@@ -13,8 +13,8 @@ import { humanizeFEL } from '../../lib/humanize';
  * Displays and edits properties for the currently selected item.
  * High-density technical inspector.
  */
-export function ItemProperties() {
-  const { selectedKey, selectedType } = useSelection();
+export function ItemProperties({ showActions = true }: { showActions?: boolean }) {
+  const { selectedKey, selectedType, select, shouldFocusInspector, consumeFocusInspector } = useSelection();
   const definition = useDefinition();
   const dispatch = useDispatch();
   const keyInputRef = useRef<HTMLInputElement>(null);
@@ -22,14 +22,18 @@ export function ItemProperties() {
   const handleRename = useCallback(
     (originalPath: string, inputEl: HTMLInputElement) => {
       const newKey = inputEl.value;
-      if (newKey && newKey !== originalPath.split('.').pop()) {
+      const currentKey = originalPath.split('.').pop();
+      if (newKey && newKey !== currentKey) {
         dispatch({
           type: 'definition.renameItem',
           payload: { path: originalPath, newKey },
         });
+        const parentPath = originalPath.split('.').slice(0, -1).join('.');
+        const nextPath = parentPath ? `${parentPath}.${newKey}` : newKey;
+        select(nextPath, selectedType ?? 'field');
       }
     },
-    [dispatch],
+    [dispatch, select, selectedType],
   );
 
   const handleDelete = useCallback(
@@ -67,6 +71,15 @@ export function ItemProperties() {
     return () => el.removeEventListener('blur', onBlur);
   }, [itemPath, handleRename]);
 
+  useEffect(() => {
+    if (!shouldFocusInspector) return;
+    const el = keyInputRef.current;
+    if (!el || !itemPath) return;
+    el.focus();
+    el.select();
+    consumeFocusInspector();
+  }, [shouldFocusInspector, itemPath, consumeFocusInspector]);
+
   if (!selectedKey) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted p-8">
@@ -97,6 +110,10 @@ export function ItemProperties() {
   const shapes = shapesFor((definition as any).shapes, path);
   const dtInfo = item.dataType ? dataTypeInfo(item.dataType) : null;
   const currentKey = path.split('.').pop() || path;
+  const rawChoiceOptions = (item as any).options ?? (item as any).choices;
+  const choiceOptions = Array.isArray(rawChoiceOptions) ? (rawChoiceOptions as Array<{ value: string; label?: string }>) : [];
+  const minRepeat = (item as any).minRepeat ?? (item as any).minItems ?? '';
+  const maxRepeat = (item as any).maxRepeat ?? (item as any).maxItems ?? '';
 
   return (
     <div className="h-full flex flex-col bg-surface overflow-hidden">
@@ -121,10 +138,28 @@ export function ItemProperties() {
           <div className="space-y-1.5 mb-2">
             <label className="font-mono text-[10px] text-muted uppercase tracking-wider block">Key</label>
             <input
+              key={itemPath}
               ref={keyInputRef}
               type="text"
+              aria-label="Key"
               className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
               defaultValue={currentKey}
+            />
+          </div>
+          <div className="space-y-1.5 mb-2">
+            <label className="font-mono text-[10px] text-muted uppercase tracking-wider block">Label</label>
+            <input
+              key={`${itemPath}-label`}
+              type="text"
+              aria-label="Label"
+              className="w-full px-2 py-1 text-[13px] border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+              defaultValue={(item.label as string) || ''}
+              onBlur={(event) => {
+                dispatch({
+                  type: 'definition.setItemProperty',
+                  payload: { path, property: 'label', value: event.currentTarget.value || null },
+                });
+              }}
             />
           </div>
           <PropertyRow label="Type">{selectedType || item.type}</PropertyRow>
@@ -146,6 +181,58 @@ export function ItemProperties() {
           </Section>
         )}
 
+        {item.type === 'group' && (item.repeatable || minRepeat !== '' || maxRepeat !== '') && (
+          <Section title="Cardinality">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="font-mono text-[10px] text-muted uppercase tracking-wider block">Min Repeat</label>
+                <input
+                  type="number"
+                  aria-label="Min Repeat"
+                  name="min-repeat"
+                  data-testid="min-repeat"
+                  defaultValue={minRepeat}
+                  className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-mono text-[10px] text-muted uppercase tracking-wider block">Max Repeat</label>
+                <input
+                  type="number"
+                  aria-label="Max Repeat"
+                  name="max-repeat"
+                  data-testid="max-repeat"
+                  defaultValue={maxRepeat}
+                  className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+                />
+              </div>
+            </div>
+          </Section>
+        )}
+
+        {item.type === 'field' && choiceOptions.length > 0 && (
+          <Section title="Options">
+            <div className="space-y-2">
+              {choiceOptions.map((option, index) => (
+                <div key={`${option.value}-${index}`} className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    aria-label={`Option ${index + 1} value`}
+                    defaultValue={option.value}
+                    className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none"
+                  />
+                  <input
+                    type="text"
+                    aria-label={`Option ${index + 1} label`}
+                    defaultValue={option.label ?? option.value}
+                    className="w-full px-2 py-1 text-[13px] border border-border rounded-[4px] bg-surface outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
         {Object.keys(binds).length > 0 && (
           <Section title="Behavior Rules">
             <div className="space-y-1">
@@ -158,9 +245,23 @@ export function ItemProperties() {
                 />
               ))}
             </div>
-            <button className="w-full py-2 mt-1 border border-dashed border-border rounded-[4px] text-muted font-mono text-[11px] hover:border-muted/40 hover:text-ink transition-colors cursor-pointer">
+            <button
+              className="w-full py-2 mt-1 border border-dashed border-border rounded-[4px] text-muted font-mono text-[11px] hover:border-muted/40 hover:text-ink transition-colors cursor-pointer"
+              onClick={() => {
+                dispatch({
+                  type: 'definition.setBind',
+                  payload: { path, properties: { required: binds.required ?? 'true()' } },
+                });
+              }}
+            >
               + Add Rule
             </button>
+            <input
+              type="text"
+              placeholder="New rule expression"
+              aria-label="Rule expression"
+              className="w-full px-2 py-1 mt-2 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+            />
           </Section>
         )}
 
@@ -183,20 +284,22 @@ export function ItemProperties() {
       </div>
 
       {/* Action Footer */}
-      <div className="p-3.5 border-t border-border bg-surface shrink-0 flex gap-2">
-        <button
-          className="flex-1 py-1.5 border border-border rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-subtle transition-colors cursor-pointer"
-          onClick={() => handleDuplicate(path)}
-        >
-          Duplicate
-        </button>
-        <button
-          className="flex-1 py-1.5 border border-error/20 rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest text-error hover:bg-error/5 transition-colors cursor-pointer"
-          onClick={() => handleDelete(path)}
-        >
-          Delete
-        </button>
-      </div>
+      {showActions && (
+        <div className="p-3.5 border-t border-border bg-surface shrink-0 flex gap-2">
+          <button
+            className="flex-1 py-1.5 border border-border rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-subtle transition-colors cursor-pointer"
+            onClick={() => handleDuplicate(path)}
+          >
+            Duplicate
+          </button>
+          <button
+            className="flex-1 py-1.5 border border-error/20 rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest text-error hover:bg-error/5 transition-colors cursor-pointer"
+            onClick={() => handleDelete(path)}
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 }

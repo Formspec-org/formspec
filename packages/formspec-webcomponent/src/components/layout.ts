@@ -279,18 +279,27 @@ export const AccordionPlugin: ComponentPlugin = {
         const bindKey = comp.bind;
         const labels: string[] = comp.labels || [];
         const detailsEls: HTMLDetailsElement[] = [];
+        let previousCount = 0;
 
         if (bindKey) {
             const fullName = ctx.prefix ? `${ctx.prefix}.${bindKey}` : bindKey;
+            const item = ctx.findItemByKey(bindKey);
             ctx.cleanupFns.push(effect(() => {
                 const count = ctx.engine.repeats[fullName]?.value || 0;
+                const expandedIndex = typeof comp.defaultOpen === 'number'
+                    ? comp.defaultOpen
+                    : count > 0
+                        ? count - 1
+                        : -1;
                 el.replaceChildren();
                 detailsEls.length = 0;
 
                 for (let i = 0; i < count; i++) {
                     const details = document.createElement('details');
                     details.className = 'formspec-accordion-item';
-                    if (comp.defaultOpen === i) details.open = true;
+                    if (i === expandedIndex || (count > previousCount && i === count - 1)) {
+                        details.open = true;
+                    }
 
                     const summary = document.createElement('summary');
                     summary.textContent = labels[i] || `Section ${i + 1}`;
@@ -302,6 +311,14 @@ export const AccordionPlugin: ComponentPlugin = {
                     for (const child of comp.children || []) {
                         ctx.renderComponent(child, content, instancePrefix);
                     }
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'formspec-repeat-add';
+                    removeBtn.textContent = `Remove ${item?.label || bindKey}`;
+                    removeBtn.addEventListener('click', () => {
+                        ctx.engine.removeRepeatInstance(fullName, i);
+                    });
+                    content.appendChild(removeBtn);
                     details.appendChild(content);
 
                     details.ontoggle = () => {
@@ -313,10 +330,11 @@ export const AccordionPlugin: ComponentPlugin = {
                     el.appendChild(details);
                     detailsEls.push(details);
                 }
+
+                previousCount = count;
             }));
 
             // Add repeat-add button to match planner fallback behavior
-            const item = ctx.findItemByKey(bindKey);
             const addBtn = document.createElement('button');
             addBtn.type = 'button';
             addBtn.className = 'formspec-repeat-add';

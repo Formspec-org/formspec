@@ -25,6 +25,8 @@ describe('Studio theme tokens', () => {
     render(
       <DisplayBlock
         itemKey="notice"
+        itemPath="notice"
+        registerTarget={() => {}}
         label="Important Notice"
         depth={0}
         selected={false}

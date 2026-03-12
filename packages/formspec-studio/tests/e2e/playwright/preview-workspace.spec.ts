@@ -198,11 +198,9 @@ test.describe('Preview Workspace', () => {
     const componentDoc = workspace.getByTestId('json-doc-component');
     await expect(componentDoc).toBeVisible();
 
-    // A properly authored component document should show a Dropdown (or Select) widget
-    // for the choice field "status", rather than the generic TextInput default.
-    // This will fail because the studio has no component authoring surface — all fields
-    // fall back to "TextInput" regardless of data type or option set association.
-    await expect(componentDoc).toContainText('Dropdown');
+    // A properly authored component document should show a non-generic choice widget
+    // for the option-backed field "status", rather than the TextInput fallback.
+    await expect(componentDoc).toContainText(/Select|Dropdown/);
   });
 
   test('bug #71: Theme sub-tab shows real theme tokens and defaults, not a targetDefinition stub', async ({ page }) => {

@@ -13,15 +13,25 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]['id'];
 
-const tabContent: Record<TabId, () => React.ReactNode> = {
-  config: () => <MappingConfig />,
-  rules: () => <RuleEditor />,
-  adapter: () => <AdapterConfig />,
-  preview: () => <MappingPreview />,
-};
-
 export function MappingTab() {
   const [activeTab, setActiveTab] = useState<TabId>('config');
+  const [configOpen, setConfigOpen] = useState(true);
+
+  let content: React.ReactNode;
+  switch (activeTab) {
+    case 'config':
+      content = <MappingConfig open={configOpen} onOpenChange={setConfigOpen} />;
+      break;
+    case 'rules':
+      content = <RuleEditor />;
+      break;
+    case 'adapter':
+      content = <AdapterConfig />;
+      break;
+    case 'preview':
+      content = <MappingPreview />;
+      break;
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -41,9 +51,7 @@ export function MappingTab() {
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-auto">
-        {tabContent[activeTab]()}
-      </div>
+      <div className="flex-1 overflow-auto">{content}</div>
     </div>
   );
 }

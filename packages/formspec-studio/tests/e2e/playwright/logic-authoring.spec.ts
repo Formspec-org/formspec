@@ -141,9 +141,9 @@ test.describe('Logic Workspace — shapes show full detail for every card (#50)'
     const workspace = page.locator('[data-testid="workspace-Logic"]');
 
     // ShapeCard renders `code || name` — all three codes must be visible
-    await expect(workspace.getByText('INC_AMI')).toBeVisible();
-    await expect(workspace.getByText('ADDR')).toBeVisible();
-    await expect(workspace.getByText('HH_MIS')).toBeVisible();
+    await expect(workspace.getByText('INC_AMI', { exact: true })).toBeVisible();
+    await expect(workspace.getByText('ADDR', { exact: true })).toBeVisible();
+    await expect(workspace.getByText('HH_MIS', { exact: true })).toBeVisible();
   });
 
   test('every shape card shows its FEL constraint expression — including shapes with or/and arrays', async ({ page }) => {
