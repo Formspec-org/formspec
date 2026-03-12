@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Formspec — Forms that think</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #0f0f18;
+      --bg3: #13131f;
+      --border: rgba(255,255,255,0.07);
+      --border-bright: rgba(255,255,255,0.13);
+      --text: #e8e8f0;
+      --text-dim: #7a7a9a;
+      --text-dimmer: #4a4a6a;
+      --accent: #7c6af7;
+      --accent2: #a78bfa;
+      --accent-glow: rgba(124,106,247,0.18);
+      --accent-glow-strong: rgba(124,106,247,0.32);
+      --green: #34d399;
+      --green-glow: rgba(52,211,153,0.15);
+      --amber: #fbbf24;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ambient glow */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20vh;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80vw;
+      height: 60vh;
+      background: radial-gradient(ellipse, rgba(124,106,247,0.07) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.4;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(10,10,15,0.8);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-logo .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 0.875rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 6px 16px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      transition: opacity 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 16px var(--accent-glow-strong);
+    }
+
+    .nav-cta:hover { opacity: 0.85; box-shadow: 0 0 24px var(--accent-glow-strong); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      padding: 100px 6vw 80px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .hero-left { padding-right: 2rem; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 1.5rem;
+    }
+
+    .eyebrow-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent2);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 .highlight {
+      background: linear-gradient(135deg, var(--accent), var(--accent2) 60%, #c4b5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 1.125rem;
+      line-height: 1.7;
+      color: var(--text-dim);
+      max-width: 480px;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 0 24px var(--accent-glow-strong);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 32px var(--accent-glow-strong);
+    }
+
+    .btn-ghost {
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: 1px solid var(--border-bright);
+      color: var(--text-dim);
+      text-decoration: none;
+      background: transparent;
+      transition: all 0.2s;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--accent-glow);
+    }
+
+    .hero-note {
+      margin-top: 1.5rem;
+      font-size: 0.78rem;
+      color: var(--text-dimmer);
+    }
+
+    /* ── LIVE DEMO FORM ── */
+    .demo-card {
+      background: var(--bg2);
+      border: 1px solid var(--border-bright);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(124,106,247,0.1), 0 32px 64px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    .demo-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20%; right: 20%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .demo-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .demo-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .demo-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(124,106,247,0.3);
+      color: var(--accent2);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .demo-dots { display: flex; gap: 6px; }
+    .demo-dots span {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border-bright);
+    }
+    .demo-dots span:nth-child(1) { background: #ff5f57; }
+    .demo-dots span:nth-child(2) { background: #febc2e; }
+    .demo-dots span:nth-child(3) { background: #28c840; }
+
+    .demo-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* Form fields */
+    .field-group {
+      margin-bottom: 16px;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .field-group.hidden {
+      opacity: 0;
+      max-height: 0;
+      margin-bottom: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .field-group.visible {
+      opacity: 1;
+      max-height: 200px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .field-label .required { color: var(--accent2); margin-left: 2px; }
+
+    .field-input {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.875rem;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      appearance: none;
+    }
+
+    .field-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .field-input::placeholder { color: var(--text-dimmer); }
+
+    select.field-input {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a7a9a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .field-computed .field-input {
+      color: var(--accent2);
+      border-color: rgba(124,106,247,0.3);
+      background: rgba(124,106,247,0.06);
+      cursor: default;
+      font-weight: 600;
+    }
+
+    .computed-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: rgba(124,106,247,0.15);
+      color: var(--accent2);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* AI Panel */
+    .ai-panel {
+      margin-top: 8px;
+      padding: 14px 16px;
+      background: rgba(52,211,153,0.05);
+      border: 1px solid rgba(52,211,153,0.18);
+      border-radius: var(--radius-sm);
+      transition: all 0.4s ease;
+      overflow: hidden;
+    }
+
+    .ai-panel.empty {
+      opacity: 0;
+      max-height: 0;
+      padding: 0;
+      border-width: 0;
+      margin-top: 0;
+    }
+
+    .ai-panel.visible {
+      opacity: 1;
+      max-height: 200px;
+    }
+
+    .ai-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--green);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ai-label svg { flex-shrink: 0; }
+
+    .ai-text {
+      font-size: 0.82rem;
+      color: rgba(232,232,240,0.8);
+      line-height: 1.55;
+      min-height: 1.2em;
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 0.9em;
+      background: var(--green);
+      margin-left: 1px;
+      vertical-align: text-bottom;
+      animation: blink 0.9s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .demo-submit {
+      width: 100%;
+      padding: 10px;
+      margin-top: 4px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .demo-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 24px var(--accent-glow-strong);
+    }
+
+    /* ── FEATURES STRIP ── */
+    .features-strip {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      padding: 20px 6vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .strip-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .strip-icon {
+      width: 16px; height: 16px;
+      color: var(--accent2);
+      flex-shrink: 0;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 100px 6vw;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .section-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 1rem;
+    }
+
+    .section-heading {
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+    }
+
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      max-width: 540px;
+    }
+
+    /* ── SECTION 1: Write once ── */
+    .portability {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: center;
+    }
+
+    .runtime-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 2rem;
+    }
+
+    .runtime-card {
+      padding: 20px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: all 0.25s;
+    }
+
+    .runtime-card:hover {
+      border-color: var(--border-bright);
+      transform: translateY(-2px);
+    }
+
+    .runtime-icon {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+    }
+
+    .runtime-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .runtime-desc {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* JSON illustration */
+    .json-demo {
+      background: var(--bg3);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      padding: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .json-demo::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20%; right: 20%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .j-key { color: var(--accent2); }
+    .j-str { color: var(--green); }
+    .j-num { color: var(--amber); }
+    .j-bool { color: #f87171; }
+    .j-punct { color: var(--text-dimmer); }
+    .j-comment { color: var(--text-dimmer); font-style: italic; }
+
+    /* ── SECTION 2: AI ── */
+    .ai-section {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ai-section > section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: center;
+    }
+
+    .ai-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: all 0.25s;
+    }
+
+    .flow-step:hover {
+      border-color: var(--border-bright);
+      background: rgba(124,106,247,0.04);
+    }
+
+    .flow-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      border: 1px solid rgba(124,106,247,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent2);
+      flex-shrink: 0;
+    }
+
+    .flow-content .flow-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .flow-content .flow-desc {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* ── SECTION 3: Open spec ── */
+    .stack-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: center;
+    }
+
+    .stack-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 1.5rem;
+    }
+
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border-bright);
+      color: var(--text-dim);
+      background: var(--bg2);
+    }
+
+    .pill.accent {
+      border-color: rgba(124,106,247,0.4);
+      color: var(--accent2);
+      background: var(--accent-glow);
+    }
+
+    .code-tabs {
+      background: var(--bg3);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .code-tabs::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20%; right: 20%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+
+    .tab {
+      padding: 10px 18px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dimmer);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .tab.active {
+      color: var(--accent2);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab:hover:not(.active) { color: var(--text-dim); }
+
+    .tab-content {
+      padding: 20px 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.8;
+      display: none;
+    }
+
+    .tab-content.active { display: block; }
+
+    /* ── CTA ── */
+    .cta-section {
+      text-align: center;
+      padding: 120px 6vw;
+    }
+
+    .cta-glow {
+      position: relative;
+      display: inline-block;
+    }
+
+    .cta-glow::before {
+      content: '';
+      position: absolute;
+      inset: -60px;
+      background: radial-gradient(ellipse, rgba(124,106,247,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-heading {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+      color: var(--text);
+    }
+
+    .cta-sub {
+      font-size: 1rem;
+      color: #9090b0;
+      max-width: 460px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+
+    .cta-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 6vw;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-logo {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .footer-note {
+      font-size: 0.75rem;
+      color: var(--text-dimmer);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 0.78rem;
+      color: var(--text-dimmer);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--text-dim); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 90px 5vw 60px;
+        gap: 3rem;
+      }
+      .hero-left { padding-right: 0; }
+      .portability, .ai-section > section, .stack-section {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+      .features-strip { gap: 1.5rem; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <span class="dot"></span>
+      formspec
+    </a>
+    <ul class="nav-links">
+      <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#ai">AI-native</a></li>
+      <li><a href="#open-spec">Open spec</a></li>
+      <li><a href="https://github.com" target="_blank">GitHub</a></li>
+    </ul>
+    <a href="#cta" class="nav-cta">Get early access</a>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-left">
+      <div class="eyebrow">
+        <span class="eyebrow-dot"></span>
+        Open specification · v1.0 draft
+      </div>
+      <h1>
+        Forms that<br />
+        <span class="highlight">actually think.</span>
+      </h1>
+      <p class="hero-sub">
+        Formspec is a new kind of form — one that adapts as you fill it in, validates in real-time,
+        and speaks the same language as every AI model out there. No more chasing errors at the end.
+      </p>
+      <div class="hero-actions">
+        <a href="#cta" class="btn-primary">Try it free</a>
+        <a href="#how-it-works" class="btn-ghost">See how it works</a>
+      </div>
+      <p class="hero-note">Open specification. Runs in browser, on server, or offline.</p>
+    </div>
+
+    <!-- LIVE DEMO -->
+    <div class="demo-card">
+      <div class="demo-header">
+        <div class="demo-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="demo-title">
+          Grant Application
+          <span class="demo-badge">Live</span>
+        </div>
+        <div style="width:48px"></div>
+      </div>
+      <div class="demo-body">
+
+        <div class="field-group visible" id="fg-name">
+          <label class="field-label">Organization name <span class="required">*</span></label>
+          <input class="field-input" id="f-org" type="text" placeholder="e.g. Sunrise Community Fund" autocomplete="off" />
+        </div>
+
+        <div class="field-group visible" id="fg-type">
+          <label class="field-label">Organization type <span class="required">*</span></label>
+          <select class="field-input" id="f-type">
+            <option value="">Choose one…</option>
+            <option value="nonprofit">Nonprofit (501c3)</option>
+            <option value="government">Government agency</option>
+            <option value="tribal">Tribal nation</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Shown when nonprofit -->
+        <div class="field-group hidden" id="fg-ein">
+          <label class="field-label">EIN <span class="required">*</span></label>
+          <input class="field-input" id="f-ein" type="text" placeholder="12-3456789" autocomplete="off" />
+        </div>
+
+        <!-- Shown when tribal -->
+        <div class="field-group hidden" id="fg-tribal">
+          <label class="field-label">Bureau of Indian Affairs number</label>
+          <input class="field-input" id="f-tribal" type="text" placeholder="BIA-XXXX" autocomplete="off" />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group visible" style="margin-bottom:0">
+            <label class="field-label">Requested amount ($)</label>
+            <input class="field-input" id="f-amount" type="number" placeholder="25000" min="0" autocomplete="off" />
+          </div>
+          <div class="field-group visible" style="margin-bottom:0">
+            <label class="field-label">Duration (months)</label>
+            <input class="field-input" id="f-months" type="number" placeholder="12" min="1" max="60" autocomplete="off" />
+          </div>
+        </div>
+        <div style="height:16px"></div>
+
+        <div class="field-group visible field-computed">
+          <label class="field-label">
+            Monthly budget
+            <span class="computed-tag">⚡ calculated</span>
+          </label>
+          <input class="field-input" id="f-monthly" type="text" readonly placeholder="Fill in amount & duration…" />
+        </div>
+
+        <!-- AI panel -->
+        <div class="ai-panel empty" id="ai-panel">
+          <div class="ai-label">
+            <svg class="strip-icon" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M5.5 8.5C6 10 10 10 10.5 8.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <circle cx="5.8" cy="6.2" r="0.7" fill="currentColor"/>
+              <circle cx="10.2" cy="6.2" r="0.7" fill="currentColor"/>
+            </svg>
+            Reading your form…
+          </div>
+          <div class="ai-text" id="ai-text"></div>
+        </div>
+
+        <button class="demo-submit" onclick="handleSubmit()">Submit application →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRIP -->
+  <div class="features-strip">
+    <div class="strip-item">
+      <svg class="strip-icon" viewBox="0 0 16 16" fill="none"><path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Conditional logic, built-in
+    </div>
+    <div class="strip-item">
+      <svg class="strip-icon" viewBox="0 0 16 16" fill="none"><path d="M8 2v3M8 11v3M2 8h3M11 8h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/></svg>
+      Auto-calculated fields
+    </div>
+    <div class="strip-item">
+      <svg class="strip-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 7h6M5 9.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Real-time validation
+    </div>
+    <div class="strip-item">
+      <svg class="strip-icon" viewBox="0 0 16 16" fill="none"><path d="M3 5l5-3 5 3v5l-5 3-5-3V5z" stroke="currentColor" stroke-width="1.2"/></svg>
+      AI-ready by design
+    </div>
+    <div class="strip-item">
+      <svg class="strip-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v3l2 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Open specification
+    </div>
+  </div>
+
+  <!-- SECTION 1: Write once, works everywhere -->
+  <section id="how-it-works">
+    <div class="portability">
+      <div>
+        <div class="section-eyebrow">Write once</div>
+        <h2 class="section-heading">One form definition.<br />Every surface.</h2>
+        <p class="section-sub">
+          Define your form once — fields, rules, validations — and it runs identically in the browser, on your server, offline, or in a mobile app. No copy-pasting logic. No syncing two codebases. Same rules, everywhere.
+        </p>
+        <div class="runtime-grid">
+          <div class="runtime-card">
+            <div class="runtime-icon">🌐</div>
+            <div class="runtime-name">Browser</div>
+            <div class="runtime-desc">Live validation and conditional logic as users type.</div>
+          </div>
+          <div class="runtime-card">
+            <div class="runtime-icon">🖥️</div>
+            <div class="runtime-name">Server</div>
+            <div class="runtime-desc">Re-verify submitted data with the exact same rules.</div>
+          </div>
+          <div class="runtime-card">
+            <div class="runtime-icon">📴</div>
+            <div class="runtime-name">Offline</div>
+            <div class="runtime-desc">Works without a connection. Syncs when back online.</div>
+          </div>
+          <div class="runtime-card">
+            <div class="runtime-icon">📱</div>
+            <div class="runtime-name">Mobile</div>
+            <div class="runtime-desc">Same definition, adapted presentation for small screens.</div>
+          </div>
+        </div>
+      </div>
+      <div class="json-demo">
+        <div class="j-comment">// One definition. All the smarts.</div><br />
+        <span class="j-punct">{</span><br />
+        &nbsp;&nbsp;<span class="j-key">"title"</span><span class="j-punct">:</span> <span class="j-str">"Grant Application"</span><span class="j-punct">,</span><br />
+        &nbsp;&nbsp;<span class="j-key">"items"</span><span class="j-punct">:</span> <span class="j-punct">[</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="j-punct">{</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"id"</span><span class="j-punct">:</span> <span class="j-str">"org_type"</span><span class="j-punct">,</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"type"</span><span class="j-punct">:</span> <span class="j-str">"select"</span><span class="j-punct">,</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"label"</span><span class="j-punct">:</span> <span class="j-str">"Organization type"</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="j-punct">},</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="j-punct">{</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"id"</span><span class="j-punct">:</span> <span class="j-str">"ein"</span><span class="j-punct">,</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"bind"</span><span class="j-punct">: {</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-comment">// Only appears for nonprofits</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"relevant"</span><span class="j-punct">:</span> <span class="j-str">"org_type = 'nonprofit'"</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-punct">}</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="j-punct">},</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="j-punct">{</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"id"</span><span class="j-punct">:</span> <span class="j-str">"monthly_budget"</span><span class="j-punct">,</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"bind"</span><span class="j-punct">: {</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-comment">// Calculated automatically</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-key">"calculate"</span><span class="j-punct">:</span> <span class="j-str">"amount / duration"</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="j-punct">}</span><br />
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="j-punct">}</span><br />
+        &nbsp;&nbsp;<span class="j-punct">]</span><br />
+        <span class="j-punct">}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: AI-native -->
+  <div class="ai-section">
+    <section id="ai">
+      <div>
+        <div class="section-eyebrow">AI-native</div>
+        <h2 class="section-heading">Built for the<br />AI era.</h2>
+        <p class="section-sub">
+          Every Formspec form is a structured JSON document. That means any AI model can read it, fill it, or explain it — without scraping HTML or guessing field names. It speaks AI fluently, by design.
+        </p>
+        <div class="stack-pills" style="margin-top:1.5rem">
+          <span class="pill accent">Structured output</span>
+          <span class="pill accent">LLM form generation</span>
+          <span class="pill accent">AI pre-fill</span>
+          <span class="pill">GPT-4 / Claude / Gemini</span>
+          <span class="pill">JSON Schema constrained</span>
+          <span class="pill">Natural language errors</span>
+        </div>
+      </div>
+      <div class="ai-flow">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-content">
+            <div class="flow-title">AI generates the form</div>
+            <div class="flow-desc">Describe what you need in plain English. The AI outputs a valid Formspec definition with fields, rules, and validation — constrained by the schema so it's always correct.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-content">
+            <div class="flow-title">User fills it in (or AI does)</div>
+            <div class="flow-desc">Forms run live in the browser with real-time conditional logic. Or pass existing data to an AI and let it pre-fill the response — the same JSON schema validates either way.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-content">
+            <div class="flow-title">AI explains what's wrong</div>
+            <div class="flow-desc">Validation errors are structured JSON — not cryptic codes. Feed them back to any LLM and get plain-English explanations your users can actually act on.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-content">
+            <div class="flow-title">Server re-verifies everything</div>
+            <div class="flow-desc">The same rules that ran in the browser run again on your server. No trust gap. No duplicate logic to maintain.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SECTION 3: Open spec, your stack -->
+  <section id="open-spec">
+    <div class="stack-section">
+      <div class="code-tabs">
+        <div class="tab-bar">
+          <div class="tab active" onclick="switchTab('py')">Python</div>
+          <div class="tab" onclick="switchTab('ts')">TypeScript</div>
+          <div class="tab" onclick="switchTab('html')">HTML</div>
+        </div>
+        <div class="tab-content active" id="tab-py">
+<span class="j-comment"># Server-side re-verification</span><br />
+<span class="j-key">from</span> formspec.evaluator <span class="j-key">import</span> DefinitionEvaluator<br />
+<br />
+<span class="j-comment"># Same rules the browser enforced</span><br />
+evaluator <span class="j-punct">=</span> DefinitionEvaluator(definition)<br />
+result <span class="j-punct">=</span> evaluator.process(submitted_data)<br />
+<br />
+<span class="j-key">if</span> <span class="j-key">not</span> result.valid<span class="j-punct">:</span><br />
+&nbsp;&nbsp;<span class="j-key">return</span> <span class="j-punct">{</span><span class="j-str">"errors"</span><span class="j-punct">:</span> result.results<span class="j-punct">}</span>
+        </div>
+        <div class="tab-content" id="tab-ts">
+<span class="j-comment">// Browser — reactive, live</span><br />
+<span class="j-key">import</span> <span class="j-punct">{</span> FormEngine <span class="j-punct">}</span> <span class="j-key">from</span> <span class="j-str">"formspec-engine"</span><span class="j-punct">;</span><br />
+<br />
+<span class="j-key">const</span> engine <span class="j-punct">=</span> <span class="j-key">new</span> FormEngine()<span class="j-punct">;</span><br />
+engine.setDefinition(definition)<span class="j-punct">;</span><br />
+engine.setValue(<span class="j-str">"org_type"</span><span class="j-punct">,</span> <span class="j-str">"nonprofit"</span>)<span class="j-punct">;</span><br />
+<br />
+<span class="j-comment">// Signals update — EIN field appears</span><br />
+<span class="j-key">const</span> report <span class="j-punct">=</span> engine.getValidationReport()<span class="j-punct">;</span>
+        </div>
+        <div class="tab-content" id="tab-html">
+<span class="j-comment">&lt;!-- Drop-in web component --&gt;</span><br />
+<span class="j-key">&lt;script</span> <span class="j-str">type="module"</span><span class="j-key">&gt;</span><br />
+&nbsp;&nbsp;<span class="j-key">import</span> <span class="j-str">"formspec-webcomponent"</span><span class="j-punct">;</span><br />
+<span class="j-key">&lt;/script&gt;</span><br />
+<br />
+<span class="j-key">&lt;formspec-render&gt;&lt;/formspec-render&gt;</span><br />
+<br />
+<span class="j-key">&lt;script&gt;</span><br />
+&nbsp;&nbsp;<span class="j-key">const</span> el <span class="j-punct">=</span> document.querySelector(<span class="j-str">"formspec-render"</span>)<span class="j-punct">;</span><br />
+&nbsp;&nbsp;el.definition <span class="j-punct">=</span> myDefinition<span class="j-punct">;</span><br />
+<span class="j-key">&lt;/script&gt;</span>
+        </div>
+      </div>
+      <div>
+        <div class="section-eyebrow">Open spec</div>
+        <h2 class="section-heading">Your stack,<br />your rules.</h2>
+        <p class="section-sub">
+          Formspec is an open specification, not a locked-in SaaS. Use the TypeScript engine in the browser, the Python library on your server, or implement it yourself. Both ship today.
+        </p>
+        <div class="stack-pills">
+          <span class="pill accent">TypeScript</span>
+          <span class="pill accent">Python</span>
+          <span class="pill">FastAPI</span>
+          <span class="pill">Django</span>
+          <span class="pill">Next.js</span>
+          <span class="pill">React</span>
+          <span class="pill">Web Components</span>
+          <span class="pill">Any stack</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-section" id="cta">
+    <div class="cta-glow">
+      <h2 class="cta-heading">Ready to build<br /><span class="highlight">smarter forms?</span></h2>
+      <p class="cta-sub">
+        Formspec is in open draft. Join early, shape the spec, and build forms that don't feel like 2012.
+      </p>
+      <div class="cta-actions">
+        <a href="https://github.com" class="btn-primary">Read the spec on GitHub</a>
+        <a href="#how-it-works" class="btn-ghost">See examples</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <a href="#" class="footer-logo">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);display:inline-block"></span>
+      formspec
+    </a>
+    <span class="footer-note">v1.0.0-draft.1 · Open specification under active development</span>
+    <ul class="footer-links">
+      <li><a href="#">GitHub</a></li>
+      <li><a href="#">Spec docs</a></li>
+      <li><a href="#">Examples</a></li>
+    </ul>
+  </footer>
+
+  <script>
+    // ── DEMO FORM LOGIC ──
+    const orgType   = document.getElementById('f-type');
+    const amount    = document.getElementById('f-amount');
+    const months    = document.getElementById('f-months');
+    const monthly   = document.getElementById('f-monthly');
+    const orgName   = document.getElementById('f-org');
+    const einField  = document.getElementById('f-ein');
+    const tribalField = document.getElementById('f-tribal');
+    const aiPanel   = document.getElementById('ai-panel');
+    const aiText    = document.getElementById('ai-text');
+
+    let aiTimeout = null;
+    let typingInterval = null;
+
+    function showField(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('hidden');
+      el.classList.add('visible');
+    }
+
+    function hideField(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('visible');
+      el.classList.add('hidden');
+    }
+
+    orgType.addEventListener('change', () => {
+      const v = orgType.value;
+      if (v === 'nonprofit') {
+        showField('fg-ein');
+        hideField('fg-tribal');
+      } else if (v === 'tribal') {
+        hideField('fg-ein');
+        showField('fg-tribal');
+      } else {
+        hideField('fg-ein');
+        hideField('fg-tribal');
+      }
+      updateAI();
+    });
+
+    function updateMonthly() {
+      const a = parseFloat(amount.value);
+      const m = parseFloat(months.value);
+      if (a > 0 && m > 0) {
+        monthly.value = '$' + (a / m).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' / mo';
+      } else {
+        monthly.value = '';
+        monthly.placeholder = 'Fill in amount & duration…';
+      }
+    }
+
+    amount.addEventListener('input', () => { updateMonthly(); updateAI(); });
+    months.addEventListener('input', () => { updateMonthly(); updateAI(); });
+    orgName.addEventListener('input', updateAI);
+    einField.addEventListener('input', updateAI);
+
+    function buildSummary() {
+      const name = orgName.value.trim();
+      const type = orgType.value;
+      const ein  = einField.value.trim();
+      const amt  = parseFloat(amount.value);
+      const mo   = parseFloat(months.value);
+
+      if (!name && !type) return null;
+
+      let parts = [];
+      if (name) parts.push(`${name}`);
+      if (type === 'nonprofit') parts.push('a registered nonprofit');
+      else if (type === 'government') parts.push('a government agency');
+      else if (type === 'tribal') parts.push('a tribal nation');
+
+      let s = parts.length === 2 ? `${parts[0]} is ${parts[1]}` : (parts[0] || '');
+
+      if (amt > 0 && mo > 0) {
+        const perMo = (amt / mo).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        s += `. Requesting $${amt.toLocaleString()} over ${mo} months — that's $${perMo}/mo`;
+      } else if (amt > 0) {
+        s += `. Requesting $${amt.toLocaleString()}`;
+      }
+
+      if (type === 'nonprofit' && ein) s += `. EIN ${ein} on file`;
+      s += '.';
+      return s;
+    }
+
+    function typeText(target, text) {
+      if (typingInterval) clearInterval(typingInterval);
+      target.innerHTML = '';
+      let i = 0;
+      const cursor = '<span class="typing-cursor"></span>';
+      typingInterval = setInterval(() => {
+        i++;
+        target.innerHTML = text.slice(0, i) + cursor;
+        if (i >= text.length) {
+          clearInterval(typingInterval);
+          typingInterval = null;
+          target.innerHTML = text;
+        }
+      }, 18);
+    }
+
+    function updateAI() {
+      clearTimeout(aiTimeout);
+      aiTimeout = setTimeout(() => {
+        const summary = buildSummary();
+        if (summary) {
+          aiPanel.classList.remove('empty');
+          aiPanel.classList.add('visible');
+          typeText(aiText, summary);
+        } else {
+          aiPanel.classList.remove('visible');
+          aiPanel.classList.add('empty');
+        }
+      }, 400);
+    }
+
+    function handleSubmit() {
+      const summary = buildSummary();
+      if (!orgName.value.trim() || !orgType.value) {
+        aiPanel.classList.remove('empty');
+        aiPanel.classList.add('visible');
+        typeText(aiText, '⚠ Organization name and type are required before submitting.');
+        return;
+      }
+      typeText(aiText, '✓ Application looks complete. Submitting…');
+      setTimeout(() => typeText(aiText, '✓ Submitted! You\'ll hear back within 5 business days.'), 1400);
+    }
+
+    // ── TABS ──
+    function switchTab(lang) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + lang).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+
+</body>
+</html>
