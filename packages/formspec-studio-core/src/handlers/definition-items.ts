@@ -18,6 +18,7 @@ import {
   rewriteFELReferences,
   type FormspecItem,
 } from 'formspec-engine';
+import { getEditableComponentDocument } from '../component-documents.js';
 import { resolveItemLocation } from './helpers.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -542,7 +543,7 @@ registerHandler('definition.renameItem', (state, payload) => {
   rewriteAllPathReferences(state, path, newPath);
 
   // Rename-specific: rewrite component tree bind references (key-based, not path-based)
-  const tree = state.component.tree as any;
+  const tree = getEditableComponentDocument(state).tree as any;
   if (tree) {
     const queue = [tree];
     while (queue.length > 0) {

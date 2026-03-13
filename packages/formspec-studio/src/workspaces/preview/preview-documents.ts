@@ -1,5 +1,22 @@
 import defaultThemeJson from '../../../../formspec-webcomponent/src/default-theme.json';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isAuthoredComponentDoc(doc: unknown): boolean {
+  return isRecord(doc) && typeof doc.$formspecComponent === 'string';
+}
+
+function hasAuthoredComponentTree(doc: unknown): boolean {
+  return isAuthoredComponentDoc(doc) && isRecord((doc as Record<string, unknown>).tree);
+}
+
+function normalizeTree(tree: unknown): unknown {
+  if (!isRecord(tree)) return tree;
+  return tree.component === 'Root' ? { ...tree, component: 'Stack' } : tree;
+}
+
 export function normalizeDefinitionDoc(definition: unknown): unknown {
   if (!definition || typeof definition !== 'object') return definition;
   const doc = { ...(definition as Record<string, unknown>) };
@@ -23,7 +40,6 @@ export function normalizeDefinitionDoc(definition: unknown): unknown {
 export function normalizeComponentDoc(doc: unknown, definition?: unknown): unknown {
   if (!doc || typeof doc !== 'object') return doc;
   const record = doc as Record<string, unknown>;
-  const tree = record.tree as Record<string, unknown> | undefined;
   const definitionUrl =
     definition && typeof definition === 'object'
       ? (definition as Record<string, unknown>).url
@@ -34,20 +50,46 @@ export function normalizeComponentDoc(doc: unknown, definition?: unknown): unkno
       ? record.targetDefinition as Record<string, unknown>
       : {};
 
-  const normalizedTree = tree?.component === 'Root'
-    ? { ...tree, component: 'Stack' }
-    : tree;
-
-  const isGenerated = record['x-studio-generated'] === true || !record.$formspecComponent;
-
   return {
     ...record,
-    ...(isGenerated ? { $formspecComponent: '1.0', version: String(record.version ?? '1.0.0'), 'x-studio-generated': true } : {}),
-    ...(normalizedTree ? { tree: normalizedTree } : {}),
+    ...(record.tree ? { tree: normalizeTree(record.tree) } : {}),
     targetDefinition: {
       ...targetDefinition,
       ...(definitionUrl ? { url: definitionUrl } : {}),
     },
+  };
+}
+
+export function materializePreviewComponentDoc(state: {
+  component: unknown;
+  generatedComponent?: unknown;
+  definition: unknown;
+}): unknown {
+  const normalizedDefinition = normalizeDefinitionDoc(state.definition);
+  if (hasAuthoredComponentTree(state.component)) {
+    return normalizeComponentDoc(state.component, normalizedDefinition);
+  }
+
+  const artifact = isRecord(state.component) ? state.component : {};
+  const generated = isRecord(state.generatedComponent) ? state.generatedComponent : {};
+  const definitionUrl =
+    isRecord(normalizedDefinition) && typeof normalizedDefinition.url === 'string'
+      ? normalizedDefinition.url
+      : undefined;
+  const mergedTargetDefinition = {
+    ...(isRecord(artifact.targetDefinition) ? artifact.targetDefinition : {}),
+    ...(isRecord(generated.targetDefinition) ? generated.targetDefinition : {}),
+    ...(definitionUrl ? { url: definitionUrl } : {}),
+  };
+
+  return {
+    ...artifact,
+    ...generated,
+    $formspecComponent: '1.0',
+    version: String(artifact.version ?? generated.version ?? '1.0.0'),
+    'x-studio-generated': true,
+    ...(generated.tree ? { tree: normalizeTree(generated.tree) } : {}),
+    targetDefinition: mergedTargetDefinition,
   };
 }
 

@@ -24,6 +24,7 @@
  */
 import { registerHandler } from '../handler-registry.js';
 import type { FormspecItem } from 'formspec-engine';
+import { splitComponentState, hasAuthoredComponentTree } from '../component-documents.js';
 
 /**
  * Replace the entire project state from imported artifacts.
@@ -44,7 +45,11 @@ registerHandler('project.import', (state, payload) => {
   const p = payload as Record<string, any>;
 
   if (p.definition) state.definition = p.definition;
-  if (p.component) state.component = p.component;
+  if (p.component) {
+    const componentState = splitComponentState(p.component, state.definition.url);
+    state.component = componentState.component;
+    state.generatedComponent = componentState.generatedComponent;
+  }
   if (p.theme) state.theme = p.theme;
   if (p.mapping) state.mapping = p.mapping;
 
@@ -52,10 +57,12 @@ registerHandler('project.import', (state, payload) => {
   const url = state.definition.url;
   if (!state.component.targetDefinition) state.component.targetDefinition = { url };
   else state.component.targetDefinition.url = url;
+  if (!state.generatedComponent.targetDefinition) state.generatedComponent.targetDefinition = { url };
+  else state.generatedComponent.targetDefinition.url = url;
   if (!state.theme.targetDefinition) state.theme.targetDefinition = { url };
   else state.theme.targetDefinition.url = url;
 
-  return { rebuildComponentTree: true, clearHistory: false };
+  return { rebuildComponentTree: !hasAuthoredComponentTree(state.component), clearHistory: false };
 });
 
 /**

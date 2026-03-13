@@ -21,7 +21,11 @@ function countComponentNodes(node: unknown): number {
 
 const SECTIONS: SectionDef[] = [
   { name: 'Structure', countFn: (s) => s.definition.items?.length ?? 0, help: 'Item tree defining fields, groups, and display elements' },
-  { name: 'Component Tree', countFn: (s) => countComponentNodes(s.component?.tree), help: 'UI component hierarchy generated from the item tree' },
+  {
+    name: 'Component Tree',
+    countFn: (s) => countComponentNodes(s.component?.tree ?? s.generatedComponent?.tree),
+    help: 'UI component hierarchy generated from the item tree',
+  },
   { name: 'Theme', countFn: (s) => Object.keys(s.theme.tokens ?? {}).length, help: 'Visual tokens, selectors, and presentation defaults', link: { tab: 'Theme', subTab: 'tokens' } },
   { name: 'Screener', countFn: null, help: 'Pre-qualification gate before the main form' },
   { name: 'Variables', countFn: (s) => s.definition.variables?.length ?? 0, help: 'Named computed values reusable across expressions', link: { tab: 'Logic' } },

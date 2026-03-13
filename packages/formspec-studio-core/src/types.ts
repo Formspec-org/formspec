@@ -26,6 +26,18 @@ export interface FormspecComponentDocument {
 }
 
 /**
+ * Studio-internal generated layout document.
+ *
+ * This is not an authored Tier 3 artifact. It holds the editor's current
+ * generated layout tree and related lineage metadata when no explicit
+ * component document tree is being authored.
+ */
+export interface FormspecGeneratedLayoutDocument extends FormspecComponentDocument {
+  /** Marker used to distinguish generated editor state from authored artifacts. */
+  'x-studio-generated': true;
+}
+
+/**
  * Minimal theme document shape for studio-core.
  *
  * Represents the Tier 2 (Theme) artifact: visual presentation tokens, form-wide
@@ -153,8 +165,10 @@ export interface VersionRelease {
 export interface ProjectState {
   /** The form's structure and behavior: items, binds, shapes, variables, etc. */
   definition: FormspecDefinition;
-  /** The parallel UI tree: widget bindings, layout containers, responsive overrides. */
+  /** The authored Tier 3 artifact document. */
   component: FormspecComponentDocument;
+  /** Studio-generated layout state used for editor interactions and preview synthesis. */
+  generatedComponent: FormspecGeneratedLayoutDocument;
   /** Visual presentation: tokens, defaults, selectors, page layout. */
   theme: FormspecThemeDocument;
   /** Bidirectional transforms between responses and external schemas. */

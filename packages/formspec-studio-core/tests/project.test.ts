@@ -49,7 +49,8 @@ describe('createProject', () => {
     const project = createProject();
 
     expect(project.definition).toBe(project.state.definition);
-    expect(project.component).toBe(project.state.component);
+    expect(project.artifactComponent).toBe(project.state.component);
+    expect(project.generatedComponent).toBe(project.state.generatedComponent);
     expect(project.theme).toBe(project.state.theme);
     expect(project.mapping).toBe(project.state.mapping);
   });

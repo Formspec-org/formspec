@@ -1,7 +1,11 @@
 import { useRef, useEffect } from 'react';
 import { useProjectState } from '../../state/useProjectState';
 import { formspecBaseCssHref } from './formspec-base-css-url';
-import { normalizeComponentDoc, normalizeDefinitionDoc, normalizeThemeDoc } from './preview-documents';
+import {
+  materializePreviewComponentDoc,
+  normalizeDefinitionDoc,
+  normalizeThemeDoc,
+} from './preview-documents';
 
 const DEBOUNCE_MS = 300;
 
@@ -37,7 +41,7 @@ function syncToElement(
     el.registryDocuments = registryDocs.length > 0 ? plain(registryDocs) : (undefined as unknown);
     const normalizedDef = normalizeDefinitionDoc(state.definition);
     el.definition = plain(normalizedDef);
-    el.componentDocument = plain(normalizeComponentDoc(state.component, normalizedDef));
+    el.componentDocument = plain(materializePreviewComponentDoc(state));
     el.themeDocument = plain(normalizeThemeDoc(state.theme, state.definition));
   } catch (err) {
     console.error('[FormspecPreviewHost] Sync failed', err);
@@ -92,7 +96,7 @@ export function FormspecPreviewHost({ width }: FormspecPreviewHostProps) {
       syncToElement(el, state);
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [state.definition, state.component, state.theme, state.extensions]);
+  }, [state.definition, state.component, state.generatedComponent, state.theme, state.extensions]);
 
   // Event listeners for composed events bubbling up from the form.
   useEffect(() => {

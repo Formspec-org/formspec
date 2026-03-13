@@ -753,7 +753,7 @@ function LayoutProperties({ layoutId, dispatch, deselect }: { layoutId: string; 
   const nodeId = nodeIdFromLayoutId(layoutId);
   const component = (useDefinition() as any); // just for re-render
   const project = useProject();
-  const tree = (project.state.component.tree as any);
+  const tree = (project.component.tree as any);
 
   // Find the layout node in the tree
   const findNode = (root: any): any => {

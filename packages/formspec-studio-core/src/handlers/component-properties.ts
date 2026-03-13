@@ -37,7 +37,11 @@
  * @module handlers/component-properties
  */
 import { registerHandler } from '../handler-registry.js';
-import type { FormspecComponentDocument } from '../types.js';
+import type { FormspecComponentDocument, ProjectState } from '../types.js';
+import {
+  getEditableComponentDocument,
+  hasAuthoredComponentTree,
+} from '../component-documents.js';
 
 /**
  * Internal representation of a component tree node.
@@ -67,13 +71,14 @@ type TreeNode = {
  * @returns The root tree node.
  */
 function markStudioGeneratedComponent(component: FormspecComponentDocument): void {
-  delete component.$formspecComponent;
-  delete component.version;
   component['x-studio-generated'] = true;
 }
 
-function ensureTree(component: FormspecComponentDocument): TreeNode {
-  markStudioGeneratedComponent(component);
+function ensureTree(state: ProjectState): TreeNode {
+  const component = getEditableComponentDocument(state) as FormspecComponentDocument;
+  if (!hasAuthoredComponentTree(state.component)) {
+    markStudioGeneratedComponent(component);
+  }
   if (!component.tree) {
     component.tree = { component: 'Stack', nodeId: 'root', children: [] };
   }
@@ -110,6 +115,18 @@ function findNode(
   return undefined;
 }
 
+function findFirstComponent(root: TreeNode, componentType: string): TreeNode | undefined {
+  const stack: TreeNode[] = [root];
+  while (stack.length) {
+    const node = stack.pop()!;
+    if (node.component === componentType) return node;
+    for (const child of node.children ?? []) {
+      stack.push(child);
+    }
+  }
+  return undefined;
+}
+
 // ── Node Properties ─────────────────────────────────────────────
 
 /**
@@ -133,7 +150,7 @@ registerHandler('component.setNodeProperty', (state, payload) => {
   const { node: ref, property, value } = payload as {
     node: { bind?: string; nodeId?: string }; property: string; value: unknown;
   };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, ref);
   if (!node) throw new Error('Node not found');
 
@@ -166,7 +183,7 @@ registerHandler('component.setNodeType', (state, payload) => {
   const { node: ref, component } = payload as {
     node: { bind?: string; nodeId?: string }; component: string; preserveProps?: boolean;
   };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, ref);
   if (!node) throw new Error('Node not found');
 
@@ -194,7 +211,7 @@ registerHandler('component.setNodeStyle', (state, payload) => {
   const { node: ref, property, value } = payload as {
     node: { bind?: string; nodeId?: string }; property: string; value: unknown;
   };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, ref);
   if (!node) throw new Error('Node not found');
 
@@ -225,7 +242,7 @@ registerHandler('component.setNodeAccessibility', (state, payload) => {
   const { node: ref, property, value } = payload as {
     node: { bind?: string; nodeId?: string }; property: string; value: unknown;
   };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, ref);
   if (!node) throw new Error('Node not found');
 
@@ -260,7 +277,7 @@ registerHandler('component.spliceArrayProp', (state, payload) => {
     node: { bind?: string; nodeId?: string };
     property: string; index: number; deleteCount: number; insert?: unknown[];
   };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, ref);
   if (!node) throw new Error('Node not found');
 
@@ -286,7 +303,7 @@ registerHandler('component.spliceArrayProp', (state, payload) => {
  */
 registerHandler('component.setFieldWidget', (state, payload) => {
   const { fieldKey, widget } = payload as { fieldKey: string; widget: string };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, { bind: fieldKey });
   if (!node) throw new Error(`No component node bound to field: ${fieldKey}`);
 
@@ -315,7 +332,7 @@ registerHandler('component.setResponsiveOverride', (state, payload) => {
   const { node: ref, breakpoint, patch } = payload as {
     node: { bind?: string; nodeId?: string }; breakpoint: string; patch: unknown;
   };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, ref);
   if (!node) throw new Error('Node not found');
 
@@ -332,9 +349,9 @@ registerHandler('component.setResponsiveOverride', (state, payload) => {
 /**
  * **component.setWizardProperty** -- Set a property on the wizard configuration.
  *
- * Wizard properties (`showProgress`, `allowSkip`) are stored in the component
- * document's `wizardConfig` object rather than on individual tree nodes.
- * The wizardConfig object is auto-initialized if absent.
+ * In authored component mode, wizard properties belong on the first `Wizard`
+ * node in the component tree. In generated-layout mode, they are stored in the
+ * internal generated component state and applied only during preview synthesis.
  *
  * @param payload.property - The wizard config key (e.g., 'showProgress', 'allowSkip').
  * @param payload.value - The value to set.
@@ -342,10 +359,19 @@ registerHandler('component.setResponsiveOverride', (state, payload) => {
  */
 registerHandler('component.setWizardProperty', (state, payload) => {
   const { property, value } = payload as { property: string; value: unknown };
-  if (!(state.component as any).wizardConfig) {
-    (state.component as any).wizardConfig = {};
+  if (hasAuthoredComponentTree(state.component)) {
+    const root = ensureTree(state);
+    const wizard = findFirstComponent(root, 'Wizard');
+    if (wizard) {
+      wizard[property] = value;
+    }
+    return { rebuildComponentTree: false };
   }
-  (state.component as any).wizardConfig[property] = value;
+
+  if (!(state.generatedComponent as any).wizardConfig) {
+    (state.generatedComponent as any).wizardConfig = {};
+  }
+  (state.generatedComponent as any).wizardConfig[property] = value;
   return { rebuildComponentTree: false };
 });
 
@@ -364,7 +390,7 @@ registerHandler('component.setWizardProperty', (state, payload) => {
  */
 registerHandler('component.setGroupRepeatable', (state, payload) => {
   const { groupKey, repeatable } = payload as { groupKey: string; repeatable: boolean };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, { bind: groupKey });
   if (!node) throw new Error(`No component node bound to group: ${groupKey}`);
 
@@ -387,7 +413,7 @@ registerHandler('component.setGroupRepeatable', (state, payload) => {
  */
 registerHandler('component.setGroupDisplayMode', (state, payload) => {
   const { groupKey, mode } = payload as { groupKey: string; mode: string };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, { bind: groupKey });
   if (!node) throw new Error(`No component node bound to group: ${groupKey}`);
 
@@ -410,7 +436,7 @@ registerHandler('component.setGroupDisplayMode', (state, payload) => {
  */
 registerHandler('component.setGroupDataTable', (state, payload) => {
   const { groupKey, config } = payload as { groupKey: string; config: unknown };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const node = findNode(root, { bind: groupKey });
   if (!node) throw new Error(`No component node bound to group: ${groupKey}`);
 
@@ -506,7 +532,7 @@ registerHandler('component.renameCustom', (state, payload) => {
   delete customs[name];
 
   // Rewrite tree references
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const rewrite = (node: TreeNode) => {
     if (node.component === name) node.component = newName;
     if (node.children) node.children.forEach(rewrite);

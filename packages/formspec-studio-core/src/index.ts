@@ -24,6 +24,7 @@ export type {
   ProjectBundle,
   ProjectStatistics,
   FormspecComponentDocument,
+  FormspecGeneratedLayoutDocument,
   FormspecThemeDocument,
   FormspecMappingDocument,
   ExtensionsState,

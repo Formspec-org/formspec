@@ -45,6 +45,13 @@ import componentSchema from '../../../schemas/component.schema.json';
 import themeSchema from '../../../schemas/theme.schema.json';
 import mappingSchema from '../../../schemas/mapping.schema.json';
 import { getHandler } from './handlers.js';
+import {
+  createGeneratedLayoutDocument,
+  getCurrentComponentDocument,
+  getEditableComponentDocument,
+  hasAuthoredComponentTree,
+  splitComponentState,
+} from './component-documents.js';
 
 /** Maximum number of undo snapshots retained before oldest-first pruning. */
 const DEFAULT_MAX_HISTORY = 50;
@@ -86,14 +93,7 @@ function createDefaultDefinition(): FormspecDefinition {
 function createDefaultState(options?: ProjectOptions): ProjectState {
   const definition = options?.seed?.definition ?? createDefaultDefinition();
   const url = definition.url;
-
-  const component: FormspecComponentDocument = options?.seed?.component ?? {
-    targetDefinition: { url },
-    'x-studio-generated': true,
-  };
-  if (!component.targetDefinition) {
-    component.targetDefinition = { url };
-  }
+  const componentState = splitComponentState(options?.seed?.component, url);
 
   const theme: FormspecThemeDocument = options?.seed?.theme ?? {
     targetDefinition: { url },
@@ -106,7 +106,10 @@ function createDefaultState(options?: ProjectOptions): ProjectState {
 
   return {
     definition,
-    component,
+    component: componentState.component,
+    generatedComponent: options?.seed?.generatedComponent
+      ? createGeneratedLayoutDocument(url, options.seed.generatedComponent)
+      : componentState.generatedComponent,
     theme,
     mapping,
     extensions: options?.seed?.extensions ?? { registries: [] },
@@ -242,12 +245,12 @@ export class Project {
     this._maxHistory = options?.maxHistoryDepth ?? DEFAULT_MAX_HISTORY;
     this._middleware = options?.middleware ?? [];
 
-    // Auto-build the component tree when a definition with items is seeded
-    // but no component document was provided (mirrors project.import behavior).
+    // Auto-build generated layout when a definition is seeded without an
+    // authored component tree.
     if (
       this._state.definition.items.length > 0 &&
-      !options?.seed?.component &&
-      !this._state.component.tree
+      !hasAuthoredComponentTree(this._state.component) &&
+      !this._state.generatedComponent.tree
     ) {
       this._rebuildComponentTree();
     }
@@ -268,9 +271,19 @@ export class Project {
     return this._state.definition;
   }
 
-  /** The parallel UI tree: widget assignments, layout containers, responsive overrides. */
+  /** The current editable component view: authored tree when present, otherwise generated layout. */
   get component(): Readonly<FormspecComponentDocument> {
+    return getCurrentComponentDocument(this._state);
+  }
+
+  /** The authored Tier 3 artifact document exactly as stored in project state. */
+  get artifactComponent(): Readonly<FormspecComponentDocument> {
     return this._state.component;
+  }
+
+  /** Studio-generated layout used when no authored component tree is available. */
+  get generatedComponent(): Readonly<FormspecComponentDocument> {
+    return this._state.generatedComponent;
   }
 
   /** Visual presentation: design tokens, defaults, selector overrides, breakpoints. */
@@ -343,7 +356,7 @@ export class Project {
     const expressionCount = this.allExpressions().length;
 
     let componentNodeCount = 0;
-    const tree = this._state.component.tree as any;
+    const tree = getCurrentComponentDocument(this._state).tree as any;
     if (tree) {
       const queue = [tree];
       while (queue.length > 0) {
@@ -503,7 +516,7 @@ export class Project {
    * @returns The matching tree node, or `undefined` if no node is bound to this key.
    */
   componentFor(fieldKey: string): Record<string, unknown> | undefined {
-    const tree = this._state.component.tree as any;
+    const tree = getEditableComponentDocument(this._state).tree as any;
     if (!tree) return undefined;
     const queue = [tree];
     while (queue.length > 0) {
@@ -537,7 +550,7 @@ export class Project {
     const fieldKeys = this.fieldPaths();
     // Collect all bind values from the component tree
     const boundKeys = new Set<string>();
-    const tree = this._state.component.tree as any;
+    const tree = getEditableComponentDocument(this._state).tree as any;
     if (tree) {
       const queue = [tree];
       while (queue.length > 0) {
@@ -868,7 +881,7 @@ export class Project {
       }
     };
 
-    const componentDoc = this._state.component as any;
+    const componentDoc = getCurrentComponentDocument(this._state) as any;
     if (componentDoc.tree) {
       walkComponentNode(componentDoc.tree, 'tree');
     }
@@ -1415,7 +1428,7 @@ export class Project {
       'Stack', 'Grid', 'Columns', 'Panel', 'Collapsible',
       'DataTable', 'Accordion', 'Tabs',
     ]);
-    const tree = this._state.component.tree as any;
+    const tree = getCurrentComponentDocument(this._state).tree as any;
     if (tree) {
       const queue = [tree];
       while (queue.length > 0) {
@@ -1659,9 +1672,12 @@ export class Project {
   private _normalize(): void {
     const url = this._state.definition.url;
 
-    // Sync targetDefinition.url on component and theme
+    // Sync targetDefinition.url on component, generated layout, and theme
     if (this._state.component.targetDefinition) {
       this._state.component.targetDefinition.url = url;
+    }
+    if (this._state.generatedComponent.targetDefinition) {
+      this._state.generatedComponent.targetDefinition.url = url;
     }
     if (this._state.theme.targetDefinition) {
       this._state.theme.targetDefinition.url = url;
@@ -1694,16 +1710,14 @@ export class Project {
    *   3. Append preserved unbound layout nodes at root level.
    */
   private _markGeneratedComponentDoc(): void {
-    const component = this._state.component as Record<string, unknown>;
-    delete component.$formspecComponent;
-    delete component.version;
+    const component = this._state.generatedComponent as Record<string, unknown>;
     component['x-studio-generated'] = true;
   }
 
   private _rebuildComponentTree(): void {
     type TreeNode = { component: string; bind?: string; nodeId?: string; children?: TreeNode[]; [k: string]: unknown };
 
-    const tree = (this._state.component.tree as TreeNode) ?? { component: 'Stack', nodeId: 'root', children: [] };
+    const tree = (this._state.generatedComponent.tree as TreeNode) ?? { component: 'Stack', nodeId: 'root', children: [] };
 
     // ── Phase 1: Snapshot top-level layout wrappers with their full subtrees ──
     // A "top-level" layout node is one whose parent is NOT a layout node.
@@ -1871,7 +1885,7 @@ export class Project {
     }
 
     this._markGeneratedComponentDoc();
-    this._state.component.tree = newRoot as any;
+    this._state.generatedComponent.tree = newRoot as any;
   }
 
   /**
@@ -1950,7 +1964,7 @@ export class Project {
       this._redoStack.length = 0;
       this._log.length = 0;
     }
-    if (result.rebuildComponentTree) {
+    if (result.rebuildComponentTree && !hasAuthoredComponentTree(this._state.component)) {
       this._rebuildComponentTree();
     }
     this._normalize();
@@ -1987,7 +2001,7 @@ export class Project {
       timestamp: Date.now(),
     });
     this._state = clone;
-    if (results.some(r => r.rebuildComponentTree)) {
+    if (results.some(r => r.rebuildComponentTree) && !hasAuthoredComponentTree(this._state.component)) {
       this._rebuildComponentTree();
     }
     this._normalize();

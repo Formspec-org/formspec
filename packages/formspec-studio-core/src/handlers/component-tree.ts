@@ -25,6 +25,10 @@
  */
 import { registerHandler } from '../handler-registry.js';
 import type { ProjectState, FormspecComponentDocument } from '../types.js';
+import {
+  getEditableComponentDocument,
+  hasAuthoredComponentTree,
+} from '../component-documents.js';
 
 /** Auto-incrementing counter for generating unique node IDs within a session. */
 let nodeCounter = 0;
@@ -74,13 +78,14 @@ type TreeNode = {
  * @returns The root tree node.
  */
 function markStudioGeneratedComponent(component: FormspecComponentDocument): void {
-  delete component.$formspecComponent;
-  delete component.version;
   component['x-studio-generated'] = true;
 }
 
-function ensureTree(component: FormspecComponentDocument): TreeNode {
-  markStudioGeneratedComponent(component);
+function ensureTree(state: ProjectState): TreeNode {
+  const component = getEditableComponentDocument(state) as FormspecComponentDocument;
+  if (!hasAuthoredComponentTree(state.component)) {
+    markStudioGeneratedComponent(component);
+  }
   if (!component.tree) {
     component.tree = { component: 'Stack', nodeId: 'root', children: [] };
   }
@@ -160,7 +165,7 @@ registerHandler('component.addNode', (state, payload) => {
     props?: Record<string, unknown>;
   };
 
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const parentResult = findNode(root, p.parent);
   if (!parentResult) throw new Error(`Parent node not found`);
 
@@ -204,7 +209,7 @@ registerHandler('component.addNode', (state, payload) => {
  */
 registerHandler('component.deleteNode', (state, payload) => {
   const { node: ref } = payload as { node: { bind?: string; nodeId?: string } };
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const result = findNode(root, ref);
   if (!result || result.index === -1) throw new Error('Node not found');
 
@@ -236,7 +241,7 @@ registerHandler('component.moveNode', (state, payload) => {
     targetIndex?: number;
   };
 
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
 
   // Remove from current parent
   const sourceResult = findNode(root, source);
@@ -276,7 +281,7 @@ registerHandler('component.reorderNode', (state, payload) => {
     direction: 'up' | 'down';
   };
 
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const result = findNode(root, ref);
   if (!result || result.index === -1) throw new Error('Node not found');
 
@@ -305,7 +310,7 @@ registerHandler('component.reorderNode', (state, payload) => {
 registerHandler('component.duplicateNode', (state, payload) => {
   const { node: ref } = payload as { node: { bind?: string; nodeId?: string } };
 
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const result = findNode(root, ref);
   if (!result || result.index === -1) throw new Error('Node not found');
 
@@ -347,7 +352,7 @@ registerHandler('component.wrapNode', (state, payload) => {
     wrapper: { component: string; props?: Record<string, unknown> };
   };
 
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const result = findNode(root, ref);
   if (!result || result.index === -1) throw new Error('Node not found');
 
@@ -382,7 +387,7 @@ registerHandler('component.wrapNode', (state, payload) => {
 registerHandler('component.unwrapNode', (state, payload) => {
   const { node: ref } = payload as { node: { bind?: string; nodeId?: string } };
 
-  const root = ensureTree(state.component);
+  const root = ensureTree(state);
   const result = findNode(root, ref);
   if (!result || result.index === -1) throw new Error('Node not found');
 

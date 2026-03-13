@@ -15,7 +15,7 @@ describe('component tree sync', () => {
     expect(node!.component).toBe('TextInput');
   });
 
-  it('marks rebuilt trees as studio-generated internal state', () => {
+  it('preserves authored component trees when definition structure changes', () => {
     const project = createProject({
       seed: {
         component: {
@@ -32,10 +32,10 @@ describe('component tree sync', () => {
       payload: { type: 'field', key: 'name', dataType: 'string' },
     });
 
-    expect((project.component as any)['x-studio-generated']).toBe(true);
-    expect((project.component as any).$formspecComponent).toBeUndefined();
-    expect((project.component as any).version).toBeUndefined();
-    expect((project.component.tree as any).component).toBe('Stack');
+    expect((project.artifactComponent as any).$formspecComponent).toBe('1.0');
+    expect((project.artifactComponent as any).version).toBe('1.0.0');
+    expect((project.artifactComponent.tree as any).component).toBe('Stack');
+    expect((project.generatedComponent as any).tree).toBeUndefined();
   });
 
   it('removes component node when item is deleted', () => {
