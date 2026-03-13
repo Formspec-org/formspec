@@ -185,6 +185,7 @@ export function DataSources() {
                     value={inst.source || ''}
                     onSave={(val) => handleSetProperty(inst.name, 'source', val || null)}
                     placeholder="https://api.example.com/data/{{entityId}}"
+                    className="block w-full text-[13px] bg-subtle border border-border rounded-lg px-3 py-2.5 hover:border-accent/50 hover:bg-subtle/70 underline decoration-accent/30 decoration-dotted underline-offset-4"
                   />
                   <p className="text-[10px] text-muted/60 italic">
                     {"Supports {{template}} variables. Leave empty for inline-only data."}
