@@ -1,150 +1,175 @@
-# `studiofixes` Review Against `main`
+# `studiofixes` Implementation List
 
 Date: 2026-03-13
+Sources: commit-by-commit review of `studiofixes` against `main`, plan review of `docs/superpowers/plans/2026-03-12-studio-review-fixes.md`
+Branch: `studiofixes` at `bfb8737`
 
-Reviewed commit-by-commit against `main`, cumulatively.
+---
 
-## Findings
+## Implementation Status
 
-### `f33799a` `refactor: remove unused page management commands from studio schema`
+Status: implemented on `studiofixes`
+Implementation commit: `6540b50` (`fix: implement studio review regressions`)
 
-None.
+Resolved items:
+- Issue 1: restored and wired `New Form`, `Export`, repeat cardinality editing, choice option editing, `+ Add Token`, `Add Data Source`, and `Run Test Response`
+- Issue 2: fixed depth-increase path rewriting for moved subtrees
+- Issue 3: preview/runtime now treats screener as active only when `enabled !== false` and `items.length > 0`
+- Issue 4: `definition.moveItem` now enforces the paged-mode root guard
+- Issue 5: `rewriteAllPathReferences()` now rewrites `innerRules[*].reverse`
+- Issue 6: completed the local Studio `FUNCTION_DETAILS` table rather than moving metadata into the engine export
+- Issue 7: fixed uncontrolled `MappingTab` active-tab styling
+- Issue 8: updated the stale `moveItem` JSDoc to match actual rewrite behavior
 
-### `a2971d9` `fix: suppress keyboard shortcuts when focus is in text inputs`
+Verification performed:
+- `packages/formspec-studio-core`: `npm test -- --run tests/definition-items.test.ts`
+- `packages/formspec-webcomponent`: `npm test -- --run tests/render-lifecycle.test.ts`
+- `packages/formspec-studio`: targeted Vitest runs covering header, shell, item properties, token editor, data sources, test response, FEL popup, theme tab, and mapping tab
+- `packages/formspec-studio`: `npx playwright test tests/e2e/playwright/header-actions.spec.ts`
 
-None.
+Notes:
+- The implementation intentionally left the “correctly removed” and “judgment call” items unchanged.
+- The quick local metadata fix for issue 6 is sufficient for current coverage, but the preferred longer-term direction remains moving signature/description metadata into the engine catalog export.
 
-### `7d20b2f` `feat: synchronize page navigation between tree and editor canvas`
+---
 
-- Severity: Medium
-- File: [packages/formspec-studio/src/components/blueprint/StructureTree.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/components/blueprint/StructureTree.tsx)
-- Issue: `handleAddPage()` switched the active page using the optimistic UI key instead of the canonical `insertedPath`. If `page1` already exists and the core inserts `page1_1`, the new page is not selected and tree/canvas page state can desynchronize immediately.
-- Status: Fixed later by `79157df`.
+## Tier 1 — High severity
 
-### `26df835` `fix: guard against root-level non-group items in paged definitions`
+### 1. Restore removed features and wire them up
 
-- Severity: Medium
-- File: [packages/formspec-studio-core/src/handlers/definition-items.ts](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts)
-- Issue: The initial guard over-blocked root insertion when page mode was enabled before any page groups existed.
-- Status: Fixed later.
+The plan classified incomplete feature stubs as "dead controls" and deleted them. The CLAUDE.md principle "delete, don't preserve" applies to wrong abstractions and cruft, not to features that need implementation. A button with no `onChange` is an incomplete feature; a button that silently hardcodes `required: 'true()'` is a broken affordance.
 
-- Severity: Medium
-- File: [packages/formspec-studio-core/src/handlers/definition-items.ts#L599](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L599)
-- Issue: `definition.moveItem` can still move a field or display node back to root in wizard/tabs mode, recreating the hidden-root state the guard was intended to prevent.
-- Status: Still open.
+**Restore and wire up:**
 
-### `35fccd0` `fix: preserve display node identity through component tree rebuilds`
+| Feature | Component | Wiring needed |
+|---|---|---|
+| `New Form` button | `Header.tsx` | Add `onNew` prop, pass handler from `Shell` that resets project state |
+| `Export` button | `Header.tsx` | Add `onExport` prop, pass handler from `Shell` that serializes and downloads definition JSON |
+| Min Repeat / Max Repeat inputs | `ItemProperties.tsx` | `onBlur` → `dispatch('definition.setItemProperty', { path, property: 'minRepeat'/'maxRepeat', value })` |
+| Choice option value/label editing | `ItemProperties.tsx` | `onBlur` → `dispatch('definition.setItemProperty', { path, property: 'options', value: updatedArray })` |
+| `+ Add Token` buttons | `TokenEditor.tsx` | Needs token creation flow — at minimum, prompt for key/value and `dispatch` to set the theme token |
+| `Add Data Source` button | `DataSources.tsx` | Needs instance creation flow |
+| `Run Test Response` button | `TestResponse.tsx` | Needs response generation using engine |
 
-- Severity: High
-- File: [packages/formspec-studio-core/src/project.ts](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/project.ts)
-- Issue: Display nodes were originally preserved by bare `item.key`, so same-key displays under different parents collided, and deleted or renamed displays could survive as stale orphan root nodes.
-- Status: Fixed later by `105e226`.
+**Correctly removed (leave as-is):**
+- `+ Add Rule` button in `ItemProperties.tsx` — silently hardcoded `required: 'true()'` regardless of context
+- Rule expression `<input>` in `ItemProperties.tsx` — disconnected from any dispatch
+- Fake variable edit mode in `VariablesSection.tsx` — `readOnly` input gave illusion of editing
 
-### `df5db39` `fix: show JSON parse errors in ImportDialog and fix doc comments`
+**Judgment calls (leave as-is for now):**
+- Option set cards `<button>` → `<div>` in `OptionSets.tsx` — no selection behavior yet
+- Variable palette hits marked read-only in `CommandPalette.tsx` — no variable editor to navigate to
 
-None.
+Files:
+- [Header.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/components/Header.tsx)
+- [Shell.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/components/Shell.tsx)
+- [ItemProperties.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/editor/ItemProperties.tsx)
+- [TokenEditor.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/theme/TokenEditor.tsx)
+- [DataSources.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/data/DataSources.tsx)
+- [TestResponse.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/data/TestResponse.tsx)
 
-### `59d29db` `docs: add studio bug tracking and coverage gap documentation`
+### 2. Fix `rewritePathPrefix()` depth-increase path corruption
 
-None.
+When a move changes `field` to `group.field`, descendant paths are rewritten as if the moved node were replaced instead of nested, so descendants lose the moved node segment.
 
-### `5ff08b2` `test: add RED tests for all 47 coverage gaps across studio`
+Trace for `field.child` with old=`field`, new=`group.field`:
+- `oldParts = ['field']` (length 1), `newParts = ['group', 'field']` (length 2)
+- Loop runs for `i = 0` only → `rewritten[0] = 'group'`
+- Remaining appended → `rewritten[1] = 'child'`
+- **Result: `group.child`** — wrong, should be `group.field.child`
 
-None.
+Root cause: the rewriting loop iterates `oldParts.length` times. When `newParts` is longer, the extra segments are never inserted.
 
-### `dfcb383` `fix: resolve all 47 studio coverage gaps — 268 unit + 141 E2E green`
+Fix: rebuild as `newParts + rawParts.slice(oldParts.length)`, preserving index/wildcard suffixes on the final matched old segment.
 
-- Severity: Medium
-- Files:
-  - [packages/formspec-studio/src/components/Shell.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/components/Shell.tsx)
-  - [packages/formspec-studio/src/workspaces/theme/ThemeTab.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/theme/ThemeTab.tsx)
-  - [packages/formspec-studio/src/workspaces/mapping/MappingTab.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/mapping/MappingTab.tsx)
-  - [packages/formspec-studio/src/workspaces/preview/PreviewTab.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/preview/PreviewTab.tsx)
-- Issue: Theme/Mapping/Preview sub-tab and view state remained component-local, so switching workspaces remounted them and reset the active sub-tab, preview mode, preview viewport, and mapping config collapse state.
-- Status: Fixed later by `8e211c5`.
+Files:
+- [definition-items.ts#L190](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L190)
+- Tests: [definition-items.test.ts](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/tests/definition-items.test.ts)
 
-- Severity: Medium
-- File: [packages/formspec-studio/src/workspaces/mapping/MappingPreview.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/mapping/MappingPreview.tsx)
-- Issue: Preview defaulted an unset mapping direction to `outbound`, even though the rest of the UI treated `unset` as a first-class state.
-- Status: Fixed later by `621d8d8`.
+### 3. Honor screener `enabled: false` in preview/runtime
 
-- Severity: Medium
-- File: [packages/formspec-studio/src/components/ui/FELReferencePopup.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/components/ui/FELReferencePopup.tsx)
-- Issue: The popup still hardcoded a function catalog that diverged from the engine and suggested invalid or missing FEL functions.
-- Status: Fixed later by `9b65e1d`.
+Studio core now preserves a disabled screener as `{ enabled: false, ... }`, but the runtime still treats any present `screener.items` array as active. Disabling the screener in studio still renders and blocks on it in preview.
 
-### `105e226` `fix: resolve chunk 1 studio correctness bugs`
+Runtime checks that need the `enabled !== false` guard:
+- `getScreenerState()` at [element.ts#L143](/Users/mikewolfd/Work/formspec/packages/formspec-webcomponent/src/element.ts#L143): `!!this._definition?.screener?.items`
+- `render()` at [element.ts#L390](/Users/mikewolfd/Work/formspec/packages/formspec-webcomponent/src/element.ts#L390): `this._definition.screener?.items`
+- Screener renderer at [screener.ts#L15](/Users/mikewolfd/Work/formspec/packages/formspec-webcomponent/src/rendering/screener.ts#L15): never checks `enabled`
 
-- Severity: High
-- Files:
-  - [packages/formspec-studio-core/src/handlers/definition-screener.ts#L45](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-screener.ts#L45)
-  - [packages/formspec-webcomponent/src/element.ts#L144](/Users/mikewolfd/Work/formspec/packages/formspec-webcomponent/src/element.ts#L144)
-  - [packages/formspec-webcomponent/src/element.ts#L390](/Users/mikewolfd/Work/formspec/packages/formspec-webcomponent/src/element.ts#L390)
-- Issue: Studio core now preserves a disabled screener as `{ enabled: false, ... }`, but preview/runtime still treats any truthy `screener.items` as active. Disabling the screener in studio can still render and block on the screener in preview.
-- Status: Still open.
+Fix: define one canonical rule — `enabled !== false && items.length > 0` — and apply it at all three entry points.
 
-### `3a3b2d0` `fix: remove dead controls from studio chunk 2`
+Files:
+- [element.ts](/Users/mikewolfd/Work/formspec/packages/formspec-webcomponent/src/element.ts)
+- [screener.ts](/Users/mikewolfd/Work/formspec/packages/formspec-webcomponent/src/rendering/screener.ts)
+- Tests: [render-lifecycle.test.ts](/Users/mikewolfd/Work/formspec/packages/formspec-webcomponent/tests/render-lifecycle.test.ts)
 
-None.
+---
 
-### `882bff3` `fix: rewrite path references when moveItem changes canonical paths`
+## Tier 2 — Medium severity
 
-- Severity: High
-- File: [packages/formspec-studio-core/src/handlers/definition-items.ts#L190](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L190)
-- Issue: `rewritePathPrefix()` rewrites only the first `oldParts.length` segments. When a move increases depth, descendant paths lose the moved node name. Example: moving `field` to `group.field` rewrites `field.child` to `group.child` instead of `group.field.child`.
-- Impact: Corrupts bind paths, shape targets, FEL references, and mapping paths for moved subtrees.
-- Status: Still open.
+### 4. Add paged-mode root guard to `moveItem`
 
-- Severity: Medium
-- File: [packages/formspec-studio-core/src/handlers/definition-items.ts#L338](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L338)
-- Issue: Mapping `innerRules[*]` rewrite `sourcePath`, `expression`, and `condition`, but skip `innerRules[*].reverse`, leaving stale references in nested reverse overrides after move or rename.
-- Status: Still open.
+`definition.addItem` blocks root-level non-group items in wizard/tabs mode, but `definition.moveItem` has no equivalent guard. A move with no `targetParentPath` can silently place a field at root level in a paged definition, recreating the hidden-root state the guard prevents.
 
-### `a0d0427` `refactor: widen CommandResult to expose insertedPath and newPath`
+Fix: apply the same guard from [definition-items.ts#L377](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L377) in `moveItem` at [definition-items.ts#L576](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L576).
 
-- Severity: Medium
-- Files:
-  - [packages/formspec-studio-core/src/types.ts](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/types.ts)
-  - [packages/formspec-studio/src/workspaces/editor/EditorCanvas.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/editor/EditorCanvas.tsx)
-  - [packages/formspec-studio/src/components/blueprint/StructureTree.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/components/blueprint/StructureTree.tsx)
-- Issue: The type exposed `insertedPath/newPath`, but callers in-range still fabricated canonical paths locally or ignored dispatch results. Duplicate-key inserts could select nonexistent unsuffixed paths, and `wrapInGroup` could target the wrong parent path if the wrapper key was auto-suffixed.
-- Status: Fixed later by `79157df`.
+Files:
+- [definition-items.ts](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts)
+- Tests: [definition-items.test.ts](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/tests/definition-items.test.ts)
 
-### `79157df` `fix: consume canonical paths from dispatch in EditorCanvas and StructureTree`
+### 5. Rewrite `innerRules[*].reverse` on move/rename
 
-None.
+`rewriteAllPathReferences()` updates top-level `rule.reverse` but skips `innerRules[*].reverse`, leaving stale nested reverse references after move or rename. The mapping schema explicitly allows `innerRules[*].reverse` with `expression` and `condition` fields.
 
-### `8e211c5` `fix: hoist workspace tab state to Shell to prevent reset on switch`
+Fix: reuse the top-level reverse rewrite block for each `inner.reverse` inside the `innerRules` loop at [definition-items.ts#L338](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L338).
 
-None.
+Files:
+- [definition-items.ts](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts)
+- Schema ref: [mapping.schema.json#L560](/Users/mikewolfd/Work/formspec/schemas/mapping.schema.json#L560)
+- Tests: [definition-items.test.ts](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/tests/definition-items.test.ts)
 
-### `621d8d8` `fix: align mapping direction default to 'unset' in MappingPreview`
+### 6. Complete FEL popup function metadata
 
-None.
+The popup now sources function names from the engine, but enriches them with a partial `FUNCTION_DETAILS` table. Missing entries fall back to `'()'` signature — incorrect for functions like `matches(value, pattern)`, `ceil(num)`, `hours(time)`.
 
-### `9b65e1d` `fix: replace hardcoded FEL catalog with engine's live function list`
+Missing functions: `ceil`, `hours`, `isDate`, `isNumber`, `isString`, `matches`, `minutes`, `readonly`, `seconds`.
 
-- Severity: Medium
-- File: [packages/formspec-studio/src/components/ui/FELReferencePopup.tsx#L31](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/components/ui/FELReferencePopup.tsx#L31)
-- Issue: The popup still relies on a partial manual `FUNCTION_DETAILS` table. Engine functions missing from that table, including `ceil`, `matches`, `readonly`, `hours`, `minutes`, `seconds`, `isDate`, `isNumber`, and `isString`, are shown and copied with an incorrect zero-arg fallback signature.
-- Status: Still open.
+Fix (pick one):
+- **Preferred:** move signature and description into the engine catalog export so studio doesn't maintain a second source of truth.
+- **Quick:** complete the local `FUNCTION_DETAILS` table and add a test asserting no engine function lacks metadata.
 
-### `9df5e3e` `docs: add studio implementation review notes and fix plan`
+Files:
+- [FELReferencePopup.tsx#L31](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/components/ui/FELReferencePopup.tsx#L31)
+- [interpreter.ts#L295](/Users/mikewolfd/Work/formspec/packages/formspec-engine/src/fel/interpreter.ts#L295)
+- Tests: [fel-reference-popup.test.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/tests/components/ui/fel-reference-popup.test.tsx)
 
-None.
+---
 
-### `edf5591` `refactor: adopt WorkspacePage layout in ThemeTab and LogicTab`
+## Tier 3 — Low severity
 
-- Severity: Low
-- File: [packages/formspec-studio/src/workspaces/mapping/MappingTab.tsx#L61](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/mapping/MappingTab.tsx#L61)
-- Issue: The active-tab styling checks the raw `activeTab` prop instead of the derived `active` state. In uncontrolled usage of `<MappingTab />`, no tab is visually active.
-- Status: Still open.
+### 7. Fix `MappingTab` uncontrolled active-tab highlight
 
-## Remaining Open Issues On `studiofixes`
+Button styling at line 61 checks `activeTab === tab.id` (raw prop) instead of `active === tab.id` (derived state). In uncontrolled usage, `activeTab` is `undefined` and no tab highlights.
 
-1. `definition.moveItem` can still create root-level hidden items in paged mode.
-2. Disabled screener state is not honored by preview/runtime.
-3. `rewritePathPrefix()` corrupts descendant paths when a move increases depth.
-4. Mapping `innerRules[*].reverse` references are not rewritten on move/rename.
-5. FEL popup metadata is still incomplete for several live engine functions.
-6. `MappingTab` uncontrolled usage no longer highlights the active tab.
+Fix: change `activeTab` to `active` in the styling condition at [MappingTab.tsx#L61](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/mapping/MappingTab.tsx#L61).
+
+Files:
+- [MappingTab.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/src/workspaces/mapping/MappingTab.tsx)
+- Tests: [mapping-tab.test.tsx](/Users/mikewolfd/Work/formspec/packages/formspec-studio/tests/workspaces/mapping/mapping-tab.test.tsx)
+
+### 8. Update stale `moveItem` JSDoc
+
+The handler's JSDoc at [definition-items.ts#L572](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L572) states "Does not rewrite bind/shape paths" but lines 601–604 call `rewriteAllPathReferences()`. Update the doc comment to reflect the current behavior.
+
+Files:
+- [definition-items.ts#L555](/Users/mikewolfd/Work/formspec/packages/formspec-studio-core/src/handlers/definition-items.ts#L555)
+
+---
+
+## Validation Notes
+
+Relevant test files for each issue (tests currently pass but do not cover the listed issues):
+- `packages/formspec-studio-core/tests/definition-items.test.ts` — issues 2, 4, 5
+- `packages/formspec-studio-core/tests/definition-screener.test.ts` — issue 3
+- `packages/formspec-webcomponent/tests/render-lifecycle.test.ts` — issue 3
+- `packages/formspec-studio/tests/components/ui/fel-reference-popup.test.tsx` — issue 6
+- `packages/formspec-studio/tests/workspaces/mapping/mapping-tab.test.tsx` — issue 7
