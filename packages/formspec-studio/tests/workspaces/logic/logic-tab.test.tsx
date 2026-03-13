@@ -11,10 +11,10 @@ const logicDef = {
     { key: 'name', type: 'field', dataType: 'string' },
     { key: 'age', type: 'field', dataType: 'integer' },
   ],
-  binds: {
-    name: { required: 'true', relevant: '$age >= 18' },
-    age: { required: 'true' },
-  },
+  binds: [
+    { path: 'name', required: 'true', relevant: '$age >= 18' },
+    { path: 'age', required: 'true' },
+  ],
   shapes: [
     { name: 'ageCheck', severity: 'error', constraint: '$age >= 0', targets: ['age'] },
   ],

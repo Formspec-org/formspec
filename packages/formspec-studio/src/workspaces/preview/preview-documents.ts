@@ -20,14 +20,6 @@ function normalizeTree(tree: unknown): unknown {
 export function normalizeDefinitionDoc(definition: unknown): unknown {
   if (!definition || typeof definition !== 'object') return definition;
   const doc = { ...(definition as Record<string, unknown>) };
-  const binds = doc.binds;
-
-  if (binds && !Array.isArray(binds) && typeof binds === 'object') {
-    doc.binds = Object.entries(binds as Record<string, Record<string, unknown>>).map(([path, config]) => ({
-      path,
-      ...(config ?? {}),
-    }));
-  }
 
   // Normalize `presentation` → `formPresentation` for webcomponent compatibility
   if (doc.presentation && !doc.formPresentation) {

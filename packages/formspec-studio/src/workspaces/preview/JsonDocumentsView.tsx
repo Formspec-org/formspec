@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useProjectState } from '../../state/useProjectState';
 import {
-  normalizeComponentDoc,
+  materializePreviewComponentDoc,
   normalizeDefinitionDoc,
   normalizeThemeDoc,
 } from './preview-documents';
@@ -23,7 +23,7 @@ export function JsonDocumentsView() {
 
   const doc = {
     Definition: normalizeDefinitionDoc(state.definition),
-    Component: normalizeComponentDoc(state.component),
+    Component: materializePreviewComponentDoc(state),
     Theme: normalizeThemeDoc(state.theme, state.definition),
     Mapping: state.mapping,
   }[active];

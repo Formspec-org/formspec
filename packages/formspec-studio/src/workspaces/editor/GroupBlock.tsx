@@ -42,6 +42,22 @@ export function GroupBlock({
           : 'border-ink/80'
         }`}
       >
+        {/* Drag Handle */}
+        <div
+          draggable="true"
+          data-testid="drag-handle"
+          className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab shrink-0"
+        >
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="2" cy="2" r="1.25" fill="currentColor" className="text-muted/60" />
+            <circle cx="6" cy="2" r="1.25" fill="currentColor" className="text-muted/60" />
+            <circle cx="2" cy="7" r="1.25" fill="currentColor" className="text-muted/60" />
+            <circle cx="6" cy="7" r="1.25" fill="currentColor" className="text-muted/60" />
+            <circle cx="2" cy="12" r="1.25" fill="currentColor" className="text-muted/60" />
+            <circle cx="6" cy="12" r="1.25" fill="currentColor" className="text-muted/60" />
+          </svg>
+        </div>
+
         {/* Accent Bar */}
         <div
           className={`w-[3px] h-[14px] rounded-[1px] transition-colors shrink-0 ${

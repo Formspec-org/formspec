@@ -1,14 +1,10 @@
 /**
- * Blueprint Sidebar E2E tests — Cluster L (6 bugs)
- *
- * These tests document KNOWN BUGS. They are intentionally RED on first run.
- * Do NOT fix these tests — fix the underlying implementation.
+ * Blueprint Sidebar E2E tests
  *
  * Bug list:
  *  #14 Component tree count=0    — countFn for "Component Tree" always returns 0
- *  #27 Settings read-only        — clicking a Settings value does not show an editable input
- *  #28 Title truncated no tooltip — Settings TITLE value has no `title` attribute
- *  #30 Variables inert           — clicking a variable row does not navigate to Logic workspace
+ *  #27 Settings editable         — pencil button opens Settings dialog with editable Title input
+ *  #28 Settings dialog title     — Title input in settings dialog shows current form title
  *  #37 Screener badge inert      — clicking the "Disabled" badge does not toggle/configure screener
  *  #47 Collapse arrow frozen     — Section ▶ button arrow does not rotate on expand/collapse
  */
@@ -84,61 +80,58 @@ test.describe('Bug #14 — Component Tree count badge is always 0', () => {
   });
 });
 
-// ─── Bug #27 — Settings section values are read-only ─────────────────────────
+// ─── Bug #27 — Settings editing opens a dialog via pencil button ─────────────
 
-test.describe('Bug #27 — Settings TITLE value is not editable', () => {
-  test('clicking the Title value in the Settings section reveals an editable input', async ({ page }) => {
+test.describe('Bug #27 — Settings TITLE is editable via dialog', () => {
+  test('clicking the pencil button in the Settings row opens a settings dialog with an editable Title input', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, SETTINGS_DEFINITION);
     await page.waitForSelector('[data-testid="field-field1"]', { timeout: 5000 });
 
-    await openBlueprintSection(page, 'Settings');
-    await page.waitForSelector('text=Definition Metadata', { timeout: 5000 });
+    // The pencil button is rendered next to the "Settings" row in the Blueprint sidebar.
+    // It has data-testid="settings-edit-btn" and dispatches formspec:open-settings.
+    const pencilBtn = page.locator('[data-testid="settings-edit-btn"]');
+    await expect(pencilBtn).toBeVisible();
+    await pencilBtn.click();
 
-    // The sidebar shows the form title as a static text node inside a PropertyRow.
-    // Clicking it should switch the value into an editable <input>.
-    const titleText = page.getByText(SETTINGS_DEFINITION.title).first();
-    await expect(titleText).toBeVisible();
-    await titleText.click();
+    // After clicking, the Settings dialog should open.
+    const dialog = page.locator('[data-testid="settings-dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 3000 });
 
-    // After clicking, the sidebar should contain an <input> whose value is the title.
-    // This is the assertion that FAILS on the bug: SettingsSection renders read-only
-    // PropertyRow spans — there is no inline-edit behaviour implemented.
-    const sidebar = page.locator('aside').first();
-    await expect(
-      sidebar.locator(`input[value="${SETTINGS_DEFINITION.title}"]`)
-    ).toBeVisible({ timeout: 3000 });
+    // The dialog contains an input for Title with aria-label="Title".
+    const titleInput = dialog.locator('input[aria-label="Title"]');
+    await expect(titleInput).toBeVisible();
   });
 });
 
-// ─── Bug #28 — Title value has no tooltip when truncated ─────────────────────
+// ─── Bug #28 — Settings dialog Title input has the correct value ──────────────
 
-test.describe('Bug #28 — Settings Title row missing tooltip', () => {
-  test('the element displaying the Title value carries a title attribute with the full string', async ({ page }) => {
+test.describe('Bug #28 — Settings dialog Title input shows current title', () => {
+  test('the Title input in the settings dialog shows the current form title', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, SETTINGS_DEFINITION);
     await page.waitForSelector('[data-testid="field-field1"]', { timeout: 5000 });
 
-    await openBlueprintSection(page, 'Settings');
-    await page.waitForSelector('text=Definition Metadata', { timeout: 5000 });
+    // Open the settings dialog via the pencil button
+    const pencilBtn = page.locator('[data-testid="settings-edit-btn"]');
+    await expect(pencilBtn).toBeVisible();
+    await pencilBtn.click();
 
-    // Find the element that renders the title value.
-    // It is a <span class="... truncate ..."> inside a PropertyRow.
-    // The `title` HTML attribute is required so the browser shows a native tooltip
-    // when the text overflows.
-    const titleElement = page.getByText(SETTINGS_DEFINITION.title).first();
-    await expect(titleElement).toBeVisible();
+    const dialog = page.locator('[data-testid="settings-dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 3000 });
 
-    // This assertion FAILS on the bug: PropertyRow renders a plain <span> with no
-    // `title` attribute, so the full text is inaccessible when the sidebar clips it.
-    await expect(titleElement).toHaveAttribute('title', SETTINGS_DEFINITION.title);
+    // The Title input in the dialog should display the current form title.
+    // SettingsDialog renders TextInputField with id="settings-title" and defaultValue=def.title.
+    const titleInput = dialog.locator('input[aria-label="Title"]');
+    await expect(titleInput).toBeVisible();
+    await expect(titleInput).toHaveValue(SETTINGS_DEFINITION.title);
   });
 });
 
-// ─── Bug #30 — Variables sidebar rows are inert ──────────────────────────────
+// ─── Variables sidebar rows navigate to Logic workspace ──────────────────────
 
-test.describe('Variables sidebar rows are informational', () => {
-  test('clicking a variable row does not pretend to navigate anywhere', async ({ page }) => {
+test.describe('Variables sidebar rows are navigation buttons', () => {
+  test('clicking a variable navigates to the Logic workspace', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, VARIABLES_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
@@ -149,12 +142,15 @@ test.describe('Variables sidebar rows are informational', () => {
     // Confirm the Logic workspace is not yet active
     await expect(page.locator('[data-testid="workspace-Logic"]')).not.toBeVisible();
 
-    await page.getByText('@taxRate').click();
+    // VariablesList.tsx renders each variable as a <button> that dispatches
+    // formspec:navigate-workspace with { tab: 'Logic' } on click.
+    await page.getByRole('button', { name: /@taxRate/i }).click();
 
-    await expect(page.locator('[data-testid="workspace-Logic"]')).not.toBeVisible();
+    // After clicking, the Logic workspace should become visible.
+    await expect(page.locator('[data-testid="workspace-Logic"]')).toBeVisible({ timeout: 3000 });
   });
 
-  test('each variable row is rendered as read-only text, not a button', async ({ page }) => {
+  test('each variable row is a button element', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, VARIABLES_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
@@ -162,8 +158,9 @@ test.describe('Variables sidebar rows are informational', () => {
     await openBlueprintSection(page, 'Variables');
     await page.waitForSelector('text=@taxRate', { timeout: 5000 });
 
-    await expect(page.getByText('@taxRate')).toBeVisible();
-    await expect(page.getByRole('button', { name: /@taxRate/i })).toHaveCount(0);
+    // VariablesList.tsx renders each variable as a <button> for navigation.
+    await expect(page.getByRole('button', { name: /@taxRate/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /@netIncome/i })).toBeVisible();
   });
 });
 

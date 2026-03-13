@@ -121,10 +121,10 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
     await expect(properties).toContainText('constraint');
   });
 
-  // #12 "+ Add Rule" dead
-  // The "+ Add Rule" button inside the Behavior Rules section has no onClick
-  // handler — clicking it does nothing (no rule composer opens, no rule appended).
-  test('#12 clicking "+ Add Rule" opens a rule composer or appends a new rule', async ({ page }) => {
+  // #12 "add behavior rule" button
+  // The AddBehaviorMenu component renders a button labeled "+ add behavior rule"
+  // (lowercase). Clicking it should open a dropdown menu of available rule types.
+  test('#12 clicking "+ add behavior rule" opens a behavior type menu', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, {
       $formspec: '1.0',
@@ -145,21 +145,14 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
     // Wait for the Behavior Rules section to be present
     await expect(properties).toContainText('Behavior Rules');
 
-    // Click the "+ Add Rule" button
-    await properties.getByRole('button', { name: '+ Add Rule' }).click();
+    // The AddBehaviorMenu renders "+ add behavior rule" (lowercase)
+    await properties.getByRole('button', { name: /add behavior rule/i }).click();
 
-    // BUG #12: Clicking "+ Add Rule" does nothing. After clicking it, a rule
-    // composer (dialog/form) should open OR a new empty rule row should appear.
-    // We check for either: a new visible input for writing an expression, or a
-    // modal/dialog for choosing a rule type.
-    const newRuleInput = properties.locator('input[placeholder*="expression"], input[placeholder*="rule"], input[placeholder*="FEL"]');
-    const ruleDialog = page.locator('[role="dialog"], [data-testid*="rule-composer"], [data-testid*="rule-editor"]');
-
-    const inputVisible = await newRuleInput.isVisible().catch(() => false);
-    const dialogVisible = await ruleDialog.isVisible().catch(() => false);
-
-    // At least one of these should be true after clicking "+ Add Rule"
-    expect(inputVisible || dialogVisible).toBe(true);
+    // After clicking, the dropdown menu of rule types should appear.
+    // AddBehaviorMenu renders available bind types as buttons in an overlay menu.
+    // The "required" type is already used, so at least one other type must appear.
+    const menuItems = page.locator('[role="button"], button').filter({ hasText: /relevant|readonly|calculate|constraint|pre-populate/i });
+    await expect(menuItems.first()).toBeVisible();
   });
 
   // #52 No cardinality settings

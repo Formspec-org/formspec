@@ -25,6 +25,7 @@
 import { registerHandler } from '../handler-registry.js';
 import type { FormspecItem } from 'formspec-engine';
 import { splitComponentState, hasAuthoredComponentTree } from '../component-documents.js';
+import { normalizeDefinition } from '../normalization.js';
 
 /**
  * Replace the entire project state from imported artifacts.
@@ -44,7 +45,7 @@ import { splitComponentState, hasAuthoredComponentTree } from '../component-docu
 registerHandler('project.import', (state, payload) => {
   const p = payload as Record<string, any>;
 
-  if (p.definition) state.definition = p.definition;
+  if (p.definition) state.definition = normalizeDefinition(p.definition);
   if (p.component) {
     const componentState = splitComponentState(p.component, state.definition.url);
     state.component = componentState.component;

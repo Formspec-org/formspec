@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { arrayBindsFor, bindsFor, shapesFor } from '../../../lib/field-helpers';
+import { bindsFor, shapesFor } from '../../../lib/field-helpers';
 import { buildDefLookup, isLayoutId } from '../../../lib/tree-helpers';
 import { useDefinition } from '../../../state/useDefinition';
 import { useDispatch } from '../../../state/useDispatch';
@@ -97,10 +97,7 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
     );
   }
 
-  const rawBinds = definition.binds;
-  const binds = Array.isArray(rawBinds)
-    ? arrayBindsFor(rawBinds as any[], found.path)
-    : bindsFor(rawBinds as any, found.path);
+  const binds = bindsFor(definition.binds as any, found.path);
   const shapes = shapesFor((definition as any).shapes, found.path);
 
   return (

@@ -29,10 +29,11 @@ export function PrePopulateCard({ value, onChange, onRemove }: PrePopulateCardPr
 
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
-          <label className="font-mono text-[8px] text-muted uppercase tracking-wider block">
+          <label htmlFor="pre-pop-instance" className="font-mono text-[8px] text-muted uppercase tracking-wider block">
             Instance
           </label>
           <input
+            id="pre-pop-instance"
             type="text"
             className="w-full px-1.5 py-0.5 text-[11px] font-mono border border-border rounded-[3px] bg-subtle outline-none focus:border-accent transition-colors"
             value={value.instance || ''}
@@ -41,10 +42,11 @@ export function PrePopulateCard({ value, onChange, onRemove }: PrePopulateCardPr
           />
         </div>
         <div className="space-y-1">
-          <label className="font-mono text-[8px] text-muted uppercase tracking-wider block">
+          <label htmlFor="pre-pop-path" className="font-mono text-[8px] text-muted uppercase tracking-wider block">
             Path
           </label>
           <input
+            id="pre-pop-path"
             type="text"
             className="w-full px-1.5 py-0.5 text-[11px] font-mono border border-border rounded-[3px] bg-subtle outline-none focus:border-accent transition-colors"
             value={value.path || ''}

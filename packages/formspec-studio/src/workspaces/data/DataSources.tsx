@@ -79,12 +79,10 @@ export function DataSources() {
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
 
-  const instances: Instance[] = Array.isArray(rawInstances)
-    ? rawInstances
-    : Object.entries(rawInstances || {}).map(([name, inst]) => ({
-        name,
-        ...(inst as object),
-      }));
+  const instances: Instance[] = Object.entries(rawInstances || {}).map(([name, inst]) => ({
+    name,
+    ...(inst as object),
+  }));
 
   const handleAdd = () => {
     const trimmed = newName.trim();

@@ -61,7 +61,7 @@ export function EditorCanvas() {
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const items: Item[] = (definition?.items as Item[]) || [];
-  const allBinds = definition?.binds as Record<string, Record<string, string>> | undefined;
+  const allBinds = definition?.binds as Array<{ path: string; [k: string]: unknown }> | undefined;
   const component = useComponent();
   const tree = component?.tree as CompNode | undefined;
 

@@ -230,34 +230,3 @@ test.describe('Logic Workspace — FEL reference popup function click (#55)', ()
   });
 });
 
-test.describe('Logic Workspace — variable expressions stay read-only', () => {
-  test.beforeEach(async ({ page }) => {
-    await waitForApp(page);
-    await importDefinition(page, LOGIC_DEFINITION);
-    await switchTab(page, 'Logic');
-  });
-
-  test('double-clicking a variable expression does not open an inline editor', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Logic"]');
-
-    const expressionText = workspace.getByText('0.25', { exact: true });
-    await expect(expressionText).toBeVisible();
-
-    await expressionText.dblclick();
-
-    await expect(workspace.locator('input[type="text"], textarea')).toHaveCount(0);
-    await expect(expressionText).toBeVisible();
-  });
-
-  test('complex variable expressions remain visible as plain text after double-click', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Logic"]');
-
-    const expressionText = workspace.getByText('$income * (1 - @taxRate)', { exact: true });
-    await expect(expressionText).toBeVisible();
-
-    await expressionText.dblclick();
-
-    await expect(workspace.locator('input[type="text"], textarea')).toHaveCount(0);
-    await expect(expressionText).toBeVisible();
-  });
-});

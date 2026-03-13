@@ -28,6 +28,7 @@ export function FieldConfigSection({
         <BindCard bindType="Initial Value" expression={item.initialValue != null ? String(item.initialValue) : ''}>
           <input
             id={`${path}-initialValue`}
+            aria-label="Initial Value"
             className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
             defaultValue={item.initialValue != null ? String(item.initialValue) : ''}
             onBlur={(e) => {

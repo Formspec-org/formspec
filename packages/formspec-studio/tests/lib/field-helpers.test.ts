@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   flatItems,
   bindsFor,
-  arrayBindsFor,
   shapesFor,
   dataTypeInfo,
   compatibleWidgets,
@@ -35,29 +34,27 @@ describe('flatItems', () => {
 
 describe('bindsFor', () => {
   it('returns binds for a field path', () => {
-    const binds = { name: { required: 'true', calculate: '$x' } };
-    const result = bindsFor(binds, 'name');
+    const binds = [{ path: 'name', required: 'true', calculate: '$x' }];
+    const result = bindsFor(binds as any, 'name');
     expect(result).toEqual({ required: 'true', calculate: '$x' });
   });
 
   it('returns empty object for unknown path', () => {
-    expect(bindsFor({}, 'unknown')).toEqual({});
+    expect(bindsFor([], 'unknown')).toEqual({});
   });
 
   it('handles undefined binds', () => {
     expect(bindsFor(undefined, 'name')).toEqual({});
   });
-});
 
-describe('arrayBindsFor', () => {
   it('returns binds for an exact path match', () => {
     const binds = [{ path: 'household.name', required: 'true()' }];
-    expect(arrayBindsFor(binds as any, 'household.name')).toEqual({ required: 'true()' });
+    expect(bindsFor(binds as any, 'household.name')).toEqual({ required: 'true()' });
   });
 
   it('does not resolve a bind by leaf key when the full path does not match', () => {
     const binds = [{ path: 'name', required: 'true()' }];
-    expect(arrayBindsFor(binds as any, 'household.name')).toEqual({});
+    expect(bindsFor(binds as any, 'household.name')).toEqual({});
   });
 });
 

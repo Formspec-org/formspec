@@ -71,7 +71,7 @@ describe('BindsSection', () => {
     );
   });
 
-  it('saving empty dispatches with null (removes bind)', () => {
+  it('saving empty dispatches with empty string', () => {
     const { dispatchSpy } = renderBinds();
     fireEvent.click(screen.getByText('$age >= 18'));
     const textarea = screen.getByRole('textbox');
@@ -80,7 +80,7 @@ describe('BindsSection', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'definition.setBind',
-        payload: { path: 'name', properties: { relevant: null } },
+        payload: { path: 'name', properties: { relevant: '' } },
       })
     );
   });

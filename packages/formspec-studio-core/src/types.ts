@@ -551,6 +551,41 @@ export interface Diagnostics {
   counts: { error: number; warning: number; info: number };
 }
 
+// ── Response schema types ───────────────────────────────────────────
+
+/**
+ * A single row in the response schema view.
+ *
+ * Describes one item (field or group) from the definition in terms of its
+ * JSON representation in a submitted form response. Rows are returned in
+ * document order (depth-first) by `Project.responseSchemaRows()`.
+ */
+export interface ResponseSchemaRow {
+  /** Full dotted path to this item (e.g. `"contact.email"`). */
+  path: string;
+  /** The item's key (leaf segment of path). */
+  key: string;
+  /** The item's label, or the key if no label is set. */
+  label: string;
+  /** Nesting depth: 0 for root items, 1 for children of root groups, etc. */
+  depth: number;
+  /**
+   * JSON type of the item's value in a form response:
+   * - `"object"` for non-repeatable groups
+   * - `"array<object>"` for repeatable groups
+   * - `"number"` for fields with dataType `integer` or `decimal`
+   * - `"boolean"` for fields with dataType `boolean`
+   * - `"string"` for all other fields
+   */
+  jsonType: 'string' | 'number' | 'boolean' | 'object' | 'array<object>';
+  /** Whether any bind for this path has a `required` property. */
+  required: boolean;
+  /** Whether any bind for this path has a `calculate` property. */
+  calculated: boolean;
+  /** Whether any bind for this path has a `relevant` or `readonly` property. */
+  conditional: boolean;
+}
+
 // ── Versioning query types ──────────────────────────────────────────
 
 /**

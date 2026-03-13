@@ -26,6 +26,7 @@ import type {
   FieldDependents,
   Diagnostics,
   Diagnostic,
+  ResponseSchemaRow,
 } from './types.js';
 import {
   analyzeFEL,
@@ -52,6 +53,7 @@ import {
   hasAuthoredComponentTree,
   splitComponentState,
 } from './component-documents.js';
+import { normalizeDefinition } from './normalization.js';
 
 /** Maximum number of undo snapshots retained before oldest-first pruning. */
 const DEFAULT_MAX_HISTORY = 50;
@@ -91,7 +93,8 @@ function createDefaultDefinition(): FormspecDefinition {
  * @returns A fully populated ProjectState.
  */
 function createDefaultState(options?: ProjectOptions): ProjectState {
-  const definition = options?.seed?.definition ?? createDefaultDefinition();
+  const rawDefinition = options?.seed?.definition ?? createDefaultDefinition();
+  const definition = normalizeDefinition(rawDefinition);
   const url = definition.url;
   const componentState = splitComponentState(options?.seed?.component, url);
 
@@ -330,6 +333,67 @@ export class Project {
    */
   itemAt(path: string): FormspecItem | undefined {
     return itemAtPath(this._state.definition.items, path);
+  }
+
+  /**
+   * Build a flat list of rows describing the response schema for the current definition.
+   *
+   * Each row describes one item (field or group) in terms of how it appears in a
+   * submitted form response. Rows are emitted in depth-first document order, matching
+   * the item tree traversal order.
+   *
+   * JSON type mapping:
+   * - Non-repeatable groups → `"object"`
+   * - Repeatable groups → `"array<object>"`
+   * - Fields with dataType `integer` or `decimal` → `"number"`
+   * - Fields with dataType `boolean` → `"boolean"`
+   * - Everything else → `"string"`
+   *
+   * Bind flags (`required`, `calculated`, `conditional`) are derived from the
+   * definition's `binds` array by matching each row's path against bind entries.
+   *
+   * @returns An array of {@link ResponseSchemaRow} objects in document order.
+   */
+  responseSchemaRows(): ResponseSchemaRow[] {
+    const rows: ResponseSchemaRow[] = [];
+    const binds = this._state.definition.binds ?? [];
+
+    const getBindFor = (path: string) => binds.find((b: any) => b.path === path) as any | undefined;
+
+    const jsonTypeForItem = (item: FormspecItem): ResponseSchemaRow['jsonType'] => {
+      if (item.type === 'group') {
+        return (item as any).repeatable ? 'array<object>' : 'object';
+      }
+      const dataType = (item as any).dataType as string | undefined;
+      if (dataType === 'integer' || dataType === 'decimal') return 'number';
+      if (dataType === 'boolean') return 'boolean';
+      return 'string';
+    };
+
+    const walk = (items: FormspecItem[], prefix: string, depth: number) => {
+      for (const item of items) {
+        const path = prefix ? `${prefix}.${item.key}` : item.key;
+        const bind = getBindFor(path);
+
+        rows.push({
+          path,
+          key: item.key,
+          label: item.label || item.key,
+          depth,
+          jsonType: jsonTypeForItem(item),
+          required: bind ? 'required' in bind : false,
+          calculated: bind ? 'calculate' in bind : false,
+          conditional: bind ? ('relevant' in bind || 'readonly' in bind) : false,
+        });
+
+        if (item.children?.length) {
+          walk(item.children, path, depth + 1);
+        }
+      }
+    };
+
+    walk(this._state.definition.items, '', 0);
+    return rows;
   }
 
   /**

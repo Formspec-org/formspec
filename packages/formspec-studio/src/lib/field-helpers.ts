@@ -25,22 +25,13 @@ export function flatItems(items: AnyItem[], prefix = '', depth = 0): FlatItem[] 
   return result;
 }
 
-/** Get bind entries for a specific field path (object-keyed format). */
-export function bindsFor(
-  binds: Record<string, Record<string, string>> | undefined | null,
-  path: string
-): Record<string, string> {
-  if (!binds) return {};
-  return binds[path] || {};
-}
-
 interface AnyBind {
   path: string;
   [k: string]: unknown;
 }
 
 /** Get bind properties for a field path from array-format binds. */
-export function arrayBindsFor(
+export function bindsFor(
   binds: AnyBind[] | undefined | null,
   path: string
 ): Record<string, string> {

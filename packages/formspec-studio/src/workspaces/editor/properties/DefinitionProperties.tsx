@@ -30,7 +30,7 @@ export function DefinitionProperties({
               defaultValue={definition.title ?? ''}
               onBlur={(event) => {
                 dispatch({
-                  type: 'definition.setProperty',
+                  type: 'definition.setDefinitionProperty',
                   payload: { property: 'title', value: event.currentTarget.value || null },
                 });
               }}

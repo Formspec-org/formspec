@@ -50,6 +50,38 @@ describe('AddItemPalette', () => {
     expect((heading!.extra as any)?.presentation?.widgetHint).toBe('Heading');
   });
 
+  describe('canonical dataType values for choice fields', () => {
+    it('Single Choice uses canonical dataType "choice" (not "select1")', () => {
+      const singleChoice = FIELD_TYPE_CATALOG.find(f => f.label === 'Single Choice');
+      expect(singleChoice).toBeDefined();
+      expect(singleChoice!.dataType).toBe('choice');
+    });
+
+    it('Multiple Choice uses canonical dataType "multiChoice" (not "select")', () => {
+      const multiChoice = FIELD_TYPE_CATALOG.find(f => f.label === 'Multiple Choice');
+      expect(multiChoice).toBeDefined();
+      expect(multiChoice!.dataType).toBe('multiChoice');
+    });
+
+    it('clicking Single Choice calls onAdd with dataType "choice"', () => {
+      const onAdd = vi.fn();
+      render(<AddItemPalette open={true} onClose={vi.fn()} onAdd={onAdd} />);
+      fireEvent.click(screen.getByRole('button', { name: /^Single Choice\b/i }));
+      expect(onAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ dataType: 'choice' })
+      );
+    });
+
+    it('clicking Multiple Choice calls onAdd with dataType "multiChoice"', () => {
+      const onAdd = vi.fn();
+      render(<AddItemPalette open={true} onClose={vi.fn()} onAdd={onAdd} />);
+      fireEvent.click(screen.getByRole('button', { name: /^Multiple Choice\b/i }));
+      expect(onAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ dataType: 'multiChoice' })
+      );
+    });
+  });
+
   describe('Tabs', () => {
     it('renders all tabs', () => {
       render(

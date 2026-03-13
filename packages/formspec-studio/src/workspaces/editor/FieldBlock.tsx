@@ -67,7 +67,7 @@ export function FieldBlock({
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={handleKeyDown}
-      className={`relative bg-surface border rounded-[4px] cursor-pointer transition-all ${
+      className={`group relative bg-surface border rounded-[4px] cursor-pointer transition-all ${
         selected ? 'border-accent ring-1 ring-accent/20 z-10'
         : isInSelection ? 'border-accent bg-accent/5 z-10'
         : 'border-border hover:border-muted/40'
@@ -80,6 +80,22 @@ export function FieldBlock({
           <div className="absolute top-1/2 -left-px w-2.5 border-b border-dashed border-border" />
         </div>
       )}
+
+      {/* Drag Handle */}
+      <div
+        draggable="true"
+        data-testid="drag-handle"
+        className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab"
+      >
+        <svg width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="2" cy="2" r="1.25" fill="currentColor" className="text-muted/60" />
+          <circle cx="6" cy="2" r="1.25" fill="currentColor" className="text-muted/60" />
+          <circle cx="2" cy="7" r="1.25" fill="currentColor" className="text-muted/60" />
+          <circle cx="6" cy="7" r="1.25" fill="currentColor" className="text-muted/60" />
+          <circle cx="2" cy="12" r="1.25" fill="currentColor" className="text-muted/60" />
+          <circle cx="6" cy="12" r="1.25" fill="currentColor" className="text-muted/60" />
+        </svg>
+      </div>
 
       <div className="flex items-start px-3 py-2 gap-2.5">
         {/* Icon Badge */}

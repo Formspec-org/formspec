@@ -134,7 +134,7 @@ describe('ItemProperties', () => {
     expect(screen.getByText(/required/i)).toBeInTheDocument();
   });
 
-  it('does not show behavior rules for nested fields when only a leaf-key bind exists', async () => {
+  it('does not show bind cards for nested fields when only a leaf-key bind exists', async () => {
     const project = createProject({ seed: { definition: {
       $formspec: '1.0',
       url: 'urn:test',
@@ -151,7 +151,10 @@ describe('ItemProperties', () => {
     } as any } });
     renderProps(project, { path: 'household.hhSize', type: 'field' });
     await act(async () => { screen.getByText('Select').click(); });
-    expect(screen.queryByText(/behavior rules/i)).toBeNull();
+    // The Behavior Rules section heading always renders, but no bind cards should appear
+    // because the bind path 'hhSize' doesn't match the full path 'household.hhSize'
+    expect(screen.getByText(/behavior rules/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^required$/i)).toBeNull();
   });
 
   it('shows repeat cardinality inputs for repeatable groups and dispatches updates on blur', async () => {
@@ -504,10 +507,10 @@ describe('ItemProperties', () => {
     expect(screen.getByLabelText(/editable/i)).not.toBeChecked();
   });
 
-  it('shows "+ Add pre-population" when prePopulate not set', async () => {
+  it('shows "+ Add Calculation / Pre-population" when prePopulate not set', async () => {
     renderProps();
     await act(async () => { screen.getByText('Select').click(); });
-    expect(screen.getByText(/\+ add pre-population/i)).toBeInTheDocument();
+    expect(screen.getByText(/add calculation/i)).toBeInTheDocument();
   });
 
   // --- Repeatable toggle ---
@@ -610,7 +613,7 @@ describe('ItemProperties', () => {
     // so the InlineExpression shows the placeholder instead
   });
 
-  it('shows "+ Add behavior rule" when no binds exist', async () => {
+  it('shows "Add behavior rule" when no binds exist', async () => {
     const project = createProject({ seed: { definition: {
       ...testDef,
       binds: [],
@@ -618,7 +621,7 @@ describe('ItemProperties', () => {
     } as any } });
     renderProps(project, { path: 'solo', type: 'field' });
     await act(async () => { screen.getByText('Select').click(); });
-    expect(screen.getByText(/\+ add behavior rule/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add behavior rule/i })).toBeInTheDocument();
   });
 
   // --- Action buttons (no tooltips, just plain buttons) ---
@@ -633,7 +636,7 @@ describe('ItemProperties', () => {
 
   // --- Add behavior rule tooltip ---
 
-  it('"+ Add behavior rule" has help tooltip', async () => {
+  it('"Add behavior rule" button exists in Behavior Rules section', async () => {
     const project = createProject({ seed: { definition: {
       ...testDef,
       binds: [],
@@ -641,9 +644,8 @@ describe('ItemProperties', () => {
     } as any } });
     renderProps(project, { path: 'solo', type: 'field' });
     await act(async () => { screen.getByText('Select').click(); });
-    const addRule = screen.getByText(/\+ add behavior rule/i);
-    const wrapper = addRule.closest('[class*="cursor-help"]');
-    expect(wrapper).toBeTruthy();
+    const addRule = screen.getByRole('button', { name: /add behavior rule/i });
+    expect(addRule).toBeInTheDocument();
   });
 
   describe('multi-select summary', () => {

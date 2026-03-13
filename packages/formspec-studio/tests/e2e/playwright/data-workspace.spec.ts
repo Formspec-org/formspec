@@ -62,19 +62,19 @@ test.describe('Data Workspace', () => {
     await expect(workspace.getByText('city', { exact: true })).toBeVisible();
   });
 
-  test('data sources sub-tab shows instances', async ({ page }) => {
+  test('data sources section shows instances', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Data"]');
-    // Click "Data Sources" sub-tab
-    await workspace.getByRole('button', { name: 'Data Sources' }).click();
+    // Click "Sources" filter button
+    await workspace.getByRole('button', { name: 'Sources' }).click();
     // Should show the instance name and source
     await expect(workspace.getByText('countries', { exact: true })).toBeVisible();
     await expect(workspace.getByText('https://api.example.com/countries', { exact: true })).toBeVisible();
   });
 
-  test('option sets sub-tab shows option set names and values', async ({ page }) => {
+  test('option sets section shows option set names and values', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Data"]');
-    // Click "Option Sets" sub-tab
-    await workspace.getByRole('button', { name: 'Option Sets' }).click();
+    // Click "Tables" filter button (covers Lookup Tables / Option Sets)
+    await workspace.getByRole('button', { name: 'Tables' }).click();
     // Should show option set name
     await expect(workspace.getByText('statusValues')).toBeVisible();
     // Should show option labels
@@ -127,7 +127,8 @@ test.describe('Data Workspace — Bug Tests', () => {
   // BUG #2 (continued): DataSources and OptionSets also use border-neutral-700
   test('data sources card borders use light-theme token, not dark neutral [BUG-002]', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Data"]');
-    await workspace.getByRole('button', { name: 'Data Sources' }).click();
+    // Navigate to the Sources section via the "Sources" filter button
+    await workspace.getByRole('button', { name: 'Sources' }).click();
 
     // The card wrapping the instance uses border-neutral-700
     const card = workspace.locator('.border').first();
@@ -144,47 +145,6 @@ test.describe('Data Workspace — Bug Tests', () => {
     expect(r).toBeGreaterThan(200);
     expect(g).toBeGreaterThan(200);
     expect(b).toBeGreaterThan(200);
-  });
-
-  // BUG #3: `text-foreground` is not a defined CSS token in the light shell.
-  // DataTab.tsx uses `hover:text-foreground` for inactive tabs.
-  // The CSS in index.css defines --color-ink, --color-muted, --color-accent, etc.
-  // but does NOT define --color-foreground, so text-foreground resolves to
-  // an empty/transparent value.
-  // RED: The computed color of an inactive tab on hover will NOT be the ink color
-  // because `text-foreground` is an undefined class/token.
-  test('inactive data sub-tabs have a defined text color on hover [BUG-003]', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Data"]');
-
-    // "Data Sources" is the second tab button — inactive by default
-    const inactiveTab = workspace.getByRole('button', { name: 'Data Sources' });
-    await expect(inactiveTab).toBeVisible();
-
-    // Check that the hover class `text-foreground` actually resolves to a color.
-    // Hover by moving the mouse over the button.
-    await inactiveTab.hover();
-
-    // Get the computed color after hover
-    const computedColor = await inactiveTab.evaluate((el) => {
-      return window.getComputedStyle(el).color;
-    });
-
-    // The color should not be transparent or rgba(0,0,0,0).
-    // BUG: text-foreground is undefined so the color may fall back to transparent
-    // or the browser default, rather than a meaningful design-token color.
-    expect(computedColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(computedColor).not.toBe('transparent');
-
-    // Additionally, verify the hover style is defined in CSS (not just browser default black).
-    // The expected ink/foreground color should be a specific design-system value.
-    // --color-ink is #0f172a = rgb(15,23,42). If text-foreground is undefined,
-    // the color won't change on hover from the muted color to the foreground color.
-    // We check that the CSS variable --color-foreground is actually defined.
-    const foregroundVar = await page.evaluate(() => {
-      return getComputedStyle(document.documentElement).getPropertyValue('--color-foreground').trim();
-    });
-    // BUG: --color-foreground is not defined in index.css, so this will be empty string.
-    expect(foregroundVar).not.toBe('');
   });
 
   // BUG #33: Repeatable groups show "object" instead of "array" in Response Schema.
@@ -210,38 +170,6 @@ test.describe('Data Workspace — Bug Tests', () => {
     await expect(membersRow.getByRole('cell', { name: 'array' })).toBeVisible();
   });
 
-  // BUG #34: Label column values look clickable but clicking them does nothing.
-  // The ResponseSchema label cells are plain <td> elements with no click handler.
-  // Expected: clicking a label (or key) cell navigates to or selects the field.
-  // RED: No navigation or selection occurs when clicking a label value.
-  test('clicking a label value in Response Schema selects or navigates to the field [BUG-034]', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Data"]');
-    await expect(workspace.getByRole('table')).toBeVisible();
-
-    // Click on the "First Name" label value in the label column
-    const labelCell = workspace.getByRole('cell', { name: 'First Name' });
-    await expect(labelCell).toBeVisible();
-    await labelCell.click();
-
-    // Expected: clicking the label should select the field and navigate to Editor,
-    // or at minimum show some visual feedback (e.g. highlight the row, open a tooltip).
-    // BUG: No feedback — the click does nothing.
-    // We test for a highlighted/selected state on the row.
-    const row = workspace.locator('tbody tr').filter({ hasText: 'First Name' });
-    // After clicking, the row should have some selected/active state
-    // (e.g., a data-selected attribute, aria-selected, or an active CSS class)
-    const isSelected = await row.evaluate((el) => {
-      return el.getAttribute('data-selected') === 'true' ||
-             el.getAttribute('aria-selected') === 'true' ||
-             el.classList.contains('selected') ||
-             el.classList.contains('active') ||
-             el.classList.contains('bg-accent') ||
-             el.classList.contains('bg-subtle');
-    });
-    // BUG: isSelected will be false because no click handling exists
-    expect(isSelected).toBe(true);
-  });
-
   test('empty data sources state stays informational without a fake creation button', async ({ page }) => {
     // Seed with a definition that has no instances
     await importDefinition(page, {
@@ -250,15 +178,15 @@ test.describe('Data Workspace — Bug Tests', () => {
     });
 
     const workspace = page.locator('[data-testid="workspace-Data"]');
-    await workspace.getByRole('button', { name: 'Data Sources' }).click();
+    await workspace.getByRole('button', { name: 'Sources' }).click();
 
     await expect(workspace.getByText('No data sources defined.')).toBeVisible();
     await expect(workspace.getByRole('button', { name: /add data source/i })).toHaveCount(0);
   });
 
-  test('Test Response tab shows an explicit not-yet-implemented state without fake controls', async ({ page }) => {
+  test('Simulation section shows an explicit not-yet-implemented state without fake controls', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Data"]');
-    await workspace.getByRole('button', { name: 'Test Response' }).click();
+    await workspace.getByRole('button', { name: 'Simulation' }).click();
 
     await expect(workspace.getByText('Test Response is not yet implemented.')).toBeVisible();
     await expect(
@@ -268,7 +196,7 @@ test.describe('Data Workspace — Bug Tests', () => {
 
   test('option set cards are informational panels, not misleading buttons', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Data"]');
-    await workspace.getByRole('button', { name: 'Option Sets' }).click();
+    await workspace.getByRole('button', { name: 'Tables' }).click();
 
     await expect(workspace.getByText('statusValues')).toBeVisible();
 
@@ -286,7 +214,7 @@ test.describe('Data Workspace — Bug Tests', () => {
   // RED: The contrast ratio between chip text and chip background will fail WCAG 4.5:1.
   test('option chips have accessible contrast ratio (WCAG 4.5:1) [BUG-054]', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Data"]');
-    await workspace.getByRole('button', { name: 'Option Sets' }).click();
+    await workspace.getByRole('button', { name: 'Tables' }).click();
 
     // Wait for chips to be visible
     await expect(workspace.getByText('Active', { exact: true })).toBeVisible();

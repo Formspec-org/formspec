@@ -9,17 +9,20 @@ test.describe('Workspace Navigation — Tab Switching', () => {
   test('Logic tab renders logic workspace', async ({ page }) => {
     await switchTab(page, 'Logic');
     const workspace = page.locator('[data-testid="workspace-Logic"]');
-    // LogicTab renders "Binds" section heading and "Shapes" section heading
-    await expect(workspace.getByRole('button', { name: /Binds/ })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: /Shapes/ })).toBeVisible();
+    // LogicTab renders a FilterBar with section pills: "All Logic", "Values", "Behaviors", "Rules"
+    await expect(workspace.getByRole('button', { name: 'All Logic' })).toBeVisible();
+    await expect(workspace.getByRole('button', { name: 'Values' })).toBeVisible();
+    await expect(workspace.getByRole('button', { name: 'Behaviors' })).toBeVisible();
+    await expect(workspace.getByRole('button', { name: 'Rules' })).toBeVisible();
   });
 
   test('Data tab renders data workspace', async ({ page }) => {
     await switchTab(page, 'Data');
     const workspace = page.locator('[data-testid="workspace-Data"]');
-    // DataTab has sub-tabs: "Response Schema", "Data Sources", "Option Sets", "Test Response"
-    await expect(workspace.getByText('Response Schema', { exact: true })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Data Sources' })).toBeVisible();
+    // DataTab uses DataPillar section filter buttons: "All Data", "Structure", "Tables", "Sources", "Simulation"
+    await expect(workspace.getByRole('button', { name: 'All Data' })).toBeVisible();
+    await expect(workspace.getByRole('button', { name: 'Structure' })).toBeVisible();
+    await expect(workspace.getByRole('button', { name: 'Sources' })).toBeVisible();
   });
 
   test('Theme tab renders theme workspace', async ({ page }) => {

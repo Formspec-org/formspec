@@ -11,6 +11,7 @@
  */
 
 export { Project, createProject } from './project.js';
+export { normalizeDefinition } from './normalization.js';
 export type {
   ProjectState,
   ProjectOptions,
@@ -45,4 +46,5 @@ export type {
   FieldDependents,
   Diagnostic,
   Diagnostics,
+  ResponseSchemaRow,
 } from './types.js';

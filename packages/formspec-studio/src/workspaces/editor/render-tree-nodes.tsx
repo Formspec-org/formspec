@@ -29,7 +29,7 @@ interface CompNode {
 export interface RenderContext {
   defLookup: Map<string, DefLookupEntry>;
   bindKeyMap: Map<string, string>;
-  allBinds?: Record<string, Record<string, string>>;
+  allBinds?: Array<{ path: string; [k: string]: unknown }>;
   primaryKey: string | null;
   selectedKeys: Set<string>;
   handleItemClick: (event: React.MouseEvent, path: string, type: string) => void;

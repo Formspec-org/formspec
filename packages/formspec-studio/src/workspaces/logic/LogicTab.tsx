@@ -60,25 +60,13 @@ function normalizeBinds(binds: unknown, items: any[] = []): Record<string, Recor
     }
   }
 
-  // 2. Process binds
-  if (!binds) return result;
-  
-  if (typeof binds === 'object' && !Array.isArray(binds)) {
-    const b = binds as Record<string, any>;
-    for (const path in b) {
-      result[path] = { ...result[path], ...b[path] };
+  // 2. Process binds (always array form)
+  if (!Array.isArray(binds)) return result;
+  for (const bind of binds) {
+    if (bind && typeof bind === 'object' && bind.path) {
+      const { path, ...rest } = bind;
+      result[path] = { ...result[path], ...rest };
     }
-    return result;
-  }
-
-  if (Array.isArray(binds)) {
-    for (const bind of binds) {
-      if (bind && typeof bind === 'object' && bind.path) {
-        const { path, ...rest } = bind;
-        result[path] = { ...result[path], ...rest };
-      }
-    }
-    return result;
   }
 
   return result;

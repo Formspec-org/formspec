@@ -10,15 +10,12 @@ export function DataSourcesList() {
   const definition = useDefinition();
   const raw = (definition as any).instances;
 
-  let entries: InstanceEntry[] = [];
-  if (Array.isArray(raw)) {
-    entries = raw;
-  } else if (raw && typeof raw === 'object') {
-    entries = Object.entries(raw).map(([name, val]) => ({
-      name,
-      ...(typeof val === 'object' && val !== null ? val as Record<string, unknown> : {}),
-    })) as InstanceEntry[];
-  }
+  const entries: InstanceEntry[] = raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? Object.entries(raw).map(([name, val]) => ({
+        name,
+        ...(typeof val === 'object' && val !== null ? val as Record<string, unknown> : {}),
+      })) as InstanceEntry[]
+    : [];
 
   if (entries.length === 0) {
     return <p className="text-xs text-muted py-2">No data sources defined</p>;

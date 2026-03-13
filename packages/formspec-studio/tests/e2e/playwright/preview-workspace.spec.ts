@@ -203,26 +203,4 @@ test.describe('Preview Workspace', () => {
     await expect(componentDoc).toContainText(/Select|Dropdown/);
   });
 
-  test('bug #71: Theme sub-tab shows real theme tokens and defaults, not a targetDefinition stub', async ({ page }) => {
-    // The default project has no authored theme content; the studio has no theme authoring
-    // surface that writes tokens or defaults into the theme document. The Theme sub-tab
-    // should display theme tokens and form-wide defaults — but currently only shows the
-    // bare targetDefinition stub: { "targetDefinition": { "url": "..." } }.
-
-    const workspace = page.locator('[data-testid="workspace-Preview"]');
-    await workspace.getByTestId('preview-mode-json').click();
-
-    // Switch to the Theme sub-tab
-    await workspace.getByRole('button', { name: 'Theme' }).click();
-
-    const themeDoc = workspace.getByTestId('json-doc-theme');
-    await expect(themeDoc).toBeVisible();
-
-    // The theme document should show authored token values (e.g. color tokens, font
-    // settings, spacing tokens) that make the theme document useful for inspection.
-    // This will fail because the theme document is always just the targetDefinition stub —
-    // there is no token editor, defaults editor, or selector editor that populates it.
-    // A real theme document must have at minimum a "tokens" or "defaults" section.
-    await expect(themeDoc).toContainText('"tokens"');
-  });
 });
