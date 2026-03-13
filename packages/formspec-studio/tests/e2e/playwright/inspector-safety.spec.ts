@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, seedDefinition, switchTab } from './helpers';
+import { waitForApp, importDefinition, switchTab } from './helpers';
 
 test.describe('Inspector Safety', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:inspector-safety',
       version: '1.0.0',
@@ -36,7 +36,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   // does not update the DOM input — it keeps the previous field's key.
   test('#22 KEY input updates when switching selection between fields', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:key-stale-test',
       items: [
@@ -64,7 +64,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   // path. flatItems won't find it, so the inspector shows "Item not found".
   test('#25 inspector still shows the renamed item after editing KEY with Tab', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:rename-inspector-test',
       items: [
@@ -97,7 +97,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   // but the binds lookup may fail when definition uses object-keyed binds format.
   test('#32 Behavior Rules section is visible in inspector when a field has binds', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:behavior-rules-test',
       items: [
@@ -126,7 +126,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   // handler — clicking it does nothing (no rule composer opens, no rule appended).
   test('#12 clicking "+ Add Rule" opens a rule composer or appends a new rule', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:add-rule-test',
       items: [
@@ -167,7 +167,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   // inspector — min/max cardinality controls are never rendered.
   test('#52 inspector shows min/max cardinality controls for a repeatable group', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:cardinality-test',
       items: [
@@ -210,7 +210,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   // the list of choices.
   test('#53 inspector shows a Choices/Options section for a Select One field', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:choices-test',
       items: [
@@ -245,7 +245,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   // editing the human-readable field label.
   test('#57 inspector shows a Label/Title input for editing a field label', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:label-field-test',
       items: [

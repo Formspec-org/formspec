@@ -101,12 +101,6 @@ export function StudioApp({ project }: StudioAppProps = {}): ReactElement {
   const [banner, setBanner] = useState<string | null>(null);
   const [projectRevision, setProjectRevision] = useState(0);
 
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      (window as any).__testProject__ = activeProject;
-    }
-  }, [activeProject]);
-
   useEffect(() => activeProject.onChange(() => {
     setProjectRevision((current) => current + 1);
   }), [activeProject]);

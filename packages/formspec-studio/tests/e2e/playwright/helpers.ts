@@ -12,34 +12,45 @@ export async function switchTab(page: Page, tabName: string) {
   await page.waitForSelector(`[data-testid="workspace-${tabName}"]`);
 }
 
-/** Dispatch a command by evaluating in the page context. */
-export async function dispatch(page: Page, command: { type: string; payload: unknown }) {
-  await page.evaluate((cmd) => {
-    (window as any).__testProject__.dispatch(cmd);
-  }, command);
+/**
+ * Import a definition via the Import Dialog UI.
+ * The import remains in undo history.
+ */
+export async function importDefinition(page: Page, definition: unknown) {
+  await page.click('[data-testid="import-btn"]');
+  const dialog = page.locator('[data-testid="import-dialog"]');
+  await dialog.waitFor();
+  await dialog.locator('textarea').fill(JSON.stringify(definition));
+  await dialog.getByRole('button', { name: 'Load' }).click();
+  await dialog.waitFor({ state: 'hidden' });
 }
 
-/** Seed the project with a definition before the test starts. */
-export async function seedDefinition(page: Page, definition: unknown) {
-  await page.evaluate((def) => {
-    const project = (window as any).__testProject__;
-    project.dispatch({
-      type: 'project.import',
-      payload: { definition: def },
-    });
-    // Clear undo/redo history so the seed itself is not part of authoring history.
-    project.resetHistory();
-  }, definition);
+/**
+ * Import a full project via the Import Dialog UI, one artifact at a time.
+ * Supports definition, component, theme, and mapping artifacts.
+ */
+export async function importProject(page: Page, state: Record<string, unknown>) {
+  const artifactOrder = ['definition', 'component', 'theme', 'mapping'] as const;
+
+  for (const key of artifactOrder) {
+    if (!(key in state)) continue;
+
+    await page.click('[data-testid="import-btn"]');
+    const dialog = page.locator('[data-testid="import-dialog"]');
+    await dialog.waitFor();
+    await dialog.getByRole('button', { name: `${key[0].toUpperCase()}${key.slice(1)}` }).click();
+    await dialog.locator('textarea').fill(JSON.stringify(state[key]));
+    await dialog.getByRole('button', { name: 'Load' }).click();
+    await dialog.waitFor({ state: 'hidden' });
+  }
 }
 
-/** Seed a complete project state (definition + theme + mapping + component). */
-export async function seedProject(page: Page, state: Record<string, unknown>) {
-  await page.evaluate((s) => {
-    const project = (window as any).__testProject__;
-    project.dispatch({ type: 'project.import', payload: s });
-    // Clear undo/redo history so the seed itself is not part of authoring history.
-    project.resetHistory();
-  }, state);
+/** Add an item from the Add Item Palette by clicking its button. */
+export async function addFromPalette(page: Page, label: string) {
+  await page.click('[data-testid="add-item"]');
+  const palette = page.locator('[data-testid="add-item-palette"]');
+  await palette.waitFor();
+  await palette.getByRole('button', { name: new RegExp(`^${label}\\b`) }).first().click();
 }
 
 /** Click a field block in the editor canvas. */

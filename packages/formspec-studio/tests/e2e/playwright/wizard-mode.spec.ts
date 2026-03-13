@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, seedDefinition, switchTab, dispatch } from './helpers';
+import { waitForApp, importDefinition, switchTab } from './helpers';
 
 const WIZARD_DEF = {
   $formspec: '1.0',
@@ -31,7 +31,7 @@ const WIZARD_DEF = {
 test.describe('Wizard mode preview', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, WIZARD_DEF);
+    await importDefinition(page, WIZARD_DEF);
     await switchTab(page, 'Preview');
   });
 
@@ -87,7 +87,7 @@ const PAGED_DEF = {
 test.describe('Bug #10 — inactive page tabs show label text', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, PAGED_DEF);
+    await importDefinition(page, PAGED_DEF);
     await page.waitForSelector('[role="tablist"]', { timeout: 5000 });
   });
 
@@ -129,7 +129,7 @@ test.describe('Bug #10 — inactive page tabs show label text', () => {
 test.describe('Bug #11 — root-level non-group items visible in paged editor', () => {
   test('root-level field outside groups is visible in paged editor canvas [BUG-011]', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       formPresentation: { pageMode: 'wizard' },
       items: [
@@ -159,7 +159,7 @@ test.describe('Bug #11 — root-level non-group items visible in paged editor', 
 test.describe('Bug #44 — double-click page tab opens inline label editor', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, PAGED_DEF);
+    await importDefinition(page, PAGED_DEF);
     await page.waitForSelector('[role="tablist"]', { timeout: 5000 });
   });
 
@@ -205,7 +205,7 @@ test.describe('Bug #73 — adding first item to empty paged definition does not 
   test('can add a field to an empty wizard-mode definition [BUG-073]', async ({ page }) => {
     await waitForApp(page);
     // Start with wizard mode but no items at all
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       formPresentation: { pageMode: 'wizard' },
       items: [],
@@ -240,7 +240,7 @@ test.describe('Bug #74 — new page tab is selected after key collision rename',
     await waitForApp(page);
     // Seed a definition that already has "page1" so the next "Add Page" click
     // will produce a collision and the handler will rename it to "page1_1".
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       formPresentation: { pageMode: 'wizard' },
       items: [
@@ -294,7 +294,7 @@ test.describe('Bug #75 — first page tab auto-selected even when StructureTree 
     });
 
     // Now load a paged definition while Settings is active (StructureTree not mounted)
-    await seedDefinition(page, PAGED_DEF);
+    await importDefinition(page, PAGED_DEF);
 
     // The editor canvas should show a tablist
     const canvas = page.locator('[data-testid="workspace-Editor"]');

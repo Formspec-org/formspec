@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition } from './helpers';
+import { waitForApp, switchTab, importDefinition } from './helpers';
 
 const DATA_DEFINITION = {
   $formspec: '1.0',
@@ -47,7 +47,7 @@ const REPEATABLE_DEFINITION = {
 test.describe('Data Workspace', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, DATA_DEFINITION);
+    await importDefinition(page, DATA_DEFINITION);
     await switchTab(page, 'Data');
   });
 
@@ -89,7 +89,7 @@ test.describe('Data Workspace', () => {
 test.describe('Data Workspace — Bug Tests', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, DATA_DEFINITION);
+    await importDefinition(page, DATA_DEFINITION);
     await switchTab(page, 'Data');
   });
 
@@ -194,7 +194,7 @@ test.describe('Data Workspace — Bug Tests', () => {
   // shows "object" for any group, including repeatable ones.
   test('repeatable group shows "array" type in Response Schema, not "object" [BUG-033]', async ({ page }) => {
     // Re-seed with a definition that has a repeatable group
-    await seedDefinition(page, REPEATABLE_DEFINITION);
+    await importDefinition(page, REPEATABLE_DEFINITION);
 
     const workspace = page.locator('[data-testid="workspace-Data"]');
     // Wait for the table to be visible (Response Schema is default tab)
@@ -244,7 +244,7 @@ test.describe('Data Workspace — Bug Tests', () => {
 
   test('empty data sources state stays informational without a fake creation button', async ({ page }) => {
     // Seed with a definition that has no instances
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
     });

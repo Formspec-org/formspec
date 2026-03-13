@@ -13,7 +13,7 @@
  *  #47 Collapse arrow frozen     — Section ▶ button arrow does not rotate on expand/collapse
  */
 import { test, expect } from '@playwright/test';
-import { waitForApp, seedDefinition, dispatch } from './helpers';
+import { importDefinition, waitForApp } from './helpers';
 
 // ─── Shared seed definitions ────────────────────────────────────────────────
 
@@ -70,36 +70,12 @@ async function openBlueprintSection(page: import('@playwright/test').Page, secti
 test.describe('Bug #14 — Component Tree count badge is always 0', () => {
   test('count badge on the "Component Tree" nav row reflects actual node count (non-zero)', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, COMPONENT_TREE_DEFINITION);
+    await importDefinition(page, COMPONENT_TREE_DEFINITION);
     await page.waitForSelector('[data-testid="field-firstName"]', { timeout: 5000 });
 
-    // Add two nodes to the component tree via dispatch so the tree is non-empty.
-    // The root 'Stack' node with nodeId='root' is created on first ensureTree() call.
-    await dispatch(page, {
-      type: 'component.addNode',
-      payload: {
-        parent: { nodeId: 'root' },
-        component: 'TextInput',
-        bind: 'firstName',
-      },
-    });
-    await dispatch(page, {
-      type: 'component.addNode',
-      payload: {
-        parent: { nodeId: 'root' },
-        component: 'TextInput',
-        bind: 'lastName',
-      },
-    });
-
-    // The "Component Tree" nav row should now display a count badge > 0.
-    // Bug root cause: Blueprint.tsx line 16 hardcodes `countFn: () => 0` for
-    // "Component Tree", so `hasData` is always false and the badge is never rendered.
     const sectionBtn = page.locator('[data-testid="blueprint-section-Component Tree"]');
     await expect(sectionBtn).toBeVisible();
 
-    // The count badge is a <span> with tabular-nums class that only renders when count > 0.
-    // This assertion FAILS on the bug: the badge is absent because count is always 0.
     const badge = sectionBtn.locator('span.tabular-nums');
     await expect(badge).toBeVisible();
 
@@ -113,7 +89,7 @@ test.describe('Bug #14 — Component Tree count badge is always 0', () => {
 test.describe('Bug #27 — Settings TITLE value is not editable', () => {
   test('clicking the Title value in the Settings section reveals an editable input', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SETTINGS_DEFINITION);
+    await importDefinition(page, SETTINGS_DEFINITION);
     await page.waitForSelector('[data-testid="field-field1"]', { timeout: 5000 });
 
     await openBlueprintSection(page, 'Settings');
@@ -140,7 +116,7 @@ test.describe('Bug #27 — Settings TITLE value is not editable', () => {
 test.describe('Bug #28 — Settings Title row missing tooltip', () => {
   test('the element displaying the Title value carries a title attribute with the full string', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SETTINGS_DEFINITION);
+    await importDefinition(page, SETTINGS_DEFINITION);
     await page.waitForSelector('[data-testid="field-field1"]', { timeout: 5000 });
 
     await openBlueprintSection(page, 'Settings');
@@ -164,7 +140,7 @@ test.describe('Bug #28 — Settings Title row missing tooltip', () => {
 test.describe('Variables sidebar rows are informational', () => {
   test('clicking a variable row does not pretend to navigate anywhere', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, VARIABLES_DEFINITION);
+    await importDefinition(page, VARIABLES_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
 
     await openBlueprintSection(page, 'Variables');
@@ -180,7 +156,7 @@ test.describe('Variables sidebar rows are informational', () => {
 
   test('each variable row is rendered as read-only text, not a button', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, VARIABLES_DEFINITION);
+    await importDefinition(page, VARIABLES_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
 
     await openBlueprintSection(page, 'Variables');
@@ -196,7 +172,7 @@ test.describe('Variables sidebar rows are informational', () => {
 test.describe('Bug #37 — Screener Disabled badge cannot be interacted with', () => {
   test('clicking the "Disabled" badge toggles the screener on or opens a config flow', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SCREENER_DISABLED_DEFINITION);
+    await importDefinition(page, SCREENER_DISABLED_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
 
     await openBlueprintSection(page, 'Screener');
@@ -222,7 +198,7 @@ test.describe('Bug #37 — Screener Disabled badge cannot be interacted with', (
 
   test('"Disabled" badge in Screener section has button role', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SCREENER_DISABLED_DEFINITION);
+    await importDefinition(page, SCREENER_DISABLED_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
 
     await openBlueprintSection(page, 'Screener');
@@ -240,7 +216,7 @@ test.describe('Bug #37 — Screener Disabled badge cannot be interacted with', (
 test.describe('Bug #47 — Section collapse arrow is frozen', () => {
   test('▶ arrow on a Section header rotates when the section is collapsed then expanded', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SETTINGS_DEFINITION);
+    await importDefinition(page, SETTINGS_DEFINITION);
     await page.waitForSelector('[data-testid="field-field1"]', { timeout: 5000 });
 
     await openBlueprintSection(page, 'Settings');
@@ -277,7 +253,7 @@ test.describe('Bug #47 — Section collapse arrow is frozen', () => {
 
   test('collapsing a Section hides its child rows', async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SETTINGS_DEFINITION);
+    await importDefinition(page, SETTINGS_DEFINITION);
     await page.waitForSelector('[data-testid="field-field1"]', { timeout: 5000 });
 
     await openBlueprintSection(page, 'Settings');

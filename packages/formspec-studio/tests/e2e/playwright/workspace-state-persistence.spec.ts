@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition } from './helpers';
+import { waitForApp, switchTab, importDefinition } from './helpers';
 
 const SEED_DEFINITION = {
   $formspec: '1.0',
@@ -13,7 +13,7 @@ const SEED_DEFINITION = {
 test.describe('Workspace state persistence', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SEED_DEFINITION);
+    await importDefinition(page, SEED_DEFINITION);
     await page.waitForSelector('[data-testid="field-name"]');
   });
 

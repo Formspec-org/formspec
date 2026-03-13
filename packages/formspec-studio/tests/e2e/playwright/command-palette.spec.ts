@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, seedDefinition } from './helpers';
+import { waitForApp, importDefinition } from './helpers';
 
 const SEED_DEFINITION = {
   $formspec: '1.0',
@@ -31,7 +31,7 @@ const LOGIC_SEED_DEFINITION = {
 test.describe('Command Palette', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SEED_DEFINITION);
+    await importDefinition(page, SEED_DEFINITION);
     await page.waitForSelector('[data-testid="field-firstName"]', { timeout: 5000 });
   });
 
@@ -117,7 +117,7 @@ test.describe('Command Palette', () => {
   // Logic workspace should produce results in a dedicated "Binds" or "Rules" section.
   test('bug #5: searching for a bind path shows bind rules and FEL expressions in results', async ({ page }) => {
     // Seed with a definition that has meaningful binds and shapes
-    await seedDefinition(page, LOGIC_SEED_DEFINITION);
+    await importDefinition(page, LOGIC_SEED_DEFINITION);
     await page.waitForSelector('[data-testid="field-grossIncome"]', { timeout: 5000 });
 
     await page.keyboard.press('Meta+k');
@@ -138,7 +138,7 @@ test.describe('Command Palette', () => {
 
   // Bug #5 (part 2): Searching for a shape constraint keyword should surface shape rules
   test('bug #5: searching for a shape name shows shape constraint rules in results', async ({ page }) => {
-    await seedDefinition(page, LOGIC_SEED_DEFINITION);
+    await importDefinition(page, LOGIC_SEED_DEFINITION);
     await page.waitForSelector('[data-testid="field-grossIncome"]', { timeout: 5000 });
 
     await page.keyboard.press('Meta+k');

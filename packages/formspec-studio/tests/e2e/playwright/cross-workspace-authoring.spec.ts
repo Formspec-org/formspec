@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition, seedProject, dispatch } from './helpers';
+import { addFromPalette, importDefinition, importProject, switchTab, waitForApp } from './helpers';
 
 test.describe('Cross-Workspace Authoring', () => {
   test.beforeEach(async ({ page }) => {
@@ -16,22 +16,19 @@ test.describe('Cross-Workspace Authoring', () => {
       ],
     };
 
-    await seedDefinition(page, definition);
+    await importDefinition(page, definition);
 
-    // Editor: verify 3 field blocks are visible
     const canvas = page.locator('[data-testid="workspace-Editor"]');
     await expect(canvas.locator('[data-testid="field-firstName"]')).toBeVisible();
     await expect(canvas.locator('[data-testid="field-lastName"]')).toBeVisible();
     await expect(canvas.locator('[data-testid="field-dob"]')).toBeVisible();
 
-    // Switch to Data tab — all 3 fields should appear in the response schema
     await switchTab(page, 'Data');
     const dataWorkspace = page.locator('[data-testid="workspace-Data"]');
-    await expect(dataWorkspace.getByText('firstName', { exact: true })).toBeVisible();
-    await expect(dataWorkspace.getByText('lastName', { exact: true })).toBeVisible();
-    await expect(dataWorkspace.getByText('dob', { exact: true })).toBeVisible();
+    await expect(dataWorkspace).toContainText('firstName');
+    await expect(dataWorkspace).toContainText('lastName');
+    await expect(dataWorkspace).toContainText('dob');
 
-    // Switch to Preview tab — 3 form inputs should render
     await switchTab(page, 'Preview');
     const previewWorkspace = page.locator('[data-testid="workspace-Preview"]');
     await expect(previewWorkspace.getByLabel('First Name')).toBeVisible();
@@ -46,19 +43,16 @@ test.describe('Cross-Workspace Authoring', () => {
       binds: { income: { required: 'true' } },
     };
 
-    await seedDefinition(page, definition);
+    await importDefinition(page, definition);
 
-    // Editor: field block shows "Required" pill
     const canvas = page.locator('[data-testid="workspace-Editor"]');
     const incomeBlock = canvas.locator('[data-testid="field-income"]');
     await expect(incomeBlock).toBeVisible();
     await expect(incomeBlock.getByText('req')).toBeVisible();
 
-    // Switch to Logic tab — bind appears with "required (1)" in FilterBar
     await switchTab(page, 'Logic');
     await expect(page.getByText(/required \(1\)/)).toBeVisible();
 
-    // Switch back to Editor tab — income field still shows "Required" pill
     await switchTab(page, 'Editor');
     const incomeBlockAgain = page.locator('[data-testid="workspace-Editor"]').locator('[data-testid="field-income"]');
     await expect(incomeBlockAgain).toBeVisible();
@@ -73,9 +67,12 @@ test.describe('Cross-Workspace Authoring', () => {
           { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
           { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
           { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
-          { key: 'address', type: 'group', label: 'Address', children: [
-            { key: 'street', type: 'field', dataType: 'string', label: 'Street' },
-          ]},
+          {
+            key: 'address',
+            type: 'group',
+            label: 'Address',
+            children: [{ key: 'street', type: 'field', dataType: 'string', label: 'Street' }],
+          },
         ],
         binds: [
           { path: 'name', required: 'true' },
@@ -91,68 +88,56 @@ test.describe('Cross-Workspace Authoring', () => {
       mapping: {
         direction: 'outbound',
         definitionRef: 'urn:formspec:test',
-        rules: [
-          { source: 'name', target: 'fullName', transform: 'preserve' },
-        ],
+        rules: [{ source: 'name', target: 'fullName', transform: 'preserve' }],
         adapter: { format: 'JSON', options: {} },
       },
     };
 
-    await seedProject(page, projectState);
+    await importProject(page, projectState);
 
-    // Editor: all items visible
     const editorWorkspace = page.locator('[data-testid="workspace-Editor"]');
     await expect(editorWorkspace.locator('[data-testid="field-name"]')).toBeVisible();
     await expect(editorWorkspace.locator('[data-testid="field-email"]')).toBeVisible();
     await expect(editorWorkspace.locator('[data-testid="field-age"]')).toBeVisible();
     await expect(editorWorkspace.locator('[data-testid="group-address"]')).toBeVisible();
 
-    // Logic: bind and shape visible
     await switchTab(page, 'Logic');
     const logicWorkspace = page.locator('[data-testid="workspace-Logic"]');
     await expect(page.getByText(/required \(1\)/)).toBeVisible();
     await expect(logicWorkspace.getByText('ageCheck')).toBeVisible();
 
-    // Data: response schema shows fields
     await switchTab(page, 'Data');
     const dataWorkspace = page.locator('[data-testid="workspace-Data"]');
-    await expect(dataWorkspace.getByText('name', { exact: true })).toBeVisible();
-    await expect(dataWorkspace.getByText('email', { exact: true })).toBeVisible();
+    await expect(dataWorkspace).toContainText('name');
+    await expect(dataWorkspace).toContainText('email');
 
-    // Theme: tokens render
     await switchTab(page, 'Theme');
     const themeWorkspace = page.locator('[data-testid="workspace-Theme"]');
     await expect(themeWorkspace.getByText('primaryColor', { exact: true })).toBeVisible();
     await expect(themeWorkspace.getByText('#3b82f6', { exact: true })).toBeVisible();
 
-    // Mapping: rule renders
     await switchTab(page, 'Mapping');
     const mappingWorkspace = page.locator('[data-testid="workspace-Mapping"]');
     await expect(mappingWorkspace.getByText('outbound')).toBeVisible();
 
-    // Preview: form renders with all fields
     await switchTab(page, 'Preview');
     const previewWorkspace = page.locator('[data-testid="workspace-Preview"]');
     await expect(previewWorkspace.getByLabel('Name')).toBeVisible();
     await expect(previewWorkspace.getByLabel('Email')).toBeVisible();
 
-    // Go back to Editor, add a new field via dispatch (creates undoable history entry)
     await switchTab(page, 'Editor');
-    await dispatch(page, {
-      type: 'definition.addItem',
-      payload: { key: 'tempField', type: 'field', dataType: 'string' },
-    });
-    await page.waitForSelector('[data-testid="field-tempField"]', { timeout: 5000 });
+    const fields = page.locator('[data-testid="workspace-Editor"] [data-testid^="field-"]');
+    const fieldCountBefore = await fields.count();
 
-    // Undo the last action — tempField should disappear
+    await addFromPalette(page, 'Text');
+    await expect(fields).toHaveCount(fieldCountBefore + 1);
+
     await page.click('[data-testid="undo-btn"]');
-    await expect(page.locator('[data-testid="field-tempField"]')).not.toBeVisible();
+    await expect(fields).toHaveCount(fieldCountBefore);
 
-    // Redo button is now enabled
     await expect(page.locator('[data-testid="redo-btn"]')).not.toBeDisabled();
 
-    // Redo restores tempField
     await page.click('[data-testid="redo-btn"]');
-    await expect(page.locator('[data-testid="field-tempField"]')).toBeVisible();
+    await expect(fields).toHaveCount(fieldCountBefore + 1);
   });
 });

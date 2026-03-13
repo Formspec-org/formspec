@@ -1,101 +1,80 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, dispatch, seedDefinition } from './helpers';
+import { addFromPalette, importDefinition, waitForApp } from './helpers';
 
 test.describe('Undo / Redo', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    // Clear the definition to have a clean slate for undo/redo tests
-    await seedDefinition(page, { $formspec: '1.0', url: 'urn:test', items: [] });
+    await importDefinition(page, { $formspec: '1.0', url: 'urn:test', items: [] });
+    await expect(page.locator('[data-testid="status-bar"]')).toContainText('0 fields');
   });
 
-  // Helper: add a field via dispatch and wait for its block to appear.
-  async function addField(page: any, key: string) {
-    await dispatch(page, {
-      type: 'definition.addItem',
-      payload: { key, type: 'field', dataType: 'string' },
-    });
-    await page.waitForSelector(`[data-testid="field-${key}"]`, { timeout: 5000 });
-  }
-
   test('Undo button removes last added field', async ({ page }) => {
-    await addField(page, 'testField');
+    const fields = page.locator('[data-testid^="field-"]');
 
-    // Field block should be visible
-    await expect(page.locator('[data-testid="field-testField"]')).toBeVisible();
+    await addFromPalette(page, 'Text');
+    await expect(fields).toHaveCount(1);
 
-    // Click Undo
     await page.click('[data-testid="undo-btn"]');
-
-    // Field should be gone
-    await expect(page.locator('[data-testid="field-testField"]')).not.toBeVisible();
-
-    // Undo button should now be disabled (nothing left to undo)
-    await expect(page.locator('[data-testid="undo-btn"]')).toBeDisabled();
+    await expect(fields).toHaveCount(0);
   });
 
   test('Redo button re-applies the undone change', async ({ page }) => {
-    await addField(page, 'testField');
+    const fields = page.locator('[data-testid^="field-"]');
 
-    // Undo it
+    await addFromPalette(page, 'Text');
+    await expect(fields).toHaveCount(1);
+
     await page.click('[data-testid="undo-btn"]');
-    await expect(page.locator('[data-testid="field-testField"]')).not.toBeVisible();
+    await expect(fields).toHaveCount(0);
 
-    // Redo it
     await page.click('[data-testid="redo-btn"]');
-
-    // Field should be back
-    await expect(page.locator('[data-testid="field-testField"]')).toBeVisible();
+    await expect(fields).toHaveCount(1);
   });
 
   test('keyboard Cmd+Z undoes last change', async ({ page }) => {
-    await addField(page, 'kbField');
+    const fields = page.locator('[data-testid^="field-"]');
 
-    // Press Cmd+Z
+    await addFromPalette(page, 'Text');
+    await expect(fields).toHaveCount(1);
+
+    await page.click('[data-testid="workspace-Editor"]', { position: { x: 10, y: 5 } });
     await page.keyboard.press('Meta+z');
-
-    await expect(page.locator('[data-testid="field-kbField"]')).not.toBeVisible();
+    await expect(fields).toHaveCount(0);
   });
 
   test('keyboard Cmd+Shift+Z redoes the undone change', async ({ page }) => {
-    await addField(page, 'kbRedoField');
+    const fields = page.locator('[data-testid^="field-"]');
 
-    // Undo via keyboard
+    await addFromPalette(page, 'Text');
+    await expect(fields).toHaveCount(1);
+
+    await page.click('[data-testid="workspace-Editor"]', { position: { x: 10, y: 5 } });
     await page.keyboard.press('Meta+z');
-    await expect(page.locator('[data-testid="field-kbRedoField"]')).not.toBeVisible();
+    await expect(fields).toHaveCount(0);
 
-    // Redo via keyboard
     await page.keyboard.press('Meta+Shift+z');
-    await expect(page.locator('[data-testid="field-kbRedoField"]')).toBeVisible();
+    await expect(fields).toHaveCount(1);
   });
 
   test('multiple undo steps walk back through history', async ({ page }) => {
-    await addField(page, 'fieldA');
-    await addField(page, 'fieldB');
-    await addField(page, 'fieldC');
+    const fields = page.locator('[data-testid^="field-"]');
 
-    // All three should be visible
-    await expect(page.locator('[data-testid="field-fieldA"]')).toBeVisible();
-    await expect(page.locator('[data-testid="field-fieldB"]')).toBeVisible();
-    await expect(page.locator('[data-testid="field-fieldC"]')).toBeVisible();
+    await addFromPalette(page, 'Text');
+    await addFromPalette(page, 'Integer');
+    await addFromPalette(page, 'Date');
+    await expect(fields).toHaveCount(3);
 
-    // Undo fieldC
+    await page.click('[data-testid="workspace-Editor"]', { position: { x: 10, y: 5 } });
     await page.keyboard.press('Meta+z');
-    await expect(page.locator('[data-testid="field-fieldC"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="field-fieldA"]')).toBeVisible();
-    await expect(page.locator('[data-testid="field-fieldB"]')).toBeVisible();
+    await expect(fields).toHaveCount(2);
 
-    // Undo fieldB
     await page.keyboard.press('Meta+z');
-    await expect(page.locator('[data-testid="field-fieldB"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="field-fieldA"]')).toBeVisible();
+    await expect(fields).toHaveCount(1);
 
-    // Undo fieldA
     await page.keyboard.press('Meta+z');
-    await expect(page.locator('[data-testid="field-fieldA"]')).not.toBeVisible();
+    await expect(fields).toHaveCount(0);
 
-    // Redo once — fieldA comes back
     await page.keyboard.press('Meta+Shift+z');
-    await expect(page.locator('[data-testid="field-fieldA"]')).toBeVisible();
-    await expect(page.locator('[data-testid="field-fieldB"]')).not.toBeVisible();
+    await expect(fields).toHaveCount(1);
   });
 });

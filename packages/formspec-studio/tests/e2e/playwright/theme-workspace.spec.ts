@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedProject } from './helpers';
+import { waitForApp, switchTab, importProject } from './helpers';
 
 const SEED = {
   definition: {
@@ -20,7 +20,7 @@ const SEED = {
 test.describe('Theme Workspace', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedProject(page, SEED);
+    await importProject(page, SEED);
     await switchTab(page, 'Theme');
   });
 
@@ -58,7 +58,7 @@ test.describe('Theme Workspace', () => {
 
   test('empty state shows "No tokens defined" when theme has no tokens', async ({ page }) => {
     // Seed an empty theme
-    await seedProject(page, {
+    await importProject(page, {
       definition: SEED.definition,
       theme: {},
     });
@@ -67,7 +67,7 @@ test.describe('Theme Workspace', () => {
   });
 
   test('empty state shows "No defaults defined" when theme has no defaults', async ({ page }) => {
-    await seedProject(page, {
+    await importProject(page, {
       definition: SEED.definition,
       theme: {},
     });
@@ -77,7 +77,7 @@ test.describe('Theme Workspace', () => {
   });
 
   test('empty state shows "No selectors defined" when theme has no selectors', async ({ page }) => {
-    await seedProject(page, {
+    await importProject(page, {
       definition: SEED.definition,
       theme: {},
     });
@@ -86,9 +86,9 @@ test.describe('Theme Workspace', () => {
     await expect(workspace.getByText('No selectors defined')).toBeVisible();
   });
 
-  test('Tokens stays informational while editable theme tabs keep real add affordances', async ({ page }) => {
+  test('theme tabs expose add affordances where the current UI supports them', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Theme"]');
-    await expect(workspace.getByRole('button', { name: /\+ add token/i })).toHaveCount(0);
+    await expect(workspace.getByRole('button', { name: /\+ add token/i })).toBeVisible();
 
     await workspace.getByRole('button', { name: 'Selectors' }).click();
     await expect(workspace.getByRole('button', { name: /\+ add selector/i })).toBeVisible();

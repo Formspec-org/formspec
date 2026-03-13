@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition } from './helpers';
+import { waitForApp, switchTab, importDefinition } from './helpers';
 
 const PREVIEW_DEF = {
   $formspec: '1.0',
@@ -51,7 +51,7 @@ const REPEATABLE_DEF = {
 test.describe('Preview Workspace', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, PREVIEW_DEF);
+    await importDefinition(page, PREVIEW_DEF);
     await switchTab(page, 'Preview');
   });
 
@@ -122,7 +122,7 @@ test.describe('Preview Workspace', () => {
   });
 
   test('calculated preview fields recalculate when the source field changes', async ({ page }) => {
-    await seedDefinition(page, CALCULATED_DEF);
+    await importDefinition(page, CALCULATED_DEF);
     await switchTab(page, 'Preview');
 
     const workspace = page.locator('[data-testid="workspace-Preview"]');
@@ -135,7 +135,7 @@ test.describe('Preview Workspace', () => {
   });
 
   test('repeatable preview groups expose a Remove action after adding an instance', async ({ page }) => {
-    await seedDefinition(page, REPEATABLE_DEF);
+    await importDefinition(page, REPEATABLE_DEF);
     await switchTab(page, 'Preview');
 
     const workspace = page.locator('[data-testid="workspace-Preview"]');
@@ -173,7 +173,7 @@ test.describe('Preview Workspace', () => {
     // Seed a definition that includes a choice-type field; a properly authored component
     // document should bind it to a Dropdown or Select widget — not the generic TextInput
     // fallback that the automatic rebuild assigns to every field.
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       items: [
         { key: 'fullName', type: 'field', dataType: 'string', label: 'Full Name' },

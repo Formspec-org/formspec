@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition } from './helpers';
+import { waitForApp, switchTab, importDefinition } from './helpers';
 
 const PREVIEW_TYPES_DEF = {
   $formspec: '1.0',
@@ -25,7 +25,7 @@ const PREVIEW_TYPES_DEF = {
 test.describe('Preview field types', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, PREVIEW_TYPES_DEF);
+    await importDefinition(page, PREVIEW_TYPES_DEF);
     await switchTab(page, 'Preview');
   });
 

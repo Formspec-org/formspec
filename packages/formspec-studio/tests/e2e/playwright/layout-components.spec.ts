@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, seedDefinition } from './helpers';
+import { addFromPalette, importDefinition, waitForApp } from './helpers';
 
 const SEED_DEF = {
   $formspec: '1.0',
@@ -11,14 +11,6 @@ const SEED_DEF = {
     { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
   ],
 };
-
-/** Click a palette button by label, scoped to the palette overlay. */
-async function addFromPalette(page: import('@playwright/test').Page, label: string) {
-  await page.click('[data-testid="add-item"]');
-  const palette = page.locator('[data-testid="add-item-palette"]');
-  await palette.waitFor();
-  await palette.getByRole('button', { name: new RegExp(`^${label}\\b`) }).click();
-}
 
 /**
  * Right-click the layout container's pill (the component type label area),
@@ -33,7 +25,7 @@ async function rightClickLayoutPill(page: import('@playwright/test').Page) {
 test.describe('Layout Components', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SEED_DEF);
+    await importDefinition(page, SEED_DEF);
     await page.waitForSelector('[data-testid="field-name"]', { timeout: 5000 });
   });
 

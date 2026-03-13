@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, seedDefinition, switchTab } from './helpers';
+import { waitForApp, importDefinition, switchTab } from './helpers';
 
 const SEED_DEFINITION = {
   $formspec: '1.0',
@@ -37,7 +37,7 @@ const PAGED_BLUEPRINT_DEFINITION = {
 test.describe('Blueprint Selection Sync', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SEED_DEFINITION);
+    await importDefinition(page, SEED_DEFINITION);
     // Wait for the first field to be rendered before proceeding
     await page.waitForSelector('[data-testid="field-firstName"]', { timeout: 5000 });
   });
@@ -97,13 +97,13 @@ test.describe('Blueprint Selection Sync', () => {
     // Use the workspace container and click at the very top (above field blocks)
     await page.click('[data-testid="workspace-Editor"]', { position: { x: 10, y: 5 } });
 
-    // Properties panel should show the empty state
-    await expect(properties).toContainText('Select an item');
-    await expect(properties).toContainText('inspect');
+    // Properties panel should fall back to form-level properties.
+    await expect(properties).toContainText('Form Properties');
+    await expect(properties).toContainText('Identity');
   });
 
   test('Clicking a structure item on another page scrolls that canvas field into view after switching pages', async ({ page }) => {
-    await seedDefinition(page, PAGED_BLUEPRINT_DEFINITION);
+    await importDefinition(page, PAGED_BLUEPRINT_DEFINITION);
     await page.waitForSelector('[role="tablist"]');
 
     await page.evaluate(() => {

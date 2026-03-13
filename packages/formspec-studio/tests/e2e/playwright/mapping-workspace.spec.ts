@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedProject } from './helpers';
+import { waitForApp, switchTab, importProject } from './helpers';
 
 const SEED = {
   definition: {
@@ -20,7 +20,7 @@ const SEED = {
 test.describe('Mapping Workspace', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedProject(page, SEED);
+    await importProject(page, SEED);
     await switchTab(page, 'Mapping');
   });
 

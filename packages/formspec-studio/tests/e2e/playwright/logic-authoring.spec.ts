@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition } from './helpers';
+import { waitForApp, switchTab, importDefinition } from './helpers';
 
 const LOGIC_DEFINITION = {
   $formspec: '1.0',
@@ -64,7 +64,7 @@ const MULTI_SHAPE_DEFINITION = {
 test.describe('Logic Workspace', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, LOGIC_DEFINITION);
+    await importDefinition(page, LOGIC_DEFINITION);
     await switchTab(page, 'Logic');
   });
 
@@ -122,7 +122,7 @@ test.describe('Logic Workspace', () => {
 test.describe('Logic Workspace — shapes show full detail for every card (#50)', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, MULTI_SHAPE_DEFINITION);
+    await importDefinition(page, MULTI_SHAPE_DEFINITION);
     await switchTab(page, 'Logic');
   });
 
@@ -169,7 +169,7 @@ test.describe('Logic Workspace — shapes show full detail for every card (#50)'
 test.describe('Logic Workspace — FEL reference popup function click (#55)', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, LOGIC_DEFINITION);
+    await importDefinition(page, LOGIC_DEFINITION);
     await switchTab(page, 'Logic');
   });
 
@@ -233,7 +233,7 @@ test.describe('Logic Workspace — FEL reference popup function click (#55)', ()
 test.describe('Logic Workspace — variable expressions stay read-only', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, LOGIC_DEFINITION);
+    await importDefinition(page, LOGIC_DEFINITION);
     await switchTab(page, 'Logic');
   });
 

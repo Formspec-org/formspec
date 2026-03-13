@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition, selectField } from './helpers';
+import { waitForApp, switchTab, importDefinition, selectField } from './helpers';
 
 const CHOICE_DEF = {
   $formspec: '1.0',
@@ -22,7 +22,7 @@ const CHOICE_DEF = {
 test.describe('widgetHint affects preview rendering', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, CHOICE_DEF);
+    await importDefinition(page, CHOICE_DEF);
   });
 
   test('choice field renders as select dropdown by default', async ({ page }) => {
@@ -107,7 +107,7 @@ test.describe('widget change works in wizard mode', () => {
 
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, WIZARD_CHOICE_DEF);
+    await importDefinition(page, WIZARD_CHOICE_DEF);
   });
 
   test('choice field renders as select by default, radiogroup after widget change', async ({ page }) => {

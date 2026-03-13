@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, seedDefinition } from './helpers';
+import { waitForApp, importDefinition } from './helpers';
 
 test.describe('Shell responsive chrome', () => {
   test.beforeEach(async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe('Shell responsive chrome', () => {
   // <a> element with a meaningful href attribute.
   test('status bar URL is rendered as an anchor element with an href [BUG-067]', async ({ page }) => {
     // Seed a definition with a known URL value so we can query for it
-    await seedDefinition(page, {
+    await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:test:status-bar-url',
       items: [],

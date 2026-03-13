@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, seedDefinition } from './helpers';
+import { waitForApp, importDefinition } from './helpers';
 
 const SEED_DEFINITION = {
   $formspec: '1.0',
@@ -11,7 +11,7 @@ const SEED_DEFINITION = {
 test.describe('Interaction Patterns', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
-    await seedDefinition(page, SEED_DEFINITION);
+    await importDefinition(page, SEED_DEFINITION);
     await page.waitForSelector('[data-testid="field-myField"]', { timeout: 5000 });
   });
 
@@ -71,7 +71,7 @@ test.describe('Interaction Patterns', () => {
     });
 
     test('clicking Move Down changes the field order', async ({ page }) => {
-      await seedDefinition(page, {
+      await importDefinition(page, {
         $formspec: '1.0',
         items: [
           { key: 'firstField', type: 'field', dataType: 'string', label: 'First Field' },
@@ -170,7 +170,7 @@ test.describe('Interaction Patterns', () => {
 
     test('Backspace key removes the selected field', async ({ page }) => {
       // Seed a second field to delete via Backspace
-      await seedDefinition(page, {
+      await importDefinition(page, {
         $formspec: '1.0',
         items: [
           { key: 'toRemove', type: 'field', dataType: 'string', label: 'To Remove' },
@@ -201,7 +201,7 @@ test.describe('Interaction Patterns', () => {
     });
 
     test('Tab moves focus to the next field card instead of jumping into the inspector', async ({ page }) => {
-      await seedDefinition(page, {
+      await importDefinition(page, {
         $formspec: '1.0',
         items: [
           { key: 'firstField', type: 'field', dataType: 'string', label: 'First Field' },
