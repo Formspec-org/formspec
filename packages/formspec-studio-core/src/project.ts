@@ -240,6 +240,16 @@ export class Project {
     this._state = createDefaultState(options);
     this._maxHistory = options?.maxHistoryDepth ?? DEFAULT_MAX_HISTORY;
     this._middleware = options?.middleware ?? [];
+
+    // Auto-build the component tree when a definition with items is seeded
+    // but no component document was provided (mirrors project.import behavior).
+    if (
+      this._state.definition.items.length > 0 &&
+      !options?.seed?.component &&
+      !this._state.component.tree
+    ) {
+      this._rebuildComponentTree();
+    }
   }
 
   // ── Reading state ────────────────────────────────────────────────

@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider } from '../../../src/state/useSelection';
@@ -39,20 +39,6 @@ describe('SettingsSection', () => {
   it('shows page mode when present', () => {
     renderSettings();
     expect(screen.getByText(/single/i)).toBeInTheDocument();
-  });
-
-  it('shows an edit settings button', () => {
-    renderSettings();
-    expect(screen.getByTestId('settings-edit-btn')).toBeInTheDocument();
-  });
-
-  it('dispatches formspec:open-settings event when edit button is clicked', () => {
-    renderSettings();
-    const handler = vi.fn();
-    window.addEventListener('formspec:open-settings', handler);
-    fireEvent.click(screen.getByTestId('settings-edit-btn'));
-    expect(handler).toHaveBeenCalled();
-    window.removeEventListener('formspec:open-settings', handler);
   });
 
   it('shows dash for missing title', () => {

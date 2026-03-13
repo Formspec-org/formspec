@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
 import { useActivePage } from '../../state/useActivePage';
 import { useDispatch } from '../../state/useDispatch';
+import { useProject } from '../../state/useProject';
 import { useCanvasTargets } from '../../state/useCanvasTargets';
-import { bindsFor } from '../../lib/field-helpers';
+import { bindsFor, flatItems } from '../../lib/field-helpers';
+import { pruneDescendants, sortForBatchDelete } from '../../lib/selection-helpers';
 import { FieldBlock } from './FieldBlock';
 import { GroupBlock } from './GroupBlock';
 import { DisplayBlock } from './DisplayBlock';
@@ -28,8 +30,9 @@ interface Item {
 function renderItems(
   items: Item[],
   allBinds: Record<string, Record<string, string>> | undefined,
-  selectedKey: string | null,
-  select: (key: string, type: string) => void,
+  primaryKey: string | null,
+  selectedKeys: Set<string>,
+  handleItemClick: (e: React.MouseEvent, path: string, type: string) => void,
   registerTarget: (path: string, element: HTMLElement | null) => void,
   depth: number,
   prefix: string,
@@ -37,7 +40,8 @@ function renderItems(
   const nodes: React.ReactNode[] = [];
   for (const item of items) {
     const path = prefix ? `${prefix}.${item.key}` : item.key;
-    const isSelected = selectedKey === path;
+    const isPrimary = primaryKey === path;
+    const inSelection = selectedKeys.has(path) && !isPrimary;
 
     if (item.type === 'group') {
       nodes.push(
@@ -51,11 +55,12 @@ function renderItems(
           minRepeat={item.minRepeat}
           maxRepeat={item.maxRepeat}
           depth={depth}
-          selected={isSelected}
-          onSelect={() => select(path, 'group')}
+          selected={isPrimary}
+          isInSelection={inSelection}
+          onSelect={(e) => handleItemClick(e, path, 'group')}
         >
           {item.children
-            ? renderItems(item.children, allBinds, selectedKey, select, registerTarget, depth + 1, path)
+            ? renderItems(item.children, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, depth + 1, path)
             : null}
         </GroupBlock>
       );
@@ -68,8 +73,9 @@ function renderItems(
           registerTarget={registerTarget}
           label={item.label}
           depth={depth}
-          selected={isSelected}
-          onSelect={() => select(path, 'display')}
+          selected={isPrimary}
+          isInSelection={inSelection}
+          onSelect={(e) => handleItemClick(e, path, 'display')}
         />
       );
     } else {
@@ -84,8 +90,9 @@ function renderItems(
           dataType={item.dataType}
           binds={bindsFor(allBinds, path)}
           depth={depth}
-          selected={isSelected}
-          onSelect={() => select(path, item.type)}
+          selected={isPrimary}
+          isInSelection={inSelection}
+          onSelect={(e) => handleItemClick(e, path, item.type)}
         />
       );
     }
@@ -141,9 +148,14 @@ function clampContextMenuPosition(x: number, y: number) {
 
 export function EditorCanvas() {
   const definition = useDefinition();
-  const { selectedKey, select, selectAndFocusInspector, deselect } = useSelection();
+  const {
+    selectedKeys, primaryKey, selectionCount,
+    select, toggleSelect, rangeSelect,
+    selectAndFocusInspector, deselect,
+  } = useSelection();
   const { activePageKey, setActivePageKey } = useActivePage();
   const dispatch = useDispatch();
+  const project = useProject();
   const { registerTarget } = useCanvasTargets();
   const [showPicker, setShowPicker] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -176,6 +188,22 @@ export function EditorCanvas() {
   const displayItems: Item[] = hasPaged
     ? [...rootItems, topLevelGroups[activePageIndex]].filter(Boolean)
     : items;
+
+  // Flat ordering for range-select (shift+click)
+  const flatOrder = useMemo(
+    () => flatItems(displayItems as any).map(f => f.path),
+    [displayItems],
+  );
+
+  const handleItemClick = useCallback((e: React.MouseEvent, path: string, type: string) => {
+    if (e.metaKey || e.ctrlKey) {
+      toggleSelect(path, type);
+    } else if (e.shiftKey) {
+      rangeSelect(path, type, flatOrder);
+    } else {
+      select(path, type);
+    }
+  }, [toggleSelect, rangeSelect, select, flatOrder]);
 
   const handleAddItem = (opt: FieldTypeOption) => {
     const key = uniqueKey(opt.dataType ?? opt.itemType);
@@ -211,6 +239,10 @@ export function EditorCanvas() {
       setContextMenu({ ...position, kind: 'canvas' });
       return;
     }
+    // Right-click on item not in selection → clear and select just that item
+    if (!selectedKeys.has(itemPath)) {
+      select(itemPath, itemType);
+    }
     setContextMenu({ ...position, kind: 'item', path: itemPath, type: itemType });
   };
 
@@ -237,6 +269,16 @@ export function EditorCanvas() {
     };
   }, [contextMenu]);
 
+  // Escape to deselect (only when context menu is not open)
+  useEffect(() => {
+    if (contextMenu) return; // context menu's own Escape handler takes priority
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') deselect();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [contextMenu, deselect]);
+
   const handleContextAction = (action: string) => {
     if (!contextMenu) return;
     if (contextMenu.kind === 'canvas') {
@@ -246,6 +288,57 @@ export function EditorCanvas() {
     }
     const path = contextMenu.path;
     if (!path) return;
+
+    // Batch operations when multiple items selected
+    if (selectionCount > 1) {
+      switch (action) {
+        case 'batchDelete': {
+          const pruned = pruneDescendants(selectedKeys);
+          const sorted = sortForBatchDelete(pruned);
+          project.batch(sorted.map(p => ({ type: 'definition.deleteItem', payload: { path: p } })));
+          deselect();
+          break;
+        }
+        case 'batchDuplicate': {
+          const pruned = pruneDescendants(selectedKeys);
+          const sorted = sortForBatchDelete(pruned);
+          project.batch(sorted.map(p => ({ type: 'definition.duplicateItem', payload: { path: p } })));
+          break;
+        }
+        case 'wrapInGroup': {
+          // Find common parent of all selected items
+          const pruned = pruneDescendants(selectedKeys);
+          if (pruned.length === 0) break;
+          // Use the first item's parent as the insertion point
+          const firstLocation = findItemLocation(items, pruned[0]);
+          if (!firstLocation) break;
+          const wrapperKey = uniqueKey('group');
+          const addResult = dispatch({
+            type: 'definition.addItem',
+            payload: {
+              key: wrapperKey,
+              type: 'group',
+              label: 'Group',
+              ...(firstLocation.parentPath ? { parentPath: firstLocation.parentPath } : {}),
+              insertIndex: firstLocation.index,
+            },
+          });
+          const targetParentPath = addResult.insertedPath
+            ?? (firstLocation.parentPath ? `${firstLocation.parentPath}.${wrapperKey}` : wrapperKey);
+          // Move each item into the new group — use batch for atomic undo
+          project.batch(pruned.map((p, i) => ({
+            type: 'definition.moveItem',
+            payload: { sourcePath: p, targetParentPath, targetIndex: i },
+          })));
+          deselect();
+          break;
+        }
+      }
+      setContextMenu(null);
+      return;
+    }
+
+    // Single-item operations
     switch (action) {
       case 'duplicate':
         dispatch({ type: 'definition.duplicateItem', payload: { path } });
@@ -284,6 +377,21 @@ export function EditorCanvas() {
     }
     setContextMenu(null);
   };
+
+  // Build context menu items based on selection state
+  const contextMenuItems = (() => {
+    if (!contextMenu || contextMenu.kind === 'canvas') {
+      return [{ label: 'Add Item', action: 'addItem' }];
+    }
+    if (selectionCount > 1) {
+      return [
+        { label: `Delete ${selectionCount} items`, action: 'batchDelete' },
+        { label: `Duplicate ${selectionCount} items`, action: 'batchDuplicate' },
+        { label: 'Wrap in Group', action: 'wrapInGroup' },
+      ];
+    }
+    return undefined; // default single-item menu
+  })();
 
   const formTitle = (definition as any)?.title;
   const formUrl = (definition as any)?.url;
@@ -327,7 +435,7 @@ export function EditorCanvas() {
           onClose={() => setShowPicker(false)}
           onAdd={handleAddItem}
         />
-        {renderItems(displayItems, allBinds, selectedKey, select, registerCanvasTarget, 0, '')}
+        {renderItems(displayItems, allBinds, primaryKey, selectedKeys, handleItemClick, registerCanvasTarget, 0, '')}
         <button
           data-testid="add-item"
           className="fixed bottom-3 left-3 right-3 z-10 flex items-center justify-center gap-1.5 rounded-[4px] border border-dashed border-border bg-surface py-2.5 font-mono text-[11.5px] text-muted shadow-sm transition-colors cursor-pointer hover:border-accent/50 hover:text-ink sm:static sm:mt-3 sm:w-full sm:bg-transparent sm:shadow-none"
@@ -345,9 +453,7 @@ export function EditorCanvas() {
           <EditorContextMenu
             onAction={handleContextAction}
             onClose={() => setContextMenu(null)}
-            items={contextMenu.kind === 'canvas'
-              ? [{ label: 'Add Item', action: 'addItem' }]
-              : undefined}
+            items={contextMenuItems}
             testId={contextMenu.kind === 'canvas' ? 'canvas-context-menu' : 'context-menu'}
           />
         </div>

@@ -2,7 +2,9 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { useSelection } from '../../state/useSelection';
 import { useDefinition } from '../../state/useDefinition';
 import { useDispatch } from '../../state/useDispatch';
+import { useProject } from '../../state/useProject';
 import { flatItems, bindsFor, arrayBindsFor, dataTypeInfo, shapesFor, compatibleWidgets, propertyHelp } from '../../lib/field-helpers';
+import { pruneDescendants, sortForBatchDelete } from '../../lib/selection-helpers';
 import { Section } from '../../components/ui/Section';
 import { PropertyRow } from '../../components/ui/PropertyRow';
 import { BindCard } from '../../components/ui/BindCard';
@@ -46,17 +48,21 @@ function PropInput({
   );
 }
 
-/** "+ Add ___" placeholder that reveals on click. */
-function AddPlaceholder({ label, onAdd }: { label: string; onAdd: () => void }) {
-  return (
+/** "+ Add ___" placeholder that reveals on click. Wraps in HelpTip when help is provided. */
+function AddPlaceholder({ label, onAdd, help }: { label: string; onAdd: () => void; help?: string }) {
+  const btn = (
     <button
       type="button"
-      className="text-[11px] text-muted hover:text-accent font-mono cursor-pointer transition-colors mb-2"
+      className="text-[11px] text-muted hover:text-accent font-mono cursor-pointer transition-colors"
       onClick={onAdd}
     >
       + Add {label}
     </button>
   );
+  if (help) {
+    return <HelpTip text={help}>{btn}</HelpTip>;
+  }
+  return btn;
 }
 
 /**
@@ -64,9 +70,10 @@ function AddPlaceholder({ label, onAdd }: { label: string; onAdd: () => void }) 
  * When nothing is selected, shows definition-level properties.
  */
 export function ItemProperties({ showActions = true }: { showActions?: boolean }) {
-  const { selectedKey, selectedType, select, shouldFocusInspector, consumeFocusInspector } = useSelection();
+  const { selectedKey, selectedType, selectedKeys, selectionCount, select, deselect, shouldFocusInspector, consumeFocusInspector } = useSelection();
   const definition = useDefinition();
   const dispatch = useDispatch();
+  const project = useProject();
   const keyInputRef = useRef<HTMLInputElement>(null);
 
   const handleRename = useCallback(
@@ -121,6 +128,18 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
     el.select();
     consumeFocusInspector();
   }, [shouldFocusInspector, itemPath, consumeFocusInspector]);
+
+  // --- Multi-select summary ---
+  if (selectionCount > 1) {
+    return (
+      <MultiSelectSummary
+        selectionCount={selectionCount}
+        selectedKeys={selectedKeys}
+        project={project}
+        deselect={deselect}
+      />
+    );
+  }
 
   // --- Nothing selected: definition-level properties ---
   if (!selectedKey) {
@@ -253,12 +272,14 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
           </Section>
         ) : (
           <div className="mb-4">
-            <button
-              type="button"
-              className="text-[11px] text-muted hover:text-accent font-mono cursor-pointer transition-colors"
-            >
-              + Add behavior rule →
-            </button>
+            <HelpTip text="Behavior rules control when fields are visible, required, readonly, or have calculated values. Opens the Logic tab.">
+              <button
+                type="button"
+                className="text-[11px] text-muted hover:text-accent font-mono cursor-pointer transition-colors"
+              >
+                + Add behavior rule →
+              </button>
+            </HelpTip>
           </div>
         )}
 
@@ -302,27 +323,43 @@ function DescriptionHintSection({ path, item, dispatch }: { path: string; item: 
   const [showDesc, setShowDesc] = useState(!!item.description);
   const [showHint, setShowHint] = useState(!!item.hint);
 
+  const descIsPlaceholder = !showDesc && !item.description;
+  const hintIsPlaceholder = !showHint && !item.hint;
+  const bothPlaceholders = descIsPlaceholder && hintIsPlaceholder;
+
   return (
     <Section title="Content">
-      {showDesc || item.description ? (
-        <PropInput path={path} property="description" label="Description"
-          value={(item.description as string) ?? ''} dispatch={dispatch} help={propertyHelp.description} />
+      {bothPlaceholders ? (
+        <div className="flex gap-3 mb-2">
+          <AddPlaceholder label="description" onAdd={() => setShowDesc(true)} help={propertyHelp.description} />
+          <AddPlaceholder label="hint" onAdd={() => setShowHint(true)} help={propertyHelp.hint} />
+        </div>
       ) : (
-        <AddPlaceholder label="description" onAdd={() => setShowDesc(true)} />
-      )}
-      {showHint || item.hint ? (
-        <PropInput path={path} property="hint" label="Hint"
-          value={(item.hint as string) ?? ''} dispatch={dispatch} help={propertyHelp.hint} />
-      ) : (
-        <AddPlaceholder label="hint" onAdd={() => setShowHint(true)} />
+        <>
+          {descIsPlaceholder ? (
+            <AddPlaceholder label="description" onAdd={() => setShowDesc(true)} help={propertyHelp.description} />
+          ) : (
+            <PropInput path={path} property="description" label="Description"
+              value={(item.description as string) ?? ''} dispatch={dispatch} help={propertyHelp.description} />
+          )}
+          {hintIsPlaceholder ? (
+            <AddPlaceholder label="hint" onAdd={() => setShowHint(true)} help={propertyHelp.hint} />
+          ) : (
+            <PropInput path={path} property="hint" label="Hint"
+              value={(item.hint as string) ?? ''} dispatch={dispatch} help={propertyHelp.hint} />
+          )}
+        </>
       )}
     </Section>
   );
 }
 
 function WidgetHintSection({ path, item, dispatch }: { path: string; item: any; dispatch: any }) {
+  const project = useProject();
   const widgets = compatibleWidgets(item.type, item.dataType);
-  const currentWidget = (item.presentation as any)?.widgetHint ?? '';
+  // Read current widget from the component tree (Tier 3), not definition presentation (Tier 1)
+  const treeNode = project.componentFor(item.key);
+  const currentWidget = (treeNode?.component as string) ?? '';
 
   if (widgets.length === 0) return null;
 
@@ -338,13 +375,11 @@ function WidgetHintSection({ path, item, dispatch }: { path: string; item: any; 
           className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
           value={currentWidget}
           onChange={(e) => {
-            const value = e.currentTarget.value || undefined;
             dispatch({
-              type: 'definition.setItemProperty',
+              type: 'component.setFieldWidget',
               payload: {
-                path,
-                property: 'presentation',
-                value: value ? { ...((item.presentation as any) || {}), widgetHint: value } : undefined,
+                fieldKey: item.key,
+                widget: e.currentTarget.value || null,
               },
             });
           }}
@@ -472,7 +507,7 @@ function FieldConfigSection({ path, item, dispatch, isChoice, isDecimalLike, isM
           </div>
         </div>
       ) : (
-        <AddPlaceholder label="pre-population" onAdd={() => setShowPrePop(true)} />
+        <AddPlaceholder label="pre-population" onAdd={() => setShowPrePop(true)} help={propertyHelp.prePopulate} />
       )}
     </Section>
   );
@@ -625,6 +660,52 @@ function OptionsSection({ path, item, dispatch }: { path: string; item: any; dis
         </button>
       </div>
     </Section>
+  );
+}
+
+function MultiSelectSummary({ selectionCount, selectedKeys, project, deselect }: {
+  selectionCount: number;
+  selectedKeys: Set<string>;
+  project: any;
+  deselect: () => void;
+}) {
+  const handleBatchDelete = () => {
+    const pruned = pruneDescendants(selectedKeys);
+    const sorted = sortForBatchDelete(pruned);
+    project.batch(sorted.map((p: string) => ({ type: 'definition.deleteItem', payload: { path: p } })));
+    deselect();
+  };
+
+  const handleBatchDuplicate = () => {
+    const pruned = pruneDescendants(selectedKeys);
+    const sorted = sortForBatchDelete(pruned);
+    project.batch(sorted.map((p: string) => ({ type: 'definition.duplicateItem', payload: { path: p } })));
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-surface overflow-hidden">
+      <div className="px-3.5 py-2.5 border-b border-border bg-surface shrink-0">
+        <h2 className="text-[15px] font-bold text-ink tracking-tight font-ui">
+          {selectionCount} items selected
+        </h2>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-3.5">
+        <button
+          aria-label="Duplicate All"
+          className="w-full py-2 border border-border rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-subtle transition-colors cursor-pointer"
+          onClick={handleBatchDuplicate}
+        >
+          Duplicate All
+        </button>
+        <button
+          aria-label="Delete All"
+          className="w-full py-2 border border-error/20 rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest text-error hover:bg-error/5 transition-colors cursor-pointer"
+          onClick={handleBatchDelete}
+        >
+          Delete All
+        </button>
+      </div>
+    </div>
   );
 }
 

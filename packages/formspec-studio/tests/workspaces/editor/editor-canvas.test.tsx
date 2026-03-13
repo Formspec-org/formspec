@@ -368,4 +368,215 @@ describe('EditorCanvas', () => {
 
     expect(capturedSelectedKey).toBe('canonical.inserted.path');
   });
+
+  describe('multi-select', () => {
+    function renderMultiSelect() {
+      const def = {
+        $formspec: '1.0', url: 'urn:multi-select', version: '1.0.0',
+        items: [
+          { key: 'first', type: 'field', dataType: 'string', label: 'First' },
+          { key: 'second', type: 'field', dataType: 'string', label: 'Second' },
+          { key: 'third', type: 'field', dataType: 'string', label: 'Third' },
+          { key: 'fourth', type: 'field', dataType: 'string', label: 'Fourth' },
+        ],
+      };
+      const project = createProject({ seed: { definition: def as any } });
+
+      let captured: any = {};
+      function SelectionCapture() {
+        const sel = useSelection();
+        captured = sel;
+        return null;
+      }
+
+      const result = render(
+        <ProjectProvider project={project}>
+          <SelectionProvider>
+            <ActivePageProvider>
+              <EditorCanvas />
+              <SelectionCapture />
+            </ActivePageProvider>
+          </SelectionProvider>
+        </ProjectProvider>,
+      );
+      return { ...result, project, getSelection: () => captured };
+    }
+
+    it('plain click selects single item and deselects others', async () => {
+      const { getSelection } = renderMultiSelect();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      expect(getSelection().selectedKeys.size).toBe(1);
+      expect(getSelection().primaryKey).toBe('first');
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-second'));
+      });
+      expect(getSelection().selectedKeys.size).toBe(1);
+      expect(getSelection().primaryKey).toBe('second');
+      expect(getSelection().selectedKeys.has('first')).toBe(false);
+    });
+
+    it('cmd+click toggles item in and out of selection', async () => {
+      const { getSelection } = renderMultiSelect();
+
+      // Select first
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      // Cmd+click second
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-second'), { metaKey: true });
+      });
+      expect(getSelection().selectedKeys.size).toBe(2);
+      expect(getSelection().selectedKeys.has('first')).toBe(true);
+      expect(getSelection().selectedKeys.has('second')).toBe(true);
+
+      // Cmd+click second again to deselect it
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-second'), { metaKey: true });
+      });
+      expect(getSelection().selectedKeys.size).toBe(1);
+      expect(getSelection().selectedKeys.has('second')).toBe(false);
+    });
+
+    it('shift+click selects range from primary to target', async () => {
+      const { getSelection } = renderMultiSelect();
+
+      // Click first (sets anchor/primary)
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      // Shift+click third
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-third'), { shiftKey: true });
+      });
+      expect(getSelection().selectedKeys.size).toBe(3);
+      expect(getSelection().selectedKeys.has('first')).toBe(true);
+      expect(getSelection().selectedKeys.has('second')).toBe(true);
+      expect(getSelection().selectedKeys.has('third')).toBe(true);
+      // Primary stays at anchor
+      expect(getSelection().primaryKey).toBe('first');
+    });
+
+    it('right-click on unselected item selects just that item', async () => {
+      const { getSelection } = renderMultiSelect();
+
+      // Select first via click
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      // Right-click on third (not in selection)
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-third'));
+      });
+      expect(getSelection().primaryKey).toBe('third');
+      expect(getSelection().selectedKeys.size).toBe(1);
+    });
+
+    it('right-click on selected item keeps the multi-selection', async () => {
+      const { getSelection } = renderMultiSelect();
+
+      // Build multi-selection
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-second'), { metaKey: true });
+      });
+      expect(getSelection().selectedKeys.size).toBe(2);
+
+      // Right-click on first (in selection) — should keep selection
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-first'));
+      });
+      expect(getSelection().selectedKeys.size).toBe(2);
+    });
+
+    it('shows batch context menu when multiple items selected', async () => {
+      renderMultiSelect();
+
+      // Build multi-selection
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-second'), { metaKey: true });
+      });
+      // Right-click on selected item
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-first'));
+      });
+      expect(screen.getByText('Delete 2 items')).toBeInTheDocument();
+      expect(screen.getByText('Duplicate 2 items')).toBeInTheDocument();
+      expect(screen.getByText('Wrap in Group')).toBeInTheDocument();
+    });
+
+    it('batch delete removes all selected items', async () => {
+      const { project } = renderMultiSelect();
+
+      // Select first and second
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-second'), { metaKey: true });
+      });
+      // Right-click and delete
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-first'));
+      });
+      await act(async () => {
+        screen.getByText('Delete 2 items').click();
+      });
+
+      const keys = project.definition.items.map((i: any) => i.key);
+      expect(keys).not.toContain('first');
+      expect(keys).not.toContain('second');
+      expect(keys).toContain('third');
+      expect(keys).toContain('fourth');
+    });
+
+    it('escape clears selection', async () => {
+      const { getSelection } = renderMultiSelect();
+
+      // Select two items
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-second'), { metaKey: true });
+      });
+      expect(getSelection().selectionCount).toBe(2);
+
+      // Press Escape
+      await act(async () => {
+        fireEvent.keyDown(window, { key: 'Escape' });
+      });
+      expect(getSelection().selectionCount).toBe(0);
+      expect(getSelection().primaryKey).toBeNull();
+    });
+
+    it('batch duplicate clones all selected items', async () => {
+      const { project } = renderMultiSelect();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-first'));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('field-second'), { metaKey: true });
+      });
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-first'));
+      });
+      await act(async () => {
+        screen.getByText('Duplicate 2 items').click();
+      });
+
+      // Should have 6 items (4 original + 2 duplicates)
+      expect(project.definition.items.length).toBe(6);
+    });
+  });
 });

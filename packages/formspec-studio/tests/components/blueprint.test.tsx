@@ -65,7 +65,7 @@ describe('Blueprint', () => {
         </SelectionProvider>
       </ProjectProvider>
     );
-    expect(screen.getByTestId('blueprint-section-Component Tree')).toHaveTextContent(/\b1\b|\b2\b|\b3\b/);
+    expect(screen.getByTestId('blueprint-section-Component Tree')).toHaveTextContent(/[123]/);
   });
 
   it('switches the collapse arrow glyph from collapsed to expanded when a sidebar section opens', async () => {

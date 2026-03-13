@@ -21,7 +21,8 @@ interface FieldBlockProps {
   binds: Record<string, string>;
   depth: number;
   selected: boolean;
-  onSelect: () => void;
+  isInSelection?: boolean;
+  onSelect: (e: React.MouseEvent) => void;
 }
 
 export function FieldBlock({
@@ -34,6 +35,7 @@ export function FieldBlock({
   binds,
   depth,
   selected,
+  isInSelection,
   onSelect,
 }: FieldBlockProps) {
   const dt = dataType ? dataTypeInfo(dataType) : { icon: '?', label: 'unknown', color: 'text-muted' };
@@ -73,7 +75,9 @@ export function FieldBlock({
       onClick={onSelect}
       onKeyDown={handleKeyDown}
       className={`relative bg-surface border rounded-[4px] cursor-pointer transition-all ${
-        selected ? 'border-accent ring-1 ring-accent/20 z-10' : 'border-border hover:border-muted/40'
+        selected ? 'border-accent ring-1 ring-accent/20 z-10'
+        : isInSelection ? 'border-accent bg-accent/5 z-10'
+        : 'border-border hover:border-muted/40'
       }`}
       style={{ marginLeft: depth > 0 ? depth * 20 : 0 }}
     >

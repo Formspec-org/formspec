@@ -1,4 +1,16 @@
-import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import {
+  useFloating,
+  autoUpdate,
+  offset,
+  flip,
+  shift,
+  useHover,
+  useDismiss,
+  useRole,
+  useInteractions,
+  FloatingPortal,
+} from '@floating-ui/react';
 
 interface HelpTipProps {
   text: string;
@@ -6,35 +18,48 @@ interface HelpTipProps {
 }
 
 /**
- * Wraps label content with a ? icon. Hovering anywhere on the
- * wrapper (label + icon) shows a tooltip with help text.
+ * Wraps content with a ? icon. Hovering anywhere on the wrapper shows
+ * a portal-rendered tooltip positioned by Floating UI (no overflow clipping).
  */
 export function HelpTip({ text, children }: HelpTipProps) {
-  const [show, setShow] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (!show) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShow(false); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [show]);
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement: 'bottom-start',
+    middleware: [offset(6), flip(), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  });
+
+  const hover = useHover(context, { move: false });
+  const dismiss = useDismiss(context);
+  const role = useRole(context, { role: 'tooltip' });
+  const { getReferenceProps, getFloatingProps } = useInteractions([hover, dismiss, role]);
 
   return (
-    <span
-      className="inline-flex items-center gap-1 cursor-help relative"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      {children}
-      <span className="text-[9px] text-muted opacity-60 hover:opacity-100 transition-opacity" aria-label="Help">?</span>
-      {show && (
-        <span
-          role="tooltip"
-          className="absolute left-0 top-full mt-1 z-50 w-52 px-2.5 py-2 text-[11px] leading-snug text-ink bg-surface border border-border rounded-[4px] shadow-md font-ui whitespace-normal"
-        >
-          {text}
-        </span>
+    <>
+      <span
+        ref={refs.setReference}
+        className="inline-flex items-center gap-1 cursor-help"
+        {...getReferenceProps()}
+      >
+        {children}
+        <span className="text-[9px] text-muted opacity-60 hover:opacity-100 transition-opacity" aria-label="Help">?</span>
+      </span>
+      {open && (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            style={floatingStyles}
+            role="tooltip"
+            className="z-50 w-52 px-2.5 py-2 text-[11px] leading-snug text-ink bg-surface border border-border rounded-[4px] shadow-md font-ui"
+            {...getFloatingProps()}
+          >
+            {text}
+          </div>
+        </FloatingPortal>
       )}
-    </span>
+    </>
   );
 }

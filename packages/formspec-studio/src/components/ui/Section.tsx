@@ -12,7 +12,7 @@ interface SectionProps {
  */
 export function Section({ title, children, defaultOpen = true }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
-  
+
   return (
     <div className="mb-4">
       <button

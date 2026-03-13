@@ -16,6 +16,19 @@ const testDef = {
   binds: [{ path: 'name', required: 'true' }],
 };
 
+/** Minimal component tree matching testDef items. */
+const testComponent = {
+  targetDefinition: { url: 'urn:test' },
+  tree: {
+    component: 'Stack', nodeId: 'root', children: [
+      { component: 'TextInput', bind: 'name' },
+      { component: 'Stack', bind: 'group1', children: [
+        { component: 'TextInput', bind: 'email' },
+      ]},
+    ],
+  },
+};
+
 function SelectAndInspect({ path, type }: { path: string; type: string }) {
   const { select } = useSelection();
   return (
@@ -27,7 +40,7 @@ function SelectAndInspect({ path, type }: { path: string; type: string }) {
 }
 
 function renderProps(project?: Project, selection: { path: string; type: string } = { path: 'name', type: 'field' }) {
-  const p = project ?? createProject({ seed: { definition: testDef as any } });
+  const p = project ?? createProject({ seed: { definition: testDef as any, component: testComponent as any } });
   return {
     ...render(
       <ProjectProvider project={p}>
@@ -292,11 +305,10 @@ describe('ItemProperties', () => {
     await act(async () => { screen.getByText('Select').click(); });
     const descBtn = screen.getByText(/\+ add description/i);
     const hintBtn = screen.getByText(/\+ add hint/i);
-    // Both should share an inline flex container
-    const container = descBtn.closest('[class*="flex"]')!;
+    // Walk up from descBtn to find the div.flex.gap-3 container
+    const container = descBtn.closest('div[class*="flex"][class*="gap"]');
     expect(container).toBeTruthy();
-    expect(container.contains(hintBtn)).toBe(true);
-    expect(container.className).toMatch(/gap/);
+    expect(container!.contains(hintBtn)).toBe(true);
   });
 
   it('add placeholder buttons have help tooltips', async () => {
@@ -316,20 +328,31 @@ describe('ItemProperties', () => {
     expect(screen.getByLabelText(/widget/i)).toBeInTheDocument();
   });
 
-  it('dispatches widgetHint change on select', async () => {
+  it('dispatches component.setFieldWidget on widget select', async () => {
     const { project } = renderProps();
     const spy = vi.spyOn(project, 'dispatch');
     await act(async () => { screen.getByText('Select').click(); });
 
     const select = screen.getByLabelText(/widget/i);
     await act(async () => {
-      fireEvent.change(select, { target: { value: 'password' } });
+      fireEvent.change(select, { target: { value: 'RadioGroup' } });
     });
 
     expect(spy).toHaveBeenCalledWith({
-      type: 'definition.setItemProperty',
-      payload: { path: 'name', property: 'presentation', value: { widgetHint: 'password' } },
+      type: 'component.setFieldWidget',
+      payload: { fieldKey: 'name', widget: 'RadioGroup' },
     });
+  });
+
+  it('widget dropdown reflects current component tree node type', async () => {
+    const project = createProject({ seed: { definition: testDef as any, component: testComponent as any } });
+    // Change the widget via the component tree
+    project.dispatch({ type: 'component.setFieldWidget', payload: { fieldKey: 'name', widget: 'RadioGroup' } });
+    renderProps(project);
+    await act(async () => { screen.getByText('Select').click(); });
+
+    const select = screen.getByLabelText(/widget/i) as HTMLSelectElement;
+    expect(select.value).toBe('RadioGroup');
   });
 
   // --- Field config: initialValue, precision, currency, prefix, suffix, semanticType ---
@@ -536,17 +559,112 @@ describe('ItemProperties', () => {
     expect(screen.getByText(/\+ add behavior rule/i)).toBeInTheDocument();
   });
 
-  // --- Action button tooltips ---
+  // --- Action buttons (no tooltips, just plain buttons) ---
 
-  it('action buttons have help tooltips', async () => {
+  it('action buttons do not have help tooltips', async () => {
     renderProps();
     await act(async () => { screen.getByText('Select').click(); });
     const dupBtn = screen.getByRole('button', { name: /duplicate/i });
-    const delBtn = screen.getByRole('button', { name: /delete/i });
-    fireEvent.mouseEnter(dupBtn);
-    expect(screen.getByRole('tooltip')).toBeInTheDocument();
-    fireEvent.mouseLeave(dupBtn);
-    fireEvent.mouseEnter(delBtn);
-    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    // No cursor-help wrapper on action buttons
+    expect(dupBtn.closest('[class*="cursor-help"]')).toBeNull();
+  });
+
+  // --- Add behavior rule tooltip ---
+
+  it('"+ Add behavior rule" has help tooltip', async () => {
+    const project = createProject({ seed: { definition: {
+      ...testDef,
+      binds: [],
+      items: [{ key: 'solo', type: 'field', dataType: 'string', label: 'Solo' }],
+    } as any } });
+    renderProps(project, { path: 'solo', type: 'field' });
+    await act(async () => { screen.getByText('Select').click(); });
+    const addRule = screen.getByText(/\+ add behavior rule/i);
+    const wrapper = addRule.closest('[class*="cursor-help"]');
+    expect(wrapper).toBeTruthy();
+  });
+
+  describe('multi-select summary', () => {
+    function MultiSelectInspect({ paths }: { paths: { key: string; type: string }[] }) {
+      const { select, toggleSelect } = useSelection();
+      return (
+        <>
+          <button data-testid="setup-multiselect" onClick={() => {
+            // First plain select, then toggle the rest
+            select(paths[0].key, paths[0].type);
+            for (let i = 1; i < paths.length; i++) {
+              toggleSelect(paths[i].key, paths[i].type);
+            }
+          }}>
+            Multi-Select
+          </button>
+          <ItemProperties />
+        </>
+      );
+    }
+
+    function renderMultiSelectProps(paths: { key: string; type: string }[]) {
+      const def = {
+        $formspec: '1.0', url: 'urn:multi-select', version: '1.0.0',
+        items: [
+          { key: 'fieldA', type: 'field', dataType: 'string', label: 'Field A' },
+          { key: 'fieldB', type: 'field', dataType: 'string', label: 'Field B' },
+          { key: 'fieldC', type: 'field', dataType: 'string', label: 'Field C' },
+        ],
+      };
+      const project = createProject({ seed: { definition: def as any } });
+      return {
+        ...render(
+          <ProjectProvider project={project}>
+            <SelectionProvider>
+              <MultiSelectInspect paths={paths} />
+            </SelectionProvider>
+          </ProjectProvider>,
+        ),
+        project,
+      };
+    }
+
+    it('shows summary view with item count when multiple items selected', async () => {
+      renderMultiSelectProps([
+        { key: 'fieldA', type: 'field' },
+        { key: 'fieldB', type: 'field' },
+      ]);
+      await act(async () => {
+        screen.getByTestId('setup-multiselect').click();
+      });
+      expect(screen.getByText('2 items selected')).toBeInTheDocument();
+    });
+
+    it('shows batch action buttons in summary view', async () => {
+      renderMultiSelectProps([
+        { key: 'fieldA', type: 'field' },
+        { key: 'fieldB', type: 'field' },
+        { key: 'fieldC', type: 'field' },
+      ]);
+      await act(async () => {
+        screen.getByTestId('setup-multiselect').click();
+      });
+      expect(screen.getByText('3 items selected')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /duplicate all/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /delete all/i })).toBeInTheDocument();
+    });
+
+    it('batch delete from summary removes all selected items', async () => {
+      const { project } = renderMultiSelectProps([
+        { key: 'fieldA', type: 'field' },
+        { key: 'fieldB', type: 'field' },
+      ]);
+      await act(async () => {
+        screen.getByTestId('setup-multiselect').click();
+      });
+      await act(async () => {
+        screen.getByRole('button', { name: /delete all/i }).click();
+      });
+      const keys = project.definition.items.map((i: any) => i.key);
+      expect(keys).not.toContain('fieldA');
+      expect(keys).not.toContain('fieldB');
+      expect(keys).toContain('fieldC');
+    });
   });
 });

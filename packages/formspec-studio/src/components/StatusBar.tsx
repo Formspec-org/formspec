@@ -39,11 +39,11 @@ export function StatusBar() {
   return (
     <footer
       data-testid="status-bar"
-      className="h-[28px] bg-surface border-t border-border px-4 flex items-center justify-between font-mono text-[11px] text-muted shrink-0"
+      className="h-[28px] bg-surface border-t border-border px-4 flex items-center justify-between font-mono text-[11px] text-muted shrink-0 cursor-default"
     >
       <div className="flex items-center gap-2.5">
         {/* Version Section */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" title="Specification version and lifecycle status">
           <div className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_4px_rgba(5,150,105,0.4)]" />
           <span className="uppercase tracking-wider font-bold text-ink">
             FORMSPEC {formspecVersion}
@@ -55,7 +55,7 @@ export function StatusBar() {
         <div className="w-px h-3 bg-border" />
 
         {/* Presentation Section */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" title="Page mode, default currency, and density">
           <span>{pageMode || 'standard'}</span>
           <span className="opacity-40">·</span>
           <span>{defaultCurrency || 'USD'}</span>
@@ -66,7 +66,7 @@ export function StatusBar() {
         <div className="w-px h-3 bg-border" />
 
         {/* Counts Section */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" title="Entity counts across the definition">
           <span>{plural(fieldCount, 'field')}</span>
           <span className="opacity-40">·</span>
           <span>{plural(bindCount, 'bind')}</span>

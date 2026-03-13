@@ -100,26 +100,30 @@ export function dataTypeInfo(dataType: string): DataTypeDisplay {
   return TYPE_MAP[dataType] || { icon: '?', label: dataType, color: 'text-muted' };
 }
 
-/** Widget compatibility: which widgetHint values are valid for each item type + dataType. */
+/**
+ * Widget compatibility: which widgetHint values are valid for each item type + dataType.
+ * Values must match the PascalCase component names registered in the webcomponent's
+ * ComponentRegistry (see packages/formspec-webcomponent/src/components/inputs.ts).
+ */
 const WIDGET_MAP: Record<string, string[]> = {
   // Groups
-  'group': ['section', 'card', 'accordion', 'tab'],
+  'group': ['Section', 'Card', 'Accordion', 'Tab'],
   // Display
-  'display': ['paragraph', 'heading', 'divider', 'banner'],
-  // Fields by dataType
-  'field:string': ['textInput', 'password', 'color'],
-  'field:text': ['textarea', 'richText'],
-  'field:integer': ['numberInput', 'stepper', 'slider', 'rating'],
-  'field:decimal': ['numberInput', 'slider'],
-  'field:boolean': ['checkbox', 'toggle', 'yesNo'],
-  'field:date': ['datePicker', 'dateInput'],
-  'field:time': ['timePicker', 'timeInput'],
-  'field:dateTime': ['datePicker', 'dateInput'],
-  'field:choice': ['dropdown', 'radio', 'autocomplete', 'segmented', 'likert'],
-  'field:multiChoice': ['checkboxGroup', 'multiSelect', 'autocomplete'],
-  'field:money': ['moneyInput'],
-  'field:uri': ['textInput'],
-  'field:attachment': ['textInput'],
+  'display': ['Paragraph', 'Heading', 'Divider', 'Banner'],
+  // Fields by dataType — must match renderer's compatibility matrix
+  'field:string': ['TextInput', 'Select', 'RadioGroup'],
+  'field:text': ['TextInput'],
+  'field:integer': ['NumberInput', 'Slider', 'Rating', 'TextInput'],
+  'field:decimal': ['NumberInput', 'Slider', 'Rating', 'TextInput'],
+  'field:boolean': ['Toggle', 'Checkbox'],
+  'field:date': ['DatePicker', 'TextInput'],
+  'field:time': ['DatePicker', 'TextInput'],
+  'field:dateTime': ['DatePicker', 'TextInput'],
+  'field:choice': ['Select', 'RadioGroup', 'TextInput'],
+  'field:multiChoice': ['CheckboxGroup'],
+  'field:money': ['NumberInput', 'TextInput'],
+  'field:uri': ['TextInput'],
+  'field:attachment': ['FileUpload', 'Signature'],
 };
 
 /** Get compatible widgetHint values for a given item type and optional dataType. */

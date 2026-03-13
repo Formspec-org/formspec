@@ -1,7 +1,14 @@
 import { useProject } from '../state/useProject';
 import { useProjectState } from '../state/useProjectState';
 
-const TABS = ['Editor', 'Logic', 'Data', 'Theme', 'Mapping', 'Preview'] as const;
+const TABS: { name: string; help: string }[] = [
+  { name: 'Editor', help: 'Visual form builder canvas for adding and arranging items' },
+  { name: 'Logic', help: 'Binds, shapes, and variables — all form logic lives here' },
+  { name: 'Data', help: 'Response schema, data sources, option sets, and test data' },
+  { name: 'Theme', help: 'Visual tokens, defaults, selectors, and page layouts' },
+  { name: 'Mapping', help: 'Bidirectional data transforms for import/export formats' },
+  { name: 'Preview', help: 'Live form preview and JSON document view' },
+];
 
 interface HeaderProps {
   activeTab: string;
@@ -64,20 +71,21 @@ export function Header({
 
       {/* Tabs */}
       <nav className="flex h-full" role="tablist">
-        {TABS.map((tab) => (
+        {TABS.map(({ name, help }) => (
           <button
-            key={tab}
+            key={name}
             role="tab"
-            aria-selected={activeTab === tab}
-            data-testid={`tab-${tab}`}
+            aria-selected={activeTab === name}
+            data-testid={`tab-${name}`}
+            title={help}
             className={`px-3.5 h-full text-[13px] transition-colors border-b-2 cursor-pointer ${
-              activeTab === tab
+              activeTab === name
                 ? 'border-accent text-accent font-semibold'
                 : 'border-transparent text-muted hover:text-ink'
             }`}
-            onClick={() => onTabChange(tab)}
+            onClick={() => onTabChange(name)}
           >
-            {tab}
+            {name}
           </button>
         ))}
       </nav>

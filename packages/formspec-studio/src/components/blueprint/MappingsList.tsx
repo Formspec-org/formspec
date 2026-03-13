@@ -1,5 +1,4 @@
 import { useProjectState } from '../../state/useProjectState';
-import { Section } from '../ui/Section';
 import { Pill } from '../ui/Pill';
 
 export function MappingsList() {
@@ -9,21 +8,15 @@ export function MappingsList() {
   const direction = mapping.direction ?? 'bidirectional';
 
   if (rules.length === 0) {
-    return (
-      <Section title="Mappings">
-        <p className="text-xs text-muted py-2">No mapping rules defined</p>
-      </Section>
-    );
+    return <p className="text-xs text-muted py-2">No mapping rules defined</p>;
   }
 
   return (
-    <Section title="Mappings">
-      <div className="space-y-1 py-1">
-        <div className="flex items-center gap-2">
-          <Pill text={`${rules.length} rule${rules.length === 1 ? '' : 's'}`} color="accent" size="sm" />
-          <Pill text={direction} color="muted" size="sm" />
-        </div>
+    <div className="space-y-1 py-1">
+      <div className="flex items-center gap-2">
+        <Pill text={`${rules.length} rule${rules.length === 1 ? '' : 's'}`} color="accent" size="sm" />
+        <Pill text={direction} color="muted" size="sm" />
       </div>
-    </Section>
+    </div>
   );
 }

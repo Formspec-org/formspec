@@ -139,7 +139,7 @@ function TextAreaField({
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-muted/60 mb-2 mt-1">
+    <h3 className="font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-muted/60 mb-3 mt-1">
       {children}
     </h3>
   );
@@ -205,9 +205,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           </button>
         </div>
 
-        <div className="p-4 space-y-5 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
           {/* Read-only identity */}
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <ReadOnlyRow label="$formspec" value={def.$formspec} help="Specification version. Always 1.0." />
             <ReadOnlyRow label="URL" value={def.url} help="Canonical URI identifier. Stable across versions — all versions of the same form share this URL." />
           </div>
@@ -215,7 +215,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           <div className="border-t border-border" />
 
           {/* Editable identity */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <SectionHeading>Identity</SectionHeading>
             <TextInputField id="settings-title" label="Title" value={def.title ?? ''} onCommit={(v) => setProperty('title', v)} help="Human-readable display name shown by authoring tools and form renderers." />
             <TextInputField id="settings-name" label="Name" value={def.name ?? ''} onCommit={(v) => setProperty('name', v)} help="Machine-readable short name. Letters, digits, and hyphens only." />
@@ -228,7 +228,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           <div className="border-t border-border" />
 
           {/* Presentation */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <SectionHeading>Presentation</SectionHeading>
             <SelectField id="settings-pageMode" label="Page Mode" value={presentation.pageMode ?? 'single'} options={PAGE_MODE_OPTIONS} onChange={(v) => setPresentation('pageMode', v)} help="How top-level groups are paginated. single: one page. wizard: sequential steps. tabs: tabbed sections." />
             <SelectField id="settings-labelPosition" label="Label Position" value={presentation.labelPosition ?? 'top'} options={LABEL_POSITION_OPTIONS} onChange={(v) => setPresentation('labelPosition', v)} help="Default label placement. top: above input. start: beside input. hidden: visually hidden but accessible." />
@@ -239,7 +239,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           <div className="border-t border-border" />
 
           {/* Behavior */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <SectionHeading>Behavior</SectionHeading>
             <SelectField id="settings-nonRelevant" label="Non-Relevant Behavior" value={def.nonRelevantBehavior ?? 'remove'} options={NON_RELEVANT_OPTIONS} onChange={(v) => setProperty('nonRelevantBehavior', v)} help="How non-relevant fields appear in submitted data. remove: excluded. empty: null. keep: retain values." />
           </div>

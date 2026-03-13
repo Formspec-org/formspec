@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { ReactNode } from 'react';
 import { Pill } from '../../components/ui/Pill';
 
@@ -11,7 +12,8 @@ interface GroupBlockProps {
   maxRepeat?: number;
   depth: number;
   selected: boolean;
-  onSelect: () => void;
+  isInSelection?: boolean;
+  onSelect: (e: React.MouseEvent) => void;
   children: ReactNode;
 }
 
@@ -25,6 +27,7 @@ export function GroupBlock({
   maxRepeat,
   depth,
   selected,
+  isInSelection,
   onSelect,
   children,
 }: GroupBlockProps) {
@@ -40,19 +43,21 @@ export function GroupBlock({
         data-item-type="group"
         onClick={onSelect}
         className={`flex items-center gap-2 px-0 py-2 border-b-2 cursor-pointer transition-colors group ${
-          selected ? 'border-accent' : 'border-ink/80'
+          selected ? 'border-accent'
+          : isInSelection ? 'border-accent'
+          : 'border-ink/80'
         }`}
       >
         {/* Accent Bar */}
         <div
           className={`w-[3px] h-[14px] rounded-[1px] transition-colors shrink-0 ${
-            selected ? 'bg-accent' : 'bg-ink/70'
+            selected ? 'bg-accent' : isInSelection ? 'bg-accent' : 'bg-ink/70'
           }`}
         />
 
         {/* Label */}
         <span className={`font-mono text-[12px] font-bold tracking-[0.14em] uppercase transition-colors ${
-          selected ? 'text-accent' : 'text-ink'
+          selected ? 'text-accent' : isInSelection ? 'text-accent' : 'text-ink'
         }`}>
           {label || itemKey}
         </span>
