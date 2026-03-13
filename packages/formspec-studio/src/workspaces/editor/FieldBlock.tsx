@@ -70,7 +70,6 @@ export function FieldBlock({
       data-testid={`field-${itemKey}`}
       data-item-path={itemPath}
       data-item-type="field"
-      draggable="true"
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={handleKeyDown}

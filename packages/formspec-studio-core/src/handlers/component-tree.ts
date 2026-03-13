@@ -67,11 +67,20 @@ type TreeNode = {
  * If `component.tree` is absent, initializes it with a `Stack` root node
  * (`{ component: 'Stack', nodeId: 'root', children: [] }`). All tree
  * operations require a root, so this is called at the start of every handler.
+ * These trees are internal Studio authoring state, not spec-valid serialized
+ * component documents, so generated metadata is marked explicitly.
  *
  * @param component - The component document to ensure a tree on.
  * @returns The root tree node.
  */
+function markStudioGeneratedComponent(component: FormspecComponentDocument): void {
+  delete component.$formspecComponent;
+  delete component.version;
+  component['x-studio-generated'] = true;
+}
+
 function ensureTree(component: FormspecComponentDocument): TreeNode {
+  markStudioGeneratedComponent(component);
   if (!component.tree) {
     component.tree = { component: 'Stack', nodeId: 'root', children: [] };
   }
@@ -345,8 +354,8 @@ registerHandler('component.wrapNode', (state, payload) => {
   // Remove the target node
   const [targetNode] = result.parent.children!.splice(result.index, 1);
 
-  // Create wrapper node
-  const wrapperNode: TreeNode = { component: wrapper.component, nodeId: generateNodeId(), children: [targetNode] };
+  // Create wrapper node (layout container — must have _layout flag for rebuild preservation)
+  const wrapperNode: TreeNode = { component: wrapper.component, nodeId: generateNodeId(), _layout: true, children: [targetNode] };
   if (wrapper.props) Object.assign(wrapperNode, wrapper.props);
 
   // Insert wrapper at same position

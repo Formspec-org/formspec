@@ -185,7 +185,7 @@ following properties:</p>
 <col style="width: 16%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Pointer</th>
 <th>Field</th>
 <th>Type</th>
@@ -195,7 +195,7 @@ following properties:</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>#/properties/$formspecRegistry</code></td>
 <td><code>$formspecRegistry</code></td>
 <td><code>string</code></td>
@@ -203,7 +203,7 @@ following properties:</p>
 <td>const: <code>“1.0”</code>; critical</td>
 <td>Registry specification version. MUST be ‘1.0’.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/$schema</code></td>
 <td><code>$schema</code></td>
 <td><code>string</code></td>
@@ -212,7 +212,7 @@ following properties:</p>
 <td>Optional JSON Schema URI for editor validation and
 autocompletion.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/entries</code></td>
 <td><code>entries</code></td>
 <td><code>array</code></td>
@@ -223,7 +223,7 @@ extension with its category, version, compatibility bounds, and
 category-specific metadata. Within a single document, the (name,
 version) tuple MUST be unique.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/extensions</code></td>
 <td><code>extensions</code></td>
 <td><code>object</code></td>
@@ -232,7 +232,7 @@ version) tuple MUST be unique.</td>
 <td>Registry-level extension properties for vendor-specific metadata.
 All property keys MUST be x-prefixed.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/published</code></td>
 <td><code>published</code></td>
 <td><code>string</code></td>
@@ -242,7 +242,7 @@ All property keys MUST be x-prefixed.</td>
 published. Used for freshness checks and conditional GET cache
 validation.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/publisher</code></td>
 <td><code>publisher</code></td>
 <td><code>$ref</code></td>
@@ -260,7 +260,7 @@ Registry Document top-level properties.</p>
 <h3 id="publisher-object">2.1 Publisher Object</h3>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Req</th>
@@ -268,19 +268,19 @@ Registry Document top-level properties.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>name</code></td>
 <td>string</td>
 <td>REQUIRED</td>
 <td>Human-readable organization name.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>url</code></td>
 <td>string (URI)</td>
 <td>REQUIRED</td>
 <td>Organization home page.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>contact</code></td>
 <td>string</td>
 <td>OPTIONAL</td>
@@ -300,7 +300,7 @@ describing one extension.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Req</th>
@@ -308,13 +308,13 @@ describing one extension.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>name</code></td>
 <td>string</td>
 <td>REQUIRED</td>
 <td>The <code>x-</code>-prefixed extension identifier.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>category</code></td>
 <td>enum</td>
 <td>REQUIRED</td>
@@ -322,69 +322,69 @@ describing one extension.</p>
 <code>"constraint"</code>, <code>"property"</code>,
 <code>"namespace"</code>.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>version</code></td>
 <td>string</td>
 <td>REQUIRED</td>
 <td>Semver version of the extension itself.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>status</code></td>
 <td>enum</td>
 <td>REQUIRED</td>
 <td>One of: <code>"draft"</code>, <code>"stable"</code>,
 <code>"deprecated"</code>, <code>"retired"</code>. See §6.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>publisher</code></td>
 <td>object</td>
 <td>OPTIONAL</td>
 <td>Entry-level publisher override. Same schema as §2.1.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>description</code></td>
 <td>string</td>
 <td>REQUIRED</td>
 <td>Human-readable summary of the extension’s purpose.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>specUrl</code></td>
 <td>string (URI)</td>
 <td>RECOMMENDED</td>
 <td>Link to the full extension documentation.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>schemaUrl</code></td>
 <td>string (URI)</td>
 <td>RECOMMENDED</td>
 <td>Link to a JSON Schema for the extension’s data.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>compatibility</code></td>
 <td>object</td>
 <td>REQUIRED</td>
 <td>Version compatibility bounds. See §3.1.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>license</code></td>
 <td>string</td>
 <td>RECOMMENDED</td>
 <td>SPDX license identifier (e.g. <code>"Apache-2.0"</code>).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>deprecationNotice</code></td>
 <td>string</td>
 <td>CONDITIONAL</td>
 <td>Human-readable deprecation message. REQUIRED when
 <code>status</code> is <code>"deprecated"</code>. See §6.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>examples</code></td>
 <td>array</td>
 <td>OPTIONAL</td>
 <td>Array of JSON values demonstrating usage.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>extensions</code></td>
 <td>object</td>
 <td>OPTIONAL</td>
@@ -401,7 +401,7 @@ describing one extension.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Req</th>
@@ -409,14 +409,14 @@ describing one extension.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>formspecVersion</code></td>
 <td>string</td>
 <td>REQUIRED</td>
 <td>Semver range of compatible Formspec versions
 (e.g. <code>"&gt;=1.0.0 &lt;2.0.0"</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>mappingDslVersion</code></td>
 <td>string</td>
 <td>OPTIONAL</td>
@@ -439,7 +439,7 @@ Formspec v1.0):</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Req</th>
@@ -447,7 +447,7 @@ Formspec v1.0):</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>baseType</code></td>
 <td>string</td>
 <td>REQUIRED</td>
@@ -455,13 +455,13 @@ Formspec v1.0):</p>
 <code>decimal</code>, <code>boolean</code>, <code>date</code>,
 <code>dateTime</code>, <code>time</code>, <code>uri</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>constraints</code></td>
 <td>object</td>
 <td>OPTIONAL</td>
 <td>Default constraint values for this type.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>metadata</code></td>
 <td>object</td>
 <td>OPTIONAL</td>
@@ -478,7 +478,7 @@ Formspec v1.0):</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Req</th>
@@ -486,13 +486,13 @@ Formspec v1.0):</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>parameters</code></td>
 <td>array</td>
 <td>REQUIRED</td>
 <td>Array of <code>{name, type, description?}</code> objects.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>returns</code></td>
 <td>string</td>
 <td>REQUIRED</td>
@@ -510,7 +510,7 @@ constraint (§8.3):</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Req</th>
@@ -518,7 +518,7 @@ constraint (§8.3):</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>parameters</code></td>
 <td>array</td>
 <td>REQUIRED</td>
@@ -540,7 +540,7 @@ RECOMMENDED.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Req</th>
@@ -548,7 +548,7 @@ RECOMMENDED.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>members</code></td>
 <td>array</td>
 <td>OPTIONAL</td>
@@ -616,31 +616,31 @@ its maturity. The following lifecycle states and transition rules are
 <col style="width: 50%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Transition</th>
 <th>Rule</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>draft → stable</td>
 <td>The publisher asserts the extension’s interface is frozen for the
 given major version.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>stable → deprecated</td>
 <td>The publisher MUST provide a <code>deprecationNotice</code>
 (human-readable string) on the entry explaining why the extension is
 deprecated. The publisher SHOULD identify a replacement extension if one
 exists.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>deprecated → retired</td>
 <td>The publisher asserts the extension SHOULD NOT be used and MAY stop
 supporting it. Processors encountering a <code>retired</code> extension
 SHOULD emit a warning.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>(any) → draft</td>
 <td>A new <code>version</code> (with incremented major version) MAY
 re-enter <code>draft</code>.</td>
@@ -678,10 +678,15 @@ notice.</p></li>
 <li><p><strong>Schema validation.</strong> If the entry provides a
 <code>schemaUrl</code>, the processor SHOULD fetch and validate the
 extension’s data in the Definition against that schema.</p></li>
-<li><p><strong>Passthrough.</strong> A registry-aware processor that
-cannot locate a registry entry for a given extension MUST fall back to
-the core §8 behavior: ignore-and-preserve for properties, error for
-unknown types/functions/ constraints.</p></li>
+<li><p><strong>Unresolved extensions.</strong> When an item declares an
+enabled extension
+(i.e. <code>"extensions": { "x-example": true }</code>) and the
+processor cannot locate a matching registry entry, the processor MUST
+emit an error with code <code>UNRESOLVED_EXTENSION</code>. This applies
+regardless of the extension’s intended category, because without the
+registry entry the processor cannot determine the extension’s semantics.
+Disabled extensions (<code>"x-example": false</code>) MUST NOT trigger
+this error.</p></li>
 </ol>
 <hr />
 <h2 id="examples">8. Examples</h2>
@@ -919,43 +924,43 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="
 <col style="width: 50%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Tag</th>
 <th>Reference</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>[rfc2119]</td>
 <td>Bradner, S., “Key words for use in RFCs to Indicate Requirement
 Levels”, BCP 14, RFC 2119, March 1997.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>[RFC 8174]</td>
 <td>Leiba, B., “Ambiguity of Uppercase vs Lowercase in RFC 2119 Key
 Words”, BCP 14, RFC 8174, May 2017.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>[RFC 8259]</td>
 <td>Bray, T., Ed., “The JavaScript Object Notation (JSON) Data
 Interchange Format”, STD 90, RFC 8259, December 2017.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>[RFC 3986]</td>
 <td>Berners-Lee, T., Fielding, R., and L. Masinter, “Uniform Resource
 Identifier (URI): Generic Syntax”, STD 66, RFC 3986, January 2005.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>[semver]</td>
 <td>Preston-Werner, T., “Semantic Versioning 2.0.0”,
 https://semver.org/spec/v2.0.0.html.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>[SPDX]</td>
 <td>SPDX Workgroup, “SPDX License List”,
 https://spdx.org/licenses/.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>[well-known]</td>
 <td>Nottingham, M., “Defining Well-Known Uniform Resource Identifiers
 (URIs)”, RFC 8615, May 2019.</td>

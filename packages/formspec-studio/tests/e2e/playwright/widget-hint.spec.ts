@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, seedDefinition, selectField, dispatch } from './helpers';
+import { waitForApp, switchTab, seedDefinition, selectField } from './helpers';
 
 const CHOICE_DEF = {
   $formspec: '1.0',
@@ -32,62 +32,104 @@ test.describe('widgetHint affects preview rendering', () => {
       .toBeVisible({ timeout: 3000 });
   });
 
-  test('changing widget to RadioGroup renders radio buttons in preview', async ({ page }) => {
-    // First verify default rendering in preview
-    await switchTab(page, 'Preview');
-    const workspace = page.locator('[data-testid="workspace-Preview"]');
-    await expect(workspace.getByRole('combobox', { name: 'Marital Status' }))
-      .toBeVisible({ timeout: 3000 });
-
-    // Switch back to Editor, dispatch the component tree widget change
-    await switchTab(page, 'Editor');
-    await dispatch(page, {
-      type: 'component.setFieldWidget',
-      payload: { fieldKey: 'maritalStatus', widget: 'RadioGroup' },
-    });
-
-    // Switch to Preview — the debounced sync (300ms) + rAF re-render needs time
-    await switchTab(page, 'Preview');
-
-    // Should now be a radiogroup, not a combobox
-    await expect(workspace.getByRole('radiogroup'))
-      .toBeVisible({ timeout: 5000 });
-    await expect(workspace.getByRole('radio', { name: /Single/ })).toBeVisible();
-    await expect(workspace.getByRole('radio', { name: /Married/ })).toBeVisible();
-  });
-
-  test('widgetHint dropdown in properties panel shows correct component names', async ({ page }) => {
-    // Select the field in the editor
+  test('widgetHint dropdown shows all renderable widgets for choice fields', async ({ page }) => {
     await selectField(page, 'maritalStatus');
 
-    // The widget dropdown should contain actual component names
     const widgetSelect = page.getByLabel('Widget');
     await expect(widgetSelect).toBeVisible();
 
-    // Check that options match the renderer's PascalCase names
+    // Must match the webcomponent renderer's compatibility matrix
     const options = widgetSelect.locator('option');
     const texts = await options.allTextContents();
+    expect(texts).toContain('Default');
     expect(texts).toContain('Select');
     expect(texts).toContain('RadioGroup');
+    expect(texts).toContain('TextInput');
   });
 
-  test('changing widget dropdown in UI updates preview rendering', async ({ page }) => {
-    // Select the field in the editor so the properties panel shows
+  test('changing widget dropdown via mouse updates preview rendering', async ({ page }) => {
+    // Select the field via mouse click in the editor
     await selectField(page, 'maritalStatus');
 
-    // Change the widget dropdown via UI interaction
+    // Change widget dropdown via UI — no programmatic dispatch
     const widgetSelect = page.getByLabel('Widget');
     await expect(widgetSelect).toBeVisible();
     await widgetSelect.selectOption('RadioGroup');
 
-    // Switch to Preview
+    // Switch to Preview — the DOM should render the new widget
     await switchTab(page, 'Preview');
     const workspace = page.locator('[data-testid="workspace-Preview"]');
 
-    // Should now render radio buttons
     await expect(workspace.getByRole('radiogroup'))
       .toBeVisible({ timeout: 5000 });
     await expect(workspace.getByRole('radio', { name: /Single/ })).toBeVisible();
     await expect(workspace.getByRole('radio', { name: /Married/ })).toBeVisible();
+  });
+
+  test('switching widget back to Select re-renders as dropdown', async ({ page }) => {
+    // Select field and change to RadioGroup
+    await selectField(page, 'maritalStatus');
+    const widgetSelect = page.getByLabel('Widget');
+    await widgetSelect.selectOption('RadioGroup');
+
+    // Switch back to Select
+    await widgetSelect.selectOption('Select');
+
+    // Preview should render as combobox again
+    await switchTab(page, 'Preview');
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+    await expect(workspace.getByRole('combobox', { name: 'Marital Status' }))
+      .toBeVisible({ timeout: 5000 });
+  });
+});
+
+// Reproduces the exact user flow: wizard-mode definition, choice field, widget change via UI
+test.describe('widget change works in wizard mode (definition fallback)', () => {
+  const WIZARD_CHOICE_DEF = {
+    $formspec: '1.0',
+    url: 'urn:wizard-widget-test',
+    version: '1.0.0',
+    formPresentation: { pageMode: 'wizard' },
+    items: [
+      {
+        key: 'priority',
+        type: 'field',
+        dataType: 'choice',
+        label: 'Priority',
+        options: [
+          { value: 'low', label: 'Low' },
+          { value: 'medium', label: 'Medium' },
+          { value: 'high', label: 'High' },
+        ],
+      },
+    ],
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await waitForApp(page);
+    await seedDefinition(page, WIZARD_CHOICE_DEF);
+  });
+
+  test('choice field renders as select by default, radiogroup after widget change', async ({ page }) => {
+    // Verify default rendering
+    await switchTab(page, 'Preview');
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+    await expect(workspace.getByRole('combobox', { name: /priority/i }))
+      .toBeVisible({ timeout: 5000 });
+
+    // Go back to editor, select the field via mouse, change widget
+    await switchTab(page, 'Editor');
+    await selectField(page, 'priority');
+
+    const widgetSelect = page.getByLabel('Widget');
+    await expect(widgetSelect).toBeVisible();
+    await widgetSelect.selectOption('RadioGroup');
+
+    // Switch to Preview — should now render as a radiogroup
+    await switchTab(page, 'Preview');
+    await expect(workspace.getByRole('radiogroup'))
+      .toBeVisible({ timeout: 5000 });
+    await expect(workspace.getByRole('radio', { name: /Low/ })).toBeVisible();
+    await expect(workspace.getByRole('radio', { name: /High/ })).toBeVisible();
   });
 });

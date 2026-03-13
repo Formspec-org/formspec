@@ -1,3 +1,12 @@
+const DISPLAY_META: Record<string, { icon: string; label: string }> = {
+  Heading:  { icon: 'H', label: 'Heading' },
+  Divider:  { icon: '—', label: 'Divider' },
+  Spacer:   { icon: '↕', label: 'Spacer' },
+  Text:     { icon: 'ℹ', label: 'Display' },
+};
+
+const DEFAULT_META = { icon: '', label: 'Display' };
+
 interface DisplayBlockProps {
   itemKey: string;
   itemPath: string;
@@ -7,6 +16,7 @@ interface DisplayBlockProps {
   selected: boolean;
   isInSelection?: boolean;
   onSelect: (e: React.MouseEvent) => void;
+  widgetHint?: string;
 }
 
 export function DisplayBlock({
@@ -18,8 +28,11 @@ export function DisplayBlock({
   selected,
   isInSelection,
   onSelect,
+  widgetHint,
 }: DisplayBlockProps) {
   const indent = depth * 24;
+  const meta = (widgetHint && DISPLAY_META[widgetHint]) || DEFAULT_META;
+
   return (
     <div
       ref={(element) => registerTarget(itemPath, element)}
@@ -34,7 +47,8 @@ export function DisplayBlock({
       style={{ marginLeft: indent }}
       onClick={onSelect}
     >
-      <span className="text-xs text-accent font-medium">Display</span>
+      {meta.icon && <span className="text-xs text-accent/70 font-mono">{meta.icon}</span>}
+      <span className="text-xs text-accent font-medium">{meta.label}</span>
       <span className="text-sm text-foreground">{label || itemKey}</span>
     </div>
   );

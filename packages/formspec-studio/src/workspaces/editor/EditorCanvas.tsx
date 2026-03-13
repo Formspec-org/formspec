@@ -1,19 +1,29 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { DragDropProvider, DragOverlay } from '@dnd-kit/react';
+import { PointerSensor, KeyboardSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { useDefinition } from '../../state/useDefinition';
+import { useComponent } from '../../state/useComponent';
 import { useSelection } from '../../state/useSelection';
 import { useActivePage } from '../../state/useActivePage';
 import { useDispatch } from '../../state/useDispatch';
 import { useProject } from '../../state/useProject';
 import { useCanvasTargets } from '../../state/useCanvasTargets';
 import { bindsFor, flatItems } from '../../lib/field-helpers';
+import { flattenComponentTree, buildDefLookup, type TreeFlatEntry } from '../../lib/tree-helpers';
 import { pruneDescendants, sortForBatchDelete } from '../../lib/selection-helpers';
 import { FieldBlock } from './FieldBlock';
 import { GroupBlock } from './GroupBlock';
 import { DisplayBlock } from './DisplayBlock';
+import { LayoutBlock } from './LayoutBlock';
 import { PageTabs } from './PageTabs';
 import { AddItemPalette, type FieldTypeOption } from '../../components/AddItemPalette';
 import { EditorContextMenu } from './EditorContextMenu';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
+import { SortableItemWrapper } from './dnd/SortableItemWrapper';
+import { DropIndicator } from './dnd/DropIndicator';
+import { DragOverlayContent } from './dnd/DragOverlayContent';
+import { useCanvasDnd } from './dnd/use-canvas-dnd';
+import type { FlatEntry } from './dnd/compute-drop-target';
 
 interface Item {
   key: string;
@@ -34,6 +44,7 @@ function renderItems(
   selectedKeys: Set<string>,
   handleItemClick: (e: React.MouseEvent, path: string, type: string) => void,
   registerTarget: (path: string, element: HTMLElement | null) => void,
+  flatIndexMap: Map<string, number>,
   depth: number,
   prefix: string,
 ): React.ReactNode[] {
@@ -42,58 +53,62 @@ function renderItems(
     const path = prefix ? `${prefix}.${item.key}` : item.key;
     const isPrimary = primaryKey === path;
     const inSelection = selectedKeys.has(path) && !isPrimary;
+    const flatIdx = flatIndexMap.get(path) ?? 0;
 
     if (item.type === 'group') {
       nodes.push(
-        <GroupBlock
-          key={path}
-          itemKey={item.key}
-          itemPath={path}
-          registerTarget={registerTarget}
-          label={item.label}
-          repeatable={item.repeatable}
-          minRepeat={item.minRepeat}
-          maxRepeat={item.maxRepeat}
-          depth={depth}
-          selected={isPrimary}
-          isInSelection={inSelection}
-          onSelect={(e) => handleItemClick(e, path, 'group')}
-        >
-          {item.children
-            ? renderItems(item.children, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, depth + 1, path)
-            : null}
-        </GroupBlock>
+        <SortableItemWrapper key={path} id={path} index={flatIdx}>
+          <GroupBlock
+            itemKey={item.key}
+            itemPath={path}
+            registerTarget={registerTarget}
+            label={item.label}
+            repeatable={item.repeatable}
+            minRepeat={item.minRepeat}
+            maxRepeat={item.maxRepeat}
+            depth={depth}
+            selected={isPrimary}
+            isInSelection={inSelection}
+            onSelect={(e) => handleItemClick(e, path, 'group')}
+          >
+            {item.children
+              ? renderItems(item.children, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, flatIndexMap, depth + 1, path)
+              : null}
+          </GroupBlock>
+        </SortableItemWrapper>
       );
     } else if (item.type === 'display') {
       nodes.push(
-        <DisplayBlock
-          key={path}
-          itemKey={item.key}
-          itemPath={path}
-          registerTarget={registerTarget}
-          label={item.label}
-          depth={depth}
-          selected={isPrimary}
-          isInSelection={inSelection}
-          onSelect={(e) => handleItemClick(e, path, 'display')}
-        />
+        <SortableItemWrapper key={path} id={path} index={flatIdx}>
+          <DisplayBlock
+            itemKey={item.key}
+            itemPath={path}
+            registerTarget={registerTarget}
+            label={item.label}
+            depth={depth}
+            selected={isPrimary}
+            isInSelection={inSelection}
+            onSelect={(e) => handleItemClick(e, path, 'display')}
+          />
+        </SortableItemWrapper>
       );
     } else {
       nodes.push(
-        <FieldBlock
-          key={path}
-          itemKey={item.key}
-          itemPath={path}
-          registerTarget={registerTarget}
-          label={item.label}
-          hint={item.hint}
-          dataType={item.dataType}
-          binds={bindsFor(allBinds, path)}
-          depth={depth}
-          selected={isPrimary}
-          isInSelection={inSelection}
-          onSelect={(e) => handleItemClick(e, path, item.type)}
-        />
+        <SortableItemWrapper key={path} id={path} index={flatIdx}>
+          <FieldBlock
+            itemKey={item.key}
+            itemPath={path}
+            registerTarget={registerTarget}
+            label={item.label}
+            hint={item.hint}
+            dataType={item.dataType}
+            binds={bindsFor(allBinds, path)}
+            depth={depth}
+            selected={isPrimary}
+            isInSelection={inSelection}
+            onSelect={(e) => handleItemClick(e, path, item.type)}
+          />
+        </SortableItemWrapper>
       );
     }
   }
@@ -189,11 +204,51 @@ export function EditorCanvas() {
     ? [...rootItems, topLevelGroups[activePageIndex]].filter(Boolean)
     : items;
 
-  // Flat ordering for range-select (shift+click)
-  const flatOrder = useMemo(
-    () => flatItems(displayItems as any).map(f => f.path),
+  // Flat ordering for range-select (shift+click) and DnD
+  const flatItemsList = useMemo(
+    () => flatItems(displayItems as any),
     [displayItems],
   );
+  const flatOrder = useMemo(
+    () => flatItemsList.map(f => f.path),
+    [flatItemsList],
+  );
+
+  // Build FlatEntry[] and index map for DnD
+  const flatEntries: FlatEntry[] = useMemo(
+    () => flatItemsList.map(f => ({
+      path: f.path,
+      type: f.item.type,
+      depth: f.depth,
+      hasChildren: !!(f.item as any).children?.length,
+    })),
+    [flatItemsList],
+  );
+  const flatIndexMap = useMemo(
+    () => new Map(flatEntries.map((e, i) => [e.path, i])),
+    [flatEntries],
+  );
+
+  // DnD hook
+  const {
+    activeId,
+    overTarget,
+    onDragStart,
+    onDragMove,
+    onDragOver,
+    onDragEnd,
+  } = useCanvasDnd({
+    flatList: flatEntries,
+    items,
+    selectedKeys,
+    primaryKey,
+    select,
+    dispatch,
+    batch: project.batch.bind(project),
+  });
+
+  // Look up the active item for the drag overlay
+  const activeItem = activeId ? flatItemsList.find(f => f.path === activeId) : null;
 
   const handleItemClick = useCallback((e: React.MouseEvent, path: string, type: string) => {
     if (e.metaKey || e.ctrlKey) {
@@ -429,13 +484,40 @@ export function EditorCanvas() {
       )}
 
       {/* Items list */}
-      <WorkspacePageSection className="flex flex-col gap-1 pt-3 pb-20">
+      <WorkspacePageSection className="relative flex flex-col gap-1 pt-3 pb-20">
         <AddItemPalette
           open={showPicker}
           onClose={() => setShowPicker(false)}
           onAdd={handleAddItem}
         />
-        {renderItems(displayItems, allBinds, primaryKey, selectedKeys, handleItemClick, registerCanvasTarget, 0, '')}
+        <DragDropProvider
+          onDragStart={onDragStart}
+          onDragMove={onDragMove}
+          onDragOver={onDragOver}
+          onDragEnd={onDragEnd}
+          sensors={() => [
+            PointerSensor.configure({
+              activationConstraints: [
+                new PointerActivationConstraints.Distance({ value: 5 }),
+              ],
+            }),
+            KeyboardSensor,
+          ]}
+        >
+          {renderItems(displayItems, allBinds, primaryKey, selectedKeys, handleItemClick, registerCanvasTarget, flatIndexMap, 0, '')}
+          {overTarget && (
+            <DropIndicator targetPath={overTarget.path} position={overTarget.position} />
+          )}
+          <DragOverlay>
+            {activeItem ? (
+              <DragOverlayContent
+                label={(activeItem.item as any).label || activeItem.path}
+                itemType={activeItem.item.type}
+                extraCount={selectionCount > 1 ? selectionCount - 1 : undefined}
+              />
+            ) : null}
+          </DragOverlay>
+        </DragDropProvider>
         <button
           data-testid="add-item"
           className="fixed bottom-3 left-3 right-3 z-10 flex items-center justify-center gap-1.5 rounded-[4px] border border-dashed border-border bg-surface py-2.5 font-mono text-[11.5px] text-muted shadow-sm transition-colors cursor-pointer hover:border-accent/50 hover:text-ink sm:static sm:mt-3 sm:w-full sm:bg-transparent sm:shadow-none"

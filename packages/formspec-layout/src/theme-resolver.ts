@@ -16,6 +16,8 @@
  * @module
  */
 
+import { widgetTokenToComponent } from './widget-vocabulary.js';
+
 // ── Shared Types ────────────────────────────────────────────────────
 
 /** Union of all `dataType` values recognized by the Formspec schema for selector matching and field definitions. */
@@ -292,12 +294,14 @@ export function resolveWidget(
     if (!presentation.widget) return null;
 
     // Try the preferred widget first
-    if (isAvailable(presentation.widget)) return presentation.widget;
+    const preferred = widgetTokenToComponent(presentation.widget);
+    if (preferred && isAvailable(preferred)) return preferred;
 
     // Try fallback chain
     if (presentation.fallback) {
         for (const fb of presentation.fallback) {
-            if (isAvailable(fb)) return fb;
+            const fallback = widgetTokenToComponent(fb);
+            if (fallback && isAvailable(fallback)) return fallback;
         }
     }
 

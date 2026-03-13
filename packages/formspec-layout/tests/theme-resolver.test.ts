@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolvePresentation, resolveWidget, type ThemeDocument, type ItemDescriptor } from '../src/index';
+import { resolvePresentation, resolveWidget, widgetTokenToComponent, type ThemeDocument, type ItemDescriptor } from '../src/index';
 
 describe('resolvePresentation', () => {
     it('returns empty block with no theme', () => {
@@ -78,12 +78,26 @@ describe('resolveWidget', () => {
         expect(result).toBe('Slider');
     });
 
+    it('maps spec widget vocabulary to concrete component types', () => {
+        expect(widgetTokenToComponent('radio')).toBe('RadioGroup');
+        expect(widgetTokenToComponent('dropdown')).toBe('Select');
+        expect(widgetTokenToComponent('datePicker')).toBe('DatePicker');
+    });
+
     it('falls back to fallback chain', () => {
         const result = resolveWidget(
             { widget: 'Slider', fallback: ['NumberInput'] },
             (type) => type !== 'Slider',
         );
         expect(result).toBe('NumberInput');
+    });
+
+    it('accepts spec widget names in theme fallback chains', () => {
+        const result = resolveWidget(
+            { widget: 'segmented', fallback: ['radio'] },
+            (type) => type === 'RadioGroup',
+        );
+        expect(result).toBe('RadioGroup');
     });
 
     it('returns null when no widget specified', () => {

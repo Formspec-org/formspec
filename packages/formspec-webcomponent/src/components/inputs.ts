@@ -2,7 +2,7 @@ import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
 
 /** Renders a text input field by delegating to `ctx.renderInputComponent()`. */
-const TextInputPlugin: ComponentPlugin = {
+export const TextInputPlugin: ComponentPlugin = {
     type: 'TextInput',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -15,7 +15,7 @@ const TextInputPlugin: ComponentPlugin = {
 };
 
 /** Renders a number input field by delegating to `ctx.renderInputComponent()`. */
-const NumberInputPlugin: ComponentPlugin = {
+export const NumberInputPlugin: ComponentPlugin = {
     type: 'NumberInput',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -28,7 +28,7 @@ const NumberInputPlugin: ComponentPlugin = {
 };
 
 /** Renders a select dropdown by delegating to `ctx.renderInputComponent()`. */
-const SelectPlugin: ComponentPlugin = {
+export const SelectPlugin: ComponentPlugin = {
     type: 'Select',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -41,7 +41,7 @@ const SelectPlugin: ComponentPlugin = {
 };
 
 /** Renders a toggle switch by delegating to `ctx.renderInputComponent()`. */
-const TogglePlugin: ComponentPlugin = {
+export const TogglePlugin: ComponentPlugin = {
     type: 'Toggle',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -54,7 +54,7 @@ const TogglePlugin: ComponentPlugin = {
 };
 
 /** Renders a checkbox input by delegating to `ctx.renderInputComponent()`. */
-const CheckboxPlugin: ComponentPlugin = {
+export const CheckboxPlugin: ComponentPlugin = {
     type: 'Checkbox',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -67,7 +67,7 @@ const CheckboxPlugin: ComponentPlugin = {
 };
 
 /** Renders a date picker input by delegating to `ctx.renderInputComponent()`. */
-const DatePickerPlugin: ComponentPlugin = {
+export const DatePickerPlugin: ComponentPlugin = {
     type: 'DatePicker',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -80,7 +80,7 @@ const DatePickerPlugin: ComponentPlugin = {
 };
 
 /** Renders a radio button group by delegating to `ctx.renderInputComponent()`. */
-const RadioGroupPlugin: ComponentPlugin = {
+export const RadioGroupPlugin: ComponentPlugin = {
     type: 'RadioGroup',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -93,7 +93,7 @@ const RadioGroupPlugin: ComponentPlugin = {
 };
 
 /** Renders a checkbox group by delegating to `ctx.renderInputComponent()`. */
-const CheckboxGroupPlugin: ComponentPlugin = {
+export const CheckboxGroupPlugin: ComponentPlugin = {
     type: 'CheckboxGroup',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -110,7 +110,7 @@ const CheckboxGroupPlugin: ComponentPlugin = {
  * Subscribes to the field signal to sync the slider position and an optional value display `<span>`.
  * Avoids overwriting the input while the user is actively dragging.
  */
-const SliderPlugin: ComponentPlugin = {
+export const SliderPlugin: ComponentPlugin = {
     type: 'Slider',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -206,7 +206,7 @@ function resolveRatingIcon(icon?: string): string {
  * Supports configurable max count, icon mapping, and optional half-step selection.
  * Subscribes to the field signal to toggle selected/half-selected CSS classes.
  */
-const RatingPlugin: ComponentPlugin = {
+export const RatingPlugin: ComponentPlugin = {
     type: 'Rating',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -282,7 +282,7 @@ const RatingPlugin: ComponentPlugin = {
  * When `dragDrop` is enabled, creates a drop zone `<div>` that handles dragover/drop events
  * and hides the native file input. Stores file metadata (name, size, type) in the engine.
  */
-const FileUploadPlugin: ComponentPlugin = {
+export const FileUploadPlugin: ComponentPlugin = {
     type: 'FileUpload',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -357,7 +357,7 @@ const FileUploadPlugin: ComponentPlugin = {
  * Stores the signature as a data URL on mouseup. Includes a clear button that resets
  * the canvas and sets the field value to null.
  */
-const SignaturePlugin: ComponentPlugin = {
+export const SignaturePlugin: ComponentPlugin = {
     type: 'Signature',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;
@@ -444,7 +444,7 @@ const SignaturePlugin: ComponentPlugin = {
 };
 
 /** Renders a money input by delegating to `ctx.renderInputComponent()` as a NumberInput with `dataType: 'money'`. */
-const MoneyInputPlugin: ComponentPlugin = {
+export const MoneyInputPlugin: ComponentPlugin = {
     type: 'MoneyInput',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
         if (!comp.bind) return;

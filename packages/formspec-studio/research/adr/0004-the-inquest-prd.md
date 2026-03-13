@@ -1,51 +1,88 @@
 # The Inquest — Guided Creation Flow
 
-**Version:** 1.0  
+**Version:** 1.3  
 **Status:** Draft  
-**Date:** March 11, 2026  
+**Date:** March 13, 2026  
 **Parent Document:** The Stack PRD v2.0  
+**Companion Document:** `0006-the-inquest-technical-addendum.md`  
 **Mutation Layer:** formspec-studio-core v0.1
 
 ---
 
 ## 1. Purpose
 
-The Inquest is the guided creation flow that bridges the gap between "I have a regulatory requirement" and "I'm editing a structured form in The Stack." It replaces the blank-canvas problem with a conversational process that accepts unstructured input — plain language descriptions, scanned paper forms, policy PDFs, existing spreadsheets — and progressively transforms it into a valid Formspec definition.
+The Inquest is the guided creation flow that bridges the gap between "I have a regulatory requirement" and "I'm ready to move a structured form into The Stack." It replaces the blank-canvas problem with a browser-based conversational process that accepts unstructured input — plain language descriptions, scanned paper forms, policy PDFs, existing spreadsheets — and progressively transforms it into a valid Formspec definition.
 
-The flow exists because the people who need The Stack cannot start from an empty editor. An analyst who knows that Section 8 eligibility requires income verification, household size thresholds, and citizenship checks cannot translate that knowledge into items, binds, and shapes without first understanding Formspec's structural vocabulary. The Inquest teaches by doing: the analyst describes what they need, the system proposes structure, the analyst refines, and the result is a populated project ready for detailed editing.
+The flow exists because the people who need The Stack cannot start from an empty editor. An analyst who knows that Section 8 eligibility requires income verification, household size thresholds, and citizenship checks cannot translate that knowledge into items, binds, and shapes without first understanding Formspec's structural vocabulary. The Inquest teaches by doing: the analyst starts from a template or a description, the system proposes structure, the analyst refines, and the result is a populated project ready to hand off into Studio for detailed editing.
+
+### 1.1 Product Constraints
+
+The initial release of The Inquest is delivered as its own browser-based application surface, not as a modal or embedded workspace inside the main Studio shell. It may live in the same package as Studio, but it must remain independent at the app-shell level. No desktop wrapper, hosted AI proxy, or server-managed model tenancy is required for the primary flow.
+
+The Inquest reuses the same authoring runtime and the relevant editor primitives as Studio — especially `formspec-studio-core`, the Studio command catalog, and shared block/property components — but wraps them in its own routes, layout, and visual language. It should feel like a sister product, not a skin of the existing editor.
+
+Implementation is modular by default. The standalone app shell is only one layer. Template selection, input inventory, analysis review cards, proposal summary, refine canvas, source traceability, provider setup, and Studio handoff should each exist as separable modules with explicit interfaces. Studio should be able to adopt those modules later without inheriting the full Inquest shell, routing, or bring-your-own-key setup.
+
+Independence is defined by dependency boundaries, not by npm package boundaries. Keeping Inquest and Studio code in the same package is acceptable if they are exposed through separate app entry points and a one-way import structure. Shared features must not import the Inquest app shell.
+
+LLM access is bring-your-own-key. The analyst selects a provider, pastes an API key, and the browser uses that key directly against the provider's API for chat, image analysis, and document analysis. Keys are stored locally in the browser and can be cleared or replaced at any time.
+
+Templates are part of the day-one experience, not a later enhancement. An analyst should be able to begin from a common form archetype in one click, then customize through chat and visual editing.
 
 ---
 
 ## 2. Entry Points
 
-The Inquest is accessible from three locations.
+The Inquest is accessible from four locations.
 
-**New Project.** When the analyst creates a new project, they are presented with a choice: "Start from scratch" (opens an empty Stack editor), "Import existing" (opens a file picker for Formspec JSON), or "Describe your form" (opens The Inquest). The Inquest is the default highlighted option.
+**Direct App Entry.** Analysts can open The Inquest directly as its own browser app and start from templates, uploads, or chat without opening Studio first.
 
-**Empty State.** If the analyst opens The Stack with an empty definition (no items), the editor canvas shows an empty state with a prominent "Start with The Inquest" call-to-action.
+**New Project.** When the analyst creates a new project in Studio, they are presented with four choices: "Use a template" (launches The Inquest with starter templates), "Describe your form" (launches The Inquest in blank mode), "Start from scratch" (opens an empty Stack editor), or "Import existing" (opens a file picker for Formspec JSON). "Use a template" is the default highlighted option.
 
-**Command Palette.** ⌘K → "New Inquest" opens the flow at any time, even with an existing project. In this case, the generated structure is merged into the current definition via `project.importSubform` rather than replacing it.
+**Empty State.** If the analyst opens The Stack with an empty definition (no items), the editor canvas shows an empty state with prominent "Start with a Template" and "Start with The Inquest" call-to-action buttons that open the separate Inquest app.
+
+**Command Palette.** ⌘K → "New Inquest" opens the separate app at any time, even with an existing project. In this case, the generated structure is merged into the current definition via a later handoff into `project.importSubform` mode rather than replacing it.
 
 ---
 
 ## 3. Flow Architecture
 
-The Inquest is a five-phase flow. Each phase produces an intermediate artifact that feeds the next. The analyst can exit at any phase and enter The Stack with whatever has been generated so far.
+The Inquest is a five-phase flow. Each phase produces an intermediate artifact that feeds the next. The analyst can exit at any phase, save progress inside The Inquest, and later hand off the current scaffold into Studio.
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌──────────────┐
 │  1. INTAKE   │────▶│  2. ANALYSIS │────▶│  3. PROPOSAL │────▶│  4. REFINE   │────▶│  5. HANDOFF   │
 │              │     │              │     │              │     │              │     │               │
-│  Chat + Upload│     │  LLM extracts│     │  Structured  │     │  Visual edit │     │  Dispatch to  │
-│  Describe need│     │  requirements│     │  scaffold    │     │  of scaffold │     │  The Stack    │
+│ Template +   │     │  LLM extracts│     │  Structured  │     │  Visual edit │     │  Open in      │
+│ Key + Upload │     │  requirements│     │  scaffold    │     │  of scaffold │     │  Studio       │
 └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘     └──────────────┘
 ```
 
-**Phase 1: Intake** — Conversational input gathering.  
+**Phase 1: Intake** — Template selection, model setup, and conversational input gathering.  
 **Phase 2: Analysis** — LLM processes inputs and extracts structured requirements.  
 **Phase 3: Proposal** — System generates a Formspec scaffold and presents it for review.  
 **Phase 4: Refine** — Analyst edits the scaffold in a simplified visual editor.  
-**Phase 5: Handoff** — Approved scaffold is dispatched as commands into The Stack.
+**Phase 5: Handoff** — Approved scaffold is handed off into Studio through the shared command model.
+
+### 3.1 Modular Composition
+
+The Inquest should be implemented as three layers:
+
+1. **Standalone app shell.** Routes, session persistence, top-level navigation, provider key management, and Inquest-specific theming.
+2. **Reusable feature modules.** Template gallery, upload intake, inputs inventory, analysis report, proposal viewer, refine workspace, source trace panel, guided prompts, and handoff launcher.
+3. **Shared authoring primitives.** `formspec-studio-core`, Studio command schemas, block canvas primitives, inspector primitives, diagnostics, and path/query helpers.
+
+Only the app shell is truly Inquest-only. Feature modules should be written so they can later render inside Studio as embedded panels, new-project flows, or sidecar tools.
+
+No feature module should hardcode ownership of the full page, browser route, or provider key lifecycle if that responsibility can be injected. Modules should accept serialized inputs and callbacks so they can run either in standalone Inquest or inside Studio-hosted surfaces.
+
+The preferred organization is a single package with multiple entry points and strict import direction:
+
+1. `app-shell/` or equivalent for the standalone Inquest application surface.
+2. `features/` for reusable modules that can be mounted by either Inquest or Studio.
+3. `shared/` for authoring primitives, adapters, contracts, and low-level helpers.
+
+`features/` may depend on `shared/`, but must not depend on `app-shell/`. This is the rule that keeps "same package" from turning into hidden coupling.
 
 ---
 
@@ -53,17 +90,39 @@ The Inquest is a five-phase flow. Each phase produces an intermediate artifact t
 
 ### 4.1 Layout
 
-Full-screen modal over The Stack. Dark background (`#0F172A`) with a centered content area (max-width 720px). The dark background signals a distinct mode — this is not the editor, this is a conversation.
+Full-screen browser app. It is not a modal over The Stack. The opening surface uses The Inquest's own shell, navigation, and visual system, with a centered working area (max-width 720px) and persistent project/session controls.
 
-Left side: chat stream. Right side: an "Inputs" panel showing uploaded files and extracted context as a growing inventory.
+At the top of the left column: a starter row with template cards and an LLM setup chip. Below that: the chat stream. Right side: an "Inputs" panel showing the selected template, uploaded files, and extracted context as a growing inventory.
 
 ### 4.2 Chat Interface
 
-The chat is a conversational thread between the analyst and an LLM assistant. The assistant's personality is professional, precise, and gently guiding — it asks clarifying questions, but never requires them. It can work with whatever the analyst provides.
+The chat is a conversational thread between the analyst and an LLM assistant. The assistant's personality is professional, precise, and gently guiding — it asks clarifying questions, but never requires them. It can work with whatever the analyst provides, whether they start from a blank prompt or a template.
+
+Before the first model-backed action, the analyst selects a provider and pastes an API key in a lightweight setup popover. The setup UI includes:
+
+- Provider selector
+- API key input
+- "Test connection" action
+- Clear explanation that requests are sent directly from the browser to the selected provider
+- Local-only key storage notice
+
+If no key is configured, template browsing remains available but Analyze / Generate actions are disabled.
 
 **System opening message:**
 
-> What form are you building? You can describe it in your own words, upload an existing paper form or PDF, or paste regulatory text. I'll help translate it into a structured specification.
+> What form are you building? You can start from a template, describe it in your own words, upload an existing paper form or PDF, or paste regulatory text. I'll help translate it into a structured specification.
+
+The starter templates cover a small but high-value set of common archetypes in the initial release:
+
+- Housing intake / recertification
+- Grant application
+- Patient intake
+- Employee onboarding
+- Compliance checklist
+
+Selecting a template preloads a starter field inventory, section structure, common validation rules, and example prompts into the session. The analyst can accept the template as a starting point, delete pieces of it, or layer uploaded reference material on top.
+
+The template gallery is intentionally a shared module, not an Inquest-only widget. Inquest uses it as a primary entry surface; Studio can later use the same module in new-project flows, import assistance, or scaffold generation entry points.
 
 The assistant is trained to ask follow-up questions across five dimensions, but only as needed — it adapts to how much information the analyst volunteers:
 
@@ -95,6 +154,7 @@ Typical use case: An analyst uploads the 24 CFR §982 regulation governing the H
 
 The right-side panel accumulates everything the analyst has provided. Each input renders as a card:
 
+- **Template seed:** The selected starter template, if any, with a summary of which starter sections, fields, and rules were preloaded.
 - **Chat excerpts:** Key statements extracted from the conversation, tagged by dimension (regulatory basis, audience, data, logic, flow).
 - **Uploaded files:** Thumbnail with filename, file type badge, and a "Detected N fields" or "Extracted N requirements" summary.
 - **Extracted items:** As the LLM processes inputs, individual detected fields appear as compact rows with an inferred label, data type, and confidence indicator (high/medium/low).
@@ -105,7 +165,7 @@ The analyst can delete inputs, correct extracted labels, and flag items as "igno
 
 The analyst proceeds to Phase 2 by clicking "Analyze" or by the assistant suggesting it's ready: "I think I have enough to propose a structure. Shall I analyze what we have?" The analyst can also continue adding inputs — the flow never forces progression.
 
-A minimum threshold for progression: at least one meaningful input (a description of more than 20 words, an uploaded file, or 3+ chat exchanges). Below this threshold, the "Analyze" button is disabled with a tooltip: "Tell me more about your form first."
+A minimum threshold for progression: at least one meaningful input (a selected template, a description of more than 20 words, an uploaded file, or 3+ chat exchanges). Below this threshold, the "Analyze" button is disabled with a tooltip: "Choose a template or tell me more about your form first."
 
 ---
 
@@ -113,7 +173,7 @@ A minimum threshold for progression: at least one meaningful input (a descriptio
 
 ### 5.1 Processing
 
-The LLM processes all accumulated inputs and produces a structured requirements document. This is not yet a Formspec definition — it's an intermediate representation that the analyst can review before structure is generated. The processing happens in the background; the analyst sees an animated progress indicator.
+The LLM processes all accumulated inputs, including any selected template seed, and produces a structured requirements document. This is not yet a Formspec definition — it's an intermediate representation that the analyst can review before structure is generated. The processing happens in the background; the analyst sees an animated progress indicator.
 
 The analysis produces five outputs:
 
@@ -129,7 +189,7 @@ The analysis produces five outputs:
 
 ### 5.2 Review Screen
 
-The analysis results render as a structured report in the same full-screen modal. The dark background persists. The report is organized into the five sections above, each rendered as a card.
+The analysis results render in the same full-screen app shell. The report is organized into the five sections above, each rendered as a card.
 
 **Field Inventory Card.** A scrollable table showing each detected field with: checkbox (include/exclude), proposed label (editable inline), inferred data type (dropdown: string, integer, boolean, date, choice, money, attachment), required flag (toggle), and source citation (expandable to show the original input text or image region).
 
@@ -177,7 +237,9 @@ A parallel Component Document scaffold is also generated with a basic layout tre
 
 The proposal renders in a split view. Left: a visual summary of the generated structure. Right: the Inputs panel from Phase 1, allowing the analyst to cross-reference the proposal against their original inputs.
 
-The visual summary uses the same block rendering as The Stack's Editor tab — group headers, field cards with type icons, bind summary strips — but in a simplified, read-only format. This teaches the analyst The Stack's visual vocabulary before they arrive in the full editor.
+The visual summary reuses the same underlying block primitives and authoring model as Studio — group headers, field cards with type icons, bind summary strips — but presents them in an Inquest-specific read-only shell. This preserves continuity of structure without making the surface look like a copy of the Studio editor.
+
+The proposal viewer should be a reusable module in its own right. Studio should later be able to embed this surface for "generate from prompt," "import review," or "AI suggestions" workflows without depending on the full Inquest app shell.
 
 Each generated element shows a "Source" link that highlights the original input (chat excerpt, form scan region, PDF section) that produced it. This traceability is essential for analyst trust: they can verify that the system understood their intent.
 
@@ -198,15 +260,17 @@ A summary bar shows: total fields generated, pages, logic rules, validation shap
 
 ### 7.1 Purpose
 
-A lightweight visual editor for the scaffold that sits between the Proposal view and the full Stack editor. It exposes the most common modifications analysts need to make before committing, without the full complexity of The Stack's nine-section Blueprint.
+A lightweight visual editor for the scaffold that sits between the Proposal view and Studio handoff. It exposes the most common modifications analysts need to make before committing, without exposing the full complexity of Studio's nine-section Blueprint.
 
 ### 7.2 Layout
 
-The dark background transitions to the standard Stack canvas background (`#F8FAFC`). The layout mirrors The Stack's three-column structure — but simplified:
+The layout keeps three working zones because the information architecture is sound, but it does not mirror Studio chrome one-for-one. The refine workspace uses an Inquest-specific shell and theme while reusing the relevant shared components beneath it:
 
-- **Left:** A flat section list (not the full Blueprint). Shows pages and their top-level groups. Drag to reorder.
-- **Center:** The block editor, identical to The Stack's Editor tab but with a reduced toolbar. Only the most common operations are exposed: reorder, rename, change type, toggle required, delete.
-- **Right:** A simplified Properties panel showing only Identity, Field Config, and Behavior Rules. No extensions, no presentation hints, no repeat config. These are available in the full editor.
+- **Left:** A narrative outline of pages and sections. Shows top-level groups, completion state, and unresolved prompts.
+- **Center:** A scaffold canvas built from shared editor blocks with a reduced toolbar. Only the most common operations are exposed: reorder, rename, change type, toggle required, delete.
+- **Right:** A simplified inspector showing Identity, Field Config, source traceability, and Behavior Rules. No extensions, no advanced presentation hints, no low-level repeat config. These remain available in Studio.
+
+The refine workspace should be decomposed so the outline, scaffold canvas, simplified inspector, and prompt tray can each be mounted independently. Studio may later want only the prompt tray, only the source-trace inspector, or only the simplified scaffold canvas inside existing workspaces.
 
 ### 7.3 Guided Prompts
 
@@ -229,7 +293,7 @@ The assistant translates this into the appropriate bind modification and applies
 
 ### 7.5 Progression
 
-The analyst proceeds to Phase 5 by clicking "Open in The Stack" or by the chat suggesting: "Your form looks ready. Want to open it in the full editor?"
+The analyst proceeds to Phase 5 by clicking "Open in Studio" or by the chat suggesting: "Your form looks ready. Want to open it in Studio?"
 
 ---
 
@@ -237,7 +301,7 @@ The analyst proceeds to Phase 5 by clicking "Open in The Stack" or by the chat s
 
 ### 8.1 Dispatch
 
-The finalized scaffold is committed to the project as a series of dispatched commands. The handoff does not use `project.import` (which clears undo history). Instead, it dispatches individual `definition.addItem`, `definition.setBind`, `definition.addShape`, `definition.addVariable`, `definition.setOptionSet`, `definition.addInstance`, `definition.addPage`, and `component.addNode` commands in sequence. This means:
+The finalized scaffold is prepared inside The Inquest using the shared Studio command model, then handed off to Studio as an ordered command bundle plus current scaffold state. Studio applies that bundle to a fresh project or target import location. The handoff does not use `project.import` (which clears undo history). Instead, Studio replays individual `definition.addItem`, `definition.setBind`, `definition.addShape`, `definition.addVariable`, `definition.setOptionSet`, `definition.addInstance`, `definition.addPage`, and `component.addNode` commands in sequence. This means:
 
 - The entire creation is undoable — ⌘Z walks back through every generated item.
 - The command history shows a clear provenance: "Generated by The Inquest" markers on each batch of commands.
@@ -245,7 +309,7 @@ The finalized scaffold is committed to the project as a series of dispatched com
 
 ### 8.2 Transition
 
-The Inquest modal fades out and The Stack editor fades in, with the first page selected and the first field highlighted in the Properties panel. A one-time welcome banner appears at the top of the editor:
+Clicking "Open in Studio" navigates into Studio with the handoff bundle attached. After Studio loads, the first generated page is selected and the first field is highlighted in the Properties panel. A one-time welcome banner appears at the top of the editor:
 
 > ✨ Your form has been generated with [N] fields, [N] rules, and [N] pages. Everything here is editable — click any block to customize it, or use the Logic tab to fine-tune behavior.
 
@@ -253,7 +317,7 @@ The banner includes a "Show me around" link that triggers a lightweight feature 
 
 ### 8.3 Inquest History
 
-The Inputs panel content (chat transcript, uploaded files, extracted requirements) is preserved in the project metadata as an `x-inquest` extension. This allows the analyst to revisit the original conversation and inputs later — useful when another team member asks "why was this field structured this way?"
+The Inputs panel content (chat transcript, uploaded files, extracted requirements) is preserved in the handoff payload and then stored in project metadata as an `x-inquest` extension. This allows the analyst to revisit the original conversation and inputs later — useful when another team member asks "why was this field structured this way?"
 
 ---
 
@@ -261,7 +325,7 @@ The Inputs panel content (chat transcript, uploaded files, extracted requirement
 
 ### 9.1 Model Requirements
 
-The Inquest requires a multimodal LLM capable of: text conversation, image analysis (form scans), PDF text extraction and reasoning, and structured JSON output generation. The model must support the Anthropic Messages API with document and image content types.
+The Inquest requires a multimodal LLM capable of: text conversation, image analysis (form scans), PDF text extraction and reasoning, and structured JSON output generation. The browser integration must support direct HTTPS calls to the provider API using an analyst-supplied key. The product should define a thin provider adapter so the UI, prompts, and output schemas are provider-agnostic.
 
 ### 9.2 System Prompt Architecture
 
@@ -270,12 +334,13 @@ The LLM system prompt includes:
 - The Formspec Definition schema (summary, not full JSON Schema) — enough for the model to understand item types, data types, bind properties, shape structure, and FEL syntax.
 - The FEL function catalog — so the model can generate valid expressions.
 - The Studio Command Catalog — so the model can generate valid command payloads for the dispatch layer.
+- The selected template seed, if any, including starter sections and starter rules.
 - Domain-specific context about common form patterns (government intake forms, grant applications, compliance checklists, clinical research instruments).
 - Persona instructions: professional, precise, never condescending, comfortable with ambiguity, asks clarifying questions only when genuinely uncertain.
 
 ### 9.3 Structured Output
 
-The LLM's analysis and proposal outputs are requested as structured JSON matching predefined schemas. The system prompt specifies the output format explicitly, and the response is parsed and validated before rendering. Malformed outputs trigger a retry with diagnostic feedback.
+The LLM's analysis and proposal outputs are requested as structured JSON matching predefined schemas. The system prompt specifies the output format explicitly, and the response is parsed and validated before rendering. Malformed outputs trigger a retry with diagnostic feedback. Provider-specific response envelopes are normalized by the browser adapter before validation.
 
 ### 9.4 Image Processing
 
@@ -293,6 +358,8 @@ For uploaded PDFs, the document is sent as base64-encoded content. The LLM is pr
 
 The full conversation history is maintained in the LLM context window across all phases. When the analyst asks a follow-up question in Phase 4 ("Actually, make the employer fields conditional"), the model has access to all prior exchanges, uploaded files, the generated analysis, and the current scaffold state. This continuity is essential — the analyst should never have to re-explain context.
 
+Template provenance is also preserved in context. If the analyst started from "Grant application," the model continues to treat that as a starting assumption until the analyst edits or removes those seeded elements.
+
 ### 9.7 Error Handling
 
 If the LLM produces an invalid Formspec structure (e.g., duplicate keys, invalid FEL syntax, circular variable references), the system:
@@ -300,7 +367,9 @@ If the LLM produces an invalid Formspec structure (e.g., duplicate keys, invalid
 1. Attempts automatic repair (deduplicating keys with suffixes, simplifying invalid FEL to placeholder expressions).
 2. If repair succeeds, flags the repaired elements with amber confidence indicators.
 3. If repair fails, shows the element in a "Needs Manual Configuration" section with the error description in plain language.
-4. Never blocks progression — the analyst can always proceed with partial results and fix issues in The Stack.
+4. Never blocks progression — the analyst can always proceed with partial results and fix issues after handoff in Studio.
+
+If the browser cannot reach the provider API, the setup chip switches to an error state with retry guidance. Existing local session artifacts remain intact; only model-backed actions are paused.
 
 ---
 
@@ -334,7 +403,7 @@ If the analyst closes The Inquest mid-flow and reopens it, the previous session 
 
 ## 11. Command Mapping
 
-Every mutation during The Inquest maps to Studio commands. The following table shows which commands each phase uses.
+Every mutation during The Inquest maps to the same Studio commands via shared `formspec-studio-core` primitives. The following table shows which commands each phase uses.
 
 | Phase | Commands Used |
 |-------|--------------|
@@ -346,31 +415,39 @@ Every mutation during The Inquest maps to Studio commands. The following table s
 
 In Phase 4, the chat continuation can dispatch any command — the LLM generates command payloads from natural language and the system validates and executes them through `Project.dispatch()`.
 
+The reusable feature modules should communicate through serializable state and command/result boundaries rather than hidden singleton state. That keeps them portable between the standalone Inquest app and future Studio embeddings.
+
+Shared modules that are expected to be used by both Inquest and Studio — especially the template gallery, proposal viewer, source trace panel, and guided prompt surfaces — should expose neutral props and events rather than product-specific orchestration APIs.
+
 ---
 
 ## 12. Design Specifications
 
 ### 12.1 Phase 1 Visual Treatment
 
-Dark background (`#0F172A`). Chat bubbles: system messages left-aligned, no bubble, raw text in Space Grotesk 14px. User messages right-aligned with subtle dark surface background (`#1E293B`), JetBrains Mono 13px. Upload cards render with file-type icons, thumbnails for images, and extraction progress indicators. The Inputs panel uses the same dark treatment with cards at `#1E293B` surface.
+The Inquest has its own visual identity. It should not reuse The Stack's Swiss Brutalist shell styling directly.
 
-The overall feel is a terminal-meets-design-tool aesthetic — technical enough to signal precision, warm enough to not intimidate. The dark mode creates a clear visual break from The Stack's light editor, reinforcing that this is a distinct mode.
+That visual identity should be expressed through theme tokens and wrapper components, not by forking shared structural primitives. Reusable modules should remain styleable so Studio can later host them with either Inquest styling or Studio styling, depending on the embedding context.
+
+Base palette: warm parchment background (`#F4EEE2`), deep ink panels (`#1C2433`), brass accent (`#B7791F`), blue-teal action color (`#2F6B7E`), and rust warning color (`#B44C3B`). Template cards and the LLM setup chip sit above the conversation in the left rail like dossier tabs. Upload cards render with file-type icons, thumbnails for images, and extraction progress indicators. The Inputs panel uses the same ink-panel treatment with parchment cards nested inside.
+
+The overall feel is an editorial research desk: precise, investigative, and calm. It should feel like a sister product to Studio, not an embedded Studio mode.
 
 ### 12.2 Phase 2–3 Visual Treatment
 
-Remains dark. The analysis report and proposal use cards with `#1E293B` backgrounds and `#E2E8F0` borders. Confidence indicators use the standard color system: green (`#059669`), amber (`#D97706`), red (`#DC2626`). The field inventory table uses JetBrains Mono for data types and keys, Space Grotesk for labels.
+Analysis and proposal continue the same Inquest palette. Report cards use deep ink shells with parchment interiors. Confidence indicators use green (`#2E8B57`), brass (`#B7791F`), and rust (`#B44C3B`). Structured data remains monospaced; labels and editorial copy use the Inquest typography system.
 
 ### 12.3 Phase 4 Transition
 
-The background transitions from dark to light (`#F8FAFC`) with a 300ms cross-fade. The block editor renders identically to The Stack's Editor tab, using the same block components. The simplified Properties panel uses the same Row, Sec, BindCard, and Pill components. The chat drawer at the bottom uses a dark strip (`#1E293B`) to maintain continuity with the earlier phases.
+The refine workspace shifts toward a lighter parchment canvas (`#F7F1E6`) with a 300ms cross-fade, but it remains unmistakably Inquest. The scaffold canvas reuses the same block components underneath, restyled through Inquest theme tokens. The simplified inspector reuses the same Row, Sec, BindCard, and Pill primitives where useful, but with its own spacing, borders, and typography.
 
 ### 12.4 Phase 5 Transition
 
-The Inquest modal fades out (opacity 0 over 400ms) while The Stack's editor fades in behind it. The first generated page is selected, the first field is highlighted, and the Properties panel is populated. The welcome banner uses a subtle accent-tinted background (`#2563EB` at 6% opacity) with a left border.
+The handoff screen resolves into Studio over 400ms via route navigation, not a modal fade. The first generated page is selected, the first field is highlighted, and the Properties panel is populated. The welcome banner uses a subtle accent-tinted background (`#2563EB` at 6% opacity) with a left border.
 
 ### 12.5 Typography
 
-All phases use the same Space Grotesk / JetBrains Mono split as The Stack. The chat uses slightly larger sizes (14px body, 13px mono) for readability in the dark context. Minimum font size across The Inquest is 12px — slightly higher than The Stack's 11px floor, because the dark background reduces perceived contrast.
+The Inquest has its own typography stack: Fraunces for major headings and section titles, IBM Plex Sans for body copy and UI labels, and IBM Plex Mono for structured data, key names, and command-like references. Minimum font size across The Inquest is 12px.
 
 ---
 
@@ -379,6 +456,8 @@ All phases use the same Space Grotesk / JetBrains Mono split as The Stack. The c
 ### 13.1 Tracked Events
 
 - Inquest started (entry point: new project / empty state / command palette)
+- Template selected (template id, later accepted / heavily modified / mostly discarded)
+- LLM provider configured (provider only, never the key)
 - Input provided (type: chat / image / pdf / spreadsheet)
 - Analysis completed (field count, section count, rule count, confidence distribution)
 - Proposal generated (field count, bind count, shape count, coverage percentage)
@@ -392,16 +471,16 @@ All phases use the same Space Grotesk / JetBrains Mono split as The Stack. The c
 
 - **Extraction accuracy.** Percentage of LLM-detected fields that survive into the final definition without label changes. Target: 80%.
 - **Logic translation accuracy.** Percentage of natural-language rules that produce valid FEL without manual correction. Target: 70%.
-- **Time to first edit.** Time from Inquest start to first manual edit in The Stack editor. Target: under 5 minutes for a 30-field form.
+- **Time to first edit.** Time from Inquest start to first manual edit in Studio after handoff. Target: under 5 minutes for a 30-field form.
 - **Scaffold retention.** Percentage of generated items that remain in the published definition (not deleted by the analyst). Target: 75%.
 
 ---
 
 ## 14. Future Enhancements
 
-### 14.1 Template Gallery
+### 14.1 Expanded Template Library
 
-Pre-built Inquest sessions for common form types: government intake forms (Section 8, SF-425, SF-424), clinical trial case report forms, grant applications, compliance checklists, employee onboarding. The analyst selects a template, which pre-populates the analysis with a known structure, then customizes from there.
+Expand the initial starter set into a richer library with jurisdiction-specific government packages (Section 8, SF-425, SF-424), clinical trial case report forms, grant applications, compliance checklists, and employer HR workflows. Each template can carry example policy references, starter option sets, and opinionated presentation defaults.
 
 ### 14.2 Iterative Re-Inquest
 

@@ -89,6 +89,7 @@ function createDefaultState(options?: ProjectOptions): ProjectState {
 
   const component: FormspecComponentDocument = options?.seed?.component ?? {
     targetDefinition: { url },
+    'x-studio-generated': true,
   };
   if (!component.targetDefinition) {
     component.targetDefinition = { url };
@@ -1692,61 +1693,87 @@ export class Project {
    *   2. Rebuild tree from definition hierarchy, reusing existing nodes where available.
    *   3. Append preserved unbound layout nodes at root level.
    */
+  private _markGeneratedComponentDoc(): void {
+    const component = this._state.component as Record<string, unknown>;
+    delete component.$formspecComponent;
+    delete component.version;
+    component['x-studio-generated'] = true;
+  }
+
   private _rebuildComponentTree(): void {
     type TreeNode = { component: string; bind?: string; nodeId?: string; children?: TreeNode[]; [k: string]: unknown };
 
     const tree = (this._state.component.tree as TreeNode) ?? { component: 'Stack', nodeId: 'root', children: [] };
 
-    // 1. Collect existing nodes by identity key (preserve their properties)
-    //    - Bound nodes (fields/groups) are keyed by `bind`
-    //    - Display nodes are keyed by `nodeId` (no bind — bind implies reactive subscription)
+    // ── Phase 1: Snapshot top-level layout wrappers with their full subtrees ──
+    // A "top-level" layout node is one whose parent is NOT a layout node.
+    // Nested layout nodes are captured inside their parent's subtree snapshot.
+    interface WrapperSnapshot {
+      wrapper: TreeNode;  // deep clone of layout node + children
+      parentRef: { bind?: string; nodeId?: string };
+      position: number;   // index within parent's children
+    }
+
+    const wrapperSnapshots: WrapperSnapshot[] = [];
+
+    const snapshotWrappers = (parent: TreeNode) => {
+      const children = parent.children ?? [];
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        if (child._layout) {
+          wrapperSnapshots.push({
+            wrapper: structuredClone(child),
+            parentRef: parent.bind ? { bind: parent.bind } : { nodeId: parent.nodeId! },
+            position: i,
+          });
+          // Don't recurse into layout node — nested layouts are part of this snapshot
+        } else if (child.children) {
+          snapshotWrappers(child);
+        }
+      }
+    };
+    snapshotWrappers(tree);
+
+    // ── Phase 2: Collect existing bound/display nodes and rebuild flat tree ──
     const existingBound = new Map<string, TreeNode>();
     const existingDisplay = new Map<string, TreeNode>();
-    const unboundNodes: TreeNode[] = [];
 
     const collectExisting = (node: TreeNode, parentPath = '') => {
       for (const child of node.children ?? []) {
-        const identity = child.bind ?? child.nodeId;
-        const path = identity ? (parentPath ? `${parentPath}.${identity}` : identity) : parentPath;
-        if (child.bind) {
-          existingBound.set(path, child);
-        } else if (child.nodeId && !child._layout) {
-          existingDisplay.set(path, child);
-        } else {
-          unboundNodes.push(child);
-        }
-        // Don't recurse into children — we'll rebuild the hierarchy from definition
-        // But we do need to collect deeply nested bound/identified nodes
-        if (child.children) {
-          const collectDeep = (n: TreeNode, currentPath: string) => {
+        if (child._layout) {
+          // Recurse into layout children to collect bound/display nodes inside
+          const collectDeep = (n: TreeNode, path: string) => {
             for (const c of n.children ?? []) {
-              const nestedIdentity = c.bind ?? c.nodeId;
-              const nestedPath = nestedIdentity ? (currentPath ? `${currentPath}.${nestedIdentity}` : nestedIdentity) : currentPath;
-              if (c.bind && !existingBound.has(nestedPath)) {
-                existingBound.set(nestedPath, c);
-              } else if (c.nodeId && !c._layout && !existingDisplay.has(nestedPath)) {
-                existingDisplay.set(nestedPath, c);
+              if (c.bind) {
+                const cPath = path ? `${path}.${c.bind}` : c.bind;
+                existingBound.set(cPath, c);
+                collectDeep(c, cPath);
+              } else if (c.nodeId && !c._layout) {
+                const cPath = path ? `${path}.${c.nodeId}` : c.nodeId;
+                existingDisplay.set(cPath, c);
               } else if (c._layout) {
-                unboundNodes.push(c);
+                collectDeep(c, path);
               }
-              collectDeep(c, nestedPath);
             }
           };
-          collectDeep(child, path);
+          collectDeep(child, parentPath);
+        } else if (child.bind) {
+          const path = parentPath ? `${parentPath}.${child.bind}` : child.bind;
+          existingBound.set(path, child);
+          if (child.children) collectExisting(child, path);
+        } else if (child.nodeId) {
+          const path = parentPath ? `${parentPath}.${child.nodeId}` : child.nodeId;
+          existingDisplay.set(path, child);
         }
       }
     };
     collectExisting(tree);
 
-    // 2. Build new tree from definition
     const buildNode = (item: FormspecItem, parentPath = ''): TreeNode => {
       const itemPath = parentPath ? `${parentPath}.${item.key}` : item.key;
       let node: TreeNode;
 
       if (item.type === 'display') {
-        // Display items have no field signals; store label text directly.
-        // Never set bind on display nodes — bind implies reactive field value subscription.
-        // Use nodeId for stable identity so overrides survive rebuilds.
         const existing = existingDisplay.get(itemPath);
         if (existing) {
           node = { ...existing, text: item.label ?? '' };
@@ -1755,7 +1782,6 @@ export class Project {
           node = { component: 'Text', nodeId: item.key, text: item.label ?? '' };
         }
       } else {
-        // Reuse existing node if available (preserves widget overrides, styles, etc.)
         const existing = existingBound.get(itemPath);
         if (existing) {
           node = { ...existing };
@@ -1764,7 +1790,6 @@ export class Project {
         }
       }
 
-      // Rebuild children from definition hierarchy
       if (item.children && item.children.length > 0) {
         node.children = item.children.map(child => buildNode(child, itemPath));
       } else if (item.type === 'group') {
@@ -1781,11 +1806,71 @@ export class Project {
       newRoot.children!.push(buildNode(item));
     }
 
-    // 3. Append preserved unbound layout nodes at root
-    for (const node of unboundNodes) {
-      newRoot.children!.push(node);
+    // ── Phase 3: Re-insert layout wrappers ──
+    // For each snapshot, update its bound/display children with rebuilt versions,
+    // remove stale children, then insert at the right position.
+
+    const findInTree = (root: TreeNode, ref: { bind?: string; nodeId?: string }): { parent: TreeNode; index: number; node: TreeNode } | undefined => {
+      if (ref.nodeId && root.nodeId === ref.nodeId) return { parent: root, index: -1, node: root };
+      if (ref.bind && root.bind === ref.bind) return { parent: root, index: -1, node: root };
+      const stack: TreeNode[] = [root];
+      while (stack.length) {
+        const p = stack.pop()!;
+        for (let i = 0; i < (p.children?.length ?? 0); i++) {
+          const c = p.children![i];
+          if (ref.nodeId && c.nodeId === ref.nodeId) return { parent: p, index: i, node: c };
+          if (ref.bind && c.bind === ref.bind) return { parent: p, index: i, node: c };
+          stack.push(c);
+        }
+      }
+      return undefined;
+    };
+
+    // Update bound/display nodes inside a wrapper with their rebuilt versions.
+    // Remove nodes that no longer exist in the rebuilt tree.
+    const updateWrapperChildren = (wrapperNode: TreeNode): void => {
+      if (!wrapperNode.children) return;
+      const updatedChildren: TreeNode[] = [];
+      for (const child of wrapperNode.children) {
+        if (child._layout) {
+          // Nested layout — recurse to update its children
+          updateWrapperChildren(child);
+          updatedChildren.push(child);
+        } else if (child.bind) {
+          // Find the rebuilt version and extract it from the flat tree
+          const found = findInTree(newRoot, { bind: child.bind });
+          if (found && found.index !== -1) {
+            const [extracted] = found.parent.children!.splice(found.index, 1);
+            updatedChildren.push(extracted);
+          }
+          // If not found, the item was deleted — omit it
+        } else if (child.nodeId) {
+          // Display node — find rebuilt version
+          const found = findInTree(newRoot, { nodeId: child.nodeId });
+          if (found && found.index !== -1) {
+            const [extracted] = found.parent.children!.splice(found.index, 1);
+            updatedChildren.push(extracted);
+          }
+        }
+      }
+      wrapperNode.children = updatedChildren;
+    };
+
+    for (const snap of wrapperSnapshots) {
+      const wrapperNode = snap.wrapper;
+      updateWrapperChildren(wrapperNode);
+
+      // Find the parent node in the rebuilt tree
+      const parentResult = findInTree(newRoot, snap.parentRef);
+      const parentNode = parentResult ? parentResult.node : newRoot;
+      if (!parentNode.children) parentNode.children = [];
+
+      // Insert at original position (clamped to valid range)
+      const idx = Math.min(snap.position, parentNode.children.length);
+      parentNode.children.splice(idx, 0, wrapperNode);
     }
 
+    this._markGeneratedComponentDoc();
     this._state.component.tree = newRoot as any;
   }
 
@@ -1800,10 +1885,19 @@ export class Project {
     switch (item.type) {
       case 'field':
         if ((item as any).optionSet || Array.isArray((item as any).options)) return 'Select';
-        if (item.dataType === 'choice') return 'Select';
-        if (item.dataType === 'multiChoice') return 'CheckboxGroup';
-        if (item.dataType === 'boolean') return 'Toggle';
-        return 'TextInput';
+        switch (item.dataType) {
+          case 'choice': return 'Select';
+          case 'multiChoice': return 'CheckboxGroup';
+          case 'boolean': return 'Toggle';
+          case 'integer':
+          case 'decimal': return 'NumberInput';
+          case 'date':
+          case 'dateTime':
+          case 'time': return 'DatePicker';
+          case 'money': return 'MoneyInput';
+          case 'attachment': return 'FileUpload';
+          default: return 'TextInput';
+        }
       case 'group': return (item as any).repeatable ? 'Accordion' : 'Stack';
       case 'display': return 'Text';
       default: return 'TextInput';

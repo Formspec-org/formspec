@@ -11,6 +11,9 @@
     "test:e2e": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
+    "@dnd-kit/dom": "^0.3.2",
+    "@dnd-kit/helpers": "^0.3.2",
+    "@dnd-kit/react": "^0.3.2",
     "@floating-ui/react": "^0.27.19",
     "formspec-engine": "*",
     "formspec-studio-core": "*",

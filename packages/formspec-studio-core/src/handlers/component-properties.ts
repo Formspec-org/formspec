@@ -59,14 +59,23 @@ type TreeNode = {
 /**
  * Ensure the component document has a root tree node.
  *
- * Initializes `component.tree` with a synthetic Root node if absent.
+ * Initializes `component.tree` with a synthetic Stack root if absent and marks
+ * the document as Studio-generated internal state rather than a spec-valid
+ * serialized component document.
  *
  * @param component - The component document.
  * @returns The root tree node.
  */
+function markStudioGeneratedComponent(component: FormspecComponentDocument): void {
+  delete component.$formspecComponent;
+  delete component.version;
+  component['x-studio-generated'] = true;
+}
+
 function ensureTree(component: FormspecComponentDocument): TreeNode {
+  markStudioGeneratedComponent(component);
   if (!component.tree) {
-    component.tree = { component: 'Root', nodeId: 'root', children: [] };
+    component.tree = { component: 'Stack', nodeId: 'root', children: [] };
   }
   return component.tree as TreeNode;
 }

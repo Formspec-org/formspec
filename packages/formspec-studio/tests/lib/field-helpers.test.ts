@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { flatItems, bindsFor, arrayBindsFor, shapesFor, dataTypeInfo } from '../../src/lib/field-helpers';
+import { flatItems, bindsFor, arrayBindsFor, shapesFor, dataTypeInfo, compatibleWidgets } from '../../src/lib/field-helpers';
 
 describe('flatItems', () => {
   it('flattens nested items with paths', () => {
@@ -99,5 +99,85 @@ describe('dataTypeInfo', () => {
     const info = dataTypeInfo('money');
     expect(info.icon).toBe('$');
     expect(info.label).toBe('Money');
+  });
+});
+
+describe('compatibleWidgets', () => {
+  // Must match the webcomponent renderer's compatibility matrix in
+  // packages/formspec-webcomponent/src/rendering/field-input.ts
+
+  it('returns all renderable widgets for string fields', () => {
+    const widgets = compatibleWidgets('field', 'string');
+    expect(widgets).toEqual(['TextInput', 'Select', 'RadioGroup']);
+  });
+
+  it('returns TextInput for text fields', () => {
+    expect(compatibleWidgets('field', 'text')).toEqual(['TextInput']);
+  });
+
+  it('returns numeric widgets for integer fields', () => {
+    expect(compatibleWidgets('field', 'integer')).toEqual(['NumberInput', 'Slider', 'Rating', 'TextInput']);
+  });
+
+  it('returns numeric widgets for decimal fields', () => {
+    expect(compatibleWidgets('field', 'decimal')).toEqual(['NumberInput', 'Slider', 'Rating', 'TextInput']);
+  });
+
+  it('returns Toggle and Checkbox for boolean fields', () => {
+    expect(compatibleWidgets('field', 'boolean')).toEqual(['Toggle', 'Checkbox']);
+  });
+
+  it('returns DatePicker and TextInput for date fields', () => {
+    expect(compatibleWidgets('field', 'date')).toEqual(['DatePicker', 'TextInput']);
+  });
+
+  it('returns DatePicker and TextInput for time fields', () => {
+    expect(compatibleWidgets('field', 'time')).toEqual(['DatePicker', 'TextInput']);
+  });
+
+  it('returns DatePicker and TextInput for dateTime fields', () => {
+    expect(compatibleWidgets('field', 'dateTime')).toEqual(['DatePicker', 'TextInput']);
+  });
+
+  it('returns Select, RadioGroup, TextInput for choice fields', () => {
+    expect(compatibleWidgets('field', 'choice')).toEqual(['Select', 'RadioGroup', 'TextInput']);
+  });
+
+  it('returns CheckboxGroup for multiChoice fields', () => {
+    expect(compatibleWidgets('field', 'multiChoice')).toEqual(['CheckboxGroup']);
+  });
+
+  it('returns MoneyInput, NumberInput, TextInput for money fields', () => {
+    expect(compatibleWidgets('field', 'money')).toEqual(['MoneyInput', 'NumberInput', 'TextInput']);
+  });
+
+  it('returns FileUpload and Signature for attachment fields', () => {
+    expect(compatibleWidgets('field', 'attachment')).toEqual(['FileUpload', 'Signature']);
+  });
+
+  it('returns TextInput for uri fields', () => {
+    expect(compatibleWidgets('field', 'uri')).toEqual(['TextInput']);
+  });
+
+  it('returns real layout component names for groups', () => {
+    const widgets = compatibleWidgets('group');
+    expect(widgets).toContain('Stack');
+    expect(widgets).toContain('Card');
+    expect(widgets).toContain('Accordion');
+    expect(widgets).not.toContain('Section');
+    expect(widgets).not.toContain('Tab');
+  });
+
+  it('returns real display component names for display items', () => {
+    const widgets = compatibleWidgets('display');
+    expect(widgets).toContain('Text');
+    expect(widgets).toContain('Heading');
+    expect(widgets).toContain('Divider');
+    expect(widgets).not.toContain('Paragraph');
+    expect(widgets).not.toContain('Banner');
+  });
+
+  it('returns empty array for unknown types', () => {
+    expect(compatibleWidgets('unknown')).toEqual([]);
   });
 });

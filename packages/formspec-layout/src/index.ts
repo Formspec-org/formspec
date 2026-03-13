@@ -39,6 +39,7 @@ export { interpolateParams } from './params.js';
 
 // Default component mapping
 export { getDefaultComponent } from './defaults.js';
+export { widgetTokenToComponent } from './widget-vocabulary.js';
 
 // Layout planner
 export { planComponentTree, planDefinitionFallback, resetNodeIdCounter } from './planner.js';

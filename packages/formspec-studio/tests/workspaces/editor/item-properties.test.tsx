@@ -12,6 +12,10 @@ const testDef = {
     { key: 'group1', type: 'group', label: 'Section', children: [
       { key: 'email', type: 'field', dataType: 'string' },
     ]},
+    {
+      key: 'status', type: 'field', dataType: 'choice', label: 'Status',
+      options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }],
+    },
   ],
   binds: [{ path: 'name', required: 'true' }],
 };
@@ -25,6 +29,7 @@ const testComponent = {
       { component: 'Stack', bind: 'group1', children: [
         { component: 'TextInput', bind: 'email' },
       ]},
+      { component: 'Select', bind: 'status' },
     ],
   },
 };
@@ -322,14 +327,28 @@ describe('ItemProperties', () => {
 
   // --- widgetHint ---
 
-  it('shows widgetHint dropdown for fields', async () => {
+  it('shows widgetHint dropdown for fields with multiple widget options', async () => {
     renderProps();
     await act(async () => { screen.getByText('Select').click(); });
+    // string field has 3 options: TextInput, Select, RadioGroup
     expect(screen.getByLabelText(/widget/i)).toBeInTheDocument();
   });
 
-  it('dispatches component.setFieldWidget on widget select', async () => {
-    const { project } = renderProps();
+  it('hides widgetHint dropdown when only one widget option exists', async () => {
+    const singleWidgetDef = {
+      ...testDef,
+      items: [{ key: 'bio', type: 'field', dataType: 'text', label: 'Bio' }],
+    };
+    const project = createProject({ seed: { definition: singleWidgetDef as any } });
+    renderProps(project, { path: 'bio', type: 'field' });
+    await act(async () => { screen.getByText('Select').click(); });
+    // text field has only TextInput — dropdown should not appear
+    expect(screen.queryByLabelText(/widget/i)).not.toBeInTheDocument();
+  });
+
+  it('dispatches both component.setFieldWidget and definition hint on widget select', async () => {
+    // Use a choice field so RadioGroup is a valid widget option
+    const { project } = renderProps(undefined, { path: 'status', type: 'field' });
     const spy = vi.spyOn(project, 'dispatch');
     await act(async () => { screen.getByText('Select').click(); });
 
@@ -338,20 +357,61 @@ describe('ItemProperties', () => {
       fireEvent.change(select, { target: { value: 'RadioGroup' } });
     });
 
+    // Tier 3: component tree
     expect(spy).toHaveBeenCalledWith({
       type: 'component.setFieldWidget',
-      payload: { fieldKey: 'name', widget: 'RadioGroup' },
+      payload: { fieldKey: 'status', widget: 'RadioGroup' },
+    });
+    // Tier 1: definition fallback (for wizard/tabs mode where tree is stripped)
+    expect(spy).toHaveBeenCalledWith({
+      type: 'definition.setItemProperty',
+      payload: { path: 'status', property: 'presentation.widgetHint', value: 'radio' },
     });
   });
 
   it('widget dropdown reflects current component tree node type', async () => {
     const project = createProject({ seed: { definition: testDef as any, component: testComponent as any } });
-    // Change the widget via the component tree
-    project.dispatch({ type: 'component.setFieldWidget', payload: { fieldKey: 'name', widget: 'RadioGroup' } });
-    renderProps(project);
+    // Change the widget via the component tree (choice field, so RadioGroup is valid)
+    project.dispatch({ type: 'component.setFieldWidget', payload: { fieldKey: 'status', widget: 'RadioGroup' } });
+    renderProps(project, { path: 'status', type: 'field' });
     await act(async () => { screen.getByText('Select').click(); });
 
     const select = screen.getByLabelText(/widget/i) as HTMLSelectElement;
+    expect(select.value).toBe('RadioGroup');
+  });
+
+  it('widget dropdown maps definition widgetHint vocabulary back to component ids', async () => {
+    const project = createProject({ seed: { definition: {
+      ...testDef,
+      items: [{
+        key: 'status',
+        type: 'field',
+        dataType: 'choice',
+        label: 'Status',
+        options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }],
+        presentation: { widgetHint: 'radio' },
+      }],
+    } as any, component: { targetDefinition: { url: 'urn:test' } } as any } });
+    renderProps(project, { path: 'status', type: 'field' });
+    await act(async () => { screen.getByText('Select').click(); });
+
+    const select = screen.getByLabelText(/widget/i) as HTMLSelectElement;
+    expect(select.value).toBe('RadioGroup');
+  });
+
+  it('widget dropdown value updates after selection (controlled input stays in sync)', async () => {
+    // Regression: controlled <select> must reflect updated value after dispatch
+    const { project } = renderProps(undefined, { path: 'status', type: 'field' });
+    await act(async () => { screen.getByText('Select').click(); });
+
+    const select = screen.getByLabelText(/widget/i) as HTMLSelectElement;
+    expect(select.value).toBe('Select'); // default for choice field
+
+    await act(async () => {
+      fireEvent.change(select, { target: { value: 'RadioGroup' } });
+    });
+
+    // After dispatch + re-render, the dropdown should reflect the new value
     expect(select.value).toBe('RadioGroup');
   });
 

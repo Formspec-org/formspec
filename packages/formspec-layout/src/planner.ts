@@ -15,6 +15,7 @@ import { resolveResponsiveProps } from './responsive.js';
 import { resolveToken } from './tokens.js';
 import { interpolateParams } from './params.js';
 import { getDefaultComponent } from './defaults.js';
+import { widgetTokenToComponent } from './widget-vocabulary.js';
 
 // ── Component category classification ────────────────────────────────
 
@@ -142,7 +143,7 @@ export function planComponentTree(
     if (applyThemePages && !prefix && ctx.theme?.pages?.length) {
         const themed = planThemePagesFromComponentTree(tree, ctx, customComponentStack);
         if (themed) {
-            return themed;
+            return applyGeneratedPageMode(themed, themed.component, ctx);
         }
     }
 
@@ -286,6 +287,10 @@ export function planComponentTree(
         }
     }
 
+    if (!prefix) {
+        return applyGeneratedPageMode(node, componentType, ctx);
+    }
+
     return node;
 }
 
@@ -310,7 +315,7 @@ export function planDefinitionFallback(
     if (applyThemePages && !prefix && ctx.theme?.pages?.length) {
         const themed = planThemePagesFromDefinitionItems(items, ctx);
         if (themed.length > 0) {
-            return themed;
+            return applyDefinitionPageMode(themed, ctx);
         }
     }
 
@@ -320,29 +325,28 @@ export function planDefinitionFallback(
         nodes.push(planDefinitionItem(item, ctx, prefix));
     }
 
-    // Wrap top-level groups in a Wizard node when pageMode is 'wizard'
+    return applyDefinitionPageMode(nodes, ctx);
+}
+
+function applyDefinitionPageMode(nodes: LayoutNode[], ctx: PlanContext): LayoutNode[] {
     const pageMode = ctx.formPresentation?.pageMode;
-    if (!prefix && (pageMode === 'wizard' || pageMode === 'tabs')) {
-        const pageNodes = nodes.filter(n => n.scopeChange);
-        if (pageNodes.length > 0) {
-            const orphans = nodes.filter(n => !n.scopeChange);
-            const wizardNode: LayoutNode = {
-                id: nextId('wizard'),
-                component: pageMode === 'tabs' ? 'Tabs' : 'Wizard',
-                category: 'interactive',
-                props: {},
-                cssClasses: [],
-                children: pageNodes.map(n => ({
-                    ...n,
-                    // Each page child becomes a panel in the Wizard
-                    props: { ...n.props, title: n.props.title || n.props.bind },
-                })),
-            };
-            return [...orphans, wizardNode];
-        }
+    if (pageMode !== 'wizard' && pageMode !== 'tabs') {
+        return nodes;
     }
 
-    return nodes;
+    const pageNodes = nodes.some((node) => node.component === 'Page')
+        ? nodes.filter((node) => node.component === 'Page')
+        : nodes.filter((node) => node.scopeChange);
+    if (pageNodes.length === 0) {
+        return nodes;
+    }
+
+    return wrapPageModeChildren(
+        nodes,
+        pageMode,
+        (node) => pageNodes.includes(node),
+        (node, index) => String(node.props.title || node.props.bind || `Page ${index + 1}`),
+    );
 }
 
 function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNode {
@@ -391,7 +395,8 @@ function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNod
     if (item.type === 'field') {
         const isAvailable = ctx.isComponentAvailable ?? (() => true);
         const themeWidget = resolveWidget(presentation, isAvailable);
-        const widget = themeWidget || item.presentation?.widgetHint || getDefaultComponent(item);
+        const tier1Widget = widgetTokenToComponent(item.presentation?.widgetHint);
+        const widget = themeWidget || tier1Widget || getDefaultComponent(item);
 
         // Default maxLines for text dataType fields rendered as TextInput
         const fieldProps: Record<string, unknown> = { bind: key };
@@ -567,6 +572,120 @@ function wrapRegionNode(
         cssClasses: [],
         children: [node],
     };
+}
+
+function wrapPageModeChildren(
+    nodes: LayoutNode[],
+    pageMode: 'wizard' | 'tabs',
+    isPageNode: (node: LayoutNode) => boolean,
+    getTitle: (node: LayoutNode, index: number) => string,
+): LayoutNode[] {
+    const pageNodes = nodes.filter(isPageNode);
+    if (pageNodes.length === 0) {
+        return nodes;
+    }
+
+    const orphans = nodes.filter((node) => !isPageNode(node));
+    const titledPages = pageNodes.map((node, index) => {
+        const title = getTitle(node, index);
+        return {
+            ...node,
+            props: { ...node.props, title },
+        };
+    });
+
+    const pagingNode: LayoutNode = {
+        id: nextId(pageMode === 'tabs' ? 'tabs' : 'wizard'),
+        component: pageMode === 'tabs' ? 'Tabs' : 'Wizard',
+        category: 'interactive',
+        props: pageMode === 'tabs'
+            ? { tabLabels: titledPages.map((page) => String(page.props.title || '')) }
+            : {},
+        cssClasses: [],
+        children: titledPages,
+    };
+
+    return [...orphans, pagingNode];
+}
+
+function applyGeneratedPageMode(
+    rootNode: LayoutNode,
+    componentType: string,
+    ctx: PlanContext,
+): LayoutNode {
+    const pageMode = ctx.formPresentation?.pageMode;
+    if (pageMode !== 'wizard' && pageMode !== 'tabs') {
+        return rootNode;
+    }
+
+    if (!isStudioGeneratedComponentDoc(ctx.componentDocument)) {
+        return rootNode;
+    }
+
+    if (componentType !== 'Stack' && componentType !== 'Root') {
+        return rootNode;
+    }
+
+    if (!Array.isArray(rootNode.children) || rootNode.children.length === 0) {
+        return rootNode;
+    }
+
+    if (rootNode.children.some((child) => child.component === 'Page')) {
+        return {
+            ...rootNode,
+            children: wrapPageModeChildren(
+                rootNode.children,
+                pageMode,
+                (node) => node.component === 'Page',
+                (node, index) => String(node.props.title || `Page ${index + 1}`),
+            ),
+        };
+    }
+
+    const topLevelNodes = rootNode.children.slice(0, ctx.items.length);
+    const preservedExtras = rootNode.children.slice(ctx.items.length);
+    const pageChildren: LayoutNode[] = [];
+    const orphanChildren: LayoutNode[] = [];
+    const tabLabels: string[] = [];
+
+    for (let index = 0; index < ctx.items.length; index += 1) {
+        const item = ctx.items[index];
+        const node = topLevelNodes[index];
+        if (!node) continue;
+
+        if (item?.type === 'group') {
+            const title = String(node.props.title || node.props.bind || item.label || item.key || `Page ${index + 1}`);
+            pageChildren.push({
+                ...node,
+                props: { ...node.props, title },
+            });
+            tabLabels.push(title);
+        } else {
+            orphanChildren.push(node);
+        }
+    }
+
+    if (pageChildren.length === 0) {
+        return rootNode;
+    }
+
+    return {
+        ...rootNode,
+        children: [
+            ...wrapPageModeChildren(
+                [...orphanChildren, ...pageChildren],
+                pageMode,
+                (node) => pageChildren.includes(node),
+                (node, index) => String(node.props.title || tabLabels[index] || `Page ${index + 1}`),
+            ),
+            ...preservedExtras,
+        ],
+    };
+}
+
+function isStudioGeneratedComponentDoc(doc: any): boolean {
+    if (!doc || typeof doc !== 'object') return false;
+    return doc['x-studio-generated'] === true || doc.$formspecComponent == null;
 }
 
 function resolveRegionPlacement(region: any, activeBreakpoint: string | null): { span: number; start?: number; hidden: boolean } {

@@ -24,30 +24,31 @@ export function normalizeComponentDoc(doc: unknown, definition?: unknown): unkno
   if (!doc || typeof doc !== 'object') return doc;
   const record = doc as Record<string, unknown>;
   const tree = record.tree as Record<string, unknown> | undefined;
+  const definitionUrl =
+    definition && typeof definition === 'object'
+      ? (definition as Record<string, unknown>).url
+      : undefined;
 
-  // When pageMode is 'wizard' or 'tabs', the auto-built component tree (a plain Stack)
-  // does not know how to wrap pages in a Wizard/Tabs node. Strip the auto-built tree
-  // so the webcomponent falls back to planDefinitionFallback, which handles wizard
-  // wrapping via formPresentation.pageMode.
-  //
-  // We identify the auto-built tree by the absence of $formspecComponent (user-authored
-  // component documents always set this to '1.0').
-  if (definition && typeof definition === 'object') {
-    const def = definition as Record<string, unknown>;
-    const pageMode =
-      (def.formPresentation as Record<string, unknown> | undefined)?.pageMode ??
-      (def.presentation as Record<string, unknown> | undefined)?.pageMode;
-    const isAutoBuiltTree = tree && !record.$formspecComponent;
-    if ((pageMode === 'wizard' || pageMode === 'tabs') && isAutoBuiltTree) {
-      const { tree: _stripped, ...rest } = record;
-      return rest;
-    }
-  }
+  const targetDefinition =
+    record.targetDefinition && typeof record.targetDefinition === 'object'
+      ? record.targetDefinition as Record<string, unknown>
+      : {};
 
-  if (tree?.component === 'Root') {
-    return { ...record, tree: { ...tree, component: 'Stack' } };
-  }
-  return doc;
+  const normalizedTree = tree?.component === 'Root'
+    ? { ...tree, component: 'Stack' }
+    : tree;
+
+  const isGenerated = record['x-studio-generated'] === true || !record.$formspecComponent;
+
+  return {
+    ...record,
+    ...(isGenerated ? { $formspecComponent: '1.0', version: String(record.version ?? '1.0.0'), 'x-studio-generated': true } : {}),
+    ...(normalizedTree ? { tree: normalizedTree } : {}),
+    targetDefinition: {
+      ...targetDefinition,
+      ...(definitionUrl ? { url: definitionUrl } : {}),
+    },
+  };
 }
 
 export function normalizeThemeDoc(doc: unknown, definition: unknown): unknown {

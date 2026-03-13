@@ -56,6 +56,66 @@ Props:
 Registers all 37 built-in component plugins with the global registry.
 Includes layout (10), input (13), display (9), interactive (3), and special (2) plugins.
 
+## `TextInputPlugin: ComponentPlugin`
+
+Renders a text input field by delegating to `ctx.renderInputComponent()`.
+
+## `NumberInputPlugin: ComponentPlugin`
+
+Renders a number input field by delegating to `ctx.renderInputComponent()`.
+
+## `SelectPlugin: ComponentPlugin`
+
+Renders a select dropdown by delegating to `ctx.renderInputComponent()`.
+
+## `TogglePlugin: ComponentPlugin`
+
+Renders a toggle switch by delegating to `ctx.renderInputComponent()`.
+
+## `CheckboxPlugin: ComponentPlugin`
+
+Renders a checkbox input by delegating to `ctx.renderInputComponent()`.
+
+## `DatePickerPlugin: ComponentPlugin`
+
+Renders a date picker input by delegating to `ctx.renderInputComponent()`.
+
+## `RadioGroupPlugin: ComponentPlugin`
+
+Renders a radio button group by delegating to `ctx.renderInputComponent()`.
+
+## `CheckboxGroupPlugin: ComponentPlugin`
+
+Renders a checkbox group by delegating to `ctx.renderInputComponent()`.
+
+## `SliderPlugin: ComponentPlugin`
+
+Renders a range `<input>` slider with configurable min/max/step.
+Subscribes to the field signal to sync the slider position and an optional value display `<span>`.
+Avoids overwriting the input while the user is actively dragging.
+
+## `RatingPlugin: ComponentPlugin`
+
+Renders an icon-rating control using clickable `<span>` elements.
+Supports configurable max count, icon mapping, and optional half-step selection.
+Subscribes to the field signal to toggle selected/half-selected CSS classes.
+
+## `FileUploadPlugin: ComponentPlugin`
+
+Renders a file `<input>` with optional drag-and-drop zone.
+When `dragDrop` is enabled, creates a drop zone `<div>` that handles dragover/drop events
+and hides the native file input. Stores file metadata (name, size, type) in the engine.
+
+## `SignaturePlugin: ComponentPlugin`
+
+Renders a `<canvas>` for freehand signature capture with mouse event drawing.
+Stores the signature as a data URL on mouseup. Includes a clear button that resets
+the canvas and sets the field value to null.
+
+## `MoneyInputPlugin: ComponentPlugin`
+
+Renders a money input by delegating to `ctx.renderInputComponent()` as a NumberInput with `dataType: 'money'`.
+
 ## `InputPlugins: ComponentPlugin[]`
 
 All 13 built-in input component plugins, exported as a single array for bulk registration.
@@ -457,6 +517,8 @@ Interface for what emitNode/renderActualComponent need from FormspecRender.
 ##### `applyAccessibility(el: HTMLElement, comp: any): void`
 
 ##### `render(): void`
+
+## `hasActiveScreener(definition: any): boolean`
 
 ## `renderScreener(host: ScreenerHost, container: HTMLElement): void`
 

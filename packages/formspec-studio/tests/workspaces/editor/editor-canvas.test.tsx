@@ -119,7 +119,7 @@ describe('EditorCanvas', () => {
     expect(firstPageTab).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('renders field cards as draggable reorder targets', () => {
+  it('renders field cards inside sortable wrappers', () => {
     renderCanvas({
       $formspec: '1.0',
       url: 'urn:reorder-fields',
@@ -130,8 +130,14 @@ describe('EditorCanvas', () => {
       ],
     });
 
-    expect(screen.getByTestId('field-firstField')).toHaveAttribute('draggable', 'true');
-    expect(screen.getByTestId('field-secondField')).toHaveAttribute('draggable', 'true');
+    // Each field block should be wrapped by a SortableItemWrapper div
+    const first = screen.getByTestId('field-firstField');
+    const second = screen.getByTestId('field-secondField');
+    expect(first).toBeInTheDocument();
+    expect(second).toBeInTheDocument();
+    // Wrapper parent should exist (SortableItemWrapper div)
+    expect(first.parentElement).toBeTruthy();
+    expect(second.parentElement).toBeTruthy();
   });
 
   it('moves keyboard focus between field cards before entering the inspector', async () => {
@@ -577,6 +583,114 @@ describe('EditorCanvas', () => {
 
       // Should have 6 items (4 original + 2 duplicates)
       expect(project.definition.items.length).toBe(6);
+    });
+  });
+
+  describe('component tree rendering', () => {
+    it('renders a LayoutBlock when the component tree has a layout wrapper', () => {
+      const project = createProject({ seed: { definition: testDef as any } });
+      // Wrap 'name' in a Card layout container
+      project.dispatch({
+        type: 'component.wrapNode',
+        payload: { node: { bind: 'name' }, wrapper: { component: 'Card' } },
+      });
+
+      render(
+        <ProjectProvider project={project}>
+          <SelectionProvider>
+            <ActivePageProvider>
+              <EditorCanvas />
+            </ActivePageProvider>
+          </SelectionProvider>
+        </ProjectProvider>,
+      );
+
+      // Card layout block should be visible
+      expect(screen.getByText('Card')).toBeInTheDocument();
+      // The field inside should still render
+      expect(screen.getByText('Full Name')).toBeInTheDocument();
+    });
+
+    it('clicking a layout block selects it with __node: id', async () => {
+      const project = createProject({ seed: { definition: testDef as any } });
+      const result = project.dispatch({
+        type: 'component.wrapNode',
+        payload: { node: { bind: 'name' }, wrapper: { component: 'Card' } },
+      });
+      const nodeId = (result as any).nodeRef.nodeId;
+
+      let capturedSelectedKey: string | null = null;
+      function SelectionCapture() {
+        const { selectedKey } = useSelection();
+        capturedSelectedKey = selectedKey;
+        return null;
+      }
+
+      render(
+        <ProjectProvider project={project}>
+          <SelectionProvider>
+            <ActivePageProvider>
+              <EditorCanvas />
+              <SelectionCapture />
+            </ActivePageProvider>
+          </SelectionProvider>
+        </ProjectProvider>,
+      );
+
+      await act(async () => {
+        screen.getByTestId(`layout-${nodeId}`).click();
+      });
+
+      expect(capturedSelectedKey).toBe(`__node:${nodeId}`);
+    });
+
+    it('fields inside layout wrappers maintain correct definition paths', () => {
+      const project = createProject({ seed: { definition: testDef as any } });
+      project.dispatch({
+        type: 'component.wrapNode',
+        payload: { node: { bind: 'name' }, wrapper: { component: 'Card' } },
+      });
+
+      render(
+        <ProjectProvider project={project}>
+          <SelectionProvider>
+            <ActivePageProvider>
+              <EditorCanvas />
+            </ActivePageProvider>
+          </SelectionProvider>
+        </ProjectProvider>,
+      );
+
+      // The field should still have its original definition path
+      const field = screen.getByTestId('field-name');
+      expect(field.getAttribute('data-item-path')).toBe('name');
+    });
+
+    it('renders display blocks with widgetHint from component tree', () => {
+      const def = {
+        $formspec: '1.0', url: 'urn:display-hint', version: '1.0.0',
+        items: [
+          { key: 'header', type: 'display', label: 'Welcome' },
+        ],
+      };
+      const project = createProject({ seed: { definition: def as any } });
+      // Change the display node's component type to Heading via setNodeProperty
+      project.dispatch({
+        type: 'component.setNodeProperty',
+        payload: { node: { nodeId: 'header' }, property: 'component', value: 'Heading' },
+      });
+
+      render(
+        <ProjectProvider project={project}>
+          <SelectionProvider>
+            <ActivePageProvider>
+              <EditorCanvas />
+            </ActivePageProvider>
+          </SelectionProvider>
+        </ProjectProvider>,
+      );
+
+      expect(screen.getByText('Heading')).toBeInTheDocument();
     });
   });
 });

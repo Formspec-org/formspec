@@ -214,6 +214,18 @@ describe('input rendering — dataType→input type mapping', () => {
         expect(select.querySelectorAll('option').length).toBeGreaterThanOrEqual(2);
     });
 
+    it('honors Tier 1 widgetHint when no theme explicitly chooses a widget', () => {
+        const el = renderField({
+            dataType: 'choice',
+            options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
+            presentation: { widgetHint: 'radio' },
+        });
+        const radioGroup = el.querySelector('[role="radiogroup"]') as HTMLElement;
+        expect(radioGroup).not.toBeNull();
+        expect(radioGroup.querySelectorAll('input[type="radio"]').length).toBe(2);
+        expect(el.querySelector('select')).toBeNull();
+    });
+
     it('select change propagates value to engine', () => {
         const tree = { component: 'Select', bind: 'name' };
         const el = renderField({

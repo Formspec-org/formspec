@@ -22,11 +22,11 @@ function renderBlueprint(onSectionChange = vi.fn()) {
 }
 
 describe('Blueprint', () => {
-  it('renders all 10 section names', () => {
+  it('renders all 9 section names', () => {
     renderBlueprint();
     const sections = [
       'Structure', 'Component Tree', 'Theme', 'Screener', 'Variables',
-      'Data Sources', 'Option Sets', 'Mappings', 'Migrations', 'Settings'
+      'Data Sources', 'Option Sets', 'Mappings', 'Settings'
     ];
     for (const name of sections) {
       expect(screen.getByText(name)).toBeInTheDocument();

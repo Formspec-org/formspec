@@ -23,7 +23,6 @@ import { VariablesList } from './blueprint/VariablesList';
 import { DataSourcesList } from './blueprint/DataSourcesList';
 import { OptionSetsList } from './blueprint/OptionSetsList';
 import { MappingsList } from './blueprint/MappingsList';
-import { MigrationsSection } from './blueprint/MigrationsSection';
 
 import { SettingsSection } from './blueprint/SettingsSection';
 import { SettingsDialog } from './SettingsDialog';
@@ -50,7 +49,6 @@ const SIDEBAR_COMPONENTS: Record<string, React.FC> = {
   'Data Sources': DataSourcesList,
   'Option Sets': OptionSetsList,
   'Mappings': MappingsList,
-  'Migrations': MigrationsSection,
   'Settings': SettingsSection,
   'Theme': ThemeOverview,
 };
@@ -141,9 +139,14 @@ export function Shell() {
 
   useEffect(() => {
     const onNavigateWorkspace = (event: Event) => {
-      const tab = (event as CustomEvent<{ tab?: string }>).detail?.tab;
+      const { tab, subTab } = (event as CustomEvent<{ tab?: string; subTab?: string }>).detail ?? {};
       if (tab && (tab === 'Data' || WORKSPACES[tab])) {
         setActiveTab(tab);
+        if (subTab) {
+          if (tab === 'Data') setActiveDataTab(subTab as DataWorkspaceTab);
+          else if (tab === 'Theme') setActiveThemeTab(subTab as ThemeTabId);
+          else if (tab === 'Mapping') setActiveMappingTab(subTab as MappingTabId);
+        }
       }
     };
     window.addEventListener('formspec:navigate-workspace', onNavigateWorkspace);

@@ -316,6 +316,60 @@ describe('planComponentTree', () => {
         const node = planComponentTree(tree, ctx);
         expect(node.accessibility).toEqual({ role: 'region', description: 'Main form' });
     });
+
+    it('wraps generated top-level groups in wizard mode while preserving orphan fields', () => {
+        const items = [
+            { key: 'intro', type: 'field', dataType: 'string', label: 'Intro' },
+            {
+                key: 'pageOne',
+                type: 'group',
+                label: 'Page One',
+                children: [
+                    {
+                        key: 'priority',
+                        type: 'field',
+                        dataType: 'choice',
+                        label: 'Priority',
+                        options: [
+                            { value: 'low', label: 'Low' },
+                            { value: 'high', label: 'High' },
+                        ],
+                    },
+                ],
+            },
+        ];
+        const tree = {
+            component: 'Stack',
+            children: [
+                { component: 'TextInput', bind: 'intro' },
+                {
+                    component: 'Stack',
+                    bind: 'pageOne',
+                    children: [
+                        { component: 'RadioGroup', bind: 'priority' },
+                    ],
+                },
+            ],
+        };
+        const ctx = makeCtx({
+            items,
+            formPresentation: { pageMode: 'wizard' },
+            componentDocument: { tree, 'x-studio-generated': true },
+            findItem: (key) => findItemByPath(items, key) ?? findItems(items, key),
+        });
+
+        const node = planComponentTree(tree, ctx);
+
+        expect(node.component).toBe('Stack');
+        expect(node.children[0].component).toBe('TextInput');
+        expect(node.children[0].bindPath).toBe('intro');
+        expect(node.children[1].component).toBe('Wizard');
+        expect(node.children[1].children).toHaveLength(1);
+        expect(node.children[1].children[0].component).toBe('Stack');
+        expect(node.children[1].children[0].props.title).toBe('Page One');
+        expect(node.children[1].children[0].children[0].component).toBe('RadioGroup');
+        expect(node.children[1].children[0].children[0].bindPath).toBe('pageOne.priority');
+    });
 });
 
 // ── planDefinitionFallback ───────────────────────────────────────────
@@ -432,6 +486,51 @@ describe('planDefinitionFallback', () => {
 
         const nodes = planDefinitionFallback(items, ctx);
         expect(nodes[0].component).toBe('Slider');
+    });
+
+    it('wraps theme pages in wizard mode during definition fallback', () => {
+        const items = [
+            { key: 'intro', type: 'field', dataType: 'string', label: 'Intro' },
+            {
+                key: 'page1',
+                type: 'group',
+                label: 'Applicant',
+                children: [
+                    { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
+                ],
+            },
+            {
+                key: 'page2',
+                type: 'group',
+                label: 'Review',
+                children: [
+                    { key: 'notes', type: 'display', label: 'Review your answers' },
+                ],
+            },
+        ];
+        const ctx = makeCtx({
+            items,
+            formPresentation: { pageMode: 'wizard' },
+            theme: {
+                pages: [
+                    { id: 'applicant', title: 'Applicant', regions: [{ key: 'page1', span: 12 }] },
+                    { id: 'review', title: 'Review', regions: [{ key: 'page2', span: 12 }] },
+                ],
+            },
+            findItem: (key) => findItemByPath(items, key) ?? findItems(items, key),
+            isComponentAvailable: () => true,
+        });
+
+        const nodes = planDefinitionFallback(items, ctx);
+
+        expect(nodes[0].bindPath).toBe('intro');
+        expect(nodes[1].component).toBe('Wizard');
+        expect(nodes[1].children).toHaveLength(2);
+        expect(nodes[1].children[0].component).toBe('Page');
+        expect(nodes[1].children[0].props.title).toBe('Applicant');
+        expect(nodes[1].children[0].children[0].component).toBe('Grid');
+        expect(nodes[1].children[1].component).toBe('Page');
+        expect(nodes[1].children[1].props.title).toBe('Review');
     });
 });
 

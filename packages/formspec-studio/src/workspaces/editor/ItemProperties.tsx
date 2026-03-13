@@ -3,7 +3,17 @@ import { useSelection } from '../../state/useSelection';
 import { useDefinition } from '../../state/useDefinition';
 import { useDispatch } from '../../state/useDispatch';
 import { useProject } from '../../state/useProject';
-import { flatItems, bindsFor, arrayBindsFor, dataTypeInfo, shapesFor, compatibleWidgets, propertyHelp } from '../../lib/field-helpers';
+import {
+  flatItems,
+  bindsFor,
+  arrayBindsFor,
+  dataTypeInfo,
+  shapesFor,
+  compatibleWidgets,
+  componentForWidgetHint,
+  widgetHintForComponent,
+  propertyHelp,
+} from '../../lib/field-helpers';
 import { pruneDescendants, sortForBatchDelete } from '../../lib/selection-helpers';
 import { Section } from '../../components/ui/Section';
 import { PropertyRow } from '../../components/ui/PropertyRow';
@@ -11,6 +21,7 @@ import { BindCard } from '../../components/ui/BindCard';
 import { ShapeCard } from '../../components/ui/ShapeCard';
 import { HelpTip } from '../../components/ui/HelpTip';
 import { humanizeFEL } from '../../lib/humanize';
+import { LogicEditorDialog } from '../logic/LogicEditorDialog';
 
 /** Labeled text input for a property. */
 function PropInput({
@@ -73,8 +84,10 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
   const { selectedKey, selectedType, selectedKeys, selectionCount, select, deselect, shouldFocusInspector, consumeFocusInspector } = useSelection();
   const definition = useDefinition();
   const dispatch = useDispatch();
-  const project = useProject();
-  const keyInputRef = useRef<HTMLInputElement>(null);
+   const project = useProject();
+   const keyInputRef = useRef<HTMLInputElement>(null);
+   const [editingBind, setEditingBind] = useState<{ path: string; type: string; expr: string } | null>(null);
+   const [editingShape, setEditingShape] = useState<{ id: string; expr: string } | null>(null);
 
   const handleRename = useCallback(
     (originalPath: string, inputEl: HTMLInputElement) => {
@@ -253,19 +266,20 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
 
         {/* Behavior Rules */}
         {Object.keys(binds).length > 0 ? (
-          <Section title="Behavior Rules">
+           <Section title="Behavior Rules">
             <div className="space-y-1">
               {Object.entries(binds).map(([type, expr]) => (
-                <div key={type} className="relative">
-                  <BindCard bindType={type} expression={expr} humanized={humanizeFEL(expr)} />
+                <div key={type} className="relative group">
                   <button
                     type="button"
-                    aria-label="Edit in Logic"
-                    className="absolute top-2 right-8 text-[10px] text-muted hover:text-accent cursor-pointer transition-colors"
-                    title="Edit in Logic tab"
+                    className="w-full text-left focus:outline-none focus:ring-1 focus:ring-accent rounded transition-transform active:scale-[0.98]"
+                    onClick={() => setEditingBind({ path, type, expr })}
                   >
-                    →
+                    <BindCard bindType={type} expression={expr} humanized={humanizeFEL(expr)} />
                   </button>
+                  <div className="absolute top-2 right-2 text-[10px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                    Edit
+                  </div>
                 </div>
               ))}
             </div>
@@ -286,12 +300,19 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
         {/* Validation Shapes */}
         {shapes.length > 0 && (
           <Section title="Validation Shapes">
-            <div className="space-y-1">
-              {shapes.map((sh, i) => (
-                <ShapeCard key={i} name={sh.name} severity={sh.severity}
-                  constraint={sh.constraint} message={sh.message as string} code={sh.code as string} />
-              ))}
-            </div>
+             <div className="space-y-1">
+               {shapes.map((sh, i) => (
+                 <button
+                   key={i}
+                   type="button"
+                   className="w-full text-left focus:outline-none focus:ring-1 focus:ring-accent rounded transition-transform active:scale-[0.98]"
+                   onClick={() => setEditingShape({ id: sh.name, expr: sh.constraint || '' })}
+                 >
+                   <ShapeCard name={sh.name} severity={sh.severity}
+                     constraint={sh.constraint} message={sh.message as string} code={sh.code as string} />
+                 </button>
+               ))}
+             </div>
           </Section>
         )}
       </div>
@@ -313,6 +334,17 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
           </button>
         </div>
       )}
+
+      <LogicEditorDialog
+        open={!!editingBind}
+        onClose={() => setEditingBind(null)}
+        target={editingBind ? { type: 'bind', nameOrPath: editingBind.path, bindType: editingBind.type, expression: editingBind.expr } : null}
+      />
+      <LogicEditorDialog
+        open={!!editingShape}
+        onClose={() => setEditingShape(null)}
+        target={editingShape ? { type: 'shape', nameOrPath: editingShape.id, expression: editingShape.expr } : null}
+      />
     </div>
   );
 }
@@ -357,11 +389,13 @@ function DescriptionHintSection({ path, item, dispatch }: { path: string; item: 
 function WidgetHintSection({ path, item, dispatch }: { path: string; item: any; dispatch: any }) {
   const project = useProject();
   const widgets = compatibleWidgets(item.type, item.dataType);
-  // Read current widget from the component tree (Tier 3), not definition presentation (Tier 1)
+  // Read current widget from the component tree (Tier 3), falling back to definition hint (Tier 1)
   const treeNode = project.componentFor(item.key);
-  const currentWidget = (treeNode?.component as string) ?? '';
+  const currentWidget = (treeNode?.component as string)
+    || componentForWidgetHint((item.presentation as any)?.widgetHint)
+    || '';
 
-  if (widgets.length === 0) return null;
+  if (widgets.length < 2) return null;
 
   return (
     <Section title="Widget">
@@ -375,12 +409,22 @@ function WidgetHintSection({ path, item, dispatch }: { path: string; item: any; 
           className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
           value={currentWidget}
           onChange={(e) => {
+            const widget = e.currentTarget.value || null;
+            const widgetHint = widget ? widgetHintForComponent(widget, item.dataType) : null;
+            // Write to both: component tree (Tier 3) for direct rendering,
+            // and definition presentation.widgetHint (Tier 1) as fallback
+            // for wizard/tabs mode where the auto-built tree is stripped.
+            try {
+              dispatch({
+                type: 'component.setFieldWidget',
+                payload: { fieldKey: item.key, widget },
+              });
+            } catch {
+              // No component tree node — definition hint is the only path
+            }
             dispatch({
-              type: 'component.setFieldWidget',
-              payload: {
-                fieldKey: item.key,
-                widget: e.currentTarget.value || null,
-              },
+              type: 'definition.setItemProperty',
+              payload: { path, property: 'presentation.widgetHint', value: widgetHint },
             });
           }}
         >
