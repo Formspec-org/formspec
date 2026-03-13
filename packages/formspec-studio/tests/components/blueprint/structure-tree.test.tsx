@@ -210,11 +210,11 @@ describe('StructureTree', () => {
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /^Text\b/i }).click();
+      screen.getByRole('button', { name: /^Text Block\b/i }).click();
     });
 
     const page = project.definition.items[0] as any;
-    const insertedField = page.children.find((item: any) => item.label === 'Text');
+    const insertedField = page.children.find((item: any) => item.label === 'Text Block');
 
     expect(insertedField).toBeTruthy();
     expect(insertedField.key).not.toBe('string1');
@@ -266,7 +266,7 @@ describe('StructureTree', () => {
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /^Text\b/i }).click();
+      screen.getByRole('button', { name: /^Text Block\b/i }).click();
     });
 
     expect(capturedSelectedKey).toBe('canonical.tree.path');

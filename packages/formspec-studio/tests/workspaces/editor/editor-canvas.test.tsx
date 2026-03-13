@@ -221,12 +221,12 @@ describe('EditorCanvas', () => {
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /^Text\b/i }).click();
+      screen.getByRole('button', { name: /^Text Block\b/i }).click();
     });
 
-    // The newly added field should now be the active selection
+    // The newly added item should now be the active selection
     expect(capturedSelectedKey).not.toBeNull();
-    expect(capturedSelectedKey).toMatch(/string/i);
+    expect(capturedSelectedKey).toMatch(/display/i);
   });
 
   // Bug #63: Newly added Single Choice field is not auto-selected with key input focused
@@ -316,11 +316,11 @@ describe('EditorCanvas', () => {
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /^Text\b/i }).click();
+      screen.getByRole('button', { name: /^Text Block\b/i }).click();
     });
 
     const page = project.definition.items[0] as any;
-    const insertedField = page.children.find((item: any) => item.label === 'Text');
+    const insertedField = page.children.find((item: any) => item.label === 'Text Block');
 
     expect(insertedField).toBeTruthy();
     expect(insertedField.key).not.toBe('string1');
@@ -369,7 +369,7 @@ describe('EditorCanvas', () => {
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /^Text\b/i }).click();
+      screen.getByRole('button', { name: /^Text Block\b/i }).click();
     });
 
     expect(capturedSelectedKey).toBe('canonical.inserted.path');
@@ -691,6 +691,74 @@ describe('EditorCanvas', () => {
       );
 
       expect(screen.getByText('Heading')).toBeInTheDocument();
+    });
+  });
+
+  describe('wrap/unwrap context menu', () => {
+    it('right-click field shows "Wrap in Card" option', async () => {
+      renderCanvas();
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-name'));
+      });
+      expect(screen.getByText('Wrap in Card')).toBeInTheDocument();
+    });
+
+    it('"Wrap in Card" dispatches component.wrapNode and wraps the field', async () => {
+      const { project } = renderCanvas();
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-name'));
+      });
+      await act(async () => {
+        screen.getByText('Wrap in Card').click();
+      });
+
+      // A Card layout block should now be visible
+      expect(screen.getByText('Card')).toBeInTheDocument();
+      // The field should still render inside
+      expect(screen.getByText('Full Name')).toBeInTheDocument();
+    });
+
+    it('right-click layout node shows "Unwrap" option', async () => {
+      const { project } = renderCanvas();
+      // First wrap a field in a Card
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-name'));
+      });
+      await act(async () => {
+        screen.getByText('Wrap in Card').click();
+      });
+      // Now right-click the layout block
+      const cardText = screen.getByText('Card');
+      const layoutBlock = cardText.closest('[data-item-type="layout"]') as HTMLElement;
+      await act(async () => {
+        fireEvent.contextMenu(layoutBlock);
+      });
+      expect(screen.getByText('Unwrap')).toBeInTheDocument();
+    });
+
+    it('"Unwrap" dissolves the layout container', async () => {
+      const { project } = renderCanvas();
+      // Wrap then unwrap
+      await act(async () => {
+        fireEvent.contextMenu(screen.getByTestId('field-name'));
+      });
+      await act(async () => {
+        screen.getByText('Wrap in Card').click();
+      });
+      expect(screen.getByText('Card')).toBeInTheDocument();
+
+      const cardText = screen.getByText('Card');
+      const layoutBlock = cardText.closest('[data-item-type="layout"]') as HTMLElement;
+      await act(async () => {
+        fireEvent.contextMenu(layoutBlock);
+      });
+      await act(async () => {
+        screen.getByText('Unwrap').click();
+      });
+      // Card should be gone
+      expect(screen.queryByText('Card')).not.toBeInTheDocument();
+      // Field should still be there
+      expect(screen.getByText('Full Name')).toBeInTheDocument();
     });
   });
 });

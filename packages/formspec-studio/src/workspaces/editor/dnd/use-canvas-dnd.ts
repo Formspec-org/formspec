@@ -1,11 +1,13 @@
 import { useState, useCallback, useRef } from 'react';
 import {
   computeDropTarget,
+  computeTreeDropTarget,
   buildSequentialMoveCommands,
   isDescendantOf,
   type DropPosition,
   type FlatEntry,
 } from './compute-drop-target';
+import { isLayoutId } from '../../../lib/tree-helpers';
 import { pruneDescendants } from '../../../lib/selection-helpers';
 
 interface OverTarget {
@@ -89,7 +91,7 @@ export function useCanvasDnd({
       const rect = el.getBoundingClientRect();
       const relY = (pointerY - rect.top) / rect.height;
 
-      if (targetEntry?.type === 'group') {
+      if (targetEntry?.type === 'group' || targetEntry?.type === 'layout') {
         if (relY < 0.25) position = 'above';
         else if (relY > 0.75) position = 'below';
         else position = 'inside';
@@ -119,6 +121,55 @@ export function useCanvasDnd({
     const sourcePath = String(event.operation?.source?.id ?? '');
     if (!sourcePath) return;
 
+    // Check if layout nodes are involved — use tree-aware routing
+    const involvesLayout = isLayoutId(sourcePath) || isLayoutId(currentOverTarget.path)
+      || flatList.find(e => e.path === currentOverTarget.path)?.type === 'layout';
+
+    if (involvesLayout) {
+      // Tree-aware DnD: import TreeFlatEntry-compatible entries from flatList
+      const treeFlatEntries = flatList.map(e => ({
+        id: e.path,
+        node: { component: '' },
+        depth: e.depth,
+        hasChildren: e.hasChildren,
+        defPath: isLayoutId(e.path) ? null : e.path,
+        category: e.type as any,
+        nodeId: isLayoutId(e.path) ? e.path.slice('__node:'.length) : (e.type === 'display' ? e.path.split('.').pop() : undefined),
+        bind: e.type !== 'layout' && e.type !== 'display' ? e.path.split('.').pop() : undefined,
+      }));
+
+      const treeTarget = computeTreeDropTarget(
+        sourcePath,
+        currentOverTarget.path,
+        currentOverTarget.position,
+        treeFlatEntries as any,
+      );
+
+      if (!treeTarget) return;
+
+      if (treeTarget.defMove) {
+        dispatch({
+          type: 'definition.moveItem',
+          payload: {
+            sourcePath: treeTarget.defMove.sourcePath,
+            targetParentPath: treeTarget.defMove.targetParentPath ?? undefined,
+            targetIndex: treeTarget.defMove.targetIndex,
+          },
+        });
+      } else {
+        dispatch({
+          type: 'component.moveNode',
+          payload: {
+            source: treeTarget.sourceRef,
+            targetParent: treeTarget.targetParentRef,
+            targetIndex: treeTarget.targetIndex,
+          },
+        });
+      }
+      return;
+    }
+
+    // Standard definition-based DnD (no layout nodes involved)
     const target = computeDropTarget(
       sourcePath,
       currentOverTarget.path,

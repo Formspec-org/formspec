@@ -4,47 +4,127 @@ import { DataSources } from './DataSources';
 import { OptionSets } from './OptionSets';
 import { TestResponse } from './TestResponse';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
+import { HelpTip } from '../../components/ui/HelpTip';
 
-const tabs = ['Response Schema', 'Data Sources', 'Option Sets', 'Test Response'] as const;
-export type Tab = typeof tabs[number];
-
-const tabComponents: Record<Tab, React.FC> = {
-  'Response Schema': ResponseSchema,
-  'Data Sources': DataSources,
-  'Option Sets': OptionSets,
-  'Test Response': TestResponse,
-};
-
-interface DataTabProps {
-  activeTab?: Tab;
-  onActiveTabChange?: (tab: Tab) => void;
+/**
+ * Visual wrapper for a Data Pillar.
+ */
+function DataPillar({ 
+  title, 
+  subtitle, 
+  helpText, 
+  children, 
+  accentColor = "bg-accent" 
+}: { 
+  title: string; 
+  subtitle: string; 
+  helpText: string; 
+  children: React.ReactNode;
+  accentColor?: string;
+}) {
+  return (
+    <div className="mb-12 last:mb-0 group animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <header className="mb-6">
+        <div className="flex items-center gap-3 mb-1">
+          <div className={`w-1 h-5 rounded-full ${accentColor}`} />
+          <h3 className="font-mono text-[13px] font-bold tracking-[0.2em] uppercase text-ink">
+            {title}
+          </h3>
+        </div>
+        <div className="flex items-center gap-2 pl-4">
+          <HelpTip text={helpText}>
+            <span className="text-[12px] text-muted italic tracking-tight">{subtitle}</span>
+          </HelpTip>
+        </div>
+      </header>
+      <div className="pl-6 border-l border-border/60 ml-0.5 mt-4">
+        {children}
+      </div>
+    </div>
+  );
 }
 
-export function DataTab({ activeTab, onActiveTabChange }: DataTabProps = {}) {
-  const [internalActive, setInternalActive] = useState<Tab>('Response Schema');
-  const active = activeTab ?? internalActive;
-  const setActive = onActiveTabChange ?? setInternalActive;
-  const ActiveComponent = tabComponents[active];
+const sectionTabs = [
+  { id: 'all', label: 'All Data' },
+  { id: 'structure', label: 'Structure' },
+  { id: 'tables', label: 'Tables' },
+  { id: 'sources', label: 'Sources' },
+  { id: 'simulation', label: 'Simulation' },
+] as const;
+
+export function DataTab() {
+  const [sectionFilter, setSectionFilter] = useState<typeof sectionTabs[number]['id']>('all');
+
+  const showStructure = sectionFilter === 'all' || sectionFilter === 'structure';
+  const showTables = sectionFilter === 'all' || sectionFilter === 'tables';
+  const showSources = sectionFilter === 'all' || sectionFilter === 'sources';
+  const showSimulation = sectionFilter === 'all' || sectionFilter === 'simulation';
 
   return (
-    <WorkspacePage>
-      <WorkspacePageSection padding="px-0" className="flex border-b border-border sticky top-0 bg-bg-default z-10">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={`px-3 py-1.5 text-xs cursor-pointer ${
-              active === tab
-                ? 'border-b-2 border-accent text-accent'
-                : 'text-foreground/70 hover:text-ink'
-            }`}
-            onClick={() => setActive(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+    <WorkspacePage className="overflow-y-auto">
+      <WorkspacePageSection padding="px-7" className="sticky top-0 bg-bg-default/80 backdrop-blur-md z-20 pt-6 pb-2 border-b border-border/40">
+        <div className="flex items-center gap-1.5 p-1 bg-subtle/50 rounded-[8px] border border-border/50 w-fit">
+          {sectionTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setSectionFilter(tab.id)}
+              className={`px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider rounded-[6px] transition-all duration-200 ${
+                sectionFilter === tab.id 
+                  ? 'bg-ink text-white shadow-sm' 
+                  : 'text-muted hover:text-ink hover:bg-subtle'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </WorkspacePageSection>
-      <WorkspacePageSection className="flex-1 overflow-auto py-4">
-        <ActiveComponent />
+
+      <WorkspacePageSection className="flex-1 py-10">
+        {showStructure && (
+          <DataPillar
+            title="Submission Structure"
+            subtitle="The shape of the form's final output"
+            helpText="This is the JSON document structure that will be generated and submitted when the form is completed."
+            accentColor="bg-accent"
+          >
+            <ResponseSchema />
+          </DataPillar>
+        )}
+
+        {showTables && (
+          <DataPillar
+            title="Lookup Tables"
+            subtitle="Shared lists of choices and options"
+            helpText="Reusable lists of options that multiple fields can reference (Option Sets)."
+            accentColor="bg-logic"
+          >
+            <OptionSets />
+          </DataPillar>
+        )}
+
+        {showSources && (
+          <DataPillar
+            title="External Sources"
+            subtitle="Data loaded from external APIs or documents"
+            helpText="External data sources (Instances) that FEL expressions @instance('name') can reference."
+            accentColor="bg-green"
+          >
+            <DataSources />
+          </DataPillar>
+        )}
+
+        {showSimulation && (
+          <DataPillar
+            title="Simulation"
+            subtitle="Preview current response document"
+            helpText="Run the form engine against the current definition to see what the resulting data would look like."
+            accentColor="bg-amber"
+          >
+            <TestResponse />
+          </DataPillar>
+        )}
       </WorkspacePageSection>
     </WorkspacePage>
   );

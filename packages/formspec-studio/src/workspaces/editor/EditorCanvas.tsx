@@ -9,7 +9,7 @@ import { useDispatch } from '../../state/useDispatch';
 import { useProject } from '../../state/useProject';
 import { useCanvasTargets } from '../../state/useCanvasTargets';
 import { bindsFor, flatItems } from '../../lib/field-helpers';
-import { flattenComponentTree, buildDefLookup, type TreeFlatEntry } from '../../lib/tree-helpers';
+import { flattenComponentTree, buildDefLookup, isLayoutId, nodeIdFromLayoutId, type TreeFlatEntry } from '../../lib/tree-helpers';
 import { pruneDescendants, sortForBatchDelete } from '../../lib/selection-helpers';
 import { FieldBlock } from './FieldBlock';
 import { GroupBlock } from './GroupBlock';
@@ -37,8 +37,19 @@ interface Item {
   children?: Item[];
 }
 
-function renderItems(
-  items: Item[],
+/** Component tree node shape (matches studio-core TreeNode). */
+interface CompNode {
+  component: string;
+  bind?: string;
+  nodeId?: string;
+  _layout?: boolean;
+  children?: CompNode[];
+  [key: string]: unknown;
+}
+
+function renderTreeNodes(
+  nodes: CompNode[],
+  defLookup: Map<string, { item: Item; path: string; parentPath: string | null }>,
   allBinds: Record<string, Record<string, string>> | undefined,
   primaryKey: string | null,
   selectedKeys: Set<string>,
@@ -46,73 +57,114 @@ function renderItems(
   registerTarget: (path: string, element: HTMLElement | null) => void,
   flatIndexMap: Map<string, number>,
   depth: number,
-  prefix: string,
+  defPathPrefix: string,
 ): React.ReactNode[] {
-  const nodes: React.ReactNode[] = [];
-  for (const item of items) {
-    const path = prefix ? `${prefix}.${item.key}` : item.key;
-    const isPrimary = primaryKey === path;
-    const inSelection = selectedKeys.has(path) && !isPrimary;
-    const flatIdx = flatIndexMap.get(path) ?? 0;
-
-    if (item.type === 'group') {
-      nodes.push(
-        <SortableItemWrapper key={path} id={path} index={flatIdx}>
-          <GroupBlock
-            itemKey={item.key}
-            itemPath={path}
+  const result: React.ReactNode[] = [];
+  for (const node of nodes) {
+    if (node._layout) {
+      // Layout container node
+      const layoutId = `__node:${node.nodeId}`;
+      const isPrimary = primaryKey === layoutId;
+      const inSelection = selectedKeys.has(layoutId) && !isPrimary;
+      const flatIdx = flatIndexMap.get(layoutId) ?? 0;
+      const children = node.children
+        ? renderTreeNodes(node.children, defLookup, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, flatIndexMap, depth + 1, defPathPrefix)
+        : null;
+      result.push(
+        <SortableItemWrapper key={layoutId} id={layoutId} index={flatIdx}>
+          <LayoutBlock
+            nodeId={node.nodeId!}
+            component={node.component}
+            layoutId={layoutId}
             registerTarget={registerTarget}
-            label={item.label}
-            repeatable={item.repeatable}
-            minRepeat={item.minRepeat}
-            maxRepeat={item.maxRepeat}
             depth={depth}
             selected={isPrimary}
             isInSelection={inSelection}
-            onSelect={(e) => handleItemClick(e, path, 'group')}
+            onSelect={(e) => handleItemClick(e, layoutId, 'layout')}
           >
-            {item.children
-              ? renderItems(item.children, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, flatIndexMap, depth + 1, path)
-              : null}
-          </GroupBlock>
+            {children}
+          </LayoutBlock>
         </SortableItemWrapper>
       );
-    } else if (item.type === 'display') {
-      nodes.push(
-        <SortableItemWrapper key={path} id={path} index={flatIdx}>
+    } else if (node.bind) {
+      // Bound node — look up definition item
+      const defPath = defPathPrefix ? `${defPathPrefix}.${node.bind}` : node.bind;
+      const defEntry = defLookup.get(defPath);
+      if (!defEntry) continue;
+      const item = defEntry.item;
+      const isPrimary = primaryKey === defPath;
+      const inSelection = selectedKeys.has(defPath) && !isPrimary;
+      const flatIdx = flatIndexMap.get(defPath) ?? 0;
+
+      if (item.type === 'group') {
+        const children = node.children
+          ? renderTreeNodes(node.children, defLookup, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, flatIndexMap, depth + 1, defPath)
+          : null;
+        result.push(
+          <SortableItemWrapper key={defPath} id={defPath} index={flatIdx}>
+            <GroupBlock
+              itemKey={item.key}
+              itemPath={defPath}
+              registerTarget={registerTarget}
+              label={item.label}
+              repeatable={item.repeatable}
+              minRepeat={item.minRepeat}
+              maxRepeat={item.maxRepeat}
+              depth={depth}
+              selected={isPrimary}
+              isInSelection={inSelection}
+              onSelect={(e) => handleItemClick(e, defPath, 'group')}
+            >
+              {children}
+            </GroupBlock>
+          </SortableItemWrapper>
+        );
+      } else {
+        result.push(
+          <SortableItemWrapper key={defPath} id={defPath} index={flatIdx}>
+            <FieldBlock
+              itemKey={item.key}
+              itemPath={defPath}
+              registerTarget={registerTarget}
+              label={item.label}
+              hint={item.hint}
+              dataType={item.dataType}
+              binds={bindsFor(allBinds, defPath)}
+              depth={depth}
+              selected={isPrimary}
+              isInSelection={inSelection}
+              onSelect={(e) => handleItemClick(e, defPath, item.type)}
+            />
+          </SortableItemWrapper>
+        );
+      }
+    } else if (node.nodeId) {
+      // Display node (nodeId without _layout)
+      const defPath = defPathPrefix ? `${defPathPrefix}.${node.nodeId}` : node.nodeId;
+      const defEntry = defLookup.get(defPath);
+      const label = defEntry?.item.label || (node as any).text || node.nodeId;
+      const isPrimary = primaryKey === defPath;
+      const inSelection = selectedKeys.has(defPath) && !isPrimary;
+      const flatIdx = flatIndexMap.get(defPath) ?? 0;
+
+      result.push(
+        <SortableItemWrapper key={defPath} id={defPath} index={flatIdx}>
           <DisplayBlock
-            itemKey={item.key}
-            itemPath={path}
+            itemKey={node.nodeId}
+            itemPath={defPath}
             registerTarget={registerTarget}
-            label={item.label}
+            label={label}
             depth={depth}
             selected={isPrimary}
             isInSelection={inSelection}
-            onSelect={(e) => handleItemClick(e, path, 'display')}
-          />
-        </SortableItemWrapper>
-      );
-    } else {
-      nodes.push(
-        <SortableItemWrapper key={path} id={path} index={flatIdx}>
-          <FieldBlock
-            itemKey={item.key}
-            itemPath={path}
-            registerTarget={registerTarget}
-            label={item.label}
-            hint={item.hint}
-            dataType={item.dataType}
-            binds={bindsFor(allBinds, path)}
-            depth={depth}
-            selected={isPrimary}
-            isInSelection={inSelection}
-            onSelect={(e) => handleItemClick(e, path, item.type)}
+            onSelect={(e) => handleItemClick(e, defPath, 'display')}
+            widgetHint={node.component !== 'Text' ? node.component : undefined}
           />
         </SortableItemWrapper>
       );
     }
   }
-  return nodes;
+  return result;
 }
 
 let nextItemId = 1;
@@ -178,6 +230,8 @@ export function EditorCanvas() {
 
   const items: Item[] = (definition?.items as Item[]) || [];
   const allBinds = definition?.binds as Record<string, Record<string, string>> | undefined;
+  const component = useComponent();
+  const tree = component?.tree as CompNode | undefined;
 
   const pageMode = (definition as any)?.formPresentation?.pageMode;
   const isPaged = pageMode === 'wizard' || pageMode === 'tabs';
@@ -204,25 +258,57 @@ export function EditorCanvas() {
     ? [...rootItems, topLevelGroups[activePageIndex]].filter(Boolean)
     : items;
 
-  // Flat ordering for range-select (shift+click) and DnD
+  // Build definition lookup for the component tree renderer
+  const defLookup = useMemo(
+    () => buildDefLookup(displayItems as any),
+    [displayItems],
+  );
+
+  // Determine which tree nodes to render (filter for paged mode)
+  const displayTreeNodes: CompNode[] = useMemo(() => {
+    if (!tree?.children) return [];
+    if (!hasPaged) return tree.children;
+    // In paged mode, show root items (non-groups) + the active page group
+    const activeGroup = topLevelGroups[activePageIndex];
+    return tree.children.filter((node: CompNode) => {
+      if (node._layout) return true; // always show layout wrappers
+      if (node.bind) {
+        const defEntry = defLookup.get(node.bind);
+        if (!defEntry) return false;
+        const item = defEntry.item;
+        if (item.type === 'group') return activeGroup && item.key === activeGroup.key;
+        return true; // root-level non-group items
+      }
+      if (node.nodeId) return true; // display nodes
+      return false;
+    });
+  }, [tree, hasPaged, topLevelGroups, activePageIndex, defLookup]);
+
+  // Flat ordering from component tree for range-select and DnD
+  const treeFlatEntries: TreeFlatEntry[] = useMemo(
+    () => tree ? flattenComponentTree({ ...tree, children: displayTreeNodes }, defLookup) : [],
+    [tree, displayTreeNodes, defLookup],
+  );
+  const flatOrder = useMemo(
+    () => treeFlatEntries.map(e => e.id),
+    [treeFlatEntries],
+  );
+
+  // Legacy flat items for DnD compatibility
   const flatItemsList = useMemo(
     () => flatItems(displayItems as any),
     [displayItems],
   );
-  const flatOrder = useMemo(
-    () => flatItemsList.map(f => f.path),
-    [flatItemsList],
-  );
 
   // Build FlatEntry[] and index map for DnD
   const flatEntries: FlatEntry[] = useMemo(
-    () => flatItemsList.map(f => ({
-      path: f.path,
-      type: f.item.type,
-      depth: f.depth,
-      hasChildren: !!(f.item as any).children?.length,
+    () => treeFlatEntries.map(e => ({
+      path: e.id,
+      type: e.category,
+      depth: e.depth,
+      hasChildren: e.hasChildren,
     })),
-    [flatItemsList],
+    [treeFlatEntries],
   );
   const flatIndexMap = useMemo(
     () => new Map(flatEntries.map((e, i) => [e.path, i])),
@@ -248,7 +334,7 @@ export function EditorCanvas() {
   });
 
   // Look up the active item for the drag overlay
-  const activeItem = activeId ? flatItemsList.find(f => f.path === activeId) : null;
+  const activeItem = activeId ? treeFlatEntries.find(e => e.id === activeId) : null;
 
   const handleItemClick = useCallback((e: React.MouseEvent, path: string, type: string) => {
     if (e.metaKey || e.ctrlKey) {
@@ -261,6 +347,20 @@ export function EditorCanvas() {
   }, [toggleSelect, rangeSelect, select, flatOrder]);
 
   const handleAddItem = (opt: FieldTypeOption) => {
+    if (opt.itemType === 'layout') {
+      // Layout items are component-tree-only (no definition entry)
+      const result = dispatch({
+        type: 'component.addNode',
+        payload: { parent: { nodeId: 'root' }, component: opt.component },
+      });
+      const nodeRef = (result as any).nodeRef;
+      if (nodeRef?.nodeId) {
+        selectAndFocusInspector(`__node:${nodeRef.nodeId}`, 'layout');
+      }
+      setShowPicker(false);
+      return;
+    }
+
     const key = uniqueKey(opt.dataType ?? opt.itemType);
     const activeGroup = hasPaged ? topLevelGroups[activePageIndex] : null;
     const result = dispatch({
@@ -393,6 +493,23 @@ export function EditorCanvas() {
       return;
     }
 
+    // Layout node operations
+    if (isLayoutId(path)) {
+      const nodeId = nodeIdFromLayoutId(path);
+      switch (action) {
+        case 'unwrap':
+          dispatch({ type: 'component.unwrapNode', payload: { node: { nodeId } } });
+          deselect();
+          break;
+        case 'deleteLayout':
+          dispatch({ type: 'component.deleteNode', payload: { node: { nodeId } } });
+          deselect();
+          break;
+      }
+      setContextMenu(null);
+      return;
+    }
+
     // Single-item operations
     switch (action) {
       case 'duplicate':
@@ -429,6 +546,26 @@ export function EditorCanvas() {
         });
         break;
       }
+      case 'wrapInCard':
+      case 'wrapInStack':
+      case 'wrapInCollapsible': {
+        const componentMap: Record<string, string> = {
+          wrapInCard: 'Card',
+          wrapInStack: 'Stack',
+          wrapInCollapsible: 'Collapsible',
+        };
+        const component = componentMap[action];
+        const nodeRef = { bind: path.split('.').pop()! };
+        const result = dispatch({
+          type: 'component.wrapNode',
+          payload: { node: nodeRef, wrapper: { component } },
+        });
+        const wrapperNodeId = (result as any).nodeRef?.nodeId;
+        if (wrapperNodeId) {
+          selectAndFocusInspector(`__node:${wrapperNodeId}`, 'layout');
+        }
+        break;
+      }
     }
     setContextMenu(null);
   };
@@ -445,7 +582,24 @@ export function EditorCanvas() {
         { label: 'Wrap in Group', action: 'wrapInGroup' },
       ];
     }
-    return undefined; // default single-item menu
+    // Layout node menu
+    if (contextMenu.type === 'layout') {
+      return [
+        { label: 'Unwrap', action: 'unwrap' },
+        { label: 'Delete', action: 'deleteLayout' },
+      ];
+    }
+    // Single non-layout item: add wrap options
+    return [
+      { label: 'Duplicate', action: 'duplicate' },
+      { label: 'Delete', action: 'delete' },
+      { label: 'Move Up', action: 'moveUp' },
+      { label: 'Move Down', action: 'moveDown' },
+      { label: 'Wrap in Group', action: 'wrapInGroup' },
+      { label: 'Wrap in Card', action: 'wrapInCard' },
+      { label: 'Wrap in Stack', action: 'wrapInStack' },
+      { label: 'Wrap in Collapsible', action: 'wrapInCollapsible' },
+    ];
   })();
 
   const formTitle = (definition as any)?.title;
@@ -504,15 +658,15 @@ export function EditorCanvas() {
             KeyboardSensor,
           ]}
         >
-          {renderItems(displayItems, allBinds, primaryKey, selectedKeys, handleItemClick, registerCanvasTarget, flatIndexMap, 0, '')}
+          {renderTreeNodes(displayTreeNodes, defLookup, allBinds, primaryKey, selectedKeys, handleItemClick, registerCanvasTarget, flatIndexMap, 0, '')}
           {overTarget && (
             <DropIndicator targetPath={overTarget.path} position={overTarget.position} />
           )}
           <DragOverlay>
             {activeItem ? (
               <DragOverlayContent
-                label={(activeItem.item as any).label || activeItem.path}
-                itemType={activeItem.item.type}
+                label={(activeItem.node as any).text || (activeItem.defPath && defLookup.get(activeItem.defPath)?.item.label) || activeItem.id}
+                itemType={activeItem.category}
                 extraCount={selectionCount > 1 ? selectionCount - 1 : undefined}
               />
             ) : null}

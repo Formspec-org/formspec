@@ -28,22 +28,42 @@ export function TestResponse() {
   };
 
   return (
-    <div className="p-4">
-      <div className="max-w-xl rounded border border-border bg-surface p-4">
-        <h2 className="text-sm font-semibold text-ink">Test Response</h2>
-        <p className="mt-2 text-sm text-muted">
-          Generate a response document and validation report from the current definition.
-        </p>
-        <button
-          type="button"
-          className="mt-4 px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border text-ink hover:bg-subtle transition-colors"
-          onClick={handleRun}
-        >
-          Run Test Response
-        </button>
-        {output ? (
-          <pre className="mt-4 overflow-auto rounded border border-border bg-subtle/40 p-3 text-xs text-ink">{output}</pre>
-        ) : null}
+    <div className="space-y-6">
+      <div className="max-w-2xl rounded-xl border border-border bg-surface shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="px-5 py-4 bg-subtle/30 border-b border-border flex items-center justify-between">
+           <div>
+            <h3 className="text-[14px] font-bold text-ink">Engine Simulation</h3>
+            <p className="text-[11px] text-muted">Generate a live response document and validation report.</p>
+           </div>
+           <button
+            type="button"
+            className="px-4 py-2 bg-accent text-white text-[12px] font-bold uppercase tracking-wider rounded-md hover:bg-accent-hover shadow-sm transition-all active:scale-95 disabled:opacity-50"
+            onClick={handleRun}
+          >
+            Run Simulation
+          </button>
+        </div>
+        
+        <div className="p-5">
+          {output ? (
+            <div className="space-y-4 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-green animate-pulse" />
+                <span className="text-[11px] font-bold text-muted uppercase tracking-widest">Live Output</span>
+              </div>
+              <pre className="overflow-auto max-h-[500px] rounded-lg border border-border bg-ink/[0.02] p-4 text-[13px] font-mono text-ink leading-relaxed selection:bg-accent/20">
+                {output}
+              </pre>
+            </div>
+          ) : (
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-3 opacity-60">
+              <div className="w-12 h-12 rounded-full bg-subtle flex items-center justify-center text-muted">
+                <span className="text-xl">⚡︎</span>
+              </div>
+              <p className="text-sm text-muted italic">Click "Run Simulation" to generate the current form state.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -174,3 +174,126 @@ export function buildSequentialMoveCommands(
 
   return commands;
 }
+
+// ── Tree-aware drop target (dual-dispatch) ──────────────────────────
+
+import type { TreeFlatEntry } from '../../../lib/tree-helpers';
+
+export interface TreeDropTarget {
+  sourceRef: { bind?: string; nodeId?: string };
+  targetParentRef: { bind?: string; nodeId?: string };
+  targetIndex: number;
+  /** Non-null when a definition.moveItem is needed (cross-group moves). Null for component-only moves. */
+  defMove: { sourcePath: string; targetParentPath: string | null; targetIndex: number } | null;
+}
+
+/**
+ * Compute a drop target using the component tree flat list.
+ * Returns routing info: whether to dispatch component.moveNode only or also definition.moveItem.
+ *
+ * Rules:
+ * - Moving a layout node → component.moveNode only (defMove = null)
+ * - Moving INTO a layout container → component.moveNode only
+ * - Moving between bound groups (different def parent) → definition.moveItem (triggers rebuild)
+ * - Moving within same def parent → component.moveNode only
+ */
+export function computeTreeDropTarget(
+  activeId: string,
+  overId: string,
+  position: DropPosition,
+  flatList: TreeFlatEntry[],
+): TreeDropTarget | null {
+  if (activeId === overId) return null;
+
+  const sourceEntry = flatList.find(e => e.id === activeId);
+  const overEntry = flatList.find(e => e.id === overId);
+  if (!sourceEntry || !overEntry) return null;
+
+  const isSourceLayout = sourceEntry.category === 'layout';
+  const isOverLayout = overEntry.category === 'layout';
+
+  // Build refs
+  const sourceRef = sourceEntry.bind
+    ? { bind: sourceEntry.bind }
+    : { nodeId: sourceEntry.nodeId! };
+
+  // Determine target parent and index
+  let targetParentRef: { bind?: string; nodeId?: string };
+  let targetIndex: number;
+
+  if (position === 'inside') {
+    // Drop inside — only valid for groups and layout containers
+    if (overEntry.category !== 'group' && overEntry.category !== 'layout') return null;
+    targetParentRef = overEntry.bind ? { bind: overEntry.bind } : { nodeId: overEntry.nodeId! };
+    // Count direct children of the target in the flat list
+    const overIdx = flatList.indexOf(overEntry);
+    let count = 0;
+    for (let i = overIdx + 1; i < flatList.length; i++) {
+      if (flatList[i].depth <= overEntry.depth) break;
+      if (flatList[i].depth === overEntry.depth + 1) count++;
+    }
+    targetIndex = count;
+  } else {
+    // above/below — sibling of the over item
+    // Find the parent of the over item by walking back in the flat list
+    const overIdx = flatList.indexOf(overEntry);
+    let parentEntry: TreeFlatEntry | undefined;
+    for (let i = overIdx - 1; i >= 0; i--) {
+      if (flatList[i].depth < overEntry.depth) {
+        parentEntry = flatList[i];
+        break;
+      }
+    }
+    targetParentRef = parentEntry
+      ? (parentEntry.bind ? { bind: parentEntry.bind } : { nodeId: parentEntry.nodeId! })
+      : { nodeId: 'root' };
+
+    // Compute sibling index
+    const parentDepth = parentEntry ? parentEntry.depth : -1;
+    const siblingDepth = parentDepth + 1;
+    let sibIdx = 0;
+    const startIdx = parentEntry ? flatList.indexOf(parentEntry) + 1 : 0;
+    for (let i = startIdx; i < flatList.length; i++) {
+      if (flatList[i].depth < siblingDepth) break;
+      if (flatList[i].depth === siblingDepth) {
+        if (flatList[i].id === overId) {
+          targetIndex = position === 'above' ? sibIdx : sibIdx + 1;
+          break;
+        }
+        sibIdx++;
+      }
+    }
+    targetIndex = targetIndex! ?? sibIdx;
+  }
+
+  // Determine if a definition move is needed
+  let defMove: TreeDropTarget['defMove'] = null;
+
+  if (!isSourceLayout) {
+    const isTargetLayout = 'nodeId' in targetParentRef && targetParentRef.nodeId !== 'root'
+      && flatList.find(e => e.nodeId === targetParentRef.nodeId)?.category === 'layout';
+
+    if (!isTargetLayout) {
+      // Target parent is a bound group or root — check if def parents differ
+      const sourceDefParent = sourceEntry.defPath ? getDefParent(sourceEntry.defPath) : null;
+      const targetDefParent = 'bind' in targetParentRef
+        ? flatList.find(e => e.bind === targetParentRef.bind)?.defPath ?? null
+        : null; // root
+
+      if (sourceDefParent !== targetDefParent) {
+        defMove = {
+          sourcePath: sourceEntry.defPath!,
+          targetParentPath: targetDefParent,
+          targetIndex,
+        };
+      }
+    }
+  }
+
+  return { sourceRef, targetParentRef, targetIndex, defMove };
+}
+
+function getDefParent(defPath: string): string | null {
+  const lastDot = defPath.lastIndexOf('.');
+  return lastDot === -1 ? null : defPath.substring(0, lastDot);
+}
