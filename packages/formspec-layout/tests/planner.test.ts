@@ -365,10 +365,12 @@ describe('planComponentTree', () => {
         expect(node.children[0].bindPath).toBe('intro');
         expect(node.children[1].component).toBe('Wizard');
         expect(node.children[1].children).toHaveLength(1);
-        expect(node.children[1].children[0].component).toBe('Stack');
+        expect(node.children[1].children[0].component).toBe('Page');
         expect(node.children[1].children[0].props.title).toBe('Page One');
-        expect(node.children[1].children[0].children[0].component).toBe('RadioGroup');
-        expect(node.children[1].children[0].children[0].bindPath).toBe('pageOne.priority');
+        expect(node.children[1].children[0].children[0].component).toBe('Stack');
+        expect(node.children[1].children[0].children[0].bindPath).toBe('pageOne');
+        expect(node.children[1].children[0].children[0].children[0].component).toBe('RadioGroup');
+        expect(node.children[1].children[0].children[0].children[0].bindPath).toBe('pageOne.priority');
     });
 });
 
@@ -488,7 +490,7 @@ describe('planDefinitionFallback', () => {
         expect(nodes[0].component).toBe('Slider');
     });
 
-    it('wraps theme pages in wizard mode during definition fallback', () => {
+    it('keeps theme pages as the top-level layout during definition fallback', () => {
         const items = [
             { key: 'intro', type: 'field', dataType: 'string', label: 'Intro' },
             {
@@ -523,14 +525,85 @@ describe('planDefinitionFallback', () => {
 
         const nodes = planDefinitionFallback(items, ctx);
 
+        expect(nodes).toHaveLength(3);
+        expect(nodes[0].component).toBe('Page');
+        expect(nodes[0].props.title).toBe('Applicant');
+        expect(nodes[0].children[0].component).toBe('Grid');
+        expect(nodes[1].component).toBe('Page');
+        expect(nodes[1].props.title).toBe('Review');
+        expect(nodes[2].bindPath).toBe('intro');
+    });
+
+    it('groups top-level definition pages without wrapping nested groups again', () => {
+        const items = [
+            { key: 'intro', type: 'field', dataType: 'string', label: 'Intro' },
+            {
+                key: 'applicant',
+                type: 'group',
+                label: 'Applicant Details',
+                presentation: {
+                    layout: {
+                        page: 'Applicant',
+                    },
+                },
+                children: [
+                    { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
+                    {
+                        key: 'address',
+                        type: 'group',
+                        label: 'Address',
+                        children: [
+                            { key: 'city', type: 'field', dataType: 'string', label: 'City' },
+                        ],
+                    },
+                ],
+            },
+            {
+                key: 'attachments',
+                type: 'group',
+                label: 'Attachments',
+                children: [
+                    { key: 'summary', type: 'field', dataType: 'text', label: 'Summary' },
+                ],
+            },
+            {
+                key: 'review',
+                type: 'group',
+                label: 'Review',
+                presentation: {
+                    layout: {
+                        page: 'Review',
+                    },
+                },
+                children: [
+                    { key: 'notes', type: 'display', label: 'Review your answers' },
+                ],
+            },
+        ];
+        const ctx = makeCtx({
+            items,
+            formPresentation: { pageMode: 'wizard' },
+            findItem: (key) => findItemByPath(items, key) ?? findItems(items, key),
+            isComponentAvailable: () => true,
+        });
+
+        const nodes = planDefinitionFallback(items, ctx);
+
+        expect(nodes).toHaveLength(2);
         expect(nodes[0].bindPath).toBe('intro');
         expect(nodes[1].component).toBe('Wizard');
         expect(nodes[1].children).toHaveLength(2);
         expect(nodes[1].children[0].component).toBe('Page');
         expect(nodes[1].children[0].props.title).toBe('Applicant');
-        expect(nodes[1].children[0].children[0].component).toBe('Grid');
+        expect(nodes[1].children[0].children).toHaveLength(2);
+        expect(nodes[1].children[0].children[0].bindPath).toBe('applicant');
+        expect(nodes[1].children[0].children[1].bindPath).toBe('attachments');
+        expect(nodes[1].children[0].children[0].children[1].component).toBe('Stack');
+        expect(nodes[1].children[0].children[0].children[1].bindPath).toBe('applicant.address');
+        expect(nodes[1].children[0].children[0].children[1].children[0].bindPath).toBe('applicant.address.city');
         expect(nodes[1].children[1].component).toBe('Page');
         expect(nodes[1].children[1].props.title).toBe('Review');
+        expect(nodes[1].children[1].children[0].bindPath).toBe('review');
     });
 });
 

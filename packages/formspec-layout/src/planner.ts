@@ -315,7 +315,7 @@ export function planDefinitionFallback(
     if (applyThemePages && !prefix && ctx.theme?.pages?.length) {
         const themed = planThemePagesFromDefinitionItems(items, ctx);
         if (themed.length > 0) {
-            return applyDefinitionPageMode(themed, ctx);
+            return themed;
         }
     }
 
@@ -325,7 +325,7 @@ export function planDefinitionFallback(
         nodes.push(planDefinitionItem(item, ctx, prefix));
     }
 
-    return applyDefinitionPageMode(nodes, ctx);
+    return !prefix ? applyDefinitionPageMode(nodes, ctx) : nodes;
 }
 
 function applyDefinitionPageMode(nodes: LayoutNode[], ctx: PlanContext): LayoutNode[] {
@@ -334,19 +334,12 @@ function applyDefinitionPageMode(nodes: LayoutNode[], ctx: PlanContext): LayoutN
         return nodes;
     }
 
-    const pageNodes = nodes.some((node) => node.component === 'Page')
-        ? nodes.filter((node) => node.component === 'Page')
-        : nodes.filter((node) => node.scopeChange);
-    if (pageNodes.length === 0) {
+    const { orphans, pages } = buildDefinitionPages(nodes, ctx.items);
+    if (pages.length === 0) {
         return nodes;
     }
 
-    return wrapPageModeChildren(
-        nodes,
-        pageMode,
-        (node) => pageNodes.includes(node),
-        (node, index) => String(node.props.title || node.props.bind || `Page ${index + 1}`),
-    );
+    return wrapPageModePages(orphans, pages, pageMode);
 }
 
 function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNode {
@@ -574,35 +567,38 @@ function wrapRegionNode(
     };
 }
 
-function wrapPageModeChildren(
-    nodes: LayoutNode[],
+type PlannedPage = {
+    title: string;
+    children: LayoutNode[];
+};
+
+function wrapPageModePages(
+    orphans: LayoutNode[],
+    pages: PlannedPage[],
     pageMode: 'wizard' | 'tabs',
-    isPageNode: (node: LayoutNode) => boolean,
-    getTitle: (node: LayoutNode, index: number) => string,
 ): LayoutNode[] {
-    const pageNodes = nodes.filter(isPageNode);
-    if (pageNodes.length === 0) {
-        return nodes;
+    if (pages.length === 0) {
+        return orphans;
     }
 
-    const orphans = nodes.filter((node) => !isPageNode(node));
-    const titledPages = pageNodes.map((node, index) => {
-        const title = getTitle(node, index);
-        return {
-            ...node,
-            props: { ...node.props, title },
-        };
-    });
+    const pageNodes = pages.map((page, index) => ({
+        id: nextId('page'),
+        component: 'Page',
+        category: 'layout' as const,
+        props: { title: page.title || `Page ${index + 1}` },
+        cssClasses: [],
+        children: page.children,
+    }));
 
     const pagingNode: LayoutNode = {
         id: nextId(pageMode === 'tabs' ? 'tabs' : 'wizard'),
         component: pageMode === 'tabs' ? 'Tabs' : 'Wizard',
         category: 'interactive',
         props: pageMode === 'tabs'
-            ? { tabLabels: titledPages.map((page) => String(page.props.title || '')) }
+            ? { tabLabels: pageNodes.map((page) => String(page.props.title || '')) }
             : {},
         cssClasses: [],
-        children: titledPages,
+        children: pageNodes,
     };
 
     return [...orphans, pagingNode];
@@ -631,22 +627,29 @@ function applyGeneratedPageMode(
     }
 
     if (rootNode.children.some((child) => child.component === 'Page')) {
+        const pages = rootNode.children
+            .filter((node) => node.component === 'Page')
+            .map((node, index) => ({
+                title: String(node.props.title || `Page ${index + 1}`),
+                children: [node],
+            }));
         return {
             ...rootNode,
-            children: wrapPageModeChildren(
-                rootNode.children,
+            children: wrapPageModePages(
+                rootNode.children.filter((node) => node.component !== 'Page'),
+                pages,
                 pageMode,
-                (node) => node.component === 'Page',
-                (node, index) => String(node.props.title || `Page ${index + 1}`),
             ),
         };
     }
 
     const topLevelNodes = rootNode.children.slice(0, ctx.items.length);
     const preservedExtras = rootNode.children.slice(ctx.items.length);
-    const pageChildren: LayoutNode[] = [];
     const orphanChildren: LayoutNode[] = [];
-    const tabLabels: string[] = [];
+    const pages: PlannedPage[] = [];
+    const pageByName = new Map<string, PlannedPage>();
+    let lastPage: PlannedPage | null = null;
+    let sawExplicitPage = false;
 
     for (let index = 0; index < ctx.items.length; index += 1) {
         const item = ctx.items[index];
@@ -654,38 +657,107 @@ function applyGeneratedPageMode(
         if (!node) continue;
 
         if (item?.type === 'group') {
-            const title = String(node.props.title || item.label || node.props.bind || item.key || `Page ${index + 1}`);
-            pageChildren.push({
-                ...node,
-                props: { ...node.props, title },
-            });
-            tabLabels.push(title);
+            const pageName = getItemPageName(item);
+            if (pageName) {
+                sawExplicitPage = true;
+                const page = pageByName.get(pageName) ?? { title: pageName, children: [] };
+                if (!pageByName.has(pageName)) {
+                    pageByName.set(pageName, page);
+                    pages.push(page);
+                }
+                page.children.push(node);
+                lastPage = page;
+            } else if (lastPage && sawExplicitPage) {
+                lastPage.children.push(node);
+            } else {
+                const title = String(item.label || node.props.title || node.props.bind || item.key || `Page ${pages.length + 1}`);
+                pages.push({
+                    title,
+                    children: [stripTitleFromGroupNode(node)],
+                });
+                lastPage = pages[pages.length - 1];
+            }
         } else {
             orphanChildren.push(node);
         }
     }
 
-    if (pageChildren.length === 0) {
+    if (pages.length === 0) {
         return rootNode;
     }
 
     return {
         ...rootNode,
-        children: [
-            ...wrapPageModeChildren(
-                [...orphanChildren, ...pageChildren],
-                pageMode,
-                (node) => pageChildren.includes(node),
-                (node, index) => String(node.props.title || tabLabels[index] || `Page ${index + 1}`),
-            ),
-            ...preservedExtras,
-        ],
+        children: [...wrapPageModePages(orphanChildren, pages, pageMode), ...preservedExtras],
     };
 }
 
 function isStudioGeneratedComponentDoc(doc: any): boolean {
     if (!doc || typeof doc !== 'object') return false;
     return doc['x-studio-generated'] === true || doc.$formspecComponent == null;
+}
+
+function buildDefinitionPages(nodes: LayoutNode[], items: any[]): { orphans: LayoutNode[]; pages: PlannedPage[] } {
+    const pageByName = new Map<string, PlannedPage>();
+    const pages: PlannedPage[] = [];
+    const orphans: LayoutNode[] = [];
+    let lastPage: PlannedPage | null = null;
+    let sawExplicitPage = false;
+
+    for (let index = 0; index < items.length; index += 1) {
+        const item = items[index];
+        const node = nodes[index];
+        if (!node) continue;
+
+        if (item?.type !== 'group') {
+            orphans.push(node);
+            continue;
+        }
+
+        const pageName = getItemPageName(item);
+        if (pageName) {
+            sawExplicitPage = true;
+            const page = pageByName.get(pageName) ?? { title: pageName, children: [] };
+            if (!pageByName.has(pageName)) {
+                pageByName.set(pageName, page);
+                pages.push(page);
+            }
+            page.children.push(node);
+            lastPage = page;
+        } else if (lastPage && sawExplicitPage) {
+            lastPage.children.push(node);
+        } else {
+            const title = String(item.label || node.props.title || node.props.bind || item.key || `Page ${pages.length + 1}`);
+            pages.push({
+                title,
+                children: [stripTitleFromGroupNode(node)],
+            });
+            lastPage = pages[pages.length - 1];
+        }
+    }
+
+    for (let index = items.length; index < nodes.length; index += 1) {
+        orphans.push(nodes[index]);
+    }
+
+    return { orphans, pages };
+}
+
+function getItemPageName(item: any): string | null {
+    const page = item?.presentation?.layout?.page;
+    return typeof page === 'string' && page.trim().length > 0 ? page.trim() : null;
+}
+
+function stripTitleFromGroupNode(node: LayoutNode): LayoutNode {
+    if (node.component !== 'Stack') {
+        return node;
+    }
+
+    const { title: _title, ...restProps } = node.props;
+    return {
+        ...node,
+        props: restProps,
+    };
 }
 
 function resolveRegionPlacement(region: any, activeBreakpoint: string | null): { span: number; start?: number; hidden: boolean } {
