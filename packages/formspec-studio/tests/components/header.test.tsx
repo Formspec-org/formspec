@@ -8,14 +8,23 @@ import { Header } from '../../src/components/Header';
 function renderHeader(project?: Project) {
   const p = project ?? createProject();
   const onTabChange = vi.fn();
+  const onNew = vi.fn();
+  const onExport = vi.fn();
   const result = render(
     <ProjectProvider project={p}>
       <SelectionProvider>
-        <Header activeTab="Editor" onTabChange={onTabChange} onImport={() => {}} onSearch={() => {}} />
+        <Header
+          activeTab="Editor"
+          onTabChange={onTabChange}
+          onImport={() => {}}
+          onSearch={() => {}}
+          onNew={onNew}
+          onExport={onExport}
+        />
       </SelectionProvider>
     </ProjectProvider>
   );
-  return { ...result, onTabChange, project: p };
+  return { ...result, onTabChange, onNew, onExport, project: p };
 }
 
 describe('Header', () => {
@@ -71,5 +80,15 @@ describe('Header', () => {
   it('renders the avatar as a menu button', () => {
     renderHeader();
     expect(screen.getByRole('button', { name: /account|profile|avatar/i })).toBeInTheDocument();
+  });
+
+  it('renders New Form and Export actions and wires clicks to the provided handlers', () => {
+    const { onNew, onExport } = renderHeader();
+
+    screen.getByRole('button', { name: /new form/i }).click();
+    screen.getByRole('button', { name: /^export$/i }).click();
+
+    expect(onNew).toHaveBeenCalledTimes(1);
+    expect(onExport).toHaveBeenCalledTimes(1);
   });
 });

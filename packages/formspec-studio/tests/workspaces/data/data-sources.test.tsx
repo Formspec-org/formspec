@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider } from '../../../src/state/useSelection';
@@ -43,6 +43,24 @@ describe('DataSources', () => {
   it('shows empty state when no instances', () => {
     renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
     expect(screen.getByText(/no data sources/i)).toBeInTheDocument();
+  });
+
+  it('adds a data source via prompt flow', async () => {
+    const { project } = renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
+    const spy = vi.spyOn(project, 'dispatch');
+    const promptSpy = vi.spyOn(window, 'prompt')
+      .mockReturnValueOnce('counties')
+      .mockReturnValueOnce('https://api.example.com/counties');
+
+    await act(async () => {
+      screen.getByRole('button', { name: /add data source/i }).click();
+    });
+
+    expect(spy).toHaveBeenCalledWith({
+      type: 'definition.addInstance',
+      payload: { name: 'counties', source: 'https://api.example.com/counties' },
+    });
+    promptSpy.mockRestore();
   });
 
 });

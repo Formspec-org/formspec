@@ -12,7 +12,13 @@ export interface ScreenerHost {
     render(): void;
 }
 
+export function hasActiveScreener(definition: any): boolean {
+    const screener = definition?.screener;
+    return screener?.enabled !== false && Array.isArray(screener?.items) && screener.items.length > 0;
+}
+
 export function renderScreener(host: ScreenerHost, container: HTMLElement): void {
+    if (!hasActiveScreener(host._definition)) return;
     const screener = host._definition.screener;
     const panel = document.createElement('div');
     panel.className = 'formspec-screener';

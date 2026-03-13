@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createProject } from 'formspec-studio-core';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
@@ -69,6 +70,10 @@ export function Shell() {
   const SidebarComponent = SIDEBAR_COMPONENTS[activeSection];
   const project = useProject();
   const { selectedKey, deselect } = useSelection();
+  const viewportWidth = typeof window !== 'undefined'
+    ? Math.min(window.innerWidth, document.documentElement?.clientWidth || window.innerWidth)
+    : Infinity;
+  const compactLayout = isTabletLayout || viewportWidth <= 1024;
 
   const workspaceContent = (() => {
     switch (activeTab) {
@@ -143,11 +148,49 @@ export function Shell() {
     return () => window.removeEventListener('formspec:navigate-workspace', onNavigateWorkspace);
   }, []);
 
+  const handleNewForm = () => {
+    project.dispatch({
+      type: 'project.import',
+      payload: createProject().export(),
+    });
+    project.resetHistory();
+    setActiveTab('Editor');
+    setActiveSection('Structure');
+    setActiveDataTab('Response Schema');
+    setActiveThemeTab('tokens');
+    setActiveMappingTab('config');
+    setMappingConfigOpen(true);
+    setPreviewViewport('desktop');
+    setPreviewMode('form');
+    setShowPalette(false);
+    setShowImport(false);
+    setShowAppMenu(false);
+    deselect();
+  };
+
+  const handleExport = () => {
+    const definition = project.export().definition;
+    const baseName = definition.title?.trim()
+      ? definition.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      : 'formspec-definition';
+    const blob = new Blob([JSON.stringify(definition, null, 2)], { type: 'application/json' });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = `${baseName || 'formspec-definition'}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(href);
+  };
+
   return (
     <div data-testid="shell" className="relative h-screen flex flex-col overflow-x-hidden bg-bg-default text-ink font-ui">
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        onNew={handleNewForm}
+        onExport={handleExport}
         onImport={() => setShowImport(true)}
         onSearch={() => setShowPalette(true)}
         onHome={() => setShowAppMenu((current) => !current)}
@@ -156,7 +199,7 @@ export function Shell() {
           setActiveSection('Settings');
         }}
         onToggleAccountMenu={() => setShowAppMenu((current) => !current)}
-        isCompact={isTabletLayout}
+        isCompact={compactLayout}
       />
       {showAppMenu ? (
         <div
@@ -198,9 +241,9 @@ export function Shell() {
             </div>
           </main>
           <aside
-            className={`w-[270px] border-l border-border bg-surface overflow-y-auto shrink-0 ${isTabletLayout ? 'hidden' : ''}`}
+            className={`w-[270px] border-l border-border bg-surface overflow-y-auto shrink-0 ${compactLayout ? 'hidden' : ''}`}
             data-testid="properties"
-            data-responsive-hidden={isTabletLayout ? 'true' : 'false'}
+            data-responsive-hidden={compactLayout ? 'true' : 'false'}
           >
             <ItemProperties showActions={activeTab === 'Editor'} />
           </aside>

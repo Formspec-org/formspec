@@ -6,6 +6,8 @@ const TABS = ['Editor', 'Logic', 'Data', 'Theme', 'Mapping', 'Preview'] as const
 interface HeaderProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onNew?: () => void;
+  onExport?: () => void;
   onImport: () => void;
   onSearch: () => void;
   onHome?: () => void;
@@ -17,6 +19,8 @@ interface HeaderProps {
 export function Header({
   activeTab,
   onTabChange,
+  onNew,
+  onExport,
   onImport,
   onSearch,
   onHome,
@@ -129,6 +133,24 @@ export function Header({
 
         <div className="w-px h-5 bg-border mx-1" />
 
+        {!isCompact && (
+          <button
+            type="button"
+            className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
+            onClick={onNew}
+          >
+            New Form
+          </button>
+        )}
+        {!isCompact && (
+          <button
+            type="button"
+            className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
+            onClick={onExport}
+          >
+            Export
+          </button>
+        )}
         <button
           data-testid="import-btn"
           className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"

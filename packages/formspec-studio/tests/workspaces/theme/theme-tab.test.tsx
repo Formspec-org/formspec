@@ -27,11 +27,11 @@ function renderThemeTab() {
 }
 
 describe('ThemeTab', () => {
-  it('keeps tokens informational while preserving real add affordances in other theme sub-tabs', () => {
+  it('keeps tokens editable while preserving real add affordances in other theme sub-tabs', () => {
     renderThemeTab();
 
     expect(screen.getByText(/no tokens defined/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ add token/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /\+ add token/i })).toBeInTheDocument();
 
     act(() => { screen.getByRole('button', { name: /selectors/i }).click(); });
     expect(screen.getByRole('button', { name: /\+ add selector/i })).toBeInTheDocument();

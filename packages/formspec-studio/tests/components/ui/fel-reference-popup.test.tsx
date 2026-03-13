@@ -30,4 +30,16 @@ describe('FELReferencePopup', () => {
     expect(screen.getByText('instance')).toBeInTheDocument();
     expect(screen.queryByText('sum')).not.toBeInTheDocument();
   });
+
+  it('shows complete metadata for functions that were previously falling back to empty signatures', () => {
+    render(<FELReferencePopup />);
+
+    fireEvent.click(screen.getByRole('button', { name: /fel reference/i }));
+    fireEvent.change(screen.getByPlaceholderText(/search functions/i), {
+      target: { value: 'matches' },
+    });
+
+    expect(screen.getByText('matches')).toBeInTheDocument();
+    expect(screen.getByText('(value, pattern) → boolean')).toBeInTheDocument();
+  });
 });

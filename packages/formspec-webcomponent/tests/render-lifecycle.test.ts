@@ -201,6 +201,39 @@ describe('render lifecycle', () => {
         expect(stateEvents.map((event) => event.reason)).toContain('skip');
     });
 
+    it('treats a disabled screener as inactive even when screener items are present', () => {
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:screened',
+            version: '1.0.0',
+            title: 'Screened Test',
+            items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
+            screener: {
+                enabled: false,
+                items: [
+                    {
+                        key: 'kind',
+                        type: 'field',
+                        dataType: 'choice',
+                        label: 'Kind',
+                        options: [{ value: 'internal', label: 'Internal' }],
+                    },
+                ],
+                routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
+            },
+        };
+        el.render();
+
+        expect(el.getScreenerState()).toMatchObject({
+            hasScreener: false,
+            completed: true,
+            routeType: 'none',
+            route: null,
+        });
+        expect(el.querySelector('.formspec-screener')).toBeNull();
+        expect(el.querySelector('.formspec-field')).not.toBeNull();
+    });
+
     it('does not auto-append a submit button', () => {
         el.definition = singleFieldDef();
         el.render();

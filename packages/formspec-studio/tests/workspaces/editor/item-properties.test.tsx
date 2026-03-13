@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createProject, type Project } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
@@ -136,7 +136,7 @@ describe('ItemProperties', () => {
     expect(screen.queryByText(/behavior rules/i)).toBeNull();
   });
 
-  it('does not show cardinality inputs for repeatable groups', async () => {
+  it('shows repeat cardinality inputs for repeatable groups and dispatches updates on blur', async () => {
     const project = createProject({ seed: { definition: {
       $formspec: '1.0',
       url: 'urn:test',
@@ -153,14 +153,28 @@ describe('ItemProperties', () => {
         },
       ],
     } as any } });
+    const spy = vi.spyOn(project, 'dispatch');
     renderProps(project, { path: 'members', type: 'group' });
     await act(async () => { screen.getByText('Select').click(); });
-    expect(screen.queryByText(/cardinality/i)).toBeNull();
-    expect(screen.queryByLabelText(/min repeat/i)).toBeNull();
-    expect(screen.queryByLabelText(/max repeat/i)).toBeNull();
+
+    const minRepeat = screen.getByLabelText(/min repeat/i);
+    const maxRepeat = screen.getByLabelText(/max repeat/i);
+
+    expect(minRepeat).toBeInTheDocument();
+    expect(maxRepeat).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.change(minRepeat, { target: { value: '2' } });
+      fireEvent.blur(minRepeat);
+    });
+
+    expect(spy).toHaveBeenCalledWith({
+      type: 'definition.setItemProperty',
+      payload: { path: 'members', property: 'minRepeat', value: 2 },
+    });
   });
 
-  it('shows choice options as read-only values', async () => {
+  it('shows editable choice options and dispatches updates on blur', async () => {
     const project = createProject({ seed: { definition: {
       $formspec: '1.0',
       url: 'urn:test',
@@ -178,13 +192,30 @@ describe('ItemProperties', () => {
         },
       ],
     } as any } });
+    const spy = vi.spyOn(project, 'dispatch');
     renderProps(project, { path: 'marital', type: 'field' });
     await act(async () => { screen.getByText('Select').click(); });
     expect(screen.getByText(/options/i)).toBeInTheDocument();
-    expect(screen.getByText('single')).toBeInTheDocument();
-    expect(screen.getByText('Single')).toBeInTheDocument();
-    expect(screen.queryByLabelText(/option 1 value/i)).toBeNull();
-    expect(screen.queryByLabelText(/option 1 label/i)).toBeNull();
+
+    const firstValue = screen.getByLabelText(/option 1 value/i);
+    const firstLabel = screen.getByLabelText(/option 1 label/i);
+
+    await act(async () => {
+      fireEvent.change(firstValue, { target: { value: 'solo' } });
+      fireEvent.blur(firstValue);
+    });
+
+    expect(spy).toHaveBeenCalledWith({
+      type: 'definition.setItemProperty',
+      payload: {
+        path: 'marital',
+        property: 'options',
+        value: [
+          { value: 'solo', label: 'Single' },
+          { value: 'married', label: 'Married' },
+        ],
+      },
+    });
   });
 
   it('does not show add-rule affordances for existing behavior rules', async () => {

@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { TokenEditor } from '../../../src/workspaces/theme/TokenEditor';
@@ -36,5 +36,23 @@ describe('TokenEditor', () => {
     const project = createProject({ seed: { definition: themeDef as any, theme: { targetDefinition: { url: 'urn:test' } } } });
     render(<ProjectProvider project={project}><TokenEditor /></ProjectProvider>);
     expect(screen.getByText(/no tokens/i)).toBeInTheDocument();
+  });
+
+  it('adds a token via prompt flow', async () => {
+    const { project } = renderTokens();
+    const spy = vi.spyOn(project, 'dispatch');
+    const promptSpy = vi.spyOn(window, 'prompt')
+      .mockReturnValueOnce('color.secondary')
+      .mockReturnValueOnce('#0f172a');
+
+    await act(async () => {
+      screen.getByRole('button', { name: /\+ add token/i }).click();
+    });
+
+    expect(spy).toHaveBeenCalledWith({
+      type: 'theme.setToken',
+      payload: { key: 'color.secondary', value: '#0f172a' },
+    });
+    promptSpy.mockRestore();
   });
 });

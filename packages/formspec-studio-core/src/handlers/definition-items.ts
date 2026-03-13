@@ -203,10 +203,11 @@ function rewritePathPrefix(path: string, oldPath: string, newPath: string): stri
     }
   }
 
-  const rewritten: string[] = [];
-  for (let i = 0; i < oldParts.length; i++) {
-    const suffix = rawParts[i].slice(normalizedParts[i].length);
-    rewritten.push((newParts[i] ?? oldParts[i]) + suffix);
+  const rewritten = [...newParts];
+  const finalMatchedIndex = oldParts.length - 1;
+  const finalMatchedSuffix = rawParts[finalMatchedIndex]?.slice(normalizedParts[finalMatchedIndex].length) ?? '';
+  if (rewritten.length > 0 && finalMatchedSuffix) {
+    rewritten[rewritten.length - 1] = rewritten[rewritten.length - 1] + finalMatchedSuffix;
   }
   for (let i = oldParts.length; i < rawParts.length; i++) {
     rewritten.push(rawParts[i]);
@@ -221,6 +222,24 @@ function rewriteFieldRef(expr: string, oldPath: string, newPath: string): string
       return rewritePathPrefix(path, oldPath, newPath);
     },
   });
+}
+
+function rewriteReverseRuleReferences(
+  reverse: Record<string, unknown>,
+  oldPath: string,
+  newPath: string,
+): void {
+  if (typeof reverse.sourcePath === 'string') {
+    reverse.sourcePath = rewritePathPrefix(reverse.sourcePath, oldPath, newPath);
+  }
+  if (typeof reverse.targetPath === 'string') {
+    reverse.targetPath = rewritePathPrefix(reverse.targetPath, oldPath, newPath);
+  }
+  for (const prop of ['expression', 'condition']) {
+    if (typeof reverse[prop] === 'string') {
+      reverse[prop] = rewriteFieldRef(reverse[prop] as string, oldPath, newPath);
+    }
+  }
 }
 
 /**
@@ -323,17 +342,7 @@ function rewriteAllPathReferences(
         }
       }
       if (rule.reverse && typeof rule.reverse === 'object') {
-        if (typeof rule.reverse.sourcePath === 'string') {
-          rule.reverse.sourcePath = rewritePathPrefix(rule.reverse.sourcePath, oldPath, newPath);
-        }
-        if (typeof rule.reverse.targetPath === 'string') {
-          rule.reverse.targetPath = rewritePathPrefix(rule.reverse.targetPath, oldPath, newPath);
-        }
-        for (const prop of ['expression', 'condition']) {
-          if (typeof rule.reverse[prop] === 'string') {
-            rule.reverse[prop] = rewriteFieldRef(rule.reverse[prop], oldPath, newPath);
-          }
-        }
+        rewriteReverseRuleReferences(rule.reverse, oldPath, newPath);
       }
       if (Array.isArray(rule.innerRules)) {
         for (const inner of rule.innerRules) {
@@ -344,6 +353,9 @@ function rewriteAllPathReferences(
             if (typeof inner[prop] === 'string') {
               inner[prop] = rewriteFieldRef(inner[prop], oldPath, newPath);
             }
+          }
+          if (inner.reverse && typeof inner.reverse === 'object') {
+            rewriteReverseRuleReferences(inner.reverse, oldPath, newPath);
           }
         }
       }
@@ -568,8 +580,9 @@ registerHandler('definition.renameItem', (state, payload) => {
  * is the item's new full dot-path after the move.
  *
  * **Side effects**: Removes the item from its source parent and inserts it
- * into the target parent. Does not rewrite bind/shape paths (the item's
- * key is unchanged).
+ * into the target parent. When the canonical path changes, rewrites path
+ * references across binds, shapes, variables, screener routes, and mapping
+ * rules to follow the moved subtree.
  *
  * @throws If `sourcePath` cannot be resolved or `targetParentPath` is invalid.
  */
@@ -582,6 +595,19 @@ registerHandler('definition.moveItem', (state, payload) => {
 
   const loc = resolveItemLocation(state, sourcePath);
   if (!loc) throw new Error(`Item not found: ${sourcePath}`);
+
+  const hasTopLevelGroups = state.definition.items.some((item) => item.type === 'group');
+  const pageMode = (state.definition as any).formPresentation?.pageMode;
+  if (
+    (pageMode === 'wizard' || pageMode === 'tabs') &&
+    !targetParentPath &&
+    loc.item.type !== 'group' &&
+    hasTopLevelGroups
+  ) {
+    throw new Error(
+      `Cannot add a "${loc.item.type}" at root in a paged (${pageMode}) definition — provide a parentPath`,
+    );
+  }
 
   // Remove from source
   const [item] = loc.parent.splice(loc.index, 1);

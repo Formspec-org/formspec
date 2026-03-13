@@ -18,7 +18,7 @@ import {
 import defaultThemeJson from './default-theme.json';
 
 // Extracted modules
-import { renderScreener, type ScreenerHost } from './rendering/screener';
+import { hasActiveScreener, renderScreener, type ScreenerHost } from './rendering/screener';
 import { setupBreakpoints as setupBreakpointsFn, cleanupBreakpoints, createBreakpointState, type BreakpointState } from './rendering/breakpoints';
 import { emitNode as emitNodeFn } from './rendering/emit-node';
 import {
@@ -141,7 +141,7 @@ export class FormspecRender extends HTMLElement {
 
     /** Returns the current screener completion + routing state. */
     getScreenerState(): ScreenerStateSnapshot {
-        const hasScreener = !!this._definition?.screener?.items;
+        const hasScreener = hasActiveScreener(this._definition);
         return {
             hasScreener,
             completed: hasScreener ? this._screenerCompleted : true,
@@ -387,7 +387,7 @@ export class FormspecRender extends HTMLElement {
 
         emitTokenPropertiesFn(this._stylingHost, container);
 
-        if (this._definition.screener?.items && !this._screenerCompleted) {
+        if (hasActiveScreener(this._definition) && !this._screenerCompleted) {
             renderScreener(this as any as ScreenerHost, container);
             return;
         }

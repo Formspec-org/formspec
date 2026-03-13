@@ -1,5 +1,5 @@
 import { render, screen, act, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createProject } from 'formspec-studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
@@ -16,17 +16,22 @@ const seededDefinition = {
   ],
 };
 
-function renderShell(definition?: typeof seededDefinition) {
+function renderShell(definition?: typeof seededDefinition, width = 1440) {
+  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
+  Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: width });
   const project = definition ? createProject({ seed: { definition } }) : createProject();
-  return render(
-    <ProjectProvider project={project}>
-      <SelectionProvider>
-        <ActivePageProvider>
-          <Shell />
-        </ActivePageProvider>
-      </SelectionProvider>
-    </ProjectProvider>
-  );
+  return {
+    ...render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActivePageProvider>
+            <Shell />
+          </ActivePageProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    ),
+    project,
+  };
 }
 
 describe('Shell', () => {
@@ -60,8 +65,49 @@ describe('Shell', () => {
     expect(screen.getByRole('button', { name: /the stack/i })).toBeInTheDocument();
   });
 
+  it('resets the project to a blank form when New Form is clicked', async () => {
+    const { project } = renderShell(seededDefinition);
+
+    expect(screen.getByTestId('field-name')).toBeInTheDocument();
+
+    await act(async () => {
+      screen.getByRole('button', { name: /new form/i }).click();
+    });
+
+    expect(screen.queryByTestId('field-name')).toBeNull();
+    expect(project.definition.items).toHaveLength(0);
+  });
+
+  it('exports the current definition as a downloadable JSON blob', async () => {
+    const { project } = renderShell(seededDefinition);
+    const createObjectURL = vi.fn(() => 'blob:formspec-test');
+    const revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
+
+    try {
+      await act(async () => {
+        screen.getByRole('button', { name: /^export$/i }).click();
+      });
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      const blob = createObjectURL.mock.calls[0][0] as Blob;
+      const json = JSON.parse(await blob.text());
+      expect(json).toEqual(project.export().definition);
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:formspec-test');
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+      clickSpy.mockRestore();
+    }
+  });
+
   it('does not delete the selected field after switching away from the Editor workspace', async () => {
-    renderShell(seededDefinition);
+    renderShell(seededDefinition, 768);
 
     await act(async () => {
       screen.getByTestId('field-name').click();
@@ -177,7 +223,8 @@ describe('Shell', () => {
   });
 
   it('preserves Preview mode and viewport when navigating away and returning', async () => {
-    renderShell(seededDefinition);
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
 
     await act(async () => {
       screen.getByRole('tab', { name: 'Preview' }).click();
@@ -215,7 +262,8 @@ describe('Shell', () => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 768 });
     Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: 768 });
 
-    renderShell(seededDefinition);
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
 
     const shell = screen.getByTestId('shell');
 

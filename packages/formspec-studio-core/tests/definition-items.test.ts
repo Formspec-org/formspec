@@ -402,6 +402,63 @@ describe('definition.moveItem — reference rewriting', () => {
     expect(bind).toBeDefined();
     expect(bind?.required).toBe('true()');
   });
+
+  it('rewrites descendant references correctly when moving an item into a deeper parent path', () => {
+    const project = createProject();
+
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'group', key: 'field' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'child', parentPath: 'field', dataType: 'string' } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'group' } },
+      { type: 'definition.setBind', payload: { path: 'field.child', properties: { required: 'true()' } } },
+    ]);
+
+    project.dispatch({
+      type: 'definition.moveItem',
+      payload: { sourcePath: 'field', targetParentPath: 'group' },
+    });
+
+    expect(project.definition.binds?.[0].path).toBe('group.field.child');
+  });
+
+  it('rewrites inner rule reverse references when an item moves', () => {
+    const project = createProject();
+
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'group', key: 'a' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'age', parentPath: 'a', dataType: 'integer' } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'b' } },
+    ]);
+
+    (project.mapping as any).rules = [
+      {
+        sourcePath: 'a',
+        targetPath: 'person',
+        innerRules: [
+          {
+            sourcePath: 'a.age',
+            targetPath: 'age',
+            reverse: {
+              sourcePath: 'person.age',
+              targetPath: 'a.age',
+              expression: '$a.age',
+              condition: '$a.age > 0',
+            },
+          },
+        ],
+      },
+    ];
+
+    project.dispatch({
+      type: 'definition.moveItem',
+      payload: { sourcePath: 'a.age', targetParentPath: 'b' },
+    });
+
+    const reverse = ((project.mapping as any).rules as any[])[0].innerRules[0].reverse;
+    expect(reverse.targetPath).toBe('b.age');
+    expect(reverse.expression).toBe('$b.age');
+    expect(reverse.condition).toBe('$b.age > 0');
+  });
 });
 
 describe('definition.reorderItem', () => {
@@ -493,5 +550,25 @@ describe('definition.addItem paged mode guard', () => {
     expect(() =>
       project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'f1', parentPath: 'page1' } }),
     ).not.toThrow();
+  });
+});
+
+describe('definition.moveItem paged mode guard', () => {
+  it('throws when moving a non-group item to root in a paged definition with top-level groups', () => {
+    const project = createProject();
+
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'group', key: 'page1' } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'page2' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'name', parentPath: 'page1', dataType: 'string' } },
+      { type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'wizard' } },
+    ]);
+
+    expect(() =>
+      project.dispatch({
+        type: 'definition.moveItem',
+        payload: { sourcePath: 'page1.name' },
+      }),
+    ).toThrow(/Cannot add a "field" at root|parentPath/);
   });
 });

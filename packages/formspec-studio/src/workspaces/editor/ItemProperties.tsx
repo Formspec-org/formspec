@@ -113,6 +113,23 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
   const rawChoiceOptions = (item as any).options ?? (item as any).choices;
   const choiceOptions = Array.isArray(rawChoiceOptions) ? (rawChoiceOptions as Array<{ value: string; label?: string }>) : [];
 
+  const parseRepeatValue = (value: string): number | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const updateChoiceOption = (index: number, property: 'value' | 'label', value: string) => {
+    const nextOptions = choiceOptions.map((option, optionIndex) =>
+      optionIndex === index ? { ...option, [property]: value } : option,
+    );
+    dispatch({
+      type: 'definition.setItemProperty',
+      payload: { path, property: 'options', value: nextOptions },
+    });
+  };
+
   return (
     <div className="h-full flex flex-col bg-surface overflow-hidden">
       {/* Panel Header */}
@@ -179,13 +196,90 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
           </Section>
         )}
 
+        {item.type === 'group' && item.repeatable && (
+          <Section title="Cardinality">
+            <div className="space-y-2">
+              <div className="space-y-1.5">
+                <label className="font-mono text-[10px] text-muted uppercase tracking-wider block" htmlFor={`${path}-min-repeat`}>
+                  Min Repeat
+                </label>
+                <input
+                  id={`${path}-min-repeat`}
+                  type="number"
+                  min={0}
+                  aria-label="Min Repeat"
+                  className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+                  defaultValue={item.minRepeat ?? ''}
+                  onBlur={(event) => {
+                    dispatch({
+                      type: 'definition.setItemProperty',
+                      payload: {
+                        path,
+                        property: 'minRepeat',
+                        value: parseRepeatValue(event.currentTarget.value),
+                      },
+                    });
+                  }}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-mono text-[10px] text-muted uppercase tracking-wider block" htmlFor={`${path}-max-repeat`}>
+                  Max Repeat
+                </label>
+                <input
+                  id={`${path}-max-repeat`}
+                  type="number"
+                  min={0}
+                  aria-label="Max Repeat"
+                  className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+                  defaultValue={item.maxRepeat ?? ''}
+                  onBlur={(event) => {
+                    dispatch({
+                      type: 'definition.setItemProperty',
+                      payload: {
+                        path,
+                        property: 'maxRepeat',
+                        value: parseRepeatValue(event.currentTarget.value),
+                      },
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          </Section>
+        )}
+
         {item.type === 'field' && choiceOptions.length > 0 && (
           <Section title="Options">
             <div className="space-y-2">
               {choiceOptions.map((option, index) => (
-                <div key={`${option.value}-${index}`} className="flex items-center justify-between gap-3 rounded-[4px] border border-border bg-subtle/40 px-2 py-1.5">
-                  <span className="font-mono text-[12px] text-ink">{option.value}</span>
-                  <span className="text-[12px] text-muted">{option.label ?? option.value}</span>
+                <div key={`${option.value}-${index}`} className="rounded-[4px] border border-border bg-subtle/40 px-2 py-2 space-y-2">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-muted uppercase tracking-wider block" htmlFor={`${path}-option-${index}-value`}>
+                      Option {index + 1} Value
+                    </label>
+                    <input
+                      id={`${path}-option-${index}-value`}
+                      aria-label={`Option ${index + 1} Value`}
+                      type="text"
+                      className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+                      defaultValue={option.value}
+                      onBlur={(event) => updateChoiceOption(index, 'value', event.currentTarget.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-muted uppercase tracking-wider block" htmlFor={`${path}-option-${index}-label`}>
+                      Option {index + 1} Label
+                    </label>
+                    <input
+                      id={`${path}-option-${index}-label`}
+                      aria-label={`Option ${index + 1} Label`}
+                      type="text"
+                      className="w-full px-2 py-1 text-[12px] border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+                      defaultValue={option.label ?? option.value}
+                      onBlur={(event) => updateChoiceOption(index, 'label', event.currentTarget.value)}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

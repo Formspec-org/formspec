@@ -20,6 +20,17 @@ function renderTab() {
 }
 
 describe('MappingTab', () => {
+  it('highlights the active tab in uncontrolled mode', () => {
+    renderTab();
+
+    const configButton = screen.getByRole('button', { name: /^config$/i });
+    expect(configButton.className).toMatch(/border-accent/);
+
+    fireEvent.click(screen.getByRole('button', { name: /rules/i }));
+
+    expect(screen.getByRole('button', { name: /rules/i }).className).toMatch(/border-accent/);
+  });
+
   it('keeps the Configuration section collapsed after switching away and back', () => {
     renderTab();
 

@@ -58,7 +58,7 @@ export function MappingTab({
             key={tab.id}
             type="button"
             className={`px-3 py-2 text-sm cursor-pointer ${
-              activeTab === tab.id
+              active === tab.id
                 ? 'border-b-2 border-accent text-ink font-medium'
                 : 'text-muted hover:text-ink'
             }`}
