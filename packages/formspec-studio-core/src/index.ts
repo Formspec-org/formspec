@@ -12,6 +12,10 @@
 
 export { Project, createProject } from './project.js';
 export { normalizeDefinition } from './normalization.js';
+export { resolveThemeCascade } from './theme-cascade.js';
+export type { ResolvedProperty } from './theme-cascade.js';
+export { resolvePageStructure } from './page-resolution.js';
+export type { ResolvedPageStructure, ResolvedPage, PageDiagnostic } from './page-resolution.js';
 export type {
   ProjectState,
   ProjectOptions,
