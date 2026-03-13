@@ -43,41 +43,106 @@ describe('DataSources', () => {
     expect(screen.getByText('https://api.example.com/counties')).toBeInTheDocument();
   });
 
-  it('shows empty state when no instances', () => {
+  it('shows empty state with guidance when no instances', () => {
     renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
     expect(screen.getByText(/no external sources/i)).toBeInTheDocument();
+    // Should explain what instances are and how to reference them
+    expect(screen.getByText(/@instance/)).toBeInTheDocument();
   });
 
-  it('add via prompt dispatches definition.addInstance with { name }', async () => {
-    const { dispatchSpy } = renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
-    vi.spyOn(window, 'prompt').mockReturnValueOnce('mySource');
+  // --- Inline add flow (replaces window.prompt) ---
 
-    await act(async () => {
-      screen.getByRole('button', { name: /add document/i }).click();
-    });
+  it('clicking + Add Source reveals an inline form with name input', () => {
+    renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
+    fireEvent.click(screen.getByRole('button', { name: /add source/i }));
+    expect(screen.getByPlaceholderText(/patient_record/)).toBeInTheDocument();
+  });
+
+  it('inline add form shows examples of valid names', () => {
+    renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
+    fireEvent.click(screen.getByRole('button', { name: /add source/i }));
+    // Should show example names so the user isn't guessing
+    expect(screen.getByText(/e\.g\./i)).toBeInTheDocument();
+  });
+
+  it('pressing Enter in name input dispatches addInstance and auto-expands', async () => {
+    const { dispatchSpy } = renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
+    fireEvent.click(screen.getByRole('button', { name: /add source/i }));
+
+    const input = screen.getByPlaceholderText(/patient_record/);
+    fireEvent.change(input, { target: { value: 'my_api' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(dispatchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'definition.addInstance',
-        payload: { name: 'mySource' },
+        payload: { name: 'my_api' },
       })
     );
   });
 
+  it('Escape cancels the add flow', () => {
+    renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
+    fireEvent.click(screen.getByRole('button', { name: /add source/i }));
+    const input = screen.getByPlaceholderText(/patient_record/);
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(screen.queryByPlaceholderText(/patient_record/)).not.toBeInTheDocument();
+  });
+
+  it('name input strips non-alphanumeric characters (except underscores)', () => {
+    renderDS({ $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] });
+    fireEvent.click(screen.getByRole('button', { name: /add source/i }));
+    const input = screen.getByPlaceholderText(/patient_record/);
+    fireEvent.change(input, { target: { value: 'my source!!!' } });
+    expect(input).toHaveValue('my_source');
+  });
+
+  // --- Expanded editor ---
+
+  it('expanded card shows source field with placeholder example', async () => {
+    const { dispatchSpy } = renderDS();
+    const card = screen.getByTestId('instance-counties');
+    await act(async () => {
+      fireEvent.click(within(card).getByText('counties'));
+    });
+    // Source field should show the current value
+    expect(screen.getByText('https://api.example.com/counties')).toBeInTheDocument();
+  });
+
+  it('expanded card shows description textarea', async () => {
+    renderDS();
+    const card = screen.getByTestId('instance-counties');
+    await act(async () => {
+      fireEvent.click(within(card).getByText('counties'));
+    });
+    expect(screen.getByPlaceholderText(/what this data source provides/i)).toBeInTheDocument();
+  });
+
+  it('expanded card shows FEL usage hint with the instance name', async () => {
+    renderDS();
+    const card = screen.getByTestId('instance-counties');
+    await act(async () => {
+      fireEvent.click(within(card).getByText('counties'));
+    });
+    // Should show how to reference this instance in FEL
+    expect(screen.getByText(/@instance\('counties'\)/)).toBeInTheDocument();
+  });
+
   it('edit source dispatches definition.setInstance with { name, property, value }', async () => {
     const { dispatchSpy } = renderDS();
-
-    // Expand the counties card by clicking its header
-    const countiesCard = screen.getByTestId('instance-counties');
+    const card = screen.getByTestId('instance-counties');
     await act(async () => {
-      fireEvent.click(within(countiesCard).getByText('counties'));
+      fireEvent.click(within(card).getByText('counties'));
     });
 
-    // Click the InlineExpression to enter edit mode
+    // Click the InlineExpression source value to enter edit mode
     fireEvent.click(screen.getByText('https://api.example.com/counties'));
-    const textarea = screen.getByRole('textbox');
-    fireEvent.change(textarea, { target: { value: 'https://new-api.com/counties' } });
-    fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
+    // The InlineExpression renders a textarea; the description field is also a textbox,
+    // so target the one with the source URL value.
+    const textareas = screen.getAllByRole('textbox');
+    const sourceTextarea = textareas.find(el => (el as HTMLTextAreaElement).value === 'https://api.example.com/counties')!;
+    fireEvent.change(sourceTextarea, { target: { value: 'https://new-api.com/counties' } });
+    fireEvent.keyDown(sourceTextarea, { key: 'Enter', metaKey: true });
 
     expect(dispatchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -87,14 +152,31 @@ describe('DataSources', () => {
     );
   });
 
+  it('edit description dispatches definition.setInstance', async () => {
+    const { dispatchSpy } = renderDS();
+    const card = screen.getByTestId('instance-counties');
+    await act(async () => {
+      fireEvent.click(within(card).getByText('counties'));
+    });
+
+    const desc = screen.getByPlaceholderText(/what this data source provides/i);
+    fireEvent.change(desc, { target: { value: 'County lookup data' } });
+    fireEvent.blur(desc);
+
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'definition.setInstance',
+        payload: { name: 'counties', property: 'description', value: 'County lookup data' },
+      })
+    );
+  });
+
   it('delete dispatches definition.deleteInstance with { name }', async () => {
     const { dispatchSpy } = renderDS();
     vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
-
-    // Expand counties
-    const countiesCard = screen.getByTestId('instance-counties');
+    const card = screen.getByTestId('instance-counties');
     await act(async () => {
-      fireEvent.click(within(countiesCard).getByText('counties'));
+      fireEvent.click(within(card).getByText('counties'));
     });
 
     await act(async () => {
@@ -111,11 +193,9 @@ describe('DataSources', () => {
 
   it('static checkbox dispatches definition.setInstance with { name, property: "static", value }', async () => {
     const { dispatchSpy } = renderDS();
-
-    // Expand counties card
-    const countiesCard = screen.getByTestId('instance-counties');
+    const card = screen.getByTestId('instance-counties');
     await act(async () => {
-      fireEvent.click(within(countiesCard).getByText('counties'));
+      fireEvent.click(within(card).getByText('counties'));
     });
 
     const checkbox = screen.getByRole('checkbox', { name: /static/i });
@@ -127,5 +207,15 @@ describe('DataSources', () => {
         payload: { name: 'counties', property: 'static', value: true },
       })
     );
+  });
+
+  it('shows inline data badge when instance has data but no source', () => {
+    renderDS({
+      $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [],
+      instances: {
+        config: { data: { maxRetries: 3 }, readonly: true },
+      },
+    });
+    expect(screen.getByText(/inline data/i)).toBeInTheDocument();
   });
 });
