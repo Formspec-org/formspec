@@ -292,8 +292,11 @@ describe('ItemProperties', () => {
     await act(async () => { screen.getByText('Select').click(); });
     const descBtn = screen.getByText(/\+ add description/i);
     const hintBtn = screen.getByText(/\+ add hint/i);
-    // Both should share the same parent (inline container)
-    expect(descBtn.parentElement).toBe(hintBtn.parentElement);
+    // Both should share an inline flex container
+    const container = descBtn.closest('[class*="flex"]')!;
+    expect(container).toBeTruthy();
+    expect(container.contains(hintBtn)).toBe(true);
+    expect(container.className).toMatch(/gap/);
   });
 
   it('add placeholder buttons have help tooltips', async () => {
@@ -531,5 +534,19 @@ describe('ItemProperties', () => {
     renderProps(project, { path: 'solo', type: 'field' });
     await act(async () => { screen.getByText('Select').click(); });
     expect(screen.getByText(/\+ add behavior rule/i)).toBeInTheDocument();
+  });
+
+  // --- Action button tooltips ---
+
+  it('action buttons have help tooltips', async () => {
+    renderProps();
+    await act(async () => { screen.getByText('Select').click(); });
+    const dupBtn = screen.getByRole('button', { name: /duplicate/i });
+    const delBtn = screen.getByRole('button', { name: /delete/i });
+    fireEvent.mouseEnter(dupBtn);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    fireEvent.mouseLeave(dupBtn);
+    fireEvent.mouseEnter(delBtn);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
   });
 });
