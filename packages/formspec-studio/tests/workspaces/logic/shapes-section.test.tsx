@@ -20,10 +20,10 @@ function renderShapes(s = shapes) {
       },
     },
   });
-  const dispatchSpy = vi.fn(project.dispatch.bind(project));
+  const dispatchSpy = vi.spyOn(project, 'dispatch');
   return {
     ...render(
-      <ProjectProvider project={{ ...project, dispatch: dispatchSpy }}>
+      <ProjectProvider project={project}>
         <ShapesSection shapes={s} />
       </ProjectProvider>
     ),

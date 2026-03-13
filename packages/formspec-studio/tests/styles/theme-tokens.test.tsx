@@ -41,7 +41,7 @@ describe('Studio theme tokens', () => {
   it('keeps the Data workspace on the light shell token palette instead of neutral dark-theme borders', () => {
     const project = createProject({ seed: { definition: dataDef as any } });
 
-    render(
+    const { container } = render(
       <ProjectProvider project={project}>
         <SelectionProvider>
           <DataTab />
@@ -49,8 +49,9 @@ describe('Studio theme tokens', () => {
       </ProjectProvider>
     );
 
-    expect(screen.getByRole('button', { name: /data sources/i })).not.toHaveClass('hover:text-foreground');
-    expect(screen.getByText('Key').closest('tr')).not.toHaveClass('border-neutral-700');
-    expect(screen.getByText('Name').closest('tr')).not.toHaveClass('border-neutral-800');
+    expect(screen.getByRole('button', { name: /sources/i })).not.toHaveClass('hover:text-foreground');
+    // No neutral dark-theme borders anywhere in the Data workspace
+    expect(container.innerHTML).not.toMatch(/border-neutral-\d+/);
+    expect(container.innerHTML).not.toMatch(/bg-neutral-\d+/);
   });
 });

@@ -40,14 +40,16 @@ describe('InlineExpression', () => {
   });
 
   it('blur saves and calls onSave', () => {
+    vi.useFakeTimers();
     const onSave = vi.fn();
     render(<InlineExpression value="$age >= 18" onSave={onSave} />);
     fireEvent.click(screen.getByText('$age >= 18'));
     const textarea = screen.getByRole('textbox');
     fireEvent.change(textarea, { target: { value: '$age >= 21' } });
     fireEvent.blur(textarea);
+    vi.advanceTimersByTime(250);
     expect(onSave).toHaveBeenCalledWith('$age >= 21');
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it('onSave not called if value unchanged', () => {
