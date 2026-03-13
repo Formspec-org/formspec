@@ -1,6 +1,8 @@
 import { signal, computed, effect, batch, Signal } from '@preact/signals-core';
 import { FelLexer } from './fel/lexer.js';
+export { FelLexer } from './fel/lexer.js';
 import { parser } from './fel/parser.js';
+export { parser } from './fel/parser.js';
 import {
     interpreter,
     FelContext,

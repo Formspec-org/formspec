@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FELReferencePopup } from './FELReferencePopup';
+import { FELEditor } from './FELEditor';
 
 interface InlineExpressionProps {
   value: string;
@@ -11,19 +12,9 @@ interface InlineExpressionProps {
 export function InlineExpression({ value, onSave, placeholder, className }: InlineExpressionProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
-    if (editing && textareaRef.current) {
-      textareaRef.current.focus();
-      autoResize(textareaRef.current);
-    }
+    // FELEditor handles its own focus and resize
   }, [editing]);
-
-  function autoResize(el: HTMLTextAreaElement) {
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-  }
 
   function enterEdit() {
     setDraft(value);
@@ -31,9 +22,13 @@ export function InlineExpression({ value, onSave, placeholder, className }: Inli
   }
 
   function save() {
+    saveWith(draft);
+  }
+
+  function saveWith(val: string) {
     setEditing(false);
-    if (draft !== value) {
-      onSave(draft);
+    if (val !== value) {
+      onSave(val);
     }
   }
 
@@ -41,28 +36,17 @@ export function InlineExpression({ value, onSave, placeholder, className }: Inli
     setEditing(false);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') {
-      cancel();
-    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      save();
-    }
-  }
 
   if (editing) {
     return (
       <div className={`flex items-start gap-1 ${className ?? ''}`}>
-        <textarea
-          ref={textareaRef}
+        <FELEditor
           value={draft}
-          onChange={(e) => {
-            setDraft(e.target.value);
-            autoResize(e.target);
-          }}
-          onBlur={save}
-          onKeyDown={handleKeyDown}
-          className="flex-1 font-mono text-[11px] text-ink bg-subtle border border-accent/40 rounded px-2 py-1 resize-none outline-none focus:ring-1 focus:ring-accent"
-          rows={1}
+          onSave={saveWith}
+          onCancel={cancel}
+          placeholder={placeholder}
+          className="flex-1"
+          autoFocus
         />
         <FELReferencePopup />
       </div>
