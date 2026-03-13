@@ -36,4 +36,5 @@ import './handlers/component-tree.js';
 import './handlers/component-properties.js';
 import './handlers/theme.js';
 import './handlers/mapping.js';
+import './handlers/pages.js';
 import './handlers/project.js';
