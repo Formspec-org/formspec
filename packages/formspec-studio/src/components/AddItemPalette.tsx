@@ -11,7 +11,9 @@ export interface FieldTypeOption {
   /** CSS color class for the icon */
   color: string;
   /** Formspec item type */
-  itemType: 'field' | 'group' | 'display';
+  itemType: 'field' | 'group' | 'display' | 'layout';
+  /** Component type for layout items (e.g. 'Card', 'Stack') */
+  component?: string;
   /** Formspec data type (for field items) */
   dataType?: string;
   /** Extra payload merged into addItem (e.g. repeatable: true) */
@@ -180,13 +182,84 @@ export const FIELD_TYPE_CATALOG: FieldTypeOption[] = [
   },
   // ── Content ─────────────────────────────────────────────────────
   {
-    label: 'Display',
+    label: 'Text Block',
     description: 'Read-only text, instructions, or content',
     icon: 'ℹ',
     color: 'text-accent',
     itemType: 'display',
     category: 'Content',
     keywords: ['display', 'text', 'note', 'read-only', 'info', 'instruction'],
+  },
+  {
+    label: 'Heading',
+    description: 'Section heading or title',
+    icon: 'H',
+    color: 'text-accent',
+    itemType: 'display',
+    extra: { presentation: { widgetHint: 'Heading' } },
+    category: 'Content',
+    keywords: ['heading', 'title', 'header', 'h1', 'h2'],
+  },
+  {
+    label: 'Divider',
+    description: 'Horizontal line to separate content',
+    icon: '—',
+    color: 'text-muted',
+    itemType: 'display',
+    extra: { presentation: { widgetHint: 'Divider' } },
+    category: 'Content',
+    keywords: ['divider', 'separator', 'line', 'hr'],
+  },
+  {
+    label: 'Spacer',
+    description: 'Vertical space between items',
+    icon: '↕',
+    color: 'text-muted',
+    itemType: 'display',
+    extra: { presentation: { widgetHint: 'Spacer' } },
+    category: 'Content',
+    keywords: ['spacer', 'space', 'gap', 'padding'],
+  },
+  // ── Layout ────────────────────────────────────────────────────
+  {
+    label: 'Card',
+    description: 'Bordered container with optional title',
+    icon: '▢',
+    color: 'text-accent',
+    itemType: 'layout',
+    component: 'Card',
+    category: 'Layout',
+    keywords: ['card', 'box', 'container', 'panel'],
+  },
+  {
+    label: 'Columns',
+    description: 'Side-by-side column layout',
+    icon: '▥',
+    color: 'text-accent',
+    itemType: 'layout',
+    component: 'Columns',
+    category: 'Layout',
+    keywords: ['columns', 'grid', 'side', 'two', 'multi'],
+  },
+  {
+    label: 'Collapsible',
+    description: 'Expandable/collapsible section',
+    icon: '▽',
+    color: 'text-accent',
+    itemType: 'layout',
+    component: 'Collapsible',
+    category: 'Layout',
+    keywords: ['collapsible', 'accordion', 'expand', 'collapse', 'toggle'],
+  },
+  {
+    label: 'Stack',
+    description: 'Vertical or horizontal stack container',
+    icon: '▤',
+    color: 'text-accent',
+    itemType: 'layout',
+    component: 'Stack',
+    category: 'Layout',
+    keywords: ['stack', 'vertical', 'horizontal', 'list', 'column'],
   },
 ];
 
@@ -207,6 +280,7 @@ interface AddItemPaletteProps {
  */
 export function AddItemPalette({ open, onClose, onAdd }: AddItemPaletteProps) {
   const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'field' | 'layout' | 'display'>('all');
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -215,22 +289,34 @@ export function AddItemPalette({ open, onClose, onAdd }: AddItemPaletteProps) {
   useEffect(() => {
     if (open) {
       setQuery('');
+      setActiveTab('all');
       setActiveIdx(0);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [open]);
 
-  const filtered = query.trim()
-    ? FIELD_TYPE_CATALOG.filter((opt) => {
-        const q = query.toLowerCase();
-        return (
-          opt.label.toLowerCase().includes(q) ||
-          opt.description.toLowerCase().includes(q) ||
-          opt.category.toLowerCase().includes(q) ||
-          opt.keywords?.some((kw) => kw.includes(q))
-        );
-      })
-    : FIELD_TYPE_CATALOG;
+  const filtered = FIELD_TYPE_CATALOG.filter((opt) => {
+    // 1. Tab filter
+    if (activeTab !== 'all') {
+      if (activeTab === 'layout') {
+        if (opt.itemType !== 'layout' && opt.itemType !== 'group') return false;
+      } else if (opt.itemType !== activeTab) {
+        return false;
+      }
+    }
+
+    // 2. Query filter
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      return (
+        opt.label.toLowerCase().includes(q) ||
+        opt.description.toLowerCase().includes(q) ||
+        opt.category.toLowerCase().includes(q) ||
+        opt.keywords?.some((kw) => kw.includes(q))
+      );
+    }
+    return true;
+  });
 
   // Keep activeIdx in bounds when filter changes
   useEffect(() => {
@@ -289,22 +375,62 @@ export function AddItemPalette({ open, onClose, onAdd }: AddItemPaletteProps) {
         onKeyDown={handleKeyDown}
       >
         {/* Header */}
-        <div className="px-4 pt-4 pb-3 border-b border-border shrink-0">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="font-mono text-[10px] font-bold tracking-[0.15em] uppercase text-muted">
-              Add Item
-            </span>
-            <span className="text-border">·</span>
-            <span className="text-[11px] text-muted">↑↓ navigate · Enter confirm · Esc close</span>
+        <div className="px-4 pt-4 pb-2 border-b border-border shrink-0 bg-subtle/30">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] font-bold tracking-[0.15em] uppercase text-muted">
+                Add Item
+              </span>
+              <span className="text-border">·</span>
+              <span className="text-[11px] text-muted">↑↓ navigate · Ent confirm</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-muted hover:text-ink transition-colors p-1"
+              aria-label="Close palette"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Search field types…"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
-            className="w-full px-3 py-2 text-[13px] font-ui bg-subtle border border-border rounded-lg outline-none focus:border-accent placeholder:text-muted/50 transition-colors"
-          />
+          <div className="relative group mb-3">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <svg className="w-4 h-4 text-muted/50 group-focus-within:text-accent transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search types..."
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
+              className="w-full pl-9 pr-3 py-2 text-[14px] font-ui bg-surface border border-border rounded-xl outline-none focus:border-accent focus:ring-4 focus:ring-accent/5 placeholder:text-muted/40 transition-all"
+            />
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 bg-subtle border border-border/50 rounded-lg">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'field', label: 'Inputs' },
+              { id: 'layout', label: 'Layout' },
+              { id: 'display', label: 'Display' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => { setActiveTab(tab.id as any); setActiveIdx(0); }}
+                className={`flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-surface text-ink shadow-sm'
+                    : 'text-muted hover:text-ink hover:bg-surface/50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Results */}
