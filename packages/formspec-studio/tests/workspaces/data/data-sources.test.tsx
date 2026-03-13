@@ -220,6 +220,74 @@ describe('DataSources', () => {
     expect(screen.getByText(/at least one of source or inline data/i)).toBeInTheDocument();
   });
 
+  // --- Inline data editor ---
+
+  it('expanded card shows inline data JSON editor', async () => {
+    renderDS();
+    const card = screen.getByTestId('instance-counties');
+    await act(async () => {
+      fireEvent.click(within(card).getByText('counties'));
+    });
+    expect(screen.getByTestId('inline-data-editor')).toBeInTheDocument();
+  });
+
+  it('inline data editor shows existing data as formatted JSON', async () => {
+    renderDS({
+      $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [],
+      instances: {
+        config: { data: { maxRetries: 3, region: 'us-east' } },
+      },
+    });
+    const card = screen.getByTestId('instance-config');
+    await act(async () => {
+      fireEvent.click(within(card).getByText('config'));
+    });
+    const editor = screen.getByTestId('inline-data-editor');
+    const textarea = within(editor).getByRole('textbox');
+    // Should show the data formatted as JSON
+    expect(textarea).toHaveValue(JSON.stringify({ maxRetries: 3, region: 'us-east' }, null, 2));
+  });
+
+  it('pasting valid JSON into data editor dispatches setInstance', async () => {
+    const { dispatchSpy } = renderDS();
+    const card = screen.getByTestId('instance-counties');
+    await act(async () => {
+      fireEvent.click(within(card).getByText('counties'));
+    });
+    const editor = screen.getByTestId('inline-data-editor');
+    const textarea = within(editor).getByRole('textbox');
+    const json = JSON.stringify([{ code: 'US', name: 'United States' }], null, 2);
+    fireEvent.change(textarea, { target: { value: json } });
+    fireEvent.blur(textarea);
+
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'definition.setInstance',
+        payload: { name: 'counties', property: 'data', value: [{ code: 'US', name: 'United States' }] },
+      })
+    );
+  });
+
+  it('invalid JSON shows error message without dispatching', async () => {
+    const { dispatchSpy } = renderDS();
+    const card = screen.getByTestId('instance-counties');
+    await act(async () => {
+      fireEvent.click(within(card).getByText('counties'));
+    });
+    const editor = screen.getByTestId('inline-data-editor');
+    const textarea = within(editor).getByRole('textbox');
+    dispatchSpy.mockClear();
+    fireEvent.change(textarea, { target: { value: '{ not valid json' } });
+    fireEvent.blur(textarea);
+
+    expect(screen.getByText(/invalid json/i)).toBeInTheDocument();
+    // Should not have dispatched a setInstance for 'data'
+    const dataCalls = dispatchSpy.mock.calls.filter(
+      ([cmd]: any) => cmd.type === 'definition.setInstance' && cmd.payload?.property === 'data'
+    );
+    expect(dataCalls).toHaveLength(0);
+  });
+
   it('shows inline data badge when instance has data but no source', () => {
     renderDS({
       $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [],

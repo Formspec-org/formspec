@@ -3,6 +3,64 @@ import { useDispatch } from '../../state/useDispatch';
 import { useDefinition } from '../../state/useDefinition';
 import { InlineExpression } from '../../components/ui/InlineExpression';
 
+function InlineDataEditor({ data, hasSource, onSave }: {
+  data: unknown;
+  hasSource: boolean;
+  onSave: (parsed: unknown) => void;
+}) {
+  const formatted = data != null ? JSON.stringify(data, null, 2) : '';
+  const [draft, setDraft] = useState(formatted);
+  const [error, setError] = useState<string | null>(null);
+
+  // Sync draft when data changes externally
+  const stableFormatted = data != null ? JSON.stringify(data, null, 2) : '';
+  if (stableFormatted !== formatted && draft === formatted) {
+    setDraft(stableFormatted);
+  }
+
+  const handleBlur = () => {
+    const trimmed = draft.trim();
+    if (!trimmed) {
+      setError(null);
+      if (data != null) onSave(null);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(trimmed);
+      setError(null);
+      onSave(parsed);
+    } catch {
+      setError('Invalid JSON — check syntax and try again.');
+    }
+  };
+
+  return (
+    <div className="space-y-1.5" data-testid="inline-data-editor">
+      <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">
+        {hasSource ? 'Fallback Data (inline JSON)' : 'Inline Data (JSON)'}
+      </label>
+      <textarea
+        className={`w-full bg-subtle border rounded-lg px-3 py-2.5 text-[12px] font-mono text-ink outline-none focus:ring-1 resize-y min-h-[80px] ${
+          error ? 'border-error focus:ring-error' : 'border-border focus:ring-accent'
+        }`}
+        value={draft}
+        onChange={(e) => { setDraft(e.target.value); setError(null); }}
+        onBlur={handleBlur}
+        placeholder={'{\n  "key": "value"\n}'}
+        spellCheck={false}
+      />
+      {error && (
+        <p className="text-[11px] text-error font-medium">{error}</p>
+      )}
+      <p className="text-[10px] text-muted/60 italic">
+        {hasSource
+          ? 'Used as fallback when the source URL is unavailable. Paste any valid JSON.'
+          : 'Paste a JSON object or array. This is the data returned by @instance().'}
+      </p>
+    </div>
+  );
+}
+
 interface Instance {
   name: string;
   source?: string;
@@ -214,6 +272,13 @@ export function DataSources() {
                     </li>
                   </ul>
                 </div>
+
+                {/* Inline data editor */}
+                <InlineDataEditor
+                  data={inst.data}
+                  hasSource={hasSource}
+                  onSave={(parsed) => handleSetProperty(inst.name, 'data', parsed)}
+                />
 
                 {/* Description */}
                 <div className="space-y-1.5">
