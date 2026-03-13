@@ -9,7 +9,7 @@ import { useDispatch } from '../../state/useDispatch';
 import { useProject } from '../../state/useProject';
 import { useCanvasTargets } from '../../state/useCanvasTargets';
 import { bindsFor, flatItems } from '../../lib/field-helpers';
-import { flattenComponentTree, buildDefLookup, isLayoutId, nodeIdFromLayoutId, type TreeFlatEntry } from '../../lib/tree-helpers';
+import { flattenComponentTree, buildDefLookup, buildBindKeyMap, isLayoutId, nodeIdFromLayoutId, type TreeFlatEntry } from '../../lib/tree-helpers';
 import { pruneDescendants, sortForBatchDelete } from '../../lib/selection-helpers';
 import { FieldBlock } from './FieldBlock';
 import { GroupBlock } from './GroupBlock';
@@ -50,6 +50,7 @@ interface CompNode {
 function renderTreeNodes(
   nodes: CompNode[],
   defLookup: Map<string, { item: Item; path: string; parentPath: string | null }>,
+  bindKeyMap: Map<string, string>,
   allBinds: Record<string, Record<string, string>> | undefined,
   primaryKey: string | null,
   selectedKeys: Set<string>,
@@ -68,7 +69,7 @@ function renderTreeNodes(
       const inSelection = selectedKeys.has(layoutId) && !isPrimary;
       const flatIdx = flatIndexMap.get(layoutId) ?? 0;
       const children = node.children
-        ? renderTreeNodes(node.children, defLookup, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, flatIndexMap, depth + 1, defPathPrefix)
+        ? renderTreeNodes(node.children, defLookup, bindKeyMap, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, flatIndexMap, depth + 1, defPathPrefix)
         : null;
       result.push(
         <SortableItemWrapper key={layoutId} id={layoutId} index={flatIdx}>
@@ -88,8 +89,16 @@ function renderTreeNodes(
       );
     } else if (node.bind) {
       // Bound node — look up definition item
-      const defPath = defPathPrefix ? `${defPathPrefix}.${node.bind}` : node.bind;
-      const defEntry = defLookup.get(defPath);
+      let defPath = defPathPrefix ? `${defPathPrefix}.${node.bind}` : node.bind;
+      let defEntry = defLookup.get(defPath);
+      // Fallback: node may be inside a layout container at a different tree level
+      if (!defEntry) {
+        const altPath = bindKeyMap.get(node.bind);
+        if (altPath) {
+          defPath = altPath;
+          defEntry = defLookup.get(altPath);
+        }
+      }
       if (!defEntry) continue;
       const item = defEntry.item;
       const isPrimary = primaryKey === defPath;
@@ -98,7 +107,7 @@ function renderTreeNodes(
 
       if (item.type === 'group') {
         const children = node.children
-          ? renderTreeNodes(node.children, defLookup, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, flatIndexMap, depth + 1, defPath)
+          ? renderTreeNodes(node.children, defLookup, bindKeyMap, allBinds, primaryKey, selectedKeys, handleItemClick, registerTarget, flatIndexMap, depth + 1, defPath)
           : null;
         result.push(
           <SortableItemWrapper key={defPath} id={defPath} index={flatIdx}>
@@ -264,6 +273,12 @@ export function EditorCanvas() {
     [displayItems],
   );
 
+  // Secondary lookup: bind key → full def path (for fields inside layout containers)
+  const bindKeyMap = useMemo(
+    () => buildBindKeyMap(defLookup),
+    [defLookup],
+  );
+
   // Determine which tree nodes to render (filter for paged mode)
   const displayTreeNodes: CompNode[] = useMemo(() => {
     if (!tree?.children) return [];
@@ -286,8 +301,8 @@ export function EditorCanvas() {
 
   // Flat ordering from component tree for range-select and DnD
   const treeFlatEntries: TreeFlatEntry[] = useMemo(
-    () => tree ? flattenComponentTree({ ...tree, children: displayTreeNodes }, defLookup) : [],
-    [tree, displayTreeNodes, defLookup],
+    () => tree ? flattenComponentTree({ ...tree, children: displayTreeNodes }, defLookup, bindKeyMap) : [],
+    [tree, displayTreeNodes, defLookup, bindKeyMap],
   );
   const flatOrder = useMemo(
     () => treeFlatEntries.map(e => e.id),
@@ -658,7 +673,7 @@ export function EditorCanvas() {
             KeyboardSensor,
           ]}
         >
-          {renderTreeNodes(displayTreeNodes, defLookup, allBinds, primaryKey, selectedKeys, handleItemClick, registerCanvasTarget, flatIndexMap, 0, '')}
+          {renderTreeNodes(displayTreeNodes, defLookup, bindKeyMap, allBinds, primaryKey, selectedKeys, handleItemClick, registerCanvasTarget, flatIndexMap, 0, '')}
           {overTarget && (
             <DropIndicator targetPath={overTarget.path} position={overTarget.position} />
           )}

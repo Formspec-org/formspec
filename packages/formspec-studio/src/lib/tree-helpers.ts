@@ -99,6 +99,24 @@ export function buildDefLookup(items: DefItem[], prefix = '', parentPath: string
   return map;
 }
 
+// ── bindKeyMap ──────────────────────────────────────────────────────
+
+/**
+ * Build a secondary lookup from item key (bind value) to definition path.
+ * Used when a bound node has been moved into a layout container at a
+ * different tree level — the computed defPath won't match defLookup,
+ * but the item's key still maps to the correct definition path.
+ */
+export function buildBindKeyMap(defLookup: Map<string, DefLookupEntry>): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const [path, entry] of defLookup) {
+    if (!map.has(entry.item.key)) {
+      map.set(entry.item.key, path);
+    }
+  }
+  return map;
+}
+
 // ── flattenComponentTree ────────────────────────────────────────────
 
 /**
@@ -111,6 +129,7 @@ export function buildDefLookup(items: DefItem[], prefix = '', parentPath: string
 export function flattenComponentTree(
   root: CompNode,
   defLookup: Map<string, DefLookupEntry>,
+  bindKeyMap?: Map<string, string>,
 ): TreeFlatEntry[] {
   const result: TreeFlatEntry[] = [];
 
@@ -133,8 +152,17 @@ export function flattenComponentTree(
         walk(children, depth + 1, defPathPrefix);
       } else if (node.bind) {
         // Bound node — field or group
-        const defPath = defPathPrefix ? `${defPathPrefix}.${node.bind}` : node.bind;
-        const defEntry = defLookup.get(defPath);
+        let defPath = defPathPrefix ? `${defPathPrefix}.${node.bind}` : node.bind;
+        let defEntry = defLookup.get(defPath);
+        // Fallback: node may have been moved into a layout container at a
+        // different tree level. Look up by bind key to find actual def path.
+        if (!defEntry && bindKeyMap) {
+          const altPath = bindKeyMap.get(node.bind);
+          if (altPath) {
+            defPath = altPath;
+            defEntry = defLookup.get(altPath);
+          }
+        }
         const itemType = defEntry?.item.type;
         const isGroup = itemType === 'group';
         const children = node.children ?? [];
