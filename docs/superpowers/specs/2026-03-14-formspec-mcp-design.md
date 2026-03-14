@@ -233,7 +233,7 @@ export function setAfterSubmit(project: Project, behavior: AfterSubmitBehavior):
 
 ---
 
-## Tool Catalog (31 tools)
+## Tool Catalog (32 tools)
 
 ### Project lifecycle (5)
 | Tool | Description |
@@ -288,6 +288,7 @@ export function setAfterSubmit(project: Project, behavior: AfterSubmitBehavior):
 | `audit(project_id)` | Runs `project.diagnose()` and additionally checks for: unreachable branches, unconstrained free-text fields, conditional dead ends. Returns structured findings with severity (error \| warning \| info). Exportable as JSON. |
 | `describe(project_id, target?)` | Without `target`: returns `project.statistics()` + `project.fieldPaths()` formatted as readable text. With `target`: returns `project.itemAt(target)` + `project.bindFor(target)` + `project.componentFor(target)`. No LLM call required. |
 | `trace(project_id, expression_or_field)` | Calls `project.expressionDependencies(expr)` or `project.fieldDependents(path)`. Returns the dependency graph for the target as readable text. |
+| `validate_response(project_id, response)` | Feed a response document in, get a `ValidationReport` back. Creates a `FormEngine` from the project's current definition, replays response values via `setValue()`, calls `getValidationReport({ mode: 'submit' })`. Returns structured results with path, severity, message, and constraint kind per field. |
 
 ### Escape hatch (1)
 | Tool | Description |
@@ -324,8 +325,8 @@ interface ToolError {
 **`formspec-mcp-generation` (separate package)**
 Server-driven generation: an optional `GenerationProvider` interface (Anthropic, OpenAI, or any structured-output LLM) that the MCP server can call to bootstrap artifacts. Useful for non-LLM-client contexts (automated pipelines, CLI batch generation). Intentionally excluded from this package to keep `formspec-mcp` dependency-free.
 
-**`validate_response` tool**
-Feed a response document in, get back a validation report. Server-side validation use case.
+**`validate_response` tool — now in scope**
+Moved into the Understanding tool group. Implemented via `FormEngine.getValidationReport()` from `formspec-engine`. No future work needed.
 
 **Naming policy enforcement**
 Project-level field key convention config. Validated on `field()` and surfaced in `audit()`.
