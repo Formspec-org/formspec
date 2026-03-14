@@ -59,7 +59,7 @@ export function resolvePageStructure(
   const pages: ResolvedPage[] = themePages.map((p: any) => ({
     id: p.id ?? '',
     title: p.title ?? '',
-    description: p.description,
+    ...(p.description !== undefined && { description: p.description }),
     regions: (p.regions ?? []).map((r: any) => {
       const region: ResolvedRegion = {
         key: r.key ?? '',

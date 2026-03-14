@@ -1929,7 +1929,7 @@ export class Project {
           component: 'Page',
           nodeId: (themePage as any).id,
           title: (themePage as any).title,
-          description: (themePage as any).description,
+          ...((themePage as any).description !== undefined && { description: (themePage as any).description }),
           children: [],
         };
 

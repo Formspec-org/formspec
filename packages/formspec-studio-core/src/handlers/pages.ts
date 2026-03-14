@@ -39,12 +39,13 @@ registerHandler('pages.addPage', (state, payload) => {
   const pages = ensurePages(state);
   const fp = ensureFormPresentation(state);
 
-  pages.push({
+  const page: any = {
     id: generatePageId(),
     title: title ?? `Page ${pages.length + 1}`,
-    description,
     regions: [],
-  });
+  };
+  if (description !== undefined) page.description = description;
+  pages.push(page);
 
   // Only promote to wizard if currently single or unset.
   // Preserve tabs mode — mode is rendering style, not structure.
