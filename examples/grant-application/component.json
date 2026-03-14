@@ -298,7 +298,7 @@
                   },
                   {
                     "component": "Popover",
-                    "triggerBind": "budget.lineItems.description",
+                    "triggerBind": "budget.lineItems[0].description",
                     "triggerLabel": "Line Item Details",
                     "placement": "left",
                     "children": [
