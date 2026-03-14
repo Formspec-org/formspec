@@ -72,7 +72,7 @@ packages/formspec-mcp/                           ← replaced package (full rewr
       structure.ts  — field/content/group/page/remove_page/place/repeat/update/remove/copy
       flow.ts       — flow/branch/move/rename
       behavior.ts   — show_when/readonly_when/require/calculate/add_rule/variable/remove_variable/update_variable
-      presentation.ts — layout/style/choices/after_submit
+      presentation.ts — layout/style/choices
       screener.ts   — screener/screen_field/screen_route/remove_screen_field/remove_screen_route
       query.ts      — preview/audit/describe/trace/validate_response/search/changelog
       fel.ts        — fel_context/fel_functions/fel_check
@@ -239,16 +239,13 @@ interface FlowProps {
 
 // Validation options for addValidation / add_rule tool
 interface ValidationOptions {
-  timing?: 'live' | 'submit' | 'both';
-  blocking?: boolean;   // server-side gate: if true, submission is blocked until this passes
-}
-
-// After-submit behavior
-interface AfterSubmitBehavior {
-  confirmationMessage?: string;
-  redirectUrl?: string;
-  emailRespondent?: boolean;
-  notifyTeam?: boolean | string[];
+  timing?: 'continuous' | 'submit' | 'demand';  // default: 'continuous'
+  severity?: 'error' | 'warning' | 'info';       // default: 'error'
+  // severity: 'error'   → blocks submission (invalid data)
+  // severity: 'warning' → advisory, does not block submission
+  // severity: 'info'    → informational only
+  code?: string;        // machine-readable error code (e.g. 'BUDGET_MISMATCH')
+  activeWhen?: string;  // FEL expression: shape is skipped when this evaluates to false
 }
 
 // Changes for updateItem — each key routes to a different artifact handler.
@@ -463,10 +460,6 @@ export function removeItem(project: Project, path: string): CommandResult[]
 // Multiple keys in one call are dispatched as a batch in declaration order.
 export function updateItem(project: Project, path: string, changes: ItemChanges): CommandResult[]
 
-// After-submit behavior
-// Dispatches: definition.setDefinitionProperty for form-level properties
-export function setAfterSubmit(project: Project, behavior: AfterSubmitBehavior): CommandResult[]
-
 // Named FEL variable
 // Dispatches: definition.addVariable
 export function addVariable(project: Project, name: string, expression: string, scope?: string): CommandResult[]
@@ -524,7 +517,7 @@ export function validateResponse(
 
 ---
 
-## Tool Catalog (49 tools)
+## Tool Catalog (48 tools)
 
 ### Project lifecycle (7)
 | Tool | Description |
@@ -566,18 +559,17 @@ export function validateResponse(
 | `readonly_when(project_id, target, condition)` | Lock a field when condition is true. Routes to `definition.setBind { readonly }`. |
 | `require(project_id, target, condition?)` | Mark as required always, or only when condition is true. Routes to `definition.setBind { required }`. |
 | `calculate(project_id, target, expression)` | Derive a field's value from a FEL expression. Routes to `definition.setBind { calculate }`. |
-| `add_rule(project_id, target, rule, message, options?)` | Enforce a data quality rule. `rule`: named format or FEL expression. `options`: timing (live\|submit\|both), blocking. Target supports wildcards (`items[*].cost`). Routes to `definition.addShape`. |
+| `add_rule(project_id, target, rule, message, options?)` | Enforce a data quality rule. `rule`: named format or FEL expression. `options`: timing (continuous\|submit\|demand), severity (error\|warning\|info — error blocks submission, warning/info are advisory), code, activeWhen. Target supports wildcards (`items[*].cost`). Routes to `definition.addShape`. |
 | `variable(project_id, name, expression, scope?)` | Define a named FEL variable reusable across the form. `scope` limits visibility to a subtree. Routes to `definition.addVariable`. |
 | `update_variable(project_id, name, expression)` | Update a named variable's expression. Routes to `definition.setVariable`. |
 | `remove_variable(project_id, name)` | Delete a named variable. Routes to `definition.deleteVariable`. |
 
-### Presentation (4)
+### Presentation (3)
 | Tool | Description |
 |------|-------------|
 | `layout(project_id, target, arrangement)` | Arrange fields spatially. `arrangement`: columns-2, columns-3, columns-4, card, sidebar, inline. Routes to `component.addNode` + `component.moveNode`. |
 | `style(project_id, target, properties)` | Set visual presentation. `target`: field path \| `{ type }` \| `{ dataType }` \| `'form'`. `properties`: density, labelPosition, visualWeight, size — not raw CSS. Routes based on target shape. |
 | `choices(project_id, name, options[])` | Define a reusable named option list. Routes to `definition.setOptionSet`. |
-| `after_submit(project_id, behavior)` | Configure completion: confirmationMessage, redirectUrl, emailRespondent, notifyTeam. Routes to `definition.setDefinitionProperty`. |
 
 ### Screener (5)
 
