@@ -233,7 +233,7 @@ export function setAfterSubmit(project: Project, behavior: AfterSubmitBehavior):
 
 ---
 
-## Tool Catalog (32 tools)
+## Tool Catalog (33 tools)
 
 ### Project lifecycle (5)
 | Tool | Description |
@@ -255,6 +255,7 @@ export function setAfterSubmit(project: Project, behavior: AfterSubmitBehavior):
 | `place(project_id, target, page_id)` | Assign a field or group to a specific page. Routes to `pages.assignItem`. |
 | `update(project_id, path, changes)` | Change any property of an existing element. The `updateItem` helper fans out each key to the correct artifact (see helper routing table above). |
 | `remove(project_id, path)` | Delete a field, group, or content element. Helper layer queries `fieldDependents` and nullifies referencing expressions before deleting. |
+| `copy(project_id, path)` | Deep-copy a field or group and insert the clone immediately after the original. Routes to `definition.duplicateItem`. Returns the new item's path. |
 
 ### Flow and form shape (4)
 | Tool | Description |
@@ -331,8 +332,8 @@ Moved into the Understanding tool group. Implemented via `FormEngine.getValidati
 **Naming policy enforcement**
 Project-level field key convention config. Validated on `field()` and surfaced in `audit()`.
 
-**`duplicate` tool**
-Copy a field or group. Straightforward addition once core tools are stable.
+**`copy` tool — now in scope**
+Moved into the Structure group. Routes to `definition.duplicateItem` which already exists.
 
 ---
 
