@@ -29,6 +29,7 @@ import {
   getEditableComponentDocument,
   hasAuthoredComponentTree,
 } from '../component-documents.js';
+import { normalizeIndexedPath } from 'formspec-engine';
 
 /** Auto-incrementing counter for generating unique node IDs within a session. */
 let nodeCounter = 0;
@@ -174,7 +175,7 @@ registerHandler('component.addNode', (state, payload) => {
 
   const node: TreeNode = { component: p.component };
   if (p.bind) {
-    node.bind = p.bind;
+    node.bind = normalizeIndexedPath(p.bind);
   } else {
     node.nodeId = generateNodeId();
     node._layout = true;
@@ -243,16 +244,25 @@ registerHandler('component.moveNode', (state, payload) => {
 
   const root = ensureTree(state);
 
-  // Remove from current parent
+  // Resolve both before any mutation
   const sourceResult = findNode(root, source);
   if (!sourceResult || sourceResult.index === -1) throw new Error('Source node not found');
-  const [node] = sourceResult.parent.children!.splice(sourceResult.index, 1);
-
-  // Add to target parent
   const targetResult = findNode(root, targetParent);
   if (!targetResult) throw new Error('Target parent not found');
-  if (!targetResult.node.children) targetResult.node.children = [];
 
+  // Guard: target must not be the source itself or inside the source subtree
+  const stack: TreeNode[] = [sourceResult.node];
+  while (stack.length) {
+    const n = stack.pop()!;
+    if (n === targetResult.node) {
+      throw new Error('Circular move: cannot move a node into itself or its own descendant');
+    }
+    stack.push(...(n.children ?? []));
+  }
+
+  // Remove from current parent, insert into target
+  const [node] = sourceResult.parent.children!.splice(sourceResult.index, 1);
+  if (!targetResult.node.children) targetResult.node.children = [];
   if (targetIndex !== undefined) {
     targetResult.node.children.splice(targetIndex, 0, node);
   } else {

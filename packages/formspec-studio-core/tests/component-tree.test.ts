@@ -131,6 +131,71 @@ describe('component.deleteNode', () => {
   });
 });
 
+describe('component.moveNode — circular move guard', () => {
+  it('throws when moving a node into its own child', () => {
+    const project = createProject();
+
+    const outer = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'Card' },
+    }) as any).nodeRef;
+
+    const inner = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: outer, component: 'Stack' },
+    }) as any).nodeRef;
+
+    expect(() =>
+      project.dispatch({
+        type: 'component.moveNode',
+        payload: { source: outer, targetParent: inner },
+      }),
+    ).toThrow(/circular|ancestor|descendant/i);
+  });
+
+  it('throws when moving a node into a deeply nested descendant', () => {
+    const project = createProject();
+
+    const a = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'Card' },
+    }) as any).nodeRef;
+
+    const b = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: a, component: 'Stack' },
+    }) as any).nodeRef;
+
+    const c = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: b, component: 'Card' },
+    }) as any).nodeRef;
+
+    expect(() =>
+      project.dispatch({
+        type: 'component.moveNode',
+        payload: { source: a, targetParent: c },
+      }),
+    ).toThrow(/circular|ancestor|descendant/i);
+  });
+
+  it('throws when moving a node into itself', () => {
+    const project = createProject();
+
+    const card = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'Card' },
+    }) as any).nodeRef;
+
+    expect(() =>
+      project.dispatch({
+        type: 'component.moveNode',
+        payload: { source: card, targetParent: card },
+      }),
+    ).toThrow(/circular|ancestor|descendant/i);
+  });
+});
+
 describe('component.moveNode', () => {
   it('moves a node to a new parent', () => {
     const project = createProject();

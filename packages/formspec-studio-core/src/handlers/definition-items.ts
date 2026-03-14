@@ -620,6 +620,11 @@ registerHandler('definition.moveItem', (state, payload) => {
   const loc = resolveItemLocation(state, sourcePath);
   if (!loc) throw new Error(`Item not found: ${sourcePath}`);
 
+  // Guard: prevent circular moves (moving a node into its own subtree)
+  if (targetParentPath && (targetParentPath === sourcePath || targetParentPath.startsWith(sourcePath + '.'))) {
+    throw new Error(`Circular move: cannot move "${sourcePath}" into its own descendant "${targetParentPath}"`);
+  }
+
   const hasTopLevelGroups = state.definition.items.some((item) => item.type === 'group');
   const pageMode = (state.definition as any).formPresentation?.pageMode;
   if (

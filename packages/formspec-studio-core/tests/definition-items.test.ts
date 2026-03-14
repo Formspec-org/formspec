@@ -572,3 +572,32 @@ describe('definition.moveItem paged mode guard', () => {
     ).toThrow(/Cannot add a "field" at root|parentPath/);
   });
 });
+
+describe('definition.moveItem — circular move guard', () => {
+  it('throws when moving a group into its own child', () => {
+    const project = createProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'parent' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'child', parentPath: 'parent' } });
+
+    expect(() =>
+      project.dispatch({
+        type: 'definition.moveItem',
+        payload: { sourcePath: 'parent', targetParentPath: 'parent.child' },
+      }),
+    ).toThrow(/circular|ancestor|descendant/i);
+  });
+
+  it('throws when moving a group into a deeply nested descendant', () => {
+    const project = createProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'a' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'b', parentPath: 'a' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'c', parentPath: 'a.b' } });
+
+    expect(() =>
+      project.dispatch({
+        type: 'definition.moveItem',
+        payload: { sourcePath: 'a', targetParentPath: 'a.b.c' },
+      }),
+    ).toThrow(/circular|ancestor|descendant/i);
+  });
+});
