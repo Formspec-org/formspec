@@ -60,6 +60,20 @@ export async function selectBlueprintByIndex(page: Page, index: number) {
   await useBlueprintBtns.nth(index).click();
 }
 
+/**
+ * Complete provider setup AND save credentials to browser.
+ * This ensures credentials survive page reload.
+ */
+export async function completeProviderSetupWithSave(page: Page) {
+  await expect(page.getByText('Intelligence Setup')).toBeVisible();
+  await page.getByRole('button', { name: 'Gemini' }).click();
+  await page.getByPlaceholder('sk-...').fill('test-e2e-key');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: /verify connection/i }).click();
+  await page.getByRole('button', { name: /continue to chat/i }).click({ timeout: 5000 });
+  await expect(page.getByPlaceholder(/describe the form you need/i)).toBeVisible();
+}
+
 /* ── Phase Navigation ───────────────────────────── */
 
 /**

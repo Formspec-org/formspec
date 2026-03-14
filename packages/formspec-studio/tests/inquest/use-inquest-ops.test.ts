@@ -263,6 +263,114 @@ describe('useInquestOps — clearOperationError', () => {
   });
 });
 
+/* ── handleChatNew ────────────────────────────── */
+
+describe('useInquestOps — handleChatNew', () => {
+  it('adds the user message to session and triggers analysis', async () => {
+    const provider = makeProvider();
+    const session = makeSession({
+      input: { description: '', uploads: [], messages: [] },
+    });
+    const updateSession = vi.fn();
+    const setDraft = vi.fn();
+
+    const { result } = renderHook(() =>
+      useInquestOps(session, null, setDraft, provider, undefined, updateSession),
+    );
+
+    await act(async () => {
+      await result.current.handleChatNew('Build a patient intake form with demographics');
+    });
+
+    // updateSession should have been called twice:
+    // 1. First call: add user message + update description
+    // 2. Second call: analysis result → transition to review
+    expect(updateSession).toHaveBeenCalledTimes(2);
+
+    // First call adds the message
+    const firstUpdater = updateSession.mock.calls[0][0];
+    const afterMessage = firstUpdater(session);
+    expect(afterMessage.input.description).toBe('Build a patient intake form with demographics');
+    expect(afterMessage.input.messages).toHaveLength(1);
+    expect(afterMessage.input.messages[0].role).toBe('user');
+    expect(afterMessage.input.messages[0].text).toBe('Build a patient intake form with demographics');
+
+    // Second call transitions to review
+    const secondUpdater = updateSession.mock.calls[1][0];
+    const afterAnalysis = secondUpdater(afterMessage);
+    expect(afterAnalysis.phase).toBe('review');
+    expect(afterAnalysis.analysis).toBeDefined();
+  });
+
+  it('updates the description with the chat message text', async () => {
+    const provider = makeProvider();
+    const session = makeSession({
+      input: { description: 'old description', uploads: [], messages: [] },
+    });
+    const updateSession = vi.fn();
+    const setDraft = vi.fn();
+
+    const { result } = renderHook(() =>
+      useInquestOps(session, null, setDraft, provider, undefined, updateSession),
+    );
+
+    await act(async () => {
+      await result.current.handleChatNew('New form requirements');
+    });
+
+    const firstUpdater = updateSession.mock.calls[0][0];
+    const afterMessage = firstUpdater(session);
+    // Description should be replaced with the new text
+    expect(afterMessage.input.description).toBe('New form requirements');
+  });
+
+  it('calls provider.runAnalysis with the chat text as the description', async () => {
+    const provider = makeProvider();
+    const session = makeSession({
+      input: { description: '', uploads: [], messages: [] },
+    });
+    const updateSession = vi.fn();
+    const setDraft = vi.fn();
+
+    const { result } = renderHook(() =>
+      useInquestOps(session, null, setDraft, provider, undefined, updateSession),
+    );
+
+    await act(async () => {
+      await result.current.handleChatNew('Collect name, email, phone');
+    });
+
+    expect(provider.runAnalysis).toHaveBeenCalledOnce();
+    // The analysis input should contain the chat text as the description
+    const analysisInput = (provider.runAnalysis as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(analysisInput.session.input.description).toBe('Collect name, email, phone');
+  });
+
+  it('sets operationError when analysis triggered by chat fails', async () => {
+    const provider = makeProvider({
+      runAnalysis: vi.fn().mockRejectedValue(new Error('Chat analysis failed')),
+    });
+    const session = makeSession({
+      input: { description: '', uploads: [], messages: [] },
+    });
+    const updateSession = vi.fn();
+    const setDraft = vi.fn();
+
+    const { result } = renderHook(() =>
+      useInquestOps(session, null, setDraft, provider, undefined, updateSession),
+    );
+
+    await act(async () => {
+      await result.current.handleChatNew('Build a form');
+    });
+
+    // The message should still be added (first updateSession call)
+    expect(updateSession).toHaveBeenCalledTimes(1);
+    // Error should be set
+    expect(result.current.operationError).toBe('Chat analysis failed');
+  });
+});
+
 /* ── handleGenerateProposal ────────────────────── */
 
 describe('useInquestOps — handleGenerateProposal', () => {
