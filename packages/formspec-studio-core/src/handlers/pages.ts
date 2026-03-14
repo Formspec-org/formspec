@@ -95,10 +95,10 @@ registerHandler('pages.reorderPages', (state, payload) => {
   if (index === -1) throw new Error(`Page not found: ${id}`);
 
   const swapIndex = direction === 'up' ? index - 1 : index + 1;
-  if (swapIndex < 0 || swapIndex >= pages.length) return { rebuildComponentTree: false };
+  if (swapIndex < 0 || swapIndex >= pages.length) return { rebuildComponentTree: true };
 
   [pages[index], pages[swapIndex]] = [pages[swapIndex], pages[index]];
-  return { rebuildComponentTree: false };
+  return { rebuildComponentTree: true };
 });
 
 // ── pages.setPageProperty ───────────────────────────────────────────
@@ -108,7 +108,7 @@ registerHandler('pages.setPageProperty', (state, payload) => {
   const pages = ensurePages(state);
   const page = findPageById(pages, id);
   page[property] = value;
-  return { rebuildComponentTree: false };
+  return { rebuildComponentTree: true };
 });
 
 // ── pages.assignItem ─────────────────────────────────────────────────
@@ -131,7 +131,7 @@ registerHandler('pages.assignItem', (state, payload) => {
   if (span !== undefined) region.span = span;
   targetPage.regions.push(region);
 
-  return { rebuildComponentTree: false };
+  return { rebuildComponentTree: true };
 });
 
 // ── pages.unassignItem ──────────────────────────────────────────────
@@ -143,7 +143,7 @@ registerHandler('pages.unassignItem', (state, payload) => {
   if (page.regions) {
     page.regions = page.regions.filter((r: any) => r.key !== key);
   }
-  return { rebuildComponentTree: false };
+  return { rebuildComponentTree: true };
 });
 
 // ── pages.autoGenerate ──────────────────────────────────────────────

@@ -344,3 +344,18 @@ describe('pages.setRegionProperty', () => {
     expect(region.start).toBe(4);
   });
 });
+
+describe('pages.* handlers trigger rebuild', () => {
+  it('pages.assignItem returns rebuildComponentTree: true', () => {
+    const project = createProject();
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'P' } });
+    const pageId = (project.theme.pages as any[])[0].id;
+
+    const result = project.dispatch({
+      type: 'pages.assignItem',
+      payload: { pageId, key: 'name' },
+    });
+
+    expect(result.rebuildComponentTree).toBe(true);
+  });
+});
