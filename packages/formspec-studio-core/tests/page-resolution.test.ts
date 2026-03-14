@@ -135,6 +135,21 @@ describe('resolvePageStructure', () => {
     );
   });
 
+  // When user set pageMode to wizard but no theme pages yet → honor intent so Add Page is visible
+  it('returns wizard mode and theme tier when pageMode is wizard and theme.pages is empty', () => {
+    const state = makeState({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: { pages: [] },
+    });
+
+    const result = resolvePageStructure(state, []);
+
+    expect(result.mode).toBe('wizard');
+    expect(result.controllingTier).toBe('theme');
+    expect(result.pages).toEqual([]);
+    expect(result.diagnostics).toEqual([]);
+  });
+
   // Test 6: pageMode='single' + theme.pages → PAGEMODE_MISMATCH diagnostic
   it('reports PAGEMODE_MISMATCH when theme pages exist but pageMode is single', () => {
     const state = makeState({

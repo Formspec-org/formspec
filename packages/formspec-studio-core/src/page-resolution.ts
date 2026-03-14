@@ -175,6 +175,20 @@ export function resolvePageStructure(
     };
   }
 
+  // ── User chose wizard/tabs but no theme pages yet ───────────────
+  // Honor formPresentation.pageMode so the mode selector and Add Page /
+  // Generate from Groups are visible; avoids catch-22 where user cannot
+  // enter wizard from a single-page form via the Pages tab.
+  if (pageMode === 'wizard' || pageMode === 'tabs') {
+    return {
+      mode: pageMode === 'tabs' ? 'tabs' : 'wizard',
+      pages: [],
+      controllingTier: 'theme',
+      diagnostics,
+      wizardConfig: defaultWizardConfig,
+    };
+  }
+
   // ── None ───────────────────────────────────────────────────────
   return {
     mode: 'single',
