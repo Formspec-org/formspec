@@ -46,8 +46,13 @@ registerHandler('pages.addPage', (state, payload) => {
     regions: [],
   });
 
-  fp.pageMode = 'wizard';
-  return { rebuildComponentTree: false };
+  // Only promote to wizard if currently single or unset.
+  // Preserve tabs mode — mode is rendering style, not structure.
+  if (!fp.pageMode || fp.pageMode === 'single') {
+    fp.pageMode = 'wizard';
+  }
+
+  return { rebuildComponentTree: true };
 });
 
 // ── pages.deletePage ─────────────────────────────────────────────────
@@ -59,13 +64,10 @@ registerHandler('pages.deletePage', (state, payload) => {
   if (index === -1) throw new Error(`Page not found: ${id}`);
 
   pages.splice(index, 1);
+  // Do NOT reset pageMode — empty page list means "ready to add pages",
+  // not "switch to single." Use pages.setMode('single') explicitly.
 
-  const fp = ensureFormPresentation(state);
-  if (pages.length === 0) {
-    fp.pageMode = 'single';
-  }
-
-  return { rebuildComponentTree: false };
+  return { rebuildComponentTree: true };
 });
 
 // ── pages.setMode ────────────────────────────────────────────────────
@@ -75,15 +77,13 @@ registerHandler('pages.setMode', (state, payload) => {
   const fp = ensureFormPresentation(state);
   fp.pageMode = mode;
 
-  if (mode === 'single') {
-    // Clear theme pages
-    state.theme.pages = [];
-  } else {
-    // Ensure pages array exists
+  // Pages are preserved in single mode (dormant, not destroyed).
+  // Ensure pages array exists for wizard/tabs.
+  if (mode !== 'single') {
     ensurePages(state);
   }
 
-  return { rebuildComponentTree: false };
+  return { rebuildComponentTree: true };
 });
 
 // ── pages.reorderPages ──────────────────────────────────────────────

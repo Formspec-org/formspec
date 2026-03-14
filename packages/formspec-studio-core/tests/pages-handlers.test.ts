@@ -31,7 +31,7 @@ describe('pages.deletePage', () => {
     expect((project.definition as any).formPresentation?.pageMode).toBe('wizard');
   });
 
-  it('resets pageMode to single when deleting the last page', () => {
+  it('preserves pageMode when deleting the last page', () => {
     const project = createProject();
     project.dispatch({ type: 'pages.addPage', payload: { title: 'Only' } });
     const pages = project.theme.pages as any[];
@@ -40,7 +40,7 @@ describe('pages.deletePage', () => {
     project.dispatch({ type: 'pages.deletePage', payload: { id } });
 
     expect(project.theme.pages as any[]).toHaveLength(0);
-    expect((project.definition as any).formPresentation?.pageMode).toBe('single');
+    expect((project.definition as any).formPresentation?.pageMode).toBe('wizard'); // preserved
   });
 });
 
@@ -54,7 +54,7 @@ describe('pages.setMode', () => {
     expect(project.theme.pages).toBeDefined();
   });
 
-  it('clears theme.pages when setting single mode', () => {
+  it('preserves theme.pages when setting single mode', () => {
     const project = createProject();
     project.dispatch({ type: 'pages.addPage', payload: { title: 'X' } });
     expect(project.theme.pages as any[]).toHaveLength(1);
@@ -62,7 +62,32 @@ describe('pages.setMode', () => {
     project.dispatch({ type: 'pages.setMode', payload: { mode: 'single' } });
 
     expect((project.definition as any).formPresentation?.pageMode).toBe('single');
-    expect(project.theme.pages as any[]).toHaveLength(0);
+    expect(project.theme.pages as any[]).toHaveLength(1); // preserved, not cleared
+  });
+});
+
+describe('pages.addPage — mode preservation', () => {
+  it('preserves tabs mode when adding a page (does not force wizard)', () => {
+    const project = createProject();
+    project.dispatch({ type: 'pages.setMode', payload: { mode: 'tabs' } });
+
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'Tab 1' } });
+
+    expect((project.definition as any).formPresentation?.pageMode).toBe('tabs');
+  });
+});
+
+describe('pages.setMode — round-trip', () => {
+  it('round-trips wizard → single → wizard preserving pages', () => {
+    const project = createProject();
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 2' } });
+
+    project.dispatch({ type: 'pages.setMode', payload: { mode: 'single' } });
+    project.dispatch({ type: 'pages.setMode', payload: { mode: 'wizard' } });
+
+    expect(project.theme.pages as any[]).toHaveLength(2);
+    expect((project.definition as any).formPresentation?.pageMode).toBe('wizard');
   });
 });
 
