@@ -348,31 +348,23 @@ registerHandler('component.setResponsiveOverride', (state, payload) => {
 });
 
 /**
- * **component.setWizardProperty** -- Set a property on the wizard configuration.
+ * **component.setWizardProperty** -- Set a property on the Wizard component.
  *
- * In authored component mode, wizard properties belong on the first `Wizard`
- * node in the component tree. In generated-layout mode, they are stored in the
- * internal generated component state and applied only during preview synthesis.
+ * Finds the Wizard node in whichever tree is active (authored or generated)
+ * and sets the property directly on it. No-ops if no Wizard node exists
+ * (e.g., form is in single mode with a Stack root).
  *
- * @param payload.property - The wizard config key (e.g., 'showProgress', 'allowSkip').
+ * @param payload.property - The Wizard component prop (e.g., 'showProgress', 'allowSkip').
  * @param payload.value - The value to set.
  * @returns `{ rebuildComponentTree: false }`.
  */
 registerHandler('component.setWizardProperty', (state, payload) => {
   const { property, value } = payload as { property: string; value: unknown };
-  if (hasAuthoredComponentTree(state.component)) {
-    const root = ensureTree(state);
-    const wizard = findFirstComponent(root, 'Wizard');
-    if (wizard) {
-      wizard[property] = value;
-    }
-    return { rebuildComponentTree: false };
+  const root = ensureTree(state);
+  const wizard = findFirstComponent(root, 'Wizard');
+  if (wizard) {
+    wizard[property] = value;
   }
-
-  if (!(state.generatedComponent as any).wizardConfig) {
-    (state.generatedComponent as any).wizardConfig = {};
-  }
-  (state.generatedComponent as any).wizardConfig[property] = value;
   return { rebuildComponentTree: false };
 });
 
