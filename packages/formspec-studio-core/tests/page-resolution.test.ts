@@ -186,6 +186,7 @@ describe('resolvePageStructure', () => {
     const result = resolvePageStructure(state, ['name']);
 
     expect(result.pages[0].regions[0].span).toBe(12);
+    expect('start' in result.pages[0].regions[0]).toBe(false);
   });
 
   it('preserves region start when specified', () => {

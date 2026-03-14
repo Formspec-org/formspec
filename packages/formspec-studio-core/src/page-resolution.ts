@@ -60,12 +60,15 @@ export function resolvePageStructure(
     id: p.id ?? '',
     title: p.title ?? '',
     description: p.description,
-    regions: (p.regions ?? []).map((r: any) => ({
-      key: r.key ?? '',
-      span: r.span ?? 12,  // Region.span default per schema
-      start: r.start,
-      exists: knownKeys.has(r.key ?? ''),
-    })),
+    regions: (p.regions ?? []).map((r: any) => {
+      const region: ResolvedRegion = {
+        key: r.key ?? '',
+        span: r.span ?? 12,  // Region.span default per schema
+        exists: knownKeys.has(r.key ?? ''),
+      };
+      if (r.start !== undefined) region.start = r.start;
+      return region;
+    }),
   }));
 
   // Build itemPageMap and emit diagnostics for unknown keys
