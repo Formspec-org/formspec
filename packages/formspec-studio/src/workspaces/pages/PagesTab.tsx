@@ -2,33 +2,35 @@ import { useState } from 'react';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { usePageStructure } from './usePageStructure';
 import { useDispatch } from '../../state/useDispatch';
+import { useProjectState } from '../../state/useProjectState';
 import type { ResolvedPage, PageDiagnostic } from 'formspec-studio-core';
 
 // ── Sub-components ───────────────────────────────────────────────────
 
-function TierStatusBanner({ controllingTier }: { controllingTier: string }) {
-  if (controllingTier === 'theme') return null;
+function TierStatusBanner({ mode, hasWizardComponent }: { mode: string; hasWizardComponent: boolean }) {
+  if (hasWizardComponent) {
+    return (
+      <div
+        data-testid="tier-status-banner"
+        className="px-4 py-3 text-[12px] rounded-lg border bg-orange-50 text-orange-800 border-orange-200"
+      >
+        A Wizard component is active in the component tree. Theme pages are shadowed.
+      </div>
+    );
+  }
 
-  const messages: Record<string, string> = {
-    none: 'Single-page form. Enable wizard mode to add pages.',
-    definition: 'Pages inferred from definition groups. Add theme pages for full control.',
-    component: 'A Wizard component is active in the component tree. Theme pages are shadowed.',
-  };
+  if (mode === 'single') {
+    return (
+      <div
+        data-testid="tier-status-banner"
+        className="px-4 py-3 text-[12px] rounded-lg border bg-subtle text-muted"
+      >
+        Single-page form. Enable wizard mode to add pages.
+      </div>
+    );
+  }
 
-  const colors: Record<string, string> = {
-    none: 'bg-subtle text-muted',
-    definition: 'bg-amber-50 text-amber-800 border-amber-200',
-    component: 'bg-orange-50 text-orange-800 border-orange-200',
-  };
-
-  return (
-    <div
-      data-testid="tier-status-banner"
-      className={`px-4 py-3 text-[12px] rounded-lg border ${colors[controllingTier] ?? 'bg-subtle text-muted'}`}
-    >
-      {messages[controllingTier] ?? ''}
-    </div>
-  );
+  return null;
 }
 
 function ModeSelector({
@@ -207,6 +209,8 @@ function DiagnosticsPanel({ diagnostics }: { diagnostics: PageDiagnostic[] }) {
 export function PagesTab() {
   const structure = usePageStructure();
   const dispatch = useDispatch();
+  const state = useProjectState();
+  const hasWizardComponent = (state.component as any)?.tree?.component === 'Wizard';
 
   const setMode = (mode: 'single' | 'wizard' | 'tabs') => {
     dispatch({ type: 'pages.setMode', payload: { mode } });
@@ -243,11 +247,11 @@ export function PagesTab() {
       </WorkspacePageSection>
 
       <WorkspacePageSection className="flex-1 py-6 space-y-6">
-        <TierStatusBanner controllingTier={structure.controllingTier} />
+        <TierStatusBanner mode={structure.mode} hasWizardComponent={hasWizardComponent} />
 
         <DiagnosticsPanel diagnostics={structure.diagnostics} />
 
-        {isMultiPage && structure.controllingTier !== 'component' && (
+        {isMultiPage && !hasWizardComponent && (
           <>
             <div className="space-y-3">
               {structure.pages.map((page, i) => (
@@ -284,7 +288,7 @@ export function PagesTab() {
           </>
         )}
 
-        {isMultiPage && structure.controllingTier === 'component' && (
+        {isMultiPage && hasWizardComponent && (
           <div className="space-y-3">
             {structure.pages.map((page) => (
               <div key={page.id} className="border border-border rounded-lg bg-surface px-3 py-2">
