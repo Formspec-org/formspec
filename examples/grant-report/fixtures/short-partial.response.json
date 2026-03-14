@@ -11,11 +11,11 @@
             "phone": "(508) 477-0208",
             "email": "jdoe@mashpeewampanoag.gov"
         },
-        "applicableTopics": [
-            "employment",
-            "housing"
-        ],
         "expenditures": {
+            "applicableTopics": [
+                "employment",
+                "housing"
+            ],
             "employment": {
                 "amount": "45000.00",
                 "currency": "USD"
@@ -55,10 +55,10 @@
             "total": {
                 "amount": "45000.00",
                 "currency": "USD"
-            }
+            },
+            "hasAdministrationCosts": null,
+            "administrationExpenditure": null
         },
-        "hasAdministrationCosts": null,
-        "administrationExpenditure": null,
         "descriptions": {
             "employmentDesc": "Job placement assistance and vocational training for 42 tribal members.",
             "educationDesc": "N/A",

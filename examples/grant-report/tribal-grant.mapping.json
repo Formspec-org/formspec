@@ -47,7 +47,7 @@
             "targetPath": "Expenditures.Employment",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'employment')",
+            "condition": "selected($expenditures.applicableTopics, 'employment')",
             "priority": 80
         },
         {
@@ -55,7 +55,7 @@
             "targetPath": "Expenditures.Childcare",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'childcare')",
+            "condition": "selected($expenditures.applicableTopics, 'childcare')",
             "priority": 80
         },
         {
@@ -63,7 +63,7 @@
             "targetPath": "Expenditures.AssetBuilding",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'assetBuilding')",
+            "condition": "selected($expenditures.applicableTopics, 'assetBuilding')",
             "priority": 80
         },
         {
@@ -71,7 +71,7 @@
             "targetPath": "Expenditures.Housing",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'housing')",
+            "condition": "selected($expenditures.applicableTopics, 'housing')",
             "priority": 80
         },
         {
@@ -79,7 +79,7 @@
             "targetPath": "Expenditures.Health",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'health')",
+            "condition": "selected($expenditures.applicableTopics, 'health')",
             "priority": 80
         },
         {
@@ -87,7 +87,7 @@
             "targetPath": "Expenditures.CivicEngagement",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'civic')",
+            "condition": "selected($expenditures.applicableTopics, 'civic')",
             "priority": 80
         },
         {
@@ -95,7 +95,7 @@
             "targetPath": "Expenditures.Transportation",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'transportation')",
+            "condition": "selected($expenditures.applicableTopics, 'transportation')",
             "priority": 80
         },
         {
@@ -103,7 +103,7 @@
             "targetPath": "Expenditures.Partnerships",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'partnerships')",
+            "condition": "selected($expenditures.applicableTopics, 'partnerships')",
             "priority": 80
         },
         {
@@ -111,7 +111,7 @@
             "targetPath": "Expenditures.Other",
             "transform": "expression",
             "expression": "string(moneyAmount($))",
-            "condition": "selected($applicableTopics, 'other')",
+            "condition": "selected($expenditures.applicableTopics, 'other')",
             "priority": 80
         },
         {

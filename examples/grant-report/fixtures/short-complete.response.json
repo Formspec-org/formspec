@@ -11,12 +11,12 @@
             "phone": "(508) 477-0208",
             "email": "jdoe@mashpeewampanoag.gov"
         },
-        "applicableTopics": [
-            "employment",
-            "housing",
-            "health"
-        ],
         "expenditures": {
+            "applicableTopics": [
+                "employment",
+                "housing",
+                "health"
+            ],
             "employment": {
                 "amount": "45000.00",
                 "currency": "USD"
@@ -56,12 +56,12 @@
             "total": {
                 "amount": "105000.00",
                 "currency": "USD"
+            },
+            "hasAdministrationCosts": true,
+            "administrationExpenditure": {
+                "amount": "8500.00",
+                "currency": "USD"
             }
-        },
-        "hasAdministrationCosts": true,
-        "administrationExpenditure": {
-            "amount": "8500.00",
-            "currency": "USD"
         },
         "descriptions": {
             "employmentDesc": "Provided job placement assistance for 42 tribal members through partnerships with local employers. Services included resume writing workshops, interview coaching, and vocational training for healthcare and construction trades.",

@@ -145,7 +145,7 @@ test.describe('Tribal Long: Expenditure Category Relevance', () => {
   });
 
   test('selecting categories makes corresponding expenditure fields relevant', async ({ page }) => {
-    await engineSetValue(page, 'applicableTopics', ['employment', 'housing']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment', 'housing']);
     await page.waitForTimeout(100);
 
     expect(await isRelevant(page, 'expenditures.employment')).toBe(true);
@@ -154,11 +154,11 @@ test.describe('Tribal Long: Expenditure Category Relevance', () => {
   });
 
   test('deselecting a category removes expenditure field relevance', async ({ page }) => {
-    await engineSetValue(page, 'applicableTopics', ['employment']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment']);
     await page.waitForTimeout(100);
     expect(await isRelevant(page, 'expenditures.employment')).toBe(true);
 
-    await engineSetValue(page, 'applicableTopics', []);
+    await engineSetValue(page, 'expenditures.applicableTopics', []);
     await page.waitForTimeout(100);
     expect(await isRelevant(page, 'expenditures.employment')).toBe(false);
   });
@@ -185,7 +185,7 @@ test.describe('Tribal Long: Expenditure Details Page', () => {
   });
 
   test('detail card for employment appears when employment is selected', async ({ page }) => {
-    await engineSetValue(page, 'applicableTopics', ['employment']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment']);
     await page.waitForTimeout(100);
 
     // The Alert hint should no longer be visible
@@ -200,7 +200,7 @@ test.describe('Tribal Long: Expenditure Details Page', () => {
   });
 
   test('detail cards for housing and health appear when those categories are selected', async ({ page }) => {
-    await engineSetValue(page, 'applicableTopics', ['housing', 'health']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['housing', 'health']);
     await page.waitForTimeout(100);
 
     expect(await isRelevant(page, 'descriptions.housingDesc')).toBe(true);
@@ -389,7 +389,7 @@ test.describe('Tribal Long: Expenditure Total Calculation', () => {
   });
 
   test('total expenditures auto-calculates from selected topics', async ({ page }) => {
-    await engineSetValue(page, 'applicableTopics', ['employment', 'housing']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment', 'housing']);
     await page.waitForTimeout(100);
     await engineSetValue(page, 'expenditures.employment', 45000);
     await engineSetValue(page, 'expenditures.housing', 32000);
@@ -408,13 +408,13 @@ test.describe('Tribal Long: Expenditure Total Calculation', () => {
 
   test('adding new topics after interaction does not trigger TYPE_MISMATCH on expenditure fields', async ({ page }) => {
     // Step 1: Select one topic and set its value
-    await engineSetValue(page, 'applicableTopics', ['employment']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment']);
     await page.waitForTimeout(100);
     await engineSetValue(page, 'expenditures.employment', 45000);
     await page.waitForTimeout(100);
 
     // Step 2: Add a second topic (housing becomes relevant, gets default)
-    await engineSetValue(page, 'applicableTopics', ['employment', 'housing']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment', 'housing']);
     await page.waitForTimeout(100);
 
     // The validation report should have NO TYPE_MISMATCH errors on any expenditure field
@@ -428,7 +428,7 @@ test.describe('Tribal Long: Expenditure Total Calculation', () => {
   test('money field defaults produce valid money objects (numeric amount)', async ({ page }) => {
     // Selecting a topic makes its expenditure field relevant with default { amount: "0", currency: "USD" }
     // The default amount is a string "0" — the engine should coerce it to numeric 0
-    await engineSetValue(page, 'applicableTopics', ['employment']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment']);
     await page.waitForTimeout(100);
 
     const val = await engineValue(page, 'expenditures.employment');

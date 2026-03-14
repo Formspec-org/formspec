@@ -37,7 +37,7 @@ test.describe('Grant Report: multiChoice → Expenditure Relevance', () => {
   });
 
   test('selecting a topic makes the corresponding expenditure field relevant', async ({ page }) => {
-    await engineSetValue(page, 'applicableTopics', ['employment', 'housing']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment', 'housing']);
     await page.waitForTimeout(100);
 
     expect(await isRelevant(page, 'expenditures.employment')).toBe(true);
@@ -46,11 +46,11 @@ test.describe('Grant Report: multiChoice → Expenditure Relevance', () => {
   });
 
   test('deselecting a topic makes expenditure field non-relevant again', async ({ page }) => {
-    await engineSetValue(page, 'applicableTopics', ['employment']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment']);
     await page.waitForTimeout(100);
     expect(await isRelevant(page, 'expenditures.employment')).toBe(true);
 
-    await engineSetValue(page, 'applicableTopics', []);
+    await engineSetValue(page, 'expenditures.applicableTopics', []);
     await page.waitForTimeout(100);
     expect(await isRelevant(page, 'expenditures.employment')).toBe(false);
   });
@@ -63,7 +63,7 @@ test.describe('Grant Report: Default Bind Re-relevance', () => {
 
   test('default value applied on relevance transition', async ({ page }) => {
     // Select employment → field becomes relevant
-    await engineSetValue(page, 'applicableTopics', ['employment']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment']);
     await page.waitForTimeout(100);
     expect(await isRelevant(page, 'expenditures.employment')).toBe(true);
 
@@ -73,14 +73,14 @@ test.describe('Grant Report: Default Bind Re-relevance', () => {
     expect(setVal).toEqual(expect.objectContaining({ amount: 45000 }));
 
     // Deselect → non-relevant
-    await engineSetValue(page, 'applicableTopics', []);
+    await engineSetValue(page, 'expenditures.applicableTopics', []);
     await page.waitForTimeout(100);
     expect(await isRelevant(page, 'expenditures.employment')).toBe(false);
 
     // Re-select → relevant again, default should apply (value was cleared/null)
     // Clear the value first to simulate the non-relevant→relevant path
     await engineSetValue(page, 'expenditures.employment', null);
-    await engineSetValue(page, 'applicableTopics', ['employment']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment']);
     await page.waitForTimeout(100);
 
     // The default bind should set the value to money object with amount 0
@@ -91,7 +91,7 @@ test.describe('Grant Report: Default Bind Re-relevance', () => {
   test('no constraint errors for default value 0 with $ >= 0', async ({ page }) => {
     // Select employment → default 0 applied
     await engineSetValue(page, 'expenditures.employment', null);
-    await engineSetValue(page, 'applicableTopics', ['employment']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment']);
     await page.waitForTimeout(100);
 
     const report = await getValidationReport(page, 'continuous');
@@ -108,7 +108,7 @@ test.describe('Grant Report: Calculate + Admin Gate', () => {
   });
 
   test('total expenditures auto-calculates from selected topics', async ({ page }) => {
-    await engineSetValue(page, 'applicableTopics', ['employment', 'housing']);
+    await engineSetValue(page, 'expenditures.applicableTopics', ['employment', 'housing']);
     await page.waitForTimeout(100);
     await engineSetValue(page, 'expenditures.employment', 45000);
     await engineSetValue(page, 'expenditures.housing', 32000);
@@ -122,14 +122,14 @@ test.describe('Grant Report: Calculate + Admin Gate', () => {
   });
 
   test('administration expenditure only relevant when hasAdministrationCosts is true', async ({ page }) => {
-    expect(await isRelevant(page, 'administrationExpenditure')).toBe(false);
+    expect(await isRelevant(page, 'expenditures.administrationExpenditure')).toBe(false);
 
-    await engineSetValue(page, 'hasAdministrationCosts', true);
+    await engineSetValue(page, 'expenditures.hasAdministrationCosts', true);
     await page.waitForTimeout(100);
-    expect(await isRelevant(page, 'administrationExpenditure')).toBe(true);
+    expect(await isRelevant(page, 'expenditures.administrationExpenditure')).toBe(true);
 
-    await engineSetValue(page, 'hasAdministrationCosts', false);
+    await engineSetValue(page, 'expenditures.hasAdministrationCosts', false);
     await page.waitForTimeout(100);
-    expect(await isRelevant(page, 'administrationExpenditure')).toBe(false);
+    expect(await isRelevant(page, 'expenditures.administrationExpenditure')).toBe(false);
   });
 });
