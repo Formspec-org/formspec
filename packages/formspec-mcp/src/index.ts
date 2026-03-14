@@ -21,6 +21,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { createProject, normalizeDefinition } from 'formspec-studio-core';
+import type { AnyCommand } from 'formspec-studio-core';
 import { inquestTemplates, findInquestTemplate } from './templates.js';
 import { runAnalysis, runProposal, runEdit, getProviderInfo } from './provider.js';
 import type { McpFormSession, ProposalV1 } from './types.js';
@@ -182,13 +184,34 @@ server.tool(
 
     const patch = await runEdit({ session, proposal: liveProposal, prompt: instruction });
 
+    // Apply the commands to get the updated definition
+    let updatedDefinition: unknown = parsedDefinition;
+    if (patch.commands.length > 0) {
+      try {
+        const project = createProject();
+        project.dispatch({
+          type: 'project.import',
+          payload: { definition: normalizeDefinition(parsedDefinition as Parameters<typeof normalizeDefinition>[0]) },
+        });
+        if (patch.commands.length === 1) {
+          project.dispatch(patch.commands[0] as AnyCommand);
+        } else {
+          project.batch(patch.commands as AnyCommand[]);
+        }
+        updatedDefinition = project.export().definition;
+      } catch {
+        // If command application fails, return the original definition
+        updatedDefinition = parsedDefinition;
+      }
+    }
+
     return {
       content: [
         {
           type: 'text' as const,
           text: JSON.stringify({
             patch,
-            note: 'Apply patch.commands to your definition using Formspec Studio or the formspec-studio-core project.dispatch() API.',
+            definition: updatedDefinition,
           }, null, 2),
         },
       ],
