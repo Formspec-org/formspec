@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "test:studio:unit": "npm run --workspace=formspec-studio test",
     "test:studio:integration": "npm run --workspace=formspec-studio test",
-    "test:studio:e2e": "npm run build --workspace=formspec-studio && playwright test -c tests/e2e/browser/studio/playwright.config.ts",
+    "test:studio:e2e": "npm run --workspace=formspec-studio test:e2e",
     "docs:api:studio": "npm run --workspace=formspec-studio build",
     "test:unit": "npm run --workspace formspec-engine test && npm run --workspace formspec-webcomponent test && npm run --workspace formspec-layout test && npm run --workspace formspec-studio-core test",
     "test:all": "npm run test:unit && npm run test:e2e",

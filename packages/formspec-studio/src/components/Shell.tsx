@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { createProject } from 'formspec-studio-core';
+import { createProject, type Project } from 'formspec-studio-core';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
@@ -120,6 +120,17 @@ export function Shell({ appMenuItems = [], banner }: ShellProps = {}) {
       }
     }
   })();
+
+  // E2E: expose project.export() when ?e2e=1 so tests can validate exported bundle
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('e2e') !== '1') return;
+    (window as unknown as { __FORMSPEC_TEST_EXPORT?: () => ReturnType<Project['export']> }).__FORMSPEC_TEST_EXPORT = () => project.export();
+    return () => {
+      delete (window as unknown as { __FORMSPEC_TEST_EXPORT?: unknown }).__FORMSPEC_TEST_EXPORT;
+    };
+  }, [project]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

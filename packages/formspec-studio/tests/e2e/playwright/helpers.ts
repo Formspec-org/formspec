@@ -6,6 +6,12 @@ export async function waitForApp(page: Page) {
   await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
 }
 
+/** Wait for app with e2e=1 so window.__FORMSPEC_TEST_EXPORT is available for export validation tests. */
+export async function waitForAppWithExport(page: Page) {
+  await page.goto('/?e2e=1');
+  await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
+}
+
 /** Switch to a workspace tab by clicking its label. */
 export async function switchTab(page: Page, tabName: string) {
   await page.click(`[data-testid="tab-${tabName}"]`);

@@ -33,6 +33,14 @@ test.describe('Workspace Navigation — Tab Switching', () => {
     await expect(workspace.getByRole('button', { name: 'Brand & Colors' })).toBeVisible();
   });
 
+  test('Pages tab renders pages workspace', async ({ page }) => {
+    await switchTab(page, 'Pages');
+    const workspace = page.locator('[data-testid="workspace-Pages"]');
+    await expect(workspace.getByRole('heading', { name: 'Pages' })).toBeVisible();
+    await expect(workspace.getByRole('button', { name: 'Single' })).toBeVisible();
+    await expect(workspace.getByRole('button', { name: 'Wizard' })).toBeVisible();
+  });
+
   test('Mapping tab renders mapping workspace', async ({ page }) => {
     await switchTab(page, 'Mapping');
     const workspace = page.locator('[data-testid="workspace-Mapping"]');

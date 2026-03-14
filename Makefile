@@ -19,10 +19,13 @@ test-js:
 test-e2e:
 	npm run test:e2e
 
+test-studio-e2e:
+	npm run test:studio:e2e
+
 test-python:
 	pytest
 
-test: test-js test-python test-e2e
+test: test-js test-python test-e2e test-studio-e2e
 
 check: docs-check test
 
@@ -95,4 +98,4 @@ clean:
 	      form-builder/API.llm.md
 	rm -rf form-builder/dist-types
 
-.PHONY: all spec-artifacts docs-check check docs api-docs test test-js test-python setup serve clean
+.PHONY: all spec-artifacts docs-check check docs api-docs test test-js test-python test-e2e test-studio-e2e setup serve clean
