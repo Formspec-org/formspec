@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef } from 'react';
 import {
   AssistantRuntimeProvider,
   ThreadPrimitive,
@@ -6,6 +6,8 @@ import {
   MessagePrimitive,
   MessagePartPrimitive,
   useExternalStoreRuntime,
+  type AppendMessage,
+  type ExternalStoreMessageConverter,
 } from '@assistant-ui/react';
 import type { InquestMessage } from '../shared/contracts/inquest';
 
@@ -44,11 +46,60 @@ function TypingIndicator() {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="h-[5px] w-[5px] rounded-full bg-slate-400 animate-bounce"
-            style={{ animationDelay: `${i * 0.18}s`, animationDuration: '1.1s' }}
+            className="h-[5px] w-[5px] rounded-full bg-slate-300 animate-bounce"
+            style={{ animationDelay: `${i * 0.15}s`, animationDuration: '1s' }}
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ── Inline text renderer: basic markdown-lite ── */
+
+function InlineText({ text }: { text: string }) {
+  // Split on **bold**, *italic*, and `code` for lightweight rendering
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('*') && part.endsWith('*')) {
+          return <em key={i}>{part.slice(1, -1)}</em>;
+        }
+        if (part.startsWith('`') && part.endsWith('`')) {
+          return (
+            <code key={i} className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[13px] text-slate-700">
+              {part.slice(1, -1)}
+            </code>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
+function AssistantText({ text }: { text: string }) {
+  // Split by newlines to preserve paragraph structure
+  const paragraphs = text.split(/\n{2,}/);
+  return (
+    <div className="space-y-2">
+      {paragraphs.map((para, i) => {
+        const lines = para.split('\n');
+        return (
+          <p key={i} className="leading-relaxed">
+            {lines.map((line, j) => (
+              <span key={j}>
+                {j > 0 && <br />}
+                <InlineText text={line} />
+              </span>
+            ))}
+          </p>
+        );
+      })}
     </div>
   );
 }
@@ -59,9 +110,13 @@ function UserMessage() {
   return (
     <MessagePrimitive.Root className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex max-w-[78%] items-end gap-2">
-        <div className="rounded-2xl rounded-tr-sm bg-accent px-4 py-3 text-[14.5px] leading-relaxed text-white shadow-sm">
+        <div className="rounded-2xl rounded-tr-sm bg-accent px-4 py-3 text-[14px] leading-relaxed text-white shadow-sm">
           <MessagePrimitive.Content
-            components={{ Text: () => <MessagePartPrimitive.Text className="whitespace-pre-wrap" /> }}
+            components={{
+              Text: () => (
+                <MessagePartPrimitive.Text className="whitespace-pre-wrap" />
+              ),
+            }}
           />
         </div>
         <UserAvatar />
@@ -70,14 +125,18 @@ function UserMessage() {
   );
 }
 
+function AssistantTextPart({ text }: { text: string; type?: string }) {
+  return <AssistantText text={text} />;
+}
+
 function AssistantMessage() {
   return (
     <MessagePrimitive.Root className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex max-w-[82%] items-end gap-2">
         <AssistantAvatar />
-        <div className="rounded-2xl rounded-tl-sm border border-slate-100 bg-white px-4 py-3 text-[14.5px] leading-relaxed text-slate-800 shadow-sm">
+        <div className="rounded-2xl rounded-tl-sm border border-slate-100 bg-white px-4 py-3 text-[14px] text-slate-800 shadow-sm">
           <MessagePrimitive.Content
-            components={{ Text: () => <MessagePartPrimitive.Text smooth className="whitespace-pre-wrap" /> }}
+            components={{ Text: AssistantTextPart }}
           />
         </div>
       </div>
@@ -86,6 +145,27 @@ function AssistantMessage() {
 }
 
 const messageComponents = { UserMessage, AssistantMessage };
+
+/* ── Stable message converter ─────────────────── */
+
+function useStableConverter(): ExternalStoreMessageConverter<InquestMessage> {
+  return useCallback((msg: InquestMessage) => ({
+    role: msg.role as 'user' | 'assistant',
+    content: msg.text,
+    id: msg.id,
+    createdAt: new Date(msg.createdAt),
+  }), []);
+}
+
+/* ── Scroll anchor ─────────────────────────────── */
+
+function ScrollAnchor({ trigger }: { trigger: unknown }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [trigger]);
+  return <div ref={ref} />;
+}
 
 /* ── Thread ───────────────────────────────────── */
 
@@ -106,36 +186,37 @@ export function InquestThread({
   afterMessages,
   belowComposer,
 }: InquestThreadProps) {
+  const convertMessage = useStableConverter();
+
+  const handleNew = useCallback(async (message: AppendMessage) => {
+    const text = message.content
+      .filter((p) => p.type === 'text')
+      .map((p) => (p as { type: 'text'; text: string }).text)
+      .join('');
+    if (!text.trim() || !onNew) return;
+    await onNew(text);
+  }, [onNew]);
+
   const runtime = useExternalStoreRuntime({
     messages,
     isRunning: isRunning ?? false,
     isDisabled: disabled || isRunning,
-    convertMessage: (msg: InquestMessage) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.text,
-      id: msg.id,
-      createdAt: new Date(msg.createdAt),
-    }),
-    onNew: async (message) => {
-      const text = message.content
-        .filter((p) => p.type === 'text')
-        .map((p) => (p as { type: 'text'; text: string }).text)
-        .join('');
-      if (!text.trim() || !onNew) return;
-      await onNew(text);
-    },
+    convertMessage,
+    onNew: handleNew,
   });
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <ThreadPrimitive.Root className="relative flex flex-1 flex-col overflow-hidden">
-        <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto">
+        <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto scroll-smooth">
           <div className="mx-auto w-full max-w-3xl space-y-5 px-8 py-8">
             <ThreadPrimitive.Messages components={messageComponents} />
             <ThreadPrimitive.If running>
               <TypingIndicator />
             </ThreadPrimitive.If>
             {afterMessages}
+            {/* Scroll anchor: scrolls into view whenever messages length or isRunning changes */}
+            <ScrollAnchor trigger={`${messages.length}:${String(isRunning)}`} />
           </div>
         </ThreadPrimitive.Viewport>
 
@@ -143,7 +224,7 @@ export function InquestThread({
           <div className="mx-auto max-w-3xl">
             <ComposerPrimitive.Root className="relative flex items-end">
               <ComposerPrimitive.Input
-                className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3.5 pr-14 text-[14.5px] leading-relaxed outline-none transition-all focus:border-accent/50 focus:bg-white focus:ring-4 focus:ring-accent/8 disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-slate-400"
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3.5 pr-14 text-[14px] leading-relaxed outline-none transition-all focus:border-accent/50 focus:bg-white focus:ring-4 focus:ring-accent/8 disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-slate-400"
                 placeholder="Describe what you're building…"
                 submitMode="enter"
                 rows={2}

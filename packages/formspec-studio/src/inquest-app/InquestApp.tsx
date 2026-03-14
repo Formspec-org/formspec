@@ -1,5 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { createProject, type AnyCommand, type ProjectBundle } from 'formspec-studio-core';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { TemplateGallery } from '../features/template-gallery/TemplateGallery';
 import { ProviderSetup } from '../features/provider-setup/ProviderSetup';
 import { RecentSessions } from '../features/recent-sessions/RecentSessions';
@@ -7,40 +6,14 @@ import { InputInventory } from '../features/input-inventory/InputInventory';
 import { ReviewWorkspace } from '../features/review-workspace/ReviewWorkspace';
 import { RefineWorkspace } from '../features/refine-workspace/RefineWorkspace';
 import { InquestThread } from './InquestThread';
-import { diagnosticsToInquestIssues, mergeIssueSets } from '../shared/authoring/diagnostics-issues';
-import { InquestDraft } from '../shared/authoring/inquest-draft';
-import type {
-  AnalysisV1,
-  ConnectionResult,
-  InquestIssue,
-  InquestSessionV1,
-  InquestSessionTarget,
-  InquestUploadSummary,
-  ProposalV1,
-} from '../shared/contracts/inquest';
-import {
-  clearProviderKey,
-  deleteInquestSession,
-  listRecentInquestSessions,
-  loadBootstrapProject,
-  loadInquestSession,
-  loadProviderPreferences,
-  rememberProviderKey,
-  saveHandoffPayload,
-  saveInquestSession,
-  saveSelectedProvider,
-} from '../shared/persistence/inquest-store';
-import { findProviderAdapter, inquestProviderAdapters } from '../shared/providers';
-import { findInquestTemplate, inquestTemplates } from '../shared/templates/templates';
-import { buildHandoffPayload } from '../shared/transport/handoff';
-import { inquestPath, studioPath } from '../shared/transport/routes';
+import type { ConnectionResult, InquestIssue, InquestSessionV1 } from '../shared/contracts/inquest';
+import { inquestProviderAdapters, findProviderAdapter } from '../shared/providers';
+import { inquestTemplates } from '../shared/templates/templates';
+import { useSessionLifecycle, summarizeUpload } from './hooks/useSessionLifecycle';
+import { useProviderManager } from './hooks/useProviderManager';
+import { useInquestOps } from './hooks/useInquestOps';
 
-/* ── Module-level helpers ─────────────────────── */
-
-const DEFAULT_ASSISTANT_MESSAGE = {
-  role: 'assistant' as const,
-  text: 'Hello! I am your Stack Assistant. I can help you build powerful, accessible forms for Formspec. What are we building today? You can describe a form from scratch, or I can suggest a template to get us started.',
-};
+/* ── Constants ────────────────────────────────── */
 
 const PHASE_ORDER = ['inputs', 'review', 'refine'] as const;
 
@@ -48,119 +21,7 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function extractSessionId(pathname: string): string | undefined {
-  return pathname.match(/^\/inquest\/session\/([^/?#]+)/)?.[1];
-}
-
-function collectGroupPaths(items: any[], prefix = ''): string[] {
-  const paths: string[] = [];
-  for (const item of items ?? []) {
-    if (item?.type !== 'group' || typeof item.key !== 'string') continue;
-    const path = prefix ? `${prefix}.${item.key}` : item.key;
-    paths.push(path);
-    paths.push(...collectGroupPaths(item.children ?? [], path));
-  }
-  return paths;
-}
-
-function meaningfulInput(session: InquestSessionV1): boolean {
-  return Boolean(
-    session.input.templateId
-    || session.input.description.trim().length >= 10
-    || session.input.uploads.length > 0
-    || session.input.messages.some((m) => m.role === 'user'),
-  );
-}
-
-function inferSessionTitle(session: InquestSessionV1): string {
-  const template = findInquestTemplate(session.input.templateId);
-  if (template) return template.name;
-  if (session.input.description.trim()) {
-    return session.input.description.trim().split(/\n+/)[0].slice(0, 48);
-  }
-  return 'Untitled Project';
-}
-
-function createBlankSession(params: URLSearchParams, target?: InquestSessionTarget): InquestSessionV1 {
-  const sessionId = crypto.randomUUID();
-  return {
-    version: 1,
-    sessionId,
-    title: 'Untitled Project',
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-    phase: 'inputs',
-    mode: params.get('mode') === 'import-subform' ? 'import-subform' : 'new-project',
-    workflowMode: params.get('workflowMode') === 'draft-fast' ? 'draft-fast' : 'verify-carefully',
-    input: {
-      description: '',
-      uploads: [],
-      messages: [
-        {
-          id: crypto.randomUUID(),
-          role: DEFAULT_ASSISTANT_MESSAGE.role,
-          text: DEFAULT_ASSISTANT_MESSAGE.text,
-          createdAt: nowIso(),
-        },
-      ],
-    },
-    issues: [],
-    target,
-  };
-}
-
-function createDraftFromBundle(bundle: Partial<ProjectBundle>): InquestDraft {
-  return new InquestDraft(createProject({ seed: bundle }));
-}
-
-function draftCommandBundle(draft: InquestDraft): AnyCommand[] {
-  return draft.log()
-    .map((entry) => entry.command)
-    .filter((command) => command.type !== 'project.import');
-}
-
-function syncIssueStatuses(nextIssues: InquestIssue[], previousIssues: InquestIssue[]): InquestIssue[] {
-  const previousById = new Map(previousIssues.map((issue) => [issue.id, issue]));
-  return nextIssues.map((issue) => {
-    const previous = previousById.get(issue.id);
-    return previous ? { ...issue, status: previous.status } : issue;
-  });
-}
-
-function issueBundle(
-  existingIssues: InquestIssue[],
-  analysis?: AnalysisV1,
-  proposal?: ProposalV1,
-  draft?: InquestDraft | null,
-): InquestIssue[] {
-  return syncIssueStatuses(
-    mergeIssueSets(
-      analysis?.issues ?? [],
-      proposal?.issues ?? [],
-      existingIssues.filter((issue) => issue.source !== 'diagnostic'),
-      draft ? diagnosticsToInquestIssues(draft.diagnose()) : [],
-    ),
-    existingIssues,
-  );
-}
-
-async function summarizeUpload(file: File): Promise<InquestUploadSummary> {
-  let excerpt: string | undefined;
-  if (file.type.startsWith('text/') || file.type === 'application/json') {
-    excerpt = (await file.text()).slice(0, 240);
-  }
-  return {
-    id: crypto.randomUUID(),
-    name: file.name,
-    mimeType: file.type || 'application/octet-stream',
-    size: file.size,
-    status: 'processed',
-    excerpt,
-    createdAt: nowIso(),
-  };
-}
-
-/* ── Extracted presentational components ─────── */
+/* ── Presentational components ────────────────── */
 
 function LoadingScreen() {
   return (
@@ -168,11 +29,7 @@ function LoadingScreen() {
       <div className="flex flex-col items-center gap-5">
         <div className="relative">
           <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
-            <svg width="28" height="28" viewBox="0 0 12 12" fill="none">
-              <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="currentColor" />
-              <rect x="2" y="5" width="8" height="2" rx=".4" fill="currentColor" fillOpacity=".7" />
-              <rect x="2" y="8.5" width="8" height="2" rx=".4" fill="currentColor" fillOpacity=".4" />
-            </svg>
+            <FormspecIcon size={28} />
           </div>
           <div className="absolute -inset-2 animate-ping rounded-3xl border border-accent/20" />
         </div>
@@ -184,6 +41,16 @@ function LoadingScreen() {
   );
 }
 
+function FormspecIcon({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" fill="none">
+      <rect x="2" y="1.5" width="8" height="2" rx=".4" fill={color} />
+      <rect x="2" y="5" width="8" height="2" rx=".4" fill={color} fillOpacity=".7" />
+      <rect x="2" y="8.5" width="8" height="2" rx=".4" fill={color} fillOpacity=".4" />
+    </svg>
+  );
+}
+
 interface AppHeaderProps {
   phase: InquestSessionV1['phase'];
   phaseIndex: number;
@@ -191,19 +58,24 @@ interface AppHeaderProps {
   saveState: 'idle' | 'saving' | 'saved' | 'error';
   connection: ConnectionResult | undefined;
   providerLabel: string;
+  onNavigateToPhase?: (phase: InquestSessionV1['phase']) => void;
 }
 
-function AppHeader({ phase, phaseIndex, sessionTitle, saveState, connection, providerLabel }: AppHeaderProps) {
+function AppHeader({
+  phase,
+  phaseIndex,
+  sessionTitle,
+  saveState,
+  connection,
+  providerLabel,
+  onNavigateToPhase,
+}: AppHeaderProps) {
   return (
     <header className="relative flex h-[60px] shrink-0 items-center justify-between border-b border-warm-border bg-white px-6 shadow-sm">
       {/* Logo + title */}
       <div className="flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent shadow-sm">
-          <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
-            <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
-            <rect x="2" y="5" width="8" height="2" rx=".4" fill="white" fillOpacity=".7" />
-            <rect x="2" y="8.5" width="8" height="2" rx=".4" fill="white" fillOpacity=".4" />
-          </svg>
+          <FormspecIcon size={14} color="white" />
         </div>
         <div>
           <h1 className="text-lg font-bold tracking-tight leading-none">Stack Builder</h1>
@@ -220,19 +92,26 @@ function AppHeader({ phase, phaseIndex, sessionTitle, saveState, connection, pro
       </div>
 
       {/* Phase stepper — centered */}
-      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
+      <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1" aria-label="Workflow phases">
         {PHASE_ORDER.map((p, i) => {
           const isCurrent = phase === p;
           const isDone = phaseIndex > i;
+          const isNavigable = isDone && onNavigateToPhase;
           return (
             <div key={p} className="flex items-center gap-1">
               {i > 0 && (
                 <div className={`w-5 h-px transition-colors ${isDone ? 'bg-accent/25' : 'bg-slate-200'}`} />
               )}
-              <div className={[
-                'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all',
-                isCurrent ? 'bg-accent/8 text-accent' : isDone ? 'text-slate-400' : 'text-slate-300',
-              ].join(' ')}>
+              <button
+                type="button"
+                disabled={!isNavigable}
+                onClick={() => isNavigable && onNavigateToPhase(p)}
+                className={[
+                  'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all',
+                  isCurrent ? 'bg-accent/8 text-accent' : isDone ? 'text-slate-400 hover:text-accent cursor-pointer' : 'text-slate-300 cursor-default',
+                  isNavigable ? 'hover:bg-accent/5' : '',
+                ].join(' ')}
+              >
                 <div className={[
                   'flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold transition-all',
                   isDone
@@ -244,11 +123,11 @@ function AppHeader({ phase, phaseIndex, sessionTitle, saveState, connection, pro
                   {isDone ? '✓' : i + 1}
                 </div>
                 <span className="capitalize tracking-wide">{p}</span>
-              </div>
+              </button>
             </div>
           );
         })}
-      </div>
+      </nav>
 
       {/* Right: save state + provider status */}
       <div className="flex items-center gap-3">
@@ -274,72 +153,6 @@ function AppHeader({ phase, phaseIndex, sessionTitle, saveState, connection, pro
   );
 }
 
-interface ProviderSetupViewProps {
-  session: InquestSessionV1;
-  providerApiKey: string;
-  rememberKey: boolean;
-  connection: ConnectionResult | undefined;
-  isTesting: boolean;
-  onContinue: () => void;
-  onProviderSelected: (providerId: string) => void;
-  onApiKeyChange: (val: string) => void;
-  onRememberChange: (val: boolean) => void;
-  onTestConnection: () => void;
-  onCredentialsCleared: () => void;
-}
-
-function ProviderSetupView({
-  session,
-  providerApiKey,
-  rememberKey,
-  connection,
-  isTesting,
-  onContinue,
-  onProviderSelected,
-  onApiKeyChange,
-  onRememberChange,
-  onTestConnection,
-  onCredentialsCleared,
-}: ProviderSetupViewProps) {
-  return (
-    <div className="flex-1 overflow-y-auto p-8 flex justify-center">
-      <div className="w-full max-w-3xl">
-        <div className="mt-12 flex flex-col items-center">
-          <div className="mb-8 text-center">
-            <div className="h-16 w-16 mx-auto mb-5 flex items-center justify-center rounded-2xl bg-accent/10 text-accent">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3m-3-3l-2.25-2.25" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">Connect Intelligence</h2>
-            <p className="mt-2 text-[14px] text-slate-500 max-w-md mx-auto">
-              To start building with <strong>Stack</strong>, connect an AI provider.
-              Your keys stay in this browser and are never sent to our servers.
-            </p>
-          </div>
-
-          <div className="w-full max-w-md">
-            <ProviderSetup
-              adapters={inquestProviderAdapters}
-              selectedProviderId={session.providerId}
-              apiKey={providerApiKey}
-              rememberKey={rememberKey}
-              connection={connection}
-              isTesting={isTesting}
-              onContinue={onContinue}
-              onProviderSelected={onProviderSelected}
-              onApiKeyChange={onApiKeyChange}
-              onRememberChange={onRememberChange}
-              onTestConnection={onTestConnection}
-              onCredentialsCleared={onCredentialsCleared}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface GenerateCTAProps {
   isAnalyzing: boolean;
   onDraftFast: () => void;
@@ -357,6 +170,7 @@ function GenerateCTA({ isAnalyzing, onDraftFast, onVerifyCarefully }: GenerateCT
 
       <div className="grid grid-cols-2 gap-3">
         <button
+          type="button"
           onClick={onDraftFast}
           disabled={isAnalyzing}
           className="group flex flex-col items-center gap-3.5 rounded-2xl bg-white p-5 border-2 border-transparent hover:border-accent hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -373,6 +187,7 @@ function GenerateCTA({ isAnalyzing, onDraftFast, onVerifyCarefully }: GenerateCT
         </button>
 
         <button
+          type="button"
           onClick={onVerifyCarefully}
           disabled={isAnalyzing}
           className="group flex flex-col items-center gap-3.5 rounded-2xl bg-white p-5 border-2 border-transparent hover:border-emerald-500 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -419,6 +234,7 @@ function TemplateSection({ showFull, selectedTemplateId, onToggleFull, onSelect 
         </div>
         {showFull && (
           <button
+            type="button"
             onClick={onToggleFull}
             className="text-[10px] font-bold text-accent hover:underline uppercase tracking-widest"
           >
@@ -436,309 +252,110 @@ function TemplateSection({ showFull, selectedTemplateId, onToggleFull, onSelect 
   );
 }
 
+function meaningfulInput(session: InquestSessionV1): boolean {
+  return Boolean(
+    session.input.templateId
+    || session.input.description.trim().length >= 10
+    || session.input.uploads.length > 0
+    || session.input.messages.some((m) => m.role === 'user'),
+  );
+}
+
 /* ── Main orchestrator ────────────────────────── */
 
 export function InquestApp() {
   const locationPathname = typeof window !== 'undefined' ? window.location.pathname : '/inquest/';
   const locationSearch = typeof window !== 'undefined' ? window.location.search : '';
 
-  const [session, setSession] = useState<InquestSessionV1 | null>(null);
-  const [draft, setDraft] = useState<InquestDraft | null>(null);
-  const [providerApiKey, setProviderApiKey] = useState('');
-  const [rememberKey, setRememberKey] = useState(false);
-  const [connection, setConnection] = useState<ConnectionResult | undefined>();
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [showFullGallery, setShowFullGallery] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [providerReady, setProviderReady] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const updateSession = (updater: (current: InquestSessionV1) => InquestSessionV1) => {
-    setSession((current) => current ? updater(current) : current);
-  };
+  // Core lifecycle: session load/save/routing
+  const {
+    session,
+    draft,
+    saveState,
+    recentSessions,
+    updateSession,
+    setDraft,
+    handleCreateFreshSession,
+    handleDeleteSession,
+    handleOpenSession,
+  } = useSessionLifecycle(locationPathname, locationSearch);
 
-  // Load or create session on mount
-  useEffect(() => {
-    let disposed = false;
+  // Provider: key management, test connection
+  const {
+    providerApiKey,
+    rememberKey,
+    connection,
+    isTesting,
+    isSetupRequired,
+    setProviderApiKey,
+    setRememberKey,
+    setProviderReady,
+    handleTestConnection,
+    handleProviderSelected,
+    handleCredentialsCleared,
+  } = useProviderManager(session);
 
-    async function load() {
-      const params = new URLSearchParams(locationSearch);
-      const sessionId = extractSessionId(locationPathname);
-      const bootstrapId = params.get('bootstrap') ?? undefined;
-      let target: InquestSessionTarget | undefined;
-
-      if (bootstrapId) {
-        const bootstrap = await loadBootstrapProject(bootstrapId);
-        target = {
-          projectId: bootstrapId,
-          availableGroups: collectGroupPaths((bootstrap?.definition as any)?.items ?? []),
-        };
-      }
-
-      const nextSession = sessionId
-        ? await loadInquestSession(sessionId) ?? createBlankSession(params, target)
-        : createBlankSession(params, target);
-
-      if (target) {
-        nextSession.target = {
-          ...target,
-          ...nextSession.target,
-          groupPath: nextSession.target?.groupPath ?? target.availableGroups?.[0],
-        };
-        nextSession.mode = 'import-subform';
-      }
-
-      nextSession.title = inferSessionTitle(nextSession);
-
-      if (disposed) return;
-
-      if (!sessionId) {
-        window.history.replaceState({}, '', inquestPath(nextSession.sessionId, params.toString()));
-      }
-      setSession(nextSession);
-
-      const prefs = loadProviderPreferences();
-      const selectedProviderId = nextSession.providerId ?? prefs.selectedProviderId ?? inquestProviderAdapters[0]?.id;
-      setSession((current) => current ? { ...current, providerId: selectedProviderId } : current);
-      setProviderApiKey(selectedProviderId ? prefs.rememberedKeys[selectedProviderId] ?? '' : '');
-      setRememberKey(Boolean(selectedProviderId && prefs.rememberedKeys[selectedProviderId]));
-
-      if (selectedProviderId && prefs.rememberedKeys[selectedProviderId]) {
-        setProviderReady(true);
-      }
-
-      if (nextSession.draftBundle?.definition) {
-        setDraft(createDraftFromBundle(nextSession.draftBundle));
-      } else if (nextSession.proposal) {
-        const nextDraft = new InquestDraft();
-        nextDraft.loadProposal(nextSession.proposal);
-        setDraft(nextDraft);
-      }
-    }
-
-    void load();
-    return () => { disposed = true; };
-  }, [locationPathname, locationSearch]);
-
-  // Sync draft changes back to session
-  useEffect(() => {
-    if (!draft || !session) return;
-    return draft.getProject().onChange(() => {
-      setSession((current) => {
-        if (!current) return current;
-        const nextIssues = issueBundle(current.issues, current.analysis, current.proposal, draft);
-        return {
-          ...current,
-          phase: 'refine',
-          draftBundle: draft.export(),
-          issues: nextIssues,
-          updatedAt: nowIso(),
-        };
-      });
-    });
-  }, [draft, session?.sessionId]);
-
-  // Persist session on every change
-  useEffect(() => {
-    if (!session) return;
-    let disposed = false;
-    setSaveState('saving');
-    void saveInquestSession(session)
-      .then(() => { if (!disposed) setSaveState('saved'); })
-      .catch(() => { if (!disposed) setSaveState('error'); });
-    return () => { disposed = true; };
-  }, [session]);
+  const provider = useMemo(
+    () => session?.providerId ? findProviderAdapter(session.providerId) ?? inquestProviderAdapters[0] : inquestProviderAdapters[0],
+    [session?.providerId],
+  );
 
   const template = useMemo(
-    () => findInquestTemplate(session?.input.templateId),
+    () => session ? (inquestTemplates.find((t) => t.id === session.input.templateId)) : undefined,
     [session?.input.templateId],
   );
-  const recentSessions = useMemo(() => listRecentInquestSessions(), [session?.updatedAt]);
 
-  if (!session) return <LoadingScreen />;
+  // AI operations: analyze, propose, edit, open studio
+  const {
+    isAnalyzing,
+    handleAnalyze,
+    handleChatNew,
+    handleGenerateProposal,
+    handleEnterRefine,
+    handleApplyPrompt,
+    handleOpenStudio,
+  } = useInquestOps(session, draft, setDraft, provider, template, updateSession);
 
-  const provider = findProviderAdapter(session.providerId) ?? inquestProviderAdapters[0];
-  const phaseIndex = PHASE_ORDER.indexOf(session.phase);
-  const isSetupRequired = !session.providerId || !providerApiKey || !providerReady;
-
-  /* ── Event handlers ── */
-
-  const handleCreateFreshSession = () => {
-    window.location.assign(inquestPath(undefined, new URLSearchParams().toString()));
-  };
-
-  const handleDeleteSession = async (sessionId: string) => {
-    await deleteInquestSession(sessionId);
-    updateSession((current) => ({ ...current, updatedAt: nowIso() }));
-  };
-
-  const handleOpenSession = (sessionId: string) => {
-    window.location.assign(inquestPath(sessionId));
-  };
-
-  const handleTestConnection = async () => {
-    if (!provider) return;
-    setIsTesting(true);
-    try {
-      const result = await provider.testConnection({ apiKey: providerApiKey });
-      setConnection(result);
-      saveSelectedProvider(provider.id);
-      if (result.ok && rememberKey) rememberProviderKey(provider.id, providerApiKey);
-      if (!rememberKey) clearProviderKey(provider.id);
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  const handleProviderSelected = (providerId: string) => {
-    setProviderReady(false);
-    const prefs = loadProviderPreferences();
-    setConnection(undefined);
-    setProviderApiKey(prefs.rememberedKeys[providerId] ?? '');
-    setRememberKey(Boolean(prefs.rememberedKeys[providerId]));
-    saveSelectedProvider(providerId);
-    updateSession((current) => ({ ...current, providerId, updatedAt: nowIso() }));
-  };
-
-  const handleCredentialsCleared = () => {
-    setProviderApiKey('');
-    setRememberKey(false);
-    if (session.providerId) clearProviderKey(session.providerId);
-    setConnection(undefined);
-  };
-
-  const handleAnalyze = async (text?: string) => {
-    if (!provider) return;
-    const description = text ?? session.input.description;
-    if (!description.trim()) return;
-
-    setIsAnalyzing(true);
-    try {
-      const analysis = await provider.runAnalysis({
-        session: { ...session, input: { ...session.input, description } },
-        template,
-      });
-      updateSession((current) => ({
-        ...current,
-        title: inferSessionTitle(current),
-        phase: 'review',
-        analysis,
-        issues: syncIssueStatuses(analysis.issues, current.issues),
-        updatedAt: nowIso(),
-        input: {
-          ...current.input,
-          messages: [
-            ...current.input.messages,
-            { id: crypto.randomUUID(), role: 'assistant' as const, text: analysis.summary, createdAt: nowIso() },
-          ],
-        },
-      }));
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleChatNew = async (text: string) => {
+  const handleTemplateSelect = useCallback((templateId: string) => {
+    setShowFullGallery(false);
     updateSession((current) => ({
       ...current,
-      input: {
-        ...current.input,
-        description: text,
-        messages: [
-          ...current.input.messages,
-          { id: crypto.randomUUID(), role: 'user' as const, text, createdAt: nowIso() },
-        ],
-      },
+      title: inquestTemplates.find((t) => t.id === templateId)?.name ?? current.title,
+      input: { ...current.input, templateId },
       updatedAt: nowIso(),
     }));
-    await handleAnalyze(text);
-  };
+  }, [updateSession]);
 
-  const handleGenerateProposal = async () => {
-    if (!provider) return;
-    setIsAnalyzing(true);
-    try {
-      const analysis = session.analysis ?? await provider.runAnalysis({ session, template });
-      const proposal = await provider.runProposal({ session, template, analysis });
-      const nextDraft = new InquestDraft();
-      nextDraft.loadProposal(proposal);
-      const nextIssues = issueBundle(session.issues, analysis, proposal, nextDraft);
-      setDraft(nextDraft);
-      updateSession((current) => ({
-        ...current,
-        phase: 'review',
-        analysis,
-        proposal,
-        draftBundle: nextDraft.export(),
-        issues: nextIssues,
-        updatedAt: nowIso(),
-      }));
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleEnterRefine = () => {
-    if (!draft && session.proposal) {
-      const nextDraft = new InquestDraft();
-      nextDraft.loadProposal(session.proposal);
-      setDraft(nextDraft);
-    }
-    updateSession((current) => ({ ...current, phase: 'refine', updatedAt: nowIso() }));
-  };
-
-  const handleIssueStatus = (issueId: string, status: InquestIssue['status']) => {
+  const handleIssueStatus = useCallback((issueId: string, status: InquestIssue['status']) => {
     updateSession((current) => ({
       ...current,
       issues: current.issues.map((issue) => issue.id === issueId ? { ...issue, status } : issue),
       updatedAt: nowIso(),
     }));
-  };
+  }, [updateSession]);
 
-  const handleApplyPrompt = async (prompt: string) => {
-    if (!provider || !draft) return;
-    const liveBundle = draft.export();
-    const liveProposal: ProposalV1 = {
-      ...(session.proposal ?? {
-        definition: liveBundle.definition,
-        component: liveBundle.component,
-        issues: [],
-        trace: {},
-        summary: { fieldCount: 0, sectionCount: 0, bindCount: 0, shapeCount: 0, variableCount: 0, coverage: 0 },
-      }),
-      definition: liveBundle.definition,
-      component: liveBundle.component,
-    };
+  const handleNavigateToPhase = useCallback((phase: InquestSessionV1['phase']) => {
+    updateSession((current) => ({ ...current, phase, updatedAt: nowIso() }));
+  }, [updateSession]);
 
-    const patch = await provider.runEdit({ session, proposal: liveProposal, prompt });
-
-    if (patch.commands.length > 0) draft.applyCommands(patch.commands);
-
+  const handleFileUpload = useCallback(async (files: FileList | null) => {
+    if (!files) return;
+    const uploads = await Promise.all(Array.from(files).map(summarizeUpload));
     updateSession((current) => ({
       ...current,
-      issues: syncIssueStatuses(
-        mergeIssueSets(
-          current.issues.filter((issue) => issue.source !== 'provider'),
-          patch.issues,
-          diagnosticsToInquestIssues(draft.diagnose()),
-        ),
-        current.issues,
-      ),
-      draftBundle: draft.export(),
+      input: { ...current.input, uploads: [...current.input.uploads, ...uploads] },
       updatedAt: nowIso(),
     }));
-  };
+  }, [updateSession]);
 
-  const handleOpenStudio = async () => {
-    if (!draft || !session.proposal) return;
-    const handoffId = session.handoffId ?? crypto.randomUUID();
-    const payload = buildHandoffPayload({ ...session, handoffId }, draft.export(), draftCommandBundle(draft));
-    await saveHandoffPayload(payload);
-    updateSession((current) => ({ ...current, handoffId, updatedAt: nowIso() }));
-    window.location.assign(studioPath(`h=${encodeURIComponent(handoffId)}`));
-  };
+  if (!session) return <LoadingScreen />;
 
-  /* ── Render ── */
+  const phaseIndex = PHASE_ORDER.indexOf(session.phase);
+  const openIssues = session.issues.filter((issue) => issue.status === 'open');
+
+  /* ── Thread slot content ── */
 
   const afterMessages: ReactNode = (
     <>
@@ -761,15 +378,7 @@ export function InquestApp() {
           showFull={showFullGallery}
           selectedTemplateId={session.input.templateId}
           onToggleFull={() => setShowFullGallery((v) => !v)}
-          onSelect={(templateId) => {
-            setShowFullGallery(false);
-            updateSession((current) => ({
-              ...current,
-              title: findInquestTemplate(templateId)?.name ?? current.title,
-              input: { ...current.input, templateId },
-              updatedAt: nowIso(),
-            }));
-          }}
+          onSelect={handleTemplateSelect}
         />
       )}
     </>
@@ -783,15 +392,7 @@ export function InquestApp() {
             type="file"
             className="hidden"
             multiple
-            onChange={async (e) => {
-              const files = Array.from(e.target.files ?? []);
-              const uploads = await Promise.all(files.map(summarizeUpload));
-              updateSession((current) => ({
-                ...current,
-                input: { ...current.input, uploads: [...current.input.uploads, ...uploads] },
-                updatedAt: nowIso(),
-              }));
-            }}
+            onChange={(e) => void handleFileUpload(e.target.files)}
           />
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -805,6 +406,7 @@ export function InquestApp() {
         </label>
 
         <button
+          type="button"
           onClick={() => setShowFullGallery(!showFullGallery)}
           className={`flex items-center gap-1.5 transition-colors ${showFullGallery ? 'text-accent' : 'hover:text-slate-600'}`}
         >
@@ -827,6 +429,7 @@ export function InquestApp() {
         saveState={saveState}
         connection={connection}
         providerLabel={provider?.label ?? 'No model'}
+        onNavigateToPhase={handleNavigateToPhase}
       />
 
       {/* ── Inputs phase ── */}
@@ -847,18 +450,18 @@ export function InquestApp() {
           {/* Center: chat or provider setup */}
           <section className="relative flex flex-1 flex-col bg-white overflow-hidden">
             {isSetupRequired ? (
-              <ProviderSetupView
+              <ProviderSetupPanel
                 session={session}
                 providerApiKey={providerApiKey}
                 rememberKey={rememberKey}
                 connection={connection}
                 isTesting={isTesting}
                 onContinue={() => setProviderReady(true)}
-                onProviderSelected={handleProviderSelected}
+                onProviderSelected={(id) => handleProviderSelected(id, updateSession)}
                 onApiKeyChange={(val) => { setProviderReady(false); setProviderApiKey(val); }}
                 onRememberChange={setRememberKey}
                 onTestConnection={handleTestConnection}
-                onCredentialsCleared={handleCredentialsCleared}
+                onCredentialsCleared={() => handleCredentialsCleared(session.providerId)}
               />
             ) : (
               <InquestThread
@@ -886,12 +489,12 @@ export function InquestApp() {
           <ReviewWorkspace
             analysis={session.analysis}
             proposal={session.proposal}
-            issues={session.issues.filter((issue) => issue.status === 'open')}
+            issues={openIssues}
             workflowMode={session.workflowMode}
             onGenerate={handleGenerateProposal}
             onProceedToRefine={handleEnterRefine}
-            onResolveIssue={(issueId) => handleIssueStatus(issueId, 'resolved')}
-            onDeferIssue={(issueId) => handleIssueStatus(issueId, 'deferred')}
+            onResolveIssue={(id) => handleIssueStatus(id, 'resolved')}
+            onDeferIssue={(id) => handleIssueStatus(id, 'deferred')}
             isGenerating={isAnalyzing}
           />
         </main>
@@ -902,15 +505,83 @@ export function InquestApp() {
         <main className="flex-1 overflow-y-auto p-6">
           <RefineWorkspace
             project={draft.getProject()}
-            issues={session.issues.filter((issue) => issue.status === 'open')}
-            onResolveIssue={(issueId) => handleIssueStatus(issueId, 'resolved')}
-            onDeferIssue={(issueId) => handleIssueStatus(issueId, 'deferred')}
+            issues={openIssues}
+            onResolveIssue={(id) => handleIssueStatus(id, 'resolved')}
+            onDeferIssue={(id) => handleIssueStatus(id, 'deferred')}
             onApplyPrompt={handleApplyPrompt}
-            onBack={() => updateSession((current) => ({ ...current, phase: 'review', updatedAt: nowIso() }))}
+            onBack={() => handleNavigateToPhase('review')}
             onOpenStudio={handleOpenStudio}
           />
         </main>
       ) : null}
+    </div>
+  );
+}
+
+/* ── Provider setup panel ─────────────────────── */
+
+interface ProviderSetupPanelProps {
+  session: InquestSessionV1;
+  providerApiKey: string;
+  rememberKey: boolean;
+  connection: ConnectionResult | undefined;
+  isTesting: boolean;
+  onContinue: () => void;
+  onProviderSelected: (providerId: string) => void;
+  onApiKeyChange: (val: string) => void;
+  onRememberChange: (val: boolean) => void;
+  onTestConnection: () => void;
+  onCredentialsCleared: () => void;
+}
+
+function ProviderSetupPanel({
+  session,
+  providerApiKey,
+  rememberKey,
+  connection,
+  isTesting,
+  onContinue,
+  onProviderSelected,
+  onApiKeyChange,
+  onRememberChange,
+  onTestConnection,
+  onCredentialsCleared,
+}: ProviderSetupPanelProps) {
+  return (
+    <div className="flex-1 overflow-y-auto p-8 flex justify-center">
+      <div className="w-full max-w-3xl">
+        <div className="mt-12 flex flex-col items-center">
+          <div className="mb-8 text-center">
+            <div className="h-16 w-16 mx-auto mb-5 flex items-center justify-center rounded-2xl bg-accent/10 text-accent">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3m-3-3l-2.25-2.25" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Connect Intelligence</h2>
+            <p className="mt-2 text-[14px] text-slate-500 max-w-md mx-auto">
+              To start building with <strong>Stack</strong>, connect an AI provider.
+              Your keys stay in this browser and are never sent to our servers.
+            </p>
+          </div>
+
+          <div className="w-full max-w-md">
+            <ProviderSetup
+              adapters={inquestProviderAdapters}
+              selectedProviderId={session.providerId}
+              apiKey={providerApiKey}
+              rememberKey={rememberKey}
+              connection={connection}
+              isTesting={isTesting}
+              onContinue={onContinue}
+              onProviderSelected={onProviderSelected}
+              onApiKeyChange={onApiKeyChange}
+              onRememberChange={onRememberChange}
+              onTestConnection={onTestConnection}
+              onCredentialsCleared={onCredentialsCleared}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
