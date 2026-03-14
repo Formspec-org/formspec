@@ -215,3 +215,42 @@ registerHandler('pages.autoGenerate', (state, payload) => {
 
   return { rebuildComponentTree: true };
 });
+
+// ── pages.reorderRegion ────────────────────────────────────────────
+
+registerHandler('pages.reorderRegion', (state, payload) => {
+  const { pageId, key, targetIndex } = payload as { pageId: string; key: string; targetIndex: number };
+  const pages = ensurePages(state);
+  const page = findPageById(pages, pageId);
+  if (!page.regions) return { rebuildComponentTree: true };
+
+  const regions = page.regions as any[];
+  const fromIndex = regions.findIndex((r: any) => r.key === key);
+  if (fromIndex === -1) throw new Error(`Region not found: ${key}`);
+
+  const [region] = regions.splice(fromIndex, 1);
+  const clampedIndex = Math.min(targetIndex, regions.length);
+  regions.splice(clampedIndex, 0, region);
+
+  return { rebuildComponentTree: true };
+});
+
+// ── pages.setRegionProperty ────────────────────────────────────────
+
+registerHandler('pages.setRegionProperty', (state, payload) => {
+  const { pageId, key, property, value } = payload as {
+    pageId: string; key: string; property: 'span' | 'start'; value: number | undefined;
+  };
+  const pages = ensurePages(state);
+  const page = findPageById(pages, pageId);
+  const region = (page.regions ?? []).find((r: any) => r.key === key);
+  if (!region) throw new Error(`Region not found: ${key}`);
+
+  if (value === undefined) {
+    delete region[property];
+  } else {
+    region[property] = value;
+  }
+
+  return { rebuildComponentTree: true };
+});

@@ -262,3 +262,85 @@ describe('pages.autoGenerate', () => {
     expect((project.definition as any).formPresentation?.pageMode).toBe('wizard');
   });
 });
+
+describe('pages.reorderRegion', () => {
+  it('moves a region to a target index within a page', () => {
+    const project = createProject();
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'P' } });
+    const pageId = (project.theme.pages as any[])[0].id;
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'a' } });
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'b' } });
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'c' } });
+
+    project.dispatch({
+      type: 'pages.reorderRegion',
+      payload: { pageId, key: 'c', targetIndex: 0 },
+    });
+
+    const regions = (project.theme.pages as any[])[0].regions;
+    expect(regions.map((r: any) => r.key)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('clamps targetIndex to valid range', () => {
+    const project = createProject();
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'P' } });
+    const pageId = (project.theme.pages as any[])[0].id;
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'a' } });
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'b' } });
+
+    project.dispatch({
+      type: 'pages.reorderRegion',
+      payload: { pageId, key: 'a', targetIndex: 99 },
+    });
+
+    const regions = (project.theme.pages as any[])[0].regions;
+    expect(regions.map((r: any) => r.key)).toEqual(['b', 'a']);
+  });
+});
+
+describe('pages.setRegionProperty', () => {
+  it('sets span on a region', () => {
+    const project = createProject();
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'P' } });
+    const pageId = (project.theme.pages as any[])[0].id;
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
+
+    project.dispatch({
+      type: 'pages.setRegionProperty',
+      payload: { pageId, key: 'name', property: 'span', value: 6 },
+    });
+
+    const region = (project.theme.pages as any[])[0].regions[0];
+    expect(region.span).toBe(6);
+  });
+
+  it('removes property when value is undefined', () => {
+    const project = createProject();
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'P' } });
+    const pageId = (project.theme.pages as any[])[0].id;
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name', span: 6 } });
+
+    project.dispatch({
+      type: 'pages.setRegionProperty',
+      payload: { pageId, key: 'name', property: 'span', value: undefined },
+    });
+
+    const region = (project.theme.pages as any[])[0].regions[0];
+    expect('span' in region).toBe(false);
+  });
+
+  it('sets start on a region', () => {
+    const project = createProject();
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'P' } });
+    const pageId = (project.theme.pages as any[])[0].id;
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
+
+    project.dispatch({
+      type: 'pages.setRegionProperty',
+      payload: { pageId, key: 'name', property: 'start', value: 4 },
+    });
+
+    const region = (project.theme.pages as any[])[0].regions[0];
+    expect(region.start).toBe(4);
+  });
+});
