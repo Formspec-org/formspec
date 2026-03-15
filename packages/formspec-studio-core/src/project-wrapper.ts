@@ -135,6 +135,13 @@ export class Project extends RawProject {
     // Compute the full path for bind operations
     const fullPath = parentPath ? `${parentPath}.${key}` : key;
 
+    // Check for duplicate key
+    if (this.itemAt(fullPath)) {
+      throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
+        path: fullPath,
+      });
+    }
+
     // Build phase1: definition.addItem
     const addItemPayload: Record<string, unknown> = {
       type: 'field',
@@ -262,6 +269,12 @@ export class Project extends RawProject {
     const key = segments.pop()!;
     const parentPath = segments.length > 0 ? segments.join('.') : undefined;
     const fullPath = parentPath ? `${parentPath}.${key}` : key;
+
+    if (this.itemAt(fullPath)) {
+      throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
+        path: fullPath,
+      });
+    }
 
     const addItemPayload: Record<string, unknown> = {
       type: 'group',
@@ -1694,6 +1707,12 @@ export class Project extends RawProject {
 
   /** Update a variable's expression. */
   updateVariable(name: string, expression: string): HelperResult {
+    if (!this.variableNames().includes(name)) {
+      throw new HelperError('VARIABLE_NOT_FOUND', `Variable "${name}" does not exist`, {
+        name,
+        validVariables: this.variableNames(),
+      });
+    }
     this._validateFEL(expression);
     this.dispatch({
       type: 'definition.setVariable',
@@ -1709,6 +1728,12 @@ export class Project extends RawProject {
 
   /** Remove a variable — warns about dangling references. */
   removeVariable(name: string): HelperResult {
+    if (!this.variableNames().includes(name)) {
+      throw new HelperError('VARIABLE_NOT_FOUND', `Variable "${name}" does not exist`, {
+        name,
+        validVariables: this.variableNames(),
+      });
+    }
     // Scan for dangling references before deletion
     const warnings: HelperWarning[] = [];
     const allExprs = this.allExpressions();
@@ -1770,8 +1795,18 @@ export class Project extends RawProject {
     };
   }
 
+  private _validateInstanceExists(name: string): void {
+    if (!this.instanceNames().includes(name)) {
+      throw new HelperError('INSTANCE_NOT_FOUND', `Instance "${name}" does not exist`, {
+        name,
+        validInstances: this.instanceNames(),
+      });
+    }
+  }
+
   /** Update instance properties. */
   updateInstance(name: string, changes: Partial<InstanceProps>): HelperResult {
+    this._validateInstanceExists(name);
     const commands: AnyCommand[] = [];
     for (const [prop, val] of Object.entries(changes)) {
       if (val !== undefined) {
@@ -1792,6 +1827,7 @@ export class Project extends RawProject {
 
   /** Rename an instance — rewrites FEL references. */
   renameInstance(name: string, newName: string): HelperResult {
+    this._validateInstanceExists(name);
     this.dispatch({
       type: 'definition.renameInstance',
       payload: { name, newName },
@@ -1806,6 +1842,7 @@ export class Project extends RawProject {
 
   /** Remove an instance. */
   removeInstance(name: string): HelperResult {
+    this._validateInstanceExists(name);
     // Scan for dangling references
     const warnings: HelperWarning[] = [];
     const allExprs = this.allExpressions();
@@ -1890,11 +1927,22 @@ export class Project extends RawProject {
     };
   }
 
+  private _validateRouteIndex(routeIndex: number): void {
+    const routes = (this.state.definition as any).screener?.routes ?? [];
+    if (routeIndex < 0 || routeIndex >= routes.length) {
+      throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Route index ${routeIndex} is out of bounds`, {
+        routeIndex,
+        routeCount: routes.length,
+      });
+    }
+  }
+
   /** Update a screener route. */
   updateScreenRoute(
     routeIndex: number,
     changes: { condition?: string; target?: string; label?: string },
   ): HelperResult {
+    this._validateRouteIndex(routeIndex);
     if (changes.condition) this._validateFEL(changes.condition);
 
     const commands: AnyCommand[] = [];
@@ -1917,6 +1965,7 @@ export class Project extends RawProject {
 
   /** Reorder a screener route. */
   reorderScreenRoute(routeIndex: number, direction: 'up' | 'down'): HelperResult {
+    this._validateRouteIndex(routeIndex);
     this.dispatch({
       type: 'definition.reorderRoute',
       payload: { index: routeIndex, direction },
@@ -1931,6 +1980,14 @@ export class Project extends RawProject {
 
   /** Remove a screener route. */
   removeScreenRoute(routeIndex: number): HelperResult {
+    this._validateRouteIndex(routeIndex);
+    const routes = (this.state.definition as any).screener?.routes ?? [];
+    if (routes.length <= 1) {
+      throw new HelperError('ROUTE_MIN_COUNT', 'Cannot delete the last remaining screener route', {
+        currentRouteCount: routes.length,
+        routes,
+      });
+    }
     this.dispatch({ type: 'definition.deleteRoute', payload: { index: routeIndex } });
 
     return {

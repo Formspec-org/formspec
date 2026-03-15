@@ -1666,3 +1666,135 @@ describe('HelperError instanceof', () => {
     expect(caught).toBe(true);
   });
 });
+
+// ── Pre-validation Error Codes ──
+
+describe('VARIABLE_NOT_FOUND pre-validation', () => {
+  it('updateVariable throws for nonexistent variable', () => {
+    const project = createProject();
+    try {
+      project.updateVariable('ghost', '42');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('VARIABLE_NOT_FOUND');
+    }
+  });
+
+  it('removeVariable throws for nonexistent variable', () => {
+    const project = createProject();
+    try {
+      project.removeVariable('ghost');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('VARIABLE_NOT_FOUND');
+    }
+  });
+});
+
+describe('INSTANCE_NOT_FOUND pre-validation', () => {
+  it('updateInstance throws for nonexistent instance', () => {
+    const project = createProject();
+    try {
+      project.updateInstance('ghost', { source: 'http://x' });
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('INSTANCE_NOT_FOUND');
+      expect((e as HelperError).detail).toHaveProperty('validInstances');
+    }
+  });
+
+  it('removeInstance throws for nonexistent instance', () => {
+    const project = createProject();
+    try {
+      project.removeInstance('ghost');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('INSTANCE_NOT_FOUND');
+    }
+  });
+
+  it('renameInstance throws for nonexistent instance', () => {
+    const project = createProject();
+    try {
+      project.renameInstance('ghost', 'newname');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('INSTANCE_NOT_FOUND');
+    }
+  });
+});
+
+describe('ROUTE_OUT_OF_BOUNDS pre-validation', () => {
+  it('updateScreenRoute throws for out-of-bounds index', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenRoute('1 = 1', 'pass');
+    try {
+      project.updateScreenRoute(99, { condition: '1 = 2' });
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('ROUTE_OUT_OF_BOUNDS');
+    }
+  });
+
+  it('reorderScreenRoute throws for out-of-bounds index', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenRoute('1 = 1', 'pass');
+    try {
+      project.reorderScreenRoute(99, 'up');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('ROUTE_OUT_OF_BOUNDS');
+    }
+  });
+});
+
+describe('ROUTE_MIN_COUNT pre-validation', () => {
+  it('removeScreenRoute throws when trying to delete the last route', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenRoute('1 = 1', 'pass');
+    try {
+      project.removeScreenRoute(0);
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('ROUTE_MIN_COUNT');
+      expect((e as HelperError).detail?.currentRouteCount).toBe(1);
+    }
+  });
+});
+
+describe('DUPLICATE_KEY pre-validation', () => {
+  it('addField throws when key already exists', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    try {
+      project.addField('name', 'Another Name', 'text');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('DUPLICATE_KEY');
+    }
+  });
+
+  it('addGroup throws when key already exists', () => {
+    const project = createProject();
+    project.addGroup('section', 'Section');
+    try {
+      project.addGroup('section', 'Another Section');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('DUPLICATE_KEY');
+    }
+  });
+});
