@@ -475,6 +475,57 @@ describe('removeItem', () => {
       expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
     }
   });
+
+  it('cleans up screener routes referencing deleted field', () => {
+    const project = createProject();
+    project.addField('age', 'Age', 'integer');
+    // Enable screener and add routes — one referencing 'age', one not
+    project.setScreener(true);
+    project.addScreenField('screen_age', 'Screen Age', 'integer');
+    project.addScreenRoute('age > 18', '/adult-form', 'Adult route');
+    project.addScreenRoute('1 = 1', '/fallback', 'Fallback');
+    // Verify routes exist
+    const routesBefore = project.state.definition.screener?.routes ?? [];
+    expect(routesBefore.length).toBe(2);
+    expect((routesBefore[0] as any).condition).toBe('age > 18');
+    // Delete the field — route referencing 'age' should be removed
+    project.removeItem('age');
+    const routesAfter = project.state.definition.screener?.routes ?? [];
+    expect(routesAfter.length).toBe(1);
+    expect((routesAfter[0] as any).condition).toBe('1 = 1');
+  });
+
+  it('cleans up mapping rules referencing deleted field', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.addField('email', 'Email', 'email');
+    // Add mapping rules — one for name, one for email
+    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'name', targetPath: '/output/name' } });
+    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'email', targetPath: '/output/email' } });
+    const rulesBefore = (project.state.mapping as any).rules;
+    expect(rulesBefore.length).toBe(2);
+    // Delete name — its mapping rule should be removed
+    project.removeItem('name');
+    const rulesAfter = (project.state.mapping as any).rules;
+    expect(rulesAfter.length).toBe(1);
+    expect(rulesAfter[0].sourcePath).toBe('email');
+  });
+
+  it('deletes multiple mapping rules in descending index order (no index shift)', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'text');
+    project.addField('b', 'B', 'text');
+    // Add 3 rules: 2 reference 'a', 1 references 'b'
+    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'a', targetPath: '/out/a1' } });
+    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'b', targetPath: '/out/b' } });
+    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'a', targetPath: '/out/a2' } });
+    expect((project.state.mapping as any).rules.length).toBe(3);
+    // Delete 'a' — both mapping rules for 'a' should be removed
+    project.removeItem('a');
+    const rulesAfter = (project.state.mapping as any).rules;
+    expect(rulesAfter.length).toBe(1);
+    expect(rulesAfter[0].sourcePath).toBe('b');
+  });
 });
 
 describe('updateItem', () => {
@@ -771,6 +822,32 @@ describe('addWizardPage', () => {
   });
 });
 
+describe('addPage vs addWizardPage independence', () => {
+  it('addPage creates theme page; addWizardPage creates definition group — independent', () => {
+    const project = createProject();
+    const pageResult = project.addPage('Page 1');
+    const wizardResult = project.addWizardPage('Step 1');
+
+    // addPage creates a theme page
+    const pages = project.state.theme.pages ?? [];
+    expect(pages.some((p: any) => p.id === pageResult.createdId)).toBe(true);
+
+    // addWizardPage creates a definition group
+    const wizardItem = project.itemAt(wizardResult.createdId!);
+    expect(wizardItem?.type).toBe('group');
+
+    // They target different artifacts
+    expect(pageResult.action.helper).toBe('addPage');
+    expect(wizardResult.action.helper).toBe('addWizardPage');
+
+    // Undo wizard page — page still exists
+    project.undo();
+    const pagesAfterUndoWizard = project.state.theme.pages ?? [];
+    expect(pagesAfterUndoWizard.some((p: any) => p.id === pageResult.createdId)).toBe(true);
+    expect(project.itemAt(wizardResult.createdId!)).toBeUndefined();
+  });
+});
+
 describe('removePage', () => {
   it('removes a page by ID', () => {
     const project = createProject();
@@ -855,6 +932,18 @@ describe('applyStyle', () => {
     project.addField('name', 'Name', 'text');
     const result = project.applyStyle('name', { width: '50%' });
     expect(result.affectedPaths[0]).toBe('name');
+  });
+
+  it('emits AMBIGUOUS_ITEM_KEY warning when leaf key shared by multiple items', () => {
+    const project = createProject();
+    project.addGroup('group1', 'Group 1');
+    project.addGroup('group2', 'Group 2');
+    project.addField('group1.name', 'Name 1', 'text');
+    project.addField('group2.name', 'Name 2', 'text');
+    // Both fields have leaf key 'name' — applying style should warn
+    const result = project.applyStyle('group1.name', { width: '50%' });
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.some(w => w.code === 'AMBIGUOUS_ITEM_KEY')).toBe(true);
   });
 });
 
@@ -1223,6 +1312,33 @@ describe('updateItem widget sets widgetHint on definition', () => {
   });
 });
 
+describe('updateItem widget with missing component node', () => {
+  it('sets widgetHint on definition even when component node absent, emits warning', () => {
+    const project = createProject();
+    // Add field via definition
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'bare', label: 'Bare', dataType: 'text' } });
+    // Set an authored component tree that does NOT include this field
+    project.dispatch({
+      type: 'project.import',
+      payload: {
+        definition: project.state.definition,
+        component: {
+          $formspecComponent: '0.1',
+          tree: { component: 'Form', children: [] }, // no node for 'bare'
+        },
+      },
+    });
+    // This should NOT throw — should emit a warning for the component part
+    // but still set widgetHint on definition
+    const result = project.updateItem('bare', { widget: 'textarea' });
+    const item = project.itemAt('bare');
+    expect((item as any)?.presentation?.widgetHint).toBe('textarea');
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.length).toBeGreaterThan(0);
+    expect(result.warnings![0].code).toBe('COMPONENT_NODE_NOT_FOUND');
+  });
+});
+
 describe('wrapInLayoutComponent dot-path', () => {
   it('extracts leaf key from dot-path', () => {
     const project = createProject();
@@ -1268,6 +1384,30 @@ describe('removeValidation preserves adjacent shapes', () => {
     const shapes = project.state.definition.shapes ?? [];
     expect(shapes.some((s: any) => s.id === r1.createdId)).toBe(false);
     expect(shapes.some((s: any) => s.id === r2.createdId)).toBe(true);
+  });
+});
+
+describe('copyItem deep shapes with new IDs', () => {
+  it('copies shapes with new auto-generated IDs (not same as original)', () => {
+    const project = createProject();
+    project.addField('score', 'Score', 'integer');
+    const shapeResult = project.addValidation('score', 'score > 0', 'Must be positive');
+    const originalShapeId = shapeResult.createdId!;
+    expect(originalShapeId).toBeDefined();
+
+    project.copyItem('score', true);
+
+    const allShapes = project.state.definition.shapes ?? [];
+    // There should now be 2 shapes — original and copy
+    expect(allShapes.length).toBe(2);
+    const originalShape = allShapes.find((s: any) => s.id === originalShapeId);
+    const copyShape = allShapes.find((s: any) => s.id !== originalShapeId);
+    expect(originalShape).toBeDefined();
+    expect(copyShape).toBeDefined();
+    // The copy should have a DIFFERENT id
+    expect(copyShape!.id).not.toBe(originalShapeId);
+    // The copy should target the copy path
+    expect((copyShape as any).target).toBe('score_copy');
   });
 });
 

@@ -513,6 +513,8 @@ export interface FieldDependents {
   variables: string[];
   /** Indices of mapping rules that reference this field. */
   mappingRules: number[];
+  /** Indices of screener routes whose conditions reference this field. */
+  screenerRoutes: number[];
 }
 
 /**

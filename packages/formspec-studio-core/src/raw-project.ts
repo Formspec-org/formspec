@@ -962,7 +962,7 @@ export class RawProject {
    * @returns A {@link FieldDependents} record grouping dependents by artifact type.
    */
   fieldDependents(fieldPath: string): FieldDependents {
-    const result: FieldDependents = { binds: [], shapes: [], variables: [], mappingRules: [] };
+    const result: FieldDependents = { binds: [], shapes: [], variables: [], mappingRules: [], screenerRoutes: [] };
     const def = this._state.definition;
     const target = normalizeIndexedPath(fieldPath);
     const expressionReferencesField = (expression: string): boolean => {
@@ -1021,6 +1021,17 @@ export class RawProject {
           || (typeof rule.condition === 'string' && expressionReferencesField(rule.condition));
         if (dependsOnField) {
           result.mappingRules.push(i);
+        }
+      }
+    }
+
+    // Check screener routes
+    const screenerRoutes = def.screener?.routes;
+    if (screenerRoutes) {
+      for (let i = 0; i < screenerRoutes.length; i++) {
+        const route = screenerRoutes[i] as any;
+        if (typeof route.condition === 'string' && expressionReferencesField(route.condition)) {
+          result.screenerRoutes.push(i);
         }
       }
     }

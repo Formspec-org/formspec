@@ -679,6 +679,17 @@ export class Project extends RawProject {
           });
         }
       }
+
+      // Clean up screener routes (delete in descending index order)
+      if (depSet.screenerRoutes?.length) {
+        const sortedIndices = [...depSet.screenerRoutes].sort((a, b) => b - a);
+        for (const idx of sortedIndices) {
+          commands.push({
+            type: 'definition.deleteRoute',
+            payload: { index: idx },
+          });
+        }
+      }
     };
 
     processBindDeps(deps);
@@ -746,6 +757,10 @@ export class Project extends RawProject {
 
     const commands: AnyCommand[] = [];
     const leafKey = path.split('.').pop()!;
+    const warnings: HelperWarning[] = [];
+
+    // Widget command dispatched separately so component failure doesn't block definition update
+    let widgetCommand: AnyCommand | undefined;
 
     for (const [key, value] of Object.entries(changes)) {
       if (value === undefined) continue;
@@ -786,22 +801,18 @@ export class Project extends RawProject {
         continue;
       }
 
-      // widget routing — TWO dispatches
+      // widget routing — definition widgetHint always set; component dispatch may fail
       if (key === 'widget') {
         const resolvedWidget = resolveWidget(value as string);
         const hint = widgetHintFor(value as string);
 
-        // 1. component.setFieldWidget (may fail if node absent — emit warning)
-        try {
-          commands.push({
-            type: 'component.setFieldWidget',
-            payload: { fieldKey: leafKey, widget: resolvedWidget },
-          });
-        } catch {
-          // Will be handled as warning
-        }
+        // Component command dispatched separately after main batch
+        widgetCommand = {
+          type: 'component.setFieldWidget',
+          payload: { fieldKey: leafKey, widget: resolvedWidget },
+        };
 
-        // 2. definition.setItemProperty for widgetHint (REQUIRED for round-trip)
+        // definition.setItemProperty for widgetHint (REQUIRED for round-trip)
         commands.push({
           type: 'definition.setItemProperty',
           payload: { path, property: 'presentation.widgetHint', value: hint ?? null },
@@ -835,10 +846,23 @@ export class Project extends RawProject {
       this.dispatch(commands);
     }
 
+    // Dispatch component widget separately — failure emits warning, not error
+    if (widgetCommand) {
+      try {
+        this.dispatch(widgetCommand);
+      } catch {
+        warnings.push({
+          code: 'COMPONENT_NODE_NOT_FOUND',
+          message: `No component node bound to field '${leafKey}'; widgetHint set on definition only`,
+        });
+      }
+    }
+
     return {
       summary: `Updated item '${path}'`,
       action: { helper: 'updateItem', params: { path, changes } },
       affectedPaths: [path],
+      ...(warnings.length > 0 ? { warnings } : {}),
     };
   }
   // ── Move / Rename / Reorder ──
@@ -1570,7 +1594,25 @@ export class Project extends RawProject {
   /** Apply style overrides to a specific field. */
   applyStyle(path: string, properties: Record<string, unknown>): HelperResult {
     const leafKey = path.split('.').pop()!;
+    const warnings: HelperWarning[] = [];
     const commands: AnyCommand[] = [];
+
+    // Check for ambiguous leaf key — multiple items share same key
+    const countLeafKey = (items: any[], key: string): number => {
+      let count = 0;
+      for (const item of items) {
+        if (item.key === key) count++;
+        if (item.children?.length) count += countLeafKey(item.children, key);
+      }
+      return count;
+    };
+    const matches = countLeafKey(this.state.definition.items, leafKey);
+    if (matches > 1) {
+      warnings.push({
+        code: 'AMBIGUOUS_ITEM_KEY',
+        message: `Leaf key '${leafKey}' matches ${matches} items; style override applies to all`,
+      });
+    }
 
     for (const [prop, val] of Object.entries(properties)) {
       commands.push({
@@ -1587,6 +1629,7 @@ export class Project extends RawProject {
       summary: `Applied style to '${path}'`,
       action: { helper: 'applyStyle', params: { path, properties } },
       affectedPaths: [path],
+      ...(warnings.length > 0 ? { warnings } : {}),
     };
   }
 
