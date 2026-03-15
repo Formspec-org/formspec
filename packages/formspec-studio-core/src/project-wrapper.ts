@@ -585,6 +585,260 @@ export class Project {
       affectedPaths: [shapeId],
     };
   }
+
+  // ── Structural Helpers ──
+
+  /**
+   * Remove item — full reference cleanup before delete.
+   * Collects ALL dependents BEFORE mutations, then dispatches cleanup + delete atomically.
+   */
+  removeItem(path: string): HelperResult {
+    const item = this.itemAt(path);
+    if (!item) {
+      throw new HelperError('PATH_NOT_FOUND', `Item not found at path "${path}"`, { path });
+    }
+
+    // Step 1: Collect dependent set upfront
+    const deps = this.fieldDependents(path);
+
+    // Also collect for descendants if item is a group
+    const descendantDeps: typeof deps[] = [];
+    if (item.children?.length) {
+      const collectDescendantPaths = (children: any[], parentPath: string) => {
+        for (const child of children) {
+          const childPath = `${parentPath}.${child.key}`;
+          descendantDeps.push(this.fieldDependents(childPath));
+          if (child.children?.length) {
+            collectDescendantPaths(child.children, childPath);
+          }
+        }
+      };
+      collectDescendantPaths(item.children, path);
+    }
+
+    // Step 2: Build cleanup commands
+    const commands: AnyCommand[] = [];
+
+    const processBindDeps = (depSet: typeof deps) => {
+      // Clean up bind properties on OTHER items that reference the deleted path
+      // FieldDependents.binds: { path: string; property: string }[]
+      for (const bind of depSet.binds) {
+        if (bind.path === path) continue; // Skip the deleted item's own binds
+        commands.push({
+          type: 'definition.setBind',
+          payload: { path: bind.path, properties: { [bind.property]: null } },
+        });
+      }
+
+      // Clean up shapes referencing the deleted path
+      // FieldDependents.shapes: { id: string; property: string }[]
+      for (const shape of depSet.shapes) {
+        commands.push({
+          type: 'definition.deleteShape',
+          payload: { id: shape.id },
+        });
+      }
+
+      // Clean up variables referencing the deleted path
+      // FieldDependents.variables: string[]
+      for (const varName of depSet.variables) {
+        commands.push({
+          type: 'definition.deleteVariable',
+          payload: { name: varName },
+        });
+      }
+
+      // Clean up mapping rules (delete in descending index order)
+      // FieldDependents.mappingRules: number[]
+      if (depSet.mappingRules?.length) {
+        const sortedIndices = [...depSet.mappingRules].sort((a, b) => b - a);
+        for (const idx of sortedIndices) {
+          commands.push({
+            type: 'mapping.deleteRule',
+            payload: { index: idx },
+          });
+        }
+      }
+    };
+
+    processBindDeps(deps);
+    for (const dDeps of descendantDeps) {
+      processBindDeps(dDeps);
+    }
+
+    // Step 3: Add the deleteItem command
+    commands.push({
+      type: 'definition.deleteItem',
+      payload: { path },
+    });
+
+    // Dispatch atomically
+    this.raw.dispatch(commands);
+
+    return {
+      summary: `Removed item '${path}'`,
+      action: { helper: 'removeItem', params: { path } },
+      affectedPaths: [path],
+    };
+  }
+
+  // ── Update Item ──
+
+  /** Valid keys for updateItem. */
+  private static readonly _VALID_UPDATE_KEYS = new Set([
+    'label', 'hint', 'description', 'placeholder', 'ariaLabel',
+    'options', 'choicesFrom', 'currency', 'precision', 'initialValue', 'prePopulate',
+    'dataType', 'required', 'constraint', 'constraintMessage', 'calculate',
+    'relevant', 'readonly', 'default', 'repeatable', 'minRepeat', 'maxRepeat',
+    'widget', 'style', 'page',
+  ]);
+
+  /** Properties that route to definition.setItemProperty. */
+  private static readonly _ITEM_PROPERTY_KEYS = new Set([
+    'label', 'hint', 'description', 'placeholder', 'ariaLabel',
+    'options', 'initialValue', 'prePopulate',
+    'repeatable', 'minRepeat', 'maxRepeat',
+    'currency', 'precision',
+  ]);
+
+  /** Properties that route to definition.setBind. */
+  private static readonly _BIND_KEYS = new Set([
+    'required', 'constraint', 'constraintMessage', 'calculate',
+    'relevant', 'readonly', 'default',
+  ]);
+
+  /** Update any property of an existing item — fan-out helper. */
+  updateItem(path: string, changes: Record<string, unknown>): HelperResult {
+    // Pre-validate: path must exist
+    if (!this.itemAt(path)) {
+      throw new HelperError('PATH_NOT_FOUND', `Item not found at path "${path}"`, { path });
+    }
+
+    // Check for unknown keys
+    for (const key of Object.keys(changes)) {
+      if (!Project._VALID_UPDATE_KEYS.has(key)) {
+        throw new HelperError('INVALID_KEY', `Unknown updateItem key "${key}"`, {
+          invalidKey: key,
+          validKeys: [...Project._VALID_UPDATE_KEYS],
+        });
+      }
+    }
+
+    const commands: AnyCommand[] = [];
+    const leafKey = path.split('.').pop()!;
+
+    for (const [key, value] of Object.entries(changes)) {
+      if (value === undefined) continue;
+
+      // Item property routing
+      if (Project._ITEM_PROPERTY_KEYS.has(key)) {
+        const property = key === 'choicesFrom' ? 'optionSet' : key;
+        commands.push({
+          type: 'definition.setItemProperty',
+          payload: { path, property, value },
+        });
+        continue;
+      }
+
+      // choicesFrom special routing
+      if (key === 'choicesFrom') {
+        commands.push({
+          type: 'definition.setItemProperty',
+          payload: { path, property: 'optionSet', value },
+        });
+        continue;
+      }
+
+      // options special routing
+      if (key === 'options') {
+        commands.push({
+          type: 'definition.setItemProperty',
+          payload: { path, property: 'options', value },
+        });
+        continue;
+      }
+
+      // Bind property routing
+      if (Project._BIND_KEYS.has(key)) {
+        let bindValue: unknown;
+        if (key === 'required' || key === 'readonly') {
+          if (value === true) bindValue = 'true';
+          else if (value === false) bindValue = null; // null-deletion
+          else bindValue = value; // string FEL passthrough
+        } else {
+          bindValue = value;
+        }
+        commands.push({
+          type: 'definition.setBind',
+          payload: { path, properties: { [key]: bindValue } },
+        });
+        continue;
+      }
+
+      // dataType routing
+      if (key === 'dataType') {
+        commands.push({
+          type: 'definition.setFieldDataType',
+          payload: { path, dataType: value },
+        });
+        continue;
+      }
+
+      // widget routing — TWO dispatches
+      if (key === 'widget') {
+        const resolvedWidget = resolveWidget(value as string);
+        const hint = widgetHintFor(value as string);
+
+        // 1. component.setFieldWidget (may fail if node absent — emit warning)
+        try {
+          commands.push({
+            type: 'component.setFieldWidget',
+            payload: { fieldKey: leafKey, widget: resolvedWidget },
+          });
+        } catch {
+          // Will be handled as warning
+        }
+
+        // 2. definition.setItemProperty for widgetHint (REQUIRED for round-trip)
+        commands.push({
+          type: 'definition.setItemProperty',
+          payload: { path, property: 'presentation.widgetHint', value: hint ?? null },
+        });
+        continue;
+      }
+
+      // style routing → theme.setItemOverride (uses leaf key)
+      if (key === 'style') {
+        const styleProps = value as Record<string, unknown>;
+        for (const [prop, val] of Object.entries(styleProps)) {
+          commands.push({
+            type: 'theme.setItemOverride',
+            payload: { itemKey: leafKey, property: prop, value: val },
+          });
+        }
+        continue;
+      }
+
+      // page routing
+      if (key === 'page') {
+        commands.push({
+          type: 'pages.assignItem',
+          payload: { pageId: value, key: leafKey },
+        });
+        continue;
+      }
+    }
+
+    if (commands.length > 0) {
+      this.raw.dispatch(commands);
+    }
+
+    return {
+      summary: `Updated item '${path}'`,
+      action: { helper: 'updateItem', params: { path, changes } },
+      affectedPaths: [path],
+    };
+  }
 }
 
 export function createProject(options?: ProjectOptions): Project {

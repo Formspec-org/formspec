@@ -420,3 +420,128 @@ describe('updateValidation', () => {
     expect(shape?.message).toBe('Must be > 10');
   });
 });
+
+describe('removeItem', () => {
+  it('removes an item from the definition', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    expect(project.fieldPaths()).toContain('name');
+    project.removeItem('name');
+    expect(project.fieldPaths()).not.toContain('name');
+  });
+
+  it('cleans up references from other fields calculate binds', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    project.addField('b', 'B', 'integer');
+    project.calculate('b', 'a + 1');
+    expect(project.bindFor('b')?.calculate).toBe('a + 1');
+
+    project.removeItem('a');
+    // b's calculate referenced 'a' — should be cleaned up
+    expect(project.bindFor('b')?.calculate).toBeUndefined();
+  });
+
+  it('cleans up shapes referencing deleted field', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    project.addField('b', 'B', 'integer');
+    const result = project.addValidation('*', 'a > b', 'A > B');
+    const shapeId = result.createdId!;
+
+    project.removeItem('a');
+    const shapes = (project.state.definition as any).shapes ?? [];
+    expect(shapes.some((s: any) => s.id === shapeId)).toBe(false);
+  });
+
+  it('is a single undo entry', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    project.addField('b', 'B', 'integer');
+    project.calculate('b', 'a + 1');
+
+    project.removeItem('a');
+    expect(project.fieldPaths()).not.toContain('a');
+
+    project.undo();
+    expect(project.fieldPaths()).toContain('a');
+    expect(project.bindFor('b')?.calculate).toBe('a + 1');
+  });
+
+  it('throws PATH_NOT_FOUND for nonexistent path', () => {
+    const project = createProject();
+    expect(() => project.removeItem('nonexistent')).toThrow(HelperError);
+    try { project.removeItem('nonexistent'); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+});
+
+describe('updateItem', () => {
+  it('updates label via setItemProperty', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.updateItem('name', { label: 'Full Name' });
+    expect(project.itemAt('name')?.label).toBe('Full Name');
+  });
+
+  it('updates required: true → setBind { required: "true" }', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.updateItem('name', { required: true });
+    expect(project.bindFor('name')?.required).toBe('true');
+  });
+
+  it('updates required: false → null-deletion', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text', { required: true });
+    expect(project.bindFor('name')?.required).toBe('true');
+    project.updateItem('name', { required: false });
+    // After null-deletion, bind entry removed if only 'path' remains
+    const bind = project.bindFor('name');
+    expect(bind?.required).toBeUndefined();
+  });
+
+  it('updates required: string → FEL passthrough', () => {
+    const project = createProject();
+    project.addField('age', 'Age', 'integer');
+    project.addField('name', 'Name', 'text');
+    project.updateItem('name', { required: 'age > 18' });
+    expect(project.bindFor('name')?.required).toBe('age > 18');
+  });
+
+  it('updates constraint via setBind', () => {
+    const project = createProject();
+    project.addField('email', 'Email', 'text');
+    project.updateItem('email', { constraint: "matches(email, '.*@.*')" });
+    expect(project.bindFor('email')?.constraint).toMatch(/matches/);
+  });
+
+  it('routes prePopulate to setItemProperty NOT setBind', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.updateItem('name', { prePopulate: 'default value' });
+    const item = project.itemAt('name');
+    expect((item as any)?.prePopulate).toBe('default value');
+    // Should NOT be in bind
+    expect(project.bindFor('name')?.prePopulate).toBeUndefined();
+  });
+
+  it('throws INVALID_KEY for unknown key', () => {
+    const project = createProject();
+    project.addField('f', 'F', 'text');
+    expect(() => project.updateItem('f', { banana: 'yes' } as any)).toThrow(HelperError);
+    try { project.updateItem('f', { banana: 'yes' } as any); } catch (e) {
+      expect((e as HelperError).code).toBe('INVALID_KEY');
+      expect((e as HelperError).detail).toHaveProperty('validKeys');
+    }
+  });
+
+  it('throws PATH_NOT_FOUND for nonexistent path', () => {
+    const project = createProject();
+    expect(() => project.updateItem('nonexistent', { label: 'x' })).toThrow(HelperError);
+    try { project.updateItem('nonexistent', { label: 'x' }); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+});
