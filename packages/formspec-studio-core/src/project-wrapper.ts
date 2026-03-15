@@ -17,6 +17,8 @@ import {
   type PlacementOptions,
   type LayoutArrangement,
   type InstanceProps,
+  type ItemChanges,
+  type MetadataChanges,
 } from './helper-types.js';
 import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
 import { rewriteFELReferences } from 'formspec-engine';
@@ -726,7 +728,7 @@ export class Project extends RawProject {
   ]);
 
   /** Update any property of an existing item — fan-out helper. */
-  updateItem(path: string, changes: Record<string, unknown>): HelperResult {
+  updateItem(path: string, changes: ItemChanges): HelperResult {
     // Pre-validate: path must exist
     if (!this.itemAt(path)) {
       this._throwPathNotFound(path);
@@ -920,7 +922,7 @@ export class Project extends RawProject {
   ]);
 
   /** Form-level metadata setter. */
-  setMetadata(changes: Record<string, unknown>): HelperResult {
+  setMetadata(changes: MetadataChanges): HelperResult {
     // Validate keys
     for (const key of Object.keys(changes)) {
       if (!Project._VALID_METADATA_KEYS.has(key)) {

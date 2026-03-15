@@ -27,10 +27,12 @@ export type {
   InstanceProps,
   ChoiceOption,
   ItemChanges,
+  MetadataChanges,
 } from './helper-types.js';
 export { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
 export type { ResolvedFieldType } from './field-type-aliases.js';
 export { previewForm, validateResponse } from './evaluation-helpers.js';
+export { resolveItemLocation } from './handlers/helpers.js';
 export { normalizeDefinition } from './normalization.js';
 export { resolveThemeCascade } from './theme-cascade.js';
 export type { ResolvedProperty } from './theme-cascade.js';

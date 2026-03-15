@@ -105,6 +105,24 @@ export interface InstanceProps {
   description?: string;
 }
 
+/** Metadata changes for setMetadata — split between title, presentation, and definition handlers */
+export interface MetadataChanges {
+  title?: string;
+  name?: string;
+  description?: string;
+  url?: string;
+  version?: string;
+  status?: string;
+  date?: string;
+  versionAlgorithm?: string;
+  nonRelevantBehavior?: string;
+  derivedFrom?: string;
+  density?: 'compact' | 'comfortable' | 'spacious';
+  labelPosition?: string;
+  pageMode?: string;
+  defaultCurrency?: string;
+}
+
 /** Changes for updateItem — each key routes to a different handler */
 export interface ItemChanges {
   label?: string;
