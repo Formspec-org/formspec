@@ -261,3 +261,162 @@ describe('calculate', () => {
     }
   });
 });
+
+describe('branch', () => {
+  it('sets relevant expressions on target paths for a choice field', () => {
+    const project = createProject();
+    project.addField('color', 'Color', 'choice', {
+      choices: [{ value: 'red', label: 'Red' }, { value: 'blue', label: 'Blue' }],
+    });
+    project.addField('red_shade', 'Red Shade', 'text');
+    project.addField('blue_shade', 'Blue Shade', 'text');
+
+    project.branch('color', [
+      { when: 'red', show: 'red_shade' },
+      { when: 'blue', show: 'blue_shade' },
+    ]);
+
+    expect(project.bindFor('red_shade')?.relevant).toBe("color = 'red'");
+    expect(project.bindFor('blue_shade')?.relevant).toBe("color = 'blue'");
+  });
+
+  it('uses selected() for multiChoice fields (auto-detection)', () => {
+    const project = createProject();
+    project.addField('tags', 'Tags', 'multichoice', {
+      choices: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
+    });
+    project.addField('a_detail', 'A Detail', 'text');
+
+    project.branch('tags', [
+      { when: 'a', show: 'a_detail' },
+    ]);
+
+    expect(project.bindFor('a_detail')?.relevant).toBe("selected(tags, 'a')");
+  });
+
+  it('builds otherwise arm with negation', () => {
+    const project = createProject();
+    project.addField('type', 'Type', 'choice');
+    project.addField('type_a', 'A', 'text');
+    project.addField('type_other', 'Other', 'text');
+
+    project.branch('type', [
+      { when: 'a', show: 'type_a' },
+    ], 'type_other');
+
+    expect(project.bindFor('type_other')?.relevant).toBe("not(type = 'a')");
+  });
+
+  it('handles boolean when values', () => {
+    const project = createProject();
+    project.addField('agreed', 'Agreed', 'boolean');
+    project.addField('details', 'Details', 'text');
+
+    project.branch('agreed', [
+      { when: true, show: 'details' },
+    ]);
+
+    expect(project.bindFor('details')?.relevant).toBe('agreed = true');
+  });
+
+  it('handles number when values', () => {
+    const project = createProject();
+    project.addField('count', 'Count', 'integer');
+    project.addField('many_section', 'Many', 'text');
+
+    project.branch('count', [
+      { when: 42, show: 'many_section' },
+    ]);
+
+    expect(project.bindFor('many_section')?.relevant).toBe('count = 42');
+  });
+
+  it('handles multiple show targets per path', () => {
+    const project = createProject();
+    project.addField('type', 'Type', 'choice');
+    project.addField('f1', 'F1', 'text');
+    project.addField('f2', 'F2', 'text');
+
+    project.branch('type', [
+      { when: 'special', show: ['f1', 'f2'] },
+    ]);
+
+    expect(project.bindFor('f1')?.relevant).toBe("type = 'special'");
+    expect(project.bindFor('f2')?.relevant).toBe("type = 'special'");
+  });
+
+  it('throws PATH_NOT_FOUND when on field does not exist', () => {
+    const project = createProject();
+    project.addField('f', 'F', 'text');
+    expect(() => project.branch('nonexistent', [{ when: 'a', show: 'f' }])).toThrow(HelperError);
+    try { project.branch('nonexistent', [{ when: 'a', show: 'f' }]); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+
+  it('emits RELEVANT_OVERWRITTEN warning when target already has relevant', () => {
+    const project = createProject();
+    project.addField('type', 'Type', 'choice');
+    project.addField('f', 'F', 'text');
+    project.showWhen('f', 'type = true');
+
+    const result = project.branch('type', [
+      { when: 'a', show: 'f' },
+    ]);
+
+    expect(result.warnings?.some(w => w.code === 'RELEVANT_OVERWRITTEN')).toBe(true);
+  });
+});
+
+describe('addValidation', () => {
+  it('adds a shape rule with correct payload mapping', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    project.addField('b', 'B', 'integer');
+
+    const result = project.addValidation('*', 'a > b', 'A must be greater than B');
+    expect(result.createdId).toBeDefined();
+    expect(result.affectedPaths[0]).toBe(result.createdId);
+    expect(result.action.helper).toBe('addValidation');
+  });
+
+  it('throws INVALID_FEL on bad rule expression', () => {
+    const project = createProject();
+    expect(() => project.addValidation('*', '!!! bad', 'msg')).toThrow(HelperError);
+    try { project.addValidation('*', '!!! bad', 'msg'); } catch (e) {
+      expect((e as HelperError).code).toBe('INVALID_FEL');
+    }
+  });
+});
+
+describe('removeValidation', () => {
+  it('removes a shape by ID', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    const result = project.addValidation('*', 'a > 0', 'Must be positive');
+    const shapeId = result.createdId!;
+
+    const shapes = (project.state.definition as any).shapes;
+    expect(shapes?.some((s: any) => s.id === shapeId)).toBe(true);
+
+    project.removeValidation(shapeId);
+    const shapesAfter = (project.state.definition as any).shapes;
+    expect(shapesAfter?.some((s: any) => s.id === shapeId)).toBe(false);
+  });
+});
+
+describe('updateValidation', () => {
+  it('updates a shape rule (changes.rule dispatches as constraint)', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    const result = project.addValidation('*', 'a > 0', 'Must be positive');
+    const shapeId = result.createdId!;
+
+    project.updateValidation(shapeId, { rule: 'a > 10', message: 'Must be > 10' });
+
+    const shapes = (project.state.definition as any).shapes;
+    const shape = shapes?.find((s: any) => s.id === shapeId);
+    expect(shape?.constraint).toBe('a > 10');
+    expect(shape?.message).toBe('Must be > 10');
+  });
+});

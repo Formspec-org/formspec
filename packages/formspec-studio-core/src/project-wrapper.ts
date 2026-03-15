@@ -13,7 +13,15 @@ import type {
   FELParseResult,
 } from './types.js';
 import type { FormspecItem } from 'formspec-engine';
-import { HelperError, type HelperResult, type FieldProps, type GroupProps } from './helper-types.js';
+import {
+  HelperError,
+  type HelperResult,
+  type HelperWarning,
+  type FieldProps,
+  type GroupProps,
+  type BranchPath,
+  type ValidationOptions,
+} from './helper-types.js';
 import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
 
 /**
@@ -370,6 +378,211 @@ export class Project {
       summary: `Set '${target}' calculated as: ${expression}`,
       action: { helper: 'calculate', params: { target, expression } },
       affectedPaths: [target],
+    };
+  }
+
+  // ── Branch ──
+
+  /** Build a FEL expression for a single branch arm. */
+  private _branchExpr(on: string, when: string | number | boolean, mode: 'equals' | 'contains'): string {
+    if (mode === 'contains') {
+      return typeof when === 'string' ? `selected(${on}, '${when}')` : `selected(${on}, ${when})`;
+    }
+    // equals mode
+    if (typeof when === 'string') return `${on} = '${when}'`;
+    if (typeof when === 'boolean') return `${on} = ${when}`;
+    return `${on} = ${when}`;
+  }
+
+  /**
+   * Branching — show different fields based on an answer.
+   * Auto-detects mode for multiChoice fields (uses selected() not equals).
+   */
+  branch(on: string, paths: BranchPath[], otherwise?: string | string[]): HelperResult {
+    // Pre-validate: on field must exist
+    const onItem = this.itemAt(on);
+    if (!onItem) {
+      throw new HelperError('PATH_NOT_FOUND', `Field "${on}" does not exist`, { path: on });
+    }
+
+    // Auto-detect mode based on on-field dataType
+    const isMultiChoice = onItem.dataType === 'multiChoice';
+    const defaultMode = isMultiChoice ? 'contains' as const : 'equals' as const;
+
+    const warnings: HelperWarning[] = [];
+    const allExprs: string[] = [];
+    const commands: AnyCommand[] = [];
+
+    for (const arm of paths) {
+      const mode = arm.mode ?? defaultMode;
+      const expr = this._branchExpr(on, arm.when, mode);
+      allExprs.push(expr);
+
+      const targets = Array.isArray(arm.show) ? arm.show : [arm.show];
+      for (const target of targets) {
+        // Check for existing relevant bind → warning
+        const existingBind = this.bindFor(target);
+        if (existingBind?.relevant) {
+          warnings.push({
+            code: 'RELEVANT_OVERWRITTEN',
+            message: `Existing relevant expression on "${target}" was replaced`,
+            detail: { path: target, previousExpression: existingBind.relevant },
+          });
+        }
+
+        commands.push({
+          type: 'definition.setBind',
+          payload: { path: target, properties: { relevant: expr } },
+        });
+      }
+    }
+
+    // Otherwise arm
+    if (otherwise) {
+      const otherwiseTargets = Array.isArray(otherwise) ? otherwise : [otherwise];
+      const negatedExpr = allExprs.length === 1
+        ? `not(${allExprs[0]})`
+        : `not(${allExprs.join(' or ')})`;
+
+      for (const target of otherwiseTargets) {
+        const existingBind = this.bindFor(target);
+        if (existingBind?.relevant) {
+          warnings.push({
+            code: 'RELEVANT_OVERWRITTEN',
+            message: `Existing relevant expression on "${target}" was replaced`,
+            detail: { path: target, previousExpression: existingBind.relevant },
+          });
+        }
+        commands.push({
+          type: 'definition.setBind',
+          payload: { path: target, properties: { relevant: negatedExpr } },
+        });
+      }
+    }
+
+    // Dispatch all setBind commands atomically
+    this.raw.dispatch(commands);
+
+    const affectedPaths = commands.map(c => (c.payload as any).path);
+    return {
+      summary: `Branch on '${on}' with ${paths.length} arm(s)`,
+      action: { helper: 'branch', params: { on, paths: paths.length, otherwise: !!otherwise } },
+      affectedPaths,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
+  }
+
+  // ── Validation Helpers ──
+
+  /** Cross-field validation — adds a shape rule. */
+  addValidation(
+    target: string,
+    rule: string,
+    message: string,
+    options?: ValidationOptions,
+  ): HelperResult {
+    this._validateFEL(rule);
+    if (options?.activeWhen) {
+      this._validateFEL(options.activeWhen);
+    }
+
+    const payload: Record<string, unknown> = {
+      target,
+      constraint: rule,
+      message,
+    };
+    if (options?.timing) payload.timing = options.timing;
+    if (options?.severity) payload.severity = options.severity;
+    if (options?.code) payload.code = options.code;
+    if (options?.activeWhen) payload.activeWhen = options.activeWhen;
+
+    this.raw.dispatch({ type: 'definition.addShape', payload });
+
+    // Read the shape ID from state (addShape appends to shapes array)
+    const shapes = (this.raw.state.definition as any).shapes ?? [];
+    const createdId = shapes[shapes.length - 1]?.id as string;
+
+    return {
+      summary: `Added validation on '${target}': ${message}`,
+      action: { helper: 'addValidation', params: { target, rule, message } },
+      affectedPaths: [createdId],
+      createdId,
+    };
+  }
+
+  /** Remove a validation shape by ID. */
+  removeValidation(shapeId: string): HelperResult {
+    this.raw.dispatch({ type: 'definition.deleteShape', payload: { id: shapeId } });
+    return {
+      summary: `Removed validation '${shapeId}'`,
+      action: { helper: 'removeValidation', params: { shapeId } },
+      affectedPaths: [shapeId],
+    };
+  }
+
+  /** Update a validation shape's rule, message, or options. */
+  updateValidation(
+    shapeId: string,
+    changes: {
+      rule?: string;
+      message?: string;
+      timing?: 'continuous' | 'submit' | 'demand';
+      severity?: 'error' | 'warning' | 'info';
+      code?: string;
+      activeWhen?: string;
+    },
+  ): HelperResult {
+    if (changes.rule) this._validateFEL(changes.rule);
+    if (changes.activeWhen) this._validateFEL(changes.activeWhen);
+
+    const commands: AnyCommand[] = [];
+
+    // rule → dispatches as 'constraint' (shape schema property)
+    if (changes.rule !== undefined) {
+      commands.push({
+        type: 'definition.setShapeProperty',
+        payload: { id: shapeId, property: 'constraint', value: changes.rule },
+      });
+    }
+    if (changes.message !== undefined) {
+      commands.push({
+        type: 'definition.setShapeProperty',
+        payload: { id: shapeId, property: 'message', value: changes.message },
+      });
+    }
+    if (changes.timing !== undefined) {
+      commands.push({
+        type: 'definition.setShapeProperty',
+        payload: { id: shapeId, property: 'timing', value: changes.timing },
+      });
+    }
+    if (changes.severity !== undefined) {
+      commands.push({
+        type: 'definition.setShapeProperty',
+        payload: { id: shapeId, property: 'severity', value: changes.severity },
+      });
+    }
+    if (changes.code !== undefined) {
+      commands.push({
+        type: 'definition.setShapeProperty',
+        payload: { id: shapeId, property: 'code', value: changes.code },
+      });
+    }
+    if (changes.activeWhen !== undefined) {
+      commands.push({
+        type: 'definition.setShapeProperty',
+        payload: { id: shapeId, property: 'activeWhen', value: changes.activeWhen },
+      });
+    }
+
+    if (commands.length > 0) {
+      this.raw.dispatch(commands);
+    }
+
+    return {
+      summary: `Updated validation '${shapeId}'`,
+      action: { helper: 'updateValidation', params: { shapeId, ...changes } },
+      affectedPaths: [shapeId],
     };
   }
 }
