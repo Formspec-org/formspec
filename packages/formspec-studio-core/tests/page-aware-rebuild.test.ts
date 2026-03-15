@@ -6,7 +6,7 @@ describe('page-aware component tree rebuild', () => {
     const project = createProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Stack');
     expect(tree.children).toHaveLength(1);
     expect(tree.children[0].bind).toBe('name');
@@ -22,7 +22,7 @@ describe('page-aware component tree rebuild', () => {
     // Switch to single — pages dormant
     project.dispatch({ type: 'pages.setMode', payload: { mode: 'single' } });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Stack');
     expect(tree.children.every((c: any) => c.component !== 'Page')).toBe(true);
   });
@@ -38,7 +38,7 @@ describe('page-aware component tree rebuild', () => {
     project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[0].id, key: 'name' } });
     project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[1].id, key: 'email' } });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Wizard');
     expect(tree.children).toHaveLength(2);
     expect(tree.children[0].component).toBe('Page');
@@ -59,7 +59,7 @@ describe('page-aware component tree rebuild', () => {
     const pages = project.theme.pages as any[];
     project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[0].id, key: 'name' } });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Tabs');
     const pageNodes = tree.children.filter((c: any) => c.component === 'Page');
     expect(pageNodes).toHaveLength(1);
@@ -77,7 +77,7 @@ describe('page-aware component tree rebuild', () => {
     project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[0].id, key: 'name' } });
     // 'extra' is unassigned
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Wizard');
     // All children must be Page (schema constraint)
     expect(tree.children.every((c: any) => c.component === 'Page')).toBe(true);
@@ -95,7 +95,7 @@ describe('page-aware component tree rebuild', () => {
     const pages = project.theme.pages as any[];
     project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[0].id, key: 'name' } });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     const page = tree.children.find((c: any) => c.component === 'Page');
     expect(page.title).toBe('My Step');
     expect(page.description).toBe('Do this');
@@ -108,11 +108,11 @@ describe('page-aware component tree rebuild', () => {
     const pages = project.theme.pages as any[];
     project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[0].id, key: 'name' } });
 
-    let tree = (project as any)._state.generatedComponent.tree;
+    let tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Wizard');
 
     project.dispatch({ type: 'pages.setMode', payload: { mode: 'single' } });
-    tree = (project as any)._state.generatedComponent.tree;
+    tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Stack');
     expect(tree.children.every((c: any) => c.component !== 'Page')).toBe(true);
     expect(tree.children.some((c: any) => c.bind === 'name')).toBe(true);
@@ -126,7 +126,7 @@ describe('page-aware component tree rebuild', () => {
     const pages = project.theme.pages as any[];
     project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[1].id, key: 'name' } });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     const assignedPages = tree.children.filter((c: any) => c.component === 'Page');
     const emptyPage = assignedPages.find((c: any) => c.title === 'Empty Page');
     const fullPage = assignedPages.find((c: any) => c.title === 'Full Page');
@@ -147,7 +147,7 @@ describe('page-aware component tree rebuild', () => {
     project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
 
     // Authored tree is preserved — rebuild skipped
-    const tree = (project as any)._state.component.tree;
+    const tree = project.component.tree;
     expect(tree.nodeId).toBe('custom-root');
   });
 
@@ -158,7 +158,7 @@ describe('page-aware component tree rebuild', () => {
     const pages = project.theme.pages as any[];
     project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[0].id, key: 'name' } });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     expect(tree.children).toHaveLength(1);
     expect(tree.children[0].title).toBe('Step 1');
   });

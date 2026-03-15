@@ -165,7 +165,7 @@ describe('component.setWizardProperty', () => {
       payload: { property: 'showProgress', value: true },
     });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Wizard');
     expect(tree.showProgress).toBe(true);
   });
@@ -185,7 +185,7 @@ describe('component.setWizardProperty', () => {
       payload: { property: 'allowSkip', value: true },
     });
 
-    const tree = (project as any)._state.component.tree;
+    const tree = project.component.tree;
     expect(tree.allowSkip).toBe(true);
   });
 
@@ -199,7 +199,7 @@ describe('component.setWizardProperty', () => {
       payload: { property: 'showProgress', value: true },
     });
 
-    const tree = (project as any)._state.generatedComponent.tree;
+    const tree = project.generatedComponent.tree;
     expect(tree.component).toBe('Stack');
     expect(tree.showProgress).toBeUndefined();
   });

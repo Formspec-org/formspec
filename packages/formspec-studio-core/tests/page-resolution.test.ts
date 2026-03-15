@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { resolvePageStructure } from '../src/page-resolution.js';
-import type { ProjectState } from '../src/types.js';
+import { resolvePageStructure } from '../src/index.js';
+import type { ProjectState } from '../src/index.js';
 
 /** Minimal state factory — only the fields resolvePageStructure reads. */
 function makeState(overrides: {

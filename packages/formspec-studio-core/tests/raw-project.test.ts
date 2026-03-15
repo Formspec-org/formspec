@@ -146,7 +146,7 @@ describe('widgetHintFor', () => {
 
 // ── RawProject Tests ────────────────────────────────────────────────
 
-import { RawProject, createRawProject } from '../src/raw-project.js';
+import { RawProject, createRawProject } from '../src/index.js';
 
 describe('RawProject', () => {
   it('is exported as RawProject class', () => {
@@ -257,11 +257,11 @@ describe('RawProject', () => {
 import { Project, createProject } from '../src/project.js';
 
 describe('Project wrapper', () => {
-  it('extends RawProject and exposes raw self-reference', () => {
+  it('composes IProjectCore and exposes raw core', () => {
     const project = createProject();
-    expect(project).toBeInstanceOf(RawProject);
     expect(project).toBeInstanceOf(Project);
-    expect(project.raw).toBe(project);
+    expect(project).not.toBeInstanceOf(RawProject);
+    expect(project.raw).toBeInstanceOf(RawProject);
     expect(project.fieldPaths()).toEqual([]);
   });
 

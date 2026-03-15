@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { resolveThemeCascade } from '../src/theme-cascade.js';
-import type { FormspecThemeDocument } from '../src/types.js';
+import { resolveThemeCascade } from '../src/index.js';
+import type { FormspecThemeDocument } from '../src/index.js';
 
 describe('resolveThemeCascade', () => {
   it('returns defaults when no selectors or item overrides exist', () => {

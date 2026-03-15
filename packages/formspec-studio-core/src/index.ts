@@ -1,16 +1,17 @@
 /**
  * @module formspec-studio-core
  *
- * Pure TypeScript library for creating and editing Formspec artifact bundles.
- * Every edit is a serializable {@link Command} dispatched against a {@link Project}.
+ * Document-agnostic semantic authoring API for Formspec.
+ * Project composes IProjectCore (from formspec-core) and exposes
+ * 51 behavior-driven helper methods for form authoring.
  *
- * Entry point: call {@link createProject} to get a new {@link Project} instance,
- * then use `project.dispatch(command)` to apply mutations.
- *
- * No framework dependencies, no singletons, no side effects.
+ * Re-exports all of formspec-core for consumer convenience.
  */
 
-export { RawProject, createRawProject } from './raw-project.js';
+// Re-export everything from formspec-core so consumers need no import changes
+export * from 'formspec-core';
+
+// Local exports
 export { Project, createProject } from './project.js';
 export { HelperError } from './helper-types.js';
 export type {
@@ -32,45 +33,3 @@ export type {
 export { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
 export type { ResolvedFieldType } from './field-type-aliases.js';
 export { previewForm, validateResponse } from './evaluation-helpers.js';
-export { resolveItemLocation } from './handlers/helpers.js';
-export { normalizeDefinition } from './normalization.js';
-export { resolveThemeCascade } from './theme-cascade.js';
-export type { ResolvedProperty } from './theme-cascade.js';
-export { resolvePageStructure } from './page-resolution.js';
-export type { ResolvedPageStructure, ResolvedPage, ResolvedRegion, PageDiagnostic } from './page-resolution.js';
-export type {
-  ProjectState,
-  ProjectOptions,
-  Command,
-  AnyCommand,
-  CommandResult,
-  ChangeListener,
-  ChangeEvent,
-  LogEntry,
-  Middleware,
-  ProjectBundle,
-  ProjectStatistics,
-  FormspecComponentDocument,
-  FormspecGeneratedLayoutDocument,
-  FormspecThemeDocument,
-  FormspecMappingDocument,
-  ExtensionsState,
-  VersioningState,
-  ItemFilter,
-  DataTypeInfo,
-  RegistrySummary,
-  ExtensionFilter,
-  Change,
-  FormspecChangelog,
-  FELParseContext,
-  FELMappingContext,
-  FELParseResult,
-  FELReferenceSet,
-  FELFunctionEntry,
-  ExpressionLocation,
-  DependencyGraph,
-  FieldDependents,
-  Diagnostic,
-  Diagnostics,
-  ResponseSchemaRow,
-} from './types.js';
