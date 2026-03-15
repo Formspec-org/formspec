@@ -337,8 +337,7 @@ export class Project extends RawProject {
         expression,
         parseError: result.errors[0] ? {
           message: result.errors[0].message,
-          offset: (result.errors[0] as any).offset,
-          errorType: (result.errors[0] as any).errorType,
+          code: result.errors[0].code,
         } : undefined,
       });
     }
@@ -432,6 +431,7 @@ export class Project extends RawProject {
     const warnings: HelperWarning[] = [];
     const allExprs: string[] = [];
     const commands: AnyCommand[] = [];
+    const affectedPaths: string[] = [];
 
     for (const arm of paths) {
       const mode = arm.mode ?? defaultMode;
@@ -454,6 +454,7 @@ export class Project extends RawProject {
           type: 'definition.setBind',
           payload: { path: target, properties: { relevant: expr } },
         });
+        affectedPaths.push(target);
       }
     }
 
@@ -477,13 +478,12 @@ export class Project extends RawProject {
           type: 'definition.setBind',
           payload: { path: target, properties: { relevant: negatedExpr } },
         });
+        affectedPaths.push(target);
       }
     }
 
     // Dispatch all setBind commands atomically
     this.dispatch(commands);
-
-    const affectedPaths = commands.map(c => (c.payload as any).path);
     return {
       summary: `Branch on '${on}' with ${paths.length} arm(s)`,
       action: { helper: 'branch', params: { on, paths: paths.length, otherwise: !!otherwise } },
@@ -519,8 +519,8 @@ export class Project extends RawProject {
     this.dispatch({ type: 'definition.addShape', payload });
 
     // Read the shape ID from state (addShape appends to shapes array)
-    const shapes = (this.state.definition as any).shapes ?? [];
-    const createdId = shapes[shapes.length - 1]?.id as string;
+    const shapes = this.state.definition.shapes ?? [];
+    const createdId = shapes[shapes.length - 1]?.id;
 
     return {
       summary: `Added validation on '${target}': ${message}`,
@@ -756,24 +756,6 @@ export class Project extends RawProject {
         commands.push({
           type: 'definition.setItemProperty',
           payload: { path, property, value },
-        });
-        continue;
-      }
-
-      // choicesFrom special routing
-      if (key === 'choicesFrom') {
-        commands.push({
-          type: 'definition.setItemProperty',
-          payload: { path, property: 'optionSet', value },
-        });
-        continue;
-      }
-
-      // options special routing
-      if (key === 'options') {
-        commands.push({
-          type: 'definition.setItemProperty',
-          payload: { path, property: 'options', value },
         });
         continue;
       }
@@ -1041,12 +1023,12 @@ export class Project extends RawProject {
         type: 'definition.duplicateItem',
         payload: { path },
       });
-      const insertedPath = (results as any)?.insertedPath ?? `${path}_copy`;
+      const insertedPath = results.insertedPath ?? `${path}_copy`;
 
       // Collect warnings about omitted binds/shapes
       const warnings: HelperWarning[] = [];
-      const binds = (this.state.definition as any).binds ?? [];
-      const shapes = (this.state.definition as any).shapes ?? [];
+      const binds = this.state.definition.binds ?? [];
+      const shapes = this.state.definition.shapes ?? [];
 
       // Find binds targeting the original path (these are NOT copied by duplicateItem)
       const matchingBinds = binds.filter((b: any) =>
@@ -1090,8 +1072,8 @@ export class Project extends RawProject {
 
     // We need batchWithRebuild: phase1 duplicates, phase2 copies binds with rewritten FEL
     // Collect bind/shape data before dispatch
-    const binds = (this.state.definition as any).binds ?? [];
-    const shapes = (this.state.definition as any).shapes ?? [];
+    const binds = this.state.definition.binds ?? [];
+    const shapes = this.state.definition.shapes ?? [];
 
     // Find binds targeting this path or descendants
     const matchingBinds = binds.filter((b: any) =>
@@ -1191,10 +1173,11 @@ export class Project extends RawProject {
         if (shape.code) payload.code = shape.code;
         if (shape.activeWhen) payload.activeWhen = rewriteFEL(shape.activeWhen);
         if (shape.context) {
-          payload.context = shape.context.map((c: any) => ({
-            ...c,
-            expression: rewriteFEL(c.expression),
-          }));
+          const rewrittenContext: Record<string, string> = {};
+          for (const [key, expr] of Object.entries(shape.context)) {
+            rewrittenContext[key] = rewriteFEL(expr) ?? expr;
+          }
+          payload.context = rewrittenContext;
         }
         phase2.push({ type: 'definition.addShape', payload });
       }
@@ -1410,7 +1393,7 @@ export class Project extends RawProject {
     });
 
     // Set wizard mode if not already
-    const pageMode = (this.state.definition as any).formPresentation?.pageMode;
+    const pageMode = this.state.definition.formPresentation?.pageMode;
     if (pageMode !== 'wizard') {
       this.dispatch({
         type: 'definition.setFormPresentation',
