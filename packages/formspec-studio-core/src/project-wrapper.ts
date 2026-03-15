@@ -23,8 +23,13 @@ import {
   type ValidationOptions,
   type RepeatProps,
   type ChoiceOption,
+  type FlowProps,
+  type PlacementOptions,
+  type LayoutArrangement,
+  type InstanceProps,
 } from './helper-types.js';
 import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
+import { rewriteFELReferences } from 'formspec-engine';
 
 /**
  * Behavior-driven interface for form authoring.
@@ -1004,6 +1009,894 @@ export class Project {
     return {
       summary: `Made group '${target}' repeatable`,
       action: { helper: 'makeRepeatable', params: { target, ...props } },
+      affectedPaths: [],
+    };
+  }
+
+  // ── Copy Item ──
+
+  /** Copy a field or group — inserts clone immediately after original. */
+  copyItem(path: string, deep?: boolean): HelperResult {
+    const item = this.itemAt(path);
+    if (!item) {
+      throw new HelperError('PATH_NOT_FOUND', `Item not found at path "${path}"`, { path });
+    }
+
+    if (!deep) {
+      // Shallow copy — just duplicate the definition item
+      const results = this.raw.dispatch({
+        type: 'definition.duplicateItem',
+        payload: { path },
+      });
+      const insertedPath = (results as any)?.insertedPath ?? `${path}_copy`;
+
+      // Collect warnings about omitted binds/shapes
+      const warnings: HelperWarning[] = [];
+      const binds = (this.raw.state.definition as any).binds ?? [];
+      const shapes = (this.raw.state.definition as any).shapes ?? [];
+
+      // Find binds targeting the original path (these are NOT copied by duplicateItem)
+      const matchingBinds = binds.filter((b: any) =>
+        b.path === path || b.path?.startsWith(`${path}.`),
+      );
+      if (matchingBinds.length > 0) {
+        const props = matchingBinds.flatMap((b: any) =>
+          Object.keys(b).filter(k => k !== 'path'),
+        );
+        warnings.push({
+          code: 'BINDS_NOT_COPIED',
+          message: `${matchingBinds.length} bind(s) not copied`,
+          detail: { count: matchingBinds.length, properties: [...new Set(props)] },
+        });
+      }
+
+      // Find shapes targeting the original path
+      const matchingShapes = shapes.filter((s: any) =>
+        s.target === path || s.target?.startsWith(`${path}.`),
+      );
+      if (matchingShapes.length > 0) {
+        warnings.push({
+          code: 'SHAPES_NOT_COPIED',
+          message: `${matchingShapes.length} shape(s) not copied`,
+          detail: { count: matchingShapes.length },
+        });
+      }
+
+      return {
+        summary: `Copied '${path}' (shallow)`,
+        action: { helper: 'copyItem', params: { path, deep: false } },
+        affectedPaths: [insertedPath],
+        warnings: warnings.length > 0 ? warnings : undefined,
+      };
+    }
+
+    // Deep copy — duplicate + rewrite FEL references in binds/shapes
+    const phase1: AnyCommand[] = [
+      { type: 'definition.duplicateItem', payload: { path } },
+    ];
+
+    // We need batchWithRebuild: phase1 duplicates, phase2 copies binds with rewritten FEL
+    // Collect bind/shape data before dispatch
+    const binds = (this.raw.state.definition as any).binds ?? [];
+    const shapes = (this.raw.state.definition as any).shapes ?? [];
+
+    // Find binds targeting this path or descendants
+    const matchingBinds = binds.filter((b: any) =>
+      b.path === path || b.path?.startsWith(`${path}.`),
+    );
+
+    // Find shapes targeting this path or descendants
+    const matchingShapes = shapes.filter((s: any) =>
+      s.target === path || s.target?.startsWith(`${path}.`),
+    );
+
+    const results = this.raw.batchWithRebuild(phase1, (() => {
+      // After phase1, the duplicated item's path should be available
+      // Read the inserted path from state — it's the item right after the original
+      const items = this.raw.state.definition.items;
+      let insertedPath: string | undefined;
+
+      // Find the copy — it should have a key ending in _copy
+      const findCopy = (itemList: any[], parentPath?: string): string | undefined => {
+        for (const it of itemList) {
+          const fullP = parentPath ? `${parentPath}.${it.key}` : it.key;
+          if (it.key.endsWith('_copy') || it.key === `${path.split('.').pop()}_copy`) {
+            if (!parentPath && !path.includes('.')) return fullP;
+            if (parentPath === path.split('.').slice(0, -1).join('.')) return fullP;
+          }
+          if (it.children?.length) {
+            const found = findCopy(it.children, fullP);
+            if (found) return found;
+          }
+        }
+        return undefined;
+      };
+      insertedPath = findCopy(items);
+      if (!insertedPath) {
+        // Fallback: assume _copy suffix
+        const leafKey = path.split('.').pop()!;
+        const parentSegments = path.split('.').slice(0, -1);
+        insertedPath = parentSegments.length > 0
+          ? `${parentSegments.join('.')}.${leafKey}_copy`
+          : `${leafKey}_copy`;
+      }
+
+      const newPath = insertedPath;
+      const phase2: AnyCommand[] = [];
+
+      const rewritePath = (p: string): string => {
+        if (p === path) return newPath;
+        if (p.startsWith(`${path}.`)) return newPath + p.slice(path.length);
+        return p;
+      };
+
+      const rewriteFEL = (expr: string | undefined): string | undefined => {
+        if (!expr) return expr;
+        try {
+          return rewriteFELReferences(expr, {
+            rewriteFieldPath: (p: string) => {
+              if (p === path || p.startsWith(`${path}.`)) {
+                return rewritePath(p);
+              }
+              return p;
+            },
+          });
+        } catch {
+          return expr;
+        }
+      };
+
+      // Copy binds with rewritten paths and FEL
+      for (const bind of matchingBinds) {
+        const newBindPath = rewritePath(bind.path);
+        const rewrittenProps: Record<string, unknown> = {};
+        for (const [prop, val] of Object.entries(bind)) {
+          if (prop === 'path') continue;
+          if (typeof val === 'string') {
+            rewrittenProps[prop] = rewriteFEL(val) ?? val;
+          } else {
+            rewrittenProps[prop] = val;
+          }
+        }
+        if (Object.keys(rewrittenProps).length > 0) {
+          phase2.push({
+            type: 'definition.setBind',
+            payload: { path: newBindPath, properties: rewrittenProps },
+          });
+        }
+      }
+
+      // Copy shapes with rewritten targets and FEL
+      for (const shape of matchingShapes) {
+        const payload: Record<string, unknown> = {
+          target: rewritePath(shape.target),
+          constraint: rewriteFEL(shape.constraint) ?? shape.constraint,
+          message: shape.message,
+        };
+        if (shape.timing) payload.timing = shape.timing;
+        if (shape.severity) payload.severity = shape.severity;
+        if (shape.code) payload.code = shape.code;
+        if (shape.activeWhen) payload.activeWhen = rewriteFEL(shape.activeWhen);
+        if (shape.context) {
+          payload.context = shape.context.map((c: any) => ({
+            ...c,
+            expression: rewriteFEL(c.expression),
+          }));
+        }
+        phase2.push({ type: 'definition.addShape', payload });
+      }
+
+      return phase2;
+    })());
+
+    // Find the new item path
+    const leafKey = path.split('.').pop()!;
+    const parentSegments = path.split('.').slice(0, -1);
+    const newPath = parentSegments.length > 0
+      ? `${parentSegments.join('.')}.${leafKey}_copy`
+      : `${leafKey}_copy`;
+
+    return {
+      summary: `Copied '${path}' (deep)`,
+      action: { helper: 'copyItem', params: { path, deep: true } },
+      affectedPaths: [newPath],
+    };
+  }
+
+  // ── Wrap Items In Group ──
+
+  /** Wrap existing items in a new group container. */
+  wrapItemsInGroup(paths: string[], label?: string): HelperResult {
+    // Pre-validation
+    for (const p of paths) {
+      if (!this.itemAt(p)) {
+        throw new HelperError('PATH_NOT_FOUND', `Item not found at path "${p}"`, { path: p });
+      }
+    }
+
+    // Descendant deduplication
+    const pruned = paths.filter(p =>
+      !paths.some(other => other !== p && p.startsWith(`${other}.`)),
+    );
+
+    // Generate group key
+    const groupKey = `group_${Date.now()}`;
+    const groupLabel = label ?? 'Group';
+
+    // Find first item's position for the new group
+    const firstPath = pruned[0];
+    const firstSegments = firstPath.split('.');
+    const firstItemKey = firstSegments.pop()!;
+    const parentPath = firstSegments.length > 0 ? firstSegments.join('.') : undefined;
+
+    // Find insertIndex of first item
+    const parentItems = parentPath
+      ? this.itemAt(parentPath)?.children ?? []
+      : this.state.definition.items;
+    const insertIndex = parentItems.findIndex((i: any) => i.key === firstItemKey);
+
+    const addPayload: Record<string, unknown> = {
+      type: 'group', key: groupKey, label: groupLabel,
+    };
+    if (parentPath) addPayload.parentPath = parentPath;
+    if (insertIndex >= 0) addPayload.insertIndex = insertIndex;
+
+    const groupPath = parentPath ? `${parentPath}.${groupKey}` : groupKey;
+
+    const phase2 = pruned.map((p, i) => ({
+      type: 'definition.moveItem' as const,
+      payload: { sourcePath: p, targetParentPath: groupPath, targetIndex: i },
+    }));
+
+    this.raw.batchWithRebuild(
+      [{ type: 'definition.addItem', payload: addPayload }],
+      phase2,
+    );
+
+    const movedPaths = pruned.map(p => {
+      const leaf = p.split('.').pop()!;
+      return `${groupPath}.${leaf}`;
+    });
+
+    return {
+      summary: `Wrapped ${pruned.length} item(s) in group '${groupKey}'`,
+      action: { helper: 'wrapItemsInGroup', params: { paths: pruned, label: groupLabel } },
+      affectedPaths: [groupPath, ...movedPaths],
+    };
+  }
+
+  // ── Wrap In Layout Component ──
+
+  /** Wrap an item node in a layout component. */
+  wrapInLayoutComponent(path: string, component: 'Card' | 'Stack' | 'Collapsible'): HelperResult {
+    if (!this.itemAt(path)) {
+      throw new HelperError('PATH_NOT_FOUND', `Item not found at path "${path}"`, { path });
+    }
+
+    const leafKey = path.split('.').pop()!;
+    const result = this.raw.dispatch({
+      type: 'component.wrapNode',
+      payload: { node: { bind: leafKey }, wrapper: { component } },
+    });
+    const nodeId = (result as any)?.nodeRef?.nodeId;
+
+    return {
+      summary: `Wrapped '${path}' in ${component}`,
+      action: { helper: 'wrapInLayoutComponent', params: { path, component } },
+      affectedPaths: [nodeId ?? path],
+      createdId: nodeId,
+    };
+  }
+
+  // ── Batch Operations ──
+
+  /** Batch delete multiple items atomically. */
+  batchDeleteItems(paths: string[]): HelperResult {
+    // Descendant deduplication
+    const pruned = paths.filter(p =>
+      !paths.some(other => other !== p && p.startsWith(`${other}.`)),
+    );
+    // Sort deepest-first
+    const sorted = [...pruned].sort((a, b) => b.split('.').length - a.split('.').length);
+
+    this.raw.dispatch(
+      sorted.map(p => ({ type: 'definition.deleteItem' as const, payload: { path: p } })),
+    );
+
+    return {
+      summary: `Deleted ${sorted.length} item(s)`,
+      action: { helper: 'batchDeleteItems', params: { paths: sorted } },
+      affectedPaths: sorted,
+    };
+  }
+
+  /** Batch duplicate multiple items atomically. */
+  batchDuplicateItems(paths: string[]): HelperResult {
+    // Descendant deduplication
+    const pruned = paths.filter(p =>
+      !paths.some(other => other !== p && p.startsWith(`${other}.`)),
+    );
+
+    const results = this.raw.dispatch(
+      pruned.map(p => ({ type: 'definition.duplicateItem' as const, payload: { path: p } })),
+    );
+
+    // Extract inserted paths from results
+    const affectedPaths = (Array.isArray(results) ? results : [results]).map(
+      (r: any, i) => r?.insertedPath ?? `${pruned[i]}_copy`,
+    );
+
+    return {
+      summary: `Duplicated ${pruned.length} item(s)`,
+      action: { helper: 'batchDuplicateItems', params: { paths: pruned } },
+      affectedPaths,
+    };
+  }
+
+  // ── Submit Button ──
+
+  /** Add a submit button. */
+  addSubmitButton(label?: string, pageId?: string): HelperResult {
+    const commands: AnyCommand[] = [
+      {
+        type: 'component.addNode',
+        payload: {
+          parent: { nodeId: 'root' },
+          component: 'SubmitButton',
+          props: { label: label ?? 'Submit' },
+        },
+      },
+    ];
+
+    if (pageId) {
+      commands.push({
+        type: 'pages.assignItem',
+        payload: { pageId, key: 'submit' },
+      });
+    }
+
+    this.raw.dispatch(commands);
+
+    return {
+      summary: `Added submit button`,
+      action: { helper: 'addSubmitButton', params: { label, pageId } },
+      affectedPaths: [],
+    };
+  }
+
+  // ── Page Helpers ──
+
+  /** Add a theme-tier page. */
+  addPage(title: string, description?: string): HelperResult {
+    const payload: Record<string, unknown> = { title };
+    if (description) payload.description = description;
+
+    this.raw.dispatch({ type: 'pages.addPage', payload });
+
+    // Read new page ID from state
+    const pages = this.raw.state.theme.pages ?? [];
+    const newPage = pages[pages.length - 1];
+    const pageId = (newPage as any)?.id as string;
+
+    return {
+      summary: `Added page '${title}'`,
+      action: { helper: 'addPage', params: { title, description } },
+      affectedPaths: [pageId],
+      createdId: pageId,
+    };
+  }
+
+  /** Add a wizard section (definition-tier group). */
+  addWizardPage(label: string): HelperResult {
+    // Generate a key from label
+    const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `step_${Date.now()}`;
+
+    this.raw.dispatch({
+      type: 'definition.addItem',
+      payload: { type: 'group', key, label },
+    });
+
+    // Set wizard mode if not already
+    const pageMode = (this.raw.state.definition as any).formPresentation?.pageMode;
+    if (pageMode !== 'wizard') {
+      this.raw.dispatch({
+        type: 'definition.setFormPresentation',
+        payload: { property: 'pageMode', value: 'wizard' },
+      });
+    }
+
+    return {
+      summary: `Added wizard page '${label}'`,
+      action: { helper: 'addWizardPage', params: { label } },
+      affectedPaths: [key],
+      createdId: key,
+    };
+  }
+
+  /** Remove a page. */
+  removePage(pageId: string): HelperResult {
+    this.raw.dispatch({ type: 'pages.deletePage', payload: { id: pageId } });
+    return {
+      summary: `Removed page '${pageId}'`,
+      action: { helper: 'removePage', params: { pageId } },
+      affectedPaths: [pageId],
+    };
+  }
+
+  /** Reorder a page. */
+  reorderPage(pageId: string, direction: 'up' | 'down'): HelperResult {
+    this.raw.dispatch({ type: 'pages.reorderPages', payload: { id: pageId, direction } });
+    return {
+      summary: `Reordered page '${pageId}' ${direction}`,
+      action: { helper: 'reorderPage', params: { pageId, direction } },
+      affectedPaths: [pageId],
+    };
+  }
+
+  /** Update a page's title or description. */
+  updatePage(pageId: string, changes: { title?: string; description?: string }): HelperResult {
+    const commands: AnyCommand[] = [];
+    for (const [prop, val] of Object.entries(changes)) {
+      if (val !== undefined) {
+        commands.push({
+          type: 'pages.setPageProperty',
+          payload: { id: pageId, property: prop, value: val },
+        });
+      }
+    }
+    if (commands.length > 0) this.raw.dispatch(commands);
+
+    return {
+      summary: `Updated page '${pageId}'`,
+      action: { helper: 'updatePage', params: { pageId, ...changes } },
+      affectedPaths: [pageId],
+    };
+  }
+
+  /** Assign an item to a page. */
+  placeOnPage(target: string, pageId: string, options?: PlacementOptions): HelperResult {
+    const leafKey = target.split('.').pop()!;
+    const payload: Record<string, unknown> = { pageId, key: leafKey };
+    if (options?.span) payload.span = options.span;
+
+    this.raw.dispatch({ type: 'pages.assignItem', payload });
+
+    return {
+      summary: `Placed '${target}' on page '${pageId}'`,
+      action: { helper: 'placeOnPage', params: { target, pageId } },
+      affectedPaths: [target],
+    };
+  }
+
+  /** Remove item from page assignment. */
+  unplaceFromPage(target: string, pageId: string): HelperResult {
+    const leafKey = target.split('.').pop()!;
+    this.raw.dispatch({ type: 'pages.unassignItem', payload: { pageId, key: leafKey } });
+
+    return {
+      summary: `Removed '${target}' from page '${pageId}'`,
+      action: { helper: 'unplaceFromPage', params: { target, pageId } },
+      affectedPaths: [target],
+    };
+  }
+
+  /** Set flow mode. */
+  setFlow(mode: 'single' | 'wizard' | 'tabs', props?: FlowProps): HelperResult {
+    const commands: AnyCommand[] = [
+      { type: 'pages.setMode', payload: { mode } },
+    ];
+
+    if (props?.showProgress !== undefined) {
+      commands.push({
+        type: 'component.setWizardProperty',
+        payload: { property: 'showProgress', value: props.showProgress },
+      });
+    }
+    if (props?.allowSkip !== undefined) {
+      commands.push({
+        type: 'component.setWizardProperty',
+        payload: { property: 'allowSkip', value: props.allowSkip },
+      });
+    }
+
+    this.raw.dispatch(commands);
+
+    return {
+      summary: `Set flow mode to '${mode}'`,
+      action: { helper: 'setFlow', params: { mode, ...props } },
+      affectedPaths: [],
+    };
+  }
+
+  // ── Layout Helpers ──
+
+  /** Layout arrangement → component mapping. */
+  private static readonly _LAYOUT_MAP: Record<LayoutArrangement, { component: string; props?: Record<string, unknown> }> = {
+    'columns-2': { component: 'Grid', props: { columns: 2 } },
+    'columns-3': { component: 'Grid', props: { columns: 3 } },
+    'columns-4': { component: 'Grid', props: { columns: 4 } },
+    'card': { component: 'Card' },
+    'sidebar': { component: 'Panel', props: { position: 'left' } },
+    'inline': { component: 'Stack', props: { direction: 'horizontal' } },
+  };
+
+  /** Apply spatial layout to targets. */
+  applyLayout(targets: string | string[], arrangement: LayoutArrangement): HelperResult {
+    const targetArray = Array.isArray(targets) ? targets : [targets];
+    const layout = Project._LAYOUT_MAP[arrangement];
+
+    // Create layout container
+    const addPayload: Record<string, unknown> = {
+      parent: { nodeId: 'root' },
+      component: layout.component,
+    };
+    if (layout.props) addPayload.props = layout.props;
+
+    const commands: AnyCommand[] = [
+      { type: 'component.addNode', payload: addPayload },
+    ];
+
+    // Move each target into the layout container (deferred — need nodeRef from first command)
+    // Since we can't get the nodeRef mid-batch, we dispatch the addNode first, then moveNode
+    this.raw.dispatch(commands[0]);
+
+    // Now find the created node — it should be the last child of root
+    const tree = this.raw.state.component?.tree;
+    const rootChildren = (tree as any)?.children ?? [];
+    const lastChild = rootChildren[rootChildren.length - 1];
+    const containerRef = lastChild?.nodeId
+      ? { nodeId: lastChild.nodeId }
+      : lastChild?.bind
+        ? { bind: lastChild.bind }
+        : { nodeId: 'root' };
+
+    // Move targets into container
+    const moveCommands: AnyCommand[] = targetArray.map((t, i) => ({
+      type: 'component.moveNode' as const,
+      payload: {
+        source: { bind: t.split('.').pop()! },
+        targetParent: containerRef,
+        targetIndex: i,
+      },
+    }));
+
+    if (moveCommands.length > 0) {
+      this.raw.dispatch(moveCommands);
+    }
+
+    return {
+      summary: `Applied ${arrangement} layout to ${targetArray.length} item(s)`,
+      action: { helper: 'applyLayout', params: { targets: targetArray, arrangement } },
+      affectedPaths: targetArray,
+    };
+  }
+
+  /** Apply style overrides to a specific field. */
+  applyStyle(path: string, properties: Record<string, unknown>): HelperResult {
+    const leafKey = path.split('.').pop()!;
+    const commands: AnyCommand[] = [];
+
+    for (const [prop, val] of Object.entries(properties)) {
+      commands.push({
+        type: 'theme.setItemOverride',
+        payload: { itemKey: leafKey, property: prop, value: val },
+      });
+    }
+
+    if (commands.length > 0) {
+      this.raw.dispatch(commands);
+    }
+
+    return {
+      summary: `Applied style to '${path}'`,
+      action: { helper: 'applyStyle', params: { path, properties } },
+      affectedPaths: [path],
+    };
+  }
+
+  /** Apply style to form-level defaults or type selectors. */
+  applyStyleAll(
+    target: 'form' | { type: 'group' | 'field' | 'display' } | { dataType: string },
+    properties: Record<string, unknown>,
+  ): HelperResult {
+    const commands: AnyCommand[] = [];
+
+    if (target === 'form') {
+      for (const [prop, val] of Object.entries(properties)) {
+        if (prop === 'density') {
+          commands.push({
+            type: 'definition.setFormPresentation',
+            payload: { property: 'density', value: val },
+          });
+        } else {
+          commands.push({
+            type: 'theme.setDefaults',
+            payload: { property: prop, value: val },
+          });
+        }
+      }
+    } else {
+      // Selector-based: { type: ... } or { dataType: ... }
+      for (const [prop, val] of Object.entries(properties)) {
+        commands.push({
+          type: 'theme.addSelector',
+          payload: { ...target, property: prop, value: val },
+        });
+      }
+    }
+
+    if (commands.length > 0) {
+      this.raw.dispatch(commands);
+    }
+
+    return {
+      summary: `Applied style to ${typeof target === 'string' ? target : JSON.stringify(target)}`,
+      action: { helper: 'applyStyleAll', params: { target, properties } },
+      affectedPaths: [],
+    };
+  }
+
+  // ── Variable Helpers ──
+
+  /** Add a named FEL variable. */
+  addVariable(name: string, expression: string, scope?: string): HelperResult {
+    this._validateFEL(expression);
+    const payload: Record<string, unknown> = { name, expression };
+    if (scope) payload.scope = scope;
+
+    this.raw.dispatch({ type: 'definition.addVariable', payload });
+
+    return {
+      summary: `Added variable '${name}'`,
+      action: { helper: 'addVariable', params: { name, expression, scope } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Update a variable's expression. */
+  updateVariable(name: string, expression: string): HelperResult {
+    this._validateFEL(expression);
+    this.raw.dispatch({
+      type: 'definition.setVariable',
+      payload: { name, property: 'expression', value: expression },
+    });
+
+    return {
+      summary: `Updated variable '${name}'`,
+      action: { helper: 'updateVariable', params: { name, expression } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Remove a variable — warns about dangling references. */
+  removeVariable(name: string): HelperResult {
+    // Scan for dangling references before deletion
+    const warnings: HelperWarning[] = [];
+    const allExprs = this.allExpressions();
+    const varRef = `$${name}`;
+    const danglingPaths: string[] = [];
+
+    for (const exprLoc of allExprs) {
+      if (typeof exprLoc.expression === 'string' && exprLoc.expression.includes(varRef)) {
+        danglingPaths.push(exprLoc.path ?? exprLoc.id ?? 'unknown');
+      }
+    }
+
+    if (danglingPaths.length > 0) {
+      warnings.push({
+        code: 'DANGLING_REFERENCES',
+        message: `${danglingPaths.length} expression(s) still reference $${name}`,
+        detail: { referenceCount: danglingPaths.length, paths: danglingPaths },
+      });
+    }
+
+    this.raw.dispatch({ type: 'definition.deleteVariable', payload: { name } });
+
+    return {
+      summary: `Removed variable '${name}'`,
+      action: { helper: 'removeVariable', params: { name } },
+      affectedPaths: [],
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
+  }
+
+  /** Rename a variable — Future Work, handler not implemented. */
+  renameVariable(name: string, newName: string): HelperResult {
+    // definition.renameVariable is Future Work — delegate to handler and let it throw if missing
+    this.raw.dispatch({
+      type: 'definition.renameVariable',
+      payload: { name, newName },
+    });
+
+    return {
+      summary: `Renamed variable '${name}' to '${newName}'`,
+      action: { helper: 'renameVariable', params: { name, newName } },
+      affectedPaths: [],
+    };
+  }
+
+  // ── Instance Helpers ──
+
+  /** Add a named external data source. */
+  addInstance(name: string, props: InstanceProps): HelperResult {
+    this.raw.dispatch({
+      type: 'definition.addInstance',
+      payload: { name, ...props },
+    });
+
+    return {
+      summary: `Added instance '${name}'`,
+      action: { helper: 'addInstance', params: { name, ...props } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Update instance properties. */
+  updateInstance(name: string, changes: Partial<InstanceProps>): HelperResult {
+    const commands: AnyCommand[] = [];
+    for (const [prop, val] of Object.entries(changes)) {
+      if (val !== undefined) {
+        commands.push({
+          type: 'definition.setInstance',
+          payload: { name, property: prop, value: val },
+        });
+      }
+    }
+    if (commands.length > 0) this.raw.dispatch(commands);
+
+    return {
+      summary: `Updated instance '${name}'`,
+      action: { helper: 'updateInstance', params: { name, changes } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Rename an instance — rewrites FEL references. */
+  renameInstance(name: string, newName: string): HelperResult {
+    this.raw.dispatch({
+      type: 'definition.renameInstance',
+      payload: { name, newName },
+    });
+
+    return {
+      summary: `Renamed instance '${name}' to '${newName}'`,
+      action: { helper: 'renameInstance', params: { name, newName } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Remove an instance. */
+  removeInstance(name: string): HelperResult {
+    // Scan for dangling references
+    const warnings: HelperWarning[] = [];
+    const allExprs = this.allExpressions();
+    const ref = `@instance('${name}')`;
+    const danglingPaths: string[] = [];
+
+    for (const exprLoc of allExprs) {
+      if (typeof exprLoc.expression === 'string' && exprLoc.expression.includes(ref)) {
+        danglingPaths.push(exprLoc.path ?? exprLoc.id ?? 'unknown');
+      }
+    }
+
+    if (danglingPaths.length > 0) {
+      warnings.push({
+        code: 'DANGLING_REFERENCES',
+        message: `${danglingPaths.length} expression(s) still reference @instance('${name}')`,
+        detail: { referenceCount: danglingPaths.length, paths: danglingPaths },
+      });
+    }
+
+    this.raw.dispatch({ type: 'definition.deleteInstance', payload: { name } });
+
+    return {
+      summary: `Removed instance '${name}'`,
+      action: { helper: 'removeInstance', params: { name } },
+      affectedPaths: [],
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
+  }
+
+  // ── Screener Helpers ──
+
+  /** Enable/disable screener. */
+  setScreener(enabled: boolean): HelperResult {
+    this.raw.dispatch({ type: 'definition.setScreener', payload: { enabled } });
+
+    return {
+      summary: `Screener ${enabled ? 'enabled' : 'disabled'}`,
+      action: { helper: 'setScreener', params: { enabled } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Add a screener question. */
+  addScreenField(key: string, label: string, type: string, props?: FieldProps): HelperResult {
+    const resolved = resolveFieldType(type);
+    this.raw.dispatch({
+      type: 'definition.addScreenerItem',
+      payload: { type: 'field', key, label, dataType: resolved.dataType },
+    });
+
+    return {
+      summary: `Added screener field '${key}'`,
+      action: { helper: 'addScreenField', params: { key, label, type } },
+      affectedPaths: [key],
+    };
+  }
+
+  /** Remove a screener question. */
+  removeScreenField(key: string): HelperResult {
+    this.raw.dispatch({ type: 'definition.deleteScreenerItem', payload: { key } });
+
+    return {
+      summary: `Removed screener field '${key}'`,
+      action: { helper: 'removeScreenField', params: { key } },
+      affectedPaths: [key],
+    };
+  }
+
+  /** Add a screener routing rule. */
+  addScreenRoute(condition: string, target: string, label?: string): HelperResult {
+    this._validateFEL(condition);
+    const payload: Record<string, unknown> = { condition, target };
+    if (label) payload.label = label;
+
+    this.raw.dispatch({ type: 'definition.addRoute', payload });
+
+    return {
+      summary: `Added screen route to '${target}'`,
+      action: { helper: 'addScreenRoute', params: { condition, target, label } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Update a screener route. */
+  updateScreenRoute(
+    routeIndex: number,
+    changes: { condition?: string; target?: string; label?: string },
+  ): HelperResult {
+    if (changes.condition) this._validateFEL(changes.condition);
+
+    const commands: AnyCommand[] = [];
+    for (const [prop, val] of Object.entries(changes)) {
+      if (val !== undefined) {
+        commands.push({
+          type: 'definition.setRouteProperty',
+          payload: { index: routeIndex, property: prop, value: val },
+        });
+      }
+    }
+    if (commands.length > 0) this.raw.dispatch(commands);
+
+    return {
+      summary: `Updated screen route ${routeIndex}`,
+      action: { helper: 'updateScreenRoute', params: { routeIndex, ...changes } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Reorder a screener route. */
+  reorderScreenRoute(routeIndex: number, direction: 'up' | 'down'): HelperResult {
+    this.raw.dispatch({
+      type: 'definition.reorderRoute',
+      payload: { index: routeIndex, direction },
+    });
+
+    return {
+      summary: `Reordered screen route ${routeIndex} ${direction}`,
+      action: { helper: 'reorderScreenRoute', params: { routeIndex, direction } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Remove a screener route. */
+  removeScreenRoute(routeIndex: number): HelperResult {
+    this.raw.dispatch({ type: 'definition.deleteRoute', payload: { index: routeIndex } });
+
+    return {
+      summary: `Removed screen route ${routeIndex}`,
+      action: { helper: 'removeScreenRoute', params: { routeIndex } },
       affectedPaths: [],
     };
   }

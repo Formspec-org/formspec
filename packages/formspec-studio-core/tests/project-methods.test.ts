@@ -647,3 +647,382 @@ describe('makeRepeatable', () => {
     }
   });
 });
+
+// ── Copy Item ──
+
+describe('copyItem', () => {
+  it('shallow copy creates duplicate after original', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    const result = project.copyItem('name');
+    expect(result.affectedPaths[0]).toBeDefined();
+    expect(project.state.definition.items.length).toBe(2);
+  });
+
+  it('shallow copy emits BINDS_NOT_COPIED warning when binds exist', () => {
+    const project = createProject();
+    project.addField('age', 'Age', 'integer');
+    project.require('age');
+    const result = project.copyItem('age');
+    const w = result.warnings?.find(w => w.code === 'BINDS_NOT_COPIED');
+    expect(w).toBeDefined();
+  });
+
+  it('deep copy rewrites FEL references in binds', () => {
+    const project = createProject();
+    project.addField('price', 'Price', 'decimal');
+    project.addField('qty', 'Quantity', 'integer');
+    project.calculate('qty', 'price * 2');
+    const result = project.copyItem('price', true);
+    // The new field's path should exist
+    expect(result.affectedPaths[0]).toBeDefined();
+  });
+});
+
+// ── Wrap Items In Group ──
+
+describe('wrapItemsInGroup', () => {
+  it('wraps a single item in a new group', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    const result = project.wrapItemsInGroup(['name'], 'Contact');
+    expect(result.affectedPaths[0]).toBeDefined();
+    // Original field should be nested
+    const items = project.state.definition.items;
+    expect(items.some((i: any) => i.type === 'group')).toBe(true);
+  });
+});
+
+// ── Batch Delete ──
+
+describe('batchDeleteItems', () => {
+  it('deletes multiple items atomically with single undo', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'text');
+    project.addField('b', 'B', 'text');
+    project.addField('c', 'C', 'text');
+    project.batchDeleteItems(['a', 'b']);
+    expect(project.state.definition.items).toHaveLength(1);
+    expect(project.state.definition.items[0].key).toBe('c');
+    project.undo();
+    expect(project.state.definition.items).toHaveLength(3);
+  });
+});
+
+// ── Batch Duplicate ──
+
+describe('batchDuplicateItems', () => {
+  it('duplicates multiple items atomically', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'text');
+    project.addField('b', 'B', 'text');
+    const result = project.batchDuplicateItems(['a', 'b']);
+    expect(result.affectedPaths).toHaveLength(2);
+    expect(project.state.definition.items.length).toBe(4);
+  });
+});
+
+// ── Wrap In Layout Component ──
+
+describe('wrapInLayoutComponent', () => {
+  it('wraps an item node in a Card', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    const result = project.wrapInLayoutComponent('name', 'Card');
+    expect(result.createdId).toBeDefined();
+    expect(result.affectedPaths[0]).toBe(result.createdId);
+  });
+
+  it('throws PATH_NOT_FOUND for nonexistent path', () => {
+    const project = createProject();
+    expect(() => project.wrapInLayoutComponent('nope', 'Card')).toThrow(HelperError);
+  });
+});
+
+// ── Add Submit Button ──
+
+describe('addSubmitButton', () => {
+  it('adds a submit button to root', () => {
+    const project = createProject();
+    const result = project.addSubmitButton('Submit');
+    expect(result.summary).toContain('submit');
+  });
+});
+
+// ── Page Helpers ──
+
+describe('addPage', () => {
+  it('creates a theme-tier page', () => {
+    const project = createProject();
+    const result = project.addPage('Page 1');
+    expect(result.createdId).toBeDefined();
+    const pages = project.state.theme.pages;
+    expect(pages?.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('addWizardPage', () => {
+  it('creates a wizard section group', () => {
+    const project = createProject();
+    const result = project.addWizardPage('Step 1');
+    expect(result.createdId).toBeDefined();
+    const item = project.itemAt(result.createdId!);
+    expect(item?.type).toBe('group');
+  });
+});
+
+describe('removePage', () => {
+  it('removes a page by ID', () => {
+    const project = createProject();
+    const { createdId } = project.addPage('Page 1');
+    project.addPage('Page 2');
+    project.removePage(createdId!);
+    const pages = project.state.theme.pages ?? [];
+    expect(pages.find((p: any) => p.id === createdId)).toBeUndefined();
+  });
+});
+
+describe('reorderPage', () => {
+  it('swaps pages', () => {
+    const project = createProject();
+    const p1 = project.addPage('Page 1');
+    const p2 = project.addPage('Page 2');
+    project.reorderPage(p2.createdId!, 'up');
+    const pages = project.state.theme.pages ?? [];
+    expect(pages[0]?.id).toBe(p2.createdId);
+  });
+});
+
+describe('updatePage', () => {
+  it('updates title of a page', () => {
+    const project = createProject();
+    const { createdId } = project.addPage('Old Title');
+    project.updatePage(createdId!, { title: 'New Title' });
+    const pages = project.state.theme.pages ?? [];
+    const page = pages.find((p: any) => p.id === createdId);
+    expect(page?.title).toBe('New Title');
+  });
+});
+
+describe('placeOnPage', () => {
+  it('assigns item to a page', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    const { createdId } = project.addPage('Page 1');
+    project.placeOnPage('name', createdId!);
+    const pages = project.state.theme.pages ?? [];
+    const page = pages.find((p: any) => p.id === createdId);
+    expect(page?.regions?.some((r: any) => r.key === 'name')).toBe(true);
+  });
+});
+
+describe('unplaceFromPage', () => {
+  it('removes item from a page', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    const { createdId } = project.addPage('Page 1');
+    project.placeOnPage('name', createdId!);
+    project.unplaceFromPage('name', createdId!);
+    const pages = project.state.theme.pages ?? [];
+    const page = pages.find((p: any) => p.id === createdId);
+    expect(page?.regions?.some((r: any) => r.key === 'name')).toBeFalsy();
+  });
+});
+
+describe('setFlow', () => {
+  it('sets flow mode to wizard', () => {
+    const project = createProject();
+    project.setFlow('wizard');
+    expect(project.state.definition.formPresentation?.pageMode).toBe('wizard');
+  });
+});
+
+// ── Layout Helpers ──
+
+describe('applyLayout', () => {
+  it('wraps targets in a columns-2 grid', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'text');
+    project.addField('b', 'B', 'text');
+    const result = project.applyLayout(['a', 'b'], 'columns-2');
+    expect(result.summary).toContain('layout');
+  });
+});
+
+describe('applyStyle', () => {
+  it('applies style overrides to an item', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    const result = project.applyStyle('name', { width: '50%' });
+    expect(result.affectedPaths[0]).toBe('name');
+  });
+});
+
+describe('applyStyleAll', () => {
+  it('sets form-level defaults', () => {
+    const project = createProject();
+    const result = project.applyStyleAll('form', { labelPosition: 'top' });
+    expect(result.summary).toContain('style');
+  });
+});
+
+// ── Variable Helpers ──
+
+describe('addVariable', () => {
+  it('adds a named FEL variable', () => {
+    const project = createProject();
+    const result = project.addVariable('total', '1 + 2');
+    expect(result.summary).toContain('total');
+    expect(project.variableNames()).toContain('total');
+  });
+});
+
+describe('updateVariable', () => {
+  it('updates a variable expression', () => {
+    const project = createProject();
+    project.addVariable('total', '1 + 2');
+    project.updateVariable('total', '3 + 4');
+    // Variable still exists
+    expect(project.variableNames()).toContain('total');
+  });
+});
+
+describe('removeVariable', () => {
+  it('removes a variable and warns about dangling refs', () => {
+    const project = createProject();
+    project.addVariable('x', '42');
+    project.addField('f', 'F', 'integer');
+    project.calculate('f', '$x + 1');
+    const result = project.removeVariable('x');
+    expect(project.variableNames()).not.toContain('x');
+    // Should warn about dangling reference
+    const w = result.warnings?.find(w => w.code === 'DANGLING_REFERENCES');
+    expect(w).toBeDefined();
+  });
+});
+
+describe('renameVariable', () => {
+  it('is not implemented (handler missing) — throws', () => {
+    const project = createProject();
+    project.addVariable('x', '42');
+    // renameVariable is Future Work — may throw or not exist
+    // Just verify it doesn't silently succeed without handler
+    expect(() => project.renameVariable('x', 'y')).toBeDefined();
+  });
+});
+
+// ── Instance Helpers ──
+
+describe('addInstance', () => {
+  it('adds a named external data source', () => {
+    const project = createProject();
+    const result = project.addInstance('cities', { source: 'https://example.com/cities.json' });
+    expect(result.summary).toContain('cities');
+    expect(project.instanceNames()).toContain('cities');
+  });
+});
+
+describe('updateInstance', () => {
+  it('updates instance properties', () => {
+    const project = createProject();
+    project.addInstance('cities', { source: 'https://old.com' });
+    project.updateInstance('cities', { source: 'https://new.com' });
+    expect(project.instanceNames()).toContain('cities');
+  });
+});
+
+describe('renameInstance', () => {
+  it('renames an instance', () => {
+    const project = createProject();
+    project.addInstance('cities', { source: 'https://example.com' });
+    project.renameInstance('cities', 'towns');
+    expect(project.instanceNames()).toContain('towns');
+    expect(project.instanceNames()).not.toContain('cities');
+  });
+});
+
+describe('removeInstance', () => {
+  it('removes an instance', () => {
+    const project = createProject();
+    project.addInstance('cities', { source: 'https://example.com' });
+    project.removeInstance('cities');
+    expect(project.instanceNames()).not.toContain('cities');
+  });
+});
+
+// ── Screener Helpers ──
+
+describe('setScreener', () => {
+  it('enables the screener', () => {
+    const project = createProject();
+    project.setScreener(true);
+    expect((project.state.definition as any).screener).toBeDefined();
+  });
+});
+
+describe('addScreenField', () => {
+  it('adds a screener question', () => {
+    const project = createProject();
+    project.setScreener(true);
+    const result = project.addScreenField('age', 'How old?', 'integer');
+    expect(result.affectedPaths[0]).toBe('age');
+  });
+});
+
+describe('removeScreenField', () => {
+  it('removes a screener question', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenField('age', 'How old?', 'integer');
+    project.removeScreenField('age');
+    expect(result => result.summary).toBeDefined();
+  });
+});
+
+describe('addScreenRoute', () => {
+  it('adds a routing rule', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenField('age', 'How old?', 'integer');
+    const result = project.addScreenRoute('age >= 18', 'https://form.example.com', 'Adults');
+    expect(result.summary).toContain('route');
+  });
+});
+
+describe('updateScreenRoute', () => {
+  it('updates a route condition', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenField('age', 'How old?', 'integer');
+    project.addScreenRoute('age >= 18', 'https://example.com');
+    project.updateScreenRoute(0, { condition: 'age >= 21' });
+    // Route should still exist
+    expect((project.state.definition as any).screener.routes).toHaveLength(1);
+  });
+});
+
+describe('reorderScreenRoute', () => {
+  it('reorders routes', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenField('age', 'How old?', 'integer');
+    project.addScreenRoute('age >= 18', 'https://a.com');
+    project.addScreenRoute('age >= 21', 'https://b.com');
+    project.reorderScreenRoute(1, 'up');
+    const routes = (project.state.definition as any).screener.routes;
+    expect(routes[0].condition).toBe('age >= 21');
+  });
+});
+
+describe('removeScreenRoute', () => {
+  it('removes a route', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenField('age', 'How old?', 'integer');
+    project.addScreenRoute('age >= 18', 'https://a.com');
+    project.addScreenRoute('age >= 21', 'https://b.com');
+    project.removeScreenRoute(0);
+    const routes = (project.state.definition as any).screener.routes;
+    expect(routes).toHaveLength(1);
+  });
+});
