@@ -1691,7 +1691,7 @@ export class Project extends RawProject {
 
     for (const exprLoc of allExprs) {
       if (typeof exprLoc.expression === 'string' && exprLoc.expression.includes(varRef)) {
-        danglingPaths.push(exprLoc.path ?? exprLoc.id ?? 'unknown');
+        danglingPaths.push(exprLoc.location ?? 'unknown');
       }
     }
 
@@ -1788,7 +1788,7 @@ export class Project extends RawProject {
 
     for (const exprLoc of allExprs) {
       if (typeof exprLoc.expression === 'string' && exprLoc.expression.includes(ref)) {
-        danglingPaths.push(exprLoc.path ?? exprLoc.id ?? 'unknown');
+        danglingPaths.push(exprLoc.location ?? 'unknown');
       }
     }
 
