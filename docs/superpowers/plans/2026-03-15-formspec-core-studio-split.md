@@ -12,6 +12,27 @@
 
 ---
 
+## TDD Discipline
+
+Every change follows red → green → refactor. No exceptions.
+
+1. **Before touching anything:** run the full suite — it must be green. This is your baseline.
+2. **Red first:** write or identify the failing test before writing implementation. If you can't make a test fail, you don't understand the change yet.
+3. **Green with minimum code:** make the test pass with the simplest change that works. Don't over-build.
+4. **Refactor under green:** clean up only after tests pass. Never refactor while red.
+5. **Expand coverage:** after green, add edge-case and regression tests. Run them — some will be red. Make them green.
+6. **No implementation before a failing test exists.** If you find yourself writing code without a failing test waiting for it, stop.
+
+For this structural split, "red" moments are:
+- After `git mv`: import resolution breaks — TypeScript goes red. Fix imports, go green.
+- After `implements IProjectCore`: TypeScript validates the interface — may go red. Fix gaps, go green.
+- After composition refactor: call sites that relied on inheritance go red. Fix them, go green.
+- After moving tests: broken imports go red. Fix, go green.
+
+Each task ends with a green test run and a commit. Do not advance to the next task while red.
+
+---
+
 ## Principles
 
 This is a **greenfield project with zero users and zero backwards-compatibility constraints.** Nothing is precious. Apply these rules without exception:
