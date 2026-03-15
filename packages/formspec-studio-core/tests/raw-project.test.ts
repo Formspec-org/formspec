@@ -257,11 +257,11 @@ describe('RawProject', () => {
 import { Project, createProject } from '../src/project-wrapper.js';
 
 describe('Project wrapper', () => {
-  it('wraps RawProject and proxies state', () => {
+  it('extends RawProject and exposes raw self-reference', () => {
     const project = createProject();
-    expect(project.raw).toBeDefined();
-    expect(project.raw).toBeInstanceOf(RawProject);
-    expect(project.state).toBe(project.raw.state);
+    expect(project).toBeInstanceOf(RawProject);
+    expect(project).toBeInstanceOf(Project);
+    expect(project.raw).toBe(project);
     expect(project.fieldPaths()).toEqual([]);
   });
 

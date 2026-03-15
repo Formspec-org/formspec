@@ -10,7 +10,27 @@
  * No framework dependencies, no singletons, no side effects.
  */
 
-export { Project, createProject } from './project.js';
+export { RawProject, createRawProject } from './raw-project.js';
+export { Project, createProject } from './project-wrapper.js';
+export { HelperError } from './helper-types.js';
+export type {
+  HelperResult,
+  HelperWarning,
+  FieldProps,
+  GroupProps,
+  RepeatProps,
+  BranchPath,
+  LayoutArrangement,
+  PlacementOptions,
+  FlowProps,
+  ValidationOptions,
+  InstanceProps,
+  ChoiceOption,
+  ItemChanges,
+} from './helper-types.js';
+export { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
+export type { ResolvedFieldType } from './field-type-aliases.js';
+export { previewForm, validateResponse } from './evaluation-helpers.js';
 export { normalizeDefinition } from './normalization.js';
 export { resolveThemeCascade } from './theme-cascade.js';
 export type { ResolvedProperty } from './theme-cascade.js';

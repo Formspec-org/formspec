@@ -1,18 +1,8 @@
-import { RawProject, createRawProject } from './raw-project.js';
+import { RawProject } from './raw-project.js';
 import type {
   ProjectOptions,
-  ProjectState,
   AnyCommand,
-  ChangeListener,
-  ProjectBundle,
-  Diagnostics,
-  ProjectStatistics,
-  FieldDependents,
-  ExpressionLocation,
-  FELParseContext,
-  FELParseResult,
 } from './types.js';
-import type { FormspecItem } from 'formspec-engine';
 import {
   HelperError,
   type HelperResult,
@@ -33,45 +23,12 @@ import { rewriteFELReferences } from 'formspec-engine';
 
 /**
  * Behavior-driven interface for form authoring.
- * Wraps RawProject via composition, adding form-author-friendly methods.
+ * Extends RawProject, adding form-author-friendly methods.
  * All authoring methods return HelperResult.
  */
-export class Project {
-  readonly raw: RawProject;
-
-  constructor(options?: ProjectOptions) {
-    this.raw = createRawProject(options);
-  }
-
-  // ── Proxied from raw (read / subscribe / export) ──
-
-  get state(): Readonly<ProjectState> { return this.raw.state; }
-  get definition() { return this.raw.definition; }
-  get component() { return this.raw.component; }
-  get theme() { return this.raw.theme; }
-  get mapping() { return this.raw.mapping; }
-
-  fieldPaths(): string[] { return this.raw.fieldPaths(); }
-  itemAt(path: string): FormspecItem | undefined { return this.raw.itemAt(path); }
-  diagnose(): Diagnostics { return this.raw.diagnose(); }
-  statistics(): ProjectStatistics { return this.raw.statistics(); }
-  bindFor(path: string) { return this.raw.bindFor(path); }
-  componentFor(fieldKey: string) { return this.raw.componentFor(fieldKey); }
-  parseFEL(expression: string, context?: FELParseContext): FELParseResult {
-    return this.raw.parseFEL(expression, context);
-  }
-  fieldDependents(path: string): FieldDependents { return this.raw.fieldDependents(path); }
-  allExpressions(): ExpressionLocation[] { return this.raw.allExpressions(); }
-  variableNames(): string[] { return this.raw.variableNames(); }
-  instanceNames(): string[] { return this.raw.instanceNames(); }
-
-  undo(): boolean { return this.raw.undo(); }
-  redo(): boolean { return this.raw.redo(); }
-  get canUndo(): boolean { return this.raw.canUndo; }
-  get canRedo(): boolean { return this.raw.canRedo; }
-
-  onChange(listener: ChangeListener): () => void { return this.raw.onChange(listener); }
-  export(): ProjectBundle { return this.raw.export(); }
+export class Project extends RawProject {
+  /** Backwards-compatible self-reference (composition → inheritance migration). */
+  get raw(): this { return this; }
 
   // ── Authoring methods ──
 
@@ -99,7 +56,7 @@ export class Project {
     }
 
     if (props?.page) {
-      const pages = this.raw.state.theme.pages;
+      const pages = this.state.theme.pages;
       const pageExists = pages?.some((p: any) => p.id === props.page);
       if (!pageExists) {
         throw new HelperError('PAGE_NOT_FOUND', `Page "${props.page}" does not exist`, {
@@ -234,7 +191,7 @@ export class Project {
     }
 
     // Dispatch
-    this.raw.batchWithRebuild(phase1, phase2);
+    this.batchWithRebuild(phase1, phase2);
 
     return {
       summary: `Added field '${key}' (${type}) to ${parentPath ? `'${parentPath}'` : 'root'}`,
@@ -259,13 +216,13 @@ export class Project {
 
     if (props?.display) {
       // Two-phase: addItem triggers rebuild, then setGroupDisplayMode on rebuilt tree
-      this.raw.batchWithRebuild(
+      this.batchWithRebuild(
         [{ type: 'definition.addItem', payload: addItemPayload }],
         [{ type: 'component.setGroupDisplayMode', payload: { groupKey: key, mode: props.display } }],
       );
     } else {
       // Single dispatch — no component tree dependency
-      this.raw.dispatch({ type: 'definition.addItem', payload: addItemPayload });
+      this.dispatch({ type: 'definition.addItem', payload: addItemPayload });
     }
 
     return {
@@ -305,7 +262,7 @@ export class Project {
     };
     if (parentPath) payload.parentPath = parentPath;
 
-    this.raw.dispatch({ type: 'definition.addItem', payload });
+    this.dispatch({ type: 'definition.addItem', payload });
 
     return {
       summary: `Added ${kind ?? 'paragraph'} content '${key}'`,
@@ -334,7 +291,7 @@ export class Project {
   /** Conditional visibility — dispatches definition.setBind { relevant: condition } */
   showWhen(target: string, condition: string): HelperResult {
     this._validateFEL(condition);
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { relevant: condition } },
     });
@@ -348,7 +305,7 @@ export class Project {
   /** Readonly condition — dispatches definition.setBind { readonly: condition } */
   readonlyWhen(target: string, condition: string): HelperResult {
     this._validateFEL(condition);
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { readonly: condition } },
     });
@@ -363,7 +320,7 @@ export class Project {
   require(target: string, condition?: string): HelperResult {
     const expr = condition ?? 'true';
     this._validateFEL(expr);
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { required: expr } },
     });
@@ -377,7 +334,7 @@ export class Project {
   /** Calculated value — dispatches definition.setBind { calculate: expression } */
   calculate(target: string, expression: string): HelperResult {
     this._validateFEL(expression);
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { calculate: expression } },
     });
@@ -468,7 +425,7 @@ export class Project {
     }
 
     // Dispatch all setBind commands atomically
-    this.raw.dispatch(commands);
+    this.dispatch(commands);
 
     const affectedPaths = commands.map(c => (c.payload as any).path);
     return {
@@ -503,10 +460,10 @@ export class Project {
     if (options?.code) payload.code = options.code;
     if (options?.activeWhen) payload.activeWhen = options.activeWhen;
 
-    this.raw.dispatch({ type: 'definition.addShape', payload });
+    this.dispatch({ type: 'definition.addShape', payload });
 
     // Read the shape ID from state (addShape appends to shapes array)
-    const shapes = (this.raw.state.definition as any).shapes ?? [];
+    const shapes = (this.state.definition as any).shapes ?? [];
     const createdId = shapes[shapes.length - 1]?.id as string;
 
     return {
@@ -519,7 +476,7 @@ export class Project {
 
   /** Remove a validation shape by ID. */
   removeValidation(shapeId: string): HelperResult {
-    this.raw.dispatch({ type: 'definition.deleteShape', payload: { id: shapeId } });
+    this.dispatch({ type: 'definition.deleteShape', payload: { id: shapeId } });
     return {
       summary: `Removed validation '${shapeId}'`,
       action: { helper: 'removeValidation', params: { shapeId } },
@@ -583,7 +540,7 @@ export class Project {
     }
 
     if (commands.length > 0) {
-      this.raw.dispatch(commands);
+      this.dispatch(commands);
     }
 
     return {
@@ -680,7 +637,7 @@ export class Project {
     });
 
     // Dispatch atomically
-    this.raw.dispatch(commands);
+    this.dispatch(commands);
 
     return {
       summary: `Removed item '${path}'`,
@@ -837,7 +794,7 @@ export class Project {
     }
 
     if (commands.length > 0) {
-      this.raw.dispatch(commands);
+      this.dispatch(commands);
     }
 
     return {
@@ -850,7 +807,7 @@ export class Project {
 
   /** Move item to a new parent or position. */
   moveItem(path: string, targetParentPath?: string, targetIndex?: number): HelperResult {
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.moveItem',
       payload: { sourcePath: path, targetParentPath, targetIndex },
     });
@@ -866,7 +823,7 @@ export class Project {
 
   /** Rename item — FEL reference rewriting handled inside the handler. */
   renameItem(path: string, newKey: string): HelperResult {
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.renameItem',
       payload: { path, newKey },
     });
@@ -883,7 +840,7 @@ export class Project {
 
   /** Reorder item within its parent (swap with neighbor). */
   reorderItem(path: string, direction: 'up' | 'down'): HelperResult {
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.reorderItem',
       payload: { path, direction },
     });
@@ -934,7 +891,7 @@ export class Project {
     }
 
     if (commands.length > 0) {
-      this.raw.dispatch(commands);
+      this.dispatch(commands);
     }
 
     return {
@@ -948,7 +905,7 @@ export class Project {
 
   /** Define a reusable named option set. */
   defineChoices(name: string, options: ChoiceOption[]): HelperResult {
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.setOptionSet',
       payload: { name, options },
     });
@@ -1004,7 +961,7 @@ export class Project {
       });
     }
 
-    this.raw.dispatch(commands);
+    this.dispatch(commands);
 
     return {
       summary: `Made group '${target}' repeatable`,
@@ -1024,7 +981,7 @@ export class Project {
 
     if (!deep) {
       // Shallow copy — just duplicate the definition item
-      const results = this.raw.dispatch({
+      const results = this.dispatch({
         type: 'definition.duplicateItem',
         payload: { path },
       });
@@ -1032,8 +989,8 @@ export class Project {
 
       // Collect warnings about omitted binds/shapes
       const warnings: HelperWarning[] = [];
-      const binds = (this.raw.state.definition as any).binds ?? [];
-      const shapes = (this.raw.state.definition as any).shapes ?? [];
+      const binds = (this.state.definition as any).binds ?? [];
+      const shapes = (this.state.definition as any).shapes ?? [];
 
       // Find binds targeting the original path (these are NOT copied by duplicateItem)
       const matchingBinds = binds.filter((b: any) =>
@@ -1077,8 +1034,8 @@ export class Project {
 
     // We need batchWithRebuild: phase1 duplicates, phase2 copies binds with rewritten FEL
     // Collect bind/shape data before dispatch
-    const binds = (this.raw.state.definition as any).binds ?? [];
-    const shapes = (this.raw.state.definition as any).shapes ?? [];
+    const binds = (this.state.definition as any).binds ?? [];
+    const shapes = (this.state.definition as any).shapes ?? [];
 
     // Find binds targeting this path or descendants
     const matchingBinds = binds.filter((b: any) =>
@@ -1090,10 +1047,10 @@ export class Project {
       s.target === path || s.target?.startsWith(`${path}.`),
     );
 
-    const results = this.raw.batchWithRebuild(phase1, (() => {
+    const results = this.batchWithRebuild(phase1, (() => {
       // After phase1, the duplicated item's path should be available
       // Read the inserted path from state — it's the item right after the original
-      const items = this.raw.state.definition.items;
+      const items = this.state.definition.items;
       let insertedPath: string | undefined;
 
       // Find the copy — it should have a key ending in _copy
@@ -1248,7 +1205,7 @@ export class Project {
       payload: { sourcePath: p, targetParentPath: groupPath, targetIndex: i },
     }));
 
-    this.raw.batchWithRebuild(
+    this.batchWithRebuild(
       [{ type: 'definition.addItem', payload: addPayload }],
       phase2,
     );
@@ -1274,7 +1231,7 @@ export class Project {
     }
 
     const leafKey = path.split('.').pop()!;
-    const result = this.raw.dispatch({
+    const result = this.dispatch({
       type: 'component.wrapNode',
       payload: { node: { bind: leafKey }, wrapper: { component } },
     });
@@ -1299,7 +1256,7 @@ export class Project {
     // Sort deepest-first
     const sorted = [...pruned].sort((a, b) => b.split('.').length - a.split('.').length);
 
-    this.raw.dispatch(
+    this.dispatch(
       sorted.map(p => ({ type: 'definition.deleteItem' as const, payload: { path: p } })),
     );
 
@@ -1317,7 +1274,7 @@ export class Project {
       !paths.some(other => other !== p && p.startsWith(`${other}.`)),
     );
 
-    const results = this.raw.dispatch(
+    const results = this.dispatch(
       pruned.map(p => ({ type: 'definition.duplicateItem' as const, payload: { path: p } })),
     );
 
@@ -1355,7 +1312,7 @@ export class Project {
       });
     }
 
-    this.raw.dispatch(commands);
+    this.dispatch(commands);
 
     return {
       summary: `Added submit button`,
@@ -1371,10 +1328,10 @@ export class Project {
     const payload: Record<string, unknown> = { title };
     if (description) payload.description = description;
 
-    this.raw.dispatch({ type: 'pages.addPage', payload });
+    this.dispatch({ type: 'pages.addPage', payload });
 
     // Read new page ID from state
-    const pages = this.raw.state.theme.pages ?? [];
+    const pages = this.state.theme.pages ?? [];
     const newPage = pages[pages.length - 1];
     const pageId = (newPage as any)?.id as string;
 
@@ -1391,15 +1348,15 @@ export class Project {
     // Generate a key from label
     const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `step_${Date.now()}`;
 
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.addItem',
       payload: { type: 'group', key, label },
     });
 
     // Set wizard mode if not already
-    const pageMode = (this.raw.state.definition as any).formPresentation?.pageMode;
+    const pageMode = (this.state.definition as any).formPresentation?.pageMode;
     if (pageMode !== 'wizard') {
-      this.raw.dispatch({
+      this.dispatch({
         type: 'definition.setFormPresentation',
         payload: { property: 'pageMode', value: 'wizard' },
       });
@@ -1415,7 +1372,7 @@ export class Project {
 
   /** Remove a page. */
   removePage(pageId: string): HelperResult {
-    this.raw.dispatch({ type: 'pages.deletePage', payload: { id: pageId } });
+    this.dispatch({ type: 'pages.deletePage', payload: { id: pageId } });
     return {
       summary: `Removed page '${pageId}'`,
       action: { helper: 'removePage', params: { pageId } },
@@ -1425,7 +1382,7 @@ export class Project {
 
   /** Reorder a page. */
   reorderPage(pageId: string, direction: 'up' | 'down'): HelperResult {
-    this.raw.dispatch({ type: 'pages.reorderPages', payload: { id: pageId, direction } });
+    this.dispatch({ type: 'pages.reorderPages', payload: { id: pageId, direction } });
     return {
       summary: `Reordered page '${pageId}' ${direction}`,
       action: { helper: 'reorderPage', params: { pageId, direction } },
@@ -1444,7 +1401,7 @@ export class Project {
         });
       }
     }
-    if (commands.length > 0) this.raw.dispatch(commands);
+    if (commands.length > 0) this.dispatch(commands);
 
     return {
       summary: `Updated page '${pageId}'`,
@@ -1459,7 +1416,7 @@ export class Project {
     const payload: Record<string, unknown> = { pageId, key: leafKey };
     if (options?.span) payload.span = options.span;
 
-    this.raw.dispatch({ type: 'pages.assignItem', payload });
+    this.dispatch({ type: 'pages.assignItem', payload });
 
     return {
       summary: `Placed '${target}' on page '${pageId}'`,
@@ -1471,7 +1428,7 @@ export class Project {
   /** Remove item from page assignment. */
   unplaceFromPage(target: string, pageId: string): HelperResult {
     const leafKey = target.split('.').pop()!;
-    this.raw.dispatch({ type: 'pages.unassignItem', payload: { pageId, key: leafKey } });
+    this.dispatch({ type: 'pages.unassignItem', payload: { pageId, key: leafKey } });
 
     return {
       summary: `Removed '${target}' from page '${pageId}'`,
@@ -1499,7 +1456,7 @@ export class Project {
       });
     }
 
-    this.raw.dispatch(commands);
+    this.dispatch(commands);
 
     return {
       summary: `Set flow mode to '${mode}'`,
@@ -1538,10 +1495,10 @@ export class Project {
 
     // Move each target into the layout container (deferred — need nodeRef from first command)
     // Since we can't get the nodeRef mid-batch, we dispatch the addNode first, then moveNode
-    this.raw.dispatch(commands[0]);
+    this.dispatch(commands[0]);
 
     // Now find the created node — it should be the last child of root
-    const tree = this.raw.state.component?.tree;
+    const tree = this.state.component?.tree;
     const rootChildren = (tree as any)?.children ?? [];
     const lastChild = rootChildren[rootChildren.length - 1];
     const containerRef = lastChild?.nodeId
@@ -1561,7 +1518,7 @@ export class Project {
     }));
 
     if (moveCommands.length > 0) {
-      this.raw.dispatch(moveCommands);
+      this.dispatch(moveCommands);
     }
 
     return {
@@ -1584,7 +1541,7 @@ export class Project {
     }
 
     if (commands.length > 0) {
-      this.raw.dispatch(commands);
+      this.dispatch(commands);
     }
 
     return {
@@ -1626,7 +1583,7 @@ export class Project {
     }
 
     if (commands.length > 0) {
-      this.raw.dispatch(commands);
+      this.dispatch(commands);
     }
 
     return {
@@ -1644,7 +1601,7 @@ export class Project {
     const payload: Record<string, unknown> = { name, expression };
     if (scope) payload.scope = scope;
 
-    this.raw.dispatch({ type: 'definition.addVariable', payload });
+    this.dispatch({ type: 'definition.addVariable', payload });
 
     return {
       summary: `Added variable '${name}'`,
@@ -1656,7 +1613,7 @@ export class Project {
   /** Update a variable's expression. */
   updateVariable(name: string, expression: string): HelperResult {
     this._validateFEL(expression);
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.setVariable',
       payload: { name, property: 'expression', value: expression },
     });
@@ -1690,7 +1647,7 @@ export class Project {
       });
     }
 
-    this.raw.dispatch({ type: 'definition.deleteVariable', payload: { name } });
+    this.dispatch({ type: 'definition.deleteVariable', payload: { name } });
 
     return {
       summary: `Removed variable '${name}'`,
@@ -1703,7 +1660,7 @@ export class Project {
   /** Rename a variable — Future Work, handler not implemented. */
   renameVariable(name: string, newName: string): HelperResult {
     // definition.renameVariable is Future Work — delegate to handler and let it throw if missing
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.renameVariable',
       payload: { name, newName },
     });
@@ -1719,7 +1676,7 @@ export class Project {
 
   /** Add a named external data source. */
   addInstance(name: string, props: InstanceProps): HelperResult {
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.addInstance',
       payload: { name, ...props },
     });
@@ -1742,7 +1699,7 @@ export class Project {
         });
       }
     }
-    if (commands.length > 0) this.raw.dispatch(commands);
+    if (commands.length > 0) this.dispatch(commands);
 
     return {
       summary: `Updated instance '${name}'`,
@@ -1753,7 +1710,7 @@ export class Project {
 
   /** Rename an instance — rewrites FEL references. */
   renameInstance(name: string, newName: string): HelperResult {
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.renameInstance',
       payload: { name, newName },
     });
@@ -1787,7 +1744,7 @@ export class Project {
       });
     }
 
-    this.raw.dispatch({ type: 'definition.deleteInstance', payload: { name } });
+    this.dispatch({ type: 'definition.deleteInstance', payload: { name } });
 
     return {
       summary: `Removed instance '${name}'`,
@@ -1801,7 +1758,7 @@ export class Project {
 
   /** Enable/disable screener. */
   setScreener(enabled: boolean): HelperResult {
-    this.raw.dispatch({ type: 'definition.setScreener', payload: { enabled } });
+    this.dispatch({ type: 'definition.setScreener', payload: { enabled } });
 
     return {
       summary: `Screener ${enabled ? 'enabled' : 'disabled'}`,
@@ -1813,7 +1770,7 @@ export class Project {
   /** Add a screener question. */
   addScreenField(key: string, label: string, type: string, props?: FieldProps): HelperResult {
     const resolved = resolveFieldType(type);
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.addScreenerItem',
       payload: { type: 'field', key, label, dataType: resolved.dataType },
     });
@@ -1827,7 +1784,7 @@ export class Project {
 
   /** Remove a screener question. */
   removeScreenField(key: string): HelperResult {
-    this.raw.dispatch({ type: 'definition.deleteScreenerItem', payload: { key } });
+    this.dispatch({ type: 'definition.deleteScreenerItem', payload: { key } });
 
     return {
       summary: `Removed screener field '${key}'`,
@@ -1842,7 +1799,7 @@ export class Project {
     const payload: Record<string, unknown> = { condition, target };
     if (label) payload.label = label;
 
-    this.raw.dispatch({ type: 'definition.addRoute', payload });
+    this.dispatch({ type: 'definition.addRoute', payload });
 
     return {
       summary: `Added screen route to '${target}'`,
@@ -1867,7 +1824,7 @@ export class Project {
         });
       }
     }
-    if (commands.length > 0) this.raw.dispatch(commands);
+    if (commands.length > 0) this.dispatch(commands);
 
     return {
       summary: `Updated screen route ${routeIndex}`,
@@ -1878,7 +1835,7 @@ export class Project {
 
   /** Reorder a screener route. */
   reorderScreenRoute(routeIndex: number, direction: 'up' | 'down'): HelperResult {
-    this.raw.dispatch({
+    this.dispatch({
       type: 'definition.reorderRoute',
       payload: { index: routeIndex, direction },
     });
@@ -1892,7 +1849,7 @@ export class Project {
 
   /** Remove a screener route. */
   removeScreenRoute(routeIndex: number): HelperResult {
-    this.raw.dispatch({ type: 'definition.deleteRoute', payload: { index: routeIndex } });
+    this.dispatch({ type: 'definition.deleteRoute', payload: { index: routeIndex } });
 
     return {
       summary: `Removed screen route ${routeIndex}`,
