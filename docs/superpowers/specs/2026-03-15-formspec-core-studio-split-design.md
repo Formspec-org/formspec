@@ -75,38 +75,58 @@ Dependency chain: `formspec-studio-core → formspec-core → formspec-engine`
 
 `IProjectCore` is defined in `formspec-core` and is the seam between packages. `RawProject` implements it. `Project` depends on it.
 
+The interface is extracted directly from `RawProject`'s existing public API — no method renaming. Key signatures (illustrative; full interface includes all ~40 public methods):
+
 ```typescript
 // formspec-core/src/project-core.ts
 export interface IProjectCore {
-  // State
-  getState(): ProjectState;
+  // State getters (preserved verbatim from RawProject)
+  get state(): ProjectState;
+  get definition(): DefinitionDocument;
+  get theme(): ThemeDocument;
+  get component(): ComponentDocument | undefined;
+  get generatedComponent(): ComponentDocument;
+  get artifactComponent(): Readonly<FormspecComponentDocument>;
+  get mapping(): MappingDocument;
 
-  // Command dispatch
-  dispatch(command: Command): CommandResult;
-  batchDispatch(commands: Command[]): CommandResult[];
+  // Command dispatch (both overloads)
+  dispatch(command: AnyCommand): CommandResult;
+  dispatch(command: AnyCommand[]): CommandResult[];
+
+  // Batch operations (actual RawProject signatures)
+  batch(commands: AnyCommand[]): CommandResult[];
+  batchWithRebuild(phase1: AnyCommand[], phase2: AnyCommand[]): CommandResult[];
 
   // History
   undo(): boolean;
   redo(): boolean;
   canUndo(): boolean;
   canRedo(): boolean;
-  clearHistory(): void;
+  resetHistory(): void;
 
-  // Change notifications
-  addChangeListener(listener: ChangeListener): () => void;
-  removeChangeListener(listener: ChangeListener): void;
+  // Change notifications (cleanup-function pattern)
+  onChange(listener: ChangeListener): () => void;
 
-  // Query methods (all current RawProject query methods)
-  getItem(path: string): ItemNode | undefined;
-  getItems(filter?: ItemFilter): ItemNode[];
-  getDefinition(): DefinitionDocument;
-  getTheme(): ThemeDocument;
-  getComponent(): ComponentDocument | undefined;
-  getGeneratedComponent(): ComponentDocument;
-  getMapping(): MappingDocument;
-  // ... all remaining query methods
+  // Query methods (representative sample — full set extracted verbatim from RawProject)
+  itemAt(path: string): ItemNode | undefined;
+  fieldPaths(): string[];
+  statistics(): ProjectStatistics;
+  diagnose(): DiagnosticReport;
+  export(): ProjectBundle;
+  parseFEL(expr: string): FELParseResult;
+  fieldDependents(path: string): FieldDependents;
+  // ... all remaining ~30 query methods
 }
 ```
+
+**`component` / `generatedComponent` / `artifactComponent` getters:**
+- `component` — user-authored component tree (undefined when not yet authored)
+- `generatedComponent` — auto-generated layout synthesized from the definition
+- `artifactComponent` — convenience getter: returns `component` if authored, else `generatedComponent`
+
+All three are part of `IProjectCore` since `Project` helper methods may need any of them.
+
+**Implementation note:** During the split, `IProjectCore` is extracted by transcribing every public property and method signature off `RawProject` verbatim. `RawProject` then adds `implements IProjectCore` and TypeScript enforces the contract. No API changes to `RawProject` are required.
 
 ---
 
@@ -184,10 +204,11 @@ Rough split: ~500 tests to `formspec-core`, ~117 to `formspec-studio-core`.
 
 ## Cleanup Opportunities (Boy Scout)
 
-1. **Delete `get raw(): this`** — was a self-referential no-op under inheritance; becomes a meaningful `IProjectCore` accessor under composition
-2. **Remove `ajv` from `formspec-studio-core`** — moves to `formspec-core` with the handler modules that use it
-3. **Rename `project-wrapper.ts` → `project.ts`** — clearer name now that it's the only thing in the package
-4. **Review `handlers/helpers.ts`** (26 lines) — small shared utility; absorb into `handlers/definition-items.ts` or keep as-is
+1. **Delete the unreferenced `project.ts` draft** — `src/project.ts` is a 2206-line standalone `Project` class that does not extend `RawProject` and is not wired into `index.ts` (which exports from `project-wrapper.ts`). Evaluate for any newer helper implementations, extract if useful, then delete. Do not carry dead code into the split.
+2. **Delete `get raw(): this`** — was a self-referential no-op under inheritance; becomes a meaningful `IProjectCore` accessor under composition
+3. **Remove `ajv` from `formspec-studio-core`** — moves to `formspec-core` with the handler modules that use it
+4. **Rename `project-wrapper.ts` → `project.ts`** — clearer name now that it's the only thing in the package
+5. **Review `handlers/helpers.ts`** (26 lines) — small shared utility; absorb into `handlers/definition-items.ts` or keep as-is
 
 ---
 
