@@ -42,7 +42,7 @@ Dependency chain: `formspec-studio-core → formspec-core → formspec-engine`
 | `src/project-core.ts` | `IProjectCore` interface — the abstraction `Project` depends on |
 | `src/handler-registry.ts` | `registerHandler` / `getHandler` — self-registration infrastructure |
 | `src/handlers.ts` | Aggregates all 21 handler module imports (side-effect: registers all handlers) |
-| `src/handlers/` | All 21 handler modules — document mutations (definition, component, theme, mapping, project-level) |
+| `src/handlers/` | All 17 handler modules — document mutations (definition, component, theme, mapping, project-level) |
 | `src/normalization.ts` | `normalizeDefinition` — legacy shape normalization |
 | `src/component-documents.ts` | Component document state management, `splitComponentState` |
 | `src/page-resolution.ts` | `resolvePageStructure` — theme page structure resolution |
@@ -84,7 +84,7 @@ export interface IProjectCore {
   get state(): ProjectState;
   get definition(): DefinitionDocument;
   get theme(): ThemeDocument;
-  get component(): ComponentDocument | undefined;
+  readonly component: Readonly<FormspecComponentDocument>; // never undefined; tree property may be null
   get generatedComponent(): ComponentDocument;
   get artifactComponent(): Readonly<FormspecComponentDocument>;
   get mapping(): MappingDocument;
