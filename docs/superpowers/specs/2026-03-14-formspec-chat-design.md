@@ -62,11 +62,11 @@ Chat-primary. The user describes what they need; the AI responds, asks clarifyin
 
 **Uploads.** The chat accepts file drops mid-conversation: images of paper forms, PDFs, spreadsheets. The AI extracts structure (field labels, section headers, conditional instructions, calculation formulas) and folds it into the conversation context.
 
-**Show something fast.** The AI generates a rough scaffold after the first meaningful input — a template selection, a substantive description, or an uploaded document. Users need something concrete to react to. A rough first draft that the user can critique is worth more than a thorough draft that arrives late. The deterministic adapter can produce an instant scaffold while the LLM refines asynchronously.
+**Show something fast.** The AI generates a rough scaffold after the first meaningful input — a template selection, a substantive description, or an uploaded document. Users need something concrete to react to. A rough first draft that the user can critique is worth more than a thorough draft that arrives late. The deterministic adapter produces an instant scaffold; when the LLM result arrives, it replaces the deterministic draft entirely. The user sees one scaffold that improves, not two competing drafts.
 
 ### 3. Preview Reveal
 
-The AI triggers the preview when the scaffold reaches a useful state. The screen transitions to a full-screen rendered form. The chat collapses into a drawer the user can pull open.
+The AI triggers the preview when the scaffold reaches a useful state — concretely, when the first `ProposalV1` contains at least one field. The screen transitions to a full-screen rendered form. The chat collapses into a drawer the user can pull open.
 
 **Source traces.** Every generated field, rule, and section links back to the conversation message, uploaded file, or template that informed it. The preview surfaces these as "this field came from your message about income verification" annotations. Source traces build trust — the user sees why each element exists.
 
