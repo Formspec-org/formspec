@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { resolveThemeCascade } from '../src/index.js';
-import type { FormspecThemeDocument } from '../src/index.js';
+import type { ThemeState } from '../src/index.js';
 
 describe('resolveThemeCascade', () => {
   it('returns defaults when no selectors or item overrides exist', () => {
-    const theme: FormspecThemeDocument = {
+    const theme: ThemeState = {
       defaults: { labelPosition: 'top', widget: 'text-input' },
     };
     const result = resolveThemeCascade(theme, 'name', 'field');
@@ -13,7 +13,7 @@ describe('resolveThemeCascade', () => {
   });
 
   it('selector overrides default, provenance says selector', () => {
-    const theme: FormspecThemeDocument = {
+    const theme: ThemeState = {
       defaults: { widget: 'text-input' },
       selectors: [
         { match: { type: 'field', dataType: 'money' }, apply: { widget: 'moneyInput' } },
@@ -28,7 +28,7 @@ describe('resolveThemeCascade', () => {
   });
 
   it('item override wins over selector, provenance says item-override', () => {
-    const theme: FormspecThemeDocument = {
+    const theme: ThemeState = {
       defaults: { widget: 'text-input' },
       selectors: [
         { match: { type: 'field' }, apply: { widget: 'custom-widget' } },
@@ -45,7 +45,7 @@ describe('resolveThemeCascade', () => {
   });
 
   it('multiple selectors merge in order', () => {
-    const theme: FormspecThemeDocument = {
+    const theme: ThemeState = {
       selectors: [
         { match: { type: 'field' }, apply: { widget: 'base-widget', cssClass: 'field-base' } },
         { match: { dataType: 'money' }, apply: { widget: 'moneyInput' } },
@@ -58,7 +58,7 @@ describe('resolveThemeCascade', () => {
   });
 
   it('unmatched selectors are skipped', () => {
-    const theme: FormspecThemeDocument = {
+    const theme: ThemeState = {
       defaults: { widget: 'text-input' },
       selectors: [
         { match: { type: 'group' }, apply: { widget: 'group-widget' } },

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createProject } from '../src/index.js';
+import { createRawProject } from '../src/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 describe('Formspec Studio Core E2E Validation', () => {
   let tmpDir: string;
-  let project: ReturnType<typeof createProject>;
+  let project: ReturnType<typeof createRawProject>;
 
   const validateProject = (stepName: string) => {
     // TS engine validator (in-memory)
@@ -64,7 +64,7 @@ describe('Formspec Studio Core E2E Validation', () => {
 
   beforeAll(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'formspec-e2e-'));
-    project = createProject();
+    project = createRawProject();
   });
 
   afterAll(() => {

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { createProject } from '../src/index.js';
+import { createRawProject } from '../src/index.js';
 
 // ── Post-dispatch normalization ─────────────────────────────────
 
 describe('post-dispatch normalization', () => {
   it('syncs targetDefinition.url when definition.url changes', () => {
-    const project = createProject();
+    const project = createRawProject();
     const originalUrl = project.definition.url;
 
     project.dispatch({
@@ -19,7 +19,7 @@ describe('post-dispatch normalization', () => {
   });
 
   it('initializes versioning state if missing after import', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.dispatch({
       type: 'project.import',
       payload: {
@@ -35,7 +35,7 @@ describe('post-dispatch normalization', () => {
 
 describe('renameItem — cross-artifact rewriting', () => {
   it('rewrites shape targets and constraint references', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'price' } },
       { type: 'definition.addShape', payload: { id: 's1', target: 'price', constraint: '$price > 0', message: 'M' } },
@@ -49,7 +49,7 @@ describe('renameItem — cross-artifact rewriting', () => {
   });
 
   it('rewrites variable expressions', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'qty' } },
       { type: 'definition.addVariable', payload: { name: 'total', expression: '$qty * 10' } },
@@ -62,7 +62,7 @@ describe('renameItem — cross-artifact rewriting', () => {
   });
 
   it('rewrites component tree bind references', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'email' } },
       { type: 'component.addNode', payload: { parent: { nodeId: 'root' }, component: 'TextInput', bind: 'email' } },
@@ -76,7 +76,7 @@ describe('renameItem — cross-artifact rewriting', () => {
   });
 
   it('rewrites theme per-item override keys', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'total' } },
       { type: 'theme.setItemOverride', payload: { itemKey: 'total', property: 'widget', value: 'Slider' } },
@@ -90,7 +90,7 @@ describe('renameItem — cross-artifact rewriting', () => {
   });
 
   it('rewrites mapping rule source paths', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'name' } },
       { type: 'mapping.addRule', payload: { sourcePath: 'name', targetPath: 'output.name' } },
@@ -103,7 +103,7 @@ describe('renameItem — cross-artifact rewriting', () => {
   });
 
   it('rewrites theme region keys across all pages', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'phone' } });
     project.dispatch({ type: 'pages.addPage', payload: { title: 'P1' } });
     project.dispatch({ type: 'pages.addPage', payload: { title: 'P2' } });
@@ -120,7 +120,7 @@ describe('renameItem — cross-artifact rewriting', () => {
 
 describe('deleteItem — cross-artifact cleanup', () => {
   it('removes shapes targeting the deleted item', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'age' } },
       { type: 'definition.addShape', payload: { id: 's1', target: 'age', constraint: '$age > 0', message: 'M' } },
@@ -131,7 +131,7 @@ describe('deleteItem — cross-artifact cleanup', () => {
   });
 
   it('removes theme per-item overrides for deleted item', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'total' } },
       { type: 'theme.setItemOverride', payload: { itemKey: 'total', property: 'widget', value: 'Slider' } },
@@ -144,7 +144,7 @@ describe('deleteItem — cross-artifact cleanup', () => {
   });
 
   it('removes orphaned theme regions when item is deleted', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'addr' } });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'city' } });
     project.dispatch({ type: 'pages.addPage', payload: { title: 'P1' } });
@@ -162,7 +162,7 @@ describe('deleteItem — cross-artifact cleanup', () => {
 
 describe('renameInstance — FEL rewriting', () => {
   it('rewrites @instance references in bind expressions', () => {
-    const project = createProject();
+    const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'f1' } },
       { type: 'definition.addInstance', payload: { name: 'lookup', source: 'https://api.example.com' } },

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createProject } from '../src/index.js';
+import { createRawProject } from '../src/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -290,8 +290,8 @@ describe('Formspec Studio E2E Examples Rehydration', () => {
       
       for (const defFile of defFiles) {
         const prefix = defFile.split('.definition.json')[0];
-        progress(`${ex} / ${prefix}: createProject + loadRegistry`);
-        const project = createProject();
+        progress(`${ex} / ${prefix}: createRawProject + loadRegistry`);
+        const project = createRawProject();
         project.dispatch({ type: 'project.loadRegistry', payload: { registry: commonRegistry } });
         
         // 1. Definition
