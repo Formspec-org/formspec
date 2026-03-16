@@ -13,7 +13,7 @@ These problems accumulated incrementally. Each decision was locally reasonable; 
 ## Goals
 
 1. **One dispatch pipeline.** All command execution routes through a single phase-aware pipeline. Middleware wraps it consistently.
-2. **No global mutable state.** Handler table is a plain object, passed at construction. Two `RawProject` instances share nothing.
+2. **No global mutable state in the dispatch pipeline.** Handler table is a plain object, passed at construction. The handler registry `Map` and side-effect imports are eliminated. **Caveat:** Seven handler modules have module-level `let` counters for auto-generating unique IDs (`autoKeyCounter`, `nodeCounter`, `pageCounter`, `shapeCounter`, `varCounter`, `instanceCounter`, `pageIdCounter`). These are shared across instances. They produce monotonically increasing IDs so they don't cause correctness bugs, but two instances in the same process will see interleaved counter values. Fixing these (e.g., passing an ID generator via handler context) is out of scope for this redesign.
 3. **Focused modules.** `RawProject` orchestrates; subsystems own their domain. Each module is small enough to hold in context.
 4. **JSON-native state.** `ProjectState` is safe to `JSON.stringify`. Runtime indexes are private caches.
 5. **Stable public interface.** `IProjectCore` does not change. Consumer packages require zero migration. Exception: `Middleware` type signature changes (no production consumers) and `ResolvedCatalog` type is removed (folded into `LoadedRegistry`).
@@ -129,7 +129,7 @@ One path, always:
    b. If any command in this phase signaled `rebuildComponentTree` and the component tree is generated (not authored), run tree reconciliation on the clone.
 4. **Normalize** cross-artifact invariants on the clone.
 5. **Push history** snapshot (pre-mutation state onto undo stack).
-6. **Handle `clearHistory`** — if any result signals `clearHistory: true` (used by `project.import` and `project.reset`), wipe undo/redo stacks and log instead of pushing.
+6. **Handle `clearHistory`** — if any result signals `clearHistory: true`, wipe undo/redo stacks and log instead of pushing. **Note:** No handler currently returns `clearHistory: true` (`project.import` explicitly returns `false`; `project.reset` does not exist). The field exists on `CommandResult` as an extension point. The unified pipeline preserves this plumbing so handlers or consumers can use it in the future without pipeline changes.
 7. **Swap** state to the clone.
 8. **Log** the command(s).
 9. **Notify** change listeners.
@@ -181,12 +181,29 @@ export class CommandPipeline {
     phases: AnyCommand[][],
     reconcile: (clone: ProjectState) => void,
   ): { newState: ProjectState; results: CommandResult[] } {
-    // Clone, phase loop, handler dispatch, inter-phase reconciliation
+    const clone = structuredClone(state);
+    const allResults: CommandResult[] = [];
+
+    for (const phase of phases) {
+      const phaseResults: CommandResult[] = [];
+      for (const cmd of phase) {
+        const handler = this.handlers[cmd.type];
+        if (!handler) throw new Error(`Unknown command type: ${cmd.type}`);
+        phaseResults.push(handler(clone, cmd.payload));
+      }
+      allResults.push(...phaseResults);
+      // Reconcile between phases when any command in this phase signals it
+      if (phaseResults.some(r => r.rebuildComponentTree)) {
+        reconcile(clone);
+      }
+    }
+
+    return { newState: clone, results: allResults };
   }
 }
 ```
 
-The `reconcile` callback is how `RawProject` injects tree rebuild behavior without the pipeline knowing about component trees.
+The `reconcile` callback is how `RawProject` injects tree rebuild behavior without the pipeline knowing about component trees. The pipeline inspects per-phase results to decide when to call it.
 
 #### HistoryManager
 
@@ -258,6 +275,8 @@ queries/
   registry-queries.ts   — listRegistries(), listExtensions(), felFunctions()
 ```
 
+**Cross-dependencies:** Some query functions call other query functions (e.g., `statistics()` calls `allExpressions()` internally). Import across query modules as needed — they are all pure functions taking `ProjectState`, so no circular dependency risk.
+
 `RawProject` keeps thin wrappers for `IProjectCore` compliance:
 
 ```typescript
@@ -323,7 +342,7 @@ function indexRegistry(registry: any): LoadedRegistry {
 }
 ```
 
-Called by the handler. Called at construction for seeded registries.
+Called by the handler. Called at construction for seeded registries. **Behavioral change:** Previously, `ProjectOptions.seed.extensions` required consumers to pre-build `LoadedRegistry` objects including the `Map` catalog. After this change, the construction path indexes registries automatically — consumers can seed raw registry documents or pre-indexed `LoadedRegistry` objects with `Record` entries.
 
 ### 5. RawProject After Redesign
 
@@ -456,7 +475,7 @@ packages/formspec-core/src/
 
 ## Migration Path
 
-Each step ships independently. Tests pass at every step because `IProjectCore` is stable.
+Each step ships independently. Tests pass at every step because `IProjectCore` is stable. **Exception:** Steps 4 and 5 have a soft dependency — six query methods use `Map` methods on `reg.catalog.entries`. If Step 4 (query extraction) ships before Step 5 (JSON-native state), the extracted query functions will use `Map` APIs that Step 5 must then update. Either do Step 5 before Step 4, or accept that Step 5 touches query files extracted in Step 4.
 
 ### Step 1: Explicit Handler Table
 
@@ -471,7 +490,7 @@ Extract `CommandPipeline` class. Rewrite `_dispatchSingle`, `_dispatchArray`, `b
 **Behavioral changes:**
 - `batch()` and `batchWithRebuild()` now run through middleware (previously bypassed entirely).
 - `dispatch(array)` middleware now runs *before* handlers execute (previously ran post-hoc with a no-op inner chain — middleware could observe but not transform or reject).
-- `clearHistory` is now honored in all dispatch paths. Previously only `_dispatchSingle` checked it; `batch()` and `batchWithRebuild()` ignored it. A `project.import` or `project.reset` dispatched via `batch()` will now correctly clear history.
+- `clearHistory` is now honored in all dispatch paths. Previously only `_dispatchSingle` checked it; `batch()` and `batchWithRebuild()` ignored it. No handler currently returns `clearHistory: true`, so this is a consistency fix for future use, not a behavioral change today.
 
 Update any tests that assert middleware bypass or post-hoc behavior.
 
