@@ -19,7 +19,7 @@ describe('Chat UI Integration', () => {
     render(<ChatShell />);
 
     // 1. Entry screen
-    expect(screen.getByText(/formspec chat/i)).toBeInTheDocument();
+    expect(screen.getByText(/build forms through/i)).toBeInTheDocument();
 
     // 2. Select a template
     fireEvent.click(screen.getByRole('button', { name: /template/i }));
@@ -28,7 +28,7 @@ describe('Chat UI Integration', () => {
     });
 
     // 3. Chat view active with input
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
 
     // 4. Definition exists — preview + export buttons visible
     expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe('Chat UI Integration', () => {
 
     // 6. Switch back to chat, send a refinement
     fireEvent.click(screen.getByRole('button', { name: /chat/i }));
-    const input = screen.getByRole('textbox');
+    const input = screen.getByPlaceholderText(/describe what you need/i);
     fireEvent.change(input, { target: { value: 'Add a section for employment history' } });
     await act(async () => {
       fireEvent.keyDown(input, { key: 'Enter' });
@@ -67,7 +67,7 @@ describe('Chat UI Integration', () => {
     });
 
     // Send a message to trigger auto-save
-    const input = screen.getByRole('textbox');
+    const input = screen.getByPlaceholderText(/describe what you need/i);
     fireEvent.change(input, { target: { value: 'Add impact metrics section' } });
     await act(async () => {
       fireEvent.keyDown(input, { key: 'Enter' });
@@ -89,7 +89,7 @@ describe('Chat UI Integration', () => {
     });
 
     // Should be in active session with messages
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
     expect(screen.getByText('Add impact metrics section')).toBeInTheDocument();
   });
 
@@ -100,7 +100,7 @@ describe('Chat UI Integration', () => {
       fireEvent.click(screen.getByRole('button', { name: /start blank/i }));
     });
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByPlaceholderText(/describe what you need/i);
     fireEvent.change(input, { target: { value: 'I need a form' } });
 
     await act(async () => {

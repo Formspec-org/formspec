@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ChatSession } from '../src/chat-session.js';
-import { DeterministicAdapter } from '../src/deterministic-adapter.js';
+import { MockAdapter } from '../src/mock-adapter.js';
 import { SessionStore } from '../src/session-store.js';
 import { TemplateLibrary } from '../src/template-library.js';
 import type { StorageBackend } from '../src/types.js';
@@ -14,7 +14,7 @@ class MemoryStorage implements StorageBackend {
 
 describe('Integration: full conversation flow', () => {
   it('template → refine → export → save → restore → continue', async () => {
-    const adapter = new DeterministicAdapter();
+    const adapter = new MockAdapter();
     const storage = new MemoryStorage();
     const store = new SessionStore(storage);
 
@@ -53,7 +53,7 @@ describe('Integration: full conversation flow', () => {
   });
 
   it('blank start → conversation → scaffold → issues', async () => {
-    const adapter = new DeterministicAdapter();
+    const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
     // Vague first message
@@ -69,7 +69,7 @@ describe('Integration: full conversation flow', () => {
   });
 
   it('all 5 templates can be started and exported', async () => {
-    const adapter = new DeterministicAdapter();
+    const adapter = new MockAdapter();
     const library = new TemplateLibrary();
 
     for (const template of library.getAll()) {
@@ -87,7 +87,7 @@ describe('Integration: full conversation flow', () => {
 
 describe('Integration: session store with multiple sessions', () => {
   it('manages multiple independent sessions', async () => {
-    const adapter = new DeterministicAdapter();
+    const adapter = new MockAdapter();
     const storage = new MemoryStorage();
     const store = new SessionStore(storage);
 
@@ -118,7 +118,7 @@ describe('Integration: session store with multiple sessions', () => {
 
 describe('Integration: issue lifecycle', () => {
   it('issues persist through save/restore', async () => {
-    const adapter = new DeterministicAdapter();
+    const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
     await session.sendMessage('I need a form');
@@ -138,9 +138,9 @@ describe('Integration: issue lifecycle', () => {
   });
 });
 
-describe('Integration: deterministic keyword matching', () => {
+describe('Integration: mock adapter keyword matching', () => {
   it('matches housing keywords to housing template', async () => {
-    const adapter = new DeterministicAdapter();
+    const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
     await session.sendMessage('I need a housing application for tenants');
@@ -151,7 +151,7 @@ describe('Integration: deterministic keyword matching', () => {
   });
 
   it('matches medical keywords to patient template', async () => {
-    const adapter = new DeterministicAdapter();
+    const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
     await session.sendMessage('We need a patient medical intake form');
@@ -161,7 +161,7 @@ describe('Integration: deterministic keyword matching', () => {
   });
 
   it('matches grant keywords to grant template', async () => {
-    const adapter = new DeterministicAdapter();
+    const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
     await session.sendMessage('Create a grant application with budget tracking');

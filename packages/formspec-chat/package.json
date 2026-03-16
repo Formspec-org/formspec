@@ -10,6 +10,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@google/genai": "^1.0.0",
     "formspec-types": "*"
   },
   "devDependencies": {

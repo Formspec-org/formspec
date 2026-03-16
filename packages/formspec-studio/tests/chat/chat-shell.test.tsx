@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import { ChatShell } from '../../src/chat/components/ChatShell.js';
-import { ChatSession, DeterministicAdapter, SessionStore } from 'formspec-chat';
+import { ChatSession, MockAdapter, SessionStore } from 'formspec-chat';
 import type { StorageBackend } from 'formspec-chat';
 
 function makeMemoryStorage(): StorageBackend {
@@ -18,7 +18,7 @@ describe('ChatShell', () => {
   describe('entry view', () => {
     it('shows entry screen when no active session', () => {
       render(<ChatShell />);
-      expect(screen.getByText(/formspec chat/i)).toBeInTheDocument();
+      expect(screen.getByText(/build forms through/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /start blank/i })).toBeInTheDocument();
     });
   });
@@ -32,7 +32,7 @@ describe('ChatShell', () => {
       });
 
       // Should show the chat input now
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
     });
 
     it('transitions to chat view after selecting a template', async () => {
@@ -45,7 +45,7 @@ describe('ChatShell', () => {
         fireEvent.click(screen.getByText('Housing Intake Form'));
       });
 
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
     });
 
     it('shows form preview toggle when definition exists', async () => {
@@ -74,7 +74,7 @@ describe('ChatShell', () => {
 
       // Switch back to chat
       fireEvent.click(screen.getByRole('button', { name: /chat/i }));
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
     });
   });
 
@@ -99,7 +99,7 @@ describe('ChatShell', () => {
       });
 
       // Should transition to active session
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
     });
 
     it('generates a form from uploaded CSV content', async () => {
@@ -123,7 +123,7 @@ describe('ChatShell', () => {
       // Pre-populate store with a saved session
       const storage = makeMemoryStorage();
       const store = new SessionStore(storage);
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('housing-intake');
       await session.sendMessage('Add an emergency contact field');
       store.save(session.toState());
@@ -139,7 +139,7 @@ describe('ChatShell', () => {
     it('resumes a saved session when clicked', async () => {
       const storage = makeMemoryStorage();
       const store = new SessionStore(storage);
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('grant-application');
       await session.sendMessage('Add a budget narrative section');
       store.save(session.toState());
@@ -152,7 +152,7 @@ describe('ChatShell', () => {
       });
 
       // Should transition to active session with messages
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
       // Messages from the saved session should be visible
       expect(screen.getByText('Add a budget narrative section')).toBeInTheDocument();
     });
@@ -168,7 +168,7 @@ describe('ChatShell', () => {
         fireEvent.click(screen.getByRole('button', { name: /start blank/i }));
       });
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByPlaceholderText(/describe what you need/i);
       fireEvent.change(input, { target: { value: 'I need a patient form' } });
 
       await act(async () => {
@@ -190,7 +190,7 @@ describe('ChatShell', () => {
         fireEvent.click(screen.getByRole('button', { name: /start blank/i }));
       });
 
-      const input = screen.getByRole('textbox');
+      const input = screen.getByPlaceholderText(/describe what you need/i);
       fireEvent.change(input, { target: { value: 'I need a form' } });
 
       await act(async () => {
@@ -211,6 +211,98 @@ describe('ChatShell', () => {
       });
 
       expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
+    });
+
+    it('shows settings gear button in active session header', async () => {
+      render(<ChatShell />);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /start blank/i }));
+      });
+      expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('provider config', () => {
+    it('persists provider config to storage and passes to entry screen', () => {
+      const storage = makeMemoryStorage();
+      const store = new SessionStore(storage);
+      render(<ChatShell store={store} storage={storage} />);
+
+      // Open settings
+      fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      // Configure provider
+      fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'openai' } });
+      fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'sk-test-key' } });
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+      // Dialog should close and provider pill should show
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByText('OpenAI')).toBeInTheDocument();
+
+      // Should persist to storage
+      expect(storage.getItem('formspec-chat:provider')).toBeTruthy();
+    });
+
+    it('loads provider config from storage on mount', () => {
+      const storage = makeMemoryStorage();
+      storage.setItem('formspec-chat:provider', JSON.stringify({ provider: 'google', apiKey: 'goog-key' }));
+      const store = new SessionStore(storage);
+
+      render(<ChatShell store={store} storage={storage} />);
+
+      expect(screen.getByText('Google')).toBeInTheDocument();
+    });
+  });
+
+  describe('session delete', () => {
+    it('deletes a session and refreshes the list', async () => {
+      const storage = makeMemoryStorage();
+      const store = new SessionStore(storage);
+      const session = new ChatSession({ adapter: new MockAdapter() });
+      await session.startFromTemplate('housing-intake');
+      await session.sendMessage('Test message for delete');
+      store.save(session.toState());
+
+      render(<ChatShell store={store} storage={storage} />);
+
+      // Session should be visible
+      expect(screen.getByText(/test message for delete/i)).toBeInTheDocument();
+
+      // Click delete
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /delete session/i }));
+      });
+
+      // Session should be gone
+      expect(screen.queryByText(/test message for delete/i)).not.toBeInTheDocument();
+    });
+
+    it('refreshes session list when navigating back from active session', async () => {
+      const storage = makeMemoryStorage();
+      const store = new SessionStore(storage);
+
+      render(<ChatShell store={store} storage={storage} />);
+
+      // Start blank and send a message to trigger auto-save
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /start blank/i }));
+      });
+
+      const input = screen.getByPlaceholderText(/describe what you need/i);
+      fireEvent.change(input, { target: { value: 'Back-navigation test' } });
+      await act(async () => {
+        fireEvent.keyDown(input, { key: 'Enter' });
+      });
+
+      // Navigate back
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /new/i }));
+      });
+
+      // Session should appear in recents
+      expect(screen.getByText(/back-navigation test/i)).toBeInTheDocument();
     });
   });
 });

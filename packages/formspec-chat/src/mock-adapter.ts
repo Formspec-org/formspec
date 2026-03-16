@@ -8,11 +8,13 @@ import { TemplateLibrary } from './template-library.js';
 const library = new TemplateLibrary();
 
 /**
- * Offline fallback adapter — works without an API key.
+ * Offline test adapter — works without an API key.
  * Uses templates for scaffold generation and simple heuristics for
  * conversation-based scaffolding. Cannot meaningfully refine forms.
+ *
+ * Intended for unit/integration tests only. Production uses GeminiAdapter.
  */
-export class DeterministicAdapter implements AIAdapter {
+export class MockAdapter implements AIAdapter {
   async isAvailable(): Promise<boolean> {
     return true;
   }
@@ -33,7 +35,6 @@ export class DeterministicAdapter implements AIAdapter {
     currentDefinition: FormDefinition,
     _instruction: string,
   ): Promise<ScaffoldResult> {
-    // Deterministic adapter cannot refine — return current def with an issue
     return {
       definition: currentDefinition,
       traces: [],
@@ -41,7 +42,7 @@ export class DeterministicAdapter implements AIAdapter {
         severity: 'info',
         category: 'missing-config',
         title: 'AI provider required for refinement',
-        description: 'The deterministic adapter cannot refine forms. Configure an AI provider to enable conversational refinement.',
+        description: 'The mock adapter cannot refine forms. Configure an AI provider to enable conversational refinement.',
         sourceIds: [],
       }],
     };
@@ -72,11 +73,9 @@ export class DeterministicAdapter implements AIAdapter {
       .map(m => m.content)
       .join(' ');
 
-    // Try to match to a template by keywords
     const match = findBestTemplate(userContent);
     if (match) {
       const result = this.scaffoldFromTemplate(match.id);
-      // Replace template traces with message-sourced traces
       const msgId = messages.find(m => m.role === 'user')?.id ?? 'unknown';
       result.traces = result.traces.map(t => ({
         ...t,
@@ -87,7 +86,6 @@ export class DeterministicAdapter implements AIAdapter {
       return result;
     }
 
-    // Fallback: generate a minimal form with the user's input as title
     const title = userContent.slice(0, 80) || 'Untitled Form';
     const definition: FormDefinition = {
       $formspec: '1.0',
@@ -112,7 +110,6 @@ export class DeterministicAdapter implements AIAdapter {
   }
 
   private scaffoldFromUpload(extractedContent: string): ScaffoldResult {
-    // Parse comma/newline-separated field names from extracted content
     const fieldNames = extractedContent
       .replace(/^Fields:\s*/i, '')
       .split(/[,\n]+/)

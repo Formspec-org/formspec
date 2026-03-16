@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ChatSession } from '../src/chat-session.js';
-import { DeterministicAdapter } from '../src/deterministic-adapter.js';
+import { MockAdapter } from '../src/mock-adapter.js';
 import type { AIAdapter, ScaffoldResult, ChatMessage, Attachment, ChatSessionState } from '../src/types.js';
 import type { FormDefinition } from 'formspec-types';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
-/** Spy adapter that records calls and delegates to deterministic. */
+/** Spy adapter that records calls and delegates to mock. */
 class SpyAdapter implements AIAdapter {
   calls: { method: string; args: any[] }[] = [];
-  private inner = new DeterministicAdapter();
+  private inner = new MockAdapter();
 
   async generateScaffold(request: any): Promise<ScaffoldResult> {
     this.calls.push({ method: 'generateScaffold', args: [request] });
@@ -169,7 +169,7 @@ describe('ChatSession', () => {
       await session.startFromUpload(attachment);
 
       const traces = session.getTraces();
-      // DeterministicAdapter.extractFromFile returns a message, not actual fields,
+      // MockAdapter.extractFromFile returns a message, not actual fields,
       // so scaffoldFromUpload processes the extracted content
       expect(session.hasDefinition()).toBe(true);
     });

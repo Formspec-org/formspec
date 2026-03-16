@@ -3,7 +3,7 @@ import { render, screen, act } from '@testing-library/react';
 import React from 'react';
 import { FormPreview } from '../../src/chat/components/FormPreview.js';
 import { ChatProvider } from '../../src/chat/state/ChatContext.js';
-import { ChatSession, DeterministicAdapter } from 'formspec-chat';
+import { ChatSession, MockAdapter } from 'formspec-chat';
 import type { DefinitionDiff } from 'formspec-chat';
 
 function renderPreview(session: ChatSession) {
@@ -16,13 +16,13 @@ function renderPreview(session: ChatSession) {
 
 describe('FormPreview', () => {
   it('shows empty state when no definition exists', () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     renderPreview(session);
     expect(screen.getByText(/no form yet/i)).toBeInTheDocument();
   });
 
   it('renders the form title when a definition exists', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     renderPreview(session);
@@ -31,7 +31,7 @@ describe('FormPreview', () => {
   });
 
   it('renders field labels from the definition', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     renderPreview(session);
@@ -44,7 +44,7 @@ describe('FormPreview', () => {
   });
 
   it('renders group labels', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     renderPreview(session);
@@ -56,17 +56,17 @@ describe('FormPreview', () => {
   });
 
   it('shows source trace count', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     renderPreview(session);
     const traces = session.getTraces();
     expect(traces.length).toBeGreaterThan(0);
-    expect(screen.getByText(new RegExp(`${traces.length} source trace`))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${traces.length} trace`))).toBeInTheDocument();
   });
 
   it('shows source trace info for individual fields', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     renderPreview(session);
@@ -79,7 +79,7 @@ describe('FormPreview', () => {
   });
 
   it('shows data type badge for fields', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('grant-application');
 
     renderPreview(session);
@@ -94,7 +94,7 @@ describe('FormPreview', () => {
   });
 
   it('shows issue count in preview header', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.sendMessage('I need a form');
 
     renderPreview(session);
@@ -105,7 +105,7 @@ describe('FormPreview', () => {
   });
 
   it('renders nested children of groups', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     renderPreview(session);
@@ -115,7 +115,7 @@ describe('FormPreview', () => {
   });
 
   it('shows form description when present', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     renderPreview(session);
@@ -126,7 +126,7 @@ describe('FormPreview', () => {
   });
 
   it('shows diff indicators for added items after refinement', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
     // Refine to generate a diff
     await session.sendMessage('Add a field for emergency contact');
@@ -144,7 +144,7 @@ describe('FormPreview', () => {
   });
 
   it('shows diff summary when diff exists', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
     await session.sendMessage('Add a field for emergency contact');
 
@@ -158,7 +158,7 @@ describe('FormPreview', () => {
   });
 
   it('renders multiple data types correctly', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     renderPreview(session);
@@ -171,7 +171,7 @@ describe('FormPreview', () => {
 
   describe('rich field rendering', () => {
     it('renders text input mockup for string fields', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('housing-intake');
 
       renderPreview(session);
@@ -181,7 +181,7 @@ describe('FormPreview', () => {
     });
 
     it('renders date input mockup for date fields', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('housing-intake');
 
       renderPreview(session);
@@ -190,7 +190,7 @@ describe('FormPreview', () => {
     });
 
     it('renders select mockup for choice fields with options', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('housing-intake');
 
       renderPreview(session);
@@ -202,7 +202,7 @@ describe('FormPreview', () => {
     });
 
     it('renders checkbox mockup for boolean fields', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('patient-intake');
 
       renderPreview(session);
@@ -211,7 +211,7 @@ describe('FormPreview', () => {
     });
 
     it('renders number input mockup for integer/decimal fields', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('housing-intake');
 
       renderPreview(session);
@@ -222,7 +222,7 @@ describe('FormPreview', () => {
     });
 
     it('renders textarea mockup for text (multiline) fields', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('housing-intake');
 
       renderPreview(session);
@@ -232,7 +232,7 @@ describe('FormPreview', () => {
     });
 
     it('renders multiChoice fields with checkbox-style options', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('employee-onboarding');
 
       renderPreview(session);

@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { DeterministicAdapter } from '../src/deterministic-adapter.js';
+import { MockAdapter } from '../src/mock-adapter.js';
 import type { ScaffoldRequest, ScaffoldResult } from '../src/types.js';
 
-describe('DeterministicAdapter', () => {
-  const adapter = new DeterministicAdapter();
+describe('MockAdapter', () => {
+  const adapter = new MockAdapter();
 
   describe('isAvailable', () => {
     it('is always available (no API key needed)', async () => {
@@ -85,7 +85,7 @@ describe('DeterministicAdapter', () => {
   });
 
   describe('refineForm', () => {
-    it('returns the current definition unchanged (deterministic cannot refine)', async () => {
+    it('returns the current definition unchanged (mock cannot refine)', async () => {
       const baseDef = (await adapter.generateScaffold({
         type: 'template',
         templateId: 'patient-intake',
@@ -97,7 +97,7 @@ describe('DeterministicAdapter', () => {
         'Add a field for blood type',
       );
 
-      // Deterministic adapter can't meaningfully refine —
+      // Mock adapter can't meaningfully refine —
       // it returns an issue explaining it needs an AI provider
       expect(result.issues.length).toBeGreaterThan(0);
       expect(

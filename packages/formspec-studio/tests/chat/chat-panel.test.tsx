@@ -3,10 +3,10 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import { ChatPanel } from '../../src/chat/components/ChatPanel.js';
 import { ChatProvider } from '../../src/chat/state/ChatContext.js';
-import { ChatSession, DeterministicAdapter } from 'formspec-chat';
+import { ChatSession, MockAdapter } from 'formspec-chat';
 
 function renderChatPanel(session?: ChatSession) {
-  const s = session ?? new ChatSession({ adapter: new DeterministicAdapter() });
+  const s = session ?? new ChatSession({ adapter: new MockAdapter() });
   return {
     ...render(
       <ChatProvider session={s}>
@@ -25,7 +25,7 @@ describe('ChatPanel', () => {
     });
 
     it('renders user messages', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.sendMessage('I need a patient intake form');
 
       renderChatPanel(session);
@@ -33,7 +33,7 @@ describe('ChatPanel', () => {
     });
 
     it('renders assistant messages', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.sendMessage('I need a form');
 
       renderChatPanel(session);
@@ -43,7 +43,7 @@ describe('ChatPanel', () => {
     });
 
     it('renders system messages with distinct style', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('housing-intake');
 
       renderChatPanel(session);
@@ -115,24 +115,24 @@ describe('ChatPanel', () => {
 
   describe('resumed sessions', () => {
     it('displays messages from a restored session', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('patient-intake');
       await session.sendMessage('Add allergy severity field');
 
       // Serialize and restore
       const state = session.toState();
-      const restored = ChatSession.fromState(state, new DeterministicAdapter());
+      const restored = ChatSession.fromState(state, new MockAdapter());
 
       renderChatPanel(restored);
       expect(screen.getByText('Add allergy severity field')).toBeInTheDocument();
     });
 
     it('can send new messages on a restored session', async () => {
-      const session = new ChatSession({ adapter: new DeterministicAdapter() });
+      const session = new ChatSession({ adapter: new MockAdapter() });
       await session.startFromTemplate('housing-intake');
 
       const state = session.toState();
-      const restored = ChatSession.fromState(state, new DeterministicAdapter());
+      const restored = ChatSession.fromState(state, new MockAdapter());
 
       renderChatPanel(restored);
 

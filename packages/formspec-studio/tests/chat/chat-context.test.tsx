@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import React from 'react';
 import { ChatProvider, useChatSession, useChatState } from '../../src/chat/state/ChatContext.js';
-import { ChatSession, DeterministicAdapter } from 'formspec-chat';
+import { ChatSession, MockAdapter } from 'formspec-chat';
 import type { DefinitionDiff } from 'formspec-chat';
 
 function makeSession() {
-  return new ChatSession({ adapter: new DeterministicAdapter() });
+  return new ChatSession({ adapter: new MockAdapter() });
 }
 
 /** Test component that displays chat state. */

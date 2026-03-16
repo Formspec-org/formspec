@@ -3,10 +3,10 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import { IssuePanel } from '../../src/chat/components/IssuePanel.js';
 import { ChatProvider } from '../../src/chat/state/ChatContext.js';
-import { ChatSession, DeterministicAdapter } from 'formspec-chat';
+import { ChatSession, MockAdapter } from 'formspec-chat';
 
 async function renderIssuePanelWithIssues() {
-  const session = new ChatSession({ adapter: new DeterministicAdapter() });
+  const session = new ChatSession({ adapter: new MockAdapter() });
   // Vague message produces issues
   await session.sendMessage('I need a form');
 
@@ -20,7 +20,7 @@ async function renderIssuePanelWithIssues() {
 
 describe('IssuePanel', () => {
   it('shows empty state when no issues', async () => {
-    const session = new ChatSession({ adapter: new DeterministicAdapter() });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     await session.startFromTemplate('housing-intake');
 
     render(
