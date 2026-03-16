@@ -10,6 +10,7 @@ blob-report/
 test-results/
 project/
 .pytest_cache/
+.mypy_cache/
 .claude
 .serena/
 dist-playground/
