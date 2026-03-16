@@ -29,30 +29,42 @@ Respond with a JSON object containing "title" (string) and "items" (array of ite
 
 // ── Response schema for Gemini structured output ─────────────────────
 
-const ITEM_SCHEMA: any = {
-  type: 'object',
+// Gemini doesn't support $ref in response schemas, so we inline one level of
+// nesting: top-level items can be groups with children, but children are leaf items.
+// The system prompt encourages flat groups which covers most real forms.
+
+const OPTION_SCHEMA = {
+  type: 'object' as const,
   properties: {
-    key: { type: 'string' },
-    type: { type: 'string', enum: ['field', 'group'] },
-    label: { type: 'string' },
-    dataType: { type: 'string' },
-    options: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          value: { type: 'string' },
-          label: { type: 'string' },
-        },
-        required: ['value', 'label'],
-      },
-    },
-    children: {
-      type: 'array',
-      items: { $ref: '#' }, // recursive — Gemini handles this
-    },
+    value: { type: 'string' as const },
+    label: { type: 'string' as const },
   },
-  required: ['key', 'type', 'label'],
+  required: ['value', 'label'] as const,
+};
+
+const LEAF_ITEM_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    key: { type: 'string' as const },
+    type: { type: 'string' as const, enum: ['field', 'group'] },
+    label: { type: 'string' as const },
+    dataType: { type: 'string' as const },
+    options: { type: 'array' as const, items: OPTION_SCHEMA },
+  },
+  required: ['key', 'type', 'label'] as const,
+};
+
+const ITEM_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    key: { type: 'string' as const },
+    type: { type: 'string' as const, enum: ['field', 'group'] },
+    label: { type: 'string' as const },
+    dataType: { type: 'string' as const },
+    options: { type: 'array' as const, items: OPTION_SCHEMA },
+    children: { type: 'array' as const, items: LEAF_ITEM_SCHEMA },
+  },
+  required: ['key', 'type', 'label'] as const,
 };
 
 const RESPONSE_SCHEMA = {
