@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRawProject } from '../src/index.js';
 
 describe('definition.addMigration', () => {
-  it('creates a migration descriptor', () => {
+  it('creates a migration descriptor keyed by fromVersion', () => {
     const project = createRawProject();
 
     project.dispatch({
@@ -10,22 +10,43 @@ describe('definition.addMigration', () => {
       payload: { fromVersion: '0.1.0', description: 'Initial migration' },
     });
 
-    const migrations = project.definition.migrations!;
-    expect(migrations).toHaveLength(1);
-    expect(migrations[0].fromVersion).toBe('0.1.0');
+    const descriptor = project.definition.migrations!.from!['0.1.0'];
+    expect(descriptor).toBeDefined();
+    expect(descriptor.description).toBe('Initial migration');
+    expect(descriptor.fieldMap).toEqual([]);
+  });
+
+  it('initialises migrations.from if absent', () => {
+    const project = createRawProject();
+    expect(project.definition.migrations).toBeUndefined();
+
+    project.dispatch({
+      type: 'definition.addMigration',
+      payload: { fromVersion: '0.1.0' },
+    });
+
+    expect(project.definition.migrations!.from).toBeDefined();
+    expect(Object.keys(project.definition.migrations!.from!)).toEqual(['0.1.0']);
   });
 });
 
 describe('definition.deleteMigration', () => {
-  it('removes a migration by fromVersion', () => {
+  it('removes a migration by fromVersion key', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addMigration', payload: { fromVersion: '0.1.0' } });
     project.dispatch({ type: 'definition.addMigration', payload: { fromVersion: '0.2.0' } });
 
     project.dispatch({ type: 'definition.deleteMigration', payload: { fromVersion: '0.1.0' } });
 
-    expect(project.definition.migrations).toHaveLength(1);
-    expect(project.definition.migrations![0].fromVersion).toBe('0.2.0');
+    expect(project.definition.migrations!.from!['0.1.0']).toBeUndefined();
+    expect(project.definition.migrations!.from!['0.2.0']).toBeDefined();
+  });
+
+  it('is a no-op if migrations do not exist', () => {
+    const project = createRawProject();
+    expect(() => {
+      project.dispatch({ type: 'definition.deleteMigration', payload: { fromVersion: '0.1.0' } });
+    }).not.toThrow();
   });
 });
 
@@ -39,7 +60,7 @@ describe('definition.setMigrationProperty', () => {
       payload: { fromVersion: '0.1.0', property: 'description', value: 'Updated desc' },
     });
 
-    expect((project.definition.migrations![0] as any).description).toBe('Updated desc');
+    expect(project.definition.migrations!.from!['0.1.0'].description).toBe('Updated desc');
   });
 });
 
@@ -58,11 +79,11 @@ describe('definition.addFieldMapRule', () => {
       },
     });
 
-    const changes = project.definition.migrations![0].changes;
-    expect(changes).toHaveLength(1);
-    expect(changes[0].source).toBe('old_name');
-    expect(changes[0].target).toBe('new_name');
-    expect(changes[0].transform).toBe('preserve');
+    const fieldMap = project.definition.migrations!.from!['0.1.0'].fieldMap!;
+    expect(fieldMap).toHaveLength(1);
+    expect(fieldMap[0].source).toBe('old_name');
+    expect(fieldMap[0].target).toBe('new_name');
+    expect(fieldMap[0].transform).toBe('preserve');
   });
 
   it('inserts at a specific index', () => {
@@ -82,7 +103,7 @@ describe('definition.addFieldMapRule', () => {
       payload: { fromVersion: '0.1.0', source: 'b', target: 'b', transform: 'preserve', insertIndex: 1 },
     });
 
-    expect(project.definition.migrations![0].changes[1].source).toBe('b');
+    expect(project.definition.migrations!.from!['0.1.0'].fieldMap![1].source).toBe('b');
   });
 });
 
@@ -100,7 +121,7 @@ describe('definition.setFieldMapRule', () => {
       payload: { fromVersion: '0.1.0', index: 0, property: 'transform', value: 'drop' },
     });
 
-    expect(project.definition.migrations![0].changes[0].transform).toBe('drop');
+    expect(project.definition.migrations!.from!['0.1.0'].fieldMap![0].transform).toBe('drop');
   });
 });
 
@@ -122,8 +143,9 @@ describe('definition.deleteFieldMapRule', () => {
       payload: { fromVersion: '0.1.0', index: 0 },
     });
 
-    expect(project.definition.migrations![0].changes).toHaveLength(1);
-    expect(project.definition.migrations![0].changes[0].source).toBe('b');
+    const fieldMap = project.definition.migrations!.from!['0.1.0'].fieldMap!;
+    expect(fieldMap).toHaveLength(1);
+    expect(fieldMap[0].source).toBe('b');
   });
 });
 
@@ -137,6 +159,6 @@ describe('definition.setMigrationDefaults', () => {
       payload: { fromVersion: '0.1.0', defaults: { 'new_field': 'default_value' } },
     });
 
-    expect((project.definition.migrations![0] as any).defaults).toEqual({ new_field: 'default_value' });
+    expect((project.definition.migrations!.from!['0.1.0'] as any).defaults).toEqual({ new_field: 'default_value' });
   });
 });
