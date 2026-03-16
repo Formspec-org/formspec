@@ -1,29 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { registryWithProject } from './helpers.js';
-import {
-  handleAudit,
-  handleDescribe,
-  handlePreview,
-  handleSearch,
-  handleTrace,
-  handleValidateResponse,
-} from '../src/tools/query.js';
-import {
-  handleFelContext,
-  handleFelFunctions,
-  handleFelCheck,
-} from '../src/tools/fel.js';
+import { handleDescribe, handleSearch, handleTrace, handlePreview } from '../src/tools/query.js';
+import { handleFel } from '../src/tools/fel.js';
 
 function parseResult(result: { content: Array<{ text: string }> }) {
   return JSON.parse(result.content[0].text);
 }
 
-// ── handleAudit ────────────────────────────────────────────────────
+// ── handleDescribe — audit mode ─────────────────────────────────
 
-describe('handleAudit', () => {
+describe('handleDescribe — audit', () => {
   it('returns diagnostics with counts for a fresh project', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleAudit(registry, projectId);
+    const result = handleDescribe(registry, projectId, 'audit');
     const data = parseResult(result);
 
     expect(data).toHaveProperty('counts');
@@ -35,7 +24,7 @@ describe('handleAudit', () => {
 
   it('returns categorized diagnostic arrays', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleAudit(registry, projectId);
+    const result = handleDescribe(registry, projectId, 'audit');
     const data = parseResult(result);
 
     expect(data).toHaveProperty('structural');
@@ -47,14 +36,14 @@ describe('handleAudit', () => {
   });
 });
 
-// ── handleDescribe ─────────────────────────────────────────────────
+// ── handleDescribe — structure mode ─────────────────────────────
 
-describe('handleDescribe', () => {
+describe('handleDescribe — structure', () => {
   it('returns statistics and fieldPaths without a target', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('q1', 'Question 1', 'text');
 
-    const result = handleDescribe(registry, projectId);
+    const result = handleDescribe(registry, projectId, 'structure');
     const data = parseResult(result);
 
     expect(data).toHaveProperty('statistics');
@@ -66,7 +55,7 @@ describe('handleDescribe', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('q1', 'Question 1', 'text');
 
-    const result = handleDescribe(registry, projectId, 'q1');
+    const result = handleDescribe(registry, projectId, 'structure', 'q1');
     const data = parseResult(result);
 
     expect(data).toHaveProperty('item');
@@ -76,21 +65,21 @@ describe('handleDescribe', () => {
 
   it('returns item: null for a non-existent path', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleDescribe(registry, projectId, 'nonexistent');
+    const result = handleDescribe(registry, projectId, 'structure', 'nonexistent');
     const data = parseResult(result);
 
     expect(data.item).toBeNull();
   });
 });
 
-// ── handlePreview ──────────────────────────────────────────────────
+// ── handlePreview — preview mode ────────────────────────────────
 
-describe('handlePreview', () => {
+describe('handlePreview — preview', () => {
   it('returns visibleFields after adding a field', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('name', 'Full Name', 'text');
 
-    const result = handlePreview(registry, projectId);
+    const result = handlePreview(registry, projectId, 'preview', {});
     expect(result.isError).toBeUndefined();
 
     const data = parseResult(result);
@@ -102,7 +91,7 @@ describe('handlePreview', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('age', 'Age', 'integer');
 
-    const result = handlePreview(registry, projectId);
+    const result = handlePreview(registry, projectId, 'preview', {});
     const data = parseResult(result);
 
     expect(data).toHaveProperty('currentValues');
@@ -114,14 +103,29 @@ describe('handlePreview', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('color', 'Color', 'text');
 
-    const result = handlePreview(registry, projectId, { color: 'blue' });
+    const result = handlePreview(registry, projectId, 'preview', { scenario: { color: 'blue' } });
     const data = parseResult(result);
 
     expect(data.currentValues.color).toBe('blue');
   });
 });
 
-// ── handleSearch ───────────────────────────────────────────────────
+// ── handlePreview — validate mode ───────────────────────────────
+
+describe('handlePreview — validate', () => {
+  it('returns a validation report', () => {
+    const { registry, projectId, project } = registryWithProject();
+    project.addField('q1', 'Q1', 'text');
+
+    const result = handlePreview(registry, projectId, 'validate', { response: { q1: 'hello' } });
+    expect(result.isError).toBeUndefined();
+
+    const data = parseResult(result);
+    expect(data).toHaveProperty('results');
+  });
+});
+
+// ── handleSearch ────────────────────────────────────────────────
 
 describe('handleSearch', () => {
   it('returns matching fields filtered by type', () => {
@@ -141,7 +145,6 @@ describe('handleSearch', () => {
     project.addField('q1', 'Question 1', 'text');
     project.addField('q2', 'Question 2', 'number');
 
-    // 'text' alias resolves to dataType 'text'; 'number' alias resolves to 'decimal'
     const result = handleSearch(registry, projectId, { dataType: 'text' });
     const data = parseResult(result);
 
@@ -160,7 +163,7 @@ describe('handleSearch', () => {
   });
 });
 
-// ── handleTrace ────────────────────────────────────────────────────
+// ── handleTrace ─────────────────────────────────────────────────
 
 describe('handleTrace', () => {
   it('returns dependencies for an expression', () => {
@@ -168,7 +171,7 @@ describe('handleTrace', () => {
     project.addField('q1', 'Q1', 'text');
     project.addField('q2', 'Q2', 'text');
 
-    const result = handleTrace(registry, projectId, '$q1 + $q2');
+    const result = handleTrace(registry, projectId, 'trace', { expression_or_field: '$q1 + $q2' });
     const data = parseResult(result);
 
     expect(data).toHaveProperty('type', 'expression');
@@ -181,7 +184,7 @@ describe('handleTrace', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('q1', 'Q1', 'text');
 
-    const result = handleTrace(registry, projectId, 'q1');
+    const result = handleTrace(registry, projectId, 'trace', { expression_or_field: 'q1' });
     const data = parseResult(result);
 
     expect(data).toHaveProperty('type', 'field');
@@ -190,32 +193,51 @@ describe('handleTrace', () => {
     expect(data.dependents).toHaveProperty('shapes');
     expect(data.dependents).toHaveProperty('variables');
   });
-});
 
-// ── handleValidateResponse ─────────────────────────────────────────
-
-describe('handleValidateResponse', () => {
-  it('returns a validation report', () => {
+  it('treats $-prefixed bare identifier as a field reference, not an expression', () => {
     const { registry, projectId, project } = registryWithProject();
-    project.addField('q1', 'Q1', 'text');
+    project.addField('myfield', 'My Field', 'text');
 
-    const result = handleValidateResponse(registry, projectId, { q1: 'hello' });
-    expect(result.isError).toBeUndefined();
-
+    const result = handleTrace(registry, projectId, 'trace', { expression_or_field: '$myfield' });
     const data = parseResult(result);
-    // ValidationReport has results array
-    expect(data).toHaveProperty('results');
+
+    expect(data).toHaveProperty('type', 'field');
+    expect(data.input).toBe('myfield');
+    expect(data).toHaveProperty('dependents');
+  });
+
+  it('treats dotted $-prefixed path as a field reference', () => {
+    const { registry, projectId, project } = registryWithProject();
+    project.addGroup('contact', 'Contact');
+    project.addField('contact.email', 'Email', 'email');
+
+    const result = handleTrace(registry, projectId, 'trace', { expression_or_field: '$contact.email' });
+    const data = parseResult(result);
+
+    expect(data).toHaveProperty('type', 'field');
+    expect(data.input).toBe('contact.email');
+  });
+
+  it('treats expressions with operators as expressions', () => {
+    const { registry, projectId, project } = registryWithProject();
+    project.addField('a', 'A', 'number');
+    project.addField('b', 'B', 'number');
+
+    const result = handleTrace(registry, projectId, 'trace', { expression_or_field: '$a + $b' });
+    const data = parseResult(result);
+
+    expect(data).toHaveProperty('type', 'expression');
   });
 });
 
-// ── handleFelContext ───────────────────────────────────────────────
+// ── handleFel — context ─────────────────────────────────────────
 
-describe('handleFelContext', () => {
+describe('handleFel — context', () => {
   it('returns available references', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('q1', 'Q1', 'text');
 
-    const result = handleFelContext(registry, projectId);
+    const result = handleFel(registry, projectId, { action: 'context' });
     const data = parseResult(result);
 
     expect(data).toHaveProperty('fields');
@@ -229,19 +251,19 @@ describe('handleFelContext', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('q1', 'Q1', 'text');
 
-    const result = handleFelContext(registry, projectId, 'q1');
+    const result = handleFel(registry, projectId, { action: 'context', path: 'q1' });
     const data = parseResult(result);
 
     expect(data).toHaveProperty('fields');
   });
 });
 
-// ── handleFelFunctions ─────────────────────────────────────────────
+// ── handleFel — functions ───────────────────────────────────────
 
-describe('handleFelFunctions', () => {
+describe('handleFel — functions', () => {
   it('returns a non-empty array of function entries', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleFelFunctions(registry, projectId);
+    const result = handleFel(registry, projectId, { action: 'functions' });
     const data = parseResult(result);
 
     expect(Array.isArray(data)).toBe(true);
@@ -250,7 +272,7 @@ describe('handleFelFunctions', () => {
 
   it('each entry has name, category, and source', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleFelFunctions(registry, projectId);
+    const result = handleFel(registry, projectId, { action: 'functions' });
     const data = parseResult(result);
 
     const first = data[0];
@@ -261,14 +283,14 @@ describe('handleFelFunctions', () => {
   });
 });
 
-// ── handleFelCheck ─────────────────────────────────────────────────
+// ── handleFel — check ───────────────────────────────────────────
 
-describe('handleFelCheck', () => {
+describe('handleFel — check', () => {
   it('returns valid: true for a valid expression', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('q1', 'Q1', 'number');
 
-    const result = handleFelCheck(registry, projectId, '$q1 + 1');
+    const result = handleFel(registry, projectId, { action: 'check', expression: '$q1 + 1' });
     const data = parseResult(result);
 
     expect(data).toHaveProperty('valid', true);
@@ -279,7 +301,7 @@ describe('handleFelCheck', () => {
   it('returns valid: false for an invalid expression', () => {
     const { registry, projectId } = registryWithProject();
 
-    const result = handleFelCheck(registry, projectId, '$$INVALID_FEL$$(');
+    const result = handleFel(registry, projectId, { action: 'check', expression: '$$INVALID_FEL$$(' });
     const data = parseResult(result);
 
     expect(data).toHaveProperty('valid', false);
@@ -291,7 +313,7 @@ describe('handleFelCheck', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('q1', 'Q1', 'number');
 
-    const result = handleFelCheck(registry, projectId, 'round($q1, 2)');
+    const result = handleFel(registry, projectId, { action: 'check', expression: 'round($q1, 2)' });
     const data = parseResult(result);
 
     expect(data.valid).toBe(true);
@@ -302,7 +324,7 @@ describe('handleFelCheck', () => {
     const { registry, projectId, project } = registryWithProject();
     project.addField('q1', 'Q1', 'text');
 
-    const result = handleFelCheck(registry, projectId, '$q1', 'q1');
+    const result = handleFel(registry, projectId, { action: 'check', expression: '$q1', context_path: 'q1' });
     const data = parseResult(result);
 
     expect(data).toHaveProperty('valid');

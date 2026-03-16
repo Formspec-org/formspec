@@ -659,7 +659,6 @@ describe('parseFEL', () => {
     const result = project.parseFEL('@source', { targetPath: 'a' });
     expect(result.valid).toBe(false);
     expect(result.errors.some((error) => error.code === 'FEL_UNKNOWN_VARIABLE')).toBe(true);
-    expect(result.ast).toBeUndefined();
   });
 });
 

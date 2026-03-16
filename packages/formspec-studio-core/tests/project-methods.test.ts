@@ -1631,6 +1631,44 @@ describe('addContent defaults', () => {
   });
 });
 
+describe('addContent page placement', () => {
+  it('places content on the specified page via pages.assignItem', () => {
+    const project = createProject();
+    const pageResult = project.addPage('Page One');
+    const pageId = pageResult.createdId!;
+
+    project.addContent('intro', 'Welcome', 'heading', { page: pageId });
+
+    const pages = (project.core as any).state.theme.pages as any[];
+    const page = pages.find((p: any) => p.id === pageId);
+    expect(page.regions.some((r: any) => r.key === 'intro')).toBe(true);
+  });
+
+  it('throws PAGE_NOT_FOUND when page does not exist', () => {
+    const project = createProject();
+    expect(() =>
+      project.addContent('intro', 'Welcome', 'heading', { page: 'nonexistent' }),
+    ).toThrow(HelperError);
+    try {
+      project.addContent('intro2', 'Welcome', 'heading', { page: 'nonexistent' });
+    } catch (e) {
+      expect((e as HelperError).code).toBe('PAGE_NOT_FOUND');
+    }
+  });
+
+  it('still adds the content item when page is provided', () => {
+    const project = createProject();
+    const pageResult = project.addPage('Page One');
+    const pageId = pageResult.createdId!;
+
+    project.addContent('intro', 'Welcome', 'heading', { page: pageId });
+
+    const item = project.itemAt('intro');
+    expect(item?.type).toBe('display');
+    expect((item as any)?.presentation?.widgetHint).toBe('heading');
+  });
+});
+
 describe('addField alias resolution', () => {
   it('resolves all aliases to correct dataType and defaultWidget', () => {
     // Every alias in FIELD_TYPE_MAP must produce the correct dataType on the definition item.

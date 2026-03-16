@@ -49,8 +49,6 @@ export function handleOpen(
       return errorResponse(formatToolError('LOAD_FAILED', `No *.definition.json found in ${absPath}`));
     }
 
-    const dirName = basename(absPath);
-
     // Read definition (required)
     const definition = JSON.parse(readFileSync(join(absPath, defFile), 'utf-8'));
 
@@ -158,6 +156,8 @@ export function handleSave(
 
 export function handleList(
   registry: ProjectRegistry,
+  includeAutosaved?: boolean,
+  autosaveDir?: string,
 ): ReturnType<typeof successResponse> {
   const entries = registry.listAll();
   const projects = entries.map(entry => {
@@ -172,35 +172,29 @@ export function handleList(
       ...(entry.sourcePath ? { sourcePath: entry.sourcePath } : {}),
     };
   });
-  return successResponse({ projects });
-}
 
-// ── handleListAutosaved ───────────────────────────────────────────
+  if (!includeAutosaved) {
+    return successResponse({ projects });
+  }
 
-export function handleListAutosaved(
-  autosaveDir?: string,
-): ReturnType<typeof successResponse> {
+  // Include autosaved entries
   const dir = autosaveDir ?? join(process.env.HOME ?? '', '.formspec', 'autosave');
+  let autosavedEntries: Array<{ name: string; path: string }> = [];
 
-  if (!existsSync(dir)) {
-    return successResponse({ entries: [] });
+  if (existsSync(dir)) {
+    try {
+      const subdirs = readdirSync(dir).filter(name => {
+        const full = join(dir, name);
+        return statSync(full).isDirectory();
+      });
+      autosavedEntries = subdirs.map(name => ({
+        name,
+        path: join(dir, name),
+      }));
+    } catch { /* ignore */ }
   }
 
-  try {
-    const subdirs = readdirSync(dir).filter(name => {
-      const full = join(dir, name);
-      return statSync(full).isDirectory();
-    });
-
-    const entries = subdirs.map(name => ({
-      name,
-      path: join(dir, name),
-    }));
-
-    return successResponse({ entries });
-  } catch {
-    return successResponse({ entries: [] });
-  }
+  return successResponse({ projects, autosaved: autosavedEntries });
 }
 
 // ── handlePublish ─────────────────────────────────────────────────

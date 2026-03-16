@@ -22,7 +22,7 @@ import type {
 } from '../types.js';
 
 function analyzeExpression(expression: string): FELAnalysis {
-  return analyzeFEL(expression, { includeCst: true });
+  return analyzeFEL(expression);
 }
 
 function resolveParseContext(context?: string | FELParseContext): FELParseContext {
@@ -85,7 +85,6 @@ export function parseFEL(state: ProjectState, expression: string, context?: FELP
     errors: [...parseErrors, ...semanticErrors],
     references: analysis.references,
     functions: analysis.functions,
-    ast: analysis.valid && semanticErrors.length === 0 ? analysis.cst : undefined,
   };
 }
 

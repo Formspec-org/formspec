@@ -1,59 +1,38 @@
 /**
- * Flow tools: flow mode, branching, move, rename.
- *
- * These manage form navigation and item organization.
+ * Flow tool (consolidated):
+ *   action: 'set_mode' | 'branch'
  */
 
 import type { ProjectRegistry } from '../registry.js';
 import { wrapHelperCall } from '../errors.js';
 import type { BranchPath, FlowProps } from 'formspec-studio-core';
 
+type FlowAction = 'set_mode' | 'branch';
+
+interface FlowParams {
+  action: FlowAction;
+  // For set_mode
+  mode?: 'single' | 'wizard' | 'tabs';
+  props?: FlowProps;
+  // For branch
+  on?: string;
+  paths?: BranchPath[];
+  otherwise?: string | string[];
+}
+
 export function handleFlow(
   registry: ProjectRegistry,
   projectId: string,
-  mode: 'single' | 'wizard' | 'tabs',
-  props?: FlowProps,
+  params: FlowParams,
 ) {
   return wrapHelperCall(() => {
     const project = registry.getProject(projectId);
-    return project.setFlow(mode, props);
-  });
-}
 
-export function handleBranch(
-  registry: ProjectRegistry,
-  projectId: string,
-  on: string,
-  paths: BranchPath[],
-  otherwise?: string | string[],
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.branch(on, paths, otherwise);
-  });
-}
-
-export function handleMove(
-  registry: ProjectRegistry,
-  projectId: string,
-  path: string,
-  targetParentPath?: string,
-  targetIndex?: number,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.moveItem(path, targetParentPath, targetIndex);
-  });
-}
-
-export function handleRename(
-  registry: ProjectRegistry,
-  projectId: string,
-  path: string,
-  newKey: string,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.renameItem(path, newKey);
+    switch (params.action) {
+      case 'set_mode':
+        return project.setFlow(params.mode!, params.props);
+      case 'branch':
+        return project.branch(params.on!, params.paths!, params.otherwise);
+    }
   });
 }

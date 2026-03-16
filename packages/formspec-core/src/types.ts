@@ -422,8 +422,6 @@ export interface FELParseResult {
   references: string[];
   /** FEL function names called in the expression. */
   functions: string[];
-  /** The parsed AST, present only when `valid` is true. */
-  ast?: unknown;
 }
 
 /**

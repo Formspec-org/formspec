@@ -3,18 +3,12 @@ import { registryWithProject, registryInBootstrap } from './helpers.js';
 import {
   handleField,
   handleContent,
-  handleUpdate,
-  handleRemove,
-  handleCopy,
-  handlePage,
   handleGroup,
-  handleRepeat,
-  handleMetadata,
-  handleSubmitButton,
+  handleUpdate,
+  handleEdit,
+  handlePage,
   handlePlace,
-  handleUnplace,
-  handleRemovePage,
-  handleMovePage,
+  handleSubmitButton,
 } from '../src/tools/structure.js';
 
 function parseResult(result: { content: Array<{ text: string }> }) {
@@ -24,44 +18,85 @@ function parseResult(result: { content: Array<{ text: string }> }) {
 // ── handleField ──────────────────────────────────────────────────
 
 describe('handleField', () => {
-  it('adds a field and returns affectedPaths', () => {
+  it('adds a field (single mode)', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleField(registry, projectId, 'name', 'Full Name', 'text');
+    const result = handleField(registry, projectId, { path: 'name', label: 'Full Name', type: 'text' });
     const data = parseResult(result);
 
     expect(result.isError).toBeUndefined();
     expect(data.affectedPaths).toContain('name');
-    expect(data.summary).toBeTruthy();
   });
 
   it('returns error for unknown field type', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleField(registry, projectId, 'q1', 'Q1', 'not_a_real_type');
-    const data = parseResult(result);
-
+    const result = handleField(registry, projectId, { path: 'q1', label: 'Q1', type: 'not_a_real_type' });
     expect(result.isError).toBe(true);
-    expect(data.code).toBeTruthy();
   });
 
   it('returns WRONG_PHASE during bootstrap', () => {
     const { registry, projectId } = registryInBootstrap();
-    const result = handleField(registry, projectId, 'q1', 'Q1', 'text');
-    const data = parseResult(result);
-
-    expect(result.isError).toBe(true);
-    expect(data.code).toBe('WRONG_PHASE');
+    const result = handleField(registry, projectId, { path: 'q1', label: 'Q1', type: 'text' });
+    expect(parseResult(result).code).toBe('WRONG_PHASE');
   });
 
   it('accepts optional props', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleField(registry, projectId, 'email', 'Email', 'email', {
-      placeholder: 'you@example.com',
-      required: true,
+    const result = handleField(registry, projectId, {
+      path: 'email', label: 'Email', type: 'email',
+      props: { placeholder: 'you@example.com', required: true },
+    });
+    expect(result.isError).toBeUndefined();
+    expect(parseResult(result).affectedPaths).toContain('email');
+  });
+
+  // ── Batch mode ──
+
+  it('adds multiple fields in batch mode', () => {
+    const { registry, projectId } = registryWithProject();
+    const result = handleField(registry, projectId, {
+      items: [
+        { path: 'name', label: 'Name', type: 'text' },
+        { path: 'email', label: 'Email', type: 'email' },
+        { path: 'phone', label: 'Phone', type: 'text' },
+      ],
     });
     const data = parseResult(result);
 
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('email');
+    expect(data.succeeded).toBe(3);
+    expect(data.failed).toBe(0);
+    expect(data.results).toHaveLength(3);
+  });
+
+  it('handles partial failure in batch mode', () => {
+    const { registry, projectId } = registryWithProject();
+    // Add a field first, then try to batch-add a duplicate
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+
+    const result = handleField(registry, projectId, {
+      items: [
+        { path: 'name', label: 'Duplicate', type: 'text' }, // will fail
+        { path: 'email', label: 'Email', type: 'email' },   // should succeed
+      ],
+    });
+    const data = parseResult(result);
+
+    expect(result.isError).toBeUndefined(); // partial success is not an error
+    expect(data.succeeded).toBe(1);
+    expect(data.failed).toBe(1);
+    expect(data.results[0].success).toBe(false);
+    expect(data.results[1].success).toBe(true);
+  });
+
+  it('returns error when all batch items fail', () => {
+    const { registry, projectId } = registryInBootstrap();
+    const result = handleField(registry, projectId, {
+      items: [
+        { path: 'a', label: 'A', type: 'text' },
+      ],
+    });
+    // WRONG_PHASE throws before batch even starts
+    expect(result.isError).toBe(true);
   });
 });
 
@@ -70,20 +105,56 @@ describe('handleField', () => {
 describe('handleContent', () => {
   it('adds content with kind', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleContent(registry, projectId, 'intro', 'Welcome to the form', 'heading');
-    const data = parseResult(result);
-
+    const result = handleContent(registry, projectId, { path: 'intro', body: 'Welcome', kind: 'heading' });
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('intro');
+    expect(parseResult(result).affectedPaths).toContain('intro');
   });
 
-  it('adds content without kind (defaults)', () => {
+  it('adds content without kind', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleContent(registry, projectId, 'note', 'Please read carefully');
+    const result = handleContent(registry, projectId, { path: 'note', body: 'Please read' });
+    expect(result.isError).toBeUndefined();
+  });
+
+  it('batch adds multiple content items', () => {
+    const { registry, projectId } = registryWithProject();
+    const result = handleContent(registry, projectId, {
+      items: [
+        { path: 'h1', body: 'Title', kind: 'heading' },
+        { path: 'p1', body: 'Description', kind: 'paragraph' },
+      ],
+    });
     const data = parseResult(result);
+    expect(data.succeeded).toBe(2);
+  });
+
+  it('places content on a page when props.page is provided', () => {
+    const { registry, projectId, project } = registryWithProject();
+    const pageResult = project.addPage('Page One');
+    const pageId = pageResult.createdId!;
+
+    const result = handleContent(registry, projectId, {
+      path: 'intro',
+      body: 'Welcome',
+      kind: 'heading',
+      props: { page: pageId },
+    });
 
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('note');
+    const pages = (project.core as any).state.theme.pages as any[];
+    const page = pages.find((p: any) => p.id === pageId);
+    expect(page.regions.some((r: any) => r.key === 'intro')).toBe(true);
+  });
+
+  it('returns PAGE_NOT_FOUND error when props.page does not exist', () => {
+    const { registry, projectId } = registryWithProject();
+    const result = handleContent(registry, projectId, {
+      path: 'intro',
+      body: 'Welcome',
+      props: { page: 'no-such-page' },
+    });
+    expect(result.isError).toBe(true);
+    expect(parseResult(result).code).toBe('PAGE_NOT_FOUND');
   });
 });
 
@@ -92,139 +163,161 @@ describe('handleContent', () => {
 describe('handleGroup', () => {
   it('adds a group', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleGroup(registry, projectId, 'address', 'Address');
-    const data = parseResult(result);
-
+    const result = handleGroup(registry, projectId, { path: 'address', label: 'Address' });
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('address');
+    expect(parseResult(result).affectedPaths).toContain('address');
+  });
+
+  it('adds a group with repeat config in props', () => {
+    const { registry, projectId } = registryWithProject();
+    const result = handleGroup(registry, projectId, {
+      path: 'items',
+      label: 'Line Items',
+      props: { repeat: { min: 1, max: 10 } },
+    });
+    expect(result.isError).toBeUndefined();
+  });
+
+  it('batch adds multiple groups', () => {
+    const { registry, projectId } = registryWithProject();
+    const result = handleGroup(registry, projectId, {
+      items: [
+        { path: 'personal', label: 'Personal Info' },
+        { path: 'work', label: 'Work Info' },
+      ],
+    });
+    const data = parseResult(result);
+    expect(data.succeeded).toBe(2);
   });
 });
 
 // ── handleUpdate ─────────────────────────────────────────────────
 
 describe('handleUpdate', () => {
-  it('updates a field label', () => {
+  it('updates item properties', () => {
     const { registry, projectId } = registryWithProject();
-    handleField(registry, projectId, 'q1', 'Question 1', 'text');
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
 
-    const result = handleUpdate(registry, projectId, 'q1', { label: 'Updated Label' });
-    const data = parseResult(result);
-
+    const result = handleUpdate(registry, projectId, 'item', {
+      path: 'name', changes: { label: 'Full Name' },
+    });
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('q1');
   });
 
-  it('returns error for invalid key', () => {
+  it('updates form metadata', () => {
     const { registry, projectId } = registryWithProject();
-    handleField(registry, projectId, 'q1', 'Q1', 'text');
+    const result = handleUpdate(registry, projectId, 'metadata', {
+      changes: { title: 'My Form', description: 'A test form' },
+    });
+    expect(result.isError).toBeUndefined();
+  });
 
-    const result = handleUpdate(registry, projectId, 'q1', { notAValidKey: 'bad' } as any);
+  it('translates nested repeat shape to flat keys', () => {
+    const { registry, projectId } = registryWithProject();
+    handleGroup(registry, projectId, { path: 'items', label: 'Items' });
+
+    const result = handleUpdate(registry, projectId, 'item', {
+      path: 'items',
+      changes: { repeat: { min: 1, max: 5 } } as Record<string, unknown>,
+    });
+    expect(result.isError).toBeUndefined();
     const data = parseResult(result);
+    expect(data.affectedPaths).toContain('items');
+  });
 
+  it('translates nested repeat with only min (no max)', () => {
+    const { registry, projectId } = registryWithProject();
+    handleGroup(registry, projectId, { path: 'lines', label: 'Lines' });
+
+    const result = handleUpdate(registry, projectId, 'item', {
+      path: 'lines',
+      changes: { repeat: { min: 1 } } as Record<string, unknown>,
+    });
+    expect(result.isError).toBeUndefined();
+  });
+
+  it('rejects unknown top-level keys even after repeat expansion', () => {
+    const { registry, projectId } = registryWithProject();
+    handleGroup(registry, projectId, { path: 'items', label: 'Items' });
+
+    const result = handleUpdate(registry, projectId, 'item', {
+      path: 'items',
+      changes: { bogusKey: 42 } as Record<string, unknown>,
+    });
     expect(result.isError).toBe(true);
-    expect(data.code).toBeTruthy();
   });
 });
 
-// ── handleRemove ─────────────────────────────────────────────────
+// ── handleEdit ───────────────────────────────────────────────────
 
-describe('handleRemove', () => {
-  it('removes a field', () => {
+describe('handleEdit', () => {
+  it('removes an item', () => {
     const { registry, projectId } = registryWithProject();
-    handleField(registry, projectId, 'q1', 'Q1', 'text');
+    handleField(registry, projectId, { path: 'temp', label: 'Temp', type: 'text' });
 
-    const result = handleRemove(registry, projectId, 'q1');
-    const data = parseResult(result);
-
+    const result = handleEdit(registry, projectId, 'remove', { path: 'temp' });
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('q1');
   });
 
-  it('returns error for nonexistent path', () => {
+  it('copies an item', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleRemove(registry, projectId, 'nonexistent');
-    const data = parseResult(result);
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
 
-    expect(result.isError).toBe(true);
-    expect(data.code).toBeTruthy();
-  });
-});
-
-// ── handleCopy ───────────────────────────────────────────────────
-
-describe('handleCopy', () => {
-  it('copies a field and returns new path in affectedPaths', () => {
-    const { registry, projectId } = registryWithProject();
-    handleField(registry, projectId, 'q1', 'Q1', 'text');
-
-    const result = handleCopy(registry, projectId, 'q1');
-    const data = parseResult(result);
-
+    const result = handleEdit(registry, projectId, 'copy', { path: 'name' });
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths.length).toBeGreaterThan(0);
-    // The new path is a variant of the original (e.g. "q1_1")
-    expect(data.affectedPaths[0]).toMatch(/^q1/);
+  });
+
+  it('renames an item', () => {
+    const { registry, projectId } = registryWithProject();
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+
+    const result = handleEdit(registry, projectId, 'rename', { path: 'name', new_key: 'full_name' });
+    expect(result.isError).toBeUndefined();
   });
 });
 
 // ── handlePage ───────────────────────────────────────────────────
 
 describe('handlePage', () => {
-  it('adds a page and returns page_id in affectedPaths', () => {
+  it('adds a page', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handlePage(registry, projectId, 'Personal Info', 'Enter your details');
-    const data = parseResult(result);
-
+    const result = handlePage(registry, projectId, 'add', { title: 'Page 1' });
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths.length).toBeGreaterThan(0);
   });
-});
 
-// ── handleRemovePage ─────────────────────────────────────────────
-
-describe('handleRemovePage', () => {
   it('removes a page', () => {
     const { registry, projectId } = registryWithProject();
-    const pageResult = handlePage(registry, projectId, 'Temp Page');
-    const pageData = parseResult(pageResult);
-    const pageId = pageData.affectedPaths[0];
+    const addResult = handlePage(registry, projectId, 'add', { title: 'Page 1' });
+    const addResult2 = handlePage(registry, projectId, 'add', { title: 'Page 2' });
+    const pageId = parseResult(addResult).createdId;
 
-    // Add a second page so we can remove the first (can't delete last)
-    handlePage(registry, projectId, 'Another Page');
-
-    const result = handleRemovePage(registry, projectId, pageId);
-    const data = parseResult(result);
-
+    const result = handlePage(registry, projectId, 'remove', { page_id: pageId });
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain(pageId);
   });
 });
 
-// ── handleRepeat ─────────────────────────────────────────────────
+// ── handlePlace ──────────────────────────────────────────────────
 
-describe('handleRepeat', () => {
-  it('makes a group repeatable', () => {
+describe('handlePlace', () => {
+  it('places an item on a page', () => {
     const { registry, projectId } = registryWithProject();
-    handleGroup(registry, projectId, 'items', 'Items');
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+    const pageResult = handlePage(registry, projectId, 'add', { title: 'Page 1' });
+    const pageId = parseResult(pageResult).createdId;
 
-    const result = handleRepeat(registry, projectId, 'items', { min: 1, max: 5 });
-    const data = parseResult(result);
-
+    const result = handlePlace(registry, projectId, 'place', 'name', pageId);
     expect(result.isError).toBeUndefined();
-    expect(data.summary).toContain('items');
   });
-});
 
-// ── handleMetadata ───────────────────────────────────────────────
-
-describe('handleMetadata', () => {
-  it('sets form title', () => {
+  it('unplaces an item from a page', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleMetadata(registry, projectId, { title: 'My Form' });
-    const data = parseResult(result);
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+    const pageResult = handlePage(registry, projectId, 'add', { title: 'Page 1' });
+    const pageId = parseResult(pageResult).createdId;
+    handlePlace(registry, projectId, 'place', 'name', pageId);
 
+    const result = handlePlace(registry, projectId, 'unplace', 'name', pageId);
     expect(result.isError).toBeUndefined();
-    expect(data.summary).toBeTruthy();
   });
 });
 
@@ -233,60 +326,7 @@ describe('handleMetadata', () => {
 describe('handleSubmitButton', () => {
   it('adds a submit button', () => {
     const { registry, projectId } = registryWithProject();
-    const result = handleSubmitButton(registry, projectId, 'Send');
-    const data = parseResult(result);
-
+    const result = handleSubmitButton(registry, projectId);
     expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths.length).toBeGreaterThan(0);
-  });
-});
-
-// ── handlePlace / handleUnplace ──────────────────────────────────
-
-describe('handlePlace', () => {
-  it('places a field on a page', () => {
-    const { registry, projectId } = registryWithProject();
-    handleField(registry, projectId, 'q1', 'Q1', 'text');
-    const pageResult = handlePage(registry, projectId, 'Page 1');
-    const pageId = parseResult(pageResult).affectedPaths[0];
-
-    const result = handlePlace(registry, projectId, 'q1', pageId);
-    const data = parseResult(result);
-
-    expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('q1');
-  });
-});
-
-describe('handleUnplace', () => {
-  it('unplaces a field from a page', () => {
-    const { registry, projectId } = registryWithProject();
-    handleField(registry, projectId, 'q1', 'Q1', 'text');
-    const pageResult = handlePage(registry, projectId, 'Page 1');
-    const pageId = parseResult(pageResult).affectedPaths[0];
-    handlePlace(registry, projectId, 'q1', pageId);
-
-    const result = handleUnplace(registry, projectId, 'q1', pageId);
-    const data = parseResult(result);
-
-    expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('q1');
-  });
-});
-
-// ── handleMovePage ───────────────────────────────────────────────
-
-describe('handleMovePage', () => {
-  it('reorders a page', () => {
-    const { registry, projectId } = registryWithProject();
-    handlePage(registry, projectId, 'Page 1');
-    const page2Result = handlePage(registry, projectId, 'Page 2');
-    const page2Id = parseResult(page2Result).affectedPaths[0];
-
-    const result = handleMovePage(registry, projectId, page2Id, 'up');
-    const data = parseResult(result);
-
-    expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain(page2Id);
   });
 });

@@ -52,6 +52,11 @@ export interface FieldProps {
   parentPath?: string;
 }
 
+/** Content properties for addContent */
+export interface ContentProps {
+  page?: string;
+}
+
 /** Group properties */
 export interface GroupProps {
   display?: 'stack' | 'dataTable';

@@ -1,94 +1,51 @@
 /**
- * Screener tools: enable/disable screener, screen fields, screen routes.
- *
- * These manage the pre-form screening logic that determines
- * eligibility before the main form is presented.
+ * Screener tool (consolidated):
+ *   action: 'enable' | 'add_field' | 'remove_field' | 'add_route' | 'update_route' | 'reorder_route' | 'remove_route'
  */
 
 import type { ProjectRegistry } from '../registry.js';
 import { wrapHelperCall } from '../errors.js';
 import type { FieldProps } from 'formspec-studio-core';
 
+type ScreenerAction = 'enable' | 'add_field' | 'remove_field' | 'add_route' | 'update_route' | 'reorder_route' | 'remove_route';
+
+interface ScreenerParams {
+  action: ScreenerAction;
+  enabled?: boolean;
+  key?: string;
+  label?: string;
+  type?: string;
+  props?: FieldProps;
+  condition?: string;
+  target?: string;
+  route_index?: number;
+  changes?: { condition?: string; target?: string; label?: string };
+  direction?: 'up' | 'down';
+}
+
 export function handleScreener(
   registry: ProjectRegistry,
   projectId: string,
-  enabled: boolean,
+  params: ScreenerParams,
 ) {
   return wrapHelperCall(() => {
     const project = registry.getProject(projectId);
-    return project.setScreener(enabled);
-  });
-}
 
-export function handleScreenField(
-  registry: ProjectRegistry,
-  projectId: string,
-  key: string,
-  label: string,
-  type: string,
-  props?: FieldProps,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.addScreenField(key, label, type, props);
-  });
-}
-
-export function handleRemoveScreenField(
-  registry: ProjectRegistry,
-  projectId: string,
-  key: string,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.removeScreenField(key);
-  });
-}
-
-export function handleScreenRoute(
-  registry: ProjectRegistry,
-  projectId: string,
-  condition: string,
-  target: string,
-  label?: string,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.addScreenRoute(condition, target, label);
-  });
-}
-
-export function handleUpdateScreenRoute(
-  registry: ProjectRegistry,
-  projectId: string,
-  routeIndex: number,
-  changes: { condition?: string; target?: string; label?: string },
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.updateScreenRoute(routeIndex, changes);
-  });
-}
-
-export function handleReorderScreenRoute(
-  registry: ProjectRegistry,
-  projectId: string,
-  routeIndex: number,
-  direction: 'up' | 'down',
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.reorderScreenRoute(routeIndex, direction);
-  });
-}
-
-export function handleRemoveScreenRoute(
-  registry: ProjectRegistry,
-  projectId: string,
-  routeIndex: number,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.removeScreenRoute(routeIndex);
+    switch (params.action) {
+      case 'enable':
+        return project.setScreener(params.enabled!);
+      case 'add_field':
+        return project.addScreenField(params.key!, params.label!, params.type!, params.props);
+      case 'remove_field':
+        return project.removeScreenField(params.key!);
+      case 'add_route':
+        return project.addScreenRoute(params.condition!, params.target!, params.label);
+      case 'update_route':
+        return project.updateScreenRoute(params.route_index!, params.changes!);
+      case 'reorder_route':
+        return project.reorderScreenRoute(params.route_index!, params.direction!);
+      case 'remove_route':
+        return project.removeScreenRoute(params.route_index!);
+    }
   });
 }

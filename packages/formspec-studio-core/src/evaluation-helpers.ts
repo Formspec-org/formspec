@@ -52,14 +52,18 @@ export function previewForm(
     }
   }
 
-  // Collect validation state
+  // Build validation state from the full report (submit mode) so all shapes — including
+  // submit-timing ones — are included. Shape results use the author-supplied message;
+  // when multiple results target the same field, errors take priority over warnings/info.
   const validationState: Record<string, { severity: 'error' | 'warning' | 'info'; message: string }> = {};
-  for (const [path, valSignal] of Object.entries(engine.validationResults)) {
-    const results = valSignal.value;
-    if (results?.length > 0) {
-      validationState[path] = {
-        severity: results[0].severity ?? 'error',
-        message: results[0].message,
+  const report = engine.getValidationReport({ mode: 'submit' });
+
+  for (const result of report.results) {
+    const existing = validationState[result.path];
+    if (!existing || result.severity === 'error' || existing.severity !== 'error') {
+      validationState[result.path] = {
+        severity: result.severity ?? 'error',
+        message: result.message,
       };
     }
   }

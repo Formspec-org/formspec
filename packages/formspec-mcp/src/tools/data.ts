@@ -1,116 +1,66 @@
 /**
- * Data tools: choices, variables, instances.
- *
- * These manage option sets, computed variables, and external data sources.
+ * Data tool (consolidated):
+ *   resource: 'choices' | 'variable' | 'instance'
+ *   action: 'add' | 'update' | 'remove' | 'rename'
  */
 
 import type { ProjectRegistry } from '../registry.js';
 import { wrapHelperCall } from '../errors.js';
 import type { ChoiceOption, InstanceProps } from 'formspec-studio-core';
 
-export function handleDefineChoices(
-  registry: ProjectRegistry,
-  projectId: string,
-  name: string,
-  options: ChoiceOption[],
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.defineChoices(name, options);
-  });
+type DataResource = 'choices' | 'variable' | 'instance';
+type DataAction = 'add' | 'update' | 'remove' | 'rename';
+
+interface DataParams {
+  resource: DataResource;
+  action: DataAction;
+  name: string;
+  // For choices add
+  options?: ChoiceOption[];
+  // For variable add/update
+  expression?: string;
+  scope?: string;
+  // For instance add/update
+  props?: InstanceProps;
+  changes?: Partial<InstanceProps>;
+  // For rename
+  new_name?: string;
 }
 
-export function handleVariable(
+export function handleData(
   registry: ProjectRegistry,
   projectId: string,
-  name: string,
-  expression: string,
-  scope?: string,
+  params: DataParams,
 ) {
   return wrapHelperCall(() => {
     const project = registry.getProject(projectId);
-    return project.addVariable(name, expression, scope);
-  });
-}
+    const { resource, action, name } = params;
 
-export function handleUpdateVariable(
-  registry: ProjectRegistry,
-  projectId: string,
-  name: string,
-  expression: string,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.updateVariable(name, expression);
-  });
-}
+    if (resource === 'choices') {
+      if (action !== 'add') {
+        throw new Error(`Choices only supports 'add' action, got '${action}'`);
+      }
+      return project.defineChoices(name, params.options!);
+    }
 
-export function handleRemoveVariable(
-  registry: ProjectRegistry,
-  projectId: string,
-  name: string,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.removeVariable(name);
-  });
-}
+    if (resource === 'variable') {
+      switch (action) {
+        case 'add': return project.addVariable(name, params.expression!, params.scope);
+        case 'update': return project.updateVariable(name, params.expression!);
+        case 'remove': return project.removeVariable(name);
+        case 'rename': return project.renameVariable(name, params.new_name!);
+      }
+    }
 
-export function handleRenameVariable(
-  registry: ProjectRegistry,
-  projectId: string,
-  name: string,
-  newName: string,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.renameVariable(name, newName);
-  });
-}
+    if (resource === 'instance') {
+      switch (action) {
+        case 'add': return project.addInstance(name, params.props!);
+        case 'update': return project.updateInstance(name, params.changes!);
+        case 'remove': return project.removeInstance(name);
+        case 'rename': return project.renameInstance(name, params.new_name!);
+      }
+    }
 
-export function handleInstance(
-  registry: ProjectRegistry,
-  projectId: string,
-  name: string,
-  props: InstanceProps,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.addInstance(name, props);
-  });
-}
-
-export function handleUpdateInstance(
-  registry: ProjectRegistry,
-  projectId: string,
-  name: string,
-  changes: Partial<InstanceProps>,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.updateInstance(name, changes);
-  });
-}
-
-export function handleRenameInstance(
-  registry: ProjectRegistry,
-  projectId: string,
-  name: string,
-  newName: string,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.renameInstance(name, newName);
-  });
-}
-
-export function handleRemoveInstance(
-  registry: ProjectRegistry,
-  projectId: string,
-  name: string,
-) {
-  return wrapHelperCall(() => {
-    const project = registry.getProject(projectId);
-    return project.removeInstance(name);
+    throw new Error(`Unknown resource '${resource}'`);
   });
 }

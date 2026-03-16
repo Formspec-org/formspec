@@ -1,9 +1,11 @@
 /**
- * Bootstrap-phase tools: draft submission, validation, and load.
+ * Bootstrap-phase tools (consolidated):
  *
- * During bootstrap the LLM generates raw JSON artifacts, validates them
- * against schemas, and iterates until clean. Once satisfied it calls
- * load_draft to transition the project into the authoring phase.
+ * - formspec_draft: Submit a raw JSON artifact (definition, component, or theme)
+ *   for schema validation. Replaces the old draft_definition/component/theme trio.
+ *
+ * - formspec_load: Auto-validates all drafts, then transitions to authoring.
+ *   Replaces the old validate_draft + load_draft pair.
  */
 
 import { HelperError, createProject } from 'formspec-studio-core';
@@ -30,111 +32,62 @@ function getDraftSafe(registry: ProjectRegistry, projectId: string) {
   }
 }
 
-function submitDraft(
+// ── Public handlers ──────────────────────────────────────────────────
+
+/**
+ * Submit a raw JSON artifact for schema validation during bootstrap.
+ * type: 'definition' | 'component' | 'theme'
+ */
+export function handleDraft(
   registry: ProjectRegistry,
   projectId: string,
-  artifactType: ArtifactType,
+  type: ArtifactType,
   json: unknown,
 ) {
   const { draft, error } = getDraftSafe(registry, projectId);
   if (error) return error;
 
   // Store the JSON on the draft regardless of validation result
-  draft![artifactType] = json;
+  draft![type] = json;
 
   // Validate against schema
   const validator = getValidator();
-  const result = validator.validate(json, artifactType as DocumentType);
+  const result = validator.validate(json, type as DocumentType);
 
   if (result.errors.length > 0) {
-    // Store errors on draft for this artifact type
-    draft!.errors.set(artifactType, result.errors);
+    draft!.errors.set(type, result.errors);
     return errorResponse(
-      formatToolError('DRAFT_SCHEMA_ERROR', `${artifactType} has ${result.errors.length} schema error(s)`, {
-        artifactType,
+      formatToolError('DRAFT_SCHEMA_ERROR', `${type} has ${result.errors.length} schema error(s)`, {
+        artifactType: type,
         errors: result.errors.map((e) => ({ path: e.path, message: e.message })),
       }),
     );
   }
 
   // Valid — clear any previous errors for this artifact type
-  draft!.errors.delete(artifactType);
-  return successResponse({
-    stored: artifactType,
-    valid: true,
-  });
+  draft!.errors.delete(type);
+  return successResponse({ stored: type, valid: true });
 }
 
-// ── Public handlers ──────────────────────────────────────────────────
-
-export function handleDraftDefinition(
-  registry: ProjectRegistry,
-  projectId: string,
-  json: unknown,
-) {
-  return submitDraft(registry, projectId, 'definition', json);
-}
-
-export function handleDraftComponent(
-  registry: ProjectRegistry,
-  projectId: string,
-  json: unknown,
-) {
-  return submitDraft(registry, projectId, 'component', json);
-}
-
-export function handleDraftTheme(
-  registry: ProjectRegistry,
-  projectId: string,
-  json: unknown,
-) {
-  return submitDraft(registry, projectId, 'theme', json);
-}
-
-export function handleValidateDraft(
+/**
+ * Auto-validates all drafts, then transitions to authoring phase.
+ * Returns validation errors instead of transitioning if any exist.
+ */
+export function handleLoad(
   registry: ProjectRegistry,
   projectId: string,
 ) {
   const { draft, error } = getDraftSafe(registry, projectId);
   if (error) return error;
 
-  // Check for unresolved schema errors
-  if (draft!.errors.size > 0) {
-    const allErrors: Array<{ artifactType: string; path: string; message: string }> = [];
-    for (const [artifactType, errors] of draft!.errors) {
-      for (const e of errors) {
-        allErrors.push({ artifactType, path: e.path, message: e.message });
-      }
-    }
-    return errorResponse(
-      formatToolError('DRAFT_INVALID', `Draft has ${allErrors.length} unresolved schema error(s)`, {
-        errors: allErrors,
-      }),
-    );
-  }
-
-  // Must have at least a definition
+  // When no definition has been drafted, create a blank project directly —
+  // no seed to validate, nothing to load.
   if (!draft!.definition) {
-    return errorResponse(
-      formatToolError('DRAFT_INCOMPLETE', 'No definition has been submitted'),
-    );
-  }
-
-  return successResponse({ valid: true });
-}
-
-export function handleLoadDraft(
-  registry: ProjectRegistry,
-  projectId: string,
-) {
-  const { draft, error } = getDraftSafe(registry, projectId);
-  if (error) return error;
-
-  // Must have at least a definition
-  if (!draft!.definition) {
-    return errorResponse(
-      formatToolError('DRAFT_INCOMPLETE', 'No definition has been submitted'),
-    );
+    const project = createProject();
+    registry.transitionToAuthoring(projectId, project);
+    const statistics = project.statistics();
+    const diagnostics = project.diagnose();
+    return successResponse({ phase: 'authoring', statistics, diagnostics: diagnostics.counts });
   }
 
   // Check for unresolved schema errors

@@ -235,7 +235,7 @@ test('should clear abstractNotPlaceholder warning when abstract does not contain
 
 // ── Additional validations migrated from grant-app-ux-fixes ─────────
 
-test('website field should validate URL-with-path input against current bind constraint', () => {
+test('website field should accept a valid URL with path', () => {
   const engine = createGrantEngine();
   engine.setValue('applicantInfo.projectWebsite', 'https://example.com/my-project');
 
@@ -246,8 +246,18 @@ test('website field should validate URL-with-path input against current bind con
   const websiteErr = report.results.find(
     r => r.path === 'applicantInfo.projectWebsite' && r.severity === 'error'
   );
-  assert.ok(websiteErr, 'Expected website constraint result');
-  assert.equal(websiteErr.constraintKind, 'constraint');
+  assert.equal(websiteErr, undefined, 'https://example.com/my-project should pass the URL constraint');
+});
+
+test('website field should reject a non-URL value', () => {
+  const engine = createGrantEngine();
+  engine.setValue('applicantInfo.projectWebsite', 'not-a-url');
+
+  const report = getValidationReport(engine, 'demand');
+  const websiteErr = report.results.find(
+    r => r.path === 'applicantInfo.projectWebsite' && r.severity === 'error'
+  );
+  assert.ok(websiteErr, 'non-URL should fail the URL constraint');
 });
 
 test('negative quantity should produce a validation error', () => {

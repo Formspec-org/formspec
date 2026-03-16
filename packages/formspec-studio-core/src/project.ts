@@ -12,6 +12,7 @@ import {
   type HelperResult,
   type HelperWarning,
   type FieldProps,
+  type ContentProps,
   type GroupProps,
   type BranchPath,
   type ValidationOptions,
@@ -438,6 +439,7 @@ export class Project {
     path: string,
     body: string,
     kind?: 'heading' | 'instructions' | 'paragraph' | 'alert' | 'banner' | 'divider',
+    props?: ContentProps,
   ): HelperResult {
     // Kind → widgetHint mapping
     const kindToHint: Record<string, string> = {
@@ -455,6 +457,16 @@ export class Project {
     const parentPath = segments.length > 0 ? segments.join('.') : undefined;
     const fullPath = parentPath ? `${parentPath}.${key}` : key;
 
+    if (props?.page) {
+      const pages = this.core.state.theme.pages;
+      const pageExists = pages?.some((p: any) => p.id === props.page);
+      if (!pageExists) {
+        throw new HelperError('PAGE_NOT_FOUND', `Page "${props.page}" does not exist`, {
+          pageId: props.page,
+        });
+      }
+    }
+
     if (this.core.itemAt(fullPath)) {
       throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
         path: fullPath,
@@ -469,7 +481,20 @@ export class Project {
     };
     if (parentPath) payload.parentPath = parentPath;
 
-    this.core.dispatch({ type: 'definition.addItem', payload });
+    const commands: AnyCommand[] = [{ type: 'definition.addItem', payload }];
+
+    if (props?.page) {
+      commands.push({
+        type: 'pages.assignItem',
+        payload: { pageId: props.page, key },
+      });
+    }
+
+    if (commands.length > 1) {
+      this.core.batchWithRebuild([commands[0]], commands.slice(1));
+    } else {
+      this.core.dispatch(commands[0]);
+    }
 
     return {
       summary: `Added ${kind ?? 'paragraph'} content '${key}'`,

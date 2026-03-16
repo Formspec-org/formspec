@@ -41,6 +41,7 @@ export type {
   HelperResult,
   HelperWarning,
   FieldProps,
+  ContentProps,
   GroupProps,
   RepeatProps,
   BranchPath,

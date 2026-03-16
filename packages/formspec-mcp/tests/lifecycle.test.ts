@@ -9,7 +9,6 @@ import {
   handleOpen,
   handleSave,
   handleList,
-  handleListAutosaved,
   handlePublish,
   handleUndo,
   handleRedo,
@@ -276,13 +275,24 @@ describe('handleSave errors', () => {
   });
 });
 
-// ── handleListAutosaved ───────────────────────────────────────────
+// ── handleList with includeAutosaved ─────────────────────────────
 
-describe('handleListAutosaved', () => {
-  it('returns empty array when autosave dir does not exist', () => {
-    const result = handleListAutosaved('/tmp/nonexistent-autosave-dir-xyz');
+describe('handleList — includeAutosaved', () => {
+  it('returns empty autosaved array when autosave dir does not exist', () => {
+    const registry = new ProjectRegistry();
+    const result = handleList(registry, true, '/tmp/nonexistent-autosave-dir-xyz');
     const data = parseResult(result);
 
-    expect(data.entries).toEqual([]);
+    expect(data.projects).toEqual([]);
+    expect(data.autosaved).toEqual([]);
+  });
+
+  it('does not include autosaved when flag is false', () => {
+    const registry = new ProjectRegistry();
+    const result = handleList(registry, false);
+    const data = parseResult(result);
+
+    expect(data.projects).toEqual([]);
+    expect(data).not.toHaveProperty('autosaved');
   });
 });

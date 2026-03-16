@@ -1,4 +1,5 @@
 import { HelperError, type HelperResult } from 'formspec-studio-core';
+import { executeBatch, type BatchItem, type BatchResult } from './batch.js';
 
 export type ToolError = {
   code: string;
@@ -24,7 +25,7 @@ export function errorResponse(error: ToolError) {
 /** MCP success response shape */
 export function successResponse(result: unknown) {
   const text = typeof result === 'string' ? result : JSON.stringify(result);
-  const structuredContent = (typeof result === 'object' && result !== null)
+  const structuredContent = (typeof result === 'object' && result !== null && !Array.isArray(result))
     ? (result as Record<string, unknown>)
     : undefined;
 
@@ -54,4 +55,22 @@ export function wrapHelperCall(
       handlerMessage: message,
     }));
   }
+}
+
+/**
+ * Wraps a batch operation into an MCP response.
+ * Uses successResponse when all succeed, marks isError when ALL fail.
+ * Partial success returns a normal response with the failure details inside.
+ */
+export function wrapBatchCall(
+  items: BatchItem[],
+  fn: (item: BatchItem, index: number) => HelperResult,
+): ReturnType<typeof successResponse> | ReturnType<typeof errorResponse> {
+  const result = executeBatch(items, fn);
+  if (result.failed > 0 && result.succeeded === 0) {
+    return errorResponse(formatToolError('BATCH_ALL_FAILED', `All ${result.failed} items failed`, {
+      results: result.results as unknown as Record<string, unknown>,
+    }));
+  }
+  return successResponse(result);
 }

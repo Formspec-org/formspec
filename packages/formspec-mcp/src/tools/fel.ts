@@ -1,77 +1,44 @@
 /**
- * FEL tools: fel_context, fel_functions, fel_check.
- *
- * These expose FEL expression parsing, validation, and reference discovery
- * for LLM-driven expression authoring.
+ * FEL tool (consolidated):
+ *   action: 'context' | 'functions' | 'check'
  */
 
 import type { ProjectRegistry } from '../registry.js';
 import { HelperError } from 'formspec-studio-core';
 import { errorResponse, successResponse, formatToolError } from '../errors.js';
 
-// ── handleFelContext ───────────────────────────────────────────────
+type FelAction = 'context' | 'functions' | 'check';
 
-/**
- * Returns available references (fields, variables, instances, context refs)
- * scoped to an optional field path.
- */
-export function handleFelContext(
-  registry: ProjectRegistry,
-  projectId: string,
-  path?: string,
-) {
-  try {
-    const project = registry.getProject(projectId);
-    const refs = project.availableReferences(path);
-    return successResponse(refs);
-  } catch (err) {
-    if (err instanceof HelperError) {
-      return errorResponse(formatToolError(err.code, err.message, err.detail as Record<string, unknown>));
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    return errorResponse(formatToolError('COMMAND_FAILED', message));
-  }
+interface FelParams {
+  action: FelAction;
+  path?: string;         // for context scoping
+  expression?: string;   // for check
+  context_path?: string; // for check scoping
 }
 
-// ── handleFelFunctions ─────────────────────────────────────────────
-
-/**
- * Returns the catalog of available FEL functions (builtin + extension-provided).
- */
-export function handleFelFunctions(
+export function handleFel(
   registry: ProjectRegistry,
   projectId: string,
+  params: FelParams,
 ) {
   try {
     const project = registry.getProject(projectId);
-    const catalog = project.felFunctionCatalog();
-    return successResponse(catalog);
-  } catch (err) {
-    if (err instanceof HelperError) {
-      return errorResponse(formatToolError(err.code, err.message, err.detail as Record<string, unknown>));
+
+    switch (params.action) {
+      case 'context': {
+        const refs = project.availableReferences(params.path);
+        return successResponse(refs);
+      }
+      case 'functions': {
+        const catalog = project.felFunctionCatalog();
+        return successResponse(catalog);
+      }
+      case 'check': {
+        const context = params.context_path ? { targetPath: params.context_path } : undefined;
+        const result = project.parseFEL(params.expression!, context);
+        return successResponse(result);
+      }
     }
-    const message = err instanceof Error ? err.message : String(err);
-    return errorResponse(formatToolError('COMMAND_FAILED', message));
-  }
-}
-
-// ── handleFelCheck ─────────────────────────────────────────────────
-
-/**
- * Parse and validate a FEL expression. Returns validity, errors, referenced
- * field paths, and function names. Optionally scoped to a context path.
- */
-export function handleFelCheck(
-  registry: ProjectRegistry,
-  projectId: string,
-  expression: string,
-  contextPath?: string,
-) {
-  try {
-    const project = registry.getProject(projectId);
-    const context = contextPath ? { targetPath: contextPath } : undefined;
-    const result = project.parseFEL(expression, context);
-    return successResponse(result);
   } catch (err) {
     if (err instanceof HelperError) {
       return errorResponse(formatToolError(err.code, err.message, err.detail as Record<string, unknown>));

@@ -866,8 +866,13 @@ export class FelInterpreter extends BaseVisitor {
   literal(ctx: any) {
     if (ctx.NumberLiteral) return parseFloat(ctx.NumberLiteral[0].image);
     if (ctx.StringLiteral) {
-        const str = ctx.StringLiteral[0].image;
-        return str.substring(1, str.length - 1);
+        const raw = ctx.StringLiteral[0].image.substring(1, ctx.StringLiteral[0].image.length - 1);
+        return raw.replace(/\\([\s\S])/g, (_match: string, ch: string) => {
+            if (ch === 'n') return '\n';
+            if (ch === 't') return '\t';
+            if (ch === 'r') return '\r';
+            return ch; // \\, \", \', and any unrecognised escape → the char itself
+        });
     }
     if (ctx.True) return true;
     if (ctx.False) return false;

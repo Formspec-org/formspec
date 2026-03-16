@@ -7,7 +7,7 @@
     "examples/refrences"
   ],
   "scripts": {
-    "build": "npm run build --workspace=formspec-types && npm run build --workspace=formspec-layout && npm run build --workspace=formspec-engine && npm run build --workspace=formspec-core && npm run build --workspace=formspec-webcomponent && npm run build --workspace=formspec-studio-core && npm run build --workspace=formspec-studio",
+    "build": "npm run build --workspace=formspec-types && npm run build --workspace=formspec-layout && npm run build --workspace=formspec-engine && npm run build --workspace=formspec-core && npm run build --workspace=formspec-webcomponent && npm run build --workspace=formspec-studio-core && npm run build --workspace=formspec-mcp && npm run build --workspace=formspec-studio",
     "test:serve": "vite --port 8080 --host 127.0.0.1",
     "start:stories": "npm run dev --workspace=formspec-stories",
     "start:studio": "npm run build --workspace=formspec-engine && npm run build --workspace=formspec-layout && npm run build --workspace=formspec-webcomponent &&  npm run dev --workspace=formspec-studio",

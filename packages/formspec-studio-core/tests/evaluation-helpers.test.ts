@@ -40,6 +40,45 @@ describe('previewForm', () => {
     const preview = previewForm(project);
     expect(preview.requiredFields).toContain('name');
   });
+
+  it('includes shape validation messages in validationState', () => {
+    const project = createProject();
+    project.addField('email', 'Email', 'email');
+    // Shape fires when constraint fails — use a constraint that fails when value is empty
+    project.addValidation('email', '$email != ""', 'Please enter a valid email');
+
+    const preview = previewForm(project);
+    // No scenario values — email is empty — shape should fire with the custom message
+    expect(preview.validationState['email']).toBeDefined();
+    expect(preview.validationState['email'].message).toBe('Please enter a valid email');
+  });
+
+  it('shape custom message wins over bind-level "Invalid" for email field with invalid value', () => {
+    // Regression: previewForm was showing "Invalid" (bind-level fallback) instead of the
+    // custom message from an add_rule shape when the email field had a non-empty invalid value.
+    // The email type auto-injects a bind constraint (matches(@, '.*@.*')) with no constraintMessage,
+    // which falls back to "Invalid". The shape message must win.
+    const project = createProject();
+    project.addField('email', 'Email', 'email');
+    project.addValidation('email', "matches($email, '.*@.*')", 'Please enter a valid email');
+
+    // Non-empty invalid email triggers both the auto-injected bind constraint AND the shape
+    const preview = previewForm(project, { email: 'notanemail' });
+    expect(preview.validationState['email']).toBeDefined();
+    expect(preview.validationState['email'].message).toBe('Please enter a valid email');
+  });
+
+  it('shape message is visible in preview even when timing is submit', () => {
+    // If add_rule is called with timing:'submit', the shape is not in shapeResults signals.
+    // previewForm must still surface submit-timing shapes so custom messages aren't hidden.
+    const project = createProject();
+    project.addField('email', 'Email', 'email');
+    project.addValidation('email', "matches($email, '.*@.*')", 'Please enter a valid email', { timing: 'submit' });
+
+    const preview = previewForm(project, { email: 'notanemail' });
+    expect(preview.validationState['email']).toBeDefined();
+    expect(preview.validationState['email'].message).toBe('Please enter a valid email');
+  });
 });
 
 describe('validateResponse', () => {
