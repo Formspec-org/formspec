@@ -132,9 +132,11 @@ describe('handleContent', () => {
     const { registry, projectId, project } = registryWithProject();
     const pageResult = project.addPage('Page One');
     const pageId = pageResult.createdId!;
+    const groupKey = pageResult.affectedPaths[0];
 
+    // Content must go inside the page's group in a paged definition
     const result = handleContent(registry, projectId, {
-      path: 'intro',
+      path: `${groupKey}.intro`,
       body: 'Welcome',
       kind: 'heading',
       props: { page: pageId },
@@ -274,6 +276,58 @@ describe('handleEdit', () => {
     const result = handleEdit(registry, projectId, 'rename', { path: 'name', new_key: 'full_name' });
     expect(result.isError).toBeUndefined();
   });
+
+  // ── Batch mode ──
+
+  it('batch moves multiple items into a group', () => {
+    const { registry, projectId } = registryWithProject();
+    handleGroup(registry, projectId, { path: 'section', label: 'Section' });
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+    handleField(registry, projectId, { path: 'email', label: 'Email', type: 'email' });
+    handleField(registry, projectId, { path: 'phone', label: 'Phone', type: 'text' });
+
+    const result = handleEdit(registry, projectId, 'move', {
+      items: [
+        { path: 'name', target_path: 'section' },
+        { path: 'email', target_path: 'section' },
+        { path: 'phone', target_path: 'section' },
+      ],
+    });
+    const data = parseResult(result);
+
+    expect(result.isError).toBeUndefined();
+    expect(data.succeeded).toBe(3);
+    expect(data.failed).toBe(0);
+    expect(data.results).toHaveLength(3);
+  });
+
+  it('batch move reports partial failure', () => {
+    const { registry, projectId } = registryWithProject();
+    handleGroup(registry, projectId, { path: 'section', label: 'Section' });
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+
+    const result = handleEdit(registry, projectId, 'move', {
+      items: [
+        { path: 'name', target_path: 'section' },
+        { path: 'nonexistent', target_path: 'section' },
+      ],
+    });
+    const data = parseResult(result);
+
+    expect(result.isError).toBeUndefined();
+    expect(data.succeeded).toBe(1);
+    expect(data.failed).toBe(1);
+    expect(data.results[0].success).toBe(true);
+    expect(data.results[1].success).toBe(false);
+  });
+
+  it('batch returns WRONG_PHASE during bootstrap', () => {
+    const { registry, projectId } = registryInBootstrap();
+    const result = handleEdit(registry, projectId, 'move', {
+      items: [{ path: 'a', target_path: 'b' }],
+    });
+    expect(result.isError).toBe(true);
+  });
 });
 
 // ── handlePage ───────────────────────────────────────────────────
@@ -299,25 +353,107 @@ describe('handlePage', () => {
 // ── handlePlace ──────────────────────────────────────────────────
 
 describe('handlePlace', () => {
-  it('places an item on a page', () => {
+  it('places an item on a page (single mode)', () => {
     const { registry, projectId } = registryWithProject();
     handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
     const pageResult = handlePage(registry, projectId, 'add', { title: 'Page 1' });
     const pageId = parseResult(pageResult).createdId;
 
-    const result = handlePlace(registry, projectId, 'place', 'name', pageId);
+    const result = handlePlace(registry, projectId, { action: 'place', target: 'name', page_id: pageId });
     expect(result.isError).toBeUndefined();
   });
 
-  it('unplaces an item from a page', () => {
+  it('unplaces an item from a page (single mode)', () => {
     const { registry, projectId } = registryWithProject();
     handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
     const pageResult = handlePage(registry, projectId, 'add', { title: 'Page 1' });
     const pageId = parseResult(pageResult).createdId;
-    handlePlace(registry, projectId, 'place', 'name', pageId);
+    handlePlace(registry, projectId, { action: 'place', target: 'name', page_id: pageId });
 
-    const result = handlePlace(registry, projectId, 'unplace', 'name', pageId);
+    const result = handlePlace(registry, projectId, { action: 'unplace', target: 'name', page_id: pageId });
     expect(result.isError).toBeUndefined();
+  });
+
+  // ── Batch mode ──
+
+  it('places multiple items on a page in one call', () => {
+    const { registry, projectId } = registryWithProject();
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+    handleField(registry, projectId, { path: 'email', label: 'Email', type: 'email' });
+    handleField(registry, projectId, { path: 'phone', label: 'Phone', type: 'text' });
+    const pageResult = handlePage(registry, projectId, 'add', { title: 'Page 1' });
+    const pageId = parseResult(pageResult).createdId;
+
+    const result = handlePlace(registry, projectId, {
+      items: [
+        { action: 'place', target: 'name', page_id: pageId },
+        { action: 'place', target: 'email', page_id: pageId },
+        { action: 'place', target: 'phone', page_id: pageId },
+      ],
+    });
+    const data = parseResult(result);
+
+    expect(result.isError).toBeUndefined();
+    expect(data.succeeded).toBe(3);
+    expect(data.failed).toBe(0);
+    expect(data.results).toHaveLength(3);
+  });
+
+  it('supports mixed place and unplace in one batch', () => {
+    const { registry, projectId } = registryWithProject();
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+    handleField(registry, projectId, { path: 'email', label: 'Email', type: 'email' });
+    const pageResult = handlePage(registry, projectId, 'add', { title: 'Page 1' });
+    const pageId = parseResult(pageResult).createdId;
+
+    // Place both first
+    handlePlace(registry, projectId, { action: 'place', target: 'name', page_id: pageId });
+    handlePlace(registry, projectId, { action: 'place', target: 'email', page_id: pageId });
+
+    // Now batch unplace both
+    const result = handlePlace(registry, projectId, {
+      items: [
+        { action: 'unplace', target: 'name', page_id: pageId },
+        { action: 'unplace', target: 'email', page_id: pageId },
+      ],
+    });
+    const data = parseResult(result);
+
+    expect(result.isError).toBeUndefined();
+    expect(data.succeeded).toBe(2);
+    expect(data.failed).toBe(0);
+  });
+
+  it('handles partial failure in batch (invalid page)', () => {
+    const { registry, projectId } = registryWithProject();
+    handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });
+    handleField(registry, projectId, { path: 'email', label: 'Email', type: 'email' });
+    const pageResult = handlePage(registry, projectId, 'add', { title: 'Page 1' });
+    const pageId = parseResult(pageResult).createdId;
+
+    const result = handlePlace(registry, projectId, {
+      items: [
+        { action: 'place', target: 'name', page_id: pageId },
+        { action: 'place', target: 'email', page_id: 'no-such-page' }, // should fail
+      ],
+    });
+    const data = parseResult(result);
+
+    expect(result.isError).toBeUndefined(); // partial success is not an error
+    expect(data.succeeded).toBe(1);
+    expect(data.failed).toBe(1);
+    expect(data.results[0].success).toBe(true);
+    expect(data.results[1].success).toBe(false);
+  });
+
+  it('returns WRONG_PHASE error in batch during bootstrap', () => {
+    const { registry, projectId } = registryInBootstrap();
+    const result = handlePlace(registry, projectId, {
+      items: [
+        { action: 'place', target: 'name', page_id: 'page1' },
+      ],
+    });
+    expect(result.isError).toBe(true);
   });
 });
 

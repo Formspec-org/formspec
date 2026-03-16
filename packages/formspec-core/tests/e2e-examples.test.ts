@@ -156,7 +156,7 @@ function hydrateTheme(project: any, themeJson: any) {
   }
 
   if (themeJson.pages) {
-    actions.push({ type: 'theme.setPages', payload: { pages: themeJson.pages } });
+    actions.push({ type: 'pages.setPages', payload: { pages: themeJson.pages } });
   }
   
   if (themeJson.items) {

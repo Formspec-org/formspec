@@ -152,7 +152,7 @@ describe('StructureTree', () => {
         screen.getByTitle('Add wizard page').click();
       });
 
-      // addWizardPage generates the key from the label slug ('New Page' -> 'new_page'),
+      // addPage generates the group key from the label slug ('New Page' -> 'new_page'),
       // which does not collide with the existing 'page1' key.
       const insertedPage = project.definition.items.find((item: any) => item.label === 'New Page');
       expect(insertedPage?.key).toBe('new_page');

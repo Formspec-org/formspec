@@ -171,8 +171,8 @@ export function StructureTree() {
 
   // Adding a wizard page
   const handleAddPage = useCallback(() => {
-    const result = project.addWizardPage('New Page');
-    const insertedPageKey = result.createdId ?? 'new_page';
+    const result = project.addPage('New Page');
+    const insertedPageKey = result.affectedPaths[0] ?? 'new_page';
     // Switch to the new page once it exists
     requestAnimationFrame(() => {
       setActivePageKey(insertedPageKey);

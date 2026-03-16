@@ -8,7 +8,8 @@
  *   - **Cascade Level 2 (Selectors)** -- Pattern-based overrides.
  *   - **Cascade Level 3 (Per-Item Overrides)** -- Highest-specificity level.
  *
- * Also manages design tokens, breakpoints, page layout, and stylesheets.
+ * Also manages design tokens, breakpoints, and stylesheets.
+ * Page layout is handled by the `pages.*` handlers.
  *
  * All handlers return `{ rebuildComponentTree: false }` because theme mutations
  * do not alter the definition item tree structure.
@@ -17,9 +18,6 @@
  */
 import type { CommandHandler } from '../types.js';
 import type { ThemeState } from '../types.js';
-
-/** Auto-incrementing counter for generating unique page IDs. */
-let pageCounter = 0;
 
 function ensureItems(theme: ThemeState): Record<string, any> {
   if (!theme.items) theme.items = {};
@@ -30,14 +28,6 @@ function ensureItemBlock(theme: ThemeState, itemKey: string): Record<string, any
   const items = ensureItems(theme);
   if (!items[itemKey]) items[itemKey] = {};
   return items[itemKey];
-}
-
-function findPage(theme: ThemeState, pageId: string): any {
-  const pages = theme.pages as any[];
-  if (!pages) throw new Error('No pages defined');
-  const page = pages.find((p: any) => p.id === pageId);
-  if (!page) throw new Error(`Page not found: ${pageId}`);
-  return page;
 }
 
 export const themeHandlers: Record<string, CommandHandler> = {
@@ -170,121 +160,6 @@ export const themeHandlers: Record<string, CommandHandler> = {
     } else {
       block.accessibility[property] = value;
     }
-    return { rebuildComponentTree: false };
-  },
-
-  // ── Page Layout ─────────────────────────────────────────────────
-
-  'theme.addPage': (state, payload) => {
-    const p = payload as { id?: string; title?: string; description?: string; insertIndex?: number };
-    if (!state.theme.pages) state.theme.pages = [];
-    const page: any = {
-      id: p.id ?? `theme_page_${++pageCounter}`,
-      title: p.title ?? '',
-      regions: [],
-    };
-    if (p.description) page.description = p.description;
-    if (p.insertIndex !== undefined) {
-      (state.theme.pages as any[]).splice(p.insertIndex, 0, page);
-    } else {
-      (state.theme.pages as any[]).push(page);
-    }
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.setPageProperty': (state, payload) => {
-    const { index, property, value } = payload as { index: number; property: string; value: unknown };
-    const pages = state.theme.pages as any[];
-    if (!pages?.[index]) throw new Error(`Page not found at index: ${index}`);
-    pages[index][property] = value;
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.deletePage': (state, payload) => {
-    const { index } = payload as { index: number };
-    const pages = state.theme.pages as any[];
-    if (!pages) return { rebuildComponentTree: false };
-    if (pages.length <= 1) throw new Error('Cannot delete the last page');
-    pages.splice(index, 1);
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.reorderPage': (state, payload) => {
-    const { index, direction } = payload as { index: number; direction: 'up' | 'down' };
-    const pages = state.theme.pages as any[];
-    if (!pages) return { rebuildComponentTree: false };
-    const target = direction === 'up' ? index - 1 : index + 1;
-    if (target < 0 || target >= pages.length) return { rebuildComponentTree: false };
-    [pages[index], pages[target]] = [pages[target], pages[index]];
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.addRegion': (state, payload) => {
-    const { pageId, key, span, start, insertIndex } = payload as {
-      pageId: string; key?: string; span?: number; start?: number; insertIndex?: number;
-    };
-    const page = findPage(state.theme, pageId);
-    if (!page.regions) page.regions = [];
-    const region: any = {};
-    if (key) region.key = key;
-    if (span !== undefined) region.span = span;
-    if (start !== undefined) region.start = start;
-    if (insertIndex !== undefined) {
-      page.regions.splice(insertIndex, 0, region);
-    } else {
-      page.regions.push(region);
-    }
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.setRegionProperty': (state, payload) => {
-    const { pageId, regionIndex, property, value } = payload as {
-      pageId: string; regionIndex: number; property: string; value: unknown;
-    };
-    const page = findPage(state.theme, pageId);
-    if (!page.regions?.[regionIndex]) throw new Error('Region not found');
-    page.regions[regionIndex][property] = value;
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.deleteRegion': (state, payload) => {
-    const { pageId, regionIndex } = payload as { pageId: string; regionIndex: number };
-    const page = findPage(state.theme, pageId);
-    if (!page.regions) return { rebuildComponentTree: false };
-    page.regions.splice(regionIndex, 1);
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.reorderRegion': (state, payload) => {
-    const { pageId, regionIndex, direction } = payload as {
-      pageId: string; regionIndex: number; direction: 'up' | 'down';
-    };
-    const page = findPage(state.theme, pageId);
-    if (!page.regions) return { rebuildComponentTree: false };
-    const target = direction === 'up' ? regionIndex - 1 : regionIndex + 1;
-    if (target < 0 || target >= page.regions.length) return { rebuildComponentTree: false };
-    [page.regions[regionIndex], page.regions[target]] = [page.regions[target], page.regions[regionIndex]];
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.renamePage': (state, payload) => {
-    const { pageId, newId } = payload as { pageId: string; newId: string };
-    const page = findPage(state.theme, pageId);
-    page.id = newId;
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.setRegionKey': (state, payload) => {
-    const { pageId, regionIndex, newKey } = payload as { pageId: string; regionIndex: number; newKey: string };
-    const page = findPage(state.theme, pageId);
-    if (!page.regions?.[regionIndex]) throw new Error('Region not found');
-    page.regions[regionIndex].key = newKey;
-    return { rebuildComponentTree: false };
-  },
-
-  'theme.setPages': (state, payload) => {
-    const { pages } = payload as { pages: unknown[] };
-    state.theme.pages = pages;
     return { rebuildComponentTree: false };
   },
 

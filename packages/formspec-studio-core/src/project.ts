@@ -1596,61 +1596,74 @@ export class Project {
 
   // ── Page Helpers ──
 
-  /** Add a theme-tier page. */
+  /**
+   * Add a page — creates both a definition group (logical container) and a
+   * theme page (rendering slot), wired together via regions.
+   * Promotes to wizard mode if not already paged.
+   */
   addPage(title: string, description?: string): HelperResult {
-    const payload: Record<string, unknown> = { title };
-    if (description) payload.description = description;
+    // Generate a group key from the title
+    const key = title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `page_${Date.now()}`;
 
-    this.core.dispatch({ type: 'pages.addPage', payload });
+    // Deduplicate: if key already exists, append a counter
+    let finalKey = key;
+    let counter = 2;
+    while (this.core.itemAt(finalKey)) {
+      finalKey = `${key}_${counter++}`;
+    }
 
-    // Read new page ID from state
-    const pages = this.core.state.theme.pages ?? [];
-    const newPage = pages[pages.length - 1];
-    const pageId = (newPage as any)?.id as string;
+    // Pre-generate page ID so all three commands can be batched atomically
+    const pageId = `page-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const pagePayload: Record<string, unknown> = { id: pageId, title };
+    if (description) pagePayload.description = description;
+
+    // All three commands in one dispatch = one undo step
+    this.core.dispatch([
+      { type: 'definition.addItem', payload: { type: 'group', key: finalKey, label: title } },
+      { type: 'pages.addPage', payload: pagePayload },
+      { type: 'pages.assignItem', payload: { pageId, key: finalKey } },
+    ] as AnyCommand[]);
 
     return {
       summary: `Added page '${title}'`,
       action: { helper: 'addPage', params: { title, description } },
-      affectedPaths: [pageId],
+      affectedPaths: [finalKey],
       createdId: pageId,
     };
   }
 
-  /** Add a wizard section (definition-tier group). */
-  addWizardPage(label: string): HelperResult {
-    // Generate a key from label
-    const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `step_${Date.now()}`;
+  /** Remove a page and its associated definition group (if created by addPage). */
+  removePage(pageId: string): HelperResult {
+    // Find the page and check if it has a region pointing to a root-level group
+    const pages = (this.core.state.theme as any).pages ?? [];
+    const page = pages.find((p: any) => p.id === pageId);
+    const affectedPaths: string[] = [pageId];
+    const commands: AnyCommand[] = [];
 
-    const commands: AnyCommand[] = [
-      { type: 'definition.addItem', payload: { type: 'group', key, label } },
-    ];
-
-    // Set wizard mode if not already
-    const pageMode = this.core.state.definition.formPresentation?.pageMode;
-    if (pageMode !== 'wizard') {
-      commands.push({
-        type: 'definition.setFormPresentation',
-        payload: { property: 'pageMode', value: 'wizard' },
-      });
+    // If the page has regions, check if any point to a root-level definition group
+    if (page?.regions?.length) {
+      for (const region of page.regions) {
+        if (region.key) {
+          const item = this.core.itemAt(region.key);
+          if (item?.type === 'group') {
+            // This is a root-level group — delete it (and its children)
+            commands.push({ type: 'definition.deleteItem', payload: { path: region.key } });
+            affectedPaths.push(region.key);
+          }
+        }
+      }
     }
 
+    commands.push({ type: 'pages.deletePage', payload: { id: pageId } });
+
+    // All commands in one dispatch = one undo step
     this.core.dispatch(commands);
 
     return {
-      summary: `Added wizard page '${label}'`,
-      action: { helper: 'addWizardPage', params: { label } },
-      affectedPaths: [key],
-      createdId: key,
-    };
-  }
-
-  /** Remove a page. */
-  removePage(pageId: string): HelperResult {
-    this.core.dispatch({ type: 'pages.deletePage', payload: { id: pageId } });
-    return {
       summary: `Removed page '${pageId}'`,
       action: { helper: 'removePage', params: { pageId } },
-      affectedPaths: [pageId],
+      affectedPaths,
     };
   }
 
@@ -2017,77 +2030,29 @@ export class Project {
     };
   }
 
-  // ── Theme Page & Region Helpers ──
+  // ── Region Helpers ──
 
-  /** Add a theme layout page. */
-  addThemePage(): HelperResult {
-    this.core.dispatch({ type: 'theme.addPage', payload: {} } as AnyCommand);
-    const pages = (this.core.state.theme as any).pages ?? [];
-    const newPage = pages[pages.length - 1];
-    const pageId = (newPage as any)?.id as string | undefined;
-    return {
-      summary: `Added theme page`,
-      action: { helper: 'addThemePage', params: {} },
-      affectedPaths: pageId ? [pageId] : [],
-      createdId: pageId,
-    };
-  }
-
-  /** Update a theme page property. */
-  updateThemePage(index: number, property: string, value: unknown): HelperResult {
-    this.core.dispatch({ type: 'theme.setPageProperty', payload: { index, property, value } } as AnyCommand);
-    return {
-      summary: `Updated theme page ${index} property '${property}'`,
-      action: { helper: 'updateThemePage', params: { index, property, value } },
-      affectedPaths: [],
-    };
-  }
-
-  /** Delete a theme page by index. */
-  deleteThemePage(index: number): HelperResult {
-    this.core.dispatch({ type: 'theme.deletePage', payload: { index } } as AnyCommand);
-    return {
-      summary: `Deleted theme page ${index}`,
-      action: { helper: 'deleteThemePage', params: { index } },
-      affectedPaths: [],
-    };
-  }
-
-  /** Reorder a theme page. */
-  reorderThemePage(index: number, direction: 'up' | 'down'): HelperResult {
-    this.core.dispatch({ type: 'theme.reorderPage', payload: { index, direction } } as AnyCommand);
-    return {
-      summary: `Reordered theme page ${index} ${direction}`,
-      action: { helper: 'reorderThemePage', params: { index, direction } },
-      affectedPaths: [],
-    };
-  }
-
-  /** Rename a theme page's id. */
-  renameThemePage(pageId: string, newId: string): HelperResult {
-    this.core.dispatch({ type: 'theme.renamePage', payload: { pageId, newId } } as AnyCommand);
-    return {
-      summary: `Renamed theme page '${pageId}' to '${newId}'`,
-      action: { helper: 'renameThemePage', params: { pageId, newId } },
-      affectedPaths: [newId],
-    };
-  }
-
-  /** Add a region to a theme page. */
+  /** Add an empty region to a page. */
   addRegion(pageId: string, span?: number): HelperResult {
-    const payload: Record<string, unknown> = { pageId };
+    // pages.assignItem requires a key — generate a placeholder
+    const key = `region_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const payload: Record<string, unknown> = { pageId, key };
     if (span !== undefined) payload.span = span;
-    this.core.dispatch({ type: 'theme.addRegion', payload } as AnyCommand);
+    this.core.dispatch({ type: 'pages.assignItem', payload });
     return {
-      summary: `Added region to theme page '${pageId}'`,
+      summary: `Added region to page '${pageId}'`,
       action: { helper: 'addRegion', params: { pageId, span } },
       affectedPaths: [pageId],
     };
   }
 
-  /** Update a region property. */
+  /** Update a region property by index. */
   updateRegion(pageId: string, regionIndex: number, property: string, value: unknown): HelperResult {
-    this.core.dispatch({ type: 'theme.setRegionProperty', payload: { pageId, regionIndex, property, value } } as AnyCommand);
+    const key = this._regionKeyAt(pageId, regionIndex);
+    this.core.dispatch({
+      type: 'pages.setRegionProperty',
+      payload: { pageId, key, property, value },
+    });
     return {
       summary: `Updated region ${regionIndex} on page '${pageId}' property '${property}'`,
       action: { helper: 'updateRegion', params: { pageId, regionIndex, property, value } },
@@ -2095,19 +2060,25 @@ export class Project {
     };
   }
 
-  /** Delete a region from a theme page. */
+  /** Delete a region from a page by index. */
   deleteRegion(pageId: string, regionIndex: number): HelperResult {
-    this.core.dispatch({ type: 'theme.deleteRegion', payload: { pageId, regionIndex } } as AnyCommand);
+    const key = this._regionKeyAt(pageId, regionIndex);
+    this.core.dispatch({ type: 'pages.unassignItem', payload: { pageId, key } });
     return {
-      summary: `Deleted region ${regionIndex} from theme page '${pageId}'`,
+      summary: `Deleted region ${regionIndex} from page '${pageId}'`,
       action: { helper: 'deleteRegion', params: { pageId, regionIndex } },
       affectedPaths: [pageId],
     };
   }
 
-  /** Reorder a region within a theme page. */
+  /** Reorder a region within a page by index. */
   reorderRegion(pageId: string, regionIndex: number, direction: 'up' | 'down'): HelperResult {
-    this.core.dispatch({ type: 'theme.reorderRegion', payload: { pageId, regionIndex, direction } } as AnyCommand);
+    const key = this._regionKeyAt(pageId, regionIndex);
+    const targetIndex = direction === 'up' ? regionIndex - 1 : regionIndex + 1;
+    this.core.dispatch({
+      type: 'pages.reorderRegion',
+      payload: { pageId, key, targetIndex },
+    });
     return {
       summary: `Reordered region ${regionIndex} on page '${pageId}' ${direction}`,
       action: { helper: 'reorderRegion', params: { pageId, regionIndex, direction } },
@@ -2115,14 +2086,39 @@ export class Project {
     };
   }
 
-  /** Set the field-key assignment for a region. */
-  setRegionKey(pageId: string, regionIndex: number, key: string): HelperResult {
-    this.core.dispatch({ type: 'theme.setRegionKey', payload: { pageId, regionIndex, key } } as AnyCommand);
+  /** Set the field-key assignment for a region by index. */
+  setRegionKey(pageId: string, regionIndex: number, newKey: string): HelperResult {
+    const oldKey = this._regionKeyAt(pageId, regionIndex);
+    // Unassign old key, assign new key at same position
+    this.core.dispatch([
+      { type: 'pages.unassignItem', payload: { pageId, key: oldKey } },
+      { type: 'pages.assignItem', payload: { pageId, key: newKey } },
+    ] as AnyCommand[]);
     return {
-      summary: `Set region ${regionIndex} on page '${pageId}' to key '${key}'`,
-      action: { helper: 'setRegionKey', params: { pageId, regionIndex, key } },
+      summary: `Set region ${regionIndex} on page '${pageId}' to key '${newKey}'`,
+      action: { helper: 'setRegionKey', params: { pageId, regionIndex, key: newKey } },
       affectedPaths: [pageId],
     };
+  }
+
+  /** Rename a page's ID. */
+  renamePage(pageId: string, newId: string): HelperResult {
+    this.core.dispatch({ type: 'pages.renamePage', payload: { id: pageId, newId } });
+    return {
+      summary: `Renamed page '${pageId}' to '${newId}'`,
+      action: { helper: 'renamePage', params: { pageId, newId } },
+      affectedPaths: [newId],
+    };
+  }
+
+  /** Look up a region's key by its index on a page. */
+  private _regionKeyAt(pageId: string, regionIndex: number): string {
+    const pages = (this.core.state.theme as any).pages ?? [];
+    const page = pages.find((p: any) => p.id === pageId);
+    if (!page) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${pageId}`);
+    const region = page.regions?.[regionIndex];
+    if (!region) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
+    return region.key;
   }
 
   // ── Component Tree Helpers ──

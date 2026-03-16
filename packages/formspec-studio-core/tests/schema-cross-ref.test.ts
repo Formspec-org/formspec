@@ -277,18 +277,19 @@ describe('M6: AMBIGUOUS_ITEM_KEY warning detail', () => {
   });
 });
 
-// ── L7: addWizardPage atomicity ───────────────────────────────────
+// ── L7: addPage atomicity ───────────────────────────────────
 
-describe('L7: addWizardPage atomicity', () => {
-  it('addWizardPage undoes in one step', () => {
+describe('L7: addPage atomicity', () => {
+  it('addPage undoes both tiers in one step', () => {
     const project = createProject();
-    project.addWizardPage('Step 1');
-    // Should have created the group item + set wizard mode
+    project.addPage('Step 1');
+    // Should have created the group item + theme page + wizard mode
     expect(project.definition.items.length).toBeGreaterThan(0);
     expect(project.definition.formPresentation?.pageMode).toBe('wizard');
+    expect((project.theme.pages ?? []).length).toBe(1);
     // Single undo reverses everything
     project.undo();
     expect(project.definition.items).toHaveLength(0);
-    expect(project.definition.formPresentation?.pageMode).not.toBe('wizard');
+    expect((project.theme.pages ?? []).length).toBe(0);
   });
 });

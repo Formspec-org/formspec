@@ -363,11 +363,11 @@ export async function main() {
 
   server.registerTool('formspec_edit', {
     title: 'Edit Structure',
-    description: 'Structural tree mutations: remove, move, rename, or copy items. Action "remove" is DESTRUCTIVE — use formspec_undo to reverse.',
+    description: 'Structural tree mutations: remove, move, rename, or copy items. Action "remove" is DESTRUCTIVE — use formspec_undo to reverse. Supports batch via items[] array for bulk operations (processed sequentially).',
     inputSchema: {
       project_id: z.string(),
       action: z.enum(['remove', 'move', 'rename', 'copy']).describe('remove: delete item and descendants; move: relocate in tree; rename: change key; copy: duplicate'),
-      path: z.string().describe('Item path to act on (e.g., "old_field", "contact.phone")'),
+      path: z.string().optional().describe('Item path to act on (e.g., "old_field", "contact.phone")'),
       // move params
       target_path: z.string().optional().describe('New parent path (for action="move")'),
       index: z.number().optional().describe('Position index (for action="move")'),
@@ -375,10 +375,22 @@ export async function main() {
       new_key: z.string().optional().describe('New key name (for action="rename")'),
       // copy params
       deep: z.boolean().optional().describe('Deep-copy descendants (for action="copy", default: false)'),
+      // Batch
+      items: z.array(z.object({
+        action: z.enum(['remove', 'move', 'rename', 'copy']).optional().describe('Override action per item (defaults to top-level action)'),
+        path: z.string().describe('Item path to act on'),
+        target_path: z.string().optional().describe('New parent path (for move)'),
+        index: z.number().optional().describe('Position index (for move)'),
+        new_key: z.string().optional().describe('New key name (for rename)'),
+        deep: z.boolean().optional().describe('Deep-copy descendants (for copy)'),
+      })).optional().describe('Batch: array of edit operations (processed sequentially)'),
     },
     annotations: DESTRUCTIVE,
-  }, async ({ project_id, action, path, target_path, index, new_key, deep }) => {
-    return structure.handleEdit(registry, project_id, action, { path, target_path, index, new_key, deep });
+  }, async ({ project_id, action, path, target_path, index, new_key, deep, items }) => {
+    if (items) {
+      return structure.handleEdit(registry, project_id, action, { items });
+    }
+    return structure.handleEdit(registry, project_id, action, { path: path!, target_path, index, new_key, deep });
   });
 
   // ══════════════════════════════════════════════════════════════════
@@ -390,7 +402,7 @@ export async function main() {
     description: 'Manage form pages: add, remove, or reorder. Pages organize form content into navigable sections (wizard steps or tabs).',
     inputSchema: {
       project_id: z.string(),
-      action: z.enum(['add', 'remove', 'move']).describe('add: create page; remove: delete page; move: reorder'),
+      action: z.enum(['add', 'remove', 'move']).describe('add: create page (definition group + theme page + wizard mode); remove: delete page; move: reorder'),
       // add params
       title: z.string().optional().describe('Page title (for action="add")'),
       description: z.string().optional().describe('Page description (for action="add")'),
@@ -405,17 +417,28 @@ export async function main() {
 
   server.registerTool('formspec_place', {
     title: 'Place on Page',
-    description: 'Assign or unassign items to/from pages. action="place" puts an item on a page; action="unplace" removes it from the page (but does NOT delete the item).',
+    description: 'Assign or unassign items to/from pages. action="place" puts an item on a page; action="unplace" removes it from the page (but does NOT delete the item). Supports batch via items[] array.',
     inputSchema: {
       project_id: z.string(),
-      action: z.enum(['place', 'unplace']).describe('place: assign to page; unplace: remove from page'),
-      target: z.string().describe('Item path to place/unplace'),
-      page_id: z.string().describe('Page ID'),
+      // Single item
+      action: z.enum(['place', 'unplace']).optional().describe('place: assign to page; unplace: remove from page'),
+      target: z.string().optional().describe('Item path to place/unplace'),
+      page_id: z.string().optional().describe('Page ID'),
       options: z.object({ span: z.number() }).optional().describe('Layout options (for action="place")'),
+      // Batch
+      items: z.array(z.object({
+        action: z.enum(['place', 'unplace']),
+        target: z.string().describe('Item path'),
+        page_id: z.string().describe('Page ID'),
+        options: z.object({ span: z.number() }).optional(),
+      })).optional().describe('Batch: array of place/unplace operations'),
     },
     annotations: NON_DESTRUCTIVE,
-  }, async ({ project_id, action, target, page_id, options }) => {
-    return structure.handlePlace(registry, project_id, action, target, page_id, options);
+  }, async ({ project_id, action, target, page_id, options, items }) => {
+    if (items) {
+      return structure.handlePlace(registry, project_id, { items });
+    }
+    return structure.handlePlace(registry, project_id, { action: action!, target: target!, page_id: page_id!, options });
   });
 
   // ══════════════════════════════════════════════════════════════════

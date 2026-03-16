@@ -35,12 +35,12 @@ function findPageById(pages: any[], id: string): any {
 export const pagesHandlers: Record<string, CommandHandler> = {
 
   'pages.addPage': (state, payload) => {
-    const { title, description } = payload as { title?: string; description?: string };
+    const { id, title, description } = payload as { id?: string; title?: string; description?: string };
     const pages = ensurePages(state);
     const fp = ensureFormPresentation(state);
 
     const page: any = {
-      id: generatePageId(),
+      id: id || generatePageId(),
       title: title || `Page ${pages.length + 1}`,
       regions: [],
     };
@@ -201,6 +201,16 @@ export const pagesHandlers: Record<string, CommandHandler> = {
     return { rebuildComponentTree: true };
   },
 
+  'pages.setPages': (state, payload) => {
+    const { pages } = payload as { pages: unknown[] };
+    state.theme.pages = pages;
+    const fp = ensureFormPresentation(state);
+    if (pages.length > 0 && (!fp.pageMode || fp.pageMode === 'single')) {
+      fp.pageMode = 'wizard';
+    }
+    return { rebuildComponentTree: true };
+  },
+
   'pages.reorderRegion': (state, payload) => {
     const { pageId, key, targetIndex } = payload as { pageId: string; key: string; targetIndex: number };
     const pages = ensurePages(state);
@@ -215,6 +225,14 @@ export const pagesHandlers: Record<string, CommandHandler> = {
     const clampedIndex = Math.min(targetIndex, regions.length);
     regions.splice(clampedIndex, 0, region);
 
+    return { rebuildComponentTree: true };
+  },
+
+  'pages.renamePage': (state, payload) => {
+    const { id, newId } = payload as { id: string; newId: string };
+    const pages = ensurePages(state);
+    const page = findPageById(pages, id);
+    page.id = newId;
     return { rebuildComponentTree: true };
   },
 

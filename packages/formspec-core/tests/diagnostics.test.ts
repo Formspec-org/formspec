@@ -223,4 +223,50 @@ describe('diagnose', () => {
     const diag = project.diagnose();
     expect(diag.consistency.filter(d => d.code === 'PAGED_ROOT_NON_GROUP')).toEqual([]);
   });
+
+  it('no PAGED_ROOT_NON_GROUP warning for theme-placed root items', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'email' } });
+    // Create a page and place both items on it
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'Contact Info' } });
+    const pages = (project.state.theme.pages ?? []) as any[];
+    const pageId = pages[0].id;
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'email' } });
+
+    const diag = project.diagnose();
+    const pagedWarnings = diag.consistency.filter(d => d.code === 'PAGED_ROOT_NON_GROUP');
+    expect(pagedWarnings).toEqual([]);
+  });
+
+  it('PAGED_ROOT_NON_GROUP only fires for unplaced items, not theme-placed ones', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'placed_field' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'orphan_field' } });
+    // Create a page and place only one item
+    project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
+    const pages = (project.state.theme.pages ?? []) as any[];
+    const pageId = pages[0].id;
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'placed_field' } });
+
+    const diag = project.diagnose();
+    const pagedWarnings = diag.consistency.filter(d => d.code === 'PAGED_ROOT_NON_GROUP');
+    // Only the unplaced item should trigger the warning
+    expect(pagedWarnings).toHaveLength(1);
+    expect(pagedWarnings[0].path).toBe('orphan_field');
+  });
+
+  it('PAGED_ROOT_NON_GROUP message mentions "Other" page for unplaced items', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'stray' } });
+    project.dispatch({ type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'wizard' } });
+
+    const diag = project.diagnose();
+    const warning = diag.consistency.find(d => d.code === 'PAGED_ROOT_NON_GROUP');
+    expect(warning).toBeDefined();
+    // The message should NOT claim the item "will be hidden" — it lands in an auto-generated "Other" page
+    expect(warning!.message).not.toContain('will be hidden');
+    expect(warning!.message).toContain('Other');
+  });
 });

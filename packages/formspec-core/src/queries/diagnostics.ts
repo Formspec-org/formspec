@@ -253,14 +253,22 @@ export function diagnose(state: ProjectState, schemaValidator?: SchemaValidator)
   // Consistency: root-level non-group items in paged definitions
   const defPageMode = (state.definition as any).formPresentation?.pageMode;
   if (defPageMode === 'wizard' || defPageMode === 'tabs') {
+    // Build set of item keys placed on theme pages — these render correctly
+    const themePlacedKeys = new Set<string>();
+    for (const page of (state.theme.pages ?? []) as any[]) {
+      for (const region of (page.regions ?? []) as any[]) {
+        if (typeof region.key === 'string') themePlacedKeys.add(region.key);
+      }
+    }
+
     for (const item of state.definition.items) {
-      if (item.type !== 'group') {
+      if (item.type !== 'group' && !themePlacedKeys.has(item.key)) {
         consistency.push({
           artifact: 'definition',
           path: item.key,
           severity: 'warning',
           code: 'PAGED_ROOT_NON_GROUP',
-          message: `Root-level ${item.type} "${item.key}" is not inside a page group — it will be hidden in ${defPageMode} mode`,
+          message: `Root-level ${item.type} "${item.key}" is not assigned to a page — it will appear in an auto-generated "Other" page in ${defPageMode} mode`,
         });
       }
     }

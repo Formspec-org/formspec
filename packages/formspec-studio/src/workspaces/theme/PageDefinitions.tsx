@@ -18,26 +18,31 @@ interface Page {
 export function PageDefinitions() {
   const theme = useTheme();
   const project = useProject();
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedPageId, setExpandedPageId] = useState<string | null>(null);
 
   const pages = (theme?.pages ?? []) as Page[];
 
   const addPage = () => {
-    project.addThemePage();
+    const result = project.addPage('New Page');
+    if (result.createdId) setExpandedPageId(result.createdId);
   };
 
-  const setPageProperty = (index: number, property: string, value: unknown) => {
-    project.updateThemePage(index, property, value);
+  const updatePageProperty = (pageId: string, property: string, value: unknown) => {
+    project.updatePage(pageId, { [property]: value } as any);
   };
 
-  const deletePage = (index: number) => {
-    project.deleteThemePage(index);
-    if (expandedIndex === index) setExpandedIndex(null);
+  const deletePage = (pageId: string) => {
+    project.removePage(pageId);
+    if (expandedPageId === pageId) setExpandedPageId(null);
   };
 
-  const reorderPage = (index: number, direction: 'up' | 'down') => {
-    project.reorderThemePage(index, direction);
-    setExpandedIndex(direction === 'up' ? index - 1 : index + 1);
+  const reorderPage = (pageId: string, direction: 'up' | 'down') => {
+    project.reorderPage(pageId, direction);
+  };
+
+  const renamePage = (pageId: string, newId: string) => {
+    project.renamePage(pageId, newId);
+    if (expandedPageId === pageId) setExpandedPageId(newId);
   };
 
   const addRegion = (pageId: string) => {
@@ -79,16 +84,17 @@ export function PageDefinitions() {
         </div>
       )}
 
-      {pages.map((page, index) => {
-        const isExpanded = expandedIndex === index;
+      {pages.map((page) => {
+        const isExpanded = expandedPageId === page.id;
         const regions = page.regions ?? [];
+        const pageIndex = pages.indexOf(page);
 
         return (
           <div key={page.id} className="border border-border rounded-lg bg-surface overflow-hidden">
             {/* Collapsed header */}
             <div
               className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-subtle/50 transition-colors"
-              onClick={() => setExpandedIndex(isExpanded ? null : index)}
+              onClick={() => setExpandedPageId(isExpanded ? null : page.id)}
             >
               <span className="text-[13px] font-bold text-ink flex-1">
                 {page.title || page.id}
@@ -128,7 +134,7 @@ export function PageDefinitions() {
                     onBlur={(e) => {
                       const v = e.target.value.trim();
                       if (v && v !== page.id) {
-                        project.renameThemePage(page.id, v);
+                        renamePage(page.id, v);
                       }
                     }}
                     className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent"
@@ -142,7 +148,7 @@ export function PageDefinitions() {
                     type="text"
                     defaultValue={page.title ?? ''}
                     key={`title-${page.title}`}
-                    onBlur={(e) => setPageProperty(index, 'title', e.target.value.trim() || null)}
+                    onBlur={(e) => updatePageProperty(page.id, 'title', e.target.value.trim() || null)}
                     className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent"
                   />
                 </div>
@@ -235,8 +241,8 @@ export function PageDefinitions() {
                     <button
                       type="button"
                       aria-label="Move page up"
-                      disabled={index === 0}
-                      onClick={() => reorderPage(index, 'up')}
+                      disabled={pageIndex === 0}
+                      onClick={() => reorderPage(page.id, 'up')}
                       className="text-[10px] font-mono text-muted hover:text-ink disabled:opacity-30"
                     >
                       Move Page Up
@@ -244,8 +250,8 @@ export function PageDefinitions() {
                     <button
                       type="button"
                       aria-label="Move page down"
-                      disabled={index === pages.length - 1}
-                      onClick={() => reorderPage(index, 'down')}
+                      disabled={pageIndex === pages.length - 1}
+                      onClick={() => reorderPage(page.id, 'down')}
                       className="text-[10px] font-mono text-muted hover:text-ink disabled:opacity-30"
                     >
                       Move Page Down
@@ -255,7 +261,7 @@ export function PageDefinitions() {
                     type="button"
                     aria-label="Delete page"
                     disabled={pages.length <= 1}
-                    onClick={() => deletePage(index)}
+                    onClick={() => deletePage(page.id)}
                     className="text-[10px] text-muted hover:text-error font-bold uppercase tracking-wider transition-colors disabled:opacity-30"
                   >
                     Delete Page

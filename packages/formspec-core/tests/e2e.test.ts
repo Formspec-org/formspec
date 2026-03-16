@@ -137,8 +137,8 @@ describe('Formspec Studio Core E2E Validation', () => {
     // 3. Theme styling / Pages
     project.batch([
       { type: 'theme.setToken', payload: { key: 'color.primary', value: '#123456' } },
-      { type: 'theme.addPage', payload: { id: 'p1', title: 'Applicant Details' } },
-      { type: 'theme.addPage', payload: { id: 'p2', title: 'Preferences' } },
+      { type: 'pages.addPage', payload: { id: 'p1', title: 'Applicant Details' } },
+      { type: 'pages.addPage', payload: { id: 'p2', title: 'Preferences' } },
       { type: 'theme.setItemOverride', payload: { itemKey: 'page2.hasPet', property: 'widget', value: 'Switch' } }
     ]);
     validateProject('1-greenfield-theme');
@@ -224,18 +224,18 @@ describe('Formspec Studio Core E2E Validation', () => {
   it('5. Designer tweaks themes and component structure', () => {
     project.batch([
       { type: 'theme.setTargetCompatibility', payload: { compatibleVersions: '>=1.0.0' } },
-      { type: 'theme.addRegion', payload: { pageId: 'p2', key: 'page2.hasPet', span: 12 } },
+      { type: 'pages.assignItem', payload: { pageId: 'p2', key: 'page2.hasPet', span: 12 } },
     ]);
     validateProject('5-designer-theme-setup');
 
     project.batch([
-      { type: 'theme.renamePage', payload: { pageId: 'p2', newId: 'page2' } },
-      { type: 'theme.setPageProperty', payload: { index: 1, property: 'title', value: 'User Preferences' } },
+      { type: 'pages.renamePage', payload: { id: 'p2', newId: 'page2' } },
+      { type: 'pages.setPageProperty', payload: { id: 'page2', property: 'title', value: 'User Preferences' } },
     ]);
     validateProject('5-designer-page-rename');
 
     project.batch([
-      { type: 'theme.deleteRegion', payload: { pageId: 'page2', regionIndex: 0 } },
+      { type: 'pages.unassignItem', payload: { pageId: 'page2', key: 'page2.hasPet' } },
       { type: 'theme.setExtension', payload: { key: 'x-theme-mode', value: 'dark' } },
     ]);
     validateProject('5-designer-end');

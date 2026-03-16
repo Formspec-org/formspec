@@ -1,8 +1,6 @@
 /**
- * Structure tools: field, content, group (add items, batch-enabled).
- * Plus: repeat, page CRUD, placement, update, remove, copy, metadata, submit.
- *
- * field/content/group support batch mode via items[] array.
+ * Structure tools: field, content, group, place, edit (batch-enabled via items[] array).
+ * Plus: page CRUD, update, submit.
  */
 
 import { HelperError } from 'formspec-studio-core';
@@ -187,22 +185,48 @@ export function handlePage(
   });
 }
 
-// ── Placement ───────────────────────────────────────────────────────
+// ── Placement (batch-enabled) ────────────────────────────────────────
 
 export function handlePlace(
   registry: ProjectRegistry,
   projectId: string,
-  action: 'place' | 'unplace',
-  target: string,
-  pageId: string,
-  options?: PlacementOptions,
+  params: { action: 'place' | 'unplace'; target: string; page_id: string; options?: PlacementOptions },
+): ReturnType<typeof wrapHelperCall>;
+export function handlePlace(
+  registry: ProjectRegistry,
+  projectId: string,
+  params: { items: Array<{ action: 'place' | 'unplace'; target: string; page_id: string; options?: PlacementOptions }> },
+): ReturnType<typeof wrapBatchCall>;
+export function handlePlace(
+  registry: ProjectRegistry,
+  projectId: string,
+  params: {
+    action?: 'place' | 'unplace';
+    target?: string;
+    page_id?: string;
+    options?: PlacementOptions;
+    items?: BatchItem[];
+  },
 ) {
+  if (params.items) {
+    const { project, error } = getProjectSafe(registry, projectId);
+    if (error) return error;
+    return wrapBatchCall(params.items, (item) => {
+      const action = item.action as 'place' | 'unplace';
+      const target = item.target as string;
+      const pageId = item.page_id as string;
+      if (action === 'place') {
+        return project!.placeOnPage(target, pageId, item.options as PlacementOptions | undefined);
+      }
+      return project!.unplaceFromPage(target, pageId);
+    });
+  }
   return wrapHelperCall(() => {
     const project = registry.getProject(projectId);
-    if (action === 'place') {
-      return project.placeOnPage(target, pageId, options);
+    if (params.action === 'place') {
+      return project.placeOnPage(params.target!, params.page_id!, params.options);
     }
-    return project.unplaceFromPage(target, pageId);
+    return project.unplaceFromPage(params.target!, params.page_id!);
   });
 }
 
@@ -237,23 +261,63 @@ export function handleUpdate(
 
 // ── formspec_edit: structural mutations ──────────────────────────────
 
+type EditAction = 'remove' | 'move' | 'rename' | 'copy';
+
+interface EditParams {
+  path: string;
+  target_path?: string;
+  index?: number;
+  new_key?: string;
+  deep?: boolean;
+}
+
 export function handleEdit(
   registry: ProjectRegistry,
   projectId: string,
-  action: 'remove' | 'move' | 'rename' | 'copy',
-  params: { path: string; target_path?: string; index?: number; new_key?: string; deep?: boolean },
+  action: EditAction,
+  params: EditParams,
+): ReturnType<typeof wrapHelperCall>;
+export function handleEdit(
+  registry: ProjectRegistry,
+  projectId: string,
+  action: EditAction,
+  params: { items: Array<{ action?: EditAction } & Partial<EditParams>> },
+): ReturnType<typeof wrapBatchCall>;
+export function handleEdit(
+  registry: ProjectRegistry,
+  projectId: string,
+  action: EditAction,
+  params: Partial<EditParams> & { items?: BatchItem[] },
 ) {
+  if (params.items) {
+    const { project, error } = getProjectSafe(registry, projectId);
+    if (error) return error;
+    return wrapBatchCall(params.items, (item) => {
+      const itemAction = (item.action as EditAction) ?? action;
+      const path = item.path as string;
+      switch (itemAction) {
+        case 'remove':
+          return project!.removeItem(path);
+        case 'move':
+          return project!.moveItem(path, item.target_path as string | undefined, item.index as number | undefined);
+        case 'rename':
+          return project!.renameItem(path, item.new_key as string);
+        case 'copy':
+          return project!.copyItem(path, item.deep as boolean | undefined);
+      }
+    });
+  }
   return wrapHelperCall(() => {
     const project = registry.getProject(projectId);
     switch (action) {
       case 'remove':
-        return project.removeItem(params.path);
+        return project.removeItem(params.path!);
       case 'move':
-        return project.moveItem(params.path, params.target_path, params.index);
+        return project.moveItem(params.path!, params.target_path, params.index);
       case 'rename':
-        return project.renameItem(params.path, params.new_key!);
+        return project.renameItem(params.path!, params.new_key!);
       case 'copy':
-        return project.copyItem(params.path, params.deep);
+        return project.copyItem(params.path!, params.deep);
     }
   });
 }

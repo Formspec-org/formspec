@@ -38,7 +38,7 @@ describe('PageDefinitions', () => {
     expect(screen.getByText(/no pages/i)).toBeInTheDocument();
   });
 
-  it('add page dispatches theme.addPage', async () => {
+  it('add page creates a page', async () => {
     const { project } = renderPages([]);
     await act(async () => {
       screen.getByRole('button', { name: /\+ new page/i }).click();
@@ -47,7 +47,7 @@ describe('PageDefinitions', () => {
     expect(pages.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('edit title dispatches theme.setPageProperty', async () => {
+  it('edit title updates page property', async () => {
     const { project } = renderPages([{ id: 'p1', title: 'Page One', regions: [] }]);
     // Expand page
     await act(async () => { screen.getByText('Page One').click(); });
@@ -59,7 +59,7 @@ describe('PageDefinitions', () => {
     expect((project.export().theme as any).pages[0].title).toBe('Updated Title');
   });
 
-  it('delete page dispatches theme.deletePage', async () => {
+  it('delete page removes the page', async () => {
     const { project } = renderPages([
       { id: 'p1', title: 'First', regions: [] },
       { id: 'p2', title: 'Second', regions: [] },
@@ -71,7 +71,7 @@ describe('PageDefinitions', () => {
     expect((project.export().theme as any).pages).toHaveLength(1);
   });
 
-  it('reorder page dispatches theme.reorderPage', async () => {
+  it('reorder page swaps page positions', async () => {
     const { project } = renderPages([
       { id: 'p1', title: 'First', regions: [] },
       { id: 'p2', title: 'Second', regions: [] },
@@ -83,7 +83,7 @@ describe('PageDefinitions', () => {
     expect((project.export().theme as any).pages[0].id).toBe('p2');
   });
 
-  it('add region dispatches theme.addRegion', async () => {
+  it('add region creates a region', async () => {
     const { project } = renderPages([{ id: 'p1', title: 'Page', regions: [] }]);
     await act(async () => { screen.getByText('Page').click(); });
     await act(async () => {
@@ -92,7 +92,7 @@ describe('PageDefinitions', () => {
     expect((project.export().theme as any).pages[0].regions).toHaveLength(1);
   });
 
-  it('edit region span dispatches theme.setRegionProperty', async () => {
+  it('edit region span updates region property', async () => {
     const { project } = renderPages([{ id: 'p1', title: 'Page', regions: [{ key: 'name', span: 12 }] }]);
     await act(async () => { screen.getByText('Page').click(); });
     const spanInput = screen.getByDisplayValue('12');
@@ -103,7 +103,7 @@ describe('PageDefinitions', () => {
     expect((project.export().theme as any).pages[0].regions[0].span).toBe(6);
   });
 
-  it('delete region dispatches theme.deleteRegion', async () => {
+  it('delete region removes the region', async () => {
     const { project } = renderPages([
       { id: 'p1', title: 'Page', regions: [{ key: 'name', span: 12 }, { key: 'age', span: 6 }] },
     ]);
@@ -113,7 +113,7 @@ describe('PageDefinitions', () => {
     expect((project.export().theme as any).pages[0].regions).toHaveLength(1);
   });
 
-  it('reorder region dispatches theme.reorderRegion', async () => {
+  it('reorder region swaps region positions', async () => {
     const { project } = renderPages([
       { id: 'p1', title: 'Page', regions: [{ key: 'name', span: 6 }, { key: 'age', span: 6 }] },
     ]);

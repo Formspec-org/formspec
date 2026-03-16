@@ -819,48 +819,101 @@ describe('addSubmitButton', () => {
 // ── Page Helpers ──
 
 describe('addPage', () => {
-  it('creates a theme-tier page', () => {
+  it('creates both a definition group AND a theme page', () => {
     const project = createProject();
-    const result = project.addPage('Page 1');
+    const result = project.addPage('Step 1');
+
+    // Returns a createdId (the page ID)
     expect(result.createdId).toBeDefined();
-    const pages = project.theme.pages;
-    expect(pages?.length).toBeGreaterThanOrEqual(1);
-  });
-});
 
-describe('addWizardPage', () => {
-  it('creates a wizard section group', () => {
-    const project = createProject();
-    const result = project.addWizardPage('Step 1');
-    expect(result.createdId).toBeDefined();
-    const item = project.itemAt(result.createdId!);
-    expect(item?.type).toBe('group');
-  });
-});
-
-describe('addPage vs addWizardPage independence', () => {
-  it('addPage creates theme page; addWizardPage creates definition group — independent', () => {
-    const project = createProject();
-    const pageResult = project.addPage('Page 1');
-    const wizardResult = project.addWizardPage('Step 1');
-
-    // addPage creates a theme page
+    // Theme page exists
     const pages = project.theme.pages ?? [];
-    expect(pages.some((p: any) => p.id === pageResult.createdId)).toBe(true);
+    expect(pages.length).toBe(1);
+    const page = pages[0];
+    expect(page.title).toBe('Step 1');
 
-    // addWizardPage creates a definition group
-    const wizardItem = project.itemAt(wizardResult.createdId!);
-    expect(wizardItem?.type).toBe('group');
+    // Definition group exists
+    const groupKey = result.affectedPaths[0];
+    expect(groupKey).toBeDefined();
+    const item = project.itemAt(groupKey);
+    expect(item?.type).toBe('group');
+    expect(item?.label).toBe('Step 1');
 
-    // They target different artifacts
-    expect(pageResult.action.helper).toBe('addPage');
-    expect(wizardResult.action.helper).toBe('addWizardPage');
+    // Group is wired to page via regions
+    expect(page.regions?.some((r: any) => r.key === groupKey)).toBe(true);
+  });
 
-    // Undo wizard page — page still exists
+  it('sets wizard page mode on first page', () => {
+    const project = createProject();
+    project.addPage('Step 1');
+    expect(project.definition.formPresentation?.pageMode).toBe('wizard');
+  });
+
+  it('preserves existing page mode (tabs)', () => {
+    const project = createProject();
+    project.setFlow('tabs');
+    project.addPage('Tab 1');
+    expect(project.definition.formPresentation?.pageMode).toBe('tabs');
+  });
+
+  it('produces Wizard component tree after addPage', () => {
+    const project = createProject();
+    const result = project.addPage('Step 1');
+    const groupKey = result.affectedPaths[0];
+
+    // Add a field into the group
+    project.addField(`${groupKey}.name`, 'Name', 'text');
+
+    const comp = project.effectiveComponent as any;
+    expect(comp.tree?.component).toBe('Wizard');
+    const pageNodes = comp.tree?.children ?? [];
+    expect(pageNodes.length).toBeGreaterThanOrEqual(1);
+    expect(pageNodes[0]?.component).toBe('Page');
+  });
+
+  it('creates multiple pages with unique groups', () => {
+    const project = createProject();
+    const r1 = project.addPage('Step 1');
+    const r2 = project.addPage('Step 2');
+
+    const pages = project.theme.pages ?? [];
+    expect(pages.length).toBe(2);
+
+    // Different groups
+    expect(r1.affectedPaths[0]).not.toBe(r2.affectedPaths[0]);
+
+    // Both groups exist
+    expect(project.itemAt(r1.affectedPaths[0])?.type).toBe('group');
+    expect(project.itemAt(r2.affectedPaths[0])?.type).toBe('group');
+  });
+
+  it('handles description parameter', () => {
+    const project = createProject();
+    const result = project.addPage('Step 1', 'First step');
+    const pages = project.theme.pages ?? [];
+    const page = pages.find((p: any) => p.id === result.createdId);
+    expect(page?.description).toBe('First step');
+  });
+
+  it('undoes both tiers in one step', () => {
+    const project = createProject();
+    const result = project.addPage('Step 1');
+    const groupKey = result.affectedPaths[0];
+
+    expect(project.definition.items.length).toBe(1);
+    expect((project.theme.pages ?? []).length).toBe(1);
+
     project.undo();
-    const pagesAfterUndoWizard = project.theme.pages ?? [];
-    expect(pagesAfterUndoWizard.some((p: any) => p.id === pageResult.createdId)).toBe(true);
-    expect(project.itemAt(wizardResult.createdId!)).toBeUndefined();
+
+    expect(project.definition.items.length).toBe(0);
+    expect((project.theme.pages ?? []).length).toBe(0);
+  });
+});
+
+describe('addWizardPage removal', () => {
+  it('addWizardPage method does not exist on Project', () => {
+    const project = createProject();
+    expect((project as any).addWizardPage).toBeUndefined();
   });
 });
 
@@ -872,6 +925,64 @@ describe('removePage', () => {
     project.removePage(createdId!);
     const pages = project.theme.pages ?? [];
     expect(pages.find((p: any) => p.id === createdId)).toBeUndefined();
+  });
+
+  it('removes the definition group created by addPage', () => {
+    const project = createProject();
+    const r1 = project.addPage('Page 1');
+    project.addPage('Page 2');
+    const groupKey = r1.affectedPaths[0];
+    expect(project.itemAt(groupKey)).toBeDefined();
+
+    project.removePage(r1.createdId!);
+    expect(project.itemAt(groupKey)).toBeUndefined();
+  });
+
+  it('removes children of the definition group', () => {
+    const project = createProject();
+    const r1 = project.addPage('Page 1');
+    project.addPage('Page 2');
+    const groupKey = r1.affectedPaths[0];
+    project.addField(`${groupKey}.name`, 'Name', 'text');
+    expect(project.itemAt(`${groupKey}.name`)).toBeDefined();
+
+    project.removePage(r1.createdId!);
+    expect(project.itemAt(`${groupKey}.name`)).toBeUndefined();
+  });
+
+  it('is atomic — single undo restores page, group, and children', () => {
+    const project = createProject();
+    const r1 = project.addPage('Page 1');
+    project.addPage('Page 2');
+    const groupKey = r1.affectedPaths[0];
+    project.addField(`${groupKey}.name`, 'Name', 'text');
+
+    project.removePage(r1.createdId!);
+
+    // Everything gone
+    expect(project.itemAt(groupKey)).toBeUndefined();
+    expect((project.theme.pages ?? []).find((p: any) => p.id === r1.createdId)).toBeUndefined();
+
+    // Single undo restores everything
+    project.undo();
+    expect(project.itemAt(groupKey)).toBeDefined();
+    expect(project.itemAt(`${groupKey}.name`)).toBeDefined();
+    expect((project.theme.pages ?? []).find((p: any) => p.id === r1.createdId)).toBeDefined();
+  });
+
+  it('does not delete group if page has no region pointing to a root group', () => {
+    // Page created manually without a corresponding definition group
+    const project = createProject();
+    project.addPage('Page 1');
+    // Manually add a page with no region wiring
+    project.setFlow('wizard');
+    const pagesBefore = project.definition.items.length;
+    // Use the core dispatch to add a raw theme page (no group)
+    (project as any).core.dispatch({ type: 'pages.addPage', payload: { id: 'orphan-page', title: 'Orphan' } });
+    expect(project.definition.items.length).toBe(pagesBefore); // no new group
+    project.removePage('orphan-page');
+    // Original items unchanged
+    expect(project.definition.items.length).toBe(pagesBefore);
   });
 });
 
@@ -1184,18 +1295,16 @@ describe('updateItem edge cases', () => {
   });
 });
 
-describe('addWizardPage edge cases', () => {
-  it('sets pageMode to wizard only when not already paged', () => {
+describe('addPage edge cases', () => {
+  it('does not re-dispatch pageMode when already wizard', () => {
     const project = createProject();
-    // First wizard page should set pageMode
-    project.addWizardPage('Step 1');
+    project.addPage('Step 1');
     expect(project.definition.formPresentation?.pageMode).toBe('wizard');
 
-    // Second wizard page should NOT re-dispatch pageMode
-    // (just verify it doesn't throw / still works)
-    project.addWizardPage('Step 2');
+    project.addPage('Step 2');
     expect(project.definition.formPresentation?.pageMode).toBe('wizard');
     expect(project.definition.items).toHaveLength(2);
+    expect((project.theme.pages ?? []).length).toBe(2);
   });
 });
 
@@ -1636,8 +1745,10 @@ describe('addContent page placement', () => {
     const project = createProject();
     const pageResult = project.addPage('Page One');
     const pageId = pageResult.createdId!;
+    const groupKey = pageResult.affectedPaths[0];
 
-    project.addContent('intro', 'Welcome', 'heading', { page: pageId });
+    // Content must go inside the page's group in a paged definition
+    project.addContent(`${groupKey}.intro`, 'Welcome', 'heading', { page: pageId });
 
     const pages = (project.core as any).state.theme.pages as any[];
     const page = pages.find((p: any) => p.id === pageId);
@@ -1660,10 +1771,12 @@ describe('addContent page placement', () => {
     const project = createProject();
     const pageResult = project.addPage('Page One');
     const pageId = pageResult.createdId!;
+    const groupKey = pageResult.affectedPaths[0];
 
-    project.addContent('intro', 'Welcome', 'heading', { page: pageId });
+    // Content must go inside the page's group in a paged definition
+    project.addContent(`${groupKey}.intro`, 'Welcome', 'heading', { page: pageId });
 
-    const item = project.itemAt('intro');
+    const item = project.itemAt(`${groupKey}.intro`);
     expect(item?.type).toBe('display');
     expect((item as any)?.presentation?.widgetHint).toBe('heading');
   });
@@ -1883,5 +1996,47 @@ describe('DUPLICATE_KEY pre-validation', () => {
       expect(e).toBeInstanceOf(HelperError);
       expect((e as HelperError).code).toBe('DUPLICATE_KEY');
     }
+  });
+});
+
+// ── *ThemePage method removal ──
+
+describe('*ThemePage methods removed', () => {
+  it('addThemePage does not exist on Project', () => {
+    const project = createProject();
+    expect((project as any).addThemePage).toBeUndefined();
+  });
+
+  it('deleteThemePage does not exist on Project', () => {
+    const project = createProject();
+    expect((project as any).deleteThemePage).toBeUndefined();
+  });
+
+  it('updateThemePage does not exist on Project', () => {
+    const project = createProject();
+    expect((project as any).updateThemePage).toBeUndefined();
+  });
+
+  it('reorderThemePage does not exist on Project', () => {
+    const project = createProject();
+    expect((project as any).reorderThemePage).toBeUndefined();
+  });
+
+  it('renameThemePage does not exist on Project', () => {
+    const project = createProject();
+    expect((project as any).renameThemePage).toBeUndefined();
+  });
+});
+
+// ── renamePage ──
+
+describe('renamePage', () => {
+  it('renames a page ID', () => {
+    const project = createProject();
+    const { createdId } = project.addPage('Page 1');
+    project.renamePage(createdId!, 'new-id');
+    const pages = project.theme.pages ?? [];
+    expect(pages.find((p: any) => p.id === 'new-id')).toBeDefined();
+    expect(pages.find((p: any) => p.id === createdId)).toBeUndefined();
   });
 });

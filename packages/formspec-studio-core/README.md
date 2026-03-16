@@ -145,11 +145,11 @@ All helpers return `HelperResult`. Helpers throw `HelperError` on pre-validation
 - `setFlow(mode, props?)` — modes: `'single'`, `'wizard'`, `'tabs'`
 
 **Pages:**
-- `addPage(title, description?)`
-- `addWizardPage(label)` — enforces wizard page mode
-- `removePage(pageId)`
+- `addPage(title, description?)` — creates definition group + theme page + wizard mode
+- `removePage(pageId)` — deletes theme page, definition group, and children atomically
 - `reorderPage(pageId, direction)`
 - `updatePage(pageId, changes)`
+- `renamePage(pageId, newId)`
 - `placeOnPage(target, pageId, options?)`
 - `unplaceFromPage(target, pageId)`
 - `autoGeneratePages()`
@@ -164,7 +164,6 @@ All helpers return `HelperResult`. Helpers throw `HelperError` on pre-validation
 - `reorderThemeSelector(index, direction)`
 - `setItemOverride(itemKey, property, value)`
 - `clearItemOverrides(itemKey)`
-- `addThemePage()` / `updateThemePage` / `deleteThemePage` / `reorderThemePage` / `renameThemePage`
 - `addRegion` / `updateRegion` / `deleteRegion` / `reorderRegion` / `setRegionKey`
 
 **Mapping:**
