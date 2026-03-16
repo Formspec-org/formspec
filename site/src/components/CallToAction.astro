@@ -26,6 +26,12 @@
         </div>
       </div>
 
+      <div class="cta-install">
+        <span class="cta-install-label">Install MCP server:</span>
+        <code class="cta-install-cmd">npx formspec-mcp</code>
+        <button class="cta-install-copy" onclick="navigator.clipboard.writeText('npx formspec-mcp').then(() => { this.textContent = 'Copied'; setTimeout(() => this.textContent = 'Copy', 1500) })" aria-label="Copy install command">Copy</button>
+      </div>
+
       <div class="cta-actions">
         <a href="/studio/" class="cta-btn-primary">
           Try Formspec Studio
@@ -117,6 +123,51 @@
     font-size: 0.8125rem;
     color: var(--color-ink-secondary);
     line-height: 1.55;
+  }
+
+  .cta-install {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .cta-install-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-ink-tertiary);
+  }
+
+  .cta-install-cmd {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 0.3rem 0.625rem;
+    color: var(--color-ink);
+    user-select: all;
+  }
+
+  .cta-install-copy {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink-secondary);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .cta-install-copy:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
   }
 
   .cta-actions {
