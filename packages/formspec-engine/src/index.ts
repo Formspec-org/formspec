@@ -42,57 +42,33 @@ export function getBuiltinFELFunctionCatalog(): FELBuiltinFunctionCatalogEntry[]
     return interpreter.listBuiltInFunctions();
 }
 
-/** A single item in a Formspec definition tree: a field (data-bearing), group (container), or display (read-only content). */
-export interface FormspecItem {
-    key: string;
-    type: "field" | "group" | "display";
-    label: string;
-    dataType?: "string" | "text" | "integer" | "decimal" | "number" | "boolean" | "date" | "dateTime" | "time" | "uri" | "attachment" | "choice" | "multiChoice" | "money";
-    currency?: string;
-    description?: string;
-    hint?: string;
-    repeatable?: boolean;
-    minRepeat?: number;
-    maxRepeat?: number;
-    children?: FormspecItem[];
-    options?: { value: string; label: string }[];
-    optionSet?: string;
-    initialValue?: any;
-    presentation?: any;
-    prePopulate?: { instance: string; path: string; editable?: boolean };
-    labels?: Record<string, string>;
-    relevant?: string;
-    required?: string | boolean;
-    calculate?: string;
-    readonly?: string | boolean;
-    constraint?: string;
-    message?: string;
-    [key: string]: any;
-}
+// ── Canonical types from formspec-types ──────────────────────────────
+// All form-document types derive from the schema-generated formspec-types
+// package. remoteOptions is engine-only (not in schema — the spec uses
+// optionSets.source for external options). Pending consolidation.
 
-/** A bind configuration that attaches FEL-driven logic (relevance, required, calculate, readonly, constraint) to a field path. */
-export interface FormspecBind {
-    path: string;
-    relevant?: string;
-    required?: string | boolean;
-    calculate?: string;
-    readonly?: string | boolean;
-    constraint?: string;
-    constraintMessage?: string;
-    default?: any;
-    whitespace?: 'preserve' | 'trim' | 'normalize' | 'remove';
-    excludedValue?: 'preserve' | 'null';
-    nonRelevantBehavior?: 'remove' | 'empty' | 'keep';
-    disabledDisplay?: 'hidden' | 'protected';
-    precision?: number;
+import type {
+    FormItem, FormBind, FormShape, FormVariable, FormInstance,
+    OptionEntry, FormDefinition,
+    ValidationResult as FormspecValidationResult,
+    ValidationReport as FormspecValidationReport,
+} from 'formspec-types';
+
+/** A single item in a Formspec definition tree. Alias for the schema-generated FormItem. */
+export type FormspecItem = FormItem;
+
+/**
+ * Bind with engine-only `remoteOptions` shorthand (not in schema).
+ * The spec-defined mechanism is optionSets.source — this is a per-bind
+ * convenience that predates formal spec alignment.
+ */
+export type FormspecBind = FormBind & {
+    /** URL for fetching remote option lists. Engine-only; not in schema. */
     remoteOptions?: string;
-}
+};
 
-/** A selectable option for choice/multiChoice fields, consisting of a machine-readable value and a display label. */
-export interface FormspecOption {
-    value: string;
-    label: string;
-}
+/** A selectable option for choice/multiChoice fields. */
+export type FormspecOption = OptionEntry;
 
 /** Loading/error state for a field whose options are fetched from a remote URL via the `remoteOptions` bind. */
 export interface RemoteOptionsState {
@@ -100,101 +76,33 @@ export interface RemoteOptionsState {
     error: string | null;
 }
 
-/**
- * A cross-field validation rule evaluated against one or more target paths.
- * Shapes support composition operators (and/or/not/xone) and timing modes (continuous, submit, demand).
- */
-export interface FormspecShape {
-    id: string;
-    target: string;
-    severity?: "error" | "warning" | "info";
-    constraint?: string;
-    message: string;
-    code?: string;
-    activeWhen?: string;
-    timing?: "continuous" | "submit" | "demand";
-    and?: string[];
-    or?: string[];
-    not?: string;
-    xone?: string[];
-    context?: Record<string, string>;
-}
+/** Cross-field validation rule. Alias for the schema-generated Shape. */
+export type FormspecShape = FormShape;
 
-/** A named computed variable defined by a FEL expression, scoped to a specific item or the entire definition ('#'). */
-export interface FormspecVariable {
-    name: string;
-    expression: string;
-    scope?: string; // item key or "#" for definition-wide (default)
-}
+/** Named computed variable. Alias for the schema-generated Variable. */
+export type FormspecVariable = FormVariable;
 
-/** A named data instance that provides external data for pre-population and FEL `instance()` lookups. */
-export interface FormspecInstance {
-    description?: string;
-    source?: string;
-    static?: boolean;
-    data?: any;
-    schema?: Record<string, string>;
-    readonly?: boolean;
-}
+/** Named data instance. Alias for the schema-generated Instance. */
+export type FormspecInstance = FormInstance;
+
+/** Top-level form definition. Alias for the schema-generated FormDefinition. */
+export type FormspecDefinition = FormDefinition;
+
+/** A single validation finding targeting a specific field path. */
+export type ValidationResult = FormspecValidationResult;
+
+/** Aggregated validation output for the entire form. */
+export type ValidationReport = FormspecValidationReport;
 
 /**
- * The top-level Formspec definition document describing a complete form.
- * Contains the item tree, bind constraints, shape rules, variables, instances, option sets,
- * and optional screener/migration/presentation configuration.
+ * Internal bind configuration built by merging inline item properties
+ * (precision, relevant, etc.) with explicit definition.binds entries.
+ * Not exported — engine-internal only.
  */
-export interface FormspecDefinition {
-    $formspec: string;
-    url: string;
-    version: string;
-    title: string;
-    items: FormspecItem[];
-    binds?: FormspecBind[];
-    shapes?: FormspecShape[];
-    variables?: FormspecVariable[];
-    instances?: Record<string, FormspecInstance>;
-    optionSets?: Record<string, FormspecOption[]>;
-    nonRelevantBehavior?: 'remove' | 'empty' | 'keep';
-    formPresentation?: any;
-    screener?: {
-        enabled?: boolean;
-        items: FormspecItem[];
-        binds?: FormspecBind[];
-        routes: Array<{ condition: string; target: string; label?: string; extensions?: Record<string, any> }>;
-        extensions?: Record<string, any>;
-    };
-    migrations?: Array<{ fromVersion: string; changes: Array<{ type: string; [key: string]: any }> }>;
-    [key: string]: any;
-}
-
-/** A single validation finding (error, warning, or info) targeting a specific field path. */
-export interface ValidationResult {
-    severity: "error" | "warning" | "info";
-    path: string;
-    message: string;
-    constraintKind: "required" | "type" | "cardinality" | "constraint" | "shape" | "external";
-    /** Alias for constraintKind, used by some test suites and older clients. */
-    kind: "required" | "type" | "cardinality" | "constraint" | "shape" | "external";
-    code: string;
-    source?: "bind" | "shape";
-    shapeId?: string;
-    constraint?: string;
-    context?: Record<string, any>;
-}
-
-/**
- * Aggregated validation output for the entire form, including all bind-level and shape-level results.
- * A report is `valid` when it contains zero errors; warnings and infos do not affect validity.
- */
-export interface ValidationReport {
-    valid: boolean;
-    results: ValidationResult[];
-    counts: {
-        error: number;
-        warning: number;
-        info: number;
-    };
-    timestamp: string;
-}
+type EngineBindConfig = FormspecBind & {
+    /** Decimal precision copied from item.precision (an Item property, not a Bind property). */
+    precision?: number;
+};
 
 export interface PinnedResponseReference {
     definitionUrl: string;
@@ -380,7 +288,7 @@ export class FormEngine {
     /** Dependency graph mapping each field path to the paths it depends on, built during FEL compilation. */
     public dependencies: Record<string, string[]> = {};
     private knownNames: Set<string> = new Set();
-    private bindConfigs: Record<string, FormspecBind> = {};
+    private bindConfigs: Record<string, EngineBindConfig> = {};
     private compiledExpressions: Record<string, () => any> = {};
     private registryEntries: Map<string, RegistryEntry> = new Map();
     private remoteOptionsTasks: Array<Promise<void>> = [];
@@ -516,7 +424,8 @@ export class FormEngine {
     private resolveOptionSetsRecursive(items: FormspecItem[]) {
         for (const item of items) {
             if (item.optionSet && this.definition.optionSets?.[item.optionSet]) {
-                const entry = this.definition.optionSets[item.optionSet] as any;
+                const entry = this.definition.optionSets[item.optionSet];
+                // Engine supports both OptionSet objects and bare OptionEntry[] arrays
                 item.options = Array.isArray(entry) ? entry : (entry.options ?? []);
             }
             if (item.children) {
@@ -565,7 +474,7 @@ export class FormEngine {
 
     private initializeRemoteOptions() {
         if (!this.definition.binds) return;
-        for (const bind of this.definition.binds) {
+        for (const bind of (this.definition.binds as FormspecBind[])) {
             if (!bind.remoteOptions) continue;
 
             const path = bind.path.replace(/\[\*\]/g, '');
@@ -986,7 +895,6 @@ export class FormEngine {
                     path: this.toExternalPath(path),
                     message: this.interpolateMessage(shape.message, path),
                     constraintKind: "shape",
-                    kind: "shape",
                     code: shape.code || "SHAPE_FAILED",
                     source: "shape",
                     shapeId: shape.id,
@@ -1226,12 +1134,12 @@ export class FormEngine {
                     }
                     const requiredRange = entry.compatibility?.formspecVersion;
                     if (requiredRange && !versionSatisfies(groupFormspecVersion, requiredRange)) {
-                        groupExtDiagnostics.push({ severity: "warning", path: this.toExternalPath(fullName), message: `Extension '${extName}' requires formspec ${requiredRange} but definition uses ${groupFormspecVersion}`, constraintKind: "constraint", kind: "constraint", code: "EXTENSION_COMPATIBILITY_MISMATCH", source: "bind" });
+                        groupExtDiagnostics.push({ severity: "warning", path: this.toExternalPath(fullName), message: `Extension '${extName}' requires formspec ${requiredRange} but definition uses ${groupFormspecVersion}`, constraintKind: "constraint", code: "EXTENSION_COMPATIBILITY_MISMATCH", source: "bind" });
                     }
                     if (entry.status === 'retired') {
-                        groupExtDiagnostics.push({ severity: "warning", path: this.toExternalPath(fullName), message: `Extension '${extName}' is retired and should not be used`, constraintKind: "constraint", kind: "constraint", code: "EXTENSION_RETIRED", source: "bind" });
+                        groupExtDiagnostics.push({ severity: "warning", path: this.toExternalPath(fullName), message: `Extension '${extName}' is retired and should not be used`, constraintKind: "constraint", code: "EXTENSION_RETIRED", source: "bind" });
                     } else if (entry.status === 'deprecated') {
-                        groupExtDiagnostics.push({ severity: "info", path: this.toExternalPath(fullName), message: entry.deprecationNotice || `Extension '${extName}' is deprecated`, constraintKind: "constraint", kind: "constraint", code: "EXTENSION_DEPRECATED", source: "bind" });
+                        groupExtDiagnostics.push({ severity: "info", path: this.toExternalPath(fullName), message: entry.deprecationNotice || `Extension '${extName}' is deprecated`, constraintKind: "constraint", code: "EXTENSION_DEPRECATED", source: "bind" });
                     }
                 }
             }
@@ -1244,7 +1152,7 @@ export class FormEngine {
                     const results: ValidationResult[] = [];
 
                     for (const extName of groupUnresolved) {
-                        results.push({ severity: "error", path: this.toExternalPath(fullName), message: `Unresolved extension '${extName}': no matching registry entry loaded`, constraintKind: "constraint", kind: "constraint", code: "UNRESOLVED_EXTENSION", source: "bind" });
+                        results.push({ severity: "error", path: this.toExternalPath(fullName), message: `Unresolved extension '${extName}': no matching registry entry loaded`, constraintKind: "constraint", code: "UNRESOLVED_EXTENSION", source: "bind" });
                     }
                     results.push(...groupExtDiagnostics);
 
@@ -1255,7 +1163,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: `Minimum ${item.minRepeat} entries required`,
                             constraintKind: "cardinality",
-                            kind: "cardinality",
                             code: "MIN_REPEAT"
                         });
                     }
@@ -1265,7 +1172,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: `Maximum ${item.maxRepeat} entries allowed`,
                             constraintKind: "cardinality",
-                            kind: "cardinality",
                             code: "MAX_REPEAT"
                         });
                     }
@@ -1281,7 +1187,7 @@ export class FormEngine {
                     this.validationResults[fullName] = computed(() => {
                         const results: ValidationResult[] = [];
                         for (const extName of groupUnresolved) {
-                            results.push({ severity: "error", path: this.toExternalPath(fullName), message: `Unresolved extension '${extName}': no matching registry entry loaded`, constraintKind: "constraint", kind: "constraint", code: "UNRESOLVED_EXTENSION", source: "bind" });
+                            results.push({ severity: "error", path: this.toExternalPath(fullName), message: `Unresolved extension '${extName}': no matching registry entry loaded`, constraintKind: "constraint", code: "UNRESOLVED_EXTENSION", source: "bind" });
                         }
                         results.push(...groupExtDiagnostics);
                         return results;
@@ -1366,9 +1272,9 @@ export class FormEngine {
 
             const compiledConstraint = bind?.constraint ? this.compileFEL(bind.constraint, fullName, undefined, true) : null;
             let patternRegex: RegExp | null = null;
-            if (item.pattern) {
+            if (typeof item.pattern === 'string') {
                 try {
-                    patternRegex = new RegExp(item.pattern);
+                    patternRegex = new RegExp(item.pattern as string);
                 } catch {
                     patternRegex = null;
                 }
@@ -1401,7 +1307,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: `Extension '${extName}' requires formspec ${requiredRange} but definition uses ${formspecVersion}`,
                             constraintKind: "constraint",
-                            kind: "constraint",
                             code: "EXTENSION_COMPATIBILITY_MISMATCH",
                             source: "bind"
                         });
@@ -1414,7 +1319,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: `Extension '${extName}' is retired and should not be used`,
                             constraintKind: "constraint",
-                            kind: "constraint",
                             code: "EXTENSION_RETIRED",
                             source: "bind"
                         });
@@ -1425,7 +1329,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: notice,
                             constraintKind: "constraint",
-                            kind: "constraint",
                             code: "EXTENSION_DEPRECATED",
                             source: "bind"
                         });
@@ -1464,7 +1367,6 @@ export class FormEngine {
                         path: this.toExternalPath(fullName),
                         message: `Unresolved extension '${extName}': no matching registry entry loaded`,
                         constraintKind: "constraint",
-                        kind: "constraint",
                         code: "UNRESOLVED_EXTENSION",
                         source: "bind"
                     });
@@ -1480,7 +1382,6 @@ export class FormEngine {
                         path: this.toExternalPath(fullName),
                         message: `Invalid ${dataType}`,
                         constraintKind: "type",
-                        kind: "type",
                         code: "TYPE_MISMATCH",
                         source: "bind"
                     });
@@ -1492,8 +1393,8 @@ export class FormEngine {
                     && value !== null
                     && value !== undefined
                     && typeof value === 'object'
-                    && 'amount' in (value as any)
-                    && (((value as any).amount === null) || ((value as any).amount === undefined) || ((value as any).amount === ''));
+                    && 'amount' in value
+                    && (value.amount === null || value.amount === undefined || value.amount === '');
 
                 if (isRequired && (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0) || isMoneyEmpty)) {
                     results.push({
@@ -1501,7 +1402,6 @@ export class FormEngine {
                         path: this.toExternalPath(fullName),
                         message: "Required",
                         constraintKind: "required",
-                        kind: "required",
                         code: "REQUIRED",
                         source: "bind"
                     });
@@ -1517,7 +1417,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: bind?.constraintMessage || "Invalid",
                             constraintKind: "constraint",
-                            kind: "constraint",
                             code: "CONSTRAINT_FAILED",
                             source: "bind",
                             constraint: bind?.constraint
@@ -1534,7 +1433,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: "Pattern mismatch",
                             constraintKind: "constraint",
-                            kind: "constraint",
                             code: "PATTERN_MISMATCH",
                             source: "bind"
                         });
@@ -1550,7 +1448,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: registryDisplayName ? `Must be a valid ${registryDisplayName}` : "Pattern mismatch",
                             constraintKind: "constraint",
-                            kind: "constraint",
                             code: "PATTERN_MISMATCH",
                             source: "bind"
                         });
@@ -1561,7 +1458,6 @@ export class FormEngine {
                             path: this.toExternalPath(fullName),
                             message: `Must be at most ${registryMaxLength} characters`,
                             constraintKind: "constraint",
-                            kind: "constraint",
                             code: "MAX_LENGTH_EXCEEDED",
                             source: "bind"
                         });
@@ -1574,7 +1470,6 @@ export class FormEngine {
                                 path: this.toExternalPath(fullName),
                                 message: `Must be at least ${registryMinimum}`,
                                 constraintKind: "constraint",
-                                kind: "constraint",
                                 code: "RANGE_UNDERFLOW",
                                 source: "bind"
                             });
@@ -1585,7 +1480,6 @@ export class FormEngine {
                                 path: this.toExternalPath(fullName),
                                 message: `Must be at most ${registryMaximum}`,
                                 constraintKind: "constraint",
-                                kind: "constraint",
                                 code: "RANGE_OVERFLOW",
                                 source: "bind"
                             });
@@ -1722,7 +1616,7 @@ export class FormEngine {
         for (const store of stores) {
             for (const key of Object.keys(store)) {
                 if (key.startsWith(prefix)) {
-                    delete (store as any)[key];
+                    delete store[key];
                 }
             }
         }

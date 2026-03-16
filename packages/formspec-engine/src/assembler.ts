@@ -151,13 +151,15 @@ const FEL_BIND_PROPERTIES = ['calculate', 'constraint', 'relevant', 'readonly', 
 function rewriteBindFEL(bind: FormspecBind, map: RewriteMap): FormspecBind {
     const newBind = { ...bind };
     for (const prop of FEL_BIND_PROPERTIES) {
-        if (typeof (newBind as any)[prop] === 'string') {
-            (newBind as any)[prop] = rewriteFEL((newBind as any)[prop], map);
+        const val = newBind[prop];
+        if (typeof val === 'string') {
+            newBind[prop] = rewriteFEL(val, map);
         }
     }
     // default: when string starting with '=', the rest is a FEL expression
-    if (typeof newBind.default === 'string' && newBind.default.startsWith('=')) {
-        newBind.default = '=' + rewriteFEL(newBind.default.substring(1), map);
+    const defaultVal = newBind.default;
+    if (typeof defaultVal === 'string' && defaultVal.startsWith('=')) {
+        newBind.default = '=' + rewriteFEL(defaultVal.substring(1), map);
     }
     return newBind;
 }
@@ -194,8 +196,9 @@ function rewriteShapeFEL(
 
     // Composition operators: and[], or[], xone[]
     for (const op of ['and', 'or', 'xone'] as const) {
-        if (Array.isArray((s as any)[op])) {
-            (s as any)[op] = ((s as any)[op] as string[]).map(entry =>
+        const arr = s[op];
+        if (Array.isArray(arr)) {
+            s[op] = arr.map(entry =>
                 rewriteCompositionEntry(entry, map, shapeIdRenameMap, importedShapeIds)
             );
         }
@@ -537,7 +540,7 @@ function performAssembly(
     assembledFrom: AssemblyProvenance[],
     host: FormspecDefinition
 ): FormspecItem {
-    const keyPrefix = (groupItem as any).keyPrefix as string | undefined;
+    const keyPrefix = groupItem.keyPrefix;
 
     // Select items from referenced definition
     let importedItems: FormspecItem[];

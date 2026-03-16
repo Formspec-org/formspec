@@ -98,7 +98,7 @@ function canonicalizeResponse(response) {
   delete normalized.authored;
   if (Array.isArray(normalized.validationResults)) {
     for (const result of normalized.validationResults) {
-      delete result.kind;
+
     }
     normalized.validationResults.sort((a, b) => {
       const left = `${a.path}|${a.code}|${a.severity}|${a.constraintKind}|${a.shapeId}|${a.source}|${a.sourceId}`;
