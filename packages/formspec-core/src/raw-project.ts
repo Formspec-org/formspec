@@ -1,13 +1,16 @@
 import type { IProjectCore } from './project-core.js';
 import type {
+  ComponentDocument, ThemeDocument, MappingDocument, FormDefinition, FormItem,
+} from 'formspec-types';
+import type {
   ProjectState,
   ProjectOptions,
+  ComponentState,
+  ThemeState,
+  MappingState,
   AnyCommand,
   CommandResult,
   ChangeListener,
-  FormspecComponentDocument,
-  FormspecThemeDocument,
-  FormspecMappingDocument,
   LogEntry,
   Middleware,
   ProjectStatistics,
@@ -38,8 +41,6 @@ import {
   validateExtensionUsage,
   type DocumentType,
   type FELAnalysis,
-  type FormspecDefinition,
-  type FormspecItem,
 } from 'formspec-engine';
 import { getHandler } from './handlers.js';
 import {
@@ -66,11 +67,11 @@ function generateUrl(): string {
 
 /**
  * Create a blank definition with sensible defaults.
- * Produces a minimal valid FormspecDefinition (version 1.0, empty items array)
+ * Produces a minimal valid FormDefinition (version 1.0, empty items array)
  * with a unique generated URL.
- * @returns A new FormspecDefinition ready for use as a project seed.
+ * @returns A new FormDefinition ready for use as a project seed.
  */
-function createDefaultDefinition(): FormspecDefinition {
+function createDefaultDefinition(): FormDefinition {
   return {
     $formspec: '1.0',
     url: generateUrl(),
@@ -94,14 +95,12 @@ function createDefaultState(options?: ProjectOptions): ProjectState {
   const url = definition.url;
   const componentState = splitComponentState(options?.seed?.component, url);
 
-  const theme: FormspecThemeDocument = options?.seed?.theme ?? {
-    targetDefinition: { url },
-  };
+  const theme: ThemeState = options?.seed?.theme ?? {};
   if (!theme.targetDefinition) {
     theme.targetDefinition = { url };
   }
 
-  const mapping: FormspecMappingDocument = options?.seed?.mapping ?? {};
+  const mapping: MappingState = options?.seed?.mapping ?? {};
 
   return {
     definition,
@@ -136,13 +135,13 @@ type FlattenedItem = {
   path: string;
   parentPath: string;
   key: string;
-  item: FormspecItem;
+  item: FormItem;
   snapshot: string;
   signature: string;
 };
 
 /** Flatten an item tree into comparable rows carrying both exact-path and rename-tolerant signatures. */
-function flattenItems(items: FormspecItem[], prefix = '', visited?: WeakSet<object>): FlattenedItem[] {
+function flattenItems(items: FormItem[], prefix = '', visited?: WeakSet<object>): FlattenedItem[] {
   const seen = visited ?? new WeakSet<object>();
   const rows: FlattenedItem[] = [];
   for (const item of items) {
@@ -246,33 +245,37 @@ export class RawProject implements IProjectCore {
   }
 
   /** The form's structure and behavior: items, binds, shapes, variables, etc. */
-  get definition(): Readonly<FormspecDefinition> {
-    return this._state.definition;
+  get definition(): Readonly<FormDefinition> {
+    // Engine types don't declare schema envelope fields ($formspec, status, etc.)
+    // but they exist at runtime on valid documents.
+    return this._state.definition as unknown as Readonly<FormDefinition>;
   }
 
   /** The current editable component view: authored tree when present, otherwise generated layout. */
-  get component(): Readonly<FormspecComponentDocument> {
-    return getCurrentComponentDocument(this._state);
+  get component(): Readonly<ComponentDocument> {
+    // Content types are structurally compatible — envelope fields may be
+    // present from imports but are not guaranteed. Use export() for valid docs.
+    return getCurrentComponentDocument(this._state) as unknown as Readonly<ComponentDocument>;
   }
 
   /** The authored Tier 3 artifact document exactly as stored in project state. */
-  get artifactComponent(): Readonly<FormspecComponentDocument> {
-    return this._state.component;
+  get artifactComponent(): Readonly<ComponentDocument> {
+    return this._state.component as unknown as Readonly<ComponentDocument>;
   }
 
   /** Studio-generated layout used when no authored component tree is available. */
-  get generatedComponent(): Readonly<FormspecComponentDocument> {
-    return this._state.generatedComponent;
+  get generatedComponent(): Readonly<ComponentDocument> {
+    return this._state.generatedComponent as unknown as Readonly<ComponentDocument>;
   }
 
   /** Visual presentation: design tokens, defaults, selector overrides, breakpoints. */
-  get theme(): Readonly<FormspecThemeDocument> {
-    return this._state.theme;
+  get theme(): Readonly<ThemeDocument> {
+    return this._state.theme as unknown as Readonly<ThemeDocument>;
   }
 
   /** Bidirectional transforms between form responses and external schemas. */
-  get mapping(): Readonly<FormspecMappingDocument> {
-    return this._state.mapping;
+  get mapping(): Readonly<MappingDocument> {
+    return this._state.mapping as unknown as Readonly<MappingDocument>;
   }
 
   // ── Queries ─────────────────────────────────────────────────────
@@ -285,7 +288,7 @@ export class RawProject implements IProjectCore {
    */
   fieldPaths(): string[] {
     const paths: string[] = [];
-    const walk = (items: FormspecItem[], prefix: string) => {
+    const walk = (items: FormItem[], prefix: string) => {
       for (const item of items) {
         const path = prefix ? `${prefix}.${item.key}` : item.key;
         if (item.type === 'field') {
@@ -305,9 +308,9 @@ export class RawProject implements IProjectCore {
    * Walks the item hierarchy segment by segment; returns `undefined` if any
    * segment is not found or if a non-group item is encountered mid-path.
    * @param path - Dot-separated path (e.g., `"address.street"`).
-   * @returns The matching FormspecItem, or `undefined` if not found.
+   * @returns The matching FormItem, or `undefined` if not found.
    */
-  itemAt(path: string): FormspecItem | undefined {
+  itemAt(path: string): FormItem | undefined {
     return itemAtPath(this._state.definition.items, path);
   }
 
@@ -336,7 +339,7 @@ export class RawProject implements IProjectCore {
 
     const getBindFor = (path: string) => binds.find((b: any) => b.path === path) as any | undefined;
 
-    const jsonTypeForItem = (item: FormspecItem): ResponseSchemaRow['jsonType'] => {
+    const jsonTypeForItem = (item: FormItem): ResponseSchemaRow['jsonType'] => {
       if (item.type === 'group') {
         return (item as any).repeatable ? 'array<object>' : 'object';
       }
@@ -346,7 +349,7 @@ export class RawProject implements IProjectCore {
       return 'string';
     };
 
-    const walk = (items: FormspecItem[], prefix: string, depth: number) => {
+    const walk = (items: FormItem[], prefix: string, depth: number) => {
       for (const item of items) {
         const path = prefix ? `${prefix}.${item.key}` : item.key;
         const bind = getBindFor(path);
@@ -381,7 +384,7 @@ export class RawProject implements IProjectCore {
   statistics(): ProjectStatistics {
     let fieldCount = 0, groupCount = 0, displayCount = 0, maxNestingDepth = 0;
 
-    const walk = (items: FormspecItem[], depth: number) => {
+    const walk = (items: FormItem[], depth: number) => {
       for (const item of items) {
         if (item.type === 'field') fieldCount++;
         else if (item.type === 'group') groupCount++;
@@ -453,7 +456,7 @@ export class RawProject implements IProjectCore {
    */
   optionSetUsage(name: string): string[] {
     const paths: string[] = [];
-    const walk = (items: FormspecItem[], prefix: string) => {
+    const walk = (items: FormItem[], prefix: string) => {
       for (const item of items) {
         const path = prefix ? `${prefix}.${item.key}` : item.key;
         if ((item as any).optionSet === name) {
@@ -470,11 +473,11 @@ export class RawProject implements IProjectCore {
    * Search definition items by type, dataType, label substring, or extension usage.
    * All filter criteria are AND-ed: an item must match every specified filter field.
    * @param filter - Criteria to match against. Omitted fields are unconstrained.
-   * @returns An array of matching FormspecItem objects (shallow references into the tree).
+   * @returns An array of matching FormItem objects (shallow references into the tree).
    */
-  searchItems(filter: ItemFilter): FormspecItem[] {
-    const results: FormspecItem[] = [];
-    const walk = (items: FormspecItem[]) => {
+  searchItems(filter: ItemFilter): FormItem[] {
+    const results: FormItem[] = [];
+    const walk = (items: FormItem[]) => {
       for (const item of items) {
         let match = true;
         if (filter.type && item.type !== filter.type) match = false;
@@ -773,7 +776,7 @@ export class RawProject implements IProjectCore {
     const resolved = this._resolveParseContext(context);
     const contextPath = resolved.targetPath;
     const fields: FELReferenceSet['fields'] = [];
-    const walk = (items: FormspecItem[], prefix: string) => {
+    const walk = (items: FormItem[], prefix: string) => {
       for (const item of items) {
         const path = prefix ? `${prefix}.${item.key}` : item.key;
         if (item.type === 'field') {
@@ -870,7 +873,7 @@ export class RawProject implements IProjectCore {
 
     // Item-level FEL-bearing properties (visited prevents infinite recursion on circular item trees)
     const itemVisited = new WeakSet<object>();
-    const walkItems = (items: FormspecItem[], prefix: string) => {
+    const walkItems = (items: FormItem[], prefix: string) => {
       for (const item of items) {
         if (itemVisited.has(item as object)) continue;
         itemVisited.add(item as object);
@@ -1246,7 +1249,7 @@ export class RawProject implements IProjectCore {
    * @returns An array of {@link Change} objects with impact classification.
    */
   diffFromBaseline(fromVersion?: string): Change[] {
-    let baseline: FormspecDefinition;
+    let baseline: FormDefinition;
     if (fromVersion) {
       const release = this._state.versioning.releases.find(r => r.version === fromVersion);
       if (!release) throw new Error(`Version not found: ${fromVersion}`);
@@ -1663,11 +1666,34 @@ export class RawProject implements IProjectCore {
    * @returns A {@link ProjectBundle} containing definition, component, theme, and mapping.
    */
   export(): ProjectBundle {
+    const url = this._state.definition.url;
+    // Destructure known fields so undefined values don't override defaults.
+    const { tree, ...restComponent } = this._state.component;
+    const { targetDefinition: themeTarget, ...restTheme } = this._state.theme;
+    const { rules, targetSchema, definitionRef, definitionVersion, ...restMapping } = this._state.mapping;
     return structuredClone({
-      definition: this._state.definition,
-      component: this._state.component,
-      theme: this._state.theme,
-      mapping: this._state.mapping,
+      definition: this._state.definition as unknown as FormDefinition,
+      component: {
+        $formspecComponent: '1.0',
+        version: '0.1.0',
+        targetDefinition: { url },
+        ...restComponent,
+        tree: tree ?? null,
+      } as ComponentDocument,
+      theme: {
+        $formspecTheme: '1.0',
+        version: '0.1.0',
+        ...restTheme,
+        targetDefinition: themeTarget ?? { url },
+      } as ThemeDocument,
+      mapping: {
+        version: '0.1.0',
+        definitionRef: definitionRef ?? url,
+        definitionVersion: definitionVersion ?? '>=0.0.0',
+        targetSchema: targetSchema ?? { format: 'json' },
+        rules: rules ?? [],
+        ...restMapping,
+      } as MappingDocument,
     });
   }
 
@@ -1877,7 +1903,7 @@ export class RawProject implements IProjectCore {
     };
     collectExisting(tree);
 
-    const buildNode = (item: FormspecItem, parentPath = ''): TreeNode => {
+    const buildNode = (item: FormItem, parentPath = ''): TreeNode => {
       const itemPath = parentPath ? `${parentPath}.${item.key}` : item.key;
       let node: TreeNode;
 
@@ -2064,7 +2090,7 @@ export class RawProject implements IProjectCore {
    * @param item - The definition item to map.
    * @returns A component type string for the tree node.
    */
-  private _defaultComponent(item: FormspecItem): string {
+  private _defaultComponent(item: FormItem): string {
     switch (item.type) {
       case 'field':
         if ((item as any).optionSet || Array.isArray((item as any).options)) return 'Select';

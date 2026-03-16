@@ -17,7 +17,7 @@
  * @module definition-optionsets
  */
 import { registerHandler } from '../handler-registry.js';
-import type { FormspecItem } from 'formspec-engine';
+import type { FormItem } from 'formspec-types';
 
 /**
  * **definition.setOptionSet** -- Create or replace a named reusable option set.
@@ -98,7 +98,7 @@ registerHandler('definition.deleteOptionSet', (state, payload) => {
   const options = optionSets[name];
 
   // Inline options into referencing fields
-  const inlineRefs = (items: FormspecItem[]) => {
+  const inlineRefs = (items: FormItem[]) => {
     for (const item of items) {
       if (item.optionSet === name) {
         delete item.optionSet;
@@ -143,7 +143,7 @@ registerHandler('definition.promoteToOptionSet', (state, payload) => {
   // Find the field by walking the dot-separated path through the item tree
   const parts = path.split('.');
   let items = state.definition.items;
-  let item: FormspecItem | undefined;
+  let item: FormItem | undefined;
 
   for (let i = 0; i < parts.length; i++) {
     const found = items.find(it => it.key === parts[i]);

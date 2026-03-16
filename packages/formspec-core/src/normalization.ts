@@ -11,7 +11,7 @@
  *
  * @module normalization
  */
-import type { FormspecDefinition } from 'formspec-engine';
+import type { FormDefinition } from 'formspec-types';
 
 /**
  * Normalize a definition by converting legacy shape forms to canonical forms.
@@ -27,7 +27,7 @@ import type { FormspecDefinition } from 'formspec-engine';
  * @param definition - The definition to normalize (not mutated; a new object is returned).
  * @returns A new definition with canonical instances and binds shapes.
  */
-export function normalizeDefinition(definition: FormspecDefinition): FormspecDefinition {
+export function normalizeDefinition(definition: FormDefinition): FormDefinition {
   let result: any = definition;
 
   // Normalize instances: array → object keyed by name
@@ -50,5 +50,5 @@ export function normalizeDefinition(definition: FormspecDefinition): FormspecDef
     result = { ...result, binds: bindsArray };
   }
 
-  return result as FormspecDefinition;
+  return result as FormDefinition;
 }

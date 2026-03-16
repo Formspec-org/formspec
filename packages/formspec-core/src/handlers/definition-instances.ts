@@ -18,7 +18,8 @@
  * @module definition-instances
  */
 import { registerHandler } from '../handler-registry.js';
-import { rewriteFELReferences, type FormspecItem } from 'formspec-engine';
+import { rewriteFELReferences } from 'formspec-engine';
+import type { FormItem } from 'formspec-types';
 
 /**
  * Monotonically increasing counter for auto-generating instance names when the
@@ -158,7 +159,7 @@ registerHandler('definition.renameInstance', (state, payload) => {
   }
 
   // Item-level FEL-bearing properties.
-  const rewriteItemExpressions = (items: FormspecItem[]) => {
+  const rewriteItemExpressions = (items: FormItem[]) => {
     for (const item of items) {
       const dynamic = item as any;
       for (const prop of ['relevant', 'required', 'readonly', 'calculate', 'constraint']) {

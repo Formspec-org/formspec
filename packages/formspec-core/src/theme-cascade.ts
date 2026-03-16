@@ -1,4 +1,4 @@
-import type { FormspecThemeDocument } from './types.js';
+import type { ThemeState } from './types.js';
 
 export interface ResolvedProperty {
   value: unknown;
@@ -26,7 +26,7 @@ function selectorLabel(match: SelectorEntry['match'], index: number): string {
 }
 
 export function resolveThemeCascade(
-  theme: FormspecThemeDocument,
+  theme: ThemeState,
   itemKey: string,
   itemType: string,
   itemDataType?: string,

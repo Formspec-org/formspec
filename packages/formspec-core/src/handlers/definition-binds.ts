@@ -17,7 +17,7 @@
 
 import { registerHandler } from '../handler-registry.js';
 import { resolveItemLocation } from './helpers.js';
-import type { FormspecBind, FormspecItem } from 'formspec-engine';
+import type { FormBind, FormItem } from 'formspec-types';
 
 // ── setBind ──────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ registerHandler('definition.setBind', (state, payload) => {
   // If only 'path' remains, remove the bind entry
   const keys = Object.keys(bind).filter(k => k !== 'path');
   if (keys.length === 0) {
-    state.definition.binds = binds.filter((b: FormspecBind) => b !== bind);
+    state.definition.binds = binds.filter((b: FormBind) => b !== bind);
   }
 
   return { rebuildComponentTree: false };
@@ -130,7 +130,7 @@ const GROUP_ONLY_PROPERTIES = new Set([
 ]);
 
 /** Reject attempts to write structurally invalid properties onto an item. */
-function assertPropertyApplicable(item: FormspecItem, propertyPath: string): void {
+function assertPropertyApplicable(item: FormItem, propertyPath: string): void {
   const rootProperty = propertyPath.split('.').filter(Boolean)[0];
   if (!rootProperty) {
     throw new Error('Property path cannot be empty');
@@ -265,7 +265,7 @@ registerHandler('definition.setItemProperty', (state, payload) => {
 registerHandler('definition.setFieldDataType', (state, payload) => {
   const { path, dataType } = payload as {
     path: string;
-    dataType: NonNullable<FormspecItem['dataType']>;
+    dataType: NonNullable<FormItem['dataType']>;
   };
   const loc = resolveItemLocation(state, path);
   if (!loc) throw new Error(`Item not found: ${path}`);

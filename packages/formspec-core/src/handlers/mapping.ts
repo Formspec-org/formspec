@@ -29,7 +29,8 @@
  * @module handlers/mapping
  */
 import { registerHandler } from '../handler-registry.js';
-import { RuntimeMappingEngine, type FormspecItem } from 'formspec-engine';
+import { RuntimeMappingEngine } from 'formspec-engine';
+import type { FormItem } from 'formspec-types';
 
 /**
  * Set or remove a top-level mapping document property.
@@ -221,7 +222,7 @@ registerHandler('mapping.autoGenerateRules', (state, payload) => {
   // Collect all field paths
   const covered = new Set(rules.map((r: any) => r.sourcePath));
   const fieldPaths: string[] = [];
-  const walk = (items: FormspecItem[], prefix: string) => {
+  const walk = (items: FormItem[], prefix: string) => {
     for (const item of items) {
       const path = prefix ? `${prefix}.${item.key}` : item.key;
       if (item.type === 'field') fieldPaths.push(path);

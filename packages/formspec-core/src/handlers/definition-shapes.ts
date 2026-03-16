@@ -19,7 +19,7 @@
  * @module definition-shapes
  */
 import { registerHandler } from '../handler-registry.js';
-import type { FormspecShape } from 'formspec-engine';
+import type { FormShape } from 'formspec-types';
 
 /** Auto-incrementing counter used to generate default shape IDs when none is provided. */
 let shapeCounter = 0;
@@ -48,7 +48,7 @@ registerHandler('definition.addShape', (state, payload) => {
   const p = payload as Record<string, unknown>;
   if (!state.definition.shapes) state.definition.shapes = [];
 
-  const shape: FormspecShape = {
+  const shape: FormShape = {
     id: (p.id as string) ?? `shape_${++shapeCounter}`,
     target: p.target as string,
     message: (p.message as string) ?? '',

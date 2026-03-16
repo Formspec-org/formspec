@@ -14,7 +14,7 @@
  * @module definition-variables
  */
 import { registerHandler } from '../handler-registry.js';
-import type { FormspecVariable } from 'formspec-engine';
+import type { FormVariable } from 'formspec-types';
 
 /** Auto-incrementing counter used to generate default variable names when none is provided. */
 let varCounter = 0;
@@ -35,7 +35,7 @@ registerHandler('definition.addVariable', (state, payload) => {
   const p = payload as Record<string, unknown>;
   if (!state.definition.variables) state.definition.variables = [];
 
-  const variable: FormspecVariable = {
+  const variable: FormVariable = {
     name: (p.name as string) ?? `var_${++varCounter}`,
     expression: (p.expression as string) ?? '',
   };

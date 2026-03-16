@@ -1,27 +1,25 @@
 import type {
-  FormspecComponentDocument,
-  FormspecGeneratedLayoutDocument,
+  ComponentState,
+  GeneratedLayoutState,
   ProjectState,
 } from './types.js';
 
-export function isAuthoredComponentDocument(doc: unknown): doc is FormspecComponentDocument {
+export function isAuthoredComponentDocument(doc: unknown): doc is ComponentState {
   return !!doc && typeof doc === 'object' && typeof (doc as Record<string, unknown>).$formspecComponent === 'string';
 }
 
-export function hasAuthoredComponentTree(doc: unknown): doc is FormspecComponentDocument {
-  return isAuthoredComponentDocument(doc) && !!(doc as FormspecComponentDocument).tree;
+export function hasAuthoredComponentTree(doc: unknown): doc is ComponentState {
+  return isAuthoredComponentDocument(doc) && !!(doc as ComponentState).tree;
 }
 
-export function createComponentArtifact(url?: string): FormspecComponentDocument {
-  return {
-    targetDefinition: url ? { url } : undefined,
-  };
+export function createComponentArtifact(url?: string): ComponentState {
+  return url ? { targetDefinition: { url } } : {};
 }
 
 export function createGeneratedLayoutDocument(
   url?: string,
-  seed?: Partial<FormspecComponentDocument> | null,
-): FormspecGeneratedLayoutDocument {
+  seed?: Partial<ComponentState> | null,
+): GeneratedLayoutState {
   return {
     ...(seed ?? {}),
     ...(url ? { targetDefinition: { url } } : {}),
@@ -30,13 +28,13 @@ export function createGeneratedLayoutDocument(
 }
 
 export function splitComponentState(
-  component: FormspecComponentDocument | undefined,
+  component: ComponentState | undefined,
   url?: string,
-): { component: FormspecComponentDocument; generatedComponent: FormspecGeneratedLayoutDocument } {
+): { component: ComponentState; generatedComponent: GeneratedLayoutState } {
   if (hasAuthoredComponentTree(component) || (isAuthoredComponentDocument(component) && !('x-studio-generated' in (component as Record<string, unknown>)))) {
     return {
       component: {
-        ...component,
+        ...component!,
         ...(url ? { targetDefinition: { ...(component?.targetDefinition ?? {}), url } } : {}),
       },
       generatedComponent: createGeneratedLayoutDocument(url),
@@ -51,22 +49,19 @@ export function splitComponentState(
 
 export function getEditableComponentDocument(
   state: Pick<ProjectState, 'component' | 'generatedComponent'>,
-): FormspecComponentDocument | FormspecGeneratedLayoutDocument {
+): ComponentState | GeneratedLayoutState {
   return hasAuthoredComponentTree(state.component) ? state.component : state.generatedComponent;
 }
 
 export function getCurrentComponentDocument(
   state: Pick<ProjectState, 'component' | 'generatedComponent'>,
-): FormspecComponentDocument | FormspecGeneratedLayoutDocument {
+): ComponentState | GeneratedLayoutState {
   if (hasAuthoredComponentTree(state.component)) {
     return state.component;
   }
 
-  const base: FormspecComponentDocument = state.component;
-  return {
-    ...base,
-    ...state.generatedComponent,
+  return Object.assign({}, state.component, state.generatedComponent, {
     tree: state.generatedComponent.tree,
-    'x-studio-generated': true,
-  };
+    'x-studio-generated': true as const,
+  }) as GeneratedLayoutState;
 }

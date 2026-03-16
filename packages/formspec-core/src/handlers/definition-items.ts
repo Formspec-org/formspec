@@ -16,8 +16,8 @@ import type { ProjectState } from '../types.js';
 import {
   normalizeIndexedPath,
   rewriteFELReferences,
-  type FormspecItem,
 } from 'formspec-engine';
+import type { FormItem } from 'formspec-types';
 import { getEditableComponentDocument } from '../component-documents.js';
 import { resolveItemLocation } from './helpers.js';
 
@@ -53,10 +53,10 @@ function generateKey(type: string): string {
  * @param state - The current project state.
  * @param parentPath - Dot-separated path to the parent item (e.g. `"contacts"`).
  *   Omit or pass `undefined` to target the root items array.
- * @returns The `FormspecItem[]` array to insert into, or `undefined` if any
+ * @returns The `FormItem[]` array to insert into, or `undefined` if any
  *   path segment cannot be resolved.
  */
-function resolveParentItems(state: ProjectState, parentPath?: string): FormspecItem[] | undefined {
+function resolveParentItems(state: ProjectState, parentPath?: string): FormItem[] | undefined {
   if (!parentPath) return state.definition.items;
 
   const parts = parentPath.split('.');
@@ -73,7 +73,7 @@ function resolveParentItems(state: ProjectState, parentPath?: string): FormspecI
 }
 
 /**
- * Construct a new {@link FormspecItem} from an `AddItemPayload` object.
+ * Construct a new {@link FormItem} from an `AddItemPayload` object.
  *
  * Applies type-specific defaults:
  * - **field**: sets `dataType` to `"string"` if not provided.
@@ -86,14 +86,14 @@ function resolveParentItems(state: ProjectState, parentPath?: string): FormspecI
  *
  * @param payload - A record matching the `AddItemPayload` shape. Must include
  *   at least `type`. If `key` is omitted, one is auto-generated.
- * @returns A new `FormspecItem` ready for insertion into the item tree.
+ * @returns A new `FormItem` ready for insertion into the item tree.
  */
-function buildItem(payload: Record<string, unknown>): FormspecItem {
+function buildItem(payload: Record<string, unknown>): FormItem {
   const type = payload.type as 'field' | 'group' | 'display';
-  type FieldDataType = NonNullable<FormspecItem['dataType']>;
+  type FieldDataType = NonNullable<FormItem['dataType']>;
   const key = (payload.key as string) || generateKey(type);
 
-  const item: FormspecItem = {
+  const item: FormItem = {
     key,
     type,
     label: (payload.label as string) ?? '',
@@ -145,7 +145,7 @@ function buildItem(payload: Record<string, unknown>): FormspecItem {
  * @returns A flat array of all keys in the subtree (root key first, then
  *   children depth-first).
  */
-function collectKeys(item: FormspecItem): string[] {
+function collectKeys(item: FormItem): string[] {
   const keys = [item.key];
   if (item.children) {
     for (const child of item.children) {
@@ -168,7 +168,7 @@ function collectKeys(item: FormspecItem): string[] {
  * @param siblings - The items array the new item will be inserted into.
  * @returns The original key if unique, or a suffixed variant if not.
  */
-function uniqueKey(key: string, siblings: FormspecItem[]): string {
+function uniqueKey(key: string, siblings: FormItem[]): string {
   const existing = new Set(siblings.map(s => s.key));
   if (!existing.has(key)) return key;
 
@@ -304,7 +304,7 @@ function rewriteAllPathReferences(
   }
 
   // 4. Rewrite inline item FEL expressions (recursive walk)
-  const rewriteItemExpressions = (items: FormspecItem[]) => {
+  const rewriteItemExpressions = (items: FormItem[]) => {
     for (const item of items) {
       const dynamic = item as any;
       for (const prop of ['relevant', 'required', 'readonly', 'calculate', 'constraint']) {
@@ -458,7 +458,7 @@ registerHandler('definition.deleteItem', (state, payload) => {
     deletedPaths.add(path);
   }
   // Also collect nested paths
-  function collectPaths(item: FormspecItem, prefix: string) {
+  function collectPaths(item: FormItem, prefix: string) {
     deletedPaths.add(prefix + item.key);
     if (item.children) {
       for (const child of item.children) {
@@ -722,7 +722,7 @@ registerHandler('definition.duplicateItem', (state, payload) => {
   clone.key = uniqueKey(clone.key, loc.parent);
 
   // Suffix children keys too for uniqueness across the tree
-  function suffixChildKeys(item: FormspecItem) {
+  function suffixChildKeys(item: FormItem) {
     if (item.children) {
       for (const child of item.children) {
         child.key = child.key + '_copy';

@@ -23,7 +23,7 @@
  * @module handlers/project
  */
 import { registerHandler } from '../handler-registry.js';
-import type { FormspecItem } from 'formspec-engine';
+import type { FormItem } from 'formspec-types';
 import { splitComponentState, hasAuthoredComponentTree } from '../component-documents.js';
 import { normalizeDefinition } from '../normalization.js';
 
@@ -38,9 +38,9 @@ import { normalizeDefinition } from '../normalization.js';
  * Leaves undo history intact so users can undo an import.
  *
  * @param payload.definition - Replacement FormspecDefinition (optional).
- * @param payload.component - Replacement FormspecComponentDocument (optional).
- * @param payload.theme - Replacement FormspecThemeDocument (optional).
- * @param payload.mapping - Replacement FormspecMappingDocument (optional).
+ * @param payload.component - Replacement ComponentDocument (optional).
+ * @param payload.theme - Replacement ThemeDocument (optional).
+ * @param payload.mapping - Replacement MappingDocument (optional).
  */
 registerHandler('project.import', (state, payload) => {
   const p = payload as Record<string, any>;
@@ -88,7 +88,7 @@ registerHandler('project.importSubform', (state, payload) => {
     definition: any; targetGroupPath?: string; keyPrefix?: string;
   };
 
-  const items = definition.items as FormspecItem[];
+  const items = definition.items as FormItem[];
   const prefixed = keyPrefix
     ? items.map((item: any) => ({ ...item, key: `${keyPrefix}${item.key}` }))
     : items;

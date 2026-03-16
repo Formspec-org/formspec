@@ -1,5 +1,6 @@
 import type { ProjectState } from '../types.js';
-import { itemLocationAtPath, type FormspecItem } from 'formspec-engine';
+import { itemLocationAtPath } from 'formspec-engine';
+import type { FormItem } from 'formspec-types';
 
 /**
  * Resolve a dot-separated item path to its location within the definition item tree.
@@ -14,13 +15,13 @@ import { itemLocationAtPath, type FormspecItem } from 'formspec-engine';
  * @param state - The current project state containing the definition item tree.
  * @param path - Dot-separated path of item keys (e.g. `"contacts.email"` for the
  *   `email` item nested under the `contacts` group).
- * @returns An object with `parent` (the containing `FormspecItem[]` array),
+ * @returns An object with `parent` (the containing `FormItem[]` array),
  *   `index` (position within that array), and `item` (the resolved item).
  *   Returns `undefined` if any segment of the path cannot be resolved.
  */
 export function resolveItemLocation(
   state: ProjectState,
   path: string,
-): { parent: FormspecItem[]; index: number; item: FormspecItem } | undefined {
+): { parent: FormItem[]; index: number; item: FormItem } | undefined {
   return itemLocationAtPath(state.definition.items, path);
 }

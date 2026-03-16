@@ -21,9 +21,9 @@
  * @module definition-screener
  */
 import { registerHandler } from '../handler-registry.js';
-import type { FormspecDefinition, FormspecItem } from 'formspec-engine';
+import type { FormDefinition, FormItem } from 'formspec-types';
 
-function getEnabledScreener(state: { definition: FormspecDefinition }) {
+function getEnabledScreener(state: { definition: FormDefinition }) {
   const screener = state.definition.screener;
   if (!screener || screener.enabled === false) {
     throw new Error('Screener is not enabled');
@@ -62,7 +62,7 @@ registerHandler('definition.setScreener', (state, payload) => {
 /**
  * **definition.addScreenerItem** -- Add a screening field to the screener.
  *
- * Creates a new `FormspecItem` from the payload and appends it to the screener's
+ * Creates a new `FormItem` from the payload and appends it to the screener's
  * `items` array. The payload shape mirrors `definition.addItem` but targets the
  * screener scope. At minimum, `type` and `key` are required; `label` and
  * `dataType` are optional.
@@ -75,10 +75,10 @@ registerHandler('definition.setScreener', (state, payload) => {
 registerHandler('definition.addScreenerItem', (state, payload) => {
   const p = payload as Record<string, unknown>;
   const screener = getEnabledScreener(state);
-  type ItemType = FormspecItem['type'];
-  type FieldDataType = NonNullable<FormspecItem['dataType']>;
+  type ItemType = FormItem['type'];
+  type FieldDataType = NonNullable<FormItem['dataType']>;
 
-  const item: FormspecItem = {
+  const item: FormItem = {
     type: p.type as ItemType,
     key: p.key as string,
     label: (p.label as string) ?? '',

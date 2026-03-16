@@ -28,7 +28,7 @@
  * @module handlers/theme
  */
 import { registerHandler } from '../handler-registry.js';
-import type { FormspecThemeDocument } from '../types.js';
+import type { ThemeState } from '../types.js';
 
 /** Auto-incrementing counter for generating unique page IDs. */
 let pageCounter = 0;
@@ -40,7 +40,7 @@ let pageCounter = 0;
  * @param theme - The theme document to ensure items on.
  * @returns The items record (created or existing).
  */
-function ensureItems(theme: FormspecThemeDocument): Record<string, any> {
+function ensureItems(theme: ThemeState): Record<string, any> {
   if (!theme.items) theme.items = {};
   return theme.items as Record<string, any>;
 }
@@ -54,7 +54,7 @@ function ensureItems(theme: FormspecThemeDocument): Record<string, any> {
  * @param itemKey - The definition item key to ensure a block for.
  * @returns The PresentationBlock record for the item.
  */
-function ensureItemBlock(theme: FormspecThemeDocument, itemKey: string): Record<string, any> {
+function ensureItemBlock(theme: ThemeState, itemKey: string): Record<string, any> {
   const items = ensureItems(theme);
   if (!items[itemKey]) items[itemKey] = {};
   return items[itemKey];
@@ -68,7 +68,7 @@ function ensureItemBlock(theme: FormspecThemeDocument, itemKey: string): Record<
  * @returns The page object.
  * @throws Error if no pages are defined or the page ID is not found.
  */
-function findPage(theme: FormspecThemeDocument, pageId: string): any {
+function findPage(theme: ThemeState, pageId: string): any {
   const pages = theme.pages as any[];
   if (!pages) throw new Error('No pages defined');
   const page = pages.find((p: any) => p.id === pageId);

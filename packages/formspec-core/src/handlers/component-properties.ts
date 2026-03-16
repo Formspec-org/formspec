@@ -37,7 +37,7 @@
  * @module handlers/component-properties
  */
 import { registerHandler } from '../handler-registry.js';
-import type { FormspecComponentDocument, ProjectState } from '../types.js';
+import type { ComponentState, ProjectState } from '../types.js';
 import {
   getEditableComponentDocument,
   hasAuthoredComponentTree,
@@ -71,12 +71,12 @@ type TreeNode = {
  * @param component - The component document.
  * @returns The root tree node.
  */
-function markStudioGeneratedComponent(component: FormspecComponentDocument): void {
+function markStudioGeneratedComponent(component: ComponentState): void {
   component['x-studio-generated'] = true;
 }
 
 function ensureTree(state: ProjectState): TreeNode {
-  const component = getEditableComponentDocument(state) as FormspecComponentDocument;
+  const component = getEditableComponentDocument(state) as ComponentState;
   if (!hasAuthoredComponentTree(state.component)) {
     markStudioGeneratedComponent(component);
   }

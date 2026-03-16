@@ -1,4 +1,7 @@
 import type {
+  FormItem, FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
+} from 'formspec-types';
+import type {
   ProjectState,
   AnyCommand,
   CommandResult,
@@ -21,14 +24,7 @@ import type {
   FieldDependents,
   Diagnostics,
   ResponseSchemaRow,
-  FormspecComponentDocument,
-  FormspecThemeDocument,
-  FormspecMappingDocument,
 } from './types.js';
-import type {
-  FormspecDefinition,
-  FormspecItem,
-} from 'formspec-engine';
 
 /**
  * Abstraction over the raw project core.
@@ -38,12 +34,12 @@ import type {
 export interface IProjectCore {
   // ── State getters ────────────────────────────────────────────
   readonly state: Readonly<ProjectState>;
-  readonly definition: Readonly<FormspecDefinition>;
-  readonly component: Readonly<FormspecComponentDocument>;
-  readonly artifactComponent: Readonly<FormspecComponentDocument>;
-  readonly generatedComponent: Readonly<FormspecComponentDocument>;
-  readonly theme: Readonly<FormspecThemeDocument>;
-  readonly mapping: Readonly<FormspecMappingDocument>;
+  readonly definition: Readonly<FormDefinition>;
+  readonly component: Readonly<ComponentDocument>;
+  readonly artifactComponent: Readonly<ComponentDocument>;
+  readonly generatedComponent: Readonly<ComponentDocument>;
+  readonly theme: Readonly<ThemeDocument>;
+  readonly mapping: Readonly<MappingDocument>;
 
   // ── Command dispatch ─────────────────────────────────────────
   dispatch(command: AnyCommand): CommandResult;
@@ -64,13 +60,13 @@ export interface IProjectCore {
 
   // ── Queries ───────────────────────────────────────────────────
   fieldPaths(): string[];
-  itemAt(path: string): FormspecItem | undefined;
+  itemAt(path: string): FormItem | undefined;
   responseSchemaRows(): ResponseSchemaRow[];
   statistics(): ProjectStatistics;
   instanceNames(): string[];
   variableNames(): string[];
   optionSetUsage(name: string): string[];
-  searchItems(filter: ItemFilter): FormspecItem[];
+  searchItems(filter: ItemFilter): FormItem[];
   effectivePresentation(fieldKey: string): Record<string, unknown>;
   bindFor(path: string): Record<string, unknown> | undefined;
   componentFor(fieldKey: string): Record<string, unknown> | undefined;

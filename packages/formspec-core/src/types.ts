@@ -1,89 +1,71 @@
-import type { FormspecDefinition, SchemaValidator } from 'formspec-engine';
+import type { SchemaValidator } from 'formspec-engine';
+import type {
+  FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
+} from 'formspec-types';
 
-// ── Artifact document types ──────────────────────────────────────────
+// ── Schema-derived types (re-exported from formspec-types) ──────────
+// These are the canonical schema types shared across all packages.
+export type {
+  FormItem, FormBind, FormShape, FormVariable, FormInstance, FormOption,
+  FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
+} from 'formspec-types';
+
+// ── Internal content types ──────────────────────────────────────────
+// Working state for the four artifacts. Envelope metadata ($formspec*,
+// version, targetDefinition) may be present from imports but is NOT
+// required internally. Envelope defaults are merged at the export
+// boundary (IProjectCore getters / export()) to produce valid
+// formspec-types documents.
 
 /**
- * Minimal component document shape for studio-core.
- *
- * Represents the Tier 3 (Component) artifact: a parallel UI tree declaring which
- * widget renders each field, layout containers, responsive overrides, and custom
- * component templates. Open-ended (`[key: string]: unknown`) to allow spec evolution.
+ * Component working state — content without required envelope metadata.
+ * Handlers read/write tree, tokens, breakpoints, etc.
  */
-export interface FormspecComponentDocument {
-  /** Canonical URL identifying this component document. */
-  url?: string;
-  /** Reference to the definition this component document targets. */
-  targetDefinition?: { url: string };
-  /** The component tree: layout containers and widget bindings. */
+export interface ComponentState {
   tree?: unknown;
-  /** Design token overrides scoped to the component tier. */
+  targetDefinition?: { url: string };
   tokens?: Record<string, unknown>;
-  /** Named viewport breakpoints (e.g. `{ sm: 640, md: 1024 }`). */
   breakpoints?: Record<string, number>;
-  /** Custom component template definitions. */
-  customComponents?: Record<string, unknown>;
+  components?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
-/**
- * Studio-internal generated layout document.
- *
- * This is not an authored Tier 3 artifact. It holds the editor's current
- * generated layout tree and related lineage metadata when no explicit
- * component document tree is being authored.
- */
-export interface FormspecGeneratedLayoutDocument extends FormspecComponentDocument {
-  /** Marker used to distinguish generated editor state from authored artifacts. */
+/** Studio-generated layout state with marker property. */
+export interface GeneratedLayoutState extends ComponentState {
   'x-studio-generated': true;
 }
 
 /**
- * Minimal theme document shape for studio-core.
- *
- * Represents the Tier 2 (Theme) artifact: visual presentation tokens, form-wide
- * defaults, selector-based overrides, per-item overrides, page layout, and external
- * stylesheets. The cascade order is: defaults -> selectors (document order) -> items.
+ * Theme working state — content without required envelope metadata.
+ * Handlers read/write defaults, selectors, items, pages, etc.
  */
-export interface FormspecThemeDocument {
-  /** Canonical URL identifying this theme document. */
-  url?: string;
-  /** Reference to the target definition, with optional semver compatibility range. */
+export interface ThemeState {
   targetDefinition?: { url: string; compatibleVersions?: string };
-  /** Design tokens (colors, spacing, typography, etc.). */
   tokens?: Record<string, unknown>;
-  /** Form-wide default presentation values (cascade level 1). */
   defaults?: Record<string, unknown>;
-  /** Selector-based overrides matching items by type/dataType (cascade level 2). */
   selectors?: unknown[];
-  /** Per-item presentation overrides keyed by item name (cascade level 3). */
   items?: Record<string, unknown>;
-  /** Page layout definitions (12-column grid regions). */
   pages?: unknown[];
-  /** Named viewport breakpoints. */
   breakpoints?: Record<string, number>;
-  /** External stylesheet URLs to load. */
   stylesheets?: string[];
+  extensions?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
 /**
- * Minimal mapping document shape for studio-core.
- *
- * Represents the Mapping artifact: bidirectional transforms between Formspec
- * responses and external schemas (JSON, XML, CSV). Contains field-level rules
- * (preserve, expression, coerce, valueMap, flatten, nest, etc.) and adapter config.
+ * Mapping working state — content without required envelope metadata.
+ * Handlers read/write rules, targetSchema, adapters, etc.
  */
-export interface FormspecMappingDocument {
-  /** Canonical URL identifying this mapping document. */
-  url?: string;
-  /** URL of the definition this mapping targets. */
-  definitionRef?: string;
-  /** Transform direction: `'inbound'`, `'outbound'`, or `'bidirectional'`. */
-  direction?: string;
-  /** Ordered list of field-level mapping rules. */
+export interface MappingState {
   rules?: unknown[];
-  /** Schema definition for the external target format. */
   targetSchema?: Record<string, unknown>;
+  definitionRef?: string;
+  definitionVersion?: string;
+  direction?: 'forward' | 'reverse' | 'both';
+  defaults?: Record<string, unknown>;
+  autoMap?: boolean;
+  conformanceLevel?: 'core' | 'bidirectional' | 'extended';
+  adapters?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -132,7 +114,7 @@ export interface ResolvedCatalog {
  */
 export interface VersioningState {
   /** Snapshot of the definition at the last publish (or project creation). */
-  baseline: FormspecDefinition;
+  baseline: FormDefinition;
   /** Ordered release history, oldest first. */
   releases: VersionRelease[];
 }
@@ -148,7 +130,7 @@ export interface VersionRelease {
   /** Structured diff from the previous version. */
   changelog: unknown;
   /** Frozen definition snapshot at this version. */
-  snapshot: FormspecDefinition;
+  snapshot: FormDefinition;
 }
 
 // ── Project state ────────────────────────────────────────────────────
@@ -164,15 +146,15 @@ export interface VersionRelease {
  */
 export interface ProjectState {
   /** The form's structure and behavior: items, binds, shapes, variables, etc. */
-  definition: FormspecDefinition;
-  /** The authored Tier 3 artifact document. */
-  component: FormspecComponentDocument;
-  /** Studio-generated layout state used for editor interactions and preview synthesis. */
-  generatedComponent: FormspecGeneratedLayoutDocument;
-  /** Visual presentation: tokens, defaults, selectors, page layout. */
-  theme: FormspecThemeDocument;
-  /** Bidirectional transforms between responses and external schemas. */
-  mapping: FormspecMappingDocument;
+  definition: FormDefinition;
+  /** The authored Tier 3 component content. */
+  component: ComponentState;
+  /** Studio-generated layout content for editor interactions and preview synthesis. */
+  generatedComponent: GeneratedLayoutState;
+  /** Visual presentation content: tokens, defaults, selectors, page layout. */
+  theme: ThemeState;
+  /** Mapping content: rules, targetSchema, adapters, etc. */
+  mapping: MappingState;
   /** Loaded extension registries providing custom types, functions, and constraints. */
   extensions: ExtensionsState;
   /** Baseline snapshot and release history for changelog generation. */
@@ -332,14 +314,14 @@ export interface ProjectStatistics {
  * Used for serialization, export, and project snapshot operations.
  */
 export interface ProjectBundle {
-  /** The form definition artifact. */
-  definition: FormspecDefinition;
-  /** The component (UI tree) artifact. */
-  component: FormspecComponentDocument;
+  /** The form definition artifact (schema-valid, with envelope metadata). */
+  definition: FormDefinition;
+  /** The component (UI tree) artifact (schema-valid, with envelope metadata). */
+  component: ComponentDocument;
   /** The theme (presentation) artifact. */
-  theme: FormspecThemeDocument;
+  theme: ThemeDocument;
   /** The mapping (data transform) artifact. */
-  mapping: FormspecMappingDocument;
+  mapping: MappingDocument;
 }
 
 // ── Search & filter types ───────────────────────────────────────────
