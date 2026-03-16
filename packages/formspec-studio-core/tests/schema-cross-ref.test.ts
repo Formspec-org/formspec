@@ -15,7 +15,7 @@ describe('H1: placeholder routing', () => {
   it('addField stores placeholder in theme widgetConfig', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text', { placeholder: 'Enter name' });
-    const block = (project.state.theme as any).items?.name;
+    const block = (project.theme as any).items?.name;
     expect(block?.widgetConfig?.placeholder).toBe('Enter name');
   });
 
@@ -23,7 +23,7 @@ describe('H1: placeholder routing', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
     project.updateItem('name', { placeholder: 'Enter name' });
-    const block = (project.state.theme as any).items?.name;
+    const block = (project.theme as any).items?.name;
     expect(block?.widgetConfig?.placeholder).toBe('Enter name');
   });
 });
@@ -34,7 +34,7 @@ describe('H2: ariaLabel routing', () => {
   it('addField stores ariaLabel via theme accessibility', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text', { ariaLabel: 'Full legal name' });
-    const block = (project.state.theme as any).items?.name;
+    const block = (project.theme as any).items?.name;
     expect(block?.accessibility?.description).toBe('Full legal name');
   });
 
@@ -42,7 +42,7 @@ describe('H2: ariaLabel routing', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
     project.updateItem('name', { ariaLabel: 'Full legal name' });
-    const block = (project.state.theme as any).items?.name;
+    const block = (project.theme as any).items?.name;
     expect(block?.accessibility?.description).toBe('Full legal name');
   });
 });
@@ -83,7 +83,7 @@ describe('H4: applyStyle CSS nesting', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
     project.applyStyle('name', { borderRadius: '8px', padding: '16px' });
-    const block = (project.state.theme as any).items?.name;
+    const block = (project.theme as any).items?.name;
     expect(block?.style?.borderRadius).toBe('8px');
     expect(block?.style?.padding).toBe('16px');
     // Should NOT be at block root level
@@ -94,7 +94,7 @@ describe('H4: applyStyle CSS nesting', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
     project.applyStyle('name', { widget: 'card', labelPosition: 'top' });
-    const block = (project.state.theme as any).items?.name;
+    const block = (project.theme as any).items?.name;
     expect(block?.widget).toBe('card');
     expect(block?.labelPosition).toBe('top');
   });
@@ -103,7 +103,7 @@ describe('H4: applyStyle CSS nesting', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
     project.updateItem('name', { style: { fontSize: '1.5rem' } });
-    const block = (project.state.theme as any).items?.name;
+    const block = (project.theme as any).items?.name;
     expect(block?.style?.fontSize).toBe('1.5rem');
     expect(block?.fontSize).toBeUndefined();
   });
@@ -115,7 +115,7 @@ describe('H5: applyStyleAll selector structure', () => {
   it('applyStyleAll creates selector with match and apply', () => {
     const project = createProject();
     project.applyStyleAll({ type: 'field' }, { widget: 'card' });
-    const selectors = project.state.theme.selectors ?? [];
+    const selectors = project.theme.selectors ?? [];
     expect(selectors.length).toBeGreaterThan(0);
     const last = selectors[selectors.length - 1] as any;
     expect(last.match).toEqual({ type: 'field' });
@@ -126,7 +126,7 @@ describe('H5: applyStyleAll selector structure', () => {
   it('applyStyleAll CSS properties nest in apply.style', () => {
     const project = createProject();
     project.applyStyleAll({ type: 'field' }, { borderRadius: '4px' });
-    const selectors = project.state.theme.selectors ?? [];
+    const selectors = project.theme.selectors ?? [];
     const last = selectors[selectors.length - 1] as any;
     expect(last.match).toEqual({ type: 'field' });
     expect(last.apply?.style?.borderRadius).toBe('4px');
@@ -135,7 +135,7 @@ describe('H5: applyStyleAll selector structure', () => {
   it('applyStyleAll mixed CSS + PresentationBlock keys', () => {
     const project = createProject();
     project.applyStyleAll({ type: 'field' }, { widget: 'card', borderRadius: '4px' });
-    const selectors = project.state.theme.selectors ?? [];
+    const selectors = project.theme.selectors ?? [];
     const last = selectors[selectors.length - 1] as any;
     expect(last.apply?.widget).toBe('card');
     expect(last.apply?.style?.borderRadius).toBe('4px');
@@ -148,7 +148,7 @@ describe('M8: applyStyleAll form-target CSS nesting', () => {
   it('applyStyleAll form target stores CSS in defaults.style', () => {
     const project = createProject();
     project.applyStyleAll('form', { borderRadius: '4px', padding: '16px' });
-    const defaults = (project.state.theme as any).defaults;
+    const defaults = (project.theme as any).defaults;
     expect(defaults?.style?.borderRadius).toBe('4px');
     expect(defaults?.style?.padding).toBe('16px');
     expect(defaults?.borderRadius).toBeUndefined();
@@ -157,7 +157,7 @@ describe('M8: applyStyleAll form-target CSS nesting', () => {
   it('applyStyleAll form PresentationBlock keys stay at root', () => {
     const project = createProject();
     project.applyStyleAll('form', { widget: 'card', labelPosition: 'top' });
-    const defaults = (project.state.theme as any).defaults;
+    const defaults = (project.theme as any).defaults;
     expect(defaults?.widget).toBe('card');
     expect(defaults?.labelPosition).toBe('top');
   });
@@ -284,11 +284,11 @@ describe('L7: addWizardPage atomicity', () => {
     const project = createProject();
     project.addWizardPage('Step 1');
     // Should have created the group item + set wizard mode
-    expect(project.state.definition.items.length).toBeGreaterThan(0);
-    expect(project.state.definition.formPresentation?.pageMode).toBe('wizard');
+    expect(project.definition.items.length).toBeGreaterThan(0);
+    expect(project.definition.formPresentation?.pageMode).toBe('wizard');
     // Single undo reverses everything
     project.undo();
-    expect(project.state.definition.items).toHaveLength(0);
-    expect(project.state.definition.formPresentation?.pageMode).not.toBe('wizard');
+    expect(project.definition.items).toHaveLength(0);
+    expect(project.definition.formPresentation?.pageMode).not.toBe('wizard');
   });
 });

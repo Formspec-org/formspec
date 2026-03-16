@@ -1,34 +1,12 @@
 import { createRawProject } from 'formspec-core';
+// Internal-only core types — never appear in public method signatures
+import type { IProjectCore, AnyCommand } from 'formspec-core';
+// Studio-core's own type vocabulary for the public API
 import type {
-  IProjectCore,
-  ProjectOptions,
-  ProjectState,
-  AnyCommand,
-  CommandResult,
-  ChangeListener,
-  LogEntry,
-  ProjectStatistics,
-  ProjectBundle,
-  ItemFilter,
-  DataTypeInfo,
-  RegistrySummary,
-  ExtensionFilter,
-  Change,
-  FormspecChangelog,
-  FELParseContext,
-  FELParseResult,
-  FELReferenceSet,
-  FELFunctionEntry,
-  ExpressionLocation,
-  DependencyGraph,
-  FieldDependents,
-  Diagnostics,
-  ResponseSchemaRow,
-  FormspecComponentDocument,
-  FormspecThemeDocument,
-  FormspecMappingDocument,
-} from 'formspec-core';
-import type { FormspecDefinition, FormspecItem } from 'formspec-engine';
+  FormItem, FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
+  ProjectBundle, ProjectStatistics, Diagnostics, LogEntry, ProjectSnapshot,
+  ChangeListener, CreateProjectOptions,
+} from './types.js';
 import {
   HelperError,
   type HelperResult,
@@ -50,69 +28,80 @@ import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from
 import { rewriteFELReferences } from 'formspec-engine';
 
 /**
- * Behavior-driven interface for form authoring.
- * Extends RawProject, adding form-author-friendly methods.
+ * Behavior-driven authoring API for Formspec.
+ * Composes an IProjectCore and exposes form-author-friendly helper methods.
  * All authoring methods return HelperResult.
+ *
+ * For raw project access (dispatch, state, queries), use formspec-core directly.
  */
-export class Project implements IProjectCore {
+export class Project {
   constructor(private readonly core: IProjectCore) {}
 
-  /** Exposes the underlying IProjectCore (e.g. for consumers that need raw dispatch). */
-  get raw(): IProjectCore { return this.core; }
+  // ── Read-only state getters (for rendering) ────────────────
 
-  // ── IProjectCore delegation ───────────────────────────────────
-  get state(): Readonly<ProjectState> { return this.core.state; }
-  get definition(): Readonly<FormspecDefinition> { return this.core.definition; }
-  get component(): Readonly<FormspecComponentDocument> { return this.core.component; }
-  get artifactComponent(): Readonly<FormspecComponentDocument> { return this.core.artifactComponent; }
-  get generatedComponent(): Readonly<FormspecComponentDocument> { return this.core.generatedComponent; }
-  get theme(): Readonly<FormspecThemeDocument> { return this.core.theme; }
-  get mapping(): Readonly<FormspecMappingDocument> { return this.core.mapping; }
+  get state(): Readonly<ProjectSnapshot> { return this.core.state as unknown as Readonly<ProjectSnapshot>; }
+  get definition(): Readonly<FormDefinition> { return this.core.definition; }
+  get component(): Readonly<ComponentDocument> { return this.core.component; }
+  get theme(): Readonly<ThemeDocument> { return this.core.theme; }
+  get mapping(): Readonly<MappingDocument> { return this.core.mapping; }
 
-  dispatch(command: AnyCommand): CommandResult;
-  dispatch(command: AnyCommand[]): CommandResult[];
-  dispatch(command: AnyCommand | AnyCommand[]): CommandResult | CommandResult[] {
-    return (this.core.dispatch as (c: AnyCommand | AnyCommand[]) => CommandResult | CommandResult[])(command);
-  }
-  batch(commands: AnyCommand[]): CommandResult[] { return this.core.batch(commands); }
-  batchWithRebuild(p1: AnyCommand[], p2: AnyCommand[]): CommandResult[] { return this.core.batchWithRebuild(p1, p2); }
+  // ── Queries ────────────────────────────────────────────────
+
+  fieldPaths(): string[] { return this.core.fieldPaths(); }
+  itemAt(path: string): FormItem | undefined { return this.core.itemAt(path); }
+  bindFor(path: string): Record<string, unknown> | undefined { return this.core.bindFor(path); }
+  variableNames(): string[] { return this.core.variableNames(); }
+  instanceNames(): string[] { return this.core.instanceNames(); }
+  statistics(): ProjectStatistics { return this.core.statistics(); }
+  commandHistory(): readonly LogEntry[] { return this.core.log; }
+  export(): ProjectBundle { return this.core.export() as unknown as ProjectBundle; }
+  diagnose(): Diagnostics { return this.core.diagnose(); }
+
+  // ── History ────────────────────────────────────────────────
+
   undo(): boolean { return this.core.undo(); }
   redo(): boolean { return this.core.redo(); }
   get canUndo(): boolean { return this.core.canUndo; }
   get canRedo(): boolean { return this.core.canRedo; }
-  get log(): readonly LogEntry[] { return this.core.log; }
-  resetHistory(): void { this.core.resetHistory(); }
-  onChange(listener: ChangeListener): () => void { return this.core.onChange(listener); }
+  onChange(listener: ChangeListener): () => void { return this.core.onChange(() => listener()); }
 
-  fieldPaths(): string[] { return this.core.fieldPaths(); }
-  itemAt(path: string): FormspecItem | undefined { return this.core.itemAt(path); }
-  responseSchemaRows(): ResponseSchemaRow[] { return this.core.responseSchemaRows(); }
-  statistics(): ProjectStatistics { return this.core.statistics(); }
-  instanceNames(): string[] { return this.core.instanceNames(); }
-  variableNames(): string[] { return this.core.variableNames(); }
-  optionSetUsage(name: string): string[] { return this.core.optionSetUsage(name); }
-  searchItems(filter: ItemFilter): FormspecItem[] { return this.core.searchItems(filter); }
-  effectivePresentation(k: string): Record<string, unknown> { return this.core.effectivePresentation(k); }
-  bindFor(path: string): Record<string, unknown> | undefined { return this.core.bindFor(path); }
-  componentFor(k: string): Record<string, unknown> | undefined { return this.core.componentFor(k); }
-  resolveExtension(name: string): Record<string, unknown> | undefined { return this.core.resolveExtension(name); }
-  unboundItems(): string[] { return this.core.unboundItems(); }
-  resolveToken(key: string): string | number | undefined { return this.core.resolveToken(key); }
-  allDataTypes(): DataTypeInfo[] { return this.core.allDataTypes(); }
-  parseFEL(expr: string, ctx?: FELParseContext): FELParseResult { return this.core.parseFEL(expr, ctx); }
-  felFunctionCatalog(): FELFunctionEntry[] { return this.core.felFunctionCatalog(); }
-  availableReferences(ctx?: string | FELParseContext): FELReferenceSet { return this.core.availableReferences(ctx); }
-  allExpressions(): ExpressionLocation[] { return this.core.allExpressions(); }
-  expressionDependencies(expr: string): string[] { return this.core.expressionDependencies(expr); }
-  fieldDependents(path: string): FieldDependents { return this.core.fieldDependents(path); }
-  variableDependents(name: string): string[] { return this.core.variableDependents(name); }
-  dependencyGraph(): DependencyGraph { return this.core.dependencyGraph(); }
-  listRegistries(): RegistrySummary[] { return this.core.listRegistries(); }
-  browseExtensions(f?: ExtensionFilter): Record<string, unknown>[] { return this.core.browseExtensions(f); }
-  diffFromBaseline(v?: string): Change[] { return this.core.diffFromBaseline(v); }
-  previewChangelog(): FormspecChangelog { return this.core.previewChangelog(); }
-  diagnose(): Diagnostics { return this.core.diagnose(); }
-  export(): ProjectBundle { return this.core.export(); }
+  // ── Bulk operations ────────────────────────────────────────
+
+  /** Import a project bundle and reset history. */
+  loadBundle(bundle: Partial<ProjectBundle>): void {
+    this.core.dispatch({ type: 'project.import', payload: bundle } as AnyCommand);
+    this.core.resetHistory();
+  }
+
+  /** Add a mapping rule from a form field to an output target. */
+  mapField(sourcePath: string, targetPath: string): HelperResult {
+    if (!this.core.itemAt(sourcePath)) {
+      this._throwPathNotFound(sourcePath);
+    }
+    this.core.dispatch({ type: 'mapping.addRule', payload: { sourcePath, targetPath } } as AnyCommand);
+    return {
+      summary: `Mapped "${sourcePath}" → "${targetPath}"`,
+      action: { helper: 'mapField', params: { sourcePath, targetPath } },
+      affectedPaths: [sourcePath],
+    };
+  }
+
+  /** Remove all mapping rules for a given source path. */
+  unmapField(sourcePath: string): HelperResult {
+    const rules = (this.core.mapping as any)?.rules ?? [];
+    const indices = rules
+      .map((r: any, i: number) => r.sourcePath === sourcePath ? i : -1)
+      .filter((i: number) => i >= 0)
+      .reverse(); // descending to avoid index shift
+    for (const idx of indices) {
+      this.core.dispatch({ type: 'mapping.deleteRule', payload: { index: idx } } as AnyCommand);
+    }
+    return {
+      summary: `Unmapped "${sourcePath}" (${indices.length} rule(s))`,
+      action: { helper: 'unmapField', params: { sourcePath } },
+      affectedPaths: [sourcePath],
+    };
+  }
 
   /** Simple edit distance for fuzzy path matching. */
   private static _editDistance(a: string, b: string): number {
@@ -135,9 +124,9 @@ export class Project implements IProjectCore {
 
   /** Find field paths similar to the given (nonexistent) path. */
   private _findSimilarPaths(path: string, maxDistance = 3): string[] {
-    const allPaths = this.fieldPaths();
+    const allPaths = this.core.fieldPaths();
     // Also include group paths
-    const allItems = this.state.definition.items;
+    const allItems = this.core.state.definition.items;
     const collectPaths = (items: any[], prefix?: string): string[] => {
       const result: string[] = [];
       for (const item of items) {
@@ -194,7 +183,7 @@ export class Project implements IProjectCore {
     }
 
     if (props?.page) {
-      const pages = this.state.theme.pages;
+      const pages = this.core.state.theme.pages;
       const pageExists = pages?.some((p: any) => p.id === props.page);
       if (!pageExists) {
         throw new HelperError('PAGE_NOT_FOUND', `Page "${props.page}" does not exist`, {
@@ -218,7 +207,7 @@ export class Project implements IProjectCore {
     const fullPath = parentPath ? `${parentPath}.${key}` : key;
 
     // Check for duplicate key
-    if (this.itemAt(fullPath)) {
+    if (this.core.itemAt(fullPath)) {
       throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
         path: fullPath,
       });
@@ -339,7 +328,7 @@ export class Project implements IProjectCore {
     }
 
     // Dispatch
-    this.batchWithRebuild(phase1, phase2);
+    this.core.batchWithRebuild(phase1, phase2);
 
     return {
       summary: `Added field '${key}' (${type}) to ${parentPath ? `'${parentPath}'` : 'root'}`,
@@ -355,7 +344,7 @@ export class Project implements IProjectCore {
     const parentPath = segments.length > 0 ? segments.join('.') : undefined;
     const fullPath = parentPath ? `${parentPath}.${key}` : key;
 
-    if (this.itemAt(fullPath)) {
+    if (this.core.itemAt(fullPath)) {
       throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
         path: fullPath,
       });
@@ -370,13 +359,13 @@ export class Project implements IProjectCore {
 
     if (props?.display) {
       // Two-phase: addItem triggers rebuild, then setGroupDisplayMode on rebuilt tree
-      this.batchWithRebuild(
+      this.core.batchWithRebuild(
         [{ type: 'definition.addItem', payload: addItemPayload }],
         [{ type: 'component.setGroupDisplayMode', payload: { groupKey: key, mode: props.display } }],
       );
     } else {
       // Single dispatch — no component tree dependency
-      this.dispatch({ type: 'definition.addItem', payload: addItemPayload });
+      this.core.dispatch({ type: 'definition.addItem', payload: addItemPayload });
     }
 
     return {
@@ -408,7 +397,7 @@ export class Project implements IProjectCore {
     const parentPath = segments.length > 0 ? segments.join('.') : undefined;
     const fullPath = parentPath ? `${parentPath}.${key}` : key;
 
-    if (this.itemAt(fullPath)) {
+    if (this.core.itemAt(fullPath)) {
       throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
         path: fullPath,
       });
@@ -422,7 +411,7 @@ export class Project implements IProjectCore {
     };
     if (parentPath) payload.parentPath = parentPath;
 
-    this.dispatch({ type: 'definition.addItem', payload });
+    this.core.dispatch({ type: 'definition.addItem', payload });
 
     return {
       summary: `Added ${kind ?? 'paragraph'} content '${key}'`,
@@ -435,7 +424,7 @@ export class Project implements IProjectCore {
 
   /** Validate a FEL expression string, throwing INVALID_FEL if it fails to parse. */
   private _validateFEL(expression: string): void {
-    const result = this.parseFEL(expression);
+    const result = this.core.parseFEL(expression);
     if (!result.valid) {
       throw new HelperError('INVALID_FEL', `Invalid FEL expression: ${expression}`, {
         expression,
@@ -450,7 +439,7 @@ export class Project implements IProjectCore {
   /** Conditional visibility — dispatches definition.setBind { relevant: condition } */
   showWhen(target: string, condition: string): HelperResult {
     this._validateFEL(condition);
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { relevant: condition } },
     });
@@ -464,7 +453,7 @@ export class Project implements IProjectCore {
   /** Readonly condition — dispatches definition.setBind { readonly: condition } */
   readonlyWhen(target: string, condition: string): HelperResult {
     this._validateFEL(condition);
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { readonly: condition } },
     });
@@ -479,7 +468,7 @@ export class Project implements IProjectCore {
   require(target: string, condition?: string): HelperResult {
     const expr = condition ?? 'true';
     this._validateFEL(expr);
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { required: expr } },
     });
@@ -493,7 +482,7 @@ export class Project implements IProjectCore {
   /** Calculated value — dispatches definition.setBind { calculate: expression } */
   calculate(target: string, expression: string): HelperResult {
     this._validateFEL(expression);
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { calculate: expression } },
     });
@@ -523,7 +512,7 @@ export class Project implements IProjectCore {
    */
   branch(on: string, paths: BranchPath[], otherwise?: string | string[]): HelperResult {
     // Pre-validate: on field must exist
-    const onItem = this.itemAt(on);
+    const onItem = this.core.itemAt(on);
     if (!onItem) {
       this._throwPathNotFound(on);
     }
@@ -545,7 +534,7 @@ export class Project implements IProjectCore {
       const targets = Array.isArray(arm.show) ? arm.show : [arm.show];
       for (const target of targets) {
         // Check for existing relevant bind → warning
-        const existingBind = this.bindFor(target);
+        const existingBind = this.core.bindFor(target);
         if (existingBind?.relevant) {
           warnings.push({
             code: 'RELEVANT_OVERWRITTEN',
@@ -570,7 +559,7 @@ export class Project implements IProjectCore {
         : `not(${allExprs.join(' or ')})`;
 
       for (const target of otherwiseTargets) {
-        const existingBind = this.bindFor(target);
+        const existingBind = this.core.bindFor(target);
         if (existingBind?.relevant) {
           warnings.push({
             code: 'RELEVANT_OVERWRITTEN',
@@ -587,7 +576,7 @@ export class Project implements IProjectCore {
     }
 
     // Dispatch all setBind commands atomically
-    this.dispatch(commands);
+    this.core.dispatch(commands);
     return {
       summary: `Branch on '${on}' with ${paths.length} arm(s)`,
       action: { helper: 'branch', params: { on, paths: paths.length, otherwise: !!otherwise } },
@@ -620,10 +609,10 @@ export class Project implements IProjectCore {
     if (options?.code) payload.code = options.code;
     if (options?.activeWhen) payload.activeWhen = options.activeWhen;
 
-    this.dispatch({ type: 'definition.addShape', payload });
+    this.core.dispatch({ type: 'definition.addShape', payload });
 
     // Read the shape ID from state (addShape appends to shapes array)
-    const shapes = this.state.definition.shapes ?? [];
+    const shapes = this.core.state.definition.shapes ?? [];
     const createdId = shapes[shapes.length - 1]?.id;
 
     return {
@@ -636,7 +625,7 @@ export class Project implements IProjectCore {
 
   /** Remove a validation shape by ID. */
   removeValidation(shapeId: string): HelperResult {
-    this.dispatch({ type: 'definition.deleteShape', payload: { id: shapeId } });
+    this.core.dispatch({ type: 'definition.deleteShape', payload: { id: shapeId } });
     return {
       summary: `Removed validation '${shapeId}'`,
       action: { helper: 'removeValidation', params: { shapeId } },
@@ -700,7 +689,7 @@ export class Project implements IProjectCore {
     }
 
     if (commands.length > 0) {
-      this.dispatch(commands);
+      this.core.dispatch(commands);
     }
 
     return {
@@ -717,13 +706,13 @@ export class Project implements IProjectCore {
    * Collects ALL dependents BEFORE mutations, then dispatches cleanup + delete atomically.
    */
   removeItem(path: string): HelperResult {
-    const item = this.itemAt(path);
+    const item = this.core.itemAt(path);
     if (!item) {
       this._throwPathNotFound(path);
     }
 
     // Step 1: Collect dependent set upfront
-    const deps = this.fieldDependents(path);
+    const deps = this.core.fieldDependents(path);
 
     // Also collect for descendants if item is a group
     const descendantDeps: typeof deps[] = [];
@@ -731,7 +720,7 @@ export class Project implements IProjectCore {
       const collectDescendantPaths = (children: any[], parentPath: string) => {
         for (const child of children) {
           const childPath = `${parentPath}.${child.key}`;
-          descendantDeps.push(this.fieldDependents(childPath));
+          descendantDeps.push(this.core.fieldDependents(childPath));
           if (child.children?.length) {
             collectDescendantPaths(child.children, childPath);
           }
@@ -808,7 +797,7 @@ export class Project implements IProjectCore {
     });
 
     // Dispatch atomically
-    this.dispatch(commands);
+    this.core.dispatch(commands);
 
     return {
       summary: `Removed item '${path}'`,
@@ -851,7 +840,7 @@ export class Project implements IProjectCore {
   /** Update any property of an existing item — fan-out helper. */
   updateItem(path: string, changes: ItemChanges): HelperResult {
     // Pre-validate: path must exist
-    if (!this.itemAt(path)) {
+    if (!this.core.itemAt(path)) {
       this._throwPathNotFound(path);
     }
 
@@ -971,13 +960,13 @@ export class Project implements IProjectCore {
     }
 
     if (commands.length > 0) {
-      this.dispatch(commands);
+      this.core.dispatch(commands);
     }
 
     // Dispatch component widget separately — failure emits warning, not error
     if (widgetCommand) {
       try {
-        this.dispatch(widgetCommand);
+        this.core.dispatch(widgetCommand);
       } catch {
         warnings.push({
           code: 'COMPONENT_NODE_NOT_FOUND',
@@ -997,7 +986,7 @@ export class Project implements IProjectCore {
 
   /** Move item to a new parent or position. */
   moveItem(path: string, targetParentPath?: string, targetIndex?: number): HelperResult {
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.moveItem',
       payload: { sourcePath: path, targetParentPath, targetIndex },
     });
@@ -1013,7 +1002,7 @@ export class Project implements IProjectCore {
 
   /** Rename item — FEL reference rewriting handled inside the handler. */
   renameItem(path: string, newKey: string): HelperResult {
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.renameItem',
       payload: { path, newKey },
     });
@@ -1030,7 +1019,7 @@ export class Project implements IProjectCore {
 
   /** Reorder item within its parent (swap with neighbor). */
   reorderItem(path: string, direction: 'up' | 'down'): HelperResult {
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.reorderItem',
       payload: { path, direction },
     });
@@ -1081,7 +1070,7 @@ export class Project implements IProjectCore {
     }
 
     if (commands.length > 0) {
-      this.dispatch(commands);
+      this.core.dispatch(commands);
     }
 
     return {
@@ -1095,7 +1084,7 @@ export class Project implements IProjectCore {
 
   /** Define a reusable named option set. */
   defineChoices(name: string, options: ChoiceOption[]): HelperResult {
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.setOptionSet',
       payload: { name, options },
     });
@@ -1111,7 +1100,7 @@ export class Project implements IProjectCore {
   /** Make a group repeatable with optional cardinality constraints. */
   makeRepeatable(target: string, props?: RepeatProps): HelperResult {
     // Pre-validate: target must be a group
-    const item = this.itemAt(target);
+    const item = this.core.itemAt(target);
     if (!item) {
       this._throwPathNotFound(target);
     }
@@ -1151,7 +1140,7 @@ export class Project implements IProjectCore {
       });
     }
 
-    this.dispatch(commands);
+    this.core.dispatch(commands);
 
     return {
       summary: `Made group '${target}' repeatable`,
@@ -1164,14 +1153,14 @@ export class Project implements IProjectCore {
 
   /** Copy a field or group — inserts clone immediately after original. */
   copyItem(path: string, deep?: boolean): HelperResult {
-    const item = this.itemAt(path);
+    const item = this.core.itemAt(path);
     if (!item) {
       this._throwPathNotFound(path);
     }
 
     if (!deep) {
       // Shallow copy — just duplicate the definition item
-      const results = this.dispatch({
+      const results = this.core.dispatch({
         type: 'definition.duplicateItem',
         payload: { path },
       });
@@ -1179,8 +1168,8 @@ export class Project implements IProjectCore {
 
       // Collect warnings about omitted binds/shapes
       const warnings: HelperWarning[] = [];
-      const binds = this.state.definition.binds ?? [];
-      const shapes = this.state.definition.shapes ?? [];
+      const binds = this.core.state.definition.binds ?? [];
+      const shapes = this.core.state.definition.shapes ?? [];
 
       // Find binds targeting the original path (these are NOT copied by duplicateItem)
       const matchingBinds = binds.filter((b: any) =>
@@ -1224,8 +1213,8 @@ export class Project implements IProjectCore {
 
     // We need batchWithRebuild: phase1 duplicates, phase2 copies binds with rewritten FEL
     // Collect bind/shape data before dispatch
-    const binds = this.state.definition.binds ?? [];
-    const shapes = this.state.definition.shapes ?? [];
+    const binds = this.core.state.definition.binds ?? [];
+    const shapes = this.core.state.definition.shapes ?? [];
 
     // Find binds targeting this path or descendants
     const matchingBinds = binds.filter((b: any) =>
@@ -1237,10 +1226,10 @@ export class Project implements IProjectCore {
       s.target === path || s.target?.startsWith(`${path}.`),
     );
 
-    const results = this.batchWithRebuild(phase1, (() => {
+    const results = this.core.batchWithRebuild(phase1, (() => {
       // After phase1, the duplicated item's path should be available
       // Read the inserted path from state — it's the item right after the original
-      const items = this.state.definition.items;
+      const items = this.core.state.definition.items;
       let insertedPath: string | undefined;
 
       // Find the copy — it should have a key ending in _copy
@@ -1358,7 +1347,7 @@ export class Project implements IProjectCore {
   wrapItemsInGroup(paths: string[], label?: string): HelperResult {
     // Pre-validation
     for (const p of paths) {
-      if (!this.itemAt(p)) {
+      if (!this.core.itemAt(p)) {
         this._throwPathNotFound(p);
       }
     }
@@ -1380,8 +1369,8 @@ export class Project implements IProjectCore {
 
     // Find insertIndex of first item
     const parentItems = parentPath
-      ? this.itemAt(parentPath)?.children ?? []
-      : this.state.definition.items;
+      ? this.core.itemAt(parentPath)?.children ?? []
+      : this.core.state.definition.items;
     const insertIndex = parentItems.findIndex((i: any) => i.key === firstItemKey);
 
     const addPayload: Record<string, unknown> = {
@@ -1397,7 +1386,7 @@ export class Project implements IProjectCore {
       payload: { sourcePath: p, targetParentPath: groupPath, targetIndex: i },
     }));
 
-    this.batchWithRebuild(
+    this.core.batchWithRebuild(
       [{ type: 'definition.addItem', payload: addPayload }],
       phase2,
     );
@@ -1418,12 +1407,12 @@ export class Project implements IProjectCore {
 
   /** Wrap an item node in a layout component. */
   wrapInLayoutComponent(path: string, component: 'Card' | 'Stack' | 'Collapsible'): HelperResult {
-    if (!this.itemAt(path)) {
+    if (!this.core.itemAt(path)) {
       this._throwPathNotFound(path);
     }
 
     const leafKey = path.split('.').pop()!;
-    const result = this.dispatch({
+    const result = this.core.dispatch({
       type: 'component.wrapNode',
       payload: { node: { bind: leafKey }, wrapper: { component } },
     });
@@ -1448,7 +1437,7 @@ export class Project implements IProjectCore {
     // Sort deepest-first
     const sorted = [...pruned].sort((a, b) => b.split('.').length - a.split('.').length);
 
-    this.dispatch(
+    this.core.dispatch(
       sorted.map(p => ({ type: 'definition.deleteItem' as const, payload: { path: p } })),
     );
 
@@ -1466,7 +1455,7 @@ export class Project implements IProjectCore {
       !paths.some(other => other !== p && p.startsWith(`${other}.`)),
     );
 
-    const results = this.dispatch(
+    const results = this.core.dispatch(
       pruned.map(p => ({ type: 'definition.duplicateItem' as const, payload: { path: p } })),
     );
 
@@ -1496,7 +1485,7 @@ export class Project implements IProjectCore {
     };
 
     if (pageId) {
-      const results = this.dispatch([
+      const results = this.core.dispatch([
         addNodeCmd,
         { type: 'pages.assignItem', payload: { pageId, key: 'submit' } },
       ]);
@@ -1509,7 +1498,7 @@ export class Project implements IProjectCore {
       };
     }
 
-    const result = this.dispatch(addNodeCmd);
+    const result = this.core.dispatch(addNodeCmd);
     const nodeId = (result as any)?.nodeRef?.nodeId;
 
     return {
@@ -1527,10 +1516,10 @@ export class Project implements IProjectCore {
     const payload: Record<string, unknown> = { title };
     if (description) payload.description = description;
 
-    this.dispatch({ type: 'pages.addPage', payload });
+    this.core.dispatch({ type: 'pages.addPage', payload });
 
     // Read new page ID from state
-    const pages = this.state.theme.pages ?? [];
+    const pages = this.core.state.theme.pages ?? [];
     const newPage = pages[pages.length - 1];
     const pageId = (newPage as any)?.id as string;
 
@@ -1552,7 +1541,7 @@ export class Project implements IProjectCore {
     ];
 
     // Set wizard mode if not already
-    const pageMode = this.state.definition.formPresentation?.pageMode;
+    const pageMode = this.core.state.definition.formPresentation?.pageMode;
     if (pageMode !== 'wizard') {
       commands.push({
         type: 'definition.setFormPresentation',
@@ -1560,7 +1549,7 @@ export class Project implements IProjectCore {
       });
     }
 
-    this.dispatch(commands);
+    this.core.dispatch(commands);
 
     return {
       summary: `Added wizard page '${label}'`,
@@ -1572,7 +1561,7 @@ export class Project implements IProjectCore {
 
   /** Remove a page. */
   removePage(pageId: string): HelperResult {
-    this.dispatch({ type: 'pages.deletePage', payload: { id: pageId } });
+    this.core.dispatch({ type: 'pages.deletePage', payload: { id: pageId } });
     return {
       summary: `Removed page '${pageId}'`,
       action: { helper: 'removePage', params: { pageId } },
@@ -1582,7 +1571,7 @@ export class Project implements IProjectCore {
 
   /** Reorder a page. */
   reorderPage(pageId: string, direction: 'up' | 'down'): HelperResult {
-    this.dispatch({ type: 'pages.reorderPages', payload: { id: pageId, direction } });
+    this.core.dispatch({ type: 'pages.reorderPages', payload: { id: pageId, direction } });
     return {
       summary: `Reordered page '${pageId}' ${direction}`,
       action: { helper: 'reorderPage', params: { pageId, direction } },
@@ -1601,7 +1590,7 @@ export class Project implements IProjectCore {
         });
       }
     }
-    if (commands.length > 0) this.dispatch(commands);
+    if (commands.length > 0) this.core.dispatch(commands);
 
     return {
       summary: `Updated page '${pageId}'`,
@@ -1616,7 +1605,7 @@ export class Project implements IProjectCore {
     const payload: Record<string, unknown> = { pageId, key: leafKey };
     if (options?.span) payload.span = options.span;
 
-    this.dispatch({ type: 'pages.assignItem', payload });
+    this.core.dispatch({ type: 'pages.assignItem', payload });
 
     return {
       summary: `Placed '${target}' on page '${pageId}'`,
@@ -1628,7 +1617,7 @@ export class Project implements IProjectCore {
   /** Remove item from page assignment. */
   unplaceFromPage(target: string, pageId: string): HelperResult {
     const leafKey = target.split('.').pop()!;
-    this.dispatch({ type: 'pages.unassignItem', payload: { pageId, key: leafKey } });
+    this.core.dispatch({ type: 'pages.unassignItem', payload: { pageId, key: leafKey } });
 
     return {
       summary: `Removed '${target}' from page '${pageId}'`,
@@ -1656,7 +1645,7 @@ export class Project implements IProjectCore {
       });
     }
 
-    this.dispatch(commands);
+    this.core.dispatch(commands);
 
     return {
       summary: `Set flow mode to '${mode}'`,
@@ -1695,10 +1684,10 @@ export class Project implements IProjectCore {
 
     // Move each target into the layout container (deferred — need nodeRef from first command)
     // Since we can't get the nodeRef mid-batch, we dispatch the addNode first, then moveNode
-    this.dispatch(commands[0]);
+    this.core.dispatch(commands[0]);
 
     // Now find the created node — it should be the last child of root
-    const tree = this.state.component?.tree;
+    const tree = this.core.state.component?.tree;
     const rootChildren = (tree as any)?.children ?? [];
     const lastChild = rootChildren[rootChildren.length - 1];
     const containerRef = lastChild?.nodeId
@@ -1718,7 +1707,7 @@ export class Project implements IProjectCore {
     }));
 
     if (moveCommands.length > 0) {
-      this.dispatch(moveCommands);
+      this.core.dispatch(moveCommands);
     }
 
     return {
@@ -1744,7 +1733,7 @@ export class Project implements IProjectCore {
       }
       return paths;
     };
-    const matchingPaths = collectLeafPaths(this.state.definition.items, leafKey);
+    const matchingPaths = collectLeafPaths(this.core.state.definition.items, leafKey);
     if (matchingPaths.length > 1) {
       warnings.push({
         code: 'AMBIGUOUS_ITEM_KEY',
@@ -1768,7 +1757,7 @@ export class Project implements IProjectCore {
     }
 
     if (commands.length > 0) {
-      this.dispatch(commands);
+      this.core.dispatch(commands);
     }
 
     return {
@@ -1805,7 +1794,7 @@ export class Project implements IProjectCore {
       }
       // CSS properties nest inside defaults.style as a single merge
       if (Object.keys(cssProps).length > 0) {
-        const existing = (this.state.theme as any).defaults?.style ?? {};
+        const existing = (this.core.state.theme as any).defaults?.style ?? {};
         commands.push({
           type: 'theme.setDefaults',
           payload: { property: 'style', value: { ...existing, ...cssProps } },
@@ -1833,7 +1822,7 @@ export class Project implements IProjectCore {
     }
 
     if (commands.length > 0) {
-      this.dispatch(commands);
+      this.core.dispatch(commands);
     }
 
     return {
@@ -1851,7 +1840,7 @@ export class Project implements IProjectCore {
     const payload: Record<string, unknown> = { name, expression };
     if (scope) payload.scope = scope;
 
-    this.dispatch({ type: 'definition.addVariable', payload });
+    this.core.dispatch({ type: 'definition.addVariable', payload });
 
     return {
       summary: `Added variable '${name}'`,
@@ -1862,14 +1851,14 @@ export class Project implements IProjectCore {
 
   /** Update a variable's expression. */
   updateVariable(name: string, expression: string): HelperResult {
-    if (!this.variableNames().includes(name)) {
+    if (!this.core.variableNames().includes(name)) {
       throw new HelperError('VARIABLE_NOT_FOUND', `Variable "${name}" does not exist`, {
         name,
-        validVariables: this.variableNames(),
+        validVariables: this.core.variableNames(),
       });
     }
     this._validateFEL(expression);
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.setVariable',
       payload: { name, property: 'expression', value: expression },
     });
@@ -1883,15 +1872,15 @@ export class Project implements IProjectCore {
 
   /** Remove a variable — warns about dangling references. */
   removeVariable(name: string): HelperResult {
-    if (!this.variableNames().includes(name)) {
+    if (!this.core.variableNames().includes(name)) {
       throw new HelperError('VARIABLE_NOT_FOUND', `Variable "${name}" does not exist`, {
         name,
-        validVariables: this.variableNames(),
+        validVariables: this.core.variableNames(),
       });
     }
     // Scan for dangling references before deletion
     const warnings: HelperWarning[] = [];
-    const allExprs = this.allExpressions();
+    const allExprs = this.core.allExpressions();
     const varRef = `$${name}`;
     const danglingPaths: string[] = [];
 
@@ -1909,7 +1898,7 @@ export class Project implements IProjectCore {
       });
     }
 
-    this.dispatch({ type: 'definition.deleteVariable', payload: { name } });
+    this.core.dispatch({ type: 'definition.deleteVariable', payload: { name } });
 
     return {
       summary: `Removed variable '${name}'`,
@@ -1932,7 +1921,7 @@ export class Project implements IProjectCore {
 
   /** Add a named external data source. */
   addInstance(name: string, props: InstanceProps): HelperResult {
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.addInstance',
       payload: { name, ...props },
     });
@@ -1945,10 +1934,10 @@ export class Project implements IProjectCore {
   }
 
   private _validateInstanceExists(name: string): void {
-    if (!this.instanceNames().includes(name)) {
+    if (!this.core.instanceNames().includes(name)) {
       throw new HelperError('INSTANCE_NOT_FOUND', `Instance "${name}" does not exist`, {
         name,
-        validInstances: this.instanceNames(),
+        validInstances: this.core.instanceNames(),
       });
     }
   }
@@ -1965,7 +1954,7 @@ export class Project implements IProjectCore {
         });
       }
     }
-    if (commands.length > 0) this.dispatch(commands);
+    if (commands.length > 0) this.core.dispatch(commands);
 
     return {
       summary: `Updated instance '${name}'`,
@@ -1977,7 +1966,7 @@ export class Project implements IProjectCore {
   /** Rename an instance — rewrites FEL references. */
   renameInstance(name: string, newName: string): HelperResult {
     this._validateInstanceExists(name);
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.renameInstance',
       payload: { name, newName },
     });
@@ -1994,7 +1983,7 @@ export class Project implements IProjectCore {
     this._validateInstanceExists(name);
     // Scan for dangling references
     const warnings: HelperWarning[] = [];
-    const allExprs = this.allExpressions();
+    const allExprs = this.core.allExpressions();
     const ref = `@instance('${name}')`;
     const danglingPaths: string[] = [];
 
@@ -2012,7 +2001,7 @@ export class Project implements IProjectCore {
       });
     }
 
-    this.dispatch({ type: 'definition.deleteInstance', payload: { name } });
+    this.core.dispatch({ type: 'definition.deleteInstance', payload: { name } });
 
     return {
       summary: `Removed instance '${name}'`,
@@ -2026,7 +2015,7 @@ export class Project implements IProjectCore {
 
   /** Enable/disable screener. */
   setScreener(enabled: boolean): HelperResult {
-    this.dispatch({ type: 'definition.setScreener', payload: { enabled } });
+    this.core.dispatch({ type: 'definition.setScreener', payload: { enabled } });
 
     return {
       summary: `Screener ${enabled ? 'enabled' : 'disabled'}`,
@@ -2038,7 +2027,7 @@ export class Project implements IProjectCore {
   /** Add a screener question. */
   addScreenField(key: string, label: string, type: string, props?: FieldProps): HelperResult {
     const resolved = resolveFieldType(type);
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.addScreenerItem',
       payload: { type: 'field', key, label, dataType: resolved.dataType },
     });
@@ -2052,7 +2041,7 @@ export class Project implements IProjectCore {
 
   /** Remove a screener question. */
   removeScreenField(key: string): HelperResult {
-    this.dispatch({ type: 'definition.deleteScreenerItem', payload: { key } });
+    this.core.dispatch({ type: 'definition.deleteScreenerItem', payload: { key } });
 
     return {
       summary: `Removed screener field '${key}'`,
@@ -2067,7 +2056,7 @@ export class Project implements IProjectCore {
     const payload: Record<string, unknown> = { condition, target };
     if (label) payload.label = label;
 
-    this.dispatch({ type: 'definition.addRoute', payload });
+    this.core.dispatch({ type: 'definition.addRoute', payload });
 
     return {
       summary: `Added screen route to '${target}'`,
@@ -2077,7 +2066,7 @@ export class Project implements IProjectCore {
   }
 
   private _validateRouteIndex(routeIndex: number): void {
-    const routes = (this.state.definition as any).screener?.routes ?? [];
+    const routes = (this.core.state.definition as any).screener?.routes ?? [];
     if (routeIndex < 0 || routeIndex >= routes.length) {
       throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Route index ${routeIndex} is out of bounds`, {
         routeIndex,
@@ -2103,7 +2092,7 @@ export class Project implements IProjectCore {
         });
       }
     }
-    if (commands.length > 0) this.dispatch(commands);
+    if (commands.length > 0) this.core.dispatch(commands);
 
     return {
       summary: `Updated screen route ${routeIndex}`,
@@ -2115,7 +2104,7 @@ export class Project implements IProjectCore {
   /** Reorder a screener route. */
   reorderScreenRoute(routeIndex: number, direction: 'up' | 'down'): HelperResult {
     this._validateRouteIndex(routeIndex);
-    this.dispatch({
+    this.core.dispatch({
       type: 'definition.reorderRoute',
       payload: { index: routeIndex, direction },
     });
@@ -2130,14 +2119,14 @@ export class Project implements IProjectCore {
   /** Remove a screener route. */
   removeScreenRoute(routeIndex: number): HelperResult {
     this._validateRouteIndex(routeIndex);
-    const routes = (this.state.definition as any).screener?.routes ?? [];
+    const routes = (this.core.state.definition as any).screener?.routes ?? [];
     if (routes.length <= 1) {
       throw new HelperError('ROUTE_MIN_COUNT', 'Cannot delete the last remaining screener route', {
         currentRouteCount: routes.length,
         routes,
       });
     }
-    this.dispatch({ type: 'definition.deleteRoute', payload: { index: routeIndex } });
+    this.core.dispatch({ type: 'definition.deleteRoute', payload: { index: routeIndex } });
 
     return {
       summary: `Removed screen route ${routeIndex}`,
@@ -2147,6 +2136,7 @@ export class Project implements IProjectCore {
   }
 }
 
-export function createProject(options?: ProjectOptions): Project {
-  return new Project(createRawProject(options));
+export function createProject(options?: CreateProjectOptions): Project {
+  // Bridge studio-core options → core options at the package boundary
+  return new Project(createRawProject(options as any));
 }

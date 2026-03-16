@@ -146,21 +146,18 @@ describe('widgetHintFor', () => {
 
 // ── Project Wrapper Tests ───────────────────────────────────────────
 
-import { RawProject } from '../src/index.js';
 import { Project, createProject } from '../src/project.js';
 
-describe('Project wrapper', () => {
-  it('composes IProjectCore and exposes raw core', () => {
+describe('Project', () => {
+  it('is a Project instance with empty fields', () => {
     const project = createProject();
     expect(project).toBeInstanceOf(Project);
-    expect(project).not.toBeInstanceOf(RawProject);
-    expect(project.raw).toBeInstanceOf(RawProject);
     expect(project.fieldPaths()).toEqual([]);
   });
 
-  it('proxies undo/redo', () => {
+  it('undo/redo round-trips', () => {
     const project = createProject();
-    project.raw.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'f' } });
+    project.addField('f', 'Field', 'text');
     expect(project.fieldPaths()).toContain('f');
     project.undo();
     expect(project.fieldPaths()).not.toContain('f');
@@ -168,18 +165,54 @@ describe('Project wrapper', () => {
     expect(project.fieldPaths()).toContain('f');
   });
 
-  it('proxies onChange subscription', () => {
+  it('onChange fires on helper calls', () => {
     const project = createProject();
     let notified = false;
     project.onChange(() => { notified = true; });
-    project.raw.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'f' } });
+    project.addField('f', 'Field', 'text');
     expect(notified).toBe(true);
   });
 
-  it('proxies export', () => {
+  it('export includes added items', () => {
     const project = createProject();
-    project.raw.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'f', label: 'Test' } });
+    project.addField('f', 'Field', 'text');
     const bundle = project.export();
     expect(bundle.definition.items).toHaveLength(1);
+  });
+
+  it('loadBundle replaces state and resets history', () => {
+    const project = createProject();
+    project.addField('old', 'Old', 'text');
+    expect(project.canUndo).toBe(true);
+
+    const bundle = project.export();
+    project.loadBundle(bundle);
+    expect(project.canUndo).toBe(false);
+    expect(project.fieldPaths()).toContain('old');
+  });
+
+  it('mapField / unmapField manage mapping rules', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.mapField('name', '/out/name');
+    expect((project.mapping as any).rules).toHaveLength(1);
+    project.unmapField('name');
+    expect((project.mapping as any).rules).toHaveLength(0);
+  });
+
+  it('read-only getters expose definition/theme/component/mapping', () => {
+    const project = createProject();
+    project.addField('f', 'Field', 'text');
+    expect(project.definition.items).toHaveLength(1);
+    expect(project.theme).toBeDefined();
+    expect(project.component).toBeDefined();
+    expect(project.mapping).toBeDefined();
+  });
+
+  it('statistics and commandHistory are available', () => {
+    const project = createProject();
+    project.addField('f', 'Field', 'text');
+    expect(project.statistics()).toBeDefined();
+    expect(project.commandHistory().length).toBeGreaterThan(0);
   });
 });

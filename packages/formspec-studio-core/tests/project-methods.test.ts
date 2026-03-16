@@ -98,14 +98,14 @@ describe('addField', () => {
 
   it('adds nested field via dot-path', () => {
     const project = createProject();
-    project.raw.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'contact' } });
+    project.addGroup('contact', 'Contact');
     project.addField('contact.email', 'Email', 'email');
     expect(project.fieldPaths()).toContain('contact.email');
   });
 
   it('adds field with explicit parentPath in props', () => {
     const project = createProject();
-    project.raw.dispatch({ type: 'definition.addItem', payload: { type: 'group', key: 'contact' } });
+    project.addGroup('contact', 'Contact');
     project.addField('phone', 'Phone', 'phone', { parentPath: 'contact' });
     expect(project.fieldPaths()).toContain('contact.phone');
   });
@@ -396,11 +396,11 @@ describe('removeValidation', () => {
     const result = project.addValidation('*', 'a > 0', 'Must be positive');
     const shapeId = result.createdId!;
 
-    const shapes = project.state.definition.shapes;
+    const shapes = project.definition.shapes;
     expect(shapes?.some((s: any) => s.id === shapeId)).toBe(true);
 
     project.removeValidation(shapeId);
-    const shapesAfter = project.state.definition.shapes;
+    const shapesAfter = project.definition.shapes;
     expect(shapesAfter?.some((s: any) => s.id === shapeId)).toBe(false);
   });
 });
@@ -414,7 +414,7 @@ describe('updateValidation', () => {
 
     project.updateValidation(shapeId, { rule: 'a > 10', message: 'Must be > 10' });
 
-    const shapes = project.state.definition.shapes;
+    const shapes = project.definition.shapes;
     const shape = shapes?.find((s: any) => s.id === shapeId);
     expect(shape?.constraint).toBe('a > 10');
     expect(shape?.message).toBe('Must be > 10');
@@ -450,7 +450,7 @@ describe('removeItem', () => {
     const shapeId = result.createdId!;
 
     project.removeItem('a');
-    const shapes = project.state.definition.shapes ?? [];
+    const shapes = project.definition.shapes ?? [];
     expect(shapes.some((s: any) => s.id === shapeId)).toBe(false);
   });
 
@@ -485,12 +485,12 @@ describe('removeItem', () => {
     project.addScreenRoute('age > 18', '/adult-form', 'Adult route');
     project.addScreenRoute('1 = 1', '/fallback', 'Fallback');
     // Verify routes exist
-    const routesBefore = project.state.definition.screener?.routes ?? [];
+    const routesBefore = project.definition.screener?.routes ?? [];
     expect(routesBefore.length).toBe(2);
     expect((routesBefore[0] as any).condition).toBe('age > 18');
     // Delete the field — route referencing 'age' should be removed
     project.removeItem('age');
-    const routesAfter = project.state.definition.screener?.routes ?? [];
+    const routesAfter = project.definition.screener?.routes ?? [];
     expect(routesAfter.length).toBe(1);
     expect((routesAfter[0] as any).condition).toBe('1 = 1');
   });
@@ -500,13 +500,13 @@ describe('removeItem', () => {
     project.addField('name', 'Name', 'text');
     project.addField('email', 'Email', 'email');
     // Add mapping rules — one for name, one for email
-    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'name', targetPath: '/output/name' } });
-    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'email', targetPath: '/output/email' } });
-    const rulesBefore = (project.state.mapping as any).rules;
+    project.mapField('name', '/output/name');
+    project.mapField('email', '/output/email');
+    const rulesBefore = (project.mapping as any).rules;
     expect(rulesBefore.length).toBe(2);
     // Delete name — its mapping rule should be removed
     project.removeItem('name');
-    const rulesAfter = (project.state.mapping as any).rules;
+    const rulesAfter = (project.mapping as any).rules;
     expect(rulesAfter.length).toBe(1);
     expect(rulesAfter[0].sourcePath).toBe('email');
   });
@@ -516,13 +516,13 @@ describe('removeItem', () => {
     project.addField('a', 'A', 'text');
     project.addField('b', 'B', 'text');
     // Add 3 rules: 2 reference 'a', 1 references 'b'
-    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'a', targetPath: '/out/a1' } });
-    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'b', targetPath: '/out/b' } });
-    project.dispatch({ type: 'mapping.addRule', payload: { sourcePath: 'a', targetPath: '/out/a2' } });
-    expect((project.state.mapping as any).rules.length).toBe(3);
+    project.mapField('a', '/out/a1');
+    project.mapField('b', '/out/b');
+    project.mapField('a', '/out/a2');
+    expect((project.mapping as any).rules.length).toBe(3);
     // Delete 'a' — both mapping rules for 'a' should be removed
     project.removeItem('a');
-    const rulesAfter = (project.state.mapping as any).rules;
+    const rulesAfter = (project.mapping as any).rules;
     expect(rulesAfter.length).toBe(1);
     expect(rulesAfter[0].sourcePath).toBe('b');
   });
@@ -641,12 +641,12 @@ describe('reorderItem', () => {
     const project = createProject();
     project.addField('a', 'A', 'text');
     project.addField('b', 'B', 'text');
-    const items = project.state.definition.items;
+    const items = project.definition.items;
     expect(items[0].key).toBe('a');
     expect(items[1].key).toBe('b');
 
     project.reorderItem('b', 'up');
-    const after = project.state.definition.items;
+    const after = project.definition.items;
     expect(after[0].key).toBe('b');
     expect(after[1].key).toBe('a');
   });
@@ -684,7 +684,7 @@ describe('defineChoices', () => {
       { value: 'blue', label: 'Blue' },
     ]);
     // Option set should be accessible
-    const def = project.state.definition as any;
+    const def = project.definition as any;
     expect(def.optionSets?.colors).toBeDefined();
   });
 });
@@ -716,7 +716,7 @@ describe('copyItem', () => {
     project.addField('name', 'Name', 'text');
     const result = project.copyItem('name');
     expect(result.affectedPaths[0]).toBeDefined();
-    expect(project.state.definition.items.length).toBe(2);
+    expect(project.definition.items.length).toBe(2);
   });
 
   it('shallow copy emits BINDS_NOT_COPIED warning when binds exist', () => {
@@ -748,7 +748,7 @@ describe('wrapItemsInGroup', () => {
     const result = project.wrapItemsInGroup(['name'], 'Contact');
     expect(result.affectedPaths[0]).toBeDefined();
     // Original field should be nested
-    const items = project.state.definition.items;
+    const items = project.definition.items;
     expect(items.some((i: any) => i.type === 'group')).toBe(true);
   });
 });
@@ -762,10 +762,10 @@ describe('batchDeleteItems', () => {
     project.addField('b', 'B', 'text');
     project.addField('c', 'C', 'text');
     project.batchDeleteItems(['a', 'b']);
-    expect(project.state.definition.items).toHaveLength(1);
-    expect(project.state.definition.items[0].key).toBe('c');
+    expect(project.definition.items).toHaveLength(1);
+    expect(project.definition.items[0].key).toBe('c');
     project.undo();
-    expect(project.state.definition.items).toHaveLength(3);
+    expect(project.definition.items).toHaveLength(3);
   });
 });
 
@@ -778,7 +778,7 @@ describe('batchDuplicateItems', () => {
     project.addField('b', 'B', 'text');
     const result = project.batchDuplicateItems(['a', 'b']);
     expect(result.affectedPaths).toHaveLength(2);
-    expect(project.state.definition.items.length).toBe(4);
+    expect(project.definition.items.length).toBe(4);
   });
 });
 
@@ -823,7 +823,7 @@ describe('addPage', () => {
     const project = createProject();
     const result = project.addPage('Page 1');
     expect(result.createdId).toBeDefined();
-    const pages = project.state.theme.pages;
+    const pages = project.theme.pages;
     expect(pages?.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -845,7 +845,7 @@ describe('addPage vs addWizardPage independence', () => {
     const wizardResult = project.addWizardPage('Step 1');
 
     // addPage creates a theme page
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     expect(pages.some((p: any) => p.id === pageResult.createdId)).toBe(true);
 
     // addWizardPage creates a definition group
@@ -858,7 +858,7 @@ describe('addPage vs addWizardPage independence', () => {
 
     // Undo wizard page — page still exists
     project.undo();
-    const pagesAfterUndoWizard = project.state.theme.pages ?? [];
+    const pagesAfterUndoWizard = project.theme.pages ?? [];
     expect(pagesAfterUndoWizard.some((p: any) => p.id === pageResult.createdId)).toBe(true);
     expect(project.itemAt(wizardResult.createdId!)).toBeUndefined();
   });
@@ -870,7 +870,7 @@ describe('removePage', () => {
     const { createdId } = project.addPage('Page 1');
     project.addPage('Page 2');
     project.removePage(createdId!);
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     expect(pages.find((p: any) => p.id === createdId)).toBeUndefined();
   });
 });
@@ -881,7 +881,7 @@ describe('reorderPage', () => {
     const p1 = project.addPage('Page 1');
     const p2 = project.addPage('Page 2');
     project.reorderPage(p2.createdId!, 'up');
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     expect(pages[0]?.id).toBe(p2.createdId);
   });
 });
@@ -891,7 +891,7 @@ describe('updatePage', () => {
     const project = createProject();
     const { createdId } = project.addPage('Old Title');
     project.updatePage(createdId!, { title: 'New Title' });
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     const page = pages.find((p: any) => p.id === createdId);
     expect(page?.title).toBe('New Title');
   });
@@ -903,7 +903,7 @@ describe('placeOnPage', () => {
     project.addField('name', 'Name', 'text');
     const { createdId } = project.addPage('Page 1');
     project.placeOnPage('name', createdId!);
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     const page = pages.find((p: any) => p.id === createdId);
     expect(page?.regions?.some((r: any) => r.key === 'name')).toBe(true);
   });
@@ -916,7 +916,7 @@ describe('unplaceFromPage', () => {
     const { createdId } = project.addPage('Page 1');
     project.placeOnPage('name', createdId!);
     project.unplaceFromPage('name', createdId!);
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     const page = pages.find((p: any) => p.id === createdId);
     expect(page?.regions?.some((r: any) => r.key === 'name')).toBeFalsy();
   });
@@ -926,7 +926,7 @@ describe('setFlow', () => {
   it('sets flow mode to wizard', () => {
     const project = createProject();
     project.setFlow('wizard');
-    expect(project.state.definition.formPresentation?.pageMode).toBe('wizard');
+    expect(project.definition.formPresentation?.pageMode).toBe('wizard');
   });
 });
 
@@ -1055,7 +1055,7 @@ describe('setScreener', () => {
   it('enables the screener', () => {
     const project = createProject();
     project.setScreener(true);
-    expect(project.state.definition.screener).toBeDefined();
+    expect(project.definition.screener).toBeDefined();
   });
 });
 
@@ -1097,7 +1097,7 @@ describe('updateScreenRoute', () => {
     project.addScreenRoute('age >= 18', 'https://example.com');
     project.updateScreenRoute(0, { condition: 'age >= 21' });
     // Route should still exist
-    expect(project.state.definition.screener.routes).toHaveLength(1);
+    expect(project.definition.screener.routes).toHaveLength(1);
   });
 });
 
@@ -1109,7 +1109,7 @@ describe('reorderScreenRoute', () => {
     project.addScreenRoute('age >= 18', 'https://a.com');
     project.addScreenRoute('age >= 21', 'https://b.com');
     project.reorderScreenRoute(1, 'up');
-    const routes = project.state.definition.screener.routes;
+    const routes = project.definition.screener.routes;
     expect(routes[0].condition).toBe('age >= 21');
   });
 });
@@ -1122,7 +1122,7 @@ describe('removeScreenRoute', () => {
     project.addScreenRoute('age >= 18', 'https://a.com');
     project.addScreenRoute('age >= 21', 'https://b.com');
     project.removeScreenRoute(0);
-    const routes = project.state.definition.screener.routes;
+    const routes = project.definition.screener.routes;
     expect(routes).toHaveLength(1);
   });
 });
@@ -1189,13 +1189,13 @@ describe('addWizardPage edge cases', () => {
     const project = createProject();
     // First wizard page should set pageMode
     project.addWizardPage('Step 1');
-    expect(project.state.definition.formPresentation?.pageMode).toBe('wizard');
+    expect(project.definition.formPresentation?.pageMode).toBe('wizard');
 
     // Second wizard page should NOT re-dispatch pageMode
     // (just verify it doesn't throw / still works)
     project.addWizardPage('Step 2');
-    expect(project.state.definition.formPresentation?.pageMode).toBe('wizard');
-    expect(project.state.definition.items).toHaveLength(2);
+    expect(project.definition.formPresentation?.pageMode).toBe('wizard');
+    expect(project.definition.items).toHaveLength(2);
   });
 });
 
@@ -1226,7 +1226,7 @@ describe('wrapItemsInGroup multi-item', () => {
     // Group should contain both items
     expect(result.affectedPaths.length).toBeGreaterThanOrEqual(3); // groupPath + 2 moved
     // Original root should have 2 items: the new group and 'c'
-    expect(project.state.definition.items).toHaveLength(2);
+    expect(project.definition.items).toHaveLength(2);
   });
 });
 
@@ -1240,8 +1240,8 @@ describe('batchDeleteItems ancestor deduplication', () => {
 
     // Passing both parent and child — child should be deduped
     project.batchDeleteItems(['contact', 'contact.email']);
-    expect(project.state.definition.items).toHaveLength(1);
-    expect(project.state.definition.items[0].key).toBe('other');
+    expect(project.definition.items).toHaveLength(1);
+    expect(project.definition.items[0].key).toBe('other');
   });
 
   it('is a single undo entry', () => {
@@ -1249,9 +1249,9 @@ describe('batchDeleteItems ancestor deduplication', () => {
     project.addField('a', 'A', 'text');
     project.addField('b', 'B', 'text');
     project.batchDeleteItems(['a', 'b']);
-    expect(project.state.definition.items).toHaveLength(0);
+    expect(project.definition.items).toHaveLength(0);
     project.undo();
-    expect(project.state.definition.items).toHaveLength(2);
+    expect(project.definition.items).toHaveLength(2);
   });
 });
 
@@ -1320,7 +1320,7 @@ describe('reorderPage boundary', () => {
     project.addPage('Page 2');
     // Moving first page up should be a no-op (no throw)
     project.reorderPage(p1.createdId!, 'up');
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     expect(pages[0]?.id).toBe(p1.createdId);
   });
 });
@@ -1332,7 +1332,7 @@ describe('addSubmitButton with pageId', () => {
     const result = project.addSubmitButton('Submit', createdId);
     expect(result.summary).toContain('submit');
     // The submit button should be assigned to the page
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     const page = pages.find((p: any) => p.id === createdId);
     expect(page?.regions?.some((r: any) => r.key === 'submit')).toBe(true);
   });
@@ -1351,18 +1351,14 @@ describe('updateItem widget sets widgetHint on definition', () => {
 describe('updateItem widget with missing component node', () => {
   it('sets widgetHint on definition even when component node absent, emits warning', () => {
     const project = createProject();
-    // Add field via definition
-    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'bare', label: 'Bare', dataType: 'text' } });
-    // Set an authored component tree that does NOT include this field
-    project.dispatch({
-      type: 'project.import',
-      payload: {
-        definition: project.state.definition,
-        component: {
-          $formspecComponent: '0.1',
-          tree: { component: 'Form', children: [] }, // no node for 'bare'
-        },
-      },
+    // Add field, then reload with a component tree that does NOT include it
+    project.addField('bare', 'Bare', 'text');
+    project.loadBundle({
+      definition: project.definition,
+      component: {
+        $formspecComponent: '0.1',
+        tree: { component: 'Form', children: [] }, // no node for 'bare'
+      } as any,
     });
     // This should NOT throw — should emit a warning for the component part
     // but still set widgetHint on definition
@@ -1393,7 +1389,7 @@ describe('batchDuplicateItems ancestor dedup', () => {
     const result = project.batchDuplicateItems(['a', 'b']);
     expect(result.affectedPaths).toHaveLength(2);
     // Original items still present
-    expect(project.state.definition.items.length).toBe(4);
+    expect(project.definition.items.length).toBe(4);
   });
 
   it('deduplicates group with child', () => {
@@ -1417,7 +1413,7 @@ describe('removeValidation preserves adjacent shapes', () => {
 
     project.removeValidation(r1.createdId!);
 
-    const shapes = project.state.definition.shapes ?? [];
+    const shapes = project.definition.shapes ?? [];
     expect(shapes.some((s: any) => s.id === r1.createdId)).toBe(false);
     expect(shapes.some((s: any) => s.id === r2.createdId)).toBe(true);
   });
@@ -1433,7 +1429,7 @@ describe('copyItem deep shapes with new IDs', () => {
 
     project.copyItem('score', true);
 
-    const allShapes = project.state.definition.shapes ?? [];
+    const allShapes = project.definition.shapes ?? [];
     // There should now be 2 shapes — original and copy
     expect(allShapes.length).toBe(2);
     const originalShape = allShapes.find((s: any) => s.id === originalShapeId);
@@ -1483,7 +1479,7 @@ describe('updateItem routing exhaustiveness', () => {
     const result = project.updateItem('status', { choicesFrom: 'statusOptions' });
     expect(result.affectedPaths[0]).toBe('status');
     // Verify command was dispatched (optionSet is stored on the item)
-    const items = project.state.definition.items;
+    const items = project.definition.items;
     const item = items.find((i: any) => i.key === 'status');
     expect((item as any)?.optionSet).toBe('statusOptions');
   });
@@ -1536,7 +1532,7 @@ describe('updateItem routing exhaustiveness', () => {
     const page = project.addPage('Page 1');
     project.updateItem('name', { page: page.createdId! });
     // Verify the page has the item assigned via regions
-    const pages = project.state.theme.pages ?? [];
+    const pages = project.theme.pages ?? [];
     const targetPage = pages.find((p: any) => p.id === page.createdId);
     const regionKeys = (targetPage as any)?.regions?.map((r: any) => r.key) ?? [];
     expect(regionKeys).toContain('name');
@@ -1557,7 +1553,7 @@ describe('updateItem routing exhaustiveness', () => {
     project.updateItem('name', { style: { fontSize: '1.5rem', color: 'blue' } });
 
     // theme.setItemStyle nests CSS inside items[key].style
-    const overrides = (project.state.theme as any).items?.name;
+    const overrides = (project.theme as any).items?.name;
     expect(overrides?.style?.fontSize).toBe('1.5rem');
     expect(overrides?.style?.color).toBe('blue');
   });
@@ -1600,7 +1596,7 @@ describe('updateValidation all changes keys', () => {
       activeWhen: 'a > 0',
     });
 
-    const shapes = project.state.definition.shapes ?? [];
+    const shapes = project.definition.shapes ?? [];
     const shape = shapes.find((s: any) => s.id === id) as any;
     expect(shape.timing).toBe('submit');
     expect(shape.severity).toBe('warning');

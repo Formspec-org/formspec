@@ -5,14 +5,37 @@
  * Project composes IProjectCore (from formspec-core) and exposes
  * 51 behavior-driven helper methods for form authoring.
  *
- * Re-exports all of formspec-core for consumer convenience.
+ * Consumers import types from THIS package — never from formspec-core.
  */
 
-// Re-export everything from formspec-core so consumers need no import changes
-export * from 'formspec-core';
-
-// Local exports
+// ── Project ─────────────────────────────────────────────────────────
 export { Project, createProject } from './project.js';
+
+// ── Studio-core types (own vocabulary) ──────────────────────────────
+export type {
+  // Schema-derived types (from formspec-types)
+  FormItem,
+  FormBind,
+  FormShape,
+  FormVariable,
+  FormInstance,
+  FormOption,
+  FormDefinition,
+  ComponentDocument,
+  ThemeDocument,
+  MappingDocument,
+  // Operational types (studio-core's own)
+  ProjectBundle,
+  ProjectSnapshot,
+  ProjectStatistics,
+  Diagnostic,
+  Diagnostics,
+  LogEntry,
+  ChangeListener,
+  CreateProjectOptions,
+} from './types.js';
+
+// ── Helper types ────────────────────────────────────────────────────
 export { HelperError } from './helper-types.js';
 export type {
   HelperResult,
@@ -30,6 +53,10 @@ export type {
   ItemChanges,
   MetadataChanges,
 } from './helper-types.js';
+
+// ── Field type aliases ──────────────────────────────────────────────
 export { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
 export type { ResolvedFieldType } from './field-type-aliases.js';
+
+// ── Evaluation helpers ──────────────────────────────────────────────
 export { previewForm, validateResponse } from './evaluation-helpers.js';

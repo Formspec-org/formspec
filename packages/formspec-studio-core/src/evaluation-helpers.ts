@@ -1,4 +1,4 @@
-import { FormEngine, type ValidationReport } from 'formspec-engine';
+import { FormEngine, type FormspecDefinition, type ValidationReport } from 'formspec-engine';
 import type { Project } from './project.js';
 
 /**
@@ -18,7 +18,8 @@ export function previewForm(
   validationState: Record<string, { severity: 'error' | 'warning' | 'info'; message: string }>;
 } {
   const bundle = project.export();
-  const engine = new FormEngine(bundle.definition);
+  // Bridge studio-core's FormDefinition → engine's FormspecDefinition at the boundary
+  const engine = new FormEngine(bundle.definition as unknown as FormspecDefinition);
 
   // Apply scenario values
   if (scenario) {
@@ -89,7 +90,8 @@ export function validateResponse(
   response: Record<string, unknown>,
 ): ValidationReport {
   const bundle = project.export();
-  const engine = new FormEngine(bundle.definition);
+  // Bridge studio-core's FormDefinition → engine's FormspecDefinition at the boundary
+  const engine = new FormEngine(bundle.definition as unknown as FormspecDefinition);
 
   // Set all response values
   for (const [path, value] of Object.entries(response)) {
