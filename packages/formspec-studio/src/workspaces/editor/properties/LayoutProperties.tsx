@@ -2,6 +2,7 @@ import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
 import { nodeIdFromLayoutId } from '../../../lib/tree-helpers';
 import { useComponent } from '../../../state/useComponent';
+import type { Project } from 'formspec-studio-core';
 
 function findNode(root: any, nodeId: string): any {
   if (root?.nodeId === nodeId) return root;
@@ -14,11 +15,11 @@ function findNode(root: any, nodeId: string): any {
 
 export function LayoutProperties({
   layoutId,
-  dispatch,
+  project,
   deselect,
 }: {
   layoutId: string;
-  dispatch: (command: any) => any;
+  project: Project;
   deselect: () => void;
 }) {
   const component = useComponent();
@@ -46,7 +47,7 @@ export function LayoutProperties({
               type="button"
               className="flex-1 py-1.5 px-3 rounded text-[11.5px] font-mono border border-border text-muted hover:text-ink hover:border-ink/30 transition-colors cursor-pointer"
               onClick={() => {
-                dispatch({ type: 'component.unwrapNode', payload: { node: { nodeId } } });
+                project.unwrapLayoutNode(nodeId);
                 deselect();
               }}
             >
@@ -56,7 +57,7 @@ export function LayoutProperties({
               type="button"
               className="flex-1 py-1.5 px-3 rounded text-[11.5px] font-mono border border-red-300 text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
               onClick={() => {
-                dispatch({ type: 'component.deleteNode', payload: { node: { nodeId } } });
+                project.deleteLayoutNode(nodeId);
                 deselect();
               }}
             >

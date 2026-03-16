@@ -4,11 +4,12 @@ import { PropInput } from './shared';
 import { AddBehaviorMenu } from '../../../components/ui/AddBehaviorMenu';
 import { BindCard } from '../../../components/ui/BindCard';
 import { PrePopulateCard } from '../../../components/ui/PrePopulateCard';
+import type { Project } from 'formspec-studio-core';
 
 export function FieldConfigSection({
   path,
   item,
-  dispatch,
+  project,
   binds,
   existingBehaviorTypes,
   isDecimalLike,
@@ -16,7 +17,7 @@ export function FieldConfigSection({
 }: {
   path: string;
   item: any;
-  dispatch: (command: any) => any;
+  project: Project;
   binds: Record<string, any>;
   existingBehaviorTypes: string[];
   isDecimalLike: boolean;
@@ -32,10 +33,7 @@ export function FieldConfigSection({
             className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
             defaultValue={item.initialValue != null ? String(item.initialValue) : ''}
             onBlur={(e) => {
-              dispatch({
-                type: 'definition.setItemProperty',
-                payload: { path, property: 'initialValue', value: e.currentTarget.value || null },
-              });
+              project.updateItem(path, { initialValue: e.currentTarget.value || null });
             }}
             placeholder="No default value"
           />
@@ -45,16 +43,10 @@ export function FieldConfigSection({
           <PrePopulateCard
             value={item.prePopulate}
             onChange={(val) => {
-              dispatch({
-                type: 'definition.setItemProperty',
-                payload: { path, property: 'prePopulate', value: val },
-              });
+              project.updateItem(path, { prePopulate: val });
             }}
             onRemove={() => {
-              dispatch({
-                type: 'definition.setItemProperty',
-                payload: { path, property: 'prePopulate', value: null },
-              });
+              project.updateItem(path, { prePopulate: null });
             }}
           />
         )}
@@ -64,10 +56,7 @@ export function FieldConfigSection({
             bindType="calculate"
             expression={binds.calculate}
             onRemove={() => {
-              dispatch({
-                type: 'definition.setBind',
-                payload: { path, properties: { calculate: null } },
-              });
+              project.updateItem(path, { calculate: null });
             }}
           >
             <div className="px-2 py-1 text-[13px] font-mono bg-subtle/50 rounded border border-border/50 text-ink/80">
@@ -82,15 +71,9 @@ export function FieldConfigSection({
           allowedTypes={['calculate', 'pre-populate']}
           onAdd={(type: string) => {
             if (type === 'pre-populate') {
-              dispatch({
-                type: 'definition.setItemProperty',
-                payload: { path, property: 'prePopulate', value: { instance: '', path: '' } },
-              });
+              project.updateItem(path, { prePopulate: { instance: '', path: '' } });
             } else if (type === 'calculate') {
-              dispatch({
-                type: 'definition.setBind',
-                payload: { path, properties: { calculate: '' } },
-              });
+              project.updateItem(path, { calculate: '' });
             }
           }}
           className="mt-1"
@@ -105,7 +88,7 @@ export function FieldConfigSection({
           type="number"
           min={0}
           value={item.precision}
-          dispatch={dispatch}
+          project={project}
           help={propertyHelp.precision}
         />
       )}
@@ -116,7 +99,7 @@ export function FieldConfigSection({
           property="currency"
           label="Currency"
           value={item.currency}
-          dispatch={dispatch}
+          project={project}
           help={propertyHelp.currency}
         />
       )}
@@ -127,7 +110,7 @@ export function FieldConfigSection({
           property="prefix"
           label="Prefix"
           value={item.prefix}
-          dispatch={dispatch}
+          project={project}
           help={propertyHelp.prefix}
         />
       )}
@@ -137,7 +120,7 @@ export function FieldConfigSection({
           property="suffix"
           label="Suffix"
           value={item.suffix}
-          dispatch={dispatch}
+          project={project}
           help={propertyHelp.suffix}
         />
       )}
@@ -147,7 +130,7 @@ export function FieldConfigSection({
           property="semanticType"
           label="Semantic Type"
           value={item.semanticType}
-          dispatch={dispatch}
+          project={project}
           help={propertyHelp.semanticType}
         />
       )}

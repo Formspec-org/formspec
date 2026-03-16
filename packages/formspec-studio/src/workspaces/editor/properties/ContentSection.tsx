@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { Section } from '../../../components/ui/Section';
 import { propertyHelp } from '../../../lib/field-helpers';
 import { AddPlaceholder, PropInput } from './shared';
+import type { Project } from 'formspec-studio-core';
 
 export function ContentSection({
   path,
   item,
-  dispatch,
+  project,
 }: {
   path: string;
   item: any;
-  dispatch: (command: any) => any;
+  project: Project;
 }) {
   const [showDescription, setShowDescription] = useState(!!item.description);
   const [showHint, setShowHint] = useState(!!item.hint);
@@ -35,7 +36,7 @@ export function ContentSection({
               property="description"
               label="Description"
               value={(item.description as string) ?? ''}
-              dispatch={dispatch}
+              project={project}
               help={propertyHelp.description}
             />
           )}
@@ -47,7 +48,7 @@ export function ContentSection({
               property="hint"
               label="Hint"
               value={(item.hint as string) ?? ''}
-              dispatch={dispatch}
+              project={project}
               help={propertyHelp.hint}
             />
           )}

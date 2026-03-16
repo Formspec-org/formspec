@@ -1,6 +1,7 @@
 import { Section } from '../../../components/ui/Section';
 import { HelpTip } from '../../../components/ui/HelpTip';
 import { propertyHelp } from '../../../lib/field-helpers';
+import type { Project } from 'formspec-studio-core';
 
 function parseRepeatValue(value: string): number | null {
   const trimmed = value.trim();
@@ -12,11 +13,11 @@ function parseRepeatValue(value: string): number | null {
 export function GroupConfigSection({
   path,
   item,
-  dispatch,
+  project,
 }: {
   path: string;
   item: any;
-  dispatch: (command: any) => any;
+  project: Project;
 }) {
   return (
     <Section title="Group Config">
@@ -28,10 +29,7 @@ export function GroupConfigSection({
           className="accent-accent"
           defaultChecked={!!item.repeatable}
           onChange={(event) => {
-            dispatch({
-              type: 'definition.setItemProperty',
-              payload: { path, property: 'repeatable', value: event.currentTarget.checked },
-            });
+            project.updateItem(path, { repeatable: event.currentTarget.checked });
           }}
         />
         <label htmlFor={`${path}-repeatable`} className="font-mono text-[10px] text-muted uppercase tracking-wider">
@@ -53,10 +51,7 @@ export function GroupConfigSection({
               className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
               defaultValue={item.minRepeat ?? ''}
               onBlur={(event) => {
-                dispatch({
-                  type: 'definition.setItemProperty',
-                  payload: { path, property: 'minRepeat', value: parseRepeatValue(event.currentTarget.value) },
-                });
+                project.updateItem(path, { minRepeat: parseRepeatValue(event.currentTarget.value) });
               }}
             />
           </div>
@@ -72,10 +67,7 @@ export function GroupConfigSection({
               className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
               defaultValue={item.maxRepeat ?? ''}
               onBlur={(event) => {
-                dispatch({
-                  type: 'definition.setItemProperty',
-                  payload: { path, property: 'maxRepeat', value: parseRepeatValue(event.currentTarget.value) },
-                });
+                project.updateItem(path, { maxRepeat: parseRepeatValue(event.currentTarget.value) });
               }}
             />
           </div>

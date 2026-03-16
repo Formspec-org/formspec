@@ -1,13 +1,14 @@
 import { Section } from '../../../components/ui/Section';
+import type { Project } from 'formspec-studio-core';
 
 export function OptionsSection({
   path,
   item,
-  dispatch,
+  project,
 }: {
   path: string;
   item: any;
-  dispatch: (command: any) => any;
+  project: Project;
 }) {
   const rawChoiceOptions = item.options ?? item.choices;
   const choiceOptions = Array.isArray(rawChoiceOptions)
@@ -18,32 +19,15 @@ export function OptionsSection({
     const nextOptions = choiceOptions.map((option, optionIndex) =>
       optionIndex === index ? { ...option, [property]: value } : option,
     );
-    dispatch({
-      type: 'definition.setItemProperty',
-      payload: { path, property: 'options', value: nextOptions },
-    });
+    project.updateItem(path, { options: nextOptions });
   };
 
   const addOption = () => {
-    dispatch({
-      type: 'definition.setItemProperty',
-      payload: {
-        path,
-        property: 'options',
-        value: [...choiceOptions, { value: '', label: '' }],
-      },
-    });
+    project.updateItem(path, { options: [...choiceOptions, { value: '', label: '' }] });
   };
 
   const removeOption = (index: number) => {
-    dispatch({
-      type: 'definition.setItemProperty',
-      payload: {
-        path,
-        property: 'options',
-        value: choiceOptions.filter((_, optionIndex) => optionIndex !== index),
-      },
-    });
+    project.updateItem(path, { options: choiceOptions.filter((_, optionIndex) => optionIndex !== index) });
   };
 
   return (

@@ -4,20 +4,18 @@ import {
   compatibleWidgets,
   componentForWidgetHint,
   propertyHelp,
-  widgetHintForComponent,
 } from '../../../lib/field-helpers';
-import { useProject } from '../../../state/useProject';
+import type { Project } from 'formspec-studio-core';
 
 export function WidgetHintSection({
   path,
   item,
-  dispatch,
+  project,
 }: {
   path: string;
   item: any;
-  dispatch: (command: any) => any;
+  project: Project;
 }) {
-  const project = useProject();
   const widgets = compatibleWidgets(item.type, item.dataType);
   const defaultWidget = widgets[0] ?? '';
   const treeWidget = project.componentFor(item.key)?.component as string | undefined;
@@ -41,21 +39,7 @@ export function WidgetHintSection({
           value={currentWidget}
           onChange={(event) => {
             const widget = event.currentTarget.value || null;
-            const widgetHint = widget ? widgetHintForComponent(widget, item.dataType) : null;
-
-            try {
-              dispatch({
-                type: 'component.setFieldWidget',
-                payload: { fieldKey: item.key, widget },
-              });
-            } catch {
-              // Some items have no component-tree node yet; keep the definition hint in sync.
-            }
-
-            dispatch({
-              type: 'definition.setItemProperty',
-              payload: { path, property: 'presentation.widgetHint', value: widgetHint },
-            });
+            project.updateItem(path, { widget });
           }}
         >
           <option value="">Default</option>

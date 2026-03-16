@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Section } from '../../../components/ui/Section';
 import { useTheme } from '../../../state/useTheme';
-import { useDispatch } from '../../../state/useDispatch';
+import { useProject } from '../../../state/useProject';
 import { resolveThemeCascade, type ResolvedProperty } from 'formspec-studio-core';
 
 const PROVENANCE_LABELS: Record<string, string> = {
@@ -20,7 +20,7 @@ export function AppearanceSection({
   itemDataType?: string;
 }) {
   const theme = useTheme();
-  const dispatch = useDispatch();
+  const project = useProject();
   const [addingStyle, setAddingStyle] = useState(false);
   const [styleKey, setStyleKey] = useState('');
   const [styleValue, setStyleValue] = useState('');
@@ -32,27 +32,18 @@ export function AppearanceSection({
   const hasOverride = Object.values(cascade).some((p: ResolvedProperty) => p.source === 'item-override');
 
   const setItemOverride = (property: string, value: unknown) => {
-    dispatch({
-      type: 'theme.setItemOverride',
-      payload: { itemKey, property, value },
-    });
+    project.setItemOverride(itemKey, property, value);
   };
 
   const clearOverride = () => {
-    dispatch({
-      type: 'theme.deleteItemOverride',
-      payload: { itemKey },
-    });
+    project.clearItemOverrides(itemKey);
   };
 
   const addStyle = () => {
     const k = styleKey.trim();
     const v = styleValue.trim();
     if (!k) return;
-    dispatch({
-      type: 'theme.setItemStyle',
-      payload: { itemKey, property: k, value: v },
-    });
+    project.applyStyle(itemKey, { [k]: v });
     setStyleKey('');
     setStyleValue('');
     setAddingStyle(false);

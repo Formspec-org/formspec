@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDefinition } from '../../state/useDefinition';
-import { useDispatch } from '../../state/useDispatch';
+import { useProject } from '../../state/useProject';
 
 interface PageTabsProps {
   activePageKey: string | null;
@@ -9,7 +9,7 @@ interface PageTabsProps {
 
 export function PageTabs({ activePageKey, onPageChange }: PageTabsProps) {
   const definition = useDefinition();
-  const dispatch = useDispatch();
+  const project = useProject();
   const items = definition.items || [];
   const [editingPageKey, setEditingPageKey] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState('');
@@ -35,14 +35,7 @@ export function PageTabs({ activePageKey, onPageChange }: PageTabsProps) {
   };
 
   const commitLabel = (pageKey: string) => {
-    dispatch({
-      type: 'definition.setItemProperty',
-      payload: {
-        path: pageKey,
-        property: 'label',
-        value: draftLabel.trim() || null,
-      },
-    });
+    project.updateItem(pageKey, { label: draftLabel.trim() || null });
     stopEditing();
   };
 

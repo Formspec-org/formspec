@@ -1,12 +1,13 @@
 import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
+import type { Project } from 'formspec-studio-core';
 
 export function DefinitionProperties({
   definition,
-  dispatch,
+  project,
 }: {
   definition: any;
-  dispatch: (command: any) => any;
+  project: Project;
 }) {
   return (
     <div className="h-full flex flex-col bg-surface overflow-hidden">
@@ -29,10 +30,7 @@ export function DefinitionProperties({
               className="w-full px-2 py-1 text-[13px] border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
               defaultValue={definition.title ?? ''}
               onBlur={(event) => {
-                dispatch({
-                  type: 'definition.setDefinitionProperty',
-                  payload: { property: 'title', value: event.currentTarget.value || null },
-                });
+                project.setMetadata({ title: event.currentTarget.value || null });
               }}
             />
           </div>

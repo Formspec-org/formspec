@@ -1,11 +1,12 @@
 import { HelpTip } from '../../../components/ui/HelpTip';
+import type { Project } from 'formspec-studio-core';
 
 export function PropInput({
   path,
   property,
   label,
   value,
-  dispatch,
+  project,
   type = 'text',
   help,
   min,
@@ -14,7 +15,7 @@ export function PropInput({
   property: string;
   label: string;
   value: string | number;
-  dispatch: (cmd: any) => any;
+  project: Project;
   type?: string;
   help?: string;
   min?: number;
@@ -38,10 +39,7 @@ export function PropInput({
             const parsed = Number.parseInt(nextValue, 10);
             nextValue = Number.isNaN(parsed) ? null : parsed;
           }
-          dispatch({
-            type: 'definition.setItemProperty',
-            payload: { path, property, value: nextValue || null },
-          });
+          project.updateItem(path, { [property]: nextValue || null });
         }}
       />
     </div>

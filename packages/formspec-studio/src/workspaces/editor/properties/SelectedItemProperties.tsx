@@ -14,6 +14,7 @@ import { GroupConfigSection } from './GroupConfigSection';
 import { OptionsSection } from './OptionsSection';
 import { AddBehaviorMenu } from '../../../components/ui/AddBehaviorMenu';
 import { PrePopulateCard } from '../../../components/ui/PrePopulateCard';
+import type { Project } from 'formspec-studio-core';
 
 export function SelectedItemProperties({
   item,
@@ -23,7 +24,7 @@ export function SelectedItemProperties({
   shapes,
   keyInputRef,
   showActions,
-  dispatch,
+  project,
   onDuplicate,
   onDelete,
 }: {
@@ -34,7 +35,7 @@ export function SelectedItemProperties({
   shapes: any[];
   keyInputRef: React.RefObject<HTMLInputElement | null>;
   showActions: boolean;
-  dispatch: (command: any) => any;
+  project: Project;
   onDuplicate: (path: string) => void;
   onDelete: (path: string) => void;
 }) {
@@ -94,10 +95,7 @@ export function SelectedItemProperties({
               className="w-full px-2 py-1 text-[13px] border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
               defaultValue={(item.label as string) || ''}
               onBlur={(event) => {
-                dispatch({
-                  type: 'definition.setItemProperty',
-                  payload: { path, property: 'label', value: event.currentTarget.value || null },
-                });
+                project.updateItem(path, { label: event.currentTarget.value || null });
               }}
             />
           </div>
@@ -110,15 +108,15 @@ export function SelectedItemProperties({
           )}
         </Section>
 
-        <ContentSection path={path} item={item} dispatch={dispatch} />
-        <WidgetHintSection path={path} item={item} dispatch={dispatch} />
+        <ContentSection path={path} item={item} project={project} />
+        <WidgetHintSection path={path} item={item} project={project} />
         <AppearanceSection itemKey={currentKey} itemType={item.type} itemDataType={dataType} />
 
         {isField && (
           <FieldConfigSection
             path={path}
             item={item}
-            dispatch={dispatch}
+            project={project}
             binds={binds}
             existingBehaviorTypes={existingBehaviorTypes}
             isDecimalLike={isDecimalLike}
@@ -127,11 +125,11 @@ export function SelectedItemProperties({
         )}
 
         {isGroup && (
-          <GroupConfigSection path={path} item={item} dispatch={dispatch} />
+          <GroupConfigSection path={path} item={item} project={project} />
         )}
 
         {isField && isChoice && (
-          <OptionsSection path={path} item={item} dispatch={dispatch} />
+          <OptionsSection path={path} item={item} project={project} />
         )}
 
         <Section title="Behavior Rules">
@@ -146,19 +144,13 @@ export function SelectedItemProperties({
                   expression={expression}
                   humanized={humanizeFEL(expression)}
                   onRemove={() => {
-                    dispatch({
-                      type: 'definition.setBind',
-                      payload: { path, properties: { [bindType]: null } },
-                    });
+                    project.updateItem(path, { [bindType]: null });
                   }}
                 >
                   <InlineExpression
                     value={expression}
                     onSave={(value) => {
-                      dispatch({
-                        type: 'definition.setBind',
-                        payload: { path, properties: { [bindType]: value ?? null } },
-                      });
+                      project.updateItem(path, { [bindType]: value ?? null });
                     }}
                     placeholder="Click to add expression"
                   />
@@ -169,10 +161,7 @@ export function SelectedItemProperties({
               existingTypes={existingBehaviorTypes}
               allowedTypes={['relevant', 'required', 'readonly', 'constraint']}
               onAdd={(type: string) => {
-                dispatch({
-                  type: 'definition.setBind',
-                  payload: { path, properties: { [type]: 'true' } },
-                });
+                project.updateItem(path, { [type]: 'true' });
               }}
               className="mt-2"
             />

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { bindsFor, shapesFor } from '../../../lib/field-helpers';
 import { buildDefLookup, isLayoutId } from '../../../lib/tree-helpers';
 import { useDefinition } from '../../../state/useDefinition';
-import { useDispatch } from '../../../state/useDispatch';
 import { useProject } from '../../../state/useProject';
 import { useSelection } from '../../../state/useSelection';
 import { DefinitionProperties } from './DefinitionProperties';
@@ -22,7 +21,6 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
     consumeFocusInspector,
   } = useSelection();
   const definition = useDefinition();
-  const dispatch = useDispatch();
   const project = useProject();
   const keyInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,23 +33,20 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
     const nextKey = inputEl.value;
     const currentKey = originalPath.split('.').pop();
     if (nextKey && nextKey !== currentKey) {
-      dispatch({
-        type: 'definition.renameItem',
-        payload: { path: originalPath, newKey: nextKey },
-      });
+      project.renameItem(originalPath, nextKey);
       const parentPath = originalPath.split('.').slice(0, -1).join('.');
       const nextPath = parentPath ? `${parentPath}.${nextKey}` : nextKey;
       select(nextPath, selectedType ?? 'field');
     }
-  }, [dispatch, select, selectedType]);
+  }, [project, select, selectedType]);
 
   const handleDelete = useCallback((path: string) => {
-    dispatch({ type: 'definition.deleteItem', payload: { path } });
-  }, [dispatch]);
+    project.removeItem(path);
+  }, [project]);
 
   const handleDuplicate = useCallback((path: string) => {
-    dispatch({ type: 'definition.duplicateItem', payload: { path } });
-  }, [dispatch]);
+    project.copyItem(path);
+  }, [project]);
 
   useEffect(() => {
     const input = keyInputRef.current;
@@ -82,11 +77,11 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
   }
 
   if (!selectedKey) {
-    return <DefinitionProperties definition={definition} dispatch={dispatch} />;
+    return <DefinitionProperties definition={definition} project={project} />;
   }
 
   if (isLayoutId(selectedKey)) {
-    return <LayoutProperties layoutId={selectedKey} dispatch={dispatch} deselect={deselect} />;
+    return <LayoutProperties layoutId={selectedKey} project={project} deselect={deselect} />;
   }
 
   if (!found) {
@@ -109,7 +104,7 @@ export function ItemProperties({ showActions = true }: { showActions?: boolean }
       shapes={shapes}
       keyInputRef={keyInputRef}
       showActions={showActions}
-      dispatch={dispatch}
+      project={project}
       onDuplicate={handleDuplicate}
       onDelete={handleDelete}
     />
