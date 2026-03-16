@@ -927,7 +927,7 @@ export async function main() {
     inputSchema: {
       project_id: z.string(),
       filter: z.object({
-        type: z.string(),
+        type: z.enum(['group', 'field', 'display']),
         dataType: z.string(),
         label: z.string(),
         hasExtension: z.string(),

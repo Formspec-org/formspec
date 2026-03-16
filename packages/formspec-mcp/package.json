@@ -8,7 +8,7 @@
     "formspec-mcp": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc --noCheck",
+    "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

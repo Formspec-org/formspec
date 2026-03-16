@@ -1,7 +1,7 @@
 # Formspec MCP Server — Design Spec
 
 **Date:** 2026-03-14
-**Status:** Draft (rev 7 — two-phase creation model)
+**Status:** Draft (rev 8 — annotation hints, tool prefix, error unification)
 **Branch:** studiofixes
 
 ---
@@ -51,7 +51,7 @@ packages/formspec-mcp/
     projects.ts     — in-memory project registry
     tools/
       bootstrap.ts  — draft_definition/draft_component/draft_theme/validate_draft/load_draft
-      lifecycle.ts  — create/open/save/list/publish/undo/redo
+      lifecycle.ts  — create/open/save/list/list_autosaved/publish/undo/redo
       structure.ts  — field/content/group/page/remove_page/move_page/place/unplace/repeat/update/remove/copy/metadata/submit_button
       flow.ts       — flow/branch/move/rename
       behavior.ts   — show_when/readonly_when/require/calculate/add_rule
@@ -80,8 +80,9 @@ packages/formspec-mcp/
 - `@modelcontextprotocol/sdk` — MCP server protocol
 - `formspec-studio-core` — project management and helpers
 - `formspec-engine` — FormEngine evaluation (for preview and validate_response)
-- `ajv` — JSON Schema validation (bootstrap phase artifact validation)
 - `zod` — tool input schema validation
+
+**Schema validation:** The server uses `createSchemaValidator` from `formspec-engine` for bootstrap phase artifact validation. Schema objects are loaded from disk at startup (`schemas/definition.schema.json`, `schemas/component.schema.json`, `schemas/theme.schema.json`). If schema files are missing, the server fails at startup (fatal), not at first tool call.
 - `uuid` — project_id generation
 
 **Transport:** stdio. Works with Claude Desktop, Claude Code, and any MCP-compatible client.
@@ -97,17 +98,17 @@ packages/formspec-mcp/
 ## Design Decisions
 
 **1. Auto-save on shutdown.**
-The in-memory registry does not persist across process exits. The server registers `SIGTERM` and `SIGINT` handlers that save all dirty projects to `~/.formspec/autosave/{project_id}/` before exit. On Claude Desktop restart, the user calls `open(~/.formspec/autosave/{project_id}/)` to recover work.
+The in-memory registry does not persist across process exits. The server registers `SIGTERM` and `SIGINT` handlers that save all dirty projects to `~/.formspec/autosave/{project_id}/` before exit. On Claude Desktop restart, the user calls `formspec_open(~/.formspec/autosave/{project_id}/)` to recover work.
 
 **2. Two-phase creation: generate JSON first, then author incrementally.**
-LLMs generate raw JSON artifacts guided by `schemas/definition.json`, `schemas/component.json`, and `schemas/theme.json`. Each artifact is validated against its schema and by the engine's diagnostics. The LLM iterates on each artifact until it's valid. Once all artifacts pass, they're normalized and loaded into a `Project`. From that point forward, all edits use the structured helper methods — no more raw JSON. This separates the hard problem (generating a valid initial structure) from the easy problem (incremental refinement), and gives the LLM clear, actionable feedback at each step.
+LLMs generate raw JSON artifacts guided by `schemas/definition.schema.json`, `schemas/component.schema.json`, and `schemas/theme.schema.json`. Each artifact is validated against its schema and by the engine's diagnostics. The LLM iterates on each artifact until it's valid. Once all artifacts pass, they're normalized and loaded into a `Project`. From that point forward, all edits use the structured helper methods — no more raw JSON. This separates the hard problem (generating a valid initial structure) from the easy problem (incremental refinement), and gives the LLM clear, actionable feedback at each step.
 
 **3. Error protocol: MCP layer translates `Project` errors to wire format.**
 `Project` helper methods pre-validate and throw `HelperError { code, message, detail }` on validation failure. The MCP tool layer wraps every `Project` call in try/catch:
 - Catches `HelperError` → maps `code` + `detail` to `ToolError` wire format
 - Catches any other `Error` → maps to `COMMAND_FAILED` with `detail.commandType` and `detail.handlerMessage`
 
-Mutation tools that accept FEL expressions (`show_when`, `calculate`, `require`, `add_rule`, etc.) auto-validate and return `INVALID_FEL` directly — `fel_check` is a dry-run convenience, not a required pre-step.
+Mutation tools that accept FEL expressions (`formspec_show_when`, `formspec_calculate`, `formspec_require`, `formspec_add_rule`, etc.) auto-validate and return `INVALID_FEL` directly — `formspec_fel_check` is a dry-run convenience, not a required pre-step.
 
 ---
 
@@ -123,15 +124,15 @@ Formspec project bundles are multi-file directories, one JSON file per artifact.
   {name}.mapping.json       — FormspecMappingDocument (optional)
 ```
 
-**`save(project_id, path)`** writes `project.export()` (a `ProjectBundle`) to a directory at `path`. Each artifact is written as a separate file using the `{dirname}.{artifact}.json` naming convention. If the directory doesn't exist, it is created.
+**`formspec_save(project_id, path)`** writes `project.export()` (a `ProjectBundle`) to a directory at `path`. Each artifact is written as a separate file using the `{dirname}.{artifact}.json` naming convention. If the directory doesn't exist, it is created.
 
-**`open(path)`** reads a bundle directory, creates a `Project` via `createProject()`, loads the bundle via `project.loadBundle()`, registers it in the **authoring phase** (skipping bootstrap — the artifacts are already valid on disk), and returns a `project_id`. Missing optional artifacts (theme, mapping) are omitted. **`open()` is idempotent:** if a project from the same `path` is already loaded in the registry, the existing `project_id` is returned. This enables reconnection after server restart.
+**`formspec_open(path)`** reads a bundle directory, creates a `Project` via `createProject()`, loads the bundle via `project.loadBundle()`, registers it in the **authoring phase** (skipping bootstrap — the artifacts are already valid on disk), and returns a `project_id`. Missing optional artifacts (theme, mapping) are omitted. **`formspec_open()` is idempotent:** if a project from the same `path` is already loaded in the registry, the existing `project_id` is returned. This enables reconnection after server restart.
 
-**Error behavior for `open()`:** `LOAD_FAILED` is returned if the directory does not exist, contains no `*.definition.json` file, or any required JSON file is malformed. The error detail includes `path` and `reason`.
+**Error behavior for `formspec_open()`:** `LOAD_FAILED` is returned if the directory does not exist, contains no `*.definition.json` file, or any required JSON file is malformed. The error detail includes `path` and `reason`.
 
-**`save(project_id)`** with no path defaults to the path the project was opened from. New projects (created via `create()`) require a path.
+**`formspec_save(project_id)`** with no path defaults to the path the project was opened from. New projects (created via `formspec_create()`) require a path.
 
-**Note on `generatedComponent`:** This field is auto-generated by the engine. It is not included in `ProjectBundle` and must not be submitted via `draft_component`.
+**Note on `generatedComponent`:** This field is auto-generated by the engine. It is not included in `ProjectBundle` and must not be submitted via `formspec_draft_component`.
 
 ---
 
@@ -140,12 +141,13 @@ Formspec project bundles are multi-file directories, one JSON file per artifact.
 ```typescript
 // projects.ts
 import { createProject, type Project } from 'formspec-studio-core';
+import type { SchemaValidationError } from 'formspec-engine';
 
 interface DraftState {
-  definition?: object;      // raw JSON, pre-normalization
-  component?: object;
-  theme?: object;
-  errors: Map<string, any[]>;  // artifact name → validation errors
+  definition?: unknown;      // raw JSON, pre-normalization
+  component?: unknown;
+  theme?: unknown;
+  errors: Map<string, SchemaValidationError[]>;  // artifact name → validation errors
 }
 
 interface ProjectEntry {
@@ -157,24 +159,26 @@ interface ProjectEntry {
 const registry = new Map<string, ProjectEntry>();
 
 function newProject(registries?: object[]): string     // returns project_id (uuid v4)
-function getProject(project_id: string): Project       // throws PROJECT_NOT_FOUND if missing; throws NOT_IN_BOOTSTRAP if still in draft phase
-function getDraft(project_id: string): DraftState      // throws PROJECT_NOT_FOUND; throws NOT_IN_DRAFT if already loaded
+function getProject(project_id: string): Project       // throws PROJECT_NOT_FOUND if missing; throws WRONG_PHASE { currentPhase: 'bootstrap' } if still in draft phase
+function getDraft(project_id: string): DraftState      // throws PROJECT_NOT_FOUND; throws WRONG_PHASE { currentPhase: 'authoring' } if already loaded
 function closeProject(project_id: string): void
 ```
 
-Each project starts in the **bootstrap phase** (`project: null, draft: { ... }`). The LLM submits artifacts via `draft_*` tools. After `load_draft`, the entry transitions to the **authoring phase** (`project: Project, draft: null`). Helper method tools check for a non-null `project` and return `NOT_IN_BOOTSTRAP` if the project hasn't been loaded yet.
+Each project starts in the **bootstrap phase** (`project: null, draft: { ... }`). The LLM submits artifacts via `formspec_draft_*` tools. After `formspec_load_draft`, the entry transitions to the **authoring phase** (`project: Project, draft: null`). Helper method tools check for a non-null `project` and return `WRONG_PHASE` if the project hasn't been loaded yet.
 
 Projects persist in memory for the lifetime of the server process.
 
-**Auto-save on shutdown:** `server.ts` registers `SIGTERM` and `SIGINT` handlers. On signal, all projects where `project.isDirty === true` are saved to `~/.formspec/autosave/{project_id}/` before the process exits.
+**Auto-save on shutdown:** `server.ts` registers `SIGTERM` and `SIGINT` handlers. On signal, all projects in the authoring phase are saved to `~/.formspec/autosave/{project_id}/` before the process exits.
 
-**Reconnection:** `open(path)` is idempotent — if the path is already open, returns the existing `project_id`.
+**Reconnection:** `formspec_open(path)` is idempotent — if the path is already open, returns the existing `project_id`.
 
 **Memory pressure:** The registry rejects `createProject()` when more than 20 projects are active, returning `TOO_MANY_PROJECTS`.
 
 ---
 
-## Tool Catalog (64 tools)
+## Tool Catalog (65 tools)
+
+All tools use the `formspec_` prefix to avoid collisions with other MCP servers. Each tool should also include a `title` field for human-readable display in client UIs (e.g., `name: "formspec_field"`, `title: "Add Field"`) — with 65 `formspec_*` tools, bare names are unwieldy in tool pickers.
 
 ### Bootstrap (5)
 
@@ -182,121 +186,153 @@ These tools support the initial generation phase. The LLM generates JSON artifac
 
 | Tool | Description |
 |------|-------------|
-| `draft_definition(project_id, json)` | Submit a FormspecDefinition JSON object. Validates against `schemas/definition.json`. Returns `{ valid: true }` or `{ valid: false, errors[] }` with JSON Schema validation errors and engine diagnostics. Overwrites any previous definition draft for this project. |
-| `draft_component(project_id, json)` | Submit a FormspecComponentDocument JSON object. Validates against `schemas/component.json`. Returns `{ valid: true }` or `{ valid: false, errors[] }`. Overwrites any previous component draft. |
-| `draft_theme(project_id, json)` | Submit a FormspecThemeDocument JSON object. Validates against `schemas/theme.json`. Returns `{ valid: true }` or `{ valid: false, errors[] }`. Overwrites any previous theme draft. Optional — omit for unstyled forms. |
-| `validate_draft(project_id)` | Run cross-artifact validation on all submitted drafts. Checks referential integrity (e.g., component references to definition items, theme selectors to valid paths). Returns `{ valid: true, summary }` or `{ valid: false, errors[] }`. Requires at least a definition draft. |
-| `load_draft(project_id)` | Normalize all valid drafts and load them into the `Project`. Calls `normalizeDefinition()` and `project.loadBundle()`. Returns the project state summary (field count, pages, etc.). Fails with `DRAFT_INVALID` if any artifact has unresolved validation errors. After this call, the project transitions to the authoring phase — all further edits use helper method tools. |
+| `formspec_draft_definition(project_id, json)` | Submit a FormspecDefinition JSON object. Validates against `schemas/definition.schema.json`. Returns `{ valid: true }` or `{ valid: false, errors[] }` with JSON Schema validation errors and engine diagnostics. Overwrites any previous definition draft for this project. |
+| `formspec_draft_component(project_id, json)` | Submit a FormspecComponentDocument JSON object. Validates against `schemas/component.schema.json`. Returns `{ valid: true }` or `{ valid: false, errors[] }`. Overwrites any previous component draft. |
+| `formspec_draft_theme(project_id, json)` | Submit a FormspecThemeDocument JSON object. Validates against `schemas/theme.schema.json`. Returns `{ valid: true }` or `{ valid: false, errors[] }`. Overwrites any previous theme draft. Optional — omit for unstyled forms. |
+| `formspec_validate_draft(project_id)` | Assembles all submitted drafts into a `Partial<ProjectBundle>`, creates a temporary `Project` via `createProject({ seed: bundle })`, calls `project.diagnose()`, and returns the results. Requires at least a definition draft. If any draft has pre-existing schema validation errors, returns those errors immediately without creating a temporary project. Returns `{ valid: true, summary }` or `{ valid: false, errors[] }`. |
+| `formspec_load_draft(project_id)` | Normalize all valid drafts and load them into the `Project`. Calls `project.loadBundle()` (which normalizes internally). Returns the project state summary (field count, pages, etc.). Fails with `DRAFT_INVALID` if any artifact has unresolved validation errors. After this call, the project transitions to the authoring phase — all further edits use helper method tools. |
 
 **Bootstrap flow:**
-1. `create()` — get a `project_id`
-2. `draft_definition(project_id, {...})` — submit, get errors, fix, resubmit until valid
-3. `draft_component(project_id, {...})` — same loop
-4. `draft_theme(project_id, {...})` — optional, same loop
-5. `validate_draft(project_id)` — cross-artifact check
-6. `load_draft(project_id)` — transition to authoring phase
-7. Use helper method tools (`field`, `show_when`, `calculate`, etc.) for refinement
+1. `formspec_create()` — get a `project_id`
+2. `formspec_draft_definition(project_id, {...})` — submit, get errors, fix, resubmit until valid
+3. `formspec_draft_component(project_id, {...})` — same loop
+4. `formspec_draft_theme(project_id, {...})` — optional, same loop
+5. `formspec_validate_draft(project_id)` — cross-artifact check
+6. `formspec_load_draft(project_id)` — transition to authoring phase
+7. Use helper method tools (`formspec_field`, `formspec_show_when`, `formspec_calculate`, etc.) for refinement
 
-**Schema resources:** The server exposes `schemas/definition.json`, `schemas/component.json`, and `schemas/theme.json` as MCP resources so the LLM can reference them when generating artifacts.
+To start over, close the project and call `formspec_create()` for a new one. There is no `reset` tool — bootstrap is one-way by design.
 
-### Project lifecycle (7)
+**Schema resources:** The server exposes `schemas/definition.schema.json`, `schemas/component.schema.json`, and `schemas/theme.schema.json` as MCP resources so the LLM can reference them when generating artifacts.
+
+### Project lifecycle (8)
 | Tool | Description |
 |------|-------------|
-| `create(registries?)` | Start a new form project. Returns `project_id`. The project starts in bootstrap phase — use `draft_*` tools to submit JSON artifacts, then `load_draft` to transition to authoring. |
-| `open(path)` | Load a form bundle directory from disk. Idempotent: if path is already open, returns existing `project_id`. |
-| `save(project_id, path?)` | Write the current bundle to disk. Defaults to the path it was opened from. |
-| `list()` | List all active in-memory projects with title, field count, and dirty flag. |
-| `publish(project_id, version, summary?)` | Publish a versioned release. Calls `project.diagnose()` first; returns `PUBLISH_BLOCKED` with full `Diagnostics` if `counts.error > 0`. |
-| `undo(project_id)` | Undo the last authoring operation. No-op if `project.canUndo` is false. |
-| `redo(project_id)` | Redo the last undone operation. No-op if `project.canRedo` is false. |
+| `formspec_create(registries?)` | Start a new form project. Returns `project_id`. The project starts in bootstrap phase — use `formspec_draft_*` tools to submit JSON artifacts, then `formspec_load_draft` to transition to authoring. |
+| `formspec_open(path)` | Load a form bundle directory from disk. Idempotent: if path is already open, returns existing `project_id`. Assumes artifacts on disk are schema-valid and semantically correct (no schema validation on load — only parse validity is checked). Call `formspec_audit()` after opening untrusted bundles to check schema and semantic validity. |
+| `formspec_save(project_id, path?)` | Write the current bundle to disk. Defaults to the path it was opened from. |
+| `formspec_list()` | List all active in-memory projects with title, field count, and dirty flag. |
+| `formspec_list_autosaved()` | List auto-saved projects from `~/.formspec/autosave/`. Returns `{ autosaved: Array<{ project_id: string, path: string, lastModified: string }> }`. When `~/.formspec/autosave/` doesn't exist or is empty, returns `{ autosaved: [] }` (not an error). |
+| `formspec_publish(project_id, version, summary?)` | Publish a versioned release. Calls `project.diagnose()` first; returns `PUBLISH_BLOCKED` with full `Diagnostics` if `counts.error > 0`. |
+| `formspec_undo(project_id)` | Undo the last authoring operation. No-op if `project.canUndo` is false. |
+| `formspec_redo(project_id)` | Redo the last undone operation. No-op if `project.canRedo` is false. |
 
 ### Structure (14)
 | Tool | Description |
 |------|-------------|
-| `field(project_id, path, label, type, props?)` | Add a data-collecting element. Calls `project.addField()`. `type` accepts aliases from the Field Type Alias Table. `props`: placeholder, hint, description, ariaLabel, choices, choices_from, format, widget, page, required (boolean), readonly (boolean), initialValue. For conditional required/readonly, chain with `require()` / `readonly_when()`. |
-| `content(project_id, path, body, kind?)` | Add a display element. Calls `project.addContent()`. `kind`: heading \| instructions \| alert \| divider. (`'image'` is not supported — no Image component in component schema.) |
-| `group(project_id, path, label, props?)` | Create a named container for related fields. Calls `project.addGroup()`. `props`: collapsible, display (stack\|dataTable). |
-| `repeat(project_id, target, props?)` | Allow multiple instances of a group. Calls `project.makeRepeatable()`. `props`: min, max, add_label, remove_label. |
-| `page(project_id, title, description?)` | Add a step to a wizard or tabs layout. Calls `project.addPage()`. Returns `{ page_id }` from `affectedPaths[0]`. |
-| `remove_page(project_id, page_id)` | Remove a page. Calls `project.removePage()`. |
-| `move_page(project_id, page_id, direction)` | Reorder a page. Calls `project.reorderPage()`. `direction`: `'up' \| 'down'` (swaps with neighbor). No-op at boundary. |
-| `place(project_id, target, page_id, options?)` | Assign a field or group to a specific page. Calls `project.placeOnPage()`. `options.span`: column span. |
-| `unplace(project_id, target, page_id)` | Remove a field or group from a page assignment (does not delete the item). Calls `project.unplaceFromPage()`. |
-| `update(project_id, path, changes)` | Change any property of an existing element. Calls `project.updateItem()`. Accepted keys: label, hint, description, placeholder, ariaLabel, options, choices_from, currency, precision, initialValue, dataType, required (FEL string), constraint, constraintMessage, calculate, relevant, readonly (FEL string), format, widget, style, page. Unknown keys return `INVALID_KEY`. |
-| `remove(project_id, path)` | Delete a field, group, or content element. Calls `project.removeItem()`. Cleans up binds, shapes, and variables before deleting. Mapping rule references not cleaned — run `audit()` afterward. |
-| `copy(project_id, path, deep?)` | Copy a field or group. Calls `project.copyItem()`. Inserts clone immediately after the original. Returns new path in `affectedPaths[0]`. `deep: false` (default): copies item structure; `warnings` lists omitted binds/shapes. `deep: true`: also copies bind entries and shape rules with path rewriting. |
-| `metadata(project_id, changes)` | Set form-level metadata. Calls `project.setMetadata()`. Accepted: title, name, description, url, version, status, date, versionAlgorithm, nonRelevantBehavior, derivedFrom, density, labelPosition, pageMode, defaultCurrency. |
-| `submit_button(project_id, label?, page_id?)` | Add a SubmitButton component. Calls `project.addSubmitButton()`. Returns component node ID in `affectedPaths[0]`. |
+| `formspec_field(project_id, path, label, type, props?)` | Add a data-collecting element. Calls `project.addField()`. `type` accepts aliases from the Field Type Alias Table. `props`: placeholder, hint, description, ariaLabel, choices, choicesFrom, widget, page, required (boolean), readonly (boolean), initialValue. For conditional required/readonly, chain with `formspec_require()` / `formspec_readonly_when()`. |
+| `formspec_content(project_id, path, body, kind?)` | Add a display element. Calls `project.addContent()`. `kind`: heading \| instructions \| alert \| divider. (`'image'` is not supported — no Image component in component schema.) |
+| `formspec_group(project_id, path, label, props?)` | Create a named container for related fields. Calls `project.addGroup()`. `props`: collapsible, display (stack\|dataTable). |
+| `formspec_repeat(project_id, target, props?)` | Allow multiple instances of a group. Calls `project.makeRepeatable()`. `props`: min, max, add_label, remove_label. |
+| `formspec_page(project_id, title, description?)` | Add a step to a wizard or tabs layout. Calls `project.addPage()`. Returns `{ page_id }` from `affectedPaths[0]`. |
+| `formspec_remove_page(project_id, page_id)` | Remove a page. Calls `project.removePage()`. |
+| `formspec_move_page(project_id, page_id, direction)` | Reorder a page. Calls `project.reorderPage()`. `direction`: `'up' \| 'down'` (swaps with neighbor). No-op at boundary. |
+| `formspec_place(project_id, target, page_id, options?)` | Assign a field or group to a specific page. Calls `project.placeOnPage()`. `options.span`: column span. |
+| `formspec_unplace(project_id, target, page_id)` | Remove a field or group from a page assignment (does not delete the item). Calls `project.unplaceFromPage()`. |
+| `formspec_update(project_id, path, changes)` | Change any property of an existing element. Calls `project.updateItem()`. Accepted keys: label, hint, description, placeholder, ariaLabel, options, choicesFrom, currency, precision, initialValue, prePopulate, dataType, required (FEL string), constraint, constraintMessage, calculate, relevant, readonly (FEL string), default, repeatable, minRepeat, maxRepeat, widget, style, page. Unknown keys return `INVALID_KEY`. |
+| `formspec_remove(project_id, path)` | Delete a field, group, or content element. Calls `project.removeItem()`. Cleans up binds, shapes, and variables before deleting. Mapping rule references not cleaned — run `formspec_audit()` afterward. |
+| `formspec_copy(project_id, path, deep?)` | Copy a field or group. Calls `project.copyItem()`. Inserts clone immediately after the original. Returns new path in `affectedPaths[0]`. `deep: false` (default): copies item structure; `warnings` lists omitted binds/shapes. `deep: true`: also copies bind entries and shape rules with path rewriting. |
+| `formspec_metadata(project_id, changes)` | Set form-level metadata. Calls `project.setMetadata()`. Accepted: title, name, description, url, version, status, date, versionAlgorithm, nonRelevantBehavior, derivedFrom, density, labelPosition, pageMode, defaultCurrency. |
+| `formspec_submit_button(project_id, label?, page_id?)` | Add a SubmitButton component. Calls `project.addSubmitButton()`. Returns component node ID in `affectedPaths[0]`. |
 
 ### Flow and form shape (4)
 | Tool | Description |
 |------|-------------|
-| `flow(project_id, mode, props?)` | Set how the form is navigated. Calls `project.setFlow()`. `mode`: single \| wizard \| tabs. `props`: showProgress, allowSkip. |
-| `branch(project_id, on, paths, otherwise?)` | Show different fields depending on an answer. Calls `project.showWhen()` per branch arm with generated FEL. `on`: field path. `paths`: `{ when, show, mode? }[]`. Mode auto-detects multiChoice fields (uses `selected(on, when)` not `contains()`). `otherwise`: path(s) visible when no branch matches — NOTE: also visible when `on` is unset/empty. |
-| `move(project_id, path, targetPath?, index?)` | Reorder or reparent a field or group. Calls `project.moveItem()`. |
-| `rename(project_id, path, newKey)` | Rename a field key. Calls `project.renameItem()`. The handler rewrites all FEL references internally. |
+| `formspec_flow(project_id, mode, props?)` | Set how the form is navigated. Calls `project.setFlow()`. `mode`: single \| wizard \| tabs. `props`: showProgress, allowSkip. |
+| `formspec_branch(project_id, on, paths, otherwise?)` | Show different fields depending on an answer. Calls `project.showWhen()` per branch arm with generated FEL. `on`: field path. `paths`: `{ when, show, mode? }[]`. Mode auto-detects multiChoice fields (uses `selected(on, when)` not `contains()`). `otherwise`: path(s) visible when no branch matches — NOTE: `otherwise` targets are also visible when the source field is empty or unset — the negation of all branch conditions is true when no value exists. To hide `otherwise` targets until the user makes a choice, chain with `formspec_show_when(target, 'string-length(on) > 0')`. |
+| `formspec_move(project_id, path, targetPath?, index?)` | Reorder or reparent a field or group. Calls `project.moveItem()`. |
+| `formspec_rename(project_id, path, newKey)` | Rename a field key. Calls `project.renameItem()`. The handler rewrites all FEL references internally. |
 
 ### Behavior (5)
 | Tool | Description |
 |------|-------------|
-| `show_when(project_id, target, condition)` | Make a field, group, or page visible only when the FEL condition is true. Calls `project.showWhen()`. |
-| `readonly_when(project_id, target, condition)` | Lock a field when condition is true. Calls `project.readonlyWhen()`. |
-| `require(project_id, target, condition?)` | Mark as required always (no condition), or only when condition is true. Calls `project.require()`. |
-| `calculate(project_id, target, expression)` | Derive a field's value from a FEL expression. Calls `project.calculate()`. |
-| `add_rule(project_id, target, rule, message, options?)` | Enforce a data quality rule. Calls `project.addValidation()`. `options`: timing, severity (error blocks submission; warning/info are advisory), code, activeWhen. |
+| `formspec_show_when(project_id, target, condition)` | Make a field, group, or page visible only when the FEL condition is true. Calls `project.showWhen()`. |
+| `formspec_readonly_when(project_id, target, condition)` | Lock a field when condition is true. Calls `project.readonlyWhen()`. |
+| `formspec_require(project_id, target, condition?)` | Mark as required always (no condition), or only when condition is true. Calls `project.require()`. |
+| `formspec_calculate(project_id, target, expression)` | Derive a field's value from a FEL expression. Calls `project.calculate()`. |
+| `formspec_add_rule(project_id, target, rule, message, options?)` | Enforce a data quality rule. Calls `project.addValidation()`. `options`: timing, severity (error blocks submission; warning/info are advisory), code, activeWhen. |
 
 ### Presentation (3)
 | Tool | Description |
 |------|-------------|
-| `layout(project_id, target, arrangement)` | Arrange fields spatially. Calls `project.applyLayout()`. `arrangement`: columns-2, columns-3, columns-4, card, sidebar, inline. |
-| `style(project_id, path, properties)` | Set visual presentation for a specific field path. Calls `project.applyStyle()`. |
-| `style_all(project_id, properties, target_type?, target_data_type?)` | Set presentation for form-level or by type/dataType. Calls `project.applyStyleAll()`. Omit targeting params for form-level. |
+| `formspec_layout(project_id, target, arrangement)` | Arrange fields spatially. Calls `project.applyLayout()`. `arrangement`: columns-2, columns-3, columns-4, card, sidebar, inline. |
+| `formspec_style(project_id, path, properties)` | Set visual presentation for a specific field path. Calls `project.applyStyle()`. |
+| `formspec_style_all(project_id, properties, target_type?, target_data_type?)` | Set presentation for form-level or by type/dataType. Calls `project.applyStyleAll()`. Omit targeting params for form-level. |
 
 ### Data (9)
 | Tool | Description |
 |------|-------------|
-| `define_choices(project_id, name, options[])` | Define a reusable named option list. Calls `project.defineChoices()`. Referenced by fields via `choices_from`. |
-| `variable(project_id, name, expression, scope?)` | Define a named FEL variable. Calls `project.addVariable()`. |
-| `update_variable(project_id, name, expression)` | Update a variable's expression. Calls `project.updateVariable()`. |
-| `remove_variable(project_id, name)` | Delete a named variable. Calls `project.removeVariable()`. |
-| `rename_variable(project_id, name, newName)` | Rename a variable and rewrite all `$name` FEL references. Calls `project.renameVariable()`. |
-| `instance(project_id, name, props)` | Declare a named external data source. Calls `project.addInstance()`. |
-| `update_instance(project_id, name, changes)` | Update instance properties. Calls `project.updateInstance()`. |
-| `rename_instance(project_id, name, newName)` | Rename an instance and rewrite all `@instance('name')` FEL references. Calls `project.renameInstance()`. |
-| `remove_instance(project_id, name)` | Remove an instance. Calls `project.removeInstance()`. FEL references not cleaned — run `audit()`. |
+| `formspec_define_choices(project_id, name, options[])` | Define a reusable named option list. Calls `project.defineChoices()`. Referenced by fields via `choicesFrom`. |
+| `formspec_variable(project_id, name, expression, scope?)` | Define a named FEL variable. Calls `project.addVariable()`. |
+| `formspec_update_variable(project_id, name, expression)` | Update a variable's expression. Calls `project.updateVariable()`. |
+| `formspec_remove_variable(project_id, name)` | Delete a named variable. Calls `project.removeVariable()`. |
+| `formspec_rename_variable(project_id, name, newName)` | Rename a variable and rewrite all `$name` FEL references. Calls `project.renameVariable()`. |
+| `formspec_instance(project_id, name, props)` | Declare a named external data source. Calls `project.addInstance()`. |
+| `formspec_update_instance(project_id, name, changes)` | Update instance properties. Calls `project.updateInstance()`. |
+| `formspec_rename_instance(project_id, name, newName)` | Rename an instance and rewrite all `@instance('name')` FEL references. Calls `project.renameInstance()`. |
+| `formspec_remove_instance(project_id, name)` | Remove an instance. Calls `project.removeInstance()`. FEL references not cleaned — run `formspec_audit()`. |
 
 ### Screener (7)
 | Tool | Description |
 |------|-------------|
-| `screener(project_id, enabled)` | Enable or disable the pre-form screener. Calls `project.setScreener()`. |
-| `screen_field(project_id, key, label, type, props?)` | Add a qualifying question. Calls `project.addScreenField()`. Same aliases and props as `field`. |
-| `remove_screen_field(project_id, key)` | Remove a qualifying question. Calls `project.removeScreenField()`. |
-| `screen_route(project_id, condition, target, label?)` | Add a routing rule. Calls `project.addScreenRoute()`. |
-| `update_screen_route(project_id, route_index, changes)` | Update a routing rule's condition, target, or label. Calls `project.updateScreenRoute()`. `changes`: `{ condition?, target?, label? }`. |
-| `reorder_screen_route(project_id, route_index, direction)` | Swap a routing rule with its neighbor. Calls `project.reorderScreenRoute()`. `direction`: `'up' \| 'down'`. |
-| `remove_screen_route(project_id, route_index)` | Remove a routing rule by zero-based index. Calls `project.removeScreenRoute()`. Cannot remove the last remaining route — returns `ROUTE_MIN_COUNT`. |
+| `formspec_screener(project_id, enabled)` | Enable or disable the pre-form screener. Calls `project.setScreener()`. |
+| `formspec_screen_field(project_id, key, label, type, props?)` | Add a qualifying question. Calls `project.addScreenField()`. Same aliases and props as `formspec_field`. |
+| `formspec_remove_screen_field(project_id, key)` | Remove a qualifying question. Calls `project.removeScreenField()`. |
+| `formspec_screen_route(project_id, condition, target, label?)` | Add a routing rule. Calls `project.addScreenRoute()`. |
+| `formspec_update_screen_route(project_id, route_index, changes)` | Update a routing rule's condition, target, or label. Calls `project.updateScreenRoute()`. `changes`: `{ condition?, target?, label? }`. |
+| `formspec_reorder_screen_route(project_id, route_index, direction)` | Swap a routing rule with its neighbor. Calls `project.reorderScreenRoute()`. `direction`: `'up' \| 'down'`. |
+| `formspec_remove_screen_route(project_id, route_index)` | Remove a routing rule by zero-based index. Calls `project.removeScreenRoute()`. Cannot remove the last remaining route — returns `ROUTE_MIN_COUNT`. |
 
 ### Understanding (7)
 | Tool | Description |
 |------|-------------|
-| `preview(project_id, scenario?)` | Simulate a respondent's experience. Returns visible/hidden fields, calculated values, required state, page progression, and validation state. Uses FormEngine evaluation. |
-| `audit(project_id)` | Runs `project.diagnose()` and formats results by severity. |
-| `describe(project_id, target?)` | Without `target`: project statistics + field paths. With `target`: field label, type, widget, bind expressions, page assignment. |
-| `trace(project_id, expression_or_field)` | Dependency graph for an expression or field. Calls `project.expressionDependencies()` or `project.fieldDependents()`. |
-| `validate_response(project_id, response)` | Validate a response document. Returns `ValidationReport` (see helpers spec for type). |
-| `search(project_id, filter)` | Find fields matching criteria. `filter`: `{ type?, dataType?, label?, hasExtension? }`. |
-| `changelog(project_id, fromVersion?)` | Changes since last published version. Returns breaking \| compatible \| cosmetic classification. |
+| `formspec_preview(project_id, scenario?)` | Simulate a respondent's experience. Returns visible/hidden fields, calculated values, required state, page progression, and validation state. Uses FormEngine evaluation. |
+| `formspec_audit(project_id)` | Runs `project.diagnose()` and formats results by severity. |
+| `formspec_describe(project_id, target?)` | Without `target`: project statistics + field paths. With `target`: field label, type, widget, bind expressions, page assignment. |
+| `formspec_trace(project_id, expression_or_field)` | Dependency graph for an expression or field. Calls `project.expressionDependencies()` or `project.fieldDependents()`. |
+| `formspec_validate_response(project_id, response)` | Validate a response document. Returns `ValidationReport` (see helpers spec for type). |
+| `formspec_search(project_id, filter)` | Find fields matching criteria. `filter`: `{ type?, dataType?, label?, hasExtension? }`. |
+| `formspec_changelog(project_id, fromVersion?)` | Changes since last published version. Returns breaking \| compatible \| cosmetic classification. |
 
 ### FEL assistance (3)
 | Tool | Description |
 |------|-------------|
-| `fel_context(project_id, path?)` | Available references at this path. Returns `project.availableReferences(path)`. |
-| `fel_functions(project_id)` | All available FEL functions with signatures. |
-| `fel_check(project_id, expression, context_path?)` | Validate a FEL expression. Returns `{ valid, errors, references, functions }`. Note: mutation tools that accept FEL expressions (`show_when`, `calculate`, `require`, `add_rule`, etc.) auto-validate and return `INVALID_FEL` directly — `fel_check` is a dry-run convenience, not a required pre-step. |
+| `formspec_fel_context(project_id, path?)` | Available references at this path. Returns `project.availableReferences(path)`. |
+| `formspec_fel_functions(project_id)` | All available FEL functions with signatures. |
+| `formspec_fel_check(project_id, expression, context_path?)` | Validate a FEL expression. Returns `{ valid, errors, references, functions }`. Note: mutation tools that accept FEL expressions (`formspec_show_when`, `formspec_calculate`, `formspec_require`, `formspec_add_rule`, etc.) auto-validate and return `INVALID_FEL` directly — `formspec_fel_check` is a dry-run convenience, not a required pre-step. |
 
 ### Escape hatch (0)
 
-Removed. Raw JSON generation happens only during the bootstrap phase via `draft_*` tools, which validate and constrain the input. After `load_draft`, all mutations go through `Project` helper methods.
+Removed. Raw JSON generation happens only during the bootstrap phase via `formspec_draft_*` tools, which validate and constrain the input. After `formspec_load_draft`, all mutations go through `Project` helper methods.
+
+---
+
+## Tool Annotations
+
+Each tool declares MCP annotation hints to inform client UIs about behavior characteristics. Grouped by annotation profile:
+
+| Profile | Annotations | Tools |
+|---------|------------|-------|
+| Read-only query | `readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false` | `formspec_preview`, `formspec_audit`, `formspec_describe`, `formspec_trace`, `formspec_validate_response`, `formspec_search`, `formspec_changelog`, `formspec_fel_context`, `formspec_fel_functions`, `formspec_fel_check`, `formspec_list`, `formspec_validate_draft`, `formspec_list_autosaved` |
+| Non-destructive mutation | `readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false` | `formspec_create`, `formspec_field`, `formspec_content`, `formspec_group`, `formspec_repeat`, `formspec_page`, `formspec_place`, `formspec_update`, `formspec_copy`, `formspec_metadata`, `formspec_submit_button`, `formspec_flow`, `formspec_branch`, `formspec_move`, `formspec_move_page`, `formspec_rename`, `formspec_show_when`, `formspec_readonly_when`, `formspec_require`, `formspec_calculate`, `formspec_add_rule`, `formspec_layout`, `formspec_style`, `formspec_style_all`, `formspec_define_choices`, `formspec_variable`, `formspec_update_variable`, `formspec_rename_variable`, `formspec_instance`, `formspec_update_instance`, `formspec_rename_instance`, `formspec_screener`, `formspec_screen_field`, `formspec_screen_route`, `formspec_update_screen_route`, `formspec_reorder_screen_route`, `formspec_draft_definition`, `formspec_draft_component`, `formspec_draft_theme`, `formspec_load_draft`, `formspec_undo`, `formspec_redo`, `formspec_publish` |
+| Destructive mutation | `readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false` | `formspec_remove`, `formspec_remove_page`, `formspec_unplace`, `formspec_remove_variable`, `formspec_remove_instance`, `formspec_remove_screen_field`, `formspec_remove_screen_route` |
+| Filesystem I/O | `readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true` | `formspec_save`, `formspec_open` |
+
+---
+
+## Resources
+
+The server exposes Formspec JSON Schemas as MCP resources. These are static (`listChanged: false`) and declared via the `resources: {}` capability in the `initialize` handshake response alongside `tools: {}`.
+
+```
+formspec://schema/definition  → schemas/definition.schema.json  (application/schema+json)
+formspec://schema/component   → schemas/component.schema.json   (application/schema+json)
+formspec://schema/theme       → schemas/theme.schema.json       (application/schema+json)
+```
+
+**Role:** The LLM reads these as guidance when generating artifacts during the bootstrap phase. The server validates internally — the LLM does not need to fetch schemas to use `formspec_draft_*` tools.
+
+**`resources/read` handler:** Returns `{ contents: [{ uri, mimeType: "application/schema+json", text }] }` where `text` is the stringified schema JSON.
 
 ---
 
@@ -323,7 +359,6 @@ interface ToolError {
     validKeys?: string[];          // for INVALID_KEY
     validTypes?: string[];         // for INVALID_TYPE
     validWidgets?: string[];       // for INVALID_WIDGET
-    validFormats?: string[];       // for INVALID_FORMAT
     commandType?: string;          // for COMMAND_FAILED: which handler failed
     handlerMessage?: string;       // for COMMAND_FAILED: raw error message from handler
     currentRouteCount?: number;    // for ROUTE_MIN_COUNT
@@ -345,22 +380,30 @@ interface ToolError {
 | `ROUTE_OUT_OF_BOUNDS` | `route_index` is out of bounds |
 | `ROUTE_MIN_COUNT` | Attempted to delete the last remaining screener route. `detail.currentRouteCount` and `detail.routes` provided. |
 | `INVALID_TYPE` | Unknown `type` alias. `detail.validTypes` lists the alias table. |
-| `INVALID_KEY` | Key in `update()` is not in `ItemChanges`. `detail.validKeys` lists all accepted keys. |
+| `INVALID_KEY` | Key in `formspec_update()` is not in `ItemChanges`. `detail.validKeys` lists all accepted keys. |
 | `INVALID_WIDGET` | Unknown widget alias or component name. `detail.validWidgets` lists the Widget Alias Table. |
-| `INVALID_FORMAT` | Unknown `format` value. `detail.validFormats` lists valid values. |
 | `DUPLICATE_KEY` | An item with that key already exists at the target path |
 | `INVALID_FEL` | FEL expression parse error. `detail.expression`, `detail.parseError.message`, `detail.parseError.offset`, `detail.parseError.errorType` provided. Mutation tools auto-validate FEL and return this error directly. |
 | `PUBLISH_BLOCKED` | `project.diagnose()` returned errors. `detail.diagnostics` contains the full `Diagnostics` object. |
 | `COMMAND_FAILED` | A helper method's internal command dispatch threw. `detail.commandType` and `detail.handlerMessage` provided. |
 | `DRAFT_INVALID` | `load_draft` called but one or more artifacts have unresolved validation errors. `detail.artifacts` lists which artifacts are invalid. |
-| `DRAFT_MISSING` | `load_draft` called but no definition draft has been submitted. |
-| `DRAFT_SCHEMA_ERROR` | `draft_*` artifact failed JSON Schema validation. `detail.errors[]` contains AJV validation errors with JSON Pointer paths. |
-| `NOT_IN_BOOTSTRAP` | A `draft_*` tool was called after `load_draft` — project is already in authoring phase. |
+| `WRONG_PHASE` | Tool called in wrong project phase. `detail.currentPhase` is `'bootstrap'` or `'authoring'`; `detail.expectedPhase` indicates which phase the tool requires. |
+| `DRAFT_SCHEMA_ERROR` | `formspec_draft_*` artifact failed JSON Schema validation. `detail.errors[]` contains schema validation errors with JSON Pointer paths. |
 | `INVALID_INPUT` | Tool input failed schema validation. |
 | `SAVE_FAILED` | File system write error during `save()`. |
 | `LOAD_FAILED` | Directory not found, missing definition file, or invalid JSON during `open()`. `detail.path` and `detail.reason` provided. |
 
-MCP error format: `{ isError: true, content: [{ type: 'text', text: JSON.stringify(toolError) }] }`.
+MCP error format:
+
+```typescript
+{
+  isError: true,
+  content: [{ type: 'text', text: JSON.stringify(toolError) }],
+  structuredContent: toolError
+}
+```
+
+The `content` array preserves the full JSON for clients that only read `content`. The `structuredContent` field provides typed access for clients that support it.
 
 ---
 
@@ -372,11 +415,11 @@ Server-driven generation with an optional `GenerationProvider` interface. Exclud
 **Pages advanced layout**
 Several `pages.*` commands exist but are not exposed as tools: `pages.autoGenerate` (auto-creates pages from group structure), `pages.reorderRegion` (reorders items within a page region), `pages.setRegionProperty` (sets `span`/`start` on a region), `pages.setPageProperty` (generic page property setter). These enable full grid layout authoring. Deferred to v1.1.
 
-**`audit()` extended checks**
+**`formspec_audit()` extended checks**
 Unreachable branches, unconstrained free-text fields, conditional dead ends. Deferred to v1.1.
 
-**Mapping rule cleanup on `remove`**
-`remove` does not clean up mapping rule references to deleted fields. Run `audit()` afterward. A `cleanup_mapping` helper is deferred.
+**Mapping rule cleanup on `formspec_remove`**
+`formspec_remove` does not clean up mapping rule references to deleted fields. Run `formspec_audit()` afterward. A `cleanup_mapping` helper is deferred.
 
 **Fragment export/import**
 Export a group (with fields, binds, shapes) as a reusable template across projects.
@@ -398,23 +441,23 @@ cd packages/formspec-mcp && node dist/index.js
 ```
 
 **Critical test coverage:**
-- `draft_definition()` — schema validation errors include JSON Pointer paths; valid definition returns `{ valid: true }`
-- `draft_component()` — rejects component referencing items not in definition draft
-- `validate_draft()` — catches cross-artifact reference errors (component → definition, theme → definition)
-- `load_draft()` — fails with `DRAFT_INVALID` when errors exist; succeeds and transitions to authoring phase
-- `load_draft()` — authoring tools work after load; draft tools return `NOT_IN_BOOTSTRAP`
-- `draft_*()` after `load_draft()` — returns `NOT_IN_BOOTSTRAP`
-- `update()` — routing table exhaustiveness (every `ItemChanges` key to correct handler; unknown → `INVALID_KEY`)
-- `field()` — all 22 aliases resolve to correct dataType + defaultWidget
-- `branch()` — multiChoice auto-detection uses `selected(on, when)` not `contains()`; `otherwise` visible when field unset
-- `branch()` — FEL expression validity for all `when` literal types (string, number, boolean)
-- `copy(deep: false)` — `warnings` populated with bind/shape counts; `deep: true` — binds and shapes copied with rewritten paths
-- `metadata()` — each property routes to correct helper; `submitMode`/`language` rejected as `INVALID_KEY`
-- `move_page()` — no-op at boundary; correct neighbor swap
-- `update_screen_route()` — each changes key dispatches to `definition.setRouteProperty`
-- `publish()` — blocked when diagnose returns errors; passes when clean
-- `preview()` / `validate_response()` — FormEngine instantiation; full return type coverage
-- `save()` / `open()` — round-trip produces identical state; `open()` idempotency
+- `formspec_draft_definition()` — schema validation errors include JSON Pointer paths; valid definition returns `{ valid: true }`
+- `formspec_draft_component()` — rejects component referencing items not in definition draft
+- `formspec_validate_draft()` — catches cross-artifact reference errors (component → definition, theme → definition)
+- `formspec_load_draft()` — fails with `DRAFT_INVALID` when errors exist; succeeds and transitions to authoring phase
+- `formspec_load_draft()` — authoring tools work after load; draft tools return `WRONG_PHASE`
+- `formspec_draft_*()` after `formspec_load_draft()` — returns `WRONG_PHASE`
+- `formspec_update()` — routing table exhaustiveness (every `ItemChanges` key to correct handler; unknown → `INVALID_KEY`)
+- `formspec_field()` — all 22 aliases resolve to correct dataType + defaultWidget
+- `formspec_branch()` — multiChoice auto-detection uses `selected(on, when)` not `contains()`; `otherwise` visible when field unset
+- `formspec_branch()` — FEL expression validity for all `when` literal types (string, number, boolean)
+- `formspec_copy(deep: false)` — `warnings` populated with bind/shape counts; `deep: true` — binds and shapes copied with rewritten paths
+- `formspec_metadata()` — each property routes to correct helper; `submitMode`/`language` rejected as `INVALID_KEY`
+- `formspec_move_page()` — no-op at boundary; correct neighbor swap
+- `formspec_update_screen_route()` — each changes key dispatches to `definition.setRouteProperty`
+- `formspec_publish()` — blocked when diagnose returns errors; passes when clean
+- `formspec_preview()` / `formspec_validate_response()` — FormEngine instantiation; full return type coverage
+- `formspec_save()` / `formspec_open()` — round-trip produces identical state; `formspec_open()` idempotency
 - `PATH_NOT_FOUND` — `similarPaths` fuzzy-match returns correct candidates
 
 ---
@@ -431,3 +474,4 @@ cd packages/formspec-mcp && node dist/index.js
 | 5.1 | 2026-03-14 | Split from formspec-mcp-design.md into two documents: this file (MCP server) and formspec-studio-core-helpers.md (helpers module) |
 | 6 | 2026-03-15 | Updated for studio-core API: all tool descriptions now reference `Project` helper methods instead of raw command types. `formspec-core` is never imported — all access through `formspec-studio-core`. Session model uses `ProjectBundle` not `ProjectState`. Removed `dispatch` escape hatch — all mutations go through helper methods. |
 | 7 | 2026-03-15 | Two-phase creation model: bootstrap (LLM generates JSON artifacts → schema validation → engine diagnostics → iterate until clean) then author (incremental edits via helper methods). Added 5 bootstrap tools (`draft_definition`, `draft_component`, `draft_theme`, `validate_draft`, `load_draft`). Removed `seed` parameter from `create()`. Session model tracks draft vs. authoring phase per project. Schema resources exposed via MCP. New error codes: `DRAFT_INVALID`, `DRAFT_MISSING`, `DRAFT_SCHEMA_ERROR`, `NOT_IN_BOOTSTRAP`. |
+| 8 | 2026-03-15 | MCP annotation hints (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`). `WRONG_PHASE` error unification (replaces `NOT_IN_BOOTSTRAP` and `DRAFT_MISSING`). Schema filename corrections (`.schema.json` suffix). `formspec_update()` key list alignment with `_VALID_UPDATE_KEYS`. `structuredContent` error format. `formspec_` tool prefix on all 65 tools. Resources section with `formspec://schema/*` URIs. `formspec_list_autosaved` tool. `format` ghost property removed. `ajv` replaced with `createSchemaValidator`. `DraftState` types corrected. `formspec_open()` trust model documented. `formspec_branch()` otherwise warning expanded. `formspec_validate_draft` implementation specified. `formspec_load_draft` description corrected. Bootstrap one-way note added. |
