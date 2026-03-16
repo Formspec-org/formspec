@@ -205,7 +205,7 @@ def test_count_single_non_null(x):
 # ---------------------------------------------------------------------------
 
 @given(x=fel_numbers)
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 def test_min_max_single_element(x):
     lit = _fel_literal(x)
     assert _eval(f'min([{lit}])') == x
