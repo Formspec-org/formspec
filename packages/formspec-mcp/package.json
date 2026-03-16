@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.0",
-    "formspec-studio-core": "*",
     "formspec-engine": "*",
-    "zod": "^3.24.0",
-    "uuid": "^11.1.0"
+    "formspec-studio-core": "*",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/uuid": "^10.0.0",
