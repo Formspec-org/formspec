@@ -52,9 +52,9 @@ import {
   splitComponentState,
 } from './component-documents.js';
 import { normalizeDefinition } from './normalization.js';
-
-/** Maximum number of undo snapshots retained before oldest-first pruning. */
-const DEFAULT_MAX_HISTORY = 50;
+import { HistoryManager } from './history.js';
+import { reconcileComponentTree } from './tree-reconciler.js';
+import { normalizeState } from './state-normalizer.js';
 
 /**
  * Generate a unique URN for a new definition.
@@ -198,18 +198,12 @@ function flattenItems(items: FormItem[], prefix = '', visited?: WeakSet<object>)
 export class RawProject implements IProjectCore {
   /** Current project state. Mutated only via dispatch (clone-and-swap). */
   private _state: ProjectState;
-  /** Stack of previous states for undo. Newest at the end. Capped by `_maxHistory`. */
-  private _undoStack: ProjectState[] = [];
-  /** Stack of undone states for redo. Cleared on any new dispatch. */
-  private _redoStack: ProjectState[] = [];
-  /** Append-only command log. Serializable -- can be persisted and replayed on a fresh project. */
-  private _log: LogEntry[] = [];
+  /** Undo/redo stacks and command log. */
+  private _history: HistoryManager<ProjectState>;
   /** Active change listeners, notified after every state transition. */
   private _listeners: Set<ChangeListener> = new Set();
   /** Phase-aware execution pipeline (handlers + middleware). */
   private _pipeline: CommandPipeline;
-  /** Maximum number of undo snapshots before oldest-first pruning. */
-  private _maxHistory: number;
   /** Optional schema validator; when set, diagnose() populates structural diagnostics. */
   private _schemaValidator: ProjectOptions['schemaValidator'];
   /** Command handler lookup table. Builtins + optional custom overrides. */
@@ -222,7 +216,7 @@ export class RawProject implements IProjectCore {
    */
   constructor(options?: ProjectOptions) {
     this._state = createDefaultState(options);
-    this._maxHistory = options?.maxHistoryDepth ?? DEFAULT_MAX_HISTORY;
+    this._history = new HistoryManager(options?.maxHistoryDepth);
     this._schemaValidator = options?.schemaValidator;
     this._handlers = options?.handlers
       ? Object.freeze({ ...builtinHandlers, ...options.handlers })
@@ -239,7 +233,12 @@ export class RawProject implements IProjectCore {
       !hasAuthoredComponentTree(this._state.component) &&
       !this._state.generatedComponent.tree
     ) {
-      this._rebuildComponentTree();
+      this._state.generatedComponent.tree = reconcileComponentTree(
+        this._state.definition,
+        this._state.generatedComponent.tree,
+        this._state.theme,
+      ) as any;
+      (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
     }
   }
 
@@ -1710,12 +1709,12 @@ export class RawProject implements IProjectCore {
 
   /** Whether there is at least one state snapshot on the undo stack. */
   get canUndo(): boolean {
-    return this._undoStack.length > 0;
+    return this._history.canUndo;
   }
 
   /** Whether there is at least one state snapshot on the redo stack. */
   get canRedo(): boolean {
-    return this._redoStack.length > 0;
+    return this._history.canRedo;
   }
 
   /**
@@ -1723,7 +1722,7 @@ export class RawProject implements IProjectCore {
    * fresh project to reconstruct state.
    */
   get log(): readonly LogEntry[] {
-    return this._log;
+    return this._history.log;
   }
 
   /**
@@ -1733,8 +1732,7 @@ export class RawProject implements IProjectCore {
    * Does not trigger change listeners.
    */
   resetHistory(): void {
-    this._undoStack.length = 0;
-    this._redoStack.length = 0;
+    this._history.clear();
   }
 
   /**
@@ -1744,9 +1742,9 @@ export class RawProject implements IProjectCore {
    * @returns `true` if undo was performed, `false` if the undo stack was empty.
    */
   undo(): boolean {
-    if (!this.canUndo) return false;
-    this._redoStack.push(this._state);
-    this._state = this._undoStack.pop()!;
+    const prev = this._history.popUndo(this._state);
+    if (!prev) return false;
+    this._state = prev;
     this._notify({ type: 'undo', payload: {} }, { rebuildComponentTree: false }, 'undo');
     return true;
   }
@@ -1758,9 +1756,9 @@ export class RawProject implements IProjectCore {
    * @returns `true` if redo was performed, `false` if the redo stack was empty.
    */
   redo(): boolean {
-    if (!this.canRedo) return false;
-    this._undoStack.push(this._state);
-    this._state = this._redoStack.pop()!;
+    const next = this._history.popRedo(this._state);
+    if (!next) return false;
+    this._state = next;
     this._notify({ type: 'redo', payload: {} }, { rebuildComponentTree: false }, 'redo');
     return true;
   }
@@ -1791,336 +1789,7 @@ export class RawProject implements IProjectCore {
     }
   }
 
-  /**
-   * Post-dispatch normalization: enforce cross-artifact invariants.
-   * Runs after every dispatch, batch, undo, and redo. Current invariants:
-   * - Component and theme `targetDefinition.url` stay in sync with `definition.url`.
-   * - Theme breakpoints are sorted by `minWidth` ascending.
-   * - Component breakpoints inherit from theme when not independently set.
-   */
-  private _normalize(): void {
-    const url = this._state.definition.url;
 
-    // Sync targetDefinition.url on component, generated layout, and theme
-    if (this._state.component.targetDefinition) {
-      this._state.component.targetDefinition.url = url;
-    }
-    if (this._state.generatedComponent.targetDefinition) {
-      this._state.generatedComponent.targetDefinition.url = url;
-    }
-    if (this._state.theme.targetDefinition) {
-      this._state.theme.targetDefinition.url = url;
-    }
-
-    // Sort theme breakpoints by minWidth ascending
-    const themeBp = this._state.theme.breakpoints;
-    if (themeBp) {
-      const sorted = Object.entries(themeBp).sort((a, b) => a[1] - b[1]);
-      const fresh: Record<string, number> = {};
-      for (const [name, minWidth] of sorted) fresh[name] = minWidth;
-      this._state.theme.breakpoints = fresh;
-    }
-
-    // Sync component breakpoints from theme when not independently set
-    if (!this._state.component.breakpoints && themeBp) {
-      this._state.component.breakpoints = { ...this._state.theme.breakpoints };
-    }
-  }
-
-  /**
-   * Full rebuild of the component tree to mirror the definition item hierarchy.
-   * Triggered when a command's result signals `rebuildComponentTree: true`
-   * (e.g., after adding, deleting, or moving items).
-   *
-   * Preserves existing bound node properties (widget overrides, styles) and
-   * unbound layout nodes (appended at root). The algorithm:
-   *   1. Collect all existing bound nodes by `bind` key (deep traversal).
-   *   2. Rebuild tree from definition hierarchy, reusing existing nodes where available.
-   *   3. Append preserved unbound layout nodes at root level.
-   */
-  private _markGeneratedComponentDoc(): void {
-    const component = this._state.generatedComponent as Record<string, unknown>;
-    component['x-studio-generated'] = true;
-  }
-
-  private _rebuildComponentTree(): void {
-    type TreeNode = { component: string; bind?: string; nodeId?: string; children?: TreeNode[]; [k: string]: unknown };
-
-    const tree = (this._state.generatedComponent.tree as TreeNode) ?? { component: 'Stack', nodeId: 'root', children: [] };
-
-    // ── Phase 1: Snapshot top-level layout wrappers with their full subtrees ──
-    // A "top-level" layout node is one whose parent is NOT a layout node.
-    // Nested layout nodes are captured inside their parent's subtree snapshot.
-    interface WrapperSnapshot {
-      wrapper: TreeNode;  // deep clone of layout node + children
-      parentRef: { bind?: string; nodeId?: string };
-      position: number;   // index within parent's children
-    }
-
-    const wrapperSnapshots: WrapperSnapshot[] = [];
-
-    const snapshotWrappers = (parent: TreeNode) => {
-      const children = parent.children ?? [];
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-        if (child._layout) {
-          wrapperSnapshots.push({
-            wrapper: structuredClone(child),
-            parentRef: parent.bind ? { bind: parent.bind } : { nodeId: parent.nodeId! },
-            position: i,
-          });
-          // Don't recurse into layout node — nested layouts are part of this snapshot
-        } else if (child.children) {
-          snapshotWrappers(child);
-        }
-      }
-    };
-    snapshotWrappers(tree);
-
-    // ── Phase 2: Collect existing bound/display nodes and rebuild flat tree ──
-    const existingBound = new Map<string, TreeNode>();
-    const existingDisplay = new Map<string, TreeNode>();
-
-    const collectExisting = (node: TreeNode, parentPath = '') => {
-      for (const child of node.children ?? []) {
-        if (child._layout) {
-          // Recurse into layout children to collect bound/display nodes inside
-          const collectDeep = (n: TreeNode, path: string) => {
-            for (const c of n.children ?? []) {
-              if (c.bind) {
-                const cPath = path ? `${path}.${c.bind}` : c.bind;
-                existingBound.set(cPath, c);
-                collectDeep(c, cPath);
-              } else if (c.nodeId && !c._layout) {
-                const cPath = path ? `${path}.${c.nodeId}` : c.nodeId;
-                existingDisplay.set(cPath, c);
-              } else if (c._layout) {
-                collectDeep(c, path);
-              }
-            }
-          };
-          collectDeep(child, parentPath);
-        } else if (child.bind) {
-          const path = parentPath ? `${parentPath}.${child.bind}` : child.bind;
-          existingBound.set(path, child);
-          if (child.children) collectExisting(child, path);
-        } else if (child.nodeId) {
-          const path = parentPath ? `${parentPath}.${child.nodeId}` : child.nodeId;
-          existingDisplay.set(path, child);
-        }
-      }
-    };
-    collectExisting(tree);
-
-    const buildNode = (item: FormItem, parentPath = ''): TreeNode => {
-      const itemPath = parentPath ? `${parentPath}.${item.key}` : item.key;
-      let node: TreeNode;
-
-      if (item.type === 'display') {
-        const existing = existingDisplay.get(itemPath);
-        if (existing) {
-          node = { ...existing, text: item.label ?? '' };
-          existingDisplay.delete(itemPath);
-        } else {
-          node = { component: 'Text', nodeId: item.key, text: item.label ?? '' };
-        }
-      } else {
-        const existing = existingBound.get(itemPath);
-        if (existing) {
-          node = { ...existing };
-        } else {
-          node = { component: this._defaultComponent(item), bind: item.key };
-        }
-      }
-
-      if (item.children && item.children.length > 0) {
-        node.children = item.children.map(child => buildNode(child, itemPath));
-      } else if (item.type === 'group') {
-        node.children = [];
-      } else {
-        delete node.children;
-      }
-
-      return node;
-    };
-
-    // Build all item nodes
-    const builtNodes: TreeNode[] = this._state.definition.items.map(item => buildNode(item));
-
-    // ── Page-aware distribution ──
-    // Reads formPresentation.pageMode (definition.schema.json) and theme.pages
-    // (theme.schema.json) to generate schema-conformant component trees:
-    //   wizard → Wizard > Page[] (component.schema.json: Wizard childConstraint "Page only")
-    //   tabs   → Tabs > Page[]   (component.schema.json: Tabs reads tab labels from Page titles)
-    //   single → Stack > items[] (flat, current behavior)
-    const def = this._state.definition as any;
-    const pageMode: string = def.formPresentation?.pageMode ?? 'single';
-    const themePages = (this._state.theme.pages ?? []) as any[];
-
-    let newRoot: TreeNode;
-
-    if (themePages.length > 0 && (pageMode === 'wizard' || pageMode === 'tabs')) {
-      // Build key → node lookup (bind for fields/groups, nodeId for display items)
-      const nodeByKey = new Map<string, TreeNode>();
-      for (const node of builtNodes) {
-        const key = node.bind ?? node.nodeId;
-        if (key) nodeByKey.set(key, node);
-      }
-
-      // Create Page nodes and distribute items by region assignment
-      const pageNodes: TreeNode[] = [];
-      const assigned = new Set<string>();
-
-      for (const themePage of themePages) {
-        const pageNode: TreeNode = {
-          component: 'Page',
-          nodeId: (themePage as any).id,
-          title: (themePage as any).title,
-          ...((themePage as any).description !== undefined && { description: (themePage as any).description }),
-          children: [],
-        };
-
-        for (const region of ((themePage as any).regions ?? []) as any[]) {
-          if (region.key && nodeByKey.has(region.key)) {
-            pageNode.children!.push(nodeByKey.get(region.key)!);
-            assigned.add(region.key);
-          }
-        }
-
-        pageNodes.push(pageNode);
-      }
-
-      // Unassigned items: collect those not placed in any page
-      const unassigned = builtNodes.filter(n => {
-        const key = n.bind ?? n.nodeId;
-        return key && !assigned.has(key);
-      });
-
-      // Wizard childConstraint: "Page only" — wrap unassigned in auto-generated Page
-      if (pageMode === 'wizard') {
-        if (unassigned.length > 0) {
-          pageNodes.push({
-            component: 'Page',
-            nodeId: '_unassigned',
-            title: 'Other',
-            children: unassigned,
-          });
-        }
-        newRoot = { component: 'Wizard', nodeId: 'root', children: pageNodes };
-      } else {
-        // Tabs mode: component.schema.json Tabs reads tab labels from child Page titles
-        if (unassigned.length > 0) {
-          pageNodes.push({
-            component: 'Page',
-            nodeId: '_unassigned',
-            title: 'Other',
-            children: unassigned,
-          });
-        }
-        newRoot = { component: 'Tabs', nodeId: 'root', children: pageNodes };
-      }
-    } else {
-      // Flat Stack (current behavior — single mode or no pages)
-      newRoot = { component: 'Stack', nodeId: 'root', children: builtNodes };
-    }
-
-    // ── Phase 3: Re-insert layout wrappers ──
-    // For each snapshot, update its bound/display children with rebuilt versions,
-    // remove stale children, then insert at the right position.
-
-    const findInTree = (root: TreeNode, ref: { bind?: string; nodeId?: string }): { parent: TreeNode; index: number; node: TreeNode } | undefined => {
-      if (ref.nodeId && root.nodeId === ref.nodeId) return { parent: root, index: -1, node: root };
-      if (ref.bind && root.bind === ref.bind) return { parent: root, index: -1, node: root };
-      const stack: TreeNode[] = [root];
-      while (stack.length) {
-        const p = stack.pop()!;
-        for (let i = 0; i < (p.children?.length ?? 0); i++) {
-          const c = p.children![i];
-          if (ref.nodeId && c.nodeId === ref.nodeId) return { parent: p, index: i, node: c };
-          if (ref.bind && c.bind === ref.bind) return { parent: p, index: i, node: c };
-          stack.push(c);
-        }
-      }
-      return undefined;
-    };
-
-    // Update bound/display nodes inside a wrapper with their rebuilt versions.
-    // Remove nodes that no longer exist in the rebuilt tree.
-    const updateWrapperChildren = (wrapperNode: TreeNode): void => {
-      if (!wrapperNode.children) return;
-      const updatedChildren: TreeNode[] = [];
-      for (const child of wrapperNode.children) {
-        if (child._layout) {
-          // Nested layout — recurse to update its children
-          updateWrapperChildren(child);
-          updatedChildren.push(child);
-        } else if (child.bind) {
-          // Find the rebuilt version and extract it from the flat tree
-          const found = findInTree(newRoot, { bind: child.bind });
-          if (found && found.index !== -1) {
-            const [extracted] = found.parent.children!.splice(found.index, 1);
-            updatedChildren.push(extracted);
-          }
-          // If not found, the item was deleted — omit it
-        } else if (child.nodeId) {
-          // Display node — find rebuilt version
-          const found = findInTree(newRoot, { nodeId: child.nodeId });
-          if (found && found.index !== -1) {
-            const [extracted] = found.parent.children!.splice(found.index, 1);
-            updatedChildren.push(extracted);
-          }
-        }
-      }
-      wrapperNode.children = updatedChildren;
-    };
-
-    for (const snap of wrapperSnapshots) {
-      const wrapperNode = snap.wrapper;
-      updateWrapperChildren(wrapperNode);
-
-      // Find the parent node in the rebuilt tree
-      const parentResult = findInTree(newRoot, snap.parentRef);
-      const parentNode = parentResult ? parentResult.node : newRoot;
-      if (!parentNode.children) parentNode.children = [];
-
-      // Insert at original position (clamped to valid range)
-      const idx = Math.min(snap.position, parentNode.children.length);
-      parentNode.children.splice(idx, 0, wrapperNode);
-    }
-
-    this._markGeneratedComponentDoc();
-    this._state.generatedComponent.tree = newRoot as any;
-  }
-
-  /**
-   * Determine the default component type for a newly created tree node.
-   * Maps item types to sensible widget defaults: field -> TextInput,
-   * group -> Stack, display -> Text.
-   * @param item - The definition item to map.
-   * @returns A component type string for the tree node.
-   */
-  private _defaultComponent(item: FormItem): string {
-    switch (item.type) {
-      case 'field':
-        if ((item as any).optionSet || Array.isArray((item as any).options)) return 'Select';
-        switch (item.dataType) {
-          case 'choice': return 'Select';
-          case 'multiChoice': return 'CheckboxGroup';
-          case 'boolean': return 'Toggle';
-          case 'integer':
-          case 'decimal': return 'NumberInput';
-          case 'date':
-          case 'dateTime':
-          case 'time': return 'DatePicker';
-          case 'money': return 'MoneyInput';
-          case 'attachment': return 'FileUpload';
-          default: return 'TextInput';
-        }
-      case 'group': return (item as any).repeatable ? 'Accordion' : 'Stack';
-      case 'display': return 'Text';
-      default: return 'TextInput';
-    }
-  }
 
   // ── Dispatching commands ─────────────────────────────────────────
 
@@ -2161,7 +1830,7 @@ export class RawProject implements IProjectCore {
 
   /** Clear the redo stack. */
   clearRedo(): void {
-    this._redoStack.length = 0;
+    this._history.clearRedo();
   }
 
   /**
@@ -2195,29 +1864,25 @@ export class RawProject implements IProjectCore {
       phases,
       (clone) => {
         if (!hasAuthoredComponentTree(clone.component)) {
-          // Temporary state swap so _rebuildComponentTree operates on the clone.
-          // This hack is eliminated when the tree reconciler is extracted (Task 8).
-          const saved = this._state;
-          this._state = clone;
-          this._rebuildComponentTree();
-          this._state = saved;
+          clone.generatedComponent.tree = reconcileComponentTree(
+            clone.definition,
+            clone.generatedComponent.tree,
+            clone.theme,
+          ) as any;
+          (clone.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
         }
       },
     );
 
     // Normalize on the new state
-    const savedForNormalize = this._state;
-    this._state = newState;
-    this._normalize();
-    this._state = savedForNormalize;
+    normalizeState(newState);
 
     // History
     if (results.some(r => r.clearHistory)) {
-      this._undoStack.length = 0;
-      this._redoStack.length = 0;
-      this._log.length = 0;
+      this._history.clear();
+      this._history.clearLog();
     } else {
-      this._pushHistory(snapshot);
+      this._history.push(snapshot);
     }
 
     // Swap to new state
@@ -2225,7 +1890,12 @@ export class RawProject implements IProjectCore {
 
     // Post-execute rebuild for commands that signal it (after state swap)
     if (results.some(r => r.rebuildComponentTree) && !hasAuthoredComponentTree(this._state.component)) {
-      this._rebuildComponentTree();
+      this._state.generatedComponent.tree = reconcileComponentTree(
+        this._state.definition,
+        this._state.generatedComponent.tree,
+        this._state.theme,
+      ) as any;
+      (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
     }
 
     // Log
@@ -2235,7 +1905,7 @@ export class RawProject implements IProjectCore {
       : phases.length > 1
         ? { type: 'batchWithRebuild', payload: { phases } }
         : { type: 'batch', payload: { commands: allCommands } };
-    this._log.push({ command: logCommand, timestamp: Date.now() });
+    this._history.appendLog({ command: logCommand, timestamp: Date.now() });
 
     // Notify
     const source = allCommands.length === 1 ? 'dispatch' : 'batch';
@@ -2248,18 +1918,6 @@ export class RawProject implements IProjectCore {
     return results;
   }
 
-  /**
-   * Push a pre-mutation state snapshot onto the undo stack and clear the redo stack.
-   * If the undo stack exceeds `_maxHistory`, the oldest snapshot is pruned.
-   * @param snapshot - The state snapshot to preserve (typically the pre-clone state).
-   */
-  private _pushHistory(snapshot: ProjectState): void {
-    this._undoStack.push(snapshot);
-    if (this._undoStack.length > this._maxHistory) {
-      this._undoStack.shift();
-    }
-    this._redoStack.length = 0;
-  }
 }
 
 /**
