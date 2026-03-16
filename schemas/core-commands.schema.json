@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://formspec.org/studio/commands/0.1",
-  "title": "Studio Command Catalog",
-  "description": "Structured catalog of all commands available in formspec-studio-core. Each entry defines the command type string, payload shape, side effects, and optional examples. Consumers — LLM agents, CLI tools, visual editors — read this catalog to discover available mutations and construct valid command payloads for Project.dispatch().",
+  "$id": "https://formspec.org/core/commands/0.1",
+  "title": "Core Command Catalog",
+  "description": "Structured catalog of all commands available in formspec-core. Each entry defines the command type string, payload shape, side effects, and optional examples. Consumers — LLM agents, CLI tools, visual editors — read this catalog to discover available mutations and construct valid command payloads for RawProject.dispatch().",
   "type": "object",
   "properties": {
     "version": { "const": "0.1" },

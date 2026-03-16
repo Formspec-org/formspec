@@ -205,7 +205,7 @@
     "pages": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/Page"
+        "$ref": "#/$defs/PageLayout"
       },
       "description": "Page layout — ordered list of pages grouping items into logical sections with a 12-column grid. When absent, the renderer walks the Definition's item tree top-to-bottom without page grouping. Items not referenced by any region on any page SHOULD be rendered after all pages in default order. The cascade (defaults/selectors/items) still applies regardless of page layout.",
       "examples": [
@@ -272,59 +272,10 @@
   },
   "$defs": {
     "TargetDefinition": {
-      "type": "object",
-      "required": [
-        "url"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "url": {
-          "type": "string",
-          "format": "uri",
-          "description": "Canonical URL of the target Definition (the 'url' property from the Definition document). This is the stable logical-form identifier shared across all versions.",
-          "examples": [
-            "https://agency.gov/forms/budget",
-            "https://example.org/forms/intake"
-          ]
-        },
-        "compatibleVersions": {
-          "type": "string",
-          "description": "Semver range expression describing which Definition versions this theme supports. When absent, the theme is assumed compatible with any version. If the Definition's version falls outside this range, processors SHOULD warn and MAY fall back to Tier 1 hints only.",
-          "examples": [
-            ">=1.0.0 <2.0.0",
-            ">=2.0.0",
-            "1.x"
-          ]
-        }
-      }
+      "$ref": "https://formspec.org/schemas/component/1.0#/$defs/TargetDefinition"
     },
     "Tokens": {
-      "type": "object",
-      "additionalProperties": {
-        "oneOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "number"
-          }
-        ]
-      },
-      "description": "Flat key-value token map. Keys are dot-delimited names using RECOMMENDED category prefixes: color.* (hex/rgb/hsl), spacing.* (CSS lengths), typography.* (font properties), border.* (border properties), elevation.* (shadows), x-* (custom/vendor). Values MUST be strings or numbers — no objects, arrays, booleans, or null. Referenced as '$token.<key>' in style and widgetConfig string values. Token references MUST NOT be recursive — a token value MUST NOT contain a $token reference to another token. Unresolved references use platform-appropriate defaults.",
-      "examples": [
-        {
-          "color.primary": "#0057B7",
-          "color.error": "#D32F2F",
-          "spacing.sm": "8px",
-          "spacing.md": "16px",
-          "border.radius": "6px",
-          "typography.body.family": "Inter, system-ui, sans-serif"
-        },
-        {
-          "x-brand.logo-height": "48px",
-          "x-agency.seal-color": "#003366"
-        }
-      ]
+      "$ref": "https://formspec.org/schemas/component/1.0#/$defs/Tokens"
     },
     "PresentationBlock": {
       "type": "object",
@@ -454,44 +405,7 @@
       }
     },
     "AccessibilityBlock": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Accessibility metadata for an item. Provides hints to renderers for producing accessible output. These are advisory — renderers are responsible for WCAG conformance.",
-      "properties": {
-        "role": {
-          "type": "string",
-          "description": "Semantic ARIA role hint for the item's container or control. Common values include standard ARIA landmark and widget roles.",
-          "examples": [
-            "alert",
-            "status",
-            "complementary",
-            "region",
-            "group"
-          ]
-        },
-        "description": {
-          "type": "string",
-          "description": "Screen-reader-only supplemental description. Rendered in accessible markup (e.g., aria-describedby) but visually hidden. Use for computed fields, complex interactions, or context not conveyed by the label alone.",
-          "examples": [
-            "Calculated total of all budget line items",
-            "This field is automatically computed from personnel and equipment costs",
-            "Select all applicable categories"
-          ]
-        },
-        "liveRegion": {
-          "type": "string",
-          "enum": [
-            "off",
-            "polite",
-            "assertive"
-          ],
-          "description": "Controls how aggressively screen readers announce value changes to this item. 'off': no automatic announcements. 'polite': announced when the user is idle (RECOMMENDED for computed fields). 'assertive': announced immediately, interrupting current speech — use sparingly, as it disrupts the reading flow. Maps to the aria-live attribute.",
-          "examples": [
-            "polite",
-            "off"
-          ]
-        }
-      }
+      "$ref": "https://formspec.org/schemas/component/1.0#/$defs/AccessibilityBlock"
     },
     "Selector": {
       "type": "object",
@@ -595,14 +509,14 @@
         }
       ]
     },
-    "Page": {
+    "PageLayout": {
       "type": "object",
       "required": [
         "id",
         "title"
       ],
       "additionalProperties": false,
-      "description": "A logical page grouping items into a section with a title and a 12-column grid layout. Pages define navigation structure (wizard steps, tabs, or sections). Each page contains regions that assign Definition items to grid positions.",
+      "description": "A logical page layout grouping items into a section with a title and a 12-column grid. Pages define navigation structure (wizard steps, tabs, or sections). Each page contains regions that assign Definition items to grid positions.",
       "properties": {
         "id": {
           "type": "string",
@@ -738,24 +652,7 @@
       ]
     },
     "Breakpoints": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "integer",
-        "minimum": 0
-      },
-      "description": "Named responsive breakpoints with min-width values in pixels. Breakpoint names are free strings used as keys in Region responsive overrides. Processors that do not support responsive layouts SHOULD ignore breakpoints and use base span/start values.",
-      "examples": [
-        {
-          "sm": 576,
-          "md": 768,
-          "lg": 1024
-        },
-        {
-          "mobile": 480,
-          "tablet": 768,
-          "desktop": 1200
-        }
-      ]
+      "$ref": "https://formspec.org/schemas/component/1.0#/$defs/Breakpoints"
     }
   }
 }
