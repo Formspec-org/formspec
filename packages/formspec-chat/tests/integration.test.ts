@@ -52,16 +52,20 @@ describe('Integration: full conversation flow', () => {
     expect(restored.getMessages().length).toBeGreaterThan(session.getMessages().length);
   });
 
-  it('blank start → conversation → scaffold → issues', async () => {
+  it('blank start → interview → scaffold → refine → issues', async () => {
     const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
-    // Vague first message
+    // Interview phase — no definition yet
     await session.sendMessage('I need a form');
+    expect(session.hasDefinition()).toBe(false);
+
+    // Scaffold explicitly
+    await session.scaffold();
     expect(session.hasDefinition()).toBe(true);
     expect(session.getOpenIssueCount()).toBeGreaterThan(0);
 
-    // More specific follow-up
+    // Refine after scaffolding
     await session.sendMessage('It should collect name, email, and phone');
     // Issues from the deterministic adapter about needing AI
     const issues = session.getIssues();
@@ -122,6 +126,7 @@ describe('Integration: issue lifecycle', () => {
     const session = new ChatSession({ adapter });
 
     await session.sendMessage('I need a form');
+    await session.scaffold();
     const issuesBefore = session.getIssues();
     expect(issuesBefore.length).toBeGreaterThan(0);
 
@@ -189,33 +194,36 @@ describe('Integration: bundle generation flow', () => {
   });
 });
 
-describe('Integration: mock adapter keyword matching', () => {
-  it('matches housing keywords to housing template', async () => {
+describe('Integration: mock adapter keyword matching on scaffold', () => {
+  it('matches housing keywords to housing template on scaffold', async () => {
     const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
     await session.sendMessage('I need a housing application for tenants');
+    await session.scaffold();
 
     const def = session.getDefinition()!;
     // Should match to housing template
     expect(def.items.length).toBeGreaterThan(2);
   });
 
-  it('matches medical keywords to patient template', async () => {
+  it('matches medical keywords to patient template on scaffold', async () => {
     const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
     await session.sendMessage('We need a patient medical intake form');
+    await session.scaffold();
 
     const def = session.getDefinition()!;
     expect(def.items.length).toBeGreaterThan(2);
   });
 
-  it('matches grant keywords to grant template', async () => {
+  it('matches grant keywords to grant template on scaffold', async () => {
     const adapter = new MockAdapter();
     const session = new ChatSession({ adapter });
 
     await session.sendMessage('Create a grant application with budget tracking');
+    await session.scaffold();
 
     const def = session.getDefinition()!;
     expect(def.items.length).toBeGreaterThan(2);

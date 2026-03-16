@@ -185,13 +185,15 @@ describe('ChatShell', () => {
     it('shows issue badge count when there are open issues', async () => {
       render(<ChatShell />);
 
-      // Send a vague message to get issues from deterministic adapter
+      // Start from template (creates a definition immediately)
+      fireEvent.click(screen.getByRole('button', { name: /template/i }));
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /start blank/i }));
+        fireEvent.click(screen.getByText('Housing Intake Form'));
       });
 
+      // Send a vague refinement to get missing-config issues
       const input = screen.getByPlaceholderText(/describe what you need/i);
-      fireEvent.change(input, { target: { value: 'I need a form' } });
+      fireEvent.change(input, { target: { value: 'make changes' } });
 
       await act(async () => {
         fireEvent.keyDown(input, { key: 'Enter' });

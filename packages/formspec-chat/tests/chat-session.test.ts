@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ChatSession } from '../src/chat-session.js';
 import { MockAdapter } from '../src/mock-adapter.js';
-import type { AIAdapter, ScaffoldResult, ChatMessage, Attachment, ChatSessionState } from '../src/types.js';
+import type { AIAdapter, ScaffoldResult, ChatMessage, Attachment, ChatSessionState, ConversationResponse } from '../src/types.js';
 import type { FormDefinition } from 'formspec-types';
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -9,6 +9,11 @@ import type { FormDefinition } from 'formspec-types';
 class SpyAdapter implements AIAdapter {
   calls: { method: string; args: any[] }[] = [];
   private inner = new MockAdapter();
+
+  async chat(messages: ChatMessage[]): Promise<ConversationResponse> {
+    this.calls.push({ method: 'chat', args: [messages] });
+    return this.inner.chat(messages);
+  }
 
   async generateScaffold(request: any): Promise<ScaffoldResult> {
     this.calls.push({ method: 'generateScaffold', args: [request] });
@@ -56,7 +61,7 @@ describe('ChatSession', () => {
     });
   });
 
-  describe('sendMessage', () => {
+  describe('sendMessage (interview phase)', () => {
     it('adds user message to history', async () => {
       await session.sendMessage('I need a patient intake form');
 
@@ -66,7 +71,7 @@ describe('ChatSession', () => {
       expect(messages[0].content).toBe('I need a patient intake form');
     });
 
-    it('generates assistant response message', async () => {
+    it('generates assistant response message via chat()', async () => {
       await session.sendMessage('I need a housing intake form');
 
       const messages = session.getMessages();
@@ -75,28 +80,93 @@ describe('ChatSession', () => {
       expect(assistant!.content).toBeTruthy();
     });
 
-    it('generates scaffold on first meaningful message', async () => {
+    it('calls adapter.chat() when no definition exists', async () => {
       await session.sendMessage('I need a patient intake form');
+
+      expect(adapter.calls.some(c => c.method === 'chat')).toBe(true);
+    });
+
+    it('does not create a definition during interview', async () => {
+      await session.sendMessage('I need a patient intake form');
+
+      expect(session.hasDefinition()).toBe(false);
+    });
+
+    it('isReadyToScaffold reflects adapter response', async () => {
+      expect(session.isReadyToScaffold()).toBe(false);
+
+      await session.sendMessage('I need a form');
+      // One user message: MockAdapter returns readyToScaffold: false
+      expect(session.isReadyToScaffold()).toBe(false);
+    });
+
+    it('calls adapter.refineForm for messages after scaffolding', async () => {
+      await session.startFromTemplate('patient-intake');
+      adapter.calls = []; // reset
+
+      await session.sendMessage('Add a field for blood type');
+
+      expect(adapter.calls.some(c => c.method === 'refineForm')).toBe(true);
+    });
+  });
+
+  describe('scaffold()', () => {
+    it('generates definition from accumulated messages', async () => {
+      await session.sendMessage('I need a patient intake form');
+      await session.scaffold();
 
       const def = session.getDefinition();
       expect(def).toBeDefined();
       expect(def!.items.length).toBeGreaterThan(0);
     });
 
+    it('calls adapter.generateScaffold with conversation type', async () => {
+      await session.sendMessage('I need a form');
+      adapter.calls = [];
+
+      await session.scaffold();
+
+      const scaffoldCall = adapter.calls.find(c => c.method === 'generateScaffold');
+      expect(scaffoldCall).toBeDefined();
+      expect(scaffoldCall!.args[0].type).toBe('conversation');
+    });
+
+    it('builds bundle', async () => {
+      await session.sendMessage('I need a form');
+      await session.scaffold();
+
+      const bundle = session.getBundle();
+      expect(bundle).not.toBeNull();
+      expect(bundle!.component.tree).not.toBeNull();
+    });
+
+    it('adds system message about generated form', async () => {
+      await session.sendMessage('I need a form');
+      await session.scaffold();
+
+      const messages = session.getMessages();
+      expect(messages.some(
+        m => m.role === 'system' && /generated form/i.test(m.content),
+      )).toBe(true);
+    });
+
+    it('resets readyToScaffold to false', async () => {
+      // Send enough messages to trigger readyToScaffold
+      await session.sendMessage('I need a form');
+      await session.sendMessage('It collects name and email');
+      await session.sendMessage('For new employees');
+
+      await session.scaffold();
+
+      expect(session.isReadyToScaffold()).toBe(false);
+    });
+
     it('creates source traces for scaffolded elements', async () => {
       await session.sendMessage('I need a housing intake form');
+      await session.scaffold();
 
       const traces = session.getTraces();
       expect(traces.length).toBeGreaterThan(0);
-    });
-
-    it('calls adapter.refineForm for subsequent messages', async () => {
-      await session.sendMessage('I need a patient intake form');
-      adapter.calls = []; // reset
-
-      await session.sendMessage('Add a field for blood type');
-
-      expect(adapter.calls.some(c => c.method === 'refineForm')).toBe(true);
     });
   });
 
@@ -209,12 +279,14 @@ describe('ChatSession', () => {
     it('collects issues from scaffold generation', async () => {
       // Vague input triggers low-confidence issues from deterministic adapter
       await session.sendMessage('I need a form');
+      await session.scaffold();
 
       expect(session.getIssues().length).toBeGreaterThan(0);
     });
 
     it('resolveIssue marks an issue as resolved', async () => {
       await session.sendMessage('I need a form');
+      await session.scaffold();
       const issues = session.getIssues();
       const openIssue = issues.find(i => i.status === 'open');
       expect(openIssue).toBeDefined();
@@ -226,6 +298,7 @@ describe('ChatSession', () => {
 
     it('deferIssue marks an issue as deferred', async () => {
       await session.sendMessage('I need a form');
+      await session.scaffold();
       const openIssue = session.getIssues().find(i => i.status === 'open')!;
 
       session.deferIssue(openIssue.id);
@@ -235,6 +308,7 @@ describe('ChatSession', () => {
 
     it('getOpenIssueCount returns count of open issues', async () => {
       await session.sendMessage('I need a form');
+      await session.scaffold();
       const count = session.getOpenIssueCount();
       expect(count).toBeGreaterThan(0);
     });
@@ -259,6 +333,7 @@ describe('ChatSession', () => {
 
     it('getLastDiff is null after first scaffold (not a refinement)', async () => {
       await session.sendMessage('I need a patient intake form');
+      await session.scaffold();
       // First scaffold is not a refinement — no previous definition to diff
       expect(session.getLastDiff()).toBeNull();
     });
@@ -324,6 +399,38 @@ describe('ChatSession', () => {
 
       expect(restored.getMessages().length).toBeGreaterThan(state.messages.length);
     });
+
+    it('readyToScaffold persists through toState/fromState', async () => {
+      // Send 3 messages to trigger readyToScaffold in MockAdapter
+      await session.sendMessage('I need a form');
+      await session.sendMessage('It collects name and email');
+      await session.sendMessage('For new employees');
+
+      const state = session.toState();
+      expect(state.readyToScaffold).toBe(true);
+
+      const restored = ChatSession.fromState(state, adapter);
+      expect(restored.isReadyToScaffold()).toBe(true);
+    });
+
+    it('readyToScaffold defaults to false for legacy states', () => {
+      const legacyState = {
+        id: 'old-session',
+        messages: [],
+        projectSnapshot: { definition: null },
+        traces: [],
+        issues: [],
+        createdAt: 1000,
+        updatedAt: 1000,
+      } as any;
+      const restored = ChatSession.fromState(legacyState, adapter);
+      expect(restored.isReadyToScaffold()).toBe(false);
+    });
+
+    it('templates bypass interview (definition set immediately)', async () => {
+      await session.startFromTemplate('housing-intake');
+      expect(session.hasDefinition()).toBe(true);
+    });
   });
 
   describe('hasDefinition', () => {
@@ -374,7 +481,7 @@ describe('ChatSession', () => {
       expect(state.messages).toEqual([]);
     });
 
-    it('sendMessage returns the assistant message', async () => {
+    it('sendMessage returns the assistant message (interview phase)', async () => {
       const reply = await session.sendMessage('Hello');
       expect(reply.role).toBe('assistant');
       expect(reply.content).toBeTruthy();
@@ -427,6 +534,7 @@ describe('ChatSession', () => {
 
     it('bundle is generated after conversation scaffold', async () => {
       await session.sendMessage('I need a patient intake form');
+      await session.scaffold();
 
       const bundle = session.getBundle();
       expect(bundle).not.toBeNull();
@@ -528,6 +636,7 @@ describe('ChatSession', () => {
 
     it('notifies on resolveIssue', async () => {
       await session.sendMessage('I need a form');
+      await session.scaffold();
       const issue = session.getIssues().find(i => i.status === 'open')!;
 
       let callCount = 0;

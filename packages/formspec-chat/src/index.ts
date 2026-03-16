@@ -15,6 +15,7 @@ export type {
   IssueSeverity,
   IssueCategory,
   IssueStatus,
+  ConversationResponse,
   ScaffoldResult,
   AIAdapter,
   ScaffoldRequest,

@@ -26,6 +26,7 @@ export function ChatPanel({ onUpload }: ChatPanelProps) {
   const state = useChatState();
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
+  const [pendingText, setPendingText] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -48,10 +49,12 @@ export function ChatPanel({ onUpload }: ChatPanelProps) {
 
     setSending(true);
     setInputValue('');
+    setPendingText(text);
     try {
       await session.sendMessage(text);
     } finally {
       setSending(false);
+      setPendingText(null);
       inputRef.current?.focus();
     }
   };
@@ -67,10 +70,13 @@ export function ChatPanel({ onUpload }: ChatPanelProps) {
     <div className="flex flex-col h-full">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto">
-        {state.messages.length === 0 ? (
+        {state.messages.length === 0 && !pendingText ? (
           <EmptyState />
         ) : (
           <div className="px-4 sm:px-6 lg:px-8 py-5 space-y-4 max-w-[720px] mx-auto w-full">
+            {pendingText && state.messages.length === 0 && (
+              <MessageBubble role="user" content={pendingText} isLast={false} />
+            )}
             {state.messages.map((msg, i) => (
               <MessageBubble
                 key={msg.id}

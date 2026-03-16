@@ -7,8 +7,9 @@ import { ChatSession, MockAdapter } from 'formspec-chat';
 
 async function renderIssuePanelWithIssues() {
   const session = new ChatSession({ adapter: new MockAdapter() });
-  // Vague message produces issues
+  // Vague message produces issues after scaffolding
   await session.sendMessage('I need a form');
+  await session.scaffold();
 
   const result = render(
     <ChatProvider session={session}>

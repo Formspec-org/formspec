@@ -1,6 +1,6 @@
 import type {
   AIAdapter, Attachment, ChatMessage, ChatSessionState,
-  SourceTrace, Issue,
+  ScaffoldRequest, SourceTrace, Issue,
 } from './types.js';
 import type { FormDefinition } from 'formspec-types';
 import type { ProjectBundle } from 'formspec-core';
@@ -34,6 +34,7 @@ export class ChatSession {
   private updatedAt: number;
   private templateId?: string;
   private lastDiff: DefinitionDiff | null = null;
+  private readyToScaffold = false;
   private listeners: Set<() => void> = new Set();
   private messageCounter = 0;
 
@@ -90,6 +91,10 @@ export class ChatSession {
     return this.definition !== null;
   }
 
+  isReadyToScaffold(): boolean {
+    return this.readyToScaffold;
+  }
+
   getBundle(): ProjectBundle | null {
     return this.bundle;
   }
@@ -120,17 +125,10 @@ export class ChatSession {
 
     try {
       if (!this.definition) {
-        // First meaningful input — generate scaffold
-        const result = await this.adapter.generateScaffold({
-          type: 'conversation',
-          messages: this.messages,
-        });
-        this.definition = result.definition;
-        this.bundle = buildBundleFromDefinition(result.definition);
-        this.lastDiff = null; // No diff on initial scaffold
-        this.traces.addTraces(result.traces);
-        this.addIssuesFromResult(result.issues);
-        assistantContent = `I've created a draft form: "${result.definition.title}" with ${result.definition.items.length} fields. You can continue describing what you need, and I'll refine it.`;
+        // Interview phase — gather requirements before scaffolding
+        const response = await this.adapter.chat(this.messages);
+        this.readyToScaffold = response.readyToScaffold;
+        assistantContent = response.message;
       } else {
         // Refine existing form
         const previousDef = this.definition;
@@ -172,6 +170,33 @@ export class ChatSession {
     this.notify();
 
     return assistantMsg;
+  }
+
+  /**
+   * Generate a form scaffold from the conversation so far.
+   * Called when the user explicitly triggers scaffolding after the interview.
+   */
+  async scaffold(): Promise<void> {
+    const result = await this.adapter.generateScaffold({
+      type: 'conversation',
+      messages: this.messages,
+    });
+    this.definition = result.definition;
+    this.bundle = buildBundleFromDefinition(result.definition);
+    this.lastDiff = null;
+    this.traces.addTraces(result.traces);
+    this.addIssuesFromResult(result.issues);
+    this.readyToScaffold = false;
+
+    const systemMsg: ChatMessage = {
+      id: this.nextMessageId(),
+      role: 'system',
+      content: `Generated form: "${result.definition.title}" with ${result.definition.items.length} fields.`,
+      timestamp: Date.now(),
+    };
+    this.messages.push(systemMsg);
+    this.updatedAt = Date.now();
+    this.notify();
   }
 
   /**
@@ -261,6 +286,7 @@ export class ChatSession {
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       templateId: this.templateId,
+      readyToScaffold: this.readyToScaffold || undefined,
     };
   }
 
@@ -277,6 +303,7 @@ export class ChatSession {
     session.createdAt = state.createdAt;
     session.updatedAt = state.updatedAt;
     session.templateId = state.templateId;
+    session.readyToScaffold = state.readyToScaffold ?? false;
     session.messageCounter = state.messages.length;
     return session;
   }

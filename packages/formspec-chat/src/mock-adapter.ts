@@ -1,6 +1,7 @@
 import type {
   AIAdapter, ScaffoldRequest, ScaffoldResult,
   ChatMessage, Attachment, SourceTrace, Issue,
+  ConversationResponse,
 } from './types.js';
 import type { FormDefinition } from 'formspec-types';
 import { TemplateLibrary } from './template-library.js';
@@ -17,6 +18,28 @@ const library = new TemplateLibrary();
 export class MockAdapter implements AIAdapter {
   async isAvailable(): Promise<boolean> {
     return true;
+  }
+
+  async chat(messages: ChatMessage[]): Promise<ConversationResponse> {
+    const userMessages = messages.filter(m => m.role === 'user');
+    const count = userMessages.length;
+
+    if (count <= 1) {
+      return {
+        message: "That sounds like a great start! Can you tell me more about the purpose of this form and who will be filling it out?",
+        readyToScaffold: false,
+      };
+    }
+    if (count === 2) {
+      return {
+        message: "Thanks for the context. What specific fields and sections should the form include? Any particular data types like dates, emails, or dropdown choices?",
+        readyToScaffold: false,
+      };
+    }
+    return {
+      message: "I have a good picture of what you need. Click **Generate Form** when you're ready, and I'll build it for you.",
+      readyToScaffold: true,
+    };
   }
 
   async generateScaffold(request: ScaffoldRequest): Promise<ScaffoldResult> {

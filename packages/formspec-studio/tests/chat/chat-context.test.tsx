@@ -23,6 +23,7 @@ function ChatStateDisplay() {
       <span data-testid="has-diff">{String(state.lastDiff !== null)}</span>
       <span data-testid="has-bundle">{String(state.bundle !== null)}</span>
       <span data-testid="has-component-tree">{String(state.bundle?.component?.tree != null)}</span>
+      <span data-testid="ready-to-scaffold">{String(state.readyToScaffold)}</span>
     </div>
   );
 }
@@ -67,7 +68,7 @@ describe('ChatContext', () => {
     expect(Number(screen.getByTestId('message-count').textContent)).toBeGreaterThan(0);
   });
 
-  it('tracks open issue count after vague input', async () => {
+  it('tracks open issue count after scaffold', async () => {
     const session = makeSession();
     render(
       <ChatProvider session={session}>
@@ -77,9 +78,34 @@ describe('ChatContext', () => {
 
     await act(async () => {
       await session.sendMessage('I need a form');
+      await session.scaffold();
     });
 
     expect(Number(screen.getByTestId('open-issues').textContent)).toBeGreaterThan(0);
+  });
+
+  it('exposes readyToScaffold state', async () => {
+    const session = makeSession();
+    render(
+      <ChatProvider session={session}>
+        <ChatStateDisplay />
+      </ChatProvider>,
+    );
+
+    expect(screen.getByTestId('ready-to-scaffold').textContent).toBe('false');
+
+    // Send 3 messages to trigger readyToScaffold in MockAdapter
+    await act(async () => {
+      await session.sendMessage('I need a form');
+    });
+    await act(async () => {
+      await session.sendMessage('It collects name and email');
+    });
+    await act(async () => {
+      await session.sendMessage('For new employees');
+    });
+
+    expect(screen.getByTestId('ready-to-scaffold').textContent).toBe('true');
   });
 
   it('exposes the definition when one exists', async () => {

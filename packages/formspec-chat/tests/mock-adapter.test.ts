@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MockAdapter } from '../src/mock-adapter.js';
-import type { ScaffoldRequest, ScaffoldResult } from '../src/types.js';
+import type { ScaffoldRequest, ScaffoldResult, ChatMessage } from '../src/types.js';
 
 describe('MockAdapter', () => {
   const adapter = new MockAdapter();
@@ -103,6 +103,59 @@ describe('MockAdapter', () => {
       expect(
         result.issues.some(i => i.category === 'missing-config'),
       ).toBe(true);
+    });
+  });
+
+  describe('chat', () => {
+    /** Creates alternating user/assistant messages with `count` user messages. */
+    function makeMessages(count: number): ChatMessage[] {
+      const msgs: ChatMessage[] = [];
+      for (let i = 0; i < count; i++) {
+        msgs.push({
+          id: `msg-u${i + 1}`,
+          role: 'user',
+          content: `User message ${i + 1}`,
+          timestamp: 1000 + i * 2,
+        });
+        if (i < count - 1) {
+          msgs.push({
+            id: `msg-a${i + 1}`,
+            role: 'assistant',
+            content: `Assistant response ${i + 1}`,
+            timestamp: 1001 + i * 2,
+          });
+        }
+      }
+      return msgs;
+    }
+
+    it('returns a conversational response', async () => {
+      const messages = makeMessages(1);
+      const result = await adapter.chat(messages);
+
+      expect(typeof result.message).toBe('string');
+      expect(typeof result.readyToScaffold).toBe('boolean');
+    });
+
+    it('does not signal readyToScaffold with one user message', async () => {
+      const messages = makeMessages(1);
+      const result = await adapter.chat(messages);
+
+      expect(result.readyToScaffold).toBe(false);
+    });
+
+    it('does not signal readyToScaffold with two user messages', async () => {
+      const messages = makeMessages(2);
+      const result = await adapter.chat(messages);
+
+      expect(result.readyToScaffold).toBe(false);
+    });
+
+    it('signals readyToScaffold after enough exchanges', async () => {
+      const messages = makeMessages(3);
+      const result = await adapter.chat(messages);
+
+      expect(result.readyToScaffold).toBe(true);
     });
   });
 

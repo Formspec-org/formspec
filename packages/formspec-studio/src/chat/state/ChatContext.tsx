@@ -8,6 +8,7 @@ import type { FormDefinition } from 'formspec-types';
 export interface ChatState {
   messages: ChatMessage[];
   hasDefinition: boolean;
+  readyToScaffold: boolean;
   definition: FormDefinition | null;
   bundle: ProjectBundle | null;
   lastDiff: DefinitionDiff | null;
@@ -20,6 +21,7 @@ function snapshotFrom(session: ChatSession): ChatState {
   return {
     messages: session.getMessages(),
     hasDefinition: session.hasDefinition(),
+    readyToScaffold: session.isReadyToScaffold(),
     definition: session.getDefinition(),
     bundle: session.getBundle(),
     lastDiff: session.getLastDiff(),

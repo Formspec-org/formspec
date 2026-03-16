@@ -69,6 +69,13 @@ export interface Issue {
   resolvedBy?: string;
 }
 
+// ── Conversation Response ────────────────────────────────────────────
+
+export interface ConversationResponse {
+  message: string;
+  readyToScaffold: boolean;
+}
+
 // ── AI Adapter ──────────────────────────────────────────────────────
 
 export interface ScaffoldResult {
@@ -81,6 +88,9 @@ export interface ScaffoldResult {
 }
 
 export interface AIAdapter {
+  /** Conduct a guided interview conversation before scaffolding. */
+  chat(messages: ChatMessage[]): Promise<ConversationResponse>;
+
   /** Generate a scaffold from the initial input. */
   generateScaffold(request: ScaffoldRequest): Promise<ScaffoldResult>;
 
@@ -139,6 +149,7 @@ export interface ChatSessionState {
   createdAt: number;
   updatedAt: number;
   templateId?: string;
+  readyToScaffold?: boolean;
 }
 
 // ── Session Store ───────────────────────────────────────────────────

@@ -93,7 +93,7 @@ describe('Chat UI Integration', () => {
     expect(screen.getByText('Add impact metrics section')).toBeInTheDocument();
   });
 
-  it('blank start with vague input shows issues', async () => {
+  it('blank start with vague input enters interview phase', async () => {
     render(<ChatShell />);
 
     await act(async () => {
@@ -107,7 +107,7 @@ describe('Chat UI Integration', () => {
       fireEvent.keyDown(input, { key: 'Enter' });
     });
 
-    // Issue badge should appear
-    expect(screen.getByTestId('issue-count')).toBeInTheDocument();
+    // User message should appear in the chat (interview phase, no definition yet)
+    expect(screen.getByText('I need a form')).toBeInTheDocument();
   });
 });

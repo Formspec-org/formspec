@@ -2,6 +2,7 @@ import { GoogleGenAI, type GenerateContentResponse } from '@google/genai';
 import type {
   AIAdapter, ScaffoldRequest, ScaffoldResult,
   ChatMessage, Attachment, SourceTrace, Issue,
+  ConversationResponse,
 } from './types.js';
 import type { FormDefinition } from 'formspec-types';
 import { TemplateLibrary } from './template-library.js';
@@ -118,6 +119,32 @@ function minimalFallback(title: string): FormDefinition {
   } as FormDefinition;
 }
 
+// ── Interview prompt & schema ────────────────────────────────────────
+
+const INTERVIEW_SYSTEM_PROMPT = `You are a form design interviewer. Your job is to have a short, focused conversation to understand what form the user needs before generating it.
+
+Guide the conversation through these sections (you don't need to cover all — stop when you have enough):
+1. **Purpose** — What is the form for? Who fills it out? What's the context?
+2. **Fields** — What data needs to be collected? What field types (text, dates, choices, etc.)?
+3. **Logic** — Any conditional fields, calculated values, or validation rules?
+4. **Advanced** — Multi-page layout, repeating sections, file uploads?
+
+Rules:
+- Ask 1-2 focused questions at a time, not a wall of questions
+- Be conversational and encouraging
+- When you have enough information to generate a good form, set readyToScaffold to true and tell the user they can generate the form
+- Set readyToScaffold to true only when you have at least a clear purpose and some field ideas
+- If the user's very first message is extremely detailed, you can set readyToScaffold to true immediately`;
+
+const INTERVIEW_RESPONSE_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    message: { type: 'string' as const },
+    readyToScaffold: { type: 'boolean' as const },
+  },
+  required: ['message', 'readyToScaffold'],
+};
+
 // ── GeminiAdapter ────────────────────────────────────────────────────
 
 export class GeminiAdapter implements AIAdapter {
@@ -131,6 +158,37 @@ export class GeminiAdapter implements AIAdapter {
 
   async isAvailable(): Promise<boolean> {
     return true;
+  }
+
+  async chat(messages: ChatMessage[]): Promise<ConversationResponse> {
+    const conversationParts = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n\n');
+
+    try {
+      const response = await this.client.models.generateContent({
+        model: this.model,
+        contents: conversationParts,
+        config: {
+          systemInstruction: INTERVIEW_SYSTEM_PROMPT,
+          responseMimeType: 'application/json',
+          responseSchema: INTERVIEW_RESPONSE_SCHEMA,
+        },
+      });
+
+      const text = extractText(response);
+      const parsed = JSON.parse(text);
+      return {
+        message: parsed.message,
+        readyToScaffold: Boolean(parsed.readyToScaffold),
+      };
+    } catch (err) {
+      return {
+        message: `I'd love to help you build a form! Could you tell me more about what you need? (Note: I encountered a temporary issue, but we can continue.)`,
+        readyToScaffold: false,
+      };
+    }
   }
 
   async generateScaffold(request: ScaffoldRequest): Promise<ScaffoldResult> {
