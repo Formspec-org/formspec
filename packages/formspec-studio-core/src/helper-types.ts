@@ -106,47 +106,52 @@ export interface InstanceProps {
 
 /** Metadata changes for setMetadata — split between title, presentation, and definition handlers */
 export interface MetadataChanges {
-  title?: string;
-  name?: string;
-  description?: string;
-  url?: string;
-  version?: string;
-  status?: 'draft' | 'active' | 'retired' | 'unknown';
-  date?: string;
-  versionAlgorithm?: string;
-  nonRelevantBehavior?: 'empty' | 'suppress';
-  derivedFrom?: string;
-  density?: 'compact' | 'comfortable' | 'spacious';
-  labelPosition?: 'top' | 'left' | 'inline' | 'hidden';
-  pageMode?: 'tabs' | 'wizard' | 'accordion';
-  defaultCurrency?: string;
+  title?: string | null;
+  name?: string | null;
+  description?: string | null;
+  url?: string | null;
+  version?: string | null;
+  status?: 'draft' | 'active' | 'retired' | 'unknown' | null;
+  date?: string | null;
+  versionAlgorithm?: string | null;
+  nonRelevantBehavior?: 'empty' | 'suppress' | null;
+  derivedFrom?: string | null;
+  density?: 'compact' | 'comfortable' | 'spacious' | null;
+  labelPosition?: 'top' | 'left' | 'inline' | 'hidden' | null;
+  pageMode?: 'tabs' | 'wizard' | 'accordion' | null;
+  defaultCurrency?: string | null;
 }
 
 /** Changes for updateItem — each key routes to a different handler */
 export interface ItemChanges {
-  label?: string;
-  hint?: string;
-  description?: string;
+  label?: string | null;
+  hint?: string | null;
+  description?: string | null;
   placeholder?: string;
   ariaLabel?: string;
-  options?: ChoiceOption[];
+  options?: ChoiceOption[] | null;
   choicesFrom?: string;
-  currency?: string;
-  precision?: number;
+  currency?: string | null;
+  precision?: number | null;
   initialValue?: unknown;
   prePopulate?: unknown;
   dataType?: string;
-  required?: boolean | string;
-  constraint?: string;
-  constraintMessage?: string;
-  calculate?: string;
-  relevant?: string;
-  readonly?: boolean | string;
-  default?: string;
+  required?: boolean | string | null;
+  constraint?: string | null;
+  constraintMessage?: string | null;
+  calculate?: string | null;
+  relevant?: string | null;
+  readonly?: boolean | string | null;
+  default?: string | null;
   repeatable?: boolean;
-  minRepeat?: number;
-  maxRepeat?: number;
-  widget?: string;
+  minRepeat?: number | null;
+  maxRepeat?: number | null;
+  widget?: string | null;
   style?: Record<string, unknown>;
   page?: string;
+  prefix?: string | null;
+  suffix?: string | null;
+  semanticType?: string | null;
+  /** Allow dynamic bind-type keys (e.g. from behavior rules editor) */
+  [key: string]: unknown;
 }

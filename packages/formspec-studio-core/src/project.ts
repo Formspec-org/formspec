@@ -1,6 +1,6 @@
 import { createRawProject } from 'formspec-core';
 // Internal-only core types — never appear in public method signatures
-import type { IProjectCore, AnyCommand, FELParseContext, FELParseResult, FELReferenceSet, FELFunctionEntry, FieldDependents, ItemFilter } from 'formspec-core';
+import type { IProjectCore, AnyCommand, CommandResult, FELParseContext, FELParseResult, FELReferenceSet, FELFunctionEntry, FieldDependents, ItemFilter } from 'formspec-core';
 // Studio-core's own type vocabulary for the public API
 import type {
   FormItem, FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
@@ -35,7 +35,7 @@ import { rewriteFELReferences } from 'formspec-engine';
  * For raw project access (dispatch, state, queries), use formspec-core directly.
  */
 export class Project {
-  constructor(private readonly core: IProjectCore) {}
+  constructor(private readonly core: IProjectCore) { }
 
   // ── Read-only state getters (for rendering) ────────────────
 

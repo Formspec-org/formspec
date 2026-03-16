@@ -1,16 +1,13 @@
-import { useProjectState } from './useProjectState';
+import { useSyncExternalStore, useCallback } from 'react';
+import type { ComponentDocument } from 'formspec-studio-core';
+import { useProject } from './useProject';
 
-export function useComponent() {
-  const state = useProjectState();
-  const authored = state.component as Record<string, unknown>;
-  if (typeof authored.$formspecComponent === 'string' && authored.tree) {
-    return state.component;
-  }
-
-  return {
-    ...state.component,
-    ...state.generatedComponent,
-    tree: state.generatedComponent?.tree,
-    'x-studio-generated': true,
-  };
+export function useComponent(): Readonly<ComponentDocument> {
+  const project = useProject();
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => project.onChange(onStoreChange),
+    [project]
+  );
+  const getSnapshot = useCallback(() => project.component, [project]);
+  return useSyncExternalStore(subscribe, getSnapshot);
 }
