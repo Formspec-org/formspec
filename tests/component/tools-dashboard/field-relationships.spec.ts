@@ -33,6 +33,8 @@ test.describe('Field Relationships Tab', () => {
   });
 
   test('graph has correct number of edges', async ({ page }) => {
+    // Wait for nodes first — proves d3 loaded and simulation is ticking
+    await expect(page.locator('#deps-svg .graph-node')).toHaveCount(8, { timeout: 10000 });
     // lineItemTotal has 2 deps, projectedEndDate has 2, displayName has 1 = 5 edges
     await expect(page.locator('#deps-svg .edge')).toHaveCount(5, { timeout: 10000 });
   });
