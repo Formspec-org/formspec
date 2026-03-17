@@ -20,7 +20,7 @@ export function VariablesSection({ variables }: VariablesSectionProps) {
 
   const handleAdd = () => {
     if (!newName.trim()) return;
-    project.addVariable(newName.trim(), '');
+    project.addVariable(newName.trim(), 'null');
     setNewName('');
     setIsAdding(false);
   };

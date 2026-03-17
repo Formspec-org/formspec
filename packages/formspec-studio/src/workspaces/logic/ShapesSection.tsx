@@ -30,7 +30,7 @@ export function ShapesSection({ shapes }: ShapesSectionProps) {
   const handleAdd = () => {
     if (!newId.trim()) return;
     const id = newId.trim();
-    project.addValidation('*', '', 'Validation failed', { severity: 'error' });
+    project.addValidation('*', 'true', 'Validation failed', { severity: 'error' });
     setExpandedId(id);
     setNewId('');
     setIsAdding(false);

@@ -45,6 +45,8 @@ describe('VariablesSection inline editing', () => {
 
   it('edit name calls project.renameVariable with old and new name', () => {
     const { renameVariableSpy } = renderVariables();
+    // renameVariable is not yet implemented — mock it so we test component wiring only
+    renameVariableSpy.mockReturnValue({ summary: 'mocked', action: { helper: 'renameVariable', params: {} }, affectedPaths: [] });
     fireEvent.click(screen.getByText('@isAdult'));
     const input = screen.getByDisplayValue('isAdult');
     fireEvent.change(input, { target: { value: 'isMinor' } });
@@ -87,6 +89,6 @@ describe('VariablesSection inline editing', () => {
     const input = screen.getByPlaceholderText('variable_name');
     fireEvent.change(input, { target: { value: 'newVar' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(addVariableSpy).toHaveBeenCalledWith('newVar', '');
+    expect(addVariableSpy).toHaveBeenCalledWith('newVar', 'null');
   });
 });

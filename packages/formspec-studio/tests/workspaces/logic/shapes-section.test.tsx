@@ -123,6 +123,6 @@ describe('ShapesSection', () => {
     const input = screen.getByPlaceholderText(/shape_id/);
     fireEvent.change(input, { target: { value: 'newRule' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(addValidationSpy).toHaveBeenCalledWith('*', '', 'Validation failed', { severity: 'error' });
+    expect(addValidationSpy).toHaveBeenCalledWith('*', 'true', 'Validation failed', { severity: 'error' });
   });
 });
