@@ -29,32 +29,38 @@ const gh = "https://github.com/mikewolfd/formspec";
         Presentation layers (Theme, Components) never affect data collection, validation, or behavioral semantics — they are swappable overlays on an unchanging behavioral core.
       </p>
 
-      <div class="code-window">
-        <div class="code-window-bar">
-          <span class="code-window-dot" style="background: #ff5f57;"></span>
-          <span class="code-window-dot" style="background: #febc2e;"></span>
-          <span class="code-window-dot" style="background: #28c840;"></span>
-          <span class="code-filename">three-tier model</span>
+      <div class="tier-stack" role="img" aria-label="Three-tier document model: Definition, Theme, Components, and Companion Specs">
+        <div class="tier-box tier-box--primary">
+          <div class="tier-label">Definition <span class="tier-tag">Core</span></div>
+          <div class="tier-details">
+            <span>Structure: items (fields, groups, displays)</span>
+            <span>Behavior: binds (calculate, relevant, required, readonly)</span>
+            <span>Shapes: composable cross-field validation rules</span>
+            <span>Language: FEL expressions throughout</span>
+          </div>
         </div>
-        <div class="code-window-body">
-<pre>╔══════════════════════════════════════════════════════════════════╗
-║  DEFINITION (Core)                                               ║
-║  Structure: items (fields, groups, displays)                     ║
-║  Behavior:  binds (calculate, relevant, required, readonly)      ║
-║             shapes (composable cross-field validation rules)     ║
-║  Language:  FEL expressions throughout                           ║
-╠══════════════════════════════════════════════════════════════════╣
-║  THEME SIDECAR (Presentation)                                    ║
-║  Design tokens, widget catalog, selector cascade, grid layout    ║
-║  Multiple themes per definition (web, mobile, print, kiosk)      ║
-╠══════════════════════════════════════════════════════════════════╣
-║  COMPONENT SIDECAR (Interaction)                                 ║
-║  Explicit component tree, slot binding, responsive breakpoints   ║
-║  33 built-in components + custom templates                       ║
-╠══════════════════════════════════════════════════════════════════╣
-║  COMPANION SPECS                                                 ║
-║  Mapping DSL · Extension Registry · Changelog Format · FEL Grammar║
-╚══════════════════════════════════════════════════════════════════╝</pre>
+        <div class="tier-box">
+          <div class="tier-label">Theme Sidecar <span class="tier-tag">Presentation</span></div>
+          <div class="tier-details">
+            <span>Design tokens, widget catalog, selector cascade, grid layout</span>
+            <span>Multiple themes per definition (web, mobile, print, kiosk)</span>
+          </div>
+        </div>
+        <div class="tier-box">
+          <div class="tier-label">Component Sidecar <span class="tier-tag">Interaction</span></div>
+          <div class="tier-details">
+            <span>Explicit component tree, slot binding, responsive breakpoints</span>
+            <span>33 built-in components + custom templates</span>
+          </div>
+        </div>
+        <div class="tier-box tier-box--muted">
+          <div class="tier-label">Companion Specs</div>
+          <div class="tier-details tier-details--inline">
+            <span>Mapping DSL</span>
+            <span>Extension Registry</span>
+            <span>Changelog Format</span>
+            <span>FEL Grammar</span>
+          </div>
         </div>
       </div>
     </section>
@@ -74,54 +80,35 @@ const gh = "https://github.com/mikewolfd/formspec";
         with full confidence in semantic equivalence.
       </p>
 
-      <div class="code-window">
-        <div class="code-window-bar">
-          <span class="code-window-dot" style="background: #ff5f57;"></span>
-          <span class="code-window-dot" style="background: #febc2e;"></span>
-          <span class="code-window-dot" style="background: #28c840;"></span>
-          <span class="code-filename">dependency graph</span>
-        </div>
-        <div class="code-window-body">
-<pre>                  ┌─────────────────────────────┐
-                  │     Formspec Specification    │
-                  │                               │
-                  │  schemas/    (structural truth)│
-                  │  specs/      (behavioral truth)│
-                  │  FEL grammar (expression truth)│
-                  └──────────┬──────────┬─────────┘
-                             │          │
-              ┌──────────────┘          └──────────────┐
-              ▼                                        ▼
-   ┌─────────────────────┐              ┌─────────────────────────┐
-   │  TypeScript Engine   │              │  Python Implementation   │
-   │                      │              │                          │
-   │  Reactive signals    │              │  CLI &amp; server tooling     │
-   │  FEL compiler        │              │  FEL compiler            │
-   │  Live validation     │              │  Static linting          │
-   │                      │              │  Mapping engine           │
-   └──────┬───────┬───────┘              └──────────────────────────┘
-          │       │
-          │       └──────────────────┐
-          │  (presentation)          │  (authoring)
-          ▼                          ▼
-   ┌──────────────────┐    ┌─────────────────────┐
-   │  Web Component    │    │  Studio Core         │
-   │                   │    │                      │
-   │  &lt;formspec-render&gt;│    │  Command model       │
-   │  33 plugin types  │    │  Queries &amp; diagnostics│
-   │  Theme resolver   │    │  Undo/redo, replay   │
-   └──────────────────┘    └──────────┬────────────┘
-                                      │
-                        ┌─────┬───────┼───────┬──────┐
-                        ▼     ▼       ▼       ▼      ▼
-                      MCP   Chat   CLI tool  Studio  LLM</pre>
-        </div>
+      <div class="diagram-wrap">
+        <img
+          src="/diagrams/dependency-graph.svg"
+          alt="Dependency graph: Specification at top, TypeScript and Python implementations in the middle, Layout Planner and Studio Core below, with renderers and authoring tools at the bottom"
+          class="diagram-svg"
+          loading="lazy"
+        />
       </div>
 
+      <h3>Rendering is two layers, not one</h3>
       <p>
-        This inversion runs deeper than client/server. The TypeScript side itself has two boundaries below the engine.
-        The <strong>web component</strong> is a presentation adapter — it reads engine signals and dispatches to a plugin registry.
-        The engine can drive any rendering surface: React, native mobile, PDF, server-rendered HTML.
+        The <strong>layout planner</strong> sits between the engine and any renderer. It resolves the
+        theme cascade, expands custom components, merges responsive breakpoints, and
+        produces a plain LayoutNode tree — a JSON-serializable blueprint that says
+        "put a TextInput here with these styles" without knowing anything about the DOM,
+        React, or any other rendering technology.
+      </p>
+      <p>
+        The <code>&lt;formspec-render&gt;</code> <strong>web component</strong> is one consumer of that blueprint. It walks
+        the LayoutNode tree, creates DOM elements, and wires Preact Signals for live
+        reactivity. But the planner doesn't depend on it. A React library, a React
+        Native app, a PDF generator, or an integration with JSON Forms could consume the
+        same blueprint and produce the same form in a completely different environment.
+      </p>
+      <p>
+        The engine owns data and logic. The planner owns presentation decisions.
+        Renderers own pixels.
+      </p>
+      <p>
         <strong>Studio Core</strong> is an authoring adapter — every edit is a serializable command with undo/redo, replay, and cross-artifact diagnostics.
         CLI tools, LLM agents, and visual editors all drive Studio Core through the same command API.
       </p>
@@ -256,14 +243,14 @@ const gh = "https://github.com/mikewolfd/formspec";
               <td>FormEngine, FEL pipeline, assembler, reactive signals</td>
             </tr>
             <tr>
-              <td><a href={`${gh}/tree/main/packages/formspec-webcomponent`} target="_blank" rel="noopener noreferrer"><code>formspec-webcomponent</code></a></td>
-              <td class="role-label">Rendering</td>
-              <td><code>&lt;formspec-render&gt;</code> — component registry, theme resolver, 33 plugins</td>
-            </tr>
-            <tr>
               <td><a href={`${gh}/tree/main/packages/formspec-layout`} target="_blank" rel="noopener noreferrer"><code>formspec-layout</code></a></td>
               <td class="role-label">Rendering</td>
-              <td>Theme cascade resolution, responsive design, grid layout</td>
+              <td>Layout planner — renderer-agnostic blueprint from definition + theme + components. Consumed by <code>formspec-webcomponent</code>; available to any renderer (React, native, PDF).</td>
+            </tr>
+            <tr>
+              <td><a href={`${gh}/tree/main/packages/formspec-webcomponent`} target="_blank" rel="noopener noreferrer"><code>formspec-webcomponent</code></a></td>
+              <td class="role-label">Rendering</td>
+              <td><code>&lt;formspec-render&gt;</code> — built-in browser renderer, component registry, 33 plugins</td>
             </tr>
             <tr>
               <td><a href={`${gh}/tree/main/packages/formspec-core`} target="_blank" rel="noopener noreferrer"><code>formspec-core</code></a></td>
@@ -606,5 +593,104 @@ const gh = "https://github.com/mikewolfd/formspec";
       font-size: 0.8125rem;
       padding-right: 0.625rem;
     }
+  }
+
+  /* ─── Tier Stack (Document Model) ─── */
+  .tier-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 1.5rem 0 2rem;
+    max-width: 52rem;
+  }
+
+  .tier-box {
+    border: 1px solid var(--color-border);
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+    background: var(--color-surface);
+  }
+
+  .tier-box:first-child {
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .tier-box:last-child {
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  .tier-box--primary {
+    background: var(--color-surface-raised);
+    border-color: var(--color-border-strong);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .tier-box--muted {
+    background: var(--color-surface-sunken);
+  }
+
+  .tier-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .tier-tag {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-accent);
+    background: var(--color-accent-light);
+    border: 1px solid var(--color-border);
+    border-radius: 100px;
+    padding: 0.125rem 0.5rem;
+  }
+
+  .tier-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .tier-details span {
+    font-size: 0.8125rem;
+    color: var(--color-ink-secondary);
+    line-height: 1.5;
+  }
+
+  .tier-details--inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.375rem 1rem;
+  }
+
+  .tier-details--inline span {
+    position: relative;
+    padding-right: 1rem;
+  }
+
+  .tier-details--inline span:not(:last-child)::after {
+    content: "\00b7";
+    position: absolute;
+    right: 0;
+    color: var(--color-ink-tertiary);
+    font-weight: 700;
+  }
+
+  /* ─── D2 Diagram ─── */
+  .diagram-wrap {
+    margin: 1.5rem 0 2rem;
+    max-width: 52rem;
+  }
+
+  .diagram-svg {
+    width: 100%;
+    height: auto;
   }
 </style>
