@@ -95,3 +95,46 @@ describe('PagesTab', () => {
     expect((project.theme.pages as any[]).length).toBe(2);
   });
 });
+
+describe('PageCard region editing', () => {
+  function renderWithExpandedCard() {
+    const result = renderPagesTab({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: {
+        pages: [{
+          id: 'p1', title: 'Step 1',
+          regions: [{ key: 'name', span: 12 }, { key: 'email', span: 6 }],
+        }],
+      },
+    });
+    // Click the expand button on the first card
+    const expandBtn = screen.getByRole('button', { expanded: false });
+    fireEvent.click(expandBtn);
+    return result;
+  }
+
+  it('expanded card shows region list with resolved labels', () => {
+    renderWithExpandedCard();
+    // Labels appear in both grid preview and region list
+    expect(screen.getAllByText('Name').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Email').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('add region button adds a span-12 region', async () => {
+    const { project } = renderWithExpandedCard();
+    await act(async () => {
+      screen.getByRole('button', { name: /add region/i }).click();
+    });
+    expect(((project.theme as any).pages[0].regions as any[]).length).toBe(3);
+  });
+
+  it('remove region button removes the region', async () => {
+    const { project } = renderWithExpandedCard();
+    // Get the per-region remove buttons (not the page-level Delete button)
+    const removeButtons = screen.getAllByRole('button', { name: /remove/i });
+    await act(async () => {
+      removeButtons[0].click();
+    });
+    expect(((project.theme as any).pages[0].regions as any[]).length).toBe(1);
+  });
+});

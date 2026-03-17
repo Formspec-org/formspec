@@ -53,6 +53,10 @@ function PageCard({
   onMoveUp,
   onMoveDown,
   onUpdateTitle,
+  onAddRegion,
+  onRemoveRegion,
+  onUpdateRegionSpan,
+  onReorderRegion,
 }: {
   page: ResolvedPage;
   index: number;
@@ -64,6 +68,10 @@ function PageCard({
   onMoveUp: () => void;
   onMoveDown: () => void;
   onUpdateTitle: (title: string) => void;
+  onAddRegion: () => void;
+  onRemoveRegion: (regionIndex: number) => void;
+  onUpdateRegionSpan: (regionIndex: number, span: number) => void;
+  onReorderRegion: (regionIndex: number, direction: 'up' | 'down') => void;
 }) {
   const regions = page.regions ?? [];
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -184,20 +192,71 @@ function PageCard({
             </div>
           )}
 
-          {/* Region list */}
+          {/* Region list with editing controls */}
           {regions.length > 0 && (
             <div className="space-y-1">
-              {regions.map((r, i) => (
-                <div key={`rk-${i}-${r.key}`} className="flex items-center gap-2 text-[12px] px-2 py-1 bg-subtle/30 rounded">
+              {regions.map((r, ri) => (
+                <div key={`rk-${ri}-${r.key}`} className="flex items-center gap-2 text-[12px] px-2 py-1 bg-subtle/30 rounded">
                   <span className="font-mono text-ink flex-1 truncate">
                     {labelMap.get(r.key) ?? r.key}
                   </span>
                   <span className="text-muted text-[10px]">span</span>
-                  <span className="font-mono text-ink w-6 text-center">{r.span}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    key={`sp-${ri}-${r.key}-${r.span}`}
+                    defaultValue={r.span}
+                    onBlur={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val) && val >= 1 && val <= 12 && val !== r.span) {
+                        onUpdateRegionSpan(ri, val);
+                      }
+                    }}
+                    className="font-mono text-ink w-10 text-center bg-transparent border border-border/50 rounded text-[11px] py-0.5"
+                  />
+                  <div className="flex gap-0.5">
+                    <button
+                      type="button"
+                      disabled={ri === 0}
+                      onClick={() => onReorderRegion(ri, 'up')}
+                      className="text-[9px] text-muted hover:text-ink disabled:opacity-30 px-0.5"
+                      title="Move region up"
+                    >
+                      &#9650;
+                    </button>
+                    <button
+                      type="button"
+                      disabled={ri === regions.length - 1}
+                      onClick={() => onReorderRegion(ri, 'down')}
+                      className="text-[9px] text-muted hover:text-ink disabled:opacity-30 px-0.5"
+                      title="Move region down"
+                    >
+                      &#9660;
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Remove region"
+                    onClick={() => onRemoveRegion(ri)}
+                    className="text-[10px] text-muted hover:text-error transition-colors px-1"
+                  >
+                    &times;
+                  </button>
                 </div>
               ))}
             </div>
           )}
+
+          {/* Add region */}
+          <button
+            type="button"
+            aria-label="Add region"
+            onClick={onAddRegion}
+            className="text-[10px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider"
+          >
+            + Add Region
+          </button>
 
           {/* Actions */}
           <div className="flex justify-between items-center pt-2 border-t border-border">
@@ -294,6 +353,10 @@ export function PagesTab() {
                   onMoveUp={() => project.reorderPage(page.id, 'up')}
                   onMoveDown={() => project.reorderPage(page.id, 'down')}
                   onUpdateTitle={(title) => project.updatePage(page.id, { title })}
+                  onAddRegion={() => project.addRegion(page.id, 12)}
+                  onRemoveRegion={(ri) => project.deleteRegion(page.id, ri)}
+                  onUpdateRegionSpan={(ri, span) => project.updateRegion(page.id, ri, 'span', span)}
+                  onReorderRegion={(ri, dir) => project.reorderRegion(page.id, ri, dir)}
                 />
               ))}
             </div>
