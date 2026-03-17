@@ -37,7 +37,10 @@ export function statistics(state: ProjectState): ProjectStatistics {
     }
   }
 
-  const mappingRules = (state.mapping.rules as unknown[] | undefined) ?? [];
+  let totalMappingRuleCount = 0;
+  for (const m of Object.values(state.mappings)) {
+    totalMappingRuleCount += (m.rules?.length ?? 0);
+  }
 
   const screener = def.screener;
   const screenerActive = screener && screener.enabled !== false;
@@ -52,7 +55,8 @@ export function statistics(state: ProjectState): ProjectStatistics {
     variableCount: def.variables?.length ?? 0,
     expressionCount,
     componentNodeCount,
-    mappingRuleCount: mappingRules.length,
+    totalMappingRuleCount,
+    mappingCount: Object.keys(state.mappings).length,
     screenerFieldCount: screenerActive ? screener.items.length : 0,
     screenerRouteCount: screenerActive ? screener.routes.length : 0,
   };

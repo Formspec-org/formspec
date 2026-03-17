@@ -270,21 +270,24 @@ export function allExpressions(state: ProjectState): ExpressionLocation[] {
   walkItems(def.items, '');
 
   // Mapping rule expressions
-  const rules = (state.mapping as any).rules as any[] | undefined;
-  if (rules) {
-    for (let i = 0; i < rules.length; i++) {
-      const rule = rules[i];
-      pushExpression(rule.expression, 'mapping', `rules[${i}].expression`);
-      pushExpression(rule.condition, 'mapping', `rules[${i}].condition`);
-      if (rule.reverse && typeof rule.reverse === 'object') {
-        pushExpression(rule.reverse.expression, 'mapping', `rules[${i}].reverse.expression`);
-        pushExpression(rule.reverse.condition, 'mapping', `rules[${i}].reverse.condition`);
-      }
-      if (Array.isArray(rule.innerRules)) {
-        for (let j = 0; j < rule.innerRules.length; j++) {
-          const inner = rule.innerRules[j];
-          pushExpression(inner.expression, 'mapping', `rules[${i}].innerRules[${j}].expression`);
-          pushExpression(inner.condition, 'mapping', `rules[${i}].innerRules[${j}].condition`);
+  for (const [mid, m] of Object.entries(state.mappings)) {
+    const rules = (m as any).rules as any[] | undefined;
+    if (rules) {
+      for (let i = 0; i < rules.length; i++) {
+        const rule = rules[i];
+        const loc = mid === 'default' ? `rules[${i}]` : `mappings[${mid}].rules[${i}]`;
+        pushExpression(rule.expression, 'mapping', `${loc}.expression`);
+        pushExpression(rule.condition, 'mapping', `${loc}.condition`);
+        if (rule.reverse && typeof rule.reverse === 'object') {
+          pushExpression(rule.reverse.expression, 'mapping', `${loc}.reverse.expression`);
+          pushExpression(rule.reverse.condition, 'mapping', `${loc}.reverse.condition`);
+        }
+        if (Array.isArray(rule.innerRules)) {
+          for (let j = 0; j < rule.innerRules.length; j++) {
+            const inner = rule.innerRules[j];
+            pushExpression(inner.expression, 'mapping', `${loc}.innerRules[${j}].expression`);
+            pushExpression(inner.condition, 'mapping', `${loc}.innerRules[${j}].condition`);
+          }
         }
       }
     }

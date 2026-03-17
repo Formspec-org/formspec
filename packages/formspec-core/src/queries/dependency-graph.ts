@@ -67,17 +67,19 @@ export function fieldDependents(state: ProjectState, fieldPath: string): FieldDe
   }
 
   // Check mapping rules
-  const rules = (state.mapping as any).rules;
-  if (rules) {
-    for (let i = 0; i < rules.length; i++) {
-      const rule = rules[i];
-      const sourcePath = typeof rule.sourcePath === 'string' ? normalizeIndexedPath(rule.sourcePath) : undefined;
-      const dependsOnField =
-        sourcePath === target
-        || (typeof rule.expression === 'string' && expressionReferencesField(rule.expression))
-        || (typeof rule.condition === 'string' && expressionReferencesField(rule.condition));
-      if (dependsOnField) {
-        result.mappingRules.push(i);
+  for (const [mid, m] of Object.entries(state.mappings)) {
+    const rules = (m as any).rules as any[] | undefined;
+    if (rules) {
+      for (let i = 0; i < rules.length; i++) {
+        const rule = rules[i];
+        const sourcePath = typeof rule.sourcePath === 'string' ? normalizeIndexedPath(rule.sourcePath) : undefined;
+        const dependsOnField =
+          sourcePath === target
+          || (typeof rule.expression === 'string' && expressionReferencesField(rule.expression))
+          || (typeof rule.condition === 'string' && expressionReferencesField(rule.condition));
+        if (dependsOnField) {
+          result.mappingRules.push(mid === 'default' ? `${i}` : `${mid}:${i}`);
+        }
       }
     }
   }

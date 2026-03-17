@@ -35,8 +35,10 @@ export function diagnose(state: ProjectState, schemaValidator?: SchemaValidator)
       { artifact: 'definition', doc: state.definition, type: 'definition' },
       { artifact: 'component', doc: getCurrentComponentDocument(state), type: 'component' },
       { artifact: 'theme', doc: state.theme, type: 'theme' },
-      { artifact: 'mapping', doc: state.mapping, type: 'mapping' },
     ];
+    for (const [id, m] of Object.entries(state.mappings)) {
+      artifacts.push({ artifact: 'mapping', doc: m, type: 'mapping' });
+    }
     for (const { artifact, doc, type } of artifacts) {
       if (doc == null || (typeof doc === 'object' && Object.keys(doc).length === 0)) continue;
       const result = schemaValidator.validate(doc, type);
@@ -190,24 +192,26 @@ export function diagnose(state: ProjectState, schemaValidator?: SchemaValidator)
 
   // Consistency: stale mapping rule source paths
   log('consistency mapping/theme...');
-  const rules = (state.mapping as any).rules as any[] | undefined;
-  if (rules) {
-    for (let i = 0; i < rules.length; i++) {
-      const sp = rules[i].sourcePath;
-      const isKnownPath = (p: string): boolean => {
-        const norm = normalizeIndexedPath(p);
-        if (normalizedItemPaths.has(norm)) return true;
-        const dot = norm.lastIndexOf('.');
-        return dot > 0 && normalizedItemPaths.has(norm.slice(0, dot));
-      };
-      if (typeof sp === 'string' && !isKnownPath(sp)) {
-        consistency.push({
-          artifact: 'mapping',
-          path: `rules[${i}].sourcePath`,
-          severity: 'warning',
-          code: 'STALE_MAPPING_SOURCE',
-          message: `Mapping rule source path "${sp}" does not match any field in the definition`,
-        });
+  for (const [mid, m] of Object.entries(state.mappings)) {
+    const rules = (m as any).rules as any[] | undefined;
+    if (rules) {
+      for (let i = 0; i < rules.length; i++) {
+        const sp = rules[i].sourcePath;
+        const isKnownPath = (p: string): boolean => {
+          const norm = normalizeIndexedPath(p);
+          if (normalizedItemPaths.has(norm)) return true;
+          const dot = norm.lastIndexOf('.');
+          return dot > 0 && normalizedItemPaths.has(norm.slice(0, dot));
+        };
+        if (typeof sp === 'string' && !isKnownPath(sp)) {
+          consistency.push({
+            artifact: 'mapping',
+            path: mid === 'default' ? `rules[${i}].sourcePath` : `${mid}:rules[${i}].sourcePath`,
+            severity: 'warning',
+            code: 'STALE_MAPPING_SOURCE',
+            message: `Mapping "${mid}" rule source path "${sp}" does not match any field in the definition`,
+          });
+        }
       }
     }
   }

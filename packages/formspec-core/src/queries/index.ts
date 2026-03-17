@@ -48,3 +48,6 @@ export {
   browseExtensions,
   resolveExtension,
 } from './registry-queries.js';
+export {
+  previewMapping,
+} from './mapping-queries.js';
