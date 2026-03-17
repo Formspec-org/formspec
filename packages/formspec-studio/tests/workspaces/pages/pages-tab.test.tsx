@@ -94,6 +94,18 @@ describe('PagesTab', () => {
     });
     expect((project.theme.pages as any[]).length).toBe(2);
   });
+
+  it('add page auto-expands the new card', async () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: { pages: [{ id: 'p0', title: 'Existing', regions: [] }] },
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: /add page/i }).click();
+    });
+    // The newly created card should be expanded (aria-expanded="true")
+    expect(screen.getByRole('button', { expanded: true })).toBeInTheDocument();
+  });
 });
 
 describe('PageCard region editing', () => {
@@ -204,5 +216,42 @@ describe('PageCard title editing', () => {
       fireEvent.blur(input);
     });
     expect((project.theme as any).pages[0].title).toBe('Original Title');
+  });
+});
+
+describe('Unassigned items section', () => {
+  it('shows unassigned section with item labels when items exist but are not on any page', () => {
+    renderPagesTab({
+      definition: {
+        formPresentation: { pageMode: 'wizard' },
+        // 'name' is unassigned; 'email' is assigned
+      },
+      theme: {
+        pages: [{ id: 'p1', title: 'Step 1', regions: [{ key: 'email', span: 12 }] }],
+      },
+    });
+    // Should show 'name' as unassigned but not 'email'
+    expect(screen.getByText('Unassigned')).toBeInTheDocument();
+    expect(screen.getAllByText('Name').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('hides unassigned section when all items are assigned', () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: {
+        pages: [
+          {
+            id: 'p1', title: 'Step 1',
+            regions: [{ key: 'name', span: 12 }, { key: 'email', span: 12 }],
+          },
+        ],
+      },
+    });
+    expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();
+  });
+
+  it('hides unassigned section in single mode with no pages', () => {
+    renderPagesTab(); // single mode, no pages
+    expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();
   });
 });

@@ -304,7 +304,7 @@ export function PagesTab() {
 
   return (
     <WorkspacePage className="overflow-y-auto">
-      {/* Sticky header: mode selector only, no heading */}
+      {/* Sticky header */}
       <WorkspacePageSection
         padding="px-7"
         className="sticky top-0 bg-bg-default/80 backdrop-blur-md z-20 pt-6 pb-4 border-b border-border/40"
@@ -361,11 +361,33 @@ export function PagesTab() {
           <button
             type="button"
             aria-label="Add page"
-            onClick={() => project.addPage('New Page')}
+            onClick={() => {
+              const result = project.addPage('New Page');
+              if (result.createdId) setExpandedPageId(result.createdId);
+            }}
             className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
           >
             + Add Page
           </button>
+        )}
+
+        {/* Unassigned items section — show below page list in wizard/tabs mode only */}
+        {!isSingle && structure.unassignedItems.length > 0 && (
+          <div className="pt-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+              Unassigned
+            </p>
+            <div className="space-y-1">
+              {structure.unassignedItems.map((key) => (
+                <div
+                  key={key}
+                  className="text-[12px] text-muted px-2 py-1 bg-subtle/30 rounded font-mono truncate"
+                >
+                  {labelMap.get(key) ?? key}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </WorkspacePageSection>
     </WorkspacePage>
