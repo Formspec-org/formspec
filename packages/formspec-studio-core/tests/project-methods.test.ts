@@ -1264,6 +1264,60 @@ describe('unplaceFromPage', () => {
   });
 });
 
+describe('setRegionKey', () => {
+  it('replaces the key of a region at a given index', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.addField('email', 'Email', 'text');
+    const { createdId } = project.addPage('Page 1');
+    project.placeOnPage('name', createdId!);
+    project.setRegionKey(createdId!, 0, 'email');
+    const page = (project.theme.pages ?? []).find((p: any) => p.id === createdId);
+    expect(page?.regions?.[0]?.key).toBe('email');
+  });
+
+  it('preserves region position when replacing key', () => {
+    // Build three pages so we can place items on them as regions on a single page
+    const project = createProject();
+    const p1 = project.addPage('Page A');
+    const p2 = project.addPage('Page B');
+    const p3 = project.addPage('Page C');
+    // Each page gets its own group (from addPage). Use those group keys as regions on a fresh page.
+    // Actually, use the simpler approach: seed via createProject with an explicit theme.
+    // Easier: create a project seeded with regions directly.
+    const p = createProject({
+      seed: {
+        definition: {
+          items: [
+            { key: 'g1', type: 'group', label: 'G1', children: [] },
+            { key: 'g2', type: 'group', label: 'G2', children: [] },
+            { key: 'g3', type: 'group', label: 'G3', children: [] },
+            { key: 'x', type: 'group', label: 'X', children: [] },
+          ],
+          formPresentation: { pageMode: 'wizard' },
+        } as any,
+        theme: {
+          pages: [{
+            id: 'the-page',
+            title: 'The Page',
+            regions: [
+              { key: 'g1', span: 4 },
+              { key: 'g2', span: 4 },
+              { key: 'g3', span: 4 },
+            ],
+          }],
+        } as any,
+      },
+    });
+    // Replace the MIDDLE region (index 1, key 'g2') with 'x'
+    p.setRegionKey('the-page', 1, 'x');
+    const page = (p.theme.pages ?? []).find((pg: any) => pg.id === 'the-page');
+    const keys = page?.regions?.map((r: any) => r.key);
+    // x must be at index 1, not appended at the end
+    expect(keys).toEqual(['g1', 'x', 'g3']);
+  });
+});
+
 describe('setFlow', () => {
   it('sets flow mode to wizard', () => {
     const project = createProject();

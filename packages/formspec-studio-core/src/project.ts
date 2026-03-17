@@ -2271,12 +2271,21 @@ export class Project {
 
   /** Set the field-key assignment for a region by index. */
   setRegionKey(pageId: string, regionIndex: number, newKey: string): HelperResult {
-    const oldKey = this._regionKeyAt(pageId, regionIndex);
-    // Unassign old key, assign new key at same position
-    this.core.dispatch([
+    const pages = (this.core.state.theme as any).pages ?? [];
+    const page = pages.find((p: any) => p.id === pageId);
+    if (!page) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${pageId}`);
+    const region = page.regions?.[regionIndex];
+    if (!region) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
+    const oldKey = region.key as string;
+    const oldSpan = region.span as number | undefined;
+
+    // assignItem appends to the end — follow with reorderRegion to restore position
+    const commands: AnyCommand[] = [
       { type: 'pages.unassignItem', payload: { pageId, key: oldKey } },
-      { type: 'pages.assignItem', payload: { pageId, key: newKey } },
-    ] as AnyCommand[]);
+      { type: 'pages.assignItem', payload: { pageId, key: newKey, span: oldSpan } },
+      { type: 'pages.reorderRegion', payload: { pageId, key: newKey, targetIndex: regionIndex } },
+    ];
+    this.core.dispatch(commands);
     return {
       summary: `Set region ${regionIndex} on page '${pageId}' to key '${newKey}'`,
       action: { helper: 'setRegionKey', params: { pageId, regionIndex, key: newKey } },
