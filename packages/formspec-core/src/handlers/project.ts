@@ -23,8 +23,31 @@ export const projectHandlers: Record<string, CommandHandler> = {
       state.component = componentState.component;
       state.generatedComponent = componentState.generatedComponent;
     }
-    if (p.theme) state.theme = p.theme;
-    if (p.mapping) state.mapping = p.mapping;
+    if (p.theme) {
+      state.theme = p.theme;
+    } else if (p.definition) {
+      // Definition-only import: clear theme pages when none of their regions
+      // match any top-level item key in the new definition. This prevents
+      // stale pages from a previous definition contaminating the new one.
+      const themePages = (state.theme as any).pages as any[] | undefined;
+      if (themePages && themePages.length > 0) {
+        const newItemKeys = new Set(
+          ((state.definition as any).items ?? []).map((item: any) => item.key as string)
+        );
+        const anyRegionMatches = themePages.some((page: any) =>
+          (page.regions ?? []).some((region: any) => newItemKeys.has(region.key))
+        );
+        if (!anyRegionMatches) {
+          (state.theme as any).pages = [];
+        }
+      }
+    }
+    if (p.mappings) {
+      state.mappings = p.mappings;
+    } else if (p.mapping) {
+      // Backward compat: old single-mapping bundles migrate to named collection
+      state.mappings = { default: p.mapping };
+    }
 
     // Sync targetDefinition URLs
     const url = state.definition.url;
