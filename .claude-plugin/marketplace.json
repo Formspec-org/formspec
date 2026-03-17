@@ -6,17 +6,17 @@
   },
   "metadata": {
     "description": "Formspec specification and schema navigator with spec-expert research agent.",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "formspec-specs",
       "description": "Formspec specification and schema navigator with spec-expert research agent. Provides structured reference maps for 625K+ of spec content and 8K lines of JSON schemas.",
       "source": "./",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "developer-tools",
       "keywords": ["formspec", "specification", "schema", "fel", "form-engine"],
-      "agents": "./agents/spec-expert.md",
+      "agents": ["./agents/spec-expert.md", "./agents/formspec-scout.md", "./agents/formspec-craftsman.md"],
       "commands": ["./commands"],
       "skills": ["./skills/formspec-specs"]
     }
