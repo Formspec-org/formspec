@@ -38,8 +38,8 @@ const fieldPropsSchema = z.object({
   choicesFrom: z.string(),
   widget: z.string(),
   page: z.string(),
-  required: z.boolean(),
-  readonly: z.boolean(),
+  required: z.boolean().describe('Shorthand for formspec_behavior(require). Sets unconditionally required. For conditional required, use formspec_behavior instead. Do NOT use both.'),
+  readonly: z.boolean().describe('Shorthand for formspec_behavior(readonly_when, condition="true"). For conditional readonly, use formspec_behavior instead. Do NOT use both.'),
   initialValue: z.unknown(),
   insertIndex: z.number(),
   parentPath: z.string(),
@@ -48,7 +48,7 @@ const fieldPropsSchema = z.object({
 const fieldItemSchema = z.object({
   path: z.string().describe('Item path (e.g., "name", "contact.email", "items[0].amount")'),
   label: z.string(),
-  type: z.string().describe('Data type: "string", "text", "number", "integer", "decimal", "boolean", "date", "email", "choice", "object", "array"'),
+  type: z.string().describe('Data type: "string", "text", "integer", "decimal", "boolean", "date", "choice". Also accepts aliases: "number" (-> decimal), "email"/"phone" (-> string + validation), "url" (-> uri), "money"/"currency", "file" (-> attachment), "multichoice", "rating" (-> integer + Rating widget), "slider" (-> decimal + Slider widget)'),
   props: fieldPropsSchema.optional(),
 });
 
@@ -276,7 +276,7 @@ export async function main() {
       // Single item
       path: z.string().optional().describe('Item path (e.g., "name", "contact.email", "items[0].amount")'),
       label: z.string().optional(),
-      type: z.string().optional().describe('Data type: "string", "text", "number", "integer", "decimal", "boolean", "date", "email", "choice"'),
+      type: z.string().optional().describe('Data type: "string", "text", "integer", "decimal", "boolean", "date", "choice". Also accepts aliases: "number" (-> decimal), "email"/"phone" (-> string + validation), "url" (-> uri), "money"/"currency", "file" (-> attachment), "multichoice", "rating" (-> integer + Rating widget), "slider" (-> decimal + Slider widget)'),
       props: fieldPropsSchema.optional(),
       // Batch
       items: z.array(fieldItemSchema).optional().describe('Batch: array of field definitions to add'),
@@ -449,7 +449,7 @@ export async function main() {
 
   server.registerTool('formspec_behavior', {
     title: 'Behavior',
-    description: 'Set field logic: visibility conditions, readonly conditions, required state, calculated values, and validation rules. Supports batch via items[] array.\n\nActions:\n- show_when: Show item when FEL condition is true\n- readonly_when: Make field readonly when condition is true\n- require: Mark field as required (optionally conditional)\n- calculate: Bind a computed FEL value directly to a field. For reusable named values across multiple fields, use formspec_data(variable) instead.\n- add_rule: Add validation constraint with message\n\nPath conventions: target uses authoring dot notation ("contact.email"). FEL expressions use $-prefix ("$contact.email"). "true" and "false" are literals, not functions — use "$field = true", not "$field = true()".',
+    description: 'Set field logic: visibility conditions, readonly conditions, required state, calculated values, and validation rules. Supports batch via items[] array.\n\nActions:\n- show_when: Show item when FEL condition is true\n- readonly_when: Make field readonly when condition is true\n- require: Mark field as required (optionally conditional). Note: formspec_field props.required=true is shorthand for unconditional require — do not use both\n- calculate: Bind a computed FEL value directly to a field. For reusable named values across multiple fields, use formspec_data(variable) instead.\n- add_rule: Add validation constraint with message\n\nPath conventions: target uses authoring dot notation ("contact.email"). FEL expressions use $-prefix ("$contact.email"). "true" and "false" are literals, not functions — use "$field = true", not "$field = true()".',
     inputSchema: {
       project_id: z.string(),
       // Single item
