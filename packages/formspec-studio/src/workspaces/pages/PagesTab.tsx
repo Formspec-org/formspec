@@ -1,15 +1,28 @@
 /** @filedesc Pages workspace tab for managing wizard pages, regions, and page-level diagnostics. */
-import { useState, useCallback, useRef, useEffect, useContext } from 'react';
-import { DragDropProvider } from '@dnd-kit/react';
+import { useState, useCallback, useRef, useEffect, useContext, useMemo } from 'react';
+import { DragDropProvider, useDraggable, useDroppable } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { PointerSensor, KeyboardSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { usePageStructure } from './usePageStructure';
 import { useProject } from '../../state/useProject';
+import { useTheme } from '../../state/useTheme';
 import { ActivePageContext } from '../../state/useActivePage';
 import { useDefinition } from '../../state/useDefinition';
 import { DragHandle } from '../editor/DragHandle';
 import type { ResolvedPage } from 'formspec-studio-core';
+
+// Per-breakpoint responsive override shape (matches schema Region.responsive)
+interface BreakpointOverride {
+  span?: number;
+  start?: number;
+  hidden?: boolean;
+}
+
+type ResponsiveOverrides = Record<string, BreakpointOverride>;
+
+// Default breakpoints shown in the UI when theme doesn't define custom breakpoints
+const DEFAULT_BREAKPOINTS = ['sm', 'md', 'lg'];
 
 /** Returns the definition group key that backs a theme page, by finding a region key that is a root group. */
 function groupKeyForPage(page: ResolvedPage, rootGroupKeys: Set<string>): string | null {
@@ -61,6 +74,7 @@ function PageCard({
   index,
   total,
   labelMap,
+  breakpointNames,
   isExpanded,
   onToggle,
   onDelete,
@@ -72,6 +86,7 @@ function PageCard({
   onRemoveRegion,
   onUpdateRegionSpan,
   onUpdateRegionStart,
+  onUpdateRegionResponsive,
   onReorderRegion,
   sortableRef,
   dragHandleRef,
@@ -81,6 +96,8 @@ function PageCard({
   index: number;
   total: number;
   labelMap: Map<string, string>;
+  /** Ordered list of breakpoint names to show in responsive override UI */
+  breakpointNames: string[];
   isExpanded: boolean;
   onToggle: () => void;
   onDelete: () => void;
@@ -92,6 +109,7 @@ function PageCard({
   onRemoveRegion: (regionIndex: number) => void;
   onUpdateRegionSpan: (regionIndex: number, span: number) => void;
   onUpdateRegionStart: (regionIndex: number, start: number | undefined) => void;
+  onUpdateRegionResponsive: (regionIndex: number, responsive: ResponsiveOverrides | undefined) => void;
   onReorderRegion: (regionIndex: number, direction: 'up' | 'down') => void;
   sortableRef?: (el: Element | null) => void;
   dragHandleRef?: (el: Element | null) => void;
@@ -101,11 +119,27 @@ function PageCard({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [startVisibleFor, setStartVisibleFor] = useState<Set<number>>(new Set());
+  /** Per-region index: whether the responsive overrides section is expanded */
+  const [responsiveExpandedFor, setResponsiveExpandedFor] = useState<Set<number>>(new Set());
+  const [selectedRegionIndex, setSelectedRegionIndex] = useState<number | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const descInputRef = useRef<HTMLInputElement>(null);
+  const gridBarRef = useRef<HTMLDivElement>(null);
 
   const showStartFor = useCallback((ri: number) => {
     setStartVisibleFor((prev) => new Set([...prev, ri]));
+  }, []);
+
+  const toggleResponsiveFor = useCallback((ri: number) => {
+    setResponsiveExpandedFor((prev) => {
+      const next = new Set(prev);
+      if (next.has(ri)) {
+        next.delete(ri);
+      } else {
+        next.add(ri);
+      }
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -121,6 +155,18 @@ function PageCard({
       descInputRef.current.select();
     }
   }, [isEditingDescription]);
+
+  // Deselect grid segment on click-outside
+  useEffect(() => {
+    if (selectedRegionIndex === null) return;
+    function handleMouseDown(e: MouseEvent) {
+      if (gridBarRef.current && !gridBarRef.current.contains(e.target as Node)) {
+        setSelectedRegionIndex(null);
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [selectedRegionIndex]);
 
   const commitTitle = useCallback(() => {
     if (!titleInputRef.current) return;
@@ -231,22 +277,86 @@ function PageCard({
       {/* Expanded detail */}
       {isExpanded && (
         <div className="border-t border-border p-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          {/* Larger grid preview */}
+          {/* Larger grid preview — interactive (FF3) */}
           {regions.length > 0 && (
-            <div className="grid grid-cols-12 gap-1 h-8">
-              {regions.map((r, i) => (
-                <div
-                  key={i}
-                  className={`border rounded text-[9px] text-center flex items-center justify-center text-muted truncate ${
-                    r.exists === false
-                      ? 'bg-amber-100/50 border-amber-300/50'
-                      : 'bg-accent/15 border-accent/30'
-                  }`}
-                  style={{ gridColumn: `span ${Math.min(r.span ?? 12, 12)}` }}
-                >
-                  {labelMap.get(r.key) ?? r.key}
-                </div>
-              ))}
+            <div ref={gridBarRef} className="grid grid-cols-12 gap-1 h-8">
+              {regions.map((r, i) => {
+                const isBroken = r.exists === false;
+                const isSelected = selectedRegionIndex === i;
+                const segmentClass = `border rounded text-[9px] text-center flex items-center justify-center text-muted truncate cursor-pointer transition-all ${
+                  isBroken
+                    ? `bg-amber-100/50 border-amber-300/50 hover:bg-amber-200/50${isSelected ? ' ring-1 ring-amber-400' : ''}`
+                    : isSelected
+                      ? 'bg-accent/30 border-accent/70 ring-1 ring-accent'
+                      : 'bg-accent/15 border-accent/30 hover:bg-accent/25'
+                }`;
+                const segmentStyle = { gridColumn: `span ${Math.min(r.span ?? 12, 12)}` };
+
+                // Single <button> element for both selected/unselected states — avoids stale refs.
+                // The "remove" control uses span[role="button"] so it's not nested inside <button>.
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label="grid segment"
+                    aria-pressed={isSelected}
+                    onClick={() => setSelectedRegionIndex(isSelected ? null : i)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setSelectedRegionIndex(null);
+                    }}
+                    className={segmentClass}
+                    style={segmentStyle}
+                  >
+                    {isSelected ? (
+                      <span className="flex items-center gap-1 px-1 w-full justify-center">
+                        <input
+                          type="number"
+                          min={1}
+                          max={12}
+                          aria-label="grid segment span"
+                          key={`gs-sp-${i}-${r.key}-${r.span}`}
+                          defaultValue={r.span ?? 12}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Escape') setSelectedRegionIndex(null);
+                          }}
+                          onBlur={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 1 && val <= 12 && val !== r.span) {
+                              onUpdateRegionSpan(i, val);
+                            }
+                          }}
+                          className="font-mono text-ink w-8 text-center bg-surface border border-border/50 rounded text-[10px] py-0"
+                        />
+                        {/* span[role="button"] avoids invalid nested <button> element */}
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label="remove segment"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveRegion(i);
+                            setSelectedRegionIndex(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.stopPropagation();
+                              onRemoveRegion(i);
+                              setSelectedRegionIndex(null);
+                            }
+                          }}
+                          className="text-[9px] text-muted hover:text-error transition-colors shrink-0 cursor-pointer"
+                        >
+                          &times;
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="truncate px-0.5">{labelMap.get(r.key) ?? r.key}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -283,85 +393,185 @@ function PageCard({
           {/* Region list with editing controls */}
           {regions.length > 0 && (
             <div className="space-y-1">
-              {regions.map((r, ri) => (
-                <div key={`rk-${ri}-${r.key}`} className="flex items-center gap-2 text-[12px] px-2 py-1 bg-subtle/30 rounded">
-                  <span className="font-mono text-ink flex-1 truncate">
-                    {labelMap.get(r.key) ?? r.key}
-                  </span>
-                  {/* Start column — show if explicit value or user clicked to add */}
-                  {(r.start !== undefined || startVisibleFor.has(ri)) ? (
-                    <>
-                      <span className="text-muted text-[10px]">start</span>
+              {regions.map((r, ri) => {
+                const responsive = (r as any).responsive as ResponsiveOverrides | undefined;
+                const responsiveOpen = responsiveExpandedFor.has(ri);
+                const hasResponsive = responsive && Object.keys(responsive).length > 0;
+
+                return (
+                  <div key={`rk-${ri}-${r.key}`} className="rounded bg-subtle/30">
+                    {/* Main region row */}
+                    <div className="flex items-center gap-2 text-[12px] px-2 py-1">
+                      <span className="font-mono text-ink flex-1 truncate">
+                        {labelMap.get(r.key) ?? r.key}
+                      </span>
+                      {/* Start column — show if explicit value or user clicked to add */}
+                      {(r.start !== undefined || startVisibleFor.has(ri)) ? (
+                        <>
+                          <span className="text-muted text-[10px]">start</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={12}
+                            aria-label="start"
+                            key={`st-${ri}-${r.key}-${r.start}`}
+                            defaultValue={r.start ?? 1}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              onUpdateRegionStart(ri, !isNaN(val) && val >= 1 && val <= 12 ? val : undefined);
+                            }}
+                            className="font-mono text-ink w-10 text-center bg-transparent border border-border/50 rounded text-[11px] py-0.5"
+                          />
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          aria-label="Add start"
+                          onClick={() => showStartFor(ri)}
+                          className="text-[9px] text-muted hover:text-ink"
+                          title="Set start column"
+                        >
+                          +col
+                        </button>
+                      )}
+                      <span className="text-muted text-[10px]">span</span>
                       <input
                         type="number"
                         min={1}
                         max={12}
-                        aria-label="start"
-                        key={`st-${ri}-${r.key}-${r.start}`}
-                        defaultValue={r.start ?? 1}
+                        key={`sp-${ri}-${r.key}-${r.span}`}
+                        defaultValue={r.span}
                         onBlur={(e) => {
                           const val = parseInt(e.target.value, 10);
-                          onUpdateRegionStart(ri, !isNaN(val) && val >= 1 && val <= 12 ? val : undefined);
+                          if (!isNaN(val) && val >= 1 && val <= 12 && val !== r.span) {
+                            onUpdateRegionSpan(ri, val);
+                          }
                         }}
                         className="font-mono text-ink w-10 text-center bg-transparent border border-border/50 rounded text-[11px] py-0.5"
                       />
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      aria-label="Add start"
-                      onClick={() => showStartFor(ri)}
-                      className="text-[9px] text-muted hover:text-ink"
-                      title="Set start column"
-                    >
-                      +col
-                    </button>
-                  )}
-                  <span className="text-muted text-[10px]">span</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={12}
-                    key={`sp-${ri}-${r.key}-${r.span}`}
-                    defaultValue={r.span}
-                    onBlur={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      if (!isNaN(val) && val >= 1 && val <= 12 && val !== r.span) {
-                        onUpdateRegionSpan(ri, val);
-                      }
-                    }}
-                    className="font-mono text-ink w-10 text-center bg-transparent border border-border/50 rounded text-[11px] py-0.5"
-                  />
-                  <div className="flex gap-0.5">
-                    <button
-                      type="button"
-                      disabled={ri === 0}
-                      onClick={() => onReorderRegion(ri, 'up')}
-                      className="text-[9px] text-muted hover:text-ink disabled:opacity-30 px-0.5"
-                      title="Move region up"
-                    >
-                      &#9650;
-                    </button>
-                    <button
-                      type="button"
-                      disabled={ri === regions.length - 1}
-                      onClick={() => onReorderRegion(ri, 'down')}
-                      className="text-[9px] text-muted hover:text-ink disabled:opacity-30 px-0.5"
-                      title="Move region down"
-                    >
-                      &#9660;
-                    </button>
+                      {/* Responsive toggle button */}
+                      <button
+                        type="button"
+                        aria-label={responsiveOpen ? 'Hide responsive overrides' : 'Show responsive overrides'}
+                        onClick={() => toggleResponsiveFor(ri)}
+                        title="Responsive breakpoint overrides"
+                        className={`text-[9px] px-1 rounded transition-colors ${
+                          hasResponsive
+                            ? 'text-accent font-bold'
+                            : responsiveOpen
+                            ? 'text-ink'
+                            : 'text-muted hover:text-ink'
+                        }`}
+                      >
+                        {responsiveOpen ? 'resp\u25B4' : 'resp\u25BE'}
+                      </button>
+                      <div className="flex gap-0.5">
+                        <button
+                          type="button"
+                          disabled={ri === 0}
+                          onClick={() => onReorderRegion(ri, 'up')}
+                          className="text-[9px] text-muted hover:text-ink disabled:opacity-30 px-0.5"
+                          title="Move region up"
+                        >
+                          &#9650;
+                        </button>
+                        <button
+                          type="button"
+                          disabled={ri === regions.length - 1}
+                          onClick={() => onReorderRegion(ri, 'down')}
+                          className="text-[9px] text-muted hover:text-ink disabled:opacity-30 px-0.5"
+                          title="Move region down"
+                        >
+                          &#9660;
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label="Remove region"
+                        onClick={() => onRemoveRegion(ri)}
+                        className="text-[10px] text-muted hover:text-error transition-colors px-1"
+                      >
+                        &times;
+                      </button>
+                    </div>
+
+                    {/* Responsive overrides section — expanded per region */}
+                    {responsiveOpen && (
+                      <div className="px-2 pb-2 space-y-1 border-t border-border/30 mt-0.5 pt-1.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-muted">
+                            Responsive
+                          </span>
+                          {hasResponsive && (
+                            <button
+                              type="button"
+                              onClick={() => onUpdateRegionResponsive(ri, undefined)}
+                              className="text-[9px] text-muted hover:text-error transition-colors"
+                              title="Clear all responsive overrides"
+                            >
+                              Clear all
+                            </button>
+                          )}
+                        </div>
+                        {breakpointNames.map((bp) => {
+                          const bpOverride = responsive?.[bp] ?? {};
+                          return (
+                            <div key={bp} className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono text-muted w-6 shrink-0">{bp}</span>
+                              {/* Hidden toggle */}
+                              <label className="flex items-center gap-1 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={bpOverride.hidden === true}
+                                  onChange={(e) => {
+                                    const next = { ...(responsive ?? {}), [bp]: { ...bpOverride, hidden: e.target.checked || undefined } };
+                                    // Clean up undefined hidden
+                                    if (!next[bp].hidden) delete next[bp].hidden;
+                                    // Remove empty breakpoint entry
+                                    if (Object.keys(next[bp]).length === 0) delete next[bp];
+                                    onUpdateRegionResponsive(ri, Object.keys(next).length > 0 ? next : undefined);
+                                  }}
+                                  className="w-3 h-3"
+                                />
+                                <span className="text-[10px] text-muted">hide</span>
+                              </label>
+                              {/* Span override — only when not hidden */}
+                              {bpOverride.hidden !== true && (
+                                <>
+                                  <span className="text-[10px] text-muted">span</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={12}
+                                    aria-label={`${bp} span`}
+                                    key={`resp-sp-${ri}-${bp}-${bpOverride.span}`}
+                                    defaultValue={bpOverride.span ?? ''}
+                                    placeholder="—"
+                                    onBlur={(e) => {
+                                      const val = e.target.value.trim() === '' ? undefined : parseInt(e.target.value, 10);
+                                      const newSpan = val !== undefined && !isNaN(val) && val >= 1 && val <= 12 ? val : undefined;
+                                      const updated = { ...bpOverride };
+                                      if (newSpan !== undefined) {
+                                        updated.span = newSpan;
+                                      } else {
+                                        delete updated.span;
+                                      }
+                                      const next = { ...(responsive ?? {}), [bp]: updated };
+                                      if (Object.keys(next[bp]).length === 0) delete next[bp];
+                                      onUpdateRegionResponsive(ri, Object.keys(next).length > 0 ? next : undefined);
+                                    }}
+                                    className="font-mono text-ink w-10 text-center bg-transparent border border-border/50 rounded text-[10px] py-0.5"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    aria-label="Remove region"
-                    onClick={() => onRemoveRegion(ri)}
-                    className="text-[10px] text-muted hover:text-error transition-colors px-1"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -409,9 +619,41 @@ function PageCard({
   );
 }
 
+// ── DroppablePageOverlay ──────────────────────────────────────────────
+
+/**
+ * Invisible drop zone that wraps a page card, making it a target for
+ * item-drag operations. Highlights with a ring when an item is dragged over.
+ */
+function DroppablePageOverlay({
+  pageId,
+  children,
+}: {
+  pageId: string;
+  children: React.ReactNode;
+}) {
+  const { ref, isDropTarget } = useDroppable({
+    id: `drop-page-${pageId}`,
+    data: { type: 'page-drop', pageId },
+  });
+
+  return (
+    <div
+      ref={ref as React.Ref<HTMLDivElement>}
+      data-drop-page={pageId}
+      className={`relative rounded-lg transition-all duration-150${isDropTarget ? ' ring-2 ring-accent ring-offset-1' : ''}`}
+    >
+      {isDropTarget && (
+        <div className="absolute inset-0 bg-accent/5 rounded-lg pointer-events-none z-10" />
+      )}
+      {children}
+    </div>
+  );
+}
+
 // ── SortablePageCard ─────────────────────────────────────────────────
 
-/** Wraps PageCard with useSortable, providing drag-to-reorder for the page list. */
+/** Wraps PageCard with useSortable and DroppablePageOverlay. */
 function SortablePageCard({
   page,
   index,
@@ -423,18 +665,64 @@ function SortablePageCard({
   const { ref, handleRef, isDragSource } = useSortable({
     id: page.id,
     index,
+    data: { type: 'page' },
     transition: null, // we handle positioning via project.movePageToIndex
   });
 
   return (
-    <PageCard
-      {...cardProps}
-      page={page}
-      index={index}
-      sortableRef={ref}
-      dragHandleRef={handleRef}
-      isDragging={isDragSource}
-    />
+    <DroppablePageOverlay pageId={page.id}>
+      <PageCard
+        {...cardProps}
+        page={page}
+        index={index}
+        sortableRef={ref}
+        dragHandleRef={handleRef}
+        isDragging={isDragSource}
+      />
+    </DroppablePageOverlay>
+  );
+}
+
+// ── DraggableUnassignedItem ───────────────────────────────────────────
+
+/** Makes an unassigned item draggable so it can be dropped onto a page card. */
+function DraggableUnassignedItem({
+  itemKey,
+  label,
+}: {
+  itemKey: string;
+  label: string;
+}) {
+  const { ref, isDragSource } = useDraggable({
+    id: `item-${itemKey}`,
+    data: { type: 'item', key: itemKey },
+  });
+
+  return (
+    <div
+      ref={ref as React.Ref<HTMLDivElement>}
+      data-draggable-item={itemKey}
+      className={`group text-[12px] text-muted px-2 py-1 bg-subtle/30 rounded font-mono truncate cursor-grab active:cursor-grabbing flex items-center gap-1.5 transition-opacity${isDragSource ? ' opacity-40' : ''}`}
+    >
+      {/* Grip icon */}
+      <svg
+        width="6"
+        height="10"
+        viewBox="0 0 6 10"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        className="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity"
+      >
+        <circle cx="1.5" cy="2" r="1" fill="currentColor" />
+        <circle cx="4.5" cy="2" r="1" fill="currentColor" />
+        <circle cx="1.5" cy="5" r="1" fill="currentColor" />
+        <circle cx="4.5" cy="5" r="1" fill="currentColor" />
+        <circle cx="1.5" cy="8" r="1" fill="currentColor" />
+        <circle cx="4.5" cy="8" r="1" fill="currentColor" />
+      </svg>
+      <span className="truncate">{label}</span>
+    </div>
   );
 }
 
@@ -446,6 +734,13 @@ export function PagesTab() {
 
   const { structure, labelMap } = usePageStructure();
   const definition = useDefinition();
+  const theme = useTheme();
+
+  // Derive breakpoint names from theme.breakpoints, falling back to defaults
+  const breakpointNames = useMemo(() => {
+    const bp = theme.breakpoints;
+    return bp && Object.keys(bp).length > 0 ? Object.keys(bp) : DEFAULT_BREAKPOINTS;
+  }, [theme.breakpoints]);
 
   // FF10: Sidebar ↔ PagesTab sync. Context is null when no provider is mounted
   // (e.g. isolated unit tests). All operations guard with `if (!activePageCtx)`.
@@ -543,6 +838,7 @@ export function PagesTab() {
                     index={i}
                     total={structure.pages.length}
                     labelMap={labelMap}
+                    breakpointNames={breakpointNames}
                     isExpanded={expandedPageId === page.id}
                     onToggle={() => handleTogglePage(page.id)}
                     onDelete={() => project.removePage(page.id)}
@@ -554,6 +850,7 @@ export function PagesTab() {
                     onRemoveRegion={(ri) => project.deleteRegion(page.id, ri)}
                     onUpdateRegionSpan={(ri, span) => project.updateRegion(page.id, ri, 'span', span)}
                     onUpdateRegionStart={(ri, start) => project.updateRegion(page.id, ri, 'start', start)}
+                    onUpdateRegionResponsive={(ri, responsive) => project.updateRegion(page.id, ri, 'responsive', responsive)}
                     onReorderRegion={(ri, dir) => project.reorderRegion(page.id, ri, dir)}
                   />
                 ))}

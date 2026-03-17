@@ -578,3 +578,115 @@ describe('FF1 — DragHandle on page cards', () => {
     expect(screen.getByRole('button', { name: /move down/i })).toBeInTheDocument();
   });
 });
+
+// ── FF3: Interactive grid bar ─────────────────────────────────────────
+
+describe('FF3 — Interactive grid bar', () => {
+  /** Renders a page card with two regions, expanded, ready for grid interaction. */
+  function renderExpandedWithRegions() {
+    const result = renderPagesTab({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: {
+        pages: [{
+          id: 'p1', title: 'Step 1',
+          regions: [{ key: 'name', span: 6 }, { key: 'email', span: 6 }],
+        }],
+      },
+    });
+    // Expand the card
+    const expandBtn = screen.getByRole('button', { expanded: false });
+    fireEvent.click(expandBtn);
+    return result;
+  }
+
+  it('each grid segment in the expanded bar is a button', () => {
+    renderExpandedWithRegions();
+    const segmentBtns = screen.getAllByRole('button', { name: /grid segment/i });
+    expect(segmentBtns.length).toBe(2);
+  });
+
+  it('clicking a grid segment selects it (aria-pressed=true)', async () => {
+    renderExpandedWithRegions();
+    const segments = screen.getAllByRole('button', { name: /grid segment/i });
+    await act(async () => { segments[0].click(); });
+    expect(segments[0]).toHaveAttribute('aria-pressed', 'true');
+    expect(segments[1]).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('selected segment shows a span input', async () => {
+    renderExpandedWithRegions();
+    const segments = screen.getAllByRole('button', { name: /grid segment/i });
+    await act(async () => { segments[0].click(); });
+    expect(screen.getByRole('spinbutton', { name: /grid segment span/i })).toBeInTheDocument();
+  });
+
+  it('changing span via grid segment input dispatches updateRegion', async () => {
+    const { project } = renderExpandedWithRegions();
+    const segments = screen.getAllByRole('button', { name: /grid segment/i });
+    await act(async () => { segments[0].click(); });
+    const spanInput = screen.getByRole('spinbutton', { name: /grid segment span/i });
+    fireEvent.change(spanInput, { target: { value: '4' } });
+    await act(async () => { fireEvent.blur(spanInput); });
+    expect((project.theme.pages as any[])[0].regions[0].span).toBe(4);
+  });
+
+  it('selected segment shows a remove button', async () => {
+    renderExpandedWithRegions();
+    const segments = screen.getAllByRole('button', { name: /grid segment/i });
+    await act(async () => { segments[1].click(); });
+    expect(screen.getByRole('button', { name: /remove segment/i })).toBeInTheDocument();
+  });
+
+  it('remove button in selected segment removes that region', async () => {
+    const { project } = renderExpandedWithRegions();
+    const segments = screen.getAllByRole('button', { name: /grid segment/i });
+    await act(async () => { segments[1].click(); });
+    const removeBtn = screen.getByRole('button', { name: /remove segment/i });
+    await act(async () => { removeBtn.click(); });
+    expect((project.theme.pages as any[])[0].regions.length).toBe(1);
+  });
+
+  it('Escape deselects the selected segment', async () => {
+    renderExpandedWithRegions();
+    const segments = screen.getAllByRole('button', { name: /grid segment/i });
+    await act(async () => { segments[0].click(); });
+    expect(segments[0]).toHaveAttribute('aria-pressed', 'true');
+    await act(async () => {
+      fireEvent.keyDown(segments[0], { key: 'Escape' });
+    });
+    expect(segments[0]).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('clicking outside the grid bar deselects the selected segment', async () => {
+    renderExpandedWithRegions();
+    const segments = screen.getAllByRole('button', { name: /grid segment/i });
+    await act(async () => { segments[0].click(); });
+    expect(segments[0]).toHaveAttribute('aria-pressed', 'true');
+    // Click on an element outside the grid
+    await act(async () => {
+      fireEvent.mouseDown(document.body);
+    });
+    expect(segments[0]).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('broken regions (exists: false) keep amber styling even when selected', async () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: {
+        pages: [{
+          id: 'p1', title: 'Step 1',
+          regions: [{ key: 'nonexistent_key', span: 6 }],
+        }],
+      },
+    });
+    const expandBtn = screen.getByRole('button', { expanded: false });
+    fireEvent.click(expandBtn);
+    const segments = screen.getAllByRole('button', { name: /grid segment/i });
+    // The broken segment should have the amber class
+    expect(segments[0].className).toMatch(/amber/);
+    await act(async () => { segments[0].click(); });
+    // Still amber after selection
+    expect(segments[0].className).toMatch(/amber/);
+  });
+});
+
