@@ -128,7 +128,6 @@ function PageCard({
             <button
               type="button"
               className="text-[13px] font-bold text-ink text-left truncate w-full flex items-center gap-1.5 cursor-text"
-              onDoubleClick={() => setIsEditingTitle(true)}
               onClick={() => setIsEditingTitle(true)}
             >
               <span className="truncate">{page.title || page.id}</span>

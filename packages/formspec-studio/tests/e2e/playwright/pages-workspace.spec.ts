@@ -43,31 +43,6 @@ const WIZARD_THEME_SEED = {
   },
 };
 
-const GROUPS_WITH_PAGE_HINTS_SEED = {
-  definition: {
-    $formspec: '1.0',
-    url: 'urn:pages-e2e',
-    version: '1.0.0',
-    formPresentation: { pageMode: 'single' },
-    items: [
-      {
-        key: 'personal',
-        type: 'group',
-        label: 'Personal',
-        layout: { page: 'page1' },
-        children: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
-      },
-      {
-        key: 'contact',
-        type: 'group',
-        label: 'Contact',
-        layout: { page: 'page2' },
-        children: [{ key: 'email', type: 'field', dataType: 'string', label: 'Email' }],
-      },
-    ],
-  },
-};
-
 const PAGEMODE_MISMATCH_SEED = {
   definition: {
     $formspec: '1.0',
@@ -86,119 +61,86 @@ test.describe('Pages Workspace', () => {
     await waitForApp(page);
   });
 
-  test('Pages tab renders and shows single-page banner when mode is single', async ({ page }) => {
+  test('single mode with no pages shows empty state', async ({ page }) => {
     await importProject(page, SINGLE_PAGE_SEED);
     await switchTab(page, 'Pages');
 
     const workspace = page.locator('[data-testid="workspace-Pages"]');
-    await expect(workspace.getByText(/single-page form/i)).toBeVisible();
-    await expect(workspace.getByTestId('tier-status-banner')).toBeVisible();
+    await expect(workspace.getByText(/switch to wizard or tabs/i)).toBeVisible();
   });
 
-  test('mode selector has Single, Wizard, Tabs and wizard mode shows add page and generate buttons', async ({
-    page,
-  }) => {
-    await importProject(page, WIZARD_THEME_SEED);
-    await switchTab(page, 'Pages');
-
-    const workspace = page.locator('[data-testid="workspace-Pages"]');
-    await expect(workspace.getByRole('button', { name: 'Single' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Wizard' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Tabs' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: /add page/i })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: /generate/i })).toBeVisible();
-  });
-
-  test('clicking Wizard shows Add Page and Generate from Groups (no catch-22)', async ({
-    page,
-  }) => {
-    await importProject(page, SINGLE_PAGE_SEED);
-    await switchTab(page, 'Pages');
-
-    const workspace = page.locator('[data-testid="workspace-Pages"]');
-    await expect(workspace.getByText(/single-page form/i)).toBeVisible();
-    await expect(workspace.getByRole('button', { name: /add page/i })).not.toBeVisible();
-
-    await workspace.getByRole('button', { name: 'Wizard' }).click();
-
-    await expect(workspace.getByRole('button', { name: /add page/i })).toBeVisible({ timeout: 2000 });
-    await expect(workspace.getByRole('button', { name: /generate/i })).toBeVisible();
-  });
-
-  test('add page button creates a new page card', async ({ page }) => {
-    await importProject(page, WIZARD_THEME_SEED);
-    await switchTab(page, 'Pages');
-
-    const workspace = page.locator('[data-testid="workspace-Pages"]');
-    await expect(workspace.getByText('Step 1')).toBeVisible();
-    await expect(workspace.getByText('Step 2')).toBeVisible();
-
-    await workspace.getByRole('button', { name: /add page/i }).click();
-
-    await expect(workspace.getByText(/Page 3/)).toBeVisible({ timeout: 2000 });
-  });
-
-  test('page cards show titles and region counts', async ({ page }) => {
-    await importProject(page, WIZARD_THEME_SEED);
-    await switchTab(page, 'Pages');
-
-    const workspace = page.locator('[data-testid="workspace-Pages"]');
-    await expect(workspace.getByText('Step 1')).toBeVisible();
-    await expect(workspace.getByText('Step 2')).toBeVisible();
-    await expect(workspace.locator('text=1 region')).toHaveCount(2);
-  });
-
-  test('auto-generate creates pages from definition groups with layout.page', async ({ page }) => {
-    await importProject(page, GROUPS_WITH_PAGE_HINTS_SEED);
-    await switchTab(page, 'Pages');
-
-    const workspace = page.locator('[data-testid="workspace-Pages"]');
-    await workspace.getByRole('button', { name: 'Wizard' }).click();
-    await workspace.getByRole('button', { name: /generate/i }).click();
-
-    await expect(workspace.getByText('Personal')).toBeVisible({ timeout: 2000 });
-    await expect(workspace.getByText('Contact')).toBeVisible();
-  });
-
-  test('diagnostics panel shows PAGEMODE_MISMATCH when theme has pages but definition is single', async ({
-    page,
-  }) => {
+  test('single mode with existing pages shows dormant info bar', async ({ page }) => {
     await importProject(page, PAGEMODE_MISMATCH_SEED);
     await switchTab(page, 'Pages');
 
     const workspace = page.locator('[data-testid="workspace-Pages"]');
-    await expect(workspace.getByText(/PAGEMODE_MISMATCH|mismatch/i)).toBeVisible();
+    await expect(workspace.getByText(/preserved but not active/i)).toBeVisible();
+    await expect(workspace.getByText('Orphan')).toBeVisible();
   });
 
-  test('tier status banner shows wizard shadowed message when component Wizard exists', async ({
+  test('mode selector has Single, Wizard, Tabs and wizard mode shows add page button', async ({
     page,
   }) => {
-    await importProject(page, {
-      definition: {
-        $formspec: '1.0',
-        url: 'urn:pages-e2e',
-        version: '1.0.0',
-        items: [{ key: 'f', type: 'field', dataType: 'string', label: 'F' }],
-      },
-      theme: {
-        pages: [{ id: 'tp', title: 'Theme Page', regions: [] }],
-      },
-      component: {
-        $formspecComponent: '1.0',
-        tree: {
-          component: 'Wizard',
-          children: [
-            { component: 'WizardPage', props: { title: 'Comp Page' }, children: [] },
-          ],
-        },
-      },
-    });
+    await importProject(page, WIZARD_THEME_SEED);
     await switchTab(page, 'Pages');
 
     const workspace = page.locator('[data-testid="workspace-Pages"]');
-    const banner = workspace.getByTestId('tier-status-banner');
-    await expect(banner).toBeVisible();
-    await expect(banner).toContainText(/wizard component|shadowed/i);
+    await expect(workspace.getByText('Single')).toBeVisible();
+    await expect(workspace.getByText('Wizard')).toBeVisible();
+    await expect(workspace.getByText('Tabs')).toBeVisible();
+    await expect(workspace.getByRole('button', { name: /add page/i })).toBeVisible();
+  });
+
+  test('clicking Wizard from single mode shows Add Page button', async ({ page }) => {
+    await importProject(page, SINGLE_PAGE_SEED);
+    await switchTab(page, 'Pages');
+
+    const workspace = page.locator('[data-testid="workspace-Pages"]');
+    await expect(workspace.getByText(/switch to wizard or tabs/i)).toBeVisible();
+    await expect(workspace.getByRole('button', { name: /add page/i })).not.toBeVisible();
+
+    await workspace.getByText('Wizard').click();
+
+    await expect(workspace.getByRole('button', { name: /add page/i })).toBeVisible({ timeout: 2000 });
+  });
+
+  test('wizard mode shows page cards with titles and item counts', async ({ page }) => {
+    await importProject(page, WIZARD_THEME_SEED);
+    await switchTab(page, 'Pages');
+
+    const workspace = page.locator('[data-testid="workspace-Pages"]');
+    await expect(workspace.getByText('Step 1')).toBeVisible();
+    await expect(workspace.getByText('Step 2')).toBeVisible();
+    await expect(workspace.locator('text=/\\d+ items?/')).toHaveCount(2);
+  });
+
+  test('add page creates card with default title', async ({ page }) => {
+    await importProject(page, WIZARD_THEME_SEED);
+    await switchTab(page, 'Pages');
+
+    const workspace = page.locator('[data-testid="workspace-Pages"]');
+    await workspace.getByRole('button', { name: /add page/i }).click();
+    await expect(workspace.getByText('New Page')).toBeVisible({ timeout: 2000 });
+  });
+
+  test('accordion: only one card expanded at a time', async ({ page }) => {
+    await importProject(page, WIZARD_THEME_SEED);
+    await switchTab(page, 'Pages');
+
+    const workspace = page.locator('[data-testid="workspace-Pages"]');
+    const expandButtons = workspace.getByRole('button', { expanded: false });
+
+    // Expand first card
+    await expandButtons.first().click();
+    const firstExpanded = workspace.getByRole('button', { expanded: true });
+    await expect(firstExpanded).toHaveCount(1);
+
+    // Expand second card — first should collapse
+    const stillCollapsed = workspace.getByRole('button', { expanded: false });
+    await stillCollapsed.first().click();
+
+    // Still only one expanded
+    await expect(workspace.getByRole('button', { expanded: true })).toHaveCount(1);
   });
 
   test('can navigate to Pages and back to Editor', async ({ page }) => {
@@ -247,7 +189,6 @@ test.describe('Pages Workspace — export validation', () => {
 
     const project = createProject({ seed: bundle });
     const diagnostics = project.diagnose();
-    // Print so we can review validation results
     console.log('\n--- Node diagnose (exported bundle) ---');
     console.log('counts:', JSON.stringify(diagnostics.counts, null, 2));
     for (const [name, list] of [
@@ -278,8 +219,6 @@ test.describe('Pages Workspace — export validation', () => {
     try {
       fs.writeFileSync(path.join(dir, 'definition.json'), JSON.stringify(bundle.definition, null, 2));
       fs.writeFileSync(path.join(dir, 'theme.json'), JSON.stringify(bundle.theme, null, 2));
-      // Only write component/mapping when they contain meaningful data —
-      // the schemas require non-null tree and non-empty rules respectively.
       if (bundle.component?.tree) {
         fs.writeFileSync(path.join(dir, 'component.json'), JSON.stringify(bundle.component, null, 2));
       }
@@ -298,7 +237,6 @@ test.describe('Pages Workspace — export validation', () => {
         cwd: repoRoot,
         env: { ...process.env, PYTHONPATH: path.join(repoRoot, 'src') },
       });
-      // Print so we can review validation results
       console.log('\n--- Python formspec.validate (exported bundle) ---');
       if (result.stdout) console.log(result.stdout);
       if (result.stderr) console.log('stderr:', result.stderr);
