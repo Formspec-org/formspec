@@ -330,6 +330,41 @@ describe('diagnose', () => {
     expect(stale[0].message).toContain('deleted_item');
   });
 
+  it('detects transitive variable cycle in consistency diagnostics', () => {
+    const project = createRawProject();
+    // Create x → depends on y, y → depends on x
+    project.dispatch({ type: 'definition.addVariable', payload: { name: 'x', expression: '@y + 1' } });
+    project.dispatch({ type: 'definition.addVariable', payload: { name: 'y', expression: '@x + 1' } });
+
+    const diag = project.diagnose();
+    const cycleDiags = diag.consistency.filter(d => d.code === 'CIRCULAR_DEPENDENCY');
+    expect(cycleDiags.length).toBeGreaterThan(0);
+    expect(cycleDiags[0].severity).toBe('error');
+  });
+
+  it('detects three-node variable cycle', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.addVariable', payload: { name: 'a', expression: '@b' } });
+    project.dispatch({ type: 'definition.addVariable', payload: { name: 'b', expression: '@c' } });
+    project.dispatch({ type: 'definition.addVariable', payload: { name: 'c', expression: '@a' } });
+
+    const diag = project.diagnose();
+    const cycleDiags = diag.consistency.filter(d => d.code === 'CIRCULAR_DEPENDENCY');
+    expect(cycleDiags.length).toBeGreaterThan(0);
+    expect(cycleDiags[0].severity).toBe('error');
+    expect(cycleDiags[0].artifact).toBe('definition');
+  });
+
+  it('no CIRCULAR_DEPENDENCY for acyclic variables', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.addVariable', payload: { name: 'x', expression: '42' } });
+    project.dispatch({ type: 'definition.addVariable', payload: { name: 'y', expression: '@x + 1' } });
+
+    const diag = project.diagnose();
+    const cycleDiags = diag.consistency.filter(d => d.code === 'CIRCULAR_DEPENDENCY');
+    expect(cycleDiags).toEqual([]);
+  });
+
   it('recognizes component node IDs as valid region keys', () => {
     const project = createRawProject();
     project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });

@@ -92,7 +92,8 @@ test('should surface BUDGET_MISMATCH shape with full ValidationResult contract',
   const engine = createGrantEngine();
   engine.setValue('budget.lineItems[0].quantity', 1);
   engine.setValue('budget.lineItems[0].unitCost', 1000);
-  // Leave requestedAmount at default (0) — mismatch
+  // Set requestedAmount to a non-matching value — triggers mismatch
+  engine.setValue('budget.requestedAmount', { amount: 0, currency: 'USD' });
 
   const report = getValidationReport(engine, 'continuous');
   const mismatch = report.results.find(r => r.code === 'BUDGET_MISMATCH');

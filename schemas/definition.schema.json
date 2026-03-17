@@ -1377,6 +1377,14 @@
             "Full Progress Report"
           ]
         },
+        "message": {
+          "type": "string",
+          "description": "Message displayed to the respondent when this route is selected and the target is a disqualification or rejection. Used to provide respectful, informative feedback to screened-out participants.",
+          "examples": [
+            "Thank you for your interest. This study requires participants aged 18 or older.",
+            "Based on your responses, a different version of this form is more appropriate."
+          ]
+        },
         "extensions": {
           "type": "object",
           "propertyNames": {

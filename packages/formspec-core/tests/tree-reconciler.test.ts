@@ -434,4 +434,52 @@ describe('reconcileComponentTree', () => {
     // Footer was last in section → stays last even after b and c are added
     expect(section.children[section.children.length - 1].component).toBe('Footer');
   });
+
+  it('sets bind on display item with calculate bind', () => {
+    const definition = {
+      items: [
+        { key: 'qty', type: 'field', dataType: 'integer' },
+        { key: 'summary', type: 'display', label: 'Summary' },
+      ],
+      binds: [
+        { path: 'summary', calculate: "format('Count: %s', $qty)" },
+      ],
+    } as any;
+
+    const tree = reconcileComponentTree(definition, undefined, {});
+    expect(tree.children).toHaveLength(2);
+    const summaryNode = tree.children[1];
+    expect(summaryNode.component).toBe('Text');
+    expect(summaryNode.bind).toBe('summary');
+    expect(summaryNode.text).toBe('Summary');
+    // Should NOT have nodeId — bind takes its place
+    expect(summaryNode.nodeId).toBeUndefined();
+  });
+
+  it('keeps nodeId on display item without calculate bind', () => {
+    const definition = {
+      items: [
+        { key: 'heading', type: 'display', label: 'Static heading' },
+      ],
+    } as any;
+
+    const tree = reconcileComponentTree(definition, undefined, {});
+    expect(tree.children[0].nodeId).toBe('heading');
+    expect(tree.children[0].bind).toBeUndefined();
+  });
+
+  it('respects widgetHint on calculated display item', () => {
+    const definition = {
+      items: [
+        { key: 'total_heading', type: 'display', label: 'Total', presentation: { widgetHint: 'heading' } },
+      ],
+      binds: [
+        { path: 'total_heading', calculate: "format('Total: $%s', $amount)" },
+      ],
+    } as any;
+
+    const tree = reconcileComponentTree(definition, undefined, {});
+    expect(tree.children[0].component).toBe('Heading');
+    expect(tree.children[0].bind).toBe('total_heading');
+  });
 });

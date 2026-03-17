@@ -88,10 +88,31 @@ export function parseFEL(state: ProjectState, expression: string, context?: FELP
     }
   }
 
+  const warnings: Diagnostic[] = [];
+
+  // Cross-reference called functions against the known catalog
+  if (analysis.valid && analysis.functions.length > 0) {
+    const catalog = felFunctionCatalog(state);
+    const knownFunctions = new Set(catalog.map((entry) => entry.name));
+    for (const fn of analysis.functions) {
+      if (!knownFunctions.has(fn)) {
+        warnings.push({
+          artifact: 'definition',
+          path: 'expression',
+          severity: 'warning',
+          code: 'FEL_UNKNOWN_FUNCTION',
+          message: `Unknown function "${fn}" — not a built-in or registered extension function`,
+        });
+      }
+    }
+  }
+
   return {
     valid: analysis.valid && semanticErrors.length === 0,
     errors: [...parseErrors, ...semanticErrors],
+    warnings,
     references: analysis.references,
+    variables: analysis.variables,
     functions: analysis.functions,
   };
 }
@@ -104,6 +125,8 @@ export function felFunctionCatalog(state: ProjectState): FELFunctionEntry[] {
     name: entry.name,
     category: entry.category,
     source: 'builtin',
+    signature: entry.signature,
+    description: entry.description,
   }));
   const seen = new Set(catalog.map((entry) => entry.name));
 

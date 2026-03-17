@@ -112,15 +112,13 @@ describe('handleBehavior — calculate', () => {
     expect(data.affectedPaths).toContain('total');
   });
 
-  it('succeeds even for paths without a field (creates a bind)', () => {
+  it('rejects nonexistent target paths', () => {
     const { registry, projectId } = registryWithProject();
     const result = handleBehavior(registry, projectId, {
       action: 'calculate', target: 'nonexistent', expression: '1 + 1',
     });
-    const data = parseResult(result);
 
-    expect(result.isError).toBeUndefined();
-    expect(data.affectedPaths).toContain('nonexistent');
+    expect(result.isError).toBe(true);
   });
 });
 
@@ -155,6 +153,68 @@ describe('handleBehavior — add_rule', () => {
     expect(result.isError).toBeUndefined();
     expect(data.affectedPaths.length).toBeGreaterThan(0);
     expect(data.summary).toContain('email');
+  });
+});
+
+// ── remove_rule ──────────────────────────────────────────────────
+
+describe('handleBehavior — remove_rule', () => {
+  it('removes a validation rule by shape ID', () => {
+    const { registry, projectId } = registryWithProject();
+    handleField(registry, projectId, { path: 'age', label: 'Age', type: 'integer' });
+
+    // Add a rule first to get the shape ID
+    const addResult = handleBehavior(registry, projectId, {
+      action: 'add_rule', target: 'age', rule: '$age >= 0', message: 'Age must be non-negative',
+    });
+    const { createdId } = parseResult(addResult);
+    expect(createdId).toBeTruthy();
+
+    // Remove it
+    const result = handleBehavior(registry, projectId, {
+      action: 'remove_rule', target: createdId,
+    });
+    const data = parseResult(result);
+
+    expect(result.isError).toBeUndefined();
+    expect(data.summary).toContain(createdId);
+    expect(data.affectedPaths).toContain(createdId);
+  });
+
+  it('silently succeeds for nonexistent shape ID (no-op)', () => {
+    const { registry, projectId } = registryWithProject();
+
+    const result = handleBehavior(registry, projectId, {
+      action: 'remove_rule', target: 'nonexistent_shape_999',
+    });
+    const data = parseResult(result);
+
+    // deleteShape is a filter -- missing IDs are a no-op, not an error
+    expect(result.isError).toBeUndefined();
+    expect(data.summary).toContain('nonexistent_shape_999');
+  });
+
+  it('round-trips add then remove in batch', () => {
+    const { registry, projectId } = registryWithProject();
+    handleField(registry, projectId, { path: 'score', label: 'Score', type: 'integer' });
+
+    // Add a rule
+    const addResult = handleBehavior(registry, projectId, {
+      action: 'add_rule', target: 'score', rule: '$score >= 0', message: 'Must be positive',
+    });
+    const { createdId } = parseResult(addResult);
+
+    // Remove via batch
+    const result = handleBehavior(registry, projectId, {
+      items: [
+        { action: 'remove_rule', target: createdId },
+      ],
+    });
+    const data = parseResult(result);
+
+    expect(result.isError).toBeUndefined();
+    expect(data.succeeded).toBe(1);
+    expect(data.failed).toBe(0);
   });
 });
 

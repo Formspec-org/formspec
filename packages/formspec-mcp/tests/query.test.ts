@@ -289,6 +289,30 @@ describe('handleTrace', () => {
 
     expect(data).toHaveProperty('type', 'expression');
   });
+
+  it('returns changelog with semverImpact and changes for a fresh project', () => {
+    const { registry, projectId } = registryWithProject();
+
+    const result = handleTrace(registry, projectId, 'changelog', {});
+    const data = parseResult(result);
+
+    expect(data).toHaveProperty('semverImpact');
+    expect(data).toHaveProperty('changes');
+    expect(data).toHaveProperty('fromVersion');
+    expect(data).toHaveProperty('toVersion');
+    expect(Array.isArray(data.changes)).toBe(true);
+  });
+
+  it('changelog detects added fields', () => {
+    const { registry, projectId, project } = registryWithProject();
+    project.addField('q1', 'Question 1', 'text');
+
+    const result = handleTrace(registry, projectId, 'changelog', {});
+    const data = parseResult(result);
+
+    expect(data.semverImpact).not.toBe('cosmetic'); // at least 'compatible' since a field was added
+    expect(data.changes.some((c: any) => c.type === 'added' && c.path === 'q1')).toBe(true);
+  });
 });
 
 // ── handleFel — context ─────────────────────────────────────────

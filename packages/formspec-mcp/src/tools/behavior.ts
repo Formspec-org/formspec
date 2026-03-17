@@ -10,7 +10,7 @@ import type { ProjectRegistry } from '../registry.js';
 import { wrapHelperCall, wrapBatchCall, errorResponse, formatToolError } from '../errors.js';
 import type { BatchItem } from '../batch.js';
 
-type BehaviorAction = 'show_when' | 'readonly_when' | 'require' | 'calculate' | 'add_rule';
+type BehaviorAction = 'show_when' | 'readonly_when' | 'require' | 'calculate' | 'add_rule' | 'remove_rule';
 
 interface BehaviorParams {
   action: BehaviorAction;
@@ -34,6 +34,8 @@ function executeBehavior(project: Project, p: BehaviorParams) {
       return project.calculate(p.target, p.expression!);
     case 'add_rule':
       return project.addValidation(p.target, p.rule!, p.message!, p.options);
+    case 'remove_rule':
+      return project.removeValidation(p.target);
   }
 }
 

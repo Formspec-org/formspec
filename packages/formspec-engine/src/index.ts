@@ -214,6 +214,15 @@ export interface EngineReplayResult {
  * - **Remote options** fetching from bind-configured URLs.
  * - **Screener evaluation** for conditional form routing.
  */
+/**
+ * Spec §3.8.1: in constraint context, null/undefined → true (passes).
+ * FEL comparisons with nullish operands propagate null. A null constraint
+ * result means "no opinion" — the constraint is not violated.
+ */
+function constraintPasses(raw: unknown): boolean {
+    return raw === null || raw === undefined ? true : !!raw;
+}
+
 /** Parse a dotted version string (e.g. "1.0" or "1.0.0") into a comparable numeric tuple, padded to 3 parts. */
 function parseVersion(v: string): [number, number, number] {
     const parts = v.split('.').map(Number);
@@ -288,6 +297,8 @@ export class FormEngine {
     /** Dependency graph mapping each field path to the paths it depends on, built during FEL compilation. */
     public dependencies: Record<string, string[]> = {};
     private knownNames: Set<string> = new Set();
+    /** Paths of display item signals — excluded from getResponse data. */
+    private displaySignalPaths: Set<string> = new Set();
     private bindConfigs: Record<string, EngineBindConfig> = {};
     private compiledExpressions: Record<string, () => any> = {};
     private registryEntries: Map<string, RegistryEntry> = new Map();
@@ -908,61 +919,60 @@ export class FormEngine {
     }
 
     /**
-     * Evaluate shape constraints including composition operators.
-     * Returns true if the shape FAILS (constraint violated).
-     */
-    /**
      * Evaluate a composition element: if it's a shape ID, resolve the referenced
      * shape's pass/fail result; otherwise compile and evaluate as FEL.
-     * Returns true if the element "passes".
+     * Returns the raw result — callers use constraintPasses() for null semantics.
      */
-    private evaluateCompositionElement(expr: string, path: string): boolean {
+    private evaluateCompositionElement(expr: string, path: string): unknown {
         // Shape ID reference: check if this string matches a known shape
         if (this.shapeResults[expr]) {
             // Shape passes when it has no validation results (no failures)
             return this.shapeResults[expr].value.length === 0;
         }
-        // Inline FEL expression
+        // Inline FEL expression — return raw value so callers can handle null
         const fn = this.compileFEL(expr, path, undefined, true);
-        return !!fn();
+        return fn();
     }
 
     private evaluateShapeConstraints(shape: FormspecShape, path: string): boolean {
-        // Primary constraint
+        // Primary constraint — null/undefined → passes (spec §3.8.1)
         if (shape.constraint) {
             const fn = this.compileFEL(shape.constraint, path, undefined, true);
-            const result = fn();
-            if (!result) {
+            if (!constraintPasses(fn())) {
                 return true;
             }
         }
 
-        // and: all must pass
+        // and: all must pass — null = no opinion = passes
         if (shape.and) {
             for (const expr of shape.and) {
-                if (!this.evaluateCompositionElement(expr, path)) return true;
+                if (!constraintPasses(this.evaluateCompositionElement(expr, path))) return true;
             }
         }
 
-        // or: at least one must pass
+        // or: at least one must pass — null = no opinion = passes
         if (shape.or) {
             let anyPass = false;
             for (const expr of shape.or) {
-                if (this.evaluateCompositionElement(expr, path)) { anyPass = true; break; }
+                if (constraintPasses(this.evaluateCompositionElement(expr, path))) { anyPass = true; break; }
             }
             if (!anyPass) return true;
         }
 
-        // not: must fail (i.e., the referenced shape/expression should not pass)
+        // not: fails only when the inner expression is definitively true.
+        // null = indeterminate = not definitively true → passes.
         if (shape.not) {
-            if (this.evaluateCompositionElement(shape.not, path)) return true;
+            const raw = this.evaluateCompositionElement(shape.not, path);
+            if (raw !== null && raw !== undefined && !!raw) return true;
         }
 
-        // xone: exactly one must pass
+        // xone: exactly one must be definitively true.
+        // null = indeterminate → does not count toward pass tally.
         if (shape.xone) {
             let passCount = 0;
             for (const expr of shape.xone) {
-                if (this.evaluateCompositionElement(expr, path)) passCount++;
+                const raw = this.evaluateCompositionElement(expr, path);
+                if (raw !== null && raw !== undefined && !!raw) passCount++;
             }
             if (passCount !== 1) return true;
         }
@@ -1411,9 +1421,7 @@ export class FormEngine {
                 // Null-propagating: skip when value is empty — the `required` Bind is
                 // responsible for ensuring a value exists (spec §3.8.1).
                 if (compiledConstraint && !(value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0))) {
-                    const raw = compiledConstraint();
-                    const isValid = raw === null || raw === undefined ? true : !!raw;
-                    if (!isValid) {
+                    if (!constraintPasses(compiledConstraint())) {
                         results.push({
                             severity: "error",
                             path: this.toExternalPath(fullName),
@@ -1528,7 +1536,12 @@ export class FormEngine {
                 }
             }
         } else if (item.type === 'display') {
-            // Display items don't have values, but they can have relevancy
+            // Display items don't collect data, but can have computed text via calculate bind.
+            if (bind?.calculate) {
+                const compiledCalc = this.compileFEL(bind.calculate, fullName, undefined, false);
+                this.signals[fullName] = computed(compiledCalc);
+                this.displaySignalPaths.add(fullName);
+            }
         }
     }
 
@@ -2088,6 +2101,7 @@ export class FormEngine {
         const defaultNRB = this.definition.nonRelevantBehavior || 'remove';
 
         for (const key of Object.keys(this.signals)) {
+            if (this.displaySignalPaths.has(key)) continue;
             const isRelevant = this.isPathRelevant(key);
             const baseName = key.replace(/\[\d+\]/g, '');
             let nrb = defaultNRB;

@@ -62,6 +62,7 @@ export interface ContentProps {
 /** Group properties */
 export interface GroupProps {
   display?: 'stack' | 'dataTable';
+  page?: string;
   parentPath?: string;
   insertIndex?: number;
 }

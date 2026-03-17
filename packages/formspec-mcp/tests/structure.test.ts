@@ -295,6 +295,40 @@ describe('handleEdit', () => {
     expect(result.isError).toBeUndefined();
   });
 
+  it('copies an item to a target group via target_path', () => {
+    const { registry, projectId } = registryWithProject();
+    handleGroup(registry, projectId, { path: 'individual', label: 'Individual' });
+    handleField(registry, projectId, { path: 'individual.phone', label: 'Phone', type: 'text' });
+    handleGroup(registry, projectId, { path: 'business', label: 'Business' });
+
+    const result = handleEdit(registry, projectId, 'copy', {
+      path: 'individual.phone',
+      target_path: 'business',
+    });
+    expect(result.isError).toBeUndefined();
+    const data = parseResult(result);
+    expect(data.affectedPaths[0]).toBe('business.phone');
+  });
+
+  it('copies an item to target in batch mode', () => {
+    const { registry, projectId } = registryWithProject();
+    handleGroup(registry, projectId, { path: 'src', label: 'Source' });
+    handleField(registry, projectId, { path: 'src.email', label: 'Email', type: 'email' });
+    handleGroup(registry, projectId, { path: 'dest', label: 'Dest' });
+
+    const result = handleEdit(registry, projectId, 'copy', {
+      items: [
+        { path: 'src.email', target_path: 'dest' },
+      ],
+    });
+    const data = parseResult(result);
+    expect(data.succeeded).toBe(1);
+    expect(data.results[0].success).toBe(true);
+    // Verify the item actually landed in the target group
+    const project = registry.getProject(projectId);
+    expect(project.itemAt('dest.email')).toBeDefined();
+  });
+
   it('renames an item', () => {
     const { registry, projectId } = registryWithProject();
     handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' });

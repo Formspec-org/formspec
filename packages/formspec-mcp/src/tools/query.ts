@@ -102,8 +102,7 @@ export function handleTrace(
     const project = registry.getProject(projectId);
 
     if (mode === 'changelog') {
-      const stats = project.statistics();
-      return { status: 'stub', message: 'Changelog generation is not yet fully implemented', projectStats: stats };
+      return project.previewChangelog();
     }
 
     // trace mode — distinguish field reference from expression

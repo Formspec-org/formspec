@@ -18,8 +18,9 @@ interface ScreenerParams {
   props?: FieldProps;
   condition?: string;
   target?: string;
+  message?: string;
   route_index?: number;
-  changes?: { condition?: string; target?: string; label?: string };
+  changes?: { condition?: string; target?: string; label?: string; message?: string };
   direction?: 'up' | 'down';
 }
 
@@ -39,7 +40,7 @@ export function handleScreener(
       case 'remove_field':
         return project.removeScreenField(params.key!);
       case 'add_route':
-        return project.addScreenRoute(params.condition!, params.target!, params.label);
+        return project.addScreenRoute(params.condition!, params.target!, params.label, params.message);
       case 'update_route':
         return project.updateScreenRoute(params.route_index!, params.changes!);
       case 'reorder_route':

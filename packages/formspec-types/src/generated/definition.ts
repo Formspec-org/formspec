@@ -525,6 +525,10 @@ export interface Route {
    * Human-readable description of this route, displayed to users or used in authoring tools.
    */
   label?: string;
+  /**
+   * Message displayed to the respondent when this route is selected and the target is a disqualification or rejection. Used to provide respectful, informative feedback to screened-out participants.
+   */
+  message?: string;
   extensions?: {};
 }
 /**

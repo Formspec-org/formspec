@@ -312,6 +312,10 @@ export interface ProjectStatistics {
   componentNodeCount: number;
   /** Number of mapping rules. */
   mappingRuleCount: number;
+  /** Number of fields in the screener (0 if no screener or disabled). */
+  screenerFieldCount: number;
+  /** Number of routing rules in the screener (0 if no screener or disabled). */
+  screenerRouteCount: number;
 }
 
 /**
@@ -427,8 +431,12 @@ export interface FELParseResult {
   valid: boolean;
   /** Parse or validation errors found in the expression. */
   errors: Diagnostic[];
-  /** Field/variable paths referenced by the expression. */
+  /** Warnings (non-fatal issues like unknown function names). */
+  warnings: Diagnostic[];
+  /** Field paths referenced by the expression ($ references). */
   references: string[];
+  /** Variable names referenced by the expression (@ references). */
+  variables: string[];
   /** FEL function names called in the expression. */
   functions: string[];
 }
@@ -462,6 +470,10 @@ export interface FELFunctionEntry {
   category: string;
   /** Whether this function is built-in or provided by an extension. */
   source: 'builtin' | 'extension';
+  /** Function signature (e.g. `'sum(array) -> number'`). */
+  signature?: string;
+  /** Human-readable description of what the function does. */
+  description?: string;
   /** URL of the registry providing this function, if extension-sourced. */
   registryUrl?: string;
 }

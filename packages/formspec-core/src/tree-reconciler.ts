@@ -122,18 +122,41 @@ export function reconcileComponentTree(
   };
   collectExisting(tree);
 
+  // ── Collect display paths with calculate binds ──
+  const calculatedDisplayPaths = new Set<string>();
+  if (definition.binds) {
+    for (const bind of definition.binds) {
+      if (bind.calculate && bind.path) {
+        calculatedDisplayPaths.add(bind.path);
+      }
+    }
+  }
+
   // ── Build nodes from definition items ──
   const buildNode = (item: FormItem, parentPath = ''): TreeNode => {
     const itemPath = parentPath ? `${parentPath}.${item.key}` : item.key;
     let node: TreeNode;
 
     if (item.type === 'display') {
-      const existing = existingDisplay.get(itemPath);
-      if (existing) {
-        node = { ...existing, text: item.label ?? '' };
-        existingDisplay.delete(itemPath);
+      const hasCalculate = calculatedDisplayPaths.has(itemPath);
+      if (hasCalculate) {
+        // Bind the display node so the webcomponent subscribes to the engine signal
+        const existing = existingBound.get(itemPath);
+        if (existing) {
+          node = { ...existing, text: item.label ?? '' };
+          existingBound.delete(itemPath);
+        } else {
+          const hintComponent = widgetTokenToComponent((item as any).presentation?.widgetHint);
+          node = { component: hintComponent ?? 'Text', bind: item.key, text: item.label ?? '' };
+        }
       } else {
-        node = { component: 'Text', nodeId: item.key, text: item.label ?? '' };
+        const existing = existingDisplay.get(itemPath);
+        if (existing) {
+          node = { ...existing, text: item.label ?? '' };
+          existingDisplay.delete(itemPath);
+        } else {
+          node = { component: 'Text', nodeId: item.key, text: item.label ?? '' };
+        }
       }
     } else {
       const existing = existingBound.get(itemPath);

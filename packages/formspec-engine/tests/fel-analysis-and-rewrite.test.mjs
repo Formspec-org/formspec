@@ -66,6 +66,38 @@ test('getBuiltinFELFunctionCatalog is sourced from the runtime stdlib', () => {
   assert.equal(names.includes('instance'), true);
 });
 
+test('catalog entries include signature and description', () => {
+  const catalog = getBuiltinFELFunctionCatalog();
+  const sum = catalog.find((e) => e.name === 'sum');
+  assert.ok(sum);
+  assert.equal(typeof sum.signature, 'string');
+  assert.equal(typeof sum.description, 'string');
+  assert.ok(sum.signature.includes('->'), 'signature should include return type arrow');
+});
+
+test('every catalog entry has signature and description', () => {
+  const catalog = getBuiltinFELFunctionCatalog();
+  for (const entry of catalog) {
+    assert.ok(entry.signature, `${entry.name} missing signature`);
+    assert.ok(entry.description, `${entry.name} missing description`);
+  }
+});
+
+test('contains vs selected descriptions disambiguate their use cases', () => {
+  const catalog = getBuiltinFELFunctionCatalog();
+  const contains = catalog.find((e) => e.name === 'contains');
+  const selected = catalog.find((e) => e.name === 'selected');
+  assert.ok(contains.description.toLowerCase().includes('substring'));
+  assert.ok(selected.description.toLowerCase().includes('choice'));
+});
+
+test('dateDiff signature documents argument order', () => {
+  const catalog = getBuiltinFELFunctionCatalog();
+  const dateDiff = catalog.find((e) => e.name === 'dateDiff');
+  assert.ok(dateDiff.description.includes('laterDate'));
+  assert.ok(dateDiff.description.includes('earlierDate'));
+});
+
 test('validateExtensionUsage reports unresolved/deprecated/retired extension entries', () => {
   const issues = validateExtensionUsage(
     [

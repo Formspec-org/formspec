@@ -583,3 +583,393 @@ describe('validateResponse', () => {
     expect(paths.some(p => p.includes('[1]'))).toBe(false);
   });
 });
+
+describe('previewForm — per-page validation counts', () => {
+  function buildWizardForm() {
+    const project = createProject();
+    project.addPage('Personal Info', undefined, 'personal');
+    project.addPage('Address', undefined, 'address');
+
+    // addPage('...', undefined, 'personal') creates group key 'personal'
+    project.addField('personal.first_name', 'First Name', 'text');
+    project.addField('personal.last_name', 'Last Name', 'text');
+    project.require('personal.first_name');
+    project.require('personal.last_name');
+
+    // addPage('...', undefined, 'address') creates group key 'address'
+    project.addField('address.street', 'Street', 'text');
+    project.addField('address.city', 'City', 'text');
+    project.require('address.street');
+
+    return project;
+  }
+
+  it('includes validationErrors count on each page entry', () => {
+    const project = buildWizardForm();
+    const preview = previewForm(project);
+
+    // All required fields are empty — errors on both pages
+    const personalPage = preview.pages.find(p => p.id === 'personal');
+    const addressPage = preview.pages.find(p => p.id === 'address');
+
+    expect(personalPage).toBeDefined();
+    expect(addressPage).toBeDefined();
+    expect(personalPage!.validationErrors).toBe(2); // first_name + last_name
+    expect(addressPage!.validationErrors).toBe(1);  // street only
+  });
+
+  it('page with no errors has validationErrors: 0', () => {
+    const project = buildWizardForm();
+    const preview = previewForm(project, {
+      'personal.first_name': 'Alice',
+      'personal.last_name': 'Smith',
+    });
+
+    const personalPage = preview.pages.find(p => p.id === 'personal');
+    expect(personalPage!.validationErrors).toBe(0);
+  });
+
+  it('does not count errors for hidden fields', () => {
+    const project = createProject();
+    project.addPage('Main', undefined, 'main');
+    project.addField('main.toggle', 'Show Details', 'boolean');
+    project.addField('main.details', 'Details', 'text');
+    project.require('main.details');
+    project.showWhen('main.details', '$main.toggle = true');
+
+    const preview = previewForm(project);
+
+    // toggle is false by default, so details is hidden — its required error shouldn't count
+    const mainPage = preview.pages.find(p => p.id === 'main');
+    expect(mainPage!.validationErrors).toBe(0);
+  });
+
+  it('counts warnings separately from errors', () => {
+    const project = createProject();
+    project.addPage('Info', undefined, 'info');
+    project.addField('info.code', 'Code', 'text');
+    project.require('info.code');
+    project.addValidation('info.code', "matches($info.code, '^[A-Z]+$')", 'Prefer uppercase', { severity: 'warning' });
+
+    const preview = previewForm(project, { 'info.code': 'abc' });
+
+    const infoPage = preview.pages.find(p => p.id === 'info');
+    expect(infoPage!.validationErrors).toBe(0);    // code is provided, so not "Required"
+    expect(infoPage!.validationWarnings).toBe(1);   // warning from the matches rule
+  });
+
+  it('returns 0 counts for pages with no fields', () => {
+    const project = createProject();
+    project.addPage('Empty Page', undefined, 'empty');
+
+    const preview = previewForm(project);
+    const emptyPage = preview.pages.find(p => p.id === 'empty');
+    expect(emptyPage!.validationErrors).toBe(0);
+    expect(emptyPage!.validationWarnings).toBe(0);
+  });
+
+  it('handles form with no pages (single-page mode)', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.require('name');
+
+    const preview = previewForm(project);
+    expect(preview.pages).toHaveLength(0);
+  });
+
+  it('counts errors in repeat group fields on a page', () => {
+    const project = createProject();
+    project.addPage('Items', undefined, 'items');
+    project.addGroup('items.line_items', 'Line Items');
+    project.makeRepeatable('items.line_items', { min: 1 });
+    project.addField('items.line_items.amount', 'Amount', 'decimal');
+    project.require('items.line_items.amount');
+
+    // Two instances, both with empty required field
+    const preview = previewForm(project, {
+      'items.line_items[0].amount': undefined,
+      'items.line_items[1].amount': undefined,
+    });
+
+    const itemsPage = preview.pages.find(p => p.id === 'items');
+    expect(itemsPage!.validationErrors).toBe(2);
+  });
+
+  it('errors on all pages are independent', () => {
+    const project = createProject();
+    project.addPage('Page A', undefined, 'page-a');
+    project.addPage('Page B', undefined, 'page-b');
+
+    project.addField('page_a.x', 'X', 'text');
+    project.require('page_a.x');
+    project.addField('page_b.y', 'Y', 'text');
+    project.addField('page_b.z', 'Z', 'text');
+    project.require('page_b.y');
+    project.require('page_b.z');
+
+    const preview = previewForm(project);
+
+    const pageA = preview.pages.find(p => p.id === 'page-a');
+    const pageB = preview.pages.find(p => p.id === 'page-b');
+    expect(pageA!.validationErrors).toBe(1);
+    expect(pageB!.validationErrors).toBe(2);
+  });
+
+  it('filling all required fields brings page errors to 0', () => {
+    const project = createProject();
+    project.addPage('Contact', undefined, 'contact');
+    project.addField('contact.name', 'Name', 'text');
+    project.addField('contact.email', 'Email', 'email');
+    project.require('contact.name');
+    project.require('contact.email');
+
+    // Fill everything
+    const preview = previewForm(project, {
+      'contact.name': 'Alice',
+      'contact.email': 'alice@example.com',
+    });
+
+    const contactPage = preview.pages.find(p => p.id === 'contact');
+    expect(contactPage!.validationErrors).toBe(0);
+    expect(contactPage!.validationWarnings).toBe(0);
+  });
+});
+
+describe('previewForm — multichoice fields', () => {
+  it('multichoice scenario array drives selected() in show_when', () => {
+    const project = createProject();
+    project.addField('sessions', 'Sessions', 'multichoice', {
+      choices: [
+        { value: 'keynote', label: 'Keynote' },
+        { value: 'workshop', label: 'Workshop' },
+        { value: 'panel', label: 'Panel' },
+      ],
+    });
+    project.addField('workshop_topic', 'Workshop Topic', 'text');
+    project.showWhen('workshop_topic', "selected($sessions, 'workshop')");
+
+    // Scenario passes multichoice array — workshop_topic should be visible
+    const preview = previewForm(project, {
+      sessions: ['keynote', 'workshop'],
+    });
+
+    expect(preview.visibleFields).toContain('workshop_topic');
+    expect(preview.currentValues['sessions']).toEqual(['keynote', 'workshop']);
+  });
+
+  it('multichoice scenario array without matching value hides conditional field', () => {
+    const project = createProject();
+    project.addField('sessions', 'Sessions', 'multichoice', {
+      choices: [
+        { value: 'keynote', label: 'Keynote' },
+        { value: 'workshop', label: 'Workshop' },
+      ],
+    });
+    project.addField('workshop_topic', 'Workshop Topic', 'text');
+    project.showWhen('workshop_topic', "selected($sessions, 'workshop')");
+
+    // Only keynote selected — workshop_topic should be hidden
+    const preview = previewForm(project, {
+      sessions: ['keynote'],
+    });
+
+    expect(preview.hiddenFields.some(h => h.path === 'workshop_topic')).toBe(true);
+  });
+
+  it('multichoice empty array keeps conditional field hidden', () => {
+    const project = createProject();
+    project.addField('sessions', 'Sessions', 'multichoice', {
+      choices: [
+        { value: 'keynote', label: 'Keynote' },
+        { value: 'workshop', label: 'Workshop' },
+      ],
+    });
+    project.addField('workshop_topic', 'Workshop Topic', 'text');
+    project.showWhen('workshop_topic', "selected($sessions, 'workshop')");
+
+    const preview = previewForm(project, {
+      sessions: [],
+    });
+
+    expect(preview.hiddenFields.some(h => h.path === 'workshop_topic')).toBe(true);
+  });
+
+  it('multichoice calculate using count() works with scenario', () => {
+    const project = createProject();
+    project.addField('tags', 'Tags', 'multichoice', {
+      choices: [
+        { value: 'a', label: 'A' },
+        { value: 'b', label: 'B' },
+        { value: 'c', label: 'C' },
+      ],
+    });
+    project.addField('tag_count', 'Tag Count', 'integer');
+    project.calculate('tag_count', 'count($tags)');
+
+    const preview = previewForm(project, {
+      tags: ['a', 'c'],
+    });
+
+    expect(preview.currentValues['tag_count']).toBe(2);
+  });
+});
+
+describe('validateResponse — multichoice fields', () => {
+  it('multichoice array passes required validation', () => {
+    const project = createProject();
+    project.addField('sessions', 'Sessions', 'multichoice', {
+      choices: [
+        { value: 'keynote', label: 'Keynote' },
+        { value: 'workshop', label: 'Workshop' },
+      ],
+    });
+    project.require('sessions');
+
+    const report = validateResponse(project, {
+      sessions: ['keynote', 'workshop'],
+    });
+    expect(report.valid).toBe(true);
+  });
+
+  it('multichoice empty array fails required validation', () => {
+    const project = createProject();
+    project.addField('sessions', 'Sessions', 'multichoice', {
+      choices: [
+        { value: 'keynote', label: 'Keynote' },
+        { value: 'workshop', label: 'Workshop' },
+      ],
+    });
+    project.require('sessions');
+
+    const report = validateResponse(project, {
+      sessions: [],
+    });
+    expect(report.valid).toBe(false);
+  });
+});
+
+describe('previewForm — multichoice and repeat groups coexist', () => {
+  it('multichoice arrays pass through while repeat group arrays expand', () => {
+    const project = createProject();
+
+    // Repeat group — array should be expanded into indexed paths
+    project.addGroup('items', 'Items');
+    project.makeRepeatable('items', { min: 1 });
+    project.addField('items.name', 'Name', 'text');
+
+    // Multichoice field — array should be passed through as-is
+    project.addField('categories', 'Categories', 'multichoice', {
+      choices: [
+        { value: 'food', label: 'Food' },
+        { value: 'travel', label: 'Travel' },
+      ],
+    });
+
+    const preview = previewForm(project, {
+      items: [{ name: 'Widget' }],
+      categories: ['food', 'travel'],
+    });
+
+    // Repeat group expanded correctly
+    expect(preview.currentValues['items[0].name']).toBe('Widget');
+    // Multichoice preserved as array
+    expect(preview.currentValues['categories']).toEqual(['food', 'travel']);
+  });
+
+  it('nested multichoice inside a non-repeat group passes through', () => {
+    const project = createProject();
+    project.addGroup('prefs', 'Preferences');
+    project.addField('prefs.colors', 'Colors', 'multichoice', {
+      choices: [
+        { value: 'red', label: 'Red' },
+        { value: 'blue', label: 'Blue' },
+      ],
+    });
+
+    const preview = previewForm(project, {
+      prefs: { colors: ['red', 'blue'] },
+    });
+
+    expect(preview.currentValues['prefs.colors']).toEqual(['red', 'blue']);
+  });
+
+  it('nested repeat group arrays still expand correctly via flat paths', () => {
+    const project = createProject();
+    project.addGroup('sections', 'Sections');
+    project.makeRepeatable('sections', { min: 1 });
+    project.addGroup('sections.items', 'Items');
+    project.makeRepeatable('sections.items', { min: 1 });
+    project.addField('sections.items.value', 'Value', 'text');
+
+    // Use flat indexed paths for nested repeat groups.
+    // Nested object expansion for multiply-nested repeats has a pre-existing
+    // limitation in the repeat count detection regex (separate from this fix).
+    const preview = previewForm(project, {
+      'sections[0].items[0].value': 'A',
+    });
+
+    expect(preview.currentValues['sections[0].items[0].value']).toBe('A');
+  });
+
+  it('repeat group with flat indexed keys still works (regression)', () => {
+    const project = createProject();
+    project.addGroup('rows', 'Rows');
+    project.makeRepeatable('rows', { min: 1 });
+    project.addField('rows.label', 'Label', 'text');
+
+    // Already-flat paths should bypass flattening entirely
+    const preview = previewForm(project, {
+      'rows[0].label': 'First',
+      'rows[1].label': 'Second',
+    });
+
+    expect(preview.currentValues['rows[0].label']).toBe('First');
+    expect(preview.currentValues['rows[1].label']).toBe('Second');
+  });
+
+  it('validateResponse with multichoice + repeat group in same form', () => {
+    const project = createProject();
+    project.addGroup('items', 'Items');
+    project.makeRepeatable('items', { min: 1 });
+    project.addField('items.name', 'Name', 'text');
+    project.require('items.name');
+
+    project.addField('tags', 'Tags', 'multichoice', {
+      choices: [
+        { value: 'a', label: 'A' },
+        { value: 'b', label: 'B' },
+      ],
+    });
+    project.require('tags');
+
+    const report = validateResponse(project, {
+      items: [{ name: 'Widget' }],
+      tags: ['a', 'b'],
+    });
+    expect(report.valid).toBe(true);
+  });
+
+  it('validateResponse with empty multichoice + valid repeat group', () => {
+    const project = createProject();
+    project.addGroup('items', 'Items');
+    project.makeRepeatable('items', { min: 1 });
+    project.addField('items.name', 'Name', 'text');
+    project.require('items.name');
+
+    project.addField('tags', 'Tags', 'multichoice', {
+      choices: [
+        { value: 'a', label: 'A' },
+        { value: 'b', label: 'B' },
+      ],
+    });
+    project.require('tags');
+
+    const report = validateResponse(project, {
+      items: [{ name: 'Widget' }],
+      tags: [],
+    });
+    // Items valid, but tags empty + required → invalid
+    expect(report.valid).toBe(false);
+    expect(report.results.some(r => r.path === 'tags')).toBe(true);
+  });
+});

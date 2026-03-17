@@ -7,25 +7,40 @@ import type { Project } from './project.js';
  * Handles three input shapes:
  * - Flat dot-path keys: `{ "expenses[0].amount": 100 }` -- passed through
  * - Nested objects: `{ patient: { first_name: "John" } }` -> `{ "patient.first_name": "John" }`
- * - Nested arrays (repeat groups): `{ expenses: [{ amount: 100 }] }` -> `{ "expenses[0].amount": 100 }`
+ * - Repeat group arrays: `{ expenses: [{ amount: 100 }] }` -> `{ "expenses[0].amount": 100 }`
+ * - Array-valued fields (multichoice): `{ tags: ["a", "b"] }` -> `{ "tags": ["a", "b"] }` (preserved)
+ *
+ * @param repeatGroupPaths - Paths known to be repeat groups. Arrays at these paths
+ *   are expanded into indexed signal paths. Arrays at all other paths are preserved
+ *   as-is (e.g. multichoice field values).
  */
-function flattenToSignalPaths(data: Record<string, unknown>, prefix = ''): Record<string, unknown> {
+function flattenToSignalPaths(
+  data: Record<string, unknown>,
+  repeatGroupPaths: ReadonlySet<string>,
+  prefix = '',
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(data)) {
     const path = prefix ? `${prefix}.${key}` : key;
 
-    if (Array.isArray(value)) {
+    // Strip indices to match engine's base repeat group paths (e.g. sections[0].items → sections.items)
+    const basePath = path.replace(/\[\d+\]/g, '');
+    if (Array.isArray(value) && repeatGroupPaths.has(basePath)) {
+      // Repeat group — expand array elements into indexed paths
       for (let i = 0; i < value.length; i++) {
         const item = value[i];
         if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
-          Object.assign(result, flattenToSignalPaths(item as Record<string, unknown>, `${path}[${i}]`));
+          Object.assign(result, flattenToSignalPaths(item as Record<string, unknown>, repeatGroupPaths, `${path}[${i}]`));
         } else {
           result[`${path}[${i}]`] = item;
         }
       }
+    } else if (Array.isArray(value)) {
+      // Non-repeat-group array (e.g. multichoice) — pass through as-is
+      result[path] = value;
     } else if (value !== null && typeof value === 'object') {
-      Object.assign(result, flattenToSignalPaths(value as Record<string, unknown>, path));
+      Object.assign(result, flattenToSignalPaths(value as Record<string, unknown>, repeatGroupPaths, path));
     } else {
       result[path] = value;
     }
@@ -42,6 +57,13 @@ function flattenToSignalPaths(data: Record<string, unknown>, prefix = ''): Recor
  * signals, then sets all values.
  */
 function loadDataIntoEngine(engine: FormEngine, data: Record<string, unknown>): void {
+  // Derive repeat group paths from the engine's initialized repeat signals.
+  // Strip indices so nested repeat groups match during recursive flattening
+  // (engine stores "sections[0].items" but nested data arrives as "sections.items").
+  const repeatGroupPaths = new Set(
+    Object.keys(engine.repeats).map(k => k.replace(/\[\d+\]/g, '')),
+  );
+
   // Separate already-flat signal paths (contain dots or brackets) from nested objects/arrays.
   let flatData = data;
   const hasNestedValues = Object.values(data).some(
@@ -57,7 +79,7 @@ function loadDataIntoEngine(engine: FormEngine, data: Record<string, unknown>): 
         flat[key] = value;
       }
     }
-    flatData = { ...flat, ...flattenToSignalPaths(nested) };
+    flatData = { ...flat, ...flattenToSignalPaths(nested, repeatGroupPaths) };
   }
 
   // Determine required repeat instance counts from indexed paths.
@@ -138,7 +160,7 @@ export function previewForm(
   hiddenFields: { path: string; hiddenBy?: string }[];
   currentValues: Record<string, unknown>;
   requiredFields: string[];
-  pages: { id: string; title: string; status: 'active' | 'complete' | 'incomplete' | 'unreachable' }[];
+  pages: { id: string; title: string; validationErrors: number; validationWarnings: number; status: 'active' | 'complete' | 'incomplete' | 'unreachable' }[];
   validationState: Record<string, { severity: 'error' | 'warning' | 'info'; message: string }>;
 } {
   const bundle = project.export();
@@ -214,12 +236,36 @@ export function previewForm(
     cleanState[path] = { severity: entry.severity, message: entry.message };
   }
 
-  // Pages from theme
-  const pages = (bundle.theme?.pages ?? []).map((p: any) => ({
-    id: p.id,
-    title: p.title ?? '',
-    status: 'active' as const,
-  }));
+  // Pages from theme — with per-page validation counts
+  const themePages = bundle.theme?.pages ?? [];
+  const visibleFieldSet = new Set(visibleFields);
+  const pages = (themePages as any[]).map((p: any) => {
+    // Collect group paths owned by this page via its regions
+    const regionKeys: string[] = (p.regions ?? [])
+      .map((r: any) => r.key)
+      .filter(Boolean);
+
+    // Count validation entries whose path falls under one of this page's groups
+    // and whose field is visible (not hidden by a show_when condition)
+    let errors = 0;
+    let warnings = 0;
+    for (const [fieldPath, entry] of Object.entries(cleanState)) {
+      if (!regionKeys.some(rk => fieldPath === rk || fieldPath.startsWith(rk + '.') || fieldPath.startsWith(rk + '['))) {
+        continue;
+      }
+      if (!visibleFieldSet.has(fieldPath)) continue;
+      if (entry.severity === 'error') errors++;
+      else if (entry.severity === 'warning') warnings++;
+    }
+
+    return {
+      id: p.id,
+      title: p.title ?? '',
+      validationErrors: errors,
+      validationWarnings: warnings,
+      status: 'active' as const,
+    };
+  });
 
   return {
     visibleFields,

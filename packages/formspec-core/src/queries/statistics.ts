@@ -39,6 +39,9 @@ export function statistics(state: ProjectState): ProjectStatistics {
 
   const mappingRules = (state.mapping.rules as unknown[] | undefined) ?? [];
 
+  const screener = def.screener;
+  const screenerActive = screener && screener.enabled !== false;
+
   return {
     fieldCount,
     groupCount,
@@ -50,5 +53,7 @@ export function statistics(state: ProjectState): ProjectStatistics {
     expressionCount,
     componentNodeCount,
     mappingRuleCount: mappingRules.length,
+    screenerFieldCount: screenerActive ? screener.items.length : 0,
+    screenerRouteCount: screenerActive ? screener.routes.length : 0,
   };
 }

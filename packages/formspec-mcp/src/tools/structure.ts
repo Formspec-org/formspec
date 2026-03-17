@@ -324,7 +324,7 @@ export function handleEdit(
         case 'rename':
           return project!.renameItem(path, item.new_key as string);
         case 'copy':
-          return project!.copyItem(path, item.deep as boolean | undefined);
+          return project!.copyItem(path, item.deep as boolean | undefined, item.target_path as string | undefined);
         default:
           throw new HelperError('INVALID_ACTION', `Unknown edit action: ${itemAction}`);
       }
@@ -340,7 +340,7 @@ export function handleEdit(
       case 'rename':
         return project.renameItem(params.path!, params.new_key!);
       case 'copy':
-        return project.copyItem(params.path!, params.deep);
+        return project.copyItem(params.path!, params.deep, params.target_path);
       default:
         throw new HelperError('INVALID_ACTION', `Unknown edit action: ${action}`);
     }

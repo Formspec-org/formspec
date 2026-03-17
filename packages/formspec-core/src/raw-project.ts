@@ -237,7 +237,8 @@ export class RawProject implements IProjectCore {
 
   export(): ProjectBundle {
     const url = this._state.definition.url;
-    const { tree, ...restComponent } = this._state.component;
+    const effectiveComponent = getCurrentComponentDocument(this._state);
+    const { tree, 'x-studio-generated': _, ...restComponent } = effectiveComponent as Record<string, unknown>;
     const { targetDefinition: themeTarget, ...restTheme } = this._state.theme;
     const { rules, targetSchema, definitionRef, definitionVersion, ...restMapping } = this._state.mapping;
     return structuredClone({

@@ -11,6 +11,7 @@ import {
 } from 'formspec-engine';
 import { getCurrentComponentDocument } from '../component-documents.js';
 import { allExpressions } from './expression-index.js';
+import { dependencyGraph } from './dependency-graph.js';
 import { flattenItems } from './versioning.js';
 import type { ProjectState, Diagnostic, Diagnostics } from '../types.js';
 
@@ -80,6 +81,23 @@ export function diagnose(state: ProjectState, schemaValidator?: SchemaValidator)
     }
   }
   log('expressions pass done');
+
+  // Dependency cycle detection
+  log('dependency cycles...');
+  const graph = dependencyGraph(state);
+  for (const cycle of graph.cycles) {
+    // Self-edges (length-1 cycles) are normal: a constraint like $age >= 18
+    // on field "age" references itself for validation — not a real cycle.
+    if (cycle.length <= 1) continue;
+    consistency.push({
+      artifact: 'definition',
+      path: cycle.join(' -> '),
+      severity: 'error',
+      code: 'CIRCULAR_DEPENDENCY',
+      message: `Circular dependency detected: ${cycle.join(' -> ')} -> ${cycle[0]}`,
+    });
+  }
+  log(`dependency cycles done (${graph.cycles.length} cycles)`);
 
   // Extension diagnostics
   log('extensions...');

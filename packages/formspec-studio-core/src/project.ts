@@ -1,6 +1,6 @@
 import { createRawProject } from 'formspec-core';
 // Internal-only core types — never appear in public method signatures
-import type { IProjectCore, AnyCommand, CommandResult, FELParseContext, FELParseResult, FELReferenceSet, FELFunctionEntry, FieldDependents, ItemFilter, ItemSearchResult } from 'formspec-core';
+import type { IProjectCore, AnyCommand, CommandResult, FELParseContext, FELParseResult, FELReferenceSet, FELFunctionEntry, FieldDependents, ItemFilter, ItemSearchResult, Change, FormspecChangelog } from 'formspec-core';
 // Studio-core's own type vocabulary for the public API
 import type {
   FormItem, FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
@@ -26,7 +26,7 @@ import {
   type MetadataChanges,
 } from './helper-types.js';
 import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
-import { rewriteFELReferences } from 'formspec-engine';
+import { rewriteFELReferences, analyzeFEL } from 'formspec-engine';
 
 /**
  * Behavior-driven authoring API for Formspec.
@@ -73,6 +73,8 @@ export class Project {
   availableReferences(context?: string | FELParseContext): FELReferenceSet { return this.core.availableReferences(context); }
   expressionDependencies(expression: string): string[] { return this.core.expressionDependencies(expression); }
   fieldDependents(fieldPath: string): FieldDependents { return this.core.fieldDependents(fieldPath); }
+  diffFromBaseline(fromVersion?: string): Change[] { return this.core.diffFromBaseline(fromVersion); }
+  previewChangelog(): FormspecChangelog { return this.core.previewChangelog(); }
 
   // ── Layout node movement ────────────────────────────────────
 
@@ -216,6 +218,13 @@ export class Project {
     });
   }
 
+  /** Validate that `path` refers to an existing main-form item. Throws PATH_NOT_FOUND otherwise. */
+  private _requireItemPath(path: string): void {
+    if (!this.core.itemAt(path)) {
+      this._throwPathNotFound(path);
+    }
+  }
+
   /** Resolve a page ID to its primary definition group path (from theme regions). */
   private _resolvePageGroup(pageId: string): string | undefined {
     const pages = (this.core.state.theme.pages ?? []) as Array<{ id: string; regions?: Array<{ key?: string }> }>;
@@ -225,6 +234,32 @@ export class Project {
     if (!groupKey) return undefined;
     const item = this.core.itemAt(groupKey);
     return item?.type === 'group' ? groupKey : undefined;
+  }
+
+  /**
+   * Unified path resolution for addField/addGroup/addContent.
+   *
+   * - When `parentPath` is given, `path` is treated as relative: split on dots,
+   *   last segment = key, preceding segments prepended to parentPath.
+   * - When `parentPath` is NOT given, `path` is split on dots: last = key,
+   *   preceding = parentPath.
+   */
+  private _resolvePath(path: string, parentPath?: string): { key: string; parentPath?: string; fullPath: string } {
+    const segments = path.split('.');
+    const key = segments.pop()!;
+    const relativeParts = segments; // everything before the last dot
+
+    let effectiveParent: string | undefined;
+    if (parentPath) {
+      effectiveParent = relativeParts.length > 0
+        ? `${parentPath}.${relativeParts.join('.')}`
+        : parentPath;
+    } else {
+      effectiveParent = relativeParts.length > 0 ? relativeParts.join('.') : undefined;
+    }
+
+    const fullPath = effectiveParent ? `${effectiveParent}.${key}` : key;
+    return { key, parentPath: effectiveParent, fullPath };
   }
 
   // ── Authoring methods ──
@@ -263,23 +298,12 @@ export class Project {
     }
 
     // Auto-resolve page to parentPath when not already nested
-    let parentPath = props?.parentPath;
-    if (!parentPath && props?.page && !path.includes('.')) {
-      parentPath = this._resolvePageGroup(props.page);
+    let baseParent = props?.parentPath;
+    if (!baseParent && props?.page && !path.includes('.')) {
+      baseParent = this._resolvePageGroup(props.page);
     }
 
-    // Parse path: last segment = key, preceding = parentPath
-    let key: string;
-    if (parentPath) {
-      key = path;
-    } else {
-      const segments = path.split('.');
-      key = segments.pop()!;
-      parentPath = segments.length > 0 ? segments.join('.') : undefined;
-    }
-
-    // Compute the full path for bind operations
-    const fullPath = parentPath ? `${parentPath}.${key}` : key;
+    const { key, parentPath, fullPath } = this._resolvePath(path, baseParent);
 
     // Check for duplicate key
     if (this.core.itemAt(fullPath)) {
@@ -416,17 +440,24 @@ export class Project {
 
   /** Add a group/section container. */
   addGroup(path: string, label: string, props?: GroupProps): HelperResult {
-    // Parse path: parentPath prop takes precedence over dot-path parsing
-    let parentPath = props?.parentPath;
-    let key: string;
-    if (parentPath) {
-      key = path;
-    } else {
-      const segments = path.split('.');
-      key = segments.pop()!;
-      parentPath = segments.length > 0 ? segments.join('.') : undefined;
+    // Page validation
+    if (props?.page) {
+      const pages = this.core.state.theme.pages;
+      const pageExists = pages?.some((p: any) => p.id === props.page);
+      if (!pageExists) {
+        throw new HelperError('PAGE_NOT_FOUND', `Page "${props.page}" does not exist`, {
+          pageId: props.page,
+        });
+      }
     }
-    const fullPath = parentPath ? `${parentPath}.${key}` : key;
+
+    // Auto-resolve page to parentPath when not already nested
+    let baseParent = props?.parentPath;
+    if (!baseParent && props?.page && !path.includes('.')) {
+      baseParent = this._resolvePageGroup(props.page);
+    }
+
+    const { key, parentPath, fullPath } = this._resolvePath(path, baseParent);
 
     if (this.core.itemAt(fullPath)) {
       throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
@@ -478,23 +509,6 @@ export class Project {
     };
     const widgetHint = kindToHint[kind ?? 'paragraph'] ?? 'paragraph';
 
-    // Auto-resolve page to parentPath when not already nested
-    let parentPath = props?.parentPath;
-    if (!parentPath && props?.page && !path.includes('.')) {
-      parentPath = this._resolvePageGroup(props.page);
-    }
-
-    // Parse path: last segment = key, preceding = parentPath
-    let key: string;
-    if (parentPath) {
-      key = path;
-    } else {
-      const segments = path.split('.');
-      key = segments.pop()!;
-      parentPath = segments.length > 0 ? segments.join('.') : undefined;
-    }
-    const fullPath = parentPath ? `${parentPath}.${key}` : key;
-
     if (props?.page) {
       const pages = this.core.state.theme.pages;
       const pageExists = pages?.some((p: any) => p.id === props.page);
@@ -504,6 +518,14 @@ export class Project {
         });
       }
     }
+
+    // Auto-resolve page to parentPath when not already nested
+    let baseParent = props?.parentPath;
+    if (!baseParent && props?.page && !path.includes('.')) {
+      baseParent = this._resolvePageGroup(props.page);
+    }
+
+    const { key, parentPath, fullPath } = this._resolvePath(path, baseParent);
 
     if (this.core.itemAt(fullPath)) {
       throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
@@ -558,6 +580,17 @@ export class Project {
     }
   }
 
+  /** Throw CIRCULAR_REFERENCE if the expression references the variable being defined. */
+  private _checkVariableSelfReference(name: string, expression: string): void {
+    const analysis = analyzeFEL(expression);
+    if (analysis.valid && analysis.variables.includes(name)) {
+      throw new HelperError('CIRCULAR_REFERENCE', `Variable "${name}" references itself`, {
+        name,
+        expression,
+      });
+    }
+  }
+
   /**
    * Normalize a shape target path by inserting `[*]` after any repeatable group
    * segments. Template paths like `expenses.receipt` become `expenses[*].receipt`
@@ -599,6 +632,7 @@ export class Project {
 
   /** Conditional visibility — dispatches definition.setBind { relevant: condition } */
   showWhen(target: string, condition: string): HelperResult {
+    this._requireItemPath(target);
     this._validateFEL(condition);
     this.core.dispatch({
       type: 'definition.setBind',
@@ -613,6 +647,7 @@ export class Project {
 
   /** Readonly condition — dispatches definition.setBind { readonly: condition } */
   readonlyWhen(target: string, condition: string): HelperResult {
+    this._requireItemPath(target);
     this._validateFEL(condition);
     this.core.dispatch({
       type: 'definition.setBind',
@@ -627,6 +662,7 @@ export class Project {
 
   /** Required rule — dispatches definition.setBind { required: condition ?? 'true()' } */
   require(target: string, condition?: string): HelperResult {
+    this._requireItemPath(target);
     const expr = condition ?? 'true';
     this._validateFEL(expr);
     this.core.dispatch({
@@ -642,6 +678,7 @@ export class Project {
 
   /** Calculated value — dispatches definition.setBind { calculate: expression } */
   calculate(target: string, expression: string): HelperResult {
+    this._requireItemPath(target);
     this._validateFEL(expression);
     this.core.dispatch({
       type: 'definition.setBind',
@@ -757,6 +794,11 @@ export class Project {
     message: string,
     options?: ValidationOptions,
   ): HelperResult {
+    // Validate target path exists (skip form-wide wildcards and repeat wildcards)
+    if (target !== '*' && target !== '#' && !target.includes('[*]')) {
+      this._requireItemPath(target);
+    }
+
     this._validateFEL(rule);
     if (options?.activeWhen) {
       this._validateFEL(options.activeWhen);
@@ -1318,27 +1360,57 @@ export class Project {
 
   // ── Copy Item ──
 
-  /** Copy a field or group — inserts clone immediately after original. */
-  copyItem(path: string, deep?: boolean): HelperResult {
+  /** Copy a field or group. If targetPath is provided, places the clone under that group. */
+  copyItem(path: string, deep?: boolean, targetPath?: string): HelperResult {
     const item = this.core.itemAt(path);
     if (!item) {
       this._throwPathNotFound(path);
     }
 
+    // Validate targetPath if provided
+    if (targetPath !== undefined) {
+      const targetItem = this.core.itemAt(targetPath);
+      if (!targetItem) {
+        throw new HelperError('PATH_NOT_FOUND', `Target path not found: ${targetPath}`);
+      }
+    }
+
+    const sourceParent = path.includes('.') ? path.slice(0, path.lastIndexOf('.')) : undefined;
+    const needsMove = targetPath !== undefined && targetPath !== sourceParent;
+    const leafKey = path.split('.').pop()!;
+    const cloneKey = this._predictCloneKey(path);
+    const clonePath = sourceParent ? `${sourceParent}.${cloneKey}` : cloneKey;
+
+    // When moving to a different parent, use original key if no collision in target
+    const finalKey = needsMove && !this._hasKeyInGroup(targetPath!, leafKey) ? leafKey : cloneKey;
+    const finalPath = needsMove ? `${targetPath}.${finalKey}` : clonePath;
+
     if (!deep) {
-      // Shallow copy — just duplicate the definition item
-      const results = this.core.dispatch({
-        type: 'definition.duplicateItem',
-        payload: { path },
-      });
-      const insertedPath = results.insertedPath ?? `${path}_copy`;
+      // Shallow copy — duplicate, then optionally move to target
+      const commands: AnyCommand[] = [
+        { type: 'definition.duplicateItem', payload: { path } },
+      ];
+
+      if (needsMove) {
+        commands.push({
+          type: 'definition.moveItem',
+          payload: { sourcePath: clonePath, targetParentPath: targetPath },
+        });
+        if (finalKey !== cloneKey) {
+          commands.push({
+            type: 'definition.renameItem',
+            payload: { path: `${targetPath}.${cloneKey}`, newKey: finalKey },
+          });
+        }
+      }
+
+      this.core.dispatch(commands);
 
       // Collect warnings about omitted binds/shapes
       const warnings: HelperWarning[] = [];
       const binds = this.core.state.definition.binds ?? [];
       const shapes = this.core.state.definition.shapes ?? [];
 
-      // Find binds targeting the original path (these are NOT copied by duplicateItem)
       const matchingBinds = binds.filter((b: any) =>
         b.path === path || b.path?.startsWith(`${path}.`),
       );
@@ -1353,7 +1425,6 @@ export class Project {
         });
       }
 
-      // Find shapes targeting the original path
       const matchingShapes = shapes.filter((s: any) =>
         s.target === path || s.target?.startsWith(`${path}.`),
       );
@@ -1365,71 +1436,39 @@ export class Project {
         });
       }
 
+      const dest = needsMove ? ` to '${targetPath}'` : '';
       return {
-        summary: `Copied '${path}' (shallow)`,
-        action: { helper: 'copyItem', params: { path, deep: false } },
-        affectedPaths: [insertedPath],
+        summary: `Copied '${path}' (shallow)${dest}`,
+        action: { helper: 'copyItem', params: { path, deep: false, ...(targetPath !== undefined ? { targetPath } : {}) } },
+        affectedPaths: [finalPath],
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     }
 
-    // Deep copy — duplicate + rewrite FEL references in binds/shapes
+    // Deep copy — duplicate + rewrite FEL references in binds/shapes, then optionally move
     const phase1: AnyCommand[] = [
       { type: 'definition.duplicateItem', payload: { path } },
     ];
 
-    // We need batchWithRebuild: phase1 duplicates, phase2 copies binds with rewritten FEL
     // Collect bind/shape data before dispatch
     const binds = this.core.state.definition.binds ?? [];
     const shapes = this.core.state.definition.shapes ?? [];
 
-    // Find binds targeting this path or descendants
     const matchingBinds = binds.filter((b: any) =>
       b.path === path || b.path?.startsWith(`${path}.`),
     );
 
-    // Find shapes targeting this path or descendants
     const matchingShapes = shapes.filter((s: any) =>
       s.target === path || s.target?.startsWith(`${path}.`),
     );
 
-    const results = this.core.batchWithRebuild(phase1, (() => {
-      // After phase1, the duplicated item's path should be available
-      // Read the inserted path from state — it's the item right after the original
-      const items = this.core.state.definition.items;
-      let insertedPath: string | undefined;
-
-      // Find the copy — it should have a key ending in _copy
-      const findCopy = (itemList: any[], parentPath?: string): string | undefined => {
-        for (const it of itemList) {
-          const fullP = parentPath ? `${parentPath}.${it.key}` : it.key;
-          if (it.key.endsWith('_copy') || it.key === `${path.split('.').pop()}_copy`) {
-            if (!parentPath && !path.includes('.')) return fullP;
-            if (parentPath === path.split('.').slice(0, -1).join('.')) return fullP;
-          }
-          if (it.children?.length) {
-            const found = findCopy(it.children, fullP);
-            if (found) return found;
-          }
-        }
-        return undefined;
-      };
-      insertedPath = findCopy(items);
-      if (!insertedPath) {
-        // Fallback: assume _copy suffix
-        const leafKey = path.split('.').pop()!;
-        const parentSegments = path.split('.').slice(0, -1);
-        insertedPath = parentSegments.length > 0
-          ? `${parentSegments.join('.')}.${leafKey}_copy`
-          : `${leafKey}_copy`;
-      }
-
-      const newPath = insertedPath;
+    this.core.batchWithRebuild(phase1, (() => {
       const phase2: AnyCommand[] = [];
 
+      // Rewrite paths to the final destination (accounts for eventual move+rename)
       const rewritePath = (p: string): string => {
-        if (p === path) return newPath;
-        if (p.startsWith(`${path}.`)) return newPath + p.slice(path.length);
+        if (p === path) return finalPath;
+        if (p.startsWith(`${path}.`)) return finalPath + p.slice(path.length);
         return p;
       };
 
@@ -1491,21 +1530,53 @@ export class Project {
         phase2.push({ type: 'definition.addShape', payload });
       }
 
+      // If relocating, add move + rename commands after FEL rewriting
+      if (needsMove) {
+        phase2.push({
+          type: 'definition.moveItem',
+          payload: { sourcePath: clonePath, targetParentPath: targetPath },
+        });
+        if (finalKey !== cloneKey) {
+          phase2.push({
+            type: 'definition.renameItem',
+            payload: { path: `${targetPath}.${cloneKey}`, newKey: finalKey },
+          });
+        }
+      }
+
       return phase2;
     })());
 
-    // Find the new item path
-    const leafKey = path.split('.').pop()!;
-    const parentSegments = path.split('.').slice(0, -1);
-    const newPath = parentSegments.length > 0
-      ? `${parentSegments.join('.')}.${leafKey}_copy`
-      : `${leafKey}_copy`;
-
+    const dest = needsMove ? ` to '${targetPath}'` : '';
     return {
-      summary: `Copied '${path}' (deep)`,
-      action: { helper: 'copyItem', params: { path, deep: true } },
-      affectedPaths: [newPath],
+      summary: `Copied '${path}' (deep)${dest}`,
+      action: { helper: 'copyItem', params: { path, deep: true, ...(targetPath !== undefined ? { targetPath } : {}) } },
+      affectedPaths: [finalPath],
     };
+  }
+
+  /** Predict the clone key that duplicateItem will generate. */
+  private _predictCloneKey(path: string): string {
+    const leafKey = path.split('.').pop()!;
+    const parentPath = path.includes('.') ? path.slice(0, path.lastIndexOf('.')) : undefined;
+    const parentItem = parentPath ? this.core.itemAt(parentPath) : undefined;
+    const siblings: any[] = parentPath
+      ? (parentItem as any)?.children ?? []
+      : this.core.state.definition.items;
+    const existingKeys = new Set(siblings.map((s: any) => s.key));
+
+    // Replicate uniqueKey logic from definition-items.ts
+    if (!existingKeys.has(leafKey)) return leafKey;
+    let suffix = 1;
+    while (existingKeys.has(`${leafKey}_${suffix}`)) suffix++;
+    return `${leafKey}_${suffix}`;
+  }
+
+  /** Check if a group already contains a child with the given key. */
+  private _hasKeyInGroup(groupPath: string, key: string): boolean {
+    const groupItem = this.core.itemAt(groupPath) as any;
+    if (!groupItem?.children) return false;
+    return groupItem.children.some((c: any) => c.key === key);
   }
 
   // ── Wrap Items In Group ──
@@ -2335,6 +2406,7 @@ export class Project {
   /** Add a named FEL variable. */
   addVariable(name: string, expression: string, scope?: string): HelperResult {
     this._validateFEL(expression);
+    this._checkVariableSelfReference(name, expression);
     const payload: Record<string, unknown> = { name, expression };
     if (scope) payload.scope = scope;
 
@@ -2356,6 +2428,7 @@ export class Project {
       });
     }
     this._validateFEL(expression);
+    this._checkVariableSelfReference(name, expression);
     this.core.dispatch({
       type: 'definition.setVariable',
       payload: { name, property: 'expression', value: expression },
@@ -2549,16 +2622,17 @@ export class Project {
   }
 
   /** Add a screener routing rule. */
-  addScreenRoute(condition: string, target: string, label?: string): HelperResult {
+  addScreenRoute(condition: string, target: string, label?: string, message?: string): HelperResult {
     this._validateFEL(condition);
     const payload: Record<string, unknown> = { condition, target };
     if (label) payload.label = label;
+    if (message) payload.message = message;
 
     this.core.dispatch({ type: 'definition.addRoute', payload });
 
     return {
       summary: `Added screen route to '${target}'`,
-      action: { helper: 'addScreenRoute', params: { condition, target, label } },
+      action: { helper: 'addScreenRoute', params: { condition, target, label, message } },
       affectedPaths: [],
     };
   }
@@ -2576,7 +2650,7 @@ export class Project {
   /** Update a screener route. */
   updateScreenRoute(
     routeIndex: number,
-    changes: { condition?: string; target?: string; label?: string },
+    changes: { condition?: string; target?: string; label?: string; message?: string },
   ): HelperResult {
     this._validateRouteIndex(routeIndex);
     if (changes.condition) this._validateFEL(changes.condition);

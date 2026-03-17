@@ -67,6 +67,61 @@ describe('statistics', () => {
     expect(stats.bindCount).toBe(1);
   });
 
+  it('reports zero screener counts when no screener exists', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'f1' } });
+
+    const stats = project.statistics();
+    expect(stats.screenerFieldCount).toBe(0);
+    expect(stats.screenerRouteCount).toBe(0);
+  });
+
+  it('reports zero screener counts when screener is disabled', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.setScreener', payload: { enabled: true } },
+      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'age', dataType: 'integer' } },
+      { type: 'definition.addRoute', payload: { condition: '$age >= 18', target: 'urn:form:adults' } },
+      { type: 'definition.setScreener', payload: { enabled: false } },
+    ]);
+
+    const stats = project.statistics();
+    expect(stats.screenerFieldCount).toBe(0);
+    expect(stats.screenerRouteCount).toBe(0);
+  });
+
+  it('counts screener fields and routes', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.setScreener', payload: { enabled: true } },
+      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'age', dataType: 'integer' } },
+      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'country', dataType: 'string' } },
+      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'language', dataType: 'choice' } },
+      { type: 'definition.addRoute', payload: { condition: '$age >= 18', target: 'urn:form:adults' } },
+      { type: 'definition.addRoute', payload: { condition: '$age < 18', target: 'urn:form:minors' } },
+    ]);
+
+    const stats = project.statistics();
+    expect(stats.screenerFieldCount).toBe(3);
+    expect(stats.screenerRouteCount).toBe(2);
+  });
+
+  it('counts screener fields separately from main form fields', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'field', key: 'name' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'email' } },
+      { type: 'definition.setScreener', payload: { enabled: true } },
+      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'eligible', dataType: 'boolean' } },
+      { type: 'definition.addRoute', payload: { condition: '$eligible = true', target: 'urn:form:main' } },
+    ]);
+
+    const stats = project.statistics();
+    expect(stats.fieldCount).toBe(2);
+    expect(stats.screenerFieldCount).toBe(1);
+    expect(stats.screenerRouteCount).toBe(1);
+  });
+
   it('reports expression, component node, and mapping rule counts', () => {
     const project = createRawProject();
     project.batch([
@@ -556,6 +611,15 @@ describe('felFunctionCatalog', () => {
     expect(countWhere!.category).toBe('aggregate');
   });
 
+  it('includes signature and description for built-in functions', () => {
+    const project = createRawProject();
+    const catalog = project.felFunctionCatalog();
+    const sum = catalog.find(f => f.name === 'sum');
+    expect(sum).toBeDefined();
+    expect(sum!.signature).toBe('sum(array) -> number');
+    expect(sum!.description).toBeTruthy();
+  });
+
   it('includes extension functions from loaded registries', () => {
     const project = createRawProject();
     project.dispatch({
@@ -738,6 +802,66 @@ describe('parseFEL', () => {
     const result = project.parseFEL('$a +');
     expect(result.valid).toBe(false);
     expect(result.errors[0].message).not.toContain('literal');
+  });
+
+  it('returns variable references from @ expressions', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addVariable', payload: { name: 'total', expression: '100' } },
+      { type: 'definition.addVariable', payload: { name: 'tax', expression: '10' } },
+    ]);
+
+    const result = project.parseFEL('@total + @tax');
+    expect(result.valid).toBe(true);
+    expect(result.variables).toContain('total');
+    expect(result.variables).toContain('tax');
+  });
+
+  it('returns empty variables array when no @ references', () => {
+    const project = createRawProject();
+    const result = project.parseFEL('$a + 1');
+    expect(result.variables).toEqual([]);
+  });
+
+  it('returns empty warnings array for valid built-in functions', () => {
+    const project = createRawProject();
+    const result = project.parseFEL('sum($items) + count($items)');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('emits FEL_UNKNOWN_FUNCTION warning for unrecognized function names', () => {
+    const project = createRawProject();
+    const result = project.parseFEL("sumWhere($x, $y, 'z')");
+    expect(result.valid).toBe(true); // warnings don't invalidate
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0].code).toBe('FEL_UNKNOWN_FUNCTION');
+    expect(result.warnings[0].severity).toBe('warning');
+    expect(result.warnings[0].message).toContain('sumWhere');
+  });
+
+  it('does not warn for extension-registered functions', () => {
+    const project = createRawProject();
+    project.dispatch({
+      type: 'project.loadRegistry',
+      payload: {
+        registry: {
+          url: 'urn:test',
+          entries: [
+            { name: 'customCalc', category: 'function', status: 'stable' },
+          ],
+        },
+      },
+    });
+
+    const result = project.parseFEL('customCalc($x)');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('does not emit function warnings for parse-invalid expressions', () => {
+    const project = createRawProject();
+    const result = project.parseFEL('bogusFunc($a +');
+    expect(result.valid).toBe(false);
+    expect(result.warnings).toEqual([]);
   });
 });
 
@@ -940,5 +1064,50 @@ describe('export', () => {
 
     bundle.definition.title = 'Mutated';
     expect(project.definition.title).not.toBe('Mutated');
+  });
+
+  it('exports the effective component tree for MCP-built forms (no authored tree)', () => {
+    const project = createRawProject();
+    // Simulate MCP-style form building: add fields via dispatch, never providing an authored component
+    project.dispatch({ type: 'definition.addItem', payload: { item: { type: 'string', name: 'first_name', label: 'First Name' } } });
+    project.dispatch({ type: 'definition.addItem', payload: { item: { type: 'string', name: 'last_name', label: 'Last Name' } } });
+
+    const bundle = project.export();
+
+    // The generated tree should be present, not null
+    expect(bundle.component.tree).not.toBeNull();
+    expect(bundle.component.tree).toBeDefined();
+  });
+
+  it('exports the authored component tree when one is present', () => {
+    const authoredTree = { type: 'Stack', children: [{ type: 'TextField', ref: 'name' }] };
+    const project = createRawProject({
+      seed: {
+        component: {
+          $formspecComponent: '1.0',
+          version: '0.1.0',
+          targetDefinition: { url: 'urn:test:authored' },
+          tree: authoredTree as any,
+        },
+      },
+    });
+
+    const bundle = project.export();
+
+    expect(bundle.component.tree).toBeDefined();
+    expect((bundle.component.tree as any).type).toBe('Stack');
+  });
+
+  it('strips x-studio-generated marker from exported component', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.addItem', payload: { item: { type: 'string', name: 'email', label: 'Email' } } });
+
+    // Confirm generated component has the marker internally
+    expect((project.generatedComponent as any)['x-studio-generated']).toBe(true);
+
+    const bundle = project.export();
+
+    // Exported bundle should not leak internal marker
+    expect((bundle.component as any)['x-studio-generated']).toBeUndefined();
   });
 });

@@ -48,7 +48,7 @@ const fieldPropsSchema = z.object({
 const fieldItemSchema = z.object({
   path: z.string().describe('Item path (e.g., "name", "contact.email", "items[0].amount")'),
   label: z.string(),
-  type: z.string().describe('Data type: "string" (single-line text), "text" (multi-line textarea), "integer", "decimal", "boolean", "date", "choice". Also accepts aliases: "number" (-> decimal), "email"/"phone" (-> string + validation), "url" (-> uri), "money"/"currency", "file" (-> attachment), "multichoice", "rating" (-> integer + Rating widget), "slider" (-> decimal + Slider widget)'),
+  type: z.string().describe('Data type: "string" (single-line text), "text" (multi-line textarea), "integer", "decimal", "boolean", "date", "choice". Also accepts aliases: "number" (-> decimal), "email"/"phone" (-> string + validation), "url" (-> uri), "money"/"currency", "file" (-> attachment), "multichoice", "rating" (-> integer + Rating widget), "slider" (-> decimal + Slider widget). For "date" fields, use initialValue: "=today()" to auto-populate with today\'s date'),
   props: fieldPropsSchema.optional(),
 });
 
@@ -78,7 +78,7 @@ const groupItemSchema = z.object({
 });
 
 const behaviorItemSchema = z.object({
-  action: z.enum(['show_when', 'readonly_when', 'require', 'calculate', 'add_rule']),
+  action: z.enum(['show_when', 'readonly_when', 'require', 'calculate', 'add_rule', 'remove_rule']),
   target: z.string().describe('Field path to apply behavior to'),
   condition: z.string().optional().describe('FEL condition (for show_when, readonly_when, require)'),
   expression: z.string().optional().describe('FEL expression (for calculate)'),
@@ -276,7 +276,7 @@ export async function main() {
       // Single item
       path: z.string().optional().describe('Item path (e.g., "name", "contact.email", "items[0].amount")'),
       label: z.string().optional(),
-      type: z.string().optional().describe('Data type: "string" (single-line text), "text" (multi-line textarea), "integer", "decimal", "boolean", "date", "choice". Also accepts aliases: "number" (-> decimal), "email"/"phone" (-> string + validation), "url" (-> uri), "money"/"currency", "file" (-> attachment), "multichoice", "rating" (-> integer + Rating widget), "slider" (-> decimal + Slider widget)'),
+      type: z.string().optional().describe('Data type: "string" (single-line text), "text" (multi-line textarea), "integer", "decimal", "boolean", "date", "choice". Also accepts aliases: "number" (-> decimal), "email"/"phone" (-> string + validation), "url" (-> uri), "money"/"currency", "file" (-> attachment), "multichoice", "rating" (-> integer + Rating widget), "slider" (-> decimal + Slider widget). For "date" fields, use initialValue: "=today()" to auto-populate with today\'s date'),
       props: fieldPropsSchema.optional(),
       // Batch
       items: z.array(fieldItemSchema).optional().describe('Batch: array of field definitions to add'),
@@ -450,11 +450,11 @@ export async function main() {
 
   server.registerTool('formspec_behavior', {
     title: 'Behavior',
-    description: 'Set field logic: visibility conditions, readonly conditions, required state, calculated values, and validation rules. Supports batch via items[] array.\n\nActions:\n- show_when: Show item when FEL condition is true\n- readonly_when: Make field readonly when condition is true\n- require: Mark field as required (optionally conditional). Note: formspec_field props.required=true is shorthand for unconditional require — do not use both\n- calculate: Bind a computed FEL value directly to a field. For reusable named values across multiple fields, use formspec_data(variable) instead.\n- add_rule: Add validation constraint with message\n\nPath conventions: target uses authoring dot notation ("contact.email"). FEL expressions use $-prefix ("$contact.email"), variables use @-prefix ("@total"). "true" and "false" are literals, not functions — use "$field = true", not "$field = true()".',
+    description: 'Set field logic: visibility conditions, readonly conditions, required state, calculated values, and validation rules. Supports batch via items[] array.\n\nActions:\n- show_when: Show item when FEL condition is true\n- readonly_when: Make field readonly when condition is true\n- require: Mark field as required (optionally conditional). Note: formspec_field props.required=true is shorthand for unconditional require — do not use both. Required validation is automatically suppressed for non-relevant (hidden) fields, so you do NOT need to duplicate show_when conditions on require — just hide the parent/field and required is skipped automatically.\n- calculate: Bind a computed FEL value directly to a field. For reusable named values across multiple fields, use formspec_data(variable) instead. Common FEL functions: today(), dateDiff(laterDate, earlierDate, unit) where unit is "years"/"months"/"days" — argument order is later date first for positive results.\n- add_rule: Add validation constraint with message\n- remove_rule: Remove a validation rule by its shape ID (returned as createdId from add_rule)\n\nPath conventions: target uses authoring dot notation ("contact.email"). FEL expressions use $-prefix ("$contact.email"), variables use @-prefix ("@total"). "true" and "false" are literals, not functions — use "$field = true", not "$field = true()".',
     inputSchema: {
       project_id: z.string(),
       // Single item
-      action: z.enum(['show_when', 'readonly_when', 'require', 'calculate', 'add_rule']).optional().describe('Behavior type'),
+      action: z.enum(['show_when', 'readonly_when', 'require', 'calculate', 'add_rule', 'remove_rule']).optional().describe('Behavior type'),
       target: z.string().optional().describe('Field path (e.g., "email", "contact.phone")'),
       condition: z.string().optional().describe('FEL condition (for show_when, readonly_when, require)'),
       expression: z.string().optional().describe('FEL expression (for calculate)'),
@@ -595,18 +595,20 @@ export async function main() {
       // routes
       condition: z.string().optional().describe('FEL condition (for add_route)'),
       target: z.string().optional().describe('Route target (for add_route)'),
+      message: z.string().optional().describe('Rejection message shown to screened-out respondents (for add_route)'),
       route_index: z.number().optional().describe('Route index (for update_route, reorder_route, remove_route)'),
       changes: z.object({
         condition: z.string(),
         target: z.string(),
         label: z.string(),
+        message: z.string(),
       }).partial().optional().describe('Route changes (for update_route)'),
       direction: z.enum(['up', 'down']).optional().describe('Reorder direction (for reorder_route)'),
     },
     annotations: DESTRUCTIVE,
-  }, async ({ project_id, action, enabled, key, label, type, props, condition, target, route_index, changes, direction }) => {
+  }, async ({ project_id, action, enabled, key, label, type, props, condition, target, message, route_index, changes, direction }) => {
     return handleScreener(registry, project_id, {
-      action, enabled, key, label, type, props, condition, target, route_index, changes, direction,
+      action, enabled, key, label, type, props, condition, target, message, route_index, changes, direction,
     });
   });
 

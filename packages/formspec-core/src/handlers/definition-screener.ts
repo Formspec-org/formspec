@@ -106,11 +106,12 @@ export const definitionScreenerHandlers: Record<string, CommandHandler> = {
   },
 
   'definition.addRoute': (state, payload) => {
-    const p = payload as { condition: string; target: string; label?: string; insertIndex?: number };
+    const p = payload as { condition: string; target: string; label?: string; message?: string; insertIndex?: number };
     const screener = getEnabledScreener(state);
 
     const route: any = { condition: p.condition, target: p.target };
     if (p.label) route.label = p.label;
+    if (p.message) route.message = p.message;
 
     if (p.insertIndex !== undefined) {
       screener.routes.splice(p.insertIndex, 0, route);

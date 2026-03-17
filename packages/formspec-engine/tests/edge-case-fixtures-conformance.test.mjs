@@ -41,7 +41,9 @@ test('shared microgrant fixture separates field-local bind failures from cross-f
   assert.ok(bindError);
   assert.equal(bindError.constraintKind, 'constraint');
   assert.ok(shapeIds.has('microgrant-contact-channel'));
-  assert.ok(shapeIds.has('microgrant-subaward-cap'));
+  // microgrant-subaward-cap cannot fire when @instance('grantRules').subawardCapPercent
+  // resolves to null — the constraint evaluates to null, which passes per spec §3.8.1.
+  assert.ok(!shapeIds.has('microgrant-subaward-cap'));
 });
 
 test('shared clinical fixture keeps field-local requiredness in binds and chronology in shapes', () => {

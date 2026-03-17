@@ -918,6 +918,56 @@ describe('copyItem', () => {
     // The new field's path should exist
     expect(result.affectedPaths[0]).toBeDefined();
   });
+
+  it('shallow copy to targetPath places clone under target group', () => {
+    const project = createProject();
+    project.addGroup('individual', 'Individual');
+    project.addField('individual.phone', 'Phone', 'text');
+    project.addGroup('business', 'Business');
+
+    const result = project.copyItem('individual.phone', false, 'business');
+    expect(result.affectedPaths[0]).toBe('business.phone');
+    // Verify the item is actually under the business group
+    const bizGroup = project.itemAt('business') as any;
+    expect(bizGroup.children?.some((c: any) => c.key === 'phone')).toBe(true);
+    // Original still in place
+    expect(project.itemAt('individual.phone')).toBeDefined();
+  });
+
+  it('deep copy to targetPath places clone under target group', () => {
+    const project = createProject();
+    project.addGroup('individual', 'Individual');
+    project.addField('individual.phone', 'Phone', 'text');
+    project.require('individual.phone');
+    project.addGroup('business', 'Business');
+
+    const result = project.copyItem('individual.phone', true, 'business');
+    expect(result.affectedPaths[0]).toBe('business.phone');
+    // Verify bind was copied to new path
+    const copyBind = project.bindFor('business.phone');
+    expect(copyBind?.required).toBe('true');
+  });
+
+  it('copy to nonexistent targetPath throws PATH_NOT_FOUND', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    expect(() => project.copyItem('name', false, 'nonexistent')).toThrow(HelperError);
+    try { project.copyItem('name', false, 'nonexistent'); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+
+  it('copy to same parent behaves as sibling copy', () => {
+    const project = createProject();
+    project.addGroup('contact', 'Contact');
+    project.addField('contact.email', 'Email', 'text');
+
+    const result = project.copyItem('contact.email', false, 'contact');
+    // Should still be under contact, just with a suffixed key
+    expect(result.affectedPaths[0]).toMatch(/^contact\./);
+    const group = project.itemAt('contact') as any;
+    expect(group.children.length).toBe(2);
+  });
 });
 
 // ── Wrap Items In Group ──
@@ -1379,6 +1429,16 @@ describe('addScreenRoute', () => {
     const result = project.addScreenRoute('age >= 18', 'https://form.example.com', 'Adults');
     expect(result.summary).toContain('route');
   });
+
+  it('stores a rejection message on the route', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenField('age', 'How old?', 'integer');
+    project.addScreenRoute('age < 18', 'https://reject.example.com', 'Minors', 'You must be 18 or older to participate.');
+    const route = project.definition.screener.routes[0];
+    expect(route.message).toBe('You must be 18 or older to participate.');
+    expect(route.label).toBe('Minors');
+  });
 });
 
 describe('updateScreenRoute', () => {
@@ -1390,6 +1450,16 @@ describe('updateScreenRoute', () => {
     project.updateScreenRoute(0, { condition: 'age >= 21' });
     // Route should still exist
     expect(project.definition.screener.routes).toHaveLength(1);
+  });
+
+  it('updates a route message', () => {
+    const project = createProject();
+    project.setScreener(true);
+    project.addScreenField('age', 'How old?', 'integer');
+    project.addScreenRoute('age >= 18', 'https://example.com');
+    project.updateScreenRoute(0, { message: 'Sorry, you do not qualify.' });
+    const route = project.definition.screener.routes[0];
+    expect(route.message).toBe('Sorry, you do not qualify.');
   });
 });
 
@@ -1849,8 +1919,8 @@ describe('copyItem deep shapes with new IDs', () => {
     expect(copyShape).toBeDefined();
     // The copy should have a DIFFERENT id
     expect(copyShape!.id).not.toBe(originalShapeId);
-    // The copy should target the copy path
-    expect((copyShape as any).target).toBe('score_copy');
+    // The copy should target the copy path (uniqueKey produces score_1)
+    expect((copyShape as any).target).toBe('score_1');
   });
 });
 
@@ -2303,6 +2373,95 @@ describe('ROUTE_OUT_OF_BOUNDS pre-validation', () => {
   });
 });
 
+// ── S3: Bind helper path validation ──
+
+describe('bind helpers reject nonexistent target paths', () => {
+  it('showWhen throws PATH_NOT_FOUND for nonexistent target', () => {
+    const project = createProject();
+    project.addField('toggle', 'Toggle', 'boolean');
+    expect(() => project.showWhen('nonexistent.field', '$toggle = true')).toThrow(HelperError);
+    try { project.showWhen('nonexistent.field', '$toggle = true'); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+
+  it('readonlyWhen throws PATH_NOT_FOUND for nonexistent target', () => {
+    const project = createProject();
+    expect(() => project.readonlyWhen('ghost', 'true')).toThrow(HelperError);
+    try { project.readonlyWhen('ghost', 'true'); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+
+  it('require throws PATH_NOT_FOUND for nonexistent target', () => {
+    const project = createProject();
+    expect(() => project.require('missing_field')).toThrow(HelperError);
+    try { project.require('missing_field'); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+
+  it('calculate throws PATH_NOT_FOUND for nonexistent target', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    expect(() => project.calculate('nope', '$a + 1')).toThrow(HelperError);
+    try { project.calculate('nope', '$a + 1'); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+
+  it('addValidation throws PATH_NOT_FOUND for nonexistent non-wildcard target', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    expect(() => project.addValidation('bogus_field', '$a > 0', 'Positive')).toThrow(HelperError);
+    try { project.addValidation('bogus_field', '$a > 0', 'Positive'); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+
+  it('addValidation throws PATH_NOT_FOUND for screener-only field', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.setScreener(true);
+    project.addScreenField('age', 'Age', 'integer');
+    // 'age' exists only in the screener — not in the main form tree
+    expect(() => project.addValidation('age', '$age > 0', 'Must be positive')).toThrow(HelperError);
+    try { project.addValidation('age', '$age > 0', 'Must be positive'); } catch (e) {
+      expect((e as HelperError).code).toBe('PATH_NOT_FOUND');
+    }
+  });
+
+  it('addValidation allows wildcard targets (* and #)', () => {
+    const project = createProject();
+    project.addField('a', 'A', 'integer');
+    // These should NOT throw
+    expect(() => project.addValidation('*', '$a > 0', 'Positive')).not.toThrow();
+    expect(() => project.addValidation('#', '$a > 0', 'Positive')).not.toThrow();
+  });
+
+  it('addValidation allows paths containing [*] wildcards', () => {
+    const project = createProject();
+    project.addGroup('items', 'Items', { repeat: { min: 1, max: 5 } });
+    project.addField('items.amount', 'Amount', 'decimal');
+    // Wildcard shape target — should not throw
+    expect(() => project.addValidation('items[*].amount', '$items[*].amount > 0', 'Positive')).not.toThrow();
+  });
+
+  it('bind helpers still work with valid existing targets (regression)', () => {
+    const project = createProject();
+    project.addField('toggle', 'Toggle', 'boolean');
+    project.addField('name', 'Name', 'text');
+    project.addField('total', 'Total', 'integer');
+
+    // All should succeed without throwing
+    expect(() => project.showWhen('name', '$toggle = true')).not.toThrow();
+    expect(() => project.readonlyWhen('name', 'true')).not.toThrow();
+    expect(() => project.require('name')).not.toThrow();
+    expect(() => project.calculate('total', '42')).not.toThrow();
+    expect(() => project.addValidation('name', 'string-length($name) > 0', 'Required')).not.toThrow();
+  });
+});
+
 describe('ROUTE_MIN_COUNT pre-validation', () => {
   it('removeScreenRoute throws when trying to delete the last route', () => {
     const project = createProject();
@@ -2384,5 +2543,47 @@ describe('renamePage', () => {
     const pages = project.theme.pages ?? [];
     expect(pages.find((p: any) => p.id === 'new-id')).toBeDefined();
     expect(pages.find((p: any) => p.id === createdId)).toBeUndefined();
+  });
+});
+
+// ── CIRCULAR_REFERENCE pre-validation ──
+
+describe('CIRCULAR_REFERENCE pre-validation', () => {
+  it('addVariable throws for direct self-reference', () => {
+    const project = createProject();
+    try {
+      project.addVariable('x', '@x + 1');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('CIRCULAR_REFERENCE');
+    }
+  });
+
+  it('updateVariable throws for direct self-reference', () => {
+    const project = createProject();
+    project.addVariable('x', '42');
+    try {
+      project.updateVariable('x', '@x + 1');
+      expect.unreachable('should throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(HelperError);
+      expect((e as HelperError).code).toBe('CIRCULAR_REFERENCE');
+    }
+  });
+
+  it('allows variable referencing a different variable', () => {
+    const project = createProject();
+    project.addVariable('y', '10');
+    project.addVariable('x', '@y + 1');
+    expect(project.variableNames()).toContain('x');
+  });
+
+  it('field ref $x does not trigger circular check for variable named x', () => {
+    const project = createProject();
+    project.addField('x', 'X', 'integer');
+    // $x is a field reference, not a variable reference — should not trigger
+    project.addVariable('x', '$x + 1');
+    expect(project.variableNames()).toContain('x');
   });
 });

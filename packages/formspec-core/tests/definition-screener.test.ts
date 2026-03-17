@@ -161,6 +161,36 @@ describe('definition.addRoute', () => {
     expect(project.definition.screener!.routes[0].label).toBe('Adult');
   });
 
+  it('stores a rejection message on a route', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+
+    project.dispatch({
+      type: 'definition.addRoute',
+      payload: {
+        condition: '$age < 18',
+        target: 'urn:formspec:reject',
+        message: 'Thank you for your interest. This study requires participants aged 18 or older.',
+      },
+    });
+
+    expect(project.definition.screener!.routes[0].message).toBe(
+      'Thank you for your interest. This study requires participants aged 18 or older.',
+    );
+  });
+
+  it('omits message when not provided', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+
+    project.dispatch({
+      type: 'definition.addRoute',
+      payload: { condition: '$x', target: 'urn:x' },
+    });
+
+    expect(project.definition.screener!.routes[0].message).toBeUndefined();
+  });
+
   it('inserts at a specific index', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
@@ -197,6 +227,22 @@ describe('definition.setRouteProperty', () => {
     });
 
     expect(project.definition.screener!.routes[0].label).toBe('Updated Label');
+  });
+
+  it('updates a route message', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({
+      type: 'definition.addRoute',
+      payload: { condition: '$x', target: 'urn:x', message: 'Original' },
+    });
+
+    project.dispatch({
+      type: 'definition.setRouteProperty',
+      payload: { index: 0, property: 'message', value: 'Updated rejection message' },
+    });
+
+    expect(project.definition.screener!.routes[0].message).toBe('Updated rejection message');
   });
 });
 

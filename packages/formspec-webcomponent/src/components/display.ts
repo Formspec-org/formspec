@@ -61,14 +61,24 @@ function renderMarkdown(src: string): string {
     return result;
 }
 
-/** Renders an `<h1>`-`<h6>` heading element based on the `level` prop (defaults to h1). */
+/** Renders an `<h1>`-`<h6>` heading element based on the `level` prop (defaults to h1).
+ *  When `bind` is set, subscribes to the field signal and reactively updates the text. */
 export const HeadingPlugin: ComponentPlugin = {
     type: 'Heading',
     render: (comp, parent, ctx) => {
         const el = document.createElement(`h${comp.level || 1}`);
         if (comp.id) el.id = comp.id;
         el.className = 'formspec-heading';
-        el.textContent = comp.text || '';
+        if (comp.bind) {
+            const itemFullName = ctx.prefix ? `${ctx.prefix}.${comp.bind}` : comp.bind;
+            ctx.cleanupFns.push(effect(() => {
+                const sig = ctx.engine.signals[itemFullName] ?? ctx.engine.variableSignals?.[`#:${comp.bind}`];
+                const v = sig?.value;
+                el.textContent = v != null ? String(v) : '';
+            }));
+        } else {
+            el.textContent = comp.text || '';
+        }
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
@@ -184,7 +194,16 @@ export const AlertPlugin: ComponentPlugin = {
             el.appendChild(closeBtn);
         }
         const textSpan = document.createElement('span');
-        textSpan.textContent = comp.text || '';
+        if (comp.bind) {
+            const itemFullName = ctx.prefix ? `${ctx.prefix}.${comp.bind}` : comp.bind;
+            ctx.cleanupFns.push(effect(() => {
+                const sig = ctx.engine.signals[itemFullName] ?? ctx.engine.variableSignals?.[`#:${comp.bind}`];
+                const v = sig?.value;
+                textSpan.textContent = v != null ? String(v) : '';
+            }));
+        } else {
+            textSpan.textContent = comp.text || '';
+        }
         el.appendChild(textSpan);
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);

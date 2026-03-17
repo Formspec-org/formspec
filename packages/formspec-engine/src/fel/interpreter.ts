@@ -89,6 +89,8 @@ function setNestedValue(target: any, path: string, value: any): void {
 export interface FELBuiltinFunctionCatalogEntry {
   name: string;
   category: string;
+  signature?: string;
+  description?: string;
 }
 
 const FEL_BUILTIN_FUNCTION_CATEGORY: Record<string, string> = {
@@ -163,6 +165,93 @@ const FEL_BUILTIN_FUNCTION_CATEGORY: Record<string, string> = {
   required: 'mip',
   // Instance
   instance: 'instance',
+};
+
+/**
+ * Signature and description metadata for each built-in FEL function.
+ * Consumed by tooling, autocomplete, and LLM function catalogs.
+ */
+const FEL_BUILTIN_FUNCTION_INFO: Record<string, { signature: string; description: string }> = {
+  // ── Aggregate ──────────────────────────────────────────────────
+  sum:       { signature: 'sum(array) -> number', description: 'Sums an array of numbers. Extracts .amount from money objects. Non-finite values treated as 0.' },
+  count:     { signature: 'count(array) -> number', description: 'Returns the number of elements in an array. Returns 0 for non-array values.' },
+  countWhere: { signature: 'countWhere(array, predicate) -> number', description: 'Counts array elements matching a predicate expression. The predicate receives each element as $.' },
+  avg:       { signature: 'avg(array) -> number', description: 'Returns the arithmetic mean of numeric array elements. Returns 0 for empty arrays.' },
+  min:       { signature: 'min(array) -> number', description: 'Returns the smallest numeric value in an array. Returns 0 for empty arrays.' },
+  max:       { signature: 'max(array) -> number', description: 'Returns the largest numeric value in an array. Returns 0 for empty arrays.' },
+
+  // ── String ─────────────────────────────────────────────────────
+  upper:     { signature: 'upper(string) -> string', description: 'Converts a string to uppercase.' },
+  lower:     { signature: 'lower(string) -> string', description: 'Converts a string to lowercase.' },
+  length:    { signature: 'length(string) -> number', description: 'Returns the character length of a string.' },
+  substring: { signature: 'substring(string, start, length?) -> string', description: 'Extracts a substring starting at the given index. If length is omitted, returns the rest of the string.' },
+  startsWith: { signature: 'startsWith(string, prefix) -> boolean', description: 'Returns true if the string begins with the given prefix.' },
+  endsWith:  { signature: 'endsWith(string, suffix) -> boolean', description: 'Returns true if the string ends with the given suffix.' },
+  contains:  { signature: 'contains(string, substring) -> boolean', description: 'Returns true if the string contains the given substring. For checking multichoice selection, use selected() instead.' },
+  replace:   { signature: 'replace(string, search, replacement) -> string', description: 'Replaces all occurrences of search with replacement in the string.' },
+  trim:      { signature: 'trim(string) -> string', description: 'Removes leading and trailing whitespace from a string.' },
+  matches:   { signature: 'matches(string, regexPattern) -> boolean', description: 'Returns true if the string matches the given regular expression pattern.' },
+  format:    { signature: 'format(template, ...args) -> string', description: 'Sprintf-style formatting. Replaces %s placeholders with successive arguments.' },
+
+  // ── Numeric ────────────────────────────────────────────────────
+  round:     { signature: 'round(number, precision?) -> number', description: 'Rounds a number to the given decimal places (default 0).' },
+  abs:       { signature: 'abs(number) -> number', description: 'Returns the absolute value of a number.' },
+  power:     { signature: 'power(base, exponent) -> number', description: 'Returns base raised to the given exponent.' },
+  floor:     { signature: 'floor(number) -> number', description: 'Rounds a number down to the nearest integer.' },
+  ceil:      { signature: 'ceil(number) -> number', description: 'Rounds a number up to the nearest integer.' },
+  number:    { signature: 'number(value) -> number | null', description: 'Coerces a value to a number. Returns null for null, undefined, empty strings, and unparseable values.' },
+
+  // ── Date/Time ──────────────────────────────────────────────────
+  today:     { signature: 'today() -> string', description: 'Returns the current date as an ISO 8601 date string (YYYY-MM-DD).' },
+  now:       { signature: 'now() -> string', description: 'Returns the current date and time as an ISO 8601 datetime string.' },
+  date:      { signature: 'date(value) -> string | null', description: 'Validates and returns an ISO 8601 date string. Throws if the value is not a valid date.' },
+  dateAdd:   { signature: 'dateAdd(date, amount, unit) -> string | null', description: 'Adds amount units to an ISO date. Unit is "days", "months", or "years". Returns an ISO date string.' },
+  dateDiff:  { signature: 'dateDiff(laterDate, earlierDate, unit) -> number | null', description: 'Returns laterDate minus earlierDate in the given unit ("days", "months", or "years"). Result is positive when laterDate is after earlierDate.' },
+  year:      { signature: 'year(date) -> number | null', description: 'Extracts the year component from an ISO date string.' },
+  month:     { signature: 'month(date) -> number | null', description: 'Extracts the month (1-12) from an ISO date string.' },
+  day:       { signature: 'day(date) -> number | null', description: 'Extracts the day of the month from an ISO date string.' },
+  hours:     { signature: 'hours(datetime) -> number | null', description: 'Extracts the hours component from an ISO datetime string.' },
+  minutes:   { signature: 'minutes(datetime) -> number | null', description: 'Extracts the minutes component from an ISO datetime string.' },
+  seconds:   { signature: 'seconds(datetime) -> number | null', description: 'Extracts the seconds component from an ISO datetime string.' },
+  time:      { signature: 'time(hours, minutes, seconds) -> string', description: 'Constructs an HH:MM:SS time string from numeric components.' },
+  timeDiff:  { signature: 'timeDiff(time1, time2, unit) -> number', description: 'Returns the absolute difference between two HH:MM:SS time strings in "seconds", "minutes", or "hours".' },
+
+  // ── Logical / Control ─────────────────────────────────────────
+  if:        { signature: 'if(condition, thenValue, elseValue) -> any', description: 'Returns thenValue when condition is truthy, elseValue otherwise. Functional alternative to if...then...else syntax.' },
+  coalesce:  { signature: 'coalesce(...values) -> any', description: 'Returns the first argument that is not null, undefined, or empty string.' },
+  isNull:    { signature: 'isNull(value) -> boolean', description: 'Returns true if the value is null, undefined, or empty string.' },
+  present:   { signature: 'present(value) -> boolean', description: 'Returns true if the value is non-null, defined, and non-empty. Inverse of isNull().' },
+  empty:     { signature: 'empty(value) -> boolean', description: 'Returns true if the value is null, undefined, empty string, or an empty array.' },
+  selected:  { signature: 'selected(fieldValue, option) -> boolean', description: 'Tests whether a choice option is selected. For multichoice (array) fields, checks if the option is in the array. For single-choice fields, checks equality. Use this for choice fields, not contains().' },
+  boolean:   { signature: 'boolean(value) -> boolean', description: 'Coerces a value to a boolean. Accepts booleans, numbers (0 = false), and "true"/"false" strings.' },
+
+  // ── Type ───────────────────────────────────────────────────────
+  isNumber:  { signature: 'isNumber(value) -> boolean', description: 'Returns true if the value is a finite number.' },
+  isString:  { signature: 'isString(value) -> boolean', description: 'Returns true if the value is a string.' },
+  isDate:    { signature: 'isDate(value) -> boolean', description: 'Returns true if the value can be parsed as a valid date.' },
+  typeOf:    { signature: 'typeOf(value) -> string', description: 'Returns the FEL type name: "array", "null", "string", "number", "boolean", or "object".' },
+  string:    { signature: 'string(value) -> string', description: 'Coerces any value to a string. Null/undefined become empty string.' },
+
+  // ── Money ──────────────────────────────────────────────────────
+  money:         { signature: 'money(amount, currency) -> money', description: 'Constructs a money object { amount, currency } from a numeric amount and currency code string.' },
+  moneyAmount:   { signature: 'moneyAmount(money) -> number | null', description: 'Extracts the numeric amount from a money object.' },
+  moneyCurrency: { signature: 'moneyCurrency(money) -> string | null', description: 'Extracts the currency code string from a money object.' },
+  moneyAdd:      { signature: 'moneyAdd(money1, money2) -> money | null', description: 'Adds two money objects. Uses the currency from the first non-null operand.' },
+  moneySum:      { signature: 'moneySum(array) -> money | null', description: 'Sums an array of money objects. Returns a money object with the currency from the first element.' },
+
+  // ── Repeat/Navigation ─────────────────────────────────────────
+  prev:   { signature: 'prev(fieldName?) -> any', description: 'Returns the previous repeat row, or a named field from it. Returns null at first row.' },
+  next:   { signature: 'next(fieldName?) -> any', description: 'Returns the next repeat row, or a named field from it. Returns null at last row.' },
+  parent: { signature: 'parent(fieldName?) -> any', description: 'Returns the parent repeat context object, or a named field from it.' },
+
+  // ── MIP Queries ────────────────────────────────────────────────
+  valid:    { signature: 'valid(fieldPath) -> boolean', description: 'Returns true if the field at the given path has zero validation errors. Argument is a path, not evaluated.' },
+  relevant: { signature: 'relevant(fieldPath) -> boolean', description: 'Returns the relevance (visibility) state of the field at the given path.' },
+  readonly: { signature: 'readonly(fieldPath) -> boolean', description: 'Returns the readonly state of the field at the given path.' },
+  required: { signature: 'required(fieldPath) -> boolean', description: 'Returns the required state of the field at the given path.' },
+
+  // ── Instance ───────────────────────────────────────────────────
+  instance: { signature: 'instance(name, subPath?) -> any', description: 'Retrieves inline instance data by name, optionally drilling into a sub-path.' },
 };
 
 export class FelUnsupportedFunctionError extends Error {
@@ -332,10 +421,15 @@ export class FelInterpreter extends BaseVisitor {
   public listBuiltInFunctions(): FELBuiltinFunctionCatalogEntry[] {
     return Object.keys(this.felStdLib)
       .sort((a, b) => a.localeCompare(b))
-      .map((name) => ({
-        name,
-        category: FEL_BUILTIN_FUNCTION_CATEGORY[name] ?? 'function',
-      }));
+      .map((name) => {
+        const info = FEL_BUILTIN_FUNCTION_INFO[name];
+        return {
+          name,
+          category: FEL_BUILTIN_FUNCTION_CATEGORY[name] ?? 'function',
+          signature: info?.signature,
+          description: info?.description,
+        };
+      });
   }
 
   private getRepeatContextInfo():
