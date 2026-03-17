@@ -79,11 +79,24 @@ describe('Header', () => {
     expect(screen.getByRole('button', { name: /account|profile|avatar/i })).toBeInTheDocument();
   });
 
-  it('renders New Form and Export actions and wires clicks to the provided handlers', () => {
+  it('renders New Form and Export actions and wires clicks to the provided handlers', async () => {
     const { onNew, onExport } = renderHeader();
 
-    screen.getByRole('button', { name: /new form/i }).click();
-    screen.getByRole('button', { name: /^export$/i }).click();
+    // Open the account menu dropdown, click New Form
+    await act(async () => {
+      screen.getByRole('button', { name: /account menu/i }).click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: /new form/i }).click();
+    });
+
+    // Re-open menu (it closes after each click), click Export
+    await act(async () => {
+      screen.getByRole('button', { name: /account menu/i }).click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: /^export$/i }).click();
+    });
 
     expect(onNew).toHaveBeenCalledTimes(1);
     expect(onExport).toHaveBeenCalledTimes(1);

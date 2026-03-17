@@ -5,7 +5,7 @@ import { App } from '../src/App';
 describe('Smoke', () => {
   it('mounts Studio by default', () => {
     render(<App />);
-    expect(screen.getByText('The Stack')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
   });
 });
 

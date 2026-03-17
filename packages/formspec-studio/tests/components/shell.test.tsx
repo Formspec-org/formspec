@@ -37,7 +37,7 @@ function renderShell(definition?: typeof seededDefinition, width = 1440) {
 describe('Shell', () => {
   it('renders header with app title', () => {
     renderShell();
-    expect(screen.getByText('The Stack')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
   });
 
   it('shows 7 workspace tabs', () => {
@@ -70,6 +70,10 @@ describe('Shell', () => {
 
     expect(screen.getByTestId('field-name')).toBeInTheDocument();
 
+    // Open the account menu dropdown, then click New Form
+    await act(async () => {
+      screen.getByRole('button', { name: /account menu/i }).click();
+    });
     await act(async () => {
       screen.getByRole('button', { name: /new form/i }).click();
     });
@@ -89,6 +93,10 @@ describe('Shell', () => {
     URL.revokeObjectURL = revokeObjectURL;
 
     try {
+      // Open the account menu dropdown, then click Export
+      await act(async () => {
+        screen.getByRole('button', { name: /account menu/i }).click();
+      });
       await act(async () => {
         screen.getByRole('button', { name: /^export$/i }).click();
       });

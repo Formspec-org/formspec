@@ -11,6 +11,16 @@ const __dirname = path.dirname(__filename);
 const EXAMPLES_DIR = path.resolve(__dirname, '../../../examples');
 const REGISTRY_PATH = path.resolve(__dirname, '../../../registries/formspec-common.registry.json');
 
+/** Resolve the correct Python binary — prefer pyenv when .python-version exists. */
+function resolvePython(): string {
+  try {
+    return execSync('pyenv which python3', { encoding: 'utf8', stdio: 'pipe' }).trim();
+  } catch {
+    return 'python3';
+  }
+}
+const PYTHON = resolvePython();
+
 /** Unbuffered stderr progress — to see where it freezes, run: npx vitest run tests/e2e-examples.test.ts --reporter=verbose 2>&1 */
 function progress(msg: string): void {
   process.stderr.write(`[e2e-examples] ${msg}\n`);
@@ -356,7 +366,7 @@ describe('Formspec Studio E2E Examples Rehydration', () => {
 
         // Python validation (on written files) — timeout to avoid hanging
         progress(`${ex} / ${prefix}: Python validate...`);
-        const validateCmd = `python3 -m formspec.validate ${outDir} --registry ${REGISTRY_PATH}`;
+        const validateCmd = `${PYTHON} -m formspec.validate ${outDir} --registry ${REGISTRY_PATH}`;
         try {
           const output = execSync(validateCmd, {
             cwd: path.resolve(__dirname, '../../..'),

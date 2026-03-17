@@ -9,6 +9,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/** Resolve the correct Python binary — prefer pyenv when .python-version exists. */
+function resolvePython(): string {
+  try {
+    return execSync('pyenv which python3', { encoding: 'utf8', stdio: 'pipe' }).trim();
+  } catch {
+    return 'python3';
+  }
+}
+const PYTHON = resolvePython();
+
 describe('Formspec Studio Core E2E Validation', () => {
   let tmpDir: string;
   let project: ReturnType<typeof createRawProject>;
@@ -40,7 +50,7 @@ describe('Formspec Studio Core E2E Validation', () => {
     fs.writeFileSync(mapPath, JSON.stringify(project.mapping, null, 2));
 
     const rootDir = path.resolve(__dirname, '../../..');
-    const validateCmd = `python3 -m formspec.validate ${tmpDir} --registry registries/formspec-common.registry.json`;
+    const validateCmd = `${PYTHON} -m formspec.validate ${tmpDir} --registry registries/formspec-common.registry.json`;
 
     try {
       const output = execSync(validateCmd, {
