@@ -217,7 +217,7 @@ export function Shell() {
       />
       <CanvasTargetsProvider>
         <div className="flex flex-1 overflow-hidden">
-          <aside className="w-[230px] border-r border-border bg-surface overflow-y-auto flex flex-col shrink-0">
+          <aside className={`w-[230px] border-r border-border bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}>
             <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
             <div className="flex-1 overflow-y-auto px-4 py-2">
               {SidebarComponent && <SidebarComponent />}

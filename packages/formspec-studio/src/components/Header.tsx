@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { useProject } from '../state/useProject';
 import { useProjectState } from '../state/useProjectState';
 
@@ -39,7 +40,188 @@ export function Header({
   const project = useProject();
   const state = useProjectState();
   const { definition } = state;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
+
+  const tabButtons = TABS.map(({ name, help }) => (
+    <button
+      key={name}
+      role="tab"
+      aria-selected={activeTab === name}
+      data-testid={`tab-${name}`}
+      title={help}
+      className={`px-3 sm:px-3.5 h-full text-[13px] transition-colors border-b-2 cursor-pointer whitespace-nowrap shrink-0 ${
+        activeTab === name
+          ? 'border-accent text-accent font-semibold'
+          : 'border-transparent text-muted hover:text-ink'
+      }`}
+      onClick={() => onTabChange(name)}
+    >
+      {name}
+    </button>
+  ));
+
+  const profileMenu = (
+    <div ref={menuRef} className="relative ml-0.5 sm:ml-1">
+      <button
+        type="button"
+        aria-label="Account menu"
+        aria-expanded={menuOpen}
+        className={`w-7 h-7 rounded-full bg-[#E2D9CF] border-2 shrink-0 transition-colors ${
+          menuOpen ? 'border-accent' : 'border-border hover:border-muted/40'
+        }`}
+        onClick={() => setMenuOpen(!menuOpen)}
+      />
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-1 w-44 bg-surface border border-border rounded-[6px] shadow-lg py-1 z-50">
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors"
+            onClick={() => { setMenuOpen(false); onNew?.(); }}
+          >
+            New Form
+          </button>
+          <button
+            data-testid="import-btn"
+            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors"
+            onClick={() => { setMenuOpen(false); onImport(); }}
+          >
+            Import
+          </button>
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors"
+            onClick={() => { setMenuOpen(false); onExport?.(); }}
+          >
+            Export
+          </button>
+          <div className="border-t border-border my-1" />
+          {isCompact && (
+            <button
+              type="button"
+              className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors"
+              onClick={() => { setMenuOpen(false); onOpenMetadata?.(); }}
+            >
+              Metadata
+            </button>
+          )}
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors"
+            onClick={() => { setMenuOpen(false); onToggleAccountMenu?.(); }}
+          >
+            Settings
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const actionButtons = (
+    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      {/* Search — icon-only on compact, full bar on wide */}
+      {isCompact ? (
+        <button
+          onClick={onSearch}
+          aria-label="Search"
+          className="p-1.5 rounded hover:bg-subtle transition-colors"
+          title="Search (⌘K)"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+      ) : (
+        <button
+          onClick={onSearch}
+          className="flex items-center gap-2 bg-subtle border border-border rounded-[4px] px-3 py-1.5 max-w-[240px] text-muted hover:border-muted/40 transition-colors group"
+        >
+          <span className="text-[13px]">🔍</span>
+          <span className="text-[13px] font-ui">Search…</span>
+          <span className="ml-auto font-mono text-[11px] border border-border rounded-[2px] px-1.5 py-0.5 group-hover:bg-surface transition-colors">
+            ⌘K
+          </span>
+        </button>
+      )}
+
+      {!isCompact && (
+        <button
+          type="button"
+          aria-label={`FORMSPEC ${definition.$formspec} metadata`}
+          className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
+          onClick={onOpenMetadata}
+        >
+          Metadata
+        </button>
+      )}
+      <button
+        data-testid="undo-btn"
+        aria-label="Undo"
+        disabled={!project.canUndo}
+        className="p-1.5 rounded hover:bg-subtle disabled:opacity-30 transition-colors"
+        onClick={() => project.undo()}
+        title="Undo (⌘Z)"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+      </button>
+      <button
+        data-testid="redo-btn"
+        aria-label="Redo"
+        disabled={!project.canRedo}
+        className="p-1.5 rounded hover:bg-subtle disabled:opacity-30 transition-colors"
+        onClick={() => project.redo()}
+        title="Redo (⌘⇧Z)"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+      </button>
+
+      {profileMenu}
+    </div>
+  );
+
+  /* ── Compact: two rows (toolbar + tab strip) ── */
+  if (isCompact) {
+    return (
+      <div data-testid="header" className="shrink-0 bg-surface border-b border-border">
+        {/* Row 1: Logo + Actions */}
+        <div className="flex items-center h-[44px] px-3">
+          <button
+            type="button"
+            aria-label="The Stack home"
+            className="flex items-center gap-2 shrink-0 text-left"
+            onClick={() => { onTabChange('Editor'); onHome?.(); }}
+          >
+            <div className="w-6.5 h-6.5 bg-accent rounded-[6px] flex items-center justify-center shrink-0">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
+                <rect x="2" y="5" width="8" height="2" rx=".4" fill="white" fillOpacity=".7" />
+                <rect x="2" y="8.5" width="8" height="2" rx=".4" fill="white" fillOpacity=".4" />
+              </svg>
+            </div>
+          </button>
+          <div className="flex-1" />
+          {actionButtons}
+        </div>
+
+        {/* Row 2: Scrollable tab strip */}
+        <nav className="flex h-[36px] overflow-x-auto scrollbar-none px-3" role="tablist">
+          {tabButtons}
+        </nav>
+      </div>
+    );
+  }
+
+  /* ── Desktop: single row ── */
   return (
     <header
       data-testid="header"
@@ -50,12 +232,9 @@ export function Header({
         type="button"
         aria-label="The Stack home"
         className="flex items-center gap-2 mr-6 shrink-0 text-left"
-        onClick={() => {
-          onTabChange('Editor');
-          onHome?.();
-        }}
+        onClick={() => { onTabChange('Editor'); onHome?.(); }}
       >
-        <div className="w-6.5 h-6.5 bg-accent rounded-[6px] flex items-center justify-center">
+        <div className="w-6.5 h-6.5 bg-accent rounded-[6px] flex items-center justify-center shrink-0">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
             <rect x="2" y="5" width="8" height="2" rx=".4" fill="white" fillOpacity=".7" />
@@ -72,108 +251,12 @@ export function Header({
 
       {/* Tabs */}
       <nav className="flex h-full" role="tablist">
-        {TABS.map(({ name, help }) => (
-          <button
-            key={name}
-            role="tab"
-            aria-selected={activeTab === name}
-            data-testid={`tab-${name}`}
-            title={help}
-            className={`px-3.5 h-full text-[13px] transition-colors border-b-2 cursor-pointer ${
-              activeTab === name
-                ? 'border-accent text-accent font-semibold'
-                : 'border-transparent text-muted hover:text-ink'
-            }`}
-            onClick={() => onTabChange(name)}
-          >
-            {name}
-          </button>
-        ))}
+        {tabButtons}
       </nav>
 
-      {/* Center: Search Bar — min-w-0 allows flex shrink on narrow viewports */}
-      <div className="flex-1 min-w-0 flex justify-center px-2">
-        <button
-          onClick={onSearch}
-          className="flex items-center gap-2 bg-subtle border border-border rounded-[4px] px-3 py-1.5 w-full max-w-[280px] text-muted hover:border-muted/40 transition-colors group"
-        >
-          <span className="text-[13px]">🔍</span>
-          {!isCompact && <span className="text-[13px] font-ui">Search items, rules, FEL…</span>}
-          <span className="ml-auto font-mono text-[11px] border border-border rounded-[2px] px-1.5 py-0.5 group-hover:bg-surface transition-colors">
-            ⌘K
-          </span>
-        </button>
-      </div>
+      <div className="flex-1 min-w-0" />
 
-      {/* Right Actions */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {!isCompact && (
-          <>
-            <button
-              type="button"
-              aria-label={`FORMSPEC ${definition.$formspec} metadata`}
-              className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
-              onClick={onOpenMetadata}
-            >
-              Metadata
-            </button>
-          </>
-        )}
-        <button
-          data-testid="undo-btn"
-          aria-label="Undo"
-          disabled={!project.canUndo}
-          className="p-1.5 rounded hover:bg-subtle disabled:opacity-30 transition-colors"
-          onClick={() => project.undo()}
-          title="Undo (⌘Z)"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-        </button>
-        <button
-          data-testid="redo-btn"
-          aria-label="Redo"
-          disabled={!project.canRedo}
-          className="p-1.5 rounded hover:bg-subtle disabled:opacity-30 transition-colors"
-          onClick={() => project.redo()}
-          title="Redo (⌘⇧Z)"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
-        </button>
-
-        <div className="w-px h-5 bg-border mx-1" />
-
-        {!isCompact && (
-          <button
-            type="button"
-            className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
-            onClick={onNew}
-          >
-            New Form
-          </button>
-        )}
-        {!isCompact && (
-          <button
-            type="button"
-            className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
-            onClick={onExport}
-          >
-            Export
-          </button>
-        )}
-        <button
-          data-testid="import-btn"
-          className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
-          onClick={onImport}
-        >
-          Import
-        </button>
-        <button
-          type="button"
-          aria-label="Account profile"
-          className="w-7 h-7 rounded-full bg-[#E2D9CF] border-2 border-border ml-1 shrink-0"
-          onClick={onToggleAccountMenu}
-        />
-      </div>
+      {actionButtons}
     </header>
   );
 }

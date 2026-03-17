@@ -23,6 +23,15 @@
   animation: msg-appear 0.18s ease-out both;
 }
 
+/* Hide scrollbar but keep scrolling */
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* PRD Design Tokens */
 @theme {
   /* Colors */

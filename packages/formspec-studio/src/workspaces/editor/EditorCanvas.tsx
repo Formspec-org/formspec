@@ -290,14 +290,15 @@ export function EditorCanvas() {
 
   return (
     <WorkspacePage
+      maxWidth="max-w-full"
       onClick={(e: React.MouseEvent) => {
         if (e.target === e.currentTarget) deselect();
       }}
       onContextMenu={handleContextMenu}
     >
-      {/* Form metadata header */}
+      {/* Form metadata header — full width */}
       {(formTitle || formUrl) && (
-        <WorkspacePageSection className="pt-4 pb-3 border-b border-border bg-surface shrink-0">
+        <div className="pt-4 pb-3 px-7 border-b border-border bg-surface shrink-0">
           <div className="font-ui text-[15px] font-semibold tracking-tight text-ink leading-snug truncate">
             {formTitle || 'Untitled Form'}
           </div>
@@ -307,18 +308,18 @@ export function EditorCanvas() {
             {pageMode && <><span className="opacity-40 shrink-0">·</span><span className="shrink-0">{pageMode}</span></>}
             {defaultCurrency && <><span className="opacity-40 shrink-0">·</span><span className="shrink-0">{defaultCurrency}</span></>}
           </div>
-        </WorkspacePageSection>
+        </div>
       )}
 
-      {/* Page tabs — only when in paged mode */}
+      {/* Page tabs — full width, no wrapping */}
       {hasPaged && (
-        <WorkspacePageSection className="border-b border-border bg-surface">
+        <div className="px-7 border-b border-border bg-surface">
           <PageTabs activePageKey={activePageKey} onPageChange={setActivePageKey} />
-        </WorkspacePageSection>
+        </div>
       )}
 
-      {/* Items list */}
-      <WorkspacePageSection className="relative flex flex-col gap-1 pt-3 pb-20">
+      {/* Items list — guttered with max-width */}
+      <WorkspacePageSection className="relative flex flex-col gap-1 pt-3 pb-20 max-w-[660px] mx-auto w-full">
         <AddItemPalette
           open={showPicker}
           onClose={() => setShowPicker(false)}
