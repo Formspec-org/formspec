@@ -287,7 +287,7 @@ export function planComponentTree(
         }
     }
 
-    if (!prefix) {
+    if (applyThemePages) {
         return applyGeneratedPageMode(node, componentType, ctx);
     }
 
@@ -665,10 +665,10 @@ function applyGeneratedPageMode(
                     pageByName.set(pageName, page);
                     pages.push(page);
                 }
-                page.children.push(node);
+                page.children.push(stripTitleFromGroupNode(node));
                 lastPage = page;
             } else if (lastPage && sawExplicitPage) {
-                lastPage.children.push(node);
+                lastPage.children.push(stripTitleFromGroupNode(node));
             } else {
                 const title = String(item.label || node.props.title || node.props.bind || item.key || `Page ${pages.length + 1}`);
                 pages.push({
@@ -722,10 +722,10 @@ function buildDefinitionPages(nodes: LayoutNode[], items: any[]): { orphans: Lay
                 pageByName.set(pageName, page);
                 pages.push(page);
             }
-            page.children.push(node);
+            page.children.push(stripTitleFromGroupNode(node));
             lastPage = page;
         } else if (lastPage && sawExplicitPage) {
-            lastPage.children.push(node);
+            lastPage.children.push(stripTitleFromGroupNode(node));
         } else {
             const title = String(item.label || node.props.title || node.props.bind || item.key || `Page ${pages.length + 1}`);
             pages.push({

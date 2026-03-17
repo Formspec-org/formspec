@@ -317,6 +317,151 @@ describe('planComponentTree', () => {
         expect(node.accessibility).toEqual({ role: 'region', description: 'Main form' });
     });
 
+    it('does not produce nested wizards when root Stack has no bind and groups have explicit pages', () => {
+        // Reproduces the S8 intake bug: studio-generated component doc with
+        // an unbound root Stack, 3 groups with explicit page names, wizard mode.
+        // The bug was that `!prefix` matched on every child (since root has no
+        // bind, childPrefix stays ''), causing each child group to get its own
+        // inner Wizard via applyGeneratedPageMode.
+        const items = [
+            {
+                key: 'basics',
+                type: 'group',
+                label: 'Basics',
+                presentation: { layout: { page: 'Basics' } },
+                children: [
+                    { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
+                ],
+            },
+            {
+                key: 'details',
+                type: 'group',
+                label: 'Details',
+                presentation: { layout: { page: 'Details' } },
+                children: [
+                    { key: 'desc', type: 'field', dataType: 'text', label: 'Description' },
+                ],
+            },
+            {
+                key: 'review',
+                type: 'group',
+                label: 'Review',
+                presentation: { layout: { page: 'Review' } },
+                children: [
+                    { key: 'notes', type: 'display', label: 'Review notes' },
+                ],
+            },
+        ];
+        const tree = {
+            component: 'Stack',
+            children: [
+                {
+                    component: 'Stack',
+                    bind: 'basics',
+                    title: 'Basics',
+                    children: [{ component: 'TextInput', bind: 'name' }],
+                },
+                {
+                    component: 'Stack',
+                    bind: 'details',
+                    title: 'Details',
+                    children: [{ component: 'Textarea', bind: 'desc' }],
+                },
+                {
+                    component: 'Stack',
+                    bind: 'review',
+                    title: 'Review',
+                    children: [{ component: 'Text', text: 'Review notes' }],
+                },
+            ],
+        };
+        const ctx = makeCtx({
+            items,
+            formPresentation: { pageMode: 'wizard' },
+            componentDocument: { tree, 'x-studio-generated': true },
+            findItem: (key) => findItemByPath(items, key) ?? findItems(items, key),
+        });
+
+        const node = planComponentTree(tree, ctx);
+
+        // There should be exactly ONE Wizard node — at the root level
+        function countWizards(n: LayoutNode): number {
+            let count = n.component === 'Wizard' ? 1 : 0;
+            for (const child of n.children) {
+                count += countWizards(child);
+            }
+            return count;
+        }
+
+        expect(countWizards(node)).toBe(1);
+
+        // The root should be a Stack wrapping a single Wizard
+        expect(node.component).toBe('Stack');
+        const wizard = node.children.find(c => c.component === 'Wizard');
+        expect(wizard).toBeDefined();
+        expect(wizard!.children).toHaveLength(3);
+        expect(wizard!.children.every(c => c.component === 'Page')).toBe(true);
+    });
+
+    it('strips group title from Stack nodes inside explicit wizard pages', () => {
+        // When a group is placed on an explicit page, the Page already shows
+        // the title in its heading. The inner Stack should not duplicate it.
+        const items = [
+            {
+                key: 'basics',
+                type: 'group',
+                label: 'Basics',
+                presentation: { layout: { page: 'Basics' } },
+                children: [
+                    { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
+                ],
+            },
+            {
+                key: 'details',
+                type: 'group',
+                label: 'Details',
+                presentation: { layout: { page: 'Details' } },
+                children: [
+                    { key: 'desc', type: 'field', dataType: 'text', label: 'Description' },
+                ],
+            },
+        ];
+        const tree = {
+            component: 'Stack',
+            children: [
+                {
+                    component: 'Stack',
+                    bind: 'basics',
+                    title: 'Basics',
+                    children: [{ component: 'TextInput', bind: 'name' }],
+                },
+                {
+                    component: 'Stack',
+                    bind: 'details',
+                    title: 'Details',
+                    children: [{ component: 'Textarea', bind: 'desc' }],
+                },
+            ],
+        };
+        const ctx = makeCtx({
+            items,
+            formPresentation: { pageMode: 'wizard' },
+            componentDocument: { tree, 'x-studio-generated': true },
+            findItem: (key) => findItemByPath(items, key) ?? findItems(items, key),
+        });
+
+        const node = planComponentTree(tree, ctx);
+
+        // Find the Stack nodes inside each Page
+        const wizard = node.children.find(c => c.component === 'Wizard')!;
+        for (const page of wizard.children) {
+            expect(page.component).toBe('Page');
+            const stackInPage = page.children.find(c => c.component === 'Stack');
+            expect(stackInPage).toBeDefined();
+            expect(stackInPage!.props.title).toBeUndefined();
+        }
+    });
+
     it('wraps generated top-level groups in wizard mode while preserving orphan fields', () => {
         const items = [
             { key: 'intro', type: 'field', dataType: 'string', label: 'Intro' },
