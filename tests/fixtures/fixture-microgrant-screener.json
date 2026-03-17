@@ -119,7 +119,7 @@
     },
     {
       "name": "subawardTotalValue",
-      "expression": "coalesce(moneyAmount(moneySum($project.subawardRows[*].subawardAmount)), 0)"
+      "expression": "sum($project.subawardRows[*].subawardAmount)"
     },
     {
       "name": "remainingBalance",

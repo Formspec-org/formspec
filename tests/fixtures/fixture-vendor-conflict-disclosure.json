@@ -52,7 +52,7 @@
     },
     {
       "name": "giftTotal",
-      "expression": "coalesce(moneyAmount(moneySum($relationships.relatedParties[*].partyGiftValue)), 0)"
+      "expression": "sum($relationships.relatedParties[*].partyGiftValue)"
     }
   ],
   "items": [
