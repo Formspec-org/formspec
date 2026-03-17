@@ -1,3 +1,4 @@
+/** @filedesc Walks a LayoutNode tree and emits DOM via component plugin dispatch. */
 import { effect, Signal } from '@preact/signals-core';
 import { FormEngine } from 'formspec-engine';
 import { globalRegistry } from '../registry';

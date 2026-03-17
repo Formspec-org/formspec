@@ -1,3 +1,4 @@
+/** @filedesc Astro configuration for the formspec.org marketing/docs site. */
 import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
 

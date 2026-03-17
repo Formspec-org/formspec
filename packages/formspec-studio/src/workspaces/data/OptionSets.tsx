@@ -1,3 +1,4 @@
+/** @filedesc Panel for creating and editing named option sets (static choices or data-sourced) on a form. */
 import { useState } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useProject } from '../../state/useProject';

@@ -1,3 +1,4 @@
+/** @filedesc Mapping workspace tab composing Config, Rules, Adapter, and Preview sub-panels. */
 import { useState } from 'react';
 import { MappingConfig } from './MappingConfig';
 import { RuleEditor } from './RuleEditor';

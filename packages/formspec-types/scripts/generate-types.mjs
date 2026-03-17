@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generates TypeScript interfaces from Formspec JSON schemas.
+ * @filedesc Generates TypeScript interfaces from Formspec JSON schemas into src/generated/.
  *
  * Usage: node scripts/generate-types.mjs
  * Output: src/generated/<schema-name>.ts + src/generated/index.ts

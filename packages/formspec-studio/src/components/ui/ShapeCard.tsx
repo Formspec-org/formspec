@@ -1,3 +1,4 @@
+/** @filedesc Severity-colored card displaying a validation shape rule with name, constraint, and message. */
 import { Pill } from './Pill';
 
 const severityColors: Record<string, string> = {

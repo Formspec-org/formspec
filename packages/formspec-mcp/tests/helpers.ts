@@ -1,3 +1,4 @@
+/** @filedesc Test helpers for formspec-mcp: factory functions for ProjectRegistry states. */
 import { createProject, type Project } from 'formspec-studio-core';
 import { ProjectRegistry } from '../src/registry.js';
 

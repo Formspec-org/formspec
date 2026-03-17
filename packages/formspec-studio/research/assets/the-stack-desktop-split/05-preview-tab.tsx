@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: Preview tab rendering a mock wizard with desktop/tablet/mobile viewports. */
 // PREVIEW TAB
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 import { useState, useCallback } from "react";

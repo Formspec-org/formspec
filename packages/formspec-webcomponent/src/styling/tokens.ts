@@ -1,3 +1,4 @@
+/** @filedesc Token resolution and CSS custom property emission for theme/component tokens. */
 import {
     resolveToken as resolveTokenBase,
 } from 'formspec-layout';

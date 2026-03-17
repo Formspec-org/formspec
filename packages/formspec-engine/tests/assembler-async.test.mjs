@@ -1,3 +1,4 @@
+/** @filedesc assembleDefinition with async resolver: referenced groups are resolved asynchronously */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assembleDefinition, FormEngine } from '../dist/index.js';

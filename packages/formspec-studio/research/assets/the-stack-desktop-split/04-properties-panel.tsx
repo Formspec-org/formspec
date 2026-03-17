@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: Properties panel showing field/group/component details for selected item. */
 // PROPERTIES PANEL
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 import { useState, useCallback } from "react";

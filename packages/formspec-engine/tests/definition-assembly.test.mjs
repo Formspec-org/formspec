@@ -1,3 +1,4 @@
+/** @filedesc Definition assembly: group references are inlined with prefixed keys and rewritten binds */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine, assembleDefinitionSync } from '../dist/index.js';

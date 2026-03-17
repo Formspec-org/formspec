@@ -1,3 +1,4 @@
+/** @filedesc Logic tab section for creating and editing named FEL variable expressions. */
 import { useState } from 'react';
 import { useProject } from '../../state/useProject';
 import { InlineExpression } from '../../components/ui/InlineExpression';

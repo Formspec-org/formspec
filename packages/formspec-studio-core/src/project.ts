@@ -1,3 +1,4 @@
+/** @filedesc Project class: high-level form authoring facade over formspec-core. */
 import { createRawProject } from 'formspec-core';
 // Internal-only core types — never appear in public method signatures
 import type { IProjectCore, AnyCommand, CommandResult, FELParseContext, FELParseResult, FELReferenceSet, FELFunctionEntry, FieldDependents, ItemFilter, ItemSearchResult, Change, FormspecChangelog } from 'formspec-core';

@@ -1,3 +1,4 @@
+/** @filedesc Field focus and reveal logic for wizard panels, tabs, and collapsibles. */
 import type { NavigationHost } from './index.js';
 import { normalizeFieldPath, externalPathToInternal } from './paths.js';
 

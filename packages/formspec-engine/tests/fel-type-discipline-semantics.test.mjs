@@ -1,3 +1,4 @@
+/** @filedesc FEL type discipline: cross-type equality returns null; strict operator type rules are enforced */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

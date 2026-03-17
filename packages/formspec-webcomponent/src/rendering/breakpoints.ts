@@ -1,3 +1,4 @@
+/** @filedesc Responsive breakpoint matching via matchMedia listeners. */
 import { signal } from '@preact/signals-core';
 
 export interface BreakpointHost {

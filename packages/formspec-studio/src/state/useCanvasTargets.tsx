@@ -1,3 +1,4 @@
+/** @filedesc Context and hook that registers canvas DOM elements by path for programmatic scroll-to. */
 import {
   createContext,
   useCallback,

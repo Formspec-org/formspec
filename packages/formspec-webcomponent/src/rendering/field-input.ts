@@ -1,3 +1,4 @@
+/** @filedesc Builds a fully-wired field input element with label, control, validation, and ARIA. */
 import { effect, Signal } from '@preact/signals-core';
 import { FormEngine } from 'formspec-engine';
 import { ItemDescriptor, PresentationBlock, COMPATIBILITY_MATRIX } from 'formspec-layout';

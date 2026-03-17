@@ -1,3 +1,4 @@
+/** @filedesc Grant-app smoke test: engine loads the grant-app fixture and basic setValue/getValue round-trips */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGrantEngine, engineValue } from './helpers/grant-app.mjs';

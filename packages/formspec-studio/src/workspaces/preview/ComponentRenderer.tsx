@@ -1,3 +1,4 @@
+/** @filedesc Lightweight React-based form renderer used as a fallback preview inside the studio. */
 import { useState } from 'react';
 
 interface Option {

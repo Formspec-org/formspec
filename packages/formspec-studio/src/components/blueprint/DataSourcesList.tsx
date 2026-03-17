@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section listing named data source instances defined on the form. */
 import { useDefinition } from '../../state/useDefinition';
 
 interface InstanceEntry {

@@ -1,3 +1,4 @@
+/** @filedesc CSS class application and widget class-slot resolution from theme config. */
 import type { PresentationBlock } from 'formspec-layout';
 import type { StylingHost } from './index';
 import { resolveToken } from './tokens';

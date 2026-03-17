@@ -1,3 +1,4 @@
+/** @filedesc Properties panel section for field-level config: initial value, decimal, and money flags. */
 import { Section } from '../../../components/ui/Section';
 import { propertyHelp } from '../../../lib/field-helpers';
 import { PropInput } from './shared';

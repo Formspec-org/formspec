@@ -1,3 +1,4 @@
+/** @filedesc Test helper: creates a FormEngine from the grant-app-definition fixture with stubbed fetch */
 import { readFileSync } from 'node:fs';
 import { FormEngine } from '../../dist/index.js';
 

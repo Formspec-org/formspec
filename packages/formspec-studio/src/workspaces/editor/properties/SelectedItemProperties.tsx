@@ -1,3 +1,4 @@
+/** @filedesc Full properties panel for a single selected item composing all property sections. */
 import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
 import { BindCard } from '../../../components/ui/BindCard';

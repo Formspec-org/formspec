@@ -1,3 +1,4 @@
+/** @filedesc Remote options: engine fetches and exposes option lists for choice fields with remoteOptions config */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

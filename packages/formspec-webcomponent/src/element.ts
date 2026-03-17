@@ -1,3 +1,4 @@
+/** @filedesc The <formspec-render> custom element that orchestrates form rendering. */
 import { signal } from '@preact/signals-core';
 import { FormEngine } from 'formspec-engine';
 import { globalRegistry } from './registry';

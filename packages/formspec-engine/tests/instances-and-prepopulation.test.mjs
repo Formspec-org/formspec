@@ -1,3 +1,4 @@
+/** @filedesc Instances and prepopulation: inline instance data is readable via FEL and pre-populates fields */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

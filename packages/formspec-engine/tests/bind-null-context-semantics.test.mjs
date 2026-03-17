@@ -1,3 +1,4 @@
+/** @filedesc Bind null context: null/undefined FEL results in relevant, required, and readonly bind expressions */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

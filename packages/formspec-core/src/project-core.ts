@@ -1,3 +1,4 @@
+/** @filedesc IProjectCore interface defining the contract between core and studio. */
 import type {
   FormItem, FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
 } from 'formspec-types';

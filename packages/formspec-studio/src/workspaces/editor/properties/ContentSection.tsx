@@ -1,3 +1,4 @@
+/** @filedesc Properties panel section for editing item label, description, and hint text. */
 import { useState } from 'react';
 import { Section } from '../../../components/ui/Section';
 import { propertyHelp } from '../../../lib/field-helpers';

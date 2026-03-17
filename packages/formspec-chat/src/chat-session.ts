@@ -1,3 +1,4 @@
+/** @filedesc Orchestrates a conversational form-building session with AI adapters. */
 import type {
   AIAdapter, Attachment, ChatMessage, ChatSessionState,
   ScaffoldRequest, SourceTrace, Issue,

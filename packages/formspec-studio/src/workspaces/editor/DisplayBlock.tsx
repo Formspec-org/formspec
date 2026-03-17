@@ -1,3 +1,4 @@
+/** @filedesc Canvas block component for display-only items (Heading, Divider, Spacer, Text). */
 import { blockIndent, blockRef, type BlockBaseProps } from './block-utils';
 import { DragHandle } from './DragHandle';
 

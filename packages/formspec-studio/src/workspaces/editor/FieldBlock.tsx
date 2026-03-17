@@ -1,3 +1,4 @@
+/** @filedesc Canvas block component for field items showing type icon, label, data type, and bind pills. */
 import { Pill } from '../../components/ui/Pill';
 import { FieldIcon } from '../../components/ui/FieldIcon';
 import { humanizeFEL } from '../../lib/humanize';

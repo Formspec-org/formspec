@@ -1,3 +1,4 @@
+/** @filedesc Tab bar for switching between top-level page groups in the editor canvas. */
 import { useEffect, useRef, useState } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useProject } from '../../state/useProject';

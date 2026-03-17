@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section summarizing token, selector, and defaults counts for the active theme. */
 import { useProjectState } from '../../state/useProjectState';
 import { Pill } from '../ui/Pill';
 

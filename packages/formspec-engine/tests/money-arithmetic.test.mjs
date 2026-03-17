@@ -1,3 +1,4 @@
+/** @filedesc Money arithmetic: FEL money() operations including addition, subtraction, and currency coercion */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

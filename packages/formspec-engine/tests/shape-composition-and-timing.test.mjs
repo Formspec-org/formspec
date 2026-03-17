@@ -1,3 +1,4 @@
+/** @filedesc Shape composition and timing: and/or composition, activation ordering, and reactive shape re-evaluation */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

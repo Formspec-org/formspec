@@ -1,3 +1,4 @@
+/** @filedesc Path normalization and external-to-internal index conversion utilities. */
 export function normalizeFieldPath(path: unknown): string {
     return typeof path === 'string' ? path.trim() : '';
 }

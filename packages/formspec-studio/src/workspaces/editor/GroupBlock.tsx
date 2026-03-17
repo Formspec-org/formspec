@@ -1,3 +1,4 @@
+/** @filedesc Canvas block component for group items with optional repeatable badge and nested children. */
 import type React from 'react';
 import type { ReactNode } from 'react';
 import { Pill } from '../../components/ui/Pill';

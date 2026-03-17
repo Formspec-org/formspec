@@ -1,3 +1,4 @@
+/** @filedesc Theme workspace tab composing color, typography, field style, selector, page, and breakpoint sections. */
 import { useState } from 'react';
 import { HelpTip } from '../../components/ui/HelpTip';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';

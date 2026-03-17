@@ -1,3 +1,4 @@
+/** @filedesc Collapsible section with an uppercase header used in the properties panel and blueprint sidebar. */
 import { useState, type ReactNode } from 'react';
 
 interface SectionProps {

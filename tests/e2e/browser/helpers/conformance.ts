@@ -1,3 +1,4 @@
+/** @filedesc ConformanceRecorder utility for tracking pass/fail/skip checks in E2E test suites. */
 import * as fs from 'fs';
 
 export type CheckStatus = 'pass' | 'fail' | 'skip';

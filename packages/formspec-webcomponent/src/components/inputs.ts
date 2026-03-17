@@ -1,3 +1,4 @@
+/** @filedesc Input component plugins: TextInput, NumberInput, Select, Toggle, Checkbox, and more. */
 import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
 

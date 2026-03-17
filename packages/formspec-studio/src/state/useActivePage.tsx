@@ -1,3 +1,4 @@
+/** @filedesc Context and hook tracking which page tab is currently active in the editor canvas. */
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 
 interface ActivePageState {

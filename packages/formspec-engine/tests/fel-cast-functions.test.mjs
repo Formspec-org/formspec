@@ -1,3 +1,4 @@
+/** @filedesc FEL cast functions: boolean(), integer(), decimal(), string(), and date() type coercions */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

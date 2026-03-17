@@ -1,3 +1,4 @@
+/** @filedesc In-memory registry of open MCP projects with lifecycle management. */
 import { v4 as uuidv4 } from 'uuid';
 import type { Project } from 'formspec-studio-core';
 import type { SchemaValidationError } from 'formspec-engine';

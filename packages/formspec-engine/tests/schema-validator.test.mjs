@@ -1,3 +1,4 @@
+/** @filedesc Schema validator: createSchemaValidator detects unknown document types and validates against JSON schemas */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

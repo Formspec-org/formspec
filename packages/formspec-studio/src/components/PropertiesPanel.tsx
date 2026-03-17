@@ -1,3 +1,4 @@
+/** @filedesc Sidebar panel that displays key and type for the currently selected item. */
 import { useSelection } from '../state/useSelection';
 
 export function PropertiesPanel() {

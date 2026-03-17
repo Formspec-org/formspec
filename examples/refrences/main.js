@@ -1,3 +1,4 @@
+/** @filedesc Entry point for the references example: registers formspec-render and loads forms. */
 import 'formspec-webcomponent/formspec-base.css';
 import { FormspecRender } from 'formspec-webcomponent';
 customElements.define('formspec-render', FormspecRender);

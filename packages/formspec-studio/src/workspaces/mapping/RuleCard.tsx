@@ -1,3 +1,4 @@
+/** @filedesc Read-only display card for a single mapping rule showing source, target, and transform. */
 import { Pill } from '../../components/ui/Pill';
 
 interface RuleCardProps {

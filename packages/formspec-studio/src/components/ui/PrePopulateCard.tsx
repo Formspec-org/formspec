@@ -1,3 +1,4 @@
+/** @filedesc Card editor for a pre-populate bind rule specifying the external instance and field path. */
 import { HelpTip } from './HelpTip';
 import { propertyHelp } from '../../lib/field-helpers';
 

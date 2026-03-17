@@ -1,3 +1,4 @@
+/** @filedesc Registry constraints: extension fields with registry entries enforce pattern and length constraints */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

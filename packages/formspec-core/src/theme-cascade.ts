@@ -1,3 +1,4 @@
+/** @filedesc Resolves theme properties via the defaults/selectors/item-override cascade. */
 import type { ThemeState } from './types.js';
 
 export interface ResolvedProperty {

@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: Logic tab visualising bind rules with FEL dependency extraction. */
 // LOGIC TAB
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 import { useState, useCallback } from "react";

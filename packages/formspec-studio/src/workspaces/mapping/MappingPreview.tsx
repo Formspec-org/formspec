@@ -1,3 +1,4 @@
+/** @filedesc Mapping tab panel showing a live preview of the mapping direction picker and URL. */
 import { useEffect, useId, useState } from 'react';
 import { useProject } from '../../state/useProject';
 import { useMapping } from '../../state/useMapping';

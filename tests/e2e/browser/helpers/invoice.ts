@@ -1,3 +1,4 @@
+/** @filedesc E2E helpers for loading and mounting the invoice example form. */
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';

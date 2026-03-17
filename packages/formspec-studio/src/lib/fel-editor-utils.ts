@@ -1,3 +1,4 @@
+/** @filedesc Utilities for FEL editor autocomplete triggers, syntax highlighting, and token parsing. */
 import { FelLexer, parser, type FormspecInstance } from 'formspec-engine';
 
 export interface FELEditorFieldOption {

@@ -1,3 +1,4 @@
+/** @filedesc Theme tab section for setting form-wide default field styles such as label position. */
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
 

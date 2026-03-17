@@ -1,3 +1,4 @@
+/** @filedesc Recursively renders the flat item/component tree as FieldBlock, GroupBlock, LayoutBlock nodes. */
 import { bindsFor } from '../../lib/field-helpers';
 import type { DefLookupEntry, FlatEntry } from '../../lib/tree-helpers';
 import { FieldBlock } from './FieldBlock';

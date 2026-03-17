@@ -1,3 +1,4 @@
+/** @filedesc Reusable MCP tool annotation presets (read-only, destructive, etc.). */
 export const READ_ONLY = {
   readOnlyHint: true,
   destructiveHint: false,

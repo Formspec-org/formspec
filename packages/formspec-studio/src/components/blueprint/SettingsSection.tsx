@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section displaying top-level form settings (title, version, status, page mode). */
 import { useDefinition } from '../../state/useDefinition';
 import { PropertyRow } from '../ui/PropertyRow';
 import { Pill } from '../ui/Pill';

@@ -1,3 +1,4 @@
+/** @filedesc Manages provenance links between form elements and their origins. */
 import type { SourceTrace } from './types.js';
 
 /**

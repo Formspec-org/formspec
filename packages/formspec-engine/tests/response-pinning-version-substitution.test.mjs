@@ -1,3 +1,4 @@
+/** @filedesc Response pinning and version substitution: response records the exact definition version without substitution */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

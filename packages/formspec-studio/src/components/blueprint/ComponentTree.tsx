@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section rendering the UI component tree with color-coded layout/input/display nodes. */
 import { useComponent } from '../../state/useComponent';
 
 interface CompNode {

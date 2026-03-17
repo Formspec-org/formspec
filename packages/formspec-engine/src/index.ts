@@ -1,3 +1,4 @@
+/** @filedesc Core FormEngine class, public API surface, and re-exported types. */
 import { signal, computed, effect, batch, Signal } from '@preact/signals-core';
 import { FelLexer } from './fel/lexer.js';
 export { FelLexer } from './fel/lexer.js';

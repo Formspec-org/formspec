@@ -1,3 +1,4 @@
+/** @filedesc Absolute-positioned line or highlight shown at the current drop target during drag. */
 import { useEffect, useState } from 'react';
 import type { DropPosition } from './compute-drop-target';
 

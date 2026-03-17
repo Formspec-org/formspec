@@ -1,3 +1,4 @@
+/** @filedesc Applies inline style objects to elements with token resolution. */
 import type { StylingHost } from './index';
 import { resolveToken } from './tokens';
 

@@ -1,3 +1,4 @@
+/** @filedesc assembleDefinitionSync: shape FEL expressions are rewritten when library groups are assembled */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assembleDefinitionSync } from '../dist/index.js';

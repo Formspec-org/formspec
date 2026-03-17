@@ -1,3 +1,4 @@
+/** @filedesc Applies ARIA role, description, and live-region attributes from component specs. */
 import type { StylingHost } from './index';
 
 /** Counter for generating unique IDs for accessibility description elements. */

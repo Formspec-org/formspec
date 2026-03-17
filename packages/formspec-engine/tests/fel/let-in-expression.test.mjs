@@ -1,3 +1,4 @@
+/** @filedesc FEL let-in expressions: variable binding syntax, scoping, and interaction with other FEL constructs */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../../dist/index.js';

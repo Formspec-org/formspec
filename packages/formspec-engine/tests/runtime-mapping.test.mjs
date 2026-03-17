@@ -1,3 +1,4 @@
+/** @filedesc Runtime mapping: RuntimeMappingEngine applies rules, value maps, transforms, and defaults to form data */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RuntimeMappingEngine } from '../dist/index.js';

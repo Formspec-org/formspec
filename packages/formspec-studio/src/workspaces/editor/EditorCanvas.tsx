@@ -1,3 +1,4 @@
+/** @filedesc Main editor canvas with drag-and-drop, page tabs, context menu, and item palette. */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react';
 import { PointerSensor, KeyboardSensor, PointerActivationConstraints } from '@dnd-kit/dom';

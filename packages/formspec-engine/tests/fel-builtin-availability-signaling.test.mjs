@@ -1,3 +1,4 @@
+/** @filedesc FEL builtin availability: unknown functions throw explicit errors; supported builtins are callable */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

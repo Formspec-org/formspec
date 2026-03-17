@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section listing version migration entries with field-map rules from the definition. */
 import { useDefinition } from '../../state/useDefinition';
 import { Pill } from '../ui/Pill';
 

@@ -1,3 +1,4 @@
+/** @filedesc Resolves field type aliases and widget hints to canonical dataTypes. */
 import { HelperError } from './helper-types.js';
 import {
   KNOWN_COMPONENT_TYPES,

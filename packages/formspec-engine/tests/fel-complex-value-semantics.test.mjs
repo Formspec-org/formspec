@@ -1,3 +1,4 @@
+/** @filedesc FEL complex value semantics: money, date, and structured-type equality and arithmetic */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

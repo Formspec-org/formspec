@@ -1,3 +1,4 @@
+/** @filedesc Button group for switching the preview viewport between desktop, tablet, and mobile widths. */
 type Viewport = 'desktop' | 'tablet' | 'mobile';
 
 interface ViewportSwitcherProps {

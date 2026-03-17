@@ -1,3 +1,4 @@
+/** @filedesc Mapping tab section that lists all top-level mapping rules with their nested inner rules. */
 import { useMapping } from '../../state/useMapping';
 import { Section } from '../../components/ui/Section';
 import { RuleCard } from './RuleCard';

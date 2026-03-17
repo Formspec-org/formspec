@@ -1,3 +1,4 @@
+/** @filedesc Right-click context menu for canvas items with duplicate, delete, move, and wrap actions. */
 interface EditorContextMenuProps {
   itemPath?: string;
   itemType?: string;

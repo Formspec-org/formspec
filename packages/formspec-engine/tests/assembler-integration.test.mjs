@@ -1,3 +1,4 @@
+/** @filedesc assembleDefinitionSync integration: full bind, shape, and FEL rewrite across imported templates */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assembleDefinitionSync } from '../dist/index.js';

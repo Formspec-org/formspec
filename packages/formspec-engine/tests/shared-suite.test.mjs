@@ -1,3 +1,4 @@
+/** @filedesc Shared suite conformance: runs the shared cross-implementation conformance suite against the engine */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

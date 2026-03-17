@@ -1,3 +1,4 @@
+/** @filedesc Test utilities for the editor workspace: fixtures and a render helper with providers. */
 import { render } from '@testing-library/react';
 import { createProject, type Project } from 'formspec-studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+/** @filedesc Generates BLUF injections, schema-ref blocks, and LLM spec docs from source specs. */
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";

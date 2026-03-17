@@ -1,3 +1,4 @@
+/** @filedesc Registry entry constraints: property-based tests against the real formspec-common registry entries */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

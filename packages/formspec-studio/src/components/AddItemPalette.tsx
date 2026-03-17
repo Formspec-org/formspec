@@ -1,3 +1,4 @@
+/** @filedesc Searchable palette for adding new field, group, display, and layout items to the form. */
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /** A user-visible field type option shown in the palette. */

@@ -1,3 +1,4 @@
+/** @filedesc FEL static analysis and rewrite: analyzeFEL, dependency extraction, reference rewriting, extension validation */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {

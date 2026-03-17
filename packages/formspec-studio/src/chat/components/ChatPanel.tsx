@@ -1,3 +1,4 @@
+/** @filedesc Chat message thread with input box, send button, and file attachment support. */
 import React, { useState, useRef, useEffect } from 'react';
 import { useChatSession, useChatState } from '../state/ChatContext.js';
 

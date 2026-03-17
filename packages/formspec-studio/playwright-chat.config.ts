@@ -1,3 +1,4 @@
+/** @filedesc Playwright config for formspec-studio chat E2E tests (real API calls, serial). */
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 

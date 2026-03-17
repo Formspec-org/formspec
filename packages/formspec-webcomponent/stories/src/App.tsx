@@ -1,3 +1,4 @@
+/** @filedesc Stories dev app: orchestrates story selection, JSON editors, and live preview pane. */
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { storyGroups, Story, defaultThemeDoc } from './stories';
 import { Sidebar } from './components/Sidebar';

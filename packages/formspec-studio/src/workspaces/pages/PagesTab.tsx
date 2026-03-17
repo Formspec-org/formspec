@@ -1,3 +1,4 @@
+/** @filedesc Pages workspace tab for managing wizard pages, regions, and page-level diagnostics. */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { usePageStructure } from './usePageStructure';

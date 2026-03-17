@@ -1,3 +1,4 @@
+/** @filedesc Panel for viewing and editing inline data sources attached to the form definition. */
 import { useState } from 'react';
 import { useProject } from '../../state/useProject';
 import { useDefinition } from '../../state/useDefinition';

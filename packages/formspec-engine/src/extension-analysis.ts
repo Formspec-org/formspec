@@ -1,3 +1,4 @@
+/** @filedesc Validates x-extension usage in item trees against a registry catalog. */
 import type { FormspecItem, RegistryEntry } from './index.js';
 
 /** A single extension usage finding emitted while walking a definition item tree. */

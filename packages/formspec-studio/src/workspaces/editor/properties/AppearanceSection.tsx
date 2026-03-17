@@ -1,3 +1,4 @@
+/** @filedesc Properties panel section showing resolved theme cascade and per-item style overrides. */
 import { useState } from 'react';
 import { Section } from '../../../components/ui/Section';
 import { useTheme } from '../../../state/useTheme';

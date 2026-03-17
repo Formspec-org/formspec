@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section rendering the interactive item tree with inline add-item palette support. */
 import { useState, useCallback, useEffect } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';

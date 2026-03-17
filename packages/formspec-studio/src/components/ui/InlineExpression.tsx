@@ -1,3 +1,4 @@
+/** @filedesc Click-to-edit inline FEL expression widget that toggles between display and FELEditor modes. */
 import { useEffect, useRef, useState } from 'react';
 import { FELReferencePopup } from './FELReferencePopup';
 import { FELEditor } from './FELEditor';

@@ -1,3 +1,4 @@
+/** @filedesc Mapping tab section for setting the top-level mapping direction and URL properties. */
 import { useEffect, useId, useState } from 'react';
 import { useProject } from '../../state/useProject';
 import { useMapping } from '../../state/useMapping';

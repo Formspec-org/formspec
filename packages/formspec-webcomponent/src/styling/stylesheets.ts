@@ -1,3 +1,4 @@
+/** @filedesc Ref-counted theme stylesheet injection and cleanup for document.head. */
 import type { StylingHost } from './index';
 
 /** Module-level ref counts (was static on the class). */

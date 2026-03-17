@@ -1,3 +1,4 @@
+/** @filedesc Loads and caches JSON Schema validators and raw schema text for MCP. */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createSchemaValidator, type SchemaValidator } from 'formspec-engine';

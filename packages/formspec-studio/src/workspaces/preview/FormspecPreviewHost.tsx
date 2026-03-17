@@ -1,3 +1,4 @@
+/** @filedesc Hosts the <formspec-render> web component and syncs project documents to it via props. */
 import { useRef, useEffect } from 'react';
 import { useProjectState } from '../../state/useProjectState';
 import { formspecBaseCssHref } from './formspec-base-css-url';

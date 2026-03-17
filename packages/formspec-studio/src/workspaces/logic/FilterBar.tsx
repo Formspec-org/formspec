@@ -1,3 +1,4 @@
+/** @filedesc Pill-based filter bar for narrowing the logic tab view to a specific bind type. */
 import { Pill } from '../../components/ui/Pill';
 
 interface BindEntry {

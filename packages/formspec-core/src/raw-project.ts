@@ -1,3 +1,4 @@
+/** @filedesc RawProject class: central editing surface for a Formspec artifact bundle. */
 import type { IProjectCore } from './project-core.js';
 import type {
   ComponentDocument, ThemeDocument, MappingDocument, FormDefinition, FormItem,

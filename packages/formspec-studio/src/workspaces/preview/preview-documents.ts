@@ -1,3 +1,4 @@
+/** @filedesc Normalizes and materializes project documents into the shapes expected by the preview host. */
 import defaultThemeJson from '../../../../formspec-webcomponent/src/default-theme.json';
 
 function isRecord(value: unknown): value is Record<string, unknown> {

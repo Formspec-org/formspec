@@ -1,3 +1,4 @@
+/** @filedesc Generic undo/redo stack and command log manager. */
 import type { LogEntry } from './types.js';
 
 /**

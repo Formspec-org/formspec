@@ -1,3 +1,4 @@
+/** @filedesc Core semantics conformance: wildcard shape targets emit concrete indexed paths for repeat groups */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

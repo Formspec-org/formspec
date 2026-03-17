@@ -1,3 +1,4 @@
+/** @filedesc Diffs original example artifacts against reconstructed outputs and writes a report. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

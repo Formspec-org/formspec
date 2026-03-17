@@ -1,3 +1,4 @@
+/** @filedesc Playwright helper utilities for formspec-studio E2E tests (navigation, import, tab switching). */
 import { Page } from '@playwright/test';
 
 /** Wait for the app to be fully loaded (Shell visible). */

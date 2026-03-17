@@ -1,3 +1,4 @@
+/** @filedesc Floating overlay rendered under the cursor while dragging canvas items. */
 interface DragOverlayContentProps {
   label: string;
   itemType: string;

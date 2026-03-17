@@ -1,3 +1,4 @@
+/** @filedesc Wrapper component that mounts and updates a <formspec-render> custom element. */
 import { useEffect, useRef } from 'preact/hooks';
 import { forwardRef } from 'preact/compat';
 

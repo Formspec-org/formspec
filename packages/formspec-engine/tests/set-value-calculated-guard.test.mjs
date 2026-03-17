@@ -1,3 +1,4 @@
+/** @filedesc setValue calculated guard: calling setValue on a calculated field is silently ignored without errors */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""FastAPI dev server for the references example app, serving static assets."""
 import sys
 from pathlib import Path
 

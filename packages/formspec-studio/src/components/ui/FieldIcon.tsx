@@ -1,3 +1,4 @@
+/** @filedesc Monospace icon glyph and color mapped from a formspec data type string. */
 const typeIcons: Record<string, { icon: string; color: string }> = {
   string: { icon: 'Aa', color: 'text-accent' },
   integer: { icon: '#', color: 'text-green' },

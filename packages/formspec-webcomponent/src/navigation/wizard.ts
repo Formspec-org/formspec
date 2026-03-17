@@ -1,3 +1,4 @@
+/** @filedesc Programmatic wizard step navigation via custom event dispatch. */
 import type { NavigationHost } from './index.js';
 
 export function goToWizardStep(host: NavigationHost, index: number): boolean {

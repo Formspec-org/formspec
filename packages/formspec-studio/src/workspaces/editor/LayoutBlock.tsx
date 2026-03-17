@@ -1,3 +1,4 @@
+/** @filedesc Canvas block component for component-tree layout nodes (non-definition items). */
 import type React from 'react';
 import type { ReactNode } from 'react';
 import { blockIndent, blockRef } from './block-utils';

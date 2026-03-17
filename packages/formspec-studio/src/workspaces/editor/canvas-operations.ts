@@ -1,3 +1,4 @@
+/** @filedesc Pure functions for building context menu items and executing canvas CRUD actions. */
 import { isLayoutId, nodeIdFromLayoutId } from '../../lib/tree-helpers';
 import { pruneDescendants } from '../../lib/selection-helpers';
 import type { Project } from 'formspec-studio-core';

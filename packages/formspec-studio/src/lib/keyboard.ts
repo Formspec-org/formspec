@@ -1,3 +1,4 @@
+/** @filedesc Global keyboard shortcut handler that dispatches undo, delete, escape, and search actions. */
 export interface ShortcutHandlers {
   undo: () => void;
   redo: () => void;

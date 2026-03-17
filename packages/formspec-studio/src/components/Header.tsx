@@ -1,3 +1,5 @@
+/** @filedesc Top navigation header with workspace tab bar and actions (new, import, export, search). */
+
 import { useState, useRef, useEffect } from 'react';
 import { useProject } from '../state/useProject';
 import { useProjectState } from '../state/useProjectState';

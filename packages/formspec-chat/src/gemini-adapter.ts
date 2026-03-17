@@ -1,3 +1,4 @@
+/** @filedesc AIAdapter implementation backed by the Google Gemini API. */
 import { GoogleGenAI, type GenerateContentResponse } from '@google/genai';
 import type {
   AIAdapter, ScaffoldRequest, ScaffoldResult,

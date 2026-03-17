@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section showing screener enabled state, items, and routing conditions. */
 import { useDefinition } from '../../state/useDefinition';
 import { useProject } from '../../state/useProject';
 import { Pill } from '../ui/Pill';

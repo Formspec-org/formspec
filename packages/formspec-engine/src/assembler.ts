@@ -1,3 +1,4 @@
+/** @filedesc Resolves $ref inclusions to produce a self-contained, assembled definition. */
 import type { FormspecDefinition, FormspecItem, FormspecBind, FormspecShape, FormspecVariable } from './index.js';
 import { rewriteFELReferences } from './fel/analysis.js';
 

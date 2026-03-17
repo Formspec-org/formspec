@@ -1,3 +1,5 @@
+/** @filedesc Helpers for flattening item trees, resolving binds/shapes, and widget compatibility queries. */
+
 import {
   COMPATIBILITY_MATRIX,
   COMPONENT_TO_HINT,

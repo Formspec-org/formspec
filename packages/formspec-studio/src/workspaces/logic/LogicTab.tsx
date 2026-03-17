@@ -1,3 +1,4 @@
+/** @filedesc Logic workspace tab composing Variables, Binds, and Shapes sections with a FilterBar. */
 import { useState, useMemo } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';

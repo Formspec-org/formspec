@@ -1,3 +1,4 @@
+/** @filedesc Live form preview panel that runs the FormEngine with scenario data and renders at a given viewport. */
 import { useMemo, useState } from 'react';
 import { FormEngine, type FormspecItem } from 'formspec-engine';
 import { useProjectState } from '../../state/useProjectState';

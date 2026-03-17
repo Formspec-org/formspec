@@ -1,3 +1,4 @@
+/** @filedesc Registers all built-in component plugins with the global registry. */
 import { globalRegistry } from '../registry';
 import { PagePlugin, StackPlugin, GridPlugin, DividerPlugin, CollapsiblePlugin, ColumnsPlugin, PanelPlugin, AccordionPlugin, ModalPlugin, PopoverPlugin } from './layout';
 import { InputPlugins } from './inputs';

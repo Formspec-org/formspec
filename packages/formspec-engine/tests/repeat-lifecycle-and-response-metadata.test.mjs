@@ -1,3 +1,4 @@
+/** @filedesc Repeat lifecycle and response metadata: add/remove instances, signal cleanup, and repeat metadata in response */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

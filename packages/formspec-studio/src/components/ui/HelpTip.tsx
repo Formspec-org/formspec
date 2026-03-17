@@ -1,3 +1,4 @@
+/** @filedesc Inline help tooltip that wraps content with a hover-triggered floating popover. */
 import { useState, type ReactNode } from 'react';
 import {
   useFloating,

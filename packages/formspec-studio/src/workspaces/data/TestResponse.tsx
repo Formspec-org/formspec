@@ -1,3 +1,4 @@
+/** @filedesc Panel that runs FormEngine against the current definition and displays the response and validation report. */
 import { useState } from 'react';
 import { FormEngine, type FormspecItem } from 'formspec-engine';
 import { useDefinition } from '../../state/useDefinition';

@@ -1,3 +1,4 @@
+/** @filedesc Rich FEL expression editor with syntax highlighting, field/function autocomplete, and validation. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useFloating,

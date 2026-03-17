@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: shared constants, colour tokens, and the Formspec definition fixture. */
 // Preamble (imports, DEF, COMP, FEL, helpers, shared UI)
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 

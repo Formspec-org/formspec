@@ -1,3 +1,4 @@
+/** @filedesc Entry point for the Studio app; registers the formspec-render custom element and mounts App. */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FormspecRender } from 'formspec-webcomponent';

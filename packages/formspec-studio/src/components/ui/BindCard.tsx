@@ -1,3 +1,4 @@
+/** @filedesc Colored-border card displaying a single bind rule's type, humanized description, and FEL expression. */
 import { FELReferencePopup } from './FELReferencePopup';
 
 const bindColors: Record<string, string> = {

@@ -1,3 +1,4 @@
+/** @filedesc Screener routing: screener FEL conditions determine eligible/ineligible routing outcomes */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

@@ -1,3 +1,4 @@
+/** @filedesc Preview workspace tab toggling between live form render and JSON documents view. */
 import { useState } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { ViewportSwitcher, type Viewport } from './ViewportSwitcher';

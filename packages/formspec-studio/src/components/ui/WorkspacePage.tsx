@@ -1,3 +1,4 @@
+/** @filedesc Centered max-width container wrapping workspace tab content pages. */
 import { ReactNode } from 'react';
 
 interface WorkspacePageProps extends React.HTMLAttributes<HTMLDivElement> {

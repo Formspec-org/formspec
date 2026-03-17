@@ -1,3 +1,4 @@
+/** @filedesc Floating popover triggered by a (?) button listing all FEL function categories and signatures. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   getFELCatalog, 

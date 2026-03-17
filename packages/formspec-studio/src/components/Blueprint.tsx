@@ -1,3 +1,4 @@
+/** @filedesc Blueprint sidebar showing all project sections (structure, theme, screener, etc.) with counts. */
 import { useProjectState } from '../state/useProjectState';
 import { Pill } from './ui/Pill';
 

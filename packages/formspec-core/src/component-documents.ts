@@ -1,3 +1,4 @@
+/** @filedesc Utilities for creating, splitting, and selecting component document states. */
 import type {
   ComponentState,
   GeneratedLayoutState,

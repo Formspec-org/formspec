@@ -1,3 +1,4 @@
+/** @filedesc FEL null and logic semantics: null propagation through arithmetic, comparisons, and boolean operators */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

@@ -1,3 +1,4 @@
+/** @filedesc E2E helpers for mounting and interacting with the clinical-intake example form. */
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';

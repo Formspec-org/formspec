@@ -1,3 +1,4 @@
+/** @filedesc Resolves dot-separated item paths to locations in the definition tree. */
 import type { ProjectState } from '../types.js';
 import { itemLocationAtPath } from 'formspec-engine';
 import type { FormItem } from 'formspec-types';

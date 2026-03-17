@@ -1,3 +1,4 @@
+/** @filedesc Properties panel section for selecting the widget hint when multiple widgets are compatible. */
 import { Section } from '../../../components/ui/Section';
 import { HelpTip } from '../../../components/ui/HelpTip';
 import {

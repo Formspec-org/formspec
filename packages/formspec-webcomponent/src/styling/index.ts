@@ -1,3 +1,4 @@
+/** @filedesc Styling barrel: StylingHost interface, presentation resolution, and re-exports. */
 import {
     ThemeDocument,
     PresentationBlock,

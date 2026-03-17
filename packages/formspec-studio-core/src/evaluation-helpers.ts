@@ -1,3 +1,4 @@
+/** @filedesc Preview and validation helpers that run FormEngine against a Project. */
 import { FormEngine, type FormspecDefinition, type ValidationReport } from 'formspec-engine';
 import type { Project } from './project.js';
 

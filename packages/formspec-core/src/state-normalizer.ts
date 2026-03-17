@@ -1,3 +1,4 @@
+/** @filedesc Enforces cross-artifact invariants after every state mutation. */
 import type { ProjectState } from './types.js';
 
 /**

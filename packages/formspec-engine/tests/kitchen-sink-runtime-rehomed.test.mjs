@@ -1,3 +1,4 @@
+/** @filedesc Kitchen-sink runtime: holistic e2e fixture exercising all engine features end-to-end */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

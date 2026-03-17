@@ -1,3 +1,4 @@
+/** @filedesc Cross-runtime fuzz runner: compares FEL evaluation results between TS and Python. */
 import fs from 'node:fs';
 import { FormEngine } from '../../../packages/formspec-engine/dist/index.js';
 

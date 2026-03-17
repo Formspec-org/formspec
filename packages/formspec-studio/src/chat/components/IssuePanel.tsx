@@ -1,3 +1,4 @@
+/** @filedesc Panel displaying the persistent issue queue (errors, warnings, contradictions) with resolve/defer actions. */
 import React from 'react';
 import { useChatSession, useChatState } from '../state/ChatContext.js';
 import type { Issue } from 'formspec-chat';

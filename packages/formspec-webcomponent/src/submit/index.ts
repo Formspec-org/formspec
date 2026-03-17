@@ -1,3 +1,4 @@
+/** @filedesc Submit flow: payload building, touch-all, pending state, and validation targeting. */
 import type { Signal } from '@preact/signals-core';
 import type { FormEngine } from 'formspec-engine';
 import { normalizeFieldPath, externalPathToInternal, findFieldElement } from '../navigation/index.js';

@@ -1,3 +1,4 @@
+/** @filedesc rewriteFEL: path and root-segment substitution rules for imported fragment key remapping */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rewriteFEL } from '../dist/index.js';

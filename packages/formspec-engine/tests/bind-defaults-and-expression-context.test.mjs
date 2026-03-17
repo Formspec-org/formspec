@@ -1,3 +1,4 @@
+/** @filedesc Bind defaults: default values apply when a field becomes relevant, and FEL expression context */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

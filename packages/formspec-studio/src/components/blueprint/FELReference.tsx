@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section displaying a categorized catalog of all FEL built-in functions and signatures. */
 import { useState } from 'react';
 import { Section } from '../ui/Section';
 

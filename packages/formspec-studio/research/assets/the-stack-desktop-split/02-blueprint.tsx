@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: Blueprint panel — collapsible tree of form items with drag reorder. */
 // BLUEPRINT
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 import { useState, useCallback } from "react";

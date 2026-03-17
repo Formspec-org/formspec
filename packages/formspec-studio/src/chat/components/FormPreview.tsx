@@ -1,3 +1,4 @@
+/** @filedesc Full-screen generated form preview with field list, data-type badges, source traces, and diff highlights. */
 import React, { useMemo } from 'react';
 import { useChatState } from '../state/ChatContext.js';
 import type { SourceTrace, DefinitionDiff } from 'formspec-chat';

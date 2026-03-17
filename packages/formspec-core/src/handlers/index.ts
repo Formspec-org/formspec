@@ -1,3 +1,4 @@
+/** @filedesc Aggregates all built-in command handlers into a single registry. */
 import type { CommandHandler } from '../types.js';
 
 import { definitionMetadataHandlers } from './definition-metadata.js';

@@ -1,3 +1,4 @@
+/** @filedesc Properties panel section for group config: repeatable toggle and min/max repeat counts. */
 import { Section } from '../../../components/ui/Section';
 import { HelpTip } from '../../../components/ui/HelpTip';
 import { propertyHelp } from '../../../lib/field-helpers';

@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: drag-and-drop primitives (DragHandle, DropIndicator, useDragReorder). */
 // DRAG & DROP
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 import { useState, useCallback } from "react";

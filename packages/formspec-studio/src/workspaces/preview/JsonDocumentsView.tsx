@@ -1,3 +1,4 @@
+/** @filedesc Preview tab panel showing the raw JSON of the Definition, Component, Theme, or Mapping docs. */
 import { useState } from 'react';
 import { useProjectState } from '../../state/useProjectState';
 import {

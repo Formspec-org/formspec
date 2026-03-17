@@ -1,3 +1,4 @@
+/** @filedesc Tracks problems and low-confidence elements in generated forms. */
 import type { Issue } from './types.js';
 
 /**

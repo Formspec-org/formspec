@@ -1,3 +1,4 @@
+/** @filedesc Indented list of nested inner mapping rules rendered beneath a parent RuleCard. */
 import { RuleCard } from './RuleCard';
 
 interface InnerRulesProps {

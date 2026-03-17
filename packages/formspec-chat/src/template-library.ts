@@ -1,3 +1,4 @@
+/** @filedesc Built-in catalog of form template archetypes for chat scaffolding. */
 import type { Template } from './types.js';
 import type { FormDefinition } from 'formspec-types';
 

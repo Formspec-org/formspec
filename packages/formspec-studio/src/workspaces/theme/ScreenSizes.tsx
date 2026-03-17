@@ -1,3 +1,4 @@
+/** @filedesc Theme tab section for editing responsive breakpoint definitions (name and min-width). */
 import { useState } from 'react';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';

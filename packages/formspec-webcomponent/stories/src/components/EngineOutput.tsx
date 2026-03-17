@@ -1,3 +1,4 @@
+/** @filedesc Tabbed panel displaying FormEngine validation report and response JSON. */
 import { useState } from 'preact/hooks';
 
 interface Props {

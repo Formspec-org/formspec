@@ -1,3 +1,4 @@
+/** @filedesc Shared primitive components (PropInput, AddPlaceholder) reused across properties panels. */
 import { HelpTip } from '../../../components/ui/HelpTip';
 import type { Project } from 'formspec-studio-core';
 

@@ -1,3 +1,4 @@
+/* @filedesc Base styles and CSS custom properties for the stories playground app. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {

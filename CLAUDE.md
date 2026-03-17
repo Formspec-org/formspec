@@ -57,6 +57,36 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
   - `thoughts/examples/` — Reference example implementation plans.
 - **`tests/`** — Python conformance test suite (pytest + jsonschema + hypothesis).
 - **`tests/e2e/`** — Playwright E2E tests and JSON fixtures.
+- **`filemap.json`** — Auto-generated file→description index for agent navigation. Regenerate with `npm run docs:filemap`. See "Filemap Convention" below.
+
+## Filemap Convention
+
+`filemap.json` is a generated JSON index mapping every source file to a one-line description. It lets agents instantly understand the codebase without re-exploring it.
+
+**How it works:**
+- A script (`scripts/generate-filemap.mjs`) walks the source tree and extracts file-level descriptions using language-native conventions.
+- Run `npm run docs:filemap` to regenerate, or `npm run docs:filemap:check` to verify freshness.
+- `npm run docs:generate` also regenerates it automatically.
+
+**Adding a description to your file:**
+
+- **TypeScript / JavaScript**: Add `@filedesc` in a JSDoc comment at the top of the file, before imports:
+  ```ts
+  /** @filedesc Resolves $ref inclusions to produce a self-contained definition. */
+  import { ... } from '...';
+  ```
+- **Python**: Use the module docstring first line (already standard):
+  ```python
+  """FEL recursive-descent parser — tokens to AST."""
+  ```
+- **JSON**: Top-level `title` and/or `description` fields (schemas already have these).
+- **CSS**: `/* @filedesc ... */` block comment at the top.
+- **Markdown**: First `# heading` is used automatically.
+
+**Rules:**
+- Keep descriptions under 100 characters — concise and informative.
+- Focus on WHAT the file does, not HOW.
+- `filemap.json` MUST NOT be hand-edited. Always regenerate via the script.
 
 ## Spec Authoring Contract
 
@@ -76,8 +106,11 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
 # Build TypeScript packages
 npm run build                    # runs tsc in each package
 
-# Regenerate schema-driven spec artifacts (BLUF injection, schema refs, LLM docs)
+# Regenerate schema-driven spec artifacts (BLUF injection, schema refs, LLM docs) + filemap
 npm run docs:generate
+
+# Regenerate filemap.json only
+npm run docs:filemap
 
 # Enforce critical doc/schema gates (staleness + critical annotations + cross-spec contracts)
 npm run docs:check

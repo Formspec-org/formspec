@@ -1,3 +1,4 @@
+/** @filedesc ComponentRegistry class and the global singleton used for plugin dispatch. */
 import { ComponentPlugin } from './types';
 
 /**

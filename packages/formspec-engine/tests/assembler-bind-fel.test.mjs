@@ -1,3 +1,4 @@
+/** @filedesc assembleDefinitionSync: bind FEL expressions are rewritten correctly when groups are imported */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assembleDefinitionSync } from '../dist/index.js';

@@ -1,3 +1,4 @@
+/** @filedesc Hook that reads the Project instance from context, throwing if called outside a provider. */
 import { useContext } from 'react';
 import { ProjectContext } from './ProjectContext';
 

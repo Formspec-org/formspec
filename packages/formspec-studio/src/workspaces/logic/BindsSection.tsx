@@ -1,3 +1,4 @@
+/** @filedesc Logic tab section listing all bind entries (required, relevant, calculate, etc.) with FEL editors. */
 import { BindCard } from '../../components/ui/BindCard';
 import { InlineExpression } from '../../components/ui/InlineExpression';
 import { useProject } from '../../state/useProject';

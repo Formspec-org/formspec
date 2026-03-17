@@ -1,3 +1,4 @@
+/** @filedesc Runtime diagnostics and replay: event log capture, replay from log, and diagnostic introspection */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

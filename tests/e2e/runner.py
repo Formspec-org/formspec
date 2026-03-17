@@ -1,3 +1,4 @@
+"""Python reference FormRunner: evaluates FEL and manages form state for E2E tests."""
 from __future__ import annotations
 import json
 from dataclasses import dataclass

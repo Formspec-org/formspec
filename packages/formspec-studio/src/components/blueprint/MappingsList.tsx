@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section summarizing mapping rule count and direction for the current project. */
 import { useProjectState } from '../../state/useProjectState';
 import { Pill } from '../ui/Pill';
 

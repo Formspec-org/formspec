@@ -1,3 +1,4 @@
+/** @filedesc Response contract and pruning: getResponse() omits non-relevant fields and meets the response shape contract */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

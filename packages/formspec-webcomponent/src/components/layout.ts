@@ -1,3 +1,4 @@
+/** @filedesc Layout component plugins: Page, Stack, Grid, Divider, Columns, Panel, Accordion, Modal, Popover. */
 import { effect, signal } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
 

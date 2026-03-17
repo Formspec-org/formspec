@@ -1,3 +1,4 @@
+/** @filedesc Package entry point: registers components and re-exports public API. */
 // Side effects
 import './formspec-base.css';
 import { registerDefaultComponents } from './components';

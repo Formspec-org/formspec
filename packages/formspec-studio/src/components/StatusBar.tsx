@@ -1,3 +1,4 @@
+/** @filedesc Bottom status bar showing formspec version, form status, field count, and bind/shape counts. */
 import { useDefinition } from '../state/useDefinition';
 
 type AnyItem = { type?: string; children?: AnyItem[]; [key: string]: unknown };

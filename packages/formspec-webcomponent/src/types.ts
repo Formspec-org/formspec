@@ -1,3 +1,4 @@
+/** @filedesc Shared type definitions: RenderContext, ComponentPlugin, and screener types. */
 import { FormEngine } from 'formspec-engine';
 import type { Signal } from '@preact/signals-core';
 import { ThemeDocument, PresentationBlock, ItemDescriptor } from 'formspec-layout';

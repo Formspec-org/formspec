@@ -1,3 +1,4 @@
+/** @filedesc FEL date functions: empty-string and null inputs to date(), today(), and date arithmetic */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../../dist/index.js';

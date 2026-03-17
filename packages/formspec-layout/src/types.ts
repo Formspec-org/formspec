@@ -1,3 +1,4 @@
+/** @filedesc Core layout plan types: LayoutNode and PlanContext interfaces. */
 import type { PresentationBlock } from './theme-resolver.js';
 
 /**

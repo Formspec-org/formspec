@@ -1,3 +1,4 @@
+/** @filedesc Main studio shell; composes the header, blueprint sidebar, workspace tabs, and status bar. */
 import { useState, useEffect } from 'react';
 import { createProject, type Project } from 'formspec-studio-core';
 import { Header } from './Header';

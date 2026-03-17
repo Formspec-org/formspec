@@ -1,3 +1,4 @@
+/** @filedesc Definition schema acceptance: shared JSON fixtures are valid and load without engine errors */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

@@ -1,3 +1,4 @@
+/** @filedesc Story navigation sidebar with search and collapsible story groups. */
 import { useState } from 'preact/hooks';
 import { StoryGroup } from '../stories';
 

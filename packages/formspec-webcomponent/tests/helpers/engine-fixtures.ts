@@ -1,3 +1,4 @@
+/** @filedesc Reusable FormEngine fixture factories for webcomponent unit tests. */
 import type { ThemeDocument, PresentationBlock } from 'formspec-layout';
 
 /**

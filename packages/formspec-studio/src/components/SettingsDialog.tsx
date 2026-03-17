@@ -1,3 +1,4 @@
+/** @filedesc Modal dialog for editing top-level form settings (title, version, status, page mode, density). */
 import { useEffect } from 'react';
 import { useDefinition } from '../state/useDefinition';
 import { useProject } from '../state/useProject';

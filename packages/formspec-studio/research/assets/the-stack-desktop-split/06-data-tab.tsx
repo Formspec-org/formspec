@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: Data tab showing response schema, data sources, and option sets. */
 // DATA TAB
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 import { useState, useCallback } from "react";

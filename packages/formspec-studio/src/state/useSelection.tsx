@@ -1,3 +1,4 @@
+/** @filedesc Context and hooks managing single and multi-item selection state in the editor. */
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
 
 interface SelectionState {

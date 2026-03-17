@@ -1,3 +1,4 @@
+/** @filedesc Special component plugins: ConditionalGroup and DataTable. */
 import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
 import { formatMoney } from '../format';

@@ -1,3 +1,4 @@
+/** @filedesc Phase-aware command execution pipeline with middleware support. */
 import type { CommandHandler, ProjectState, AnyCommand, CommandResult, Middleware } from './types.js';
 
 /**

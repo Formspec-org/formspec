@@ -1,3 +1,4 @@
+/** @filedesc FEL repeat navigation semantics: aggregate functions and sibling-index traversal inside repeat groups */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

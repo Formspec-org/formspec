@@ -1,3 +1,4 @@
+/** @filedesc Logic tab section for creating and editing cross-field shape validation rules. */
 import { useState } from 'react';
 import { useProject } from '../../state/useProject';
 import { ShapeCard } from '../../components/ui/ShapeCard';

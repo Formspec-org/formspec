@@ -1,3 +1,4 @@
+/** @filedesc Display component plugins: Heading, Text, Card, Spacer, Alert, Badge, ProgressBar, Summary. */
 import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
 import { formatMoney } from '../format';

@@ -1,3 +1,4 @@
+/** @filedesc Dropdown menu for adding a bind behavior type (relevant, required, calculate, etc.) to an item. */
 import { useState, useRef, useEffect } from 'react';
 
 const BIND_TYPES = [

@@ -1,3 +1,4 @@
+/** @filedesc Low-level Playwright harness: navigate, mount, submit, and inspect formspec-render. */
 // ADR-0023: Low-level harness used only by tests that require synthetic inline fixtures
 // (compatibility matrices, Tab-based layouts, and other non-grant-app scenarios).
 import type { Page } from '@playwright/test';

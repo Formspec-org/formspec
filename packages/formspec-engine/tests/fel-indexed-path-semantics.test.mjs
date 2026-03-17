@@ -1,3 +1,4 @@
+/** @filedesc FEL indexed path semantics: accessing and computing values via repeat-group indexed paths */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

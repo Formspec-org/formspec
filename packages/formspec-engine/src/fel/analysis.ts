@@ -1,3 +1,4 @@
+/** @filedesc Static analysis and path rewriting for FEL expressions. */
 import { type IToken } from 'chevrotain';
 import { FelLexer } from './lexer.js';
 import { parser } from './parser.js';

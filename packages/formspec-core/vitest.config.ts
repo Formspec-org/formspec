@@ -1,3 +1,4 @@
+/** @filedesc Vitest configuration for the formspec-core package. */
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 

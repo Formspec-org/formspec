@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section listing named option sets and their option counts from the definition. */
 import { useDefinition } from '../../state/useDefinition';
 import { Pill } from '../ui/Pill';
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /**
+ * @filedesc Generates concise Markdown API docs from TypeScript .d.ts files for each package.
+ *
  * Generate concise Markdown API docs from TypeScript declaration files.
  *
  * Usage: node scripts/generate-ts-api-markdown.mjs

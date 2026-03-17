@@ -1,3 +1,4 @@
+/** @filedesc Interactive component plugins: Wizard, Tabs, and SubmitButton. */
 import { signal } from '@preact/signals-core';
 import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';

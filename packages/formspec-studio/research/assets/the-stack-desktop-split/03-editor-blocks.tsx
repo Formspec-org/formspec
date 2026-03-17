@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: editor canvas blocks (GroupBlock, FieldBlock) with metadata pills. */
 // EDITOR BLOCKS
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 import { useState, useCallback } from "react";

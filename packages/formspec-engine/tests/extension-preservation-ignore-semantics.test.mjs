@@ -1,3 +1,4 @@
+/** @filedesc Extension preservation and ignore semantics: unknown x- extensions are preserved and do not affect engine behavior */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

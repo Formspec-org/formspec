@@ -1,3 +1,4 @@
+/** @filedesc Catalog of FEL built-in functions with signatures, descriptions, and category metadata. */
 import { getBuiltinFELFunctionCatalog, type FELBuiltinFunctionCatalogEntry } from 'formspec-engine';
 
 export interface FELFunction {

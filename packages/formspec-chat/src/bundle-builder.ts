@@ -1,3 +1,4 @@
+/** @filedesc Builds a ProjectBundle from a bare FormDefinition via createRawProject. */
 import type { FormDefinition } from 'formspec-types';
 import { createRawProject, type ProjectBundle } from 'formspec-core';
 

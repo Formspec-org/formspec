@@ -1,3 +1,4 @@
+/** @filedesc Modal dialog for pasting and importing JSON artifacts (definition, component, theme, mapping). */
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useProject } from '../state/useProject';
 

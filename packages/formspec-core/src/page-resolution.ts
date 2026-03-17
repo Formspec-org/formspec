@@ -1,3 +1,4 @@
+/** @filedesc Resolves theme pages into enriched page structures with diagnostics. */
 import type { ProjectState } from './types.js';
 
 // ── Public types ─────────────────────────────────────────────────────

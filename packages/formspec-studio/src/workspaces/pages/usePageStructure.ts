@@ -1,3 +1,4 @@
+/** @filedesc Hook that resolves the current page structure (mode, pages, diagnostics) from project state. */
 import { useMemo } from 'react';
 import { resolvePageStructure, type ResolvedPageStructure } from 'formspec-studio-core';
 import { useProjectState } from '../../state/useProjectState';

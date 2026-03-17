@@ -1,3 +1,4 @@
+/** @filedesc Theme tab section showing all tokens grouped by dot-prefix with inline edit and delete. */
 import { useState } from 'react';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';

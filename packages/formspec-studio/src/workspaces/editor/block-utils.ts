@@ -1,3 +1,4 @@
+/** @filedesc Shared types and helpers (indent calculation, ref factory) used by canvas block components. */
 export interface BlockBaseProps {
   itemKey: string;
   itemPath: string;

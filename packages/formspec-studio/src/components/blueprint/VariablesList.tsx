@@ -1,3 +1,4 @@
+/** @filedesc Blueprint section listing computed variables with their FEL expressions and a navigate-to-Logic link. */
 import { useDefinition } from '../../state/useDefinition';
 
 export function VariablesList() {

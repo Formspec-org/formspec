@@ -1,3 +1,4 @@
+/** @filedesc Entry point for the chat-only build; seeds a Gemini dev key and mounts ChatShell. */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SessionStore } from 'formspec-chat';

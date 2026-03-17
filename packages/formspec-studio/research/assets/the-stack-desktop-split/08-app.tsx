@@ -1,3 +1,4 @@
+/** @filedesc Research prototype: top-level App shell wiring Editor/Logic/Data/Preview tabs together. */
 // APP
 // Split from the-stack-desktop.tsx — prototype, imports not wired.
 import { useState, useCallback } from "react";

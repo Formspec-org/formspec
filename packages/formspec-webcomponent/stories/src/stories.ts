@@ -1,3 +1,4 @@
+/** @filedesc Story registry: type definitions, default theme, and all named form fixtures. */
 export interface Story {
     label: string;
     description: string;

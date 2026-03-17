@@ -1,3 +1,4 @@
+/** @filedesc Wrapper that makes a canvas item sortable via dnd-kit, fading the source during drag. */
 import type { ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 

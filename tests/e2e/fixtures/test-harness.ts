@@ -1,3 +1,4 @@
+/** @filedesc E2E test harness entry point: registers formspec-render and exposes engine globals. */
 import { FormspecRender } from '../../../packages/formspec-webcomponent/src/index';
 import { FormEngine, assembleDefinitionSync } from '../../../packages/formspec-engine/src/index';
 

@@ -1,3 +1,4 @@
+/** @filedesc Keyboard-driven command palette for searching and navigating items, variables, binds, and shapes. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDefinition } from '../state/useDefinition';
 import { useSelection } from '../state/useSelection';

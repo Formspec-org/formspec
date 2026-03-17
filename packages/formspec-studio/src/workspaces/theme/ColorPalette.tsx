@@ -1,3 +1,4 @@
+/** @filedesc Theme tab section for viewing and editing color.* design tokens as a color palette. */
 import { useState, useRef } from 'react';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';

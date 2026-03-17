@@ -1,3 +1,4 @@
+/** @filedesc FEL completeness and variables: valid() reactive updates and variable reference resolution */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

@@ -1,3 +1,4 @@
+/** @filedesc Validates AI provider configuration (provider type and API key). */
 import type { ProviderConfig, ProviderType } from './types.js';
 
 export interface ProviderValidationError {

@@ -1,3 +1,4 @@
+/** @filedesc Extended engine features: formPresentation metadata, screener routing, and miscellaneous engine surface */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

@@ -1,3 +1,4 @@
+/** @filedesc Offline AIAdapter for tests; uses templates and heuristics, no API key. */
 import type {
   AIAdapter, ScaffoldRequest, ScaffoldResult,
   ChatMessage, Attachment, SourceTrace, Issue,

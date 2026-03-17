@@ -1,3 +1,4 @@
+/** @filedesc Navigation barrel: exports NavigationHost, path utils, focus, and wizard helpers. */
 export interface NavigationHost {
     querySelector(selectors: string): Element | null;
     querySelectorAll(selectors: string): NodeListOf<Element>;

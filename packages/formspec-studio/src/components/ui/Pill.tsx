@@ -1,3 +1,4 @@
+/** @filedesc Small themed badge pill for displaying labels, counts, and status values. */
 const colorMap: Record<string, string> = {
   accent: 'bg-accent/10 text-accent border-accent/20',
   logic: 'bg-logic/10 text-logic border-logic/20',

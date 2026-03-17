@@ -1,3 +1,4 @@
+/** @filedesc Shape active and severity: shapes only fire when activeWhen is true and emit correct severity levels */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

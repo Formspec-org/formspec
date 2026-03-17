@@ -1,3 +1,4 @@
+/** @filedesc Theme tab section for managing selector rules that apply styles by item type or dataType. */
 import { useState } from 'react';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';

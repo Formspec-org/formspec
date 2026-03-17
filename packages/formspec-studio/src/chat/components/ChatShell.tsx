@@ -1,3 +1,4 @@
+/** @filedesc Top-level chat UI shell; manages AI adapter wiring, file uploads, and panel layout. */
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ChatSession, GeminiAdapter, MockAdapter, SessionStore, validateProviderConfig } from 'formspec-chat';
 import type { AIAdapter, Attachment, ProviderConfig, StorageBackend } from 'formspec-chat';

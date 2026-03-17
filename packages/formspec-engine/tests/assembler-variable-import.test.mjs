@@ -1,3 +1,4 @@
+/** @filedesc assembleDefinitionSync: variable declarations are imported and rewritten from library definitions */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assembleDefinitionSync } from '../dist/index.js';

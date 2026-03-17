@@ -1,3 +1,4 @@
+/** @filedesc Read-only tree view of the form's response schema derived from the item hierarchy. */
 import { useState } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useOptionalSelection } from '../../state/useSelection';

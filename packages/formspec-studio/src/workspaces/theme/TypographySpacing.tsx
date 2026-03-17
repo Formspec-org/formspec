@@ -1,3 +1,4 @@
+/** @filedesc Theme tab section for editing typography, spacing scale, and border design tokens. */
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
 

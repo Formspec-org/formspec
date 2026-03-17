@@ -1,3 +1,4 @@
+/** @filedesc Two-column label/value row for property panels with optional help tooltip and color. */
 import { HelpTip } from './HelpTip';
 
 interface PropertyRowProps {

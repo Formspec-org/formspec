@@ -1,3 +1,4 @@
+/** @filedesc Tabbed JSON editor panel for definition, component doc, and theme in the stories app. */
 import { useState } from 'preact/hooks';
 
 type EditorTab = 'definition' | 'componentDoc' | 'theme';

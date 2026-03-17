@@ -1,3 +1,4 @@
+/** @filedesc Properties panel shown when no item is selected; edits top-level form definition metadata. */
 import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
 import type { Project } from 'formspec-studio-core';

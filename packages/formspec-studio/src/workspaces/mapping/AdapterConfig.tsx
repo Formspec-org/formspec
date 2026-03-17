@@ -1,3 +1,4 @@
+/** @filedesc Mapping tab section displaying the configured output adapter format and options. */
 import { useMapping } from '../../state/useMapping';
 import { Section } from '../../components/ui/Section';
 import { Pill } from '../../components/ui/Pill';

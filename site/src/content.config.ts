@@ -1,3 +1,4 @@
+/** @filedesc Astro content collection definitions for the blog. */
 import { defineCollection, z } from "astro:content";
 import { glob } from "astro/loaders";
 

@@ -1,3 +1,4 @@
+/** @filedesc Persists and retrieves chat sessions via a pluggable StorageBackend. */
 import type { StorageBackend, ChatSessionState, SessionSummary } from './types.js';
 
 const KEY_PREFIX = 'formspec-chat:session:';

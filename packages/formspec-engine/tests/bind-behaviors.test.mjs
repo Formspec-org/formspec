@@ -1,3 +1,4 @@
+/** @filedesc Bind behaviors: whitespace normalization, readonly, and other field-level bind semantics */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../dist/index.js';

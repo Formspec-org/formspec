@@ -1,3 +1,4 @@
+/** @filedesc Edge-case fixture conformance: shared fixtures exercise bind failures vs shape errors in realistic forms */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
