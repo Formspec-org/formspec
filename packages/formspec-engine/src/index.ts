@@ -1740,8 +1740,8 @@ export class FormEngine {
             this.dependencies[baseCurrentItemName] = [];
         }
 
-        const parts = currentItemName.split(/[.\[\]]/).filter(Boolean);
-        const parentPath = parts.slice(0, -1).join('.');
+        const lastDot = currentItemName.lastIndexOf('.');
+        const parentPath = lastDot === -1 ? '' : currentItemName.substring(0, lastDot);
 
         for (const dep of astDeps) {
             let fullDepPath = dep;
