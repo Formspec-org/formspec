@@ -88,6 +88,28 @@ function loadDataIntoEngine(engine: FormEngine, data: Record<string, unknown>): 
 }
 
 /**
+ * Walk ancestor paths to find the first one whose own relevantSignal is false.
+ * Returns the ancestor path, or undefined if the path itself is the hidden one.
+ */
+function findHidingAncestor(engine: FormEngine, path: string): string | undefined {
+  const parts = path.split(/[\[\].]/).filter(Boolean);
+  let currentPath = '';
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    const isIndex = /^\d+$/.test(part);
+    if (isIndex) {
+      currentPath += `[${part}]`;
+    } else {
+      currentPath += (currentPath ? '.' : '') + part;
+    }
+    if (engine.relevantSignals[currentPath] && !engine.relevantSignals[currentPath].value) {
+      return currentPath;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Preview — simulate respondent experience.
  * Creates a FormEngine from the project's exported definition,
  * optionally replays scenario values, and returns a snapshot.
@@ -121,11 +143,11 @@ export function previewForm(
     currentValues[path] = signal.value;
   }
 
-  for (const [path, relSignal] of Object.entries(engine.relevantSignals)) {
-    if (relSignal.value) {
+  for (const [path] of Object.entries(engine.relevantSignals)) {
+    if (engine.isPathRelevant(path)) {
       visibleFields.push(path);
     } else {
-      hiddenFields.push({ path });
+      hiddenFields.push({ path, hiddenBy: findHidingAncestor(engine, path) });
     }
   }
 

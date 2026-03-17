@@ -2053,7 +2053,7 @@ export class FormEngine {
         return this.evaluateShapeForPaths(shape);
     }
 
-    private isPathRelevant(path: string): boolean {
+    public isPathRelevant(path: string): boolean {
         if (!path) return true;
         const parts = path.split(/[\[\]\.]/).filter(Boolean);
         let currentPath = '';

@@ -132,6 +132,116 @@ describe('previewForm', () => {
   });
 });
 
+describe('previewForm — parent group visibility inheritance', () => {
+  it('hides child fields when parent group is hidden', () => {
+    const project = createProject();
+    project.addField('toggle', 'Toggle', 'boolean');
+    project.addGroup('details', 'Details');
+    project.addField('details.name', 'Name', 'text');
+    project.addField('details.age', 'Age', 'integer');
+    project.showWhen('details', '$toggle = true');
+
+    // toggle defaults to falsy, so 'details' group is hidden
+    const preview = previewForm(project);
+
+    // Children must be in hiddenFields, not visibleFields
+    expect(preview.visibleFields).not.toContain('details.name');
+    expect(preview.visibleFields).not.toContain('details.age');
+    expect(preview.hiddenFields.some(h => h.path === 'details.name')).toBe(true);
+    expect(preview.hiddenFields.some(h => h.path === 'details.age')).toBe(true);
+  });
+
+  it('populates hiddenBy with the ancestor that caused hiding', () => {
+    const project = createProject();
+    project.addField('toggle', 'Toggle', 'boolean');
+    project.addGroup('details', 'Details');
+    project.addField('details.name', 'Name', 'text');
+    project.showWhen('details', '$toggle = true');
+
+    const preview = previewForm(project);
+
+    const hidden = preview.hiddenFields.find(h => h.path === 'details.name');
+    expect(hidden).toBeDefined();
+    expect(hidden!.hiddenBy).toBe('details');
+  });
+
+  it('hides grandchildren when grandparent group is hidden', () => {
+    const project = createProject();
+    project.addField('toggle', 'Toggle', 'boolean');
+    project.addGroup('outer', 'Outer');
+    project.addGroup('outer.inner', 'Inner');
+    project.addField('outer.inner.value', 'Value', 'text');
+    project.showWhen('outer', '$toggle = true');
+
+    const preview = previewForm(project);
+
+    expect(preview.visibleFields).not.toContain('outer.inner.value');
+    expect(preview.hiddenFields.some(h => h.path === 'outer.inner.value')).toBe(true);
+    // hiddenBy should point to the outermost hidden ancestor
+    const hidden = preview.hiddenFields.find(h => h.path === 'outer.inner.value');
+    expect(hidden!.hiddenBy).toBe('outer');
+  });
+
+  it('child with own show_when=true is still hidden if parent is hidden', () => {
+    const project = createProject();
+    project.addField('toggle', 'Toggle', 'boolean');
+    project.addGroup('details', 'Details');
+    project.addField('details.name', 'Name', 'text');
+    project.showWhen('details', '$toggle = true');
+    // Child has its own show_when that evaluates to true, but parent overrides
+    project.showWhen('details.name', 'true');
+
+    const preview = previewForm(project);
+
+    expect(preview.visibleFields).not.toContain('details.name');
+    expect(preview.hiddenFields.some(h => h.path === 'details.name')).toBe(true);
+  });
+
+  it('shows children when parent group is visible', () => {
+    const project = createProject();
+    project.addField('toggle', 'Toggle', 'boolean');
+    project.addGroup('details', 'Details');
+    project.addField('details.name', 'Name', 'text');
+    project.showWhen('details', '$toggle = true');
+
+    // Scenario makes toggle true, so parent is visible
+    const preview = previewForm(project, { toggle: true });
+
+    expect(preview.visibleFields).toContain('details.name');
+    expect(preview.hiddenFields.some(h => h.path === 'details.name')).toBe(false);
+  });
+
+  it('hides repeat group children when parent group is hidden', () => {
+    const project = createProject();
+    project.addField('show_items', 'Show Items', 'boolean');
+    project.addGroup('items', 'Items');
+    project.makeRepeatable('items', { min: 1 });
+    project.addField('items.name', 'Name', 'text');
+    project.showWhen('items', '$show_items = true');
+
+    const preview = previewForm(project);
+
+    // items[0].name should be hidden because parent 'items' is hidden
+    expect(preview.visibleFields).not.toContain('items[0].name');
+    expect(preview.hiddenFields.some(h => h.path === 'items[0].name')).toBe(true);
+  });
+
+  it('hiddenBy for repeat group child points to hidden group', () => {
+    const project = createProject();
+    project.addField('show_items', 'Show Items', 'boolean');
+    project.addGroup('items', 'Items');
+    project.makeRepeatable('items', { min: 1 });
+    project.addField('items.name', 'Name', 'text');
+    project.showWhen('items', '$show_items = true');
+
+    const preview = previewForm(project);
+
+    const hidden = preview.hiddenFields.find(h => h.path === 'items[0].name');
+    expect(hidden).toBeDefined();
+    expect(hidden!.hiddenBy).toBe('items');
+  });
+});
+
 describe('previewForm — repeat groups', () => {
   function buildExpenseForm() {
     const project = createProject();
