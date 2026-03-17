@@ -12,7 +12,10 @@ test-results/
 project/
 .pytest_cache/
 .mypy_cache/
-.claude
+# Claude Code project config (ignore contents, track shared config)
+.claude/*
+!.claude/settings.json
+!.claude/mcp.json
 .serena/
 dist-playground/
 .playwright-mcp/
