@@ -36,3 +36,4 @@ reconstructed-examples/
 # Firebase Hosting build output
 public/
 firebase-debug.log
+.firebase/

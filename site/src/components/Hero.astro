@@ -33,7 +33,7 @@
         </svg>
       </a>
       <a
-        href="https://github.com/formspec/formspec"
+        href="https://github.com/mikewolfd/formspec"
         class="btn-ghost"
         target="_blank"
         rel="noopener noreferrer"
@@ -44,28 +44,8 @@
         GitHub
       </a>
       <a href="/docs/" class="btn-ghost">
-        Read the spec
+        Docs
       </a>
-    </div>
-
-    <div class="hero-install">
-      <span class="hero-install-label">Add MCP to Claude Desktop:</span>
-      <code class="hero-install-cmd" id="mcp-cmd">npx formspec-mcp</code>
-      <button class="hero-install-copy" onclick="navigator.clipboard.writeText('npx formspec-mcp').then(() => { this.textContent = 'Copied'; setTimeout(() => this.textContent = 'Copy', 1500) })" aria-label="Copy install command">Copy</button>
-    </div>
-
-    <p class="hero-cta-caption">Studio is a browser-based form builder with AI chat. The MCP server adds 28 form-building tools to Claude, Cursor, or any MCP client.</p>
-
-    <div class="hero-proof" role="list" aria-label="Key properties">
-      <span role="listitem">Works offline</span>
-      <span class="proof-sep" aria-hidden="true">/</span>
-      <span role="listitem">Automatic validation</span>
-      <span class="proof-sep" aria-hidden="true">/</span>
-      <span role="listitem">No vendor lock-in</span>
-      <span class="proof-sep" aria-hidden="true">/</span>
-      <span role="listitem">AI-assisted</span>
-      <span class="proof-sep" aria-hidden="true">/</span>
-      <span role="listitem">Open source</span>
     </div>
 
   </div>
@@ -116,7 +96,7 @@
     margin: 0 auto;
     padding: 5rem clamp(1.25rem, 4vw, 2.5rem) 4rem;
     display: grid;
-    grid-template-columns: 5fr 7fr;
+    grid-template-columns: 1fr 1fr;
     gap: 3rem;
     align-items: center;
   }
@@ -154,58 +134,6 @@
     line-height: 1.5;
   }
 
-  .hero-install {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .hero-install-label {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-ink-tertiary);
-  }
-
-  .hero-install-cmd {
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
-    background: var(--color-surface-sunken);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    padding: 0.3rem 0.625rem;
-    color: var(--color-ink);
-    user-select: all;
-  }
-
-  .hero-install-copy {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.3rem 0.5rem;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-ink-secondary);
-    cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-  }
-
-  .hero-install-copy:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-  }
-
-  .hero-cta-caption {
-    font-size: 0.8125rem;
-    color: var(--color-ink-tertiary);
-    margin: 0 0 2rem;
-    line-height: 1.5;
-  }
-
   .hero-headline {
     font-size: clamp(2.25rem, 4.5vw, 3.25rem);
     font-weight: 700;
@@ -216,7 +144,7 @@
   }
 
   .hero-headline-dim {
-    color: var(--color-ink-tertiary);
+    color: var(--color-ink-secondary);
   }
 
   .hero-sub {
@@ -224,7 +152,7 @@
     color: var(--color-ink-secondary);
     line-height: 1.7;
     max-width: 38rem;
-    margin: 0 0 2rem;
+    margin: 0 0 1.5rem;
   }
 
   .hero-actions {
@@ -232,7 +160,6 @@
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
-    margin-bottom: 2rem;
   }
 
   .btn-primary {
@@ -275,21 +202,8 @@
     color: var(--color-accent);
   }
 
-  .hero-proof {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    flex-wrap: wrap;
-    font-size: 0.8125rem;
-    color: var(--color-ink-tertiary);
-  }
-
-  .proof-sep {
-    color: var(--color-border-strong);
-  }
-
   .hero-code {
-    min-width: 0;
+    min-width: 32rem;
   }
 
   .code-filename {
@@ -389,7 +303,7 @@
   /* ── Right: preview pane ── */
 
   .split-pane--preview {
-    background: #f8f8f7;
+    background: #f0f0ee;
     padding: 1rem 1.125rem;
     overflow-y: auto;
     position: relative;
@@ -472,6 +386,7 @@
     }
 
     .hero-code {
+      min-width: 0;
       max-width: 100%;
     }
   }

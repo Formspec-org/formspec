@@ -2,7 +2,7 @@ import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  site: "https://formspec.dev",
+  site: "https://formspec.org",
   vite: {
     plugins: [tailwindcss()],
   },

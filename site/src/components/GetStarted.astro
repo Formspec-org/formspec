@@ -1,0 +1,265 @@
+---
+// GetStarted — three entry points, each showing who it's for
+// and what the experience looks like.
+---
+
+<section class="getstarted" aria-label="Getting started">
+  <div class="getstarted-inner">
+
+    <a href="/studio/" class="gs-card">
+      <div class="gs-preview gs-preview--studio">
+        <div class="gs-mock-editor">
+          <div class="gs-mock-sidebar">
+            <span class="gs-mock-sidebar-item gs-mock-sidebar-item--active"></span>
+            <span class="gs-mock-sidebar-item"></span>
+            <span class="gs-mock-sidebar-item"></span>
+          </div>
+          <div class="gs-mock-canvas">
+            <span class="gs-mock-field"></span>
+            <span class="gs-mock-field gs-mock-field--short"></span>
+            <span class="gs-mock-field"></span>
+          </div>
+        </div>
+      </div>
+      <div class="gs-content">
+        <span class="gs-label">Formspec Studio</span>
+        <span class="gs-audience">Full form builder</span>
+        <span class="gs-desc">Visual editor for building, editing, and managing complex forms. Full control over every field and rule.</span>
+      </div>
+    </a>
+
+    <a href="#developers" class="gs-card">
+      <div class="gs-preview gs-preview--mcp">
+        <div class="gs-mock-terminal">
+          <span class="gs-mock-prompt">$</span> npx formspec-mcp
+          <div class="gs-mock-output">28 tools registered</div>
+        </div>
+      </div>
+      <div class="gs-content">
+        <span class="gs-label">MCP Server</span>
+        <span class="gs-audience">IDE &amp; AI agent users</span>
+        <span class="gs-desc">Add form-building tools to Claude, Cursor, or any MCP client.</span>
+      </div>
+    </a>
+
+    <a href="/chat/" class="gs-card">
+      <div class="gs-preview gs-preview--chat">
+        <div class="gs-mock-chat">
+          <div class="gs-mock-bubble gs-mock-bubble--user">I need a grant application with budget tracking</div>
+          <div class="gs-mock-bubble gs-mock-bubble--ai">Building form with 12 fields, 3 pages...</div>
+        </div>
+      </div>
+      <div class="gs-content">
+        <span class="gs-label">Chat</span>
+        <span class="gs-audience">AI-powered kickstart</span>
+        <span class="gs-desc">Describe what you need. AI builds a working form in minutes. No install, no IDE.</span>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<style>
+  .getstarted {
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 2.5rem 0;
+  }
+
+  .getstarted-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .gs-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    text-decoration: none;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+
+  .gs-card:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  /* Preview area — mini visual of what the experience looks like */
+  .gs-preview {
+    padding: 1rem 1rem 0.75rem;
+    min-height: 5.5rem;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .gs-preview--studio {
+    background: linear-gradient(135deg, #2a2a3d, #1e1e2e);
+  }
+
+  .gs-preview--mcp {
+    background: linear-gradient(135deg, #1a1a2e, #0f0f1a);
+  }
+
+  .gs-preview--chat {
+    background: linear-gradient(135deg, #2d2a3d, #1e1b2e);
+  }
+
+  /* Mock editor (Studio) */
+  .gs-mock-editor {
+    display: flex;
+    gap: 0.375rem;
+    width: 100%;
+    height: 100%;
+  }
+
+  .gs-mock-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 2.5rem;
+    flex-shrink: 0;
+  }
+
+  .gs-mock-sidebar-item {
+    display: block;
+    height: 6px;
+    background: rgb(255 255 255 / 0.12);
+    border-radius: 2px;
+  }
+
+  .gs-mock-sidebar-item--active {
+    background: rgb(61 82 213 / 0.5);
+  }
+
+  .gs-mock-canvas {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    background: rgb(255 255 255 / 0.04);
+    border-radius: 3px;
+    padding: 0.375rem;
+  }
+
+  /* Mock chat bubbles */
+  .gs-mock-chat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    width: 100%;
+  }
+
+  .gs-mock-bubble {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    line-height: 1.4;
+    padding: 0.375rem 0.5rem;
+    border-radius: 4px;
+    max-width: 85%;
+  }
+
+  .gs-mock-bubble--user {
+    background: rgb(61 82 213 / 0.25);
+    color: rgb(255 255 255 / 0.8);
+    align-self: flex-end;
+  }
+
+  .gs-mock-bubble--ai {
+    background: rgb(255 255 255 / 0.08);
+    color: rgb(255 255 255 / 0.6);
+    align-self: flex-start;
+  }
+
+  /* Mock terminal */
+  .gs-mock-terminal {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: rgb(255 255 255 / 0.7);
+    line-height: 1.6;
+    width: 100%;
+  }
+
+  .gs-mock-prompt {
+    color: var(--color-accent);
+    margin-right: 0.375rem;
+  }
+
+  .gs-mock-output {
+    color: rgb(80 250 123 / 0.7);
+    margin-top: 0.125rem;
+  }
+
+  /* Mock form fields in chat preview */
+  .gs-mock-field {
+    display: block;
+    height: 6px;
+    background: rgb(255 255 255 / 0.15);
+    border-radius: 2px;
+    margin-top: 0.25rem;
+  }
+
+  .gs-mock-field--short {
+    width: 60%;
+  }
+
+  /* Card content area */
+  .gs-content {
+    padding: 1rem 1.125rem 1.125rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .gs-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    letter-spacing: -0.01em;
+  }
+
+  .gs-audience {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-accent);
+    margin-bottom: 0.25rem;
+  }
+
+  .gs-desc {
+    font-size: 0.8125rem;
+    color: var(--color-ink-secondary);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 768px) {
+    .getstarted-inner {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+
+    .gs-card {
+      flex-direction: row;
+    }
+
+    .gs-preview {
+      min-height: 0;
+      width: 8rem;
+      flex-shrink: 0;
+      padding: 0.75rem;
+      align-items: center;
+    }
+
+    .gs-content {
+      padding: 0.75rem 1rem;
+    }
+  }
+</style>
