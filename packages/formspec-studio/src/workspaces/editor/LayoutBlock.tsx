@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { ReactNode } from 'react';
 import { blockIndent, blockRef } from './block-utils';
+import { DragHandle } from './DragHandle';
 
 interface LayoutBlockProps {
   nodeId: string;
@@ -42,20 +43,7 @@ export function LayoutBlock({
         {/* Header row with drag handle and component pill */}
         <div className="flex items-center gap-2">
           {/* Drag Handle */}
-          <div
-            draggable="true"
-            data-testid="drag-handle"
-            className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab shrink-0"
-          >
-            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <circle cx="2" cy="2" r="1.25" fill="currentColor" className="text-muted/60" />
-              <circle cx="6" cy="2" r="1.25" fill="currentColor" className="text-muted/60" />
-              <circle cx="2" cy="7" r="1.25" fill="currentColor" className="text-muted/60" />
-              <circle cx="6" cy="7" r="1.25" fill="currentColor" className="text-muted/60" />
-              <circle cx="2" cy="12" r="1.25" fill="currentColor" className="text-muted/60" />
-              <circle cx="6" cy="12" r="1.25" fill="currentColor" className="text-muted/60" />
-            </svg>
-          </div>
+          <DragHandle />
 
           {/* Component type pill */}
           <span className={`inline-block font-mono text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded ${

@@ -3,6 +3,7 @@ import { FieldIcon } from '../../components/ui/FieldIcon';
 import { humanizeFEL } from '../../lib/humanize';
 import { dataTypeInfo } from '../../lib/field-helpers';
 import { blockIndent, blockRef, type BlockBaseProps } from './block-utils';
+import { DragHandle } from './DragHandle';
 
 const iconBgMap: Record<string, string> = {
   'text-accent': 'bg-accent/10 border-accent/20',
@@ -67,7 +68,7 @@ export function FieldBlock({
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={handleKeyDown}
-      className={`group relative bg-surface border rounded-[4px] cursor-pointer transition-all ${
+      className={`group relative bg-surface border rounded-[4px] cursor-pointer transition-all flex ${
         selected ? 'border-accent ring-1 ring-accent/20 z-10'
         : isInSelection ? 'border-accent bg-accent/5 z-10'
         : 'border-border hover:border-muted/40'
@@ -81,70 +82,60 @@ export function FieldBlock({
         </div>
       )}
 
-      {/* Drag Handle */}
-      <div
-        draggable="true"
-        data-testid="drag-handle"
-        className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-grab"
-      >
-        <svg width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <circle cx="2" cy="2" r="1.25" fill="currentColor" className="text-muted/60" />
-          <circle cx="6" cy="2" r="1.25" fill="currentColor" className="text-muted/60" />
-          <circle cx="2" cy="7" r="1.25" fill="currentColor" className="text-muted/60" />
-          <circle cx="6" cy="7" r="1.25" fill="currentColor" className="text-muted/60" />
-          <circle cx="2" cy="12" r="1.25" fill="currentColor" className="text-muted/60" />
-          <circle cx="6" cy="12" r="1.25" fill="currentColor" className="text-muted/60" />
-        </svg>
-      </div>
+      {/* Drag Handle — full-height left column */}
+      <DragHandle className="rounded-l-[3px]" />
 
-      <div className="flex items-start px-3 py-2 gap-2.5">
-        {/* Icon Badge */}
-        <div className={`w-[24px] h-[24px] rounded-[3px] border flex items-center justify-center shrink-0 mt-0.5 ${iconBg}`}>
-          <FieldIcon dataType={dataType || 'string'} className={`text-[11px] font-semibold ${dt.color}`} />
-        </div>
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start px-3 py-2 gap-2.5">
+          {/* Icon Badge */}
+          <div className={`w-[24px] h-[24px] rounded-[3px] border flex items-center justify-center shrink-0 mt-0.5 ${iconBg}`}>
+            <FieldIcon dataType={dataType || 'string'} className={`text-[11px] font-semibold ${dt.color}`} />
+          </div>
 
-        <div className="flex-1 min-w-0">
-          {/* Label Row */}
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-ui text-[15px] font-medium tracking-tight text-ink truncate min-w-0">
-              {label || itemKey}
-            </span>
-            <div className="flex items-center gap-1 shrink-0">
-              {isReq && <Pill text="req" color="accent" size="sm" />}
-              {hasCal && <Pill text="ƒx" color="green" size="sm" />}
-              {isReadonly && <Pill text="ro" color="muted" size="sm" />}
+          <div className="flex-1 min-w-0">
+            {/* Label Row */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-ui text-[15px] font-medium tracking-tight text-ink truncate min-w-0">
+                {label || itemKey}
+              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                {isReq && <Pill text="req" color="accent" size="sm" />}
+                {hasCal && <Pill text="ƒx" color="green" size="sm" />}
+                {isReadonly && <Pill text="ro" color="muted" size="sm" />}
+              </div>
+            </div>
+
+            {/* Metadata Row */}
+            <div className="flex items-center gap-2 mt-0.5 font-mono text-[10.5px] text-muted overflow-hidden">
+              <span className={`${dt.color} shrink-0`}>{dt.label}</span>
+              <span className="opacity-55 shrink-0">{itemKey}</span>
+              {hint && <span className="opacity-45 italic truncate">— {hint}</span>}
             </div>
           </div>
+        </div>
 
-          {/* Metadata Row */}
-          <div className="flex items-center gap-2 mt-0.5 font-mono text-[10.5px] text-muted overflow-hidden">
-            <span className={`${dt.color} shrink-0`}>{dt.label}</span>
-            <span className="opacity-55 shrink-0">{itemKey}</span>
-            {hint && <span className="opacity-45 italic truncate">— {hint}</span>}
+        {/* Summary Strip */}
+        {(hasRel || hasCal || hasCon) && (
+          <div className="border-t border-border px-3 py-1 ml-[34px] flex gap-3.5 flex-wrap font-mono text-[10.5px]">
+            {hasRel && (
+              <span className="text-logic flex items-center gap-1">
+                <span className="text-[9px]">◈</span> {humanizeFEL(binds.relevant)}
+              </span>
+            )}
+            {hasCal && (
+              <span className="text-green flex items-center gap-1">
+                <span className="text-[9px]">ƒ</span> Auto-calculated
+              </span>
+            )}
+            {hasCon && (
+              <span className="text-amber flex items-center gap-1">
+                <span className="text-[9px]">⚡</span> Validated
+              </span>
+            )}
           </div>
-        </div>
+        )}
       </div>
-
-      {/* Summary Strip */}
-      {(hasRel || hasCal || hasCon) && (
-        <div className="border-t border-border px-3 py-1 ml-[34px] flex gap-3.5 flex-wrap font-mono text-[10.5px]">
-          {hasRel && (
-            <span className="text-logic flex items-center gap-1">
-              <span className="text-[9px]">◈</span> {humanizeFEL(binds.relevant)}
-            </span>
-          )}
-          {hasCal && (
-            <span className="text-green flex items-center gap-1">
-              <span className="text-[9px]">ƒ</span> Auto-calculated
-            </span>
-          )}
-          {hasCon && (
-            <span className="text-amber flex items-center gap-1">
-              <span className="text-[9px]">⚡</span> Validated
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }
