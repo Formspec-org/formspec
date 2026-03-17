@@ -274,8 +274,11 @@ export function planComponentTree(
         node.isRepeatTemplate = true;
     }
 
-    // Mark scope change for group nodes so the emitter extends the prefix
-    if (fullBindPath && item?.type === 'group') {
+    // Mark scope change for group nodes so the emitter extends the prefix.
+    // DataTable and Accordion manage their own group binding internally,
+    // so they must NOT be treated as scope-change nodes.
+    const SELF_MANAGED_GROUP_COMPONENTS = new Set(['DataTable', 'Accordion']);
+    if (fullBindPath && item?.type === 'group' && !SELF_MANAGED_GROUP_COMPONENTS.has(componentType)) {
         node.scopeChange = true;
     }
 
