@@ -474,7 +474,29 @@ export class Project {
     if (parentPath) addItemPayload.parentPath = parentPath;
     if (props?.insertIndex !== undefined) addItemPayload.insertIndex = props.insertIndex;
 
-    if (props?.display) {
+    // When adding a root-level group in paged mode, create a paired theme page
+    // so that theme.pages and definition.items stay in sync (same invariant as addPage).
+    const pageMode = this.core.state.definition.formPresentation?.pageMode;
+    const isRootLevel = !parentPath;
+    const shouldCreatePage = isRootLevel && (pageMode === 'wizard' || pageMode === 'tabs');
+
+    if (shouldCreatePage) {
+      const pageId = `page-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const pageCommands = [
+        { type: 'definition.addItem', payload: addItemPayload },
+        { type: 'pages.addPage', payload: { id: pageId, title: label } },
+        { type: 'pages.assignItem', payload: { pageId, key } },
+      ] as AnyCommand[];
+
+      if (props?.display) {
+        this.core.batchWithRebuild(
+          pageCommands,
+          [{ type: 'component.setGroupDisplayMode', payload: { groupKey: key, mode: props.display } }],
+        );
+      } else {
+        this.core.dispatch(pageCommands);
+      }
+    } else if (props?.display) {
       // Two-phase: addItem triggers rebuild, then setGroupDisplayMode on rebuilt tree
       this.core.batchWithRebuild(
         [{ type: 'definition.addItem', payload: addItemPayload }],

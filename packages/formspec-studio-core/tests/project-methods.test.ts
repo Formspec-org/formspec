@@ -183,6 +183,55 @@ describe('addGroup', () => {
   });
 });
 
+describe('addGroup in paged mode', () => {
+  it('creates a paired theme page when project is in wizard mode', () => {
+    const project = createProject();
+    project.addPage('Existing Page'); // puts project into wizard mode
+    project.addGroup('section_a', 'Section A');
+
+    const pages = project.theme.pages ?? [];
+    expect(pages.length).toBe(2);
+    const newPage = pages.find((p: any) => p.title === 'Section A');
+    expect(newPage).toBeDefined();
+    const groupKey = 'section_a';
+    expect(newPage?.regions?.some((r: any) => r.key === groupKey)).toBe(true);
+    expect(project.itemAt(groupKey)?.type).toBe('group');
+  });
+
+  it('creates a paired theme page when project is in tabs mode', () => {
+    const project = createProject();
+    project.setFlow('tabs');
+    project.addPage('First Tab');
+    project.addGroup('tab_two', 'Tab Two');
+
+    const pages = project.theme.pages ?? [];
+    expect(pages.length).toBe(2);
+    const newPage = pages.find((p: any) => p.title === 'Tab Two');
+    expect(newPage).toBeDefined();
+    expect(newPage?.regions?.some((r: any) => r.key === 'tab_two')).toBe(true);
+  });
+
+  it('does NOT create a theme page in single (non-paged) mode', () => {
+    const project = createProject();
+    // single mode — no addPage, no setFlow to wizard/tabs
+    project.addGroup('section_a', 'Section A');
+
+    const pages = project.theme.pages ?? [];
+    expect(pages.length).toBe(0);
+  });
+
+  it('does NOT create a theme page for a nested (non-root) group', () => {
+    const project = createProject();
+    project.addPage('Page One'); // wizard mode
+    project.addGroup('sub_section', 'Sub Section', { parentPath: 'page_one' });
+
+    const pages = project.theme.pages ?? [];
+    // Only the one page from addPage — the nested group does not get a page
+    expect(pages.length).toBe(1);
+    expect(pages.find((p: any) => p.title === 'Sub Section')).toBeUndefined();
+  });
+});
+
 describe('addContent', () => {
   it('adds display content with default kind (paragraph)', () => {
     const project = createProject();
