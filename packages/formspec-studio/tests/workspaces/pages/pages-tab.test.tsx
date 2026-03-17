@@ -690,3 +690,53 @@ describe('FF3 — Interactive grid bar', () => {
   });
 });
 
+// ── FF4: Drag unassigned items onto page cards ───────────────────────
+
+describe('FF4 — Drag unassigned items onto page cards', () => {
+  function renderUnassignedWithPages() {
+    return renderPagesTab({
+      definition: {
+        formPresentation: { pageMode: 'wizard' },
+        // 'name' is unassigned; 'email' is on p1
+      },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Step 1', regions: [{ key: 'email', span: 12 }] },
+          { id: 'p2', title: 'Step 2', regions: [] },
+        ],
+      },
+    });
+  }
+
+  it('unassigned items have a data-draggable-item attribute', () => {
+    renderUnassignedWithPages();
+    const draggableItems = document.querySelectorAll('[data-draggable-item]');
+    expect(draggableItems.length).toBeGreaterThanOrEqual(1);
+    // The 'name' item should be draggable
+    const nameItem = Array.from(draggableItems).find(
+      (el) => el.textContent?.includes('Name'),
+    );
+    expect(nameItem).toBeDefined();
+    expect(nameItem?.getAttribute('data-draggable-item')).toBe('name');
+  });
+
+  it('page cards have a data-drop-page attribute for item drops', () => {
+    renderUnassignedWithPages();
+    const dropZones = document.querySelectorAll('[data-drop-page]');
+    // One per page card
+    expect(dropZones.length).toBe(2);
+    const pageIds = Array.from(dropZones).map((el) => el.getAttribute('data-drop-page'));
+    expect(pageIds).toContain('p1');
+    expect(pageIds).toContain('p2');
+  });
+
+  it('each unassigned item has its key as the draggable item identifier', () => {
+    renderUnassignedWithPages();
+    // 'name' is unassigned; 'email' is assigned to p1
+    const nameItem = document.querySelector('[data-draggable-item="name"]');
+    expect(nameItem).not.toBeNull();
+    // 'email' should not appear in the unassigned draggable list
+    const emailItem = document.querySelector('[data-draggable-item="email"]');
+    expect(emailItem).toBeNull();
+  });
+});

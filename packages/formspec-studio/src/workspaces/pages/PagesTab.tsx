@@ -807,29 +807,41 @@ export function PagesTab() {
           </p>
         )}
 
-        {/* Page list */}
-        {hasPages && (
-          <div className={isSingle ? 'opacity-50 pointer-events-none' : ''}>
-            <DragDropProvider
-              onDragEnd={(event: any) => {
-                if (event.canceled) return;
-                const sourceId = String(event.operation?.source?.id ?? '');
-                const targetId = String(event.operation?.target?.id ?? '');
-                if (!sourceId || !targetId || sourceId === targetId) return;
-                const pages = structure.pages;
-                const targetIndex = pages.findIndex((p) => p.id === targetId);
-                if (targetIndex === -1) return;
-                project.movePageToIndex(sourceId, targetIndex);
-              }}
-              sensors={() => [
-                PointerSensor.configure({
-                  activationConstraints: [
-                    new PointerActivationConstraints.Distance({ value: 5 }),
-                  ],
-                }),
-                KeyboardSensor,
-              ]}
-            >
+        {/* Active mode (wizard/tabs): unified DragDropProvider for both page reorder
+            (FF1) and item-to-page assignment (FF4). */}
+        {!isSingle && (
+          <DragDropProvider
+            onDragEnd={(event: any) => {
+              if (event.canceled) return;
+              const sourceData = event.operation?.source?.data ?? {};
+              const targetData = event.operation?.target?.data ?? {};
+
+              if (sourceData.type === 'item' && targetData.type === 'page-drop') {
+                // FF4: unassigned item dropped onto a page card — assign it
+                project.placeOnPage(sourceData.key, targetData.pageId);
+                return;
+              }
+
+              // FF1: page dragged to reorder
+              const sourceId = String(event.operation?.source?.id ?? '');
+              const targetId = String(event.operation?.target?.id ?? '');
+              if (!sourceId || !targetId || sourceId === targetId) return;
+              const pages = structure.pages;
+              const targetIndex = pages.findIndex((p) => p.id === targetId);
+              if (targetIndex === -1) return;
+              project.movePageToIndex(sourceId, targetIndex);
+            }}
+            sensors={() => [
+              PointerSensor.configure({
+                activationConstraints: [
+                  new PointerActivationConstraints.Distance({ value: 5 }),
+                ],
+              }),
+              KeyboardSensor,
+            ]}
+          >
+            {/* Page list */}
+            {hasPages && (
               <div className="space-y-3">
                 {structure.pages.map((page, i) => (
                   <SortablePageCard
@@ -855,46 +867,72 @@ export function PagesTab() {
                   />
                 ))}
               </div>
-            </DragDropProvider>
-          </div>
-        )}
+            )}
 
-        {/* Add page — only in wizard/tabs mode */}
-        {!isSingle && (
-          <button
-            type="button"
-            aria-label="Add page"
-            onClick={() => {
-              const result = project.addPage('New Page');
-              if (result.createdId) {
-                setExpandedPageId(result.createdId);
-                // Sync sidebar to the new page's group key
-                const groupKey = result.affectedPaths[0];
-                if (groupKey && activePageCtx) activePageCtx.setActivePageKey(groupKey);
-              }
-            }}
-            className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
-          >
-            + Add Page
-          </button>
-        )}
+            {/* Add page button */}
+            <button
+              type="button"
+              aria-label="Add page"
+              onClick={() => {
+                const result = project.addPage('New Page');
+                if (result.createdId) {
+                  setExpandedPageId(result.createdId);
+                  // Sync sidebar to the new page's group key
+                  const groupKey = result.affectedPaths[0];
+                  if (groupKey && activePageCtx) activePageCtx.setActivePageKey(groupKey);
+                }
+              }}
+              className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
+            >
+              + Add Page
+            </button>
 
-        {/* Unassigned items section — show below page list in wizard/tabs mode only */}
-        {!isSingle && structure.unassignedItems.length > 0 && (
-          <div className="pt-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
-              Unassigned
-            </p>
-            <div className="space-y-1">
-              {structure.unassignedItems.map((key) => (
-                <div
-                  key={key}
-                  className="text-[12px] text-muted px-2 py-1 bg-subtle/30 rounded font-mono truncate"
-                >
-                  {labelMap.get(key) ?? key}
+            {/* Unassigned items — draggable onto page cards (FF4) */}
+            {structure.unassignedItems.length > 0 && (
+              <div className="pt-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+                  Unassigned
+                </p>
+                <div className="space-y-1">
+                  {structure.unassignedItems.map((key) => (
+                    <DraggableUnassignedItem
+                      key={key}
+                      itemKey={key}
+                      label={labelMap.get(key) ?? key}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+          </DragDropProvider>
+        )}
+
+        {/* Single mode: dormant page list (read-only, pointer-events-none) */}
+        {isSingle && hasPages && (
+          <div className="opacity-50 pointer-events-none space-y-3">
+            {structure.pages.map((page, i) => (
+              <PageCard
+                key={page.id}
+                page={page}
+                index={i}
+                total={structure.pages.length}
+                labelMap={labelMap}
+                breakpointNames={breakpointNames}
+                isExpanded={expandedPageId === page.id}
+                onToggle={() => handleTogglePage(page.id)}
+                onDelete={() => project.removePage(page.id)}
+                onMoveUp={() => project.reorderPage(page.id, 'up')}
+                onMoveDown={() => project.reorderPage(page.id, 'down')}
+                onUpdateTitle={(title) => project.updatePage(page.id, { title })}
+                onUpdateDescription={(description) => project.updatePage(page.id, { description })}
+                onAddRegion={() => project.addRegion(page.id, 12)}
+                onRemoveRegion={(ri) => project.deleteRegion(page.id, ri)}
+                onUpdateRegionSpan={(ri, span) => project.updateRegion(page.id, ri, 'span', span)}
+                onUpdateRegionStart={(ri, start) => project.updateRegion(page.id, ri, 'start', start)}
+                onUpdateRegionResponsive={(ri, responsive) => project.updateRegion(page.id, ri, 'responsive', responsive)}
+                onReorderRegion={(ri, dir) => project.reorderRegion(page.id, ri, dir)}
+              />
+            ))}
           </div>
         )}
       </WorkspacePageSection>
