@@ -517,9 +517,9 @@ class DefinitionEvaluator:
                     results.append({
                         'severity': 'error',
                         'path': path,
-                        'message': f'Expected {info.data_type}, got {type(val).__name__}',
+                        'message': f'Invalid {info.data_type}',
                         'constraintKind': 'type',
-                        'code': 'TYPE_ERROR',
+                        'code': 'TYPE_MISMATCH',
                         'source': 'bind',
                     })
 
@@ -528,7 +528,7 @@ class DefinitionEvaluator:
                 results.append({
                     'severity': 'error',
                     'path': path,
-                    'message': f'{path} is required',
+                    'message': 'Required',
                     'constraintKind': 'required',
                     'code': 'REQUIRED',
                     'source': 'bind',
@@ -538,7 +538,7 @@ class DefinitionEvaluator:
                 if not self._eval_constraint(
                     bind['constraint'], data, variables, self_value=val, path=path, null_passes=True,
                 ):
-                    msg = bind.get('constraintMessage', f'Constraint failed for {path}')
+                    msg = bind.get('constraintMessage', 'Invalid')
                     results.append({
                         'severity': 'error',
                         'path': path,
@@ -546,6 +546,7 @@ class DefinitionEvaluator:
                         'constraintKind': 'constraint',
                         'code': 'CONSTRAINT_FAILED',
                         'source': 'bind',
+                        'constraint': bind.get('constraint'),
                     })
 
             # Registry-defined constraints
@@ -614,7 +615,7 @@ class DefinitionEvaluator:
                         results.append({
                             'severity': 'error',
                             'path': path,
-                            'message': msg or f"Value does not match pattern: {pattern}",
+                            'message': msg or "Pattern mismatch",
                             'constraintKind': 'constraint',
                             'code': 'PATTERN_MISMATCH',
                             'source': 'bind',
@@ -627,7 +628,7 @@ class DefinitionEvaluator:
                         results.append({
                             'severity': 'error',
                             'path': path,
-                            'message': msg or f"Value is too long (max {max_len} characters)",
+                            'message': msg or f"Must be at most {max_len} characters",
                             'constraintKind': 'constraint',
                             'code': 'MAX_LENGTH_EXCEEDED',
                             'source': 'bind',
@@ -643,7 +644,7 @@ class DefinitionEvaluator:
                                 results.append({
                                     'severity': 'error',
                                     'path': path,
-                                    'message': msg or f"Value must be at least {minimum}",
+                                    'message': msg or f"Must be at least {minimum}",
                                     'constraintKind': 'constraint',
                                     'code': 'RANGE_UNDERFLOW',
                                     'source': 'bind',
@@ -655,7 +656,7 @@ class DefinitionEvaluator:
                                 results.append({
                                     'severity': 'error',
                                     'path': path,
-                                    'message': msg or f"Value must be at most {maximum}",
+                                    'message': msg or f"Must be at most {maximum}",
                                     'constraintKind': 'constraint',
                                     'code': 'RANGE_OVERFLOW',
                                     'source': 'bind',
@@ -682,19 +683,17 @@ class DefinitionEvaluator:
                 results.append({
                     'severity': 'error',
                     'path': path,
-                    'message': f'{path} requires at least {info.min_repeat} entries (has {count})',
+                    'message': f'Minimum {info.min_repeat} entries required',
                     'constraintKind': 'cardinality',
                     'code': 'MIN_REPEAT',
-                    'source': 'bind',
                 })
             if info.max_repeat is not None and count > info.max_repeat:
                 results.append({
                     'severity': 'error',
                     'path': path,
-                    'message': f'{path} allows at most {info.max_repeat} entries (has {count})',
+                    'message': f'Maximum {info.max_repeat} entries allowed',
                     'constraintKind': 'cardinality',
                     'code': 'MAX_REPEAT',
-                    'source': 'bind',
                 })
 
         return results
@@ -730,7 +729,7 @@ class DefinitionEvaluator:
                     results.append({
                         'severity': 'error',
                         'path': concrete_path,
-                        'message': f'{concrete_path} is required',
+                        'message': 'Required',
                         'constraintKind': 'required',
                         'code': 'REQUIRED',
                         'source': 'bind',
@@ -741,7 +740,7 @@ class DefinitionEvaluator:
                     bind['constraint'], data, variables,
                     self_value=val, row=row, path=concrete_path, null_passes=True,
                 ):
-                    msg = bind.get('constraintMessage', f'Constraint failed for {concrete_path}')
+                    msg = bind.get('constraintMessage', 'Invalid')
                     results.append({
                         'severity': 'error',
                         'path': concrete_path,
@@ -749,6 +748,7 @@ class DefinitionEvaluator:
                         'constraintKind': 'constraint',
                         'code': 'CONSTRAINT_FAILED',
                         'source': 'bind',
+                        'constraint': bind.get('constraint'),
                     })
 
     def _eval_shapes(
@@ -807,7 +807,7 @@ class DefinitionEvaluator:
             passed = passing == 1
 
         if not passed:
-            out.append({
+            result_entry = {
                 'severity': shape.get('severity', 'error'),
                 'path': target_path,
                 'message': shape['message'],
@@ -815,7 +815,10 @@ class DefinitionEvaluator:
                 'code': shape.get('code', 'SHAPE_FAILED'),
                 'source': 'shape',
                 'shapeId': shape['id'],
-            })
+            }
+            if 'constraint' in shape:
+                result_entry['constraint'] = shape['constraint']
+            out.append(result_entry)
 
         return passed
 

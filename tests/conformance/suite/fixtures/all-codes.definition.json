@@ -1,0 +1,48 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.org/forms/conformance/all-codes",
+  "version": "1.0.0",
+  "status": "active",
+  "title": "All Validation Codes",
+  "items": [
+    { "key": "typed_field", "type": "field", "dataType": "integer", "label": "Typed Field" },
+    { "key": "required_field", "type": "field", "dataType": "string", "label": "Required Field" },
+    { "key": "constrained_field", "type": "field", "dataType": "integer", "label": "Constrained Field" },
+    { "key": "patterned_field", "type": "field", "dataType": "string", "label": "Patterned Field", "extensions": { "x-test-pattern": true } },
+    { "key": "maxlen_field", "type": "field", "dataType": "string", "label": "MaxLen Field", "extensions": { "x-test-maxlen": true } },
+    { "key": "range_low_field", "type": "field", "dataType": "integer", "label": "Range Low", "extensions": { "x-test-range": true } },
+    { "key": "range_high_field", "type": "field", "dataType": "integer", "label": "Range High", "extensions": { "x-test-range": true } },
+    { "key": "unresolved_ext_field", "type": "field", "dataType": "string", "label": "Unresolved Ext", "extensions": { "x-nonexistent": true } },
+    { "key": "compat_field", "type": "field", "dataType": "string", "label": "Compat Field", "extensions": { "x-test-compat": true } },
+    { "key": "retired_field", "type": "field", "dataType": "string", "label": "Retired Field", "extensions": { "x-test-retired": true } },
+    { "key": "deprecated_field", "type": "field", "dataType": "string", "label": "Deprecated Field", "extensions": { "x-test-deprecated": true } },
+    { "key": "shape_target", "type": "field", "dataType": "integer", "label": "Shape Target" },
+    {
+      "key": "min_group", "type": "group", "label": "Min Group",
+      "repeatable": true, "minRepeat": 2,
+      "children": [
+        { "key": "item", "type": "field", "dataType": "string", "label": "Item" }
+      ]
+    },
+    {
+      "key": "max_group", "type": "group", "label": "Max Group",
+      "repeatable": true, "maxRepeat": 1,
+      "children": [
+        { "key": "item", "type": "field", "dataType": "string", "label": "Item" }
+      ]
+    }
+  ],
+  "binds": [
+    { "path": "required_field", "required": "true" },
+    { "path": "constrained_field", "constraint": "$ > 0", "constraintMessage": "Must be positive" }
+  ],
+  "shapes": [
+    {
+      "id": "positive-check",
+      "target": "shape_target",
+      "constraint": "$ > 50",
+      "message": "Must exceed 50",
+      "severity": "error"
+    }
+  ]
+}

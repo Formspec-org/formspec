@@ -3,6 +3,28 @@
   "$id": "https://formspec.org/schemas/conformance-suite/1.0",
   "title": "Formspec Shared Conformance Suite Case",
   "description": "Canonical shared-case contract for cross-runtime conformance checks executed by both Python and TypeScript runners.",
+  "$defs": {
+    "standardValidationCode": {
+      "type": "string",
+      "enum": [
+        "REQUIRED",
+        "TYPE_MISMATCH",
+        "MIN_REPEAT",
+        "MAX_REPEAT",
+        "CONSTRAINT_FAILED",
+        "PATTERN_MISMATCH",
+        "MAX_LENGTH_EXCEEDED",
+        "RANGE_UNDERFLOW",
+        "RANGE_OVERFLOW",
+        "SHAPE_FAILED",
+        "UNRESOLVED_EXTENSION",
+        "EXTENSION_COMPATIBILITY_MISMATCH",
+        "EXTENSION_RETIRED",
+        "EXTENSION_DEPRECATED"
+      ],
+      "description": "Standard validation result codes that both Python and TypeScript runtimes MUST emit identically. The first seven are reserved built-in codes from validationResult.schema.json. The remaining are registry extension codes. Shape-level and external codes (e.g., 'BUDGET_SUM_MISMATCH', 'EIN_NOT_FOUND') are user-defined and not constrained here."
+    }
+  },
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "kind", "expected", "legacyCoverage"],

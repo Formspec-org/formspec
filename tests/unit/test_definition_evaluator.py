@@ -911,7 +911,7 @@ class TestBindValidation:
             'items': [{'type': 'field', 'key': 'name', 'dataType': 'string'}],
         })
         result = ev.process({'name': 42})
-        errors = [r for r in result.results if r['code'] == 'TYPE_ERROR']
+        errors = [r for r in result.results if r['code'] == 'TYPE_MISMATCH']
         assert len(errors) == 1
 
     def test_type_validation_null_passes(self):
@@ -920,7 +920,7 @@ class TestBindValidation:
             'items': [{'type': 'field', 'key': 'name', 'dataType': 'string'}],
         })
         result = ev.process({'name': None})
-        errors = [r for r in result.results if r['code'] == 'TYPE_ERROR']
+        errors = [r for r in result.results if r['code'] == 'TYPE_MISMATCH']
         assert len(errors) == 0
 
     def test_constraint_null_in_bind_context_passes(self):

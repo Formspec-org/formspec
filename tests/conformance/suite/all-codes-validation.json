@@ -1,0 +1,158 @@
+{
+  "id": "all-codes.validation-report",
+  "kind": "VALIDATION_REPORT",
+  "definitionPath": "tests/conformance/suite/fixtures/all-codes.definition.json",
+  "registryPaths": [
+    "tests/conformance/suite/fixtures/all-codes.registry.json"
+  ],
+  "inputData": {
+    "typed_field": "abc",
+    "required_field": "",
+    "constrained_field": -5,
+    "patterned_field": "bad",
+    "maxlen_field": "toolong",
+    "range_low_field": 1,
+    "range_high_field": 999,
+    "unresolved_ext_field": "x",
+    "compat_field": "x",
+    "retired_field": "x",
+    "deprecated_field": "x",
+    "shape_target": 10,
+    "min_group": [],
+    "max_group": [{ "item": "a" }, { "item": "b" }, { "item": "c" }]
+  },
+  "mode": "submit",
+  "expected": {
+    "valid": false,
+    "counts": {
+      "error": 11,
+      "info": 1,
+      "warning": 2
+    },
+    "results": [
+      {
+        "code": "EXTENSION_COMPATIBILITY_MISMATCH",
+        "constraintKind": "constraint",
+        "message": "Extension 'x-test-compat' requires formspec >=99.0.0 but definition uses 1.0",
+        "path": "compat_field",
+        "severity": "warning",
+        "source": "bind"
+      },
+      {
+        "code": "CONSTRAINT_FAILED",
+        "constraint": "$ > 0",
+        "constraintKind": "constraint",
+        "message": "Must be positive",
+        "path": "constrained_field",
+        "severity": "error",
+        "source": "bind"
+      },
+      {
+        "code": "EXTENSION_DEPRECATED",
+        "constraintKind": "constraint",
+        "message": "Extension 'x-test-deprecated' is deprecated",
+        "path": "deprecated_field",
+        "severity": "info",
+        "source": "bind"
+      },
+      {
+        "code": "MAX_REPEAT",
+        "constraintKind": "cardinality",
+        "message": "Maximum 1 entries allowed",
+        "path": "max_group",
+        "severity": "error"
+      },
+      {
+        "code": "MAX_LENGTH_EXCEEDED",
+        "constraintKind": "constraint",
+        "message": "Must be at most 5 characters",
+        "path": "maxlen_field",
+        "severity": "error",
+        "source": "bind"
+      },
+      {
+        "code": "MIN_REPEAT",
+        "constraintKind": "cardinality",
+        "message": "Minimum 2 entries required",
+        "path": "min_group",
+        "severity": "error"
+      },
+      {
+        "code": "PATTERN_MISMATCH",
+        "constraintKind": "constraint",
+        "message": "Must be a valid Test Pattern",
+        "path": "patterned_field",
+        "severity": "error",
+        "source": "bind"
+      },
+      {
+        "code": "RANGE_OVERFLOW",
+        "constraintKind": "constraint",
+        "message": "Must be at most 100",
+        "path": "range_high_field",
+        "severity": "error",
+        "source": "bind"
+      },
+      {
+        "code": "RANGE_UNDERFLOW",
+        "constraintKind": "constraint",
+        "message": "Must be at least 10",
+        "path": "range_low_field",
+        "severity": "error",
+        "source": "bind"
+      },
+      {
+        "code": "REQUIRED",
+        "constraintKind": "required",
+        "message": "Required",
+        "path": "required_field",
+        "severity": "error",
+        "source": "bind"
+      },
+      {
+        "code": "EXTENSION_RETIRED",
+        "constraintKind": "constraint",
+        "message": "Extension 'x-test-retired' is retired and should not be used",
+        "path": "retired_field",
+        "severity": "warning",
+        "source": "bind"
+      },
+      {
+        "code": "SHAPE_FAILED",
+        "constraint": "$ > 50",
+        "constraintKind": "shape",
+        "message": "Must exceed 50",
+        "path": "shape_target",
+        "severity": "error",
+        "shapeId": "positive-check",
+        "source": "shape"
+      },
+      {
+        "code": "TYPE_MISMATCH",
+        "constraintKind": "type",
+        "message": "Invalid integer",
+        "path": "typed_field",
+        "severity": "error",
+        "source": "bind"
+      },
+      {
+        "code": "UNRESOLVED_EXTENSION",
+        "constraintKind": "constraint",
+        "message": "Unresolved extension 'x-nonexistent': no matching registry entry loaded",
+        "path": "unresolved_ext_field",
+        "severity": "error",
+        "source": "bind"
+      }
+    ]
+  },
+  "legacyCoverage": [
+    {
+      "path": "tests/unit/test_definition_evaluator.py",
+      "check": "TestBindValidation::test_type_validation_string"
+    },
+    {
+      "path": "packages/formspec-engine/tests/shared-suite.test.mjs",
+      "check": "all-codes-validation-report"
+    }
+  ]
+}

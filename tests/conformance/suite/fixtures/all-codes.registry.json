@@ -1,0 +1,69 @@
+{
+  "$schema": "https://formspec.org/schemas/registry/1.0",
+  "name": "conformance-all-codes",
+  "version": "1.0.0",
+  "entries": [
+    {
+      "name": "x-test-pattern",
+      "category": "dataType",
+      "version": "1.0.0",
+      "status": "active",
+      "description": "Test extension with pattern constraint",
+      "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+      "metadata": { "displayName": "Test Pattern" },
+      "constraints": {
+        "pattern": "^[A-Z]{3}-[0-9]{3}$"
+      }
+    },
+    {
+      "name": "x-test-maxlen",
+      "category": "dataType",
+      "version": "1.0.0",
+      "status": "active",
+      "description": "Test extension with maxLength constraint",
+      "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+      "metadata": { "displayName": "Short Code" },
+      "constraints": {
+        "maxLength": 5
+      }
+    },
+    {
+      "name": "x-test-range",
+      "category": "dataType",
+      "version": "1.0.0",
+      "status": "active",
+      "description": "Test extension with range constraints",
+      "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+      "metadata": { "displayName": "Ranged Value" },
+      "constraints": {
+        "minimum": 10,
+        "maximum": 100
+      }
+    },
+    {
+      "name": "x-test-compat",
+      "category": "dataType",
+      "version": "1.0.0",
+      "status": "active",
+      "description": "Test extension with incompatible formspec version",
+      "compatibility": { "formspecVersion": ">=99.0.0" }
+    },
+    {
+      "name": "x-test-retired",
+      "category": "dataType",
+      "version": "1.0.0",
+      "status": "retired",
+      "description": "Test retired extension",
+      "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" }
+    },
+    {
+      "name": "x-test-deprecated",
+      "category": "dataType",
+      "version": "1.0.0",
+      "status": "deprecated",
+      "description": "Test deprecated extension",
+      "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+      "deprecationNotice": "Extension 'x-test-deprecated' is deprecated"
+    }
+  ]
+}
