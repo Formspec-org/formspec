@@ -387,6 +387,13 @@ export class FelInterpreter extends BaseVisitor {
     }
 
     if (op === '+' || op === '-' || op === '*' || op === '/' || op === '%') {
+      const leftIsMoney = isMoney(left);
+      const rightIsMoney = isMoney(right);
+
+      if (leftIsMoney || rightIsMoney) {
+        return this.applyMoneyArithmetic(op, left, right, leftIsMoney, rightIsMoney);
+      }
+
       if (!isNumber(left) || !isNumber(right)) return null;
       if ((op === '/' || op === '%') && right === 0) return null;
       if (op === '+') return left + right;
@@ -416,6 +423,62 @@ export class FelInterpreter extends BaseVisitor {
       return left.amount === right.amount && left.currency === right.currency;
     }
     return left === right;
+  }
+
+  /**
+   * Money-aware arithmetic. At least one operand is a money object.
+   *
+   * Rules:
+   * - money +/- money → money (same currency required, else null)
+   * - money * number | number * money → money
+   * - money / number → money
+   * - money % number → money
+   * - money / money → number (unit cancellation, same currency required)
+   * - money +/- number → money (add/subtract from amount)
+   * - Currency mismatch on money+money or money-money → null
+   */
+  private applyMoneyArithmetic(
+    op: string,
+    left: any,
+    right: any,
+    leftIsMoney: boolean,
+    rightIsMoney: boolean,
+  ): any {
+    if (leftIsMoney && rightIsMoney) {
+      // Both money — currency must match for +, -, /
+      if (left.currency !== right.currency) return null;
+      const la = left.amount;
+      const ra = right.amount;
+      if (!isNumber(la) || !isNumber(ra)) return null;
+      if (op === '+') return { amount: la + ra, currency: left.currency };
+      if (op === '-') return { amount: la - ra, currency: left.currency };
+      if (op === '/') {
+        if (ra === 0) return null;
+        return la / ra; // unit cancellation → plain number
+      }
+      // money * money and money % money are not meaningful
+      return null;
+    }
+
+    // One money, one scalar
+    const m = leftIsMoney ? left : right;
+    const s = leftIsMoney ? right : left;
+    if (!isNumber(m.amount) || !isNumber(s)) return null;
+
+    if (op === '*') {
+      return { amount: m.amount * s, currency: m.currency };
+    }
+
+    // Remaining ops only make sense with money on the left
+    if (!leftIsMoney) return null;
+
+    if ((op === '/' || op === '%') && s === 0) return null;
+    if (op === '/') return { amount: m.amount / s, currency: m.currency };
+    if (op === '%') return { amount: m.amount % s, currency: m.currency };
+    if (op === '+') return { amount: m.amount + s, currency: m.currency };
+    if (op === '-') return { amount: m.amount - s, currency: m.currency };
+
+    return null;
   }
 
   /**
