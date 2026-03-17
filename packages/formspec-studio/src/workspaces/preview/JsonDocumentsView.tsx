@@ -26,7 +26,7 @@ export function JsonDocumentsView() {
     Definition: normalizeDefinitionDoc(state.definition),
     Component: materializePreviewComponentDoc(state),
     Theme: normalizeThemeDoc(state.theme, state.definition),
-    Mapping: state.mapping,
+    Mapping: state.mappings,
   }[active];
   const isEmpty =
     doc == null ||

@@ -1,6 +1,8 @@
-/** @filedesc Hook that returns the current mapping document from project state. */
+/** @filedesc Hook that returns the selected mapping document from project state. */
 import { useProjectState } from './useProjectState';
 
 export function useMapping() {
-  return useProjectState().mapping;
+  const state = useProjectState();
+  const id = state.selectedMappingId ?? Object.keys(state.mappings)[0] ?? 'default';
+  return state.mappings[id] ?? null;
 }

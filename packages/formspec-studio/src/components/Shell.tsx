@@ -62,7 +62,7 @@ export function Shell() {
   const [showPalette, setShowPalette] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [activeDataFilter, setActiveDataFilter] = useState<DataSectionFilter>('all');
-  const [activeMappingTab, setActiveMappingTab] = useState<MappingTabId>('config');
+  const [activeMappingTab, setActiveMappingTab] = useState<MappingTabId>('all');
   const [mappingConfigOpen, setMappingConfigOpen] = useState(true);
   const [previewViewport, setPreviewViewport] = useState<Viewport>('desktop');
   const [previewMode, setPreviewMode] = useState<PreviewMode>('form');

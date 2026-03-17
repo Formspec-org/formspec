@@ -4,7 +4,8 @@ import { Pill } from '../ui/Pill';
 
 export function MappingsList() {
   const state = useProjectState();
-  const mapping = state.mapping;
+  const id = state.selectedMappingId ?? Object.keys(state.mappings)[0] ?? 'default';
+  const mapping = state.mappings[id] ?? {};
   const rules = (mapping.rules as unknown[] | undefined) ?? [];
   const direction = mapping.direction ?? 'bidirectional';
 

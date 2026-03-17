@@ -32,7 +32,7 @@ const SECTIONS: SectionDef[] = [
   { name: 'Variables', countFn: (s) => s.definition.variables?.length ?? 0, help: 'Named computed values reusable across expressions', link: { tab: 'Logic' } },
   { name: 'Data Sources', countFn: (s) => Object.keys(s.definition.instances ?? {}).length, help: 'Secondary data instances for lookups and reference data', link: { tab: 'Data', subTab: 'Data Sources' } },
   { name: 'Option Sets', countFn: (s) => Object.keys(s.definition.optionSets ?? {}).length, help: 'Reusable option lists for choice and multiChoice fields', link: { tab: 'Data', subTab: 'Option Sets' } },
-  { name: 'Mappings', countFn: (s) => (s.mapping.rules as unknown[] | undefined)?.length ?? 0, help: 'Bidirectional data transforms for import/export', link: { tab: 'Mapping', subTab: 'rules' } },
+  { name: 'Mappings', countFn: (s) => Object.values(s.mappings ?? {}).reduce((sum, m) => sum + ((m.rules as unknown[] | undefined)?.length ?? 0), 0), help: 'Bidirectional data transforms for import/export', link: { tab: 'Mapping', subTab: 'rules' } },
   { name: 'Settings', countFn: null, help: 'Form identity, presentation, and behavioral defaults' },
 ];
 
