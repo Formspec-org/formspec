@@ -75,6 +75,70 @@ import {
   resolveExtension as _resolveExtension,
 } from './queries/index.js';
 
+/** Components that manage their own group path binding and MUST keep their bind on export. */
+const SELF_MANAGED_GROUP_BINDS = new Set(['Accordion', 'DataTable']);
+
+/**
+ * Walk a definition item tree to find an item by dotted path.
+ * Supports nested groups: 'group1.group2.field'.
+ */
+function findItemByPath(items: any[], path: string): any | null {
+  const segments = path.split('.');
+  let current: any[] = items;
+  let found: any = null;
+  for (const seg of segments) {
+    found = current.find((x: any) => x.key === seg);
+    if (!found) return null;
+    current = found.children ?? [];
+  }
+  return found;
+}
+
+/**
+ * Strip internal Studio properties from a component tree node and normalize
+ * bind values to absolute dot-paths for export.
+ *
+ * - `nodeId` and `_layout` are always removed (internal authoring props).
+ * - For layout/container nodes bound to a group item: bind is removed and the
+ *   group path is used as the prefix for all descendant bind values.
+ * - For input/display nodes: bind is converted to the full absolute path.
+ */
+function cleanTreeForExport(
+  node: Record<string, unknown>,
+  definition: { items: any[] },
+  prefix: string,
+): Record<string, unknown> {
+  // Strip internal-only properties
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { nodeId: _nodeId, _layout: _lay, ...rest } = node;
+
+  const bindKey = rest.bind as string | undefined;
+  const component = rest.component as string;
+  let childPrefix = prefix;
+
+  if (bindKey) {
+    const fullPath = prefix ? `${prefix}.${bindKey}` : bindKey;
+    const item = findItemByPath(definition.items, fullPath);
+
+    if (item?.type === 'group' && !SELF_MANAGED_GROUP_BINDS.has(component)) {
+      // Non-self-managed group container: strip bind, propagate full path to children
+      delete rest.bind;
+      childPrefix = fullPath;
+    } else {
+      // Input, display, or self-managed group component: use absolute path
+      rest.bind = fullPath;
+    }
+  }
+
+  if (Array.isArray(rest.children)) {
+    rest.children = rest.children.map((child: unknown) =>
+      cleanTreeForExport(child as Record<string, unknown>, definition, childPrefix)
+    );
+  }
+
+  return rest;
+}
+
 /**
  * Generate a unique URN for a new definition.
  */
@@ -240,6 +304,7 @@ export class RawProject implements IProjectCore {
     const url = this._state.definition.url;
     const effectiveComponent = getCurrentComponentDocument(this._state);
     const { tree, 'x-studio-generated': _, ...restComponent } = effectiveComponent as Record<string, unknown>;
+    const cleanedTree = tree ? cleanTreeForExport(tree as Record<string, unknown>, this._state.definition as any, '') : null;
     const { targetDefinition: themeTarget, ...restTheme } = this._state.theme;
     const { rules, targetSchema, definitionRef, definitionVersion, ...restMapping } = this._state.mapping;
     return structuredClone({
@@ -249,8 +314,8 @@ export class RawProject implements IProjectCore {
         version: '0.1.0',
         targetDefinition: { url },
         ...restComponent,
-        tree: tree ?? null,
-      } as ComponentDocument,
+        tree: cleanedTree,
+      } as unknown as ComponentDocument,
       theme: {
         $formspecTheme: '1.0',
         version: '0.1.0',
