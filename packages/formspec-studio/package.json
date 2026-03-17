@@ -17,6 +17,7 @@
     "@floating-ui/react": "^0.27.19",
     "formspec-chat": "*",
     "formspec-engine": "*",
+    "formspec-layout": "*",
     "formspec-studio-core": "*",
     "formspec-webcomponent": "*",
     "react": "^19.0.0",

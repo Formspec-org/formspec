@@ -1,3 +1,10 @@
+import {
+  COMPATIBILITY_MATRIX,
+  COMPONENT_TO_HINT,
+  SPEC_WIDGET_TO_COMPONENT,
+  KNOWN_COMPONENT_TYPES,
+} from 'formspec-layout';
+
 interface AnyItem {
   key: string;
   type: string;
@@ -93,106 +100,20 @@ export function dataTypeInfo(dataType: string): DataTypeDisplay {
 
 /**
  * Widget compatibility: which component types can render each item type + dataType.
- * Must match the webcomponent renderer's compatibility matrix in
- * packages/formspec-webcomponent/src/rendering/field-input.ts (lines 55-69)
- * plus any standalone component plugins (MoneyInput).
+ * Field-level entries are derived from formspec-layout's canonical COMPATIBILITY_MATRIX.
+ * Group/display entries are local (they're UI-tier only).
  */
-const WIDGET_MAP: Record<string, string[]> = {
-  // Groups — layout containers
-  'group': ['Stack', 'Card', 'Accordion', 'Collapsible'],
-  // Display — presentational components (no bind)
-  'display': ['Text', 'Heading', 'Divider', 'Alert'],
-  // Fields by dataType — matches webcomponent renderer matrix
-  'field:string': ['TextInput', 'Select', 'RadioGroup'],
-  'field:text': ['TextInput'],
-  'field:integer': ['NumberInput', 'Slider', 'Rating', 'TextInput'],
-  'field:decimal': ['NumberInput', 'Slider', 'Rating', 'TextInput'],
-  'field:boolean': ['Toggle', 'Checkbox'],
-  'field:date': ['DatePicker', 'TextInput'],
-  'field:time': ['DatePicker', 'TextInput'],
-  'field:dateTime': ['DatePicker', 'TextInput'],
-  'field:choice': ['Select', 'RadioGroup', 'TextInput'],
-  'field:multiChoice': ['CheckboxGroup'],
-  'field:money': ['MoneyInput', 'NumberInput', 'TextInput'],
-  'field:uri': ['TextInput'],
-  'field:attachment': ['FileUpload', 'Signature'],
+const ITEM_TYPE_WIDGETS: Record<string, string[]> = {
+  group: ['Stack', 'Card', 'Accordion', 'Collapsible'],
+  display: ['Text', 'Heading', 'Divider', 'Alert'],
 };
 
-const COMPONENT_TO_HINT: Record<string, string> = {
-  TextInput: 'textInput',
-  NumberInput: 'numberInput',
-  Checkbox: 'checkbox',
-  Toggle: 'toggle',
-  DatePicker: 'datePicker',
-  Select: 'dropdown',
-  RadioGroup: 'radio',
-  CheckboxGroup: 'checkboxGroup',
-  Slider: 'slider',
-  Rating: 'rating',
-  FileUpload: 'fileUpload',
-  Signature: 'signature',
-  MoneyInput: 'moneyInput',
-  Stack: 'section',
-  Card: 'card',
-  Accordion: 'accordion',
-  Collapsible: 'accordion',
-  Heading: 'heading',
-  Text: 'paragraph',
-  Divider: 'divider',
-  Alert: 'banner',
-};
-
-const HINT_TO_COMPONENT: Record<string, string> = {
-  textinput: 'TextInput',
-  textarea: 'TextInput',
-  richtext: 'TextInput',
-  password: 'TextInput',
-  color: 'TextInput',
-  numberinput: 'NumberInput',
-  stepper: 'NumberInput',
-  slider: 'Slider',
-  rating: 'Rating',
-  checkbox: 'Checkbox',
-  toggle: 'Toggle',
-  yesno: 'Toggle',
-  datepicker: 'DatePicker',
-  datetimepicker: 'DatePicker',
-  timepicker: 'DatePicker',
-  dateinput: 'TextInput',
-  datetimeinput: 'TextInput',
-  timeinput: 'TextInput',
-  dropdown: 'Select',
-  radio: 'RadioGroup',
-  autocomplete: 'Select',
-  segmented: 'RadioGroup',
-  likert: 'RadioGroup',
-  checkboxgroup: 'CheckboxGroup',
-  multiselect: 'CheckboxGroup',
-  fileupload: 'FileUpload',
-  camera: 'FileUpload',
-  signature: 'Signature',
-  moneyinput: 'MoneyInput',
-  urlinput: 'TextInput',
-  section: 'Stack',
-  card: 'Card',
-  accordion: 'Accordion',
-  tab: 'Stack',
-  heading: 'Heading',
-  paragraph: 'Text',
-  divider: 'Divider',
-  banner: 'Alert',
-};
-
-function normalizeWidgetToken(widget: string): string {
-  return widget.replace(/[\s_-]+/g, '').toLowerCase();
-}
-
-/** Get compatible widgetHint values for a given item type and optional dataType. */
+/** Get compatible widget component names for a given item type and optional dataType. */
 export function compatibleWidgets(type: string, dataType?: string): string[] {
   if (type === 'field' && dataType) {
-    return WIDGET_MAP[`field:${dataType}`] || [];
+    return COMPATIBILITY_MATRIX[dataType] || [];
   }
-  return WIDGET_MAP[type] || [];
+  return ITEM_TYPE_WIDGETS[type] || [];
 }
 
 /** Convert a concrete component type into the closest Tier 1 widgetHint token. */
@@ -210,12 +131,17 @@ export function widgetHintForComponent(component: string, dataType?: string): st
   return COMPONENT_TO_HINT[component] || component;
 }
 
+function normalizeWidgetToken(widget: string): string {
+  return widget.replace(/[\s_-]+/g, '').toLowerCase();
+}
+
 /** Convert a Tier 1 widgetHint token back into the component id used in the component tree. */
 export function componentForWidgetHint(widgetHint?: string | null): string | null {
   if (!widgetHint) return null;
   if (widgetHint.startsWith('x-')) return widgetHint;
-  if (COMPONENT_TO_HINT[widgetHint]) return widgetHint;
-  return HINT_TO_COMPONENT[normalizeWidgetToken(widgetHint)] || null;
+  // If it's already a known component name, return it
+  if (KNOWN_COMPONENT_TYPES.has(widgetHint)) return widgetHint;
+  return SPEC_WIDGET_TO_COMPONENT[normalizeWidgetToken(widgetHint)] || null;
 }
 
 /** Help text for property labels, derived from schema descriptions. */

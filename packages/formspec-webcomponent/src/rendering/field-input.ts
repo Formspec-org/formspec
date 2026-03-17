@@ -1,6 +1,6 @@
 import { effect, Signal } from '@preact/signals-core';
 import { FormEngine } from 'formspec-engine';
-import { ItemDescriptor, PresentationBlock } from 'formspec-layout';
+import { ItemDescriptor, PresentationBlock, COMPATIBILITY_MATRIX } from 'formspec-layout';
 
 export interface FieldInputHost {
     engine: FormEngine;
@@ -52,23 +52,7 @@ export function renderInputComponent(host: FieldInputHost, comp: any, item: any,
     const options = host.engine.getOptions?.(fullName) || item.options || [];
     const remoteOptionsState = host.engine.getOptionsState?.(fullName) || { loading: false, error: null };
 
-    const matrix: Record<string, string[]> = {
-        'string': ['TextInput', 'Select', 'RadioGroup'],
-        'text': ['TextInput'],
-        'decimal': ['NumberInput', 'Slider', 'Rating', 'TextInput'],
-        'integer': ['NumberInput', 'Slider', 'Rating', 'TextInput'],
-        'boolean': ['Toggle', 'Checkbox'],
-        'date': ['DatePicker', 'TextInput'],
-        'dateTime': ['DatePicker', 'TextInput'],
-        'time': ['DatePicker', 'TextInput'],
-        'uri': ['TextInput'],
-        'choice': ['Select', 'RadioGroup', 'TextInput'],
-        'multiChoice': ['CheckboxGroup'],
-        'attachment': ['FileUpload', 'Signature'],
-        'money': ['NumberInput', 'TextInput']
-    };
-
-    if (matrix[dataType] && !matrix[dataType].includes(componentType)) {
+    if (COMPATIBILITY_MATRIX[dataType] && !COMPATIBILITY_MATRIX[dataType].includes(componentType)) {
         console.warn(`Incompatible component ${componentType} for dataType ${dataType}.`);
     }
 

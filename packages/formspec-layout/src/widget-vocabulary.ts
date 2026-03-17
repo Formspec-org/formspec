@@ -1,4 +1,11 @@
-const KNOWN_COMPONENT_TYPES = new Set([
+/**
+ * Canonical widget vocabulary — single source of truth for widget ↔ component mappings.
+ *
+ * All packages that need widget resolution (studio-core, studio, webcomponent)
+ * import from here. No other package should define its own widget maps.
+ */
+
+export const KNOWN_COMPONENT_TYPES = new Set([
     'TextInput', 'NumberInput', 'Select', 'Toggle', 'Checkbox',
     'DatePicker', 'RadioGroup', 'CheckboxGroup', 'Slider', 'Rating',
     'FileUpload', 'Signature', 'MoneyInput',
@@ -7,7 +14,11 @@ const KNOWN_COMPONENT_TYPES = new Set([
     'Wizard', 'Tabs', 'Page',
 ]);
 
-const SPEC_WIDGET_TO_COMPONENT: Record<string, string> = {
+/**
+ * Spec-normative Tier 1 widgetHint → Tier 3 component name.
+ * Keys are always lowercase (normalized). Values are PascalCase component names.
+ */
+export const SPEC_WIDGET_TO_COMPONENT: Record<string, string> = {
     textinput: 'TextInput',
     textarea: 'TextInput',
     richtext: 'TextInput',
@@ -46,6 +57,59 @@ const SPEC_WIDGET_TO_COMPONENT: Record<string, string> = {
     paragraph: 'Text',
     divider: 'Divider',
     banner: 'Alert',
+};
+
+/**
+ * Reverse map: PascalCase component → canonical camelCase hint.
+ * These are the values stored in definition.presentation.widgetHint.
+ * For components with multiple hints (e.g. TextInput → textInput, textarea, password),
+ * this picks the primary/default hint.
+ *
+ * Note: SPEC_WIDGET_TO_COMPONENT keys are all-lowercase (normalized for lookup).
+ * These values are camelCase (the authoring/storage form).
+ */
+export const COMPONENT_TO_HINT: Record<string, string> = {
+    TextInput: 'textInput',
+    NumberInput: 'numberInput',
+    Checkbox: 'checkbox',
+    Toggle: 'toggle',
+    DatePicker: 'datePicker',
+    Select: 'dropdown',
+    RadioGroup: 'radio',
+    CheckboxGroup: 'checkboxGroup',
+    Slider: 'slider',
+    Rating: 'rating',
+    FileUpload: 'fileUpload',
+    Signature: 'signature',
+    MoneyInput: 'moneyInput',
+    Stack: 'section',
+    Card: 'card',
+    Accordion: 'accordion',
+    Collapsible: 'accordion',
+    Heading: 'heading',
+    Text: 'paragraph',
+    Divider: 'divider',
+    Alert: 'banner',
+};
+
+/**
+ * Widget compatibility matrix: dataType → ordered list of compatible components.
+ * First entry is the default widget for that dataType.
+ */
+export const COMPATIBILITY_MATRIX: Record<string, string[]> = {
+    string: ['TextInput', 'Select', 'RadioGroup'],
+    text: ['TextInput'],
+    decimal: ['NumberInput', 'Slider', 'Rating', 'TextInput'],
+    integer: ['NumberInput', 'Slider', 'Rating', 'TextInput'],
+    boolean: ['Toggle', 'Checkbox'],
+    date: ['DatePicker', 'TextInput'],
+    dateTime: ['DatePicker', 'TextInput'],
+    time: ['DatePicker', 'TextInput'],
+    uri: ['TextInput'],
+    choice: ['Select', 'RadioGroup', 'TextInput'],
+    multiChoice: ['CheckboxGroup'],
+    attachment: ['FileUpload', 'Signature'],
+    money: ['MoneyInput', 'NumberInput', 'TextInput'],
 };
 
 function normalizeWidgetToken(widget: string): string {

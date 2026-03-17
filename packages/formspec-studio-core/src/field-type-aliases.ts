@@ -1,4 +1,9 @@
 import { HelperError } from './helper-types.js';
+import {
+  KNOWN_COMPONENT_TYPES,
+  SPEC_WIDGET_TO_COMPONENT,
+  COMPONENT_TO_HINT,
+} from 'formspec-layout';
 
 export interface ResolvedFieldType {
   dataType: string;
@@ -36,58 +41,11 @@ const FIELD_TYPE_MAP: Record<string, { dataType: string; defaultWidget: string; 
 };
 
 /**
- * Spec-normative Tier 1 widgetHint → Tier 3 component name.
- * Source: spec section 4.2.5.1 + widget-vocabulary.ts in formspec-layout.
- *
- * Also includes short aliases (e.g. "radio", "select") for authoring convenience.
- * All keys are lowercase or camelCase spec vocabulary -- never PascalCase.
- *
- * Note: insertion order matters — widgetHintFor reverse-maps to the FIRST alias
- * for each component via Object.entries().find(). For example, "radio", "segmented",
- * and "likert" all map to RadioGroup; widgetHintFor("RadioGroup") returns "radio".
+ * Authoring-only short aliases that extend the canonical spec vocabulary.
+ * These are convenience aliases for the MCP/studio authoring layer only.
+ * All keys are lowercase — never PascalCase.
  */
-const WIDGET_ALIAS_MAP: Record<string, string> = {
-  // string dataType
-  textInput:      'TextInput',
-  password:       'TextInput',
-  color:          'TextInput',
-  // text dataType
-  textarea:       'TextInput',
-  richText:       'TextInput',
-  // integer / decimal dataType
-  numberInput:    'NumberInput',
-  stepper:        'NumberInput',
-  // boolean dataType
-  checkbox:       'CheckboxGroup',
-  toggle:         'Toggle',
-  yesNo:          'Toggle',
-  // date / dateTime / time dataType
-  datePicker:     'DatePicker',
-  dateTimePicker: 'DatePicker',
-  timePicker:     'DatePicker',
-  dateInput:      'TextInput',
-  dateTimeInput:  'TextInput',
-  timeInput:      'TextInput',
-  // choice dataType
-  dropdown:       'Select',
-  radio:          'RadioGroup',
-  autocomplete:   'Select',
-  segmented:      'RadioGroup',
-  likert:         'RadioGroup',
-  // multiChoice dataType
-  checkboxGroup:  'CheckboxGroup',
-  multiSelect:    'CheckboxGroup',
-  // attachment dataType
-  fileUpload:     'FileUpload',
-  camera:         'FileUpload',
-  signature:      'Signature',
-  // money dataType
-  moneyInput:     'MoneyInput',
-  // special
-  slider:         'Slider',
-  rating:         'Rating',
-
-  // ── Short authoring aliases (non-spec convenience) ──
+const AUTHORING_ALIASES: Record<string, string> = {
   select:  'Select',
   file:    'FileUpload',
   date:    'DatePicker',
@@ -96,11 +54,42 @@ const WIDGET_ALIAS_MAP: Record<string, string> = {
   text:    'TextInput',
 };
 
-/** PascalCase Tier 3 component names — accepted as input but not shown in error messages. */
-const RAW_COMPONENT_NAMES = new Set([
-  'RadioGroup', 'CheckboxGroup', 'Toggle', 'Select', 'Slider', 'Rating',
-  'TextInput', 'FileUpload', 'Signature', 'DatePicker', 'MoneyInput', 'NumberInput',
-]);
+/**
+ * Build the full alias map by converting the canonical spec map to camelCase keys
+ * and merging with authoring-only aliases. This is derived from the canonical
+ * SPEC_WIDGET_TO_COMPONENT in formspec-layout — never hand-maintained.
+ */
+function buildWidgetAliasMap(): Record<string, string> {
+  const map: Record<string, string> = {};
+  // Canonical spec hints (lowercase → PascalCase from layout)
+  // Convert to camelCase for authoring layer (spec keys are all-lowercase)
+  for (const [key, component] of Object.entries(SPEC_WIDGET_TO_COMPONENT)) {
+    // Find the camelCase form: 'textinput' → 'textInput', 'checkbox' → 'checkbox'
+    // We keep a curated camelCase list for the ones that differ
+    map[key] = component;
+  }
+  // Overlay camelCase forms for multi-word hints
+  map['textInput'] = 'TextInput';
+  map['richText'] = 'TextInput';
+  map['numberInput'] = 'NumberInput';
+  map['yesNo'] = 'Toggle';
+  map['datePicker'] = 'DatePicker';
+  map['dateTimePicker'] = 'DatePicker';
+  map['timePicker'] = 'DatePicker';
+  map['dateInput'] = 'TextInput';
+  map['dateTimeInput'] = 'TextInput';
+  map['timeInput'] = 'TextInput';
+  map['checkboxGroup'] = 'CheckboxGroup';
+  map['multiSelect'] = 'CheckboxGroup';
+  map['fileUpload'] = 'FileUpload';
+  map['moneyInput'] = 'MoneyInput';
+  map['urlInput'] = 'TextInput';
+  // Authoring aliases
+  Object.assign(map, AUTHORING_ALIASES);
+  return map;
+}
+
+const WIDGET_ALIAS_MAP = buildWidgetAliasMap();
 
 export function resolveFieldType(type: string): ResolvedFieldType {
   const entry = FIELD_TYPE_MAP[type];
@@ -114,7 +103,7 @@ export function resolveFieldType(type: string): ResolvedFieldType {
 
 export function resolveWidget(widget: string): string {
   if (WIDGET_ALIAS_MAP[widget]) return WIDGET_ALIAS_MAP[widget];
-  if (RAW_COMPONENT_NAMES.has(widget)) return widget;
+  if (KNOWN_COMPONENT_TYPES.has(widget)) return widget;
   throw new HelperError('INVALID_WIDGET', `Unknown widget "${widget}"`, {
     validWidgets: Object.keys(WIDGET_ALIAS_MAP),
   });
@@ -124,10 +113,10 @@ export function widgetHintFor(aliasOrComponent: string): string | undefined {
   // "text" as a short alias doesn't carry a widgetHint (it's the TextInput default)
   if (aliasOrComponent === 'text') return undefined;
   if (WIDGET_ALIAS_MAP[aliasOrComponent]) return aliasOrComponent;
-  if (RAW_COMPONENT_NAMES.has(aliasOrComponent)) {
+  if (KNOWN_COMPONENT_TYPES.has(aliasOrComponent)) {
     if (aliasOrComponent === 'TextInput') return undefined;
-    const reverseEntry = Object.entries(WIDGET_ALIAS_MAP).find(([, comp]) => comp === aliasOrComponent);
-    return reverseEntry ? reverseEntry[0] : aliasOrComponent.toLowerCase();
+    // Use the canonical reverse map from layout
+    return COMPONENT_TO_HINT[aliasOrComponent] ?? aliasOrComponent.toLowerCase();
   }
   return undefined;
 }

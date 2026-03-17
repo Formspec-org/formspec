@@ -1737,6 +1737,28 @@ describe('updateItem widget sets widgetHint on definition', () => {
   });
 });
 
+describe('updateItem widget change on boolean field', () => {
+  it('changes a boolean field from Toggle to Checkbox', () => {
+    const project = createProject();
+    project.addField('agreed', 'I agree', 'boolean');
+
+    // Default widget for boolean is Toggle
+    const nodeBefore = project.componentFor('agreed');
+    expect(nodeBefore?.component).toBe('Toggle');
+
+    // Changing to Checkbox should work — Checkbox is a valid component
+    // for boolean fields in the webcomponent renderer
+    const result = project.updateItem('agreed', { widget: 'Checkbox' });
+    expect(result.warnings).toBeUndefined();
+
+    // Both definition hint and component tree should update
+    const item = project.itemAt('agreed') as any;
+    expect(item?.presentation?.widgetHint).toBe('checkbox');
+    const nodeAfter = project.componentFor('agreed');
+    expect(nodeAfter?.component).toBe('Checkbox');
+  });
+});
+
 describe('updateItem widget with missing component node', () => {
   it('sets widgetHint on definition even when component node absent, emits warning', () => {
     const project = createProject();

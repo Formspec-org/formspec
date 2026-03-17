@@ -30,7 +30,7 @@ describe('resolveWidget — spec widgetHint coverage', () => {
       ['numberInput', 'NumberInput'],
       ['stepper', 'NumberInput'],
       // boolean
-      ['checkbox', 'CheckboxGroup'],
+      ['checkbox', 'Checkbox'],
       ['toggle', 'Toggle'],
       ['yesNo', 'Toggle'],
       // date / dateTime / time
@@ -67,7 +67,7 @@ describe('resolveWidget — spec widgetHint coverage', () => {
 
   it('accepts PascalCase component names as pass-through', () => {
     const components = [
-      'RadioGroup', 'CheckboxGroup', 'Toggle', 'Select', 'Slider', 'Rating',
+      'RadioGroup', 'CheckboxGroup', 'Toggle', 'Checkbox', 'Select', 'Slider', 'Rating',
       'TextInput', 'FileUpload', 'Signature', 'DatePicker', 'MoneyInput', 'NumberInput',
     ];
     for (const comp of components) {

@@ -39,7 +39,15 @@ export { interpolateParams } from './params.js';
 
 // Default component mapping
 export { getDefaultComponent } from './defaults.js';
-export { widgetTokenToComponent } from './widget-vocabulary.js';
+
+// Widget vocabulary — canonical source of truth for widget ↔ component mappings
+export {
+    widgetTokenToComponent,
+    KNOWN_COMPONENT_TYPES,
+    SPEC_WIDGET_TO_COMPONENT,
+    COMPONENT_TO_HINT,
+    COMPATIBILITY_MATRIX,
+} from './widget-vocabulary.js';
 
 // Layout planner
 export { planComponentTree, planDefinitionFallback, resetNodeIdCounter } from './planner.js';
