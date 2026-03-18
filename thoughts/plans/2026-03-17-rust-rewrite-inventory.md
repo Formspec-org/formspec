@@ -35,14 +35,15 @@ Build a **Rust shared kernel** that eliminates the TS↔Python logic duplication
 
 ### Crate Status
 
-| Crate | Contents | Status | Tests |
-|-------|----------|--------|-------|
-| `crates/fel-core` | FEL lexer, parser, evaluator (rust_decimal), environment, extensions, dependencies | ✅ Complete | 108 |
-| `crates/formspec-core` | FEL analysis, path utils, schema validator, extension analysis, runtime mapping, assembler | ✅ Complete | 52 |
-| `crates/formspec-eval` | Definition Evaluator (4-phase batch processor) | ✅ Complete | 6 |
-| `crates/formspec-lint` | 7-pass static analysis linter | ✅ Complete | 9 |
-| `crates/formspec-wasm` | WASM bindings via wasm-bindgen → TypeScript | ✅ Complete | — |
-| `crates/formspec-py` | PyO3 bindings → Python | ✅ Complete | — |
+| Crate | Lines | Contents | Tests |
+|-------|-------|----------|-------|
+| `crates/fel-core` | 4,731 | FEL lexer, parser, evaluator (rust_decimal), environment, extensions, dependencies, printer | 123 |
+| `crates/formspec-core` | 2,501 | FEL analysis, path utils, schema validator, extension analysis, runtime mapping, assembler | 61 |
+| `crates/formspec-eval` | 1,586 | Definition Evaluator — 4-phase batch processor with topo sort, inheritance, NRB, wildcards | 28 |
+| `crates/formspec-lint` | 1,392 | 7-pass static analysis linter with pass gating, LintMode, diagnostic sorting | 27 |
+| `crates/formspec-wasm` | 390 | WASM bindings via wasm-bindgen → TypeScript (all capabilities) | — |
+| `crates/formspec-py` | 331 | PyO3 bindings → Python (all capabilities) | — |
+| **Total** | **10,931** | | **239** |
 
 ### Decommission Milestones
 
@@ -70,21 +71,48 @@ Build a **Rust shared kernel** that eliminates the TS↔Python logic duplication
 5. ✅ **Path Utils** (`src/path_utils.rs`) — `normalize_indexed_path`, `split_normalized_path`, `item_at_path`, `item_location_at_path`, `parent_path`, `leaf_key`. Generic `TreeItem` trait for tree traversal.
 6. ✅ **Schema Validator** (`src/schema_validator.rs`) — `detect_document_type` for all 8 artifact types (marker fields + heuristic fallback). `JsonSchemaValidator` trait for dependency inversion (host provides JSON Schema engine). `json_pointer_to_jsonpath` converter.
 7. ✅ **Extension Analysis** (`src/extension_analysis.rs`) — `validate_extension_usage` with `RegistryLookup` trait. Detects unresolved (error), retired (warning), deprecated (info) extensions. Tree walk with path accumulation.
-8. ✅ **Runtime Mapping** (`src/runtime_mapping.rs`) — `execute_mapping` with bidirectional transforms: preserve, drop, constant, valueMap (auto-invert for reverse), coerce (string/number/integer/boolean/date/datetime), expression (FEL). Priority-ordered rules, condition guards, nested path output.
-9. ✅ **Assembler** (`src/assembler.rs`) — `assemble_definition` with `RefResolver` trait. Key prefix application, circular ref detection, bind/shape/variable import with FEL path rewriting.
+8. ✅ **Runtime Mapping** (`src/runtime_mapping.rs`) — `execute_mapping` with bidirectional transforms: preserve, drop, constant, valueMap (auto-invert for reverse), coerce (string/number/integer/boolean/date/datetime), expression (FEL with source field access). Priority-ordered rules, condition guards, nested path output.
+9. ✅ **Assembler** (`src/assembler.rs`) — `assemble_definition` with `RefResolver` trait. Key prefix application, circular ref detection, bind/shape/variable import with proper AST-based FEL path rewriting (parse → transform → print).
+10. ✅ **FEL Printer** (`crates/fel-core/src/printer.rs`) — `print_expr()` serializes AST back to valid FEL source. 15 round-trip tests verify parse → print → reparse identity.
 
 ### Phase 3: WASM Bindings ✅
 
-10. ✅ **`crates/formspec-wasm`** — Thin wasm-bindgen layer exposing: `evalFEL`, `parseFEL`, `getFELDependencies`, `extractDependencies`, `analyzeFEL`, `normalizeIndexedPath`, `detectDocumentType`, `executeMapping`. JSON string interfaces.
+11. ✅ **`crates/formspec-wasm`** — wasm-bindgen layer exposing all capabilities:
+    - FEL: `evalFEL`, `parseFEL`, `printFEL`, `getFELDependencies`, `extractDependencies`, `analyzeFEL`
+    - Path: `normalizeIndexedPath`
+    - Schema: `detectDocumentType`
+    - Lint: `lintDocument`, `lintDocumentWithRegistries`
+    - Eval: `evaluateDefinition`
+    - Assembly: `assembleDefinition`
+    - Mapping: `executeMapping`
 
 ### Phase 4: Batch Processors ✅
 
-11. ✅ **Definition Evaluator** (`crates/formspec-eval`) — 4-phase pipeline: Rebuild (item tree from definition), Recalculate (FEL evaluation with `FormspecEnvironment`, NRB continuation per S5.6), Revalidate (required/constraint/shape with null context defaults per S3.8.1), Notify (collect non-relevant, emit results).
-12. ✅ **Linter** (`crates/formspec-lint`) — 7-pass pipeline: E100 (document type detection), E201 (duplicate keys), E300/E302 (bind/shape reference validation), E400 (FEL parse validation), E500 (dependency cycle detection via DFS), W700 (theme token references), E800/W804 (component tree validation).
+12. ✅ **Definition Evaluator** (`crates/formspec-eval`) — 4-phase pipeline:
+    - Rebuild: item tree from definition, bind index merge (object + array styles)
+    - Recalculate: whitespace normalization → variable evaluation (topo-sorted with cycle detection) → relevance (AND inheritance) → readonly (OR inheritance) → required (no inheritance) → calculate (continues when non-relevant per S5.6)
+    - Revalidate: required/constraint/shape with null context defaults per S3.8.1, activeWhen guards
+    - Notify: NRB modes (remove/empty/keep) with lookup precedence (exact → wildcard → stripped → parent → definition default)
+    - Wildcard bind expansion against actual repeat data
+
+13. ✅ **Linter** (`crates/formspec-lint`) — 7-pass pipeline with modular architecture:
+    - E100: document type detection
+    - E200/E201: duplicate key detection
+    - E300: bind path validation (including wildcard on repeatable groups)
+    - E301: shape target validation
+    - E302/W300: optionSet reference + dataType compatibility
+    - E400: FEL expression parse validation (binds, shapes, screener routes)
+    - E500: dependency cycle detection via DFS with rotation-based dedup
+    - E600: extension resolution against registry documents
+    - W700: theme token reference integrity
+    - E800/W804: component tree validation, bind uniqueness
+    - Pass gating (stop after structural errors)
+    - LintMode (Authoring/Runtime) with suppressions
+    - Diagnostic sorting (pass → severity → path)
 
 ### Phase 5: PyO3 Bindings ✅
 
-13. ✅ **`crates/formspec-py`** — PyO3 module `formspec_rust` exposing: `eval_fel`, `parse_fel`, `get_dependencies`, `extract_deps`, `analyze_expression`, `detect_type`, `lint_document`, `evaluate_def`. Full Python↔Rust type conversion (None/bool/int/float/str/list/dict ↔ FelValue).
+14. ✅ **`crates/formspec-py`** — PyO3 module `formspec_rust` exposing: `eval_fel`, `parse_fel`, `get_dependencies`, `extract_deps`, `analyze_expression`, `detect_type`, `lint_document`, `evaluate_def`. Full Python↔Rust type conversion (None/bool/int/float/str/list/dict ↔ FelValue).
 
 ---
 
@@ -92,33 +120,46 @@ Build a **Rust shared kernel** that eliminates the TS↔Python logic duplication
 
 ### Phase 6: Wire WASM into TypeScript
 
-14. **Wire `index.ts`** to call WASM for FEL eval, assembly, schema validation, path resolution
-    - Build WASM package: `wasm-pack build crates/formspec-wasm --target bundler`
-    - Replace `FelLexer`/`parser`/`interpreter` imports with WASM calls
-    - Replace `analyzeFEL`, `getFELDependencies` with WASM
-    - Replace `assembleDefinitionSync` with WASM
-    - Replace `createSchemaValidator` with WASM
-    - Replace `normalizeIndexedPath` and path helpers with WASM
-    - Replace `RuntimeMappingEngine` with WASM
-15. **Delete** all non-reactive TS files (see Decommission Milestones above)
-16. **Run full Playwright E2E suite** to verify no regressions
+- [ ] Install toolchain: `rustup target add wasm32-unknown-unknown` + `cargo install wasm-pack`
+- [ ] Build WASM package: `wasm-pack build crates/formspec-wasm --target bundler`
+- [ ] Add WASM package as npm dependency in `packages/formspec-engine/package.json`
+- [ ] Create thin TS wrapper module that loads WASM and re-exports typed functions
+- [ ] Wire `index.ts` to call WASM for:
+  - [ ] FEL evaluation (`compileFEL`, `evaluateFEL`)
+  - [ ] FEL dependency extraction (reactive signal wiring)
+  - [ ] FEL analysis (`analyzeFEL`, `getFELDependencies`)
+  - [ ] Assembly (`assembleDefinitionSync`)
+  - [ ] Schema validation (`createSchemaValidator`)
+  - [ ] Path utilities (`normalizeIndexedPath`)
+  - [ ] Runtime mapping (`RuntimeMappingEngine`)
+- [ ] Delete all non-reactive TS files (see Decommission Milestones)
+- [ ] Run full Playwright E2E suite — verify zero regressions
+- [ ] Run `npm run docs:check` — verify doc gates pass
 
 ### Phase 7: Wire PyO3 into Python
 
-17. **Build** with `maturin develop --release` in `crates/formspec-py`
-18. **Wire Python backend** — replace `from formspec.fel import ...` with `import formspec_rust`
-    - Replace `formspec.fel.parser.parse` → `formspec_rust.parse_fel`
-    - Replace `formspec.fel.evaluator.evaluate` → `formspec_rust.eval_fel`
-    - Replace `formspec.fel.dependencies.extract_dependencies` → `formspec_rust.extract_deps`
-    - Wire `formspec.validator` → `formspec_rust.lint_document`
-    - Wire `formspec.evaluator` → `formspec_rust.evaluate_def`
-19. **Delete** `src/formspec/fel/`
-20. **Run full Python conformance suite** to verify no regressions
+- [ ] Install maturin: `pip install maturin`
+- [ ] Build: `maturin develop --release` in `crates/formspec-py`
+- [ ] Wire Python backend — replace `from formspec.fel import ...` with `import formspec_rust`:
+  - [ ] `formspec.fel.parser.parse` → `formspec_rust.parse_fel`
+  - [ ] `formspec.fel.evaluator.evaluate` → `formspec_rust.eval_fel`
+  - [ ] `formspec.fel.dependencies.extract_dependencies` → `formspec_rust.extract_deps`
+  - [ ] `formspec.validator` → `formspec_rust.lint_document`
+  - [ ] `formspec.evaluator` → `formspec_rust.evaluate_def`
+- [ ] Delete `src/formspec/fel/`
+- [ ] Run full Python conformance suite: `python3 -m pytest tests/ -v`
 
-### Phase 8: Tooling (deferred, needs crates.io)
+### Phase 8: Tooling (deferred)
 
-21. **Registry** — extension registry client in Rust
-22. **Changelog** — definition version diffing in Rust
+- [ ] Registry client in Rust (currently Python-only)
+- [ ] Changelog diffing in Rust (currently Python-only)
+
+### Cleanup
+
+- [ ] Delete superseded branch `claude/rust-formspec-rewrite-JysP8`
+- [ ] Prune empty codex worktree `50af`
+- [ ] Merge `feature/rust-rewrite` into main (or create PR)
+- [ ] Remove `.worktrees/rust-rewrite` worktree after merge
 
 ---
 
@@ -268,6 +309,28 @@ Batch operations accumulate writes; one cycle runs at end with union of dirty no
 
 ---
 
+## Build History
+
+### Iteration 1 (2026-03-18)
+Built all 6 crates from scratch. 175 tests.
+- `fel-core`: decimal migration, environment, extensions
+- `formspec-core`: all 6 modules
+- `formspec-eval`, `formspec-lint`: initial implementations
+- `formspec-wasm`, `formspec-py`: binding layers
+
+### Iteration 2 (2026-03-18)
+Deepened eval and lint. 239 tests (↑64).
+- `fel-core`: added FEL printer (15 round-trip tests)
+- `formspec-core`: fixed assembler FEL rewriting (AST-based), improved runtime mapping expression transform
+- `formspec-eval`: added topo sort, AND/OR inheritance, wildcard expansion, NRB modes, whitespace normalization (6→28 tests)
+- `formspec-lint`: added E302/W300/E301/E600, wildcard validation, screener parsing, pass gating, LintMode, diagnostic sorting (9→27 tests)
+
+### Iteration 3 (2026-03-18)
+Expanded WASM bindings. 239 tests (maintained).
+- `formspec-wasm`: added linter, evaluator, assembler, printer exports — all processing capabilities now exposed to TypeScript
+
+---
+
 ## Dependency Graph
 
 ```
@@ -280,22 +343,16 @@ index.ts (stays TS — Preact Signals)
     │   ├── Extension Analysis ✅
     │   ├── Runtime Mapping ✅
     │   └── Assembler ✅
+    ├── crates/formspec-eval ✅
+    ├── crates/formspec-lint ✅
     └── crates/fel-core ✅
         ├── Lexer, Parser, AST (rust_decimal) ✅
         ├── Evaluator + ~61 stdlib ✅
         ├── Dependencies ✅
         ├── Environment ✅
-        └── Extensions ✅
+        ├── Extensions ✅
+        └── Printer ✅
 
-crates/formspec-eval (Definition Evaluator) ✅
-├── crates/formspec-core ✅
-├── crates/fel-core ✅
-└── Registry (stays Python)
-
-crates/formspec-lint (Linter) ✅
-├── crates/formspec-core ✅
-└── crates/fel-core ✅
-
-crates/formspec-wasm ✅ / crates/formspec-py ✅
+crates/formspec-py ✅
 └── all of the above ✅
 ```
