@@ -8,7 +8,7 @@ import {
   FunctionCallingConfigMode,
 } from '@google/genai';
 import type {
-  AIAdapter, ScaffoldRequest, ScaffoldResult,
+  AIAdapter, ScaffoldRequest, ScaffoldResult, ScaffoldProgressCallback,
   ChatMessage, Attachment, SourceTrace,
   ConversationResponse, ToolContext, RefinementResult, ToolCallRecord,
 } from './types.js';
@@ -111,20 +111,23 @@ function flattenItemKeys(items: any[]): string[] {
 }
 
 function extractText(response: GenerateContentResponse): string {
-  return response.text ?? '';
-}
-
-function minimalFallback(title: string): FormDefinition {
-  return {
-    $formspec: '1.0',
-    url: `urn:formspec:chat:${Date.now()}`,
-    version: '0.1.0',
-    status: 'draft',
-    title,
-    items: [
-      { key: 'field_1', type: 'field', label: 'Field 1', dataType: 'string' },
-    ],
-  } as FormDefinition;
+  const text = response.text ?? '';
+  if (!text) {
+    // Inspect why the response is empty — safety filter, rate limit, or model refusal
+    const candidate = response.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    const blockReason = response.promptFeedback?.blockReason;
+    const parts = [
+      blockReason && `blocked: ${blockReason}`,
+      finishReason && finishReason !== 'STOP' && `finishReason: ${finishReason}`,
+    ].filter(Boolean);
+    throw new Error(
+      parts.length > 0
+        ? `Gemini returned empty response (${parts.join(', ')})`
+        : 'Gemini returned empty response — check API key, quota, or model availability',
+    );
+  }
+  return text;
 }
 
 // ── Interview prompt & schema ────────────────────────────────────────
@@ -203,12 +206,12 @@ export class GeminiAdapter implements AIAdapter {
     }
   }
 
-  async generateScaffold(request: ScaffoldRequest): Promise<ScaffoldResult> {
+  async generateScaffold(request: ScaffoldRequest, onProgress?: ScaffoldProgressCallback): Promise<ScaffoldResult> {
     switch (request.type) {
       case 'template':
         return this.scaffoldFromTemplate(request.templateId);
       case 'conversation':
-        return this.scaffoldFromConversation(request.messages);
+        return this.scaffoldFromConversation(request.messages, onProgress);
       case 'upload':
         return this.scaffoldFromUpload(request.extractedContent);
     }
@@ -333,24 +336,54 @@ When done with all changes, respond with a brief summary of what you did.`;
     return { definition: template.definition, traces, issues: [] };
   }
 
-  private async scaffoldFromConversation(messages: ChatMessage[]): Promise<ScaffoldResult> {
+  private async scaffoldFromConversation(messages: ChatMessage[], onProgress?: ScaffoldProgressCallback): Promise<ScaffoldResult> {
     const userContent = messages
       .filter(m => m.role === 'user')
       .map(m => m.content)
       .join('\n');
 
-    try {
-      const response = await this.client.models.generateContent({
-        model: this.model,
-        contents: `Design a form based on this description:\n\n${userContent}`,
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
-        },
-      });
+    const params = {
+      model: this.model,
+      contents: `Design a form based on this description:\n\n${userContent}`,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: 'application/json' as const,
+        responseSchema: RESPONSE_SCHEMA,
+        maxOutputTokens: 65536,
+      },
+    };
 
-      const text = extractText(response);
+    try {
+      let text: string;
+
+      if (onProgress) {
+        // Stream so the UI can show partial JSON as it arrives
+        const stream = await this.client.models.generateContentStream(params);
+        let accumulated = '';
+        let lastChunk: GenerateContentResponse | undefined;
+        for await (const chunk of stream) {
+          lastChunk = chunk;
+          try {
+            const part = chunk.text ?? '';
+            accumulated += part;
+          } catch {
+            // chunk.text getter can throw if the chunk has no text parts
+            continue;
+          }
+          onProgress(accumulated);
+        }
+        text = accumulated;
+        if (!text) throw new Error('Gemini returned empty streamed response');
+        // Check if the stream was truncated
+        const finishReason = lastChunk?.candidates?.[0]?.finishReason;
+        if (finishReason && finishReason !== 'STOP') {
+          throw new Error(`Gemini stream ended early (${finishReason}) — response was truncated. The form may be too large for a single generation.`);
+        }
+      } else {
+        const response = await this.client.models.generateContent(params);
+        text = extractText(response);
+      }
+
       const parsed = JSON.parse(text);
       const definition = wrapAsDefinition(parsed);
 
@@ -365,57 +398,34 @@ When done with all changes, respond with a brief summary of what you did.`;
 
       return { definition, traces, issues: [] };
     } catch (err) {
-      return {
-        definition: minimalFallback(userContent.slice(0, 80) || 'Untitled Form'),
-        traces: [],
-        issues: [{
-          severity: 'error',
-          category: 'missing-config',
-          title: 'Generation failed',
-          description: `Gemini API error: ${(err as Error).message}`,
-          sourceIds: messages.map(m => m.id),
-        }],
-      };
+      throw new Error(`Form generation failed: ${(err as Error).message}`);
     }
   }
 
   private async scaffoldFromUpload(extractedContent: string): Promise<ScaffoldResult> {
-    try {
-      const response = await this.client.models.generateContent({
-        model: this.model,
-        contents: `Create a form definition from this extracted document content. Identify fields, their types, and group related fields logically:\n\n${extractedContent}`,
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
-        },
-      });
+    const response = await this.client.models.generateContent({
+      model: this.model,
+      contents: `Create a form definition from this extracted document content. Identify fields, their types, and group related fields logically:\n\n${extractedContent}`,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: 'application/json',
+        responseSchema: RESPONSE_SCHEMA,
+        maxOutputTokens: 65536,
+      },
+    });
 
-      const text = extractText(response);
-      const parsed = JSON.parse(text);
-      const definition = wrapAsDefinition(parsed);
+    const text = extractText(response);
+    const parsed = JSON.parse(text);
+    const definition = wrapAsDefinition(parsed);
 
-      const traces: SourceTrace[] = flattenItemKeys(parsed.items).map(key => ({
-        elementPath: key,
-        sourceType: 'upload' as const,
-        sourceId: 'upload',
-        description: 'Extracted from uploaded document',
-        timestamp: Date.now(),
-      }));
+    const traces: SourceTrace[] = flattenItemKeys(parsed.items).map(key => ({
+      elementPath: key,
+      sourceType: 'upload' as const,
+      sourceId: 'upload',
+      description: 'Extracted from uploaded document',
+      timestamp: Date.now(),
+    }));
 
-      return { definition, traces, issues: [] };
-    } catch (err) {
-      return {
-        definition: minimalFallback('Uploaded Form'),
-        traces: [],
-        issues: [{
-          severity: 'error',
-          category: 'missing-config',
-          title: 'Upload processing failed',
-          description: `Gemini API error: ${(err as Error).message}`,
-          sourceIds: [],
-        }],
-      };
-    }
+    return { definition, traces, issues: [] };
   }
 }

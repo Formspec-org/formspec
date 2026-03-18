@@ -1,7 +1,7 @@
 /** @filedesc Orchestrates a conversational form-building session with AI adapters. */
 import type {
   AIAdapter, Attachment, ChatMessage, ChatSessionState,
-  ScaffoldRequest, SourceTrace, Issue,
+  ScaffoldRequest, SourceTrace, Issue, DebugEntry,
 } from './types.js';
 import type { FormDefinition } from 'formspec-types';
 import type { ProjectBundle } from 'formspec-core';
@@ -40,6 +40,8 @@ export class ChatSession {
   private listeners: Set<() => void> = new Set();
   private messageCounter = 0;
   private bridge: McpBridge | null = null;
+  private debugLog: DebugEntry[] = [];
+  private scaffoldingText: string | null = null;
 
   constructor(options: { adapter: AIAdapter; id?: string }) {
     this.adapter = options.adapter;
@@ -110,6 +112,18 @@ export class ChatSession {
     return this.lastDiff;
   }
 
+  getDebugLog(): DebugEntry[] {
+    return [...this.debugLog];
+  }
+
+  getScaffoldingText(): string | null {
+    return this.scaffoldingText;
+  }
+
+  private log(direction: DebugEntry['direction'], label: string, data: unknown): void {
+    this.debugLog.push({ timestamp: Date.now(), direction, label, data });
+  }
+
   /**
    * Send a user message and get an assistant response.
    * On the first meaningful message, generates a scaffold.
@@ -129,18 +143,22 @@ export class ChatSession {
     try {
       if (!this.definition) {
         // Interview phase — gather requirements before scaffolding
+        this.log('sent', 'chat', { messages: this.messages });
         const response = await this.adapter.chat(this.messages);
+        this.log('received', 'chat', response);
         this.readyToScaffold = response.readyToScaffold;
         assistantContent = response.message;
       } else {
         // Refine existing form via MCP tools
         const previousDef = this.definition;
         const toolContext = await this.bridge!.getToolContext();
+        this.log('sent', 'refineForm', { instruction: content, toolCount: toolContext.tools.length });
         const result = await this.adapter.refineForm(
           this.messages,
           content,
           toolContext,
         );
+        this.log('received', 'refineForm', result);
 
         // Read back updated state from the bridge
         this.definition = this.bridge!.getDefinition();
@@ -162,6 +180,7 @@ export class ChatSession {
         assistantContent = result.message;
       }
     } catch (err) {
+      this.log('error', 'sendMessage', { error: (err as Error).message, stack: (err as Error).stack });
       const errorMsg: ChatMessage = {
         id: this.nextMessageId(),
         role: 'system',
@@ -192,31 +211,58 @@ export class ChatSession {
    * Called when the user explicitly triggers scaffolding after the interview.
    */
   async scaffold(): Promise<void> {
-    const result = await this.adapter.generateScaffold({
-      type: 'conversation',
-      messages: this.messages,
-    });
-
-    // Create bridge BEFORE setting definition — if it fails, session stays in interview phase
-    const bridge = await this.replaceBridge(result.definition);
-
-    this.definition = result.definition;
-    this.bundle = buildBundleFromDefinition(result.definition);
-    this.lastDiff = null;
-    this.traces.addTraces(result.traces);
-    this.addIssuesFromResult(result.issues);
-    this.addIssuesFromResult(bridge.consumeLoadDiagnostics());
-    this.readyToScaffold = false;
-
-    const systemMsg: ChatMessage = {
-      id: this.nextMessageId(),
-      role: 'system',
-      content: `Generated form: "${result.definition.title}" with ${result.definition.items.length} fields.`,
-      timestamp: Date.now(),
-    };
-    this.messages.push(systemMsg);
-    this.updatedAt = Date.now();
+    const request: ScaffoldRequest = { type: 'conversation', messages: this.messages };
+    this.log('sent', 'scaffold', request);
+    this.scaffoldingText = '';
     this.notify();
+
+    try {
+      const result = await this.adapter.generateScaffold(request, (text) => {
+        this.scaffoldingText = text;
+        this.notify();
+      });
+      this.log('received', 'scaffold', { title: result.definition.title, itemCount: result.definition.items.length, issueCount: result.issues.length });
+
+      // Create bridge BEFORE setting definition — if it fails, session stays in interview phase
+      const bridge = await this.replaceBridge(result.definition);
+
+      this.definition = result.definition;
+      this.bundle = buildBundleFromDefinition(result.definition);
+      this.lastDiff = null;
+      this.traces.addTraces(result.traces);
+      this.addIssuesFromResult(result.issues);
+
+      const loadDiags = bridge.consumeLoadDiagnostics();
+      this.addIssuesFromResult(loadDiags);
+      this.readyToScaffold = false;
+
+      const systemMsg: ChatMessage = {
+        id: this.nextMessageId(),
+        role: 'system',
+        content: `Generated form: "${result.definition.title}" with ${result.definition.items.length} fields.`,
+        timestamp: Date.now(),
+      };
+      this.messages.push(systemMsg);
+
+      // Auto-fix: if audit found errors, run refinement rounds to correct them
+      const errors = loadDiags.filter(d => d.severity === 'error');
+      if (errors.length > 0) {
+        await this.autoFix(errors);
+      }
+    } catch (err) {
+      this.log('error', 'scaffold', { error: (err as Error).message, stack: (err as Error).stack });
+      const errorMsg: ChatMessage = {
+        id: this.nextMessageId(),
+        role: 'system',
+        content: `Scaffold failed: ${(err as Error).message}`,
+        timestamp: Date.now(),
+      };
+      this.messages.push(errorMsg);
+    } finally {
+      this.scaffoldingText = null;
+      this.updatedAt = Date.now();
+      this.notify();
+    }
   }
 
   /**
@@ -278,6 +324,65 @@ export class ChatSession {
   }
 
   /**
+   * Re-generate the form from scratch using the entire conversation history.
+   * Discards the current definition/bundle and scaffolds a new one.
+   */
+  async regenerate(): Promise<void> {
+    const request: ScaffoldRequest = { type: 'conversation', messages: this.messages };
+    this.log('sent', 'regenerate', request);
+    this.scaffoldingText = '';
+    this.notify();
+
+    try {
+      const result = await this.adapter.generateScaffold(request, (text) => {
+        this.scaffoldingText = text;
+        this.notify();
+      });
+      this.log('received', 'regenerate', { title: result.definition.title, itemCount: result.definition.items.length });
+
+      const bridge = await this.replaceBridge(result.definition);
+
+      this.definition = result.definition;
+      this.bundle = buildBundleFromDefinition(result.definition);
+      this.lastDiff = null;
+      this.traces = new SourceTraceManager();
+      this.traces.addTraces(result.traces);
+      this.issues = new IssueQueue();
+      this.addIssuesFromResult(result.issues);
+
+      const loadDiags = bridge.consumeLoadDiagnostics();
+      this.addIssuesFromResult(loadDiags);
+
+      const systemMsg: ChatMessage = {
+        id: this.nextMessageId(),
+        role: 'system',
+        content: `Regenerated form from scratch: "${result.definition.title}" with ${result.definition.items.length} fields.`,
+        timestamp: Date.now(),
+      };
+      this.messages.push(systemMsg);
+
+      // Auto-fix: if audit found errors, run refinement rounds to correct them
+      const errors = loadDiags.filter(d => d.severity === 'error');
+      if (errors.length > 0) {
+        await this.autoFix(errors);
+      }
+    } catch (err) {
+      this.log('error', 'regenerate', { error: (err as Error).message, stack: (err as Error).stack });
+      const errorMsg: ChatMessage = {
+        id: this.nextMessageId(),
+        role: 'system',
+        content: `Regeneration failed: ${(err as Error).message}`,
+        timestamp: Date.now(),
+      };
+      this.messages.push(errorMsg);
+    } finally {
+      this.scaffoldingText = null;
+      this.updatedAt = Date.now();
+      this.notify();
+    }
+  }
+
+  /**
    * Export the current form definition as JSON.
    */
   exportJSON(): FormDefinition {
@@ -309,6 +414,7 @@ export class ChatSession {
       },
       traces: this.traces.toJSON(),
       issues: this.issues.toJSON(),
+      debugLog: [...this.debugLog],
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       templateId: this.templateId,
@@ -330,6 +436,7 @@ export class ChatSession {
     session.updatedAt = state.updatedAt;
     session.templateId = state.templateId;
     session.readyToScaffold = state.readyToScaffold ?? false;
+    session.debugLog = [...(state.debugLog ?? [])];
     session.messageCounter = state.messages.length;
 
     // Recreate bridge for sessions with an existing definition
@@ -357,6 +464,73 @@ export class ChatSession {
     for (const issue of issues) {
       this.issues.addIssue(issue);
     }
+  }
+
+  /**
+   * Automatically fix errors found during audit by running refinement rounds.
+   * Uses the existing MCP tool surface — the LLM reads the diagnostics and
+   * fixes the form via tool calls, exactly like a user-initiated refinement.
+   */
+  private async autoFix(errors: Omit<Issue, 'id' | 'status'>[]): Promise<void> {
+    const MAX_FIX_ROUNDS = 3;
+
+    for (let round = 0; round < MAX_FIX_ROUNDS; round++) {
+      const errorSummary = errors
+        .map(e => `- [${e.title}] ${e.description}${e.elementPath ? ` (at ${e.elementPath})` : ''}`)
+        .join('\n');
+
+      const instruction = `The form has ${errors.length} validation error(s) that need to be fixed:\n${errorSummary}\n\nUse formspec_describe to inspect the current state, then fix each error using the appropriate tools.`;
+
+      this.log('sent', 'autoFix', { round: round + 1, errorCount: errors.length, errors: errorSummary });
+
+      try {
+        const toolContext = await this.bridge!.getToolContext();
+        const result = await this.adapter.refineForm(this.messages, instruction, toolContext);
+
+        this.log('received', 'autoFix', { round: round + 1, toolCalls: result.toolCalls.length, message: result.message });
+
+        // Read back updated state
+        this.definition = this.bridge!.getDefinition();
+        this.bundle = this.bridge!.getBundle();
+
+        const fixMsg: ChatMessage = {
+          id: this.nextMessageId(),
+          role: 'system',
+          content: `Auto-fix round ${round + 1}: ${result.message}`,
+          timestamp: Date.now(),
+        };
+        this.messages.push(fixMsg);
+        this.updatedAt = Date.now();
+        this.notify();
+
+        // Re-audit to check if errors are resolved
+        const remainingDiags = await this.bridge!.audit();
+        const remainingErrors = remainingDiags.filter(d => d.severity === 'error');
+
+        if (remainingErrors.length === 0) {
+          this.log('received', 'autoFix', { round: round + 1, result: 'all errors fixed' });
+          return;
+        }
+
+        // Still have errors — update for next round
+        errors = remainingErrors;
+      } catch (err) {
+        this.log('error', 'autoFix', { round: round + 1, error: (err as Error).message });
+        const errMsg: ChatMessage = {
+          id: this.nextMessageId(),
+          role: 'system',
+          content: `Auto-fix round ${round + 1} failed: ${(err as Error).message}`,
+          timestamp: Date.now(),
+        };
+        this.messages.push(errMsg);
+        this.updatedAt = Date.now();
+        this.notify();
+        return; // Don't keep retrying on adapter failure
+      }
+    }
+
+    // Exhausted retries — remaining errors stay as issues
+    this.log('received', 'autoFix', { result: `gave up after ${MAX_FIX_ROUNDS} rounds, ${errors.length} errors remain` });
   }
 
   /**

@@ -6,7 +6,6 @@ import path from 'path';
 const repoRoot = path.resolve(__dirname, '../..');
 
 export default defineConfig({
-  base: './',
   appType: 'mpa',
   plugins: [react(), tailwindcss()],
   define: {

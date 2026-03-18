@@ -1,6 +1,6 @@
 /** @filedesc React context and hooks that expose ChatSession state and session actions to chat components. */
 import React, { createContext, useContext, useCallback, useRef, useSyncExternalStore } from 'react';
-import type { ChatSession, ChatMessage, SourceTrace, Issue, DefinitionDiff } from 'formspec-chat';
+import type { ChatSession, ChatMessage, SourceTrace, Issue, DefinitionDiff, DebugEntry } from 'formspec-chat';
 import type { ProjectBundle } from 'formspec-studio-core';
 import type { FormDefinition } from 'formspec-types';
 
@@ -16,6 +16,8 @@ export interface ChatState {
   openIssueCount: number;
   traces: SourceTrace[];
   issues: Issue[];
+  debugLog: DebugEntry[];
+  scaffoldingText: string | null;
 }
 
 function snapshotFrom(session: ChatSession): ChatState {
@@ -29,6 +31,8 @@ function snapshotFrom(session: ChatSession): ChatState {
     openIssueCount: session.getOpenIssueCount(),
     traces: session.getTraces(),
     issues: session.getIssues(),
+    debugLog: session.getDebugLog(),
+    scaffoldingText: session.getScaffoldingText(),
   };
 }
 

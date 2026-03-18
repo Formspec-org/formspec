@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "build:studio": "npm run build -w formspec-studio",
-    "copy:studio": "rm -rf public/studio public/chat && mkdir -p public/studio public/chat && cp -r ../packages/formspec-studio/dist/* public/studio/ && mv public/studio/chat.html public/chat/index.html && cp -r public/studio/assets public/chat/assets",
+    "copy:studio": "rm -rf public/studio public/chat && mkdir -p public/studio public/chat && cp -r ../packages/formspec-studio/dist/* public/studio/ && mv public/studio/chat.html public/chat/index.html && cp -r public/studio/assets public/chat/assets && sed -i '' 's|href=\"/assets|href=\"/studio/assets|g' public/studio/index.html && sed -i '' 's|src=\"/assets|src=\"/studio/assets|g' public/studio/index.html && sed -i '' 's|href=\"/assets|href=\"/chat/assets|g' public/chat/index.html && sed -i '' 's|src=\"/assets|src=\"/chat/assets|g' public/chat/index.html",
     "predev": "npm run build:studio && npm run copy:studio",
     "prebuild": "npm run build:studio && npm run copy:studio",
     "dev": "astro dev",

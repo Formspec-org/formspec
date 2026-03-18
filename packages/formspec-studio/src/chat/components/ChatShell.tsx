@@ -224,12 +224,21 @@ function IconGear() {
   );
 }
 
+function IconBug() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.5" y="3" width="5" height="6.5" rx="2.5" />
+      <path d="M1 5h2M9 5h2M1 8h2M9 8h2M4.5 1.5L5 3M7.5 1.5L7 3" />
+    </svg>
+  );
+}
+
 function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () => void; onUpload: () => void; onOpenSettings: () => void }) {
   const session = useChatSession();
   const state = useChatState();
   // Mobile-only view toggle — on desktop both panes are visible
   const [mobileView, setMobileView] = useState<'chat' | 'preview'>('chat');
-  const [showIssues, setShowIssues] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   const handleExport = useCallback(async () => {
     const bundle = session.exportBundle();
@@ -279,19 +288,18 @@ function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () =>
             formspec
           </span>
           {state.openIssueCount > 0 && (
-            <button
-              onClick={() => setShowIssues(!showIssues)}
+            <span
               data-testid="issue-count"
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded-full bg-amber/10 text-amber border border-amber/25 hover:bg-amber/20 transition-colors"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded-full bg-amber/10 text-amber border border-amber/25"
             >
               <IconWarning />
               {state.openIssueCount}
-            </button>
+            </span>
           )}
         </div>
 
         <div className="flex items-center gap-3">
-          {state.hasDefinition && (
+          {(state.hasDefinition || state.scaffoldingText != null) && (
             <>
               {/* Mobile-only: segmented view toggle */}
               <div className="flex lg:hidden items-center rounded-md bg-subtle border border-border p-0.5">
@@ -340,21 +348,48 @@ function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () =>
         </div>
       </header>
 
-      {/* Content — side-by-side on desktop, toggled on mobile */}
+      {/* Content — left sidebar | chat | preview */}
       <div className="flex-1 flex overflow-hidden">
+        {/* Left sidebar — always visible, toggles between Issues and Debug */}
+        <div className="hidden lg:flex flex-col w-[280px] shrink-0 border-r border-border bg-surface">
+          <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border">
+            {(['issues', 'debug'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setShowDebug(tab === 'debug')}
+                className={`px-2.5 py-1 text-xs font-medium rounded capitalize transition-colors ${
+                  (tab === 'debug') === showDebug
+                    ? 'bg-accent text-white'
+                    : 'text-muted hover:text-ink hover:bg-subtle'
+                }`}
+              >
+                {tab === 'issues' && state.openIssueCount > 0
+                  ? `Issues (${state.openIssueCount})`
+                  : tab === 'debug'
+                    ? `Debug (${state.debugLog.length})`
+                    : 'Issues'}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {showDebug ? <DebugLog entries={state.debugLog} /> : <IssuePanel />}
+          </div>
+        </div>
+
         {/* Chat pane — always visible on desktop, toggled on mobile */}
         <div className={[
           'flex flex-col',
           // Mobile: full width when active, hidden when preview
           mobileView === 'chat' ? 'flex-1' : 'hidden',
-          // Desktop: always visible, takes ~55% width
+          // Desktop: always visible, takes remaining width
           'lg:flex lg:flex-1 lg:min-w-0',
         ].join(' ')}>
           <ChatPanel onUpload={onUpload} />
         </div>
 
-        {/* Preview pane — always visible on desktop when definition exists */}
-        {state.hasDefinition && (
+        {/* Preview pane — visible when definition exists OR scaffolding is streaming */}
+        {(state.hasDefinition || state.scaffoldingText != null) && (
           <div className={[
             'flex flex-col border-l border-border',
             // Mobile: full width when active, hidden when chat
@@ -365,25 +400,77 @@ function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () =>
             <FormPreview />
           </div>
         )}
-
-        {/* Issue panel — slide-over on top of preview */}
-        {showIssues && (
-          <div className="absolute right-0 top-[45px] bottom-0 w-full sm:w-[360px] bg-surface border-l border-border shadow-lg z-10 flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <span className="text-sm font-medium text-ink">Issues</span>
-              <button
-                onClick={() => setShowIssues(false)}
-                className="text-xs text-muted hover:text-ink transition-colors px-2 py-1 rounded hover:bg-subtle"
-              >
-                Close
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <IssuePanel />
-            </div>
-          </div>
-        )}
       </div>
+    </div>
+  );
+}
+
+// ── Debug Log ──────────────────────────────────────────────────────
+
+function DebugLog({ entries }: { entries: import('formspec-chat').DebugEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full px-4">
+        <p className="text-xs text-muted/60 italic">No debug entries yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-2 py-2 space-y-1.5">
+      {entries.map((entry, i) => (
+        <DebugLogEntry key={i} entry={entry} />
+      ))}
+    </div>
+  );
+}
+
+function DebugLogEntry({ entry }: { entry: import('formspec-chat').DebugEntry }) {
+  const [expanded, setExpanded] = useState(false);
+  const time = new Date(entry.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const directionStyle = {
+    sent: 'text-accent',
+    received: 'text-green',
+    error: 'text-error',
+  }[entry.direction];
+
+  const directionIcon = {
+    sent: '\u2192',   // →
+    received: '\u2190', // ←
+    error: '\u2717',   // ✗
+  }[entry.direction];
+
+  let preview: string;
+  try {
+    const s = JSON.stringify(entry.data);
+    preview = s.length > 80 ? s.slice(0, 80) + '\u2026' : s;
+  } catch {
+    preview = String(entry.data);
+  }
+
+  return (
+    <div className="rounded border border-border bg-bg-default text-xs">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-subtle/50 transition-colors"
+      >
+        <span className={`font-mono font-bold ${directionStyle}`}>{directionIcon}</span>
+        <span className="font-mono text-muted/70">{time}</span>
+        <span className="font-medium text-ink truncate">{entry.label}</span>
+        <span className="ml-auto text-muted/40 text-[10px]">{expanded ? '\u25BC' : '\u25B6'}</span>
+      </button>
+      {!expanded && (
+        <div className="px-2 pb-1.5 -mt-0.5">
+          <span className="font-mono text-[10px] text-muted/50 break-all">{preview}</span>
+        </div>
+      )}
+      {expanded && (
+        <pre className="px-2 pb-2 font-mono text-[10px] text-ink overflow-x-auto max-h-[300px] overflow-y-auto border-t border-border mt-0.5 pt-1.5 whitespace-pre-wrap break-all">
+          {JSON.stringify(entry.data, null, 2)}
+        </pre>
+      )}
     </div>
   );
 }

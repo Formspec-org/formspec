@@ -125,12 +125,15 @@ export interface RefinementResult {
   toolCalls: ToolCallRecord[];
 }
 
+/** Called with accumulated text as a scaffold streams in. */
+export type ScaffoldProgressCallback = (text: string) => void;
+
 export interface AIAdapter {
   /** Conduct a guided interview conversation before scaffolding. */
   chat(messages: ChatMessage[]): Promise<ConversationResponse>;
 
   /** Generate a scaffold from the initial input. */
-  generateScaffold(request: ScaffoldRequest): Promise<ScaffoldResult>;
+  generateScaffold(request: ScaffoldRequest, onProgress?: ScaffoldProgressCallback): Promise<ScaffoldResult>;
 
   /** Refine an existing form via MCP tool calls. */
   refineForm(
@@ -172,6 +175,15 @@ export interface Template {
   definition: FormDefinition;
 }
 
+// ── Debug Log ───────────────────────────────────────────────────
+
+export interface DebugEntry {
+  timestamp: number;
+  direction: 'sent' | 'received' | 'error';
+  label: string;
+  data: unknown;
+}
+
 // ── Session Persistence ─────────────────────────────────────────────
 
 export interface ChatProjectSnapshot {
@@ -184,6 +196,7 @@ export interface ChatSessionState {
   projectSnapshot: ChatProjectSnapshot;
   traces: SourceTrace[];
   issues: Issue[];
+  debugLog?: DebugEntry[];
   createdAt: number;
   updatedAt: number;
   templateId?: string;

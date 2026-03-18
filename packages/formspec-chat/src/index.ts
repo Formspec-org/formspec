@@ -31,6 +31,8 @@ export type {
   ToolContext,
   ToolCallRecord,
   RefinementResult,
+  DebugEntry,
+  ScaffoldProgressCallback,
 } from './types.js';
 
 // Modules
