@@ -1867,6 +1867,7 @@ export class Project {
       action: { helper: 'addPage', params: { title, description } },
       affectedPaths: [finalKey],
       createdId: pageId,
+      groupKey: finalKey,
     };
   }
 
@@ -2389,6 +2390,110 @@ export class Project {
     const region = page.regions?.[regionIndex];
     if (!region) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
     return region.key;
+  }
+
+  /** Find a region's index by item key on a page. Throws if page or item not found. */
+  private _regionIndexOf(pageId: string, itemKey: string): number {
+    const pages = (this.core.state.theme as any).pages ?? [];
+    const page = pages.find((p: any) => p.id === pageId);
+    if (!page) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${pageId}`);
+    const regions = page.regions ?? [];
+    const index = regions.findIndex((r: any) => r.key === itemKey);
+    if (index === -1) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
+    return index;
+  }
+
+  // ── Behavioral Page Methods ──
+
+  /** Set the width (grid span) of an item on a page. */
+  setItemWidth(pageId: string, itemKey: string, width: number): HelperResult {
+    this._regionIndexOf(pageId, itemKey); // validates existence
+    this.core.dispatch({
+      type: 'pages.setRegionProperty',
+      payload: { pageId, key: itemKey, property: 'span', value: width },
+    });
+    return {
+      summary: `Set width of '${itemKey}' on page '${pageId}' to ${width}`,
+      action: { helper: 'setItemWidth', params: { pageId, itemKey, width } },
+      affectedPaths: [pageId],
+    };
+  }
+
+  /** Set the offset (grid start) of an item on a page. */
+  setItemOffset(pageId: string, itemKey: string, offset: number | undefined): HelperResult {
+    this._regionIndexOf(pageId, itemKey);
+    this.core.dispatch({
+      type: 'pages.setRegionProperty',
+      payload: { pageId, key: itemKey, property: 'start', value: offset },
+    });
+    return {
+      summary: `Set offset of '${itemKey}' on page '${pageId}' to ${offset ?? 'auto'}`,
+      action: { helper: 'setItemOffset', params: { pageId, itemKey, offset } },
+      affectedPaths: [pageId],
+    };
+  }
+
+  /** Set responsive breakpoint overrides for an item on a page. */
+  setItemResponsive(
+    pageId: string,
+    itemKey: string,
+    breakpoint: string,
+    overrides: { width?: number; offset?: number; hidden?: boolean } | undefined,
+  ): HelperResult {
+    const regionIndex = this._regionIndexOf(pageId, itemKey);
+    const pages = (this.core.state.theme as any).pages ?? [];
+    const page = pages.find((p: any) => p.id === pageId);
+    const region = page.regions[regionIndex];
+
+    // Clone existing responsive map or start fresh
+    const responsive = { ...(region.responsive ?? {}) };
+
+    if (overrides === undefined) {
+      delete responsive[breakpoint];
+    } else {
+      // Translate behavioral vocabulary → schema vocabulary
+      const entry: Record<string, unknown> = {};
+      if (overrides.width !== undefined) entry.span = overrides.width;
+      if (overrides.offset !== undefined) entry.start = overrides.offset;
+      if (overrides.hidden !== undefined) entry.hidden = overrides.hidden;
+      responsive[breakpoint] = entry;
+    }
+
+    this.core.dispatch({
+      type: 'pages.setRegionProperty',
+      payload: { pageId, key: itemKey, property: 'responsive', value: responsive },
+    });
+    return {
+      summary: `Set responsive '${breakpoint}' for '${itemKey}' on page '${pageId}'`,
+      action: { helper: 'setItemResponsive', params: { pageId, itemKey, breakpoint, overrides } },
+      affectedPaths: [pageId],
+    };
+  }
+
+  /** Remove an item from a page. */
+  removeItemFromPage(pageId: string, itemKey: string): HelperResult {
+    this._regionIndexOf(pageId, itemKey);
+    this.core.dispatch({ type: 'pages.unassignItem', payload: { pageId, key: itemKey } });
+    return {
+      summary: `Removed '${itemKey}' from page '${pageId}'`,
+      action: { helper: 'removeItemFromPage', params: { pageId, itemKey } },
+      affectedPaths: [pageId],
+    };
+  }
+
+  /** Reorder an item within a page (by key, not index). */
+  reorderItemOnPage(pageId: string, itemKey: string, direction: 'up' | 'down'): HelperResult {
+    const currentIndex = this._regionIndexOf(pageId, itemKey);
+    const targetIndex = Math.max(0, direction === 'up' ? currentIndex - 1 : currentIndex + 1);
+    this.core.dispatch({
+      type: 'pages.reorderRegion',
+      payload: { pageId, key: itemKey, targetIndex },
+    });
+    return {
+      summary: `Reordered '${itemKey}' ${direction} on page '${pageId}'`,
+      action: { helper: 'reorderItemOnPage', params: { pageId, itemKey, direction } },
+      affectedPaths: [pageId],
+    };
   }
 
   // ── Component Tree Helpers ──

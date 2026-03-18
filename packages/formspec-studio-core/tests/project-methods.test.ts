@@ -2790,3 +2790,185 @@ describe('CIRCULAR_REFERENCE pre-validation', () => {
     expect(project.variableNames()).toContain('x');
   });
 });
+
+// ── Behavioral Page Methods (Phase 2) ──
+
+describe('behavioral page methods', () => {
+  /** Helper: create a project with a page and two items placed on it. */
+  function projectWithPageAndItems() {
+    const project = createProject();
+    const result = project.addPage('Test Page');
+    const pageId = result.createdId!;
+    const groupKey = (result as any).groupKey as string;
+    // In paged mode, fields must live inside the page's group
+    project.addField(`${groupKey}.name`, 'Name', 'text');
+    project.addField(`${groupKey}.email`, 'Email', 'email');
+    // Place the leaf keys on the page
+    project.placeOnPage('name', pageId);
+    project.placeOnPage('email', pageId);
+    return { project, pageId, groupKey };
+  }
+
+  describe('setItemWidth', () => {
+    it('updates the span of a placed item', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      const result = project.setItemWidth(pageId, 'name', 6);
+      expect(result.summary).toContain('name');
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const region = page?.regions?.find((r: any) => r.key === 'name');
+      expect(region?.span).toBe(6);
+    });
+  });
+
+  describe('setItemOffset', () => {
+    it('sets the start offset of a placed item', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      project.setItemOffset(pageId, 'email', 3);
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const region = page?.regions?.find((r: any) => r.key === 'email');
+      expect(region?.start).toBe(3);
+    });
+
+    it('clears the start offset when undefined', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      project.setItemOffset(pageId, 'email', 3);
+      project.setItemOffset(pageId, 'email', undefined);
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const region = page?.regions?.find((r: any) => r.key === 'email');
+      expect(region?.start).toBeUndefined();
+    });
+  });
+
+  describe('setItemResponsive', () => {
+    it('sets responsive overrides translating width→span, offset→start', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      project.setItemResponsive(pageId, 'name', 'sm', { width: 12, offset: 0, hidden: false });
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const region = page?.regions?.find((r: any) => r.key === 'name');
+      expect(region?.responsive?.sm).toEqual({ span: 12, start: 0, hidden: false });
+    });
+
+    it('removes a breakpoint when overrides is undefined', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      project.setItemResponsive(pageId, 'name', 'sm', { width: 12 });
+      project.setItemResponsive(pageId, 'name', 'sm', undefined);
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const region = page?.regions?.find((r: any) => r.key === 'name');
+      expect(region?.responsive?.sm).toBeUndefined();
+    });
+
+    it('preserves other breakpoints when setting one', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      project.setItemResponsive(pageId, 'name', 'sm', { width: 12 });
+      project.setItemResponsive(pageId, 'name', 'md', { width: 6 });
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const region = page?.regions?.find((r: any) => r.key === 'name');
+      expect(region?.responsive?.sm).toEqual({ span: 12 });
+      expect(region?.responsive?.md).toEqual({ span: 6 });
+    });
+  });
+
+  describe('removeItemFromPage', () => {
+    it('removes an item from the page', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      project.removeItemFromPage(pageId, 'name');
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      expect(page?.regions?.some((r: any) => r.key === 'name')).toBeFalsy();
+    });
+  });
+
+  describe('reorderItemOnPage', () => {
+    it('moves an item down within a page', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      // Initial order: [group_key, name, email] — name is at index 1, email at 2
+      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const regionKeys = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      const nameIdx = regionKeys.indexOf('name');
+      const emailIdx = regionKeys.indexOf('email');
+      expect(nameIdx).toBeLessThan(emailIdx);
+
+      project.reorderItemOnPage(pageId, 'name', 'down');
+
+      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      expect(keysAfter.indexOf('name')).toBeGreaterThan(keysAfter.indexOf('email'));
+    });
+
+    it('moves an item up within a page', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      project.reorderItemOnPage(pageId, 'email', 'up');
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keys = page?.regions?.map((r: any) => r.key) ?? [];
+      expect(keys.indexOf('email')).toBeLessThan(keys.indexOf('name'));
+    });
+  });
+
+  describe('error handling', () => {
+    it('throws PAGE_NOT_FOUND for unknown pageId', () => {
+      const project = createProject();
+      try {
+        project.setItemWidth('nonexistent-page', 'name', 6);
+        expect.unreachable('should throw');
+      } catch (e) {
+        expect(e).toBeInstanceOf(HelperError);
+        expect((e as HelperError).code).toBe('PAGE_NOT_FOUND');
+      }
+    });
+
+    it('throws ITEM_NOT_ON_PAGE for unknown itemKey on page', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      try {
+        project.setItemWidth(pageId, 'nonexistent', 6);
+        expect.unreachable('should throw');
+      } catch (e) {
+        expect(e).toBeInstanceOf(HelperError);
+        expect((e as HelperError).code).toBe('ITEM_NOT_ON_PAGE');
+      }
+    });
+
+    it('ITEM_NOT_ON_PAGE applies to all behavioral methods', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      const ghost = 'ghost_item';
+      expect(() => project.setItemWidth(pageId, ghost, 6)).toThrow(HelperError);
+      expect(() => project.setItemOffset(pageId, ghost, 3)).toThrow(HelperError);
+      expect(() => project.setItemResponsive(pageId, ghost, 'sm', { width: 12 })).toThrow(HelperError);
+      expect(() => project.removeItemFromPage(pageId, ghost)).toThrow(HelperError);
+      expect(() => project.reorderItemOnPage(pageId, ghost, 'up')).toThrow(HelperError);
+    });
+  });
+
+  describe('addPage returns groupKey', () => {
+    it('includes groupKey in the result', () => {
+      const project = createProject();
+      const result = project.addPage('My Page');
+      expect(result).toHaveProperty('groupKey');
+      expect(typeof (result as any).groupKey).toBe('string');
+      // groupKey matches the affected path
+      expect((result as any).groupKey).toBe(result.affectedPaths[0]);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('reorder first item up is a no-op (index clamped to 0)', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      // The first region is the group key from addPage — reorder it up
+      const firstKey = keysBefore[0];
+      project.reorderItemOnPage(pageId, firstKey, 'up');
+      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      expect(keysAfter).toEqual(keysBefore);
+    });
+
+    it('setItemResponsive with empty overrides clears all properties for that breakpoint', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      project.setItemResponsive(pageId, 'name', 'lg', { width: 4, hidden: true });
+      // Empty overrides — sets an empty object for the breakpoint
+      project.setItemResponsive(pageId, 'name', 'lg', {});
+      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const region = page?.regions?.find((r: any) => r.key === 'name');
+      expect(region?.responsive?.lg).toEqual({});
+    });
+  });
+});
