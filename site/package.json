@@ -7,8 +7,10 @@
   "scripts": {
     "build:studio": "npm run build -w formspec-studio",
     "copy:studio": "rm -rf public/studio public/chat && mkdir -p public/studio public/chat && cp -r ../packages/formspec-studio/dist/* public/studio/ && mv public/studio/chat.html public/chat/index.html",
-    "predev": "npm run build:studio && npm run copy:studio",
-    "prebuild": "npm run build:studio && npm run copy:studio",
+    "build:references": "cd ../examples/refrences && FORMSPEC_BASE_PATH=/references/ npx vite build",
+    "copy:references": "rm -rf public/references && mkdir -p public/references && cp -r ../examples/refrences/dist/* public/references/ && mkdir -p public/references/examples && cp -r ../examples/grant-application public/references/examples/ && cp -r ../examples/grant-report public/references/examples/ && cp -r ../examples/invoice public/references/examples/ && cp -r ../examples/clinical-intake public/references/examples/ && mkdir -p public/references/registries && cp ../registries/*.json public/references/registries/",
+    "predev": "npm run build:studio && npm run copy:studio && npm run build:references && npm run copy:references",
+    "prebuild": "npm run build:studio && npm run copy:studio && npm run build:references && npm run copy:references",
     "dev": "astro dev",
     "build": "astro build && cp -rL ../docs dist/docs",
     "preview": "astro preview",

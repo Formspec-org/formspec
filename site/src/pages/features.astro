@@ -1,5 +1,6 @@
 ---
 import Page from "../layouts/Page.astro";
+import GetStarted from "../components/GetStarted.astro";
 import CallToAction from "../components/CallToAction.astro";
 ---
 
@@ -16,34 +17,35 @@ import CallToAction from "../components/CallToAction.astro";
       <p class="features-lead">
         Design, logic, validation, and export in one open-source platform. Build visually in Studio or describe what you need to an AI assistant.
       </p>
+
+      <div class="hero-actions">
+        <a href="/studio/" class="btn-primary">
+          Try Formspec Studio
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2.5 7H11.5M7.5 3L11.5 7L7.5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <a
+          href="https://github.com/mikewolfd/formspec"
+          class="btn-ghost"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="/docs/" class="btn-ghost">
+          Docs
+        </a>
+      </div>
     </header>
 
-    <!-- ─── Section: How You Build ─── -->
-    <section class="features-section reveal">
-      <div class="section-eyebrow">How you build</div>
-      <h2>Three ways to create forms. All produce the same portable JSON.</h2>
-      <p class="section-lead">
-        Whether you prefer a visual editor, a conversation, or AI-assisted authoring — the output is the same portable JSON definition. Mix and match freely.
-      </p>
-      <div class="authoring-grid">
-        <div class="feature-card">
-          <h3>Formspec Studio</h3>
-          <p>A visual form builder with drag-and-drop editing, live preview, and every setting accessible without code. Build logic rules, design themes, and configure exports — all in one workspace.</p>
-          {/* [Screenshot: Studio editor showing a grant budget form with live preview] */}
-        </div>
-        <div class="feature-card">
-          <h3>Chat builder</h3>
-          <p>Describe your form in plain language. A conversational AI builds it live alongside the conversation.</p>
-        </div>
-        <div class="feature-card">
-          <h3>AI tool integration</h3>
-          <p>For teams using AI coding assistants: 28 structured actions for adding fields, setting rules, configuring validation, and more (via Model Context Protocol).</p>
-        </div>
-      </div>
-    </section>
+    <GetStarted />
 
     <!-- ─── BLUF Table ─── -->
-    <section class="features-section reveal">
+    <section class="features-section">
       <div class="section-eyebrow">Requirements checklist</div>
       <h2>Bottom line up front</h2>
       <p class="section-lead">
@@ -133,6 +135,10 @@ import CallToAction from "../components/CallToAction.astro";
               <td>Describe what you need in plain language. An AI chat builder creates the form live. Also integrates with AI coding assistants via 28 structured tool actions.</td>
             </tr>
             <tr>
+              <td>Extend forms with custom types and rules</td>
+              <td>Declare new data types, validation constraints, and functions as JSON extensions. Publish them in a shareable registry. Enable on any field with one property — no code changes needed.</td>
+            </tr>
+            <tr>
               <td>No vendor lock-in</td>
               <td>Free and open-source (MIT license). Your form definitions are portable JSON files you own. No proprietary format, no lock-in.</td>
             </tr>
@@ -166,9 +172,8 @@ import CallToAction from "../components/CallToAction.astro";
           <p>Form definitions are JSON documents conforming to a published spec. Move between implementations, host on your own infrastructure, or build custom tooling against the spec.</p>
         </div>
         <div class="feature-card">
-          <h3>Community</h3>
-          <p>An open spec means third-party implementations, community extensions, and shared component registries.</p>
-          {/* TODO(product): Support model — community forum, Discord, GitHub Discussions? Commercial support or paid tier planned? See revision plan section 6, item 1 */}
+          <h3>Community extensions</h3>
+          <p>Extension registries are plain JSON files you can check into a repo, fork, audit, or vendor. No gatekeepers, no app store — just publish and share.</p>
         </div>
         <div class="feature-card">
           <h3>Compliance posture</h3>
@@ -187,11 +192,13 @@ import CallToAction from "../components/CallToAction.astro";
     <!-- ─── Section: Fields ─── -->
     <section class="features-section reveal">
       <div class="section-eyebrow">Fields</div>
-      <h2>13 field types — from plain text to money and signatures.</h2>
+      <h2>13 built-in types — from plain text to money and signatures.</h2>
       <p class="section-lead">
-        Every common data type ships built in. No plugins or add-ons required.
+        Every common data type ships built in. Need something more specialized? Extensions add email, phone, SSN, and more — see below.
       </p>
-      {/* [Screenshot: A rendered form showing 4–5 field types together] */}
+      {/* <div class="feature-showcase reveal">
+        <img src="/features/field-types.png" alt="A variety of Formspec field types including text, money, date picker, and signature pad." loading="lazy" />
+      </div> */}
       <div class="feature-grid">
         <div class="feature-card">
           <h3>Text & Numbers</h3>
@@ -216,6 +223,41 @@ import CallToAction from "../components/CallToAction.astro";
         <div class="feature-card">
           <h3>Ratings & Sliders</h3>
           <p>Star/icon ratings (configurable icon, optional half-step) and sliders (min/max/step with tick marks).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Extensions ─── -->
+    <section class="features-section reveal">
+      <div class="section-eyebrow">Extensions</div>
+      <h2>Anyone can add new field types, constraints, and functions — and share them.</h2>
+      <p class="section-lead">
+        Need an email validator? A phone number formatter? A compliance check specific to your industry? Declare it as a JSON extension, enable it on a field with one property, and publish it for every team in your organization.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>One property to activate</h3>
+          <p>Add <code>"x-formspec-email": true</code> to any field's extensions. That single property activates validation, input hints, and display formatting — nothing else to configure.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Declare, don't code</h3>
+          <p>A data type extension is a JSON entry: a validation pattern, input mask, display format, and metadata — one declaration replaces what would otherwise be a custom plugin. Function and constraint extensions declare their signatures the same way.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Five extension categories</h3>
+          <p>Data types add new field kinds (email, phone, SSN). Constraints add validation rules (Luhn checksum for card numbers). Functions add computed values (calculate age from a birth date). Properties attach custom metadata (compliance tags, sensitivity flags). Namespaces group related extensions into installable bundles.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Publish and share</h3>
+          <p>Package extensions into a registry — versioned, with compatibility bounds that prevent breaking changes on upgrade. Your compliance team publishes validated types once; every team in the organization uses them. Extensions follow a formal lifecycle (draft, stable, deprecated, retired) so consumers always know what's production-ready.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Common library included</h3>
+          <p>16 production-ready extensions ship out of the box: email, phone (international and North American), ZIP code, SSN, EIN, credit card, percentage, US currency, URL, hex color code, and more — each with validation built in, plus input hints, display masking, and formatting where appropriate.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Portable by design</h3>
+          <p>Extensions follow the same open JSON format as everything else. Move them between implementations, fork them, or build tooling against them. No vendor lock-in at the extension layer either.</p>
         </div>
       </div>
     </section>
@@ -262,7 +304,9 @@ import CallToAction from "../components/CallToAction.astro";
       <p class="section-lead">
         Field-level checks and cross-field business rules — with structured results your systems can act on, not just red error text.
       </p>
-      {/* [Screenshot: A form with error, warning, and info validation messages visible] */}
+      {/* <div class="feature-showcase reveal">
+        <img src="/features/validation-messages.png" alt="Formspec validation report showing error, warning, and info messages." loading="lazy" />
+      </div> */}
       <div class="feature-grid">
         <div class="feature-card">
           <h3>Field constraints</h3>
@@ -298,7 +342,9 @@ import CallToAction from "../components/CallToAction.astro";
       <p class="section-lead">
         Full control over navigation and layout — without touching your form logic.
       </p>
-      {/* [Screenshot: Wizard navigation with step indicator] */}
+      {/* <div class="feature-showcase reveal">
+        <img src="/features/wizard-navigation.png" alt="Multi-step wizard navigation with progress indicator and step-by-step forms." loading="lazy" />
+      </div> */}
       <div class="feature-grid">
         <div class="feature-card">
           <h3>Wizard navigation</h3>
@@ -330,7 +376,9 @@ import CallToAction from "../components/CallToAction.astro";
       <p class="section-lead">
         Repeatable groups are first-class citizens, not a workaround.
       </p>
-      {/* [Screenshot: An editable data table with calculated row totals] */}
+      {/* <div class="feature-showcase reveal">
+        <img src="/features/repeatable-table.png" alt="An editable repeatable budget table with automated row calculations." loading="lazy" />
+      </div> */}
       <div class="feature-grid">
         <div class="feature-card">
           <h3>Data table</h3>
@@ -443,7 +491,7 @@ import CallToAction from "../components/CallToAction.astro";
   }
 
   .features-header {
-    padding: 6rem clamp(1.25rem, 4vw, 2.5rem) 4rem;
+    padding: 4rem clamp(1.25rem, 4vw, 2.5rem) 3rem;
     max-width: 72rem;
     margin: 0 auto;
     position: relative;
@@ -495,6 +543,56 @@ import CallToAction from "../components/CallToAction.astro";
     border-bottom: 1px solid var(--color-border);
   }
 
+  /* ── Hero Actions ── */
+
+  .hero-actions {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius);
+    background: var(--color-accent);
+    color: white;
+    text-decoration: none;
+    transition: background-color 0.15s, transform 0.1s;
+    box-shadow: 0 1px 2px rgb(61 82 213 / 0.3), 0 0 0 1px rgb(61 82 213 / 0.1);
+  }
+
+  .btn-primary:hover {
+    background: #2c42c4;
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-ink-secondary);
+    text-decoration: none;
+    background: var(--color-surface);
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
   .features-section--last {
     border-bottom: none;
   }
@@ -519,7 +617,8 @@ import CallToAction from "../components/CallToAction.astro";
 
   .table-wrap {
     overflow-x: auto;
-    margin: 1.25rem 0;
+    margin: 2rem 0;
+    border-radius: var(--radius-lg);
   }
 
   .bluf-table {
@@ -643,6 +742,44 @@ import CallToAction from "../components/CallToAction.astro";
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.25rem;
+  }
+
+  /* ── Screenshots ── */
+
+  .screenshot-container {
+    margin-top: 1.25rem;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    background: var(--color-surface-raised);
+  }
+
+  .screenshot-container img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .feature-showcase {
+    margin: 2rem auto 4rem;
+    max-width: 800px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    background: var(--color-surface-raised);
+  }
+
+  .feature-showcase img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: transform 0.5s ease;
+  }
+
+  .feature-showcase:hover img {
+    transform: scale(1.02);
   }
 
   /* ─── Mobile ─── */

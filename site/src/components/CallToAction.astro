@@ -26,18 +26,18 @@
         </div>
       </div>
 
-      <div class="cta-install">
-        <span class="cta-install-label">Install MCP server:</span>
-        <code class="cta-install-cmd">npx formspec-mcp</code>
-        <button class="cta-install-copy" onclick="navigator.clipboard.writeText('npx formspec-mcp').then(() => { this.textContent = 'Copied'; setTimeout(() => this.textContent = 'Copy', 1500) })" aria-label="Copy install command">Copy</button>
-      </div>
-
       <div class="cta-actions">
         <a href="/studio/" class="cta-btn-primary">
           Try Formspec Studio
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M2.5 7H11.5M7.5 3L11.5 7L7.5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
+        </a>
+        <a href="/formspec-mcp.mcpb" class="cta-btn-primary cta-btn-mcp" download>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 1v9m0 0L5 7m3 3l3-3M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Install MCP Server
         </a>
         <a
           href="https://github.com/mikewolfd/formspec"
@@ -125,51 +125,6 @@
     line-height: 1.55;
   }
 
-  .cta-install {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-  }
-
-  .cta-install-label {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--color-ink-tertiary);
-  }
-
-  .cta-install-cmd {
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    padding: 0.3rem 0.625rem;
-    color: var(--color-ink);
-    user-select: all;
-  }
-
-  .cta-install-copy {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.3rem 0.5rem;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    color: var(--color-ink-secondary);
-    cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-  }
-
-  .cta-install-copy:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-  }
-
   .cta-actions {
     display: flex;
     align-items: center;
@@ -195,6 +150,15 @@
   .cta-btn-primary:hover {
     background: #2c42c4;
     transform: translateY(-1px);
+  }
+
+  .cta-btn-mcp {
+    background: #1a1a2e;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+
+  .cta-btn-mcp:hover {
+    background: #252540;
   }
 
   .cta-btn-ghost {
