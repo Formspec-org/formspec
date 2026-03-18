@@ -1,0 +1,601 @@
+---
+import Page from "../layouts/Page.astro";
+import CallToAction from "../components/CallToAction.astro";
+---
+
+<Page
+  title="Features — Formspec"
+  description="Everything complex forms require — from calculated fields and conditional logic to multi-step wizards, structured validation, and bidirectional data mapping."
+>
+  <article class="features">
+
+    <!-- ─── Page Header ─── -->
+    <header class="features-header">
+      <div class="section-eyebrow">What's included</div>
+      <h1>Everything complex forms require — nothing bolted on.</h1>
+      <p class="features-lead">
+        Design, logic, validation, and export in one open-source platform. Build visually in Studio or describe what you need to an AI assistant.
+      </p>
+    </header>
+
+    <!-- ─── Section: How You Build ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">How you build</div>
+      <h2>Three ways to create forms. All produce the same portable JSON.</h2>
+      <p class="section-lead">
+        Whether you prefer a visual editor, a conversation, or AI-assisted authoring — the output is the same portable JSON definition. Mix and match freely.
+      </p>
+      <div class="authoring-grid">
+        <div class="feature-card">
+          <h3>Formspec Studio</h3>
+          <p>A visual form builder with drag-and-drop editing, live preview, and every setting accessible without code. Build logic rules, design themes, and configure exports — all in one workspace.</p>
+          {/* [Screenshot: Studio editor showing a grant budget form with live preview] */}
+        </div>
+        <div class="feature-card">
+          <h3>Chat builder</h3>
+          <p>Describe your form in plain language. A conversational AI builds it live alongside the conversation.</p>
+        </div>
+        <div class="feature-card">
+          <h3>AI tool integration</h3>
+          <p>For teams using AI coding assistants: 28 structured actions for adding fields, setting rules, configuring validation, and more (via Model Context Protocol).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── BLUF Table ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">Requirements checklist</div>
+      <h2>Bottom line up front</h2>
+      <p class="section-lead">
+        Free and open-source — MIT license. No per-seat pricing, no usage limits.
+        If you're evaluating form tools, here's the direct answer to the most common requirements.
+      </p>
+
+      <div class="table-wrap">
+        <table class="bluf-table">
+          <thead>
+            <tr>
+              <th>Requirement</th>
+              <th>What Formspec provides</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Calculated fields that update in real time</td>
+              <td>61 built-in functions for math, dates, text, and more. Calculations update instantly as the user types. No coding required — works like spreadsheet formulas.</td>
+            </tr>
+            <tr>
+              <td>Show/hide fields based on other answers</td>
+              <td>Set a condition on any field or section. When the condition is false, the field hides — and everything inside that section hides with it.</td>
+            </tr>
+            <tr>
+              <td>Required fields that depend on other answers</td>
+              <td>Make any field conditionally required based on other answers. "Required when the applicant selected Nonprofit" is a single rule, not custom code.</td>
+            </tr>
+            <tr>
+              <td>Cross-field validation with custom error messages</td>
+              <td>Write business rules that check across multiple fields — with custom messages at three severity levels: error (blocks submission), warning (flags for review), and info (context only).</td>
+            </tr>
+            <tr>
+              <td>Multi-step wizard navigation</td>
+              <td>Wizard (step-by-step), tabbed, and single-page layouts — all built in. Switch modes without rebuilding your form.</td>
+            </tr>
+            <tr>
+              <td>Repeatable sections (add/remove rows)</td>
+              <td>Users add and remove rows freely. Set minimum and maximum number of rows. Nest groups inside groups (e.g., budget categories → line items).</td>
+            </tr>
+            <tr>
+              <td>Money fields with no rounding errors</td>
+              <td>Money fields store the amount and currency together. Decimal-precision math means $0.10 + $0.20 always equals $0.30 — no floating-point surprises.</td>
+            </tr>
+            <tr>
+              <td>File upload with drag-and-drop</td>
+              <td>Drag-and-drop file upload with file-type restrictions and multi-file support.</td>
+            </tr>
+            <tr>
+              <td>Signature capture</td>
+              <td>Draw-on-screen signature capture. Saves as an image.</td>
+            </tr>
+            <tr>
+              <td>Pre-populate fields from another system</td>
+              <td>Pull data from EHR, CRM, or any API to pre-fill fields. Each pre-filled field can be editable or locked.</td>
+            </tr>
+            <tr>
+              <td>Export data in our format (JSON/XML/CSV)</td>
+              <td>Export responses as JSON, XML, or CSV — with field renaming, value translation, and conditional rules. The same mapping works for import and export.</td>
+            </tr>
+            <tr>
+              <td>Forms that work offline</td>
+              <td>All form logic runs in the browser. No server connection needed while filling out the form.</td>
+            </tr>
+            <tr>
+              <td>Same validation on server as client</td>
+              <td>Server-side validation uses the same rules as client-side — guaranteed identical results. No rule duplication.</td>
+            </tr>
+            <tr>
+              <td>Version-lock forms once deployed</td>
+              <td>Once published, a form version is locked. Every response records which version it was filled on. Old responses always validate against their original form — never a newer one.</td>
+            </tr>
+            <tr>
+              <td>Migrate old responses to a new form version</td>
+              <td>When you update a form, define what happens to each field from the old version: keep the value, discard it, or compute a new value. The original response is always preserved.</td>
+            </tr>
+            <tr>
+              <td>Route applicants to the right form</td>
+              <td>Add a short screening questionnaire before the main form. Answers automatically route the user to the right form version or intake path.</td>
+            </tr>
+            <tr>
+              <td>Design control (tokens, widgets, layout)</td>
+              <td>Full design control: color tokens, typography, spacing, and layout. 37 built-in components. Apply a theme without changing the form itself.</td>
+            </tr>
+            <tr>
+              <td>Build forms with AI</td>
+              <td>Describe what you need in plain language. An AI chat builder creates the form live. Also integrates with AI coding assistants via 28 structured tool actions.</td>
+            </tr>
+            <tr>
+              <td>No vendor lock-in</td>
+              <td>Free and open-source (MIT license). Your form definitions are portable JSON files you own. No proprietary format, no lock-in.</td>
+            </tr>
+            <tr>
+              <td>Static linting before deployment</td>
+              <td>Catch errors before you publish. A static checker validates your form's logic, references, and structure — so users never see a broken form.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─── Section: Open-Source & Compliance ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">Open-source & compliance</div>
+      <h2>Open-source, auditable, yours to own.</h2>
+      <p class="section-lead">
+        Formspec is free and open-source under the MIT license. Your form definitions, response data, and validation rules are portable JSON files — not locked inside a proprietary platform.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>No per-seat pricing, no usage tiers</h3>
+          <p>Free for every team, every form, every response.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Auditability</h3>
+          <p>Regulated industries can inspect every line of logic. The specification is public. Validation behavior is testable end to end.</p>
+        </div>
+        <div class="feature-card">
+          <h3>No lock-in</h3>
+          <p>Form definitions are JSON documents conforming to a published spec. Move between implementations, host on your own infrastructure, or build custom tooling against the spec.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Community</h3>
+          <p>An open spec means third-party implementations, community extensions, and shared component registries.</p>
+          {/* TODO(product): Support model — community forum, Discord, GitHub Discussions? Commercial support or paid tier planned? See revision plan section 6, item 1 */}
+        </div>
+        <div class="feature-card">
+          <h3>Compliance posture</h3>
+          <p>Formspec runs client-side by default. No form data passes through Formspec servers. Your hosting environment, not Formspec, determines your compliance boundary.</p>
+          {/* TODO(product): HIPAA posture — see revision plan section 6, item 2. Provide a clear statement: BAA available? HIPAA deployment guide? */}
+          {/* TODO(product): WCAG accessibility level — see revision plan section 6, item 3. What level of WCAG conformance do built-in components target? */}
+        </div>
+        <div class="feature-card">
+          <h3>Mobile support</h3>
+          <p>Forms are responsive by default. Built-in components adapt to phone, tablet, and desktop viewports.</p>
+          {/* TODO(product): Mobile support details — see revision plan section 6, item 4. Native mobile SDKs, mobile-specific renderer, or offline-capable PWA support? */}
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Fields ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">Fields</div>
+      <h2>13 field types — from plain text to money and signatures.</h2>
+      <p class="section-lead">
+        Every common data type ships built in. No plugins or add-ons required.
+      </p>
+      {/* [Screenshot: A rendered form showing 4–5 field types together] */}
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Text & Numbers</h3>
+          <p>Single-line, multi-line, integers, decimals, and URIs. Automatic whitespace cleanup before storage.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Dates & Times</h3>
+          <p>Date only, date+time, or time only. ISO 8601 storage. Date arithmetic in expressions: difference in years/months/days, component extraction.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Choices</h3>
+          <p>Single-select and multi-select, rendered as dropdown, radio group, or checkbox group. Named option lists defined once and reused across fields.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Money</h3>
+          <p>Money fields store the amount and currency together. String-based amounts eliminate floating-point errors in financial calculations.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Files & Signatures</h3>
+          <p>File upload with drag-and-drop, MIME type filtering, and multi-file support. Canvas signature component with stroke capture — saves as an image.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Ratings & Sliders</h3>
+          <p>Star/icon ratings (configurable icon, optional half-step) and sliders (min/max/step with tick marks).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Calculated Fields & Conditions ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">Logic</div>
+      <h2>Calculated fields, conditions, and business rules — without code.</h2>
+      <p class="section-lead">
+        Set up calculated fields, show/hide logic, conditional requirements, and read-only rules — all using spreadsheet-style formulas (powered by Formspec Expression Language). No programming required. Power users can write complex expressions; everyone else uses Studio's visual rule builder.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Calculated fields</h3>
+          <p>Build formulas using 61 built-in functions: sums, averages, date math, text operations, and more. Results update in real time as the user types.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Show/hide conditions</h3>
+          <p>Set a condition on any field or section. When false, the field hides and everything inside it hides too. Hidden fields are automatically excluded from validation and output.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Conditional requirements</h3>
+          <p>Make any field required only when another condition is met. "Required when Organization Type is Nonprofit" is a single rule.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Read-only fields</h3>
+          <p>Lock fields with a condition. A locked section locks everything inside it. Calculated fields are automatically read-only.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Precision and power</h3>
+          <p>Decimal-precision math eliminates rounding errors in financial and scientific calculations. Row-by-row calculations across repeating sections — multiply quantity by price in each row, then sum the total. Named variables to reuse intermediate values across fields.</p>
+        </div>
+        <div class="feature-card">
+          <h3>State queries</h3>
+          <p>Check any field's current state — is it valid, visible, read-only, or required? — and use that answer as a condition in other rules.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Validation ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">Validation</div>
+      <h2>Field errors and cross-field business rules — structured, not just red text.</h2>
+      <p class="section-lead">
+        Field-level checks and cross-field business rules — with structured results your systems can act on, not just red error text.
+      </p>
+      {/* [Screenshot: A form with error, warning, and info validation messages visible] */}
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Field constraints</h3>
+          <p>A formula that returns true when the value is valid, plus a custom error message. Works with cross-field references: "end date must be after start date."</p>
+        </div>
+        <div class="feature-card">
+          <h3>Cross-field validation rules</h3>
+          <p>Named validation rules that target any field in the form. Each rule has a condition, severity (error/warning/info), a human-readable message, a machine-readable code, and an optional activation condition.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Rule composition</h3>
+          <p>Combine validation rules with and, or, not, and exactly-one. Rules can activate only when another condition is true.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Structured validation report</h3>
+          <p>Every validation run produces a structured report: pass/fail status, every violation with its field, severity, message, and a machine-readable code. Your backend can react to specific violations, not just "the form failed."</p>
+        </div>
+        <div class="feature-card">
+          <h3>Validation timing</h3>
+          <p>Per-rule: continuous (every change), on-submit only, or on-demand. Form-wide mode: validate everything, validate on submit, or never.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Three severity levels</h3>
+          <p>Error blocks completion; warning flags for review without blocking; info provides context. Warnings surface high-risk patterns without stopping the form.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Pages & Components ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">Pages & Components</div>
+      <h2>Multi-step wizards, tabbed forms, and 37 built-in components.</h2>
+      <p class="section-lead">
+        Full control over navigation and layout — without touching your form logic.
+      </p>
+      {/* [Screenshot: Wizard navigation with step indicator] */}
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Wizard navigation</h3>
+          <p>Step-by-step with Previous/Next/Submit, collapsible side nav, progress indicators (completed/active/upcoming). Per-page validation shows errors in context.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Tab navigation</h3>
+          <p>Click-based switching with configurable labels, top or bottom tab bar, and programmatic control.</p>
+        </div>
+        <div class="feature-card">
+          <h3>37 built-in components</h3>
+          <p>37 components across five categories: layout, inputs, display, interactive, and special-purpose — including grids, modals, accordions, data tables, alerts, and more.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Theme files</h3>
+          <p>Separate design configuration with color tokens, typography, spacing, and layout rules. Change the look without touching the form definition.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Responsive design</h3>
+          <p>Forms adapt to phone, tablet, and desktop automatically. Override layout per screen size without writing media queries.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Repeats ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">Repeats</div>
+      <h2>Add rows, nest groups, build tables — all from the definition.</h2>
+      <p class="section-lead">
+        Repeatable groups are first-class citizens, not a workaround.
+      </p>
+      {/* [Screenshot: An editable data table with calculated row totals] */}
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Data table</h3>
+          <p>A repeatable group rendered as an editable spreadsheet: add/remove row buttons, type-appropriate inputs per column, optional row numbers, computed cells (e.g., line totals).</p>
+        </div>
+        <div class="feature-card">
+          <h3>Repeatable groups</h3>
+          <p>Any group can become repeatable. Users add and remove instances; minimum and maximum number of rows validated automatically. Output is a JSON array.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Nested repeats</h3>
+          <p>A repeatable group can contain another repeatable group. Medical conditions → medications → dosages. Paths resolve correctly at any nesting depth.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Integration ─── -->
+    <section class="features-section">
+      <div class="section-eyebrow">Integration</div>
+      <h2>Pre-fill from any source. Export to any format.</h2>
+      <p class="section-lead">
+        Formspec is the hub — data flows in from your existing systems and out to wherever it needs to go.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Screener routing</h3>
+          <p>Add a short questionnaire before the main form. Based on answers, automatically route each person to the right form or intake path. First-match logic: emergency → emergency intake, urgent → urgent care, everyone else → standard.</p>
+          {/* TODO(product): Screener routing — can product provide 2–3 concrete routing scenarios beyond emergency/urgent/standard? See revision plan section 6, item 7 */}
+        </div>
+        <div class="feature-card">
+          <h3>Pre-fill from any source</h3>
+          <p>Connect to EHR, CRM, or any API to pre-fill fields. Data can come from a URL, an inline dataset, or a function your host app provides. Each pre-filled field can be editable or locked. Pre-fill patient demographics, insurance details, or prior responses from your EHR — editable or locked per field.</p>
+          {/* TODO(product): EHR/CRM integrations — which systems connect out of the box? (Epic, Cerner, Salesforce, etc.) Or is the answer "any system via API, no pre-built connectors yet"? See revision plan section 6, item 5 */}
+        </div>
+        <div class="feature-card">
+          <h3>Named option lists</h3>
+          <p>Define a choice list once, reference it across multiple fields. Update one list; all fields pick it up.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Export mapping</h3>
+          <p>A separate configuration file that transforms responses into your external format. Supports JSON (restructure and rename fields), XML (with namespaces and attributes), and CSV (configurable delimiters and encoding).</p>
+        </div>
+        <div class="feature-card">
+          <h3>Bidirectional transforms</h3>
+          <p>The same mapping works for both import and export. Value translation converts internal codes to external codes and back. Conditional rules skip fields when a guard condition is false.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Reversibility guarantees</h3>
+          <p>Mappings track whether each transformation is reversible. Lossless transforms round-trip automatically; lossy ones require you to define the reverse explicitly.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Versioning & Migrations ─── -->
+    <section class="features-section features-section--last">
+      <div class="section-eyebrow">Versioning</div>
+      <h2>Version-locked forms. Response pinning. Formal migrations.</h2>
+      <p class="section-lead">
+        When a regulated organization changes a form, three questions follow immediately: What was the user shown? Which version? Can existing responses still be validated? Formspec answers all three by design.
+      </p>
+      {/* [Screenshot: (optional) Version timeline or diff view in Studio] */}
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Immutable versions</h3>
+          <p>Once published, a form version is locked. Any change produces a new version. Definitions carry a stable URL + version identity pair.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Response pinning</h3>
+          <p>Every submitted response records the exact version it was filled against. Validation always uses the pinned version — never a newer one. This is critical for audit trails in healthcare, financial services, and government.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Formal migrations</h3>
+          <p>For each field, choose: keep the value as-is, discard it, or compute a new value from the old data. Migration produces a new response; the original is always preserved.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Changelog format</h3>
+          <p>Atomic diffs between versions. Each change is classified by impact (breaking, compatible, or cosmetic) so your deployment pipeline can gate on it automatically.</p>
+        </div>
+      </div>
+    </section>
+
+    <CallToAction />
+  </article>
+</Page>
+
+<style>
+  .features {
+    font-family: var(--font-sans);
+  }
+
+  .features-header {
+    padding: 5rem clamp(1.25rem, 4vw, 2.5rem) 3rem;
+    max-width: 72rem;
+    margin: 0 auto;
+  }
+
+  .features-header h1 {
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    color: var(--color-ink);
+    margin: 0 0 0.75rem;
+  }
+
+  .features-lead {
+    font-size: 1.125rem;
+    color: var(--color-ink-secondary);
+    line-height: 1.7;
+    margin: 0;
+    max-width: 48rem;
+  }
+
+  .section-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-accent);
+    margin-bottom: 0.75rem;
+  }
+
+  .features-section {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 4rem clamp(1.25rem, 4vw, 2.5rem);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .features-section--last {
+    border-bottom: none;
+  }
+
+  .features-section h2 {
+    font-size: clamp(1.5rem, 2.5vw, 1.875rem);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--color-ink);
+    margin: 0 0 0.75rem;
+  }
+
+  .section-lead {
+    font-size: 1.0625rem;
+    color: var(--color-ink-secondary);
+    line-height: 1.7;
+    margin: 0 0 2rem;
+    max-width: 48rem;
+  }
+
+  /* ─── BLUF Table ─── */
+
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.25rem 0;
+  }
+
+  .bluf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .bluf-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-tertiary);
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid var(--color-border-strong);
+  }
+
+  .bluf-table td {
+    padding: 0.75rem 1rem;
+    color: var(--color-ink-secondary);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .bluf-table td:first-child {
+    font-weight: 500;
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+
+  .bluf-table tbody tr:nth-child(even) {
+    background: var(--color-surface-raised);
+  }
+
+  .bluf-table tbody tr:hover {
+    background: var(--color-accent-light);
+  }
+
+  .bluf-table code {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    background: var(--color-surface-raised);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ─── Feature Cards ─── */
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .feature-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-md);
+  }
+
+  .feature-card h3 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin: 0 0 0.5rem;
+  }
+
+  .feature-card p {
+    font-size: 0.875rem;
+    color: var(--color-ink-secondary);
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  .feature-card code {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    background: var(--color-surface-raised);
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ─── Authoring Grid (3-col) ─── */
+
+  .authoring-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+
+  /* ─── Mobile ─── */
+
+  @media (max-width: 700px) {
+    .feature-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .authoring-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .bluf-table td:first-child {
+      white-space: normal;
+    }
+  }
+</style>
