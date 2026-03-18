@@ -74,10 +74,11 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
         <div class="dev-group">
           <h3 class="dev-group-label">The Implementations</h3>
           <ul class="dev-list">
-            <li>TypeScript form engine — reactive signals, framework-agnostic, browser or Node</li>
+            <li>Rust shared kernel — single implementation of FEL, linting, evaluation, mapping, compiled to WASM and PyO3</li>
+            <li>TypeScript form engine — reactive signals, framework-agnostic, calls Rust via WASM for all pure logic</li>
             <li><code class="inline-code">&lt;formspec-render&gt;</code> web component — drop a tag, get a form</li>
             <li>Portable layout planner — produces a renderer-agnostic blueprint that any UI framework can consume (React, Vue, native mobile, PDF)</li>
-            <li>Python evaluator — server-side re-validation, same rules, same results</li>
+            <li>Python evaluator — server-side re-validation via PyO3, same Rust core, same results</li>
             <li>Mapping engine — output transformation to any format</li>
           </ul>
         </div>
@@ -99,8 +100,10 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
       </p>
 
       <div class="tech-pills" role="list" aria-label="Technologies">
+        <span role="listitem" class="tech-pill">Rust</span>
         <span role="listitem" class="tech-pill">TypeScript</span>
         <span role="listitem" class="tech-pill">Python</span>
+        <span role="listitem" class="tech-pill">WASM</span>
         <span role="listitem" class="tech-pill">Web Components</span>
         <span role="listitem" class="tech-pill">JSON Schema</span>
         <span role="listitem" class="tech-pill">MCP Server</span>

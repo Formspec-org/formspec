@@ -74,10 +74,12 @@ const gh = "https://github.com/mikewolfd/formspec";
         The specification — <a href={`${gh}/tree/main/schemas`} target="_blank" rel="noopener noreferrer">JSON Schemas</a>,
         <a href={`${gh}/tree/main/specs`} target="_blank" rel="noopener noreferrer">normative prose</a>, and the
         <a href={`${gh}/blob/main/specs/fel/fel-grammar.md`} target="_blank" rel="noopener noreferrer">FEL grammar</a> — is the stable
-        center that both runtimes implement against. The TypeScript engine and Python evaluator
-        share no code, yet produce identical results for the same definition and data because both
-        conform to the same contracts. Submit a form in the browser; re-validate it on the server
-        with full confidence in semantic equivalence.
+        center that all implementations conform to. A <strong>Rust shared kernel</strong> (in progress) is replacing
+        the duplicated pure logic in both the TypeScript and Python implementations — FEL evaluation,
+        assembly, linting, mapping, and more — exposed via WASM to TypeScript and PyO3 to Python.
+        The TypeScript engine keeps Preact Signals for reactive UI state; everything else moves to
+        one Rust codebase. Submit a form in the browser; re-validate it on the server with full
+        confidence in semantic equivalence — backed by a single implementation, not two synchronized codebases.
       </p>
 
       <div class="diagram-wrap">
@@ -148,10 +150,12 @@ const gh = "https://github.com/mikewolfd/formspec";
       </div>
 
       <p>
-        FEL was designed from the start to be JSON-native, deterministic, side-effect-free, and dual-implemented in TypeScript and Python.
+        FEL was designed from the start to be JSON-native, deterministic, and side-effect-free.
         Field references use <code>$field_id</code> syntax. Variables use <code>@name</code>.
         The language is small enough to fit in a single grammar file, yet expressive enough to handle
         multi-level budget calculations, conditional visibility chains, and cross-field constraint composition.
+        The <a href="/blog/rust-shared-kernel/">Rust shared kernel</a> provides a single FEL implementation
+        with base-10 decimal arithmetic (28-digit precision), compiled to WASM for the browser and PyO3 for the server.
       </p>
     </section>
 
@@ -282,13 +286,61 @@ const gh = "https://github.com/mikewolfd/formspec";
       </div>
     </section>
 
+    <!-- ─── Rust Shared Kernel ─── -->
+    <section class="arch-section">
+      <div class="section-eyebrow">Rust <span class="in-progress-badge">In Progress</span></div>
+      <h2>Rust shared kernel</h2>
+      <p>
+        A set of <a href={`${gh}/tree/main/crates`} target="_blank" rel="noopener noreferrer">Rust crates</a> replacing
+        duplicated logic across the TypeScript and Python implementations. One codebase, compiled to WASM (browser/Node)
+        and PyO3 (Python). Read the <a href="/blog/rust-shared-kernel/">full story</a>.
+      </p>
+
+      <div class="table-wrap">
+        <table aria-label="Rust crates and their descriptions">
+          <thead>
+            <tr>
+              <th>Crate</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>fel-core</code></td>
+              <td>FEL lexer, parser, evaluator (base-10 decimal), environment, extensions, dependency extraction, AST printer</td>
+            </tr>
+            <tr>
+              <td><code>formspec-core</code></td>
+              <td>FEL analysis, path utils, schema validator, extension analysis, runtime mapping, assembler, registry client, changelog</td>
+            </tr>
+            <tr>
+              <td><code>formspec-eval</code></td>
+              <td>Definition Evaluator — 4-phase batch processor with topo sort, inheritance, NRB, wildcards</td>
+            </tr>
+            <tr>
+              <td><code>formspec-lint</code></td>
+              <td>7-pass static linter — 35 diagnostic codes, pass gating, authoring/runtime modes</td>
+            </tr>
+            <tr>
+              <td><code>formspec-wasm</code></td>
+              <td>WASM bindings (wasm-bindgen) — exposes all capabilities to TypeScript</td>
+            </tr>
+            <tr>
+              <td><code>formspec-py</code></td>
+              <td>PyO3 bindings — exposes all capabilities to Python</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- ─── Python Modules ─── -->
     <section class="arch-section">
       <div class="section-eyebrow">Python</div>
       <h2>Python modules</h2>
       <p>
         The <a href={`${gh}/tree/main/src/formspec`} target="_blank" rel="noopener noreferrer">Python package</a> is a plain library — import it into any backend framework.
-        It handles server-side re-validation, static linting, mapping transforms, and CLI tooling.
+        Most pure logic is migrating to the Rust kernel (via PyO3). What stays: format adapters (JSON, XML, CSV serialization) and the artifact orchestrator CLI.
       </p>
 
       <div class="table-wrap">
@@ -434,6 +486,20 @@ const gh = "https://github.com/mikewolfd/formspec";
 
   .arch-section--last {
     border-bottom: none;
+  }
+
+  .in-progress-badge {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #b45309;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 100px;
+    padding: 0.125rem 0.5rem;
+    margin-left: 0.5rem;
+    vertical-align: middle;
   }
 
   .arch-section h2 {

@@ -21,18 +21,26 @@ Formspec inverts the usual dependency between frontend and backend. Neither impl
                              │          │
               ┌──────────────┘          └──────────────┐
               ▼                                        ▼
-   ┌─────────────────────┐              ┌─────────────────────────┐
-   │  TypeScript Engine   │              │  Python Implementation   │
-   │                      │              │                          │
-   │  Reactive signals    │              │  CLI & server tooling     │
-   │  FEL compiler        │              │  FEL compiler            │
-   │  Live validation     │              │  Static linting          │
-   │                      │              │  Mapping engine           │
-   └──────┬───────┬───────┘              └──────────────────────────┘
-          │       │
-          │       └──────────────────┐
-          │  (presentation)          │  (authoring)
-          ▼                          ▼
+   ┌─────────────────────┐    ┌──────────────────────────────────┐
+   │  TypeScript Engine   │    │  Rust Shared Kernel (in progress) │
+   │                      │◄───│                                   │
+   │  Reactive signals    │WASM│  FEL runtime (rust_decimal)       │
+   │  4-phase processing  │    │  Assembler, path utils            │
+   │  Live state mgmt     │    │  Definition evaluator             │
+   │                      │    │  7-pass static linter             │
+   └──────┬───────┬───────┘    │  Mapping engine, registry,       │
+          │       │            │  changelog                        │
+          │       │            └──────────┬────────────────────────┘
+          │       │                       │ PyO3
+          │       │            ┌──────────▼───────────────┐
+          │       │            │  Python Implementation    │
+          │       │            │                           │
+          │       │            │  Format adapters (JSON,   │
+          │       │            │    XML, CSV)              │
+          │       │            │  Artifact orchestrator    │
+          │       └────────┐   └──────────────────────────┘
+          │  (presentation)│  (authoring)
+          ▼                ▼
    ┌──────────────────┐    ┌─────────────────────┐
    │  Web Component    │    │  Studio Core         │
    │                   │    │                      │
@@ -46,7 +54,7 @@ Formspec inverts the usual dependency between frontend and backend. Neither impl
                       MCP   Chat   CLI tool  Studio  LLM
 ```
 
-The specification — schemas, normative prose, and FEL grammar — is the stable abstraction that both runtimes implement against. The TypeScript engine and Python evaluator share no code, yet produce identical results for the same definition and data because both conform to the same contracts. Submit a form in the browser; re-validate it on the server with full confidence in semantic equivalence.
+The specification — schemas, normative prose, and FEL grammar — is the stable abstraction that all implementations conform to. A Rust shared kernel (in progress) is replacing the duplicated pure logic in both the TypeScript and Python implementations. The TypeScript engine keeps Preact Signals for reactive UI state; everything else — FEL evaluation, assembly, linting, mapping, registry, changelog — moves to Rust, exposed via WASM to TypeScript and PyO3 to Python. One implementation, every platform.
 
 This inversion runs deeper than just client/server. The TypeScript side itself has two dependency boundaries below the engine:
 
@@ -160,16 +168,29 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 | [`formspec-mcp`](packages/formspec-mcp/README.md) | MCP server — 28 consolidated tools for LLM-driven form authoring (stdio transport) |
 | [`formspec-chat`](packages/formspec-chat/README.md) | Chat core — conversational form builder logic, AI adapter interface, issue queue |
 
+### Rust Crates — `crates/` *(in progress)*
+
+| Crate | Description |
+|---|---|
+| `fel-core` | FEL lexer, parser, evaluator (rust_decimal), environment, extensions, dependency extraction, AST printer |
+| `formspec-core` | FEL analysis, path utils, schema validator, extension analysis, runtime mapping, assembler, registry client, changelog |
+| `formspec-eval` | Definition Evaluator — 4-phase batch processor with topo sort, inheritance, NRB, wildcards |
+| `formspec-lint` | 7-pass static linter — 35 diagnostic codes, pass gating, authoring/runtime modes |
+| `formspec-wasm` | WASM bindings (wasm-bindgen) — exposes all capabilities to TypeScript |
+| `formspec-py` | PyO3 bindings — exposes all capabilities to Python |
+
 ### Python — [`src/formspec/`](src/formspec/README.md)
 
-| Module | Description |
-|---|---|
-| `fel/` | FEL parser, AST, evaluator, dependency extractor |
-| `validator/` | Multi-pass static linter |
-| `mapping/` | Bidirectional rule engine |
-| `adapters/` | JSON, XML, CSV serializers |
-| `evaluator.py` | 4-phase form processor (rebuild → recalculate → revalidate → apply NRB) |
-| `validate.py` | Directory-level artifact validator (10-pass, auto-discovery) |
+| Module | Description | Status |
+|---|---|---|
+| `fel/` | FEL parser, AST, evaluator, dependency extractor | → Rust (`fel-core`) |
+| `validator/` | Multi-pass static linter | → Rust (`formspec-lint`) |
+| `mapping/` | Bidirectional rule engine | → Rust (`formspec-core`) |
+| `adapters/` | JSON, XML, CSV serializers | Stays Python |
+| `evaluator.py` | 4-phase form processor (rebuild → recalculate → revalidate → apply NRB) | → Rust (`formspec-eval`) |
+| `registry.py` | Extension registry client, semver matching, lifecycle validation | → Rust (`formspec-core`) |
+| `changelog.py` | Definition version diffing, change classification | → Rust (`formspec-core`) |
+| `validate.py` | Directory-level artifact validator (10-pass, auto-discovery) | Stays Python (calls Rust via PyO3) |
 
 ### [Examples](examples/README.md)
 
@@ -291,7 +312,9 @@ npm run test:all           # Everything
 
 ## Roadmap
 
-- [ ] **Rust linter core** — Rewrite the linter in Rust and expose it via PyO3 (Python bindings) and WASM (browser/Node). Single implementation, three targets: CLI, server library, in-browser studio diagnostics.
+- [x] **Rust shared kernel** — FEL runtime, assembler, path utils, schema validator, definition evaluator, and 7-pass linter implemented in Rust (6 crates, 10,931 lines, 239 tests). WASM and PyO3 bindings cover all capabilities.
+- [ ] **Wire WASM into TypeScript** — Connect `formspec-wasm` to the TypeScript engine, replacing ~3,900 lines of duplicated TS logic. Delete old FEL pipeline, assembler, and utility files.
+- [ ] **Wire PyO3 into Python** — Connect `formspec-py` to the Python backend, replacing FEL, mapping engine, registry, and changelog. Only format adapters stay Python.
 - [ ] **Variable name shadowing validation** — FEL uses `@name` for both reserved context references (`@current`, `@index`, `@count`, `@instance`) and user-defined variable references. Variable names that collide with reserved context names silently shadow them. Add a validation rule (linter + schema `not enum`) that rejects variable names matching the reserved set.
 
 ## Status
