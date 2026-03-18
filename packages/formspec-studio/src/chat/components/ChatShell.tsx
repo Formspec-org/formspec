@@ -233,6 +233,16 @@ function IconBug() {
   );
 }
 
+function IconExternal() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10 3H11.5A1.5 1.5 0 0 1 13 4.5V11.5A1.5 1.5 0 0 1 11.5 13H4.5A1.5 1.5 0 0 1 3 11.5V10" />
+      <polyline points="8 1 13 1 13 6" />
+      <line x1="6" y1="8" x2="13" y2="1" />
+    </svg>
+  );
+}
+
 function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () => void; onUpload: () => void; onOpenSettings: () => void }) {
   const session = useChatSession();
   const state = useChatState();
@@ -268,6 +278,23 @@ function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () =>
     a.download = `${baseName}.zip`;
     a.click();
     URL.revokeObjectURL(url);
+  }, [session]);
+
+  const handleOpenInStudio = useCallback(() => {
+    const bundle = session.exportBundle();
+    const handoffId = Math.random().toString(36).substring(2, 11);
+    const storageKey = `formspec-handoff:${handoffId}`;
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(bundle));
+      
+      // Navigate to the studio app. 
+      // With base: '/studio/' set in vite config, this works in both dev and prod.
+      window.location.href = `/studio/?h=${handoffId}`;
+    } catch (err) {
+      console.error('Handoff failed', err);
+      alert('Failed to prepare project for Studio. The definition may be too large for local storage.');
+    }
   }, [session]);
 
   return (
@@ -328,6 +355,15 @@ function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () =>
                   Preview
                 </button>
               </div>
+
+              <button
+                onClick={handleOpenInStudio}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border border-border text-muted hover:text-ink hover:border-accent/50 transition-colors"
+                title="Open this form in the full Studio editor"
+              >
+                <IconExternal />
+                <span className="hidden sm:inline">Open in Studio</span>
+              </button>
 
               <button
                 onClick={handleExport}
