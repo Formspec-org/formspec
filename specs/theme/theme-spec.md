@@ -743,6 +743,12 @@ A region’s `key` references an item from the target Definition by its
   region’s position on the page; repeat layout is internal to the
   group.
 
+- **Nested item key:** A region MAY reference any item key in the
+  Definition, including nested items within groups. When a nested
+  item is referenced directly, it is rendered standalone at the grid
+  position, independent of its parent group's layout. When a group
+  key is referenced, the entire subtree renders within the region.
+
 - **Unknown key:** A region referencing a key that does not exist in
   the target Definition SHOULD produce a warning. Processors MUST NOT
   fail.

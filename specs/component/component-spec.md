@@ -477,22 +477,28 @@ on a component object establishes this association.
 
 ### 4.1 The bind Property
 
-The `bind` property is a **string** containing the globally unique `key`
-of an item in the target Definition. It is NOT a dotted path, JSON
-Pointer, or FEL expression — it is a flat key that matches an item's
-`key` property exactly.
+The `bind` property is a **string** that identifies an item in the
+target Definition. It accepts two forms:
+
+1. **Flat key** — a single `key` matching a top-level item
+   (e.g., `"projectName"`).
+2. **Dotted qualified path** — a dot-delimited path from a group key
+   to a nested child key (e.g., `"applicantInfo.orgName"`).
+
+The `bind` value is NOT a JSON Pointer or FEL expression.
 
 ```json
-// Definition item:
-{ "key": "projectName", "type": "field", "dataType": "string" }
-
-// Component binding:
+// Top-level item — flat key:
 { "component": "TextInput", "bind": "projectName" }
+
+// Nested item — dotted qualified path:
+{ "component": "TextInput", "bind": "applicantInfo.orgName" }
 ```
 
 The `bind` value MUST be a non-empty string. The value MUST correspond
-to an item `key` in the target Definition. If the key does not exist
-in the Definition, the processor MUST emit a warning and SHOULD hide
+to an item `key` (or a dotted path resolving to a nested item) in the
+target Definition. If the key does not resolve to any item in the
+Definition, the processor MUST emit a warning and SHOULD hide
 the component.
 
 ### 4.2 Bind Resolution Rules
@@ -504,7 +510,7 @@ The meaning and requirement of `bind` varies by component category:
 | **Input** | REQUIRED | The component reads and writes the bound item's value. The renderer MUST propagate the item's `required`, `readOnly`, and `relevant` state to the input control. Validation errors for the bound key MUST be displayed adjacent to this component. |
 | **Display** | OPTIONAL | When present, the component displays the bound item's current value as read-only content. When absent, the component renders its static `text` prop. |
 | **Layout** | FORBIDDEN | Layout components MUST NOT have a `bind` property. If present, processors MUST ignore it and emit a warning. |
-| **Container** | FORBIDDEN | Container components MUST NOT have a `bind` property, with the exception of **DataTable** (§6.13), which MAY bind to a repeatable group. |
+| **Container** | FORBIDDEN | Container components MUST NOT have a `bind` property, with the exceptions of **DataTable** (§6.13) and **Accordion** (§6.3), which MAY bind to a repeatable group. |
 
 When an Input component is bound to a field item:
 
@@ -566,7 +572,8 @@ The renderer MUST:
    to `minRepeat` and `maxRepeat` constraints from the Definition.
 
 Repeatable group binding is available on **DataTable** (§6.13), where each
-repeat instance becomes a table row.
+repeat instance becomes a table row, and on **Accordion** (§6.3), where
+each repeat instance becomes a collapsible section.
 
 Other layout and container components MUST NOT bind to repeatable groups.
 Processors MUST reject such bindings.
@@ -1562,10 +1569,10 @@ visibly in sequence.
 
 ### 6.3 Accordion
 
-**Category:** Layout 
-**Level:** Progressive 
-**Accepts children:** Yes 
-**Bind:** Forbidden 
+**Category:** Layout
+**Level:** Progressive
+**Accepts children:** Yes
+**Bind:** Optional (repeatable group key)
 **Fallback:** Stack with Collapsible children
 
 #### Description
@@ -1575,12 +1582,17 @@ section is expanded at a time. Each child SHOULD be a component with
 a `title` prop (e.g., Page, Card, Collapsible) to serve as the
 section header.
 
+When `bind` is provided, it MUST reference a repeatable group item.
+Each repeat instance becomes one accordion section. Child `bind`
+values resolve relative to the repeat context.
+
 #### Props
 
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
 | `allowMultiple` | boolean | `false` | No | Whether multiple sections may be expanded simultaneously. When `false`, expanding one section collapses the others. |
 | `defaultOpen` | integer | `0` | No | Zero-based index of the initially expanded section. |
+| `labels` | string[] | — | No | Section header labels. `labels[i]` is the summary text for `children[i]`. Falls back to `"Section {i+1}"` when absent. |
 
 #### Rendering Requirements
 

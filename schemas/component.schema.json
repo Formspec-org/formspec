@@ -959,7 +959,7 @@
         "category": "layout",
         "level": "progressive",
         "children": true,
-        "bind": "forbidden",
+        "bind": "optional",
         "fallback": "Stack",
         "fallbackNotes": "Each child wrapped in Collapsible. First defaults open; rest closed."
       },
