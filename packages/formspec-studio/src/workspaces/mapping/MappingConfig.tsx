@@ -112,13 +112,24 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
           <div className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-subtle/30 transition-colors">
             <div className="flex items-center gap-2">
               <span className="text-[12px] font-medium text-muted">Version</span>
-              <HelpTip text="Spec version the mapping document conforms to.">
+              <HelpTip text="Author-defined SemVer for this mapping document. Bump when making breaking changes.">
                 <span className="text-[10px] text-muted/50 cursor-help hover:text-accent transition-colors">ⓘ</span>
               </HelpTip>
             </div>
-            <span className="font-mono text-[11px] font-bold text-ink px-1.5 py-0.5 bg-subtle/50 border border-border/40 rounded min-w-[50px] text-center">
-              {mapping?.version ?? '1.2.3'}
-            </span>
+            <input
+              type="text"
+              data-testid="mapping-version"
+              defaultValue={mapping?.version ?? ''}
+              placeholder="1.0.0"
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                project.setMappingProperty('version', v === '' ? null : v);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
+              className="font-mono text-[11px] text-ink text-right bg-subtle/40 border border-border/40 rounded px-1.5 py-0.5 w-[70px] focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-muted/30"
+            />
           </div>
 
           {/* Definition Ref Row */}

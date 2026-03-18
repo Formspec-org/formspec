@@ -39,8 +39,8 @@ test.describe('Mapping Workspace', () => {
     // Check direction
     await expect(workspace.locator('[data-testid="direction-picker"]')).toHaveText('forward');
 
-    // Check version (rendered as a span, not an input)
-    await expect(workspace.getByText('1.2.3')).toBeVisible();
+    // Check version input is editable
+    await expect(workspace.locator('[data-testid="mapping-version"]')).toHaveValue('1.2.3');
 
     // Check definition ref
     await expect(workspace.getByText('urn:formspec:test')).toBeVisible();
