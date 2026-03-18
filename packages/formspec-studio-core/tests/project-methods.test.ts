@@ -2971,4 +2971,83 @@ describe('behavioral page methods', () => {
       expect(region?.responsive?.lg).toEqual({});
     });
   });
+
+  describe('moveItemOnPageToIndex', () => {
+    it('moves item from position 0 to position 2', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      const firstKey = keysBefore[0];
+
+      project.moveItemOnPageToIndex(pageId, firstKey, 2);
+
+      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      expect(keysAfter.indexOf(firstKey)).toBe(2);
+    });
+
+    it('moves item from last position to position 0', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      const lastKey = keysBefore[keysBefore.length - 1];
+
+      project.moveItemOnPageToIndex(pageId, lastKey, 0);
+
+      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      expect(keysAfter[0]).toBe(lastKey);
+    });
+
+    it('with current position is a no-op', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+
+      project.moveItemOnPageToIndex(pageId, keysBefore[1], 1);
+
+      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      expect(keysAfter).toEqual(keysBefore);
+    });
+
+    it('throws PAGE_NOT_FOUND for unknown pageId', () => {
+      const project = createProject();
+      expect(() => project.moveItemOnPageToIndex('nonexistent', 'name', 0)).toThrow(HelperError);
+      try {
+        project.moveItemOnPageToIndex('nonexistent', 'name', 0);
+      } catch (e) {
+        expect((e as HelperError).code).toBe('PAGE_NOT_FOUND');
+      }
+    });
+
+    it('throws ITEM_NOT_ON_PAGE for unknown itemKey', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      expect(() => project.moveItemOnPageToIndex(pageId, 'ghost', 0)).toThrow(HelperError);
+      try {
+        project.moveItemOnPageToIndex(pageId, 'ghost', 0);
+      } catch (e) {
+        expect((e as HelperError).code).toBe('ITEM_NOT_ON_PAGE');
+      }
+    });
+
+    it('clamps targetIndex beyond array length to end', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      const firstKey = keysBefore[0];
+
+      // targetIndex = 100, should clamp to end
+      project.moveItemOnPageToIndex(pageId, firstKey, 100);
+
+      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
+      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      expect(keysAfter[keysAfter.length - 1]).toBe(firstKey);
+    });
+
+    it('throws for negative targetIndex', () => {
+      const { project, pageId } = projectWithPageAndItems();
+      expect(() => project.moveItemOnPageToIndex(pageId, 'name', -1)).toThrow(HelperError);
+    });
+  });
 });

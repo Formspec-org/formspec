@@ -433,4 +433,154 @@ describe('resolvePageView', () => {
     expect(result.pages[0].items[0].label).toBe('missing_item');
     expect(result.pages[0].items[0].status).toBe('broken');
   });
+
+  // ── itemType, childCount, repeatable ─────────────────────────────
+
+  it('returns itemType "field" for field regions', () => {
+    const state = makeState({
+      definition: {
+        items: [{ key: 'name', type: 'field', label: 'Name' }],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [{ id: 'p1', title: 'A', regions: [{ key: 'name', span: 12 }] }],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.pages[0].items[0].itemType).toBe('field');
+  });
+
+  it('returns itemType "group" for group regions', () => {
+    const state = makeState({
+      definition: {
+        items: [{
+          key: 'contact', type: 'group', label: 'Contact',
+          children: [{ key: 'phone', type: 'field', label: 'Phone' }],
+        }],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [{ id: 'p1', title: 'A', regions: [{ key: 'contact', span: 12 }] }],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.pages[0].items[0].itemType).toBe('group');
+  });
+
+  it('returns itemType "display" for display regions', () => {
+    const state = makeState({
+      definition: {
+        items: [{ key: 'intro', type: 'display', label: 'Introduction' }],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [{ id: 'p1', title: 'A', regions: [{ key: 'intro', span: 12 }] }],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.pages[0].items[0].itemType).toBe('display');
+  });
+
+  it('returns childCount for groups', () => {
+    const state = makeState({
+      definition: {
+        items: [{
+          key: 'contact', type: 'group', label: 'Contact',
+          children: [
+            { key: 'first', type: 'field', label: 'First' },
+            { key: 'last', type: 'field', label: 'Last' },
+            { key: 'email', type: 'field', label: 'Email' },
+          ],
+        }],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [{ id: 'p1', title: 'A', regions: [{ key: 'contact', span: 12 }] }],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.pages[0].items[0].childCount).toBe(3);
+  });
+
+  it('returns repeatable true for repeatable groups', () => {
+    const state = makeState({
+      definition: {
+        items: [{
+          key: 'entries', type: 'group', label: 'Entries',
+          repeatable: true,
+          children: [{ key: 'val', type: 'field', label: 'Value' }],
+        }],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [{ id: 'p1', title: 'A', regions: [{ key: 'entries', span: 12 }] }],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.pages[0].items[0].repeatable).toBe(true);
+  });
+
+  it('omits childCount and repeatable for non-group items', () => {
+    const state = makeState({
+      definition: {
+        items: [{ key: 'name', type: 'field', label: 'Name' }],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [{ id: 'p1', title: 'A', regions: [{ key: 'name', span: 12 }] }],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.pages[0].items[0].childCount).toBeUndefined();
+    expect(result.pages[0].items[0].repeatable).toBeUndefined();
+  });
+
+  it('defaults itemType to "field" for broken regions', () => {
+    const state = makeState({
+      definition: {
+        items: [],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [{ id: 'p1', title: 'A', regions: [{ key: 'ghost' }] }],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.pages[0].items[0].itemType).toBe('field');
+    expect(result.pages[0].items[0].status).toBe('broken');
+  });
+
+  // ── breakpointValues ─────────────────────────────────────────────
+
+  it('returns breakpointValues from theme.breakpoints when present', () => {
+    const state = makeState({
+      theme: {
+        breakpoints: { sm: 576, md: 768, lg: 1024 },
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.breakpointValues).toEqual({ sm: 576, md: 768, lg: 1024 });
+  });
+
+  it('returns breakpointValues undefined when theme has no breakpoints', () => {
+    const result = resolvePageView(makeState());
+
+    expect(result.breakpointValues).toBeUndefined();
+  });
 });

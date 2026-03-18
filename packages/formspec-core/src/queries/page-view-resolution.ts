@@ -23,6 +23,9 @@ export interface PageItemView {
     offset?: number;
     hidden?: boolean;
   }>;
+  itemType: 'field' | 'group' | 'display';
+  childCount?: number;       // only set for groups
+  repeatable?: boolean;      // only set for repeatable groups
 }
 
 export interface PlaceableItem {
@@ -35,22 +38,34 @@ export interface PageStructureView {
   pages: PageView[];
   unassigned: PlaceableItem[];
   breakpointNames: string[];
+  breakpointValues?: Record<string, number>;
   diagnostics: Array<{ severity: 'warning' | 'error'; message: string }>;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-/** Walk the item tree depth-first, building a key → label lookup. */
-function buildLabelMap(items: FormItem[]): Map<string, string> {
-  const map = new Map<string, string>();
+/** Walk the item tree depth-first, building lookup maps for labels, types, child counts, and repeatability. */
+function buildItemMaps(items: FormItem[]) {
+  const labelMap = new Map<string, string>();
+  const typeMap = new Map<string, 'field' | 'group' | 'display'>();
+  const childCountMap = new Map<string, number>();
+  const repeatableMap = new Map<string, boolean>();
+
   function walk(nodes: FormItem[]) {
     for (const item of nodes) {
-      map.set(item.key, item.label ?? item.key);
-      if (item.children) walk(item.children);
+      labelMap.set(item.key, item.label ?? item.key);
+      typeMap.set(item.key, item.type as 'field' | 'group' | 'display');
+      if (item.children) {
+        childCountMap.set(item.key, item.children.length);
+        walk(item.children);
+      }
+      if (item.repeatable) {
+        repeatableMap.set(item.key, true);
+      }
     }
   }
   walk(items);
-  return map;
+  return { labelMap, typeMap, childCountMap, repeatableMap };
 }
 
 /** Collect all top-level item keys (non-recursive — same set resolvePageStructure uses). */
@@ -101,7 +116,7 @@ export type PageViewInput = {
 export function resolvePageView(state: PageViewInput): PageStructureView {
   const defItems: FormItem[] = (state.definition.items ?? []) as FormItem[];
   const allKeys = collectAllKeys(defItems);
-  const labelMap = buildLabelMap(defItems);
+  const { labelMap, typeMap, childCountMap, repeatableMap } = buildItemMaps(defItems);
 
   const resolved = resolvePageStructure(
     { theme: state.theme as any, definition: state.definition },
@@ -119,6 +134,9 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
       width: r.span,
       ...(r.start !== undefined && { offset: r.start }),
       responsive: translateResponsive(r.responsive),
+      itemType: typeMap.get(r.key) ?? 'field',
+      ...(childCountMap.has(r.key) && { childCount: childCountMap.get(r.key) }),
+      ...(repeatableMap.get(r.key) && { repeatable: true }),
     })),
   }));
 
@@ -141,6 +159,7 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
     pages,
     unassigned,
     breakpointNames,
+    breakpointValues: state.theme.breakpoints ?? undefined,
     diagnostics,
   };
 }

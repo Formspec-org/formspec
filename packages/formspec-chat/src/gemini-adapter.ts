@@ -162,7 +162,7 @@ export class GeminiAdapter implements AIAdapter {
   private client: GoogleGenAI;
   private model: string;
 
-  constructor(apiKey: string, model = 'gemini-2.5-flash') {
+  constructor(apiKey: string, model = 'gemini-3-flash-preview') {
     this.client = new GoogleGenAI({ apiKey });
     this.model = model;
   }

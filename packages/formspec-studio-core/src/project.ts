@@ -2496,6 +2496,23 @@ export class Project {
     };
   }
 
+  /** Move an item to an arbitrary position on a page by target index. */
+  moveItemOnPageToIndex(pageId: string, itemKey: string, targetIndex: number): HelperResult {
+    if (targetIndex < 0) {
+      throw new HelperError('ROUTE_OUT_OF_BOUNDS', `targetIndex must be non-negative, got ${targetIndex}`);
+    }
+    this._regionIndexOf(pageId, itemKey); // validates page and item existence
+    this.core.dispatch({
+      type: 'pages.reorderRegion',
+      payload: { pageId, key: itemKey, targetIndex },
+    });
+    return {
+      summary: `Moved '${itemKey}' to index ${targetIndex} on page '${pageId}'`,
+      action: { helper: 'moveItemOnPageToIndex', params: { pageId, itemKey, targetIndex } },
+      affectedPaths: [pageId],
+    };
+  }
+
   // ── Component Tree Helpers ──
 
   /** Add a layout-only node to the component tree. */
