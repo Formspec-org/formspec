@@ -67,6 +67,8 @@ export function Shell() {
   const [previewViewport, setPreviewViewport] = useState<Viewport>('desktop');
   const [previewMode, setPreviewMode] = useState<PreviewMode>('form');
   const [showSettings, setShowSettings] = useState(false);
+  const [showBlueprintDrawer, setShowBlueprintDrawer] = useState(false);
+  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
   const SidebarComponent = SIDEBAR_COMPONENTS[activeSection];
   const project = useProject();
@@ -109,6 +111,16 @@ export function Shell() {
       }
     }
   })();
+
+  // Sync mobile drawer/modal states with selection
+  useEffect(() => {
+    if (compactLayout && selectedKey) {
+      setShowPropertiesModal(true);
+      setShowBlueprintDrawer(false);
+    } else if (!selectedKey) {
+      setShowPropertiesModal(false);
+    }
+  }, [selectedKey, compactLayout]);
 
   // E2E: expose project.export() when ?e2e=1 so tests can validate exported bundle
   useEffect(() => {
@@ -214,16 +226,79 @@ export function Shell() {
         onHome={() => setShowSettings(true)}
         onOpenMetadata={() => setShowSettings(true)}
         onToggleAccountMenu={() => setShowSettings(true)}
+        onToggleMenu={compactLayout ? () => setShowBlueprintDrawer(true) : undefined}
         isCompact={compactLayout}
       />
       <CanvasTargetsProvider>
         <div className="flex flex-1 overflow-hidden">
+          {/* Desktop Left Sidebar */}
           <aside className={`w-[230px] border-r border-border bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}>
             <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
             <div className="flex-1 overflow-y-auto px-4 py-2">
               {SidebarComponent && <SidebarComponent />}
             </div>
           </aside>
+
+          {/* Compact Blueprint Drawer */}
+          {compactLayout && showBlueprintDrawer && (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 transition-opacity"
+              onClick={() => setShowBlueprintDrawer(false)}
+            >
+              <aside
+                className="w-[280px] h-full bg-surface shadow-xl flex flex-col animate-in slide-in-from-left duration-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                  <span className="font-bold text-sm">Blueprint</span>
+                  <button
+                    type="button"
+                    className="p-1 rounded hover:bg-subtle"
+                    onClick={() => setShowBlueprintDrawer(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
+                  <div className="px-4 py-2">
+                    {SidebarComponent && <SidebarComponent />}
+                  </div>
+                </div>
+              </aside>
+            </div>
+          )}
+
+          {/* Compact Properties Modal (Full Screen) */}
+          {compactLayout && showPropertiesModal && selectedKey && (
+            <div className="fixed inset-0 z-50 bg-surface flex flex-col animate-in slide-in-from-bottom duration-300">
+              <div className="flex items-center justify-between p-4 border-b border-border bg-surface shrink-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="p-1 -ml-1 rounded hover:bg-subtle"
+                    onClick={() => deselect()}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                  </button>
+                  <span className="font-bold text-sm truncate max-w-[200px]">{selectedKey}</span>
+                </div>
+                <button
+                  type="button"
+                  className="px-3 py-1.5 bg-accent text-white text-[13px] font-bold rounded hover:bg-accent/90 transition-colors"
+                  onClick={() => setShowPropertiesModal(false)}
+                >
+                  Done
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 pb-24">
+                <ItemProperties showActions={activeTab === 'Editor'} />
+              </div>
+            </div>
+          )}
+
           <main className="flex-1 overflow-y-auto bg-bg-default min-w-0">
             <div
               data-testid={`workspace-${activeTab}`}

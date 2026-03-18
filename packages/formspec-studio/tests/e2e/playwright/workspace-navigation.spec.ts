@@ -44,8 +44,8 @@ test.describe('Workspace Navigation — Tab Switching', () => {
   test('Mapping tab renders mapping workspace', async ({ page }) => {
     await switchTab(page, 'Mapping');
     const workspace = page.locator('[data-testid="workspace-Mapping"]');
-    // MappingTab has sub-tabs: "Config", "Rules", "Adapter", "Preview"
-    await expect(workspace.getByRole('button', { name: 'Config', exact: true })).toBeVisible();
+    // MappingTab has sub-tabs: "Blueprint", "Rules", "Adapter", "Preview"
+    await expect(workspace.getByRole('button', { name: 'Blueprint', exact: true })).toBeVisible();
     await expect(workspace.getByRole('button', { name: 'Rules', exact: true })).toBeVisible();
   });
 

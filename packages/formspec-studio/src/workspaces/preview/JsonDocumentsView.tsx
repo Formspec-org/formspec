@@ -1,8 +1,9 @@
 /** @filedesc Preview tab panel showing the raw JSON of the Definition, Component, Theme, or Mapping docs. */
 import { useState } from 'react';
 import { useProjectState } from '../../state/useProjectState';
+import { useProject } from '../../state/useProject';
 import {
-  materializePreviewComponentDoc,
+  normalizeComponentDoc,
   normalizeDefinitionDoc,
   normalizeThemeDoc,
 } from './preview-documents';
@@ -20,11 +21,13 @@ function formatJson(value: unknown): string {
 
 export function JsonDocumentsView() {
   const state = useProjectState();
+  const project = useProject();
   const [active, setActive] = useState<DocId>('Definition');
 
+  const normalizedDef = normalizeDefinitionDoc(state.definition);
   const doc = {
-    Definition: normalizeDefinitionDoc(state.definition),
-    Component: materializePreviewComponentDoc(state),
+    Definition: normalizedDef,
+    Component: normalizeComponentDoc(project.effectiveComponent, normalizedDef),
     Theme: normalizeThemeDoc(state.theme, state.definition),
     Mapping: state.mappings,
   }[active];

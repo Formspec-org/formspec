@@ -5,14 +5,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-function isAuthoredComponentDoc(doc: unknown): boolean {
-  return isRecord(doc) && typeof doc.$formspecComponent === 'string';
-}
-
-function hasAuthoredComponentTree(doc: unknown): boolean {
-  return isAuthoredComponentDoc(doc) && isRecord((doc as Record<string, unknown>).tree);
-}
-
 function normalizeTree(tree: unknown): unknown {
   if (!isRecord(tree)) return tree;
   return tree.component === 'Root' ? { ...tree, component: 'Stack' } : tree;
@@ -50,39 +42,6 @@ export function normalizeComponentDoc(doc: unknown, definition?: unknown): unkno
       ...targetDefinition,
       ...(definitionUrl ? { url: definitionUrl } : {}),
     },
-  };
-}
-
-export function materializePreviewComponentDoc(state: {
-  component: unknown;
-  generatedComponent?: unknown;
-  definition: unknown;
-}): unknown {
-  const normalizedDefinition = normalizeDefinitionDoc(state.definition);
-  if (hasAuthoredComponentTree(state.component)) {
-    return normalizeComponentDoc(state.component, normalizedDefinition);
-  }
-
-  const artifact = isRecord(state.component) ? state.component : {};
-  const generated = isRecord(state.generatedComponent) ? state.generatedComponent : {};
-  const definitionUrl =
-    isRecord(normalizedDefinition) && typeof normalizedDefinition.url === 'string'
-      ? normalizedDefinition.url
-      : undefined;
-  const mergedTargetDefinition = {
-    ...(isRecord(artifact.targetDefinition) ? artifact.targetDefinition : {}),
-    ...(isRecord(generated.targetDefinition) ? generated.targetDefinition : {}),
-    ...(definitionUrl ? { url: definitionUrl } : {}),
-  };
-
-  return {
-    ...artifact,
-    ...generated,
-    $formspecComponent: '1.0',
-    version: String(artifact.version ?? generated.version ?? '1.0.0'),
-    'x-studio-generated': true,
-    ...(generated.tree ? { tree: normalizeTree(generated.tree) } : {}),
-    targetDefinition: mergedTargetDefinition,
   };
 }
 

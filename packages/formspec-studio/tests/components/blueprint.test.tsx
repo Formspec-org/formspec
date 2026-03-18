@@ -52,6 +52,7 @@ describe('Blueprint', () => {
   it('shows a non-zero count badge for Component Tree when a component document exists', () => {
     const project = createProject({ seed: {
       component: {
+        $formspecComponent: '1.0',
         tree: {
           component: 'Root',
           children: [{ component: 'TextInput', bind: 'name' }],

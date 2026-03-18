@@ -24,6 +24,7 @@ interface HeaderProps {
   onHome?: () => void;
   onOpenMetadata?: () => void;
   onToggleAccountMenu?: () => void;
+  onToggleMenu?: () => void;
   isCompact?: boolean;
 }
 
@@ -37,6 +38,7 @@ export function Header({
   onHome,
   onOpenMetadata,
   onToggleAccountMenu,
+  onToggleMenu,
   isCompact = false,
 }: HeaderProps) {
   const project = useProject();
@@ -195,20 +197,40 @@ export function Header({
   if (isCompact) {
     return (
       <div data-testid="header" className="shrink-0 bg-surface border-b border-border">
-        {/* Row 1: Logo + Actions */}
-        <div className="flex items-center h-[44px] px-3">
+        {/* Row 1: Logo + Title + Actions */}
+        <div className="flex items-center h-[44px] px-3 gap-4">
+          {onToggleMenu && (
+            <button
+              type="button"
+              aria-label="Toggle blueprint menu"
+              className="p-1.5 -ml-1.5 rounded hover:bg-subtle transition-colors"
+              onClick={onToggleMenu}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          )}
           <button
             type="button"
             aria-label="The Stack home"
-            className="flex items-center gap-2 shrink-0 text-left"
+            className="flex items-center gap-2.5 shrink-0 text-left"
             onClick={() => { onTabChange('Editor'); onHome?.(); }}
           >
-            <div className="w-6.5 h-6.5 bg-accent rounded-[6px] flex items-center justify-center shrink-0">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <div className="w-6 h-6 bg-accent rounded-[5px] flex items-center justify-center shrink-0">
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                 <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
                 <rect x="2" y="5" width="8" height="2" rx=".4" fill="white" fillOpacity=".7" />
                 <rect x="2" y="8.5" width="8" height="2" rx=".4" fill="white" fillOpacity=".4" />
               </svg>
+            </div>
+            <div className="">
+              <div className="font-bold text-[14px] tracking-tight leading-none whitespace-nowrap">The Stack</div>
+              <div className="font-mono text-[9px] text-muted tracking-wide uppercase whitespace-nowrap">
+                FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}
+              </div>
             </div>
           </button>
           <div className="flex-1" />

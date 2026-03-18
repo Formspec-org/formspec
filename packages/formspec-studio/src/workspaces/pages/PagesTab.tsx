@@ -207,6 +207,7 @@ function PageCard({
   return (
     <div
       ref={sortableRef}
+      data-testid={`page-card-${page.id}`}
       className={`group border border-border rounded-lg bg-surface overflow-hidden${isDragging ? ' opacity-40' : ''}`}
     >
       {/* Collapsed header */}

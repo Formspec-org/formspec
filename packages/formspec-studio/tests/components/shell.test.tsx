@@ -177,9 +177,9 @@ describe('Shell', () => {
     const mappingWorkspace = screen.getByTestId('workspace-Mapping');
     await act(async () => {
       within(mappingWorkspace).getByRole('button', { name: /configuration/i }).click();
-      within(mappingWorkspace).getByRole('button', { name: /preview/i }).click();
+      within(mappingWorkspace).getByTestId('mapping-filter-tab-preview').click();
     });
-    expect(within(mappingWorkspace).getByText(/input/i)).toBeInTheDocument();
+    expect(within(mappingWorkspace).getByTestId('preview-source-header')).toBeInTheDocument();
 
     await act(async () => {
       screen.getByRole('tab', { name: 'Logic' }).click();
@@ -190,12 +190,13 @@ describe('Shell', () => {
     });
 
     const restoredMappingWorkspace = screen.getByTestId('workspace-Mapping');
-    expect(within(restoredMappingWorkspace).getByText(/input/i)).toBeInTheDocument();
+    expect(within(restoredMappingWorkspace).getByTestId('preview-source-header')).toBeInTheDocument();
 
     await act(async () => {
-      within(restoredMappingWorkspace).getByRole('button', { name: /config/i }).click();
+      within(restoredMappingWorkspace).getByTestId('mapping-filter-tab-preview').click();
     });
 
+    // Preview-only filter hides the config pillar
     expect(within(screen.getByTestId('workspace-Mapping')).queryByText('Direction')).not.toBeInTheDocument();
   });
 

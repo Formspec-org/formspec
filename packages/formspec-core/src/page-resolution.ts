@@ -1,5 +1,5 @@
 /** @filedesc Resolves theme pages into enriched page structures with diagnostics. */
-import type { ThemeDocument, FormDefinition } from './types.js';
+import type { ThemeDocument, FormDefinition, FormItem } from './types.js';
 
 // ── Public types ─────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ export interface ResolvedPageStructure {
 /** The two document slices resolvePageStructure reads. */
 export type PageStructureInput = {
   theme: Pick<ThemeDocument, 'pages'>;
-  definition: Pick<FormDefinition, 'formPresentation'>;
+  definition: Pick<FormDefinition, 'formPresentation' | 'items'>;
 };
 
 /**
@@ -80,6 +80,7 @@ export function resolvePageStructure(
   }));
 
   // Build itemPageMap and emit diagnostics for unknown keys
+  // 1. Explicitly assigned keys from regions
   const itemPageMap: Record<string, string> = {};
   for (const page of pages) {
     for (const region of page.regions) {
@@ -95,8 +96,46 @@ export function resolvePageStructure(
     }
   }
 
-  // Compute unassigned items
-  const unassignedItems = definitionItemKeys.filter(k => !(k in itemPageMap));
+  // 2. Inherit page IDs for child items (groups assign all children by default)
+  function propagate(items: FormItem[], parentPageId?: string) {
+    for (const item of items) {
+      const inheritedId = itemPageMap[item.key] ?? parentPageId;
+      if (inheritedId && !itemPageMap[item.key]) {
+        itemPageMap[item.key] = inheritedId;
+      }
+      if (item.children) {
+        propagate(item.children, inheritedId);
+      }
+    }
+  }
+  propagate(state.definition.items ?? []);
+
+  // Compute unassigned items (top-level only)
+  // An item is unassigned if it's not in any region and didn't inherit from parent.
+  // We only show the highest-level unassigned item in any branch.
+  const unassignedItems: string[] = [];
+  const visited = new Set<string>();
+  function collectUnassigned(items: FormItem[], parentUnassigned: boolean = false) {
+    for (const item of items) {
+      visited.add(item.key);
+      const isUnassigned = !(item.key in itemPageMap);
+      if (isUnassigned && !parentUnassigned) {
+        unassignedItems.push(item.key);
+      }
+      if (item.children) {
+        collectUnassigned(item.children, isUnassigned || parentUnassigned);
+      }
+    }
+  }
+  collectUnassigned(state.definition.items ?? []);
+
+  // Also include keys from the input list that weren't in the items tree
+  // (guards against mismatched inputs and supports minimal test cases)
+  for (const key of definitionItemKeys) {
+    if (!visited.has(key) && !(key in itemPageMap)) {
+      unassignedItems.push(key);
+    }
+  }
 
   // Emit PAGEMODE_MISMATCH
   if (pages.length > 0 && pageMode === 'single') {

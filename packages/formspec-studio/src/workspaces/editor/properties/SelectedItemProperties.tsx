@@ -197,15 +197,17 @@ export function SelectedItemProperties({
       </div>
 
       {showActions && (
-        <div className="p-3.5 border-t border-border bg-surface shrink-0 flex gap-2">
+        <div className="p-3 pb-6 sm:p-3.5 border-t-2 border-border bg-subtle/30 shrink-0 flex gap-2">
           <button
-            className="flex-1 py-1.5 border border-border rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-subtle transition-colors cursor-pointer"
+            type="button"
+            className="flex-1 py-1.5 bg-surface border border-border rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest hover:bg-surface-hover hover:border-muted/30 transition-all cursor-pointer shadow-sm active:translate-y-px"
             onClick={() => onDuplicate(path)}
           >
             Duplicate
           </button>
           <button
-            className="flex-1 py-1.5 border border-error/20 rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest text-error hover:bg-error/5 transition-colors cursor-pointer"
+            type="button"
+            className="flex-1 py-1.5 bg-surface border border-error/20 rounded-[4px] font-mono text-[11px] font-bold uppercase tracking-widest text-error hover:bg-error/5 hover:border-error/40 transition-all cursor-pointer shadow-sm active:translate-y-px"
             onClick={() => onDelete(path)}
           >
             Delete

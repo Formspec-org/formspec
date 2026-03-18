@@ -1,5 +1,6 @@
 /** @filedesc Blueprint sidebar showing all project sections (structure, theme, screener, etc.) with counts. */
 import { useProjectState } from '../state/useProjectState';
+import { useProject } from '../state/useProject';
 import { Pill } from './ui/Pill';
 
 interface BlueprintProps {
@@ -24,7 +25,7 @@ const SECTIONS: SectionDef[] = [
   { name: 'Structure', countFn: (s) => s.definition.items?.length ?? 0, help: 'Item tree defining fields, groups, and display elements' },
   {
     name: 'Component Tree',
-    countFn: (s) => countComponentNodes(s.component?.tree),
+    countFn: null, // computed from effectiveComponent below
     help: 'UI component hierarchy generated from the item tree',
   },
   { name: 'Theme', countFn: (s) => Object.keys(s.theme.tokens ?? {}).length, help: 'Visual tokens, selectors, and presentation defaults', link: { tab: 'Theme', subTab: 'tokens' } },
@@ -42,6 +43,8 @@ const SECTIONS: SectionDef[] = [
  */
 export function Blueprint({ activeSection, onSectionChange }: BlueprintProps) {
   const state = useProjectState();
+  const project = useProject();
+  const componentTreeCount = countComponentNodes((project.effectiveComponent as any)?.tree);
 
   return (
     <div className="flex flex-col shrink-0">
@@ -49,11 +52,11 @@ export function Blueprint({ activeSection, onSectionChange }: BlueprintProps) {
         <h2 className="font-mono text-[11px] font-bold tracking-[0.15em] uppercase text-muted/70 mb-1.5 px-1">
           Blueprint
         </h2>
-        
+
         <nav data-testid="blueprint" className="flex flex-col gap-px">
           {SECTIONS.map(({ name, countFn, help, link }) => {
             const isActive = activeSection === name;
-            const count = countFn ? countFn(state) : null;
+            const count = name === 'Component Tree' ? componentTreeCount : countFn ? countFn(state) : null;
             const hasData = count !== null && count > 0;
 
             return (

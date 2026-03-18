@@ -71,7 +71,7 @@ describe('StatusBar', () => {
       url: 'urn:test',
       version: '1.0.0',
       items: [],
-      presentation: { pageMode: 'wizard' },
+      formPresentation: { pageMode: 'wizard' },
     });
     expect(screen.getByText(/wizard/i)).toBeInTheDocument();
   });

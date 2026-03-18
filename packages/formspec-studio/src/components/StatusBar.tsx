@@ -38,23 +38,23 @@ export function StatusBar() {
   return (
     <footer
       data-testid="status-bar"
-      className="h-[28px] bg-surface border-t border-border px-4 flex items-center justify-between font-mono text-[11px] text-muted shrink-0 cursor-default"
+      className="h-[28px] bg-surface border-t border-border px-3 sm:px-4 flex items-center justify-between font-mono text-[11px] text-muted shrink-0 cursor-default overflow-hidden"
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
         {/* Version Section */}
-        <div className="flex items-center gap-1.5" title="Specification version and lifecycle status">
+        <div className="flex items-center gap-1.5 shrink-0" title="Specification version and lifecycle status">
           <div className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_4px_rgba(5,150,105,0.4)]" />
-          <span className="uppercase tracking-wider font-bold text-ink">
+          <span className="uppercase tracking-wider font-bold text-ink whitespace-nowrap">
             FORMSPEC {formspecVersion}
           </span>
           <span className="opacity-40">·</span>
           <span className="uppercase font-bold text-ink/70">{status}</span>
         </div>
 
-        <div className="w-px h-3 bg-border" />
+        <div className="hidden sm:block w-px h-3 bg-border shrink-0" />
 
         {/* Presentation Section */}
-        <div className="flex items-center gap-1.5" title="Page mode, default currency, and density">
+        <div className="hidden md:flex items-center gap-1.5 shrink-0" title="Page mode, default currency, and density">
           <span>{pageMode || 'standard'}</span>
           <span className="opacity-40">·</span>
           <span>{(defaultCurrency as string) || 'USD'}</span>
@@ -62,21 +62,19 @@ export function StatusBar() {
           <span>{(density as string) || 'comfortable'}</span>
         </div>
 
-        <div className="w-px h-3 bg-border" />
+        <div className="hidden sm:block w-px h-3 bg-border shrink-0" />
 
         {/* Counts Section */}
-        <div className="flex items-center gap-2" title="Entity counts across the definition">
-          <span>{plural(fieldCount, 'field')}</span>
-          <span className="opacity-40">·</span>
-          <span>{plural(bindCount, 'bind')}</span>
-          <span className="opacity-40">·</span>
-          <span>{plural(shapeCount, 'shape')}</span>
-          <span className="opacity-40">·</span>
-          <span>{varCount} vars</span>
+        <div className="flex items-center gap-2 min-w-0" title="Entity counts across the definition">
+          <span className="whitespace-nowrap truncate">{plural(fieldCount, 'field')}</span>
+          <span className="hidden sm:inline opacity-40">·</span>
+          <span className="hidden sm:inline whitespace-nowrap">{plural(bindCount, 'bind')}</span>
+          <span className="hidden md:inline opacity-40">·</span>
+          <span className="hidden md:inline whitespace-nowrap">{plural(shapeCount, 'shape')}</span>
         </div>
       </div>
 
-      <div className="truncate ml-4 max-w-[300px]">
+      <div className="truncate ml-4 max-w-[150px] sm:max-w-[300px] shrink-0 text-right">
         {definition.url ? (
           <a href={definition.url} className="hover:text-ink underline-offset-2 hover:underline">
             {definition.url}

@@ -132,6 +132,109 @@ describe('resolvePageStructure', () => {
     );
   });
 
+  it('inherits page IDs for child items when a group is assigned to a page', () => {
+    const state = makeState({
+      definition: {
+        items: [
+          {
+            key: 'group1',
+            type: 'group',
+            children: [
+              { key: 'child1', type: 'string' },
+              { key: 'child2', type: 'string' },
+            ],
+          },
+        ],
+      },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Page 1', regions: [{ key: 'group1' }] },
+        ],
+      },
+    });
+
+    const result = resolvePageStructure(state, ['group1', 'child1', 'child2']);
+
+    expect(result.itemPageMap).toEqual({
+      group1: 'p1',
+      child1: 'p1',
+      child2: 'p1',
+    });
+    expect(result.unassignedItems).toEqual([]);
+  });
+
+  it('allows children to explicitly override inherited page IDs', () => {
+    const state = makeState({
+      definition: {
+        items: [
+          {
+            key: 'group1',
+            type: 'group',
+            children: [
+              { key: 'child1', type: 'string' },
+              { key: 'child2', type: 'string' },
+            ],
+          },
+        ],
+      },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Page 1', regions: [{ key: 'group1' }] },
+          { id: 'p2', title: 'Page 2', regions: [{ key: 'child2' }] },
+        ],
+      },
+    });
+
+    const result = resolvePageStructure(state, ['group1', 'child1', 'child2']);
+
+    expect(result.itemPageMap).toEqual({
+      group1: 'p1',
+      child1: 'p1',
+      child2: 'p2', // Explicit override wins
+    });
+  });
+
+  it('propagates page IDs through deeply nested groups', () => {
+    const state = makeState({
+      definition: {
+        items: [
+          {
+            key: 'outer',
+            type: 'group',
+            children: [
+              {
+                key: 'inner',
+                type: 'group',
+                children: [
+                  { key: 'deep_field', type: 'string' },
+                ],
+              },
+              { key: 'sibling', type: 'string' },
+            ],
+          },
+        ],
+      },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Page 1', regions: [{ key: 'outer' }] },
+        ],
+      },
+    });
+
+    const result = resolvePageStructure(
+      state,
+      ['outer', 'inner', 'deep_field', 'sibling'],
+    );
+
+    expect(result.itemPageMap).toEqual({
+      outer: 'p1',
+      inner: 'p1',
+      deep_field: 'p1',
+      sibling: 'p1',
+    });
+    expect(result.unassignedItems).toEqual([]);
+  });
+
   it('emits PAGEMODE_MISMATCH when pages exist but pageMode is single', () => {
     const state = makeState({
       definition: { formPresentation: { pageMode: 'single' } },
@@ -210,6 +313,28 @@ describe('resolvePageStructure', () => {
     const result = resolvePageStructure(makeState(), ['name', 'email']);
 
     expect(result.unassignedItems).toEqual(['name', 'email']);
+  });
+
+  it('unassignedItems only contains top-level unassigned items, not their children', () => {
+    const state = makeState({
+      definition: {
+        items: [
+          {
+            key: 'group1',
+            type: 'group',
+            children: [
+              { key: 'child1', type: 'string' },
+            ],
+          },
+        ],
+      },
+    });
+
+    const result = resolvePageStructure(state, ['group1', 'child1']);
+
+    // Current implementation will return ['group1', 'child1']
+    // We want it to only return ['group1'] because assigning group1 handles child1
+    expect(result.unassignedItems).toEqual(['group1']);
   });
 
   it('does not include wizardConfig (component concern, not resolution)', () => {
