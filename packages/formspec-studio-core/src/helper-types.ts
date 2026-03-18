@@ -14,6 +14,7 @@ export interface HelperResult {
   };
   affectedPaths: string[];
   createdId?: string;
+  groupKey?: string;
   warnings?: HelperWarning[];
 }
 
