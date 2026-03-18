@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-18
 **Status:** Draft
-**Scope:** formspec-studio PagesTab, formspec-studio-core (palette query), formspec-core (no changes)
+**Scope:** formspec-studio PagesTab, formspec-studio-core (one new method), formspec-core (minor type additions)
 **Prerequisite:** Pages Behavioral API (Phases 0–3 complete)
 
 ---
@@ -102,6 +102,21 @@ Each item on the grid renders as a block showing:
 - Width badge (e.g., "6/12")
 - Status coloring: valid = accent, broken = amber
 - Groups show a child-count indicator (e.g., "5 fields")
+- Repeatable groups show a repeat icon alongside the child count
+
+**Broken items:** A broken item (key not found in definition) renders in
+amber with a "Remove" action. Resize and reorder are disabled — the item
+has no meaningful layout to edit. Clicking a broken block selects it and
+shows only the Remove option in the toolbar.
+
+**Required type additions to `PageItemView`:**
+- `itemType: 'field' | 'group' | 'display'` — enables type indicator
+- `childCount?: number` — enables "5 fields" indicator on groups
+- `repeatable?: boolean` — enables repeat indicator on groups
+
+These are small additions to `resolvePageView` in formspec-core. The
+function already walks the definition tree for label resolution; adding
+type, child count, and repeatable lookups is a minor extension.
 
 ### 3.2 Interactions
 
@@ -200,6 +215,8 @@ A horizontal bar below the page title in Focus Mode. Contains:
   (typically `sm`, `md`, `lg`)
 
 Active breakpoint is visually highlighted. Only one active at a time.
+Each breakpoint toggle shows a tooltip with the pixel value (e.g.,
+"sm (576px)") so authors understand what the breakpoint means.
 
 ### 5.2 Behavior
 
@@ -207,11 +224,22 @@ Switching breakpoints changes:
 - Which width/offset values the grid canvas displays
 - Which values resize/reorder operations write to
 - Whether "hidden" toggles are shown per item
+- The selection toolbar's width presets write to the active breakpoint
 
 It does NOT change:
 - The physical width of the grid canvas
 - Which items are on the page (hiding is per-breakpoint, not removal)
 - The palette contents
+- The selected item (selection is preserved across breakpoint switches)
+
+### 5.2.1 Phantom Breakpoints
+
+When the theme has no explicit `breakpoints` object, `resolvePageView`
+returns default names (`sm`, `md`, `lg`) but no pixel values exist in the
+theme. If the user edits a responsive override for the first time, the
+system auto-creates the `breakpoints` object with sensible defaults:
+`{ sm: 576, md: 768, lg: 1024 }`. This ensures responsive overrides are
+never structurally orphaned (keys without definitions).
 
 ### 5.3 Override Indicators
 
@@ -236,30 +264,63 @@ project.state (theme + definition)
   → Focus Mode: grid canvas + palette + breakpoint bar
 ```
 
-No new query functions are needed. `resolvePageView` already provides
-all data the layout builder requires.
+`resolvePageView` provides the core data. Minor additions to `PageItemView`
+are needed (see Section 3.1): `itemType`, `childCount`, `repeatable`.
+These extend the existing resolution function, not a new query.
+
+`PageStructureView.breakpointNames` needs a companion field
+`breakpointValues?: Record<string, number>` to support tooltips showing
+pixel widths (Section 5.1).
 
 ### 6.2 Write Path
 
-All mutations go through existing behavioral project methods:
+Mutations use behavioral project methods. Most are existing; one new
+method is required.
 
-| User action | Method |
-|-------------|--------|
-| Resize item | `project.setItemWidth(pageId, itemKey, width)` |
-| Set offset | `project.setItemOffset(pageId, itemKey, offset)` |
-| Reorder item | `project.reorderItemOnPage(pageId, itemKey, direction)` |
-| Place item | `project.placeOnPage(itemKey, pageId, { span })` |
-| Remove item | `project.removeItemFromPage(pageId, itemKey)` |
-| Set responsive | `project.setItemResponsive(pageId, itemKey, breakpoint, overrides)` |
-| Add page | `project.addPage(title)` |
-| Delete page | `project.removePage(pageId)` |
-| Reorder page | `project.reorderPage(pageId, direction)` or `project.movePageToIndex(pageId, index)` |
-| Update title | `project.updatePage(pageId, { title })` |
-| Update desc | `project.updatePage(pageId, { description })` |
-| Set mode | `project.setFlow(mode)` |
+| User action | Method | Status |
+|-------------|--------|--------|
+| Resize item | `project.setItemWidth(pageId, itemKey, width)` | Existing |
+| Set offset | `project.setItemOffset(pageId, itemKey, offset)` | Existing |
+| Reorder item (up/down) | `project.reorderItemOnPage(pageId, itemKey, direction)` | Existing |
+| **Move item to position** | **`project.moveItemOnPageToIndex(pageId, itemKey, targetIndex)`** | **New** |
+| Place item | `project.placeOnPage(itemKey, pageId, { span })` | Existing |
+| Remove item | `project.removeItemFromPage(pageId, itemKey)` | Existing |
+| Set responsive | `project.setItemResponsive(pageId, itemKey, breakpoint, overrides)` | Existing |
+| Add page | `project.addPage(title)` | Existing |
+| Delete page | `project.removePage(pageId)` | Existing |
+| Reorder page | `project.reorderPage(pageId, direction)` or `project.movePageToIndex(pageId, index)` | Existing |
+| Update title | `project.updatePage(pageId, { title })` | Existing |
+| Update desc | `project.updatePage(pageId, { description })` | Existing |
+| Set mode | `project.setFlow(mode)` | Existing |
 
-No new project methods are needed. The behavioral API (Phases 1–2)
-already covers every mutation the layout builder requires.
+#### 6.2.1 New Method: `moveItemOnPageToIndex`
+
+```ts
+moveItemOnPageToIndex(pageId: string, itemKey: string, targetIndex: number): void
+```
+
+Required because `reorderItemOnPage` only supports `direction: 'up' | 'down'`
+(one position at a time). Drag-to-reorder and drag-from-palette both need
+arbitrary-position placement. The underlying handler (`pages.reorderRegion`)
+already accepts `targetIndex` — this method is a thin behavioral wrapper,
+following the same pattern as the existing Phase 2 methods.
+
+#### 6.2.2 `addPage` Behavior Note
+
+`addPage(title)` creates a paired definition group alongside the theme
+page. This is intentional — in Studio, every page is backed by a
+definition group that serves as the logical container for items on that
+page. The layout builder's palette then lets the user populate the page
+by placing items from the flat palette. The group is the structural
+anchor; the page regions define the visual layout.
+
+#### 6.2.3 `removePage` Safety
+
+`removePage(pageId)` cascades into definition deletion when a page's
+regions reference root-level groups. The layout builder must show a
+confirmation dialog before deleting a page that has placed items:
+"Deleting this page will also remove its associated group and N fields
+from the form definition. This cannot be undone."
 
 ### 6.3 Palette Query
 
@@ -312,8 +373,12 @@ All state is local to PagesTab. No new context providers needed.
 ### 8.2 Exiting Focus Mode
 
 - Click back arrow in top bar
-- Press Escape
+- Press Escape (when no item is selected)
 - Both return to Overview Mode, scrolled to the previously-focused card
+
+**Escape key priority:** If an item is selected, the first Escape
+deselects it. A second Escape (with nothing selected) exits Focus Mode.
+This prevents accidental exits during editing.
 
 ### 8.3 Page Navigation in Focus Mode
 
@@ -335,15 +400,34 @@ All state is local to PagesTab. No new context providers needed.
 - Drag starts on the block body (not the right edge)
 - During drag: other items shift to show the drop position
 - Uses existing `@dnd-kit/react` already in the project
-- On drop: `project.reorderItemOnPage()` is called
-- Reorder is position-based (within the page's item list order)
+- On drop: `project.moveItemOnPageToIndex(pageId, itemKey, targetIndex)`
+  is called — a single atomic operation (one undo step)
 
 ### 8.6 Drag-from-Palette Details
 
 - Drag starts on an unplaced item in the palette
 - Grid canvas shows drop indicators between existing items
 - On drop: `project.placeOnPage(itemKey, pageId, { span: 12 })` is called,
-  then `project.reorderItemOnPage()` to position it at the drop index
+  then `project.moveItemOnPageToIndex()` to position it at the drop index
+- These are two operations; undo reverses both (place + position)
+
+### 8.7 Dormant Pages (Single Mode)
+
+When `pageMode` is `single`, pages are preserved as dormant data.
+In Overview Mode, dormant page cards are shown with reduced opacity
+and a "dormant" badge. In Focus Mode, dormant pages are fully editable
+— the user can pre-arrange layouts before switching to wizard/tabs.
+This is useful for preparing page layouts without activating navigation.
+
+### 8.8 Empty Theme Pages
+
+When `formPresentation.pageMode` is `wizard` or `tabs` but `theme.pages`
+is empty (no pages exist), the Pages tab shows a prompt: "Create pages
+to organize your form into steps." with an "Auto-generate from groups"
+button that calls `autoGeneratePages()`. This handles the case where a
+definition uses Tier 1 pagination hints (`presentation.layout.page` on
+groups) but has no Tier 2 theme pages — the user is guided to bridge the
+gap rather than seeing an empty tab.
 
 ---
 
@@ -354,16 +438,33 @@ All state is local to PagesTab. No new context providers needed.
 - Two-mode architecture (Overview + Focus)
 - Grid canvas with drag-to-resize, reorder, place, remove
 - Field palette (top-level items only)
-- Breakpoint switcher
+- Breakpoint switcher with pixel value tooltips
 - Width presets (Full/Half/Third/Quarter + custom)
 - Page description as first-class field
-- Existing behavioral API methods (no new ones needed)
+- One new behavioral method: `moveItemOnPageToIndex`
+- Minor type additions to `PageItemView` (itemType, childCount, repeatable)
+- `removePage` confirmation dialog
+- Empty theme pages prompt with auto-generate button
+- Dormant page editing in Focus Mode
 
 ### Out of Scope (Future Work)
 
 - **Nested field extraction** — Depends on reconciler Phase 4.
   When it ships, the palette expands to show nested fields, and
-  residual group behavior activates.
+  residual group behavior activates. Phase 4 must also address:
+  whether extracted fields render inside their parent group (duplicate),
+  re-absorption of extracted fields back into groups, and cross-page
+  extraction semantics.
+- **Cross-page item move** — Dragging an item directly from one page
+  to another. Currently requires remove + navigate + place (3 steps).
+  Natural extension of the drag infrastructure.
+- **Bulk operations** — Multi-select in palette for batch placement,
+  or multi-select on grid for batch width changes.
+- **Group internal layout editing** — Groups appear as opaque blocks
+  on the grid canvas. Configuring a group's internal layout (`flow`,
+  `columns`) requires the Editor tab. A drill-in that expands a group
+  to show its children with internal layout controls is a natural
+  extension but out of scope for v1.
 - **Conditional pages / page branching** — Requires new spec work
   for page-level relevance expressions.
 - **Page-level validation gating** — Wizard forward-navigation
@@ -373,6 +474,9 @@ All state is local to PagesTab. No new context providers needed.
 - **Page templates** — Pre-built page patterns for common use cases.
 - **Sidebar/pages source reconciliation** — Aligning the sidebar's
   page-derived section list with the Pages tab. Related but separate.
+- **Keyboard accessibility for grid canvas** — Arrow keys for item
+  movement, keyboard shortcuts for width presets. Important for
+  accessibility but separate from the core layout builder.
 
 ---
 
@@ -386,12 +490,16 @@ After implementation:
    grid canvas.
 3. User can drag the right edge of a field block to resize its column
    span, with visual column guides.
-4. User can drag fields from the palette onto the grid to place them.
+4. User can drag fields from the palette onto the grid to place them
+   at a specific position.
 5. User can remove fields from the grid (they return to the palette).
 6. User can switch breakpoints and see/edit per-breakpoint overrides.
 7. User can use named width presets (Full/Half/Third/Quarter) instead
    of remembering column numbers.
-8. Escape returns to Overview Mode.
-9. No new formspec-core or formspec-studio-core methods are needed —
-   all mutations use the existing behavioral API.
+8. Escape deselects first, then exits Focus Mode on second press.
+9. One new method added: `moveItemOnPageToIndex`. All other mutations
+   use existing behavioral API methods.
 10. The palette does not show items the reconciler cannot resolve.
+11. Deleting a page with placed items shows a confirmation dialog.
+12. Item blocks show type indicators and group child counts.
+13. Breakpoint tooltips show pixel values.
