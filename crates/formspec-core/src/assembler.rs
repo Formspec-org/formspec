@@ -319,10 +319,10 @@ fn rewrite_fel_string(expression: &str, prefix: &str) -> String {
         return expression.to_string();
     }
 
-    // Parse and rewrite via AST
+    // Parse → rewrite AST → print back to string
     match parse(expression) {
         Ok(expr) => {
-            let _rewritten = rewrite_fel_references(&expr, &RewriteOptions {
+            let rewritten = rewrite_fel_references(&expr, &RewriteOptions {
                 rewrite_field_path: Some(Box::new({
                     let p = prefix.to_string();
                     move |path| Some(format!("{p}_{path}"))
@@ -330,11 +330,7 @@ fn rewrite_fel_string(expression: &str, prefix: &str) -> String {
                 rewrite_variable: None,
                 rewrite_instance_name: None,
             });
-            // Serialize back to string — for now, return the original with simple replacement
-            // Full AST→string serialization would require a printer module
-            // Use simple prefix replacement as approximation
-            expression.replace('$', &format!("${prefix}_"))
-                .replace(&format!("${prefix}___"), &format!("${prefix}_"))
+            fel_core::print_expr(&rewritten)
         }
         Err(_) => expression.to_string(),
     }
@@ -505,5 +501,52 @@ mod tests {
         let item = json!({ "key": "name" });
         let result = apply_key_prefix(&item, "");
         assert_eq!(result["key"], "name");
+    }
+
+    #[test]
+    fn test_fel_rewriting_with_prefix() {
+        // Verify the AST-based FEL rewriting works end-to-end
+        let result = rewrite_fel_string("$name + $age", "contact");
+        assert_eq!(result, "$contact_name + $contact_age");
+    }
+
+    #[test]
+    fn test_fel_rewriting_complex() {
+        let result = rewrite_fel_string("if $active then $total * 1.1 else 0", "order");
+        assert_eq!(result, "if $order_active then $order_total * 1.1 else 0");
+    }
+
+    #[test]
+    fn test_fel_rewriting_preserves_literals() {
+        let result = rewrite_fel_string("'hello' & $name", "p");
+        assert_eq!(result, "'hello' & $p_name");
+    }
+
+    #[test]
+    fn test_fel_rewriting_functions() {
+        let result = rewrite_fel_string("sum($items[*].qty)", "order");
+        assert_eq!(result, "sum($order_items[*].qty)");
+    }
+
+    #[test]
+    fn test_bind_import_rewrites_calculate() {
+        let def = json!({
+            "items": [
+                { "$ref": "frag.json", "key": "g", "keyPrefix": "p" }
+            ]
+        });
+        let mut resolver = MapResolver::new();
+        resolver.add("frag.json", json!({
+            "items": [{ "key": "total" }],
+            "binds": {
+                "total": { "calculate": "$qty * $price" }
+            }
+        }));
+
+        let result = assemble_definition(&def, &resolver);
+        assert!(result.errors.is_empty());
+        let binds = result.definition["items"][0]["binds"].as_object().unwrap();
+        let calc = binds["p.total"]["calculate"].as_str().unwrap();
+        assert_eq!(calc, "$p_qty * $p_price");
     }
 }

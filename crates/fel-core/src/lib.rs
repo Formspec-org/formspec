@@ -10,6 +10,7 @@ pub mod evaluator;
 pub mod extensions;
 pub mod lexer;
 pub mod parser;
+pub mod printer;
 pub mod types;
 
 // Re-export key types
@@ -20,6 +21,7 @@ pub use error::{Diagnostic, FelError, Severity};
 pub use evaluator::{evaluate, Environment, EvalResult, Evaluator, MapEnvironment};
 pub use extensions::{ExtensionError, ExtensionRegistry};
 pub use parser::parse;
+pub use printer::print_expr;
 pub use rust_decimal::Decimal;
 pub use types::{FelDate, FelMoney, FelValue};
 
