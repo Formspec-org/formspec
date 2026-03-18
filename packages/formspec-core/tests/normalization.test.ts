@@ -55,7 +55,7 @@ describe('normalizeDefinition', () => {
       title: 'Test',
       items: [],
       binds: {
-        'contact.email': { required: 'true()', constraint: 'matches($email, "@")' },
+        'contact.email': { required:  'true', constraint: 'matches($email, "@")' },
         'contact.phone': { relevant: '$includePhone' },
       },
     };
@@ -69,7 +69,7 @@ describe('normalizeDefinition', () => {
     expect(emailBind).toBeDefined();
     expect(emailBind).toMatchObject({
       path: 'contact.email',
-      required: 'true()',
+      required:  'true',
       constraint: 'matches($email, "@")',
     });
 
@@ -89,7 +89,7 @@ describe('normalizeDefinition', () => {
       title: 'Test',
       items: [],
       binds: [
-        { path: 'email', required: 'true()' },
+        { path: 'email', required:  'true' },
         { path: 'phone', relevant: '$show' },
       ],
     };
@@ -98,7 +98,7 @@ describe('normalizeDefinition', () => {
 
     expect(Array.isArray(normalized.binds)).toBe(true);
     expect(normalized.binds).toEqual([
-      { path: 'email', required: 'true()' },
+      { path: 'email', required:  'true' },
       { path: 'phone', relevant: '$show' },
     ]);
   });
@@ -114,7 +114,7 @@ describe('normalizeDefinition', () => {
         { name: 'src', source: 'https://api.example.com' },
       ],
       binds: {
-        field1: { required: 'true()' },
+        field1: { required:  'true' },
       },
     };
 
@@ -179,14 +179,14 @@ describe('project.import applies normalization', () => {
           title: 'Imported',
           items: [{ type: 'field', key: 'age', dataType: 'integer' }],
           binds: {
-            age: { required: 'true()' },
+            age: { required:  'true' },
           },
         },
       },
     });
 
     expect(Array.isArray(project.definition.binds)).toBe(true);
-    expect(project.definition.binds![0]).toMatchObject({ path: 'age', required: 'true()' });
+    expect(project.definition.binds![0]).toMatchObject({ path: 'age', required:  'true' });
   });
 });
 
@@ -223,14 +223,14 @@ describe('createRawProject seed normalization', () => {
           title: 'Seeded',
           items: [{ type: 'field', key: 'age', dataType: 'integer' }],
           binds: {
-            age: { required: 'true()' },
+            age: { required:  'true' },
           } as any,
         },
       },
     });
 
     expect(Array.isArray(project.definition.binds)).toBe(true);
-    expect(project.definition.binds![0]).toMatchObject({ path: 'age', required: 'true()' });
+    expect(project.definition.binds![0]).toMatchObject({ path: 'age', required:  'true' });
   });
 });
 
@@ -305,7 +305,7 @@ describe('Project.responseSchemaRows', () => {
 
     project.dispatch({
       type: 'definition.setBind',
-      payload: { path: 'email', properties: { required: 'true()' } },
+      payload: { path: 'email', properties: { required:  'true' } },
     });
     project.dispatch({
       type: 'definition.setBind',
@@ -313,7 +313,7 @@ describe('Project.responseSchemaRows', () => {
     });
     project.dispatch({
       type: 'definition.setBind',
-      payload: { path: 'notes', properties: { relevant: '$showNotes', readonly: 'true()' } },
+      payload: { path: 'notes', properties: { relevant: '$showNotes', readonly:  'true' } },
     });
 
     const rows = project.responseSchemaRows();

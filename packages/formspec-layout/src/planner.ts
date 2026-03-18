@@ -418,6 +418,8 @@ function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNod
                 label: item.label ?? key,
                 hint: item.hint,
                 dataType: item.dataType,
+                options: item.options,
+                optionSet: item.optionSet,
             },
             presentation,
             labelPosition: presentation.labelPosition ?? 'top',

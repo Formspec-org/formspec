@@ -333,6 +333,7 @@ function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () =>
                 <button
                   onClick={() => setMobileView('chat')}
                   aria-pressed={mobileView === 'chat'}
+                  data-testid="mobile-chat-btn"
                   className={[
                     'px-3 py-1 text-xs font-medium rounded transition-all duration-100',
                     mobileView === 'chat'
@@ -345,6 +346,7 @@ function ActiveSessionView({ onBack, onUpload, onOpenSettings }: { onBack: () =>
                 <button
                   onClick={() => setMobileView('preview')}
                   aria-pressed={mobileView === 'preview'}
+                  data-testid="mobile-preview-btn"
                   className={[
                     'px-3 py-1 text-xs font-medium rounded transition-all duration-100',
                     mobileView === 'preview'

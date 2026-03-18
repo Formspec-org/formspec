@@ -143,7 +143,7 @@ describe('definition.setBind', () => {
       payload: {
         path: 'email',
         properties: {
-          required: 'true()',
+          required:  'true',
           constraint: 'matches($email, "^[^@]+@[^@]+$")',
           constraintMessage: 'Invalid email',
         },
@@ -152,7 +152,7 @@ describe('definition.setBind', () => {
 
     const bind = project.definition.binds![0];
     expect(bind.path).toBe('email');
-    expect(bind.required).toBe('true()');
+    expect(bind.required).toBe( 'true');
     expect(bind.constraint).toBe('matches($email, "^[^@]+@[^@]+$")');
     expect(bind.constraintMessage).toBe('Invalid email');
   });
@@ -162,7 +162,7 @@ describe('definition.setBind', () => {
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'f' } });
     project.dispatch({
       type: 'definition.setBind',
-      payload: { path: 'f', properties: { required: 'true()', calculate: '$a + $b' } },
+      payload: { path: 'f', properties: { required:  'true', calculate: '$a + $b' } },
     });
 
     project.dispatch({
@@ -180,7 +180,7 @@ describe('definition.setBind', () => {
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'f' } });
     project.dispatch({
       type: 'definition.setBind',
-      payload: { path: 'f', properties: { required: 'true()' } },
+      payload: { path: 'f', properties: { required:  'true' } },
     });
 
     project.dispatch({

@@ -38,7 +38,14 @@ export interface LayoutNode {
     bindPath?: string;
 
     /** Snapshot of the definition item this field maps to. */
-    fieldItem?: { key: string; label: string; hint?: string; dataType?: string };
+    fieldItem?: {
+        key: string;
+        label: string;
+        hint?: string;
+        dataType?: string;
+        options?: Array<{ value: string; label: string }>;
+        optionSet?: string;
+    };
 
     /** Resolved presentation block from 5-level theme cascade. */
     presentation?: PresentationBlock;

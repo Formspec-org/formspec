@@ -112,7 +112,7 @@ describe('definition.deleteScreenerItem', () => {
     });
     project.dispatch({
       type: 'definition.setScreenerBind',
-      payload: { path: 'age', properties: { required: 'true()' } },
+      payload: { path: 'age', properties: { required:  'true' } },
     });
 
     project.dispatch({
@@ -135,12 +135,12 @@ describe('definition.setScreenerBind', () => {
 
     project.dispatch({
       type: 'definition.setScreenerBind',
-      payload: { path: 'eligible', properties: { required: 'true()', constraint: '$eligible != ""' } },
+      payload: { path: 'eligible', properties: { required:  'true', constraint: '$eligible != ""' } },
     });
 
     const bind = project.definition.screener!.binds!.find((b: any) => b.path === 'eligible');
     expect(bind).toBeDefined();
-    expect(bind!.required).toBe('true()');
+    expect(bind!.required).toBe( 'true');
     expect(bind!.constraint).toBe('$eligible != ""');
   });
 });

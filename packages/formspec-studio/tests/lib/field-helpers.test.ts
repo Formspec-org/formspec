@@ -48,12 +48,12 @@ describe('bindsFor', () => {
   });
 
   it('returns binds for an exact path match', () => {
-    const binds = [{ path: 'household.name', required: 'true()' }];
-    expect(bindsFor(binds as any, 'household.name')).toEqual({ required: 'true()' });
+    const binds = [{ path: 'household.name', required:  'true' }];
+    expect(bindsFor(binds as any, 'household.name')).toEqual({ required:  'true' });
   });
 
   it('does not resolve a bind by leaf key when the full path does not match', () => {
-    const binds = [{ path: 'name', required: 'true()' }];
+    const binds = [{ path: 'name', required:  'true' }];
     expect(bindsFor(binds as any, 'household.name')).toEqual({});
   });
 });

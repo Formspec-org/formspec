@@ -1121,7 +1121,7 @@ Common multi-step workflows should be dispatched as a batch so they undo as one 
 ```typescript
 project.batch([
   { type: 'definition.addItem', payload: { type: 'field', key: 'email', dataType: 'string' } },
-  { type: 'definition.setBind', payload: { path: 'email', properties: { required: 'true()' } } },
+  { type: 'definition.setBind', payload: { path: 'email', properties: { required:  'true' } } },
   { type: 'definition.setItemExtension', payload: { path: 'email', extension: 'x-formspec-url', value: true } },
   { type: 'component.setFieldWidget', payload: { fieldKey: 'email', widget: 'TextInput' } },
 ]);
@@ -1160,7 +1160,7 @@ project.dispatch({
   payload: {
     path: 'email',
     properties: {
-      required: 'true()',
+      required:  'true',
       constraint: 'matches($email, "^[^@]+@[^@]+$")',
       constraintMessage: 'Please enter a valid email address'
     }
@@ -1170,7 +1170,7 @@ project.dispatch({
 // Check state
 console.log(project.definition.title);           // 'Contact Form'
 console.log(project.fieldPaths());                // ['name', 'email']
-console.log(project.bindFor('email')?.required);  // 'true()'
+console.log(project.bindFor('email')?.required);  //  'true'
 ```
 
 ### Build a component tree for a wizard

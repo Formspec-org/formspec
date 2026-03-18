@@ -14,7 +14,7 @@ describe('diff', () => {
       { key: 'email', type: 'field', label: 'Email', dataType: 'string' },
     ],
     binds: [
-      { path: 'name', required: 'true()' },
+      { path: 'name', required:  'true' },
     ],
   } as FormDefinition;
 

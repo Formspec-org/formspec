@@ -189,9 +189,9 @@ class TestBind:
         doc = _base_doc(binds=[{
             "path": "/f1",
             "calculate": "1 + 1",
-            "relevant": "true()",
-            "required": "true()",
-            "readonly": "false()",
+            "relevant": "true",
+            "required": "true",
+            "readonly": "false",
             "constraint": ". > 0",
             "constraintMessage": "Must be positive",
             "default": "hello",
@@ -289,7 +289,7 @@ class TestShape:
     def test_invalid_severity(self, schema, val):
         doc = _base_doc(shapes=[{
             "id": "s1", "target": "/f1", "message": "bad",
-            "constraint": "true()", "severity": val,
+            "constraint": "true", "severity": val,
         }])
         with pytest.raises(ValidationError):
             _validate(doc, schema)
@@ -298,7 +298,7 @@ class TestShape:
     def test_invalid_timing(self, schema, val):
         doc = _base_doc(shapes=[{
             "id": "s1", "target": "/f1", "message": "bad",
-            "constraint": "true()", "timing": val,
+            "constraint": "true", "timing": val,
         }])
         with pytest.raises(ValidationError):
             _validate(doc, schema)
@@ -307,7 +307,7 @@ class TestShape:
     def test_invalid_id_pattern(self, schema, bad_id):
         doc = _base_doc(shapes=[{
             "id": bad_id, "target": "/f1", "message": "bad",
-            "constraint": "true()",
+            "constraint": "true",
         }])
         with pytest.raises(ValidationError):
             _validate(doc, schema)
@@ -432,7 +432,7 @@ class TestScreener:
 
     def test_missing_items(self, schema):
         doc = _base_doc(screener={
-            "routes": [{"condition": "true()",
+            "routes": [{"condition": "true",
                         "target": "https://example.com/x"}],
         })
         with pytest.raises(ValidationError):
@@ -456,7 +456,7 @@ class TestScreener:
     def test_route_missing_target(self, schema):
         doc = _base_doc(screener={
             "items": [_minimal_field(key="sq1")],
-            "routes": [{"condition": "true()"}],
+            "routes": [{"condition": "true"}],
         })
         with pytest.raises(ValidationError):
             _validate(doc, schema)
@@ -557,7 +557,7 @@ class TestExtensions:
     def test_extension_on_shape(self, schema):
         doc = _base_doc(shapes=[{
             "id": "s1", "target": "/f1", "message": "m",
-            "constraint": "true()",
+            "constraint": "true",
             "extensions": {"x-custom": 1},
         }])
         _validate(doc, schema)

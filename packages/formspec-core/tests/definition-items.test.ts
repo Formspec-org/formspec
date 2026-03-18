@@ -135,7 +135,7 @@ describe('definition.deleteItem', () => {
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'email' } });
     project.dispatch({
       type: 'definition.setBind',
-      payload: { path: 'email', properties: { required: 'true()' } },
+      payload: { path: 'email', properties: { required:  'true' } },
     });
 
     expect(project.definition.binds).toHaveLength(1);
@@ -173,7 +173,7 @@ describe('definition.renameItem', () => {
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'email' } });
     project.dispatch({
       type: 'definition.setBind',
-      payload: { path: 'email', properties: { required: 'true()' } },
+      payload: { path: 'email', properties: { required:  'true' } },
     });
 
     project.dispatch({
@@ -286,7 +286,7 @@ describe('definition.moveItem — reference rewriting', () => {
     // Add a bind referencing a.name
     project.dispatch({
       type: 'definition.setBind',
-      payload: { path: 'a.name', properties: { required: 'true()' } },
+      payload: { path: 'a.name', properties: { required:  'true' } },
     });
 
     // Move "name" from group "a" to group "b"
@@ -299,7 +299,7 @@ describe('definition.moveItem — reference rewriting', () => {
     const binds = project.definition.binds;
     const bind = binds?.find((b: any) => b.path === 'b.name');
     expect(bind).toBeDefined();
-    expect(bind?.required).toBe('true()');
+    expect(bind?.required).toBe( 'true');
 
     // Old path should not exist
     const oldBind = binds?.find((b: any) => b.path === 'a.name');
@@ -389,7 +389,7 @@ describe('definition.moveItem — reference rewriting', () => {
 
     project.dispatch({
       type: 'definition.setBind',
-      payload: { path: 'b', properties: { required: 'true()' } },
+      payload: { path: 'b', properties: { required:  'true' } },
     });
 
     // Move 'b' to index 0 at root — path stays 'b'
@@ -400,7 +400,7 @@ describe('definition.moveItem — reference rewriting', () => {
 
     const bind = project.definition.binds?.find((b: any) => b.path === 'b');
     expect(bind).toBeDefined();
-    expect(bind?.required).toBe('true()');
+    expect(bind?.required).toBe( 'true');
   });
 
   it('rewrites descendant references correctly when moving an item into a deeper parent path', () => {
@@ -410,7 +410,7 @@ describe('definition.moveItem — reference rewriting', () => {
       { type: 'definition.addItem', payload: { type: 'group', key: 'field' } },
       { type: 'definition.addItem', payload: { type: 'field', key: 'child', parentPath: 'field', dataType: 'string' } },
       { type: 'definition.addItem', payload: { type: 'group', key: 'group' } },
-      { type: 'definition.setBind', payload: { path: 'field.child', properties: { required: 'true()' } } },
+      { type: 'definition.setBind', payload: { path: 'field.child', properties: { required:  'true' } } },
     ]);
 
     project.dispatch({

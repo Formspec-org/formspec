@@ -55,7 +55,7 @@ describe('statistics', () => {
       { type: 'definition.addItem', payload: { type: 'display', key: 'd1' } },
       { type: 'definition.addShape', payload: { id: 's1', target: 'f1', constraint: '$f1 > 0', message: 'M' } },
       { type: 'definition.addVariable', payload: { name: 'v1', expression: '42' } },
-      { type: 'definition.setBind', payload: { path: 'f1', properties: { required: 'true()' } } },
+      { type: 'definition.setBind', payload: { path: 'f1', properties: { required:  'true' } } },
     ]);
 
     const stats = project.statistics();
@@ -355,12 +355,12 @@ describe('bindFor', () => {
     const project = createRawProject();
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'age' } },
-      { type: 'definition.setBind', payload: { path: 'age', properties: { required: 'true()', constraint: '$age > 0' } } },
+      { type: 'definition.setBind', payload: { path: 'age', properties: { required:  'true', constraint: '$age > 0' } } },
     ]);
 
     const bind = project.bindFor('age');
     expect(bind).toBeDefined();
-    expect(bind!.required).toBe('true()');
+    expect(bind!.required).toBe( 'true');
     expect(bind!.constraint).toBe('$age > 0');
   });
 
@@ -513,7 +513,7 @@ describe('allExpressions', () => {
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'a' } },
       { type: 'definition.addItem', payload: { type: 'field', key: 'b' } },
-      { type: 'definition.setBind', payload: { path: 'a', properties: { calculate: '$b * 2', required: 'true()' } } },
+      { type: 'definition.setBind', payload: { path: 'a', properties: { calculate: '$b * 2', required:  'true' } } },
       { type: 'definition.addShape', payload: { id: 's1', target: 'a', constraint: '$a > 0', message: 'M' } },
       { type: 'definition.addVariable', payload: { name: 'total', expression: '$a + $b' } },
     ]);

@@ -31,11 +31,11 @@ describe('Chat UI Integration', () => {
     expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
 
     // 4. Definition exists — preview + export buttons visible
-    expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
+    expect(screen.getByTestId('mobile-preview-btn')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
 
     // 5. Switch to preview
-    fireEvent.click(screen.getByRole('button', { name: /preview/i }));
+    fireEvent.click(screen.getByTestId('mobile-preview-btn'));
     expect(screen.getByTestId('form-preview')).toBeInTheDocument();
     // Preview shows the form title
     expect(screen.getByText('Housing Intake Form')).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe('Chat UI Integration', () => {
     expect(screen.getByText('Applicant Name')).toBeInTheDocument();
 
     // 6. Switch back to chat, send a refinement
-    fireEvent.click(screen.getByRole('button', { name: /chat/i }));
+    fireEvent.click(screen.getByTestId('mobile-chat-btn'));
     const input = screen.getByPlaceholderText(/describe what you need/i);
     fireEvent.change(input, { target: { value: 'Add a section for employment history' } });
     await act(async () => {

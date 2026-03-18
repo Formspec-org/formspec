@@ -57,7 +57,7 @@ describe('ChatShell', () => {
         fireEvent.click(screen.getByText('Grant Application'));
       });
 
-      expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-preview-btn')).toBeInTheDocument();
     });
 
     it('toggles between chat and preview', async () => {
@@ -69,11 +69,11 @@ describe('ChatShell', () => {
       });
 
       // Switch to preview
-      fireEvent.click(screen.getByRole('button', { name: /preview/i }));
+      fireEvent.click(screen.getByTestId('mobile-preview-btn'));
       expect(screen.getByTestId('form-preview')).toBeInTheDocument();
 
       // Switch back to chat
-      fireEvent.click(screen.getByRole('button', { name: /chat/i }));
+      fireEvent.click(screen.getByTestId('mobile-chat-btn'));
       expect(screen.getByPlaceholderText(/describe what you need/i)).toBeInTheDocument();
     });
   });
@@ -114,7 +114,7 @@ describe('ChatShell', () => {
       });
 
       // Should have a definition with fields
-      expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-preview-btn')).toBeInTheDocument();
     });
   });
 
