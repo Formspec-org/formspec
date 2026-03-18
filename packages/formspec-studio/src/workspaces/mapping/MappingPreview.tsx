@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { faker } from '@faker-js/faker';
 import { FormEngine } from 'formspec-engine';
 import { useProject } from '../../state/useProject';
 import { useMapping } from '../../state/useMapping';
@@ -21,14 +22,6 @@ export function MappingPreview() {
     // Create a temporary engine instance to handle value generation and serialization
     const engine = new FormEngine({...definition});
     
-    const firstNames = ['Jane', 'John', 'Alice', 'Bob', 'Charlie', 'Diana', 'Edward', 'Fiona'];
-    const lastNames = ['Doe', 'Smith', 'Johnson', 'Brown', 'Taylor', 'Miller', 'Wilson', 'Moore'];
-    const streets = ['Maple Ave', 'Oak St', 'Pine Rd', 'Cedar Ln', 'Elm Dr', 'Washington Blvd'];
-    const cities = ['Springfield', 'Riverside', 'Georgetown', 'Franklin', 'Clinton'];
-
-    const pick = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)];
-    const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-
     // Helper to walk items and set values in the engine
     const walk = (items: any[], prefix = '') => {
       for (const item of items) {
@@ -40,31 +33,30 @@ export function MappingPreview() {
           let val: any = "sample";
 
           if (dataType === 'integer' || dataType === 'decimal' || dataType === 'number') {
-            val = randomInt(1, 100);
-            if (keyLower.includes('year')) val = randomInt(2020, 2026);
-            if (keyLower.includes('price') || keyLower.includes('amount')) val = randomInt(10, 5000) / 100;
-            if (keyLower.includes('age')) val = randomInt(18, 75);
+            if (keyLower.includes('year')) val = faker.date.past().getFullYear();
+            else if (keyLower.includes('price') || keyLower.includes('amount')) val = Number(faker.commerce.price());
+            else if (keyLower.includes('age')) val = faker.number.int({ min: 18, max: 90 });
+            else val = dataType === 'integer' ? faker.number.int({ min: 1, max: 1000 }) : faker.number.float({ min: 1, max: 1000, fractionDigits: 2 });
           } else if (dataType === 'boolean') {
-            val = Math.random() > 0.5;
+            val = faker.datatype.boolean();
           } else if (dataType === 'date') {
-            const d = new Date();
-            d.setDate(d.getDate() - randomInt(0, 365));
-            val = d.toISOString().split('T')[0];
+            val = faker.date.past().toISOString().split('T')[0];
           } else if (dataType === 'money') {
-            val = { amount: randomInt(100, 10000) / 100, currency: 'USD' };
+            val = { amount: Number(faker.commerce.price()), currency: faker.finance.currencyCode() };
           } else {
             // String / other
-            val = "sample_text";
-            if (keyLower.includes('first')) val = pick(firstNames);
-            else if (keyLower.includes('last')) val = pick(lastNames);
-            else if (keyLower.includes('full') && keyLower.includes('name')) val = `${pick(firstNames)} ${pick(lastNames)}`;
-            else if (keyLower.includes('name')) val = pick(firstNames);
-            
-            if (keyLower.includes('email')) val = `${val.toLowerCase()}@example.com`;
-            if (keyLower.includes('phone')) val = `555-${randomInt(100, 999)}-${randomInt(1000, 9999)}`;
-            if (keyLower.includes('street')) val = `${randomInt(100, 9999)} ${pick(streets)}`;
-            if (keyLower.includes('city')) val = pick(cities);
-            if (keyLower.includes('zip') || keyLower.includes('postal')) val = String(randomInt(10000, 99999));
+            if (keyLower.includes('first')) val = faker.person.firstName();
+            else if (keyLower.includes('last')) val = faker.person.lastName();
+            else if (keyLower.includes('full') && keyLower.includes('name')) val = faker.person.fullName();
+            else if (keyLower.includes('name')) val = faker.person.fullName();
+            else if (keyLower.includes('email')) val = faker.internet.email();
+            else if (keyLower.includes('phone')) val = faker.phone.number();
+            else if (keyLower.includes('street')) val = faker.location.streetAddress();
+            else if (keyLower.includes('city')) val = faker.location.city();
+            else if (keyLower.includes('zip') || keyLower.includes('postal')) val = faker.location.zipCode();
+            else if (keyLower.includes('company')) val = faker.company.name();
+            else if (keyLower.includes('description') || keyLower.includes('bio')) val = faker.lorem.paragraph();
+            else val = faker.lorem.words(3);
           }
           
           engine.setValue(path, val);
@@ -72,9 +64,12 @@ export function MappingPreview() {
 
         if (item.type === 'group') {
           if (item.repeatable) {
-            // Add 1 instance for repeatable groups
-            engine.addRepeatInstance(path);
-            if (item.children) walk(item.children, `${path}[0]`);
+            // Add 1-2 instances for repeatable groups to make it interesting
+            const count = faker.number.int({ min: 1, max: 2 });
+            for (let i = 0; i < count; i++) {
+              engine.addRepeatInstance(path);
+              if (item.children) walk(item.children, `${path}[${i}]`);
+            }
           } else if (item.children) {
             walk(item.children, path);
           }
