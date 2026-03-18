@@ -85,24 +85,41 @@ describe('MockAdapter', () => {
   });
 
   describe('refineForm', () => {
-    it('returns the current definition unchanged (mock cannot refine)', async () => {
-      const baseDef = (await adapter.generateScaffold({
-        type: 'template',
-        templateId: 'patient-intake',
-      })).definition;
+    it('returns a message when no relevant tool calls can be made', async () => {
+      const mockToolContext = {
+        tools: [],
+        callTool: async () => ({ content: '', isError: false }),
+      };
 
       const result = await adapter.refineForm(
         [],
-        baseDef,
-        'Add a field for blood type',
+        'Change the color to blue',
+        mockToolContext,
       );
 
-      // Mock adapter can't meaningfully refine —
-      // it returns an issue explaining it needs an AI provider
-      expect(result.issues.length).toBeGreaterThan(0);
-      expect(
-        result.issues.some(i => i.category === 'missing-config'),
-      ).toBe(true);
+      // Mock adapter with no matching keywords returns a message
+      expect(result.message).toBeTruthy();
+      expect(result.toolCalls).toHaveLength(0);
+    });
+
+    it('attempts a tool call for "add field" instructions', async () => {
+      let calledTool = '';
+      const mockToolContext = {
+        tools: [],
+        callTool: async (name: string, _args: Record<string, unknown>) => {
+          calledTool = name;
+          return { content: '{"summary": "Added"}', isError: false };
+        },
+      };
+
+      const result = await adapter.refineForm(
+        [],
+        'Add a field for blood type',
+        mockToolContext,
+      );
+
+      expect(calledTool).toBe('formspec_field');
+      expect(result.toolCalls).toHaveLength(1);
     });
   });
 

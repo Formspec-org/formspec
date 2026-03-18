@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ChatSession } from '../src/chat-session.js';
 import { MockAdapter } from '../src/mock-adapter.js';
-import type { AIAdapter, ScaffoldResult, ChatMessage, Attachment, ChatSessionState, ConversationResponse } from '../src/types.js';
+import type { AIAdapter, ScaffoldResult, ChatMessage, Attachment, ChatSessionState, ConversationResponse, ToolContext, RefinementResult } from '../src/types.js';
 import type { FormDefinition } from 'formspec-types';
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -20,9 +20,9 @@ class SpyAdapter implements AIAdapter {
     return this.inner.generateScaffold(request);
   }
 
-  async refineForm(messages: ChatMessage[], def: FormDefinition, instruction: string): Promise<ScaffoldResult> {
-    this.calls.push({ method: 'refineForm', args: [messages, def, instruction] });
-    return this.inner.refineForm(messages, def, instruction);
+  async refineForm(messages: ChatMessage[], instruction: string, toolContext: ToolContext): Promise<RefinementResult> {
+    this.calls.push({ method: 'refineForm', args: [messages, instruction, toolContext] });
+    return this.inner.refineForm(messages, instruction, toolContext);
   }
 
   async extractFromFile(attachment: Attachment): Promise<string> {
@@ -382,7 +382,7 @@ describe('ChatSession', () => {
       await session.startFromTemplate('patient-intake');
       const state = session.toState();
 
-      const restored = ChatSession.fromState(state, adapter);
+      const restored = await ChatSession.fromState(state, adapter);
 
       expect(restored.id).toBe(session.id);
       expect(restored.getMessages()).toEqual(session.getMessages());
@@ -394,7 +394,7 @@ describe('ChatSession', () => {
       await session.startFromTemplate('housing-intake');
       const state = session.toState();
 
-      const restored = ChatSession.fromState(state, adapter);
+      const restored = await ChatSession.fromState(state, adapter);
       await restored.sendMessage('Add a disability accommodation field');
 
       expect(restored.getMessages().length).toBeGreaterThan(state.messages.length);
@@ -409,11 +409,11 @@ describe('ChatSession', () => {
       const state = session.toState();
       expect(state.readyToScaffold).toBe(true);
 
-      const restored = ChatSession.fromState(state, adapter);
+      const restored = await ChatSession.fromState(state, adapter);
       expect(restored.isReadyToScaffold()).toBe(true);
     });
 
-    it('readyToScaffold defaults to false for legacy states', () => {
+    it('readyToScaffold defaults to false for legacy states', async () => {
       const legacyState = {
         id: 'old-session',
         messages: [],
@@ -423,7 +423,7 @@ describe('ChatSession', () => {
         createdAt: 1000,
         updatedAt: 1000,
       } as any;
-      const restored = ChatSession.fromState(legacyState, adapter);
+      const restored = await ChatSession.fromState(legacyState, adapter);
       expect(restored.isReadyToScaffold()).toBe(false);
     });
 
@@ -501,7 +501,7 @@ describe('ChatSession', () => {
       expect(bundle!.definition).toBeDefined();
       expect(bundle!.component).toBeDefined();
       expect(bundle!.theme).toBeDefined();
-      expect(bundle!.mapping).toBeDefined();
+      expect(bundle!.mappings).toBeDefined();
     });
 
     it('bundle has a non-null component tree with nodes', async () => {
@@ -562,7 +562,7 @@ describe('ChatSession', () => {
       expect(bundle.definition.$formspec).toBe('1.0');
       expect(bundle.component).toBeDefined();
       expect(bundle.theme).toBeDefined();
-      expect(bundle.mapping).toBeDefined();
+      expect(bundle.mappings).toBeDefined();
     });
 
     it('exportBundle throws when no definition exists', () => {
@@ -580,14 +580,14 @@ describe('ChatSession', () => {
       await session.startFromTemplate('patient-intake');
       const state = session.toState();
 
-      const restored = ChatSession.fromState(state, adapter);
+      const restored = await ChatSession.fromState(state, adapter);
       const bundle = restored.getBundle();
       expect(bundle).not.toBeNull();
       expect(bundle!.definition.title).toBe(session.getDefinition()!.title);
       expect(bundle!.component.tree).not.toBeNull();
     });
 
-    it('fromState handles legacy state without bundle field', () => {
+    it('fromState handles legacy state without bundle field', async () => {
       const legacyState = {
         id: 'old-session',
         messages: [],
@@ -597,14 +597,14 @@ describe('ChatSession', () => {
         createdAt: 1000,
         updatedAt: 1000,
       } as any;
-      const restored = ChatSession.fromState(legacyState, adapter);
+      const restored = await ChatSession.fromState(legacyState, adapter);
       expect(restored.getBundle()).toBeNull();
     });
 
     it('bundle.definition deep-equals getDefinition after restore', async () => {
       await session.startFromTemplate('housing-intake');
       const state = session.toState();
-      const restored = ChatSession.fromState(state, adapter);
+      const restored = await ChatSession.fromState(state, adapter);
       expect(restored.getBundle()!.definition).toEqual(restored.getDefinition());
     });
 

@@ -1,9 +1,16 @@
 /** @filedesc AIAdapter implementation backed by the Google Gemini API. */
-import { GoogleGenAI, type GenerateContentResponse } from '@google/genai';
+import {
+  GoogleGenAI,
+  type GenerateContentResponse,
+  type FunctionDeclaration,
+  type Part,
+  type Content,
+  FunctionCallingConfigMode,
+} from '@google/genai';
 import type {
   AIAdapter, ScaffoldRequest, ScaffoldResult,
-  ChatMessage, Attachment, SourceTrace, Issue,
-  ConversationResponse,
+  ChatMessage, Attachment, SourceTrace,
+  ConversationResponse, ToolContext, RefinementResult, ToolCallRecord,
 } from './types.js';
 import type { FormDefinition } from 'formspec-types';
 import { TemplateLibrary } from './template-library.js';
@@ -185,9 +192,13 @@ export class GeminiAdapter implements AIAdapter {
         readyToScaffold: Boolean(parsed.readyToScaffold),
       };
     } catch (err) {
+      // If the API is down but the user has provided enough context, let them scaffold anyway
+      const userMessageCount = messages.filter(m => m.role === 'user').length;
       return {
-        message: `I'd love to help you build a form! Could you tell me more about what you need? (Note: I encountered a temporary issue, but we can continue.)`,
-        readyToScaffold: false,
+        message: userMessageCount >= 3
+          ? `I encountered a temporary issue connecting to the AI provider, but you've provided enough context. Click **Generate Form** when you're ready.`
+          : `I'd love to help you build a form! Could you tell me more about what you need? (Note: I encountered a temporary issue, but we can continue.)`,
+        readyToScaffold: userMessageCount >= 3,
       };
     }
   }
@@ -205,55 +216,91 @@ export class GeminiAdapter implements AIAdapter {
 
   async refineForm(
     messages: ChatMessage[],
-    currentDefinition: FormDefinition,
     instruction: string,
-  ): Promise<ScaffoldResult> {
+    toolContext: ToolContext,
+  ): Promise<RefinementResult> {
+    const toolCalls: ToolCallRecord[] = [];
+
+    // Convert MCP tool declarations to Gemini function declarations
+    const functionDeclarations: FunctionDeclaration[] = toolContext.tools.map(t => ({
+      name: t.name,
+      description: t.description,
+      parametersJsonSchema: t.inputSchema,
+    }));
+
     const conversationHistory = messages
-      .filter(m => m.role === 'user')
-      .map(m => m.content)
-      .join('\n');
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .slice(-6) // last few turns for context
+      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n\n');
 
-    const prompt = `Here is the current form definition:\n\`\`\`json\n${JSON.stringify(currentDefinition, null, 2)}\n\`\`\`\n\nConversation context:\n${conversationHistory}\n\nInstruction: ${instruction}\n\nUpdate the form definition according to the instruction. Return the complete updated form definition.`;
+    const systemPrompt = `You are a form design assistant. You modify forms using the provided tools.
+Use formspec_describe to inspect the current form structure before making changes.
+Make surgical edits — add, update, or remove specific fields rather than rebuilding.
+When done with all changes, respond with a brief summary of what you did.`;
 
-    try {
+    // Build initial contents
+    const contents: Content[] = [
+      { role: 'user', parts: [{ text: `Conversation context:\n${conversationHistory}\n\nInstruction: ${instruction}` }] },
+    ];
+
+    const MAX_TURNS = 10;
+    for (let turn = 0; turn < MAX_TURNS; turn++) {
       const response = await this.client.models.generateContent({
         model: this.model,
-        contents: prompt,
+        contents,
         config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
+          systemInstruction: systemPrompt,
+          tools: [{ functionDeclarations }],
+          toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.AUTO } },
         },
       });
 
-      const text = extractText(response);
-      const parsed = JSON.parse(text);
-      const definition = wrapAsDefinition(parsed);
-      // Preserve the original URL
-      definition.url = currentDefinition.url;
+      const candidate = response.candidates?.[0];
+      if (!candidate?.content?.parts) break;
 
-      const traces: SourceTrace[] = flattenItemKeys(parsed.items).map(key => ({
-        elementPath: key,
-        sourceType: 'message' as const,
-        sourceId: 'refinement',
-        description: `Updated: ${instruction.slice(0, 60)}`,
-        timestamp: Date.now(),
-      }));
+      const parts = candidate.content.parts;
+      // Append model response to conversation
+      contents.push({ role: 'model', parts });
 
-      return { definition, traces, issues: [] };
-    } catch (err) {
-      return {
-        definition: currentDefinition,
-        traces: [],
-        issues: [{
-          severity: 'error',
-          category: 'missing-config',
-          title: 'Refinement failed',
-          description: `Gemini API error: ${(err as Error).message}`,
-          sourceIds: [],
-        }],
-      };
+      // Check for function calls
+      const fnCalls = parts.filter(p => p.functionCall);
+      if (fnCalls.length === 0) {
+        // No more tool calls — model is done. Extract text response.
+        const textParts = parts.filter(p => p.text).map(p => p.text!).join('');
+        return { message: textParts || "I've updated the form.", toolCalls };
+      }
+
+      // Execute each function call and collect responses
+      const responseParts: Part[] = [];
+      for (const part of fnCalls) {
+        const fc = part.functionCall!;
+        const result = await toolContext.callTool(fc.name!, fc.args ?? {});
+        toolCalls.push({
+          tool: fc.name!,
+          args: fc.args ?? {},
+          result: result.content,
+          isError: result.isError,
+        });
+        responseParts.push({
+          functionResponse: {
+            name: fc.name!,
+            id: fc.id,
+            response: { content: result.content, isError: result.isError },
+          },
+        });
+      }
+
+      // Feed function results back
+      contents.push({ role: 'user', parts: responseParts });
     }
+
+    return {
+      message: toolCalls.length > 0
+        ? "I've made changes to the form."
+        : "I wasn't able to determine what changes to make. Try being more specific.",
+      toolCalls,
+    };
   }
 
   async extractFromFile(attachment: Attachment): Promise<string> {

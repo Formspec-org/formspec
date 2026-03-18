@@ -26,6 +26,11 @@ export type {
   ChatSessionState,
   StorageBackend,
   SessionSummary,
+  ToolDeclaration,
+  ToolCallResult,
+  ToolContext,
+  ToolCallRecord,
+  RefinementResult,
 } from './types.js';
 
 // Modules
@@ -39,3 +44,4 @@ export { SessionStore } from './session-store.js';
 export { diff, type DefinitionDiff } from './form-scaffolder.js';
 export { buildBundleFromDefinition } from './bundle-builder.js';
 export { ChatSession } from './chat-session.js';
+export { McpBridge } from './mcp-bridge.js';

@@ -5,6 +5,17 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./server": {
+      "types": "./dist/create-server.d.ts",
+      "default": "./dist/create-server.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "default": "./dist/registry.js"
+    }
+  },
   "bin": {
     "formspec-mcp": "./dist/index.js"
   },

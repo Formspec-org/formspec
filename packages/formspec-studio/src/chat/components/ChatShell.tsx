@@ -119,11 +119,11 @@ export function ChatShell({ store, storage }: ChatShellProps = {}) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [providerConfig]);
 
-  const handleResumeSession = useCallback((sessionId: string) => {
+  const handleResumeSession = useCallback(async (sessionId: string) => {
     if (!store) return;
     const state = store.load(sessionId);
     if (!state) return;
-    const restored = ChatSession.fromState(state, getAdapter(providerConfig));
+    const restored = await ChatSession.fromState(state, getAdapter(providerConfig));
     setSession(restored);
   }, [store, providerConfig]);
 

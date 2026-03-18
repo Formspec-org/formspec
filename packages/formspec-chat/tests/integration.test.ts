@@ -42,7 +42,7 @@ describe('Integration: full conversation flow', () => {
 
     // 5. Restore from store
     const loaded = store.load(session.id)!;
-    const restored = ChatSession.fromState(loaded, adapter);
+    const restored = await ChatSession.fromState(loaded, adapter);
     expect(restored.getMessages()).toEqual(session.getMessages());
     expect(restored.getTraces()).toEqual(session.getTraces());
     expect(restored.hasDefinition()).toBe(true);
@@ -65,11 +65,12 @@ describe('Integration: full conversation flow', () => {
     expect(session.hasDefinition()).toBe(true);
     expect(session.getOpenIssueCount()).toBeGreaterThan(0);
 
-    // Refine after scaffolding
-    await session.sendMessage('It should collect name, email, and phone');
-    // Issues from the deterministic adapter about needing AI
-    const issues = session.getIssues();
-    expect(issues.some(i => i.category === 'missing-config')).toBe(true);
+    // Refine after scaffolding — mock adapter can now make tool calls via bridge
+    await session.sendMessage('Add a field for contact info');
+    // Refinement should produce a message
+    const lastMsg = session.getMessages().at(-1)!;
+    expect(lastMsg.role).toBe('assistant');
+    expect(lastMsg.content).toBeTruthy();
   });
 
   it('all 5 templates can be started and exported', async () => {
@@ -135,7 +136,7 @@ describe('Integration: issue lifecycle', () => {
 
     // Save and restore
     const state = session.toState();
-    const restored = ChatSession.fromState(state, adapter);
+    const restored = await ChatSession.fromState(state, adapter);
 
     const issuesAfter = restored.getIssues();
     expect(issuesAfter).toEqual(session.getIssues());
@@ -152,7 +153,7 @@ describe('Integration: bundle generation flow', () => {
     const bundle1 = session.getBundle()!;
     expect(bundle1.component.tree).not.toBeNull();
     expect(bundle1.theme).toBeDefined();
-    expect(bundle1.mapping).toBeDefined();
+    expect(bundle1.mappings).toBeDefined();
 
     await session.sendMessage('Add a budget section');
     const bundle2 = session.getBundle()!;
@@ -169,7 +170,7 @@ describe('Integration: bundle generation flow', () => {
 
     store.save(session.toState());
     const loaded = store.load(session.id)!;
-    const restored = ChatSession.fromState(loaded, adapter);
+    const restored = await ChatSession.fromState(loaded, adapter);
 
     const bundle = restored.getBundle()!;
     expect(bundle.definition.title).toBe(session.getDefinition()!.title);
@@ -189,7 +190,7 @@ describe('Integration: bundle generation flow', () => {
       expect(bundle.definition.$formspec).toBe('1.0');
       expect(bundle.component).toBeDefined();
       expect(bundle.theme).toBeDefined();
-      expect(bundle.mapping).toBeDefined();
+      expect(bundle.mappings).toBeDefined();
     }
   });
 });

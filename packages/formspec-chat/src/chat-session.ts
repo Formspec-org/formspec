@@ -9,6 +9,7 @@ import { SourceTraceManager } from './source-trace.js';
 import { IssueQueue } from './issue-queue.js';
 import { diff, type DefinitionDiff } from './form-scaffolder.js';
 import { buildBundleFromDefinition } from './bundle-builder.js';
+import { McpBridge } from './mcp-bridge.js';
 
 let sessionCounter = 0;
 
@@ -38,6 +39,7 @@ export class ChatSession {
   private readyToScaffold = false;
   private listeners: Set<() => void> = new Set();
   private messageCounter = 0;
+  private bridge: McpBridge | null = null;
 
   constructor(options: { adapter: AIAdapter; id?: string }) {
     this.adapter = options.adapter;
@@ -131,21 +133,33 @@ export class ChatSession {
         this.readyToScaffold = response.readyToScaffold;
         assistantContent = response.message;
       } else {
-        // Refine existing form
+        // Refine existing form via MCP tools
         const previousDef = this.definition;
+        const toolContext = await this.bridge!.getToolContext();
         const result = await this.adapter.refineForm(
           this.messages,
-          this.definition,
           content,
+          toolContext,
         );
-        this.lastDiff = diff(previousDef, result.definition);
-        this.definition = result.definition;
-        this.bundle = buildBundleFromDefinition(result.definition);
-        this.traces.addTraces(result.traces);
-        this.addIssuesFromResult(result.issues);
-        assistantContent = this.lastDiff.added.length === 0 && this.lastDiff.modified.length === 0 && this.lastDiff.removed.length === 0
-          ? `I wasn't able to make changes to the form. Try being more specific, or configure an AI provider for full conversational refinement.`
-          : `I've updated the form based on your request.`;
+
+        // Read back updated state from the bridge
+        this.definition = this.bridge!.getDefinition();
+        this.bundle = this.bridge!.getBundle();
+        this.lastDiff = diff(previousDef, this.definition);
+
+        // Generate traces from tool calls
+        const traces: SourceTrace[] = result.toolCalls
+          .filter(tc => !tc.isError)
+          .map(tc => ({
+            elementPath: (tc.args.path ?? tc.args.target ?? '') as string,
+            sourceType: 'message' as const,
+            sourceId: userMsg.id,
+            description: `${tc.tool}: ${JSON.stringify(tc.args).slice(0, 60)}`,
+            timestamp: Date.now(),
+          }));
+        this.traces.addTraces(traces);
+
+        assistantContent = result.message;
       }
     } catch (err) {
       const errorMsg: ChatMessage = {
@@ -189,6 +203,10 @@ export class ChatSession {
     this.addIssuesFromResult(result.issues);
     this.readyToScaffold = false;
 
+    // Create MCP bridge for refinement and surface any load diagnostics
+    this.bridge = await McpBridge.create(result.definition);
+    this.addIssuesFromResult(this.bridge.consumeLoadDiagnostics());
+
     const systemMsg: ChatMessage = {
       id: this.nextMessageId(),
       role: 'system',
@@ -213,6 +231,10 @@ export class ChatSession {
     this.templateId = templateId;
     this.traces.addTraces(result.traces);
     this.addIssuesFromResult(result.issues);
+
+    // Create MCP bridge for refinement and surface any load diagnostics
+    this.bridge = await McpBridge.create(result.definition);
+    this.addIssuesFromResult(this.bridge.consumeLoadDiagnostics());
 
     const systemMsg: ChatMessage = {
       id: this.nextMessageId(),
@@ -240,6 +262,10 @@ export class ChatSession {
     this.bundle = buildBundleFromDefinition(result.definition);
     this.traces.addTraces(result.traces);
     this.addIssuesFromResult(result.issues);
+
+    // Create MCP bridge for refinement and surface any load diagnostics
+    this.bridge = await McpBridge.create(result.definition);
+    this.addIssuesFromResult(this.bridge.consumeLoadDiagnostics());
 
     const systemMsg: ChatMessage = {
       id: this.nextMessageId(),
@@ -294,7 +320,7 @@ export class ChatSession {
   /**
    * Restore a session from serialized state.
    */
-  static fromState(state: ChatSessionState, adapter: AIAdapter): ChatSession {
+  static async fromState(state: ChatSessionState, adapter: AIAdapter): Promise<ChatSession> {
     const session = new ChatSession({ adapter, id: state.id });
     session.messages = [...state.messages];
     session.definition = state.projectSnapshot.definition;
@@ -306,6 +332,12 @@ export class ChatSession {
     session.templateId = state.templateId;
     session.readyToScaffold = state.readyToScaffold ?? false;
     session.messageCounter = state.messages.length;
+
+    // Recreate bridge for sessions with an existing definition
+    if (session.definition) {
+      session.bridge = await McpBridge.create(session.definition);
+    }
+
     return session;
   }
 

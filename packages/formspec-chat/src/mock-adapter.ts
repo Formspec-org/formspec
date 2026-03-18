@@ -2,7 +2,7 @@
 import type {
   AIAdapter, ScaffoldRequest, ScaffoldResult,
   ChatMessage, Attachment, SourceTrace, Issue,
-  ConversationResponse,
+  ConversationResponse, ToolContext, RefinementResult,
 } from './types.js';
 import type { FormDefinition } from 'formspec-types';
 import { TemplateLibrary } from './template-library.js';
@@ -56,19 +56,38 @@ export class MockAdapter implements AIAdapter {
 
   async refineForm(
     _messages: ChatMessage[],
-    currentDefinition: FormDefinition,
-    _instruction: string,
-  ): Promise<ScaffoldResult> {
+    instruction: string,
+    toolContext: ToolContext,
+  ): Promise<RefinementResult> {
+    // Mock: attempt a simple tool call based on keywords in the instruction
+    const lower = instruction.toLowerCase();
+    const toolCalls: RefinementResult['toolCalls'] = [];
+
+    if (lower.includes('add') && lower.includes('field')) {
+      // Try adding a generic field via the MCP tool
+      const result = await toolContext.callTool('formspec_field', {
+        path: 'new_field',
+        label: 'New Field',
+        type: 'string',
+      });
+      toolCalls.push({
+        tool: 'formspec_field',
+        args: { path: 'new_field', label: 'New Field', type: 'string' },
+        result: result.content,
+        isError: result.isError,
+      });
+    }
+
+    if (toolCalls.length === 0) {
+      return {
+        message: 'The mock adapter has limited refinement ability. Configure an AI provider for full conversational refinement.',
+        toolCalls: [],
+      };
+    }
+
     return {
-      definition: currentDefinition,
-      traces: [],
-      issues: [{
-        severity: 'info',
-        category: 'missing-config',
-        title: 'AI provider required for refinement',
-        description: 'The mock adapter cannot refine forms. Configure an AI provider to enable conversational refinement.',
-        sourceIds: [],
-      }],
+      message: `Mock adapter executed ${toolCalls.length} tool call(s).`,
+      toolCalls,
     };
   }
 

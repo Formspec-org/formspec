@@ -121,7 +121,7 @@ describe('ChatPanel', () => {
 
       // Serialize and restore
       const state = session.toState();
-      const restored = ChatSession.fromState(state, new MockAdapter());
+      const restored = await ChatSession.fromState(state, new MockAdapter());
 
       renderChatPanel(restored);
       expect(screen.getByText('Add allergy severity field')).toBeInTheDocument();
@@ -132,7 +132,7 @@ describe('ChatPanel', () => {
       await session.startFromTemplate('housing-intake');
 
       const state = session.toState();
-      const restored = ChatSession.fromState(state, new MockAdapter());
+      const restored = await ChatSession.fromState(state, new MockAdapter());
 
       renderChatPanel(restored);
 

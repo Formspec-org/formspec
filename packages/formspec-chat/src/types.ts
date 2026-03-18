@@ -87,6 +87,44 @@ export interface ScaffoldResult {
   issues: Omit<Issue, 'id' | 'status'>[];
 }
 
+// ── Tool Context (for MCP-backed refinement) ────────────────────────
+
+/** A tool declaration surfaced from the MCP server, ready for LLM consumption. */
+export interface ToolDeclaration {
+  name: string;
+  description: string;
+  /** JSON Schema for the tool's parameters (project_id already stripped). */
+  inputSchema: Record<string, unknown>;
+}
+
+/** Result of executing a single MCP tool call. */
+export interface ToolCallResult {
+  content: string;
+  isError: boolean;
+}
+
+/** Passed to adapters so they can discover and invoke MCP tools. */
+export interface ToolContext {
+  tools: ToolDeclaration[];
+  callTool(name: string, args: Record<string, unknown>): Promise<ToolCallResult>;
+}
+
+/** Record of a tool call executed during refinement (for logging/traces). */
+export interface ToolCallRecord {
+  tool: string;
+  args: Record<string, unknown>;
+  result: string;
+  isError: boolean;
+}
+
+/** Result of an adapter's refinement via tool calls. */
+export interface RefinementResult {
+  /** AI's natural language summary of what changed. */
+  message: string;
+  /** Log of tool calls executed. */
+  toolCalls: ToolCallRecord[];
+}
+
 export interface AIAdapter {
   /** Conduct a guided interview conversation before scaffolding. */
   chat(messages: ChatMessage[]): Promise<ConversationResponse>;
@@ -94,12 +132,12 @@ export interface AIAdapter {
   /** Generate a scaffold from the initial input. */
   generateScaffold(request: ScaffoldRequest): Promise<ScaffoldResult>;
 
-  /** Refine an existing form based on a new instruction. */
+  /** Refine an existing form via MCP tool calls. */
   refineForm(
     messages: ChatMessage[],
-    currentDefinition: FormDefinition,
     instruction: string,
-  ): Promise<ScaffoldResult>;
+    toolContext: ToolContext,
+  ): Promise<RefinementResult>;
 
   /** Extract structure from an uploaded file. */
   extractFromFile(attachment: Attachment): Promise<string>;

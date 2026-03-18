@@ -12,7 +12,10 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.11.0",
     "formspec-core": "*",
+    "formspec-mcp": "*",
+    "formspec-studio-core": "*",
     "formspec-types": "*"
   },
   "devDependencies": {
