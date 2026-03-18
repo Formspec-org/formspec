@@ -116,20 +116,22 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
                 <span className="text-[10px] text-muted/50 cursor-help hover:text-accent transition-colors">ⓘ</span>
               </HelpTip>
             </div>
-            <input
-              type="text"
-              data-testid="mapping-version"
-              defaultValue={mapping?.version ?? ''}
-              placeholder="1.0.0"
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                project.setMappingProperty('version', v === '' ? null : v);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-              }}
-              className="font-mono text-[11px] text-ink text-right bg-subtle/40 border border-border/40 rounded px-1.5 py-0.5 w-24 focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-muted/30"
-            />
+            <div className="shrink-0">
+              <input
+                type="text"
+                data-testid="mapping-version"
+                defaultValue={mapping?.version ?? ''}
+                placeholder="1.0.0"
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  project.setMappingProperty('version', v === '' ? null : v);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
+                className="font-mono text-[11px] text-ink text-right bg-subtle/40 border border-border/40 rounded px-1.5 py-0.5 w-20 focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-muted/30"
+              />
+            </div>
           </div>
 
           {/* Definition Ref Row */}
