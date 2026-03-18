@@ -65,7 +65,7 @@ describe('MappingsList', () => {
   it('shows mapping info', () => {
     const project = createProject({ seed: {
       definition: { $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] } as any,
-      mapping: { direction: 'outbound', rules: [{ source: 'a', target: 'b' }] },
+      mappings: { default: { direction: 'outbound', rules: [{ source: 'a', target: 'b' }] } as any },
     }});
     render(<ProjectProvider project={project}><SelectionProvider><MappingsList /></SelectionProvider></ProjectProvider>);
     expect(screen.getByText(/1 rule/i)).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('ThemeOverview', () => {
   it('shows token count', () => {
     const project = createProject({ seed: {
       definition: { $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] } as any,
-      theme: { targetDefinition: { url: 'urn:test' }, tokens: { a: '1', b: '2' } },
+      theme: { targetDefinition: { url: 'urn:test' }, tokens: { a: '1', b: '2' } } as any,
     }});
     render(<ProjectProvider project={project}><SelectionProvider><ThemeOverview /></SelectionProvider></ProjectProvider>);
     expect(screen.getByText(/2 tokens/i)).toBeInTheDocument();

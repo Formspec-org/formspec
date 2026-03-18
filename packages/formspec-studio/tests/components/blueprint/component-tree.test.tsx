@@ -21,7 +21,7 @@ const compDoc = {
 function renderCompTree() {
   const project = createProject({ seed: {
     definition: { $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] } as any,
-    component: compDoc,
+    component: compDoc as any,
   }});
   return render(
     <ProjectProvider project={project}>
@@ -54,7 +54,7 @@ describe('ComponentTree', () => {
   it('shows empty state when no tree', () => {
     const project = createProject({ seed: {
       definition: { $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] } as any,
-      component: { targetDefinition: { url: 'urn:test' } },
+      component: { targetDefinition: { url: 'urn:test' } } as any,
     }});
     render(
       <ProjectProvider project={project}>

@@ -7,7 +7,7 @@ import { ActivePageProvider } from '../../src/state/useActivePage';
 import { Shell } from '../../src/components/Shell';
 
 const seededDefinition = {
-  $formspec: '1.0',
+  $formspec: '1.0' as const,
   url: 'urn:test-shell',
   version: '1.0.0',
   title: 'Shell Test',

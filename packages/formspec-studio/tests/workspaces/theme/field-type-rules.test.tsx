@@ -8,7 +8,7 @@ function renderRules(selectors?: unknown[]) {
   const project = createProject({
     seed: {
       definition: { $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] } as any,
-      theme: { selectors },
+      theme: { selectors } as any,
     },
   });
   return {

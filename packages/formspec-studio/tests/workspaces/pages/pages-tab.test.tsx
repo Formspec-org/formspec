@@ -84,7 +84,7 @@ describe('PagesTab', () => {
     await act(async () => {
       screen.getByText('Wizard').click();
     });
-    expect((project.definition as any).formPresentation?.pageMode).toBe('wizard');
+    expect(project.definition.formPresentation?.pageMode).toBe('wizard');
   });
 
   it('add page button creates a new page with default title', async () => {

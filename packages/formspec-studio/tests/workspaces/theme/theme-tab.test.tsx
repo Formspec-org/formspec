@@ -15,7 +15,7 @@ function renderThemeTab(theme?: Record<string, unknown>) {
   const project = createProject({
     seed: {
       definition: definition as any,
-      theme: { targetDefinition: { url: definition.url }, ...theme },
+      theme: { targetDefinition: { url: definition.url }, ...theme } as any,
     },
   });
 
@@ -83,7 +83,7 @@ describe('ThemeTab', () => {
     const project = createProject({
       seed: {
         definition: definition as any,
-        theme: { targetDefinition: { url: definition.url } },
+        theme: { targetDefinition: { url: definition.url } } as any,
       },
     });
     const { container } = render(

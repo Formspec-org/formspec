@@ -8,7 +8,7 @@ function renderAllTokens(tokens?: Record<string, unknown>) {
   const project = createProject({
     seed: {
       definition: { $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] } as any,
-      theme: { tokens },
+      theme: { tokens } as any,
     },
   });
   return {

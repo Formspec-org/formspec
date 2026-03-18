@@ -22,9 +22,9 @@ describe('createStudioProject bootstrap', () => {
 
   it('sets pageMode to wizard when groups exist', () => {
     const project = createStudioProject();
-    const fp = (project.definition as any).formPresentation;
+    const fp = project.definition.formPresentation;
 
-    expect(fp.pageMode).toBe('wizard');
+    expect(fp?.pageMode).toBe('wizard');
   });
 
   it('does NOT overwrite theme.pages when seed provides them', () => {

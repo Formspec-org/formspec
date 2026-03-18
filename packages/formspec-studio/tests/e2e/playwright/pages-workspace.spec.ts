@@ -222,8 +222,9 @@ test.describe('Pages Workspace — export validation', () => {
       if (bundle.component?.tree) {
         fs.writeFileSync(path.join(dir, 'component.json'), JSON.stringify(bundle.component, null, 2));
       }
-      if (bundle.mapping?.rules?.length) {
-        fs.writeFileSync(path.join(dir, 'mapping.json'), JSON.stringify(bundle.mapping, null, 2));
+      const firstMapping = Object.values(bundle.mappings ?? {})[0];
+      if ((firstMapping as any)?.rules?.length) {
+        fs.writeFileSync(path.join(dir, 'mapping.json'), JSON.stringify(firstMapping, null, 2));
       }
 
       const repoRoot = path.resolve(__dirname, '..', '..', '..', '..', '..');

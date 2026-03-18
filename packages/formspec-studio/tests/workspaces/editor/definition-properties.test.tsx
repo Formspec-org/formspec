@@ -71,6 +71,6 @@ describe('DefinitionProperties', () => {
     });
 
     // State should have changed if the correct command was dispatched
-    expect((project.definition as any).title).toBe('Updated Form Title');
+    expect(project.definition.title).toBe('Updated Form Title');
   });
 });
