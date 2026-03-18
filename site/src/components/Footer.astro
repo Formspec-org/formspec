@@ -37,8 +37,10 @@ const year = new Date().getFullYear();
 
   <div class="footer-bottom">
     <p>
-      &copy; {year} Formspec contributors.
-      MIT License. Open source, under active development.
+      &copy; {year} <a href="https://www.linkedin.com/in/michael-deeb/" target="_blank" rel="noopener noreferrer">Michael Deeb</a>,
+      <a href="https://tealwolf.consulting/" target="_blank" rel="noopener noreferrer">TealWolf Consulting</a> &amp;
+      <a href="https://focusconsulting.io/" target="_blank" rel="noopener noreferrer">Focus Consulting</a>.
+      <a href="https://github.com/mikewolfd/formspec/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.
     </p>
   </div>
 </footer>
@@ -130,4 +132,13 @@ const year = new Date().getFullYear();
     color: var(--color-ink-tertiary);
     margin: 0;
   }
+
+  .footer-bottom a {
+    color: var(--color-ink-tertiary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.15s;
+  }
+
+  .footer-bottom a:hover { color: var(--color-ink-secondary); }
 </style>

@@ -299,3 +299,11 @@ npm run test:all           # Everything
 **Version**: 1.0.0-draft.1 — Draft specification under active development.
 
 Design rationale lives in [Architecture Decision Records](thoughts/adr/).
+
+## Authors
+
+Created by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/) at [TealWolf Consulting](https://tealwolf.consulting/) in partnership with [Focus Consulting](https://focusconsulting.io/).
+
+## License
+
+[MIT](LICENSE)
