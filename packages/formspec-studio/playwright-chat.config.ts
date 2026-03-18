@@ -21,7 +21,7 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
-    command: 'VITE_GEMINI_DEV_KEY=AIzaSyCYAy6PIZw664oLQg4CM8DOf86x15TYD1s npx vite --port 5174',
+    command: 'VITE_GEMINI_DEV_KEY=mock-key-for-playwright npx vite --port 5174',
     url: 'http://localhost:5174/chat.html',
     reuseExistingServer: true,
     cwd: __dirname,

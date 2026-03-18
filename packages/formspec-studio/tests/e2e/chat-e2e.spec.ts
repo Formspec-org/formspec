@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SCREENSHOT_DIR = path.resolve(__dirname, 'screenshots');
 const CHAT_URL = 'http://localhost:5174/chat.html';
-const GEMINI_API_KEY = 'AIzaSyCYAy6PIZw664oLQg4CM8DOf86x15TYD1s';
+const GEMINI_API_KEY = 'mock-key-for-playwright';
 
 // Pre-seed localStorage with the Google provider config before each test
 async function seedProvider(page: Page) {
