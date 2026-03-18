@@ -3,7 +3,7 @@ title: "One codebase, every platform: the Rust shared kernel"
 description: "Formspec had two implementations of the same logic — TypeScript for the browser, Python for the server. We rewrote the shared core in Rust and compile it to both. Here's what we built, why we didn't do a full rewrite, and what happens next."
 date: 2026-03-18
 tags: ["rust", "architecture", "deep-dive"]
-author: "Formspec Team"
+author: "Michael Deeb & Claude"
 ---
 
 The [FEL design post](/blog/fel-design) ended with a promise: a Rust rewrite that eliminates the cost of maintaining two implementations. That rewrite is done — six Rust crates, 10,931 lines, 239 tests. WASM bindings for TypeScript, PyO3 bindings for Python, both covering every capability.

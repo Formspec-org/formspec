@@ -3,7 +3,7 @@ title: "Introducing Formspec: A JSON-native form specification for high-stakes e
 description: "Why we built a new form specification, what it solves, and how it fits into the ecosystem of tools for grants, field operations, and compliance workflows."
 date: 2026-02-20
 tags: ["announcement", "specification"]
-author: "Formspec Team"
+author: "Michael Deeb & Claude"
 ---
 
 Most form systems handle simple cases well. Grant applications, compliance reports, and field inspection checklists are not simple cases. ([Why another form thing?](/blog/why-another-form-thing) covers the gap in detail.)

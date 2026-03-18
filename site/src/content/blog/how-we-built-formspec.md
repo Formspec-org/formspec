@@ -3,7 +3,7 @@ title: "Three weeks from research to runtime"
 description: "Formspec was built as a chain of formal models — research into specs, specs into schemas, schemas into implementations. Here's how we did it in three weeks, and what we learned about AI-driven specification work."
 date: 2026-03-16
 tags: ["process", "specification", "deep-dive"]
-author: "Formspec Team"
+author: "Michael Deeb & Claude"
 ---
 
 Most software projects start with code. A prototype, a spike, something to see if the idea holds together. We did it backwards — started with research and didn't write anything executable for the first week. Three weeks later we had 7 formal specifications, 12 JSON schemas, two reference implementations, a conformance test suite, a static linter, an MCP server, a web component, and a visual studio.

@@ -3,7 +3,7 @@ title: "Why another form thing?"
 description: "Forms have been solved a hundred times — unless your data actually matters. A look at the gap between form builders and form infrastructure, and how six prior-art standards shaped Formspec."
 date: 2026-02-18
 tags: ["specification", "deep-dive", "research"]
-author: "Formspec Team"
+author: "Michael Deeb & Claude"
 ---
 
 If you're building a contact form or a customer survey, stop reading. You're well served. Google Forms, Typeform, React Hook Form, SurveyJS, Formik — pick one, ship it, move on.

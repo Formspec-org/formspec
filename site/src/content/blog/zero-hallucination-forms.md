@@ -3,7 +3,7 @@ title: "Zero-hallucination form building: how typed tool calls eliminate the AI 
 description: "Most AI code generation is freeform text you review line by line. Formspec's approach is different — structured MCP tool calls, JSON Schema validation, and static linting mean AI-generated forms are verified automatically."
 date: 2026-03-15
 tags: ["ai", "mcp", "deep-dive"]
-author: "Formspec Team"
+author: "Michael Deeb & Claude"
 ---
 
 A 200-field grant application with conditional sections, calculated budget fields, cross-field validation rules, and a multi-page wizard. Every change request means weeks of back-and-forth with developers. A logic error mid-cycle means re-opening submissions and contacting everyone who already filed. "Can we add a field?" becomes a project.

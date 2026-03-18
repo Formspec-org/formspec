@@ -3,7 +3,7 @@ title: "Designing FEL: Why Formspec has its own expression language"
 description: "We evaluated CEL, JSONLogic, JSONata, Power Fx, and JEXL before building FEL. Here's every alternative side by side — same expressions, six languages — and the Rust-based future that makes owning a language sustainable."
 date: 2026-02-25
 tags: ["specification", "fel", "deep-dive"]
-author: "Formspec Team"
+author: "Michael Deeb & Claude"
 ---
 
 Formspec ships its own expression language. That sounds like NIH syndrome. Look at the same expressions written in every alternative we evaluated, then decide.

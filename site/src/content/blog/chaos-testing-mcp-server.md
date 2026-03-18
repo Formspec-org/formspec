@@ -3,7 +3,7 @@ title: "Chaos testing an MCP server with AI personas"
 description: "We built a Claude Code skill that spawns five AI personas — from a nervous admin assistant to an API-first developer — to stress-test our form-building MCP server. Here's the pipeline and what we found."
 date: 2026-03-17
 tags: ["ai", "mcp", "testing", "deep-dive"]
-author: "Formspec Team"
+author: "Michael Deeb & Claude"
 ---
 
 Formspec's [MCP server](/blog/zero-hallucination-forms) validates every tool call against typed schemas, runs a static linter after every write, and rejects malformed FEL expressions at parse time. That pipeline catches a lot. But it catches *correctness* — structural violations, type mismatches, invalid expressions. It doesn't catch the moment where a user provides exactly the right parameter and the system silently ignores it.
