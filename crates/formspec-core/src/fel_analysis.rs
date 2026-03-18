@@ -1,3 +1,5 @@
+//! FEL static analysis and expression rewriting for field references and variables.
+
 /// FEL static analysis and path rewriting.
 ///
 /// Analyzes FEL expressions to extract field references, variables, function calls,

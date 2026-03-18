@@ -1,4 +1,4 @@
-/// FEL (Formspec Expression Language) — parser, evaluator, and dependency analysis.
+//! FEL parser, evaluator, and dependency analysis with base-10 decimal arithmetic.
 ///
 /// Uses rust_decimal for base-10 arithmetic per spec S3.4.1 (minimum 18 significant digits).
 

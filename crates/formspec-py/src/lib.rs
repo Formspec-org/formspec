@@ -1,3 +1,5 @@
+//! PyO3 bindings for Formspec — FEL, linting, and definition evaluation to Python.
+
 /// PyO3 bindings for Formspec — exposes FEL evaluation, linting, and evaluation to Python.
 ///
 /// This replaces the pure-Python FEL implementation (src/formspec/fel/)

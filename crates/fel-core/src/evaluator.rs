@@ -1,4 +1,4 @@
-/// FEL tree-walking evaluator — base-10 decimal arithmetic per spec S3.4.1.
+//! FEL tree-walking evaluator with base-10 decimal arithmetic and null propagation.
 ///
 /// Non-fatal errors produce a Diagnostic + FelNull (never panic).
 /// Null propagation follows spec §3: most ops propagate, equality does NOT.

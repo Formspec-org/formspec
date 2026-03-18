@@ -1,3 +1,5 @@
+//! Validates extension usage in item trees against a registry catalog.
+
 /// Validates x-extension usage in definition item trees against a registry catalog.
 ///
 /// Checks for unresolved, retired, and deprecated extensions.

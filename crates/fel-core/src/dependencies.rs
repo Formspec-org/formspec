@@ -1,4 +1,4 @@
-/// Static dependency extraction from FEL AST.
+//! Static dependency extraction — field refs, context refs, and MIP dependencies.
 ///
 /// Walks the AST without evaluation to find field references,
 /// context references, MIP dependencies, and structural flags.

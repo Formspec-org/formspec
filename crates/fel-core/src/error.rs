@@ -1,4 +1,4 @@
-/// FEL error and diagnostic types — zero dependencies.
+//! FEL error types and diagnostic messages.
 use std::fmt;
 
 #[derive(Debug, Clone)]

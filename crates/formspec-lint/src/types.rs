@@ -1,3 +1,5 @@
+//! Shared types for the formspec lint pipeline (diagnostics, modes, results).
+
 /// Shared types for the formspec lint pipeline.
 
 use std::cmp::Ordering;

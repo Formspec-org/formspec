@@ -1,3 +1,5 @@
+//! Formspec core processing — FEL, paths, schemas, assembly, mappings, extensions.
+
 /// Formspec core processing — FEL analysis, path utils, schema validation, assembler.
 ///
 /// This crate depends on `fel-core` and provides the non-reactive processing layer

@@ -1,4 +1,4 @@
-/// FEL runtime value types — base-10 decimal arithmetic per spec S3.4.1.
+//! FEL runtime value types with base-10 decimal arithmetic.
 use rust_decimal::Decimal;
 use std::fmt;
 

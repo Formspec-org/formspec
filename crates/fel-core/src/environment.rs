@@ -1,4 +1,4 @@
-/// Rich FEL evaluation environment — field resolution, repeat context, MIP state, instances.
+//! FEL evaluation environment with field resolution, repeats, MIP state, and instances.
 ///
 /// Provides `FormspecEnvironment`, a concrete `Environment` impl backed by
 /// nested data dicts, repeat context, MIP states, named instances, and variables.

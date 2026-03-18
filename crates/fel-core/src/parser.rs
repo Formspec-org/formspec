@@ -1,4 +1,4 @@
-/// FEL parser — hand-rolled recursive descent.
+//! FEL hand-rolled recursive descent parser with operator precedence.
 ///
 /// Operator precedence (lowest → highest):
 /// 0: let...in, if...then...else

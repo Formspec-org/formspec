@@ -8,6 +8,7 @@
  * Supported extraction patterns:
  *   - TypeScript/JavaScript: JSDoc `@filedesc` tag, or `@module` description, or first JSDoc line
  *   - Python: Module docstring first line (triple-quoted)
+ *   - Rust: First `//!` module doc comment line
  *   - JSON: Top-level "title" and/or "description" fields
  *   - CSS: `@filedesc` in a block comment
  *   - Markdown: First `# heading`
@@ -31,13 +32,15 @@ const OUTPUT = resolve(ROOT, 'filemap.json');
 // ---------------------------------------------------------------------------
 
 const INCLUDE_EXTENSIONS = new Set([
-  '.ts', '.tsx', '.js', '.mjs', '.py', '.json', '.css', '.html', '.md',
+  '.ts', '.tsx', '.js', '.mjs', '.py', '.rs', '.json', '.css', '.html', '.md',
 ]);
 
 const EXCLUDE_DIRS = new Set([
   'node_modules', '.git', 'dist', '__pycache__', 'build', '.venv',
   '.mypy_cache', '.pytest_cache', '.tox', 'coverage', '.firebase',
   'archived',           // Dead code (superseded by formspec-studio)
+  'target',             // Rust build artifacts
+  'reconstructed-examples', // Generated example reconstructions
 ]);
 
 const EXCLUDE_PATTERNS = [
@@ -47,6 +50,7 @@ const EXCLUDE_PATTERNS = [
   /\.spec\.tsx$/,       // Test files
   /\.test\.tsx$/,       // Test files
   /test_.*\.py$/,       // Python test files
+  /crates\/.*\/tests\//, // Rust test files
   /conftest\.py$/,      // Pytest fixtures
   /package-lock\.json$/, // Lock files
   /tsconfig.*\.json$/,  // TS config
@@ -143,6 +147,18 @@ function extractPython(content) {
   return null;
 }
 
+/** Extract the first //! module doc comment line from a Rust file. */
+function extractRust(content) {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const match = line.match(/^\s*\/\/!\s+(.+)/);
+    if (match) return cleanDesc(match[1]);
+    // Stop at the first non-comment, non-blank line
+    if (line.trim() && !line.trim().startsWith('//')) break;
+  }
+  return null;
+}
+
 /** Extract title + description from a JSON file. */
 function extractJSON(content) {
   try {
@@ -224,6 +240,7 @@ const EXTRACTORS = {
   '.js': extractTS,
   '.mjs': extractTS,
   '.py': extractPython,
+  '.rs': extractRust,
   '.json': extractJSON,
   '.css': extractCSS,
   '.md': extractMarkdown,

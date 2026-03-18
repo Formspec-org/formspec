@@ -1,12 +1,4 @@
-/// Formspec Definition Evaluator — 4-phase batch processor.
-///
-/// Implements the Formspec processing model (spec S2.4):
-/// 1. **Rebuild** — Build item tree (ItemInfo nodes) from definition, index binds
-/// 2. **Recalculate** — Variables (topo-sorted), whitespace, calculates, relevance/readonly/required
-/// 3. **Revalidate** — Check constraints and shapes
-/// 4. **Notify** — Apply NRB, collect changes, emit results
-///
-/// This is the server-side batch equivalent of the reactive FormEngine.
+//! Formspec Definition Evaluator — 4-phase batch processor.
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 

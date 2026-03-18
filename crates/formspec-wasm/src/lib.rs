@@ -1,3 +1,5 @@
+//! WASM bindings for Formspec — exposes FEL, linting, evaluation, assembly, mapping to TS.
+
 /// WASM bindings for Formspec — thin layer exposing all Rust crates to TypeScript.
 ///
 /// All functions accept/return JSON strings for complex types.

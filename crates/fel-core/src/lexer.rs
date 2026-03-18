@@ -1,4 +1,4 @@
-/// FEL lexer — hand-rolled tokenizer.
+//! FEL hand-rolled lexer — tokenization with spans and decimal numbers.
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 

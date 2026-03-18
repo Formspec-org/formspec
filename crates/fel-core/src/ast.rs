@@ -1,4 +1,4 @@
-/// FEL abstract syntax tree nodes.
+//! FEL abstract syntax tree node definitions and operators.
 use rust_decimal::Decimal;
 
 /// A path segment for field references and postfix access.

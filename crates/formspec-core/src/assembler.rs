@@ -1,3 +1,5 @@
+//! Resolves $ref inclusions and assembles self-contained definitions with FEL rewriting.
+
 /// Resolves `$ref` inclusions to produce self-contained definitions.
 ///
 /// Key prefix application, circular reference detection, key collision handling,

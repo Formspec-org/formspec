@@ -1,4 +1,4 @@
-/// FEL extension function registry — user-defined functions with null propagation.
+//! FEL extension function registry with null propagation and conflict detection.
 ///
 /// Extensions cannot shadow reserved words or built-in function names.
 /// All extension functions are null-propagating: if any argument is null, the result is null.

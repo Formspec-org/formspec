@@ -1,3 +1,5 @@
+//! Individual lint pass implementations (passes 2-7).
+
 /// Individual lint pass implementations.
 
 use std::collections::{HashMap, HashSet};

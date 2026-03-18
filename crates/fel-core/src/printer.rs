@@ -1,4 +1,4 @@
-/// FEL AST → string printer — serializes an AST back to valid FEL source.
+//! FEL AST to string serializer for expression rewriting and debugging.
 ///
 /// Used by the assembler to rewrite FEL expressions after AST transformations
 /// (e.g., field path prefixing during $ref resolution).

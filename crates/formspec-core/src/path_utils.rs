@@ -1,3 +1,5 @@
+//! Dotted path normalization and tree item navigation by path.
+
 /// Dotted path normalization and tree navigation utilities.
 ///
 /// Paths use dot notation: `group.field`, `parent.child.leaf`.

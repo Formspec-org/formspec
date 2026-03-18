@@ -1,3 +1,5 @@
+//! Bidirectional mapping engine for transforming data between formats.
+
 /// Bidirectional data-transform engine for Formspec mapping documents.
 ///
 /// Executes mapping rules to transform data between Formspec response format

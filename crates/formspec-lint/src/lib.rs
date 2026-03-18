@@ -1,3 +1,5 @@
+//! Formspec Linter — 7-pass static analysis and validation pipeline.
+
 /// Formspec Linter — 7-pass static analysis pipeline.
 ///
 /// Pass 1 (E100): Schema validation — JSON Schema conformance, document type detection

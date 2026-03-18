@@ -1,3 +1,5 @@
+//! Schema validation with document type detection and validation dispatch.
+
 /// Schema validation for Formspec artifacts — document type detection and validation dispatch.
 ///
 /// Uses dependency inversion: the actual JSON Schema validation is provided by the host
