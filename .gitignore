@@ -45,5 +45,8 @@ firebase-debug.log
 site/public/studio/
 site/public/chat/
 
+# MCP bundle (build output)
+*.mcpb
+
 # Rust build artifacts
 target/
