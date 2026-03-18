@@ -128,7 +128,7 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
               onKeyDown={(e) => {
                 if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
               }}
-              className="font-mono text-[11px] text-ink text-right bg-subtle/40 border border-border/40 rounded px-1.5 py-0.5 w-[70px] focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-muted/30"
+              className="font-mono text-[11px] text-ink text-right bg-subtle/40 border border-border/40 rounded px-1.5 py-0.5 w-24 focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-muted/30"
             />
           </div>
 
