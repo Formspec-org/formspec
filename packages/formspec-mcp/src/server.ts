@@ -6,9 +6,17 @@
  */
 
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+// Resolve directory of this file — works in both ESM (dist/) and CJS (esbuild bundle)
+/* eslint-disable no-var */
+declare var __dirname: string | undefined;
+const thisDir = typeof __dirname !== 'undefined'
+  ? __dirname
+  : dirname(fileURLToPath(import.meta.url));
 
 import { ProjectRegistry } from './registry.js';
 import { initSchemas, initSchemaTexts, getSchemaText } from './schemas.js';
@@ -25,17 +33,24 @@ export { createFormspecServer } from './create-server.js';
 // ── Main ─────────────────────────────────────────────────────────────
 
 export async function main() {
-  // Locate schemas directory
+  // Locate schemas directory — use __dirname (relative to this file) since
+  // CWD is undefined in Claude Desktop (may be / on macOS).
   const schemaDirs = [
-    resolve(process.cwd(), 'schemas'),
-    resolve(process.cwd(), 'lib/schemas'),     // bundled for .mcpb
-    resolve(process.cwd(), '../../schemas'),  // from packages/formspec-mcp/
+    resolve(thisDir, '../lib/schemas'),     // mcpb bundle: bundle/../lib/schemas
+    resolve(thisDir, '../schemas'),         // mcpb bundle alt layout
+    resolve(thisDir, '../../schemas'),      // monorepo: dist/../../schemas
+    resolve(process.cwd(), 'schemas'),        // standalone fallback
+    resolve(process.cwd(), 'lib/schemas'),
   ];
+  console.error('[formspec-mcp] thisDir:', thisDir);
+  console.error('[formspec-mcp] cwd:', process.cwd());
+  console.error('[formspec-mcp] Searching for schemas in:', schemaDirs.join(', '));
   const actualSchemasDir = schemaDirs.find(d => existsSync(d));
   if (!actualSchemasDir) {
-    console.error('Fatal: schemas/ directory not found');
+    console.error('[formspec-mcp] Fatal: schemas/ directory not found in any of:', schemaDirs.join(', '));
     process.exit(1);
   }
+  console.error('[formspec-mcp] Found schemas at:', actualSchemasDir);
 
   initSchemas(actualSchemasDir);
   initSchemaTexts(actualSchemasDir);
@@ -162,4 +177,6 @@ export async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  console.error('[formspec-mcp] Server ready');
+  process.stdin.resume();
 }

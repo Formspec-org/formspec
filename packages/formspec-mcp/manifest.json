@@ -10,10 +10,10 @@
   },
   "server": {
     "type": "node",
-    "entry_point": "bundle/index.js",
+    "entry_point": "bundle/index.cjs",
     "mcp_config": {
       "command": "node",
-      "args": ["bundle/index.js"]
+      "args": ["${__dirname}/bundle/index.cjs"]
     }
   }
 }
