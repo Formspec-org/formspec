@@ -126,4 +126,6 @@ export function isTextareaWidget(widget: string): boolean {
   return widget === 'textarea';
 }
 
-export { FIELD_TYPE_MAP, WIDGET_ALIAS_MAP };
+// ── Test-only exports ───────────────────────────────────────────────
+/** @internal */
+export { FIELD_TYPE_MAP as _FIELD_TYPE_MAP, WIDGET_ALIAS_MAP as _WIDGET_ALIAS_MAP };

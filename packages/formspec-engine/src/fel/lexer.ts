@@ -16,21 +16,21 @@ import { createToken, Lexer } from 'chevrotain';
 // ---------------------------------------------------------------------------
 
 /** Matches one or more whitespace characters. Skipped during tokenization. */
-export const WhiteSpace = createToken({
+const WhiteSpace = createToken({
   name: 'WhiteSpace',
   pattern: /\s+/,
   group: Lexer.SKIPPED
 });
 
 /** Matches single-line comments starting with `//`. Skipped during tokenization. */
-export const Comment = createToken({
+const Comment = createToken({
   name: 'Comment',
   pattern: /\/\/.*/,
   group: Lexer.SKIPPED
 });
 
 /** Matches block comments delimited by `/* ... *\/`. Skipped during tokenization. */
-export const BlockComment = createToken({
+const BlockComment = createToken({
   name: 'BlockComment',
   pattern: /\/\*[\s\S]*?\*\//,
   group: Lexer.SKIPPED

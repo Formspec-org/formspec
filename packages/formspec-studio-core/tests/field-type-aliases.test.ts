@@ -5,7 +5,7 @@ import {
   resolveWidget,
   widgetHintFor,
   isTextareaWidget,
-  WIDGET_ALIAS_MAP,
+  _WIDGET_ALIAS_MAP as WIDGET_ALIAS_MAP,
 } from '../src/field-type-aliases.js';
 import { createProject } from '../src/project.js';
 
