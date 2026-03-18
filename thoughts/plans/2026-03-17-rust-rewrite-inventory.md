@@ -1,6 +1,6 @@
 # Rust Rewrite Inventory
 
-Status: **Phases 1–5 complete, deepened** — All 6 crates built, 239 tests passing. Wiring and decommission next.
+Status: **Phases 1–5 complete, hardened** — 6 crates, 10,931 lines of Rust, 239 tests. WASM/PyO3 exports cover all capabilities. Wiring and decommission next.
 
 ## Overview
 
