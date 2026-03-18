@@ -15,6 +15,10 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "jsonschema[format]" referencing
       - run: npm ci
       - run: npm run build
       - run: npm run test:unit
@@ -39,6 +43,10 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "jsonschema[format]" referencing fastapi "uvicorn[standard]" pydantic
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
@@ -61,6 +69,10 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "jsonschema[format]" referencing
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
