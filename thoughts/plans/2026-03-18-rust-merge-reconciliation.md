@@ -176,3 +176,68 @@ Steps 2-3 each include per-module red-green-refactor tests. This step is for add
 ## Estimated effort
 
 Step 0 is 15 minutes (generate and read diffs). Steps 1-3 are the bulk — writing fresh code with per-module TDD, roughly 4-5 hours. Step 4 is edge-case backfill, roughly 1 hour. Total: ~6-7 hours of focused work.
+
+---
+
+## Scope Expansion: Mapping Engine, Registry, Changelog → Rust
+
+**Decision (2026-03-18):** Move mapping engine, registry client, and changelog diffing into the Rust kernel. Only format adapters (JSON, XML, CSV serialization) stay Python.
+
+**Rationale:** These are all pure logic with no language-specific dependencies. The mapping engine is already partially duplicated (`formspec-core::runtime_mapping` exists). The registry client blocks TS tooling from doing extension validation without Python. Changelog is small and has no reason to stay.
+
+### Step 9: Mapping Engine → `formspec-core`
+
+`formspec-core::runtime_mapping` already handles bidirectional transforms with 7 transform types. The Python `mapping/engine.py` + `mapping/transforms.py` add:
+
+- [ ] `autoMap` — automatic field-to-field mapping by path matching
+- [ ] Array descriptors — repeat group mapping with `arrayPath` + `itemMapping`
+- [ ] `concat` transform — join multiple source fields into one string
+- [ ] `split` transform — split a string source into multiple targets
+- [ ] `nest` transform — restructure flat fields into nested objects
+- [ ] `flatten` transform — collapse nested objects into flat fields
+- [ ] Full bidirectional engine with `direction: "forward" | "reverse"` orchestration
+
+Extend `runtime_mapping.rs` or add `mapping_engine.rs` alongside it. Update WASM + PyO3 bindings.
+
+### Step 10: Registry Client → `formspec-core`
+
+Port `src/formspec/registry.py` to a new `registry_client.rs` in `formspec-core`:
+
+- [ ] Registry document parsing (extensions array, metadata, lifecycle states)
+- [ ] Semver constraint matching (`_version_satisfies` → Rust equivalent)
+- [ ] Lifecycle state machine validation (draft → active → deprecated → retired)
+- [ ] Well-known discovery URL construction
+- [ ] Multi-registry resolution (search registries in order, first match wins)
+
+Note: `RegistryLookup` trait already exists in `formspec-core` for the linter. The registry client implements this trait with actual registry document parsing, replacing the test-only `HashMap` wrapper.
+
+### Step 11: Changelog → `formspec-core`
+
+Port `src/formspec/changelog.py` to `changelog.rs` in `formspec-core`:
+
+- [ ] Diff two definition versions into a structured changelog
+- [ ] Classify changes as breaking / compatible / cosmetic
+- [ ] Compute major / minor / patch semver impact
+- [ ] Produce change objects per the changelog spec (`specs/registry/changelog-spec.llm.md`)
+
+### Step 12: Update bindings + delete Python
+
+- [ ] Add mapping engine, registry client, changelog exports to `formspec-wasm`
+- [ ] Add mapping engine, registry client, changelog exports to `formspec-py`
+- [ ] Wire PyO3 into Python backend — replace `from formspec.mapping import ...`, `from formspec.registry import ...`, `from formspec.changelog import ...` with `formspec_rust` calls
+- [ ] Delete `src/formspec/mapping/engine.py`, `src/formspec/mapping/transforms.py`
+- [ ] Delete `src/formspec/registry.py`
+- [ ] Delete `src/formspec/changelog.py`
+- [ ] Keep `src/formspec/adapters/` (JSON, XML, CSV) — stays Python
+
+### What stays Python after all steps
+
+Only format adapters and the artifact orchestrator:
+
+| Module | File | Why it stays |
+|--------|------|-------------|
+| Base adapter ABC | `adapters/base.py` | Python abstract interface for format adapters |
+| JSON adapter | `adapters/json_adapter.py` | Server-side serialization, Python `json` stdlib |
+| XML adapter | `adapters/xml_adapter.py` | Server-side serialization, `xml.etree` stdlib |
+| CSV adapter | `adapters/csv_adapter.py` | Server-side serialization, `csv` stdlib |
+| Artifact Orchestrator | `validate.py` | CLI entry point, calls into Rust via PyO3 |
