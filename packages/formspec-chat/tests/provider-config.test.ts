@@ -15,7 +15,7 @@ describe('validateProviderConfig', () => {
   it('accepts a valid Google config', () => {
     const config: ProviderConfig = {
       provider: 'google',
-      apiKey: 'AIzaSyD_abc123xyz',
+      apiKey: 'mock-gemini-key',
     };
     expect(validateProviderConfig(config)).toEqual([]);
   });

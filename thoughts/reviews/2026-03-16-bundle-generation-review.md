@@ -29,7 +29,7 @@
 
 ### Critical (1)
 
-**Hardcoded API key in `main-chat.tsx`** — `AIzaSyCYAy6PIZw664oLQg4CM8DOf86x15TYD1s` is in source, committed to git, and will be in production builds via `chat.html` entry point. Move to `import.meta.env.VITE_GEMINI_DEV_KEY` with `.env.local`.
+**Hardcoded API key in `main-chat.tsx`** — `GEMINI_API_KEY` is in source, committed to git, and will be in production builds via `chat.html` entry point. Move to `import.meta.env.VITE_GEMINI_DEV_KEY` with `.env.local`.
 
 ### High Priority (3)
 
