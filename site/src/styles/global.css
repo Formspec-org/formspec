@@ -156,6 +156,30 @@ body {
   margin: 2rem 0;
 }
 
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9375rem;
+}
+
+.prose th,
+.prose td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.prose th {
+  font-weight: 600;
+  color: var(--color-ink);
+  border-bottom: 2px solid var(--color-border-strong);
+}
+
+.prose td {
+  color: var(--color-ink-secondary);
+}
+
 /* ── Code block (non-prose, in landing page) ── */
 .code-window {
   background: #1e1e2e;
