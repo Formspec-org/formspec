@@ -1,0 +1,9 @@
+# Dev-only files — not needed at runtime
+src/
+dist/
+tests/
+tsconfig.json
+vitest.config.ts
+node_modules/
+.gitignore
+.mcpbignore

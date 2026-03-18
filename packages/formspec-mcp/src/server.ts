@@ -28,6 +28,7 @@ export async function main() {
   // Locate schemas directory
   const schemaDirs = [
     resolve(process.cwd(), 'schemas'),
+    resolve(process.cwd(), 'lib/schemas'),     // bundled for .mcpb
     resolve(process.cwd(), '../../schemas'),  // from packages/formspec-mcp/
   ];
   const actualSchemasDir = schemaDirs.find(d => existsSync(d));
