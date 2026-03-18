@@ -282,7 +282,7 @@ export const exampleDefinition = {
     {
       path: 'ssn',
       required: 'true',
-      constraint: "matches($,'^\\d{3}-\\d{2}-\\d{4}$')",
+      constraint: "matches($,'^[0-9]{3}-[0-9]{2}-[0-9]{4}$')",
       constraintMessage: 'XXX-XX-XXXX.',
       whitespace: 'remove',
     },

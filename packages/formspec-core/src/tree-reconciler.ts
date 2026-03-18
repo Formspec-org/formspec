@@ -20,6 +20,12 @@ interface WrapperSnapshot {
   wasLast: boolean;
 }
 
+/** Component types that allow `children` per the component schema. */
+const CONTAINER_COMPONENTS = new Set([
+  'Accordion', 'Card', 'Collapsible', 'Columns', 'ConditionalGroup',
+  'Grid', 'Modal', 'Page', 'Panel', 'Popover', 'Stack', 'Tabs', 'Wizard',
+]);
+
 /**
  * Determine the default component type for a definition item.
  * Maps item types to sensible widget defaults: field -> TextInput,
@@ -134,7 +140,9 @@ export function reconcileComponentTree(
   }
 
   // ── Build nodes from definition items ──
-  const buildNode = (item: FormItem, parentPath = ''): TreeNode => {
+  // Returns an array: normally [node], but non-container components with
+  // definition children emit those children as siblings instead of nesting.
+  const buildNodes = (item: FormItem, parentPath = ''): TreeNode[] => {
     const itemPath = parentPath ? `${parentPath}.${item.key}` : item.key;
     let node: TreeNode;
 
@@ -174,17 +182,24 @@ export function reconcileComponentTree(
     }
 
     if (item.children && item.children.length > 0) {
-      node.children = item.children.map(child => buildNode(child, itemPath));
+      const childNodes = item.children.flatMap(child => buildNodes(child, itemPath));
+      if (CONTAINER_COMPONENTS.has(node.component)) {
+        node.children = childNodes;
+      } else {
+        // Non-container component (e.g. RadioGroup): emit children as siblings
+        delete node.children;
+        return [node, ...childNodes];
+      }
     } else if (item.type === 'group') {
       node.children = [];
     } else {
       delete node.children;
     }
 
-    return node;
+    return [node];
   };
 
-  const builtNodes: TreeNode[] = definition.items.map(item => buildNode(item));
+  const builtNodes: TreeNode[] = definition.items.flatMap(item => buildNodes(item));
 
   // ── Page-aware distribution ──
   const def = definition as any;
