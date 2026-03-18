@@ -200,6 +200,8 @@ version = "0.1.0"
 dependencies = [
  "fel-core",
  "formspec-core",
+ "formspec-eval",
+ "formspec-lint",
  "rust_decimal",
  "serde-wasm-bindgen",
  "serde_json",
