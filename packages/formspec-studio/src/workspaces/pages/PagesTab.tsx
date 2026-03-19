@@ -94,6 +94,7 @@ function PageCard({
   const items = page.items ?? [];
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [startVisibleFor, setStartVisibleFor] = useState<Set<number>>(new Set());
   /** Per-item index: whether the responsive overrides section is expanded */
   const [responsiveExpandedFor, setResponsiveExpandedFor] = useState<Set<number>>(new Set());
@@ -279,7 +280,7 @@ function PageCard({
                   className={`rounded-sm ${bgClass} flex items-center justify-center overflow-hidden`}
                   style={{ gridColumn: `span ${Math.min(item.width, 12)}` }}
                 >
-                  <span className="text-[8px] text-muted truncate px-0.5">{item.label}</span>
+                  <span className="text-[10px] text-muted truncate px-0.5">{item.label}</span>
                 </div>
               );
             })}
@@ -638,13 +639,42 @@ function PageCard({
                 </button>
               )}
             </div>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="text-[10px] text-muted hover:text-error font-bold uppercase tracking-wider transition-colors"
-            >
-              Delete
-            </button>
+            {confirmingDelete ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-error">
+                  Delete page and {items.length} field{items.length !== 1 ? 's' : ''}?
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false); }}
+                  className="text-[10px] text-muted hover:text-ink font-bold uppercase tracking-wider transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false); onDelete(); }}
+                  className="text-[10px] text-error hover:text-error-hover font-bold uppercase tracking-wider transition-colors"
+                >
+                  Confirm
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (items.length > 0) {
+                    setConfirmingDelete(true);
+                  } else {
+                    onDelete();
+                  }
+                }}
+                className="text-[10px] text-muted hover:text-error font-bold uppercase tracking-wider transition-colors"
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -775,7 +805,7 @@ function PagesFocusView({ pageId, onBack }: { pageId: string; onBack: () => void
         >
           &larr; Back
         </button>
-        <p className="text-[13px] text-muted">Focus Mode — coming soon</p>
+        <p className="text-[13px] text-muted">Focus Mode for page {pageId} — coming soon</p>
       </WorkspacePageSection>
     </WorkspacePage>
   );
@@ -831,17 +861,7 @@ export function PagesTab() {
   /** Shared callback props for PageCard / SortablePageCard */
   const pageCardProps = useCallback((page: PageView) => ({
     breakpointNames: structure.breakpointNames,
-    onDelete: () => {
-      const hasItems = (page.items ?? []).length > 0;
-      if (hasItems) {
-        const count = page.items.length;
-        const confirmed = window.confirm(
-          `Deleting this page will also remove its associated group and ${count} field${count !== 1 ? 's' : ''} from the form definition. Continue?`,
-        );
-        if (!confirmed) return;
-      }
-      project.removePage(page.id);
-    },
+    onDelete: () => project.removePage(page.id),
     onMoveUp: () => project.reorderPage(page.id, 'up'),
     onMoveDown: () => project.reorderPage(page.id, 'down'),
     onUpdateTitle: (title: string) => project.updatePage(page.id, { title }),
@@ -1010,15 +1030,19 @@ export function PagesTab() {
         {isSingle && hasPages && (
           <div className="opacity-50 pointer-events-none space-y-3">
             {structure.pages.map((page, i) => (
-              <PageCard
-                key={page.id}
-                page={page}
-                index={i}
-                total={structure.pages.length}
-                isExpanded={expandedPageId === page.id}
-                onToggle={() => handleTogglePage(page.id)}
-                {...pageCardProps(page)}
-              />
+              <div key={page.id} className="relative">
+                <span className="absolute top-2 right-2 z-10 text-[9px] font-bold uppercase tracking-wider text-muted bg-subtle/80 px-1.5 py-0.5 rounded">
+                  dormant
+                </span>
+                <PageCard
+                  page={page}
+                  index={i}
+                  total={structure.pages.length}
+                  isExpanded={expandedPageId === page.id}
+                  onToggle={() => handleTogglePage(page.id)}
+                  {...pageCardProps(page)}
+                />
+              </div>
             ))}
           </div>
         )}

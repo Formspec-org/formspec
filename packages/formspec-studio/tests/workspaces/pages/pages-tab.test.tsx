@@ -972,7 +972,22 @@ describe('Phase 2 — Empty state prompts', () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  it('single mode shows dormant pages with reduced opacity', () => {
+  it('"+ Add Page" button in empty state calls addPage with default title', async () => {
+    const { project } = renderPagesTab({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: { pages: [] },
+    });
+    const spy = vi.spyOn(project, 'addPage');
+    // The empty state prompt contains the "+ Add Page" button
+    const addPageBtns = screen.getAllByRole('button', { name: /add page/i });
+    await act(async () => {
+      addPageBtns[0].click();
+    });
+    expect(spy).toHaveBeenCalledWith('Page 1');
+    spy.mockRestore();
+  });
+
+  it('single mode shows dormant pages with reduced opacity and dormant badge', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'single' } },
       theme: {
@@ -982,14 +997,15 @@ describe('Phase 2 — Empty state prompts', () => {
     expect(screen.getByText(/preserved but not active/i)).toBeInTheDocument();
     // Dormant pages should be visible
     expect(screen.getByText('Dormant Page')).toBeInTheDocument();
+    // Each dormant page card should have a "dormant" badge
+    expect(screen.getByText('dormant')).toBeInTheDocument();
   });
 });
 
 // ── Phase 2: removePage confirmation ──────────────────────────────────
 
 describe('Phase 2 — removePage confirmation', () => {
-  it('deleting a page with items shows confirmation dialog', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('deleting a page with items shows inline confirmation', async () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
       theme: {
@@ -1000,14 +1016,15 @@ describe('Phase 2 — removePage confirmation', () => {
     const expandBtn = screen.getByRole('button', { expanded: false });
     fireEvent.click(expandBtn);
     await act(async () => {
-      screen.getByRole('button', { name: /delete/i }).click();
+      screen.getByRole('button', { name: /^delete$/i }).click();
     });
-    expect(confirmSpy).toHaveBeenCalled();
-    confirmSpy.mockRestore();
+    // Should show inline confirmation with Cancel and Confirm buttons
+    expect(screen.getByText(/delete page and/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeInTheDocument();
   });
 
   it('deleting an empty page skips confirmation', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
       theme: {
@@ -1022,17 +1039,15 @@ describe('Phase 2 — removePage confirmation', () => {
     fireEvent.click(expandBtns[0]);
     const removeSpy = vi.spyOn(project, 'removePage');
     await act(async () => {
-      screen.getByRole('button', { name: /delete/i }).click();
+      screen.getByRole('button', { name: /^delete$/i }).click();
     });
-    // Should not show confirm dialog — deletes directly
-    expect(confirmSpy).not.toHaveBeenCalled();
+    // Should not show confirmation — deletes directly
+    expect(screen.queryByText(/delete page and/i)).not.toBeInTheDocument();
     expect(removeSpy).toHaveBeenCalledWith('p1');
-    confirmSpy.mockRestore();
     removeSpy.mockRestore();
   });
 
   it('confirming deletion calls removePage', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
       theme: {
@@ -1047,15 +1062,17 @@ describe('Phase 2 — removePage confirmation', () => {
     const expandBtns = screen.getAllByRole('button', { expanded: false });
     fireEvent.click(expandBtns[0]);
     await act(async () => {
-      screen.getByRole('button', { name: /delete/i }).click();
+      screen.getByRole('button', { name: /^delete$/i }).click();
+    });
+    // Click Confirm in the inline confirmation
+    await act(async () => {
+      screen.getByRole('button', { name: /confirm/i }).click();
     });
     expect(removeSpy).toHaveBeenCalledWith('p1');
-    confirmSpy.mockRestore();
     removeSpy.mockRestore();
   });
 
   it('canceling confirmation does not call removePage', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
       theme: {
@@ -1066,10 +1083,15 @@ describe('Phase 2 — removePage confirmation', () => {
     const expandBtn = screen.getByRole('button', { expanded: false });
     fireEvent.click(expandBtn);
     await act(async () => {
-      screen.getByRole('button', { name: /delete/i }).click();
+      screen.getByRole('button', { name: /^delete$/i }).click();
+    });
+    // Click Cancel
+    await act(async () => {
+      screen.getByRole('button', { name: /cancel/i }).click();
     });
     expect(removeSpy).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
+    // Should return to showing the Delete button
+    expect(screen.getByRole('button', { name: /^delete$/i })).toBeInTheDocument();
     removeSpy.mockRestore();
   });
 });
@@ -1091,8 +1113,8 @@ describe('Phase 2 — Focus mode scaffold', () => {
     await act(async () => {
       screen.getByRole('button', { name: /edit layout/i }).click();
     });
-    // Should show focus mode placeholder
-    expect(screen.getByText(/focus mode/i)).toBeInTheDocument();
+    // Should show focus mode placeholder with page ID
+    expect(screen.getByText(/focus mode for page p1/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
   });
 
