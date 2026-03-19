@@ -633,34 +633,44 @@ fn parse_mapping_document(val: &Value) -> PyResult<runtime_mapping::MappingDocum
 }
 
 fn parse_mapping_rules(val: &Value) -> PyResult<Vec<runtime_mapping::MappingRule>> {
+    parse_mapping_rules_inner(val)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))
+}
+
+/// Core mapping-rule parser returning `Result<_, String>` for testability without FFI.
+fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<runtime_mapping::MappingRule>, String> {
     let arr = val.as_array()
-        .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("rules must be an array"))?;
+        .ok_or_else(|| "rules must be an array".to_string())?;
 
     let mut rules = Vec::new();
-    for rule_val in arr {
+    for (i, rule_val) in arr.iter().enumerate() {
         let obj = rule_val.as_object()
-            .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("rule must be an object"))?;
+            .ok_or_else(|| format!("rule[{i}]: must be an object"))?;
 
-        let transform = match obj.get("transform").and_then(|v| v.as_str()).unwrap_or("preserve") {
+        // transform is REQUIRED (mapping.schema.json FieldRule.required)
+        let transform_str = obj.get("transform").and_then(|v| v.as_str())
+            .ok_or_else(|| format!("rule[{i}]: missing required field 'transform'"))?;
+
+        let transform = match transform_str {
             "preserve" => runtime_mapping::TransformType::Preserve,
             "drop" => runtime_mapping::TransformType::Drop,
-            "constant" => runtime_mapping::TransformType::Constant(
-                obj.get("value").cloned().unwrap_or(Value::Null),
-            ),
-            "coerce" => {
-                let target = obj.get("coerce").and_then(|v| v.as_str()).unwrap_or("string");
-                runtime_mapping::TransformType::Coerce(match target {
-                    "number" => runtime_mapping::CoerceType::Number,
-                    "integer" => runtime_mapping::CoerceType::Integer,
-                    "boolean" => runtime_mapping::CoerceType::Boolean,
-                    "date" => runtime_mapping::CoerceType::Date,
-                    "datetime" => runtime_mapping::CoerceType::DateTime,
-                    _ => runtime_mapping::CoerceType::String,
-                })
+            "constant" => {
+                let expr = obj.get("expression").and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("rule[{i}]: transform 'constant' requires 'expression'"))?;
+                runtime_mapping::TransformType::Constant(Value::String(expr.to_string()))
             }
-            "expression" => runtime_mapping::TransformType::Expression(
-                obj.get("expression").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            ),
+            "coerce" => {
+                let coerce_val = obj.get("coerce")
+                    .ok_or_else(|| format!("rule[{i}]: transform 'coerce' requires 'coerce' property"))?;
+                let coerce_type = parse_coerce_type(coerce_val)
+                    .ok_or_else(|| format!("rule[{i}]: invalid coerce value"))?;
+                runtime_mapping::TransformType::Coerce(coerce_type)
+            }
+            "expression" => {
+                let expr = obj.get("expression").and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("rule[{i}]: transform 'expression' requires 'expression'"))?;
+                runtime_mapping::TransformType::Expression(expr.to_string())
+            }
             "valueMap" => {
                 let entries = obj.get("valueMap").and_then(|v| v.as_object());
                 let forward: Vec<(Value, Value)> = entries
@@ -680,18 +690,29 @@ fn parse_mapping_rules(val: &Value) -> PyResult<Vec<runtime_mapping::MappingRule
             "nest" => runtime_mapping::TransformType::Nest {
                 separator: obj.get("separator").and_then(|v| v.as_str()).unwrap_or(".").to_string(),
             },
-            "concat" => runtime_mapping::TransformType::Concat(
-                obj.get("expression").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            ),
-            "split" => runtime_mapping::TransformType::Split(
-                obj.get("expression").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            ),
-            other => return Err(pyo3::exceptions::PyValueError::new_err(format!("unknown transform type: {other}"))),
+            "concat" => {
+                let expr = obj.get("expression").and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("rule[{i}]: transform 'concat' requires 'expression'"))?;
+                runtime_mapping::TransformType::Concat(expr.to_string())
+            }
+            "split" => {
+                let expr = obj.get("expression").and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("rule[{i}]: transform 'split' requires 'expression'"))?;
+                runtime_mapping::TransformType::Split(expr.to_string())
+            }
+            other => return Err(format!("rule[{i}]: unknown transform type: {other}")),
         };
 
+        // At least one of sourcePath or targetPath MUST be present (mapping.schema.json FieldRule.anyOf)
+        let source_path = obj.get("sourcePath").and_then(|v| v.as_str()).map(String::from);
+        let target_path = obj.get("targetPath").and_then(|v| v.as_str()).map(String::from);
+        if source_path.is_none() && target_path.is_none() {
+            return Err(format!("rule[{i}]: at least one of 'sourcePath' or 'targetPath' must be present"));
+        }
+
         rules.push(runtime_mapping::MappingRule {
-            source_path: obj.get("sourcePath").and_then(|v| v.as_str()).map(String::from),
-            target_path: obj.get("targetPath").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            source_path,
+            target_path: target_path.unwrap_or_default(),
             transform,
             condition: obj.get("condition").and_then(|v| v.as_str()).map(String::from),
             priority: obj.get("priority").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
@@ -701,4 +722,150 @@ fn parse_mapping_rules(val: &Value) -> PyResult<Vec<runtime_mapping::MappingRule
         });
     }
     Ok(rules)
+}
+
+/// Parse a coerce value — either a shorthand string or an object with from/to.
+fn parse_coerce_type(val: &Value) -> Option<runtime_mapping::CoerceType> {
+    if let Some(s) = val.as_str() {
+        return match s {
+            "string" => Some(runtime_mapping::CoerceType::String),
+            "number" => Some(runtime_mapping::CoerceType::Number),
+            "integer" => Some(runtime_mapping::CoerceType::Integer),
+            "boolean" => Some(runtime_mapping::CoerceType::Boolean),
+            "date" => Some(runtime_mapping::CoerceType::Date),
+            "datetime" => Some(runtime_mapping::CoerceType::DateTime),
+            _ => None,
+        };
+    }
+    if let Some(obj) = val.as_object() {
+        let to = obj.get("to").and_then(|v| v.as_str())?;
+        return match to {
+            "string" => Some(runtime_mapping::CoerceType::String),
+            "number" => Some(runtime_mapping::CoerceType::Number),
+            "integer" => Some(runtime_mapping::CoerceType::Integer),
+            "boolean" => Some(runtime_mapping::CoerceType::Boolean),
+            "date" => Some(runtime_mapping::CoerceType::Date),
+            "datetime" => Some(runtime_mapping::CoerceType::DateTime),
+            _ => None,
+        };
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    // Tests call parse_mapping_rules_inner directly (returns Result<_, String>)
+    // to avoid FFI (PyO3) dependencies in native test builds.
+
+    fn expect_err(rules: Value, substring: &str) {
+        let err = parse_mapping_rules_inner(&rules).unwrap_err();
+        assert!(err.contains(substring), "expected error containing {substring:?}, got: {err}");
+    }
+
+    // ── Required field: transform ────────────────────────────────
+
+    #[test]
+    fn rejects_rule_missing_transform() {
+        expect_err(json!([{"sourcePath": "a", "targetPath": "b"}]), "missing required field 'transform'");
+    }
+
+    #[test]
+    fn accepts_valid_preserve_rule() {
+        let rules = json!([{"sourcePath": "a", "targetPath": "b", "transform": "preserve"}]);
+        assert_eq!(parse_mapping_rules_inner(&rules).unwrap().len(), 1);
+    }
+
+    // ── Required field: expression (for expression/constant/concat/split) ──
+
+    #[test]
+    fn rejects_expression_transform_missing_expression() {
+        expect_err(json!([{"sourcePath": "a", "targetPath": "b", "transform": "expression"}]), "requires 'expression'");
+    }
+
+    #[test]
+    fn rejects_constant_transform_missing_expression() {
+        expect_err(json!([{"targetPath": "b", "transform": "constant"}]), "requires 'expression'");
+    }
+
+    #[test]
+    fn rejects_concat_transform_missing_expression() {
+        expect_err(json!([{"sourcePath": "a", "targetPath": "b", "transform": "concat"}]), "requires 'expression'");
+    }
+
+    #[test]
+    fn rejects_split_transform_missing_expression() {
+        expect_err(json!([{"sourcePath": "a", "targetPath": "b", "transform": "split"}]), "requires 'expression'");
+    }
+
+    #[test]
+    fn accepts_expression_transform_with_expression() {
+        let rules = json!([{"sourcePath": "a", "targetPath": "b", "transform": "expression", "expression": "$ + 1"}]);
+        assert_eq!(parse_mapping_rules_inner(&rules).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn accepts_constant_transform_with_expression() {
+        let rules = json!([{"targetPath": "b", "transform": "constant", "expression": "'hello'"}]);
+        assert_eq!(parse_mapping_rules_inner(&rules).unwrap().len(), 1);
+    }
+
+    // ── Required field: coerce (for coerce transform) ────────────
+
+    #[test]
+    fn rejects_coerce_transform_missing_coerce() {
+        expect_err(json!([{"sourcePath": "a", "targetPath": "b", "transform": "coerce"}]), "requires 'coerce'");
+    }
+
+    #[test]
+    fn accepts_coerce_transform_with_string_shorthand() {
+        let rules = json!([{"sourcePath": "a", "targetPath": "b", "transform": "coerce", "coerce": "number"}]);
+        assert_eq!(parse_mapping_rules_inner(&rules).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn accepts_coerce_transform_with_object_form() {
+        let rules = json!([{"sourcePath": "a", "targetPath": "b", "transform": "coerce", "coerce": {"from": "date", "to": "string"}}]);
+        assert_eq!(parse_mapping_rules_inner(&rules).unwrap().len(), 1);
+    }
+
+    // ── Required: at least one of sourcePath/targetPath ──────────
+
+    #[test]
+    fn rejects_rule_missing_both_paths() {
+        expect_err(json!([{"transform": "preserve"}]), "at least one of 'sourcePath' or 'targetPath'");
+    }
+
+    #[test]
+    fn accepts_rule_with_only_source_path() {
+        let rules = json!([{"sourcePath": "a", "transform": "drop"}]);
+        assert_eq!(parse_mapping_rules_inner(&rules).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn accepts_rule_with_only_target_path() {
+        let rules = json!([{"targetPath": "b", "transform": "constant", "expression": "'v1'"}]);
+        assert_eq!(parse_mapping_rules_inner(&rules).unwrap().len(), 1);
+    }
+
+    // ── Error messages include rule index ────────────────────────
+
+    #[test]
+    fn error_message_includes_rule_index() {
+        let rules = json!([
+            {"sourcePath": "a", "targetPath": "b", "transform": "preserve"},
+            {"sourcePath": "c"}
+        ]);
+        let err = parse_mapping_rules_inner(&rules).unwrap_err();
+        assert!(err.contains("rule[1]"));
+    }
+
+    // ── Unknown transform type ───────────────────────────────────
+
+    #[test]
+    fn rejects_unknown_transform_type() {
+        expect_err(json!([{"sourcePath": "a", "targetPath": "b", "transform": "magic"}]), "unknown transform type: magic");
+    }
 }
