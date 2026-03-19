@@ -9,6 +9,9 @@
     ".": "./dist/index.js"
   },
   "scripts": {
+    "build:css": "sass src/uswds/uswds-formspec.scss dist/uswds-formspec.css --style=compressed --load-path=node_modules/@uswds/uswds/packages",
+    "build:integration-css": "node scripts/generate-integration-css.mjs",
+    "prebuild": "npm run build:css && npm run build:integration-css",
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -17,8 +20,10 @@
     "formspec-webcomponent": "*"
   },
   "devDependencies": {
+    "@uswds/uswds": "^3.11.0",
     "formspec-webcomponent": "*",
     "happy-dom": "^17.6.1",
+    "sass": "^1.86.0",
     "typescript": "^5.0.0",
     "vitest": "^3.2.4"
   }

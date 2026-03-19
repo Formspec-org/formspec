@@ -55,7 +55,7 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
   - `packages/formspec-mcp/API.llm.md` — TypeScript MCP server API reference (tool declarations, server setup).
   - `packages/formspec-studio-core/API.llm.md` — TypeScript studio-core API reference (Project, helpers, evaluation).
 - **`thoughts/`** — All plans, ADRs, research, and design artifacts. **Never put plans in `docs/`.** See `thoughts/README.md` for full index.
-  - `thoughts/adr/` — Architecture decision records (decisions with Status). `NNNN-short-name.md`. Next: **0048**.
+  - `thoughts/adr/` — Architecture decision records (decisions with Status). `NNNN-short-name.md`. Next: **0049**.
   - `thoughts/plans/` — Implementation and execution plans. `YYYY-MM-DD-short-name.md`.
   - `thoughts/specs/` — Design specifications and PRDs. `YYYY-MM-DD-short-name.md`.
   - `thoughts/reviews/` — Code reviews, audits, post-mortems. `YYYY-MM-DD-short-name.md`.
@@ -71,6 +71,7 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
 `filemap.json` is a generated JSON index mapping every source file to a one-line description. It lets agents instantly understand the codebase without re-exploring it.
 
 **How it works:**
+
 - A script (`scripts/generate-filemap.mjs`) walks the source tree and extracts file-level descriptions using language-native conventions.
 - Run `npm run docs:filemap` to regenerate, or `npm run docs:filemap:check` to verify freshness.
 - `npm run docs:generate` also regenerates it automatically.
@@ -78,19 +79,24 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
 **Adding a description to your file:**
 
 - **TypeScript / JavaScript**: Add `@filedesc` in a JSDoc comment at the top of the file, before imports:
+
   ```ts
   /** @filedesc Resolves $ref inclusions to produce a self-contained definition. */
   import { ... } from '...';
   ```
+
 - **Python**: Use the module docstring first line (already standard):
+
   ```python
   """FEL recursive-descent parser — tokens to AST."""
   ```
+
 - **JSON**: Top-level `title` and/or `description` fields (schemas already have these).
 - **CSS**: `/* @filedesc ... */` block comment at the top.
 - **Markdown**: First `# heading` is used automatically.
 
 **Rules:**
+
 - Keep descriptions under 100 characters — concise and informative.
 - Focus on WHAT the file does, not HOW.
 - `filemap.json` MUST NOT be hand-edited. Always regenerate via the script.
@@ -159,27 +165,34 @@ python3 -m pytest tests/test_fel_evaluator.py::TestClassName::test_name -v
 ## Architecture
 
 ### FormEngine (`packages/formspec-engine/src/index.ts`)
+
 Central class that manages form state. Maintains separate Preact Signals for: field values, relevance, required state, readonly state, validation results, and repeat counts. Computed signals auto-update when dependencies change. Key methods: `setDefinition()`, `setValue()`, `getResponse()`, `getValidationReport()`, `compileFEL()`.
 
 ### FEL Pipeline (`packages/formspec-engine/src/fel/` — TypeScript)
+
 1. **Lexer** (`lexer.ts`) — Chevrotain-based tokenization
 2. **Parser** (`parser.ts`) — Chevrotain CstParser producing CST
 3. **Interpreter** (`interpreter.ts`) — CstVisitor that evaluates expressions; includes ~40+ stdlib functions (aggregates, strings, dates, logical, math, type checking)
 4. **DependencyVisitor** (`dependency-visitor.ts`) — Extracts field references from CST to wire up reactive dependencies
 
 ### Python Backend & Tooling (`src/formspec/` — Python)
+
 A separate Python implementation designed for server-side evaluation, strict validation, and static analysis:
+
 - **`src/formspec/fel/parser.py`** & **`src/formspec/fel/evaluator.py`**: A complete parsing and evaluation engine that executes FEL on backend servers (e.g., re-verifying validation on submit).
 - **`src/formspec/fel/dependencies.py`**: Builds dependency graphs and enables static analysis/linting of FEL expressions.
 - **`src/formspec/adapters/`**: Implements the Mapping spec, allowing server-side conversion of Formspec data into CSV, XML, and alternate JSON layouts.
 
 ### Web Component (`packages/formspec-webcomponent/src/`)
+
 `<formspec-render>` element with a component registry. Components are organized by category (layout, inputs, display, interactive, special). Each component implements a type string and render function receiving a `RenderContext` with engine access and path resolution.
 
 ### Validation
+
 Two mechanisms: **bind constraints** (field-level: required, constraint, readonly, calculate) and **shape rules** (cross-field/form-level constraints). `ValidationReport` contains results with severity levels (error/warning/info) and constraint kinds. Path-based field targeting supports wildcards (e.g., `items[*].field`).
 
 ### Repeatable Groups
+
 Tracked via separate `repeats` signals mapping group names to instance counts. Uses indexed paths like `group[0].field`. Supports nesting and min/max cardinality validation.
 
 ## Git Worktrees
@@ -212,6 +225,7 @@ git branch -d <branch-name>
 ```
 
 **Rules:**
+
 - Always use `.claude/worktrees/` — no other location. Already gitignored.
 - Run `npm install` after creating a worktree. Dependencies are per-worktree.
 - Verify tests pass in the worktree before starting work. Report failures before proceeding.
@@ -240,6 +254,7 @@ Every feature or bugfix follows this loop. Do NOT write implementation before a 
 **What NOT to test:** Trivial getters/setters, framework glue, type-system-enforced invariants, or implementation details that would break on any reasonable refactor. If a test only passes because it knows about internal structure, it's testing the wrong thing.
 
 **Test locations:**
+
 - `tests/` — Python conformance suite (schema, FEL, cross-spec contracts, hypothesis)
 - `tests/e2e/playwright/` — Browser E2E tests (fixtures in `tests/e2e/fixtures/`)
 - `form-builder/src/__tests__/` — Form builder unit/integration tests (Vitest)

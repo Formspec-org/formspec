@@ -1,16 +1,12 @@
-/** @filedesc USWDS integration CSS exported as a string for runtime injection. */
+/** @filedesc USWDS integration CSS — GENERATED, DO NOT EDIT. Regenerate with `npm run build:css && npm run build:integration-css`. */
 
-/**
- * CSS overrides that resolve conflicts between formspec layout primitives
- * and USWDS component expectations. Injected into the document head when
- * the USWDS adapter is activated.
- *
- * TODO: Replace this string export + CDN stylesheet with a trimmed Sass
- * build using USWDS component-level partials (@use 'uswds-core' + only
- * the components the adapter uses). This would eliminate the 400KB CDN
- * dependency, remove most integration overrides, and let us share
- * design tokens between the adapter and its styles.
- */
+// Generated from src/uswds/uswds-formspec.scss — see ADR 0048.
+// This file is overwritten by scripts/generate-integration-css.mjs.
+//
+// BOOTSTRAP FALLBACK: The content below is a hand-written subset that ships
+// until the first Sass build runs. Once `npm run prebuild` executes, this
+// file is replaced with the full compiled USWDS output. The fallback covers
+// the same overrides as before (ADR 0047) so tests pass without Sass.
 export const integrationCSS = `\
 /* USWDS integration overrides for formspec layout primitives */
 

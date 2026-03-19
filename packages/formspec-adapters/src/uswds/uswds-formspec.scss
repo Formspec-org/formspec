@@ -1,0 +1,65 @@
+// @filedesc Trimmed USWDS Sass entry point — only the components the adapter uses.
+//
+// Compiled by `npm run build:css` into dist/uswds-formspec.css, then
+// injected into integration-css.ts by `npm run build:integration-css`.
+//
+// See ADR 0048 for rationale and component inventory.
+
+// ---------------------------------------------------------------------------
+// USWDS core (settings, functions, mixins, tokens) — no output CSS
+// ---------------------------------------------------------------------------
+@forward 'uswds-core' with (
+  // Suppress compile-time notification banner
+  $theme-show-notifications: false,
+
+  // Disable USWDS font loading — theme tokens handle typography
+  // via system font stack ('Public Sans', -apple-system, ...)
+  $theme-font-path: false,
+
+  // Formspec layout integration: inputs fill their grid cells
+  $theme-input-max-width: none,
+
+  // Formspec layout integration: grid gap handles inter-field spacing
+  $theme-form-group-margin-top: 0,
+);
+
+// ---------------------------------------------------------------------------
+// Component packages — only what the adapter actually renders
+// ---------------------------------------------------------------------------
+@forward 'usa-form-group';
+@forward 'usa-label';
+@forward 'usa-input';
+@forward 'usa-textarea';
+@forward 'usa-select';
+@forward 'usa-checkbox';
+@forward 'usa-radio';
+@forward 'usa-date-picker';
+@forward 'usa-file-input';
+@forward 'usa-range';
+@forward 'usa-fieldset';
+@forward 'usa-hint';
+@forward 'usa-error-message';
+@forward 'usa-button';
+@forward 'usa-button-group';
+@forward 'usa-step-indicator';
+
+// ---------------------------------------------------------------------------
+// Formspec-specific overrides — no USWDS setting equivalent
+// ---------------------------------------------------------------------------
+
+// Reset fieldset/label/hint margins that USWDS applies beyond the
+// form-group margin we already zeroed via $theme-form-group-margin-top
+.formspec-container .usa-fieldset { border: 0; padding: 0; margin: 0; }
+.formspec-container .usa-label { margin-top: 0; }
+.formspec-container .usa-hint { margin-top: 0; }
+
+// Scale step indicator to formspec wizard proportions
+.formspec-wizard .usa-step-indicator__heading { font-size: 1rem; }
+.formspec-wizard .usa-step-indicator__current-step {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 2rem;
+}
+.formspec-wizard .usa-step-indicator__heading-text { font-weight: 600; }
