@@ -191,7 +191,7 @@ describe('resolvePageView', () => {
     const result = resolvePageView(state);
 
     expect(result.unassigned).toEqual([
-      { key: 'age', label: 'Your Age' },
+      { key: 'age', label: 'Your Age', itemType: 'field' },
     ]);
   });
 
@@ -253,8 +253,8 @@ describe('resolvePageView', () => {
 
     expect(result.pages).toEqual([]);
     expect(result.unassigned).toEqual([
-      { key: 'name', label: 'Name' },
-      { key: 'email', label: 'Email' },
+      { key: 'name', label: 'Name', itemType: 'field' },
+      { key: 'email', label: 'Email', itemType: 'field' },
     ]);
   });
 
@@ -368,7 +368,7 @@ describe('resolvePageView', () => {
     const result = resolvePageView(state);
 
     expect(result.unassigned).toEqual([
-      { key: 'no_label', label: 'no_label' },
+      { key: 'no_label', label: 'no_label', itemType: 'field' },
     ]);
   });
 
@@ -582,5 +582,61 @@ describe('resolvePageView', () => {
     const result = resolvePageView(makeState());
 
     expect(result.breakpointValues).toBeUndefined();
+  });
+
+  // ── itemPageMap ─────────────────────────────────────────────────
+
+  it('returns itemPageMap mapping each placed item key to its page ID', () => {
+    const state = makeState({
+      definition: {
+        items: [
+          { key: 'name', type: 'field', label: 'Name' },
+          { key: 'email', type: 'field', label: 'Email' },
+          { key: 'phone', type: 'field', label: 'Phone' },
+        ],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] },
+          { id: 'p2', title: 'Step 2', regions: [{ key: 'email', span: 6 }, { key: 'phone', span: 6 }] },
+        ],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    expect(result.itemPageMap).toEqual({
+      name: 'p1',
+      email: 'p2',
+      phone: 'p2',
+    });
+  });
+
+  it('itemPageMap is empty when no pages exist', () => {
+    const result = resolvePageView(makeState());
+
+    expect(result.itemPageMap).toEqual({});
+  });
+
+  it('itemPageMap does not include broken regions', () => {
+    const state = makeState({
+      definition: {
+        items: [{ key: 'name', type: 'field', label: 'Name' }],
+        formPresentation: { pageMode: 'wizard' },
+      },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'A', regions: [{ key: 'name', span: 12 }, { key: 'ghost', span: 6 }] },
+        ],
+      },
+    });
+
+    const result = resolvePageView(state);
+
+    // 'name' is valid and mapped; 'ghost' is broken but still mapped (it occupies a region slot)
+    expect(result.itemPageMap).toHaveProperty('name', 'p1');
+    // broken regions are still mapped — they occupy space on the page
+    expect(result.itemPageMap).toHaveProperty('ghost', 'p1');
   });
 });

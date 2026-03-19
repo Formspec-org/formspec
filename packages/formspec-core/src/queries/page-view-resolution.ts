@@ -31,12 +31,15 @@ export interface PageItemView {
 export interface PlaceableItem {
   key: string;
   label: string;
+  itemType: 'field' | 'group' | 'display';
 }
 
 export interface PageStructureView {
   mode: 'single' | 'wizard' | 'tabs';
   pages: PageView[];
   unassigned: PlaceableItem[];
+  /** Maps each placed item key to the page ID it belongs to. */
+  itemPageMap: Record<string, string>;
   breakpointNames: string[];
   breakpointValues?: Record<string, number>;
   diagnostics: Array<{ severity: 'warning' | 'error'; message: string }>;
@@ -54,7 +57,7 @@ function buildItemMaps(items: FormItem[]) {
   function walk(nodes: FormItem[]) {
     for (const item of nodes) {
       labelMap.set(item.key, item.label ?? item.key);
-      typeMap.set(item.key, item.type);
+      typeMap.set(item.key, item.type as 'field' | 'group' | 'display');
       if (item.children) {
         childCountMap.set(item.key, item.children.length);
         walk(item.children);
@@ -68,7 +71,7 @@ function buildItemMaps(items: FormItem[]) {
   return { labelMap, typeMap, childCountMap, repeatableMap };
 }
 
-/** Collect all item keys from the tree (recursive — same set resolvePageStructure uses). */
+/** Collect all top-level item keys (non-recursive — same set resolvePageStructure uses). */
 function collectAllKeys(items: FormItem[]): string[] {
   const keys: string[] = [];
   function walk(nodes: FormItem[]) {
@@ -119,7 +122,7 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
   const { labelMap, typeMap, childCountMap, repeatableMap } = buildItemMaps(defItems);
 
   const resolved = resolvePageStructure(
-    { theme: state.theme, definition: state.definition },
+    { theme: state.theme as any, definition: state.definition },
     allKeys,
   );
 
@@ -140,9 +143,18 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
     })),
   }));
 
+  // Build itemPageMap: every region key -> page ID
+  const itemPageMap: Record<string, string> = {};
+  for (const p of pages) {
+    for (const item of p.items) {
+      itemPageMap[item.key] = p.id;
+    }
+  }
+
   const unassigned: PlaceableItem[] = resolved.unassignedItems.map(key => ({
     key,
     label: labelMap.get(key) ?? key,
+    itemType: typeMap.get(key) ?? 'field',
   }));
 
   const breakpointNames: string[] = state.theme.breakpoints
@@ -158,8 +170,9 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
     mode: resolved.mode,
     pages,
     unassigned,
+    itemPageMap,
     breakpointNames,
-    breakpointValues: state.theme.breakpoints,
+    breakpointValues: state.theme.breakpoints ?? undefined,
     diagnostics,
   };
 }
