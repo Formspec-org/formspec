@@ -13,7 +13,6 @@ import {
     ItemDescriptor,
     type LayoutNode,
 } from 'formspec-layout';
-import { renderInputComponent as renderInputComponentFn, type FieldInputHost } from './field-input';
 
 /**
  * Interface for what emitNode/renderActualComponent need from FormspecRender.
@@ -215,7 +214,6 @@ export function renderActualComponent(host: RenderHost, comp: any, parent: HTMLE
         resolveItemPresentation: (itemDesc: ItemDescriptor) => host.resolveItemPresentation(itemDesc),
         cleanupFns: host.cleanupFns,
         findItemByKey: (key: string) => host.findItemByKey(key),
-        renderInputComponent: (comp: any, item: any, fullName: string) => renderInputComponentFn(host as any as FieldInputHost, comp, item, fullName),
         activeBreakpoint: host.activeBreakpoint,
         touchedFields: host.touchedFields,
         touchedVersion: host.touchedVersion,

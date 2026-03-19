@@ -128,12 +128,6 @@ export interface RenderContext {
     /** Look up a definition item by key (supports dotted paths like `"group.field"`). Returns `null` if not found. */
     findItemByKey: (key: string, items?: any[]) => any | null;
 
-    /**
-     * Build and return a fully-wired field input element (label, input control,
-     * hint, error display, signal bindings, ARIA attributes) for a bound field.
-     */
-    renderInputComponent: (comp: any, item: any, fullName: string) => HTMLElement;
-
     /** The currently active responsive breakpoint name, or `null` when no breakpoint matches. */
     activeBreakpoint: string | null;
 
