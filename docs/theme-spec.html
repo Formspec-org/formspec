@@ -225,24 +225,24 @@ architecture:</p>
 <col style="width: 42%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Layer</th>
 <th>Concern</th>
 <th>Defined In</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>1. Structure</td>
 <td>What data to collect</td>
 <td>Core §4 (Items)</td>
 </tr>
-<tr class="even">
+<tr>
 <td>2. Behavior</td>
 <td>How data behaves</td>
 <td>Core §4.3 (Binds), §5 (Shapes)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>3. Presentation</td>
 <td>How data is displayed</td>
 <td>Core §4.2.5 (Tier 1 hints) + <strong>this spec</strong> (Tier 2
@@ -260,39 +260,39 @@ author-specified defaults; Tier 2 themes override them.</p>
 <col style="width: 66%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Term</th>
 <th>Definition</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><strong>Definition</strong></td>
 <td>A Formspec Definition document (core spec §4).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Theme</strong></td>
 <td>A Formspec Theme document conforming to this specification.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Tier 1 hints</strong></td>
 <td>The <code>formPresentation</code> and <code>presentation</code>
 properties defined in core spec §4.1.1 and §4.2.5.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Renderer</strong></td>
 <td>Software that presents a Definition to end users.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Token</strong></td>
 <td>A named design value (color, spacing, typography) defined in
 §3.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Widget</strong></td>
 <td>A UI control type (text input, slider, toggle, etc.).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Cascade</strong></td>
 <td>The precedence system that determines the effective presentation for
 each item (§5).</td>
@@ -359,7 +359,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="
 <col style="width: 16%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Pointer</th>
 <th>Field</th>
 <th>Type</th>
@@ -369,7 +369,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>#/properties/$formspecTheme</code></td>
 <td><code>$formspecTheme</code></td>
 <td><code>string</code></td>
@@ -377,7 +377,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="
 <td>const: <code>“1.0”</code>; critical</td>
 <td>Theme specification version. MUST be ‘1.0’.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/breakpoints</code></td>
 <td><code>breakpoints</code></td>
 <td><code>$ref</code></td>
@@ -388,7 +388,7 @@ by regions’ ‘responsive’ objects to override span, start, or visibility
 at different viewport sizes. Processors that do not support responsive
 layouts SHOULD use the base span and start values.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/defaults</code></td>
 <td><code>defaults</code></td>
 <td><code>$ref</code></td>
@@ -404,7 +404,7 @@ per-property — nested objects (widgetConfig, style, accessibility) are
 replaced as a whole, not deep-merged. Exception: cssClass uses union
 semantics across all levels.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/description</code></td>
 <td><code>description</code></td>
 <td><code>string</code></td>
@@ -413,7 +413,7 @@ semantics across all levels.</td>
 <td>Human-readable description of the theme’s purpose and target
 audience.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/extensions</code></td>
 <td><code>extensions</code></td>
 <td><code>object</code></td>
@@ -424,7 +424,7 @@ metadata. All keys MUST be x- prefixed. Processors MUST ignore
 unrecognized extensions. Extensions MUST NOT alter core presentation
 semantics.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/items</code></td>
 <td><code>items</code></td>
 <td><code>object</code></td>
@@ -436,7 +436,7 @@ cascade levels. Item keys that do not correspond to any item in the
 target Definition SHOULD produce a warning but MUST NOT cause
 failure.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/name</code></td>
 <td><code>name</code></td>
 <td><code>string</code></td>
@@ -444,7 +444,7 @@ failure.</td>
 <td>—</td>
 <td>Machine-friendly short identifier for programmatic use.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/pages</code></td>
 <td><code>pages</code></td>
 <td><code>array</code></td>
@@ -457,7 +457,7 @@ referenced by any region on any page SHOULD be rendered after all pages
 in default order. The cascade (defaults/selectors/items) still applies
 regardless of page layout.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/platform</code></td>
 <td><code>platform</code></td>
 <td><code>string</code></td>
@@ -469,7 +469,7 @@ values: ‘web’ (desktop/mobile browsers), ‘mobile’ (native apps), ‘pdf�
 (PDF rendering), ‘print’ (print-optimized), ‘kiosk’ (public terminals),
 ‘universal’ (no platform assumptions, implicit default).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/selectors</code></td>
 <td><code>selectors</code></td>
 <td><code>array</code></td>
@@ -481,7 +481,7 @@ Selectors are evaluated in document order — all matching selectors
 apply, with later matches overriding earlier ones per-property.
 Overrides defaults (level 1); overridden by items (level 3).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/stylesheets</code></td>
 <td><code>stylesheets</code></td>
 <td><code>array</code></td>
@@ -494,7 +494,7 @@ cannot be loaded; they SHOULD warn and continue. Non-web renderers (PDF,
 native) MAY ignore stylesheets. Subject to host application security
 policy (CSP, CORS).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/targetDefinition</code></td>
 <td><code>targetDefinition</code></td>
 <td><code>$ref</code></td>
@@ -508,7 +508,7 @@ falls outside the range, the processor SHOULD warn and MAY fall back to
 Tier 1 hints only (null theme). The processor MUST NOT fail on a version
 mismatch.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/title</code></td>
 <td><code>title</code></td>
 <td><code>string</code></td>
@@ -516,7 +516,7 @@ mismatch.</td>
 <td>—</td>
 <td>Human-readable display name for the theme.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/tokens</code></td>
 <td><code>tokens</code></td>
 <td><code>$ref</code></td>
@@ -529,7 +529,7 @@ string values. Token keys use dot-delimited category prefixes (e.g.,
 ‘color.primary’, ‘spacing.md’). Values MUST be strings or numbers. Token
 references MUST NOT be recursive.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/url</code></td>
 <td><code>url</code></td>
 <td><code>string</code></td>
@@ -538,7 +538,7 @@ references MUST NOT be recursive.</td>
 <td>Canonical identifier for this theme. Stable across theme versions —
 the pair (url, version) SHOULD be globally unique.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/version</code></td>
 <td><code>version</code></td>
 <td><code>string</code></td>
@@ -564,7 +564,7 @@ specific Definition.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Cardinality</th>
@@ -572,14 +572,14 @@ specific Definition.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>url</code></td>
 <td>string (URI)</td>
 <td><strong>1..1</strong> (REQUIRED)</td>
 <td>Canonical URL of the target Definition (<code>url</code> property
 from the Definition).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>compatibleVersions</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -598,33 +598,33 @@ unsatisfied; it SHOULD warn and MAY fall back to Tier 1 hints.</p>
 intended rendering platform. Well-known values:</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Value</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>"web"</code></td>
 <td>Desktop and mobile web browsers.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>"mobile"</code></td>
 <td>Native mobile applications.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>"pdf"</code></td>
 <td>PDF or print rendering.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>"print"</code></td>
 <td>Print-optimized layout.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>"kiosk"</code></td>
 <td>Public kiosk or terminal.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>"universal"</code></td>
 <td>No platform-specific assumptions (default).</td>
 </tr>
@@ -706,45 +706,45 @@ interoperability. These categories are RECOMMENDED, not required.</p>
 <col style="width: 43%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prefix</th>
 <th>Purpose</th>
 <th>Example keys</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>color.</code></td>
 <td>Colors (hex, rgb, hsl, named)</td>
 <td><code>color.primary</code>, <code>color.error</code>,
 <code>color.surface</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>spacing.</code></td>
 <td>Spacing and padding</td>
 <td><code>spacing.xs</code>, <code>spacing.sm</code>,
 <code>spacing.md</code>, <code>spacing.lg</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>typography.</code></td>
 <td>Font properties</td>
 <td><code>typography.body.family</code>,
 <code>typography.body.size</code>,
 <code>typography.heading.weight</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>border.</code></td>
 <td>Borders</td>
 <td><code>border.radius</code>, <code>border.width</code>,
 <code>border.color</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>elevation.</code></td>
 <td>Shadows and depth</td>
 <td><code>elevation.low</code>, <code>elevation.medium</code>,
 <code>elevation.high</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>x-</code></td>
 <td>Custom/vendor tokens</td>
 <td><code>x-brand.logo-height</code>,
@@ -816,19 +816,19 @@ unrecognized keys.</p>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>maxLength</code></td>
 <td>integer</td>
 <td>Maximum character count display.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>inputMode</code></td>
 <td>string</td>
 <td>Input hint: <code>"text"</code>, <code>"email"</code>,
@@ -839,24 +839,24 @@ unrecognized keys.</p>
 <p><strong><code>textarea</code></strong> (text)</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>rows</code></td>
 <td>integer</td>
 <td>Visible text rows.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>maxRows</code></td>
 <td>integer</td>
 <td>Maximum rows before scroll.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>autoResize</code></td>
 <td>boolean</td>
 <td>Auto-resize to content.</td>
@@ -866,19 +866,19 @@ unrecognized keys.</p>
 <p><strong><code>numberInput</code></strong> (integer, decimal)</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>showStepper</code></td>
 <td>boolean</td>
 <td>Show increment/decrement buttons.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>locale</code></td>
 <td>string</td>
 <td>Locale for number formatting (e.g., <code>"en-US"</code>).</td>
@@ -890,24 +890,24 @@ properties.</p>
 <p><strong><code>datePicker</code></strong> (date, dateTime, time)</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>format</code></td>
 <td>string</td>
 <td>Display format (e.g., <code>"YYYY-MM-DD"</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>minDate</code></td>
 <td>string</td>
 <td>Earliest selectable date (ISO 8601).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>maxDate</code></td>
 <td>string</td>
 <td>Latest selectable date (ISO 8601).</td>
@@ -917,19 +917,19 @@ properties.</p>
 <p><strong><code>dropdown</code></strong> (choice)</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>searchable</code></td>
 <td>boolean</td>
 <td>Enable type-ahead search.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>placeholder</code></td>
 <td>string</td>
 <td>Placeholder text when no selection.</td>
@@ -939,19 +939,19 @@ properties.</p>
 <p><strong><code>checkboxGroup</code></strong> (multiChoice)</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>columns</code></td>
 <td>integer</td>
 <td>Number of columns for layout.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>maxVisible</code></td>
 <td>integer</td>
 <td>Max visible items before scroll.</td>
@@ -961,24 +961,24 @@ properties.</p>
 <p><strong><code>fileUpload</code></strong> (attachment)</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>accept</code></td>
 <td>string</td>
 <td>Accepted file types (MIME types or extensions).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>maxSizeMb</code></td>
 <td>number</td>
 <td>Maximum file size in megabytes.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>preview</code></td>
 <td>boolean</td>
 <td>Show file preview after selection.</td>
@@ -988,19 +988,19 @@ properties.</p>
 <p><strong><code>moneyInput</code></strong> (money)</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>showCurrencySymbol</code></td>
 <td>boolean</td>
 <td>Display currency symbol.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>locale</code></td>
 <td>string</td>
 <td>Locale for currency formatting.</td>
@@ -1019,7 +1019,7 @@ array from the theme.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Widget</th>
 <th>Applies to</th>
 <th>Config Properties</th>
@@ -1027,131 +1027,131 @@ array from the theme.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>slider</code></td>
 <td>integer, decimal</td>
 <td><code>min</code>, <code>max</code>, <code>step</code>,
 <code>showTicks</code>, <code>showValue</code></td>
 <td><code>numberInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>stepper</code></td>
 <td>integer</td>
 <td><code>min</code>, <code>max</code>, <code>step</code></td>
 <td><code>numberInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>rating</code></td>
 <td>integer</td>
 <td><code>max</code>, <code>icon</code> (<code>"star"</code>,
 <code>"heart"</code>)</td>
 <td><code>numberInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>toggle</code></td>
 <td>boolean</td>
 <td><code>onLabel</code>, <code>offLabel</code></td>
 <td><code>checkbox</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>yesNo</code></td>
 <td>boolean</td>
 <td>(none)</td>
 <td><code>checkbox</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>radio</code></td>
 <td>choice</td>
 <td><code>direction</code> (<code>"vertical"</code>,
 <code>"horizontal"</code>), <code>columns</code></td>
 <td><code>dropdown</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>autocomplete</code></td>
 <td>choice, multiChoice</td>
 <td><code>debounceMs</code>, <code>minChars</code></td>
 <td><code>dropdown</code> / <code>checkboxGroup</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>segmented</code></td>
 <td>choice</td>
 <td>(none)</td>
 <td><code>radio</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>likert</code></td>
 <td>choice</td>
 <td><code>scaleLabels</code> (array of strings)</td>
 <td><code>radio</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>multiSelect</code></td>
 <td>multiChoice</td>
 <td><code>searchable</code>, <code>maxItems</code></td>
 <td><code>checkboxGroup</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>richText</code></td>
 <td>text</td>
 <td><code>toolbar</code> (array of tool names)</td>
 <td><code>textarea</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>password</code></td>
 <td>string</td>
 <td><code>showToggle</code> (boolean)</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>color</code></td>
 <td>string</td>
 <td><code>format</code> (<code>"hex"</code>, <code>"rgb"</code>)</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>urlInput</code></td>
 <td>uri</td>
 <td>(none)</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>dateInput</code></td>
 <td>date</td>
 <td><code>format</code></td>
 <td><code>datePicker</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>dateTimePicker</code></td>
 <td>dateTime</td>
 <td><code>format</code></td>
 <td><code>datePicker</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>dateTimeInput</code></td>
 <td>dateTime</td>
 <td><code>format</code></td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>timePicker</code></td>
 <td>time</td>
 <td><code>format</code>, <code>step</code></td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>timeInput</code></td>
 <td>time</td>
 <td><code>format</code></td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>camera</code></td>
 <td>attachment</td>
 <td><code>facing</code> (<code>"user"</code>,
 <code>"environment"</code>)</td>
 <td><code>fileUpload</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>signature</code></td>
 <td>attachment</td>
 <td><code>strokeColor</code>, <code>height</code> (integer, pixels)</td>
@@ -1211,39 +1211,39 @@ baselines:</p>
 <col style="width: 46%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Level</th>
 <th>Source</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>3</td>
 <td>Theme <code>items.{key}</code></td>
 <td>Per-item override. Highest theme specificity.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>2</td>
 <td>Theme <code>selectors[]</code></td>
 <td>Type and dataType-based rules.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>1</td>
 <td>Theme <code>defaults</code></td>
 <td>Baseline for all items.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>0</td>
 <td>Tier 1 <code>presentation</code></td>
 <td>Inline hints on the item (core §4.2.5).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>-1</td>
 <td>Tier 1 <code>formPresentation</code></td>
 <td>Form-wide defaults (core §4.1.1).</td>
 </tr>
-<tr class="even">
+<tr>
 <td>-2</td>
 <td>Renderer defaults</td>
 <td>Platform and implementation defaults (implicit).</td>
@@ -1293,20 +1293,20 @@ semantics:</p>
 <col style="width: 42%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Key</th>
 <th>Type</th>
 <th>Matches</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>type</code></td>
 <td>string</td>
 <td>Item’s <code>type</code> (<code>"group"</code>,
 <code>"field"</code>, <code>"display"</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>dataType</code></td>
 <td>string</td>
 <td>Item’s <code>dataType</code> (field items only; one of the 13 core
@@ -1450,39 +1450,39 @@ follows:</p>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Theme property</th>
 <th>Tier 1 equivalent</th>
 <th>Notes</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>widget</code></td>
 <td><code>widgetHint</code></td>
 <td>Same vocabulary. Theme uses <code>widget</code> for brevity.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>widgetConfig</code></td>
 <td>(none)</td>
 <td>Theme-only.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>labelPosition</code></td>
 <td><code>formPresentation.labelPosition</code></td>
 <td>Same enum values.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>style</code></td>
 <td><code>styleHints</code></td>
 <td>Theme <code>style</code> is richer (arbitrary key-value).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>accessibility</code></td>
 <td><code>accessibility</code></td>
 <td>Same structure.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>fallback</code></td>
 <td>(none)</td>
 <td>Theme-only.</td>
@@ -1516,7 +1516,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb12-1"><a href=
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Cardinality</th>
@@ -1524,26 +1524,26 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb12-1"><a href=
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>id</code></td>
 <td>string</td>
 <td><strong>1..1</strong> (REQUIRED)</td>
 <td>Unique page identifier. MUST match
 <code>^[a-zA-Z][a-zA-Z0-9_\-]*$</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>title</code></td>
 <td>string</td>
 <td><strong>1..1</strong> (REQUIRED)</td>
 <td>Page title for navigation.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>description</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
 <td>Page description or instructions.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>regions</code></td>
 <td>array</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -1565,7 +1565,7 @@ assigns an item to a grid position.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Cardinality</th>
@@ -1573,28 +1573,28 @@ assigns an item to a grid position.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>key</code></td>
 <td>string</td>
 <td><strong>1..1</strong> (REQUIRED)</td>
 <td>Item key from the Definition. A group key includes its entire
 subtree.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>span</code></td>
 <td>integer (1–12)</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
 <td>Grid columns this region occupies. Default: <code>12</code> (full
 width).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>start</code></td>
 <td>integer (1–12)</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
 <td>Grid column start position. When absent, the region follows the
 previous region in flow.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>responsive</code></td>
 <td>object</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -1625,6 +1625,12 @@ theme’s page grid.</p></li>
 region renders all repeat instances within the region. The theme grid
 controls the region’s position on the page; repeat layout is internal to
 the group.</p></li>
+<li><p><strong>Nested item key:</strong> A region MAY reference any item
+key in the Definition, including nested items within groups. When a
+nested item is referenced directly, it is rendered standalone at the
+grid position, independent of its parent group’s layout. When a group
+key is referenced, the entire subtree renders within the
+region.</p></li>
 <li><p><strong>Unknown key:</strong> A region referencing a key that
 does not exist in the target Definition SHOULD produce a warning.
 Processors MUST NOT fail.</p></li>
@@ -1650,24 +1656,24 @@ integers representing pixels.</p>
 breakpoint name. Each breakpoint override may set:</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>span</code></td>
 <td>integer (1–12)</td>
 <td>Override column span at this breakpoint.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>start</code></td>
 <td>integer (1–12)</td>
 <td>Override column start at this breakpoint.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>hidden</code></td>
 <td>boolean</td>
 <td>Hide this region at this breakpoint.</td>
@@ -1746,46 +1752,46 @@ presentation data for the renderer.</li>
 <col style="width: 47%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Condition</th>
 <th>Behavior</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>Unknown item key in <code>items</code></td>
 <td>SHOULD warn, MUST NOT fail.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Unknown item key in a region</td>
 <td>SHOULD warn, MUST NOT fail.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Incompatible widget for dataType</td>
 <td>MUST apply <code>fallback</code> chain; if no fallback, use default
 widget.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Unresolved <code>$token.</code> reference</td>
 <td>MUST use platform default, SHOULD warn.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Recursive token reference</td>
 <td>MUST treat as unresolved.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>compatibleVersions</code> not satisfied</td>
 <td>SHOULD warn, MAY fall back to null theme.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Unrecognized <code>$formspecTheme</code> version</td>
 <td>MUST reject the theme.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Unrecognized <code>x-</code> prefixed widget</td>
 <td>MUST apply <code>fallback</code> chain.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Unrecognized <code>widgetConfig</code> key</td>
 <td>MUST ignore.</td>
 </tr>
@@ -2021,7 +2027,7 @@ fallback.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Widget</th>
 <th>Level</th>
 <th>Compatible dataTypes</th>
@@ -2029,229 +2035,229 @@ fallback.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>textInput</code></td>
 <td>Required</td>
 <td>string, uri</td>
 <td>—</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>textarea</code></td>
 <td>Required</td>
 <td>text</td>
 <td>—</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>numberInput</code></td>
 <td>Required</td>
 <td>integer, decimal</td>
 <td>—</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>checkbox</code></td>
 <td>Required</td>
 <td>boolean</td>
 <td>—</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>datePicker</code></td>
 <td>Required</td>
 <td>date, dateTime, time</td>
 <td>—</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>dropdown</code></td>
 <td>Required</td>
 <td>choice</td>
 <td>—</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>checkboxGroup</code></td>
 <td>Required</td>
 <td>multiChoice</td>
 <td>—</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>fileUpload</code></td>
 <td>Required</td>
 <td>attachment</td>
 <td>—</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>moneyInput</code></td>
 <td>Required</td>
 <td>money</td>
 <td>—</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>slider</code></td>
 <td>Progressive</td>
 <td>integer, decimal</td>
 <td><code>numberInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>stepper</code></td>
 <td>Progressive</td>
 <td>integer</td>
 <td><code>numberInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>rating</code></td>
 <td>Progressive</td>
 <td>integer</td>
 <td><code>numberInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>toggle</code></td>
 <td>Progressive</td>
 <td>boolean</td>
 <td><code>checkbox</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>yesNo</code></td>
 <td>Progressive</td>
 <td>boolean</td>
 <td><code>checkbox</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>radio</code></td>
 <td>Progressive</td>
 <td>choice</td>
 <td><code>dropdown</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>autocomplete</code></td>
 <td>Progressive</td>
 <td>choice, multiChoice</td>
 <td><code>dropdown</code> / <code>checkboxGroup</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>segmented</code></td>
 <td>Progressive</td>
 <td>choice</td>
 <td><code>radio</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>likert</code></td>
 <td>Progressive</td>
 <td>choice</td>
 <td><code>radio</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>multiSelect</code></td>
 <td>Progressive</td>
 <td>multiChoice</td>
 <td><code>checkboxGroup</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>richText</code></td>
 <td>Progressive</td>
 <td>text</td>
 <td><code>textarea</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>password</code></td>
 <td>Progressive</td>
 <td>string</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>color</code></td>
 <td>Progressive</td>
 <td>string</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>urlInput</code></td>
 <td>Progressive</td>
 <td>uri</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>dateInput</code></td>
 <td>Progressive</td>
 <td>date</td>
 <td><code>datePicker</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>dateTimePicker</code></td>
 <td>Progressive</td>
 <td>dateTime</td>
 <td><code>datePicker</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>dateTimeInput</code></td>
 <td>Progressive</td>
 <td>dateTime</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>timePicker</code></td>
 <td>Progressive</td>
 <td>time</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>timeInput</code></td>
 <td>Progressive</td>
 <td>time</td>
 <td><code>textInput</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>camera</code></td>
 <td>Progressive</td>
 <td>attachment</td>
 <td><code>fileUpload</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>signature</code></td>
 <td>Progressive</td>
 <td>attachment</td>
 <td><code>fileUpload</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>section</code></td>
 <td>—</td>
 <td>group</td>
 <td>—</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>card</code></td>
 <td>—</td>
 <td>group</td>
 <td><code>section</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>accordion</code></td>
 <td>—</td>
 <td>group</td>
 <td><code>section</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>tab</code></td>
 <td>—</td>
 <td>group</td>
 <td><code>section</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>heading</code></td>
 <td>—</td>
 <td>display</td>
 <td>—</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>paragraph</code></td>
 <td>—</td>
 <td>display</td>
 <td>—</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>divider</code></td>
 <td>—</td>
 <td>display</td>
 <td>—</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>banner</code></td>
 <td>—</td>
 <td>display</td>
@@ -2269,59 +2275,59 @@ Reference</h2>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Token key pattern</th>
 <th>Example</th>
 <th>Typical value</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>color.*</code></td>
 <td><code>color.primary</code></td>
 <td><code>"#0057B7"</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>color.*.light</code></td>
 <td><code>color.primary.light</code></td>
 <td><code>"#E0F0FF"</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>spacing.*</code></td>
 <td><code>spacing.md</code></td>
 <td><code>"16px"</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>typography.*.family</code></td>
 <td><code>typography.body.family</code></td>
 <td><code>"Inter, sans-serif"</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>typography.*.size</code></td>
 <td><code>typography.body.size</code></td>
 <td><code>"1rem"</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>typography.*.weight</code></td>
 <td><code>typography.heading.weight</code></td>
 <td><code>"700"</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>border.radius</code></td>
 <td><code>border.radius</code></td>
 <td><code>"6px"</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>border.width</code></td>
 <td><code>border.width</code></td>
 <td><code>1</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>elevation.*</code></td>
 <td><code>elevation.low</code></td>
 <td><code>"0 1px 3px rgba(0,0,0,0.12)"</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>x-*</code></td>
 <td><code>x-brand.logo-height</code></td>
 <td><code>"48px"</code></td>

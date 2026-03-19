@@ -363,6 +363,6 @@ export class FelParser extends CstParser {
  * Shared across the engine to avoid the cost of repeated Chevrotain self-analysis.
  * Usage: set `parser.input = FelLexer.tokenize(expr).tokens`, then call
  * `parser.expression()` to obtain a CST node. The CST is then passed to the
- * {@link interpreter} or {@link dependencyVisitor} for evaluation or analysis.
+ * the interpreter or dependency visitor for evaluation or analysis.
  */
 export const parser = new FelParser();

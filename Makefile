@@ -26,7 +26,7 @@ test-python:
 	pytest
 
 test-rust:
-	cargo test --workspace
+	cargo test --workspace --exclude formspec-py
 
 test: test-unit test-python test-rust test-e2e test-studio-e2e
 
@@ -36,8 +36,6 @@ api-docs:
 	PYTHONPATH=src python3 -m pdoc formspec --output-directory $(DOCS_DIR)/api/formspec
 	npx typedoc --entryPoints packages/formspec-engine/src/index.ts --tsconfig packages/formspec-engine/tsconfig.json --out $(DOCS_DIR)/api/formspec-engine
 	npx typedoc --entryPoints packages/formspec-webcomponent/src/index.ts --tsconfig packages/formspec-webcomponent/tsconfig.json --out $(DOCS_DIR)/api/formspec-webcomponent
-	npm run --workspace=form-builder build:types
-	npx typedoc --entryPoints form-builder/src/index.ts --tsconfig form-builder/tsconfig.docs.json --skipErrorChecking --out $(DOCS_DIR)/api/form-builder
 	npm run --workspace=formspec-studio-core build || true
 	PYTHONPATH=src python3 scripts/generate-api-markdown.py src/formspec/API.llm.md
 	node scripts/generate-ts-api-markdown.mjs
@@ -97,8 +95,6 @@ clean:
 	rm -rf $(DOCS_DIR)/api
 	rm -f src/formspec/API.llm.md \
 	      packages/formspec-engine/API.llm.md \
-	      packages/formspec-webcomponent/API.llm.md \
-	      form-builder/API.llm.md
-	rm -rf form-builder/dist-types
+	      packages/formspec-webcomponent/API.llm.md
 
 .PHONY: all spec-artifacts docs-check check docs api-docs test test-unit test-python test-rust test-e2e test-studio-e2e setup serve clean

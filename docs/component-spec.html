@@ -480,24 +480,24 @@ model:</p>
 <col style="width: 44%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Tier</th>
 <th>Concern</th>
 <th>Defined In</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>1. Structure hints</td>
 <td>Advisory widget hints on Items</td>
 <td>Core §4.2.5 (<code>presentation</code>)</td>
 </tr>
-<tr class="even">
+<tr>
 <td>2. Theme</td>
 <td>Selector cascade, tokens, layout grid</td>
 <td>Theme Spec (theme-spec.md)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>3. Component</td>
 <td>Explicit component tree with slot binding</td>
 <td><strong>This specification</strong></td>
@@ -532,20 +532,20 @@ Complete)</h3>
 <col style="width: 41%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Level</th>
 <th>Components</th>
 <th>Requirement</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><strong>Core Conformant</strong></td>
 <td>18 Core components (§5)</td>
 <td>MUST support all 18 Core components. MUST apply fallback rules
 (§6.17) when encountering Progressive components.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Complete Conformant</strong></td>
 <td>All 34 components (§5 + §6)</td>
 <td>MUST support all 18 Core components and all 16 Progressive
@@ -566,64 +566,64 @@ built-in components natively.</p>
 <col style="width: 66%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Term</th>
 <th>Definition</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><strong>Definition</strong></td>
 <td>A Formspec Definition document (core spec §4).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Component Document</strong></td>
 <td>A Formspec Component document conforming to this specification.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Component</strong></td>
 <td>A node in the component tree. Each component has a type, optional
 binding, and optional children.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Tier 1 hints</strong></td>
 <td>The <code>formPresentation</code> and <code>presentation</code>
 properties defined in core spec §4.1.1 and §4.2.5.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Tier 2 theme</strong></td>
 <td>A Formspec Theme Document conforming to theme-spec.md.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Tier 3 component</strong></td>
 <td>A Component Document conforming to this specification.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Renderer</strong></td>
 <td>Software that presents a Definition to end users using a Component
 Document.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Token</strong></td>
 <td>A named design value (color, spacing, typography) defined in the
 <code>tokens</code> map.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Slot binding</strong></td>
 <td>The association between a component and a Definition item via the
 <code>bind</code> property.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Core component</strong></td>
 <td>One of the 18 components that all conforming processors MUST
 support.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Progressive component</strong></td>
 <td>One of the 16 additional components that Complete processors MUST
 support, with defined fallbacks for Core processors.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Custom component</strong></td>
 <td>A reusable component template defined in the <code>components</code>
 registry.</td>
@@ -666,7 +666,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="
 <col style="width: 16%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Pointer</th>
 <th>Field</th>
 <th>Type</th>
@@ -676,7 +676,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>#/properties/$formspecComponent</code></td>
 <td><code>$formspecComponent</code></td>
 <td><code>string</code></td>
@@ -684,7 +684,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="
 <td>const: <code>“1.0”</code>; critical</td>
 <td>Component specification version. MUST be ‘1.0’.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/breakpoints</code></td>
 <td><code>breakpoints</code></td>
 <td><code>$ref</code></td>
@@ -695,7 +695,7 @@ breakpoint names; values are minimum viewport widths in pixels.
 Mobile-first cascade: base props apply to all widths, then overrides
 merge in ascending order.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/components</code></td>
 <td><code>components</code></td>
 <td><code>object</code></td>
@@ -705,7 +705,7 @@ merge in ascending order.</td>
 (MUST NOT collide with built-in names). Each template has params and a
 tree that is instantiated with {param} interpolation.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/description</code></td>
 <td><code>description</code></td>
 <td><code>string</code></td>
@@ -713,7 +713,7 @@ tree that is instantiated with {param} interpolation.</td>
 <td>—</td>
 <td>Human-readable description.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/name</code></td>
 <td><code>name</code></td>
 <td><code>string</code></td>
@@ -721,7 +721,7 @@ tree that is instantiated with {param} interpolation.</td>
 <td>—</td>
 <td>Machine-friendly short identifier.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/targetDefinition</code></td>
 <td><code>targetDefinition</code></td>
 <td><code>$ref</code></td>
@@ -731,7 +731,7 @@ critical</td>
 <td>Binding to the target Formspec Definition and optional compatibility
 range.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/title</code></td>
 <td><code>title</code></td>
 <td><code>string</code></td>
@@ -739,7 +739,7 @@ range.</td>
 <td>—</td>
 <td>Human-readable name.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/tokens</code></td>
 <td><code>tokens</code></td>
 <td><code>$ref</code></td>
@@ -749,7 +749,7 @@ range.</td>
 token-able props via $token.key syntax. Tier 3 tokens override Tier 2
 theme tokens of the same key.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/tree</code></td>
 <td><code>tree</code></td>
 <td><code>$ref</code></td>
@@ -758,7 +758,7 @@ theme tokens of the same key.</td>
 <td>Root component node of the presentation tree. MUST be a single
 component object (wrap multiple children in Stack or Page).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>#/properties/url</code></td>
 <td><code>url</code></td>
 <td><code>string</code></td>
@@ -766,7 +766,7 @@ component object (wrap multiple children in Stack or Page).</td>
 <td>—</td>
 <td>Canonical URI identifier for this Component Document.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>#/properties/version</code></td>
 <td><code>version</code></td>
 <td><code>string</code></td>
@@ -793,7 +793,7 @@ Document to a specific Definition.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Cardinality</th>
@@ -801,14 +801,14 @@ Document to a specific Definition.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>url</code></td>
 <td>string (URI)</td>
 <td><strong>1..1</strong> (REQUIRED)</td>
 <td>Canonical URL of the target Definition (<code>url</code> property
 from the Definition).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>compatibleVersions</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -889,7 +889,7 @@ properties are recognized on all component objects:</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Cardinality</th>
@@ -897,40 +897,40 @@ properties are recognized on all component objects:</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>component</code></td>
 <td>string</td>
 <td><strong>1..1</strong> (REQUIRED)</td>
 <td>The component type name. MUST be a built-in component name (§5, §6)
 or a key in the <code>components</code> registry (§7).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>bind</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (varies)</td>
 <td>Item key from the Definition. See §4 for rules per component
 category.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>when</code></td>
 <td>string (FEL)</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
 <td>FEL boolean expression for conditional rendering. See §8.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>responsive</code></td>
 <td>object</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
 <td>Breakpoint-keyed prop overrides. See §9.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>style</code></td>
 <td>object</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
 <td>Flat style map. Values MAY contain <code>$token.path</code>
 references. See §10.2.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>cssClass</code></td>
 <td>string | array of strings</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
@@ -938,14 +938,14 @@ references. See §10.2.</td>
 root element. Additive to renderer-generated classes. Non-web renderers
 MAY ignore. Values MAY contain <code>$token.</code> references.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>accessibility</code></td>
 <td>AccessibilityBlock</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
 <td>Accessibility overrides applied to the component’s root element. See
 §3.5.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>children</code></td>
 <td>array</td>
 <td><strong>0..1</strong> (varies)</td>
@@ -984,13 +984,13 @@ them in a layout component (typically <code>Stack</code> or
 <code>Page</code>):</p>
 <div class="sourceCode" id="cb4"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="er">//</span> <span class="er">✗</span> <span class="er">INVALID</span> <span class="er">—</span> <span class="er">tree</span> <span class="er">cannot</span> <span class="er">be</span> <span class="er">an</span> <span class="er">array</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;tree&quot;:</span> <span class="ot">[</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;tree&quot;</span><span class="er">:</span> <span class="ot">[</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">{</span> <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;TextInput&quot;</span><span class="fu">,</span> <span class="dt">&quot;bind&quot;</span><span class="fu">:</span> <span class="st">&quot;name&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">{</span> <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;TextInput&quot;</span><span class="fu">,</span> <span class="dt">&quot;bind&quot;</span><span class="fu">:</span> <span class="st">&quot;email&quot;</span> <span class="fu">}</span></span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ot">]</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="er">//</span> <span class="er">✓</span> <span class="er">VALID</span> <span class="er">—</span> <span class="er">single</span> <span class="er">root</span> <span class="er">wrapping</span> <span class="er">multiple</span> <span class="er">children</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="er">&quot;tree&quot;:</span> <span class="fu">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;tree&quot;</span><span class="er">:</span> <span class="fu">{</span></span>
 <span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;Stack&quot;</span><span class="fu">,</span></span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;children&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;TextInput&quot;</span><span class="fu">,</span> <span class="dt">&quot;bind&quot;</span><span class="fu">:</span> <span class="st">&quot;name&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
@@ -1023,29 +1023,29 @@ on the category:</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Category</th>
 <th>Accepts <code>children</code></th>
 <th>Examples</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><strong>Layout</strong></td>
 <td>Yes</td>
 <td>Page, Stack, Grid, Wizard, Columns, Tabs, Accordion</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Container</strong></td>
 <td>Yes</td>
 <td>Card, Collapsible, ConditionalGroup, Panel, Modal, Popover</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Input</strong></td>
 <td>No</td>
 <td>TextInput, NumberInput, Select, Toggle, …</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Display</strong></td>
 <td>No</td>
 <td>Heading, Text, Divider, Alert, Badge, …</td>
@@ -1083,28 +1083,28 @@ component’s root element.</p>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>role</code></td>
 <td>string</td>
 <td>ARIA role override (e.g., <code>"region"</code>,
 <code>"group"</code>, <code>"status"</code>). Replaces any
 renderer-default role.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>description</code></td>
 <td>string</td>
 <td>Accessible description text. Renderers SHOULD wire this to
 <code>aria-describedby</code> (not <code>aria-description</code>, which
 is not a valid ARIA attribute).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>liveRegion</code></td>
 <td><code>"off"</code> | <code>"polite"</code> |
 <code>"assertive"</code></td>
@@ -1124,21 +1124,28 @@ tree are associated with items in the Formspec Definition. The
 <code>bind</code> property on a component object establishes this
 association.</p>
 <h3 id="the-bind-property">4.1 The bind Property</h3>
-<p>The <code>bind</code> property is a <strong>string</strong>
-containing the globally unique <code>key</code> of an item in the target
-Definition. It is NOT a dotted path, JSON Pointer, or FEL expression —
-it is a flat key that matches an item’s <code>key</code> property
-exactly.</p>
+<p>The <code>bind</code> property is a <strong>string</strong> that
+identifies an item in the target Definition. It accepts two forms:</p>
+<ol type="1">
+<li><strong>Flat key</strong> — a single <code>key</code> matching a
+top-level item (e.g., <code>"projectName"</code>).</li>
+<li><strong>Dotted qualified path</strong> — a dot-delimited path from a
+group key to a nested child key (e.g.,
+<code>"applicantInfo.orgName"</code>).</li>
+</ol>
+<p>The <code>bind</code> value is NOT a JSON Pointer or FEL
+expression.</p>
 <div class="sourceCode" id="cb5"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="er">//</span> <span class="er">Definition</span> <span class="er">item:</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span> <span class="dt">&quot;key&quot;</span><span class="fu">:</span> <span class="st">&quot;projectName&quot;</span><span class="fu">,</span> <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;field&quot;</span><span class="fu">,</span> <span class="dt">&quot;dataType&quot;</span><span class="fu">:</span> <span class="st">&quot;string&quot;</span> <span class="fu">}</span></span>
+class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="er">//</span> <span class="er">Top-level</span> <span class="er">item</span> <span class="er">—</span> <span class="er">flat</span> <span class="er">key:</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span> <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;TextInput&quot;</span><span class="fu">,</span> <span class="dt">&quot;bind&quot;</span><span class="fu">:</span> <span class="st">&quot;projectName&quot;</span> <span class="fu">}</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="er">//</span> <span class="er">Component</span> <span class="er">binding:</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span> <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;TextInput&quot;</span><span class="fu">,</span> <span class="dt">&quot;bind&quot;</span><span class="fu">:</span> <span class="st">&quot;projectName&quot;</span> <span class="fu">}</span></span></code></pre></div>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="er">//</span> <span class="er">Nested</span> <span class="er">item</span> <span class="er">—</span> <span class="er">dotted</span> <span class="er">qualified</span> <span class="er">path:</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span> <span class="dt">&quot;component&quot;</span><span class="fu">:</span> <span class="st">&quot;TextInput&quot;</span><span class="fu">,</span> <span class="dt">&quot;bind&quot;</span><span class="fu">:</span> <span class="st">&quot;applicantInfo.orgName&quot;</span> <span class="fu">}</span></span></code></pre></div>
 <p>The <code>bind</code> value MUST be a non-empty string. The value
-MUST correspond to an item <code>key</code> in the target Definition. If
-the key does not exist in the Definition, the processor MUST emit a
-warning and SHOULD hide the component.</p>
+MUST correspond to an item <code>key</code> (or a dotted path resolving
+to a nested item) in the target Definition. If the key does not resolve
+to any item in the Definition, the processor MUST emit a warning and
+SHOULD hide the component.</p>
 <h3 id="bind-resolution-rules">4.2 Bind Resolution Rules</h3>
 <p>The meaning and requirement of <code>bind</code> varies by component
 category:</p>
@@ -1149,14 +1156,14 @@ category:</p>
 <col style="width: 35%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Category</th>
 <th><code>bind</code></th>
 <th>Behavior</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><strong>Input</strong></td>
 <td>REQUIRED</td>
 <td>The component reads and writes the bound item’s value. The renderer
@@ -1164,25 +1171,26 @@ MUST propagate the item’s <code>required</code>, <code>readOnly</code>,
 and <code>relevant</code> state to the input control. Validation errors
 for the bound key MUST be displayed adjacent to this component.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Display</strong></td>
 <td>OPTIONAL</td>
 <td>When present, the component displays the bound item’s current value
 as read-only content. When absent, the component renders its static
 <code>text</code> prop.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Layout</strong></td>
 <td>FORBIDDEN</td>
 <td>Layout components MUST NOT have a <code>bind</code> property. If
 present, processors MUST ignore it and emit a warning.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Container</strong></td>
 <td>FORBIDDEN</td>
 <td>Container components MUST NOT have a <code>bind</code> property,
-with the exception of <strong>DataTable</strong> (§6.13), which MAY bind
-to a repeatable group.</td>
+with the exceptions of <strong>DataTable</strong> (§6.13) and
+<strong>Accordion</strong> (§6.3), which MAY bind to a repeatable
+group.</td>
 </tr>
 </tbody>
 </table>
@@ -1249,7 +1257,9 @@ subject to <code>minRepeat</code> and <code>maxRepeat</code> constraints
 from the Definition.</li>
 </ol>
 <p>Repeatable group binding is available on <strong>DataTable</strong>
-(§6.13), where each repeat instance becomes a table row.</p>
+(§6.13), where each repeat instance becomes a table row, and on
+<strong>Accordion</strong> (§6.3), where each repeat instance becomes a
+collapsible section.</p>
 <p>Other layout and container components MUST NOT bind to repeatable
 groups. Processors MUST reject such bindings.</p>
 <h3 id="unbound-required-items">4.5 Unbound Required Items</h3>
@@ -1281,49 +1291,49 @@ values it is compatible with. Binding a component to an item with an
 incompatible <code>dataType</code> is a validation error.</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th><code>dataType</code></th>
 <th>Compatible Input Components</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>string</code></td>
 <td>TextInput</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>number</code></td>
 <td>NumberInput, Slider, Rating</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>integer</code></td>
 <td>NumberInput, Slider, Rating</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>boolean</code></td>
 <td>Toggle</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>date</code></td>
 <td>DatePicker</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>dateTime</code></td>
 <td>DatePicker</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>time</code></td>
 <td>DatePicker</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>choice</code></td>
 <td>Select, RadioGroup</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>multiChoice</code></td>
 <td>CheckboxGroup</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>attachment</code></td>
 <td>FileUpload, Signature</td>
 </tr>
@@ -1384,7 +1394,7 @@ forms.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -1393,14 +1403,14 @@ forms.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>title</code></td>
 <td>string</td>
 <td>—</td>
 <td>No</td>
 <td>Page heading displayed at the top of the section.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>description</code></td>
 <td>string</td>
 <td>—</td>
@@ -1449,7 +1459,7 @@ primitive and is typically used as the root component.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -1458,7 +1468,7 @@ primitive and is typically used as the root component.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>direction</code></td>
 <td>string</td>
 <td><code>"vertical"</code></td>
@@ -1466,7 +1476,7 @@ primitive and is typically used as the root component.</p>
 <td>Stack direction. MUST be one of <code>"vertical"</code> or
 <code>"horizontal"</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>gap</code></td>
 <td>string | number</td>
 <td><code>0</code></td>
@@ -1474,7 +1484,7 @@ primitive and is typically used as the root component.</p>
 <td>Spacing between children. String values (e.g., <code>"16px"</code>,
 <code>"$token.spacing.md"</code>) or numeric pixel values.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>align</code></td>
 <td>string</td>
 <td><code>"stretch"</code></td>
@@ -1482,7 +1492,7 @@ primitive and is typically used as the root component.</p>
 <td>Cross-axis alignment. MUST be one of <code>"start"</code>,
 <code>"center"</code>, <code>"end"</code>, <code>"stretch"</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>wrap</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -1530,7 +1540,7 @@ Children are placed in source order, wrapping to new rows as needed.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -1539,7 +1549,7 @@ Children are placed in source order, wrapping to new rows as needed.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>columns</code></td>
 <td>integer | string</td>
 <td><code>2</code></td>
@@ -1547,14 +1557,14 @@ Children are placed in source order, wrapping to new rows as needed.</p>
 <td>Number of columns (integer) or a CSS grid-template-columns value
 (string, e.g., <code>"1fr 2fr 1fr"</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>gap</code></td>
 <td>string | number</td>
 <td><code>0</code></td>
 <td>Yes</td>
 <td>Spacing between grid cells.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>rowGap</code></td>
 <td>string | number</td>
 <td>(inherits <code>gap</code>)</td>
@@ -1604,7 +1614,7 @@ controls.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -1613,7 +1623,7 @@ controls.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>showProgress</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
@@ -1621,7 +1631,7 @@ controls.</p>
 <td>Whether to display a progress indicator (step counter, progress bar,
 or breadcrumb).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>allowSkip</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -1681,7 +1691,7 @@ Spacer is a leaf component with no children and no binding.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -1690,7 +1700,7 @@ Spacer is a leaf component with no children and no binding.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>size</code></td>
 <td>string | number</td>
 <td><code>"$token.spacing.md"</code></td>
@@ -1732,7 +1742,7 @@ greater than 1, the input renders as a multi-line textarea.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -1741,14 +1751,14 @@ greater than 1, the input renders as a multi-line textarea.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>placeholder</code></td>
 <td>string</td>
 <td>—</td>
 <td>No</td>
 <td>Placeholder text displayed when the field is empty.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>maxLines</code></td>
 <td>integer</td>
 <td><code>1</code></td>
@@ -1756,7 +1766,7 @@ greater than 1, the input renders as a multi-line textarea.</p>
 <td>Maximum visible lines. <code>1</code> = single-line input,
 <code>&gt;1</code> = multi-line textarea. MUST be ≥ 1.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>inputMode</code></td>
 <td>string</td>
 <td><code>"text"</code></td>
@@ -1764,7 +1774,7 @@ greater than 1, the input renders as a multi-line textarea.</p>
 <td>Input mode hint. One of <code>"text"</code>, <code>"email"</code>,
 <code>"tel"</code>, <code>"url"</code>, <code>"search"</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>prefix</code></td>
 <td>string</td>
 <td>—</td>
@@ -1772,7 +1782,7 @@ greater than 1, the input renders as a multi-line textarea.</p>
 <td>Static text rendered before the input (e.g.,
 <code>"https://"</code>).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>suffix</code></td>
 <td>string</td>
 <td>—</td>
@@ -1823,7 +1833,7 @@ prefix/suffix).</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -1832,35 +1842,35 @@ prefix/suffix).</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>step</code></td>
 <td>number</td>
 <td><code>1</code></td>
 <td>No</td>
 <td>Increment/decrement step value.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>min</code></td>
 <td>number</td>
 <td>—</td>
 <td>No</td>
 <td>Minimum allowed value.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>max</code></td>
 <td>number</td>
 <td>—</td>
 <td>No</td>
 <td>Maximum allowed value.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>showStepper</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
 <td>No</td>
 <td>Whether to show increment/decrement buttons.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>locale</code></td>
 <td>string</td>
 <td>—</td>
@@ -1909,7 +1919,7 @@ automatically determined by the bound item’s <code>dataType</code>.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -1918,7 +1928,7 @@ automatically determined by the bound item’s <code>dataType</code>.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>format</code></td>
 <td>string</td>
 <td>—</td>
@@ -1927,21 +1937,21 @@ automatically determined by the bound item’s <code>dataType</code>.</p>
 <code>"MM/DD/YYYY"</code>). Does not affect stored value (always ISO
 8601).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>minDate</code></td>
 <td>string</td>
 <td>—</td>
 <td>No</td>
 <td>Earliest selectable date (ISO 8601).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>maxDate</code></td>
 <td>string</td>
 <td>—</td>
 <td>No</td>
 <td>Latest selectable date (ISO 8601).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>showTime</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -1994,7 +2004,7 @@ Definition.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2003,21 +2013,21 @@ Definition.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>searchable</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
 <td>No</td>
 <td>Whether to enable type-ahead search/filtering of options.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>placeholder</code></td>
 <td>string</td>
 <td><code>"Select…"</code></td>
 <td>No</td>
 <td>Placeholder text when no option is selected.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>clearable</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -2065,7 +2075,7 @@ the bound item’s <code>options</code> or <code>optionSet</code>.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2074,14 +2084,14 @@ the bound item’s <code>options</code> or <code>optionSet</code>.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>columns</code></td>
 <td>integer</td>
 <td><code>1</code></td>
 <td>No</td>
 <td>Number of columns to arrange checkboxes in.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>selectAll</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -2127,7 +2137,7 @@ true/false fields.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2136,7 +2146,7 @@ true/false fields.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>onLabel</code></td>
 <td>string</td>
 <td><code>"On"</code></td>
@@ -2144,7 +2154,7 @@ true/false fields.</p>
 <td>Label displayed when the toggle is in the <code>true</code>
 state.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>offLabel</code></td>
 <td>string</td>
 <td><code>"Off"</code></td>
@@ -2190,7 +2200,7 @@ multiple file selection with optional type and size constraints.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2199,7 +2209,7 @@ multiple file selection with optional type and size constraints.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>accept</code></td>
 <td>string</td>
 <td><code>"*/*"</code></td>
@@ -2207,21 +2217,21 @@ multiple file selection with optional type and size constraints.</p>
 <td>Accepted MIME types (comma-separated, e.g.,
 <code>"image/*,application/pdf"</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>maxSize</code></td>
 <td>integer</td>
 <td>—</td>
 <td>No</td>
 <td>Maximum file size in bytes.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>multiple</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
 <td>No</td>
 <td>Whether multiple files may be uploaded.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>dragDrop</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
@@ -2272,7 +2282,7 @@ data.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2281,7 +2291,7 @@ data.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>level</code></td>
 <td>integer</td>
 <td>— (REQUIRED)</td>
@@ -2289,7 +2299,7 @@ data.</p>
 <td>Heading level, 1–6. MUST correspond to HTML heading semantics
 (<code>&lt;h1&gt;</code>–<code>&lt;h6&gt;</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>text</code></td>
 <td>string</td>
 <td>— (REQUIRED)</td>
@@ -2328,7 +2338,7 @@ prop.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2337,14 +2347,14 @@ prop.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>text</code></td>
 <td>string</td>
 <td><code>""</code></td>
 <td>No</td>
 <td>Static text content. Ignored when <code>bind</code> is present.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>format</code></td>
 <td>string</td>
 <td><code>"plain"</code></td>
@@ -2390,7 +2400,7 @@ Forbidden</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2399,7 +2409,7 @@ Forbidden</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>label</code></td>
 <td>string</td>
 <td>—</td>
@@ -2437,7 +2447,7 @@ provide a visual boundary with optional title and subtitle.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2446,21 +2456,21 @@ provide a visual boundary with optional title and subtitle.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>title</code></td>
 <td>string</td>
 <td>—</td>
 <td>No</td>
 <td>Card header title.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>subtitle</code></td>
 <td>string</td>
 <td>—</td>
 <td>No</td>
 <td>Card header subtitle, rendered below the title.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>elevation</code></td>
 <td>string</td>
 <td><code>"low"</code></td>
@@ -2505,7 +2515,7 @@ the children. Useful for optional sections or advanced options.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2514,7 +2524,7 @@ the children. Useful for optional sections or advanced options.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>title</code></td>
 <td>string</td>
 <td>— (REQUIRED)</td>
@@ -2522,7 +2532,7 @@ the children. Useful for optional sections or advanced options.</p>
 <td>The collapsible section header. MUST be visible regardless of
 open/closed state.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>defaultOpen</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -2574,7 +2584,7 @@ solely to conditionally show/hide a group of children.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2583,7 +2593,7 @@ solely to conditionally show/hide a group of children.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>when</code></td>
 <td>string (FEL)</td>
 <td>— (REQUIRED)</td>
@@ -2593,7 +2603,7 @@ solely to conditionally show/hide a group of children.</p>
 <strong>REQUIRED</strong> on ConditionalGroup (unlike optional
 <code>when</code> on other components).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>fallback</code></td>
 <td>string</td>
 <td>—</td>
@@ -2660,7 +2670,7 @@ control over per-column sizing.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2669,7 +2679,7 @@ control over per-column sizing.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>widths</code></td>
 <td>array of strings</td>
 <td>equal widths</td>
@@ -2678,7 +2688,7 @@ control over per-column sizing.</p>
 <code>["1fr", "2fr", "1fr"]</code> or <code>["200px", "auto"]</code>).
 Array length SHOULD match the number of children.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>gap</code></td>
 <td>string | number</td>
 <td><code>0</code></td>
@@ -2727,7 +2737,7 @@ content of one tab. Tab labels are derived from child Page
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2736,7 +2746,7 @@ content of one tab. Tab labels are derived from child Page
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>position</code></td>
 <td>string</td>
 <td><code>"top"</code></td>
@@ -2745,7 +2755,7 @@ content of one tab. Tab labels are derived from child Page
 <code>"bottom"</code>, <code>"left"</code>, or
 <code>"right"</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>tabLabels</code></td>
 <td>array of strings</td>
 <td>—</td>
@@ -2754,7 +2764,7 @@ content of one tab. Tab labels are derived from child Page
 <code>title</code> from each child (children SHOULD be Page
 components).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>defaultTab</code></td>
 <td>integer</td>
 <td><code>0</code></td>
@@ -2797,13 +2807,17 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb26-1"><a href=
 <hr />
 <h3 id="accordion">6.3 Accordion</h3>
 <p><strong>Category:</strong> Layout <strong>Level:</strong> Progressive
-<strong>Accepts children:</strong> Yes <strong>Bind:</strong> Forbidden
-<strong>Fallback:</strong> Stack with Collapsible children</p>
+<strong>Accepts children:</strong> Yes <strong>Bind:</strong> Optional
+(repeatable group key) <strong>Fallback:</strong> Stack with Collapsible
+children</p>
 <h4 id="description-20">Description</h4>
 <p>A vertical list of collapsible sections where, by default, only one
 section is expanded at a time. Each child SHOULD be a component with a
 <code>title</code> prop (e.g., Page, Card, Collapsible) to serve as the
 section header.</p>
+<p>When <code>bind</code> is provided, it MUST reference a repeatable
+group item. Each repeat instance becomes one accordion section. Child
+<code>bind</code> values resolve relative to the repeat context.</p>
 <h4 id="props-20">Props</h4>
 <table>
 <colgroup>
@@ -2814,7 +2828,7 @@ section header.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2823,7 +2837,7 @@ section header.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>allowMultiple</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -2831,12 +2845,21 @@ section header.</p>
 <td>Whether multiple sections may be expanded simultaneously. When
 <code>false</code>, expanding one section collapses the others.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>defaultOpen</code></td>
 <td>integer</td>
 <td><code>0</code></td>
 <td>No</td>
 <td>Zero-based index of the initially expanded section.</td>
+</tr>
+<tr>
+<td><code>labels</code></td>
+<td>string[]</td>
+<td>—</td>
+<td>No</td>
+<td>Section header labels. <code>labels[i]</code> is the summary text
+for <code>children[i]</code>. Falls back to <code>"Section {i+1}"</code>
+when absent.</td>
 </tr>
 </tbody>
 </table>
@@ -2888,7 +2911,7 @@ lists (typically ≤ 7 items).</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2897,14 +2920,14 @@ lists (typically ≤ 7 items).</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>columns</code></td>
 <td>integer</td>
 <td><code>1</code></td>
 <td>No</td>
 <td>Number of columns to arrange radio buttons in.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>orientation</code></td>
 <td>string</td>
 <td><code>"vertical"</code></td>
@@ -2955,7 +2978,7 @@ formatting.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -2964,7 +2987,7 @@ formatting.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>currency</code></td>
 <td>string</td>
 <td><code>"USD"</code></td>
@@ -2972,14 +2995,14 @@ formatting.</p>
 <td>ISO 4217 currency code (e.g., <code>"USD"</code>,
 <code>"EUR"</code>, <code>"GBP"</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>showCurrency</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
 <td>No</td>
 <td>Whether to display the currency symbol.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>locale</code></td>
 <td>string</td>
 <td>—</td>
@@ -3032,7 +3055,7 @@ continuous range.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3041,28 +3064,28 @@ continuous range.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>min</code></td>
 <td>number</td>
 <td><code>0</code></td>
 <td>No</td>
 <td>Minimum value.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>max</code></td>
 <td>number</td>
 <td><code>100</code></td>
 <td>No</td>
 <td>Maximum value.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>step</code></td>
 <td>number</td>
 <td><code>1</code></td>
 <td>No</td>
 <td>Step increment.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>showValue</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
@@ -3070,7 +3093,7 @@ continuous range.</p>
 <td>Whether to display the current numeric value adjacent to the
 slider.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>showTicks</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -3124,7 +3147,7 @@ a small range (typically 1–5 or 1–10).</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3133,14 +3156,14 @@ a small range (typically 1–5 or 1–10).</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>max</code></td>
 <td>integer</td>
 <td><code>5</code></td>
 <td>No</td>
 <td>Maximum rating value (number of stars/icons).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>icon</code></td>
 <td>string</td>
 <td><code>"star"</code></td>
@@ -3149,7 +3172,7 @@ a small range (typically 1–5 or 1–10).</p>
 <code>"heart"</code>, <code>"circle"</code>. Renderers MAY support
 additional icons.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>allowHalf</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -3200,7 +3223,7 @@ attachment.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3209,28 +3232,28 @@ attachment.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>strokeColor</code></td>
 <td>string</td>
 <td><code>"#000000"</code></td>
 <td>Yes</td>
 <td>Stroke color for the signature pen.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>height</code></td>
 <td>integer</td>
 <td><code>150</code></td>
 <td>No</td>
 <td>Height of the signature pad in pixels.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>penWidth</code></td>
 <td>number</td>
 <td><code>2</code></td>
 <td>No</td>
 <td>Stroke width in pixels.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>clearable</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
@@ -3278,7 +3301,7 @@ error summaries, or success messages.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3287,7 +3310,7 @@ error summaries, or success messages.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>severity</code></td>
 <td>string</td>
 <td>— (REQUIRED)</td>
@@ -3296,14 +3319,14 @@ error summaries, or success messages.</p>
 <code>"success"</code>, <code>"warning"</code>,
 <code>"error"</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>text</code></td>
 <td>string</td>
 <td>— (REQUIRED)</td>
 <td>No</td>
 <td>Alert message text.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>dismissible</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
@@ -3348,7 +3371,7 @@ Forbidden <strong>Fallback:</strong> Text</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3357,14 +3380,14 @@ Forbidden <strong>Fallback:</strong> Text</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>text</code></td>
 <td>string</td>
 <td>— (REQUIRED)</td>
 <td>No</td>
 <td>Badge label text.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>variant</code></td>
 <td>string</td>
 <td><code>"default"</code></td>
@@ -3405,7 +3428,7 @@ the data. When unbound, uses the static <code>value</code> prop.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3414,7 +3437,7 @@ the data. When unbound, uses the static <code>value</code> prop.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>value</code></td>
 <td>number</td>
 <td><code>0</code></td>
@@ -3422,21 +3445,21 @@ the data. When unbound, uses the static <code>value</code> prop.</p>
 <td>Current progress value. Ignored when <code>bind</code> is
 present.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>max</code></td>
 <td>number</td>
 <td><code>100</code></td>
 <td>No</td>
 <td>Maximum value (100% completion).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>label</code></td>
 <td>string</td>
 <td>—</td>
 <td>No</td>
 <td>Accessible label for the progress bar.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>showPercent</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
@@ -3484,7 +3507,7 @@ their current values in a structured list. Useful for review pages.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3493,7 +3516,7 @@ their current values in a structured list. Useful for review pages.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>items</code></td>
 <td>array</td>
 <td>— (REQUIRED)</td>
@@ -3513,7 +3536,7 @@ REQUIRED — item key), and optional <code>optionSet</code> (string).</td>
 <col style="width: 31%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Item Field</th>
 <th>Type</th>
 <th>Required</th>
@@ -3521,19 +3544,19 @@ REQUIRED — item key), and optional <code>optionSet</code> (string).</td>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>label</code></td>
 <td>string</td>
 <td>Yes</td>
 <td>Display label shown next to the value.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>bind</code></td>
 <td>string</td>
 <td>Yes</td>
 <td>Path to the field whose value to display.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>optionSet</code></td>
 <td>string</td>
 <td>No</td>
@@ -3593,7 +3616,7 @@ is one of the few non-Layout/Container components that MAY use
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3602,7 +3625,7 @@ is one of the few non-Layout/Container components that MAY use
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>columns</code></td>
 <td>array</td>
 <td>— (REQUIRED)</td>
@@ -3611,21 +3634,21 @@ is one of the few non-Layout/Container components that MAY use
 <code>header</code> (string, REQUIRED) and <code>bind</code> (string,
 REQUIRED — item key within the repeat group).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>showRowNumbers</code></td>
 <td>boolean</td>
 <td><code>false</code></td>
 <td>No</td>
 <td>Whether to display row numbers.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>allowAdd</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
 <td>No</td>
 <td>Whether to show an “Add row” control.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>allowRemove</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
@@ -3680,7 +3703,7 @@ actions. Panels may be positioned alongside the main content.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3689,7 +3712,7 @@ actions. Panels may be positioned alongside the main content.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>position</code></td>
 <td>string</td>
 <td><code>"left"</code></td>
@@ -3697,14 +3720,14 @@ actions. Panels may be positioned alongside the main content.</p>
 <td>Panel position. MUST be one of <code>"left"</code> or
 <code>"right"</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>title</code></td>
 <td>string</td>
 <td>—</td>
 <td>No</td>
 <td>Panel header title.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>width</code></td>
 <td>string</td>
 <td><code>"300px"</code></td>
@@ -3753,7 +3776,7 @@ main form. Modals require explicit user action to open and close.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3762,14 +3785,14 @@ main form. Modals require explicit user action to open and close.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>title</code></td>
 <td>string</td>
 <td>— (REQUIRED)</td>
 <td>No</td>
 <td>Modal dialog title.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>size</code></td>
 <td>string</td>
 <td><code>"md"</code></td>
@@ -3777,7 +3800,7 @@ main form. Modals require explicit user action to open and close.</p>
 <td>Modal size. MUST be one of <code>"sm"</code>, <code>"md"</code>,
 <code>"lg"</code>, <code>"xl"</code>, or <code>"full"</code>.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>trigger</code></td>
 <td>string</td>
 <td><code>"button"</code></td>
@@ -3786,7 +3809,7 @@ main form. Modals require explicit user action to open and close.</p>
 dedicated open button) or <code>"auto"</code> (opens automatically based
 on <code>when</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>triggerLabel</code></td>
 <td>string</td>
 <td><code>"Open"</code></td>
@@ -3794,7 +3817,7 @@ on <code>when</code>).</td>
 <td>Label for the trigger button when <code>trigger</code> is
 <code>"button"</code>.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>closable</code></td>
 <td>boolean</td>
 <td><code>true</code></td>
@@ -3849,7 +3872,7 @@ trigger is activated.</p>
 <col style="width: 28%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Prop</th>
 <th>Type</th>
 <th>Default</th>
@@ -3858,7 +3881,7 @@ trigger is activated.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>triggerBind</code></td>
 <td>string</td>
 <td>—</td>
@@ -3866,7 +3889,7 @@ trigger is activated.</p>
 <td>Optional bind key whose current value is shown as the trigger
 label.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>triggerLabel</code></td>
 <td>string</td>
 <td><code>"Open"</code></td>
@@ -3874,7 +3897,7 @@ label.</td>
 <td>Fallback trigger label when <code>triggerBind</code> has no
 value.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>placement</code></td>
 <td>string</td>
 <td><code>"bottom"</code></td>
@@ -3921,93 +3944,93 @@ fallbacks when it encounters a Progressive component.</p>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Progressive Component</th>
 <th>Core Fallback</th>
 <th>Notes</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>Columns</td>
 <td>Grid</td>
 <td><code>columns</code> set to child count; <code>gap</code>
 preserved.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Tabs</td>
 <td>Stack + Heading</td>
 <td>Each child preceded by a Heading (level 3) with the tab label.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Accordion</td>
 <td>Stack + Collapsible</td>
 <td>Each child wrapped in Collapsible; first defaults open.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>RadioGroup</td>
 <td>Select</td>
 <td><code>columns</code> discarded.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>MoneyInput</td>
 <td>NumberInput</td>
 <td>Currency symbol rendered as prefix if available.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Slider</td>
 <td>NumberInput</td>
 <td><code>min</code>, <code>max</code>, <code>step</code>
 preserved.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Rating</td>
 <td>NumberInput</td>
 <td><code>min: 1</code>, <code>max</code> preserved,
 <code>step: 1</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Signature</td>
 <td>FileUpload</td>
 <td><code>accept</code> set to <code>"image/*"</code>.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Alert</td>
 <td>Text</td>
 <td>Text prefixed with severity in brackets.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Badge</td>
 <td>Text</td>
 <td>Same <code>text</code> prop.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>ProgressBar</td>
 <td>Text</td>
 <td>Text shows
 <code>"&lt;value&gt; / &lt;max&gt; (&lt;percent&gt;%)"</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Summary</td>
 <td>Stack of Text</td>
 <td>One Text per item: <code>"&lt;label&gt;: &lt;value&gt;"</code>.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>DataTable</td>
 <td>Stack of Card</td>
 <td>One Card per repeat instance with child inputs.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Panel</td>
 <td>Card</td>
 <td><code>title</code> preserved; position/width discarded.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Modal</td>
 <td>Collapsible</td>
 <td><code>title</code> preserved; <code>defaultOpen: false</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Popover</td>
 <td>Collapsible</td>
 <td><code>triggerLabel</code> mapped to <code>title</code>; placement
@@ -4046,7 +4069,7 @@ template</strong> objects.</p>
 <col style="width: 25%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Property</th>
 <th>Type</th>
 <th>Cardinality</th>
@@ -4054,14 +4077,14 @@ template</strong> objects.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>params</code></td>
 <td>array of strings</td>
 <td><strong>0..1</strong> (OPTIONAL)</td>
 <td>Parameter names accepted by this template. Each name MUST match
 <code>[a-zA-Z][a-zA-Z0-9_]*</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>tree</code></td>
 <td>object</td>
 <td><strong>1..1</strong> (REQUIRED)</td>
@@ -4136,37 +4159,37 @@ error.</li>
 <col style="width: 52%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Allowed</th>
 <th>Examples</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>bind</code></td>
 <td><code>"bind": "{prefix}Street"</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>when</code></td>
 <td><code>"when": "${field} != null"</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>text</code> (on Text, Heading, Alert, Badge)</td>
 <td><code>"text": "Address for {label}"</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>title</code> (on Page, Card, Collapsible, etc.)</td>
 <td><code>"title": "{sectionTitle}"</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>placeholder</code></td>
 <td><code>"placeholder": "Enter {label}"</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>label</code> (on Divider)</td>
 <td><code>"label": "{section}"</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>fallback</code> (on ConditionalGroup)</td>
 <td><code>"fallback": "No {item} available"</code></td>
 </tr>
@@ -4175,31 +4198,31 @@ error.</li>
 <p>Interpolation is FORBIDDEN in:</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Forbidden</th>
 <th>Reason</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>component</code></td>
 <td>Component type switching creates ambiguous trees.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>$token.*</code> references</td>
 <td>Token resolution is a separate phase.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Numeric props (<code>min</code>, <code>max</code>,
 <code>step</code>, <code>columns</code>, etc.)</td>
 <td>Type safety.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Boolean props (<code>searchable</code>, <code>showProgress</code>,
 etc.)</td>
 <td>Type safety.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>style</code> keys or values</td>
 <td>Style resolution is a separate phase.</td>
 </tr>
@@ -4292,35 +4315,35 @@ purposes</strong>:</p>
 <col style="width: 40%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Aspect</th>
 <th><code>when</code> (Component)</th>
 <th><code>relevant</code> (Bind)</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><strong>Scope</strong></td>
 <td>Visual presentation only</td>
 <td>Data model inclusion</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Data effect</strong></td>
 <td>None — hidden component’s bound data is preserved</td>
 <td>Non-relevant data MAY be removed from the Instance (per
 <code>nonRelevantBehavior</code>)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Defined in</strong></td>
 <td>Component Document (Tier 3)</td>
 <td>Definition (Tier 1, Binds)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Evaluation</strong></td>
 <td>FEL against data tree</td>
 <td>FEL against data tree</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Override</strong></td>
 <td>Cannot override <code>relevant</code></td>
 <td>Cannot be overridden by <code>when</code></td>
@@ -4509,24 +4532,24 @@ a <code>$token.</code> reference).</p>
 the same Definition, the following cascade applies:</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Priority</th>
 <th>Source</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>1 (highest)</td>
 <td>Component Document <code>tokens</code></td>
 <td>Tier 3 tokens.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>2</td>
 <td>Theme Document <code>tokens</code></td>
 <td>Tier 2 tokens.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>3 (lowest)</td>
 <td>Renderer defaults</td>
 <td>Platform/implementation defaults.</td>
@@ -4564,7 +4587,7 @@ convention is:</p>
 <p>For example, a theme token <code>color.primary</code> with value
 <code>#005ea2</code> SHOULD be emitted as:</p>
 <div class="sourceCode" id="cb51"><pre
-class="sourceCode css"><code class="sourceCode css"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>--formspec-color-primary<span class="in">: #005ea2;</span></span></code></pre></div>
+class="sourceCode css"><code class="sourceCode css"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>--formspec-color-primary<span class="in">:</span> <span class="pp">#005ea2</span>;</span></code></pre></div>
 <p>This enables external CSS — including design-system bridge
 stylesheets and author-defined overrides — to reference theme tokens
 without JavaScript coupling. Bridge CSS can use
@@ -4618,27 +4641,27 @@ Tier 2 &gt; Tier 1</h3>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Priority</th>
 <th>Tier</th>
 <th>Effect</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>1 (highest)</td>
 <td><strong>Tier 3 — Component Document</strong></td>
 <td>Component tree layout, component selection, style, and tokens
 override everything below.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>2</td>
 <td><strong>Tier 2 — Theme Document</strong></td>
 <td>Widget configuration, selector cascade, tokens, and page layout
 apply to items NOT controlled by Tier 3. Tier 2 tokens are inherited by
 Tier 3 (§10.3).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>3 (lowest)</td>
 <td><strong>Tier 1 — Definition hints</strong></td>
 <td>Inline <code>presentation</code> and <code>formPresentation</code>
@@ -4797,62 +4820,62 @@ by conforming processors.</p>
 <col style="width: 50%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Excluded Feature</th>
 <th>Rationale</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><strong>Imperative event handlers / scripting</strong></td>
 <td>Component Documents are declarative data, not programs. No
 <code>onClick</code>, <code>onChange</code>, or embedded JavaScript/FEL
 imperative code.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Conditional component type switching</strong></td>
 <td>The <code>component</code> prop MUST NOT vary by condition,
 breakpoint, or parameter. Structural ambiguity prevents static
 analysis.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Recursive custom components</strong></td>
 <td>Self-referencing templates produce unbounded trees. Prohibited and
 statically detected (§7.4).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Computed props via FEL</strong></td>
 <td>FEL is used ONLY in <code>when</code> conditions and display
 <code>text</code> interpolation. Props like <code>columns</code>,
 <code>min</code>, <code>max</code> MUST NOT be FEL expressions.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Arbitrary slot projection / transclusion</strong></td>
 <td>Components do not have named slots or content projection beyond
 <code>children</code>. This avoids the complexity of Angular/Vue-style
 slot APIs.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Animation specifications</strong></td>
 <td>Transitions, keyframes, and timing functions are out of scope.
 Renderers MAY animate independently.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Server-side data fetching</strong></td>
 <td>Component Documents MUST NOT trigger HTTP requests, API calls, or
 data loading. All data is provided by the Formspec Instance.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Component inheritance</strong></td>
 <td>No <code>extends</code> or prototype-chain mechanism for component
 types. Use custom components (§7) for reuse.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Dynamic component registration</strong></td>
 <td>The <code>components</code> registry is static. Components MUST NOT
 be added or removed at runtime.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Deep responsive (children swap)</strong></td>
 <td>Responsive overrides MUST NOT alter <code>children</code>,
 <code>bind</code>, or <code>component</code> type (§9.4). Only
@@ -4870,52 +4893,52 @@ complexity:</p>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Guard Rail</th>
 <th>Limit</th>
 <th>Enforcement</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><strong>Total tree depth</strong></td>
 <td>SHOULD NOT exceed 20 levels.</td>
 <td>Processors MAY reject deeper trees. MUST NOT enforce limits below
 10.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Custom component nesting</strong></td>
 <td>SHOULD NOT exceed 3 levels of expansion.</td>
 <td>Processors MAY reject deeper nesting.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Single <code>when</code> per component</strong></td>
 <td>Each component has at most one <code>when</code> expression.</td>
 <td>Use FEL <code>and</code>/<code>or</code> for compound
 conditions.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>String-only params</strong></td>
 <td>Custom component <code>params</code> values MUST be strings.</td>
 <td>No objects, arrays, numbers, or booleans as param values.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>No param interpolation in type names</strong></td>
 <td><code>{param}</code> MUST NOT appear in the <code>component</code>
 property.</td>
 <td>Prevents dynamic dispatch.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Flat token map</strong></td>
 <td>Tokens are a single-level key-value map.</td>
 <td>No nested token groups or computed tokens.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><strong>Editable uniqueness</strong></td>
 <td>At most one editable Input per item key (§4.3).</td>
 <td>Prevents conflicting write paths.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Static tree</strong></td>
 <td>The component tree structure is fixed at authoring time.</td>
 <td><code>when</code> hides/shows but does not add/remove nodes.</td>
@@ -5170,7 +5193,7 @@ classification and key characteristics.</p>
 <col style="width: 21%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>#</th>
 <th>Component</th>
 <th>Category</th>
@@ -5181,7 +5204,7 @@ classification and key characteristics.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>1</td>
 <td>Page</td>
 <td>Layout</td>
@@ -5190,7 +5213,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Top-level page/section container.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>2</td>
 <td>Stack</td>
 <td>Layout</td>
@@ -5199,7 +5222,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Flexbox vertical/horizontal stacking.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>3</td>
 <td>Grid</td>
 <td>Layout</td>
@@ -5208,7 +5231,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Multi-column grid layout.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>4</td>
 <td>Wizard</td>
 <td>Layout</td>
@@ -5217,7 +5240,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Sequential step navigation.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>5</td>
 <td>Spacer</td>
 <td>Layout</td>
@@ -5226,7 +5249,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Empty spacing element.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>6</td>
 <td>TextInput</td>
 <td>Input</td>
@@ -5235,7 +5258,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Single/multi-line text input.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>7</td>
 <td>NumberInput</td>
 <td>Input</td>
@@ -5244,7 +5267,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Numeric input with stepper.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>8</td>
 <td>DatePicker</td>
 <td>Input</td>
@@ -5253,7 +5276,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Date/time/datetime picker.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>9</td>
 <td>Select</td>
 <td>Input</td>
@@ -5262,7 +5285,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Dropdown single-select.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>10</td>
 <td>CheckboxGroup</td>
 <td>Input</td>
@@ -5271,7 +5294,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Multi-select checkboxes.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>11</td>
 <td>Toggle</td>
 <td>Input</td>
@@ -5280,7 +5303,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Boolean switch.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>12</td>
 <td>FileUpload</td>
 <td>Input</td>
@@ -5289,7 +5312,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>File attachment upload.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>13</td>
 <td>Heading</td>
 <td>Display</td>
@@ -5298,7 +5321,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Section heading (h1–h6).</td>
 </tr>
-<tr class="even">
+<tr>
 <td>14</td>
 <td>Text</td>
 <td>Display</td>
@@ -5307,7 +5330,7 @@ classification and key characteristics.</p>
 <td>Optional</td>
 <td>Static or data-bound text.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>15</td>
 <td>Divider</td>
 <td>Display</td>
@@ -5316,7 +5339,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Horizontal rule separator.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>16</td>
 <td>Card</td>
 <td>Container</td>
@@ -5325,7 +5348,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Bordered surface grouping.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>17</td>
 <td>Collapsible</td>
 <td>Container</td>
@@ -5334,7 +5357,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Expandable/collapsible section.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>18</td>
 <td>ConditionalGroup</td>
 <td>Container</td>
@@ -5343,7 +5366,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Condition-based visibility group.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>19</td>
 <td>Columns</td>
 <td>Layout</td>
@@ -5352,7 +5375,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Explicit column widths layout.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>20</td>
 <td>Tabs</td>
 <td>Layout</td>
@@ -5361,7 +5384,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Tabbed navigation container.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>21</td>
 <td>Accordion</td>
 <td>Layout</td>
@@ -5370,7 +5393,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Collapsible section list.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>22</td>
 <td>RadioGroup</td>
 <td>Input</td>
@@ -5379,7 +5402,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Radio button single-select.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>23</td>
 <td>MoneyInput</td>
 <td>Input</td>
@@ -5388,7 +5411,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Currency-aware numeric input.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>24</td>
 <td>Slider</td>
 <td>Input</td>
@@ -5397,7 +5420,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Range slider control.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>25</td>
 <td>Rating</td>
 <td>Input</td>
@@ -5406,7 +5429,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Star/icon rating control.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>26</td>
 <td>Signature</td>
 <td>Input</td>
@@ -5415,7 +5438,7 @@ classification and key characteristics.</p>
 <td>Required</td>
 <td>Drawn signature capture.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>27</td>
 <td>Alert</td>
 <td>Display</td>
@@ -5424,7 +5447,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Status message banner.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>28</td>
 <td>Badge</td>
 <td>Display</td>
@@ -5433,7 +5456,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Compact label badge.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>29</td>
 <td>ProgressBar</td>
 <td>Display</td>
@@ -5442,7 +5465,7 @@ classification and key characteristics.</p>
 <td>Optional</td>
 <td>Visual progress indicator.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>30</td>
 <td>Summary</td>
 <td>Display</td>
@@ -5451,7 +5474,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Key-value summary display.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>31</td>
 <td>DataTable</td>
 <td>Display</td>
@@ -5460,7 +5483,7 @@ classification and key characteristics.</p>
 <td>Optional²</td>
 <td>Tabular repeatable data.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>32</td>
 <td>Panel</td>
 <td>Container</td>
@@ -5469,7 +5492,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Side panel.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>33</td>
 <td>Modal</td>
 <td>Container</td>
@@ -5478,7 +5501,7 @@ classification and key characteristics.</p>
 <td>Forbidden</td>
 <td>Dialog overlay.</td>
 </tr>
-<tr class="even">
+<tr>
 <td>34</td>
 <td>Popover</td>
 <td>Container</td>
@@ -5514,7 +5537,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <col style="width: 7%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>dataType</th>
 <th>TextInput</th>
 <th>NumberInput</th>
@@ -5531,7 +5554,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>string</code></td>
 <td>✓</td>
 <td></td>
@@ -5546,7 +5569,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td></td>
 <td></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>number</code></td>
 <td></td>
 <td>✓</td>
@@ -5561,7 +5584,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td></td>
 <td></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>integer</code></td>
 <td></td>
 <td>✓</td>
@@ -5576,7 +5599,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td>✓</td>
 <td></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>boolean</code></td>
 <td></td>
 <td></td>
@@ -5591,7 +5614,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td></td>
 <td></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>date</code></td>
 <td></td>
 <td></td>
@@ -5606,7 +5629,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td></td>
 <td></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>dateTime</code></td>
 <td></td>
 <td></td>
@@ -5621,7 +5644,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td></td>
 <td></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>time</code></td>
 <td></td>
 <td></td>
@@ -5636,7 +5659,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td></td>
 <td></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>choice</code></td>
 <td></td>
 <td></td>
@@ -5651,7 +5674,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td></td>
 <td></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>multiChoice</code></td>
 <td></td>
 <td></td>
@@ -5666,7 +5689,7 @@ Components marked (P) are Progressive; all others are Core.</p>
 <td></td>
 <td></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>attachment</code></td>
 <td></td>
 <td></td>

@@ -733,8 +733,9 @@ source reference.</td>
 </tr>
 </tbody>
 </table>
-<p>Additional <code>dataType</code> values MAY be defined via extensions
-(§7).</p>
+<p>Additional data type semantics MAY be layered onto core
+<code>dataType</code> values via the item-level <code>extensions</code>
+object (§7, §8.1).</p>
 <blockquote>
 <p><strong>Example.</strong> A group with mixed item types:</p>
 <div class="sourceCode" id="cb4"><pre
@@ -7516,9 +7517,14 @@ following general requirements apply:</p>
 <ol type="1">
 <li><p>All custom identifiers MUST be prefixed with
 <code>x-</code>.</p></li>
-<li><p>Processors that encounter a custom data type they do not support
-MUST fall back to the declared <code>baseType</code> and SHOULD log an
-informational notice.</p></li>
+<li><p>Custom data types are declared via the item-level
+<code>extensions</code> object
+(e.g. <code>"extensions": { "x-formspec-email": true }</code>). The
+field’s <code>dataType</code> MUST remain a core type from the table in
+§2; the registry entry’s <code>baseType</code> declares which core type
+it extends. Processors that encounter an enabled extension they do not
+support MUST validate against the field’s core <code>dataType</code> and
+SHOULD log an informational notice.</p></li>
 <li><p>Processors that encounter a custom function or constraint they do
 not support MUST raise a clear, actionable error. Processors MUST NOT
 silently skip unsupported functions or constraints.</p></li>

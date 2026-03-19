@@ -1,0 +1,27 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "blockTags": [
+    "@param",
+    "@returns",
+    "@example",
+    "@filedesc",
+    "@remarks",
+    "@see",
+    "@throws",
+    "@default",
+    "@defaultValue",
+    "@deprecated",
+    "@typeParam",
+    "@template",
+    "@since",
+    "@category",
+    "@group",
+    "@internal"
+  ],
+  "externalSymbolLinkMappings": {
+    "formspec-engine": {
+      "FormEngine": "api/formspec-engine/classes/FormEngine.html"
+    }
+  },
+  "excludeInternal": true
+}
