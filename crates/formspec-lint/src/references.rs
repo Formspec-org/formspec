@@ -36,15 +36,25 @@ fn check_bind_paths(
     index: &ItemTreeIndex,
     diagnostics: &mut Vec<LintDiagnostic>,
 ) {
-    let binds = match document.get("binds").and_then(|v| v.as_object()) {
-        Some(b) => b,
-        None => return,
-    };
+    let binds_val = document.get("binds");
 
-    for bind_key in binds.keys() {
-        let json_path = format!("$.binds.{bind_key}");
-        if let Some(diag) = validate_path(bind_key, &json_path, "Bind", "E300", index) {
-            diagnostics.push(diag);
+    // Object format (legacy): keys are bind paths
+    if let Some(binds_obj) = binds_val.and_then(|v| v.as_object()) {
+        for bind_key in binds_obj.keys() {
+            let json_path = format!("$.binds.{bind_key}");
+            if let Some(diag) = validate_path(bind_key, &json_path, "Bind", "E300", index) {
+                diagnostics.push(diag);
+            }
+        }
+    // Array format (schema-canonical): each element has a `path` property
+    } else if let Some(binds_arr) = binds_val.and_then(|v| v.as_array()) {
+        for (i, bind) in binds_arr.iter().enumerate() {
+            if let Some(path) = bind.get("path").and_then(|v| v.as_str()) {
+                let json_path = format!("$.binds[{i}].path");
+                if let Some(diag) = validate_path(path, &json_path, "Bind", "E300", index) {
+                    diagnostics.push(diag);
+                }
+            }
         }
     }
 }
@@ -373,7 +383,7 @@ mod tests {
         let doc = json!({
             "items": [{
                 "key": "lines",
-                "repeat": { "min": 1, "max": 10 },
+                "repeatable": true,
                 "children": [{ "key": "amount", "dataType": "decimal" }]
             }],
             "binds": { "lines[*].amount": { "required": "true" } }
@@ -409,7 +419,7 @@ mod tests {
         let doc = json!({
             "items": [{
                 "key": "lines",
-                "repeat": { "min": 1 },
+                "repeatable": true,
                 "children": [{ "key": "amount", "dataType": "decimal" }]
             }],
             "binds": { "lines[*].nonexistent": { "required": "true" } }
@@ -552,7 +562,7 @@ mod tests {
         let doc = json!({
             "items": [{
                 "key": "lines",
-                "repeat": { "min": 1 },
+                "repeatable": true,
                 "children": [{ "key": "amount" }]
             }],
             "binds": { "lines[*]": { "relevant": "true" } }
@@ -593,6 +603,77 @@ mod tests {
         let e302: Vec<_> = diags.iter().filter(|d| d.code == "E302").collect();
         assert_eq!(e302.len(), 1, "Should find E302 in nested items");
         assert!(e302[0].message.contains("missing"));
+    }
+
+    // ── Array-format binds (schema-canonical) ──────────────────
+
+    #[test]
+    fn array_format_binds_valid_path_no_e300() {
+        let doc = json!({
+            "items": [{ "key": "name", "dataType": "string" }],
+            "binds": [{ "path": "name", "required": "true" }]
+        });
+        let diags = lint(&doc);
+        assert!(
+            !codes(&diags).contains(&"E300"),
+            "Valid array-format bind path should not emit E300"
+        );
+    }
+
+    #[test]
+    fn array_format_binds_unresolved_emits_e300() {
+        let doc = json!({
+            "items": [{ "key": "name", "dataType": "string" }],
+            "binds": [{ "path": "ghost", "required": "true" }]
+        });
+        let diags = lint(&doc);
+        let e300: Vec<_> = diags.iter().filter(|d| d.code == "E300").collect();
+        assert_eq!(e300.len(), 1);
+        assert!(e300[0].message.contains("ghost"));
+        assert_eq!(e300[0].path, "$.binds[0].path");
+    }
+
+    #[test]
+    fn array_format_binds_dotted_path() {
+        let doc = json!({
+            "items": [{
+                "key": "address",
+                "children": [{ "key": "street", "dataType": "string" }]
+            }],
+            "binds": [{ "path": "address.street", "required": "true" }]
+        });
+        let diags = lint(&doc);
+        assert!(
+            !codes(&diags).contains(&"E300"),
+            "Valid dotted path in array-format bind should not emit E300"
+        );
+    }
+
+    #[test]
+    fn array_format_binds_wildcard_on_repeatable() {
+        let doc = json!({
+            "items": [{
+                "key": "lines",
+                "repeatable": true,
+                "children": [{ "key": "amount", "dataType": "decimal" }]
+            }],
+            "binds": [{ "path": "lines[*].amount", "required": "true" }]
+        });
+        let diags = lint(&doc);
+        assert!(
+            !codes(&diags).contains(&"E300"),
+            "Wildcard array-format bind on repeatable group should not emit E300"
+        );
+    }
+
+    #[test]
+    fn array_format_empty_binds_no_diagnostics() {
+        let doc = json!({
+            "items": [{ "key": "name" }],
+            "binds": []
+        });
+        let diags = lint(&doc);
+        assert!(diags.is_empty());
     }
 
     #[test]

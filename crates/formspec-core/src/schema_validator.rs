@@ -61,15 +61,12 @@ pub struct SchemaValidationResult {
 // ── Document type detection ─────────────────────────────────────
 
 /// Marker fields that identify document types.
+/// Only includes markers that actually exist in the schemas.
 const MARKER_FIELDS: &[(&str, DocumentType)] = &[
     ("$formspec", DocumentType::Definition),
     ("$formspecTheme", DocumentType::Theme),
-    ("$formspecMapping", DocumentType::Mapping),
     ("$formspecComponent", DocumentType::Component),
-    ("$formspecResponse", DocumentType::Response),
-    ("$formspecValidationReport", DocumentType::ValidationReport),
     ("$formspecRegistry", DocumentType::Registry),
-    ("$formspecChangelog", DocumentType::Changelog),
 ];
 
 /// Detect the document type from a JSON value by examining marker fields.
@@ -83,21 +80,34 @@ pub fn detect_document_type(doc: &Value) -> Option<DocumentType> {
         }
     }
 
-    // Fallback: heuristic detection by key patterns
+    // Fallback: heuristic detection by required-field combinations unique to each schema.
     if obj.contains_key("items") && obj.contains_key("title") {
         return Some(DocumentType::Definition);
     }
     if obj.contains_key("tokens") || obj.contains_key("selectors") {
         return Some(DocumentType::Theme);
     }
-    if obj.contains_key("rules") && obj.contains_key("adapter") {
-        return Some(DocumentType::Mapping);
-    }
     if obj.contains_key("tree") && obj.contains_key("componentType") {
         return Some(DocumentType::Component);
     }
     if obj.contains_key("entries") && obj.contains_key("extensions") {
         return Some(DocumentType::Registry);
+    }
+    // Response: required fields include data + status + authored
+    if obj.contains_key("data") && obj.contains_key("status") && obj.contains_key("authored") {
+        return Some(DocumentType::Response);
+    }
+    // ValidationReport: required fields include valid + results + counts
+    if obj.contains_key("valid") && obj.contains_key("results") && obj.contains_key("counts") {
+        return Some(DocumentType::ValidationReport);
+    }
+    // Mapping: required fields include rules + targetSchema
+    if obj.contains_key("rules") && obj.contains_key("targetSchema") {
+        return Some(DocumentType::Mapping);
+    }
+    // Changelog: required fields include semverImpact + changes
+    if obj.contains_key("semverImpact") && obj.contains_key("changes") {
+        return Some(DocumentType::Changelog);
     }
 
     None
@@ -181,7 +191,7 @@ mod tests {
 
     #[test]
     fn test_detect_mapping() {
-        let doc = json!({ "$formspecMapping": "1.0", "rules": [], "adapter": "json" });
+        let doc = json!({ "rules": [], "targetSchema": "urn:example", "definitionRef": "https://example.org/forms/x", "definitionVersion": "1.0.0", "version": "1.0.0" });
         assert_eq!(detect_document_type(&doc), Some(DocumentType::Mapping));
     }
 
@@ -189,6 +199,41 @@ mod tests {
     fn test_detect_component() {
         let doc = json!({ "$formspecComponent": "1.0", "tree": {}, "componentType": "Stack" });
         assert_eq!(detect_document_type(&doc), Some(DocumentType::Component));
+    }
+
+    #[test]
+    fn test_detect_response() {
+        let doc = json!({
+            "definitionUrl": "https://example.org/forms/x",
+            "definitionVersion": "1.0.0",
+            "status": "in-progress",
+            "data": {},
+            "authored": "2025-01-01T00:00:00Z"
+        });
+        assert_eq!(detect_document_type(&doc), Some(DocumentType::Response));
+    }
+
+    #[test]
+    fn test_detect_validation_report() {
+        let doc = json!({
+            "valid": true,
+            "results": [],
+            "counts": { "error": 0, "warning": 0, "info": 0 },
+            "timestamp": "2025-01-01T00:00:00Z"
+        });
+        assert_eq!(detect_document_type(&doc), Some(DocumentType::ValidationReport));
+    }
+
+    #[test]
+    fn test_detect_changelog() {
+        let doc = json!({
+            "definitionUrl": "https://example.org/forms/x",
+            "fromVersion": "1.0.0",
+            "toVersion": "2.0.0",
+            "semverImpact": "breaking",
+            "changes": []
+        });
+        assert_eq!(detect_document_type(&doc), Some(DocumentType::Changelog));
     }
 
     #[test]

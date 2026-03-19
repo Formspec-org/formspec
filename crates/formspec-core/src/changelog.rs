@@ -1,0 +1,602 @@
+//! Changelog — diffs two definition versions into a structured changelog.
+//!
+//! Compares two Formspec definition JSON documents section-by-section and
+//! produces an ordered list of `Change` records with impact classification.
+
+use serde_json::Value;
+
+/// Kind of change between two definition versions.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChangeType {
+    Added,
+    Removed,
+    Modified,
+}
+
+/// Definition subsystem affected by a change.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChangeTarget {
+    Item,
+    Bind,
+    Shape,
+    OptionSet,
+    DataSource,
+    Screener,
+    Migration,
+    Metadata,
+}
+
+/// Severity classification of a single change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ChangeImpact {
+    Cosmetic,
+    Compatible,
+    Breaking,
+}
+
+/// Semantic version bump implied by the aggregate impact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SemverImpact {
+    Patch,
+    Minor,
+    Major,
+}
+
+/// A single atomic change between two definition versions.
+pub struct Change {
+    pub change_type: ChangeType,
+    pub target: ChangeTarget,
+    pub path: String,
+    pub impact: ChangeImpact,
+    pub key: Option<String>,
+    pub description: Option<String>,
+    pub before: Option<Value>,
+    pub after: Option<Value>,
+    pub migration_hint: Option<String>,
+}
+
+/// Structured diff between two definition versions.
+pub struct Changelog {
+    pub definition_url: String,
+    pub from_version: String,
+    pub to_version: String,
+    pub semver_impact: SemverImpact,
+    pub changes: Vec<Change>,
+}
+
+/// Keys on an item that are purely presentational — changes to only these
+/// keys produce `Cosmetic` impact, not `Compatible`.
+const ITEM_COSMETIC_KEYS: &[&str] = &["label", "hint", "description", "help"];
+
+/// Keys on an item whose change is `Breaking`.
+const ITEM_BREAKING_KEYS: &[&str] = &["dataType", "type"];
+
+/// Diff two Formspec definition JSON documents and produce a changelog.
+///
+/// Walks items, binds, shapes, optionSets, dataSources, screener, migrations,
+/// and metadata sections. Each difference produces a `Change` with an impact
+/// classification. The aggregate `semver_impact` is the maximum across all changes.
+pub fn generate_changelog(
+    old_def: &Value,
+    new_def: &Value,
+    definition_url: &str,
+) -> Changelog {
+    let from_version = str_field(old_def, "version").to_string();
+    let to_version = str_field(new_def, "version").to_string();
+
+    let mut changes = Vec::new();
+
+    diff_items(old_def, new_def, &mut changes);
+    diff_binds(old_def, new_def, &mut changes);
+    diff_keyed_array(old_def, new_def, "shapes", "name", ChangeTarget::Shape, &mut changes);
+    diff_dict(old_def, new_def, "optionSets", ChangeTarget::OptionSet, &mut changes);
+    diff_dict(old_def, new_def, "dataSources", ChangeTarget::DataSource, &mut changes);
+    diff_screener(old_def, new_def, &mut changes);
+    diff_migrations(old_def, new_def, &mut changes);
+    diff_metadata(old_def, new_def, &mut changes);
+
+    let max_impact = changes.iter().map(|c| c.impact).max().unwrap_or(ChangeImpact::Cosmetic);
+    let semver_impact = match max_impact {
+        ChangeImpact::Breaking => SemverImpact::Major,
+        ChangeImpact::Compatible => SemverImpact::Minor,
+        ChangeImpact::Cosmetic => SemverImpact::Patch,
+    };
+
+    Changelog {
+        definition_url: definition_url.to_string(),
+        from_version,
+        to_version,
+        semver_impact,
+        changes,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Section diff helpers
+// ---------------------------------------------------------------------------
+
+fn str_field<'a>(val: &'a Value, key: &str) -> &'a str {
+    val.get(key).and_then(|v| v.as_str()).unwrap_or("")
+}
+
+/// Index an array of objects by a string key field, returning (key → &Value).
+fn index_by_key<'a>(arr: &'a [Value], key_field: &str) -> Vec<(&'a str, &'a Value)> {
+    arr.iter()
+        .filter_map(|v| {
+            v.get(key_field)
+                .and_then(|k| k.as_str())
+                .map(|k| (k, v))
+        })
+        .collect()
+}
+
+/// Diff the `items` array, keyed by the `key` field on each item.
+fn diff_items(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
+    let empty = vec![];
+    let old_items = old_def.get("items").and_then(|v| v.as_array()).unwrap_or(&empty);
+    let new_items = new_def.get("items").and_then(|v| v.as_array()).unwrap_or(&empty);
+
+    let old_map = index_by_key(old_items, "key");
+    let new_map = index_by_key(new_items, "key");
+
+    let old_keys: std::collections::HashSet<&str> = old_map.iter().map(|(k, _)| *k).collect();
+    let new_keys: std::collections::HashSet<&str> = new_map.iter().map(|(k, _)| *k).collect();
+
+    // Added
+    for &(key, val) in &new_map {
+        if !old_keys.contains(key) {
+            changes.push(Change {
+                change_type: ChangeType::Added,
+                target: ChangeTarget::Item,
+                path: format!("items.{}", key),
+                impact: ChangeImpact::Compatible,
+                key: Some(key.to_string()),
+                description: None,
+                before: None,
+                after: Some(val.clone()),
+                migration_hint: None,
+            });
+        }
+    }
+
+    // Removed
+    for &(key, val) in &old_map {
+        if !new_keys.contains(key) {
+            changes.push(Change {
+                change_type: ChangeType::Removed,
+                target: ChangeTarget::Item,
+                path: format!("items.{}", key),
+                impact: ChangeImpact::Breaking,
+                key: Some(key.to_string()),
+                description: None,
+                before: Some(val.clone()),
+                after: None,
+                migration_hint: Some("drop".to_string()),
+            });
+        }
+    }
+
+    // Modified
+    for &(key, old_val) in &old_map {
+        if let Some(&(_, new_val)) = new_map.iter().find(|(k, _)| *k == key) {
+            if old_val != new_val {
+                let impact = classify_item_modification(old_val, new_val);
+                changes.push(Change {
+                    change_type: ChangeType::Modified,
+                    target: ChangeTarget::Item,
+                    path: format!("items.{}", key),
+                    impact,
+                    key: Some(key.to_string()),
+                    description: None,
+                    before: Some(old_val.clone()),
+                    after: Some(new_val.clone()),
+                    migration_hint: None,
+                });
+            }
+        }
+    }
+}
+
+/// Classify an item modification's impact by inspecting which keys changed.
+fn classify_item_modification(old: &Value, new: &Value) -> ChangeImpact {
+    let old_obj = old.as_object();
+    let new_obj = new.as_object();
+    let (Some(old_obj), Some(new_obj)) = (old_obj, new_obj) else {
+        return ChangeImpact::Compatible;
+    };
+
+    // Collect all keys that differ
+    let all_keys: std::collections::HashSet<&String> =
+        old_obj.keys().chain(new_obj.keys()).collect();
+
+    let mut has_breaking = false;
+    let mut has_non_cosmetic = false;
+
+    for key in &all_keys {
+        let old_v = old_obj.get(key.as_str());
+        let new_v = new_obj.get(key.as_str());
+        if old_v == new_v {
+            continue;
+        }
+        if ITEM_BREAKING_KEYS.contains(&key.as_str()) {
+            has_breaking = true;
+        } else if !ITEM_COSMETIC_KEYS.contains(&key.as_str()) {
+            has_non_cosmetic = true;
+        }
+    }
+
+    if has_breaking {
+        ChangeImpact::Breaking
+    } else if has_non_cosmetic {
+        ChangeImpact::Compatible
+    } else {
+        ChangeImpact::Cosmetic
+    }
+}
+
+/// Diff the `binds` object, keyed by bind path.
+fn diff_binds(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
+    let empty_obj = serde_json::Map::new();
+    let old_binds = old_def.get("binds").and_then(|v| v.as_object()).unwrap_or(&empty_obj);
+    let new_binds = new_def.get("binds").and_then(|v| v.as_object()).unwrap_or(&empty_obj);
+
+    let old_keys: std::collections::HashSet<&String> = old_binds.keys().collect();
+    let new_keys: std::collections::HashSet<&String> = new_binds.keys().collect();
+
+    // Added
+    for key in new_keys.difference(&old_keys) {
+        let val = &new_binds[key.as_str()];
+        let has_required = bind_has_required(val);
+        changes.push(Change {
+            change_type: ChangeType::Added,
+            target: ChangeTarget::Bind,
+            path: key.to_string(),
+            impact: if has_required { ChangeImpact::Breaking } else { ChangeImpact::Compatible },
+            key: None,
+            description: None,
+            before: None,
+            after: Some(val.clone()),
+            migration_hint: None,
+        });
+    }
+
+    // Removed
+    for key in old_keys.difference(&new_keys) {
+        changes.push(Change {
+            change_type: ChangeType::Removed,
+            target: ChangeTarget::Bind,
+            path: key.to_string(),
+            impact: ChangeImpact::Breaking,
+            key: None,
+            description: None,
+            before: Some(old_binds[key.as_str()].clone()),
+            after: None,
+            migration_hint: None,
+        });
+    }
+
+    // Modified
+    for key in old_keys.intersection(&new_keys) {
+        let old_val = &old_binds[key.as_str()];
+        let new_val = &new_binds[key.as_str()];
+        if old_val != new_val {
+            let impact = classify_bind_modification(old_val, new_val);
+            changes.push(Change {
+                change_type: ChangeType::Modified,
+                target: ChangeTarget::Bind,
+                path: key.to_string(),
+                impact,
+                key: None,
+                description: None,
+                before: Some(old_val.clone()),
+                after: Some(new_val.clone()),
+                migration_hint: None,
+            });
+        }
+    }
+}
+
+/// Check if a bind value contains a truthy `required` property.
+fn bind_has_required(bind: &Value) -> bool {
+    match bind.get("required") {
+        Some(Value::String(s)) => !s.is_empty() && s != "false()" && s != "false",
+        Some(Value::Bool(b)) => *b,
+        _ => false,
+    }
+}
+
+/// Classify a bind modification by checking required gain/loss.
+fn classify_bind_modification(old: &Value, new: &Value) -> ChangeImpact {
+    let old_req = bind_has_required(old);
+    let new_req = bind_has_required(new);
+
+    if !old_req && new_req {
+        // Gained required → Breaking
+        ChangeImpact::Breaking
+    } else if old_req && !new_req {
+        // Lost required → Compatible
+        ChangeImpact::Compatible
+    } else if old.get("constraint") != new.get("constraint") {
+        ChangeImpact::Compatible
+    } else {
+        ChangeImpact::Cosmetic
+    }
+}
+
+/// Diff a keyed array section (shapes). Elements are matched by a key field.
+fn diff_keyed_array(
+    old_def: &Value,
+    new_def: &Value,
+    section: &str,
+    key_field: &str,
+    target: ChangeTarget,
+    changes: &mut Vec<Change>,
+) {
+    let empty = vec![];
+    let old_arr = old_def.get(section).and_then(|v| v.as_array()).unwrap_or(&empty);
+    let new_arr = new_def.get(section).and_then(|v| v.as_array()).unwrap_or(&empty);
+
+    let old_map = index_by_key(old_arr, key_field);
+    let new_map = index_by_key(new_arr, key_field);
+
+    let old_keys: std::collections::HashSet<&str> = old_map.iter().map(|(k, _)| *k).collect();
+    let new_keys: std::collections::HashSet<&str> = new_map.iter().map(|(k, _)| *k).collect();
+
+    let (add_impact, remove_impact, modify_impact) = keyed_array_impacts(&target);
+
+    for &(key, val) in &new_map {
+        if !old_keys.contains(key) {
+            changes.push(Change {
+                change_type: ChangeType::Added,
+                target: target.clone(),
+                path: format!("{}.{}", section, key),
+                impact: add_impact,
+                key: None,
+                description: None,
+                before: None,
+                after: Some(val.clone()),
+                migration_hint: None,
+            });
+        }
+    }
+
+    for &(key, val) in &old_map {
+        if !new_keys.contains(key) {
+            changes.push(Change {
+                change_type: ChangeType::Removed,
+                target: target.clone(),
+                path: format!("{}.{}", section, key),
+                impact: remove_impact,
+                key: None,
+                description: None,
+                before: Some(val.clone()),
+                after: None,
+                migration_hint: None,
+            });
+        }
+    }
+
+    for &(key, old_val) in &old_map {
+        if let Some(&(_, new_val)) = new_map.iter().find(|(k, _)| *k == key) {
+            if old_val != new_val {
+                changes.push(Change {
+                    change_type: ChangeType::Modified,
+                    target: target.clone(),
+                    path: format!("{}.{}", section, key),
+                    impact: modify_impact,
+                    key: None,
+                    description: None,
+                    before: Some(old_val.clone()),
+                    after: Some(new_val.clone()),
+                    migration_hint: None,
+                });
+            }
+        }
+    }
+}
+
+/// Impact rules for keyed array sections: (add, remove, modify).
+fn keyed_array_impacts(target: &ChangeTarget) -> (ChangeImpact, ChangeImpact, ChangeImpact) {
+    match target {
+        // Shape add/remove are both Compatible (shapes are constraints; removing loosens).
+        ChangeTarget::Shape => (ChangeImpact::Compatible, ChangeImpact::Compatible, ChangeImpact::Cosmetic),
+        _ => (ChangeImpact::Compatible, ChangeImpact::Breaking, ChangeImpact::Compatible),
+    }
+}
+
+/// Diff a dict section (optionSets, dataSources).
+fn diff_dict(
+    old_def: &Value,
+    new_def: &Value,
+    section: &str,
+    target: ChangeTarget,
+    changes: &mut Vec<Change>,
+) {
+    let empty_obj = serde_json::Map::new();
+    let old_dict = old_def.get(section).and_then(|v| v.as_object()).unwrap_or(&empty_obj);
+    let new_dict = new_def.get(section).and_then(|v| v.as_object()).unwrap_or(&empty_obj);
+
+    let old_keys: std::collections::HashSet<&String> = old_dict.keys().collect();
+    let new_keys: std::collections::HashSet<&String> = new_dict.keys().collect();
+
+    for key in new_keys.difference(&old_keys) {
+        changes.push(Change {
+            change_type: ChangeType::Added,
+            target: target.clone(),
+            path: format!("{}.{}", section, key),
+            impact: ChangeImpact::Compatible,
+            key: None,
+            description: None,
+            before: None,
+            after: Some(new_dict[key.as_str()].clone()),
+            migration_hint: None,
+        });
+    }
+
+    for key in old_keys.difference(&new_keys) {
+        changes.push(Change {
+            change_type: ChangeType::Removed,
+            target: target.clone(),
+            path: format!("{}.{}", section, key),
+            impact: ChangeImpact::Breaking,
+            key: None,
+            description: None,
+            before: Some(old_dict[key.as_str()].clone()),
+            after: None,
+            migration_hint: None,
+        });
+    }
+
+    for key in old_keys.intersection(&new_keys) {
+        let old_val = &old_dict[key.as_str()];
+        let new_val = &new_dict[key.as_str()];
+        if old_val != new_val {
+            changes.push(Change {
+                change_type: ChangeType::Modified,
+                target: target.clone(),
+                path: format!("{}.{}", section, key),
+                impact: ChangeImpact::Compatible,
+                key: None,
+                description: None,
+                before: Some(old_val.clone()),
+                after: Some(new_val.clone()),
+                migration_hint: None,
+            });
+        }
+    }
+}
+
+/// Diff the singleton `screener` section.
+fn diff_screener(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
+    let old_s = old_def.get("screener");
+    let new_s = new_def.get("screener");
+
+    match (old_s, new_s) {
+        (None, Some(val)) => {
+            changes.push(Change {
+                change_type: ChangeType::Added,
+                target: ChangeTarget::Screener,
+                path: "screener".to_string(),
+                impact: ChangeImpact::Compatible,
+                key: None,
+                description: None,
+                before: None,
+                after: Some(val.clone()),
+                migration_hint: None,
+            });
+        }
+        (Some(val), None) => {
+            changes.push(Change {
+                change_type: ChangeType::Removed,
+                target: ChangeTarget::Screener,
+                path: "screener".to_string(),
+                impact: ChangeImpact::Breaking,
+                key: None,
+                description: None,
+                before: Some(val.clone()),
+                after: None,
+                migration_hint: None,
+            });
+        }
+        (Some(old_val), Some(new_val)) if old_val != new_val => {
+            changes.push(Change {
+                change_type: ChangeType::Modified,
+                target: ChangeTarget::Screener,
+                path: "screener".to_string(),
+                impact: ChangeImpact::Compatible,
+                key: None,
+                description: None,
+                before: Some(old_val.clone()),
+                after: Some(new_val.clone()),
+                migration_hint: None,
+            });
+        }
+        _ => {}
+    }
+}
+
+/// Diff the `migrations` array (positional, not keyed).
+fn diff_migrations(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
+    let empty = vec![];
+    let old_arr = old_def.get("migrations").and_then(|v| v.as_array()).unwrap_or(&empty);
+    let new_arr = new_def.get("migrations").and_then(|v| v.as_array()).unwrap_or(&empty);
+
+    let max_len = old_arr.len().max(new_arr.len());
+    for i in 0..max_len {
+        let old_val = old_arr.get(i);
+        let new_val = new_arr.get(i);
+        match (old_val, new_val) {
+            (None, Some(val)) => {
+                changes.push(Change {
+                    change_type: ChangeType::Added,
+                    target: ChangeTarget::Migration,
+                    path: format!("migrations[{}]", i),
+                    impact: ChangeImpact::Compatible,
+                    key: None,
+                    description: None,
+                    before: None,
+                    after: Some(val.clone()),
+                    migration_hint: None,
+                });
+            }
+            (Some(val), None) => {
+                changes.push(Change {
+                    change_type: ChangeType::Removed,
+                    target: ChangeTarget::Migration,
+                    path: format!("migrations[{}]", i),
+                    impact: ChangeImpact::Compatible,
+                    key: None,
+                    description: None,
+                    before: Some(val.clone()),
+                    after: None,
+                    migration_hint: None,
+                });
+            }
+            (Some(o), Some(n)) if o != n => {
+                changes.push(Change {
+                    change_type: ChangeType::Modified,
+                    target: ChangeTarget::Migration,
+                    path: format!("migrations[{}]", i),
+                    impact: ChangeImpact::Cosmetic,
+                    key: None,
+                    description: None,
+                    before: Some(o.clone()),
+                    after: Some(n.clone()),
+                    migration_hint: None,
+                });
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Metadata keys to compare.
+const METADATA_KEYS: &[&str] = &["title", "url", "version", "$formspec", "description", "formPresentation"];
+
+/// Diff top-level metadata fields.
+fn diff_metadata(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
+    for &key in METADATA_KEYS {
+        let old_val = old_def.get(key);
+        let new_val = new_def.get(key);
+        if old_val != new_val {
+            changes.push(Change {
+                change_type: match (old_val, new_val) {
+                    (None, Some(_)) => ChangeType::Added,
+                    (Some(_), None) => ChangeType::Removed,
+                    _ => ChangeType::Modified,
+                },
+                target: ChangeTarget::Metadata,
+                path: key.to_string(),
+                impact: ChangeImpact::Cosmetic,
+                key: None,
+                description: None,
+                before: old_val.cloned(),
+                after: new_val.cloned(),
+                migration_hint: None,
+            });
+        }
+    }
+}
+
+// Tests live in crates/formspec-core/tests/changelog_test.rs (integration test)
+// to avoid compilation issues with sibling module test blocks.

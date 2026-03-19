@@ -104,8 +104,8 @@ static COMPAT_RULES: &[CompatRule] = &[
     },
     CompatRule {
         component: "Rating",
-        strict_allowed: &["integer"],
-        authoring_allowed: &["decimal"],
+        strict_allowed: &["integer", "decimal"],
+        authoring_allowed: &[],
         requires_options: false,
     },
     CompatRule {
@@ -207,14 +207,14 @@ mod tests {
     }
 
     #[test]
-    fn rating_integer_compatible_decimal_warning() {
+    fn rating_integer_and_decimal_both_compatible() {
         assert_eq!(
             classify_compatibility("Rating", "integer"),
             Compatibility::Compatible
         );
         assert_eq!(
             classify_compatibility("Rating", "decimal"),
-            Compatibility::CompatibleWithWarning
+            Compatibility::Compatible
         );
     }
 

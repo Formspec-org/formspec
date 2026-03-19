@@ -34,7 +34,7 @@ pub fn compile_expressions(document: &Value) -> ExpressionCompilationResult {
     let mut compiled = Vec::new();
     let mut diagnostics = Vec::new();
 
-    walk_binds_object(document.get("binds"), "$", &mut compiled, &mut diagnostics);
+    walk_binds(document.get("binds"), "$", &mut compiled, &mut diagnostics);
     walk_shapes(document.get("shapes"), &mut compiled, &mut diagnostics);
     walk_variables(document.get("variables"), &mut compiled, &mut diagnostics);
     walk_screener(document.get("screener"), &mut compiled, &mut diagnostics);
@@ -45,12 +45,26 @@ pub fn compile_expressions(document: &Value) -> ExpressionCompilationResult {
     }
 }
 
-// ── Binds (object format: key = bind path) ──────────────────────
+// ── Binds ────────────────────────────────────────────────────────
 
 /// All expression slots on a bind object.
 const ALL_BIND_SLOTS: &[&str] = &[
     "calculate", "relevant", "required", "readonly", "constraint",
 ];
+
+/// Dispatch to object or array format handler.
+fn walk_binds(
+    binds: Option<&Value>,
+    path_prefix: &str,
+    compiled: &mut Vec<CompiledExpression>,
+    diagnostics: &mut Vec<LintDiagnostic>,
+) {
+    if binds.and_then(|v| v.as_object()).is_some() {
+        walk_binds_object(binds, path_prefix, compiled, diagnostics);
+    } else if let Some(arr) = binds.and_then(|v| v.as_array()) {
+        walk_binds_array(arr, path_prefix, compiled, diagnostics);
+    }
+}
 
 fn walk_binds_object(
     binds: Option<&Value>,
@@ -91,6 +105,50 @@ fn walk_binds_object(
                     fel_source,
                     expression_path,
                     Some(bind_key.clone()),
+                    compiled,
+                    diagnostics,
+                );
+            }
+        }
+    }
+}
+
+fn walk_binds_array(
+    binds: &[Value],
+    path_prefix: &str,
+    compiled: &mut Vec<CompiledExpression>,
+    diagnostics: &mut Vec<LintDiagnostic>,
+) {
+    for (i, bind) in binds.iter().enumerate() {
+        let obj = match bind.as_object() {
+            Some(o) => o,
+            None => continue,
+        };
+
+        let bind_key = match obj.get("path").and_then(|v| v.as_str()) {
+            Some(k) => k,
+            None => continue,
+        };
+
+        for &slot in ALL_BIND_SLOTS {
+            if let Some(expr_str) = obj.get(slot).and_then(|v| v.as_str()) {
+                let expression_path = format!("{path_prefix}.binds[{i}].{slot}");
+                let bind_target = if slot == "constraint" {
+                    None
+                } else {
+                    Some(bind_key.to_string())
+                };
+                try_parse(expr_str, expression_path, bind_target, compiled, diagnostics);
+            }
+        }
+
+        if let Some(default_str) = obj.get("default").and_then(|v| v.as_str()) {
+            if let Some(fel_source) = default_str.strip_prefix('=') {
+                let expression_path = format!("{path_prefix}.binds[{i}].default");
+                try_parse(
+                    fel_source,
+                    expression_path,
+                    Some(bind_key.to_string()),
                     compiled,
                     diagnostics,
                 );
@@ -194,8 +252,8 @@ fn walk_screener(
         }
     }
 
-    // Screener binds (object format, same slots as top-level binds)
-    walk_binds_object(
+    // Screener binds (same slots as top-level binds)
+    walk_binds(
         screener.get("binds"),
         "$.screener",
         compiled,
@@ -482,6 +540,84 @@ mod tests {
         let doc = Value::Null;
         let result = compile_expressions(&doc);
 
+        assert!(result.compiled.is_empty());
+        assert!(result.diagnostics.is_empty());
+    }
+
+    // ── Array-format binds (schema-canonical) ──────────────────
+
+    #[test]
+    fn array_format_binds_compiled() {
+        let doc = json!({
+            "binds": [{ "path": "total", "calculate": "$a + $b" }]
+        });
+        let result = compile_expressions(&doc);
+        assert!(result.diagnostics.is_empty());
+        assert_eq!(result.compiled.len(), 1);
+        assert_eq!(result.compiled[0].bind_target, Some("total".to_string()));
+        assert_eq!(result.compiled[0].expression_path, "$.binds[0].calculate");
+    }
+
+    #[test]
+    fn array_format_binds_constraint_no_bind_target() {
+        let doc = json!({
+            "binds": [{ "path": "age", "constraint": "$ >= 0" }]
+        });
+        let result = compile_expressions(&doc);
+        assert!(result.diagnostics.is_empty());
+        assert_eq!(result.compiled.len(), 1);
+        assert_eq!(result.compiled[0].bind_target, None);
+        assert_eq!(result.compiled[0].expression_path, "$.binds[0].constraint");
+    }
+
+    #[test]
+    fn array_format_binds_all_slots() {
+        let doc = json!({
+            "binds": [{
+                "path": "x",
+                "calculate": "1",
+                "relevant": "true",
+                "required": "true",
+                "readonly": "true"
+            }]
+        });
+        let result = compile_expressions(&doc);
+        assert!(result.diagnostics.is_empty());
+        assert_eq!(result.compiled.len(), 4);
+        for expr in &result.compiled {
+            assert_eq!(expr.bind_target, Some("x".to_string()));
+        }
+    }
+
+    #[test]
+    fn array_format_binds_default_with_equals() {
+        let doc = json!({
+            "binds": [{ "path": "name", "default": "=concat($first, ' ', $last)" }]
+        });
+        let result = compile_expressions(&doc);
+        assert!(result.diagnostics.is_empty());
+        assert_eq!(result.compiled.len(), 1);
+        assert_eq!(result.compiled[0].expression, "concat($first, ' ', $last)");
+        assert_eq!(result.compiled[0].expression_path, "$.binds[0].default");
+        assert_eq!(result.compiled[0].bind_target, Some("name".to_string()));
+    }
+
+    #[test]
+    fn array_format_binds_invalid_expression_emits_e400() {
+        let doc = json!({
+            "binds": [{ "path": "x", "calculate": "1 + + 2" }]
+        });
+        let result = compile_expressions(&doc);
+        assert!(result.compiled.is_empty());
+        assert_eq!(result.diagnostics.len(), 1);
+        assert_eq!(result.diagnostics[0].code, "E400");
+        assert_eq!(result.diagnostics[0].path, "$.binds[0].calculate");
+    }
+
+    #[test]
+    fn array_format_empty_binds_no_panic() {
+        let doc = json!({ "binds": [] });
+        let result = compile_expressions(&doc);
         assert!(result.compiled.is_empty());
         assert!(result.diagnostics.is_empty());
     }

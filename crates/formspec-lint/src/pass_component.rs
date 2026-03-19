@@ -83,7 +83,7 @@ fn collect_fields(items: &[Value], lookup: &mut HashMap<String, FieldInfo>) {
 
 /// Collect component references used inside a custom component's tree.
 fn collect_component_refs(node: &Value, custom_names: &HashSet<&str>, refs: &mut HashSet<String>) {
-    let comp_type = node.get("componentType").and_then(|v| v.as_str()).unwrap_or("");
+    let comp_type = node.get("component").and_then(|v| v.as_str()).unwrap_or("");
     if custom_names.contains(comp_type) {
         refs.insert(comp_type.to_string());
     }
@@ -131,7 +131,7 @@ struct WalkState<'a> {
 
 impl<'a> WalkState<'a> {
     fn walk_node(&mut self, node: &Value, path: &str) {
-        let comp_type = match node.get("componentType").and_then(|v| v.as_str()) {
+        let comp_type = match node.get("component").and_then(|v| v.as_str()) {
             Some(ct) => ct,
             None => return,
         };
@@ -148,7 +148,7 @@ impl<'a> WalkState<'a> {
         if comp_type == "Wizard" {
             if let Some(children) = node.get("children").and_then(|v| v.as_array()) {
                 for (i, child) in children.iter().enumerate() {
-                    let child_type = child.get("componentType").and_then(|v| v.as_str()).unwrap_or("");
+                    let child_type = child.get("component").and_then(|v| v.as_str()).unwrap_or("");
                     if child_type != "Page" {
                         self.diags.push(LintDiagnostic::error(
                             "E805", PASS,
@@ -297,7 +297,7 @@ pub fn lint_component(component: &Value, definition: Option<&Value>) -> Vec<Lint
     let mut diags = Vec::new();
 
     // E800: Root must be a layout type
-    let root_type = tree.get("componentType").and_then(|v| v.as_str()).unwrap_or("");
+    let root_type = tree.get("component").and_then(|v| v.as_str()).unwrap_or("");
     if root_type.is_empty() || !LAYOUT_ROOTS.contains(&root_type) {
         diags.push(LintDiagnostic::error(
             "E800", PASS, "$.tree",
@@ -376,7 +376,7 @@ mod tests {
     #[test]
     fn layout_root_no_e800() {
         let comp = json!({
-            "tree": { "componentType": "Stack", "children": [] }
+            "tree": { "component": "Stack", "children": [] }
         });
         let diags = lint_component(&comp, None);
         assert!(with_code(&diags, "E800").is_empty());
@@ -386,7 +386,7 @@ mod tests {
     fn all_layout_roots_accepted() {
         for root in LAYOUT_ROOTS {
             let comp = json!({
-                "tree": { "componentType": root, "children": [] }
+                "tree": { "component": root, "children": [] }
             });
             let diags = lint_component(&comp, None);
             assert!(
@@ -400,7 +400,7 @@ mod tests {
     #[test]
     fn non_layout_root_emits_e800() {
         let comp = json!({
-            "tree": { "componentType": "TextInput", "bind": "name" }
+            "tree": { "component": "TextInput", "bind": "name" }
         });
         let diags = lint_component(&comp, None);
         let e800 = with_code(&diags, "E800");
@@ -422,9 +422,9 @@ mod tests {
     fn unknown_component_emits_e801() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "FancyWidget", "bind": "x" }
+                    { "component": "FancyWidget", "bind": "x" }
                 ]
             }
         });
@@ -439,14 +439,14 @@ mod tests {
         let comp = json!({
             "components": {
                 "AddressBlock": {
-                    "tree": { "componentType": "Stack", "children": [] },
+                    "tree": { "component": "Stack", "children": [] },
                     "params": ["label"]
                 }
             },
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "AddressBlock", "label": "Home" }
+                    { "component": "AddressBlock", "label": "Home" }
                 ]
             }
         });
@@ -459,11 +459,11 @@ mod tests {
     fn wizard_non_page_children_emits_e805() {
         let comp = json!({
             "tree": {
-                "componentType": "Wizard",
+                "component": "Wizard",
                 "children": [
-                    { "componentType": "Page", "title": "Step 1" },
-                    { "componentType": "Stack", "children": [] },
-                    { "componentType": "Page", "title": "Step 3" }
+                    { "component": "Page", "title": "Step 1" },
+                    { "component": "Stack", "children": [] },
+                    { "component": "Page", "title": "Step 3" }
                 ]
             }
         });
@@ -478,10 +478,10 @@ mod tests {
     fn wizard_all_pages_no_e805() {
         let comp = json!({
             "tree": {
-                "componentType": "Wizard",
+                "component": "Wizard",
                 "children": [
-                    { "componentType": "Page", "title": "Step 1" },
-                    { "componentType": "Page", "title": "Step 2" }
+                    { "component": "Page", "title": "Step 1" },
+                    { "component": "Page", "title": "Step 2" }
                 ]
             }
         });
@@ -495,14 +495,14 @@ mod tests {
         let comp = json!({
             "components": {
                 "LabeledField": {
-                    "tree": { "componentType": "Stack", "children": [] },
+                    "tree": { "component": "Stack", "children": [] },
                     "params": ["field", "label"]
                 }
             },
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "LabeledField", "field": "name" }
+                    { "component": "LabeledField", "field": "name" }
                 ]
             }
         });
@@ -517,14 +517,14 @@ mod tests {
         let comp = json!({
             "components": {
                 "LabeledField": {
-                    "tree": { "componentType": "Stack", "children": [] },
+                    "tree": { "component": "Stack", "children": [] },
                     "params": ["field", "label"]
                 }
             },
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "LabeledField", "field": "name", "label": "Name" }
+                    { "component": "LabeledField", "field": "name", "label": "Name" }
                 ]
             }
         });
@@ -539,14 +539,14 @@ mod tests {
             "components": {
                 "Recursive": {
                     "tree": {
-                        "componentType": "Stack",
+                        "component": "Stack",
                         "children": [
-                            { "componentType": "Recursive" }
+                            { "component": "Recursive" }
                         ]
                     }
                 }
             },
-            "tree": { "componentType": "Stack", "children": [] }
+            "tree": { "component": "Stack", "children": [] }
         });
         let diags = lint_component(&comp, None);
         let e807 = with_code(&diags, "E807");
@@ -560,18 +560,18 @@ mod tests {
             "components": {
                 "Alpha": {
                     "tree": {
-                        "componentType": "Stack",
-                        "children": [{ "componentType": "Beta" }]
+                        "component": "Stack",
+                        "children": [{ "component": "Beta" }]
                     }
                 },
                 "Beta": {
                     "tree": {
-                        "componentType": "Stack",
-                        "children": [{ "componentType": "Alpha" }]
+                        "component": "Stack",
+                        "children": [{ "component": "Alpha" }]
                     }
                 }
             },
-            "tree": { "componentType": "Stack", "children": [] }
+            "tree": { "component": "Stack", "children": [] }
         });
         let diags = lint_component(&comp, None);
         let e807 = with_code(&diags, "E807");
@@ -584,12 +584,12 @@ mod tests {
             "components": {
                 "Wrapper": {
                     "tree": {
-                        "componentType": "Stack",
-                        "children": [{ "componentType": "TextInput", "bind": "x" }]
+                        "component": "Stack",
+                        "children": [{ "component": "TextInput", "bind": "x" }]
                     }
                 }
             },
-            "tree": { "componentType": "Stack", "children": [] }
+            "tree": { "component": "Stack", "children": [] }
         });
         let diags = lint_component(&comp, None);
         assert!(with_code(&diags, "E807").is_empty());
@@ -600,10 +600,10 @@ mod tests {
     fn duplicate_bind_emits_w804() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "name" },
-                    { "componentType": "TextInput", "bind": "name" }
+                    { "component": "TextInput", "bind": "name" },
+                    { "component": "TextInput", "bind": "name" }
                 ]
             }
         });
@@ -617,10 +617,10 @@ mod tests {
     fn unique_binds_no_w804() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "first_name" },
-                    { "componentType": "TextInput", "bind": "last_name" }
+                    { "component": "TextInput", "bind": "first_name" },
+                    { "component": "TextInput", "bind": "last_name" }
                 ]
             }
         });
@@ -633,7 +633,7 @@ mod tests {
     fn layout_with_bind_emits_w801() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "bind": "oops",
                 "children": []
             }
@@ -648,9 +648,9 @@ mod tests {
     fn container_with_bind_emits_w801() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "Card", "bind": "oops", "children": [] }
+                    { "component": "Card", "bind": "oops", "children": [] }
                 ]
             }
         });
@@ -665,9 +665,9 @@ mod tests {
         // DataTable is a special container that CAN bind
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "DataTable", "bind": "items" }
+                    { "component": "DataTable", "bind": "items" }
                 ]
             }
         });
@@ -680,9 +680,9 @@ mod tests {
     fn compatible_bind_no_warnings() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "name" }
+                    { "component": "TextInput", "bind": "name" }
                 ]
             }
         });
@@ -700,9 +700,9 @@ mod tests {
     fn unresolved_bind_emits_w800() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "ghost" }
+                    { "component": "TextInput", "bind": "ghost" }
                 ]
             }
         });
@@ -720,9 +720,9 @@ mod tests {
     fn incompatible_type_emits_e802() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "Toggle", "bind": "name" }
+                    { "component": "Toggle", "bind": "name" }
                 ]
             }
         });
@@ -740,9 +740,9 @@ mod tests {
     fn compatible_with_warning_emits_w802() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "age" }
+                    { "component": "TextInput", "bind": "age" }
                 ]
             }
         });
@@ -761,9 +761,9 @@ mod tests {
     fn no_definition_skips_resolution_checks() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "Toggle", "bind": "ghost" }
+                    { "component": "Toggle", "bind": "ghost" }
                 ]
             }
         });
@@ -778,9 +778,9 @@ mod tests {
     fn select_without_options_emits_e803() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "Select", "bind": "color" }
+                    { "component": "Select", "bind": "color" }
                 ]
             }
         });
@@ -797,9 +797,9 @@ mod tests {
     fn select_with_option_set_no_e803() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "Select", "bind": "color" }
+                    { "component": "Select", "bind": "color" }
                 ]
             }
         });
@@ -815,9 +815,9 @@ mod tests {
     fn select_with_inline_options_no_e803() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "Select", "bind": "color" }
+                    { "component": "Select", "bind": "color" }
                 ]
             }
         });
@@ -836,9 +836,9 @@ mod tests {
     fn richtext_non_string_emits_e804() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "count", "inputMode": "richtext" }
+                    { "component": "TextInput", "bind": "count", "inputMode": "richtext" }
                 ]
             }
         });
@@ -856,9 +856,9 @@ mod tests {
     fn richtext_string_no_e804() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "bio", "inputMode": "richtext" }
+                    { "component": "TextInput", "bind": "bio", "inputMode": "richtext" }
                 ]
             }
         });
@@ -874,10 +874,10 @@ mod tests {
     fn multiple_editable_inputs_same_bind_emits_w803() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "name" },
-                    { "componentType": "NumberInput", "bind": "name" }
+                    { "component": "TextInput", "bind": "name" },
+                    { "component": "NumberInput", "bind": "name" }
                 ]
             }
         });
@@ -892,10 +892,10 @@ mod tests {
         // Heading is a display component, not input — only the input triggers W803
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "Heading", "bind": "name" },
-                    { "componentType": "TextInput", "bind": "name" }
+                    { "component": "Heading", "bind": "name" },
+                    { "component": "TextInput", "bind": "name" }
                 ]
             }
         });
@@ -908,11 +908,11 @@ mod tests {
     fn all_diagnostics_are_pass_7() {
         let comp = json!({
             "tree": {
-                "componentType": "TextInput",
+                "component": "TextInput",
                 "bind": "x",
                 "children": [
-                    { "componentType": "FancyWidget" },
-                    { "componentType": "TextInput", "bind": "x" }
+                    { "component": "FancyWidget" },
+                    { "component": "TextInput", "bind": "x" }
                 ]
             }
         });
@@ -928,15 +928,15 @@ mod tests {
     fn deeply_nested_bind_tracked() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
                     {
-                        "componentType": "Card",
+                        "component": "Card",
                         "children": [
-                            { "componentType": "TextInput", "bind": "name" }
+                            { "component": "TextInput", "bind": "name" }
                         ]
                     },
-                    { "componentType": "TextInput", "bind": "name" }
+                    { "component": "TextInput", "bind": "name" }
                 ]
             }
         });
@@ -949,9 +949,9 @@ mod tests {
     fn field_lookup_finds_nested_items() {
         let comp = json!({
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "amount" }
+                    { "component": "TextInput", "bind": "amount" }
                 ]
             }
         });

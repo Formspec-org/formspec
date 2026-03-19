@@ -348,20 +348,48 @@ impl<'a> Lexer<'a> {
             match self.advance() {
                 None => return Err("unterminated string".into()),
                 Some(c) if c == quote => return Ok(Token::StringLit(result)),
-                Some('\\') => match self.advance() {
-                    Some('n') => result.push('\n'),
-                    Some('t') => result.push('\t'),
-                    Some('r') => result.push('\r'),
-                    Some('\\') => result.push('\\'),
-                    Some('"') => result.push('"'),
-                    Some('\'') => result.push('\''),
-                    Some('/') => result.push('/'),
-                    Some(c) => {
-                        result.push('\\');
-                        result.push(c);
+                Some('\\') => {
+                    let esc_pos = self.pos - 1; // position of the backslash
+                    match self.advance() {
+                        Some('n') => result.push('\n'),
+                        Some('t') => result.push('\t'),
+                        Some('r') => result.push('\r'),
+                        Some('\\') => result.push('\\'),
+                        Some('"') => result.push('"'),
+                        Some('\'') => result.push('\''),
+                        Some('u') => {
+                            let mut hex = String::with_capacity(4);
+                            for _ in 0..4 {
+                                match self.peek() {
+                                    Some(h) if h.is_ascii_hexdigit() => {
+                                        hex.push(h);
+                                        self.advance();
+                                    }
+                                    _ => {
+                                        return Err(format!(
+                                            "invalid unicode escape '\\u{hex}' at position {esc_pos}: expected 4 hex digits"
+                                        ));
+                                    }
+                                }
+                            }
+                            let cp = u32::from_str_radix(&hex, 16).unwrap();
+                            match char::from_u32(cp) {
+                                Some(ch) => result.push(ch),
+                                None => {
+                                    return Err(format!(
+                                        "invalid unicode codepoint '\\u{hex}' at position {esc_pos}"
+                                    ));
+                                }
+                            }
+                        }
+                        Some(c) => {
+                            return Err(format!(
+                                "unrecognized escape sequence '\\{c}' at position {esc_pos}"
+                            ));
+                        }
+                        None => return Err("unterminated string escape".into()),
                     }
-                    None => return Err("unterminated string escape".into()),
-                },
+                }
                 Some(c) => result.push(c),
             }
         }
@@ -387,5 +415,59 @@ impl<'a> Lexer<'a> {
             "not" => Token::Not,
             _ => Token::Identifier(word),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lex_string(input: &str) -> Result<Vec<Token>, String> {
+        let mut lexer = Lexer::new(input);
+        lexer.tokenize().map(|tokens| tokens.into_iter().map(|st| st.token).collect())
+    }
+
+    #[test]
+    fn test_unicode_escape_basic() {
+        let tokens = lex_string(r#""\u0041""#).unwrap();
+        assert_eq!(tokens[0], Token::StringLit("A".into()));
+    }
+
+    #[test]
+    fn test_unicode_escape_multibyte() {
+        // \u00E9 = e-acute
+        let tokens = lex_string(r#""\u00E9""#).unwrap();
+        assert_eq!(tokens[0], Token::StringLit("\u{00E9}".into()));
+    }
+
+    #[test]
+    fn test_unicode_escape_too_few_hex_digits() {
+        let err = lex_string(r#""\u00G1""#).unwrap_err();
+        assert!(err.contains("invalid unicode escape"), "got: {err}");
+    }
+
+    #[test]
+    fn test_unicode_escape_no_digits() {
+        let err = lex_string(r#""\u""#).unwrap_err();
+        assert!(err.contains("invalid unicode escape"), "got: {err}");
+    }
+
+    #[test]
+    fn test_unrecognized_escape_error() {
+        let err = lex_string(r#""\q""#).unwrap_err();
+        assert!(err.contains("unrecognized escape sequence '\\q'"), "got: {err}");
+    }
+
+    #[test]
+    fn test_slash_escape_removed() {
+        // \/ is no longer a valid escape
+        let err = lex_string(r#""\/""#).unwrap_err();
+        assert!(err.contains("unrecognized escape sequence"), "got: {err}");
+    }
+
+    #[test]
+    fn test_valid_escapes_still_work() {
+        let tokens = lex_string(r#""a\nb\tc\\d\"e\'f""#).unwrap();
+        assert_eq!(tokens[0], Token::StringLit("a\nb\tc\\d\"e'f".into()));
     }
 }

@@ -6,9 +6,11 @@
 /// that replaces the TypeScript engine's pure-logic modules.
 
 pub mod assembler;
+pub mod changelog;
 pub mod extension_analysis;
 pub mod fel_analysis;
 pub mod path_utils;
+pub mod registry_client;
 pub mod runtime_mapping;
 pub mod schema_validator;
 
@@ -28,8 +30,8 @@ pub use path_utils::{
     normalize_path_segment, parent_path, split_normalized_path, ItemLocation, TreeItem,
 };
 pub use runtime_mapping::{
-    execute_mapping, CoerceType, MappingDiagnostic, MappingDirection, MappingResult,
-    MappingRule, TransformType, UnmappedStrategy,
+    execute_mapping, execute_mapping_doc, CoerceType, MappingDiagnostic, MappingDirection,
+    MappingDocument, MappingResult, MappingRule, TransformType, UnmappedStrategy,
 };
 pub use schema_validator::{
     detect_document_type, json_pointer_to_jsonpath, validate_document, DocumentType,

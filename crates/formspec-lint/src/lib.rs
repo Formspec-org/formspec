@@ -221,10 +221,10 @@ mod tests {
         let comp = json!({
             "$formspecComponent": "1.0",
             "tree": {
-                "componentType": "Stack",
+                "component": "Stack",
                 "children": [
-                    { "componentType": "TextInput", "bind": "name" },
-                    { "componentType": "TextInput", "bind": "name" }
+                    { "component": "TextInput", "bind": "name" },
+                    { "component": "TextInput", "bind": "name" }
                 ]
             }
         });
@@ -349,7 +349,7 @@ mod tests {
             "items": [
                 {
                     "key": "lines",
-                    "repeat": { "min": 1, "max": 10 },
+                    "repeatable": true,
                     "children": [
                         { "key": "amount", "dataType": "decimal" }
                     ]
@@ -394,7 +394,7 @@ mod tests {
             "items": [
                 {
                     "key": "lines",
-                    "repeat": { "min": 1 },
+                    "repeatable": true,
                     "children": [
                         { "key": "amount", "dataType": "decimal" }
                     ]

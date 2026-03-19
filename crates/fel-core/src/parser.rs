@@ -484,8 +484,11 @@ impl Parser {
             }
             Token::LParen => {
                 self.advance();
+                let saved_no_in = self.no_in_depth;
+                self.no_in_depth = 0;
                 let expr = self.parse_expression()?;
                 self.expect(&Token::RParen)?;
+                self.no_in_depth = saved_no_in;
                 Ok(expr)
             }
             Token::LBracket => self.parse_array_literal(),
@@ -847,5 +850,28 @@ mod tests {
         // not the membership operator
         let expr = parse("let x = $a in x + 1").unwrap();
         assert!(matches!(expr, Expr::LetBinding { .. }));
+    }
+
+    #[test]
+    fn test_parse_let_with_parenthesized_in() {
+        // Parens reset the no_in suppression, so the inner `in` is membership
+        let expr = parse("let x = (1 in [1, 2, 3]) in x").unwrap();
+        match expr {
+            Expr::LetBinding { value, body, .. } => {
+                assert!(matches!(*value, Expr::Membership { negated: false, .. }));
+                assert!(matches!(*body, Expr::FieldRef { .. }));
+            }
+            other => panic!("expected LetBinding, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_let_nested_parens_restore_suppression() {
+        // After the closing paren, `in` should still be the let-body separator
+        let expr = parse("let y = ($a + 1) in y * 2").unwrap();
+        match expr {
+            Expr::LetBinding { name, .. } => assert_eq!(name, "y"),
+            other => panic!("expected LetBinding, got {other:?}"),
+        }
     }
 }

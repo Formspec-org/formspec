@@ -23,8 +23,8 @@ pub struct ItemRef {
     pub parent_full_path: Option<String>,
     /// The item's `dataType` value, if present.
     pub data_type: Option<String>,
-    /// Whether this item has a `repeat` property.
-    pub has_repeat: bool,
+    /// Whether this item is a repeatable group (`"repeatable": true` or legacy `"repeat": {…}`).
+    pub is_repeatable: bool,
 }
 
 /// Index built by walking the item tree. Consumed by downstream lint passes.
@@ -34,7 +34,7 @@ pub struct ItemTreeIndex {
     pub by_key: HashMap<String, ItemRef>,
     /// All items by full dotted path.
     pub by_full_path: HashMap<String, ItemRef>,
-    /// Full paths of items that have a `repeat` property.
+    /// Full paths of repeatable group items.
     pub repeatable_groups: HashSet<String>,
     /// Keys that appear more than once anywhere in the tree.
     pub ambiguous_keys: HashSet<String>,
@@ -84,7 +84,11 @@ fn walk_items(
             .get("dataType")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        let has_repeat = item.get("repeat").is_some();
+        let is_repeatable = item
+            .get("repeatable")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+            || item.get("repeat").is_some();
 
         let item_ref = ItemRef {
             key: key.to_string(),
@@ -92,7 +96,7 @@ fn walk_items(
             json_path: json_path.clone(),
             parent_full_path: parent_full_path.map(|s| s.to_string()),
             data_type,
-            has_repeat,
+            is_repeatable,
         };
 
         // E200: duplicate key (different location in the tree)
@@ -120,7 +124,7 @@ fn walk_items(
             index.by_full_path.insert(full_path.clone(), item_ref);
         }
 
-        if has_repeat {
+        if is_repeatable {
             index.repeatable_groups.insert(full_path.clone());
         }
 
@@ -230,13 +234,13 @@ mod tests {
     }
 
     #[test]
-    fn repeatable_group_tracking() {
+    fn repeatable_group_tracking_canonical_boolean() {
         let doc = json!({
             "items": [
                 { "key": "name", "dataType": "string" },
                 {
                     "key": "lines",
-                    "repeat": { "min": 1, "max": 10 },
+                    "repeatable": true,
                     "children": [
                         { "key": "amount", "dataType": "decimal" }
                     ]
@@ -250,7 +254,27 @@ mod tests {
         assert!(!index.repeatable_groups.contains("lines.amount"));
 
         let lines = &index.by_key["lines"];
-        assert!(lines.has_repeat);
+        assert!(lines.is_repeatable);
+    }
+
+    #[test]
+    fn repeatable_group_tracking_legacy_repeat_object() {
+        let doc = json!({
+            "items": [
+                {
+                    "key": "lines",
+                    "repeat": { "min": 1, "max": 10 },
+                    "children": [
+                        { "key": "amount", "dataType": "decimal" }
+                    ]
+                }
+            ]
+        });
+        let index = build_item_index(&doc);
+
+        assert!(index.repeatable_groups.contains("lines"));
+        let lines = &index.by_key["lines"];
+        assert!(lines.is_repeatable);
     }
 
     #[test]

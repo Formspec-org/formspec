@@ -276,15 +276,19 @@ fn apply_fragment(
         }
     }
 
-    // Track collision warnings
+    // Detect key collisions — spec requires abort on collision
     if !key_prefix.is_empty() {
         if let Some(frag_items) = fragment.get("items").and_then(|v| v.as_array()) {
             let mut seen_keys: HashSet<String> = HashSet::new();
             for item in frag_items {
                 if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
-                    let prefixed = format!("{key_prefix}_{key}");
+                    let prefixed = format!("{key_prefix}.{key}");
                     if !seen_keys.insert(prefixed.clone()) {
-                        result.warnings.push(format!("Duplicate key after prefix: {prefixed}"));
+                        result.errors.push(AssemblyError::KeyCollision {
+                            key: prefixed,
+                            source: _ref_uri.to_string(),
+                        });
+                        return Value::Object(merged);
                     }
                 }
             }
@@ -303,7 +307,7 @@ fn apply_key_prefix(item: &Value, prefix: &str) -> Value {
     let mut result = item.clone();
     if let Some(obj) = result.as_object_mut() {
         if let Some(key) = obj.get("key").and_then(|v| v.as_str()) {
-            obj.insert("key".to_string(), Value::String(format!("{prefix}_{key}")));
+            obj.insert("key".to_string(), Value::String(format!("{prefix}.{key}")));
         }
         if let Some(children) = obj.get("children").and_then(|v| v.as_array()).cloned() {
             let prefixed: Vec<Value> = children.iter()
@@ -327,7 +331,7 @@ fn rewrite_fel_string(expression: &str, prefix: &str) -> String {
             let rewritten = rewrite_fel_references(&expr, &RewriteOptions {
                 rewrite_field_path: Some(Box::new({
                     let p = prefix.to_string();
-                    move |path| Some(format!("{p}_{path}"))
+                    move |path| Some(format!("{p}.{path}"))
                 })),
                 rewrite_variable: None,
                 rewrite_instance_name: None,
@@ -432,8 +436,8 @@ mod tests {
         // Items should be imported with key prefix
         let children = result.definition["items"][0]["children"].as_array().unwrap();
         assert_eq!(children.len(), 2);
-        assert_eq!(children[0]["key"], "c_name");
-        assert_eq!(children[1]["key"], "c_email");
+        assert_eq!(children[0]["key"], "c.name");
+        assert_eq!(children[1]["key"], "c.email");
     }
 
     #[test]
@@ -472,9 +476,9 @@ mod tests {
             ]
         });
         let prefixed = apply_key_prefix(&item, "contact");
-        assert_eq!(prefixed["key"], "contact_name");
-        assert_eq!(prefixed["children"][0]["key"], "contact_first");
-        assert_eq!(prefixed["children"][1]["key"], "contact_last");
+        assert_eq!(prefixed["key"], "contact.name");
+        assert_eq!(prefixed["children"][0]["key"], "contact.first");
+        assert_eq!(prefixed["children"][1]["key"], "contact.last");
     }
 
     #[test]
@@ -509,25 +513,25 @@ mod tests {
     fn test_fel_rewriting_with_prefix() {
         // Verify the AST-based FEL rewriting works end-to-end
         let result = rewrite_fel_string("$name + $age", "contact");
-        assert_eq!(result, "$contact_name + $contact_age");
+        assert_eq!(result, "$contact.name + $contact.age");
     }
 
     #[test]
     fn test_fel_rewriting_complex() {
         let result = rewrite_fel_string("if $active then $total * 1.1 else 0", "order");
-        assert_eq!(result, "if $order_active then $order_total * 1.1 else 0");
+        assert_eq!(result, "if $order.active then $order.total * 1.1 else 0");
     }
 
     #[test]
     fn test_fel_rewriting_preserves_literals() {
         let result = rewrite_fel_string("'hello' & $name", "p");
-        assert_eq!(result, "'hello' & $p_name");
+        assert_eq!(result, "'hello' & $p.name");
     }
 
     #[test]
     fn test_fel_rewriting_functions() {
         let result = rewrite_fel_string("sum($items[*].qty)", "order");
-        assert_eq!(result, "sum($order_items[*].qty)");
+        assert_eq!(result, "sum($order.items[*].qty)");
     }
 
     #[test]
@@ -549,6 +553,6 @@ mod tests {
         assert!(result.errors.is_empty());
         let binds = result.definition["items"][0]["binds"].as_object().unwrap();
         let calc = binds["p.total"]["calculate"].as_str().unwrap();
-        assert_eq!(calc, "$p_qty * $p_price");
+        assert_eq!(calc, "$p.qty * $p.price");
     }
 }
