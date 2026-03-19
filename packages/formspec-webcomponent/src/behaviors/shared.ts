@@ -1,6 +1,6 @@
 /** @filedesc Shared utilities for behavior hooks: path resolution, ID generation, token stripping, shared bind helpers. */
 import { effect, Signal } from '@preact/signals-core';
-import type { PresentationBlock } from 'formspec-layout';
+import { type PresentationBlock, COMPATIBILITY_MATRIX } from 'formspec-layout';
 import type { ResolvedPresentationBlock, FieldRefs, BehaviorContext } from './types';
 
 /** Build full field path from bind key and prefix. */
@@ -19,7 +19,8 @@ export function toFieldId(fieldPath: string): string {
  */
 export function resolveAndStripTokens(
     block: PresentationBlock,
-    resolveToken: (v: any) => any
+    resolveToken: (v: any) => any,
+    comp?: any,
 ): ResolvedPresentationBlock {
     const resolved: any = { ...block };
     if (resolved.style) {
@@ -32,7 +33,18 @@ export function resolveAndStripTokens(
             ? resolved.cssClass.map((c: any) => resolveToken(c))
             : resolveToken(resolved.cssClass);
     }
+    // comp.labelPosition overrides theme cascade (matches old field-input.ts precedence)
+    if (comp?.labelPosition) {
+        resolved.labelPosition = comp.labelPosition;
+    }
     return resolved;
+}
+
+/** Warn if the component type is incompatible with the item's dataType. */
+export function warnIfIncompatible(componentType: string, dataType: string): void {
+    if (COMPATIBILITY_MATRIX[dataType] && !COMPATIBILITY_MATRIX[dataType].includes(componentType)) {
+        console.warn(`Incompatible component ${componentType} for dataType ${dataType}.`);
+    }
 }
 
 /**

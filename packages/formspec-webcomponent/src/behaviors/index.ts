@@ -7,7 +7,7 @@ export type {
     RatingBehavior, FileUploadBehavior, SignatureBehavior,
     WizardBehavior, TabsBehavior, WizardRefs, TabsRefs,
 } from './types';
-export { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects } from './shared';
+export { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 export { useTextInput } from './text-input';
 export { useNumberInput } from './number-input';
 export { useRadioGroup } from './radio-group';

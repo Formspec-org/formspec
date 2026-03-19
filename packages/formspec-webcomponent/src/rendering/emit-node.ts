@@ -6,6 +6,8 @@ import {
     RenderContext,
     ValidationTargetMetadata,
 } from '../types';
+import type { BehaviorContext } from '../behaviors/types';
+import type { AdapterContext } from '../adapters/types';
 import {
     PresentationBlock,
     ItemDescriptor,
@@ -39,7 +41,9 @@ export interface RenderHost {
         error?: unknown;
     };
     applyAccessibility(el: HTMLElement, comp: any): void;
+    applyClassValue(el: HTMLElement, classValue: unknown): void;
     findItemByKey(key: string, items?: any[]): any | null;
+    _registryEntries: Map<string, any>;
     submit(options?: any): any;
     resolveValidationTarget(resultOrPath: any): ValidationTargetMetadata;
     focusField(path: string): boolean;
@@ -215,6 +219,29 @@ export function renderActualComponent(host: RenderHost, comp: any, parent: HTMLE
         activeBreakpoint: host.activeBreakpoint,
         touchedFields: host.touchedFields,
         touchedVersion: host.touchedVersion,
+        behaviorContext: {
+            engine: host.engine,
+            prefix,
+            cleanupFns: host.cleanupFns,
+            touchedFields: host.touchedFields,
+            touchedVersion: host.touchedVersion,
+            latestSubmitDetailSignal: host._latestSubmitDetailSignal,
+            resolveToken: (v: any) => host.resolveToken(v),
+            resolveItemPresentation: (item: ItemDescriptor) => host.resolveItemPresentation(item),
+            resolveWidgetClassSlots: (p: PresentationBlock) => host.resolveWidgetClassSlots(p),
+            findItemByKey: (key: string) => host.findItemByKey(key),
+            renderComponent: (comp: any, parent: HTMLElement, pfx?: string) => renderComponent(host, comp, parent, pfx),
+            submit: (opts?: any) => host.submit(opts),
+            registryEntries: host._registryEntries,
+            rerender: () => host.render(),
+        },
+        adapterContext: {
+            onDispose: (fn: () => void) => host.cleanupFns.push(fn),
+            applyCssClass: (el: HTMLElement, comp: any) => host.applyCssClass(el, comp),
+            applyStyle: (el: HTMLElement, style: any) => host.applyStyle(el, style),
+            applyAccessibility: (el: HTMLElement, comp: any) => host.applyAccessibility(el, comp),
+            applyClassValue: (el: HTMLElement, classValue: unknown) => host.applyClassValue(el, classValue),
+        },
     };
 
     if (plugin) {

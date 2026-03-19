@@ -1,15 +1,16 @@
 /** @filedesc NumberInput behavior hook — extracts reactive state for numeric fields. */
 import { effect } from '@preact/signals-core';
 import type { NumberInputBehavior, FieldRefs, BehaviorContext } from './types';
-import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects } from './shared';
+import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 
 export function useNumberInput(ctx: BehaviorContext, comp: any): NumberInputBehavior {
     const fieldPath = resolveFieldPath(comp.bind, ctx.prefix);
     const id = comp.id || toFieldId(fieldPath);
     const item = ctx.findItemByKey(comp.bind);
+    warnIfIncompatible('NumberInput', item?.dataType || 'string');
     const itemDesc = { key: item?.key || comp.bind, type: 'field' as const, dataType: item?.dataType || 'number' };
     const rawPresentation = ctx.resolveItemPresentation(itemDesc);
-    const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken);
+    const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
 

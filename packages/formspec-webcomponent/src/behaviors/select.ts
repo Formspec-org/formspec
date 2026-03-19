@@ -1,15 +1,16 @@
 /** @filedesc Select behavior hook — extracts reactive state for dropdown select fields. */
 import { effect } from '@preact/signals-core';
 import type { SelectBehavior, FieldRefs, BehaviorContext } from './types';
-import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects } from './shared';
+import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 
 export function useSelect(ctx: BehaviorContext, comp: any): SelectBehavior {
     const fieldPath = resolveFieldPath(comp.bind, ctx.prefix);
     const id = comp.id || toFieldId(fieldPath);
     const item = ctx.findItemByKey(comp.bind);
+    warnIfIncompatible('Select', item?.dataType || 'string');
     const itemDesc = { key: item?.key || comp.bind, type: 'field' as const, dataType: item?.dataType || 'choice' };
     const rawPresentation = ctx.resolveItemPresentation(itemDesc);
-    const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken);
+    const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
 
