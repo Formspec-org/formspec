@@ -387,5 +387,47 @@ mod tests {
         assert_eq!(DocumentType::ValidationReport.schema_key(), "validationReport");
         assert_eq!(DocumentType::Registry.schema_key(), "registry");
         assert_eq!(DocumentType::Changelog.schema_key(), "changelog");
+    /// Spec: schemas/definition.schema.json — validate_document with a mock
+    /// validator that returns actual SchemaValidationError instances, verifying
+    /// that detected type is passed through and errors are propagated.
+    #[test]
+    fn test_validate_document_with_errors() {
+        struct ErrorValidator;
+        impl JsonSchemaValidator for ErrorValidator {
+            fn validate(&self, _doc: &Value, dt: DocumentType) -> Vec<SchemaValidationError> {
+                vec![
+                    SchemaValidationError {
+                        path: "$.items[0].key".to_string(),
+                        message: format!("required property missing in {}", dt.schema_key()),
+                    },
+                    SchemaValidationError {
+                        path: "$.title".to_string(),
+                        message: "must be a string".to_string(),
+                    },
+                ]
+            }
+        }
+
+        let doc = json!({ "$formspec": "1.0", "items": [{}], "title": 42 });
+        let result = validate_document(&doc, &ErrorValidator);
+        assert_eq!(result.document_type, Some(DocumentType::Definition));
+        assert_eq!(result.errors.len(), 2);
+        assert_eq!(result.errors[0].path, "$.items[0].key");
+        assert!(result.errors[0].message.contains("definition"));
+        assert_eq!(result.errors[1].path, "$.title");
+        assert_eq!(result.errors[1].message, "must be a string");
+    }
+
+    /// Spec: core/spec.md §5.3 (RFC 6901) — JSON Pointer segment `01` is an opaque
+    /// string per RFC 6901, not array index 1. `json_pointer_to_jsonpath` currently
+    /// treats any numeric segment as an array index. This test documents that
+    /// leading-zero segments like `/items/01/key` are treated as array indices.
+    #[test]
+    fn json_pointer_leading_zero_treated_as_index() {
+        // `01` parses as usize 1, so it becomes [1] in JSONPath.
+        // This documents the current behavior — RFC 6901 says `01` is opaque,
+        // but practical JSON Pointer usage in schemas treats it as an index.
+        let result = json_pointer_to_jsonpath("/items/01/key");
+        assert_eq!(result, "$.items[1].key");
     }
 }

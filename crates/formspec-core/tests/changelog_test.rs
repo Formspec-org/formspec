@@ -738,4 +738,88 @@ fn description_metadata_change() {
     assert_eq!(meta.len(), 1);
     assert_eq!(meta[0].change_type, ChangeType::Added);
     assert_eq!(meta[0].impact, ChangeImpact::Cosmetic);
+/// Spec: registry/changelog-spec.md §5 (Generation Algorithm, steps 3-7) —
+/// Diff behavior with nested/child item modifications inside a group.
+/// The changelog diff indexes items by their top-level `key` field.
+/// Child items nested inside a group's `children` array are part of
+/// the parent item's value — changes to children show as a modification
+/// of the parent item, not as independent child-level changes.
+#[test]
+fn nested_child_modification_detected_as_parent_change() {
+    let old = json!({
+        "url": URL,
+        "version": "1.0.0",
+        "title": "Test Form",
+        "items": [
+            {
+                "key": "address",
+                "type": "group",
+                "label": "Address",
+                "children": [
+                    { "key": "street", "type": "field", "dataType": "string", "label": "Street" },
+                    { "key": "city", "type": "field", "dataType": "string", "label": "City" }
+                ]
+            }
+        ]
+    });
+
+    let mut new = old.clone();
+    // Modify a child item: change city's label
+    new["items"][0]["children"][1]["label"] = json!("Town/City");
+
+    let cl = generate_changelog(&old, &new, URL);
+
+    // The diff should detect a modification on the parent "address" item,
+    // because items are indexed by top-level key and compared by value equality.
+    let item_changes: Vec<_> = cl.changes.iter()
+        .filter(|c| c.target == ChangeTarget::Item && c.change_type == ChangeType::Modified)
+        .collect();
+    assert_eq!(item_changes.len(), 1, "should detect one modified item");
+    assert_eq!(item_changes[0].key.as_deref(), Some("address"));
+
+    // The child "label" change is nested inside the parent's "children" array.
+    // "children" is not in ITEM_COSMETIC_KEYS, so the diff engine classifies
+    // the parent modification as Compatible, not Cosmetic.
+    assert_eq!(item_changes[0].impact, ChangeImpact::Compatible);
+}
+
+/// Spec: registry/changelog-spec.md §5 — Adding a child to a group shows
+/// as a parent modification, not an independent item addition.
+#[test]
+fn nested_child_added_shows_as_parent_modification() {
+    let old = json!({
+        "url": URL,
+        "version": "1.0.0",
+        "title": "Test Form",
+        "items": [
+            {
+                "key": "address",
+                "type": "group",
+                "label": "Address",
+                "children": [
+                    { "key": "street", "type": "field", "dataType": "string" }
+                ]
+            }
+        ]
+    });
+
+    let mut new = old.clone();
+    new["items"][0]["children"].as_array_mut().unwrap().push(json!({
+        "key": "city", "type": "field", "dataType": "string"
+    }));
+
+    let cl = generate_changelog(&old, &new, URL);
+
+    // No independent item-added for "city" — it's inside the parent
+    let added: Vec<_> = cl.changes.iter()
+        .filter(|c| c.target == ChangeTarget::Item && c.change_type == ChangeType::Added)
+        .collect();
+    assert!(added.is_empty(), "child add should not produce independent item-added");
+
+    // Instead, "address" shows as modified
+    let modified: Vec<_> = cl.changes.iter()
+        .filter(|c| c.target == ChangeTarget::Item && c.change_type == ChangeType::Modified)
+        .collect();
+    assert_eq!(modified.len(), 1);
+    assert_eq!(modified[0].key.as_deref(), Some("address"));
 }

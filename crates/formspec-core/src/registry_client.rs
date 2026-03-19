@@ -1109,4 +1109,143 @@ mod tests {
         let url = reg.lookup("x-formspec-url").unwrap();
         assert_eq!(url.status, RegistryEntryStatus::Active);
     }
+
+    // ── Findings 28-30: structural parse errors and conditional requirements ──
+
+    /// Spec: registry/extension-registry.md §2, schemas/registry.schema.json "type":"object"
+    /// Root document must be an object. An array root must be rejected.
+    #[test]
+    fn parse_error_when_root_is_array() {
+        let val = json!([]);
+        let err = Registry::from_json(&val).unwrap_err();
+        assert!(matches!(err, RegistryError::InvalidField(_)));
+    }
+
+    /// Spec: registry/extension-registry.md §2.1, schemas/registry.schema.json $defs/publisher
+    /// Publisher field must be an object. A string value must be rejected.
+    #[test]
+    fn parse_error_when_publisher_is_string() {
+        let val = json!({
+            "publisher": "not an object",
+            "published": "2026-01-01T00:00:00Z",
+            "entries": []
+        });
+        let err = Registry::from_json(&val).unwrap_err();
+        assert!(matches!(err, RegistryError::InvalidField(_)));
+    }
+
+    /// Spec: registry/extension-registry.md §3 — Entry missing `version` field.
+    #[test]
+    fn parse_error_entry_missing_version() {
+        let val = json!({
+            "publisher": { "name": "X", "url": "https://x.com" },
+            "published": "2026-01-01T00:00:00Z",
+            "entries": [{
+                "name": "x-test",
+                "category": "property",
+                "status": "stable",
+                "description": "test"
+            }]
+        });
+        let err = Registry::from_json(&val).unwrap_err();
+        assert!(matches!(err, RegistryError::InvalidEntry(0, ref m) if m.contains("version")));
+    }
+
+    /// Spec: registry/extension-registry.md §3 — Entry missing `status` field.
+    #[test]
+    fn parse_error_entry_missing_status() {
+        let val = json!({
+            "publisher": { "name": "X", "url": "https://x.com" },
+            "published": "2026-01-01T00:00:00Z",
+            "entries": [{
+                "name": "x-test",
+                "category": "property",
+                "version": "1.0.0",
+                "description": "test"
+            }]
+        });
+        let err = Registry::from_json(&val).unwrap_err();
+        assert!(matches!(err, RegistryError::InvalidEntry(0, ref m) if m.contains("status")));
+    }
+
+    /// Spec: registry/extension-registry.md §3 — Entry missing `description` field.
+    #[test]
+    fn parse_error_entry_missing_description() {
+        let val = json!({
+            "publisher": { "name": "X", "url": "https://x.com" },
+            "published": "2026-01-01T00:00:00Z",
+            "entries": [{
+                "name": "x-test",
+                "category": "property",
+                "version": "1.0.0",
+                "status": "stable"
+            }]
+        });
+        let err = Registry::from_json(&val).unwrap_err();
+        assert!(matches!(err, RegistryError::InvalidEntry(0, ref m) if m.contains("description")));
+    }
+
+    /// Spec: registry/extension-registry.md §3, Appendix A — dataType entries
+    /// require baseType. Validated via `Registry::validate()`.
+    #[test]
+    fn validate_datatype_requires_base_type() {
+        let val = json!({
+            "publisher": { "name": "X", "url": "https://x.com" },
+            "published": "2026-01-01T00:00:00Z",
+            "entries": [{
+                "name": "x-test-dt",
+                "category": "dataType",
+                "version": "1.0.0",
+                "status": "stable",
+                "description": "A data type"
+                // missing baseType
+            }]
+        });
+        let reg = Registry::from_json(&val).unwrap();
+        let issues = reg.validate();
+        assert!(issues.iter().any(|m| m.contains("baseType")));
+    }
+
+    /// Spec: registry/extension-registry.md §3 — function entries require
+    /// both `parameters` and `returns`. Validated via `Registry::validate()`.
+    #[test]
+    fn validate_function_requires_parameters_and_returns() {
+        let val = json!({
+            "publisher": { "name": "X", "url": "https://x.com" },
+            "published": "2026-01-01T00:00:00Z",
+            "entries": [{
+                "name": "x-test-fn",
+                "category": "function",
+                "version": "1.0.0",
+                "status": "stable",
+                "description": "A function"
+                // missing parameters AND returns
+            }]
+        });
+        let reg = Registry::from_json(&val).unwrap();
+        let issues = reg.validate();
+        assert!(issues.iter().any(|m| m.contains("parameters")));
+        assert!(issues.iter().any(|m| m.contains("returns")));
+    }
+
+    /// Spec: registry/extension-registry.md §3 — deprecated status requires
+    /// deprecationNotice. Validated via `Registry::validate()`.
+    #[test]
+    fn validate_deprecated_requires_notice() {
+        let val = json!({
+            "publisher": { "name": "X", "url": "https://x.com" },
+            "published": "2026-01-01T00:00:00Z",
+            "entries": [{
+                "name": "x-test-dep",
+                "category": "property",
+                "version": "1.0.0",
+                "status": "deprecated",
+                "description": "Deprecated thing"
+                // missing deprecationNotice
+            }]
+        });
+        let reg = Registry::from_json(&val).unwrap();
+        let issues = reg.validate();
+        assert!(issues.iter().any(|m| m.contains("deprecationNotice")));
+    }
 }

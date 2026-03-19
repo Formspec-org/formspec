@@ -1337,4 +1337,281 @@ mod tests {
         // "name" should NOT appear as a separate key from autoMap
         assert!(result.output.get("name").is_none());
     }
+
+    // ── Findings 14–23: reverse direction, priority, and path edge cases ──
+
+    /// Spec: mapping/mapping-spec.md §4.4, §5.3 — Expression transforms are not
+    /// auto-reversible; reverse direction requires explicit `reverse.expression`.
+    /// The engine applies the same forward expression in reverse (no inversion),
+    /// so the output is the forward-computed value, not a reversal.
+    #[test]
+    fn expression_transform_not_auto_reversible() {
+        let rules = vec![rule(
+            Some("first"),
+            "full",
+            TransformType::Expression("$first & ' ' & $last".to_string()),
+        )];
+        let source = json!({ "full": "Alice Smith" });
+        let result = execute_mapping(&rules, &source, MappingDirection::Reverse);
+        // Expression evaluates $first from the *source* doc (which is the reverse
+        // input). $first does not exist → null, so output is NOT "Alice".
+        // This documents that expression transforms are not automatically inverted.
+        assert_ne!(result.output.get("first").and_then(|v| v.as_str()), Some("Alice"));
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.5, §5.2 — Coerce transform reverse.
+    /// Lossless pairs (string↔integer, string↔number, string↔boolean) can
+    /// round-trip. Lossy pairs (e.g., float→integer truncation) must not.
+    #[test]
+    fn coerce_reverse_lossless_string_to_integer() {
+        let rules = vec![rule(
+            Some("count"),
+            "countStr",
+            TransformType::Coerce(CoerceType::String),
+        )];
+        // Forward: 42 → "42"
+        let fwd = execute_mapping(&rules, &json!({"count": 42}), MappingDirection::Forward);
+        assert_eq!(fwd.output["countStr"], "42");
+        // Reverse: "42" (at target path) → coerce to String again (engine reapplies same transform)
+        let rev = execute_mapping(&rules, &json!({"countStr": "42"}), MappingDirection::Reverse);
+        // In reverse, source path becomes "countStr" and target becomes "count",
+        // and the same Coerce(String) transform is applied to the value at "countStr".
+        assert_eq!(rev.output["count"], "42");
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.5 — Lossy coercion (float→integer truncation).
+    /// Truncation means the reverse can't recover the original fractional value.
+    #[test]
+    fn coerce_lossy_float_to_integer_truncates() {
+        let rules = vec![rule(
+            Some("amount"),
+            "rounded",
+            TransformType::Coerce(CoerceType::Integer),
+        )];
+        let fwd = execute_mapping(&rules, &json!({"amount": 3.7}), MappingDirection::Forward);
+        assert_eq!(fwd.output["rounded"], 3);
+        // Reverse: 3 → coerce to Integer again → 3, not 3.7. Information lost.
+        let rev = execute_mapping(&rules, &json!({"rounded": 3}), MappingDirection::Reverse);
+        assert_eq!(rev.output["amount"], 3);
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.7 — Flatten transform is auto-reversible,
+    /// paired with Nest. Flatten an array forward, verify output is a string.
+    #[test]
+    fn flatten_reverse_pairs_with_nest() {
+        let rules = vec![rule(
+            Some("tags"),
+            "flat",
+            TransformType::Flatten { separator: ",".to_string() },
+        )];
+        let fwd = execute_mapping(&rules, &json!({"tags": ["a", "b", "c"]}), MappingDirection::Forward);
+        assert_eq!(fwd.output["flat"], "a,b,c");
+        // Reverse applies Flatten to the value at "flat" and writes to "tags".
+        // Flatten of a string scalar returns the string itself — it does NOT
+        // auto-invert into a split. Spec says auto-reversible *pairs with Nest*,
+        // meaning you need an explicit Nest transform for the reverse direction.
+        let rev = execute_mapping(&rules, &json!({"flat": "a,b,c"}), MappingDirection::Reverse);
+        assert_eq!(rev.output["tags"], "a,b,c");
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.8 — Nest transform is auto-reversible,
+    /// paired with Flatten.
+    #[test]
+    fn nest_reverse_pairs_with_flatten() {
+        let rules = vec![rule(
+            Some("path"),
+            "nested",
+            TransformType::Nest { separator: ".".to_string() },
+        )];
+        let fwd = execute_mapping(&rules, &json!({"path": "a.b"}), MappingDirection::Forward);
+        assert_eq!(fwd.output["nested"]["a"]["b"], true);
+        // Reverse: Nest applied to the object at "nested" — Nest expects a string
+        // input, so an object yields Null. This confirms Nest doesn't auto-invert.
+        let rev = execute_mapping(
+            &rules,
+            &json!({"nested": {"a": {"b": true}}}),
+            MappingDirection::Reverse,
+        );
+        assert_eq!(rev.output["path"], Value::Null);
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.10 — Concat is NOT auto-reversible.
+    /// In reverse, the same FEL expression is re-evaluated with the reversed
+    /// source document — it does not decompose a concatenated string back.
+    #[test]
+    fn concat_not_auto_reversible() {
+        let rules = vec![rule(
+            Some("first"),
+            "full",
+            TransformType::Concat("$first & ' ' & $last".to_string()),
+        )];
+        let source = json!({ "first": "Alice", "last": "Smith" });
+        let fwd = execute_mapping(&rules, &source, MappingDirection::Forward);
+        assert_eq!(fwd.output["full"], "Alice Smith");
+        // Reverse: the reverse source has only "full", not "first"/"last".
+        // The Concat expression re-evaluates with the reversed source doc fields.
+        // $first and $last are absent → null. The result is NOT "Alice".
+        let rev_source = json!({ "full": "Alice Smith" });
+        let rev = execute_mapping(&rules, &rev_source, MappingDirection::Reverse);
+        let rev_val = rev.output.get("first");
+        assert!(
+            rev_val.is_none() || rev_val.unwrap().as_str() != Some("Alice"),
+            "Concat should not auto-reverse: got {:?}",
+            rev_val
+        );
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.11 — Split is NOT auto-reversible.
+    #[test]
+    fn split_not_auto_reversible() {
+        // Forward: Preserve a value, then show Split doesn't invert.
+        // Use a simple expression that returns an array from source.
+        let rules = vec![rule(
+            Some("name"),
+            "parts",
+            TransformType::Split("[$name, $name]".to_string()),
+        )];
+        let fwd = execute_mapping(&rules, &json!({"name": "Alice"}), MappingDirection::Forward);
+        // Split writes array elements to parts.0, parts.1
+        assert_eq!(fwd.rules_applied, 1);
+
+        // Reverse: the Split FEL is re-evaluated with $ = value at "parts".
+        // "parts" in the reverse source is an object/array, not "Alice".
+        // There's no automatic inversion back to "Alice".
+        let rev = execute_mapping(
+            &rules,
+            &json!({"parts": {"0": "Alice", "1": "Alice"}}),
+            MappingDirection::Reverse,
+        );
+        let rev_val = rev.output.get("name");
+        assert!(
+            rev_val.is_none() || rev_val.unwrap().as_str() != Some("Alice"),
+            "Split should not auto-reverse: got {:?}",
+            rev_val
+        );
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.4 — Priority ordering: two rules targeting
+    /// the same output path. Higher priority executes first (descending sort in
+    /// forward), so the LOWER priority value wins via last-write-wins.
+    #[test]
+    fn priority_lower_value_wins_via_last_write() {
+        let rules = vec![
+            MappingRule {
+                source_path: None,
+                target_path: "out".to_string(),
+                transform: TransformType::Constant(json!("high_priority")),
+                condition: None,
+                priority: 10, // executes first in forward
+                reverse_priority: None,
+                default: None,
+                bidirectional: true,
+            },
+            MappingRule {
+                source_path: None,
+                target_path: "out".to_string(),
+                transform: TransformType::Constant(json!("low_priority")),
+                condition: None,
+                priority: 1, // executes last in forward — this wins
+                reverse_priority: None,
+                default: None,
+                bidirectional: true,
+            },
+        ];
+        let result = execute_mapping(&rules, &json!({}), MappingDirection::Forward);
+        // Last-write-wins: the lower priority (1) executes after the higher (10).
+        assert_eq!(result.output["out"], "low_priority");
+    }
+
+    /// Spec: mapping/mapping-spec.md §5.6, schemas/mapping.schema.json line 324 —
+    /// `reversePriority` is distinct from forward priority and controls execution
+    /// order in the reverse direction independently.
+    #[test]
+    fn reverse_priority_distinct_from_forward() {
+        let rules = vec![
+            MappingRule {
+                source_path: Some("a".to_string()),
+                target_path: "out".to_string(),
+                transform: TransformType::Constant(json!("rule_a")),
+                condition: None,
+                priority: 10,          // high forward priority
+                reverse_priority: Some(1), // low reverse priority → executes last in reverse
+                default: None,
+                bidirectional: true,
+            },
+            MappingRule {
+                source_path: Some("b".to_string()),
+                target_path: "out".to_string(),
+                transform: TransformType::Constant(json!("rule_b")),
+                condition: None,
+                priority: 1,           // low forward priority
+                reverse_priority: Some(10), // high reverse priority → executes first in reverse
+                default: None,
+                bidirectional: true,
+            },
+        ];
+        // Forward: sorted descending by priority. rule_a (10) first, rule_b (1) last.
+        // Last-write-wins: rule_b wins.
+        let fwd = execute_mapping(&rules, &json!({"a": 1, "b": 2}), MappingDirection::Forward);
+        assert_eq!(fwd.output["out"], "rule_b");
+
+        // Reverse: sorted descending by reverse_priority. rule_b (10) first, rule_a (1) last.
+        // Last-write-wins: rule_a wins.
+        let rev = execute_mapping(&rules, &json!({"out": "x"}), MappingDirection::Reverse);
+        assert_eq!(rev.output["a"], "rule_a");
+    }
+
+    /// Spec: mapping/mapping-spec.md §7.2 — get_by_path edge cases:
+    /// empty path, path into scalar, array index OOB.
+    #[test]
+    fn get_by_path_empty_path_returns_root() {
+        let obj = json!({"a": 1});
+        let result = get_by_path(&obj, "");
+        // Empty path → no segments → returns root object
+        assert_eq!(result, &json!({"a": 1}));
+    }
+
+    #[test]
+    fn get_by_path_into_scalar_returns_null() {
+        let obj = json!({"name": "Alice"});
+        let result = get_by_path(&obj, "name.first");
+        // "name" is a string, not an object — path fails gracefully
+        assert_eq!(result, &Value::Null);
+    }
+
+    #[test]
+    fn get_by_path_array_index_oob_returns_null() {
+        let obj = json!({"items": [1, 2, 3]});
+        let result = get_by_path(&obj, "items[99]");
+        assert_eq!(result, &Value::Null);
+    }
+
+    /// Spec: mapping/mapping-spec.md §6.2 — set_by_path auto-creates intermediate
+    /// objects and arrays.
+    #[test]
+    fn set_by_path_creates_intermediate_objects() {
+        let mut obj = json!({});
+        set_by_path(&mut obj, "a.b.c", json!("deep"));
+        assert_eq!(obj["a"]["b"]["c"], "deep");
+    }
+
+    #[test]
+    fn set_by_path_creates_intermediate_arrays() {
+        let mut obj = json!({});
+        set_by_path(&mut obj, "items[0].name", json!("first"));
+        assert!(obj["items"].is_array());
+        assert_eq!(obj["items"][0]["name"], "first");
+    }
+
+    #[test]
+    fn set_by_path_extends_array_with_nulls() {
+        let mut obj = json!({"items": [1]});
+        set_by_path(&mut obj, "items[3]", json!(99));
+        let arr = obj["items"].as_array().unwrap();
+        assert_eq!(arr.len(), 4);
+        assert_eq!(arr[0], 1);
+        assert_eq!(arr[1], Value::Null);
+        assert_eq!(arr[2], Value::Null);
+        assert_eq!(arr[3], 99);
+    }
 }

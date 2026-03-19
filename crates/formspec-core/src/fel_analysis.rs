@@ -580,5 +580,27 @@ mod tests {
         assert!(result.valid);
         assert!(result.references.contains("primary"));
         assert!(result.references.contains("fallback"));
+    /// Spec: fel/fel-grammar.md §4-5 — PostfixAccess on a function call result.
+    /// `someFunc($x).name` parses as PostfixAccess { expr: FunctionCall, path: [Dot("name")] }.
+    /// The analysis should collect `$x` as a reference but NOT collect `.name`
+    /// as a field reference — it's a property access on a computed result.
+    #[test]
+    fn test_analyze_postfix_access() {
+        let result = analyze_fel("coalesce($obj, null).name");
+        assert!(result.valid);
+        // $obj is a field reference
+        assert!(
+            result.references.contains("obj"),
+            "should contain 'obj', got: {:?}",
+            result.references
+        );
+        // ".name" is postfix access on the function result, not a field reference.
+        // It should NOT appear in references.
+        assert!(
+            !result.references.contains("name"),
+            "postfix .name should not be a field reference"
+        );
+        // coalesce is a function call
+        assert!(result.functions.contains("coalesce"));
     }
 }

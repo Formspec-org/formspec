@@ -305,5 +305,34 @@ mod tests {
     #[test]
     fn parent_path_deep() {
         assert_eq!(parent_path("a.b.c.d.e"), "a.b.c.d");
+    /// Spec: core/spec.md §5.3 (uses RFC 6901) — JSON Pointer treats segments as
+    /// opaque strings. `01` is a valid key, not array index 1. Since
+    /// `json_pointer_to_jsonpath` lives in schema_validator, we test normalization
+    /// behavior of leading-zero segments here: `normalize_indexed_path` strips
+    /// bracket indices but `01` without brackets is just a normal dotted segment.
+    #[test]
+    fn normalize_leading_zero_segment_preserved() {
+        // "items.01.key" — `01` is a plain dotted segment, not a bracket index.
+        // It should pass through normalization unchanged.
+        assert_eq!(normalize_indexed_path("items.01.key"), "items.01.key");
+    }
+
+    /// Spec: core/spec.md §4.3.3 — normalize_indexed_path is idempotent:
+    /// applying it twice produces the same result as applying it once.
+    #[test]
+    fn normalize_indexed_path_idempotent() {
+        let paths = [
+            "group[0].items[1].field",
+            "a[0].b[*].c",
+            "simple",
+            "deep.nested.path",
+            "items[0].children[1].key[2]",
+            "",
+        ];
+        for path in &paths {
+            let once = normalize_indexed_path(path);
+            let twice = normalize_indexed_path(&once);
+            assert_eq!(once, twice, "idempotence failed for input '{path}'");
+        }
     }
 }
