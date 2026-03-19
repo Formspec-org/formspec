@@ -184,9 +184,11 @@ Tracked via separate `repeats` signals mapping group names to instance counts. U
 
 ## Git Worktrees
 
-All worktrees live in `.claude/worktrees/`. This directory is already gitignored (via `.claude/*`).
+**Default: work directly on `main` or a local branch.** Do NOT use worktrees unless absolutely necessary. The overhead of `npm install` + `npm run build` per worktree is significant and rarely justified.
 
-**When to use a worktree:** Any feature branch, spike, or multi-step implementation plan that benefits from isolation — especially when you need to keep `main` clean for other work or run parallel implementations. Claude Code's `isolation: "worktree"` (Agent tool) also creates worktrees here automatically.
+**When to use a worktree:** Only when you must run truly parallel implementations that would conflict on the same working tree (e.g., two agents modifying the same files simultaneously). A simple feature branch does NOT require a worktree — just `git checkout -b <branch>`.
+
+All worktrees live in `.claude/worktrees/`. This directory is already gitignored (via `.claude/*`).
 
 **Creating a worktree:**
 
