@@ -1,0 +1,17 @@
+{
+  "name": "formspec-wasm",
+  "type": "module",
+  "description": "WASM bindings for Formspec — exposes fel-core and formspec-core to TypeScript",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "formspec_wasm_bg.wasm",
+    "formspec_wasm.js",
+    "formspec_wasm.d.ts"
+  ],
+  "main": "formspec_wasm.js",
+  "types": "formspec_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

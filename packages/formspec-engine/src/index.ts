@@ -9,6 +9,8 @@ import { chevrotainFelRuntime } from './fel/chevrotain-runtime.js';
 
 export type { IFelRuntime, ICompiledExpression, FelContext, FELBuiltinFunctionCatalogEntry } from './fel/runtime.js';
 export { ChevrotainFelRuntime, chevrotainFelRuntime } from './fel/chevrotain-runtime.js';
+export { WasmFelRuntime, wasmFelRuntime } from './fel/wasm-runtime.js';
+export { initWasm, isWasmReady } from './wasm-bridge.js';
 export type { IFormEngine, IRuntimeMappingEngine } from './interfaces.js';
 export type {
     FelCompilationError,
