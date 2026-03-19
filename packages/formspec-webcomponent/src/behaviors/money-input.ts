@@ -15,8 +15,7 @@ export function useMoneyInput(ctx: BehaviorContext, comp: any): MoneyInputBehavi
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
 
     // Resolve currency: fixed from item or definition default, or null for editable
-    const definition = (ctx.engine as any)._definition;
-    const resolvedCurrency = item?.currency || definition?.formPresentation?.defaultCurrency || null;
+    const resolvedCurrency = item?.currency || ctx.definition?.formPresentation?.defaultCurrency || null;
 
     return {
         fieldPath,

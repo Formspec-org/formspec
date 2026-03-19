@@ -219,6 +219,7 @@ export function renderActualComponent(host: RenderHost, comp: any, parent: HTMLE
         touchedVersion: host.touchedVersion,
         behaviorContext: {
             engine: host.engine,
+            definition: host._definition,
             prefix,
             cleanupFns: host.cleanupFns,
             touchedFields: host.touchedFields,

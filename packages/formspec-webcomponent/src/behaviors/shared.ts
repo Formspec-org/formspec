@@ -61,6 +61,13 @@ export function bindSharedFieldEffects(
 ): Array<() => void> {
     const disposers: Array<() => void> = [];
 
+    // Resolve the actual interactive element for ARIA attributes.
+    // refs.control may be a wrapper div (Toggle, MoneyInput, TextInput with prefix/suffix).
+    const actualInput = refs.control.querySelector('input')
+        || refs.control.querySelector('select')
+        || refs.control.querySelector('textarea')
+        || refs.control;
+
     // Required indicator
     disposers.push(effect(() => {
         const isRequired = ctx.engine.requiredSignals[fieldPath]?.value ?? false;
@@ -69,7 +76,7 @@ export function bindSharedFieldEffects(
         } else {
             refs.label.textContent = labelText;
         }
-        refs.control.setAttribute('aria-required', String(isRequired));
+        actualInput.setAttribute('aria-required', String(isRequired));
     }));
 
     // Validation display
@@ -87,19 +94,18 @@ export function bindSharedFieldEffects(
         const effectiveError = error || submitError;
         const showError = ctx.touchedFields.has(fieldPath) ? (effectiveError || '') : '';
         if (refs.error) refs.error.textContent = showError;
-        refs.control.setAttribute('aria-invalid', String(!!showError));
+        actualInput.setAttribute('aria-invalid', String(!!showError));
     }));
 
     // Readonly
     disposers.push(effect(() => {
         const isReadonly = ctx.engine.readonlySignals[fieldPath]?.value ?? false;
-        const target = refs.control.querySelector?.('input') || refs.control.querySelector?.('select') || refs.control.querySelector?.('textarea') || refs.control;
-        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-            target.readOnly = isReadonly;
-        } else if (target instanceof HTMLSelectElement) {
-            target.disabled = isReadonly;
+        if (actualInput instanceof HTMLInputElement || actualInput instanceof HTMLTextAreaElement) {
+            actualInput.readOnly = isReadonly;
+        } else if (actualInput instanceof HTMLSelectElement) {
+            actualInput.disabled = isReadonly;
         }
-        refs.control.setAttribute('aria-readonly', String(isReadonly));
+        actualInput.setAttribute('aria-readonly', String(isReadonly));
         refs.root.classList.toggle('formspec-field--readonly', isReadonly);
     }));
 
@@ -107,7 +113,7 @@ export function bindSharedFieldEffects(
     disposers.push(effect(() => {
         const isRelevant = ctx.engine.relevantSignals[fieldPath]?.value ?? true;
         refs.root.classList.toggle('formspec-hidden', !isRelevant);
-        refs.control.setAttribute('aria-hidden', String(!isRelevant));
+        actualInput.setAttribute('aria-hidden', String(!isRelevant));
     }));
 
     // Touched tracking

@@ -47,7 +47,9 @@ export function useToggle(ctx: BehaviorContext, comp: any): ToggleBehavior {
             disposers.push(effect(() => {
                 const sig = ctx.engine.signals[fieldPath];
                 if (!sig) return;
-                (checkbox as HTMLInputElement).checked = !!sig.value;
+                if (document.activeElement !== checkbox) {
+                    (checkbox as HTMLInputElement).checked = !!sig.value;
+                }
             }));
 
             // Toggle label text swap

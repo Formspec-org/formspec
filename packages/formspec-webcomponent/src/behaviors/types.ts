@@ -65,6 +65,7 @@ export interface CheckboxGroupBehavior extends FieldBehavior {
 export interface SelectBehavior extends FieldBehavior {
     placeholder?: string;
     clearable?: boolean;
+    dataType: string;
 }
 
 export interface ToggleBehavior extends FieldBehavior {
@@ -178,6 +179,7 @@ export interface TabsBehavior {
  */
 export interface BehaviorContext {
     engine: FormEngine;
+    definition: any;
     prefix: string;
     cleanupFns: Array<() => void>;
     touchedFields: Set<string>;

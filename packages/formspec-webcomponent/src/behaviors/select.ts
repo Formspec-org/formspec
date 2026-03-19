@@ -31,6 +31,8 @@ export function useSelect(ctx: BehaviorContext, comp: any): SelectBehavior {
     }
     const remoteOptionsState = ctx.engine.getOptionsState?.(fieldPath) || { loading: false, error: null };
 
+    const dataType = item?.dataType || 'choice';
+
     return {
         fieldPath,
         id,
@@ -48,6 +50,7 @@ export function useSelect(ctx: BehaviorContext, comp: any): SelectBehavior {
         options: () => ctx.engine.getOptions?.(fieldPath) || item?.options || [],
         placeholder: comp.placeholder,
         clearable: comp.clearable,
+        dataType,
 
         bind(refs: FieldRefs): () => void {
             const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
@@ -64,9 +67,14 @@ export function useSelect(ctx: BehaviorContext, comp: any): SelectBehavior {
                 }
             }));
 
-            // Value sync: DOM → engine
+            // Value sync: DOM → engine (coerce to number for numeric dataTypes)
             selectEl.addEventListener('change', (e) => {
-                ctx.engine.setValue(fieldPath, (e.target as HTMLSelectElement).value);
+                const raw = (e.target as HTMLSelectElement).value;
+                let val: any = raw;
+                if (['integer', 'decimal', 'number'].includes(dataType)) {
+                    val = raw === '' ? null : Number(raw);
+                }
+                ctx.engine.setValue(fieldPath, val);
             });
 
             return () => disposers.forEach(d => d());

@@ -27,6 +27,13 @@ export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
         container.appendChild(lbl);
     }
 
+    // Set id and aria-describedby on first radio button (matches original field-input.ts behavior)
+    const firstInput = optionControls.values().next().value;
+    if (firstInput) {
+        firstInput.id = behavior.id;
+        firstInput.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
+    }
+
     fieldDOM.root.appendChild(container);
     applyControlSlotClass(container, behavior, actx, true);
     finalizeFieldDOM(fieldDOM, behavior, actx);
