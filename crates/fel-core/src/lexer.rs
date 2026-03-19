@@ -89,7 +89,7 @@ impl<'a> Lexer<'a> {
     pub fn tokenize(&mut self) -> Result<Vec<SpannedToken>, String> {
         let mut tokens = Vec::new();
         loop {
-            self.skip_whitespace_and_comments();
+            self.skip_whitespace_and_comments()?;
             if self.pos >= self.chars.len() {
                 tokens.push(SpannedToken {
                     token: Token::Eof,
@@ -129,39 +129,47 @@ impl<'a> Lexer<'a> {
         c
     }
 
-    fn skip_whitespace_and_comments(&mut self) {
+    fn skip_whitespace_and_comments(&mut self) -> Result<(), String> {
+        let len = self.chars.len();
         loop {
             // Skip whitespace
-            while self.pos < self.chars.len() && self.chars[self.pos].is_whitespace() {
+            while self.pos < len && self.chars[self.pos].is_whitespace() {
                 self.pos += 1;
             }
             // Skip line comments
-            if self.pos + 1 < self.chars.len()
+            if self.pos + 1 < len
                 && self.chars[self.pos] == '/'
                 && self.chars[self.pos + 1] == '/'
             {
-                while self.pos < self.chars.len() && self.chars[self.pos] != '\n' {
+                while self.pos < len && self.chars[self.pos] != '\n' {
                     self.pos += 1;
                 }
                 continue;
             }
             // Skip block comments
-            if self.pos + 1 < self.chars.len()
+            if self.pos + 1 < len
                 && self.chars[self.pos] == '/'
                 && self.chars[self.pos + 1] == '*'
             {
+                let start = self.pos;
                 self.pos += 2;
-                while self.pos + 1 < self.chars.len() {
+                let mut closed = false;
+                while self.pos + 1 < len {
                     if self.chars[self.pos] == '*' && self.chars[self.pos + 1] == '/' {
                         self.pos += 2;
+                        closed = true;
                         break;
                     }
                     self.pos += 1;
+                }
+                if !closed {
+                    return Err(format!("unterminated block comment at position {start}"));
                 }
                 continue;
             }
             break;
         }
+        Ok(())
     }
 
     fn next_token(&mut self) -> Result<Token, String> {

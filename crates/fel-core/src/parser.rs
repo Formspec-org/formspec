@@ -15,6 +15,8 @@
 /// 11: postfix . []
 use rust_decimal::prelude::*;
 
+use std::collections::HashSet;
+
 use crate::ast::*;
 use crate::error::FelError;
 use crate::lexer::{Lexer, SpannedToken, Token};
@@ -622,15 +624,25 @@ impl Parser {
     fn parse_object_literal(&mut self) -> Result<Expr, FelError> {
         self.expect(&Token::LBrace)?;
         let mut entries = Vec::new();
+        let mut seen_keys = HashSet::new();
         if !matches!(self.peek(), Token::RBrace) {
-            entries.push(self.parse_object_entry()?);
+            let entry = self.parse_object_entry()?;
+            seen_keys.insert(entry.0.clone());
+            entries.push(entry);
             while matches!(self.peek(), Token::Comma) {
                 self.advance();
                 // Allow trailing comma
                 if matches!(self.peek(), Token::RBrace) {
                     break;
                 }
-                entries.push(self.parse_object_entry()?);
+                let entry = self.parse_object_entry()?;
+                if !seen_keys.insert(entry.0.clone()) {
+                    return Err(FelError::Parse(format!(
+                        "duplicate key '{}' in object literal",
+                        entry.0
+                    )));
+                }
+                entries.push(entry);
             }
         }
         self.expect(&Token::RBrace)?;

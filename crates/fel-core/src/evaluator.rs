@@ -495,6 +495,9 @@ impl<'a> Evaluator<'a> {
                 }
                 FelValue::Boolean(true)
             }
+            (FelValue::Object(a), FelValue::Object(b)) => {
+                FelValue::Boolean(a == b)
+            }
             _ => {
                 self.diag(format!("cannot compare {} with {}", left.type_name(), right.type_name()));
                 FelValue::Null
