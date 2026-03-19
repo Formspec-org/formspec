@@ -23,3 +23,14 @@ export type { RenderContext, ComponentPlugin, ValidationTargetMetadata, Screener
 // Default theme
 import defaultThemeJson from './default-theme.json';
 export { defaultThemeJson as defaultTheme };
+
+// Headless adapter public API
+export type { RenderAdapter, AdapterRenderFn, AdapterContext } from './adapters/types';
+export type {
+    FieldBehavior, FieldRefs, ResolvedPresentationBlock, BehaviorContext,
+    TextInputBehavior, NumberInputBehavior, RadioGroupBehavior,
+    CheckboxGroupBehavior, SelectBehavior, ToggleBehavior,
+    DatePickerBehavior, MoneyInputBehavior, SliderBehavior,
+    RatingBehavior, FileUploadBehavior, SignatureBehavior,
+    WizardBehavior, WizardRefs, TabsBehavior, TabsRefs,
+} from './behaviors/types';

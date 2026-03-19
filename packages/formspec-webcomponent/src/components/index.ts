@@ -1,5 +1,6 @@
 /** @filedesc Registers all built-in component plugins with the global registry. */
 import { globalRegistry } from '../registry';
+import { defaultAdapter } from '../adapters/default/index';
 import { PagePlugin, StackPlugin, GridPlugin, DividerPlugin, CollapsiblePlugin, ColumnsPlugin, PanelPlugin, AccordionPlugin, ModalPlugin, PopoverPlugin } from './layout';
 import { InputPlugins } from './inputs';
 import { HeadingPlugin, TextPlugin, CardPlugin, SpacerPlugin, AlertPlugin, BadgePlugin, ProgressBarPlugin, SummaryPlugin, ValidationSummaryPlugin } from './display';
@@ -36,4 +37,5 @@ export function registerDefaultComponents() {
     globalRegistry.register(ValidationSummaryPlugin);
     globalRegistry.register(ConditionalGroupPlugin);
     globalRegistry.register(DataTablePlugin);
+    globalRegistry.registerAdapter(defaultAdapter);
 }
