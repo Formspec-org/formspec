@@ -1,0 +1,442 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.gov/forms/community-grant",
+  "version": "1.0.0",
+  "status": "active",
+  "title": "Community Development Grant Application",
+  "name": "community-grant",
+  "description": "Application for community development block grant funding. Demonstrates USWDS adapter rendering with repeatable budget line items, conditional sections, calculated totals, and multi-page wizard navigation.",
+  "formPresentation": {
+    "pageMode": "wizard",
+    "labelPosition": "top",
+    "density": "comfortable",
+    "defaultCurrency": "USD"
+  },
+  "optionSets": {
+    "us_states": {
+      "options": [
+        { "value": "AL", "label": "Alabama" },
+        { "value": "AK", "label": "Alaska" },
+        { "value": "AZ", "label": "Arizona" },
+        { "value": "AR", "label": "Arkansas" },
+        { "value": "CA", "label": "California" },
+        { "value": "CO", "label": "Colorado" },
+        { "value": "CT", "label": "Connecticut" },
+        { "value": "DE", "label": "Delaware" },
+        { "value": "DC", "label": "District of Columbia" },
+        { "value": "FL", "label": "Florida" },
+        { "value": "GA", "label": "Georgia" },
+        { "value": "HI", "label": "Hawaii" },
+        { "value": "ID", "label": "Idaho" },
+        { "value": "IL", "label": "Illinois" },
+        { "value": "IN", "label": "Indiana" },
+        { "value": "IA", "label": "Iowa" },
+        { "value": "KS", "label": "Kansas" },
+        { "value": "KY", "label": "Kentucky" },
+        { "value": "LA", "label": "Louisiana" },
+        { "value": "ME", "label": "Maine" },
+        { "value": "MD", "label": "Maryland" },
+        { "value": "MA", "label": "Massachusetts" },
+        { "value": "MI", "label": "Michigan" },
+        { "value": "MN", "label": "Minnesota" },
+        { "value": "MS", "label": "Mississippi" },
+        { "value": "MO", "label": "Missouri" },
+        { "value": "MT", "label": "Montana" },
+        { "value": "NE", "label": "Nebraska" },
+        { "value": "NV", "label": "Nevada" },
+        { "value": "NH", "label": "New Hampshire" },
+        { "value": "NJ", "label": "New Jersey" },
+        { "value": "NM", "label": "New Mexico" },
+        { "value": "NY", "label": "New York" },
+        { "value": "NC", "label": "North Carolina" },
+        { "value": "ND", "label": "North Dakota" },
+        { "value": "OH", "label": "Ohio" },
+        { "value": "OK", "label": "Oklahoma" },
+        { "value": "OR", "label": "Oregon" },
+        { "value": "PA", "label": "Pennsylvania" },
+        { "value": "RI", "label": "Rhode Island" },
+        { "value": "SC", "label": "South Carolina" },
+        { "value": "SD", "label": "South Dakota" },
+        { "value": "TN", "label": "Tennessee" },
+        { "value": "TX", "label": "Texas" },
+        { "value": "UT", "label": "Utah" },
+        { "value": "VT", "label": "Vermont" },
+        { "value": "VA", "label": "Virginia" },
+        { "value": "WA", "label": "Washington" },
+        { "value": "WV", "label": "West Virginia" },
+        { "value": "WI", "label": "Wisconsin" },
+        { "value": "WY", "label": "Wyoming" }
+      ]
+    },
+    "budget_categories": {
+      "options": [
+        { "value": "personnel", "label": "Personnel / Salaries" },
+        { "value": "fringe", "label": "Fringe Benefits" },
+        { "value": "travel", "label": "Travel" },
+        { "value": "equipment", "label": "Equipment" },
+        { "value": "supplies", "label": "Supplies" },
+        { "value": "contractual", "label": "Contractual Services" },
+        { "value": "construction", "label": "Construction" },
+        { "value": "other", "label": "Other Direct Costs" }
+      ]
+    },
+    "grant_types": {
+      "options": [
+        { "value": "new", "label": "New Application" },
+        { "value": "continuation", "label": "Continuation" },
+        { "value": "supplement", "label": "Supplemental Funding" },
+        { "value": "renewal", "label": "Renewal" }
+      ]
+    },
+    "target_populations": {
+      "options": [
+        { "value": "low_income", "label": "Low-Income Households" },
+        { "value": "elderly", "label": "Elderly (62+)" },
+        { "value": "youth", "label": "Youth (Under 18)" },
+        { "value": "disabled", "label": "Persons with Disabilities" },
+        { "value": "homeless", "label": "Homeless Individuals" },
+        { "value": "veterans", "label": "Veterans" },
+        { "value": "rural", "label": "Rural Communities" },
+        { "value": "tribal", "label": "Tribal Communities" }
+      ]
+    }
+  },
+  "items": [
+    {
+      "key": "applicant_section",
+      "type": "group",
+      "label": "Applicant Information",
+      "children": [
+        {
+          "key": "org_name",
+          "type": "field",
+          "label": "Organization Legal Name",
+          "dataType": "string",
+          "description": "Full legal name as it appears on your IRS determination letter."
+        },
+        {
+          "key": "ein",
+          "type": "field",
+          "label": "Employer Identification Number (EIN)",
+          "dataType": "string",
+          "description": "9-digit federal tax ID (XX-XXXXXXX format)."
+        },
+        {
+          "key": "org_type",
+          "type": "field",
+          "label": "Organization Type",
+          "dataType": "choice",
+          "options": [
+            { "value": "nonprofit", "label": "501(c)(3) Nonprofit" },
+            { "value": "government", "label": "State or Local Government" },
+            { "value": "tribal", "label": "Tribal Government" },
+            { "value": "educational", "label": "Educational Institution" },
+            { "value": "faith_based", "label": "Faith-Based Organization" }
+          ]
+        },
+        {
+          "key": "address",
+          "type": "group",
+          "label": "Mailing Address",
+          "children": [
+            { "key": "street", "type": "field", "label": "Street Address", "dataType": "string" },
+            { "key": "city", "type": "field", "label": "City", "dataType": "string" },
+            { "key": "state", "type": "field", "label": "State", "dataType": "choice", "optionSet": "us_states" },
+            { "key": "zip", "type": "field", "label": "ZIP Code", "dataType": "string" }
+          ]
+        },
+        {
+          "key": "contact_name",
+          "type": "field",
+          "label": "Primary Contact Name",
+          "dataType": "string"
+        },
+        {
+          "key": "contact_email",
+          "type": "field",
+          "label": "Contact Email",
+          "dataType": "string"
+        },
+        {
+          "key": "contact_phone",
+          "type": "field",
+          "label": "Contact Phone",
+          "dataType": "string"
+        }
+      ]
+    },
+    {
+      "key": "project_section",
+      "type": "group",
+      "label": "Project Details",
+      "children": [
+        {
+          "key": "project_title",
+          "type": "field",
+          "label": "Project Title",
+          "dataType": "string",
+          "description": "A concise title describing the proposed project."
+        },
+        {
+          "key": "project_abstract",
+          "type": "field",
+          "label": "Project Abstract",
+          "dataType": "text",
+          "description": "Provide a brief summary of the proposed project, including objectives, target population, and expected outcomes (500 words max)."
+        },
+        {
+          "key": "grant_type",
+          "type": "field",
+          "label": "Application Type",
+          "dataType": "choice",
+          "optionSet": "grant_types"
+        },
+        {
+          "key": "start_date",
+          "type": "field",
+          "label": "Proposed Start Date",
+          "dataType": "date"
+        },
+        {
+          "key": "end_date",
+          "type": "field",
+          "label": "Proposed End Date",
+          "dataType": "date"
+        },
+        {
+          "key": "target_population",
+          "type": "field",
+          "label": "Target Population(s)",
+          "dataType": "multiChoice",
+          "optionSet": "target_populations",
+          "description": "Select all populations this project will serve."
+        },
+        {
+          "key": "has_subcontractors",
+          "type": "field",
+          "label": "Will this project involve subcontractors?",
+          "dataType": "boolean"
+        },
+        {
+          "key": "subcontractor_info",
+          "type": "group",
+          "label": "Subcontractor Details",
+          "children": [
+            {
+              "key": "sub_org_name",
+              "type": "field",
+              "label": "Subcontractor Organization",
+              "dataType": "string"
+            },
+            {
+              "key": "sub_scope",
+              "type": "field",
+              "label": "Scope of Work",
+              "dataType": "text"
+            },
+            {
+              "key": "sub_amount",
+              "type": "field",
+              "label": "Subcontract Amount",
+              "dataType": "decimal",
+              "description": "Total dollar amount of the subcontract."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "budget_section",
+      "type": "group",
+      "label": "Budget",
+      "children": [
+        {
+          "key": "budget_instructions",
+          "type": "display",
+          "label": "Itemize all projected costs by category. Each line item should include a brief description and dollar amount. The system will calculate totals automatically."
+        },
+        {
+          "key": "line_items",
+          "type": "group",
+          "label": "Budget Line Items",
+          "repeatable": true,
+          "minRepeat": 1,
+          "maxRepeat": 25,
+          "children": [
+            {
+              "key": "category",
+              "type": "field",
+              "label": "Category",
+              "dataType": "choice",
+              "optionSet": "budget_categories"
+            },
+            {
+              "key": "description",
+              "type": "field",
+              "label": "Description",
+              "dataType": "string"
+            },
+            {
+              "key": "amount",
+              "type": "field",
+              "label": "Amount ($)",
+              "dataType": "decimal"
+            }
+          ]
+        },
+        {
+          "key": "total_direct",
+          "type": "field",
+          "label": "Total Direct Costs",
+          "dataType": "decimal",
+          "description": "Calculated sum of all line item amounts."
+        },
+        {
+          "key": "indirect_rate",
+          "type": "field",
+          "label": "Indirect Cost Rate (%)",
+          "dataType": "decimal",
+          "description": "Enter your federally negotiated indirect cost rate. Enter 0 if not applicable."
+        },
+        {
+          "key": "indirect_costs",
+          "type": "field",
+          "label": "Indirect Costs",
+          "dataType": "decimal",
+          "description": "Calculated from direct costs and indirect rate."
+        },
+        {
+          "key": "total_requested",
+          "type": "field",
+          "label": "Total Amount Requested",
+          "dataType": "decimal",
+          "description": "Total direct costs plus indirect costs."
+        }
+      ]
+    },
+    {
+      "key": "review_section",
+      "type": "group",
+      "label": "Attachments & Certification",
+      "children": [
+        {
+          "key": "attachment_instructions",
+          "type": "display",
+          "label": "Upload the required supporting documents. Accepted formats: PDF, DOC, DOCX, XLS, XLSX (max 10 MB each)."
+        },
+        {
+          "key": "budget_narrative",
+          "type": "field",
+          "label": "Budget Narrative",
+          "dataType": "attachment",
+          "description": "A detailed justification for each budget line item."
+        },
+        {
+          "key": "org_chart",
+          "type": "field",
+          "label": "Organizational Chart",
+          "dataType": "attachment",
+          "description": "Current organizational chart showing project staff positions."
+        },
+        {
+          "key": "cert_heading",
+          "type": "display",
+          "label": "Certification"
+        },
+        {
+          "key": "certify",
+          "type": "field",
+          "label": "I certify that the information provided in this application is true and correct to the best of my knowledge.",
+          "dataType": "boolean"
+        },
+        {
+          "key": "certifier_name",
+          "type": "field",
+          "label": "Authorized Representative Name",
+          "dataType": "string"
+        },
+        {
+          "key": "certification_date",
+          "type": "field",
+          "label": "Date Signed",
+          "dataType": "date"
+        }
+      ]
+    }
+  ],
+  "binds": [
+    { "path": "applicant_section.org_name", "required": "true" },
+    { "path": "applicant_section.ein", "required": "true" },
+    { "path": "applicant_section.org_type", "required": "true" },
+    { "path": "applicant_section.address.street", "required": "true" },
+    { "path": "applicant_section.address.city", "required": "true" },
+    { "path": "applicant_section.address.state", "required": "true" },
+    { "path": "applicant_section.address.zip", "required": "true" },
+    { "path": "applicant_section.ein", "constraint": "matches($applicant_section.ein, '^[0-9]{2}-[0-9]{7}$')" },
+    { "path": "applicant_section.contact_name", "required": "true" },
+    { "path": "applicant_section.contact_email", "required": "true" },
+    { "path": "project_section.project_title", "required": "true" },
+    { "path": "project_section.project_abstract", "required": "true" },
+    { "path": "project_section.grant_type", "required": "true" },
+    { "path": "project_section.start_date", "required": "true" },
+    { "path": "project_section.end_date", "required": "true" },
+    { "path": "project_section.target_population", "required": "true" },
+    {
+      "path": "project_section.subcontractor_info",
+      "relevant": "$project_section.has_subcontractors = true"
+    },
+    {
+      "path": "budget_section.total_direct",
+      "calculate": "sum($budget_section.line_items[*].amount)"
+    },
+    {
+      "path": "budget_section.total_direct",
+      "readonly": "true"
+    },
+    {
+      "path": "budget_section.indirect_costs",
+      "calculate": "round($budget_section.total_direct * $budget_section.indirect_rate / 100, 2)"
+    },
+    {
+      "path": "budget_section.indirect_costs",
+      "readonly": "true"
+    },
+    {
+      "path": "budget_section.total_requested",
+      "calculate": "$budget_section.total_direct + $budget_section.indirect_costs"
+    },
+    {
+      "path": "budget_section.total_requested",
+      "readonly": "true"
+    },
+    { "path": "review_section.certify", "required": "true" },
+    { "path": "review_section.certifier_name", "required": "true" },
+    { "path": "review_section.certification_date", "required": "true" }
+  ],
+  "shapes": [
+    {
+      "id": "date_ordering",
+      "target": "project_section",
+      "severity": "error",
+      "message": "Proposed end date must be after the start date.",
+      "constraint": "$project_section.end_date > $project_section.start_date",
+      "activeWhen": "$project_section.start_date != '' and $project_section.end_date != ''"
+    },
+    {
+      "id": "budget_nonzero",
+      "target": "budget_section",
+      "severity": "error",
+      "message": "At least one budget line item must have an amount greater than zero.",
+      "constraint": "sum($budget_section.line_items[*].amount) > 0",
+      "timing": "submit"
+    },
+    {
+      "id": "certification_required",
+      "target": "review_section",
+      "severity": "error",
+      "message": "You must certify the application before submitting.",
+      "constraint": "$review_section.certify = true",
+      "timing": "submit"
+    }
+  ]
+}

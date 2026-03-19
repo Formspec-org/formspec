@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@preact/signals-core": "*",
+    "formspec-adapters": "*",
     "formspec-engine": "*",
     "formspec-webcomponent": "*"
   },

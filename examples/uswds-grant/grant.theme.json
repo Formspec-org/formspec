@@ -1,0 +1,235 @@
+{
+  "$formspecTheme": "1.0",
+  "url": "https://example.gov/forms/community-grant/themes/uswds-web",
+  "version": "1.0.0",
+  "name": "community-grant-uswds",
+  "title": "Community Grant — USWDS Web Theme",
+  "description": "USWDS v3 theme for the community development grant application. Uses the formspec USWDS adapter for native usa-* markup.",
+  "targetDefinition": {
+    "url": "https://example.gov/forms/community-grant",
+    "compatibleVersions": ">=1.0.0 <2.0.0"
+  },
+  "platform": "web",
+  "stylesheets": [
+    "https://cdnjs.cloudflare.com/ajax/libs/uswds/3.11.0/css/uswds.min.css"
+  ],
+  "breakpoints": {
+    "sm": 640,
+    "md": 768,
+    "lg": 1024
+  },
+  "tokens": {
+    "color.primary": "#005ea2",
+    "color.primary.dark": "#1a4480",
+    "color.primary.light": "#d9e8f6",
+    "color.secondary": "#d83933",
+    "color.error": "#b50909",
+    "color.warning": "#ffbe2e",
+    "color.success": "#00a91c",
+    "color.background": "#f0f0f0",
+    "color.surface": "#ffffff",
+    "color.text": "#1b1b1b",
+    "color.text.secondary": "#71767a",
+    "spacing.xs": "0.25rem",
+    "spacing.sm": "0.5rem",
+    "spacing.md": "1rem",
+    "spacing.lg": "1.5rem",
+    "spacing.xl": "2rem",
+    "spacing.xxl": "3rem",
+    "typography.family": "'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    "typography.size.body": "1.06rem",
+    "typography.size.sm": "0.93rem",
+    "typography.size.lg": "1.33rem",
+    "typography.size.xl": "1.99rem",
+    "typography.weight.normal": "400",
+    "typography.weight.bold": "700",
+    "border.radius": "0",
+    "border.width": "1px",
+    "border.color": "#a9aeb1"
+  },
+  "defaults": {
+    "labelPosition": "top",
+    "style": {
+      "fontFamily": "$token.typography.family"
+    }
+  },
+  "selectors": [
+    {
+      "match": { "type": "field" },
+      "apply": {
+        "cssClass": ["usa-form-group"]
+      }
+    },
+    {
+      "match": { "dataType": "string" },
+      "apply": {
+        "widget": "textInput",
+        "cssClass": ["usa-input"]
+      }
+    },
+    {
+      "match": { "dataType": "text" },
+      "apply": {
+        "widget": "textarea",
+        "cssClass": ["usa-textarea"],
+        "widgetConfig": { "rows": 5 }
+      }
+    },
+    {
+      "match": { "dataType": "choice" },
+      "apply": {
+        "widget": "dropdown",
+        "cssClass": ["usa-select"]
+      }
+    },
+    {
+      "match": { "dataType": "multiChoice" },
+      "apply": {
+        "widget": "checkboxGroup",
+        "cssClass": ["usa-checkbox"],
+        "widgetConfig": { "columns": 2 }
+      }
+    },
+    {
+      "match": { "dataType": "boolean" },
+      "apply": {
+        "widget": "checkbox",
+        "cssClass": ["usa-checkbox"]
+      }
+    },
+    {
+      "match": { "dataType": "date" },
+      "apply": {
+        "widget": "datePicker",
+        "cssClass": ["usa-date-picker"]
+      }
+    },
+    {
+      "match": { "dataType": "decimal" },
+      "apply": {
+        "widget": "numberInput",
+        "cssClass": ["usa-input"]
+      }
+    },
+    {
+      "match": { "dataType": "attachment" },
+      "apply": {
+        "widget": "fileUpload",
+        "cssClass": ["usa-file-input"],
+        "widgetConfig": {
+          "accept": ".pdf,.doc,.docx,.xls,.xlsx",
+          "maxSizeMb": 10
+        }
+      }
+    },
+    {
+      "match": { "type": "display" },
+      "apply": {
+        "widget": "paragraph",
+        "cssClass": ["usa-prose"]
+      }
+    },
+    {
+      "match": { "type": "group" },
+      "apply": {
+        "cssClass": ["usa-form"]
+      }
+    }
+  ],
+  "items": {
+    "budget_section.total_direct": {
+      "cssClass": ["usa-input", "usa-input--success"],
+      "style": {
+        "fontWeight": "$token.typography.weight.bold",
+        "fontSize": "$token.typography.size.lg"
+      },
+      "accessibility": {
+        "liveRegion": "polite",
+        "description": "Automatically calculated sum of all budget line items"
+      }
+    },
+    "budget_section.total_requested": {
+      "cssClass": ["usa-input", "usa-input--success"],
+      "style": {
+        "fontWeight": "$token.typography.weight.bold",
+        "fontSize": "$token.typography.size.lg",
+        "borderWidth": "2px",
+        "borderColor": "$token.color.primary"
+      },
+      "accessibility": {
+        "liveRegion": "polite",
+        "description": "Total grant amount requested — sum of direct and indirect costs"
+      }
+    },
+    "budget_section.indirect_costs": {
+      "accessibility": {
+        "liveRegion": "polite",
+        "description": "Calculated from direct costs multiplied by indirect rate"
+      }
+    },
+    "review_section.cert_heading": {
+      "widget": "heading",
+      "style": {
+        "marginTop": "$token.spacing.xl"
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "applicant-info",
+      "title": "Applicant Information",
+      "description": "Provide details about the applying organization and primary point of contact.",
+      "regions": [
+        { "key": "applicant_section.org_name", "span": 8, "responsive": { "sm": { "span": 12 } } },
+        { "key": "applicant_section.ein", "span": 4, "responsive": { "sm": { "span": 12 } } },
+        { "key": "applicant_section.org_type", "span": 6, "responsive": { "sm": { "span": 12 } } },
+        { "key": "applicant_section.address", "span": 12 },
+        { "key": "applicant_section.contact_name", "span": 4, "responsive": { "sm": { "span": 12 } } },
+        { "key": "applicant_section.contact_email", "span": 4, "responsive": { "sm": { "span": 12 } } },
+        { "key": "applicant_section.contact_phone", "span": 4, "responsive": { "sm": { "span": 12 } } }
+      ]
+    },
+    {
+      "id": "project-details",
+      "title": "Project Details",
+      "description": "Describe the proposed project, including timeline, population served, and any subcontractors.",
+      "regions": [
+        { "key": "project_section.project_title", "span": 12 },
+        { "key": "project_section.project_abstract", "span": 12 },
+        { "key": "project_section.grant_type", "span": 6, "responsive": { "sm": { "span": 12 } } },
+        { "key": "project_section.start_date", "span": 3, "responsive": { "sm": { "span": 6 } } },
+        { "key": "project_section.end_date", "span": 3, "responsive": { "sm": { "span": 6 } } },
+        { "key": "project_section.target_population", "span": 12 },
+        { "key": "project_section.has_subcontractors", "span": 12 },
+        { "key": "project_section.subcontractor_info", "span": 12 }
+      ]
+    },
+    {
+      "id": "budget",
+      "title": "Budget",
+      "description": "Provide a detailed cost breakdown. Totals are calculated automatically.",
+      "regions": [
+        { "key": "budget_section.budget_instructions", "span": 12 },
+        { "key": "budget_section.line_items", "span": 12 },
+        { "key": "budget_section.total_direct", "span": 4, "responsive": { "sm": { "span": 12 } } },
+        { "key": "budget_section.indirect_rate", "span": 4, "responsive": { "sm": { "span": 6 } } },
+        { "key": "budget_section.indirect_costs", "span": 4, "responsive": { "sm": { "span": 6 } } },
+        { "key": "budget_section.total_requested", "span": 12 }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "Attachments & Certification",
+      "description": "Upload required documents and certify the application.",
+      "regions": [
+        { "key": "review_section.attachment_instructions", "span": 12 },
+        { "key": "review_section.budget_narrative", "span": 6, "responsive": { "sm": { "span": 12 } } },
+        { "key": "review_section.org_chart", "span": 6, "responsive": { "sm": { "span": 12 } } },
+        { "key": "review_section.cert_heading", "span": 12 },
+        { "key": "review_section.certify", "span": 12 },
+        { "key": "review_section.certifier_name", "span": 6, "responsive": { "sm": { "span": 12 } } },
+        { "key": "review_section.certification_date", "span": 6, "responsive": { "sm": { "span": 12 } } }
+      ]
+    }
+  ]
+}

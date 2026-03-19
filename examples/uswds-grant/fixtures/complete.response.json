@@ -1,0 +1,94 @@
+{
+  "definitionUrl": "https://example.gov/forms/community-grant",
+  "definitionVersion": "1.0.0",
+  "status": "completed",
+  "authored": "2026-03-15T14:30:00Z",
+  "data": {
+    "applicant_section": {
+      "org_name": "Riverside Community Action Partnership",
+      "ein": "84-1234567",
+      "org_type": "nonprofit",
+      "address": {
+        "street": "1200 Main Street, Suite 300",
+        "city": "Springfield",
+        "state": "IL",
+        "zip": "62704"
+      },
+      "contact_name": "Maria Chen",
+      "contact_email": "mchen@riversidecap.org",
+      "contact_phone": "217-555-0142"
+    },
+    "project_section": {
+      "project_title": "Eastside Neighborhood Revitalization Initiative",
+      "project_abstract": "The Eastside Neighborhood Revitalization Initiative will address deteriorating housing conditions and limited economic opportunity in Springfield's Eastside district. The project will rehabilitate 15 owner-occupied homes, establish a micro-enterprise incubator providing business training and seed grants to 25 residents, and create a community resource center offering workforce development programs. Over 24 months, the initiative expects to serve 200 low-income households, generate 40 new jobs, and leverage $500,000 in private matching investment.",
+      "grant_type": "new",
+      "start_date": "2027-01-01",
+      "end_date": "2028-12-31",
+      "target_population": ["low_income", "youth", "elderly"],
+      "has_subcontractors": true,
+      "subcontractor_info": {
+        "sub_org_name": "Eastside Housing Cooperative",
+        "sub_scope": "Housing rehabilitation inspections, contractor oversight, and compliance monitoring for all 15 home rehabilitation projects. Includes lead paint assessment and remediation coordination.",
+        "sub_amount": 75000
+      }
+    },
+    "budget_section": {
+      "line_items": [
+        {
+          "category": "personnel",
+          "description": "Project Director (1.0 FTE, 24 months)",
+          "amount": 145000
+        },
+        {
+          "category": "personnel",
+          "description": "Community Outreach Coordinator (1.0 FTE, 24 months)",
+          "amount": 92000
+        },
+        {
+          "category": "fringe",
+          "description": "Benefits at 32% of salaries",
+          "amount": 75840
+        },
+        {
+          "category": "travel",
+          "description": "Local travel for site visits and outreach (500 mi/mo x 24 mo x $0.67/mi)",
+          "amount": 8040
+        },
+        {
+          "category": "equipment",
+          "description": "Laptops, projector, and community center furnishings",
+          "amount": 18500
+        },
+        {
+          "category": "supplies",
+          "description": "Office supplies, printing, and training materials",
+          "amount": 6200
+        },
+        {
+          "category": "contractual",
+          "description": "Eastside Housing Cooperative — rehab oversight",
+          "amount": 75000
+        },
+        {
+          "category": "construction",
+          "description": "Home rehabilitation materials and labor (15 homes)",
+          "amount": 375000
+        },
+        {
+          "category": "other",
+          "description": "Micro-enterprise seed grants (25 x $2,000)",
+          "amount": 50000
+        }
+      ],
+      "total_direct": 845580,
+      "indirect_rate": 12.5,
+      "indirect_costs": 105697.50,
+      "total_requested": 951277.50
+    },
+    "review_section": {
+      "certify": true,
+      "certifier_name": "Maria Chen, Executive Director",
+      "certification_date": "2026-03-15"
+    }
+  }
+}

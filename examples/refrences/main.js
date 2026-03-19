@@ -1,7 +1,11 @@
 /** @filedesc Entry point for the references example: registers formspec-render and loads forms. */
 import 'formspec-webcomponent/formspec-base.css';
-import { FormspecRender } from 'formspec-webcomponent';
+import { FormspecRender, globalRegistry } from 'formspec-webcomponent';
+import { uswdsAdapter } from 'formspec-adapters';
 customElements.define('formspec-render', FormspecRender);
+
+// Register available adapters — examples can opt in via `adapter: 'uswds'`
+globalRegistry.registerAdapter(uswdsAdapter);
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 const SERVER = `${BASE}/api`;
@@ -83,6 +87,18 @@ const EXAMPLES = [
       { id: 'intake-partial', label: 'Partial', file: 'fixtures/intake-partial.response.json' },
       { id: 'intake-complete', label: 'Complete', file: 'fixtures/intake-complete.response.json' },
       { id: 'intake-nested-repeat', label: 'Nested Repeat', file: 'fixtures/intake-nested-repeat.response.json' },
+    ],
+  },
+  {
+    id: 'uswds-grant',
+    name: 'Community Grant (USWDS Adapter)',
+    description: 'USWDS adapter demo — repeats, calculated totals, conditional sections',
+    dir: `${BASE}/examples/uswds-grant`,
+    artifacts: { definition: 'grant.definition.json', theme: 'grant.theme.json' },
+    adapter: 'uswds',
+    fixtures: [
+      { id: 'uswds-empty', label: 'Empty', file: 'fixtures/empty.response.json' },
+      { id: 'uswds-complete', label: 'Complete Submission', file: 'fixtures/complete.response.json' },
     ],
   },
 ];
@@ -409,6 +425,13 @@ async function loadExample(ex, fixture = null) {
       } catch (err) {
         console.warn(`Failed to load registry ${ex.registry}:`, err);
       }
+    }
+
+    // Activate adapter if the example specifies one, otherwise reset to default
+    if (ex.adapter) {
+      globalRegistry.setAdapter(ex.adapter);
+    } else {
+      globalRegistry.setAdapter('default');
     }
 
     // Set artifacts — this creates the engine and triggers rendering

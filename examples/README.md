@@ -1,6 +1,6 @@
 # Examples
 
-Five example projects demonstrate Formspec features at increasing complexity. Each contains a `validate.py` script that runs all artifacts through the Python artifact validator.
+Six example projects demonstrate Formspec features at increasing complexity. Each contains a `validate.py` script that runs all artifacts through the Python artifact validator.
 
 ```bash
 # Validate any example
@@ -85,6 +85,20 @@ See [`grant-application/README.md`](grant-application/README.md) for full detail
 | `contact-fragment.json` | Reusable `$ref` target |
 | `fixtures/` | 4 submission samples (complete, in-progress, amended, stopped) |
 | `server/` | FastAPI backend (FEL evaluation, export, submit, registry) |
+
+---
+
+## uswds-grant/
+
+Community development grant application rendered with the **USWDS adapter**. A focused two-document example (definition + theme, no component document) that demonstrates the headless behavior/adapter architecture with USWDS v3 CSS markup.
+
+**Demonstrates:** USWDS render adapter, 4-page wizard via theme pages, repeatable budget line items, FEL-calculated totals (direct → indirect → grand total), conditional subcontractor section, cross-field validation shapes, 8 data types, responsive 12-column grid, USWDS design tokens.
+
+| Artifact | Purpose |
+|---|---|
+| `grant.definition.json` | 25-field grant application with option sets, repeats, binds, shapes |
+| `grant.theme.json` | USWDS v3 theme with tokens, cascade selectors, 4-page layout |
+| `fixtures/` | 2 response fixtures (empty, complete) |
 
 ---
 
