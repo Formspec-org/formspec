@@ -1,18 +1,24 @@
 //! Formspec Linter — 7-pass static analysis and validation pipeline.
+//!
+//! Pass 1 (E100): Document type detection
+//! Pass 2 (E200/E201): Tree indexing, duplicate key/path detection
+//! Pass 3 (E300/E301/E302/W300): Reference validation — bind paths, shape targets, optionSets
+//! Pass 3b (E600/E601/E602): Extension resolution against registry documents
+//! Pass 4 (E400): FEL expression compilation
+//! Pass 5 (E500): Dependency cycle detection
+//! Pass 6 (W700-W711/E710): Theme — token validation, reference integrity, page semantics
+//! Pass 7 (E800-E807/W800-W804): Components — tree validation, type compatibility, bind resolution
 
-/// Formspec Linter — 7-pass static analysis pipeline.
-///
-/// Pass 1 (E100): Schema validation — JSON Schema conformance, document type detection
-/// Pass 2 (E200): Tree — Item tree flattening, duplicate key detection
-/// Pass 3 (E300/E301/E302/W300/E600): References — Bind/shape path validation,
-///         optionSet resolution, extension resolution, wildcard path checks
-/// Pass 4 (E400): Expressions — Parse all FEL slots in binds/shapes/screener
-/// Pass 5 (E500): Dependencies — Dependency graph + DFS cycle detection
-/// Pass 6 (W700): Theme — Token validation, reference integrity, page layout
-/// Pass 7 (E800): Components — Component tree, type compatibility, bind uniqueness
-
-mod passes;
 mod types;
+
+pub mod component_matrix;
+pub mod tree;
+pub mod expressions;
+pub mod dependencies;
+pub mod references;
+pub mod extensions;
+pub mod pass_theme;
+pub mod pass_component;
 
 use serde_json::Value;
 
@@ -34,77 +40,59 @@ pub fn lint(doc: &Value) -> LintResult {
 pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
     let mut diagnostics = Vec::new();
 
-    // Detect document type
+    // ── Pass 1: Document type detection ─────────────────────────
     let doc_type = detect_document_type(doc);
 
-    // Pass 1: Schema validation (detection)
     if doc_type.is_none() {
-        diagnostics.push(LintDiagnostic {
-            code: "E100".to_string(),
-            pass: 1,
-            severity: LintSeverity::Error,
-            path: "$".to_string(),
-            message: "Cannot determine document type".to_string(),
-        });
-        return LintResult {
-            document_type: None,
-            diagnostics,
-            valid: false,
-        };
+        diagnostics.push(LintDiagnostic::error("E100", 1, "$", "Cannot determine document type"));
+        return LintResult { document_type: None, diagnostics, valid: false };
     }
 
     let doc_type = doc_type.unwrap();
 
-    // Only run definition-specific passes on definitions
+    // ── Definition passes (2–5) ─────────────────────────────────
     if doc_type == DocumentType::Definition {
-        // Pass 2: Tree
-        passes::pass_2_tree(doc, &mut diagnostics);
+        // Pass 2: Tree indexing (E200/E201)
+        let mut tree_index = tree::build_item_index(doc);
+        diagnostics.append(&mut tree_index.diagnostics);
 
         // Pass gating: stop if structural errors exist from pass 2
-        let has_structural_errors = diagnostics.iter().any(|d| d.severity == LintSeverity::Error);
-        if has_structural_errors {
-            // Sort and filter before returning
+        if diagnostics.iter().any(|d| d.severity == LintSeverity::Error) {
             sort_diagnostics(&mut diagnostics);
             diagnostics.retain(|d| !d.suppressed_in(options.mode));
-            return LintResult {
-                document_type: Some(doc_type),
-                diagnostics,
-                valid: false,
-            };
+            return LintResult { document_type: Some(doc_type), diagnostics, valid: false };
         }
 
-        // Pass 3: References (includes E300, E301, E302, W300, E600)
-        passes::pass_3_references(doc, &mut diagnostics);
-        passes::pass_3b_extensions(doc, &options.registry_documents, &mut diagnostics);
+        // Pass 3: Reference validation (E300/E301/E302/W300)
+        diagnostics.extend(references::check_references(doc, &tree_index));
 
-        // Pass 4: Expressions
-        passes::pass_4_expressions(doc, &mut diagnostics);
+        // Pass 3b: Extension resolution (E600/E601/E602)
+        diagnostics.extend(extensions::check_extensions(doc, &options.registry_documents));
 
-        // Pass 5: Dependencies
-        passes::pass_5_dependencies(doc, &mut diagnostics);
+        // Pass 4: Expression compilation (E400)
+        let compilation = expressions::compile_expressions(doc);
+        diagnostics.extend(compilation.diagnostics);
+
+        // Pass 5: Dependency cycle detection (E500)
+        diagnostics.extend(dependencies::analyze_dependencies(&compilation.compiled));
     }
 
+    // ── Theme pass (6) ──────────────────────────────────────────
     if doc_type == DocumentType::Theme {
-        passes::pass_6_theme(doc, &mut diagnostics);
+        diagnostics.extend(pass_theme::lint_theme(doc, options.definition_document.as_ref()));
     }
 
+    // ── Component pass (7) ──────────────────────────────────────
     if doc_type == DocumentType::Component {
-        passes::pass_7_components(doc, &mut diagnostics);
+        diagnostics.extend(pass_component::lint_component(doc, options.definition_document.as_ref()));
     }
 
-    // Sort diagnostics: pass ASC, severity (error > warning > info), path ASC
+    // Sort and filter
     sort_diagnostics(&mut diagnostics);
-
-    // Apply lint mode filtering
     diagnostics.retain(|d| !d.suppressed_in(options.mode));
 
     let valid = diagnostics.iter().all(|d| d.severity != LintSeverity::Error);
-
-    LintResult {
-        document_type: Some(doc_type),
-        diagnostics,
-        valid,
-    }
+    LintResult { document_type: Some(doc_type), diagnostics, valid }
 }
 
 #[cfg(test)]
@@ -212,9 +200,9 @@ mod tests {
         });
         let result = lint(&theme);
         assert_eq!(result.document_type, Some(DocumentType::Theme));
-        // Should warn about missing token
-        assert!(result.diagnostics.iter().any(|d| d.code == "W700"));
-        // Should not warn about existing token
+        // W704: missing token reference (pass_theme module)
+        assert!(result.diagnostics.iter().any(|d| d.code == "W704"));
+        // Valid token ($token.primary) should not trigger diagnostics
         assert_eq!(result.diagnostics.len(), 1);
     }
 

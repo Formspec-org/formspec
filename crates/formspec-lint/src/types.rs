@@ -3,7 +3,6 @@
 /// Shared types for the formspec lint pipeline.
 
 use std::cmp::Ordering;
-use std::collections::HashSet;
 
 use serde_json::Value;
 
@@ -59,6 +58,13 @@ impl Default for LintMode {
     }
 }
 
+impl LintMode {
+    /// Whether this mode is the relaxed authoring mode.
+    pub fn is_authoring(self) -> bool {
+        self == LintMode::Authoring
+    }
+}
+
 // ── Diagnostic ──────────────────────────────────────────────────
 
 /// A lint diagnostic.
@@ -77,13 +83,29 @@ pub struct LintDiagnostic {
 }
 
 impl LintDiagnostic {
+    /// Create an error diagnostic.
+    pub fn error(code: &str, pass: u8, path: impl Into<String>, message: impl Into<String>) -> Self {
+        Self { code: code.to_string(), pass, severity: LintSeverity::Error, path: path.into(), message: message.into() }
+    }
+
+    /// Create a warning diagnostic.
+    pub fn warning(code: &str, pass: u8, path: impl Into<String>, message: impl Into<String>) -> Self {
+        Self { code: code.to_string(), pass, severity: LintSeverity::Warning, path: path.into(), message: message.into() }
+    }
+
+    /// Create an info diagnostic.
+    pub fn info(code: &str, pass: u8, path: impl Into<String>, message: impl Into<String>) -> Self {
+        Self { code: code.to_string(), pass, severity: LintSeverity::Info, path: path.into(), message: message.into() }
+    }
+
     /// Whether this diagnostic should be suppressed in the given lint mode.
     pub fn suppressed_in(&self, mode: LintMode) -> bool {
         match mode {
             LintMode::Runtime => false,
             LintMode::Authoring => {
-                // Suppress W300 (incompatible dataType) in authoring mode
-                self.code == "W300"
+                // W300: incompatible dataType for optionSet (noisy during editing)
+                // W802: compatible-with-warning fallback (authoring mode allows it)
+                self.code == "W300" || self.code == "W802"
             }
         }
     }
@@ -102,22 +124,17 @@ pub fn sort_diagnostics(diags: &mut [LintDiagnostic]) {
 // ── Lint options ────────────────────────────────────────────────
 
 /// Options for the lint pipeline.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct LintOptions {
     /// Lint mode (Runtime or Authoring).
     pub mode: LintMode,
     /// Optional registry documents for extension resolution (E600).
     /// Each value should be a JSON registry document with `entries` array.
     pub registry_documents: Vec<Value>,
-}
-
-impl Default for LintOptions {
-    fn default() -> Self {
-        Self {
-            mode: LintMode::Runtime,
-            registry_documents: Vec::new(),
-        }
-    }
+    /// Optional paired definition document for cross-artifact validation.
+    /// Used by pass 6 (theme: W705-W707) and pass 7 (components: W800/E802-E803).
+    /// When `None`, cross-artifact checks are skipped (single-document mode).
+    pub definition_document: Option<Value>,
 }
 
 // ── Lint result ─────────────────────────────────────────────────
@@ -133,65 +150,3 @@ pub struct LintResult {
     pub valid: bool,
 }
 
-// ── Item helpers ────────────────────────────────────────────────
-
-/// Collect all item keys from the item tree, including from children.
-pub fn collect_keys(items: &[Value], keys: &mut HashSet<String>) {
-    for item in items {
-        if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
-            keys.insert(key.to_string());
-        }
-        if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-            collect_keys(children, keys);
-        }
-    }
-}
-
-/// Collect all repeatable group keys (items that have `repeat` or `repeat.min`/`repeat.max`).
-pub fn collect_repeatable_groups(items: &[Value], groups: &mut HashSet<String>) {
-    for item in items {
-        if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
-            if item.get("repeat").is_some() {
-                groups.insert(key.to_string());
-            }
-            if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-                collect_repeatable_groups(children, groups);
-            }
-        }
-    }
-}
-
-/// Collect item keys that are children of a specific group key.
-pub fn collect_group_children(items: &[Value], group_key: &str) -> HashSet<String> {
-    let mut result = HashSet::new();
-    find_group_children(items, group_key, &mut result);
-    result
-}
-
-fn find_group_children(items: &[Value], group_key: &str, result: &mut HashSet<String>) {
-    for item in items {
-        if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
-            if key == group_key {
-                // Found the group, collect all its children's keys
-                if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-                    collect_keys(children, result);
-                }
-                return;
-            }
-            if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-                find_group_children(children, group_key, result);
-            }
-        }
-    }
-}
-
-/// Collect optionSets defined at the definition level.
-pub fn collect_option_sets(doc: &Value) -> HashSet<String> {
-    let mut names = HashSet::new();
-    if let Some(option_sets) = doc.get("optionSets").and_then(|v| v.as_object()) {
-        for key in option_sets.keys() {
-            names.insert(key.clone());
-        }
-    }
-    names
-}
