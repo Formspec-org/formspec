@@ -8,7 +8,11 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
     behavior, parent, actx
 ) => {
     const el = document.createElement('div');
+    if (behavior.id) el.id = behavior.id;
     el.className = 'formspec-wizard';
+    if (behavior.compOverrides.cssClass) actx.applyCssClass(el, behavior.compOverrides);
+    if (behavior.compOverrides.accessibility) actx.applyAccessibility(el, behavior.compOverrides);
+    if (behavior.compOverrides.style) actx.applyStyle(el, behavior.compOverrides.style);
     parent.appendChild(el);
 
     if (behavior.totalSteps() === 0) return;
@@ -109,7 +113,7 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
                 wrapper.appendChild(indicator);
 
                 const stepTitle = behavior.steps[i]?.title;
-                if (stepTitle && stepTitle !== `Step ${i + 1}`) {
+                if (stepTitle) {
                     const label = document.createElement('span');
                     label.className = 'formspec-wizard-step-label';
                     if (i === step) label.classList.add('formspec-wizard-step-label--active');

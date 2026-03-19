@@ -16,6 +16,12 @@ export function useTabs(ctx: BehaviorContext, comp: any): TabsBehavior {
     };
 
     return {
+        id: comp.id,
+        compOverrides: {
+            cssClass: comp.cssClass,
+            style: comp.style,
+            accessibility: comp.accessibility,
+        },
         tabLabels,
         tabCount: children.length,
         position,

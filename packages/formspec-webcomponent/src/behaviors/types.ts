@@ -140,6 +140,8 @@ export interface WizardRefs {
 }
 
 export interface WizardBehavior {
+    id?: string;
+    compOverrides: { cssClass?: any; style?: any; accessibility?: any };
     steps: ReadonlyArray<{ id: string; title: string }>;
     showSideNav: boolean;
     showProgress: boolean;
@@ -163,6 +165,8 @@ export interface TabsRefs {
 }
 
 export interface TabsBehavior {
+    id?: string;
+    compOverrides: { cssClass?: any; style?: any; accessibility?: any };
     tabLabels: string[];
     tabCount: number;
     position: 'top' | 'bottom';

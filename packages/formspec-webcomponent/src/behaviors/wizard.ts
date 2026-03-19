@@ -18,6 +18,12 @@ export function useWizard(ctx: BehaviorContext, comp: any): WizardBehavior {
         title: child?.props?.title || `Step ${i + 1}`,
     }));
 
+    const wizardId = comp.id;
+    const compOverrides = {
+        cssClass: comp.cssClass,
+        style: comp.style,
+        accessibility: comp.accessibility,
+    };
     const showSideNav = comp.sidenav !== false;
     const showProgress = comp.showProgress !== false;
     const allowSkip = !!comp.allowSkip;
@@ -26,6 +32,8 @@ export function useWizard(ctx: BehaviorContext, comp: any): WizardBehavior {
     let renderedPanels: HTMLElement[] = [];
 
     return {
+        id: wizardId,
+        compOverrides,
         steps,
         showSideNav,
         showProgress,
