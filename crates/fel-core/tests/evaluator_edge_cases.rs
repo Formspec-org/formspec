@@ -296,51 +296,36 @@ fn date_add_month_to_non_leap_feb() {
 }
 
 // ── Object equality ─────────────────────────────────────────────
-// BUG: eval_equality() in evaluator.rs has no (Object, Object) match arm.
-// Objects fall through to the catch-all `_` which returns Null + diagnostic
-// ("cannot compare object with object"). The FelValue::PartialEq impl
-// handles objects correctly, but the evaluator's equality function does not.
-// These tests document the current (buggy) behavior.
+// Spec: spec.md L1073 — "Any two values of the same type may be compared for equality."
 
-/// Correctness: object equality — same keys and values
-/// BUG: spec implies objects should be comparable but evaluator returns Null
+/// Correctness: object equality — same keys and values → true
 #[test]
-fn object_equality_same_returns_null_due_to_missing_impl() {
-    // Should be Boolean(true) once eval_equality handles Object
-    let r = eval_result("{a: 1, b: 2} = {a: 1, b: 2}");
-    assert_eq!(r.value, FelValue::Null);
-    assert!(
-        r.diagnostics.iter().any(|d| d.message.contains("cannot compare")),
-        "expected 'cannot compare' diagnostic"
-    );
+fn object_equality_same() {
+    assert_eq!(eval("{a: 1, b: 2} = {a: 1, b: 2}"), FelValue::Boolean(true));
 }
 
-/// Correctness: object equality — different values
-/// BUG: should return Boolean(false), returns Null
+/// Correctness: object equality — different values → false
 #[test]
-fn object_equality_different_values_returns_null() {
-    assert_eq!(eval("{a: 1} = {a: 2}"), FelValue::Null);
+fn object_equality_different_values() {
+    assert_eq!(eval("{a: 1} = {a: 2}"), FelValue::Boolean(false));
 }
 
-/// Correctness: object equality — different keys
-/// BUG: should return Boolean(false), returns Null
+/// Correctness: object equality — different keys → false
 #[test]
-fn object_equality_different_keys_returns_null() {
-    assert_eq!(eval("{a: 1} = {b: 1}"), FelValue::Null);
+fn object_equality_different_keys() {
+    assert_eq!(eval("{a: 1} = {b: 1}"), FelValue::Boolean(false));
 }
 
-/// Correctness: object equality — different lengths
-/// BUG: should return Boolean(false), returns Null
+/// Correctness: object equality — different lengths → false
 #[test]
-fn object_equality_different_lengths_returns_null() {
-    assert_eq!(eval("{a: 1} = {a: 1, b: 2}"), FelValue::Null);
+fn object_equality_different_lengths() {
+    assert_eq!(eval("{a: 1} = {a: 1, b: 2}"), FelValue::Boolean(false));
 }
 
-/// Correctness: nested object equality
-/// BUG: should return Boolean(true), returns Null
+/// Correctness: nested object equality → true
 #[test]
-fn object_equality_nested_returns_null() {
-    assert_eq!(eval("{a: {b: 1}} = {a: {b: 1}}"), FelValue::Null);
+fn object_equality_nested() {
+    assert_eq!(eval("{a: {b: 1}} = {a: {b: 1}}"), FelValue::Boolean(true));
 }
 
 // ── today() and now() ───────────────────────────────────────────

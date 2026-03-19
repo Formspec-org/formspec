@@ -15,19 +15,9 @@ fn assert_rejects(input: &str) {
 
 /// Spec: fel-grammar.md §4.2 L272-273 — "Duplicate keys within a single object
 /// literal are a syntax error."
-///
-/// BUG: spec requires duplicate keys to be rejected but the parser accepts them.
-/// The parser's parse_object_literal does not track seen keys.
 #[test]
-fn duplicate_object_keys_accepted_but_spec_requires_rejection() {
-    // The spec says this MUST be a syntax error, but the parser accepts it.
-    // Documenting current (non-conformant) behavior.
-    let result = parse("{a: 1, a: 2}");
-    assert!(
-        result.is_ok(),
-        "BUG: parser currently accepts duplicate keys (spec §4.2 L273 says it should reject)"
-    );
-    // When this is fixed, change this test to assert_rejects("{a: 1, a: 2}")
+fn duplicate_object_keys_rejected() {
+    assert_rejects("{a: 1, a: 2}");
 }
 
 // ── Pipe operator ───────────────────────────────────────────────

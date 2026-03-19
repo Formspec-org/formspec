@@ -229,19 +229,11 @@ fn block_comments_do_not_nest() {
     assert_eq!(toks, vec![Token::Identifier("c".into())]);
 }
 
-/// Spec: fel-grammar.md §3.1 L62 — unterminated block comment
-/// BUG: The lexer's block comment loop uses `pos + 1 < len` which stops
-/// one character before EOF, leaving the last char of the unterminated
-/// comment to be lexed as a regular token. Ideally this should either
-/// consume to EOF silently or produce an error.
+/// Spec: fel-grammar.md §3.1 L62 — unterminated block comment MUST be a syntax error
 #[test]
-fn unterminated_block_comment_leaks_last_char() {
-    // "42 /* unterminated" — the loop stops before 'd', so 'd' is lexed
-    // as an identifier. This is a known lexer edge case.
-    let toks = tokens("42 /* unterminated");
-    assert_eq!(toks[0], Token::Number(Decimal::from(42)));
-    // BUG: last char 'd' leaks through as an identifier
-    assert_eq!(toks[1], Token::Identifier("d".into()));
+fn unterminated_block_comment_is_error() {
+    let result = Lexer::new("42 /* unterminated").tokenize();
+    assert!(result.is_err(), "unterminated block comment should produce an error");
 }
 
 // ── Operator tokenization ───────────────────────────────────────

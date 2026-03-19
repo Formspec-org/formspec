@@ -177,100 +177,54 @@ fn backslash_s_matches_single_whitespace() {
 
 // ── Escape sequences WITH quantifiers — known BUG ───────────────
 // BUG: escape sequences (\d, \w, \s) followed by quantifiers (*, +, ?)
-// do not work. The match_recursive function checks for quantifiers at
-// pat[pi+1], but escapes are two chars wide (\d), so the quantifier
-// is at pat[pi+2]. The code sees the escape letter as "not a quantifier"
-// and falls through to single-escape matching.
+// Escape sequences with quantifiers — fixed by replacing hand-rolled engine with regex crate.
 
-/// BUG: \\d+ should match one or more digits but doesn't
+/// \\d+ matches one or more digits
 #[test]
-fn backslash_d_plus_is_broken() {
-    // Should be true: "abc123" contains one or more digits
-    // BUG: returns false because \d+ is parsed as \d followed by literal +
-    let result = eval(r#"matches('abc123', '\\d+')"#);
-    assert_eq!(
-        result,
-        FelValue::Boolean(false),
-        "BUG: \\d+ doesn't work — escape sequences with quantifiers are broken"
-    );
+fn backslash_d_plus() {
+    assert_eq!(eval(r#"matches('abc123', '\\d+')"#), FelValue::Boolean(true));
 }
 
-/// BUG: \\w+ should match one or more word characters but doesn't
+/// \\w+ matches one or more word characters
 #[test]
-fn backslash_w_plus_is_broken() {
-    let result = eval(r#"matches('hello_123', '^\\w+$')"#);
-    assert_eq!(
-        result,
-        FelValue::Boolean(false),
-        "BUG: \\w+ doesn't work"
-    );
+fn backslash_w_plus() {
+    assert_eq!(eval(r#"matches('hello_123', '^\\w+$')"#), FelValue::Boolean(true));
 }
 
-/// BUG: \\D+ should match non-digits but doesn't with quantifier
+/// \\D+ matches non-digits
 #[test]
-fn backslash_upper_d_plus_is_broken() {
-    let result = eval(r#"matches('abc', '^\\D+$')"#);
-    assert_eq!(
-        result,
-        FelValue::Boolean(false),
-        "BUG: \\D+ doesn't work"
-    );
+fn backslash_upper_d_plus() {
+    assert_eq!(eval(r#"matches('abc', '^\\D+$')"#), FelValue::Boolean(true));
 }
 
-/// BUG: \\W+ should match non-word chars but doesn't with quantifier
+/// \\W+ matches non-word chars
 #[test]
-fn backslash_upper_w_plus_is_broken() {
-    let result = eval(r#"matches('!@#', '^\\W+$')"#);
-    assert_eq!(
-        result,
-        FelValue::Boolean(false),
-        "BUG: \\W+ doesn't work"
-    );
+fn backslash_upper_w_plus() {
+    assert_eq!(eval(r#"matches('!@#', '^\\W+$')"#), FelValue::Boolean(true));
 }
 
-/// BUG: \\S+ should match non-whitespace but doesn't with quantifier
+/// \\S+ matches non-whitespace
 #[test]
-fn backslash_upper_s_plus_is_broken() {
-    let result = eval(r#"matches('abc', '^\\S+$')"#);
-    assert_eq!(
-        result,
-        FelValue::Boolean(false),
-        "BUG: \\S+ doesn't work"
-    );
+fn backslash_upper_s_plus() {
+    assert_eq!(eval(r#"matches('abc', '^\\S+$')"#), FelValue::Boolean(true));
 }
 
-/// BUG: \\d* should match zero or more digits but doesn't
+/// \\d* matches zero or more digits
 #[test]
-fn backslash_d_star_is_broken() {
-    // "^\\d*$" on "" should match (zero digits) but escape+quantifier is broken
-    let result = eval(r#"matches('', '^\\d*$')"#);
-    assert_eq!(
-        result,
-        FelValue::Boolean(false),
-        "BUG: \\d* doesn't work"
-    );
+fn backslash_d_star() {
+    assert_eq!(eval(r#"matches('', '^\\d*$')"#), FelValue::Boolean(true));
 }
 
-/// BUG: email-like pattern using \\w+ fails
+/// Email-like pattern with \\w+
 #[test]
-fn email_like_pattern_broken_due_to_escape_quantifier_bug() {
-    let result = eval(r#"matches('user@example.com', '\\w+@\\w+')"#);
-    assert_eq!(
-        result,
-        FelValue::Boolean(false),
-        "BUG: \\w+ doesn't work, so email pattern fails"
-    );
+fn email_like_pattern() {
+    assert_eq!(eval(r#"matches('user@example.com', '\\w+@\\w+')"#), FelValue::Boolean(true));
 }
 
-/// BUG: anchored \\d+ pattern fails
+/// Anchored \\d+ pattern
 #[test]
-fn anchored_digit_pattern_broken() {
-    let result = eval(r#"matches('12345', '^\\d+$')"#);
-    assert_eq!(
-        result,
-        FelValue::Boolean(false),
-        "BUG: ^\\d+$ doesn't work"
-    );
+fn anchored_digit_pattern() {
+    assert_eq!(eval(r#"matches('12345', '^\\d+$')"#), FelValue::Boolean(true));
 }
 
 // ── Escape sequences in patterns (literal escapes, no quantifier) ──

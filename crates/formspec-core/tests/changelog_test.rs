@@ -657,9 +657,10 @@ fn bind_has_required_string_false() {
         "required='false' should be treated as non-required");
 }
 
-/// Spec: changelog-spec.md §5 — "bind_has_required: string 'false()' returns false"
+/// "false()" is NOT valid FEL (false is the keyword, not false()).
+/// A non-empty, non-"false" required string is treated as a truthy required expression → Breaking.
 #[test]
-fn bind_has_required_string_false_fn() {
+fn bind_has_required_string_false_fn_is_breaking() {
     let old = json!({ "version": "1.0.0", "binds": {} });
     let new = json!({
         "version": "2.0.0",
@@ -670,8 +671,8 @@ fn bind_has_required_string_false_fn() {
         .filter(|c| c.target == ChangeTarget::Bind && c.change_type == ChangeType::Added)
         .collect();
     assert_eq!(bind_adds.len(), 1);
-    assert_eq!(bind_adds[0].impact, ChangeImpact::Compatible,
-        "required='false()' should be treated as non-required");
+    assert_eq!(bind_adds[0].impact, ChangeImpact::Breaking,
+        "required='false()' is not valid FEL — treated as truthy required expression");
 }
 
 /// Spec: changelog-spec.md §5 — "bind_has_required: empty string returns false"
