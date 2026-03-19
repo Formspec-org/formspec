@@ -26,11 +26,14 @@ export { defaultThemeJson as defaultTheme };
 
 // Headless adapter public API
 export type { RenderAdapter, AdapterRenderFn, AdapterContext } from './adapters/types';
+export { createSignatureCanvas } from './adapters/signature-canvas';
+export type { SignatureCanvasConfig, SignatureCanvasResult } from './adapters/signature-canvas';
 export type {
     FieldBehavior, FieldRefs, ResolvedPresentationBlock, BehaviorContext,
     TextInputBehavior, NumberInputBehavior, RadioGroupBehavior,
     CheckboxGroupBehavior, SelectBehavior, ToggleBehavior,
     DatePickerBehavior, MoneyInputBehavior, SliderBehavior,
     RatingBehavior, FileUploadBehavior, SignatureBehavior,
-    WizardBehavior, WizardRefs, TabsBehavior, TabsRefs,
+    WizardBehavior, WizardRefs, WizardSidenavItemRefs, WizardProgressItemRefs,
+    TabsBehavior, TabsRefs,
 } from './behaviors/types';
