@@ -23,6 +23,7 @@ export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     checkbox.className = 'formspec-input';
     checkbox.name = behavior.fieldPath;
     checkbox.id = behavior.id;
+    checkbox.setAttribute('role', 'switch');
     checkbox.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
     toggleContainer.appendChild(checkbox);
 

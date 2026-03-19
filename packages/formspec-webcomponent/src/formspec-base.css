@@ -52,7 +52,7 @@ input:not([hidden]):focus,
 textarea:focus,
 select:focus {
   border-color: #4f88e8;
-  box-shadow: 0 0 0 3px rgba(79, 136, 232, 0.15);
+  box-shadow: 0 0 0 3px rgba(79, 136, 232, 0.45);
 }
 
 input[type="radio"],
@@ -142,7 +142,7 @@ h6 {
 
 .formspec-hint {
   font-size: 0.85rem;
-  opacity: 0.75;
+  color: var(--formspec-hint-color, #64748b);
 }
 
 .formspec-heading {
@@ -434,7 +434,7 @@ hr.formspec-divider {
 
 .formspec-divider-label {
   font-size: 11px;
-  color: #888;
+  color: #595959;
   white-space: nowrap;
 }
 
@@ -1660,5 +1660,16 @@ hr.formspec-divider {
 
   .formspec-screener-fields {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .formspec-toggle input[type="checkbox"],
+  .formspec-wizard-sidenav,
+  .formspec-tab,
+  .formspec-tab-panel,
+  input, textarea, select, button {
+    transition: none !important;
   }
 }

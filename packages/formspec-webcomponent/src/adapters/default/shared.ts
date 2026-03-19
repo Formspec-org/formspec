@@ -48,10 +48,13 @@ export function createFieldDOM(
     root.appendChild(label);
 
     if (behavior.description) {
+        const descId = `${fieldId}-desc`;
         const desc = document.createElement('div');
         desc.className = 'formspec-description';
+        desc.id = descId;
         desc.textContent = behavior.description;
         root.appendChild(desc);
+        describedBy.push(descId);
     }
 
     let hint: HTMLElement | undefined;

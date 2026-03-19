@@ -36,6 +36,7 @@ export const renderMoneyInput: AdapterRenderFn<MoneyInputBehavior> = (
         currencyInput.className = 'formspec-input formspec-money-currency-input';
         currencyInput.placeholder = 'Currency';
         currencyInput.name = `${behavior.fieldPath}__currency`;
+        currencyInput.setAttribute('aria-label', 'Currency code');
         container.appendChild(currencyInput);
     }
 

@@ -50,6 +50,19 @@ export const renderSelect: AdapterRenderFn<SelectBehavior> = (
         control: select,
         hint: fieldDOM.hint,
         error: fieldDOM.error,
+        rebuildOptions: (_container, newOptions) => {
+            // Keep placeholder/clear options, remove the rest
+            const keepCount = (behavior.placeholder ? 1 : 0) + (behavior.clearable ? 1 : 0);
+            while (select.options.length > keepCount) select.remove(select.options.length - 1);
+            const controls = new Map<string, HTMLInputElement>();
+            for (const opt of newOptions) {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.textContent = opt.label;
+                select.appendChild(option);
+            }
+            return controls;
+        },
     });
     actx.onDispose(dispose);
 };

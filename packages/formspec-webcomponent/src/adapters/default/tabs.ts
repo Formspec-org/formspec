@@ -16,9 +16,12 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
 
     const count = behavior.tabCount;
 
+    const idBase = behavior.id || 'tabs';
+
     // Tab bar
     const tabBar = document.createElement('div');
     tabBar.className = 'formspec-tab-bar';
+    tabBar.setAttribute('role', 'tablist');
 
     // Panel container
     const panelContainer = document.createElement('div');
@@ -29,6 +32,10 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
     for (let i = 0; i < count; i++) {
         const panel = document.createElement('div');
         panel.className = 'formspec-tab-panel';
+        panel.setAttribute('role', 'tabpanel');
+        panel.id = `${idBase}-panel-${i}`;
+        panel.setAttribute('aria-labelledby', `${idBase}-tab-${i}`);
+        panel.setAttribute('tabindex', '0');
         if (i !== behavior.defaultTab) panel.classList.add('formspec-hidden');
         behavior.renderTab(i, panel);
         panelContainer.appendChild(panel);
@@ -42,6 +49,11 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
         btn.type = 'button';
         btn.textContent = behavior.tabLabels[i] || `Tab ${i + 1}`;
         btn.className = 'formspec-tab';
+        btn.setAttribute('role', 'tab');
+        btn.id = `${idBase}-tab-${i}`;
+        btn.setAttribute('aria-controls', `${idBase}-panel-${i}`);
+        btn.setAttribute('aria-selected', i === behavior.defaultTab ? 'true' : 'false');
+        btn.setAttribute('tabindex', i === behavior.defaultTab ? '0' : '-1');
         tabBar.appendChild(btn);
         buttons.push(btn);
     }

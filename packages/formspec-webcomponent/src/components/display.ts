@@ -182,6 +182,7 @@ export const AlertPlugin: ComponentPlugin = {
         const el = document.createElement('div');
         if (comp.id) el.id = comp.id;
         el.className = `formspec-alert formspec-alert--${severity}`;
+        el.setAttribute('role', severity === 'error' || severity === 'warning' ? 'alert' : 'status');
         if (comp.dismissible) {
             el.classList.add('formspec-alert--dismissible');
             const closeBtn = document.createElement('button');

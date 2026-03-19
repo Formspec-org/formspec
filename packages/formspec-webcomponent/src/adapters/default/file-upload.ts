@@ -22,6 +22,16 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
         dropZone.className = 'formspec-drop-zone';
         dropZone.textContent = 'Drop files here or click to browse';
 
+        dropZone.setAttribute('tabindex', '0');
+        dropZone.setAttribute('role', 'button');
+        dropZone.setAttribute('aria-label', 'Drop files here or click to browse');
+        dropZone.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                input.click();
+            }
+        });
+
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('formspec-drop-zone--active');

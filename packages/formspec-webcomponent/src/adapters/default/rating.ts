@@ -11,6 +11,46 @@ export const renderRating: AdapterRenderFn<RatingBehavior> = (
 
     const container = document.createElement('div');
     container.className = 'formspec-rating-stars';
+    container.setAttribute('role', 'slider');
+    container.setAttribute('tabindex', '0');
+    container.setAttribute('aria-valuemin', '0');
+    container.setAttribute('aria-valuemax', String(behavior.maxRating));
+    container.setAttribute('aria-valuenow', '0');
+    container.setAttribute('aria-valuetext', `0 of ${behavior.maxRating}`);
+    container.setAttribute('aria-label', behavior.label);
+
+    const step = behavior.allowHalf ? 0.5 : 1;
+    let currentValue = 0;
+
+    const updateValue = (value: number) => {
+        currentValue = Math.max(0, Math.min(value, behavior.maxRating));
+        container.setAttribute('aria-valuenow', String(currentValue));
+        container.setAttribute('aria-valuetext', `${currentValue} of ${behavior.maxRating}`);
+        behavior.setValue(currentValue);
+    };
+
+    container.addEventListener('keydown', (e: KeyboardEvent) => {
+        switch (e.key) {
+            case 'ArrowRight':
+            case 'ArrowUp':
+                e.preventDefault();
+                updateValue(currentValue + step);
+                break;
+            case 'ArrowLeft':
+            case 'ArrowDown':
+                e.preventDefault();
+                updateValue(currentValue - step);
+                break;
+            case 'Home':
+                e.preventDefault();
+                updateValue(0);
+                break;
+            case 'End':
+                e.preventDefault();
+                updateValue(behavior.maxRating);
+                break;
+        }
+    });
 
     for (let i = 1; i <= behavior.maxRating; i++) {
         const star = document.createElement('span');
@@ -24,7 +64,7 @@ export const renderRating: AdapterRenderFn<RatingBehavior> = (
                 const clickedLeftHalf = rect.width > 0 && (event.clientX - rect.left) < rect.width / 2;
                 value = clickedLeftHalf ? i - 0.5 : i;
             }
-            behavior.setValue(value);
+            updateValue(value);
         });
         container.appendChild(star);
     }

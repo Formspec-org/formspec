@@ -8,8 +8,14 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
 ) => {
     const fieldDOM = createFieldDOM(behavior, actx);
 
+    const labelId = `${behavior.id}-label`;
+    fieldDOM.label.id = labelId;
+
     const container = document.createElement('div');
     container.className = 'formspec-checkbox-group';
+    container.setAttribute('role', 'group');
+    container.setAttribute('aria-labelledby', labelId);
+    container.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
     if (behavior.columns && behavior.columns > 1) {
         container.dataset.columns = String(behavior.columns);
     }
@@ -47,11 +53,10 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
         container.appendChild(lbl);
     }
 
-    // Set id and aria-describedby on first checkbox (matches original field-input.ts behavior)
+    // Set id on first checkbox for label htmlFor association
     const firstInput = optionControls.values().next().value;
     if (firstInput) {
         firstInput.id = behavior.id;
-        firstInput.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
     }
 
     fieldDOM.root.appendChild(container);

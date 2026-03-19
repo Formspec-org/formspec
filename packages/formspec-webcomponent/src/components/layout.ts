@@ -387,7 +387,7 @@ export const ModalPlugin: ComponentPlugin = {
             const closeBtn = document.createElement('button');
             closeBtn.type = 'button';
             closeBtn.className = 'formspec-modal-close';
-            closeBtn.textContent = '\u00d7';
+            closeBtn.innerHTML = '<span aria-hidden="true">\u00d7</span>';
             closeBtn.setAttribute('aria-label', 'Close');
             closeBtn.addEventListener('click', () => dialog.close());
             dialog.appendChild(closeBtn);
@@ -471,6 +471,8 @@ export const PopoverPlugin: ComponentPlugin = {
         const triggerBtn = document.createElement('button');
         triggerBtn.type = 'button';
         triggerBtn.className = 'formspec-popover-trigger';
+        triggerBtn.setAttribute('aria-haspopup', 'dialog');
+        triggerBtn.setAttribute('aria-expanded', 'false');
 
         const triggerPath = comp.triggerBind
             ? (ctx.prefix ? `${ctx.prefix}.${comp.triggerBind}` : comp.triggerBind)
@@ -501,21 +503,64 @@ export const PopoverPlugin: ComponentPlugin = {
             }
         }
 
+        const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+        const focusFirstInContent = () => {
+            const target = content.querySelector<HTMLElement>(FOCUSABLE);
+            target?.focus();
+        };
+
+        const closePopover = () => {
+            const contentAny = content as any;
+            if (typeof contentAny.hidePopover === 'function') {
+                try { contentAny.hidePopover(); } catch { /* already hidden */ }
+            } else {
+                content.hidden = true;
+            }
+            triggerBtn.setAttribute('aria-expanded', 'false');
+            triggerBtn.focus();
+        };
+
+        content.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+                closePopover();
+            }
+        });
+
         const contentAny = content as any;
         if (typeof contentAny.showPopover === 'function') {
             contentAny.popover = 'auto';
             triggerBtn.addEventListener('click', () => {
                 contentAny.togglePopover();
-                queueMicrotask(() => positionOverlayNearTrigger(triggerBtn, content, placement));
+                const isOpen = contentAny.matches(':popover-open');
+                triggerBtn.setAttribute('aria-expanded', String(isOpen));
+                if (isOpen) {
+                    queueMicrotask(() => {
+                        positionOverlayNearTrigger(triggerBtn, content, placement);
+                        focusFirstInContent();
+                    });
+                }
             });
         } else {
             content.hidden = true;
+            const onClickOutside = (e: MouseEvent) => {
+                if (!wrapper.contains(e.target as Node)) closePopover();
+            };
             triggerBtn.addEventListener('click', () => {
                 content.hidden = !content.hidden;
+                triggerBtn.setAttribute('aria-expanded', String(!content.hidden));
                 if (!content.hidden) {
-                    queueMicrotask(() => positionOverlayNearTrigger(triggerBtn, content, placement));
+                    queueMicrotask(() => {
+                        positionOverlayNearTrigger(triggerBtn, content, placement);
+                        focusFirstInContent();
+                    });
+                    document.addEventListener('click', onClickOutside, true);
+                } else {
+                    document.removeEventListener('click', onClickOutside, true);
                 }
             });
+            ctx.cleanupFns.push(() => document.removeEventListener('click', onClickOutside, true));
         }
 
         wrapper.appendChild(triggerBtn);

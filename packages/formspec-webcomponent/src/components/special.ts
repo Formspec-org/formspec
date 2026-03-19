@@ -44,6 +44,12 @@ export const DataTablePlugin: ComponentPlugin = {
         ctx.applyStyle(table, comp.style);
         wrapper.appendChild(table);
 
+        if (comp.title) {
+            const caption = document.createElement('caption');
+            caption.textContent = comp.title;
+            table.appendChild(caption);
+        }
+
         const columns: Array<{ header: string; bind: string; min?: number; max?: number; step?: number }> = comp.columns || [];
         const bindKey = comp.bind;
         if (!bindKey || columns.length === 0) return;
@@ -100,9 +106,12 @@ export const DataTablePlugin: ComponentPlugin = {
             th.textContent = '#';
             headerRow.appendChild(th);
         }
-        for (const col of columns) {
+        for (let ci = 0; ci < columns.length; ci++) {
+            const col = columns[ci];
             const th = document.createElement('th');
             th.textContent = col.header;
+            th.setAttribute('scope', 'col');
+            th.id = `${comp.id || 'dt'}-col-${ci}`;
             headerRow.appendChild(th);
         }
         if (allowRemove) {
@@ -210,6 +219,8 @@ export const DataTablePlugin: ComponentPlugin = {
                             });
                             inputEl = input;
                         }
+
+                        inputEl.setAttribute('aria-label', `${col.header}, Row ${i + 1}`);
 
                         if (prefix || suffix) {
                             const wrapper = document.createElement('div');

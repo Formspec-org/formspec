@@ -53,9 +53,11 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
         label.htmlFor = fieldId;
         fieldWrapper.appendChild(label);
 
+        const hintId = `${fieldId}-hint`;
         if (item.hint) {
             const hint = document.createElement('span');
             hint.className = 'formspec-hint';
+            hint.id = hintId;
             hint.textContent = item.hint;
             fieldWrapper.appendChild(hint);
         }
@@ -68,6 +70,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             const select = document.createElement('select');
             select.className = 'formspec-input';
             select.id = fieldId;
+            if (item.hint) select.setAttribute('aria-describedby', hintId);
             const emptyOpt = document.createElement('option');
             emptyOpt.value = '';
             emptyOpt.textContent = '-- Select --';
@@ -90,6 +93,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             checkbox.type = 'checkbox';
             checkbox.className = 'formspec-input';
             checkbox.id = fieldId;
+            if (item.hint) checkbox.setAttribute('aria-describedby', hintId);
             checkbox.addEventListener('change', () => {
                 answers[item.key] = checkbox.checked;
                 clearFieldError();
@@ -101,6 +105,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             input.className = 'formspec-input';
             input.id = fieldId;
             input.placeholder = 'Amount';
+            if (item.hint) input.setAttribute('aria-describedby', hintId);
             input.addEventListener('input', () => {
                 const val = parseFloat(input.value);
                 answers[item.key] = isNaN(val) ? null : { amount: val, currency: host._definition.formPresentation?.defaultCurrency || 'USD' };
@@ -112,6 +117,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             input.type = item.dataType === 'integer' || item.dataType === 'decimal' || item.dataType === 'number' ? 'number' : 'text';
             input.className = 'formspec-input';
             input.id = fieldId;
+            if (item.hint) input.setAttribute('aria-describedby', hintId);
             input.addEventListener('input', () => {
                 const val = input.value;
                 if (item.dataType === 'integer') {
@@ -159,6 +165,8 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
                     if (wrapper) {
                         const err = document.createElement('div');
                         err.className = 'formspec-error';
+                        err.setAttribute('role', 'alert');
+                        err.setAttribute('aria-live', 'assertive');
                         err.textContent = 'Required';
                         wrapper.appendChild(err);
                     }
@@ -180,6 +188,8 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
                         if (wrapper) {
                             const err = document.createElement('div');
                             err.className = 'formspec-error';
+                            err.setAttribute('role', 'alert');
+                            err.setAttribute('aria-live', 'assertive');
                             err.textContent = 'Required';
                             wrapper.appendChild(err);
                         }

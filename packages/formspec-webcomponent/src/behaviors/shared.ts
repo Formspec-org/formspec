@@ -97,6 +97,7 @@ export function bindSharedFieldEffects(
         const showError = ctx.touchedFields.has(fieldPath) ? (effectiveError || '') : '';
         if (refs.error) refs.error.textContent = showError;
         actualInput.setAttribute('aria-invalid', String(!!showError));
+        if (refs.onValidationChange) refs.onValidationChange(!!showError, showError);
     }));
 
     // Readonly

@@ -55,7 +55,7 @@ export interface RenderHost {
 /**
  * Walk a LayoutNode tree from the planner and emit DOM.
  */
-export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement, prefix: string): void {
+export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement, prefix: string, headingLevel = 3): void {
     let target = parent;
 
     if (node.when) {
@@ -109,7 +109,7 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
 
                 const instancePrefix = `${fullRepeatPath}[${idx}]`;
                 for (const child of node.children) {
-                    emitNode(repeatHost, child, instanceWrapper, instancePrefix);
+                    emitNode(repeatHost, child, instanceWrapper, instancePrefix, headingLevel);
                 }
 
                 const removeBtn = document.createElement('button');
@@ -145,7 +145,7 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         const el = document.createElement('div');
         el.className = 'formspec-group';
         if (node.props.title) {
-            const heading = document.createElement('h3');
+            const heading = document.createElement(`h${Math.min(headingLevel, 6)}`);
             heading.textContent = node.props.title as string;
             el.appendChild(heading);
         }
@@ -159,7 +159,7 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         target.appendChild(el);
 
         for (const child of node.children) {
-            emitNode(host, child, el, nextPrefix);
+            emitNode(host, child, el, nextPrefix, Math.min(headingLevel + 1, 6));
         }
         return;
     }

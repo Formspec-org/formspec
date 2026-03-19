@@ -39,18 +39,59 @@ export function useTabs(ctx: BehaviorContext, comp: any): TabsBehavior {
 
         bind(refs: TabsRefs): () => void {
             const disposers: Array<() => void> = [];
+            const tabCount = refs.buttons.length;
 
-            // Reactive panel/button toggling
+            const activateTab = (index: number) => {
+                setActiveTab(index);
+                refs.buttons[activeTabSignal.value]?.focus();
+            };
+
+            // Reactive panel/button toggling + ARIA state
             disposers.push(effect(() => {
                 const active = activeTabSignal.value;
                 refs.panels.forEach((p, idx) => p.classList.toggle('formspec-hidden', idx !== active));
-                refs.buttons.forEach((b, idx) => b.classList.toggle('formspec-tab--active', idx === active));
+                refs.buttons.forEach((b, idx) => {
+                    const isActive = idx === active;
+                    b.classList.toggle('formspec-tab--active', isActive);
+                    b.setAttribute('aria-selected', String(isActive));
+                    b.setAttribute('tabindex', isActive ? '0' : '-1');
+                });
             }));
 
             // Wire button clicks
             refs.buttons.forEach((btn, i) => {
                 btn.addEventListener('click', () => setActiveTab(i));
             });
+
+            // Arrow key navigation (WAI-ARIA Tabs pattern)
+            const onKeyDown = (event: KeyboardEvent) => {
+                const active = activeTabSignal.value;
+                let nextIndex: number | undefined;
+
+                switch (event.key) {
+                    case 'ArrowRight':
+                    case 'ArrowDown':
+                        nextIndex = (active + 1) % tabCount;
+                        break;
+                    case 'ArrowLeft':
+                    case 'ArrowUp':
+                        nextIndex = (active - 1 + tabCount) % tabCount;
+                        break;
+                    case 'Home':
+                        nextIndex = 0;
+                        break;
+                    case 'End':
+                        nextIndex = tabCount - 1;
+                        break;
+                }
+
+                if (nextIndex !== undefined) {
+                    event.preventDefault();
+                    activateTab(nextIndex);
+                }
+            };
+            refs.tabBar.addEventListener('keydown', onKeyDown);
+            disposers.push(() => refs.tabBar.removeEventListener('keydown', onKeyDown));
 
             // formspec-tabs-set-active custom event
             const onSetActive = (event: Event) => {
