@@ -1,18 +1,13 @@
-/** @filedesc Default adapter for Rating — reproduces current star-rating DOM structure. */
+/** @filedesc Default adapter for Rating — star-rating DOM with shared field infrastructure. */
 import type { RatingBehavior } from '../../behaviors/types';
 import type { AdapterRenderFn } from '../types';
+import { createFieldDOM, finalizeFieldDOM } from './shared';
 
 export const renderRating: AdapterRenderFn<RatingBehavior> = (
     behavior, parent, actx
 ) => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'formspec-field formspec-rating';
-    wrapper.dataset.name = behavior.fieldPath;
-
-    const label = document.createElement('label');
-    label.className = 'formspec-label';
-    label.textContent = behavior.label;
-    wrapper.appendChild(label);
+    const fieldDOM = createFieldDOM(behavior, actx);
+    fieldDOM.root.classList.add('formspec-rating');
 
     const container = document.createElement('div');
     container.className = 'formspec-rating-stars';
@@ -34,20 +29,16 @@ export const renderRating: AdapterRenderFn<RatingBehavior> = (
         container.appendChild(star);
     }
 
-    wrapper.appendChild(container);
-
-    actx.applyCssClass(wrapper, behavior.presentation);
-    actx.applyAccessibility(wrapper, behavior.presentation);
-    actx.applyStyle(wrapper, behavior.presentation.style);
-    if (behavior.compOverrides.cssClass) actx.applyCssClass(wrapper, behavior.compOverrides);
-    if (behavior.compOverrides.accessibility) actx.applyAccessibility(wrapper, behavior.compOverrides);
-    if (behavior.compOverrides.style) actx.applyStyle(wrapper, behavior.compOverrides.style);
-    parent.appendChild(wrapper);
+    fieldDOM.root.appendChild(container);
+    finalizeFieldDOM(fieldDOM, behavior, actx);
+    parent.appendChild(fieldDOM.root);
 
     const dispose = behavior.bind({
-        root: wrapper,
-        label,
+        root: fieldDOM.root,
+        label: fieldDOM.label,
         control: container,
+        hint: fieldDOM.hint,
+        error: fieldDOM.error,
     });
     actx.onDispose(dispose);
 };

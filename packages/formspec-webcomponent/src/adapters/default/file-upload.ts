@@ -1,22 +1,18 @@
-/** @filedesc Default adapter for FileUpload — reproduces current file input DOM structure. */
+/** @filedesc Default adapter for FileUpload — file input with optional drag-drop zone. */
 import type { FileUploadBehavior } from '../../behaviors/types';
 import type { AdapterRenderFn } from '../types';
+import { createFieldDOM, finalizeFieldDOM } from './shared';
 
 export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     behavior, parent, actx
 ) => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'formspec-field formspec-file-upload';
-    wrapper.dataset.name = behavior.fieldPath;
-
-    const label = document.createElement('label');
-    label.className = 'formspec-label';
-    label.textContent = behavior.label;
-    wrapper.appendChild(label);
+    const fieldDOM = createFieldDOM(behavior, actx);
+    fieldDOM.root.classList.add('formspec-file-upload');
 
     const input = document.createElement('input');
     input.type = 'file';
     input.className = 'formspec-input';
+    input.id = behavior.id;
     input.name = behavior.fieldPath;
     if (behavior.accept) input.accept = behavior.accept;
     if (behavior.multiple) input.multiple = true;
@@ -38,8 +34,7 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
             dropZone.classList.remove('formspec-drop-zone--active');
             const files = Array.from(e.dataTransfer?.files || []);
             const fileData = files.map(f => ({ name: f.name, size: f.size, type: f.type }));
-            // Dispatch custom event for behavior bind() to handle value storage
-            wrapper.dispatchEvent(new CustomEvent('formspec-files-dropped', {
+            fieldDOM.root.dispatchEvent(new CustomEvent('formspec-files-dropped', {
                 detail: { fileData, multiple: behavior.multiple },
                 bubbles: false,
             }));
@@ -47,24 +42,21 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
         dropZone.addEventListener('click', () => input.click());
 
         input.hidden = true;
-        wrapper.appendChild(dropZone);
-        wrapper.appendChild(input);
+        fieldDOM.root.appendChild(dropZone);
+        fieldDOM.root.appendChild(input);
     } else {
-        wrapper.appendChild(input);
+        fieldDOM.root.appendChild(input);
     }
 
-    actx.applyCssClass(wrapper, behavior.presentation);
-    actx.applyAccessibility(wrapper, behavior.presentation);
-    actx.applyStyle(wrapper, behavior.presentation.style);
-    if (behavior.compOverrides.cssClass) actx.applyCssClass(wrapper, behavior.compOverrides);
-    if (behavior.compOverrides.accessibility) actx.applyAccessibility(wrapper, behavior.compOverrides);
-    if (behavior.compOverrides.style) actx.applyStyle(wrapper, behavior.compOverrides.style);
-    parent.appendChild(wrapper);
+    finalizeFieldDOM(fieldDOM, behavior, actx);
+    parent.appendChild(fieldDOM.root);
 
     const dispose = behavior.bind({
-        root: wrapper,
-        label,
+        root: fieldDOM.root,
+        label: fieldDOM.label,
         control: input,
+        hint: fieldDOM.hint,
+        error: fieldDOM.error,
     });
     actx.onDispose(dispose);
 };

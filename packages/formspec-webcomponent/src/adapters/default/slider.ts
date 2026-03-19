@@ -1,18 +1,13 @@
-/** @filedesc Default adapter for Slider — reproduces current range input DOM structure. */
+/** @filedesc Default adapter for Slider — range input with track container and value display. */
 import type { SliderBehavior } from '../../behaviors/types';
 import type { AdapterRenderFn } from '../types';
+import { createFieldDOM, finalizeFieldDOM } from './shared';
 
 export const renderSlider: AdapterRenderFn<SliderBehavior> = (
     behavior, parent, actx
 ) => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'formspec-field formspec-slider';
-    wrapper.dataset.name = behavior.fieldPath;
-
-    const label = document.createElement('label');
-    label.className = 'formspec-label';
-    label.textContent = behavior.label;
-    wrapper.appendChild(label);
+    const fieldDOM = createFieldDOM(behavior, actx);
+    fieldDOM.root.classList.add('formspec-slider');
 
     const sliderContainer = document.createElement('div');
     sliderContainer.className = 'formspec-slider-track';
@@ -21,6 +16,7 @@ export const renderSlider: AdapterRenderFn<SliderBehavior> = (
     input.type = 'range';
     input.className = 'formspec-input';
     input.name = behavior.fieldPath;
+    input.id = behavior.id;
     if (behavior.min != null) input.min = String(behavior.min);
     if (behavior.max != null) input.max = String(behavior.max);
     if (behavior.step != null) input.step = String(behavior.step);
@@ -49,20 +45,16 @@ export const renderSlider: AdapterRenderFn<SliderBehavior> = (
         sliderContainer.appendChild(valueDisplay);
     }
 
-    wrapper.appendChild(sliderContainer);
-
-    actx.applyCssClass(wrapper, behavior.presentation);
-    actx.applyAccessibility(wrapper, behavior.presentation);
-    actx.applyStyle(wrapper, behavior.presentation.style);
-    if (behavior.compOverrides.cssClass) actx.applyCssClass(wrapper, behavior.compOverrides);
-    if (behavior.compOverrides.accessibility) actx.applyAccessibility(wrapper, behavior.compOverrides);
-    if (behavior.compOverrides.style) actx.applyStyle(wrapper, behavior.compOverrides.style);
-    parent.appendChild(wrapper);
+    fieldDOM.root.appendChild(sliderContainer);
+    finalizeFieldDOM(fieldDOM, behavior, actx);
+    parent.appendChild(fieldDOM.root);
 
     const dispose = behavior.bind({
-        root: wrapper,
-        label,
+        root: fieldDOM.root,
+        label: fieldDOM.label,
         control: sliderContainer,
+        hint: fieldDOM.hint,
+        error: fieldDOM.error,
     });
     actx.onDispose(dispose);
 };

@@ -68,20 +68,21 @@ export function useTextInput(ctx: BehaviorContext, comp: any): TextInputBehavior
         bind(refs: FieldRefs): () => void {
             const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
 
+            // Resolve the actual input element once for both sync directions
+            const inputEl = refs.control.querySelector('input') || refs.control.querySelector('textarea') || refs.control;
+
             // Value sync: engine → DOM
-            const bindableInput = refs.control.querySelector('input') || refs.control.querySelector('textarea') || refs.control;
             disposers.push(effect(() => {
                 const sig = ctx.engine.signals[fieldPath];
                 if (!sig) return;
                 const val = sig.value;
-                if (document.activeElement !== bindableInput) {
-                    (bindableInput as HTMLInputElement).value = val ?? '';
+                if (document.activeElement !== inputEl) {
+                    (inputEl as HTMLInputElement).value = val ?? '';
                 }
             }));
 
             // Value sync: DOM → engine
-            const eventTarget = refs.control.querySelector('input') || refs.control.querySelector('textarea') || refs.control;
-            eventTarget.addEventListener('input', (e) => {
+            inputEl.addEventListener('input', (e) => {
                 ctx.engine.setValue(fieldPath, (e.target as HTMLInputElement).value);
             });
 

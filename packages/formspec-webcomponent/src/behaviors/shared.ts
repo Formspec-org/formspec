@@ -33,6 +33,8 @@ export function resolveAndStripTokens(
             ? resolved.cssClass.map((c: any) => resolveToken(c))
             : resolveToken(resolved.cssClass);
     }
+    // widgetConfig is intentionally NOT token-resolved: its values are semantic configuration
+    // (rows, searchable, direction), not CSS values, so $token. references are not expected.
     // comp.labelPosition overrides theme cascade (matches old field-input.ts precedence)
     if (comp?.labelPosition) {
         resolved.labelPosition = comp.labelPosition;
@@ -125,6 +127,10 @@ export function bindSharedFieldEffects(
     };
     refs.root.addEventListener('focusout', markTouched);
     refs.root.addEventListener('change', markTouched);
+    disposers.push(() => {
+        refs.root.removeEventListener('focusout', markTouched);
+        refs.root.removeEventListener('change', markTouched);
+    });
 
     return disposers;
 }

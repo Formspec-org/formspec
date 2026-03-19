@@ -1,7 +1,7 @@
 /** @filedesc Slider behavior hook — extracts reactive state for range slider fields. */
 import { effect } from '@preact/signals-core';
 import type { SliderBehavior, FieldRefs, BehaviorContext } from './types';
-import { resolveFieldPath, toFieldId, resolveAndStripTokens, warnIfIncompatible } from './shared';
+import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 
 export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
     const fieldPath = resolveFieldPath(comp.bind, ctx.prefix);
@@ -19,8 +19,8 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
         fieldPath,
         id,
         label: labelText,
-        hint: null,
-        description: null,
+        hint: comp.hintOverride || item?.hint || null,
+        description: item?.description || null,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -37,10 +37,11 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
         showValue: comp.showValue !== false,
 
         bind(refs: FieldRefs): () => void {
-            const disposers: Array<() => void> = [];
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
 
-            // Value sync: DOM → engine (input event on range control)
             const rangeInput = refs.control.querySelector('input[type="range"]') || refs.control;
+
+            // Value sync: DOM → engine
             rangeInput.addEventListener('input', () => {
                 const val = (rangeInput as HTMLInputElement).value === '' ? null : Number((rangeInput as HTMLInputElement).value);
                 ctx.engine.setValue(fieldPath, val);
@@ -55,16 +56,9 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
                 if (document.activeElement !== rangeInput) {
                     (rangeInput as HTMLInputElement).value = val ?? '';
                 }
-                // Show signal value, or fall back to the native input value (range defaults to midpoint)
                 if (valueDisplay) {
                     valueDisplay.textContent = val != null ? String(val) : (rangeInput as HTMLInputElement).value;
                 }
-            }));
-
-            // Relevance
-            disposers.push(effect(() => {
-                const isRelevant = ctx.engine.relevantSignals[fieldPath]?.value ?? true;
-                refs.root.classList.toggle('formspec-hidden', !isRelevant);
             }));
 
             return () => disposers.forEach(d => d());

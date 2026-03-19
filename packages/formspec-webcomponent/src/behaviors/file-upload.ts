@@ -1,7 +1,6 @@
 /** @filedesc FileUpload behavior hook — extracts reactive state for file input fields. */
-import { effect } from '@preact/signals-core';
 import type { FileUploadBehavior, FieldRefs, BehaviorContext } from './types';
-import { resolveFieldPath, toFieldId, resolveAndStripTokens, warnIfIncompatible } from './shared';
+import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 
 export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavior {
     const fieldPath = resolveFieldPath(comp.bind, ctx.prefix);
@@ -20,8 +19,8 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
         fieldPath,
         id,
         label: labelText,
-        hint: null,
-        description: null,
+        hint: comp.hintOverride || item?.hint || null,
+        description: item?.description || null,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -36,7 +35,7 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
         dragDrop: comp.dragDrop === true,
 
         bind(refs: FieldRefs): () => void {
-            const disposers: Array<() => void> = [];
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
 
             const storeFiles = (fileData: Array<{ name: string; size: number; type: string }>) => {
                 ctx.engine.setValue(fieldPath, multiple ? fileData : fileData[0] || null);
@@ -57,12 +56,6 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
                 if (detail?.fileData) storeFiles(detail.fileData);
             };
             refs.root.addEventListener('formspec-files-dropped', onFilesDrop);
-
-            // Relevance
-            disposers.push(effect(() => {
-                const isRelevant = ctx.engine.relevantSignals[fieldPath]?.value ?? true;
-                refs.root.classList.toggle('formspec-hidden', !isRelevant);
-            }));
 
             return () => disposers.forEach(d => d());
         }

@@ -1,7 +1,6 @@
 /** @filedesc Signature behavior hook — extracts reactive state for signature canvas fields. */
-import { effect } from '@preact/signals-core';
 import type { SignatureBehavior, FieldRefs, BehaviorContext } from './types';
-import { resolveFieldPath, toFieldId, resolveAndStripTokens, warnIfIncompatible } from './shared';
+import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 
 export function useSignature(ctx: BehaviorContext, comp: any): SignatureBehavior {
     const fieldPath = resolveFieldPath(comp.bind, ctx.prefix);
@@ -19,8 +18,8 @@ export function useSignature(ctx: BehaviorContext, comp: any): SignatureBehavior
         fieldPath,
         id,
         label: labelText,
-        hint: null,
-        description: null,
+        hint: comp.hintOverride || item?.hint || null,
+        description: item?.description || null,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -34,7 +33,7 @@ export function useSignature(ctx: BehaviorContext, comp: any): SignatureBehavior
         strokeColor: comp.strokeColor || '#000',
 
         bind(refs: FieldRefs): () => void {
-            const disposers: Array<() => void> = [];
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
 
             // Listen for signature drawn event from adapter
             refs.root.addEventListener('formspec-signature-drawn', (e: Event) => {
@@ -46,12 +45,6 @@ export function useSignature(ctx: BehaviorContext, comp: any): SignatureBehavior
             refs.root.addEventListener('formspec-signature-cleared', () => {
                 ctx.engine.setValue(fieldPath, null);
             });
-
-            // Relevance
-            disposers.push(effect(() => {
-                const isRelevant = ctx.engine.relevantSignals[fieldPath]?.value ?? true;
-                refs.root.classList.toggle('formspec-hidden', !isRelevant);
-            }));
 
             return () => disposers.forEach(d => d());
         }

@@ -1,7 +1,7 @@
 /** @filedesc Rating behavior hook — extracts reactive state for icon-rating fields. */
 import { effect } from '@preact/signals-core';
 import type { RatingBehavior, FieldRefs, BehaviorContext } from './types';
-import { resolveFieldPath, toFieldId, resolveAndStripTokens, warnIfIncompatible } from './shared';
+import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 
 const RATING_ICON_MAP: Record<string, string> = {
     star: '\u2605',
@@ -34,8 +34,8 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
         fieldPath,
         id,
         label: labelText,
-        hint: null,
-        description: null,
+        hint: comp.hintOverride || item?.hint || null,
+        description: item?.description || null,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -56,7 +56,7 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
         },
 
         bind(refs: FieldRefs): () => void {
-            const disposers: Array<() => void> = [];
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
 
             // Sync star selection classes from engine value
             const stars = refs.control.querySelectorAll('.formspec-rating-star');
@@ -71,12 +71,6 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
                     star.classList.toggle('formspec-rating-star--selected', isSelected);
                     star.classList.toggle('formspec-rating-star--half', isHalfSelected);
                 });
-            }));
-
-            // Relevance
-            disposers.push(effect(() => {
-                const isRelevant = ctx.engine.relevantSignals[fieldPath]?.value ?? true;
-                refs.root.classList.toggle('formspec-hidden', !isRelevant);
             }));
 
             return () => disposers.forEach(d => d());

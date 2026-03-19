@@ -1,23 +1,18 @@
-/** @filedesc Default adapter for Signature — reproduces current canvas drawing DOM structure. */
+/** @filedesc Default adapter for Signature — canvas drawing with shared field infrastructure. */
 import type { SignatureBehavior } from '../../behaviors/types';
 import type { AdapterRenderFn } from '../types';
+import { createFieldDOM, finalizeFieldDOM } from './shared';
 
 export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
     behavior, parent, actx
 ) => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'formspec-field formspec-signature';
-    wrapper.dataset.name = behavior.fieldPath;
-
-    const label = document.createElement('label');
-    label.className = 'formspec-label';
-    label.textContent = behavior.label;
-    wrapper.appendChild(label);
+    const fieldDOM = createFieldDOM(behavior, actx);
+    fieldDOM.root.classList.add('formspec-signature');
 
     const canvas = document.createElement('canvas');
     canvas.className = 'formspec-signature-canvas';
     canvas.style.height = `${behavior.height}px`;
-    wrapper.appendChild(canvas);
+    fieldDOM.root.appendChild(canvas);
 
     const dpr = window.devicePixelRatio || 1;
     const canvasCtx = canvas.getContext('2d')!;
@@ -57,8 +52,7 @@ export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
     });
     canvas.addEventListener('mouseup', () => {
         drawing = false;
-        // Store signature as data URL — dispatch custom event for behavior to handle
-        wrapper.dispatchEvent(new CustomEvent('formspec-signature-drawn', {
+        fieldDOM.root.dispatchEvent(new CustomEvent('formspec-signature-drawn', {
             detail: { dataUrl: canvas.toDataURL() },
             bubbles: false,
         }));
@@ -71,24 +65,21 @@ export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
     clearBtn.className = 'formspec-signature-clear';
     clearBtn.addEventListener('click', () => {
         canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-        wrapper.dispatchEvent(new CustomEvent('formspec-signature-cleared', {
+        fieldDOM.root.dispatchEvent(new CustomEvent('formspec-signature-cleared', {
             bubbles: false,
         }));
     });
-    wrapper.appendChild(clearBtn);
+    fieldDOM.root.appendChild(clearBtn);
 
-    actx.applyCssClass(wrapper, behavior.presentation);
-    actx.applyAccessibility(wrapper, behavior.presentation);
-    actx.applyStyle(wrapper, behavior.presentation.style);
-    if (behavior.compOverrides.cssClass) actx.applyCssClass(wrapper, behavior.compOverrides);
-    if (behavior.compOverrides.accessibility) actx.applyAccessibility(wrapper, behavior.compOverrides);
-    if (behavior.compOverrides.style) actx.applyStyle(wrapper, behavior.compOverrides.style);
-    parent.appendChild(wrapper);
+    finalizeFieldDOM(fieldDOM, behavior, actx);
+    parent.appendChild(fieldDOM.root);
 
     const dispose = behavior.bind({
-        root: wrapper,
-        label,
+        root: fieldDOM.root,
+        label: fieldDOM.label,
         control: canvas,
+        hint: fieldDOM.hint,
+        error: fieldDOM.error,
     });
     actx.onDispose(dispose);
 };
