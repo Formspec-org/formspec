@@ -132,6 +132,88 @@ interface ComponentPlugin {
 | **Interactive** (3) | Wizard, Tabs, SubmitButton |
 | **Special** (2) | ConditionalGroup, DataTable |
 
+## Render Adapters
+
+Input components use a **headless behavior/adapter architecture** (see [ADR 0046](../../thoughts/adr/0046-headless-component-adapters.md)). Each component is split into:
+
+- **Behavior hook** — owns reactive signal wiring, value coercion, ARIA state management, touched tracking, and validation display. Never creates DOM.
+- **Render adapter** — owns DOM structure and CSS class names. Never imports `@preact/signals-core`. Calls `behavior.bind(refs)` after building DOM to wire everything up.
+
+The built-in **default adapter** reproduces the standard Formspec DOM. Design-system adapters can provide structurally different markup while reusing the same behavior hooks.
+
+### Registering a Custom Adapter
+
+```js
+import { globalRegistry } from 'formspec-webcomponent';
+
+globalRegistry.registerAdapter({
+  name: 'my-design-system',
+  components: {
+    TextInput: (behavior, parent, actx) => {
+      // Build your own DOM structure
+      const root = document.createElement('div');
+      root.className = 'my-field';
+
+      const label = document.createElement('label');
+      label.textContent = behavior.label;
+      root.appendChild(label);
+
+      const input = document.createElement('input');
+      input.id = behavior.id;
+      root.appendChild(input);
+
+      const error = document.createElement('div');
+      root.appendChild(error);
+
+      parent.appendChild(root);
+
+      // bind() wires ALL reactive behavior — adapter does NOT register event listeners
+      const dispose = behavior.bind({ root, label, control: input, error });
+      actx.onDispose(dispose);
+    },
+    // ... other components. Missing entries fall back to the default adapter.
+  },
+});
+
+// Activate globally
+globalRegistry.setAdapter('my-design-system');
+```
+
+Per-form override is also available:
+
+```js
+const el = document.querySelector('formspec-render');
+el.adapter = 'my-design-system';  // Override for this instance only
+```
+
+### Adapter Contract
+
+Adapters **must**:
+1. Create DOM elements and append the root to `parent`
+2. Apply `behavior.presentation.cssClass` to the root element (union semantics)
+3. Respect `behavior.presentation.labelPosition` (`'top'` | `'start'` | `'hidden'`)
+4. Apply `behavior.presentation.accessibility` attributes (role, aria-description, aria-live)
+5. Call `behavior.bind(refs)` with references to created elements
+6. Register the dispose function via `actx.onDispose(dispose)`
+
+Adapters **must not**:
+- Import `@preact/signals-core` or access the engine directly
+- Register event listeners for value sync, change detection, or touch tracking (`bind()` owns all event wiring)
+
+### Exported Types for Adapter Authors
+
+```ts
+import type {
+  RenderAdapter, AdapterRenderFn, AdapterContext,
+  FieldBehavior, FieldRefs, ResolvedPresentationBlock,
+  TextInputBehavior, NumberInputBehavior, RadioGroupBehavior,
+  CheckboxGroupBehavior, SelectBehavior, ToggleBehavior,
+  DatePickerBehavior, MoneyInputBehavior, SliderBehavior,
+  RatingBehavior, FileUploadBehavior, SignatureBehavior,
+  WizardBehavior, TabsBehavior,
+} from 'formspec-webcomponent';
+```
+
 ## Theme Cascade
 
 The renderer resolves presentation through a 5-level cascade (lowest to highest priority):
@@ -153,7 +235,8 @@ Theme documents may declare a `stylesheets` array of CSS URLs. The renderer inje
 3. **Tokens** — emit CSS custom properties onto `.formspec-container`.
 4. **Screener gate** — render the screener if one is defined and not yet completed.
 5. **Plan** — call `planComponentTree()` (from `formspec-layout`) to produce a layout node tree.
-6. **Emit** — walk the tree, create DOM elements, and wire Preact Signal effects for reactivity (relevance, validation, repeat instances).
+6. **Emit** — walk the tree and dispatch each component to its plugin.
+7. **Orchestrate** — each input plugin calls its behavior hook, resolves the active adapter, and invokes the adapter render function. The adapter builds DOM; `bind()` wires all reactive effects.
 
 Each input component receives a fully wired field wrapper with label, hint, error display, ARIA attributes, and touch tracking driven by signals from the engine.
 
@@ -176,6 +259,13 @@ export { resolvePresentation, resolveWidget, interpolateParams, resolveResponsiv
 // Types
 export type { RenderContext, ComponentPlugin, ValidationTargetMetadata, ScreenerRoute, ScreenerRouteType, ScreenerStateSnapshot };
 export type { ThemeDocument, PresentationBlock, ItemDescriptor, AccessibilityBlock, ThemeSelector, SelectorMatch, Tier1Hints, FormspecDataType, Page, Region, LayoutHints, StyleHints };
+
+// Headless adapter public API
+export type { RenderAdapter, AdapterRenderFn, AdapterContext };
+export type { FieldBehavior, FieldRefs, ResolvedPresentationBlock, BehaviorContext };
+export type { TextInputBehavior, NumberInputBehavior, RadioGroupBehavior, CheckboxGroupBehavior, SelectBehavior, ToggleBehavior };
+export type { DatePickerBehavior, MoneyInputBehavior, SliderBehavior, RatingBehavior, FileUploadBehavior, SignatureBehavior };
+export type { WizardBehavior, WizardRefs, TabsBehavior, TabsRefs };
 ```
 
 ## Development
