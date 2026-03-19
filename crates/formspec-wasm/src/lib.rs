@@ -593,6 +593,8 @@ fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<formspec_core::MappingRu
                     forward,
                     unmapped: match obj.get("unmapped").and_then(|v| v.as_str()) {
                         Some("error") => formspec_core::UnmappedStrategy::Error,
+                        Some("drop") => formspec_core::UnmappedStrategy::Drop,
+                        Some("default") => formspec_core::UnmappedStrategy::Default,
                         _ => formspec_core::UnmappedStrategy::PassThrough,
                     },
                 }

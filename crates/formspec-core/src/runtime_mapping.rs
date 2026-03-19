@@ -8,7 +8,7 @@ use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use serde_json::Value;
 
-use fel_core::{parse, evaluate, MapEnvironment, FelValue};
+use fel_core::{evaluate, parse, FelValue, MapEnvironment};
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -69,14 +69,19 @@ pub enum TransformType {
 }
 
 /// Strategy for values not found in a value map.
+///
+/// Spec: mapping/mapping-spec.md §4.6 — ValueMap unmapped strategies.
+/// The spec defines exactly four strategies: "error", "drop", "passthrough", "default".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnmappedStrategy {
-    /// Pass through unchanged.
+    /// `"passthrough"` — copy the source value through unchanged.
     PassThrough,
-    /// Return null.
-    Null,
-    /// Return an error.
+    /// `"drop"` — omit the target field entirely (returns None from apply_value_map).
+    Drop,
+    /// `"error"` — produce a runtime mapping diagnostic.
     Error,
+    /// `"default"` — use the default value from the rule's `default` property.
+    Default,
 }
 
 /// Target types for coercion.
@@ -202,7 +207,9 @@ fn set_by_path(obj: &mut Value, path: &str, value: Value) {
             }
         } else {
             // Intermediate segment — ensure container exists
-            let next_is_index = segments.get(i + 1).map_or(false, |s| s.parse::<usize>().is_ok());
+            let next_is_index = segments
+                .get(i + 1)
+                .map_or(false, |s| s.parse::<usize>().is_ok());
             match current {
                 Value::Object(map) => {
                     if !map.contains_key(seg.as_str()) {
@@ -253,7 +260,9 @@ fn json_to_fel(val: &Value) -> FelValue {
         Value::String(s) => FelValue::String(s.clone()),
         Value::Array(arr) => FelValue::Array(arr.iter().map(json_to_fel).collect()),
         Value::Object(map) => FelValue::Object(
-            map.iter().map(|(k, v)| (k.clone(), json_to_fel(v))).collect(),
+            map.iter()
+                .map(|(k, v)| (k.clone(), json_to_fel(v)))
+                .collect(),
         ),
     }
 }
@@ -280,14 +289,18 @@ fn fel_to_json(val: &FelValue) -> Value {
         FelValue::Date(d) => Value::String(d.format_iso()),
         FelValue::Array(arr) => Value::Array(arr.iter().map(fel_to_json).collect()),
         FelValue::Object(entries) => {
-            let map: serde_json::Map<String, Value> = entries.iter()
+            let map: serde_json::Map<String, Value> = entries
+                .iter()
                 .map(|(k, v)| (k.clone(), fel_to_json(v)))
                 .collect();
             Value::Object(map)
         }
         FelValue::Money(m) => {
             let mut map = serde_json::Map::new();
-            map.insert("amount".to_string(), fel_to_json(&FelValue::Number(m.amount)));
+            map.insert(
+                "amount".to_string(),
+                fel_to_json(&FelValue::Number(m.amount)),
+            );
             map.insert("currency".to_string(), Value::String(m.currency.clone()));
             Value::Object(map)
         }
@@ -312,7 +325,9 @@ pub fn execute_mapping(
         let r = &rules[i];
         match direction {
             MappingDirection::Forward => std::cmp::Reverse(r.priority),
-            MappingDirection::Reverse => std::cmp::Reverse(r.reverse_priority.unwrap_or(r.priority)),
+            MappingDirection::Reverse => {
+                std::cmp::Reverse(r.reverse_priority.unwrap_or(r.priority))
+            }
         }
     });
 
@@ -341,7 +356,10 @@ pub fn execute_mapping(
         // Direction-aware path resolution
         let (src_path, tgt_path) = match direction {
             MappingDirection::Forward => (rule.source_path.as_deref(), rule.target_path.as_str()),
-            MappingDirection::Reverse => (Some(rule.target_path.as_str()), rule.source_path.as_deref().unwrap_or("")),
+            MappingDirection::Reverse => (
+                Some(rule.target_path.as_str()),
+                rule.source_path.as_deref().unwrap_or(""),
+            ),
         };
 
         // Get source value, falling back to per-rule default if null/absent
@@ -363,22 +381,45 @@ pub fn execute_mapping(
             TransformType::Preserve => source_value,
             TransformType::Constant(val) => val.clone(),
             TransformType::ValueMap { forward, unmapped } => {
-                match direction {
-                    MappingDirection::Forward => {
-                        apply_value_map(&source_value, forward, *unmapped, rule_idx, tgt_path, &mut diagnostics)
-                    }
+                let mapped = match direction {
+                    MappingDirection::Forward => apply_value_map(
+                        &source_value,
+                        forward,
+                        *unmapped,
+                        rule_idx,
+                        tgt_path,
+                        &mut diagnostics,
+                        rule.default.as_ref(),
+                    ),
                     MappingDirection::Reverse => {
                         // Auto-invert the map
-                        let reversed: Vec<(Value, Value)> = forward.iter()
+                        let reversed: Vec<(Value, Value)> = forward
+                            .iter()
                             .map(|(k, v)| (v.clone(), k.clone()))
                             .collect();
-                        apply_value_map(&source_value, &reversed, *unmapped, rule_idx, tgt_path, &mut diagnostics)
+                        apply_value_map(
+                            &source_value,
+                            &reversed,
+                            *unmapped,
+                            rule_idx,
+                            tgt_path,
+                            &mut diagnostics,
+                            rule.default.as_ref(),
+                        )
                     }
+                };
+                match mapped {
+                    Some(v) => v,
+                    None => continue, // Drop strategy — omit target field
                 }
             }
-            TransformType::Coerce(target_type) => {
-                apply_coerce(&source_value, *target_type, rule_idx, tgt_path, &mut diagnostics)
-            }
+            TransformType::Coerce(target_type) => apply_coerce(
+                &source_value,
+                *target_type,
+                rule_idx,
+                tgt_path,
+                &mut diagnostics,
+            ),
             TransformType::Expression(fel_expr) => {
                 match parse(fel_expr) {
                     Ok(expr) => {
@@ -406,17 +447,27 @@ pub fn execute_mapping(
                     }
                 }
             }
-            TransformType::Flatten { separator } => {
-                apply_flatten(&source_value, separator)
-            }
-            TransformType::Nest { separator } => {
-                apply_nest(&source_value, separator)
-            }
-            TransformType::Concat(fel_expr) => {
-                eval_fel_with_dollar(fel_expr, &source_value, source, rule_idx, src_path, tgt_path, &mut diagnostics)
-            }
+            TransformType::Flatten { separator } => apply_flatten(&source_value, separator),
+            TransformType::Nest { separator } => apply_nest(&source_value, separator),
+            TransformType::Concat(fel_expr) => eval_fel_with_dollar(
+                fel_expr,
+                &source_value,
+                source,
+                rule_idx,
+                src_path,
+                tgt_path,
+                &mut diagnostics,
+            ),
             TransformType::Split(fel_expr) => {
-                let result = eval_fel_with_dollar(fel_expr, &source_value, source, rule_idx, src_path, tgt_path, &mut diagnostics);
+                let result = eval_fel_with_dollar(
+                    fel_expr,
+                    &source_value,
+                    source,
+                    rule_idx,
+                    src_path,
+                    tgt_path,
+                    &mut diagnostics,
+                );
                 // Split writes multiple target paths if result is array or object
                 match &result {
                     Value::Array(arr) => {
@@ -462,15 +513,16 @@ fn apply_value_map(
     rule_idx: usize,
     target_path: &str,
     diagnostics: &mut Vec<MappingDiagnostic>,
-) -> Value {
+    rule_default: Option<&Value>,
+) -> Option<Value> {
     for (from, to) in map {
         if value == from {
-            return to.clone();
+            return Some(to.clone());
         }
     }
     match unmapped {
-        UnmappedStrategy::PassThrough => value.clone(),
-        UnmappedStrategy::Null => Value::Null,
+        UnmappedStrategy::PassThrough => Some(value.clone()),
+        UnmappedStrategy::Drop => None,
         UnmappedStrategy::Error => {
             diagnostics.push(MappingDiagnostic {
                 rule_index: rule_idx,
@@ -478,8 +530,9 @@ fn apply_value_map(
                 target_path: target_path.to_string(),
                 message: format!("No value map entry for: {value}"),
             });
-            Value::Null
+            Some(Value::Null)
         }
+        UnmappedStrategy::Default => Some(rule_default.cloned().unwrap_or(Value::Null)),
     }
 }
 
@@ -554,7 +607,8 @@ fn apply_coerce(
 fn apply_flatten(value: &Value, separator: &str) -> Value {
     match value {
         Value::Object(map) => {
-            let parts: Vec<String> = map.iter()
+            let parts: Vec<String> = map
+                .iter()
                 .map(|(k, v)| format!("{k}={}", value_to_flat_string(v)))
                 .collect();
             Value::String(parts.join(separator))
@@ -644,7 +698,9 @@ pub fn execute_mapping_doc(
     // autoMap: generate synthetic preserve rules for unmapped top-level source keys (forward only)
     if doc.auto_map && direction == MappingDirection::Forward {
         if let Some(obj) = source.as_object() {
-            let covered: std::collections::HashSet<&str> = doc.rules.iter()
+            let covered: std::collections::HashSet<&str> = doc
+                .rules
+                .iter()
                 .filter_map(|r| r.source_path.as_deref())
                 .collect();
             for key in obj.keys() {
@@ -734,8 +790,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "secret": "hidden" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -749,17 +805,14 @@ mod tests {
             source_path: Some("status".to_string()),
             target_path: "statusCode".to_string(),
             transform: TransformType::ValueMap {
-                forward: vec![
-                    (json!("active"), json!(1)),
-                    (json!("inactive"), json!(0)),
-                ],
-                unmapped: UnmappedStrategy::Null,
+                forward: vec![(json!("active"), json!(1)), (json!("inactive"), json!(0))],
+                unmapped: UnmappedStrategy::PassThrough,
             },
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "status": "active" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -772,17 +825,14 @@ mod tests {
             source_path: Some("status".to_string()),
             target_path: "statusCode".to_string(),
             transform: TransformType::ValueMap {
-                forward: vec![
-                    (json!("active"), json!(1)),
-                    (json!("inactive"), json!(0)),
-                ],
-                unmapped: UnmappedStrategy::Null,
+                forward: vec![(json!("active"), json!(1)), (json!("inactive"), json!(0))],
+                unmapped: UnmappedStrategy::PassThrough,
             },
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "statusCode": 1 });
         let result = execute_mapping(&rules, &source, MappingDirection::Reverse);
@@ -798,8 +848,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "count": 42 });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -815,8 +865,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "amount": "99.5" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -832,8 +882,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "name": "Bob" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -850,8 +900,8 @@ mod tests {
                 condition: None,
                 priority: 1,
                 reverse_priority: None,
-            default: None,
-            bidirectional: true,
+                default: None,
+                bidirectional: true,
             },
             MappingRule {
                 source_path: Some("last".to_string()),
@@ -860,8 +910,8 @@ mod tests {
                 condition: None,
                 priority: 0,
                 reverse_priority: None,
-            default: None,
-            bidirectional: true,
+                default: None,
+                bidirectional: true,
             },
         ];
         let source = json!({ "first": "Alice", "last": "Smith" });
@@ -883,8 +933,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "val": "unknown" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -900,8 +950,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "first": "Alice", "last": "Smith" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -917,8 +967,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "qty": 5, "price": 10 });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -934,8 +984,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "active": "true" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -951,8 +1001,8 @@ mod tests {
             condition: None,
             priority: 0,
             reverse_priority: None,
-        default: None,
-        bidirectional: true,
+            default: None,
+            bidirectional: true,
         }];
         let source = json!({ "amount": 3.7 });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
@@ -963,7 +1013,10 @@ mod tests {
     fn test_split_path() {
         assert_eq!(split_path("a.b.c"), vec!["a", "b", "c"]);
         assert_eq!(split_path("a[0].b"), vec!["a", "0", "b"]);
-        assert_eq!(split_path("items[0].children[1].key"), vec!["items", "0", "children", "1", "key"]);
+        assert_eq!(
+            split_path("items[0].children[1].key"),
+            vec!["items", "0", "children", "1", "key"]
+        );
     }
 
     // ── New transform tests ─────────────────────────────────────
@@ -983,7 +1036,13 @@ mod tests {
 
     #[test]
     fn test_flatten_object() {
-        let rules = vec![rule(Some("addr"), "flat", TransformType::Flatten { separator: ".".to_string() })];
+        let rules = vec![rule(
+            Some("addr"),
+            "flat",
+            TransformType::Flatten {
+                separator: ".".to_string(),
+            },
+        )];
         let source = json!({ "addr": { "city": "NYC", "zip": "10001" } });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         let flat = result.output["flat"].as_str().unwrap();
@@ -994,7 +1053,13 @@ mod tests {
 
     #[test]
     fn test_flatten_array() {
-        let rules = vec![rule(Some("tags"), "flat", TransformType::Flatten { separator: ", ".to_string() })];
+        let rules = vec![rule(
+            Some("tags"),
+            "flat",
+            TransformType::Flatten {
+                separator: ", ".to_string(),
+            },
+        )];
         let source = json!({ "tags": ["a", "b", "c"] });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["flat"], "a, b, c");
@@ -1002,7 +1067,13 @@ mod tests {
 
     #[test]
     fn test_flatten_null_uses_rule_default() {
-        let mut r = rule(Some("missing"), "out", TransformType::Flatten { separator: ".".to_string() });
+        let mut r = rule(
+            Some("missing"),
+            "out",
+            TransformType::Flatten {
+                separator: ".".to_string(),
+            },
+        );
         r.default = Some(json!("fallback"));
         let rules = vec![r];
         let source = json!({});
@@ -1013,7 +1084,13 @@ mod tests {
 
     #[test]
     fn test_nest_string() {
-        let rules = vec![rule(Some("path"), "nested", TransformType::Nest { separator: ".".to_string() })];
+        let rules = vec![rule(
+            Some("path"),
+            "nested",
+            TransformType::Nest {
+                separator: ".".to_string(),
+            },
+        )];
         let source = json!({ "path": "a.b.c" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["nested"]["a"]["b"]["c"], true);
@@ -1021,7 +1098,13 @@ mod tests {
 
     #[test]
     fn test_nest_non_string_uses_rule_default() {
-        let mut r = rule(Some("num"), "out", TransformType::Nest { separator: ".".to_string() });
+        let mut r = rule(
+            Some("num"),
+            "out",
+            TransformType::Nest {
+                separator: ".".to_string(),
+            },
+        );
         r.default = Some(json!("x.y"));
         let rules = vec![r];
         // source has a number — nest expects a string, so it returns Null.
@@ -1035,7 +1118,11 @@ mod tests {
 
     #[test]
     fn test_concat_fel_expression() {
-        let rules = vec![rule(None, "full", TransformType::Concat("$first & ' ' & $last".to_string()))];
+        let rules = vec![rule(
+            None,
+            "full",
+            TransformType::Concat("$first & ' ' & $last".to_string()),
+        )];
         let source = json!({ "first": "Alice", "last": "Smith" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["full"], "Alice Smith");
@@ -1044,7 +1131,11 @@ mod tests {
     #[test]
     fn test_split_fel_into_object() {
         // FEL expression that builds an object from source fields
-        let rules = vec![rule(None, "parts", TransformType::Split("{first: $first, last: $last}".to_string()))];
+        let rules = vec![rule(
+            None,
+            "parts",
+            TransformType::Split("{first: $first, last: $last}".to_string()),
+        )];
         let source = json!({ "first": "Alice", "last": "Smith" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["parts"]["first"], "Alice");
@@ -1212,7 +1303,11 @@ mod tests {
         }];
         let source = json!({ "val": "unknown" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
-        assert_eq!(result.output["out"], Value::Null, "Error strategy returns null");
+        assert_eq!(
+            result.output["out"],
+            Value::Null,
+            "Error strategy returns null"
+        );
         assert_eq!(result.diagnostics.len(), 1);
         assert!(result.diagnostics[0].message.contains("No value map entry"));
     }
@@ -1222,7 +1317,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.6 — "CoerceType::Date passes through string values"
     #[test]
     fn coerce_date_passes_string() {
-        let rules = vec![rule(Some("d"), "out", TransformType::Coerce(CoerceType::Date))];
+        let rules = vec![rule(
+            Some("d"),
+            "out",
+            TransformType::Coerce(CoerceType::Date),
+        )];
         let source = json!({ "d": "2025-01-15" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], "2025-01-15");
@@ -1231,7 +1330,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.6 — "CoerceType::Date returns null for non-string"
     #[test]
     fn coerce_date_non_string_is_null() {
-        let rules = vec![rule(Some("d"), "out", TransformType::Coerce(CoerceType::Date))];
+        let rules = vec![rule(
+            Some("d"),
+            "out",
+            TransformType::Coerce(CoerceType::Date),
+        )];
         let source = json!({ "d": 12345 });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], Value::Null);
@@ -1240,7 +1343,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.6 — "CoerceType::DateTime passes through string values"
     #[test]
     fn coerce_datetime_passes_string() {
-        let rules = vec![rule(Some("dt"), "out", TransformType::Coerce(CoerceType::DateTime))];
+        let rules = vec![rule(
+            Some("dt"),
+            "out",
+            TransformType::Coerce(CoerceType::DateTime),
+        )];
         let source = json!({ "dt": "2025-01-15T10:30:00Z" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], "2025-01-15T10:30:00Z");
@@ -1251,7 +1358,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.6 — "Coerce(Number) on unparseable string returns null"
     #[test]
     fn coerce_number_unparseable_string_is_null() {
-        let rules = vec![rule(Some("x"), "out", TransformType::Coerce(CoerceType::Number))];
+        let rules = vec![rule(
+            Some("x"),
+            "out",
+            TransformType::Coerce(CoerceType::Number),
+        )];
         let source = json!({ "x": "not-a-number" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], Value::Null);
@@ -1260,7 +1371,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.6 — "Coerce(Integer) on non-integer string returns null"
     #[test]
     fn coerce_integer_unparseable_string_is_null() {
-        let rules = vec![rule(Some("x"), "out", TransformType::Coerce(CoerceType::Integer))];
+        let rules = vec![rule(
+            Some("x"),
+            "out",
+            TransformType::Coerce(CoerceType::Integer),
+        )];
         let source = json!({ "x": "abc" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], Value::Null);
@@ -1269,7 +1384,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.6 — "Coerce(Boolean) on unrecognized string returns null"
     #[test]
     fn coerce_boolean_unknown_string_is_null() {
-        let rules = vec![rule(Some("x"), "out", TransformType::Coerce(CoerceType::Boolean))];
+        let rules = vec![rule(
+            Some("x"),
+            "out",
+            TransformType::Coerce(CoerceType::Boolean),
+        )];
         let source = json!({ "x": "maybe" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], Value::Null);
@@ -1278,7 +1397,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.6 — "Coerce(Number) on null returns null"
     #[test]
     fn coerce_number_null_is_null() {
-        let rules = vec![rule(Some("x"), "out", TransformType::Coerce(CoerceType::Number))];
+        let rules = vec![rule(
+            Some("x"),
+            "out",
+            TransformType::Coerce(CoerceType::Number),
+        )];
         let source = json!({ "x": null });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], Value::Null);
@@ -1287,7 +1410,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.6 — "Coerce(Number) from bool converts to 0/1"
     #[test]
     fn coerce_number_from_bool() {
-        let rules = vec![rule(Some("x"), "out", TransformType::Coerce(CoerceType::Number))];
+        let rules = vec![rule(
+            Some("x"),
+            "out",
+            TransformType::Coerce(CoerceType::Number),
+        )];
         let source = json!({ "x": true });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], 1);
@@ -1298,7 +1425,11 @@ mod tests {
     /// Spec: mapping-spec.md §4.7 — "FEL parse error in Expression transform emits diagnostic"
     #[test]
     fn expression_parse_error_emits_diagnostic() {
-        let rules = vec![rule(None, "out", TransformType::Expression("invalid ++ syntax".to_string()))];
+        let rules = vec![rule(
+            None,
+            "out",
+            TransformType::Expression("invalid ++ syntax".to_string()),
+        )];
         let source = json!({});
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
         assert_eq!(result.output["out"], Value::Null);
@@ -1320,7 +1451,10 @@ mod tests {
         };
         let source = json!({ "name": "Alice" });
         let result = execute_mapping_doc(&doc, &source, MappingDirection::Forward);
-        assert_eq!(result.output["name"], "Alice", "Rule output takes priority over default");
+        assert_eq!(
+            result.output["name"], "Alice",
+            "Rule output takes priority over default"
+        );
     }
 
     #[test]
@@ -1356,7 +1490,10 @@ mod tests {
         // Expression evaluates $first from the *source* doc (which is the reverse
         // input). $first does not exist → null, so output is NOT "Alice".
         // This documents that expression transforms are not automatically inverted.
-        assert_ne!(result.output.get("first").and_then(|v| v.as_str()), Some("Alice"));
+        assert_ne!(
+            result.output.get("first").and_then(|v| v.as_str()),
+            Some("Alice")
+        );
     }
 
     /// Spec: mapping/mapping-spec.md §4.5, §5.2 — Coerce transform reverse.
@@ -1373,7 +1510,11 @@ mod tests {
         let fwd = execute_mapping(&rules, &json!({"count": 42}), MappingDirection::Forward);
         assert_eq!(fwd.output["countStr"], "42");
         // Reverse: "42" (at target path) → coerce to String again (engine reapplies same transform)
-        let rev = execute_mapping(&rules, &json!({"countStr": "42"}), MappingDirection::Reverse);
+        let rev = execute_mapping(
+            &rules,
+            &json!({"countStr": "42"}),
+            MappingDirection::Reverse,
+        );
         // In reverse, source path becomes "countStr" and target becomes "count",
         // and the same Coerce(String) transform is applied to the value at "countStr".
         assert_eq!(rev.output["count"], "42");
@@ -1402,9 +1543,15 @@ mod tests {
         let rules = vec![rule(
             Some("tags"),
             "flat",
-            TransformType::Flatten { separator: ",".to_string() },
+            TransformType::Flatten {
+                separator: ",".to_string(),
+            },
         )];
-        let fwd = execute_mapping(&rules, &json!({"tags": ["a", "b", "c"]}), MappingDirection::Forward);
+        let fwd = execute_mapping(
+            &rules,
+            &json!({"tags": ["a", "b", "c"]}),
+            MappingDirection::Forward,
+        );
         assert_eq!(fwd.output["flat"], "a,b,c");
         // Reverse applies Flatten to the value at "flat" and writes to "tags".
         // Flatten of a string scalar returns the string itself — it does NOT
@@ -1421,7 +1568,9 @@ mod tests {
         let rules = vec![rule(
             Some("path"),
             "nested",
-            TransformType::Nest { separator: ".".to_string() },
+            TransformType::Nest {
+                separator: ".".to_string(),
+            },
         )];
         let fwd = execute_mapping(&rules, &json!({"path": "a.b"}), MappingDirection::Forward);
         assert_eq!(fwd.output["nested"]["a"]["b"], true);
@@ -1534,7 +1683,7 @@ mod tests {
                 target_path: "out".to_string(),
                 transform: TransformType::Constant(json!("rule_a")),
                 condition: None,
-                priority: 10,          // high forward priority
+                priority: 10,              // high forward priority
                 reverse_priority: Some(1), // low reverse priority → executes last in reverse
                 default: None,
                 bidirectional: true,
@@ -1544,7 +1693,7 @@ mod tests {
                 target_path: "out".to_string(),
                 transform: TransformType::Constant(json!("rule_b")),
                 condition: None,
-                priority: 1,           // low forward priority
+                priority: 1,                // low forward priority
                 reverse_priority: Some(10), // high reverse priority → executes first in reverse
                 default: None,
                 bidirectional: true,
@@ -1613,5 +1762,71 @@ mod tests {
         assert_eq!(arr[1], Value::Null);
         assert_eq!(arr[2], Value::Null);
         assert_eq!(arr[3], 99);
+    }
+    /// Spec: mapping/mapping-spec.md §4.6 — UnmappedStrategy::Drop omits target field.
+    #[test]
+    fn test_unmapped_drop_omits_field() {
+        let rules = vec![MappingRule {
+            source_path: Some("val".to_string()),
+            target_path: "out".to_string(),
+            transform: TransformType::ValueMap {
+                forward: vec![(json!("a"), json!(1))],
+                unmapped: UnmappedStrategy::Drop,
+            },
+            condition: None,
+            priority: 0,
+            reverse_priority: None,
+            default: None,
+            bidirectional: true,
+        }];
+        let source = json!({ "val": "unknown" });
+        let result = execute_mapping(&rules, &source, MappingDirection::Forward);
+        assert!(
+            result.output.get("out").is_none(),
+            "drop should omit the target field"
+        );
+        assert_eq!(result.rules_applied, 0);
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.6 — UnmappedStrategy::Default uses rule default.
+    #[test]
+    fn test_unmapped_default_uses_rule_default() {
+        let rules = vec![MappingRule {
+            source_path: Some("val".to_string()),
+            target_path: "out".to_string(),
+            transform: TransformType::ValueMap {
+                forward: vec![(json!("a"), json!(1))],
+                unmapped: UnmappedStrategy::Default,
+            },
+            condition: None,
+            priority: 0,
+            reverse_priority: None,
+            default: Some(json!("fallback")),
+            bidirectional: true,
+        }];
+        let source = json!({ "val": "unknown" });
+        let result = execute_mapping(&rules, &source, MappingDirection::Forward);
+        assert_eq!(result.output["out"], "fallback");
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.6 — UnmappedStrategy::Default with no rule default yields null.
+    #[test]
+    fn test_unmapped_default_without_rule_default_yields_null() {
+        let rules = vec![MappingRule {
+            source_path: Some("val".to_string()),
+            target_path: "out".to_string(),
+            transform: TransformType::ValueMap {
+                forward: vec![(json!("a"), json!(1))],
+                unmapped: UnmappedStrategy::Default,
+            },
+            condition: None,
+            priority: 0,
+            reverse_priority: None,
+            default: None,
+            bidirectional: true,
+        }];
+        let source = json!({ "val": "unknown" });
+        let result = execute_mapping(&rules, &source, MappingDirection::Forward);
+        assert_eq!(result.output["out"], Value::Null);
     }
 }

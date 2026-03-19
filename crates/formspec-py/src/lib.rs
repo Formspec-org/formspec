@@ -610,12 +610,52 @@ fn parse_direction(s: &str) -> PyResult<runtime_mapping::MappingDirection> {
 }
 
 fn parse_mapping_document(val: &Value) -> PyResult<runtime_mapping::MappingDocument> {
+    parse_mapping_document_inner(val)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))
+}
+
+// ── Testable inner functions (no PyO3 dependency) ───────────────
+
+/// Parse a coerce type from a JSON value.
+///
+/// Accepts both string shorthand (`"number"`) and object form (`{"from": "string", "to": "number"}`).
+/// Returns `None` for unknown type strings, non-string/non-object inputs, or object form missing `"to"`.
+///
+/// Note: The object form `"from"` field is accepted but ignored — coercion target is all that matters
+/// for the runtime. The `from` field is informational for documentation/validation purposes only.
+fn parse_coerce_type(val: &Value) -> Option<runtime_mapping::CoerceType> {
+    match val {
+        Value::String(s) => coerce_type_from_str(s),
+        Value::Object(obj) => {
+            obj.get("to")
+                .and_then(|v| v.as_str())
+                .and_then(coerce_type_from_str)
+        }
+        _ => None,
+    }
+}
+
+/// Map a coerce type name string to the enum variant.
+fn coerce_type_from_str(s: &str) -> Option<runtime_mapping::CoerceType> {
+    match s {
+        "string" => Some(runtime_mapping::CoerceType::String),
+        "number" => Some(runtime_mapping::CoerceType::Number),
+        "integer" => Some(runtime_mapping::CoerceType::Integer),
+        "boolean" => Some(runtime_mapping::CoerceType::Boolean),
+        "date" => Some(runtime_mapping::CoerceType::Date),
+        "datetime" => Some(runtime_mapping::CoerceType::DateTime),
+        _ => None,
+    }
+}
+
+/// Parse a mapping document from a JSON value. Returns `Err(String)` on failure.
+fn parse_mapping_document_inner(val: &Value) -> Result<runtime_mapping::MappingDocument, String> {
     let obj = val.as_object()
-        .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("mapping doc must be an object"))?;
+        .ok_or_else(|| "mapping doc must be an object".to_string())?;
 
     let rules_val = obj.get("rules")
-        .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("mapping doc missing 'rules'"))?;
-    let rules = parse_mapping_rules(rules_val)?;
+        .ok_or_else(|| "mapping doc missing 'rules'".to_string())?;
+    let rules = parse_mapping_rules_inner(rules_val)?;
 
     let defaults = obj.get("defaults")
         .and_then(|v| v.as_object())
@@ -680,6 +720,8 @@ fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<runtime_mapping::Mapping
                     forward,
                     unmapped: match obj.get("unmapped").and_then(|v| v.as_str()) {
                         Some("error") => runtime_mapping::UnmappedStrategy::Error,
+                        Some("drop") => runtime_mapping::UnmappedStrategy::Drop,
+                        Some("default") => runtime_mapping::UnmappedStrategy::Default,
                         _ => runtime_mapping::UnmappedStrategy::PassThrough,
                     },
                 }
@@ -1451,5 +1493,224 @@ mod tests {
     #[test]
     fn rejects_unknown_transform_type() {
         expect_err(json!([{"sourcePath": "a", "targetPath": "b", "transform": "magic"}]), "unknown transform type: magic");
+    // ── Finding 78: parse_coerce_type ───────────────────────────
+
+    /// Spec: mapping/mapping-spec.md §3.3.2 — String shorthand for known coerce types.
+    #[test]
+    fn parse_coerce_type_string_shorthand_known() {
+        assert_eq!(parse_coerce_type(&json!("string")), Some(runtime_mapping::CoerceType::String));
+        assert_eq!(parse_coerce_type(&json!("number")), Some(runtime_mapping::CoerceType::Number));
+        assert_eq!(parse_coerce_type(&json!("integer")), Some(runtime_mapping::CoerceType::Integer));
+        assert_eq!(parse_coerce_type(&json!("boolean")), Some(runtime_mapping::CoerceType::Boolean));
+        assert_eq!(parse_coerce_type(&json!("date")), Some(runtime_mapping::CoerceType::Date));
+        assert_eq!(parse_coerce_type(&json!("datetime")), Some(runtime_mapping::CoerceType::DateTime));
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.3.2 — Unknown string shorthand returns None.
+    #[test]
+    fn parse_coerce_type_unknown_string_returns_none() {
+        assert_eq!(parse_coerce_type(&json!("uuid")), None);
+        assert_eq!(parse_coerce_type(&json!("money")), None);
+        assert_eq!(parse_coerce_type(&json!("")), None);
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.3.2 — Object form with valid "to" key.
+    #[test]
+    fn parse_coerce_type_object_form_with_to() {
+        assert_eq!(
+            parse_coerce_type(&json!({"from": "date", "to": "string", "format": "MM/DD/YYYY"})),
+            Some(runtime_mapping::CoerceType::String)
+        );
+        assert_eq!(
+            parse_coerce_type(&json!({"from": "string", "to": "number"})),
+            Some(runtime_mapping::CoerceType::Number)
+        );
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.3.2 — Object form missing "to" key returns None.
+    #[test]
+    fn parse_coerce_type_object_missing_to_returns_none() {
+        assert_eq!(parse_coerce_type(&json!({"from": "string"})), None);
+        assert_eq!(parse_coerce_type(&json!({})), None);
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.3.2 — Object form with unknown "to" value returns None.
+    #[test]
+    fn parse_coerce_type_object_unknown_to_returns_none() {
+        assert_eq!(parse_coerce_type(&json!({"from": "string", "to": "uuid"})), None);
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.3.2 — Non-string, non-object input returns None.
+    #[test]
+    fn parse_coerce_type_non_string_non_object_returns_none() {
+        assert_eq!(parse_coerce_type(&json!(42)), None);
+        assert_eq!(parse_coerce_type(&json!(null)), None);
+        assert_eq!(parse_coerce_type(&json!([])), None);
+        assert_eq!(parse_coerce_type(&json!(true)), None);
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.3.2 — Object form "from" field is ignored.
+    /// The "from" field is accepted but has no effect on the returned CoerceType.
+    #[test]
+    fn parse_coerce_type_object_from_field_ignored() {
+        // Same "to" regardless of "from" value
+        let with_from = parse_coerce_type(&json!({"from": "date", "to": "string"}));
+        let without_from = parse_coerce_type(&json!({"to": "string"}));
+        assert_eq!(with_from, without_from);
+        assert_eq!(with_from, Some(runtime_mapping::CoerceType::String));
+    }
+
+    // ── Finding 79: parse_mapping_document_inner ────────────────
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Valid mapping document with autoMap and rules.
+    #[test]
+    fn parse_mapping_document_inner_valid_with_automap_and_rules() {
+        let doc = json!({
+            "rules": [
+                {"sourcePath": "name", "targetPath": "fullName", "transform": "preserve"}
+            ],
+            "autoMap": true
+        });
+        let result = parse_mapping_document_inner(&doc).unwrap();
+        assert_eq!(result.rules.len(), 1);
+        assert!(result.auto_map);
+        assert!(result.defaults.is_none());
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Minimal document with empty rules.
+    #[test]
+    fn parse_mapping_document_inner_minimal_empty_rules() {
+        let doc = json!({"rules": []});
+        let result = parse_mapping_document_inner(&doc).unwrap();
+        assert_eq!(result.rules.len(), 0);
+        assert!(!result.auto_map);
+        assert!(result.defaults.is_none());
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Non-object input returns error.
+    #[test]
+    fn parse_mapping_document_inner_non_object_rejected() {
+        assert!(parse_mapping_document_inner(&json!("string")).is_err());
+        assert!(parse_mapping_document_inner(&json!(42)).is_err());
+        assert!(parse_mapping_document_inner(&json!(null)).is_err());
+        assert!(parse_mapping_document_inner(&json!([])).is_err());
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Document with defaults.
+    #[test]
+    fn parse_mapping_document_inner_with_defaults() {
+        let doc = json!({
+            "rules": [],
+            "defaults": {"separator": ".", "unmapped": "error"}
+        });
+        let result = parse_mapping_document_inner(&doc).unwrap();
+        let defaults = result.defaults.unwrap();
+        assert_eq!(defaults.get("separator").unwrap(), ".");
+        assert_eq!(defaults.get("unmapped").unwrap(), "error");
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Missing "rules" key returns error.
+    #[test]
+    fn parse_mapping_document_inner_missing_rules_rejected() {
+        let doc = json!({"autoMap": true});
+        assert!(parse_mapping_document_inner(&doc).is_err());
+    }
+
+    // ── Finding 79: parse_mapping_rules_inner ───────────────────
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Rules array parse with multiple transforms.
+    #[test]
+    fn parse_mapping_rules_inner_multiple_transforms() {
+        let rules = json!([
+            {"sourcePath": "a", "targetPath": "b", "transform": "preserve"},
+            {"targetPath": "c", "transform": "drop"},
+            {"sourcePath": "d", "targetPath": "e", "transform": "coerce", "coerce": "number"}
+        ]);
+        let result = parse_mapping_rules_inner(&rules).unwrap();
+        assert_eq!(result.len(), 3);
+        assert!(matches!(result[0].transform, runtime_mapping::TransformType::Preserve));
+        assert!(matches!(result[1].transform, runtime_mapping::TransformType::Drop));
+        assert!(matches!(result[2].transform, runtime_mapping::TransformType::Coerce(runtime_mapping::CoerceType::Number)));
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Non-array input returns error.
+    #[test]
+    fn parse_mapping_rules_inner_non_array_rejected() {
+        assert!(parse_mapping_rules_inner(&json!({})).is_err());
+        assert!(parse_mapping_rules_inner(&json!("rules")).is_err());
+        assert!(parse_mapping_rules_inner(&json!(null)).is_err());
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Rule with unknown transform returns error.
+    #[test]
+    fn parse_mapping_rules_inner_unknown_transform_rejected() {
+        let rules = json!([{"sourcePath": "a", "targetPath": "b", "transform": "magical"}]);
+        assert!(parse_mapping_rules_inner(&rules).is_err());
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.1 — Default transform is "preserve".
+    #[test]
+    fn parse_mapping_rules_inner_default_transform_is_preserve() {
+        let rules = json!([{"sourcePath": "a", "targetPath": "b"}]);
+        let result = parse_mapping_rules_inner(&rules).unwrap();
+        assert!(matches!(result[0].transform, runtime_mapping::TransformType::Preserve));
+    }
+
+    // ── Finding 80: UnmappedStrategy parsing ────────────────────
+
+    /// Spec: mapping/mapping-spec.md §4.6 — All four unmapped strategies parse correctly.
+    #[test]
+    fn parse_mapping_rules_inner_all_unmapped_strategies() {
+        for (strategy_str, expected) in [
+            ("error", runtime_mapping::UnmappedStrategy::Error),
+            ("drop", runtime_mapping::UnmappedStrategy::Drop),
+            ("default", runtime_mapping::UnmappedStrategy::Default),
+            ("passthrough", runtime_mapping::UnmappedStrategy::PassThrough),
+        ] {
+            let rules = json!([{
+                "sourcePath": "a",
+                "targetPath": "b",
+                "transform": "valueMap",
+                "valueMap": {"x": 1},
+                "unmapped": strategy_str
+            }]);
+            let result = parse_mapping_rules_inner(&rules).unwrap();
+            if let runtime_mapping::TransformType::ValueMap { unmapped, .. } = &result[0].transform {
+                assert_eq!(*unmapped, expected, "strategy '{strategy_str}' did not match");
+            } else {
+                panic!("expected ValueMap transform");
+            }
+        }
+    }
+
+    /// Spec: mapping/mapping-spec.md §4.6 — Unknown unmapped strategy defaults to passthrough.
+    #[test]
+    fn parse_mapping_rules_inner_unknown_unmapped_defaults_to_passthrough() {
+        let rules = json!([{
+            "sourcePath": "a",
+            "targetPath": "b",
+            "transform": "valueMap",
+            "valueMap": {"x": 1},
+            "unmapped": "nonexistent"
+        }]);
+        let result = parse_mapping_rules_inner(&rules).unwrap();
+        if let runtime_mapping::TransformType::ValueMap { unmapped, .. } = &result[0].transform {
+            assert_eq!(*unmapped, runtime_mapping::UnmappedStrategy::PassThrough);
+        } else {
+            panic!("expected ValueMap transform");
+        }
+    }
+
+    /// Spec: mapping/mapping-spec.md §3.3.2 — Coerce with object form parsed through rules.
+    #[test]
+    fn parse_mapping_rules_inner_coerce_object_form() {
+        let rules = json!([{
+            "sourcePath": "dob",
+            "targetPath": "dob_str",
+            "transform": "coerce",
+            "coerce": {"from": "date", "to": "string", "format": "MM/DD/YYYY"}
+        }]);
+        let result = parse_mapping_rules_inner(&rules).unwrap();
+        assert!(matches!(result[0].transform, runtime_mapping::TransformType::Coerce(runtime_mapping::CoerceType::String)));
     }
 }
