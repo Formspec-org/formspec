@@ -735,58 +735,175 @@ mod tests {
         );
     }
 
+    /// Spec: fel-grammar.md §7 — precedence-preserving parse tree.
+    /// `1 + 2 * 3` must parse as Add(1, Mul(2, 3)), not Mul(Add(1, 2), 3).
     #[test]
     fn test_parse_arithmetic_precedence() {
         let expr = parse("1 + 2 * 3").unwrap();
-        assert!(matches!(expr, Expr::BinaryOp { op: BinaryOp::Add, .. }));
+        match expr {
+            Expr::BinaryOp { op: BinaryOp::Add, left, right } => {
+                assert_eq!(*left, Expr::Number(Decimal::from(1)));
+                match *right {
+                    Expr::BinaryOp { op: BinaryOp::Mul, left: rl, right: rr } => {
+                        assert_eq!(*rl, Expr::Number(Decimal::from(2)));
+                        assert_eq!(*rr, Expr::Number(Decimal::from(3)));
+                    }
+                    other => panic!("expected Mul on right, got {other:?}"),
+                }
+            }
+            other => panic!("expected Add at top, got {other:?}"),
+        }
     }
 
+    /// Spec: fel-grammar.md §7 — function call with nested field ref + wildcard.
     #[test]
     fn test_parse_function_call() {
         let expr = parse("sum($items[*].qty)").unwrap();
-        assert!(matches!(expr, Expr::FunctionCall { .. }));
+        match expr {
+            Expr::FunctionCall { name, args } => {
+                assert_eq!(name, "sum");
+                assert_eq!(args.len(), 1);
+                assert_eq!(args[0], Expr::FieldRef {
+                    name: Some("items".into()),
+                    path: vec![PathSegment::Wildcard, PathSegment::Dot("qty".into())],
+                });
+            }
+            other => panic!("expected FunctionCall, got {other:?}"),
+        }
     }
 
+    /// Spec: fel-grammar.md §7 — if...then...else keyword form.
     #[test]
     fn test_parse_if_then_else() {
         let expr = parse("if $x > 0 then 'positive' else 'non-positive'").unwrap();
-        assert!(matches!(expr, Expr::IfThenElse { .. }));
+        match expr {
+            Expr::IfThenElse { condition, then_branch, else_branch } => {
+                // condition: $x > 0
+                match *condition {
+                    Expr::BinaryOp { op: BinaryOp::Gt, left, right } => {
+                        assert_eq!(*left, Expr::FieldRef { name: Some("x".into()), path: vec![] });
+                        assert_eq!(*right, Expr::Number(Decimal::from(0)));
+                    }
+                    other => panic!("expected Gt condition, got {other:?}"),
+                }
+                assert_eq!(*then_branch, Expr::String("positive".into()));
+                assert_eq!(*else_branch, Expr::String("non-positive".into()));
+            }
+            other => panic!("expected IfThenElse, got {other:?}"),
+        }
     }
 
+    /// Spec: fel-grammar.md §7 — if(...) function call form.
     #[test]
     fn test_parse_if_function() {
         let expr = parse("if($x > 0, 'yes', 'no')").unwrap();
-        assert!(matches!(expr, Expr::FunctionCall { .. }));
+        match expr {
+            Expr::FunctionCall { name, args } => {
+                assert_eq!(name, "if");
+                assert_eq!(args.len(), 3);
+                match &args[0] {
+                    Expr::BinaryOp { op: BinaryOp::Gt, .. } => {}
+                    other => panic!("expected Gt as first arg, got {other:?}"),
+                }
+                assert_eq!(args[1], Expr::String("yes".into()));
+                assert_eq!(args[2], Expr::String("no".into()));
+            }
+            other => panic!("expected FunctionCall, got {other:?}"),
+        }
     }
 
+    /// Spec: fel-grammar.md §7 — ternary `? :` with condition, branches.
     #[test]
     fn test_parse_ternary() {
         let expr = parse("$x > 0 ? 'yes' : 'no'").unwrap();
-        assert!(matches!(expr, Expr::Ternary { .. }));
+        match expr {
+            Expr::Ternary { condition, then_branch, else_branch } => {
+                match *condition {
+                    Expr::BinaryOp { op: BinaryOp::Gt, left, right } => {
+                        assert_eq!(*left, Expr::FieldRef { name: Some("x".into()), path: vec![] });
+                        assert_eq!(*right, Expr::Number(Decimal::from(0)));
+                    }
+                    other => panic!("expected Gt condition, got {other:?}"),
+                }
+                assert_eq!(*then_branch, Expr::String("yes".into()));
+                assert_eq!(*else_branch, Expr::String("no".into()));
+            }
+            other => panic!("expected Ternary, got {other:?}"),
+        }
     }
 
+    /// Spec: fel-grammar.md §7 — let binding structure.
     #[test]
     fn test_parse_let_binding() {
         let expr = parse("let x = 5 in x + 1").unwrap();
-        assert!(matches!(expr, Expr::LetBinding { .. }));
+        match expr {
+            Expr::LetBinding { name, value, body } => {
+                assert_eq!(name, "x");
+                assert_eq!(*value, Expr::Number(Decimal::from(5)));
+                match *body {
+                    Expr::BinaryOp { op: BinaryOp::Add, left, right } => {
+                        assert_eq!(*left, Expr::FieldRef { name: Some("x".into()), path: vec![] });
+                        assert_eq!(*right, Expr::Number(Decimal::from(1)));
+                    }
+                    other => panic!("expected Add in body, got {other:?}"),
+                }
+            }
+            other => panic!("expected LetBinding, got {other:?}"),
+        }
     }
 
+    /// Spec: fel-grammar.md §7 — `in` membership with array literal.
     #[test]
     fn test_parse_membership() {
         let expr = parse("$status in ['active', 'pending']").unwrap();
-        assert!(matches!(expr, Expr::Membership { negated: false, .. }));
+        match expr {
+            Expr::Membership { value, container, negated } => {
+                assert!(!negated);
+                assert_eq!(*value, Expr::FieldRef { name: Some("status".into()), path: vec![] });
+                match *container {
+                    Expr::Array(ref elems) => {
+                        assert_eq!(elems.len(), 2);
+                        assert_eq!(elems[0], Expr::String("active".into()));
+                        assert_eq!(elems[1], Expr::String("pending".into()));
+                    }
+                    other => panic!("expected Array container, got {other:?}"),
+                }
+            }
+            other => panic!("expected Membership, got {other:?}"),
+        }
     }
 
+    /// Spec: fel-grammar.md §7 — `not in` membership.
     #[test]
     fn test_parse_not_in() {
         let expr = parse("$status not in ['deleted']").unwrap();
-        assert!(matches!(expr, Expr::Membership { negated: true, .. }));
+        match expr {
+            Expr::Membership { value, container, negated } => {
+                assert!(negated);
+                assert_eq!(*value, Expr::FieldRef { name: Some("status".into()), path: vec![] });
+                match *container {
+                    Expr::Array(ref elems) => {
+                        assert_eq!(elems.len(), 1);
+                        assert_eq!(elems[0], Expr::String("deleted".into()));
+                    }
+                    other => panic!("expected Array container, got {other:?}"),
+                }
+            }
+            other => panic!("expected Membership, got {other:?}"),
+        }
     }
 
+    /// Spec: fel-grammar.md §7 — null coalesce `??` structure.
     #[test]
     fn test_parse_null_coalesce() {
         let expr = parse("$x ?? 0").unwrap();
-        assert!(matches!(expr, Expr::NullCoalesce { .. }));
+        match expr {
+            Expr::NullCoalesce { left, right } => {
+                assert_eq!(*left, Expr::FieldRef { name: Some("x".into()), path: vec![] });
+                assert_eq!(*right, Expr::Number(Decimal::from(0)));
+            }
+            other => panic!("expected NullCoalesce, got {other:?}"),
+        }
     }
 
     #[test]

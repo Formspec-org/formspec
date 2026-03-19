@@ -38,7 +38,11 @@ fn walk(expr: &Expr, deps: &mut Dependencies, let_vars: &mut Vec<String>) {
         Expr::FieldRef { name, path } => {
             match name {
                 None => {
-                    deps.has_self_ref = true;
+                    // Bare $ is rebound inside countWhere predicates;
+                    // only mark self-ref if not suppressed.
+                    if !let_vars.contains(&"$".to_string()) {
+                        deps.has_self_ref = true;
+                    }
                 }
                 Some(n) => {
                     // Skip let-bound variables
@@ -297,5 +301,60 @@ mod tests {
         assert!(d.fields.contains("a"));
         assert!(d.fields.contains("b"));
         assert!(d.fields.contains("c"));
+    }
+
+    /// Spec: core/spec.md §3.6.1, fel-grammar.md §4 precedence 7 —
+    /// NullCoalesce (`??`) dep extraction must walk both sides.
+    #[test]
+    fn null_coalesce_extracts_deps_from_both_sides() {
+        let d = deps("$fieldA ?? $fieldB");
+        assert!(d.fields.contains("fieldA"), "left side of ?? must produce a dep");
+        assert!(d.fields.contains("fieldB"), "right side of ?? must produce a dep");
+        assert_eq!(d.fields.len(), 2);
+    }
+
+    /// Spec: core/spec.md §3.6.1, fel-grammar.md §4 precedence 1 —
+    /// Ternary (`? :`) dep extraction must walk condition, true-branch, and false-branch.
+    #[test]
+    fn ternary_extracts_deps_from_all_three_branches() {
+        let d = deps("$cond ? $yes : $no");
+        assert!(d.fields.contains("cond"), "condition must produce a dep");
+        assert!(d.fields.contains("yes"), "true-branch must produce a dep");
+        assert!(d.fields.contains("no"), "false-branch must produce a dep");
+        assert_eq!(d.fields.len(), 3);
+    }
+
+    /// Spec: core/spec.md §3.6.1, fel-grammar.md §4.2-4.3 —
+    /// Field refs nested inside object and array literals must be found.
+    #[test]
+    fn object_and_array_literal_dep_extraction() {
+        let d = deps("{total: $price, items: [$qty, $tax]}");
+        assert!(d.fields.contains("price"), "object value must produce a dep");
+        assert!(d.fields.contains("qty"), "array element must produce a dep");
+        assert!(d.fields.contains("tax"), "array element must produce a dep");
+        assert_eq!(d.fields.len(), 3);
+    }
+
+    /// Spec: core/spec.md §3.5.1 — countWhere's predicate rebinds `$` to the
+    /// current element. Bare `$` inside the predicate is NOT a field self-ref.
+    #[test]
+    fn count_where_rebinds_bare_dollar() {
+        let d = deps("countWhere($items, $ > 3)");
+        assert!(d.fields.contains("items"), "first arg field ref must be found");
+        assert!(!d.has_self_ref, "bare $ in countWhere predicate is rebound, not a self-ref");
+        // The predicate's `$` should NOT appear in fields
+        assert_eq!(d.fields.len(), 1);
+    }
+
+    /// Spec: core/spec.md §3.6.1 — deeply nested function calls (3+ levels)
+    /// must recursively extract all deps.
+    #[test]
+    fn deeply_nested_function_calls_extract_all_deps() {
+        let d = deps("sum(round($a + $b) + countWhere($items, $ > $threshold))");
+        assert!(d.fields.contains("a"));
+        assert!(d.fields.contains("b"));
+        assert!(d.fields.contains("items"));
+        assert!(d.fields.contains("threshold"));
+        assert_eq!(d.fields.len(), 4);
     }
 }

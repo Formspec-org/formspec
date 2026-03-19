@@ -138,6 +138,21 @@ impl Default for ExtensionRegistry {
 }
 
 #[cfg(test)]
+/// Design note (spec: core/spec.md §3.12, registry/extension-registry.md §7):
+///
+/// ExtensionRegistry is intentionally isolated from the evaluator's built-in
+/// function dispatch. The spec says extensions "MAY supplement but MUST NOT
+/// override" built-ins. This is enforced structurally: the evaluator matches
+/// built-in names first in `eval_function`, and only falls through to the
+/// extension registry for unknown names. The registry itself independently
+/// rejects registration of names that collide with built-ins or reserved words.
+///
+/// This two-layer defense is by design, not accident. The evaluator's match
+/// arms guarantee built-in semantics can never be replaced at runtime, while
+/// the registry's registration-time check gives early feedback to extension
+/// authors. Neither layer alone would be sufficient: without the evaluator
+/// guard, a bug in the registry could allow shadowing; without the registry
+/// guard, extensions would silently be ignored instead of rejected.
 mod tests {
     use super::*;
     use rust_decimal::Decimal;

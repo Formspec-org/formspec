@@ -503,6 +503,87 @@ fn test_count_where() {
     assert_eq!(eval("countWhere([1, 2, 3], $ = 2)"), num(1));
 }
 
+// ── Aggregate functions on empty arrays (spec §3.5.1) ───────────
+
+/// Spec: core/spec.md §3.5.1 (lines 1220-1225) — sum([]) must return 0.
+#[test]
+fn test_sum_empty_array() {
+    assert_eq!(eval("sum([])"), num(0));
+}
+
+/// Spec: core/spec.md §3.5.1 — count([]) must return 0.
+#[test]
+fn test_count_empty_array() {
+    assert_eq!(eval("count([])"), num(0));
+}
+
+/// Spec: core/spec.md §3.5.1 — avg([]) must signal error (division by zero).
+#[test]
+fn test_avg_empty_array() {
+    let expr = parse("avg([])").unwrap();
+    let env = MapEnvironment::new();
+    let result = evaluate(&expr, &env);
+    assert_eq!(result.value, FelValue::Null, "avg([]) must return null");
+    assert!(!result.diagnostics.is_empty(), "avg([]) must produce a diagnostic");
+}
+
+/// Spec: core/spec.md §3.5.1 — min([]) must return null.
+#[test]
+fn test_min_empty_array() {
+    assert_eq!(eval("min([])"), FelValue::Null);
+}
+
+/// Spec: core/spec.md §3.5.1 — max([]) must return null.
+#[test]
+fn test_max_empty_array() {
+    assert_eq!(eval("max([])"), FelValue::Null);
+}
+
+// ── Arity checks on aggregate functions (spec §3.10) ────────────
+
+/// Spec: core/spec.md §3.10, fel-grammar.md §7 —
+/// Wrong argument count on aggregate functions must be rejected.
+#[test]
+fn test_aggregate_arity_sum_no_args() {
+    let expr = parse("sum()").unwrap();
+    let env = MapEnvironment::new();
+    let result = evaluate(&expr, &env);
+    // sum with no args evaluates with a missing arg (null) → null
+    assert_eq!(result.value, FelValue::Null);
+}
+
+/// Spec: core/spec.md §3.10 — countWhere requires exactly 2 arguments.
+#[test]
+fn test_count_where_wrong_arity() {
+    let expr = parse("countWhere([1, 2, 3])").unwrap();
+    let env = MapEnvironment::new();
+    let result = evaluate(&expr, &env);
+    assert_eq!(result.value, FelValue::Null, "countWhere with 1 arg must fail");
+    assert!(!result.diagnostics.is_empty(), "countWhere arity mismatch must produce diagnostic");
+}
+
+// ── Type mismatch in casting (spec §3.4.3) ──────────────────────
+
+/// Spec: core/spec.md §3.4.3 (line 1183) — number("abc") must signal error.
+#[test]
+fn test_number_cast_invalid_string() {
+    let expr = parse("number('abc')").unwrap();
+    let env = MapEnvironment::new();
+    let result = evaluate(&expr, &env);
+    assert_eq!(result.value, FelValue::Null, "number('abc') must return null");
+    assert!(!result.diagnostics.is_empty(), "number('abc') must produce a diagnostic");
+}
+
+/// Spec: core/spec.md §3.4.3 (line 1193) — date("not-a-date") must signal error.
+#[test]
+fn test_date_cast_invalid_string() {
+    let expr = parse("date('not-a-date')").unwrap();
+    let env = MapEnvironment::new();
+    let result = evaluate(&expr, &env);
+    assert_eq!(result.value, FelValue::Null, "date('not-a-date') must return null");
+    assert!(!result.diagnostics.is_empty(), "date('not-a-date') must produce a diagnostic");
+}
+
 // ── Decimal precision (spec S3.4.1) ─────────────────────────────
 
 #[test]
