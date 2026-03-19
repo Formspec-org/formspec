@@ -213,6 +213,7 @@ git branch -d <branch-name>
 - Always use `.claude/worktrees/` — no other location. Already gitignored.
 - Run `npm install` after creating a worktree. Dependencies are per-worktree.
 - Verify tests pass in the worktree before starting work. Report failures before proceeding.
+- **Commit your work.** Every worktree agent MUST commit before finishing. Uncommitted changes in a worktree are invisible to `git log`, unreviewable, and will be lost when the worktree is removed. Commit early and often with descriptive messages — this is how we track what was done, by whom, on which branch. A worktree with uncommitted changes is a worktree that wasted its work.
 - Do not leave stale worktrees around. Clean up after merging or abandoning a branch.
 
 ## Development Workflow — Red-Green-Refactor
