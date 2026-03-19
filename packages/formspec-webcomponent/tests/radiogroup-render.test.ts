@@ -191,3 +191,124 @@ describe('RadioGroup rendering', () => {
         expect(radios.length, 'Should render 3 radio buttons').toBe(3);
     });
 });
+
+describe('RadioGroup accessibility', () => {
+    function renderRadioGroup() {
+        const el = document.createElement('formspec-render-radio') as any;
+        document.body.appendChild(el);
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:radio-a11y',
+            version: '1.0.0',
+            title: 'A11y Test',
+            items: [
+                {
+                    key: 'color',
+                    type: 'field',
+                    label: 'Favorite Color',
+                    hint: 'Pick one',
+                    dataType: 'choice',
+                    options: [
+                        { value: 'red', label: 'Red' },
+                        { value: 'blue', label: 'Blue' },
+                    ],
+                    presentation: { widgetHint: 'radio' },
+                },
+            ],
+        };
+        el.componentDocument = {
+            $formspecComponent: '1.0',
+            version: '1.0.0',
+            targetDefinition: { url: 'urn:test:radio-a11y' },
+            tree: {
+                component: 'Stack', nodeId: 'root',
+                children: [{ component: 'RadioGroup', bind: 'color' }],
+            },
+        };
+        el.render();
+        return el;
+    }
+
+    it('container has role="radiogroup" and aria-labelledby pointing to label', () => {
+        const el = renderRadioGroup();
+        const container = el.querySelector('[role="radiogroup"]');
+        expect(container).not.toBeNull();
+        const labelledBy = container!.getAttribute('aria-labelledby');
+        expect(labelledBy).toBeTruthy();
+        const labelEl = el.querySelector(`#${labelledBy}`);
+        expect(labelEl).not.toBeNull();
+        expect(labelEl!.tagName).toBe('LABEL');
+    });
+
+    it('container has aria-describedby (not individual radio)', () => {
+        const el = renderRadioGroup();
+        const container = el.querySelector('[role="radiogroup"]');
+        expect(container!.getAttribute('aria-describedby')).toBeTruthy();
+        // Individual radios should NOT have aria-describedby
+        const radios = el.querySelectorAll('input[type="radio"]');
+        for (const radio of radios) {
+            expect(radio.getAttribute('aria-describedby')).toBeNull();
+        }
+    });
+});
+
+describe('CheckboxGroup accessibility', () => {
+    function renderCheckboxGroup() {
+        const el = document.createElement('formspec-render-radio') as any;
+        document.body.appendChild(el);
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:cb-a11y',
+            version: '1.0.0',
+            title: 'CB A11y Test',
+            items: [
+                {
+                    key: 'colors',
+                    type: 'field',
+                    label: 'Colors',
+                    hint: 'Pick many',
+                    dataType: 'choice',
+                    multiple: true,
+                    options: [
+                        { value: 'red', label: 'Red' },
+                        { value: 'blue', label: 'Blue' },
+                    ],
+                    presentation: { widgetHint: 'checkbox' },
+                },
+            ],
+        };
+        el.componentDocument = {
+            $formspecComponent: '1.0',
+            version: '1.0.0',
+            targetDefinition: { url: 'urn:test:cb-a11y' },
+            tree: {
+                component: 'Stack', nodeId: 'root',
+                children: [{ component: 'CheckboxGroup', bind: 'colors' }],
+            },
+        };
+        el.render();
+        return el;
+    }
+
+    it('container has role="group" and aria-labelledby pointing to label', () => {
+        const el = renderCheckboxGroup();
+        const container = el.querySelector('[role="group"]');
+        expect(container).not.toBeNull();
+        const labelledBy = container!.getAttribute('aria-labelledby');
+        expect(labelledBy).toBeTruthy();
+        const labelEl = el.querySelector(`#${labelledBy}`);
+        expect(labelEl).not.toBeNull();
+        expect(labelEl!.tagName).toBe('LABEL');
+    });
+
+    it('container has aria-describedby (not individual checkbox)', () => {
+        const el = renderCheckboxGroup();
+        const container = el.querySelector('[role="group"]');
+        expect(container!.getAttribute('aria-describedby')).toBeTruthy();
+        // Individual checkboxes should NOT have aria-describedby
+        const checkboxes = el.querySelectorAll('input[type="checkbox"]');
+        for (const cb of checkboxes) {
+            expect(cb.getAttribute('aria-describedby')).toBeNull();
+        }
+    });
+});
