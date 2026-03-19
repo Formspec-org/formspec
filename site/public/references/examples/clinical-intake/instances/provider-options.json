@@ -1,7 +1,0 @@
-[
-  { "value": "any", "label": "Any available provider" },
-  { "value": "family", "label": "Family Medicine" },
-  { "value": "internal", "label": "Internal Medicine" },
-  { "value": "pediatrics", "label": "Pediatrics" },
-  { "value": "obgyn", "label": "OB/GYN" }
-]

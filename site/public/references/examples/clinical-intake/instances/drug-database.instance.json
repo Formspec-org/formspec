@@ -1,7 +1,0 @@
-[
-  { "name": "Lisinopril", "class": "ACE Inhibitor", "commonDosages": ["5mg", "10mg", "20mg", "40mg"] },
-  { "name": "Metformin", "class": "Biguanide", "commonDosages": ["500mg", "850mg", "1000mg"] },
-  { "name": "Atorvastatin", "class": "Statin", "commonDosages": ["10mg", "20mg", "40mg", "80mg"] },
-  { "name": "Omeprazole", "class": "PPI", "commonDosages": ["20mg", "40mg"] },
-  { "name": "Amlodipine", "class": "CCB", "commonDosages": ["2.5mg", "5mg", "10mg"] }
-]

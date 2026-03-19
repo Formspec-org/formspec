@@ -40,9 +40,10 @@ reconstructed-examples/
 firebase-debug.log
 .firebase/
 
-# Site generated artifacts
+# Site generated artifacts (rebuilt by prebuild/predev hooks)
 site/public/studio/
 site/public/chat/
+site/public/references/
 
 # MCP bundle (build output)
 *.mcpb
