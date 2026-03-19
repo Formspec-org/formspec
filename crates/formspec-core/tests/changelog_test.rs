@@ -15,7 +15,7 @@ fn base_def() -> Value {
             { "key": "email", "type": "field", "label": "Email", "dataType": "string" }
         ],
         "binds": {
-            "name": { "required": "true()" }
+            "name": { "required": "true" }
         },
         "shapes": [
             { "name": "emailFormat", "constraint": "matches($email, '.*@.*')", "message": "Invalid email" }
@@ -101,7 +101,7 @@ fn item_label_change_is_cosmetic() {
 fn bind_added_with_required_is_breaking() {
     let old = base_def();
     let mut new = base_def();
-    new["binds"]["email"] = json!({ "required": "true()" });
+    new["binds"]["email"] = json!({ "required": "true" });
 
     let cl = generate_changelog(&old, &new, URL);
     let bind_changes: Vec<_> = cl.changes.iter()
@@ -133,7 +133,7 @@ fn bind_gaining_required_is_breaking() {
     let mut old = base_def();
     old["binds"]["name"] = json!({ "constraint": "string-length(.) > 0" });
     let mut new = base_def();
-    new["binds"]["name"] = json!({ "constraint": "string-length(.) > 0", "required": "true()" });
+    new["binds"]["name"] = json!({ "constraint": "string-length(.) > 0", "required": "true" });
 
     let cl = generate_changelog(&old, &new, URL);
     let bind_changes: Vec<_> = cl.changes.iter()
@@ -314,7 +314,7 @@ fn data_source_added_is_compatible() {
 fn screener_add_is_compatible() {
     let old = base_def();
     let mut new = base_def();
-    new["screener"] = json!({ "routes": [{ "condition": "true()" }] });
+    new["screener"] = json!({ "routes": [{ "condition": "true" }] });
 
     let cl = generate_changelog(&old, &new, URL);
     let changes: Vec<_> = cl.changes.iter()
@@ -328,7 +328,7 @@ fn screener_add_is_compatible() {
 #[test]
 fn screener_remove_is_breaking() {
     let mut old = base_def();
-    old["screener"] = json!({ "routes": [{ "condition": "true()" }] });
+    old["screener"] = json!({ "routes": [{ "condition": "true" }] });
     let new = base_def();
 
     let cl = generate_changelog(&old, &new, URL);
@@ -512,9 +512,9 @@ fn item_added_has_after_snapshot() {
 #[test]
 fn screener_modified_is_compatible() {
     let mut old = base_def();
-    old["screener"] = json!({ "routes": [{ "condition": "true()" }] });
+    old["screener"] = json!({ "routes": [{ "condition": "true" }] });
     let mut new = base_def();
-    new["screener"] = json!({ "routes": [{ "condition": "false()" }] });
+    new["screener"] = json!({ "routes": [{ "condition": "false" }] });
 
     let cl = generate_changelog(&old, &new, URL);
     let changes: Vec<_> = cl.changes.iter()
@@ -529,7 +529,7 @@ fn screener_modified_is_compatible() {
 fn bind_constraint_change_is_compatible() {
     let old = base_def();
     let mut new = base_def();
-    new["binds"]["name"] = json!({ "required": "true()", "constraint": "string-length(.) > 3" });
+    new["binds"]["name"] = json!({ "required": "true", "constraint": "string-length(.) > 3" });
 
     let cl = generate_changelog(&old, &new, URL);
     let bind_changes: Vec<_> = cl.changes.iter()

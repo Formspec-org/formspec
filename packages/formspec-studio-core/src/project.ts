@@ -715,7 +715,7 @@ export class Project {
     };
   }
 
-  /** Required rule — dispatches definition.setBind { required: condition ?? 'true()' } */
+  /** Required rule — dispatches definition.setBind { required: condition ?? 'true' } */
   require(target: string, condition?: string): HelperResult {
     this._requireItemPath(target);
     const expr = condition ?? 'true';

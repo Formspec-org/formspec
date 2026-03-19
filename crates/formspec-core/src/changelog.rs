@@ -299,7 +299,7 @@ fn diff_binds(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
 /// Check if a bind value contains a truthy `required` property.
 fn bind_has_required(bind: &Value) -> bool {
     match bind.get("required") {
-        Some(Value::String(s)) => !s.is_empty() && s != "false()" && s != "false",
+        Some(Value::String(s)) => !s.is_empty() && s != "false",
         Some(Value::Bool(b)) => *b,
         _ => false,
     }

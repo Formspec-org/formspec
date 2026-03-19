@@ -245,6 +245,17 @@ impl<'a> Lexer<'a> {
                     Ok(Token::Gt)
                 }
             }
+            '|' => {
+                if self.peek() == Some('>') {
+                    self.advance();
+                    Err(format!(
+                        "pipe operator `|>` is reserved for future use at position {}",
+                        self.pos - 2
+                    ))
+                } else {
+                    Err(format!("unexpected character '|' at position {}", self.pos - 1))
+                }
+            }
             _ => Err(format!("unexpected character '{c}' at position {}", self.pos - 1)),
         }
     }
@@ -469,5 +480,29 @@ mod tests {
     fn test_valid_escapes_still_work() {
         let tokens = lex_string(r#""a\nb\tc\\d\"e\'f""#).unwrap();
         assert_eq!(tokens[0], Token::StringLit("a\nb\tc\\d\"e'f".into()));
+    }
+
+    #[test]
+    fn test_pipe_operator_rejected_as_reserved() {
+        let err = lex_string("$a |> $b").unwrap_err();
+        assert!(
+            err.contains("pipe operator `|>` is reserved for future use"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_bare_pipe_rejected() {
+        let err = lex_string("$a | $b").unwrap_err();
+        assert!(err.contains("unexpected character '|'"), "got: {err}");
+    }
+
+    #[test]
+    fn test_pipe_in_expression_rejected() {
+        let err = lex_string("concat('a', 'b') |> upper()").unwrap_err();
+        assert!(
+            err.contains("pipe operator `|>` is reserved for future use"),
+            "got: {err}"
+        );
     }
 }
