@@ -31,6 +31,16 @@ export interface FieldRefs {
 }
 
 /** Returned by every field behavior hook. */
+export interface SubmitDetail {
+    response: any;
+    validationReport: {
+        valid: boolean;
+        results: any[];
+        counts: { error: number; warning: number; info: number };
+        timestamp: string;
+    };
+}
+
 export interface FieldBehavior {
     fieldPath: string;
     id: string;
@@ -38,7 +48,17 @@ export interface FieldBehavior {
     hint: string | null;
     description: string | null;
     presentation: ResolvedPresentationBlock;
+    /**
+     * Widget class slots from theme widgetConfig x-classes.
+     * Used by the default adapter for slot-level class injection.
+     * Custom adapters can ignore this.
+     */
     widgetClassSlots: { root?: unknown; label?: unknown; control?: unknown; hint?: unknown; error?: unknown };
+    /**
+     * Component-level style/class/accessibility overrides from the component descriptor.
+     * Used by the default adapter to apply comp-level overrides.
+     * Custom adapters can ignore this — they own their own styling.
+     */
     compOverrides: {
         cssClass?: any;
         style?: any;
@@ -59,7 +79,7 @@ export interface CheckboxGroupBehavior extends FieldBehavior {
     groupRole: 'group';
     selectAll: boolean;
     columns?: number;
-    setValue(val: any): void;
+    setValue(val: string[]): void;
 }
 
 export interface SelectBehavior extends FieldBehavior {
@@ -188,7 +208,7 @@ export interface BehaviorContext {
     cleanupFns: Array<() => void>;
     touchedFields: Set<string>;
     touchedVersion: Signal<number>;
-    latestSubmitDetailSignal: Signal<any>;
+    latestSubmitDetailSignal: Signal<SubmitDetail | null>;
     resolveToken: (val: any) => any;
     resolveItemPresentation: (item: ItemDescriptor) => PresentationBlock;
     resolveWidgetClassSlots: (presentation: PresentationBlock) => {
@@ -196,7 +216,7 @@ export interface BehaviorContext {
     };
     findItemByKey: (key: string) => any | null;
     renderComponent: (comp: any, parent: HTMLElement, prefix?: string) => void;
-    submit: (options?: any) => any;
+    submit: (options?: { mode?: 'continuous' | 'submit'; emitEvent?: boolean }) => SubmitDetail | null;
     registryEntries: Map<string, any>;
     rerender: () => void;
 }

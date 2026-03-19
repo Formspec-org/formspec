@@ -22,7 +22,13 @@ export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
-        canvasCtx.scale(dpr, dpr);
+        // setTransform sets an absolute (not cumulative) transform — safe across repeated resizes.
+        // Fallback to scale() for test environments with incomplete canvas implementations.
+        if (canvasCtx.setTransform) {
+            canvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        } else {
+            canvasCtx.scale(dpr, dpr);
+        }
     };
     resizeCanvas();
     const ro = new ResizeObserver(resizeCanvas);

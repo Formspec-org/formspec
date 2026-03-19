@@ -53,7 +53,7 @@ export function useCheckboxGroup(ctx: BehaviorContext, comp: any): CheckboxGroup
         selectAll: !!comp.selectAll,
         columns: comp.columns,
 
-        setValue(val: any): void {
+        setValue(val: string[]): void {
             ctx.engine.setValue(fieldPath, val);
         },
 
