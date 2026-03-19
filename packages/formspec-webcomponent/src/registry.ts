@@ -1,9 +1,11 @@
-/** @filedesc ComponentRegistry class and the global singleton used for plugin dispatch. */
+/** @filedesc ComponentRegistry class with plugin dispatch and adapter resolution. */
 import { ComponentPlugin } from './types';
+import type { RenderAdapter, AdapterRenderFn } from './adapters/types';
 
 /**
  * Map-based registry that dispatches component type strings to their
- * {@link ComponentPlugin} implementations.
+ * {@link ComponentPlugin} implementations, and resolves render adapter
+ * functions for the headless component architecture.
  *
  * At render time the `FormspecRender` element looks up each component
  * descriptor's `component` field in the registry to find the plugin
@@ -15,6 +17,8 @@ import { ComponentPlugin } from './types';
  */
 export class ComponentRegistry {
     private plugins: Map<string, ComponentPlugin> = new Map();
+    private adapters: Map<string, RenderAdapter> = new Map();
+    private activeAdapter: string = 'default';
 
     /**
      * Register a component plugin, keyed by its `type` string.
@@ -39,6 +43,32 @@ export class ComponentRegistry {
     /** The number of currently registered component plugins. */
     get size(): number {
         return this.plugins.size;
+    }
+
+    /** Register a render adapter. The 'default' adapter is always the fallback. */
+    registerAdapter(adapter: RenderAdapter): void {
+        this.adapters.set(adapter.name, adapter);
+    }
+
+    /** Set the active adapter by name. Warns and keeps current if name is unknown. */
+    setAdapter(name: string): void {
+        if (!this.adapters.has(name)) {
+            console.warn(`Adapter '${name}' not registered, keeping current adapter.`);
+            return;
+        }
+        this.activeAdapter = name;
+    }
+
+    /** Resolve the render function for a component type. Falls back to default adapter. */
+    resolveAdapterFn(componentType: string): AdapterRenderFn | undefined {
+        const active = this.adapters.get(this.activeAdapter);
+        return active?.components[componentType]
+            ?? this.adapters.get('default')?.components[componentType];
+    }
+
+    /** Get the name of the currently active adapter. */
+    get activeAdapterName(): string {
+        return this.activeAdapter;
     }
 }
 
