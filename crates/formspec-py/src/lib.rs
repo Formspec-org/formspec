@@ -766,34 +766,6 @@ fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<runtime_mapping::Mapping
     Ok(rules)
 }
 
-/// Parse a coerce value — either a shorthand string or an object with from/to.
-fn parse_coerce_type(val: &Value) -> Option<runtime_mapping::CoerceType> {
-    if let Some(s) = val.as_str() {
-        return match s {
-            "string" => Some(runtime_mapping::CoerceType::String),
-            "number" => Some(runtime_mapping::CoerceType::Number),
-            "integer" => Some(runtime_mapping::CoerceType::Integer),
-            "boolean" => Some(runtime_mapping::CoerceType::Boolean),
-            "date" => Some(runtime_mapping::CoerceType::Date),
-            "datetime" => Some(runtime_mapping::CoerceType::DateTime),
-            _ => None,
-        };
-    }
-    if let Some(obj) = val.as_object() {
-        let to = obj.get("to").and_then(|v| v.as_str())?;
-        return match to {
-            "string" => Some(runtime_mapping::CoerceType::String),
-            "number" => Some(runtime_mapping::CoerceType::Number),
-            "integer" => Some(runtime_mapping::CoerceType::Integer),
-            "boolean" => Some(runtime_mapping::CoerceType::Boolean),
-            "date" => Some(runtime_mapping::CoerceType::Date),
-            "datetime" => Some(runtime_mapping::CoerceType::DateTime),
-            _ => None,
-        };
-    }
-    None
-}
-
 // ── Tests ───────────────────────────────────────────────────────
 //
 // NOTE: PyO3 #[pyfunction] wrappers and type conversion helpers
@@ -1493,6 +1465,8 @@ mod tests {
     #[test]
     fn rejects_unknown_transform_type() {
         expect_err(json!([{"sourcePath": "a", "targetPath": "b", "transform": "magic"}]), "unknown transform type: magic");
+    }
+
     // ── Finding 78: parse_coerce_type ───────────────────────────
 
     /// Spec: mapping/mapping-spec.md §3.3.2 — String shorthand for known coerce types.
