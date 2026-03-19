@@ -1,6 +1,7 @@
 /** @filedesc Layout component plugins: Page, Stack, Grid, Divider, Columns, Panel, Accordion, Modal, Popover. */
 import { effect, signal } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
+import { focusFirstIn } from '../dom-utils';
 
 type PopupPlacement = 'top' | 'right' | 'bottom' | 'left';
 
@@ -60,9 +61,10 @@ export const PagePlugin: ComponentPlugin = {
         ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
         if (comp.title) {
-            const h2 = document.createElement('h2');
-            h2.textContent = comp.title;
-            el.appendChild(h2);
+            const headingLevel = comp.headingLevel || 'h2';
+            const h = document.createElement(headingLevel);
+            h.textContent = comp.title;
+            el.appendChild(h);
         }
         if (comp.description) {
             const desc = document.createElement('p');
@@ -322,11 +324,11 @@ export const AccordionPlugin: ComponentPlugin = {
                     content.appendChild(removeBtn);
                     details.appendChild(content);
 
-                    details.ontoggle = () => {
+                    details.addEventListener('toggle', () => {
                         if (details.open && !comp.allowMultiple) {
                             detailsEls.forEach(d => { if (d !== details) d.open = false; });
                         }
-                    };
+                    });
 
                     el.appendChild(details);
                     detailsEls.push(details);
@@ -360,11 +362,11 @@ export const AccordionPlugin: ComponentPlugin = {
                 ctx.renderComponent(children[i], content, ctx.prefix);
                 details.appendChild(content);
 
-                details.ontoggle = () => {
+                details.addEventListener('toggle', () => {
                     if (details.open && !comp.allowMultiple) {
                         detailsEls.forEach(d => { if (d !== details) d.open = false; });
                     }
-                };
+                });
 
                 el.appendChild(details);
                 detailsEls.push(details);
@@ -394,10 +396,15 @@ export const ModalPlugin: ComponentPlugin = {
         }
 
         if (comp.title) {
+            const titleId = `${comp.id || 'modal'}-title`;
             const titleEl = document.createElement('h2');
             titleEl.className = 'formspec-modal-title';
+            titleEl.id = titleId;
             titleEl.textContent = comp.title;
             dialog.appendChild(titleEl);
+            dialog.setAttribute('aria-labelledby', titleId);
+        } else if (comp.triggerLabel) {
+            dialog.setAttribute('aria-label', comp.triggerLabel);
         }
 
         const content = document.createElement('div');
@@ -423,6 +430,7 @@ export const ModalPlugin: ComponentPlugin = {
                     const shouldOpen = !!exprFn();
                     if (shouldOpen && !dialog.open) {
                         dialog.showModal();
+                        queueMicrotask(() => focusFirstIn(dialog));
                     } else if (!shouldOpen && dialog.open) {
                         dialog.close();
                     }
@@ -430,6 +438,7 @@ export const ModalPlugin: ComponentPlugin = {
             } else {
                 queueMicrotask(() => {
                     if (!dialog.open) dialog.showModal();
+                    focusFirstIn(dialog);
                 });
             }
             return;
@@ -444,7 +453,10 @@ export const ModalPlugin: ComponentPlugin = {
         };
         triggerBtn.addEventListener('click', () => {
             if (!dialog.open) dialog.showModal();
-            queueMicrotask(repositionDialog);
+            queueMicrotask(() => {
+                repositionDialog();
+                focusFirstIn(dialog);
+            });
         });
         window.addEventListener('resize', repositionDialog);
         window.addEventListener('scroll', repositionDialog, true);
@@ -452,6 +464,7 @@ export const ModalPlugin: ComponentPlugin = {
             window.removeEventListener('resize', repositionDialog);
             window.removeEventListener('scroll', repositionDialog, true);
         });
+        dialog.addEventListener('close', () => triggerBtn.focus());
         parent.appendChild(triggerBtn);
     }
 };
@@ -493,6 +506,7 @@ export const PopoverPlugin: ComponentPlugin = {
         const content = document.createElement('div');
         content.className = 'formspec-popover-content';
         content.setAttribute('role', 'dialog');
+        content.setAttribute('aria-label', comp.title || comp.triggerLabel || 'Popover');
         if (comp.placement) {
             content.dataset.placement = comp.placement;
         }
@@ -503,12 +517,7 @@ export const PopoverPlugin: ComponentPlugin = {
             }
         }
 
-        const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-        const focusFirstInContent = () => {
-            const target = content.querySelector<HTMLElement>(FOCUSABLE);
-            target?.focus();
-        };
+        const focusFirstInContent = () => focusFirstIn(content);
 
         const closePopover = () => {
             const contentAny = content as any;

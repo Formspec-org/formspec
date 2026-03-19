@@ -20,15 +20,15 @@
 
 /* ── Screen reader only (labelPosition: hidden) ───────────────── */
 .formspec-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 /* ── Native element resets ─────────────────────────────────────── */
@@ -1068,26 +1068,40 @@ hr.formspec-divider {
 
 .formspec-wizard-sidenav-item {
   display: flex;
+  border-left: 3px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.formspec-wizard-sidenav-btn {
+  display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
   padding: 9px 12px;
+  background: none;
+  border: none;
   cursor: pointer;
-  border-left: 3px solid transparent;
   white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  transition: background 0.15s;
   outline: none;
 }
 
-.formspec-wizard-sidenav-item:hover {
+.formspec-wizard-sidenav-btn:hover {
   background: #f1f5f9;
 }
 
-.formspec-wizard-sidenav-item:focus-visible {
+.formspec-wizard-sidenav-btn:focus-visible {
   background: #eff6ff;
 }
 
 .formspec-wizard-sidenav-item--active {
   border-left-color: #4f88e8;
+}
+
+.formspec-wizard-sidenav-item--active .formspec-wizard-sidenav-btn {
   background: #eff6ff;
 }
 

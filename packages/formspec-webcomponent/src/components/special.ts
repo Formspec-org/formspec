@@ -104,6 +104,7 @@ export const DataTablePlugin: ComponentPlugin = {
         if (showRowNumbers) {
             const th = document.createElement('th');
             th.textContent = '#';
+            th.setAttribute('scope', 'col');
             headerRow.appendChild(th);
         }
         for (let ci = 0; ci < columns.length; ci++) {
@@ -280,6 +281,7 @@ export const DataTablePlugin: ComponentPlugin = {
                     removeBtn.type = 'button';
                     removeBtn.className = 'formspec-datatable-remove';
                     removeBtn.textContent = 'Remove';
+                    removeBtn.setAttribute('aria-label', `Remove row ${i + 1}`);
                     const idx = i;
                     removeBtn.addEventListener('click', () => {
                         ctx.engine.removeRepeatInstance(fullName, idx);

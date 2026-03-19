@@ -1,6 +1,7 @@
 /** @filedesc USWDS v3 adapter for CheckboxGroup — renders usa-checkbox markup inside a fieldset. */
 import type { CheckboxGroupBehavior, AdapterRenderFn } from 'formspec-webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
+import { createUSWDSError } from './shared';
 
 function buildCheckboxOptions(
     behavior: CheckboxGroupBehavior,
@@ -87,11 +88,7 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
     let optionControlsRef = buildCheckboxOptions(behavior, optionContainer, behavior.options());
     fieldset.appendChild(optionContainer);
 
-    const error = el('span', {
-        class: 'usa-error-message',
-        id: `${behavior.id}-error`,
-        role: 'alert',
-    });
+    const error = createUSWDSError(behavior.id);
     fieldset.appendChild(error);
 
     parent.appendChild(fieldset);

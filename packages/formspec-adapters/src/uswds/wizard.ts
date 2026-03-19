@@ -68,6 +68,8 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
     for (let i = 0; i < behavior.totalSteps(); i++) {
         const panel = document.createElement('div');
         panel.className = 'formspec-wizard-panel';
+        panel.setAttribute('role', 'region');
+        panel.setAttribute('aria-label', behavior.steps[i]?.title || `Step ${i + 1}`);
         if (i !== 0) panel.classList.add('formspec-hidden');
         behavior.renderStep(i, panel);
         root.appendChild(panel);

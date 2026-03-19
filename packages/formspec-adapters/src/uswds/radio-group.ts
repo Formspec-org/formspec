@@ -1,6 +1,7 @@
 /** @filedesc USWDS v3 adapter for RadioGroup — renders usa-radio markup inside a fieldset. */
 import type { RadioGroupBehavior, AdapterRenderFn } from 'formspec-webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
+import { createUSWDSError } from './shared';
 
 function buildRadioOptions(
     behavior: RadioGroupBehavior,
@@ -63,11 +64,7 @@ export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
     const initialControls = buildRadioOptions(behavior, optionContainer, behavior.options());
     fieldset.appendChild(optionContainer);
 
-    const error = el('span', {
-        class: 'usa-error-message',
-        id: `${behavior.id}-error`,
-        role: 'alert',
-    });
+    const error = createUSWDSError(behavior.id);
     fieldset.appendChild(error);
 
     parent.appendChild(fieldset);

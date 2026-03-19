@@ -30,8 +30,13 @@ export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     if (behavior.onLabel || behavior.offLabel) {
         const toggleLabel = document.createElement('span');
         toggleLabel.className = 'formspec-toggle-label';
+        toggleLabel.id = `${behavior.id}-toggle-label`;
         toggleLabel.textContent = behavior.offLabel || '';
         toggleContainer.appendChild(toggleLabel);
+
+        // Add toggle label to aria-describedby so screen readers announce on/off text
+        const existing = checkbox.getAttribute('aria-describedby') || '';
+        checkbox.setAttribute('aria-describedby', `${existing} ${toggleLabel.id}`.trim());
     }
 
     fieldDOM.root.appendChild(toggleContainer);

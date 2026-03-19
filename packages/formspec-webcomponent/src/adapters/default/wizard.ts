@@ -165,6 +165,12 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
     nav.appendChild(nextBtn);
     container.appendChild(nav);
 
+    const announcer = document.createElement('div');
+    announcer.className = 'formspec-sr-only';
+    announcer.setAttribute('aria-live', 'polite');
+    announcer.setAttribute('role', 'status');
+    container.appendChild(announcer);
+
     // Bind behavior to refs — bind() manages all reactive DOM updates
     const dispose = behavior.bind({
         root: el,
@@ -177,4 +183,12 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
         progressItems,
     });
     actx.onDispose(dispose);
+
+    el.addEventListener('formspec-page-change', ((e: CustomEvent) => {
+        const { index, total, title } = e.detail;
+        const stepLabel = title || `Step ${index + 1}`;
+        announcer.textContent = index === total - 1
+            ? `${stepLabel}. Next will submit the form.`
+            : `${stepLabel}. Step ${index + 1} of ${total}.`;
+    }) as EventListener);
 };

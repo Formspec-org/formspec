@@ -14,6 +14,7 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
     parent.appendChild(root);
 
     const count = behavior.tabCount;
+    const idBase = behavior.id || 'tabs';
 
     // Tab bar — USWDS segmented button group
     const tabBar = document.createElement('ul');
@@ -29,6 +30,9 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
         const panel = document.createElement('div');
         panel.className = 'formspec-tab-panel';
         panel.setAttribute('role', 'tabpanel');
+        panel.id = `${idBase}-panel-${i}`;
+        panel.setAttribute('aria-labelledby', `${idBase}-tab-${i}`);
+        panel.setAttribute('tabindex', '0');
         if (i !== behavior.defaultTab) panel.style.display = 'none';
         behavior.renderTab(i, panel);
         panelContainer.appendChild(panel);
@@ -44,6 +48,10 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.setAttribute('role', 'tab');
+        btn.id = `${idBase}-tab-${i}`;
+        btn.setAttribute('aria-controls', `${idBase}-panel-${i}`);
+        btn.setAttribute('aria-selected', i === behavior.defaultTab ? 'true' : 'false');
+        btn.setAttribute('tabindex', i === behavior.defaultTab ? '0' : '-1');
         btn.textContent = behavior.tabLabels[i] || `Tab ${i + 1}`;
         // Active tab: filled button; inactive: outline
         btn.className = i === behavior.defaultTab

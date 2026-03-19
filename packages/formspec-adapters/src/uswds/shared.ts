@@ -53,11 +53,7 @@ export function createUSWDSFieldDOM(
     }
 
     // Error (not appended — adapter places it after control)
-    const error = el('span', {
-        class: 'usa-error-message',
-        id: `${behavior.id}-error`,
-        role: 'alert',
-    });
+    const error = createUSWDSError(behavior.id);
 
     // describedBy
     const describedBy = [
@@ -66,4 +62,14 @@ export function createUSWDSFieldDOM(
     ].filter(Boolean).join(' ');
 
     return { root, label, hint, error, describedBy };
+}
+
+/** Create a USWDS error message element with correct ARIA live-region attributes. */
+export function createUSWDSError(behaviorId: string): HTMLElement {
+    return el('span', {
+        class: 'usa-error-message',
+        id: `${behaviorId}-error`,
+        role: 'alert',
+        'aria-live': 'polite',
+    });
 }

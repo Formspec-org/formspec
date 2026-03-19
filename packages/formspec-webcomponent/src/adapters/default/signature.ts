@@ -17,7 +17,8 @@ export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
     });
     canvas.setAttribute('tabindex', '0');
     canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', 'Signature canvas. Use the Clear button to reset.');
+    canvas.setAttribute('aria-roledescription', 'signature pad');
+    canvas.setAttribute('aria-label', 'Signature canvas. Draw your signature or use the Clear button to reset.');
     fieldDOM.root.appendChild(canvas);
     actx.onDispose(canvasDispose);
 

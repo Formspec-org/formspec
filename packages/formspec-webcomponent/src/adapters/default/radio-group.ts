@@ -6,7 +6,7 @@ import { createFieldDOM, finalizeFieldDOM, applyControlSlotClass } from './share
 export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
     behavior, parent, actx
 ) => {
-    const fieldDOM = createFieldDOM(behavior, actx);
+    const fieldDOM = createFieldDOM(behavior, actx, { labelFor: false });
 
     const labelId = `${behavior.id}-label`;
     fieldDOM.label.id = labelId;
@@ -30,12 +30,6 @@ export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
         lbl.appendChild(rb);
         lbl.appendChild(document.createTextNode(` ${opt.label}`));
         container.appendChild(lbl);
-    }
-
-    // Set id on first radio for label htmlFor association
-    const firstInput = optionControls.values().next().value;
-    if (firstInput) {
-        firstInput.id = behavior.id;
     }
 
     fieldDOM.root.appendChild(container);

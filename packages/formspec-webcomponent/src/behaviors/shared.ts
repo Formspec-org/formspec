@@ -73,10 +73,13 @@ export function bindSharedFieldEffects(
     // Required indicator
     disposers.push(effect(() => {
         const isRequired = ctx.engine.requiredSignals[fieldPath]?.value ?? false;
+        refs.label.textContent = labelText;
         if (isRequired) {
-            refs.label.innerHTML = `${labelText} <span class="formspec-required">*</span>`;
-        } else {
-            refs.label.textContent = labelText;
+            const indicator = document.createElement('span');
+            indicator.className = 'formspec-required';
+            indicator.setAttribute('aria-hidden', 'true');
+            indicator.textContent = ' *';
+            refs.label.appendChild(indicator);
         }
         actualInput.setAttribute('aria-required', String(isRequired));
     }));
@@ -116,7 +119,13 @@ export function bindSharedFieldEffects(
     disposers.push(effect(() => {
         const isRelevant = ctx.engine.relevantSignals[fieldPath]?.value ?? true;
         refs.root.classList.toggle('formspec-hidden', !isRelevant);
-        actualInput.setAttribute('aria-hidden', String(!isRelevant));
+        if (!isRelevant) {
+            refs.root.setAttribute('aria-hidden', 'true');
+            refs.root.inert = true;
+        } else {
+            refs.root.removeAttribute('aria-hidden');
+            refs.root.inert = false;
+        }
     }));
 
     // Touched tracking

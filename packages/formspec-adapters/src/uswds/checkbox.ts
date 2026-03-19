@@ -1,6 +1,7 @@
 /** @filedesc USWDS v3 adapter for Checkbox — renders a single boolean usa-checkbox. */
 import type { FieldBehavior, AdapterRenderFn } from 'formspec-webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
+import { createUSWDSError } from './shared';
 
 export const renderCheckbox: AdapterRenderFn<FieldBehavior> = (
     behavior, parent, actx
@@ -42,11 +43,7 @@ export const renderCheckbox: AdapterRenderFn<FieldBehavior> = (
         root.appendChild(hint);
     }
 
-    const error = el('span', {
-        class: 'usa-error-message',
-        id: `${behavior.id}-error`,
-        role: 'alert',
-    });
+    const error = createUSWDSError(behavior.id);
     root.appendChild(error);
 
     parent.appendChild(root);

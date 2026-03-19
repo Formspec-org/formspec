@@ -2,6 +2,11 @@
 import type { FieldBehavior } from '../../behaviors/types';
 import type { AdapterContext } from '../types';
 
+export interface FieldDOMOptions {
+    /** Set false for group controls where the label shouldn't target a single input. Default true. */
+    labelFor?: boolean;
+}
+
 export interface FieldDOM {
     root: HTMLElement;
     label: HTMLElement;
@@ -18,6 +23,7 @@ export interface FieldDOM {
 export function createFieldDOM(
     behavior: FieldBehavior,
     actx: AdapterContext,
+    options?: FieldDOMOptions,
 ): FieldDOM {
     const p = behavior.presentation;
     const slots = behavior.widgetClassSlots;
@@ -36,7 +42,9 @@ export function createFieldDOM(
     const label = document.createElement('label');
     label.className = 'formspec-label';
     label.textContent = behavior.label;
-    label.htmlFor = fieldId;
+    if (options?.labelFor !== false) {
+        label.htmlFor = fieldId;
+    }
     if (slots.label) actx.applyClassValue(label, slots.label);
 
     if (effectiveLabelPosition === 'hidden') {

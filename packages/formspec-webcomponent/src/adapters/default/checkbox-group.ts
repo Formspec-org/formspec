@@ -6,7 +6,7 @@ import { createFieldDOM, finalizeFieldDOM, applyControlSlotClass } from './share
 export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
     behavior, parent, actx
 ) => {
-    const fieldDOM = createFieldDOM(behavior, actx);
+    const fieldDOM = createFieldDOM(behavior, actx, { labelFor: false });
 
     const labelId = `${behavior.id}-label`;
     fieldDOM.label.id = labelId;
@@ -51,12 +51,6 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
         lbl.appendChild(cb);
         lbl.appendChild(document.createTextNode(` ${opt.label}`));
         container.appendChild(lbl);
-    }
-
-    // Set id on first checkbox for label htmlFor association
-    const firstInput = optionControls.values().next().value;
-    if (firstInput) {
-        firstInput.id = behavior.id;
     }
 
     fieldDOM.root.appendChild(container);
