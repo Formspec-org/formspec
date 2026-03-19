@@ -165,7 +165,22 @@ fn resolve_item(
             .unwrap_or("");
 
         // Build the resolved item from the fragment
-        let resolved = apply_fragment(item, &fragment, key_prefix, &ref_uri, result);
+        let mut resolved = apply_fragment(item, &fragment, key_prefix, &ref_uri, result);
+
+        // Recursively resolve any $ref children in the resolved fragment (spec §6.6.2 Rule 5)
+        if let Some(children) = resolved.get("children").and_then(|v| v.as_array()).cloned() {
+            let mut resolved_children = Vec::new();
+            for child in &children {
+                match resolve_item(child, resolver, visited, result) {
+                    Some(r) => resolved_children.push(r),
+                    None => resolved_children.push(child.clone()),
+                }
+            }
+            if let Some(obj) = resolved.as_object_mut() {
+                obj.insert("children".to_string(), Value::Array(resolved_children));
+            }
+        }
+
         visited.remove(&ref_uri);
         return Some(resolved);
     }
@@ -735,6 +750,135 @@ mod tests {
     fn test_fel_rewriting_functions() {
         let result = rewrite_fel_string("sum($items[*].qty)", "order");
         assert_eq!(result, "sum($order.items[*].qty)");
+    }
+
+    // ── Recursive $ref resolution tests (spec §6.6.2 Rule 5) ──
+
+    #[test]
+    fn test_recursive_ref_resolution() {
+        // Fragment A references Fragment B — both levels should be resolved
+        let def = json!({
+            "items": [
+                { "$ref": "a.json", "key": "a" }
+            ]
+        });
+        let mut resolver = MapResolver::new();
+        resolver.add("a.json", json!({
+            "items": [
+                { "$ref": "b.json", "key": "nested" }
+            ]
+        }));
+        resolver.add("b.json", json!({
+            "items": [
+                { "key": "leaf", "dataType": "string" }
+            ]
+        }));
+
+        let result = assemble_definition(&def, &resolver);
+        assert!(result.errors.is_empty(), "expected no errors, got: {:?}", result.errors);
+
+        // a's children should contain the resolved nested item,
+        // which itself should have children from b.json
+        let a_children = result.definition["items"][0]["children"].as_array().unwrap();
+        assert_eq!(a_children.len(), 1, "a should have 1 child (the resolved nested ref)");
+        let nested_children = a_children[0]["children"].as_array().unwrap();
+        assert_eq!(nested_children.len(), 1, "nested should have 1 child from b.json");
+        assert_eq!(nested_children[0]["key"], "leaf");
+    }
+
+    #[test]
+    fn test_three_level_recursive_ref() {
+        let def = json!({
+            "items": [
+                { "$ref": "a.json", "key": "top" }
+            ]
+        });
+        let mut resolver = MapResolver::new();
+        resolver.add("a.json", json!({
+            "items": [{ "$ref": "b.json", "key": "mid" }]
+        }));
+        resolver.add("b.json", json!({
+            "items": [{ "$ref": "c.json", "key": "deep" }]
+        }));
+        resolver.add("c.json", json!({
+            "items": [{ "key": "bottom", "dataType": "number" }]
+        }));
+
+        let result = assemble_definition(&def, &resolver);
+        assert!(result.errors.is_empty(), "expected no errors, got: {:?}", result.errors);
+
+        let bottom = &result.definition["items"][0]["children"][0]["children"][0]["children"][0];
+        assert_eq!(bottom["key"], "bottom");
+    }
+
+    // ── Circular $ref detection tests (spec §6.6.2 Rule 6) ──
+
+    #[test]
+    fn test_self_referencing_ref() {
+        let def = json!({
+            "items": [
+                { "$ref": "self.json", "key": "x" }
+            ]
+        });
+        let mut resolver = MapResolver::new();
+        resolver.add("self.json", json!({
+            "items": [
+                { "$ref": "self.json", "key": "loop" }
+            ]
+        }));
+
+        let result = assemble_definition(&def, &resolver);
+        assert!(result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(_))),
+            "expected CircularRef error for self-referencing $ref");
+    }
+
+    #[test]
+    fn test_direct_circular_ref() {
+        // A references B, B references A
+        let def = json!({
+            "items": [
+                { "$ref": "a.json", "key": "x" }
+            ]
+        });
+        let mut resolver = MapResolver::new();
+        resolver.add("a.json", json!({
+            "items": [
+                { "$ref": "b.json", "key": "from_a" }
+            ]
+        }));
+        resolver.add("b.json", json!({
+            "items": [
+                { "$ref": "a.json", "key": "from_b" }
+            ]
+        }));
+
+        let result = assemble_definition(&def, &resolver);
+        assert!(result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(_))),
+            "expected CircularRef error for A->B->A cycle");
+    }
+
+    #[test]
+    fn test_transitive_circular_ref() {
+        // A -> B -> C -> A
+        let def = json!({
+            "items": [
+                { "$ref": "a.json", "key": "x" }
+            ]
+        });
+        let mut resolver = MapResolver::new();
+        resolver.add("a.json", json!({
+            "items": [{ "$ref": "b.json", "key": "from_a" }]
+        }));
+        resolver.add("b.json", json!({
+            "items": [{ "$ref": "c.json", "key": "from_b" }]
+        }));
+        resolver.add("c.json", json!({
+            "items": [{ "$ref": "a.json", "key": "from_c" }]
+        }));
+
+        let result = assemble_definition(&def, &resolver);
+        assert!(result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(_))),
+            "expected CircularRef error for A->B->C->A cycle");
     }
 
     #[test]
