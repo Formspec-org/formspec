@@ -1,9 +1,10 @@
 /** @filedesc Panel that runs FormEngine against the current definition and displays the response and validation report. */
 import { useState } from 'react';
-import { FormEngine, type FormspecItem } from 'formspec-engine';
+import { createFormEngine, type FormspecItem } from 'formspec-engine';
+import type { IFormEngine } from 'formspec-engine';
 import { useDefinition } from '../../state/useDefinition';
 
-function seedInitialValues(engine: FormEngine, items: FormspecItem[], prefix = ''): void {
+function seedInitialValues(engine: IFormEngine, items: FormspecItem[], prefix = ''): void {
   for (const item of items) {
     const path = prefix ? `${prefix}.${item.key}` : item.key;
     if (item.type === 'field' && item.initialValue !== undefined && !(typeof item.initialValue === 'string' && item.initialValue.startsWith('='))) {
@@ -20,7 +21,7 @@ export function TestResponse() {
   const [output, setOutput] = useState<string>('');
 
   const handleRun = () => {
-    const engine = new FormEngine({...definition});
+    const engine = createFormEngine({...definition});
     seedInitialValues(engine, (definition?.items ?? []) as FormspecItem[]);
     setOutput(JSON.stringify({
       response: engine.getResponse(),

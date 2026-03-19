@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { faker } from '@faker-js/faker';
-import { FormEngine } from 'formspec-engine';
+import { createFormEngine } from 'formspec-engine';
 import { useProject } from '../../state/useProject';
 import { useMapping } from '../../state/useMapping';
 import { serializeMappedData } from './adapters';
@@ -20,7 +20,7 @@ export function MappingPreview() {
     const definition = project.definition;
     
     // Create a temporary engine instance to handle value generation and serialization
-    const engine = new FormEngine({...definition});
+    const engine = createFormEngine({...definition});
     
     // Helper to walk items and set values in the engine
     const walk = (items: any[], prefix = '') => {

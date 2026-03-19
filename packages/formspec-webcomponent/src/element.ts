@@ -1,6 +1,6 @@
 /** @filedesc The <formspec-render> custom element that orchestrates form rendering. */
 import { signal } from '@preact/signals-core';
-import { FormEngine } from 'formspec-engine';
+import { createFormEngine } from 'formspec-engine';
 import type { IFormEngine } from 'formspec-engine';
 import { globalRegistry } from './registry';
 import {
@@ -184,7 +184,7 @@ export class FormspecRender extends HTMLElement {
         this.touchedFields.clear();
         this.touchedVersion.value = 0;
         try {
-            this.engine = new FormEngine(val, undefined, Array.from(this._registryEntries.values()));
+            this.engine = createFormEngine(val, undefined, Array.from(this._registryEntries.values()));
         } catch (e) {
             console.error("Engine initialization failed", e);
             throw e;

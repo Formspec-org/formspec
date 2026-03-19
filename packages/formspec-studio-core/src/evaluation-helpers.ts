@@ -1,5 +1,5 @@
 /** @filedesc Preview and validation helpers that run FormEngine against a Project. */
-import { FormEngine, type FormspecDefinition, type ValidationReport } from 'formspec-engine';
+import { createFormEngine, type FormspecDefinition, type ValidationReport, type IFormEngine } from 'formspec-engine';
 import type { Project } from './project.js';
 
 /**
@@ -57,7 +57,7 @@ function flattenToSignalPaths(
  * This function detects higher indices in the data, calls addRepeatInstance to expand
  * signals, then sets all values.
  */
-function loadDataIntoEngine(engine: FormEngine, data: Record<string, unknown>): void {
+function loadDataIntoEngine(engine: IFormEngine, data: Record<string, unknown>): void {
   // Derive repeat group paths from the engine's initialized repeat signals.
   // Strip indices so nested repeat groups match during recursive flattening
   // (engine stores "sections[0].items" but nested data arrives as "sections.items").
@@ -114,7 +114,7 @@ function loadDataIntoEngine(engine: FormEngine, data: Record<string, unknown>): 
  * Walk ancestor paths to find the first one whose own relevantSignal is false.
  * Returns the ancestor path, or undefined if the path itself is the hidden one.
  */
-function findHidingAncestor(engine: FormEngine, path: string): string | undefined {
+function findHidingAncestor(engine: IFormEngine, path: string): string | undefined {
   const parts = path.split(/[\[\].]/).filter(Boolean);
   let currentPath = '';
   for (let i = 0; i < parts.length - 1; i++) {
@@ -166,7 +166,7 @@ export function previewForm(
 } {
   const bundle = project.export();
   // Bridge studio-core's FormDefinition → engine's FormspecDefinition at the boundary
-  const engine = new FormEngine(bundle.definition as unknown as FormspecDefinition);
+  const engine = createFormEngine(bundle.definition as unknown as FormspecDefinition);
 
   if (scenario) {
     loadDataIntoEngine(engine, scenario);
@@ -288,7 +288,7 @@ export function validateResponse(
 ): ValidationReport {
   const bundle = project.export();
   // Bridge studio-core's FormDefinition → engine's FormspecDefinition at the boundary
-  const engine = new FormEngine(bundle.definition as unknown as FormspecDefinition);
+  const engine = createFormEngine(bundle.definition as unknown as FormspecDefinition);
 
   loadDataIntoEngine(engine, response);
 

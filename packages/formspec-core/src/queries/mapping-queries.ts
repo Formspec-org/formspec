@@ -1,5 +1,5 @@
 /** @filedesc Mapping-specific state queries: bidirectional transform evaluation. */
-import { RuntimeMappingEngine } from 'formspec-engine';
+import { createMappingEngine } from 'formspec-engine';
 import type { ProjectState, MappingPreviewParams, MappingPreviewResult } from '../types.js';
 
 /**
@@ -35,7 +35,7 @@ export function previewMapping(
       .filter((rule: unknown) => rule !== undefined);
   }
 
-  const runtime = new RuntimeMappingEngine(mappingDoc);
+  const runtime = createMappingEngine(mappingDoc);
   const result = direction === 'reverse'
     ? runtime.reverse(sampleData)
     : runtime.forward(sampleData);

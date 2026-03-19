@@ -1,6 +1,7 @@
 /** @filedesc Live form preview panel that runs the FormEngine with scenario data and renders at a given viewport. */
 import { useMemo, useState } from 'react';
-import { FormEngine, type FormspecItem } from 'formspec-engine';
+import { createFormEngine, type FormspecItem } from 'formspec-engine';
+import type { IFormEngine } from 'formspec-engine';
 import type { FormDefinition } from 'formspec-types';
 import { useProjectState } from '../../state/useProjectState';
 import { normalizeDefinitionDoc } from '../../workspaces/preview/preview-documents';
@@ -13,7 +14,7 @@ const viewportWidths: Record<Viewport, string> = {
   mobile: '375px',
 };
 
-function seedInitialValues(engine: FormEngine, items: FormspecItem[], prefix = ''): void {
+function seedInitialValues(engine: IFormEngine, items: FormspecItem[], prefix = ''): void {
   for (const item of items) {
     const path = prefix ? `${prefix}.${item.key}` : item.key;
     if (item.type === 'field' && item.initialValue !== undefined && !(typeof item.initialValue === 'string' && item.initialValue.startsWith('='))) {
@@ -44,14 +45,14 @@ function flattenScenario(value: unknown, prefix = ''): Array<{ path: string; val
 
 interface SimulationResult {
   parseError?: string;
-  snapshot?: ReturnType<FormEngine['getDiagnosticsSnapshot']>;
+  snapshot?: ReturnType<IFormEngine['getDiagnosticsSnapshot']>;
   response?: unknown;
 }
 
 function buildSimulation(definition: unknown, scenarioText: string): SimulationResult {
   try {
     const normalizedDefinition = normalizeDefinitionDoc(definition) as FormDefinition;
-    const engine = new FormEngine(normalizedDefinition);
+    const engine = createFormEngine(normalizedDefinition);
     seedInitialValues(engine, (normalizedDefinition?.items ?? []) as FormspecItem[]);
 
     const parsedScenario = scenarioText.trim() ? JSON.parse(scenarioText) : {};

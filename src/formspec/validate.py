@@ -24,6 +24,7 @@ from typing import Any
 
 from formspec.changelog import generate_changelog
 from formspec.evaluator import DefinitionEvaluator
+from formspec.factories import create_form_processor, create_mapping_engine
 from formspec.fel import extract_dependencies
 from formspec.fel.errors import FelSyntaxError
 from formspec.mapping import MappingEngine
@@ -381,7 +382,7 @@ def _pass_runtime_evaluation(arts: DiscoveredArtifacts) -> PassResult:
 
     evaluators: dict[tuple[str, str], DefinitionEvaluator] = {}
     for identity, da in arts.definition_versions.items():
-        evaluators[identity] = DefinitionEvaluator(da.doc, registries=registries)
+        evaluators[identity] = create_form_processor(da.doc, registries=registries)
 
     pr = PassResult(title="Runtime evaluation (DefinitionEvaluator)")
     for resp in arts.responses:
@@ -454,7 +455,7 @@ def _pass_mapping_forward(arts: DiscoveredArtifacts) -> PassResult:
 
     for mapping in arts.mappings:
         try:
-            engine = MappingEngine(mapping.doc)
+            engine = create_mapping_engine(mapping.doc)
         except Exception as e:
             pr.items.append(
                 PassItemResult(

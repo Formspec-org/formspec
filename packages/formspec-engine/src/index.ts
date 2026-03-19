@@ -19,6 +19,7 @@ export { assembleDefinition, assembleDefinitionSync, rewriteFEL, rewriteMessageT
 export type { AssemblyProvenance, AssemblyResult, DefinitionResolver, RewriteMap } from './assembler.js';
 export { RuntimeMappingEngine } from './runtime-mapping.js';
 export type { MappingDirection, RuntimeMappingResult, MappingDiagnostic } from './runtime-mapping.js';
+export { createFormEngine, createMappingEngine } from './factories.js';
 export { analyzeFEL, getFELDependencies, rewriteFELReferences } from './fel/analysis.js';
 export type { FELAnalysis, FELAnalysisError, FELRewriteOptions } from './fel/analysis.js';
 // FELBuiltinFunctionCatalogEntry re-exported from './fel/runtime.js' above
