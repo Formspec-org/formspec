@@ -28,9 +28,9 @@ from formspec.changelog import generate_changelog
 from formspec.registry import Registry
 from formspec.validator.linter import lint
 from formspec.validator.schema import SchemaValidator
-from formspec.mapping.engine import MappingEngine
+from formspec.factories import create_mapping_engine
 from formspec.adapters import get_adapter
-from formspec.evaluator import DefinitionEvaluator
+from formspec.factories import create_form_processor
 from formspec.fel import evaluate as fel_evaluate, extract_dependencies, to_python, typeof, FelSyntaxError
 
 
@@ -245,7 +245,7 @@ def export(
     if not mapping_doc:
         raise HTTPException(status_code=400, detail="No mapping document specified or discoverable for this definition.")
 
-    engine = MappingEngine(mapping_doc)
+    engine = create_mapping_engine(mapping_doc)
     mapped = engine.forward(request.data)
 
     adapter_config = mapping_doc.get("adapters", {}).get(format)
@@ -264,8 +264,8 @@ def submit(request: SubmitRequest):
     reg_doc = _load_registry_doc("formspec-common.registry.json")
     registries = [Registry(reg_doc)] if reg_doc else []
 
-    evaluator = DefinitionEvaluator(definition, registries=registries)
-    mapping_engine = MappingEngine(mapping_doc) if mapping_doc else None
+    evaluator = create_form_processor(definition, registries=registries)
+    mapping_engine = create_mapping_engine(mapping_doc) if mapping_doc else None
 
     registry_documents = [reg_doc] if reg_doc else []
     lint_diags = lint(definition, mode="authoring", registry_documents=registry_documents)

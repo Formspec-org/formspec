@@ -29,7 +29,7 @@ from .errors import (
     FelError, FelSyntaxError, FelDefinitionError, FelEvaluationError,
     Diagnostic, SourcePos, Severity,
 )
-from .runtime import FelRuntime, DefaultFelRuntime, default_fel_runtime
+from .runtime import FelRuntime, DefaultFelRuntime, RustFelRuntime, default_fel_runtime
 
 
 def evaluate(
@@ -43,8 +43,7 @@ def evaluate(
 ) -> EvalResult:
     """Parse and evaluate a FEL expression in one call.
 
-    Builds an Environment and function registry, parses ``source``, evaluates
-    the AST, and returns an EvalResult with the computed value and diagnostics.
+    Delegates to the default FEL runtime (Rust when available, Python fallback).
 
     Args:
         source: FEL expression (e.g. ``"$price * $quantity"``).
@@ -57,25 +56,21 @@ def evaluate(
     Raises:
         FelSyntaxError: If the expression cannot be parsed.
     """
-    ast = parse(source)
-    env = Environment(data=data, instances=instances, mip_states=mip_states, variables=variables)
-    functions = build_default_registry()
-    if extensions:
-        functions.update(extensions)
-    ev = Evaluator(env, functions)
-    value = ev.evaluate(ast)
-    return EvalResult(value=value, diagnostics=ev.diagnostics)
+    return default_fel_runtime().evaluate(
+        source, data,
+        instances=instances,
+        mip_states=mip_states,
+        extensions=extensions,
+        variables=variables,
+    )
 
 
 def extract_dependencies(source: str) -> DependencySet:
     """Parse a FEL expression and statically extract all referenced dependencies.
 
-    Returns a DependencySet of field paths, context refs, instance refs, MIP
-    dependencies, and structural flags (self-ref, wildcards, prev/next) --
-    without evaluating the expression.
+    Delegates to the default FEL runtime (Rust when available, Python fallback).
 
     Raises:
         FelSyntaxError: If the expression cannot be parsed.
     """
-    ast = parse(source)
-    return _extract_deps(ast)
+    return default_fel_runtime().extract_dependencies(source)

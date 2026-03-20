@@ -24,7 +24,11 @@ export async function initWasm(): Promise<void> {
         try {
             // Dynamic import so the WASM glue is only loaded when needed
             const mod = await import('../wasm-pkg/formspec_wasm.js');
-            await mod.default();
+            // wasm-pack default export is the init function; TypeScript's
+            // module namespace typing doesn't always recognise it as callable,
+            // so we import by name from the generated types.
+            const init: (input?: any) => Promise<any> = (mod as any).default;
+            await init();
             _wasm = mod;
             _wasmReady = true;
         } catch (e) {
