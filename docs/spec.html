@@ -801,10 +801,11 @@ field’s value MUST NOT appear in validation results.</td>
 <tr>
 <td><code>required</code></td>
 <td><code>boolean</code></td>
-<td>If <code>true</code>, the target field MUST have a non-null,
-non-empty-string value for the Instance to be valid. This is evaluated
-dynamically — a field may be required only when other conditions
-hold.</td>
+<td>If <code>true</code>, the target field MUST have a non-empty value
+for the Instance to be valid. A value is “empty” if it is
+<code>null</code>, an empty string <code>""</code>, or an empty array
+<code>[]</code>. This is evaluated dynamically — a field may be required
+only when other conditions hold.</td>
 </tr>
 <tr>
 <td><code>readonly</code></td>
@@ -1410,10 +1411,11 @@ constraint expression. If the result is <code>false</code>, record a
 ValidationResult with severity <code>"error"</code> and the Bind’s
 <code>constraintMessage</code>.</li>
 <li>If the field has a <code>required</code> Bind that evaluated to
-<code>true</code>, and the field’s value is <code>null</code> or empty
-string, record a ValidationResult with severity <code>"error"</code> and
-a processor-generated message (or the Bind’s
-<code>requiredMessage</code>, if provided).</li>
+<code>true</code>, and the field’s value is empty (<code>null</code>,
+empty string <code>""</code>, or empty array <code>[]</code>), record a
+ValidationResult with severity <code>"error"</code> and a
+processor-generated message (or the Bind’s <code>requiredMessage</code>,
+if provided).</li>
 </ol></li>
 <li>For each Validation Shape whose target paths intersect the affected
 subgraph, evaluate the Shape’s constraint expressions and record
@@ -1584,7 +1586,7 @@ Shape-level and external codes override the generic defaults.</p>
 <tr>
 <td><code>REQUIRED</code></td>
 <td><code>required</code></td>
-<td>A required field is null or empty string.</td>
+<td>A required field is null, empty string, or empty array.</td>
 </tr>
 <tr>
 <td><code>TYPE_MISMATCH</code></td>
@@ -1840,8 +1842,8 @@ available:</p>
 <tr>
 <td><code>$repeatKey[index].fieldKey</code></td>
 <td>The value of <code>fieldKey</code> in the repeat instance at the
-given 0-based <code>index</code>.</td>
-<td><code>$lineItems[0].amount</code> → <code>100.00</code></td>
+given 1-based <code>index</code>.</td>
+<td><code>$lineItems[1].amount</code> → <code>100.00</code></td>
 </tr>
 <tr>
 <td><code>$repeatKey[*].fieldKey</code></td>
@@ -1858,9 +1860,9 @@ for disambiguation.</td>
 </tr>
 <tr>
 <td><code>@index</code></td>
-<td>The 0-based position of the current repeat instance within its
-parent array.</td>
-<td><code>if(@index = 0, 'First', 'Subsequent')</code></td>
+<td>The 1-based position of the current repeat instance within its
+parent collection.</td>
+<td><code>if(@index = 1, 'First', 'Subsequent')</code></td>
 </tr>
 <tr>
 <td><code>@count</code></td>
@@ -1870,8 +1872,8 @@ parent array.</td>
 </tbody>
 </table>
 <p>A conformant processor MUST signal an error if an explicit index is
-out of bounds (less than 0 or greater than or equal to the number of
-repeat instances).</p>
+out of bounds (less than 1 or greater than the number of repeat
+instances).</p>
 <h4 id="cross-instance-references">3.2.3 Cross-Instance References</h4>
 <p>To reference data in a secondary instance, use the
 <code>@instance()</code> accessor:</p>
@@ -2998,8 +3000,12 @@ choice - <code>*</code> — zero or more - <code>+</code> — one or more -
 
 Expression     ← _ LetExpr _
 
-LetExpr        ← &#39;let&#39; _ Identifier _ &#39;=&#39; _ IfExpr _ &#39;in&#39; _ LetExpr
+LetExpr        ← &#39;let&#39; _ Identifier _ &#39;=&#39; _ LetValue _ &#39;in&#39; _ LetExpr
                / IfExpr
+
+# LetValue omits Membership to disambiguate the &#39;in&#39; keyword.
+# Use parentheses for membership in let-value position: let x = (1 in $arr) in ...
+LetValue       ← IfExpr   # with Membership production omitted from the chain
 
 IfExpr         ← &#39;if&#39; _ Ternary _ &#39;then&#39; _ IfExpr _ &#39;else&#39; _ IfExpr
                / Ternary
@@ -4974,8 +4980,8 @@ following forms are defined:</p>
 </tr>
 <tr>
 <td><code>groupKey[@index = N].fieldKey</code></td>
-<td>A field in a specific repetition (0-based index)</td>
-<td><code>line_items[@index = 0].amount</code></td>
+<td>A field in a specific repetition (1-based index)</td>
+<td><code>line_items[@index = 1].amount</code></td>
 </tr>
 <tr>
 <td><code>groupA.groupB[*].fieldKey</code></td>
@@ -4988,9 +4994,11 @@ following forms are defined:</p>
 uniformly to all repetitions of a repeatable group. Index-based
 addressing (<code>[@index = N]</code>) SHOULD be used only in
 exceptional circumstances (e.g., binding a calculation to the first
-repetition only). Repeat indexes are 0-based throughout Formspec path
-syntax and resolved ValidationResult paths to align with JSON array
-indexing.</p>
+repetition only). FEL expression indexes (<code>$repeat[n]</code>,
+<code>@index</code>) are <strong>1-based</strong> as defined in the FEL
+normative grammar (§6.1–6.2). Resolved instance paths in
+ValidationResult entries use <strong>0-based</strong> JSON array indexes
+(e.g., <code>line_items[2].amount</code>).</p>
 <p>A path MUST resolve to at least one Item <code>key</code> in the
 Definition. If a path does not resolve, implementations MUST report a
 Definition error.</p>

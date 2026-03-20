@@ -2542,7 +2542,7 @@ FEL expressions in `when` ALWAYS resolve against the **data tree**
 
 - `$fieldKey` resolves to the current value of the field with that
   key.
-- `@index` resolves to the zero-based repeat index when inside a
+- `@index` resolves to the 1-based repeat index when inside a
   repeatable group context.
 - `@count` resolves to the total number of repeat instances when
   inside a repeatable group context.

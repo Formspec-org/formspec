@@ -363,7 +363,7 @@ FEL expression:
 |----------|---------------|----------|
 | `calculate` | Same as target field’s `dataType` | The field’s value is computed from this expression. A field with a `calculate` Bind is implicitly `readonly`. The processor MUST evaluate this expression and write the result to the Instance whenever a dependency changes. |
 | `relevant` | `boolean` | If the expression evaluates to `false`, the target node (and all its descendants, if a group) is **not relevant**: it is hidden from the user, excluded from validation, and its value in the Instance is preserved but marked as non-relevant. A non-relevant field’s value MUST NOT appear in validation results. |
-| `required` | `boolean` | If `true`, the target field MUST have a non-null, non-empty-string value for the Instance to be valid. This is evaluated dynamically — a field may be required only when other conditions hold. |
+| `required` | `boolean` | If `true`, the target field MUST have a non-empty value for the Instance to be valid. A value is "empty" if it is `null`, an empty string `""`, or an empty array `[]`. This is evaluated dynamically — a field may be required only when other conditions hold. |
 | `readonly` | `boolean` | If `true`, the field’s value MUST NOT be modified by user input. It MAY still be modified by a `calculate` expression. |
 | `constraint` | `boolean` | A per-field validation expression. If it evaluates to `false`, the field is invalid. The Bind SHOULD include a `constraintMessage` string for human-readable feedback. |
 | `default` | Same as target field’s `dataType` | The value assigned when a previously non-relevant field becomes relevant again. This is distinct from Item `initialValue` and `prePopulate`, which apply at response or repeat-instance creation time. `default` is not reactive like `calculate`; it applies on each non-relevant → relevant transition. |
@@ -774,7 +774,7 @@ recalculation guarantee, borrowed from XForms.
       If the result is `false`, record a ValidationResult with severity
       `"error"` and the Bind’s `constraintMessage`.
    b. If the field has a `required` Bind that evaluated to `true`, and the
-      field’s value is `null` or empty string, record a ValidationResult with
+      field’s value is empty (`null`, empty string `""`, or empty array `[]`), record a ValidationResult with
       severity `"error"` and a processor-generated message (or the Bind’s
       `requiredMessage`, if provided).
 2. For each Validation Shape whose target paths intersect the affected
@@ -859,7 +859,7 @@ codes override the generic defaults.
 
 | Code | constraintKind | Triggered When |
 |------|---------------|---------------|
-| `REQUIRED` | `required` | A required field is null or empty string. |
+| `REQUIRED` | `required` | A required field is null, empty string, or empty array. |
 | `TYPE_MISMATCH` | `type` | Value cannot be interpreted as the field's `dataType`. |
 | `MIN_REPEAT` | `cardinality` | Fewer repeat instances than `minRepeat`. |
 | `MAX_REPEAT` | `cardinality` | More repeat instances than `maxRepeat`. |
@@ -997,15 +997,14 @@ Within repeatable contexts, additional reference forms are available:
 
 | Syntax | Resolves to | Example |
 |--------|------------|--------|
-| `$repeatKey[index].fieldKey` | The value of `fieldKey` in the repeat instance at the given 0-based `index`. | `$lineItems[0].amount` → `100.00` |
+| `$repeatKey[index].fieldKey` | The value of `fieldKey` in the repeat instance at the given 1-based `index`. | `$lineItems[1].amount` → `100.00` |
 | `$repeatKey[*].fieldKey` | An **array** of all values of `fieldKey` across all instances of the repeat. Intended for use with aggregate functions. | `sum($lineItems[*].amount)` → `350.00` |
 | `@current` | An explicit reference to the current repeat instance object. Useful for disambiguation. | `@current.quantity * @current.unitPrice` |
-| `@index` | The 0-based position of the current repeat instance within its parent array. | `if(@index = 0, 'First', 'Subsequent')` |
+| `@index` | The 1-based position of the current repeat instance within its parent collection. | `if(@index = 1, 'First', 'Subsequent')` |
 | `@count` | The total number of instances in the current repeat collection. | `@count >= 1` (at least one entry required) |
 
 A conformant processor MUST signal an error if an explicit index is out of
-bounds (less than 0 or greater than or equal to the number of repeat
-instances).
+bounds (less than 1 or greater than the number of repeat instances).
 
 #### 3.2.3 Cross-Instance References
 
@@ -1457,8 +1456,12 @@ The grammar uses the following PEG conventions:
 
 Expression     ← _ LetExpr _
 
-LetExpr        ← 'let' _ Identifier _ '=' _ IfExpr _ 'in' _ LetExpr
+LetExpr        ← 'let' _ Identifier _ '=' _ LetValue _ 'in' _ LetExpr
                / IfExpr
+
+# LetValue omits Membership to disambiguate the 'in' keyword.
+# Use parentheses for membership in let-value position: let x = (1 in $arr) in ...
+LetValue       ← IfExpr   # with Membership production omitted from the chain
 
 IfExpr         ← 'if' _ Ternary _ 'then' _ IfExpr _ 'else' _ IfExpr
                / Ternary
@@ -2283,15 +2286,16 @@ forms are defined:
 | `fieldKey` | A root-level field | `entity_name` |
 | `groupKey.fieldKey` | A field nested inside a group | `budget_section.total_budget` |
 | `groupKey[*].fieldKey` | A field inside each repetition of a repeatable group | `line_items[*].amount` |
-| `groupKey[@index = N].fieldKey` | A field in a specific repetition (0-based index) | `line_items[@index = 0].amount` |
+| `groupKey[@index = N].fieldKey` | A field in a specific repetition (1-based index) | `line_items[@index = 1].amount` |
 | `groupA.groupB[*].fieldKey` | Deep nesting across multiple groups | `budget_section.line_items[*].amount` |
 
 The `[*]` wildcard MUST be used when a Bind applies uniformly to all
 repetitions of a repeatable group. Index-based addressing (`[@index = N]`)
 SHOULD be used only in exceptional circumstances (e.g., binding a calculation
-to the first repetition only). Repeat indexes are 0-based throughout
-Formspec path syntax and resolved ValidationResult paths to align with JSON
-array indexing.
+to the first repetition only). FEL expression indexes (`$repeat[n]`, `@index`)
+are **1-based** as defined in the FEL normative grammar (§6.1–6.2). Resolved
+instance paths in ValidationResult entries use **0-based** JSON array indexes
+(e.g., `line_items[2].amount`).
 
 A path MUST resolve to at least one Item `key` in the Definition. If a path
 does not resolve, implementations MUST report a Definition error.
