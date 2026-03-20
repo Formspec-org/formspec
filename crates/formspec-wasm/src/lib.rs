@@ -6,23 +6,75 @@
 /// The binding layer handles type conversion only — no business logic here.
 use wasm_bindgen::prelude::*;
 
-use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::*;
 use serde_json::Value;
 use std::collections::HashMap;
 
 use fel_core::{
-    evaluate, extract_dependencies, parse, print_expr, Dependencies, FelValue, MapEnvironment,
-    FormspecEnvironment, MipState,
-};
-use formspec_core::{
-    analyze_fel, assemble_definition, detect_document_type, execute_mapping, execute_mapping_doc,
-    get_fel_dependencies, normalize_indexed_path, MapResolver, MappingDocument,
+    Dependencies, FelMoney, FelValue, FormspecEnvironment, MapEnvironment, MipState,
+    builtin_function_catalog, evaluate, extract_dependencies, parse, parse_date_literal,
+    parse_datetime_literal, print_expr,
 };
 use formspec_core::changelog;
 use formspec_core::registry_client::{self, Registry};
+use formspec_core::{
+    ExtensionErrorCode, ExtensionItem, ExtensionSeverity, MapRegistry, MapResolver,
+    MappingDocument, RegistryEntryInfo, RegistryEntryStatus, RewriteOptions, analyze_fel,
+    assemble_definition, collect_fel_rewrite_targets, detect_document_type, execute_mapping,
+    execute_mapping_doc, get_fel_dependencies, json_pointer_to_jsonpath, normalize_indexed_path,
+    parent_path, rewrite_fel_source_references, rewrite_message_template, schema_validation_plan,
+    validate_extension_usage,
+};
 use formspec_eval::evaluate_definition;
-use formspec_lint::{lint, lint_with_options, LintOptions};
+use formspec_lint::{LintOptions, lint, lint_with_options};
+
+fn json_item_at_path<'a>(items: &'a [Value], path: &str) -> Option<&'a Value> {
+    let normalized = normalize_indexed_path(path);
+    let segments: Vec<&str> = normalized
+        .split('.')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+    if segments.is_empty() {
+        return None;
+    }
+
+    let mut current_items = items;
+    for (index, segment) in segments.iter().enumerate() {
+        let found = current_items
+            .iter()
+            .find(|item| item.get("key").and_then(Value::as_str) == Some(*segment))?;
+        if index == segments.len() - 1 {
+            return Some(found);
+        }
+        current_items = found.get("children").and_then(Value::as_array)?;
+    }
+    None
+}
+
+fn json_item_location_at_path<'a>(items: &'a [Value], path: &str) -> Option<(usize, &'a Value)> {
+    let normalized = normalize_indexed_path(path);
+    let segments: Vec<&str> = normalized
+        .split('.')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+    if segments.is_empty() {
+        return None;
+    }
+
+    let mut current_items = items;
+    for (depth, segment) in segments.iter().enumerate() {
+        let index = current_items
+            .iter()
+            .position(|item| item.get("key").and_then(Value::as_str) == Some(*segment))?;
+        let item = &current_items[index];
+        if depth == segments.len() - 1 {
+            return Some((index, item));
+        }
+        current_items = item.get("children").and_then(Value::as_array)?;
+    }
+    None
+}
 
 // ── FEL Evaluation ──────────────────────────────────────────────
 
@@ -39,8 +91,8 @@ fn eval_fel_inner(expression: &str, fields_json: &str) -> Result<String, String>
     let fields: HashMap<String, FelValue> = if fields_json.is_empty() || fields_json == "{}" {
         HashMap::new()
     } else {
-        let json_val: Value = serde_json::from_str(fields_json)
-            .map_err(|e| format!("invalid fields JSON: {e}"))?;
+        let json_val: Value =
+            serde_json::from_str(fields_json).map_err(|e| format!("invalid fields JSON: {e}"))?;
         json_to_field_map(&json_val)
     };
 
@@ -61,11 +113,15 @@ pub fn eval_fel_with_context(expression: &str, context_json: &str) -> Result<Str
 fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<String, String> {
     let expr = parse(expression).map_err(|e| e.to_string())?;
 
-    let ctx: Value = serde_json::from_str(context_json)
-        .map_err(|e| format!("invalid context JSON: {e}"))?;
+    let ctx: Value =
+        serde_json::from_str(context_json).map_err(|e| format!("invalid context JSON: {e}"))?;
     let ctx_obj = ctx.as_object().ok_or("context must be a JSON object")?;
 
     let mut env = FormspecEnvironment::new();
+
+    if let Some(now_iso) = ctx_obj.get("nowIso").and_then(|v| v.as_str()) {
+        env.set_now_from_iso(now_iso);
+    }
 
     // Fields: { path: value }
     if let Some(fields) = ctx_obj.get("fields") {
@@ -90,29 +146,35 @@ fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<S
         if let Some(obj) = mips.as_object() {
             for (k, v) in obj {
                 if let Some(mip_obj) = v.as_object() {
-                    env.set_mip(k, MipState {
-                        valid: mip_obj.get("valid").and_then(|v| v.as_bool()).unwrap_or(true),
-                        relevant: mip_obj.get("relevant").and_then(|v| v.as_bool()).unwrap_or(true),
-                        readonly: mip_obj.get("readonly").and_then(|v| v.as_bool()).unwrap_or(false),
-                        required: mip_obj.get("required").and_then(|v| v.as_bool()).unwrap_or(false),
-                    });
+                    env.set_mip(
+                        k,
+                        MipState {
+                            valid: mip_obj
+                                .get("valid")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(true),
+                            relevant: mip_obj
+                                .get("relevant")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(true),
+                            readonly: mip_obj
+                                .get("readonly")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false),
+                            required: mip_obj
+                                .get("required")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false),
+                        },
+                    );
                 }
             }
         }
     }
 
-    // Repeat context: { current, index, count, collection? }
+    // Repeat context: { current, index, count, collection?, parent? }
     if let Some(repeat) = ctx_obj.get("repeatContext") {
-        if let Some(obj) = repeat.as_object() {
-            let current = obj.get("current").map(json_to_fel).unwrap_or(FelValue::Null);
-            let index = obj.get("index").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
-            let count = obj.get("count").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-            let collection = obj.get("collection")
-                .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().map(json_to_fel).collect())
-                .unwrap_or_default();
-            env.push_repeat(current, index, count, collection);
-        }
+        push_repeat_context(&mut env, repeat);
     }
 
     // Instances: { name: value }
@@ -125,6 +187,17 @@ fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<S
     }
 
     let result = evaluate(&expr, &env);
+    if let Some(diag) = result
+        .diagnostics
+        .iter()
+        .find(|diag| diag.message.starts_with("undefined function: "))
+    {
+        let name = diag
+            .message
+            .trim_start_matches("undefined function: ")
+            .trim();
+        return Err(format!("Unsupported FEL function: {name}"));
+    }
     let json = fel_to_json(&result.value);
     serde_json::to_string(&json).map_err(|e| e.to_string())
 }
@@ -179,6 +252,188 @@ pub fn analyze_fel_wasm(expression: &str) -> Result<String, JsError> {
     serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
 }
 
+/// Collect rewriteable targets from a FEL expression.
+#[wasm_bindgen(js_name = "collectFELRewriteTargets")]
+pub fn collect_fel_rewrite_targets_wasm(expression: &str) -> Result<String, JsError> {
+    let targets = collect_fel_rewrite_targets(expression);
+    let mut field_paths: Vec<_> = targets.field_paths.into_iter().collect();
+    field_paths.sort();
+    let mut current_paths: Vec<_> = targets.current_paths.into_iter().collect();
+    current_paths.sort();
+    let mut variables: Vec<_> = targets.variables.into_iter().collect();
+    variables.sort();
+    let mut instance_names: Vec<_> = targets.instance_names.into_iter().collect();
+    instance_names.sort();
+    let navigation_targets = targets
+        .navigation_targets
+        .into_iter()
+        .map(|entry| {
+            serde_json::json!({
+                "functionName": entry.function_name,
+                "name": entry.name,
+            })
+        })
+        .collect::<Vec<_>>();
+    let json = serde_json::json!({
+        "fieldPaths": field_paths,
+        "currentPaths": current_paths,
+        "variables": variables,
+        "instanceNames": instance_names,
+        "navigationTargets": navigation_targets,
+    });
+    serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
+}
+
+/// Rewrite a FEL expression using explicit rewrite maps.
+#[wasm_bindgen(js_name = "rewriteFELReferences")]
+pub fn rewrite_fel_references_wasm(
+    expression: &str,
+    rewrites_json: &str,
+) -> Result<String, JsError> {
+    let rewrites: Value = serde_json::from_str(rewrites_json)
+        .map_err(|e| JsError::new(&format!("invalid rewrites JSON: {e}")))?;
+
+    let empty = serde_json::Map::new();
+    let rewrites_obj = rewrites.as_object().unwrap_or(&empty);
+    let field_paths = rewrites_obj.get("fieldPaths").and_then(Value::as_object);
+    let current_paths = rewrites_obj.get("currentPaths").and_then(Value::as_object);
+    let variables = rewrites_obj.get("variables").and_then(Value::as_object);
+    let instance_names = rewrites_obj.get("instanceNames").and_then(Value::as_object);
+    let navigation_targets = rewrites_obj
+        .get("navigationTargets")
+        .and_then(Value::as_object);
+
+    let options = RewriteOptions {
+        rewrite_field_path: field_paths.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |path: &str| {
+                map.get(path)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as Box<dyn Fn(&str) -> Option<String>>
+        }),
+        rewrite_current_path: current_paths.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |path: &str| {
+                map.get(path)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as Box<dyn Fn(&str) -> Option<String>>
+        }),
+        rewrite_variable: variables.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |name: &str| {
+                map.get(name)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as Box<dyn Fn(&str) -> Option<String>>
+        }),
+        rewrite_instance_name: instance_names.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |name: &str| {
+                map.get(name)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as Box<dyn Fn(&str) -> Option<String>>
+        }),
+        rewrite_navigation_target: navigation_targets.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |name: &str, fn_name: &str| {
+                let key = format!("{fn_name}:{name}");
+                map.get(&key)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as Box<dyn Fn(&str, &str) -> Option<String>>
+        }),
+    };
+
+    Ok(rewrite_fel_source_references(expression, &options))
+}
+
+/// Rewrite FEL expressions embedded in {{...}} interpolation segments.
+#[wasm_bindgen(js_name = "rewriteMessageTemplate")]
+pub fn rewrite_message_template_wasm(
+    message: &str,
+    rewrites_json: &str,
+) -> Result<String, JsError> {
+    let rewrites: Value = serde_json::from_str(rewrites_json)
+        .map_err(|e| JsError::new(&format!("invalid rewrites JSON: {e}")))?;
+
+    let empty = serde_json::Map::new();
+    let rewrites_obj = rewrites.as_object().unwrap_or(&empty);
+    let field_paths = rewrites_obj.get("fieldPaths").and_then(Value::as_object);
+    let current_paths = rewrites_obj.get("currentPaths").and_then(Value::as_object);
+    let variables = rewrites_obj.get("variables").and_then(Value::as_object);
+    let instance_names = rewrites_obj.get("instanceNames").and_then(Value::as_object);
+    let navigation_targets = rewrites_obj
+        .get("navigationTargets")
+        .and_then(Value::as_object);
+
+    Ok(rewrite_message_template(
+        message,
+        &RewriteOptions {
+            rewrite_field_path: field_paths.map(|entries| {
+                let map = entries.clone();
+                Box::new(move |path: &str| {
+                    map.get(path)
+                        .and_then(Value::as_str)
+                        .map(|value| value.to_string())
+                }) as Box<dyn Fn(&str) -> Option<String>>
+            }),
+            rewrite_current_path: current_paths.map(|entries| {
+                let map = entries.clone();
+                Box::new(move |path: &str| {
+                    map.get(path)
+                        .and_then(Value::as_str)
+                        .map(|value| value.to_string())
+                }) as Box<dyn Fn(&str) -> Option<String>>
+            }),
+            rewrite_variable: variables.map(|entries| {
+                let map = entries.clone();
+                Box::new(move |name: &str| {
+                    map.get(name)
+                        .and_then(Value::as_str)
+                        .map(|value| value.to_string())
+                }) as Box<dyn Fn(&str) -> Option<String>>
+            }),
+            rewrite_instance_name: instance_names.map(|entries| {
+                let map = entries.clone();
+                Box::new(move |name: &str| {
+                    map.get(name)
+                        .and_then(Value::as_str)
+                        .map(|value| value.to_string())
+                }) as Box<dyn Fn(&str) -> Option<String>>
+            }),
+            rewrite_navigation_target: navigation_targets.map(|entries| {
+                let map = entries.clone();
+                Box::new(move |name: &str, fn_name: &str| {
+                    let key = format!("{fn_name}:{name}");
+                    map.get(&key)
+                        .and_then(Value::as_str)
+                        .map(|value| value.to_string())
+                }) as Box<dyn Fn(&str, &str) -> Option<String>>
+            }),
+        },
+    ))
+}
+
+/// Return builtin FEL function metadata for tooling/autocomplete surfaces.
+#[wasm_bindgen(js_name = "listBuiltinFunctions")]
+pub fn list_builtin_functions() -> Result<String, JsError> {
+    let json = serde_json::json!(
+        builtin_function_catalog()
+            .iter()
+            .map(|entry| serde_json::json!({
+                "name": entry.name,
+                "category": entry.category,
+                "signature": entry.signature,
+                "description": entry.description,
+            }))
+            .collect::<Vec<_>>()
+    );
+    serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
+}
+
 // ── Path Utils ──────────────────────────────────────────────────
 
 /// Normalize a dotted path by stripping repeat indices.
@@ -187,18 +442,81 @@ pub fn normalize_path(path: &str) -> String {
     normalize_indexed_path(path)
 }
 
+/// Find an item in a JSON item tree by dotted path.
+#[wasm_bindgen(js_name = "itemAtPath")]
+pub fn item_at_path_wasm(items_json: &str, path: &str) -> Result<String, JsError> {
+    let items: Vec<Value> = serde_json::from_str(items_json)
+        .map_err(|e| JsError::new(&format!("invalid items JSON: {e}")))?;
+    let json = json_item_at_path(&items, path)
+        .cloned()
+        .unwrap_or(Value::Null);
+    serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
+}
+
+/// Resolve the index, item, and parent path for a dotted item-tree path.
+#[wasm_bindgen(js_name = "itemLocationAtPath")]
+pub fn item_location_at_path_wasm(items_json: &str, path: &str) -> Result<String, JsError> {
+    let items: Vec<Value> = serde_json::from_str(items_json)
+        .map_err(|e| JsError::new(&format!("invalid items JSON: {e}")))?;
+    let json = match json_item_location_at_path(&items, path) {
+        Some((index, item)) => serde_json::json!({
+            "parentPath": parent_path(path),
+            "index": index,
+            "item": item.clone(),
+        }),
+        None => Value::Null,
+    };
+    serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
+}
+
 // ── Schema Validation ───────────────────────────────────────────
 
 /// Detect the document type of a Formspec JSON document.
 /// Returns the document type string or null.
 #[wasm_bindgen(js_name = "detectDocumentType")]
 pub fn detect_doc_type(doc_json: &str) -> Result<JsValue, JsError> {
-    let doc: Value = serde_json::from_str(doc_json)
-        .map_err(|e| JsError::new(&format!("invalid JSON: {e}")))?;
+    let doc: Value =
+        serde_json::from_str(doc_json).map_err(|e| JsError::new(&format!("invalid JSON: {e}")))?;
     match detect_document_type(&doc) {
         Some(dt) => Ok(JsValue::from_str(dt.schema_key())),
         None => Ok(JsValue::NULL),
     }
+}
+
+/// Convert a JSON Pointer string into a JSONPath string.
+#[wasm_bindgen(js_name = "jsonPointerToJsonPath")]
+pub fn json_pointer_to_jsonpath_wasm(pointer: &str) -> String {
+    json_pointer_to_jsonpath(pointer)
+}
+
+/// Plan schema validation execution for a document.
+///
+/// Returns JSON:
+/// - `{ documentType: null, mode: "unknown", error }` for unknown documents
+/// - `{ documentType, mode: "document" }` for non-component docs
+/// - `{ documentType: "component", mode: "component", componentTargets: [...] }`
+#[wasm_bindgen(js_name = "planSchemaValidation")]
+pub fn plan_schema_validation_wasm(
+    doc_json: &str,
+    document_type_override: Option<String>,
+) -> Result<String, JsError> {
+    let doc: Value =
+        serde_json::from_str(doc_json).map_err(|e| JsError::new(&format!("invalid JSON: {e}")))?;
+    let override_type = document_type_override
+        .as_deref()
+        .and_then(formspec_core::DocumentType::from_schema_key);
+    let plan = schema_validation_plan(&doc, override_type);
+    let json = serde_json::json!({
+        "documentType": plan.document_type,
+        "mode": plan.mode,
+        "componentTargets": plan.component_targets.iter().map(|target| serde_json::json!({
+            "pointer": target.pointer,
+            "component": target.component,
+            "node": target.node,
+        })).collect::<Vec<_>>(),
+        "error": plan.error,
+    });
+    serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
 }
 
 // ── Linting ─────────────────────────────────────────────────────
@@ -207,8 +525,8 @@ pub fn detect_doc_type(doc_json: &str) -> Result<JsValue, JsError> {
 /// Returns JSON: { documentType, valid, diagnostics: [...] }
 #[wasm_bindgen(js_name = "lintDocument")]
 pub fn lint_document(doc_json: &str) -> Result<String, JsError> {
-    let doc: Value = serde_json::from_str(doc_json)
-        .map_err(|e| JsError::new(&format!("invalid JSON: {e}")))?;
+    let doc: Value =
+        serde_json::from_str(doc_json).map_err(|e| JsError::new(&format!("invalid JSON: {e}")))?;
     let result = lint(&doc);
     let json = lint_result_to_json(&result);
     serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
@@ -217,16 +535,22 @@ pub fn lint_document(doc_json: &str) -> Result<String, JsError> {
 /// Lint with registry documents for extension resolution.
 /// registries_json is a JSON array of registry documents.
 #[wasm_bindgen(js_name = "lintDocumentWithRegistries")]
-pub fn lint_document_with_registries(doc_json: &str, registries_json: &str) -> Result<String, JsError> {
+pub fn lint_document_with_registries(
+    doc_json: &str,
+    registries_json: &str,
+) -> Result<String, JsError> {
     let doc: Value = serde_json::from_str(doc_json)
         .map_err(|e| JsError::new(&format!("invalid doc JSON: {e}")))?;
     let registries: Vec<Value> = serde_json::from_str(registries_json)
         .map_err(|e| JsError::new(&format!("invalid registries JSON: {e}")))?;
 
-    let result = lint_with_options(&doc, &LintOptions {
-        registry_documents: registries,
-        ..Default::default()
-    });
+    let result = lint_with_options(
+        &doc,
+        &LintOptions {
+            registry_documents: registries,
+            ..Default::default()
+        },
+    );
     let json = lint_result_to_json(&result);
     serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
 }
@@ -243,8 +567,8 @@ pub fn evaluate_definition_wasm(definition_json: &str, data_json: &str) -> Resul
 fn evaluate_definition_inner(definition_json: &str, data_json: &str) -> Result<String, String> {
     let definition: Value = serde_json::from_str(definition_json)
         .map_err(|e| format!("invalid definition JSON: {e}"))?;
-    let data_val: Value = serde_json::from_str(data_json)
-        .map_err(|e| format!("invalid data JSON: {e}"))?;
+    let data_val: Value =
+        serde_json::from_str(data_json).map_err(|e| format!("invalid data JSON: {e}"))?;
 
     let data: HashMap<String, Value> = data_val
         .as_object()
@@ -273,7 +597,10 @@ fn evaluate_definition_inner(definition_json: &str, data_json: &str) -> Result<S
 /// fragments_json is a JSON object mapping URI → fragment definition.
 /// Returns JSON: { definition, warnings, errors }
 #[wasm_bindgen(js_name = "assembleDefinition")]
-pub fn assemble_definition_wasm(definition_json: &str, fragments_json: &str) -> Result<String, JsError> {
+pub fn assemble_definition_wasm(
+    definition_json: &str,
+    fragments_json: &str,
+) -> Result<String, JsError> {
     let definition: Value = serde_json::from_str(definition_json)
         .map_err(|e| JsError::new(&format!("invalid definition JSON: {e}")))?;
     let fragments: Value = serde_json::from_str(fragments_json)
@@ -313,10 +640,10 @@ fn execute_mapping_inner(
     source_json: &str,
     direction: &str,
 ) -> Result<String, String> {
-    let rules_val: Value = serde_json::from_str(rules_json)
-        .map_err(|e| format!("invalid rules JSON: {e}"))?;
-    let source: Value = serde_json::from_str(source_json)
-        .map_err(|e| format!("invalid source JSON: {e}"))?;
+    let rules_val: Value =
+        serde_json::from_str(rules_json).map_err(|e| format!("invalid rules JSON: {e}"))?;
+    let source: Value =
+        serde_json::from_str(source_json).map_err(|e| format!("invalid source JSON: {e}"))?;
     let dir = match direction {
         "forward" => formspec_core::MappingDirection::Forward,
         "reverse" => formspec_core::MappingDirection::Reverse,
@@ -348,10 +675,13 @@ fn execute_mapping_inner(
 pub fn parse_registry(registry_json: &str) -> Result<String, JsError> {
     let val: Value = serde_json::from_str(registry_json)
         .map_err(|e| JsError::new(&format!("invalid JSON: {e}")))?;
-    let registry = Registry::from_json(&val)
-        .map_err(|e| JsError::new(&e.to_string()))?;
+    let registry = Registry::from_json(&val).map_err(|e| JsError::new(&e.to_string()))?;
     let issues = registry.validate();
-    let entry_count = val.get("entries").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+    let entry_count = val
+        .get("entries")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
     let json = serde_json::json!({
         "publisher": {
             "name": registry.publisher.name,
@@ -368,17 +698,28 @@ pub fn parse_registry(registry_json: &str) -> Result<String, JsError> {
 /// Find the highest-version registry entry matching name + version constraint.
 /// Returns entry JSON or "null" if not found.
 #[wasm_bindgen(js_name = "findRegistryEntry")]
-pub fn find_registry_entry(registry_json: &str, name: &str, version_constraint: &str) -> Result<String, JsError> {
+pub fn find_registry_entry(
+    registry_json: &str,
+    name: &str,
+    version_constraint: &str,
+) -> Result<String, JsError> {
     find_registry_entry_inner(registry_json, name, version_constraint).map_err(|e| JsError::new(&e))
 }
 
-fn find_registry_entry_inner(registry_json: &str, name: &str, version_constraint: &str) -> Result<String, String> {
-    let val: Value = serde_json::from_str(registry_json)
-        .map_err(|e| format!("invalid JSON: {e}"))?;
-    let registry = Registry::from_json(&val)
-        .map_err(|e| e.to_string())?;
+fn find_registry_entry_inner(
+    registry_json: &str,
+    name: &str,
+    version_constraint: &str,
+) -> Result<String, String> {
+    let val: Value =
+        serde_json::from_str(registry_json).map_err(|e| format!("invalid JSON: {e}"))?;
+    let registry = Registry::from_json(&val).map_err(|e| e.to_string())?;
 
-    let constraint = if version_constraint.is_empty() { None } else { Some(version_constraint) };
+    let constraint = if version_constraint.is_empty() {
+        None
+    } else {
+        Some(version_constraint)
+    };
     let entry = registry.find_one(name, constraint);
 
     match entry {
@@ -426,16 +767,172 @@ pub fn well_known_registry_url(base_url: &str) -> String {
     registry_client::well_known_url(base_url)
 }
 
+#[derive(Debug)]
+struct WasmExtensionItem {
+    key: String,
+    children: Vec<WasmExtensionItem>,
+    extensions: Option<HashMap<String, Value>>,
+    extra: HashMap<String, Value>,
+}
+
+impl WasmExtensionItem {
+    fn from_json(value: &Value) -> Option<Self> {
+        let obj = value.as_object()?;
+        let key = obj.get("key")?.as_str()?.to_string();
+        let children = obj
+            .get("children")
+            .and_then(|child| child.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(WasmExtensionItem::from_json)
+                    .collect()
+            })
+            .unwrap_or_default();
+        let extensions = obj
+            .get("extensions")
+            .and_then(|extensions| extensions.as_object())
+            .map(|map| map.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+        let extra = obj
+            .iter()
+            .filter(|(name, _)| *name != "key" && *name != "children" && *name != "extensions")
+            .map(|(name, value)| (name.clone(), value.clone()))
+            .collect();
+        Some(Self {
+            key,
+            children,
+            extensions,
+            extra,
+        })
+    }
+}
+
+impl ExtensionItem for WasmExtensionItem {
+    fn key(&self) -> &str {
+        &self.key
+    }
+
+    fn declared_extensions(&self) -> Vec<String> {
+        let mut found = Vec::new();
+        for (name, value) in &self.extra {
+            if !name.starts_with("x-") {
+                continue;
+            }
+            if value.is_null() || value == &Value::Bool(false) {
+                continue;
+            }
+            found.push(name.clone());
+        }
+        if let Some(extensions) = &self.extensions {
+            for (name, enabled) in extensions {
+                if !name.starts_with("x-") {
+                    continue;
+                }
+                if enabled.is_null() || enabled == &Value::Bool(false) {
+                    continue;
+                }
+                found.push(name.clone());
+            }
+        }
+        found.sort();
+        found.dedup();
+        found
+    }
+
+    fn children(&self) -> &[Self] {
+        &self.children
+    }
+}
+
+fn parse_registry_status(status: &str) -> RegistryEntryStatus {
+    match status {
+        "retired" => RegistryEntryStatus::Retired,
+        "deprecated" => RegistryEntryStatus::Deprecated,
+        "draft" => RegistryEntryStatus::Draft,
+        _ => RegistryEntryStatus::Active,
+    }
+}
+
+/// Validate enabled x-extension usage in an item tree against a registry entry lookup map.
+#[wasm_bindgen(js_name = "validateExtensionUsage")]
+pub fn validate_extension_usage_wasm(
+    items_json: &str,
+    registry_entries_json: &str,
+) -> Result<String, JsError> {
+    let item_values: Value = serde_json::from_str(items_json)
+        .map_err(|e| JsError::new(&format!("invalid items JSON: {e}")))?;
+    let items = item_values
+        .as_array()
+        .ok_or_else(|| JsError::new("items JSON must be an array"))?
+        .iter()
+        .filter_map(WasmExtensionItem::from_json)
+        .collect::<Vec<_>>();
+    let registry_entries: HashMap<String, Value> = serde_json::from_str(registry_entries_json)
+        .map_err(|e| JsError::new(&format!("invalid registry entries JSON: {e}")))?;
+
+    let mut registry = MapRegistry::new();
+    for (name, entry) in registry_entries {
+        let status = entry
+            .get("status")
+            .and_then(|value| value.as_str())
+            .map(parse_registry_status)
+            .unwrap_or(RegistryEntryStatus::Active);
+        registry.add(RegistryEntryInfo {
+            name: name.clone(),
+            status,
+            display_name: entry
+                .get("displayName")
+                .and_then(|value| value.as_str())
+                .map(String::from),
+            deprecation_notice: entry
+                .get("deprecationNotice")
+                .and_then(|value| value.as_str())
+                .map(String::from),
+        });
+    }
+
+    let issues = validate_extension_usage(&items, &registry);
+    let json = serde_json::json!(
+        issues
+            .iter()
+            .map(|issue| serde_json::json!({
+                "path": issue.path,
+                "extension": issue.extension,
+                "severity": match issue.severity {
+                    ExtensionSeverity::Error => "error",
+                    ExtensionSeverity::Warning => "warning",
+                    ExtensionSeverity::Info => "info",
+                },
+                "code": match issue.code {
+                    ExtensionErrorCode::UnresolvedExtension => "UNRESOLVED_EXTENSION",
+                    ExtensionErrorCode::ExtensionRetired => "EXTENSION_RETIRED",
+                    ExtensionErrorCode::ExtensionDeprecated => "EXTENSION_DEPRECATED",
+                },
+                "message": issue.message,
+            }))
+            .collect::<Vec<_>>()
+    );
+    serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()))
+}
+
 // ── Changelog ───────────────────────────────────────────────────
 
 /// Diff two Formspec definition versions and produce a structured changelog.
 /// Returns JSON with camelCase keys.
 #[wasm_bindgen(js_name = "generateChangelog")]
-pub fn generate_changelog_wasm(old_def_json: &str, new_def_json: &str, definition_url: &str) -> Result<String, JsError> {
-    generate_changelog_inner(old_def_json, new_def_json, definition_url).map_err(|e| JsError::new(&e))
+pub fn generate_changelog_wasm(
+    old_def_json: &str,
+    new_def_json: &str,
+    definition_url: &str,
+) -> Result<String, JsError> {
+    generate_changelog_inner(old_def_json, new_def_json, definition_url)
+        .map_err(|e| JsError::new(&e))
 }
 
-fn generate_changelog_inner(old_def_json: &str, new_def_json: &str, definition_url: &str) -> Result<String, String> {
+fn generate_changelog_inner(
+    old_def_json: &str,
+    new_def_json: &str,
+    definition_url: &str,
+) -> Result<String, String> {
     let old_def: Value = serde_json::from_str(old_def_json)
         .map_err(|e| format!("invalid old definition JSON: {e}"))?;
     let new_def: Value = serde_json::from_str(new_def_json)
@@ -489,7 +986,11 @@ fn generate_changelog_inner(old_def_json: &str, new_def_json: &str, definition_u
 /// Execute a full mapping document (rules + defaults + autoMap).
 /// Returns JSON: { direction, output, rulesApplied, diagnostics }
 #[wasm_bindgen(js_name = "executeMappingDoc")]
-pub fn execute_mapping_doc_wasm(doc_json: &str, source_json: &str, direction: &str) -> Result<String, JsError> {
+pub fn execute_mapping_doc_wasm(
+    doc_json: &str,
+    source_json: &str,
+    direction: &str,
+) -> Result<String, JsError> {
     let doc_val: Value = serde_json::from_str(doc_json)
         .map_err(|e| JsError::new(&format!("invalid mapping document JSON: {e}")))?;
     let source: Value = serde_json::from_str(source_json)
@@ -540,11 +1041,36 @@ fn json_to_fel(val: &Value) -> FelValue {
                 FelValue::Null
             }
         }
-        Value::String(s) => FelValue::String(s.clone()),
+        Value::String(s) => {
+            let prefixed = format!("@{s}");
+            if let Some(date) = parse_date_literal(&prefixed) {
+                FelValue::Date(date)
+            } else if let Some(datetime) = parse_datetime_literal(&prefixed) {
+                FelValue::Date(datetime)
+            } else {
+                FelValue::String(s.clone())
+            }
+        }
         Value::Array(arr) => FelValue::Array(arr.iter().map(json_to_fel).collect()),
-        Value::Object(map) => FelValue::Object(
-            map.iter().map(|(k, v)| (k.clone(), json_to_fel(v))).collect(),
-        ),
+        Value::Object(map) => {
+            if let (Some(amount), Some(currency)) = (
+                map.get("amount"),
+                map.get("currency").and_then(|v| v.as_str()),
+            ) {
+                let amount_value = json_to_fel(amount);
+                if let FelValue::Number(amount_number) = amount_value {
+                    return FelValue::Money(FelMoney {
+                        amount: amount_number,
+                        currency: currency.to_string(),
+                    });
+                }
+            }
+            FelValue::Object(
+                map.iter()
+                    .map(|(k, v)| (k.clone(), json_to_fel(v)))
+                    .collect(),
+            )
+        }
     }
 }
 
@@ -567,14 +1093,18 @@ fn fel_to_json(val: &FelValue) -> Value {
         FelValue::Date(d) => Value::String(d.format_iso()),
         FelValue::Array(arr) => Value::Array(arr.iter().map(fel_to_json).collect()),
         FelValue::Object(entries) => {
-            let map: serde_json::Map<String, Value> = entries.iter()
+            let map: serde_json::Map<String, Value> = entries
+                .iter()
                 .map(|(k, v)| (k.clone(), fel_to_json(v)))
                 .collect();
             Value::Object(map)
         }
         FelValue::Money(m) => {
             let mut map = serde_json::Map::new();
-            map.insert("amount".to_string(), fel_to_json(&FelValue::Number(m.amount)));
+            map.insert(
+                "amount".to_string(),
+                fel_to_json(&FelValue::Number(m.amount)),
+            );
             map.insert("currency".to_string(), Value::String(m.currency.clone()));
             Value::Object(map)
         }
@@ -609,6 +1139,29 @@ fn lint_result_to_json(result: &formspec_lint::LintResult) -> Value {
             "message": d.message,
         })).collect::<Vec<_>>(),
     })
+}
+
+fn push_repeat_context(env: &mut FormspecEnvironment, repeat: &Value) {
+    let Some(obj) = repeat.as_object() else {
+        return;
+    };
+
+    if let Some(parent) = obj.get("parent") {
+        push_repeat_context(env, parent);
+    }
+
+    let current = obj
+        .get("current")
+        .map(json_to_fel)
+        .unwrap_or(FelValue::Null);
+    let index = obj.get("index").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+    let count = obj.get("count").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+    let collection = obj
+        .get("collection")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().map(json_to_fel).collect())
+        .unwrap_or_default();
+    env.push_repeat(current, index, count, collection);
 }
 
 /// Parse the `coerce` field from a mapping rule JSON object.
@@ -647,27 +1200,42 @@ fn parse_coerce_type(val: &Value) -> Option<formspec_core::CoerceType> {
 }
 
 fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<formspec_core::MappingRule>, String> {
-    let arr = val.as_array().ok_or_else(|| "rules must be an array".to_string())?;
+    let arr = val
+        .as_array()
+        .ok_or_else(|| "rules must be an array".to_string())?;
     let mut rules = Vec::new();
     for rule_val in arr {
-        let obj = rule_val.as_object().ok_or_else(|| "rule must be an object".to_string())?;
-        let transform = match obj.get("transform").and_then(|v| v.as_str()).unwrap_or("preserve") {
+        let obj = rule_val
+            .as_object()
+            .ok_or_else(|| "rule must be an object".to_string())?;
+        let transform = match obj
+            .get("transform")
+            .and_then(|v| v.as_str())
+            .unwrap_or("preserve")
+        {
             "preserve" => formspec_core::TransformType::Preserve,
             "drop" => formspec_core::TransformType::Drop,
             "constant" => formspec_core::TransformType::Constant(
                 obj.get("value").cloned().unwrap_or(Value::Null),
             ),
             "coerce" => {
-                let coerce_val = obj.get("coerce").cloned().unwrap_or(Value::String("string".into()));
-                let coerce_type = parse_coerce_type(&coerce_val)
-                    .unwrap_or(formspec_core::CoerceType::String);
+                let coerce_val = obj
+                    .get("coerce")
+                    .cloned()
+                    .unwrap_or(Value::String("string".into()));
+                let coerce_type =
+                    parse_coerce_type(&coerce_val).unwrap_or(formspec_core::CoerceType::String);
                 formspec_core::TransformType::Coerce(coerce_type)
             }
             "valueMap" => {
                 let entries = obj.get("valueMap").and_then(|v| v.as_object());
-                let forward: Vec<(Value, Value)> = entries.map(|m| {
-                    m.iter().map(|(k, v)| (Value::String(k.clone()), v.clone())).collect()
-                }).unwrap_or_default();
+                let forward: Vec<(Value, Value)> = entries
+                    .map(|m| {
+                        m.iter()
+                            .map(|(k, v)| (Value::String(k.clone()), v.clone()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 formspec_core::TransformType::ValueMap {
                     forward,
                     unmapped: match obj.get("unmapped").and_then(|v| v.as_str()) {
@@ -679,47 +1247,83 @@ fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<formspec_core::MappingRu
                 }
             }
             "flatten" => formspec_core::TransformType::Flatten {
-                separator: obj.get("separator").and_then(|v| v.as_str()).unwrap_or(".").to_string(),
+                separator: obj
+                    .get("separator")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".")
+                    .to_string(),
             },
             "nest" => formspec_core::TransformType::Nest {
-                separator: obj.get("separator").and_then(|v| v.as_str()).unwrap_or(".").to_string(),
+                separator: obj
+                    .get("separator")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".")
+                    .to_string(),
             },
             "concat" => formspec_core::TransformType::Concat(
-                obj.get("expression").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                obj.get("expression")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
             ),
             "split" => formspec_core::TransformType::Split(
-                obj.get("expression").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                obj.get("expression")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
             ),
             other => return Err(format!("unknown transform type: {other}")),
         };
 
         // At least one of sourcePath or targetPath MUST be present (mapping.schema.json FieldRule.anyOf)
-        let source_path = obj.get("sourcePath").and_then(|v| v.as_str()).map(String::from);
-        let target_path = obj.get("targetPath").and_then(|v| v.as_str()).map(String::from);
+        let source_path = obj
+            .get("sourcePath")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        let target_path = obj
+            .get("targetPath")
+            .and_then(|v| v.as_str())
+            .map(String::from);
         if source_path.is_none() && target_path.is_none() {
-            return Err(format!("rule[{rule_val}]: at least one of 'sourcePath' or 'targetPath' must be present"));
+            return Err(format!(
+                "rule[{rule_val}]: at least one of 'sourcePath' or 'targetPath' must be present"
+            ));
         }
 
         rules.push(formspec_core::MappingRule {
             source_path,
             target_path: target_path.unwrap_or_default(),
             transform,
-            condition: obj.get("condition").and_then(|v| v.as_str()).map(String::from),
+            condition: obj
+                .get("condition")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             priority: obj.get("priority").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
-            reverse_priority: obj.get("reversePriority").and_then(|v| v.as_i64()).map(|n| n as i32),
+            reverse_priority: obj
+                .get("reversePriority")
+                .and_then(|v| v.as_i64())
+                .map(|n| n as i32),
             default: obj.get("default").cloned(),
-            bidirectional: obj.get("bidirectional").and_then(|v| v.as_bool()).unwrap_or(true),
+            bidirectional: obj
+                .get("bidirectional")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true),
         });
     }
     Ok(rules)
 }
 
 fn parse_mapping_document_inner(val: &Value) -> Result<MappingDocument, String> {
-    let obj = val.as_object().ok_or_else(|| "mapping document must be an object".to_string())?;
+    let obj = val
+        .as_object()
+        .ok_or_else(|| "mapping document must be an object".to_string())?;
     let rules_val = obj.get("rules").cloned().unwrap_or(Value::Array(vec![]));
     let rules = parse_mapping_rules_inner(&rules_val)?;
     let defaults = obj.get("defaults").and_then(|v| v.as_object()).cloned();
-    let auto_map = obj.get("autoMap").and_then(|v| v.as_bool()).unwrap_or(false);
+    let auto_map = obj
+        .get("autoMap")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     Ok(MappingDocument {
         rules,
         defaults,
@@ -793,7 +1397,8 @@ mod tests {
                     "baseType": "string"
                 }
             ]
-        }).to_string()
+        })
+        .to_string()
     }
 
     // ── Finding 67+68: eval_fel_inner ───────────────────────────
@@ -860,8 +1465,14 @@ mod tests {
 
         // Top-level keys
         assert!(val.get("values").is_some(), "missing 'values' key");
-        assert!(val.get("validations").is_some(), "missing 'validations' key");
-        assert!(val.get("nonRelevant").is_some(), "missing 'nonRelevant' key");
+        assert!(
+            val.get("validations").is_some(),
+            "missing 'validations' key"
+        );
+        assert!(
+            val.get("nonRelevant").is_some(),
+            "missing 'nonRelevant' key"
+        );
         assert!(val.get("variables").is_some(), "missing 'variables' key");
 
         // values is an object
@@ -886,7 +1497,8 @@ mod tests {
             "bind": {
                 "name": { "required": true }
             }
-        }).to_string();
+        })
+        .to_string();
         let data = json!({}).to_string();
         let result = evaluate_definition_inner(&def, &data).unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
@@ -927,7 +1539,8 @@ mod tests {
             "items": [
                 { "key": "name", "label": "Name", "dataType": "string" }
             ]
-        }).to_string();
+        })
+        .to_string();
         let new_def = json!({
             "title": "Form v2",
             "version": "2.0.0",
@@ -935,9 +1548,11 @@ mod tests {
                 { "key": "name", "label": "Full Name", "dataType": "string" },
                 { "key": "email", "label": "Email", "dataType": "string" }
             ]
-        }).to_string();
+        })
+        .to_string();
 
-        let result = generate_changelog_inner(&old_def, &new_def, "https://example.com/form").unwrap();
+        let result =
+            generate_changelog_inner(&old_def, &new_def, "https://example.com/form").unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
 
         assert_eq!(val["definitionUrl"], "https://example.com/form");
@@ -964,7 +1579,8 @@ mod tests {
             "items": [
                 { "key": "name", "label": "Name", "dataType": "string" }
             ]
-        }).to_string();
+        })
+        .to_string();
         let new_def = json!({
             "title": "Form v2",
             "version": "2.0.0",
@@ -972,9 +1588,11 @@ mod tests {
                 { "key": "name", "label": "Name", "dataType": "string" },
                 { "key": "email", "label": "Email", "dataType": "string" }
             ]
-        }).to_string();
+        })
+        .to_string();
 
-        let result = generate_changelog_inner(&old_def, &new_def, "https://example.com/form").unwrap();
+        let result =
+            generate_changelog_inner(&old_def, &new_def, "https://example.com/form").unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
         let changes = val["changes"].as_array().unwrap();
 
@@ -992,7 +1610,16 @@ mod tests {
             );
 
             let target = c["target"].as_str().unwrap();
-            let valid_targets = ["item", "bind", "shape", "optionSet", "dataSource", "screener", "migration", "metadata"];
+            let valid_targets = [
+                "item",
+                "bind",
+                "shape",
+                "optionSet",
+                "dataSource",
+                "screener",
+                "migration",
+                "metadata",
+            ];
             assert!(
                 valid_targets.contains(&target),
                 "unexpected target: {target}"
@@ -1027,7 +1654,10 @@ mod tests {
         assert_eq!(val["category"], "dataType");
         assert!(val["version"].is_string(), "version must be a string");
         assert!(val["status"].is_string(), "status must be a string");
-        assert!(val["description"].is_string(), "description must be a string");
+        assert!(
+            val["description"].is_string(),
+            "description must be a string"
+        );
     }
 
     /// Spec: specs/registry/extension-registry.md §3 — Not found returns "null" string.
@@ -1056,7 +1686,8 @@ mod tests {
                 "targetPath": "first_name",
                 "transform": "preserve"
             }
-        ]).to_string();
+        ])
+        .to_string();
         let source = json!({"firstName": "Jane"}).to_string();
 
         let result = execute_mapping_inner(&rules, &source, "forward").unwrap();
@@ -1083,12 +1714,30 @@ mod tests {
     /// Spec: specs/mapping/mapping-spec.md §3.3.2 — String shorthand: known types resolve.
     #[test]
     fn parse_coerce_type_string_known() {
-        assert!(matches!(parse_coerce_type(&json!("string")), Some(formspec_core::CoerceType::String)));
-        assert!(matches!(parse_coerce_type(&json!("number")), Some(formspec_core::CoerceType::Number)));
-        assert!(matches!(parse_coerce_type(&json!("integer")), Some(formspec_core::CoerceType::Integer)));
-        assert!(matches!(parse_coerce_type(&json!("boolean")), Some(formspec_core::CoerceType::Boolean)));
-        assert!(matches!(parse_coerce_type(&json!("date")), Some(formspec_core::CoerceType::Date)));
-        assert!(matches!(parse_coerce_type(&json!("datetime")), Some(formspec_core::CoerceType::DateTime)));
+        assert!(matches!(
+            parse_coerce_type(&json!("string")),
+            Some(formspec_core::CoerceType::String)
+        ));
+        assert!(matches!(
+            parse_coerce_type(&json!("number")),
+            Some(formspec_core::CoerceType::Number)
+        ));
+        assert!(matches!(
+            parse_coerce_type(&json!("integer")),
+            Some(formspec_core::CoerceType::Integer)
+        ));
+        assert!(matches!(
+            parse_coerce_type(&json!("boolean")),
+            Some(formspec_core::CoerceType::Boolean)
+        ));
+        assert!(matches!(
+            parse_coerce_type(&json!("date")),
+            Some(formspec_core::CoerceType::Date)
+        ));
+        assert!(matches!(
+            parse_coerce_type(&json!("datetime")),
+            Some(formspec_core::CoerceType::DateTime)
+        ));
     }
 
     /// Spec: specs/mapping/mapping-spec.md §3.3.2 — Unknown string shorthand returns None.
@@ -1104,10 +1753,16 @@ mod tests {
     #[test]
     fn parse_coerce_type_object_valid() {
         let val = json!({"from": "date", "to": "string"});
-        assert!(matches!(parse_coerce_type(&val), Some(formspec_core::CoerceType::String)));
+        assert!(matches!(
+            parse_coerce_type(&val),
+            Some(formspec_core::CoerceType::String)
+        ));
 
         let val = json!({"from": "string", "to": "number"});
-        assert!(matches!(parse_coerce_type(&val), Some(formspec_core::CoerceType::Number)));
+        assert!(matches!(
+            parse_coerce_type(&val),
+            Some(formspec_core::CoerceType::Number)
+        ));
     }
 
     /// Spec: specs/mapping/mapping-spec.md §3.3.2 — Object form missing `to` returns None.
@@ -1141,8 +1796,14 @@ mod tests {
         let a = json!({"from": "date", "to": "string"});
         let b = json!({"from": "number", "to": "string"});
         // Both resolve to String regardless of `from`
-        assert!(matches!(parse_coerce_type(&a), Some(formspec_core::CoerceType::String)));
-        assert!(matches!(parse_coerce_type(&b), Some(formspec_core::CoerceType::String)));
+        assert!(matches!(
+            parse_coerce_type(&a),
+            Some(formspec_core::CoerceType::String)
+        ));
+        assert!(matches!(
+            parse_coerce_type(&b),
+            Some(formspec_core::CoerceType::String)
+        ));
     }
 
     // ── Finding 73: parse_mapping_document_inner error path ─────
@@ -1192,7 +1853,11 @@ mod tests {
         let rules = json!([{"transform": "teleport", "targetPath": "x"}]);
         let result = parse_mapping_rules_inner(&rules);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("unknown transform type: teleport"));
+        assert!(
+            result
+                .unwrap_err()
+                .contains("unknown transform type: teleport")
+        );
     }
 
     // ── Finding 74: fel_to_json Decimal::MAX ────────────────────
@@ -1207,7 +1872,10 @@ mod tests {
         let json = fel_to_json(&val);
         // Decimal::MAX has zero fract, so to_i64() is tried first — but fails (too large).
         // Then to_f64() succeeds (7.9e28), and from_f64() accepts it (finite).
-        assert!(json.is_number(), "Decimal::MAX should produce a JSON number, not null");
+        assert!(
+            json.is_number(),
+            "Decimal::MAX should produce a JSON number, not null"
+        );
         // Verify the approximate value is correct (precision loss is expected)
         let f = json.as_f64().unwrap();
         assert!(f > 7.9e28 && f < 8.0e28, "unexpected magnitude: {f}");
@@ -1289,7 +1957,10 @@ mod tests {
     #[test]
     fn json_to_fel_boolean() {
         assert!(matches!(json_to_fel(&json!(true)), FelValue::Boolean(true)));
-        assert!(matches!(json_to_fel(&json!(false)), FelValue::Boolean(false)));
+        assert!(matches!(
+            json_to_fel(&json!(false)),
+            FelValue::Boolean(false)
+        ));
     }
 
     /// Verify integer roundtrip.

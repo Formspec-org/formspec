@@ -1,14 +1,14 @@
 //! Bidirectional mapping engine for transforming data between formats.
 
+use rust_decimal::Decimal;
 /// Bidirectional data-transform engine for Formspec mapping documents.
 ///
 /// Executes mapping rules to transform data between Formspec response format
 /// and external formats (forward: Formspec → external, reverse: external → Formspec).
 use rust_decimal::prelude::*;
-use rust_decimal::Decimal;
 use serde_json::Value;
 
-use fel_core::{evaluate, parse, FelValue, MapEnvironment};
+use fel_core::{FelValue, FormspecEnvironment, evaluate, parse};
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -121,6 +121,25 @@ pub struct MappingDocument {
     pub defaults: Option<serde_json::Map<String, Value>>,
     /// When true, generate synthetic preserve rules for unmapped top-level source keys.
     pub auto_map: bool,
+}
+
+fn build_mapping_env(
+    source_doc: &Value,
+    target_doc: &Value,
+    dollar: Option<&Value>,
+) -> FormspecEnvironment {
+    let mut env = FormspecEnvironment::new();
+    if let Some(value) = dollar {
+        env.set_field("$", json_to_fel(value));
+    }
+    if let Some(obj) = source_doc.as_object() {
+        for (k, v) in obj {
+            env.set_field(k, json_to_fel(v));
+        }
+    }
+    env.set_variable("source", json_to_fel(source_doc));
+    env.set_variable("target", json_to_fel(target_doc));
+    env
 }
 
 // ── Path utilities ──────────────────────────────────────────────
@@ -342,10 +361,7 @@ pub fn execute_mapping(
         // Check condition
         if let Some(ref cond) = rule.condition {
             if let Ok(expr) = parse(cond) {
-                let mut fields = std::collections::HashMap::new();
-                // Make source document available as @source
-                fields.insert("__source__".to_string(), json_to_fel(source));
-                let env = MapEnvironment::with_fields(fields);
+                let env = build_mapping_env(source, &output, None);
                 let result = evaluate(&expr, &env);
                 if !result.value.is_truthy() {
                     continue; // condition false — skip rule
@@ -420,33 +436,22 @@ pub fn execute_mapping(
                 tgt_path,
                 &mut diagnostics,
             ),
-            TransformType::Expression(fel_expr) => {
-                match parse(fel_expr) {
-                    Ok(expr) => {
-                        // Build environment: source value fields are available directly,
-                        // and the full source document fields are also available.
-                        let mut fields = std::collections::HashMap::new();
-                        // Make source document fields available as $fieldName
-                        if let Some(obj) = source.as_object() {
-                            for (k, v) in obj {
-                                fields.insert(k.clone(), json_to_fel(v));
-                            }
-                        }
-                        let env = MapEnvironment::with_fields(fields);
-                        let result = evaluate(&expr, &env);
-                        fel_to_json(&result.value)
-                    }
-                    Err(e) => {
-                        diagnostics.push(MappingDiagnostic {
-                            rule_index: rule_idx,
-                            source_path: src_path.map(String::from),
-                            target_path: tgt_path.to_string(),
-                            message: format!("FEL parse error: {e}"),
-                        });
-                        Value::Null
-                    }
+            TransformType::Expression(fel_expr) => match parse(fel_expr) {
+                Ok(expr) => {
+                    let env = build_mapping_env(source, &output, None);
+                    let result = evaluate(&expr, &env);
+                    fel_to_json(&result.value)
                 }
-            }
+                Err(e) => {
+                    diagnostics.push(MappingDiagnostic {
+                        rule_index: rule_idx,
+                        source_path: src_path.map(String::from),
+                        target_path: tgt_path.to_string(),
+                        message: format!("FEL parse error: {e}"),
+                    });
+                    Value::Null
+                }
+            },
             TransformType::Flatten { separator } => apply_flatten(&source_value, separator),
             TransformType::Nest { separator } => apply_nest(&source_value, separator),
             TransformType::Concat(fel_expr) => eval_fel_with_dollar(
@@ -661,16 +666,7 @@ fn eval_fel_with_dollar(
 ) -> Value {
     match parse(fel_expr) {
         Ok(expr) => {
-            let mut fields = std::collections::HashMap::new();
-            // $ binds to the resolved source value
-            fields.insert("$".to_string(), json_to_fel(source_value));
-            // Full source document fields also available as $fieldName
-            if let Some(obj) = source_doc.as_object() {
-                for (k, v) in obj {
-                    fields.insert(k.clone(), json_to_fel(v));
-                }
-            }
-            let env = MapEnvironment::with_fields(fields);
+            let env = build_mapping_env(source_doc, &Value::Null, Some(source_value));
             let result = evaluate(&expr, &env);
             fel_to_json(&result.value)
         }

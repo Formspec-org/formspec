@@ -74,33 +74,154 @@ fn is_css_color(s: &str) -> bool {
 /// lowercase-matching name from the CSS specification.
 fn is_css_named_color(s: &str) -> bool {
     const NAMED_COLORS: &[&str] = &[
-        "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure",
-        "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet", "brown",
-        "burlywood", "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue",
-        "cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod",
-        "darkgray", "darkgreen", "darkgrey", "darkkhaki", "darkmagenta",
-        "darkolivegreen", "darkorange", "darkorchid", "darkred", "darksalmon",
-        "darkseagreen", "darkslateblue", "darkslategray", "darkslategrey",
-        "darkturquoise", "darkviolet", "deeppink", "deepskyblue", "dimgray",
-        "dimgrey", "dodgerblue", "firebrick", "floralwhite", "forestgreen",
-        "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "green",
-        "greenyellow", "grey", "honeydew", "hotpink", "indianred", "indigo", "ivory",
-        "khaki", "lavender", "lavenderblush", "lawngreen", "lemonchiffon",
-        "lightblue", "lightcoral", "lightcyan", "lightgoldenrodyellow", "lightgray",
-        "lightgreen", "lightgrey", "lightpink", "lightsalmon", "lightseagreen",
-        "lightskyblue", "lightslategray", "lightslategrey", "lightsteelblue",
-        "lightyellow", "lime", "limegreen", "linen", "magenta", "maroon",
-        "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple",
-        "mediumseagreen", "mediumslateblue", "mediumspringgreen", "mediumturquoise",
-        "mediumvioletred", "midnightblue", "mintcream", "mistyrose", "moccasin",
-        "navajowhite", "navy", "oldlace", "olive", "olivedrab", "orange", "orangered",
-        "orchid", "palegoldenrod", "palegreen", "paleturquoise", "palevioletred",
-        "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue", "purple",
-        "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown", "salmon",
-        "sandybrown", "seagreen", "seashell", "sienna", "silver", "skyblue",
-        "slateblue", "slategray", "slategrey", "snow", "springgreen", "steelblue",
-        "tan", "teal", "thistle", "tomato", "turquoise", "violet", "wheat", "white",
-        "whitesmoke", "yellow", "yellowgreen",
+        "aliceblue",
+        "antiquewhite",
+        "aqua",
+        "aquamarine",
+        "azure",
+        "beige",
+        "bisque",
+        "black",
+        "blanchedalmond",
+        "blue",
+        "blueviolet",
+        "brown",
+        "burlywood",
+        "cadetblue",
+        "chartreuse",
+        "chocolate",
+        "coral",
+        "cornflowerblue",
+        "cornsilk",
+        "crimson",
+        "cyan",
+        "darkblue",
+        "darkcyan",
+        "darkgoldenrod",
+        "darkgray",
+        "darkgreen",
+        "darkgrey",
+        "darkkhaki",
+        "darkmagenta",
+        "darkolivegreen",
+        "darkorange",
+        "darkorchid",
+        "darkred",
+        "darksalmon",
+        "darkseagreen",
+        "darkslateblue",
+        "darkslategray",
+        "darkslategrey",
+        "darkturquoise",
+        "darkviolet",
+        "deeppink",
+        "deepskyblue",
+        "dimgray",
+        "dimgrey",
+        "dodgerblue",
+        "firebrick",
+        "floralwhite",
+        "forestgreen",
+        "fuchsia",
+        "gainsboro",
+        "ghostwhite",
+        "gold",
+        "goldenrod",
+        "gray",
+        "green",
+        "greenyellow",
+        "grey",
+        "honeydew",
+        "hotpink",
+        "indianred",
+        "indigo",
+        "ivory",
+        "khaki",
+        "lavender",
+        "lavenderblush",
+        "lawngreen",
+        "lemonchiffon",
+        "lightblue",
+        "lightcoral",
+        "lightcyan",
+        "lightgoldenrodyellow",
+        "lightgray",
+        "lightgreen",
+        "lightgrey",
+        "lightpink",
+        "lightsalmon",
+        "lightseagreen",
+        "lightskyblue",
+        "lightslategray",
+        "lightslategrey",
+        "lightsteelblue",
+        "lightyellow",
+        "lime",
+        "limegreen",
+        "linen",
+        "magenta",
+        "maroon",
+        "mediumaquamarine",
+        "mediumblue",
+        "mediumorchid",
+        "mediumpurple",
+        "mediumseagreen",
+        "mediumslateblue",
+        "mediumspringgreen",
+        "mediumturquoise",
+        "mediumvioletred",
+        "midnightblue",
+        "mintcream",
+        "mistyrose",
+        "moccasin",
+        "navajowhite",
+        "navy",
+        "oldlace",
+        "olive",
+        "olivedrab",
+        "orange",
+        "orangered",
+        "orchid",
+        "palegoldenrod",
+        "palegreen",
+        "paleturquoise",
+        "palevioletred",
+        "papayawhip",
+        "peachpuff",
+        "peru",
+        "pink",
+        "plum",
+        "powderblue",
+        "purple",
+        "rebeccapurple",
+        "red",
+        "rosybrown",
+        "royalblue",
+        "saddlebrown",
+        "salmon",
+        "sandybrown",
+        "seagreen",
+        "seashell",
+        "sienna",
+        "silver",
+        "skyblue",
+        "slateblue",
+        "slategray",
+        "slategrey",
+        "snow",
+        "springgreen",
+        "steelblue",
+        "tan",
+        "teal",
+        "thistle",
+        "tomato",
+        "turquoise",
+        "violet",
+        "wheat",
+        "white",
+        "whitesmoke",
+        "yellow",
+        "yellowgreen",
         "transparent",
     ];
     NAMED_COLORS.contains(&s.to_ascii_lowercase().as_str())
@@ -161,7 +282,15 @@ fn extract_token_refs(text: &str) -> Vec<&str> {
         }
         // Token name: everything up to whitespace, comma, semicolon, quote, or end
         let name_end = text[name_start..]
-            .find(|c: char| c.is_whitespace() || c == ',' || c == ';' || c == '\'' || c == '"' || c == ')' || c == '}')
+            .find(|c: char| {
+                c.is_whitespace()
+                    || c == ','
+                    || c == ';'
+                    || c == '\''
+                    || c == '"'
+                    || c == ')'
+                    || c == '}'
+            })
             .map_or(text.len(), |e| name_start + e);
         if name_end > name_start {
             refs.push(&text[name_start..name_end]);
@@ -197,7 +326,12 @@ fn collect_keys_recursive(items: &[Value], keys: &mut HashSet<String>) {
 
 /// Walk a JSON value recursively, collecting token references from all string values.
 /// Calls `visitor(path, token_name)` for each `$token.X` found.
-fn walk_token_refs(value: &Value, path: &str, token_names: &HashSet<String>, diags: &mut Vec<LintDiagnostic>) {
+fn walk_token_refs(
+    value: &Value,
+    path: &str,
+    token_names: &HashSet<String>,
+    diags: &mut Vec<LintDiagnostic>,
+) {
     match value {
         Value::String(s) => {
             for token_name in extract_token_refs(s) {
@@ -206,7 +340,9 @@ fn walk_token_refs(value: &Value, path: &str, token_names: &HashSet<String>, dia
                         "W704",
                         PASS,
                         path,
-                        format!("Token reference '$token.{token_name}' not found in declared tokens"),
+                        format!(
+                            "Token reference '$token.{token_name}' not found in declared tokens"
+                        ),
                     ));
                 }
             }
@@ -336,11 +472,21 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
     if let Some(selectors) = theme.get("selectors").and_then(|v| v.as_array()) {
         for (i, selector) in selectors.iter().enumerate() {
             if let Some(apply) = selector.get("apply") {
-                walk_token_refs(apply, &format!("$.selectors[{i}].apply"), &token_names, &mut diags);
+                walk_token_refs(
+                    apply,
+                    &format!("$.selectors[{i}].apply"),
+                    &token_names,
+                    &mut diags,
+                );
             }
             // Also check "properties" (used on main branch)
             if let Some(props) = selector.get("properties") {
-                walk_token_refs(props, &format!("$.selectors[{i}].properties"), &token_names, &mut diags);
+                walk_token_refs(
+                    props,
+                    &format!("$.selectors[{i}].properties"),
+                    &token_names,
+                    &mut diags,
+                );
             }
         }
     }
@@ -405,7 +551,9 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                         "W705",
                         PASS,
                         format!("$.items.{key}"),
-                        format!("Theme item override '{key}' does not match any definition item path"),
+                        format!(
+                            "Theme item override '{key}' does not match any definition item path"
+                        ),
                     ));
                 }
             }
@@ -608,7 +756,10 @@ mod tests {
         for w in (100..=900).step_by(100) {
             let theme = json!({ "tokens": { "typography.fontweight.x": w.to_string() } });
             let diags = lint_theme(&theme, None);
-            assert!(with_code(&diags, "W702").is_empty(), "Weight {w} should be valid");
+            assert!(
+                with_code(&diags, "W702").is_empty(),
+                "Weight {w} should be valid"
+            );
         }
     }
 
@@ -822,22 +973,34 @@ mod tests {
 
     #[test]
     fn classify_font_weight_tokens() {
-        assert_eq!(classify_token("typography.fontweight.body"), TokenCategory::FontWeight);
+        assert_eq!(
+            classify_token("typography.fontweight.body"),
+            TokenCategory::FontWeight
+        );
         assert_eq!(classify_token("fontWeight"), TokenCategory::FontWeight);
         assert_eq!(classify_token("heading.weight"), TokenCategory::FontWeight);
     }
 
     #[test]
     fn classify_line_height_tokens() {
-        assert_eq!(classify_token("typography.lineheight.body"), TokenCategory::LineHeight);
-        assert_eq!(classify_token("body.line-height"), TokenCategory::LineHeight);
+        assert_eq!(
+            classify_token("typography.lineheight.body"),
+            TokenCategory::LineHeight
+        );
+        assert_eq!(
+            classify_token("body.line-height"),
+            TokenCategory::LineHeight
+        );
     }
 
     #[test]
     fn classify_other_tokens() {
         assert_eq!(classify_token("border.radius"), TokenCategory::Other);
         assert_eq!(classify_token("elevation.low"), TokenCategory::Other);
-        assert_eq!(classify_token("typography.body.family"), TokenCategory::Other);
+        assert_eq!(
+            classify_token("typography.body.family"),
+            TokenCategory::Other
+        );
     }
 
     // ── 11. $token.X extraction ─────────────────────────────────
@@ -850,7 +1013,8 @@ mod tests {
 
     #[test]
     fn extract_multiple_refs() {
-        let refs = extract_token_refs("border: 1px solid $token.color.border, bg: $token.color.surface");
+        let refs =
+            extract_token_refs("border: 1px solid $token.color.border, bg: $token.color.surface");
         assert_eq!(refs, vec!["color.border", "color.surface"]);
     }
 
@@ -1068,7 +1232,10 @@ mod tests {
             }]
         });
         let diags = lint_theme(&theme, Some(&def));
-        assert!(with_code(&diags, "W705").is_empty(), "amount is a nested child, should match");
+        assert!(
+            with_code(&diags, "W705").is_empty(),
+            "amount is a nested child, should match"
+        );
     }
 
     // ── Finding 56: rgb() content not validated ────────────────
@@ -1090,8 +1257,19 @@ mod tests {
     /// Named colors like "red", "navy", "transparent" must be accepted.
     #[test]
     fn named_css_colors_accepted() {
-        for name in &["red", "blue", "green", "navy", "transparent", "rebeccapurple", "coral"] {
-            assert!(is_css_color(name), "Named color '{name}' should be accepted");
+        for name in &[
+            "red",
+            "blue",
+            "green",
+            "navy",
+            "transparent",
+            "rebeccapurple",
+            "coral",
+        ] {
+            assert!(
+                is_css_color(name),
+                "Named color '{name}' should be accepted"
+            );
         }
     }
 
@@ -1114,7 +1292,10 @@ mod tests {
             }
         });
         let diags = lint_theme(&theme, None);
-        assert!(with_code(&diags, "W700").is_empty(), "Named colors should not emit W700");
+        assert!(
+            with_code(&diags, "W700").is_empty(),
+            "Named colors should not emit W700"
+        );
     }
 
     // ── Finding 58: 4-char hex (#RGBA) ───────────────────────────
@@ -1133,7 +1314,10 @@ mod tests {
             "tokens": { "color.overlay": "#0008" }
         });
         let diags = lint_theme(&theme, None);
-        assert!(with_code(&diags, "W700").is_empty(), "#RGBA hex should not emit W700");
+        assert!(
+            with_code(&diags, "W700").is_empty(),
+            "#RGBA hex should not emit W700"
+        );
     }
 
     // ── Finding 59: Negative CSS lengths ─────────────────────────
@@ -1142,7 +1326,10 @@ mod tests {
     #[test]
     fn negative_css_length_accepted() {
         assert!(is_css_length("-8px"), "Negative px length should be valid");
-        assert!(is_css_length("-1.5rem"), "Negative rem length should be valid");
+        assert!(
+            is_css_length("-1.5rem"),
+            "Negative rem length should be valid"
+        );
         assert!(is_css_length("-50%"), "Negative percentage should be valid");
     }
 
@@ -1151,8 +1338,14 @@ mod tests {
     /// Spec: theme-spec.md §3.2 — CSS forbids whitespace between the number and unit.
     #[test]
     fn whitespace_between_number_and_unit_rejected() {
-        assert!(!is_css_length("8 px"), "Whitespace before unit should be rejected");
-        assert!(!is_css_length("1 rem"), "Whitespace before rem should be rejected");
+        assert!(
+            !is_css_length("8 px"),
+            "Whitespace before unit should be rejected"
+        );
+        assert!(
+            !is_css_length("1 rem"),
+            "Whitespace before rem should be rejected"
+        );
     }
 
     // ── Finding 61: Region without key in W706 check ─────────────
@@ -1177,7 +1370,11 @@ mod tests {
         let diags = lint_theme(&theme, Some(&def));
         // Only the region WITH a key should be checked — "missing_field" not in definition → W706
         let w706 = with_code(&diags, "W706");
-        assert_eq!(w706.len(), 1, "Only the region with key should produce W706");
+        assert_eq!(
+            w706.len(),
+            1,
+            "Only the region with key should produce W706"
+        );
         assert!(w706[0].message.contains("missing_field"));
     }
 
@@ -1222,7 +1419,10 @@ mod tests {
             ]
         });
         let diags = lint_theme(&theme, None);
-        assert!(with_code(&diags, "E710").is_empty(), "Pages without id should be silently skipped");
+        assert!(
+            with_code(&diags, "E710").is_empty(),
+            "Pages without id should be silently skipped"
+        );
     }
 
     // ── $token. in non-string contexts ──────────────────────────
@@ -1239,6 +1439,9 @@ mod tests {
             }
         });
         let diags = lint_theme(&theme, None);
-        assert!(with_code(&diags, "W704").is_empty(), "Non-string values should not be checked for token refs");
+        assert!(
+            with_code(&diags, "W704").is_empty(),
+            "Non-string values should not be checked for token refs"
+        );
     }
 }

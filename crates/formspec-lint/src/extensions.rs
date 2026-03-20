@@ -16,7 +16,9 @@
 
 use serde_json::Value;
 
-use formspec_core::extension_analysis::{MapRegistry, RegistryEntryInfo, RegistryEntryStatus, RegistryLookup};
+use formspec_core::extension_analysis::{
+    MapRegistry, RegistryEntryInfo, RegistryEntryStatus, RegistryLookup,
+};
 
 use crate::types::LintDiagnostic;
 
@@ -254,9 +256,7 @@ mod tests {
         let doc = def_with_items(json!([
             { "key": "field", "extensions": { "x-old": true } }
         ]));
-        let reg = registry_with_entries(json!([
-            retired_entry("x-old", "Old Extension")
-        ]));
+        let reg = registry_with_entries(json!([retired_entry("x-old", "Old Extension")]));
         let diags = check_extensions(&doc, &[reg]);
 
         assert_eq!(diags.len(), 1);
@@ -271,9 +271,11 @@ mod tests {
         let doc = def_with_items(json!([
             { "key": "field", "extensions": { "x-legacy": true } }
         ]));
-        let reg = registry_with_entries(json!([
-            deprecated_entry("x-legacy", "Legacy Ext", "Use x-new instead")
-        ]));
+        let reg = registry_with_entries(json!([deprecated_entry(
+            "x-legacy",
+            "Legacy Ext",
+            "Use x-new instead"
+        )]));
         let diags = check_extensions(&doc, &[reg]);
 
         assert_eq!(diags.len(), 1);
@@ -439,7 +441,10 @@ mod tests {
             "status": "active"
         }]));
         let diags = check_extensions(&doc, &[reg]);
-        assert!(diags.is_empty(), "status='active' should resolve without diagnostics");
+        assert!(
+            diags.is_empty(),
+            "status='active' should resolve without diagnostics"
+        );
     }
 
     // Extra: deeply nested items

@@ -7,7 +7,9 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
-use crate::component_matrix::{classify_compatibility, is_input_component, requires_options_source, Compatibility};
+use crate::component_matrix::{
+    Compatibility, classify_compatibility, is_input_component, requires_options_source,
+};
 use crate::types::LintDiagnostic;
 
 const PASS: u8 = 7;
@@ -16,8 +18,18 @@ const PASS: u8 = 7;
 
 /// Components that may appear as the root of a component tree.
 const LAYOUT_ROOTS: &[&str] = &[
-    "Page", "Stack", "Grid", "Wizard", "Columns", "Tabs",
-    "Accordion", "Panel", "Card", "Collapsible", "ConditionalGroup", "Modal",
+    "Page",
+    "Stack",
+    "Grid",
+    "Wizard",
+    "Columns",
+    "Tabs",
+    "Accordion",
+    "Panel",
+    "Card",
+    "Collapsible",
+    "ConditionalGroup",
+    "Modal",
 ];
 
 /// Layout-only components that should not declare a bind.
@@ -25,19 +37,54 @@ const LAYOUT_NO_BIND: &[&str] = &["Page", "Stack", "Grid", "Wizard", "Spacer"];
 
 /// Container components that should not declare a bind (except DataTable).
 const CONTAINER_NO_BIND: &[&str] = &[
-    "Card", "Collapsible", "ConditionalGroup", "Columns", "Tabs",
-    "Accordion", "Panel", "Modal", "Popover",
+    "Card",
+    "Collapsible",
+    "ConditionalGroup",
+    "Columns",
+    "Tabs",
+    "Accordion",
+    "Panel",
+    "Modal",
+    "Popover",
 ];
 
 /// All built-in component names.
 const ALL_BUILTINS: &[&str] = &[
-    "Page", "Stack", "Grid", "Wizard", "Spacer",
-    "TextInput", "NumberInput", "DatePicker", "Select", "CheckboxGroup",
-    "Toggle", "FileUpload", "Heading", "Text", "Divider",
-    "Card", "Collapsible", "ConditionalGroup", "Columns", "Tabs",
-    "Accordion", "RadioGroup", "MoneyInput", "Slider", "Rating",
-    "Signature", "Alert", "Badge", "ProgressBar", "Summary",
-    "ValidationSummary", "DataTable", "Panel", "Modal", "Popover",
+    "Page",
+    "Stack",
+    "Grid",
+    "Wizard",
+    "Spacer",
+    "TextInput",
+    "NumberInput",
+    "DatePicker",
+    "Select",
+    "CheckboxGroup",
+    "Toggle",
+    "FileUpload",
+    "Heading",
+    "Text",
+    "Divider",
+    "Card",
+    "Collapsible",
+    "ConditionalGroup",
+    "Columns",
+    "Tabs",
+    "Accordion",
+    "RadioGroup",
+    "MoneyInput",
+    "Slider",
+    "Rating",
+    "Signature",
+    "Alert",
+    "Badge",
+    "ProgressBar",
+    "Summary",
+    "ValidationSummary",
+    "DataTable",
+    "Panel",
+    "Modal",
+    "Popover",
     "SubmitButton",
 ];
 
@@ -68,10 +115,22 @@ fn build_field_lookup(definition: &Value) -> HashMap<String, FieldInfo> {
 fn collect_fields(items: &[Value], lookup: &mut HashMap<String, FieldInfo>) {
     for item in items {
         if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
-            let data_type = item.get("dataType").and_then(|v| v.as_str()).map(String::from);
+            let data_type = item
+                .get("dataType")
+                .and_then(|v| v.as_str())
+                .map(String::from);
             let has_options = item.get("optionSet").is_some()
-                || item.get("options").and_then(|v| v.as_array()).is_some_and(|a| !a.is_empty());
-            lookup.insert(key.to_string(), FieldInfo { data_type, has_options });
+                || item
+                    .get("options")
+                    .and_then(|v| v.as_array())
+                    .is_some_and(|a| !a.is_empty());
+            lookup.insert(
+                key.to_string(),
+                FieldInfo {
+                    data_type,
+                    has_options,
+                },
+            );
             if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
                 collect_fields(children, lookup);
             }
@@ -139,7 +198,9 @@ impl<'a> WalkState<'a> {
         // E801: Unknown component
         if !is_builtin(comp_type) && !self.custom_names.contains(comp_type) {
             self.diags.push(LintDiagnostic::error(
-                "E801", PASS, path,
+                "E801",
+                PASS,
+                path,
                 format!("Unknown component type: '{comp_type}'"),
             ));
         }
@@ -148,12 +209,18 @@ impl<'a> WalkState<'a> {
         if comp_type == "Wizard" {
             if let Some(children) = node.get("children").and_then(|v| v.as_array()) {
                 for (i, child) in children.iter().enumerate() {
-                    let child_type = child.get("component").and_then(|v| v.as_str()).unwrap_or("");
+                    let child_type = child
+                        .get("component")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
                     if child_type != "Page" {
                         self.diags.push(LintDiagnostic::error(
-                            "E805", PASS,
+                            "E805",
+                            PASS,
                             format!("{path}.children[{i}]"),
-                            format!("Wizard children must be Page components, found '{child_type}'"),
+                            format!(
+                                "Wizard children must be Page components, found '{child_type}'"
+                            ),
                         ));
                     }
                 }
@@ -185,7 +252,9 @@ impl<'a> WalkState<'a> {
             // W801: Layout/container shouldn't bind
             if should_not_bind(comp_type) {
                 self.diags.push(LintDiagnostic::warning(
-                    "W801", PASS, path,
+                    "W801",
+                    PASS,
+                    path,
                     format!("Layout/container component '{comp_type}' should not declare a bind"),
                 ));
             }
@@ -193,7 +262,9 @@ impl<'a> WalkState<'a> {
             // W804: Duplicate bind in tree (any component)
             if !self.all_binds.insert(bind.to_string()) {
                 self.diags.push(LintDiagnostic::warning(
-                    "W804", PASS, path,
+                    "W804",
+                    PASS,
+                    path,
                     format!("Duplicate bind in component tree: {bind}"),
                 ));
             }
@@ -239,11 +310,14 @@ impl<'a> WalkState<'a> {
 
                             // E804: richtext TextInput must bind to string
                             if comp_type == "TextInput" {
-                                let is_richtext = node.get("inputMode")
+                                let is_richtext = node
+                                    .get("inputMode")
                                     .and_then(|v| v.as_str())
                                     .is_some_and(|m| m == "richtext");
                                 if is_richtext {
-                                    let is_string = field_info.data_type.as_deref()
+                                    let is_string = field_info
+                                        .data_type
+                                        .as_deref()
                                         .is_some_and(|dt| dt == "string" || dt == "text");
                                     if !is_string {
                                         self.diags.push(LintDiagnostic::error(
@@ -263,7 +337,9 @@ impl<'a> WalkState<'a> {
                 // W803: Multiple editable inputs bind same field
                 if !self.editable_binds.insert(bind.to_string()) {
                     self.diags.push(LintDiagnostic::warning(
-                        "W803", PASS, path,
+                        "W803",
+                        PASS,
+                        path,
                         format!("Multiple editable inputs bind to the same field: '{bind}'"),
                     ));
                 }
@@ -300,7 +376,9 @@ pub fn lint_component(component: &Value, definition: Option<&Value>) -> Vec<Lint
     let root_type = tree.get("component").and_then(|v| v.as_str()).unwrap_or("");
     if root_type.is_empty() || !LAYOUT_ROOTS.contains(&root_type) {
         diags.push(LintDiagnostic::error(
-            "E800", PASS, "$.tree",
+            "E800",
+            PASS,
+            "$.tree",
             format!(
                 "Root component must be a layout type ({}), found '{root_type}'",
                 LAYOUT_ROOTS.join(", ")
@@ -329,7 +407,8 @@ pub fn lint_component(component: &Value, definition: Option<&Value>) -> Vec<Lint
         }
         for (from, to) in cycles {
             diags.push(LintDiagnostic::error(
-                "E807", PASS,
+                "E807",
+                PASS,
                 format!("$.components.{from}"),
                 format!("Custom component reference cycle: '{from}' -> '{to}'"),
             ));
@@ -1011,7 +1090,11 @@ mod tests {
         let diags = lint_component(&comp, None);
         assert!(!diags.is_empty());
         for d in &diags {
-            assert_eq!(d.pass, PASS, "Diagnostic {} should be pass {}", d.code, PASS);
+            assert_eq!(
+                d.pass, PASS,
+                "Diagnostic {} should be pass {}",
+                d.code, PASS
+            );
         }
     }
 
@@ -1056,10 +1139,14 @@ mod tests {
             }
         });
         let diags = lint_component(&comp, None);
-        assert!(with_code(&diags, "E806").is_empty(),
-            "Empty params array means no required params — no E806");
-        assert!(with_code(&diags, "E801").is_empty(),
-            "Custom component should not be flagged as unknown");
+        assert!(
+            with_code(&diags, "E806").is_empty(),
+            "Empty params array means no required params — no E806"
+        );
+        assert!(
+            with_code(&diags, "E801").is_empty(),
+            "Custom component should not be flagged as unknown"
+        );
     }
 
     // ── SubmitButton component ──────────────────────────────────
@@ -1076,8 +1163,10 @@ mod tests {
             }
         });
         let diags = lint_component(&comp, None);
-        assert!(with_code(&diags, "E801").is_empty(),
-            "SubmitButton should be recognized as a built-in component");
+        assert!(
+            with_code(&diags, "E801").is_empty(),
+            "SubmitButton should be recognized as a built-in component"
+        );
     }
 
     /// Spec: component-spec.md §7.33 — SubmitButton should not declare a bind (it's not an input)
@@ -1095,8 +1184,10 @@ mod tests {
         // SubmitButton is not in LAYOUT_NO_BIND or CONTAINER_NO_BIND, and it's not an input component.
         // So W801 should NOT fire (it's not a layout/container), and W803 should NOT fire (it's not input).
         // But W804 duplicate bind tracking still applies.
-        assert!(with_code(&diags, "W801").is_empty(),
-            "SubmitButton is not layout/container, so no W801");
+        assert!(
+            with_code(&diags, "W801").is_empty(),
+            "SubmitButton is not layout/container, so no W801"
+        );
     }
 
     // ── W804 semantic divergence documentation ──────────────────
@@ -1126,6 +1217,9 @@ mod tests {
             }]
         });
         let diags = lint_component(&comp, Some(&def));
-        assert!(with_code(&diags, "W800").is_empty(), "Nested field 'amount' should resolve");
+        assert!(
+            with_code(&diags, "W800").is_empty(),
+            "Nested field 'amount' should resolve"
+        );
     }
 }

@@ -36,15 +36,9 @@ fn build_graph(
         };
 
         let deps = get_fel_dependencies(&expr.expression);
-        let base_keys: HashSet<String> = deps
-            .iter()
-            .map(|dep| base_key(dep).to_string())
-            .collect();
+        let base_keys: HashSet<String> = deps.iter().map(|dep| base_key(dep).to_string()).collect();
 
-        graph
-            .entry(bind_key.clone())
-            .or_default()
-            .extend(base_keys);
+        graph.entry(bind_key.clone()).or_default().extend(base_keys);
         path_map
             .entry(bind_key.clone())
             .or_insert_with(|| expr.expression_path.clone());
@@ -210,21 +204,17 @@ mod tests {
     #[test]
     fn no_cycle_produces_no_diagnostics() {
         // a → b → c (chain, no cycle)
-        let compiled = vec![
-            expr("a", "$b + 1"),
-            expr("b", "$c + 1"),
-            expr("c", "42"),
-        ];
+        let compiled = vec![expr("a", "$b + 1"), expr("b", "$c + 1"), expr("c", "42")];
         let diags = analyze_dependencies(&compiled);
-        assert!(diags.is_empty(), "Acyclic graph should produce no diagnostics");
+        assert!(
+            diags.is_empty(),
+            "Acyclic graph should produce no diagnostics"
+        );
     }
 
     #[test]
     fn simple_two_node_cycle() {
-        let compiled = vec![
-            expr("a", "$b + 1"),
-            expr("b", "$a + 1"),
-        ];
+        let compiled = vec![expr("a", "$b + 1"), expr("b", "$a + 1")];
         let diags = analyze_dependencies(&compiled);
         assert_eq!(diags.len(), 1, "Expected exactly 1 E500 for a↔b cycle");
         assert_eq!(diags[0].code, "E500");
@@ -246,38 +236,38 @@ mod tests {
     #[test]
     fn constraint_excluded_from_graph() {
         // Constraint references self — should NOT create a cycle
-        let compiled = vec![
-            expr("age", "18"),
-            constraint_expr("$ >= 0 and $age > 0"),
-        ];
+        let compiled = vec![expr("age", "18"), constraint_expr("$ >= 0 and $age > 0")];
         let diags = analyze_dependencies(&compiled);
-        assert!(diags.is_empty(), "Constraint expressions should not participate in dependency graph");
+        assert!(
+            diags.is_empty(),
+            "Constraint expressions should not participate in dependency graph"
+        );
     }
 
     #[test]
     fn cycle_dedup_same_cycle_from_multiple_starts() {
         // a → b → a — DFS from both 'a' and 'b' should still produce 1 diagnostic
-        let compiled = vec![
-            expr("a", "$b"),
-            expr("b", "$a"),
-        ];
+        let compiled = vec![expr("a", "$b"), expr("b", "$a")];
         let diags = analyze_dependencies(&compiled);
-        assert_eq!(diags.len(), 1, "Same cycle discovered from multiple DFS starts should be deduplicated");
+        assert_eq!(
+            diags.len(),
+            1,
+            "Same cycle discovered from multiple DFS starts should be deduplicated"
+        );
     }
 
     #[test]
     fn three_node_cycle() {
-        let compiled = vec![
-            expr("a", "$b"),
-            expr("b", "$c"),
-            expr("c", "$a"),
-        ];
+        let compiled = vec![expr("a", "$b"), expr("b", "$c"), expr("c", "$a")];
         let diags = analyze_dependencies(&compiled);
         assert_eq!(diags.len(), 1, "Expected exactly 1 E500 for a→b→c→a cycle");
 
         // The canonical cycle starts at the lex-minimum ('a'), so message should show a → b → c → a
         let msg = &diags[0].message;
-        assert!(msg.contains("a \u{2192} b \u{2192} c \u{2192} a"), "Expected canonical order, got: {msg}");
+        assert!(
+            msg.contains("a \u{2192} b \u{2192} c \u{2192} a"),
+            "Expected canonical order, got: {msg}"
+        );
     }
 
     #[test]
@@ -313,9 +303,7 @@ mod tests {
     fn nested_path_uses_base_key() {
         // Expression references $addr.city — base key is 'addr'
         // No 'addr' in the graph as a bind target, so no cycle possible
-        let compiled = vec![
-            expr("total", "$addr.city"),
-        ];
+        let compiled = vec![expr("total", "$addr.city")];
         let diags = analyze_dependencies(&compiled);
         assert!(diags.is_empty());
     }
@@ -341,10 +329,18 @@ mod tests {
     /// first path segment before any `.` or `[`.
     #[test]
     fn base_key_bracket_only_path() {
-        assert_eq!(base_key("items[0]"), "items", "Bracket-only path should extract base");
+        assert_eq!(
+            base_key("items[0]"),
+            "items",
+            "Bracket-only path should extract base"
+        );
         assert_eq!(base_key("plain"), "plain", "Plain key returns itself");
         assert_eq!(base_key("a.b.c"), "a", "Dotted path extracts first segment");
-        assert_eq!(base_key("group[0].field"), "group", "Mixed path extracts first segment");
+        assert_eq!(
+            base_key("group[0].field"),
+            "group",
+            "Mixed path extracts first segment"
+        );
     }
 
     // ── Finding 66: Cycle path attribution with shared bind target ─
@@ -392,7 +388,11 @@ mod tests {
             expr("y", "$x"),
         ];
         let diags = analyze_dependencies(&compiled);
-        assert_eq!(diags.len(), 2, "Two independent cycles should produce 2 diagnostics");
+        assert_eq!(
+            diags.len(),
+            2,
+            "Two independent cycles should produce 2 diagnostics"
+        );
     }
 
     // ── Wildcard path dependencies ─────────────────────────────
@@ -407,7 +407,11 @@ mod tests {
             expr("lines", "$total"),
         ];
         let diags = analyze_dependencies(&compiled);
-        assert_eq!(diags.len(), 1, "Wildcard dependency should use base key 'lines' and detect cycle");
+        assert_eq!(
+            diags.len(),
+            1,
+            "Wildcard dependency should use base key 'lines' and detect cycle"
+        );
         assert!(diags[0].message.contains("lines"));
         assert!(diags[0].message.contains("total"));
     }
@@ -415,12 +419,12 @@ mod tests {
     /// Spec: spec.md §5.4 — wildcard ref with no cycle
     #[test]
     fn wildcard_path_no_cycle_when_acyclic() {
-        let compiled = vec![
-            expr("total", "sum($lines[*].amount)"),
-            expr("lines", "42"),
-        ];
+        let compiled = vec![expr("total", "sum($lines[*].amount)"), expr("lines", "42")];
         let diags = analyze_dependencies(&compiled);
-        assert!(diags.is_empty(), "No cycle when wildcard target doesn't reference source");
+        assert!(
+            diags.is_empty(),
+            "No cycle when wildcard target doesn't reference source"
+        );
     }
 
     // ── relevant + calculate on same bind key merge dependencies ─
@@ -447,7 +451,11 @@ mod tests {
         ];
         let diags = analyze_dependencies(&compiled);
         // a → c → a cycle (via relevant slot)
-        assert_eq!(diags.len(), 1, "Should detect cycle between a and c through merged deps");
+        assert_eq!(
+            diags.len(),
+            1,
+            "Should detect cycle between a and c through merged deps"
+        );
         assert!(diags[0].message.contains('a'));
         assert!(diags[0].message.contains('c'));
     }

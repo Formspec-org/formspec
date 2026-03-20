@@ -49,7 +49,11 @@ pub fn compile_expressions(document: &Value) -> ExpressionCompilationResult {
 
 /// All expression slots on a bind object.
 const ALL_BIND_SLOTS: &[&str] = &[
-    "calculate", "relevant", "required", "readonly", "constraint",
+    "calculate",
+    "relevant",
+    "required",
+    "readonly",
+    "constraint",
 ];
 
 /// Dispatch to object or array format handler.
@@ -92,15 +96,20 @@ fn walk_binds_object(
                 } else {
                     Some(bind_key.clone())
                 };
-                try_parse(expr_str, expression_path, bind_target, compiled, diagnostics);
+                try_parse(
+                    expr_str,
+                    expression_path,
+                    bind_target,
+                    compiled,
+                    diagnostics,
+                );
             }
         }
 
         // `default` — only when the value starts with `=` (FEL heuristic)
         if let Some(default_str) = obj.get("default").and_then(|v| v.as_str()) {
             if let Some(fel_source) = default_str.strip_prefix('=') {
-                let expression_path =
-                    format!("{path_prefix}.binds.{bind_key}.default");
+                let expression_path = format!("{path_prefix}.binds.{bind_key}.default");
                 try_parse(
                     fel_source,
                     expression_path,
@@ -138,7 +147,13 @@ fn walk_binds_array(
                 } else {
                     Some(bind_key.to_string())
                 };
-                try_parse(expr_str, expression_path, bind_target, compiled, diagnostics);
+                try_parse(
+                    expr_str,
+                    expression_path,
+                    bind_target,
+                    compiled,
+                    diagnostics,
+                );
             }
         }
 
@@ -182,8 +197,7 @@ fn walk_shapes(
         if let Some(ctx) = shape.get("context").and_then(|v| v.as_object()) {
             for (ctx_key, ctx_val) in ctx {
                 if let Some(expr_str) = ctx_val.as_str() {
-                    let expression_path =
-                        format!("$.shapes[{i}].context.{ctx_key}");
+                    let expression_path = format!("$.shapes[{i}].context.{ctx_key}");
                     try_parse(expr_str, expression_path, None, compiled, diagnostics);
                 }
             }
@@ -194,8 +208,7 @@ fn walk_shapes(
             if let Some(arr) = shape.get(array_op).and_then(|v| v.as_array()) {
                 for (j, item) in arr.iter().enumerate() {
                     if let Some(expr_str) = item.as_str() {
-                        let expression_path =
-                            format!("$.shapes[{i}].{array_op}[{j}]");
+                        let expression_path = format!("$.shapes[{i}].{array_op}[{j}]");
                         try_parse(expr_str, expression_path, None, compiled, diagnostics);
                     }
                 }
@@ -245,20 +258,14 @@ fn walk_screener(
     if let Some(routes) = screener.get("routes").and_then(|v| v.as_array()) {
         for (i, route) in routes.iter().enumerate() {
             if let Some(expr_str) = route.get("condition").and_then(|v| v.as_str()) {
-                let expression_path =
-                    format!("$.screener.routes[{i}].condition");
+                let expression_path = format!("$.screener.routes[{i}].condition");
                 try_parse(expr_str, expression_path, None, compiled, diagnostics);
             }
         }
     }
 
     // Screener binds (same slots as top-level binds)
-    walk_binds(
-        screener.get("binds"),
-        "$.screener",
-        compiled,
-        diagnostics,
-    );
+    walk_binds(screener.get("binds"), "$.screener", compiled, diagnostics);
 }
 
 // ── Parse helper ────────────────────────────────────────────────
@@ -365,8 +372,12 @@ mod tests {
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 4);
         for expr in &result.compiled {
-            assert_eq!(expr.bind_target, Some("x".to_string()),
-                "slot {} should have bind_target", expr.expression_path);
+            assert_eq!(
+                expr.bind_target,
+                Some("x".to_string()),
+                "slot {} should have bind_target",
+                expr.expression_path
+            );
         }
     }
 
@@ -385,7 +396,11 @@ mod tests {
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 2);
 
-        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        let paths: Vec<&str> = result
+            .compiled
+            .iter()
+            .map(|e| e.expression_path.as_str())
+            .collect();
         assert!(paths.contains(&"$.shapes[0].constraint"));
         assert!(paths.contains(&"$.shapes[0].activeWhen"));
 
@@ -410,7 +425,9 @@ mod tests {
         let result = compile_expressions(&doc);
 
         assert!(result.diagnostics.is_empty());
-        let ctx_expr = result.compiled.iter()
+        let ctx_expr = result
+            .compiled
+            .iter()
             .find(|e| e.expression_path == "$.shapes[0].context.total")
             .expect("context expression should be compiled");
         assert_eq!(ctx_expr.expression, "sum($items[*].amount)");
@@ -431,7 +448,11 @@ mod tests {
         let result = compile_expressions(&doc);
 
         assert!(result.diagnostics.is_empty());
-        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        let paths: Vec<&str> = result
+            .compiled
+            .iter()
+            .map(|e| e.expression_path.as_str())
+            .collect();
         assert!(paths.contains(&"$.shapes[0].and[0]"));
         assert!(paths.contains(&"$.shapes[0].and[1]"));
         assert!(paths.contains(&"$.shapes[0].or[0]"));
@@ -455,8 +476,14 @@ mod tests {
 
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 2);
-        assert_eq!(result.compiled[0].expression_path, "$.screener.routes[0].condition");
-        assert_eq!(result.compiled[1].expression_path, "$.screener.routes[1].condition");
+        assert_eq!(
+            result.compiled[0].expression_path,
+            "$.screener.routes[0].condition"
+        );
+        assert_eq!(
+            result.compiled[1].expression_path,
+            "$.screener.routes[1].condition"
+        );
     }
 
     #[test]
@@ -474,7 +501,11 @@ mod tests {
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 2);
 
-        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        let paths: Vec<&str> = result
+            .compiled
+            .iter()
+            .map(|e| e.expression_path.as_str())
+            .collect();
         assert!(paths.contains(&"$.screener.binds.q1.required"));
         assert!(paths.contains(&"$.screener.binds.q1.constraint"));
     }
@@ -490,7 +521,10 @@ mod tests {
 
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 1);
-        assert_eq!(result.compiled[0].expression_path, "$.variables[0].expression");
+        assert_eq!(
+            result.compiled[0].expression_path,
+            "$.variables[0].expression"
+        );
         assert_eq!(result.compiled[0].expression, "sum($items[*].amount)");
     }
 
@@ -637,8 +671,14 @@ mod tests {
             }
         });
         let result = compile_expressions(&doc);
-        assert!(result.compiled.is_empty(), "Non-object bind values should be skipped");
-        assert!(result.diagnostics.is_empty(), "Non-object bind values should not produce diagnostics");
+        assert!(
+            result.compiled.is_empty(),
+            "Non-object bind values should be skipped"
+        );
+        assert!(
+            result.diagnostics.is_empty(),
+            "Non-object bind values should not produce diagnostics"
+        );
     }
 
     // ── Finding 55: Array bind entry without path skipped ────────
@@ -656,7 +696,11 @@ mod tests {
         });
         let result = compile_expressions(&doc);
         // Only the entry WITH a path should be compiled
-        assert_eq!(result.compiled.len(), 1, "Only bind with path should be compiled");
+        assert_eq!(
+            result.compiled.len(),
+            1,
+            "Only bind with path should be compiled"
+        );
         assert_eq!(result.compiled[0].bind_target, Some("valid".to_string()));
         assert!(result.diagnostics.is_empty());
     }
@@ -695,7 +739,11 @@ mod tests {
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 2);
 
-        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        let paths: Vec<&str> = result
+            .compiled
+            .iter()
+            .map(|e| e.expression_path.as_str())
+            .collect();
         assert!(paths.contains(&"$.screener.binds[0].required"));
         assert!(paths.contains(&"$.screener.binds[0].constraint"));
     }
@@ -716,7 +764,11 @@ mod tests {
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 3);
 
-        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        let paths: Vec<&str> = result
+            .compiled
+            .iter()
+            .map(|e| e.expression_path.as_str())
+            .collect();
         assert!(paths.contains(&"$.shapes[0].constraint"));
         assert!(paths.contains(&"$.shapes[0].and[0]"));
         assert!(paths.contains(&"$.shapes[0].and[1]"));
@@ -736,8 +788,15 @@ mod tests {
         let result = compile_expressions(&doc);
 
         assert!(result.diagnostics.is_empty());
-        assert_eq!(result.compiled.len(), 1, "Only the variable with expression should compile");
-        assert_eq!(result.compiled[0].expression_path, "$.variables[1].expression");
+        assert_eq!(
+            result.compiled.len(),
+            1,
+            "Only the variable with expression should compile"
+        );
+        assert_eq!(
+            result.compiled[0].expression_path,
+            "$.variables[1].expression"
+        );
     }
 
     #[test]

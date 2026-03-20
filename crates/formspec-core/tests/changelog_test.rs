@@ -1,7 +1,7 @@
 //! Integration tests for changelog module.
 
 use formspec_core::changelog::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 const URL: &str = "https://example.org/forms/test";
 

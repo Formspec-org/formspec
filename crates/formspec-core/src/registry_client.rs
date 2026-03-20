@@ -157,10 +157,7 @@ impl Registry {
 
     /// List all entries with a given lifecycle status.
     pub fn list_by_status(&self, status: RegistryEntryStatus) -> Vec<&RegistryEntry> {
-        self.entries
-            .iter()
-            .filter(|e| e.status == status)
-            .collect()
+        self.entries.iter().filter(|e| e.status == status).collect()
     }
 
     /// Validate registry entries against structural rules.
@@ -176,8 +173,7 @@ impl Registry {
                 ));
             }
 
-            if entry.status == RegistryEntryStatus::Deprecated
-                && entry.deprecation_notice.is_none()
+            if entry.status == RegistryEntryStatus::Deprecated && entry.deprecation_notice.is_none()
             {
                 messages.push(format!(
                     "entry[{i}]: deprecated entry '{}' missing deprecationNotice",
@@ -244,10 +240,7 @@ impl RegistryLookup for Registry {
 /// deprecated → {deprecated, retired, stable}  // un-deprecation allowed
 /// retired    → {}  // terminal
 /// ```
-pub fn validate_lifecycle_transition(
-    from: RegistryEntryStatus,
-    to: RegistryEntryStatus,
-) -> bool {
+pub fn validate_lifecycle_transition(from: RegistryEntryStatus, to: RegistryEntryStatus) -> bool {
     use RegistryEntryStatus::*;
     matches!(
         (from, to),
@@ -378,7 +371,10 @@ fn parse_publisher(val: &serde_json::Value) -> Result<Publisher, RegistryError> 
         .and_then(|v| v.as_str())
         .ok_or_else(|| RegistryError::MissingField("publisher.url".into()))?
         .to_string();
-    let contact = obj.get("contact").and_then(|v| v.as_str()).map(String::from);
+    let contact = obj
+        .get("contact")
+        .and_then(|v| v.as_str())
+        .map(String::from);
     Ok(Publisher { name, url, contact })
 }
 
@@ -408,14 +404,17 @@ fn parse_parameter(val: &serde_json::Value) -> Option<Parameter> {
     Some(Parameter {
         name: obj.get("name")?.as_str()?.to_string(),
         param_type: obj.get("type")?.as_str()?.to_string(),
-        description: obj.get("description").and_then(|v| v.as_str()).map(String::from),
+        description: obj
+            .get("description")
+            .and_then(|v| v.as_str())
+            .map(String::from),
     })
 }
 
 fn parse_entry(val: &serde_json::Value, index: usize) -> Result<RegistryEntry, RegistryError> {
-    let obj = val.as_object().ok_or_else(|| {
-        RegistryError::InvalidEntry(index, "entry must be an object".into())
-    })?;
+    let obj = val
+        .as_object()
+        .ok_or_else(|| RegistryError::InvalidEntry(index, "entry must be an object".into()))?;
 
     let name = obj
         .get("name")
@@ -1050,7 +1049,10 @@ mod tests {
         });
         let reg = Registry::from_json(&val).unwrap();
         let issues = reg.validate();
-        assert!(!issues.is_empty(), "x-1test should be invalid (digit start)");
+        assert!(
+            !issues.is_empty(),
+            "x-1test should be invalid (digit start)"
+        );
     }
 
     /// Spec: extension-registry.md §2.1 — "Multi-segment name is valid"
@@ -1070,7 +1072,10 @@ mod tests {
         });
         let reg = Registry::from_json(&val).unwrap();
         let issues = reg.validate();
-        assert!(issues.is_empty(), "x-formspec-url-validator should be valid: {issues:?}");
+        assert!(
+            issues.is_empty(),
+            "x-formspec-url-validator should be valid: {issues:?}"
+        );
     }
 
     // ── Version with non-numeric parts ───────────────────────────

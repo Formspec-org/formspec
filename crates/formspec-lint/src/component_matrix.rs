@@ -43,8 +43,17 @@ static COMPAT_RULES: &[CompatRule] = &[
         component: "TextInput",
         strict_allowed: &["string", "text"],
         authoring_allowed: &[
-            "integer", "decimal", "boolean", "date", "dateTime", "time", "uri", "attachment",
-            "choice", "multiChoice", "money",
+            "integer",
+            "decimal",
+            "boolean",
+            "date",
+            "dateTime",
+            "time",
+            "uri",
+            "attachment",
+            "choice",
+            "multiChoice",
+            "money",
         ],
         requires_options: false,
     },
@@ -280,7 +289,9 @@ mod tests {
                     result,
                     Compatibility::Compatible,
                     "Component '{}' with dataType '{}' should be Compatible (strict_allowed), got {:?}",
-                    rule.component, dt, result,
+                    rule.component,
+                    dt,
+                    result,
                 );
             }
 
@@ -291,7 +302,9 @@ mod tests {
                     result,
                     Compatibility::CompatibleWithWarning,
                     "Component '{}' with dataType '{}' should be CompatibleWithWarning (authoring_allowed), got {:?}",
-                    rule.component, dt, result,
+                    rule.component,
+                    dt,
+                    result,
                 );
             }
         }

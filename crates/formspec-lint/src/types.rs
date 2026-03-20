@@ -1,7 +1,6 @@
 //! Shared types for the formspec lint pipeline (diagnostics, modes, results).
 
 /// Shared types for the formspec lint pipeline.
-
 use std::cmp::Ordering;
 
 use serde_json::Value;
@@ -84,18 +83,46 @@ pub struct LintDiagnostic {
 
 impl LintDiagnostic {
     /// Create an error diagnostic.
-    pub fn error(code: &str, pass: u8, path: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { code: code.to_string(), pass, severity: LintSeverity::Error, path: path.into(), message: message.into() }
+    pub fn error(
+        code: &str,
+        pass: u8,
+        path: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            code: code.to_string(),
+            pass,
+            severity: LintSeverity::Error,
+            path: path.into(),
+            message: message.into(),
+        }
     }
 
     /// Create a warning diagnostic.
-    pub fn warning(code: &str, pass: u8, path: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { code: code.to_string(), pass, severity: LintSeverity::Warning, path: path.into(), message: message.into() }
+    pub fn warning(
+        code: &str,
+        pass: u8,
+        path: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            code: code.to_string(),
+            pass,
+            severity: LintSeverity::Warning,
+            path: path.into(),
+            message: message.into(),
+        }
     }
 
     /// Create an info diagnostic.
     pub fn info(code: &str, pass: u8, path: impl Into<String>, message: impl Into<String>) -> Self {
-        Self { code: code.to_string(), pass, severity: LintSeverity::Info, path: path.into(), message: message.into() }
+        Self {
+            code: code.to_string(),
+            pass,
+            severity: LintSeverity::Info,
+            path: path.into(),
+            message: message.into(),
+        }
     }
 
     /// Whether this diagnostic should be suppressed in the given lint mode.
@@ -164,7 +191,10 @@ mod tests {
         assert!(LintSeverity::Warning < LintSeverity::Info);
         assert!(LintSeverity::Error < LintSeverity::Info);
         // Reflexive equality
-        assert_eq!(LintSeverity::Error.cmp(&LintSeverity::Error), std::cmp::Ordering::Equal);
+        assert_eq!(
+            LintSeverity::Error.cmp(&LintSeverity::Error),
+            std::cmp::Ordering::Equal
+        );
     }
 
     // ── Finding 46: suppressed_in by mode ────────────────────────
@@ -173,16 +203,28 @@ mod tests {
     #[test]
     fn w300_suppressed_in_authoring_not_runtime() {
         let diag = LintDiagnostic::warning("W300", 3, "$.test", "test");
-        assert!(diag.suppressed_in(LintMode::Authoring), "W300 should be suppressed in Authoring");
-        assert!(!diag.suppressed_in(LintMode::Runtime), "W300 should NOT be suppressed in Runtime");
+        assert!(
+            diag.suppressed_in(LintMode::Authoring),
+            "W300 should be suppressed in Authoring"
+        );
+        assert!(
+            !diag.suppressed_in(LintMode::Runtime),
+            "W300 should NOT be suppressed in Runtime"
+        );
     }
 
     /// Spec: W802 component compatibility warning suppressed during authoring.
     #[test]
     fn w802_suppressed_in_authoring_not_runtime() {
         let diag = LintDiagnostic::warning("W802", 7, "$.test", "test");
-        assert!(diag.suppressed_in(LintMode::Authoring), "W802 should be suppressed in Authoring");
-        assert!(!diag.suppressed_in(LintMode::Runtime), "W802 should NOT be suppressed in Runtime");
+        assert!(
+            diag.suppressed_in(LintMode::Authoring),
+            "W802 should be suppressed in Authoring"
+        );
+        assert!(
+            !diag.suppressed_in(LintMode::Runtime),
+            "W802 should NOT be suppressed in Runtime"
+        );
     }
 
     /// Spec: No diagnostics are suppressed in Runtime mode.
@@ -229,25 +271,34 @@ mod tests {
         for window in diags.windows(2) {
             let a = &window[0];
             let b = &window[1];
-            let order = a.pass.cmp(&b.pass)
+            let order = a
+                .pass
+                .cmp(&b.pass)
                 .then(a.severity.cmp(&b.severity))
                 .then(a.path.cmp(&b.path));
             assert!(
                 order != std::cmp::Ordering::Greater,
                 "Sort violation: ({}, {:?}, {}) should not come after ({}, {:?}, {})",
-                a.pass, a.severity, a.path,
-                b.pass, b.severity, b.path,
+                a.pass,
+                a.severity,
+                a.path,
+                b.pass,
+                b.severity,
+                b.path,
             );
         }
 
         // Verify stability: the two E300 diagnostics at pass 3, path $.binds.a
         // should keep their original relative order.
-        let e300s: Vec<&str> = diags.iter()
+        let e300s: Vec<&str> = diags
+            .iter()
             .filter(|d| d.code == "E300" && d.path == "$.binds.a")
             .map(|d| d.message.as_str())
             .collect();
-        assert_eq!(e300s, vec!["error a", "error a duplicate"],
-            "Identical (pass, severity, path) diagnostics should preserve insertion order");
+        assert_eq!(
+            e300s,
+            vec!["error a", "error a duplicate"],
+            "Identical (pass, severity, path) diagnostics should preserve insertion order"
+        );
     }
 }
-

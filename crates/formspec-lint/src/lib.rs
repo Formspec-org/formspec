@@ -12,21 +12,21 @@
 mod types;
 
 pub mod component_matrix;
-pub mod tree;
-pub mod expressions;
 pub mod dependencies;
-pub mod references;
+pub mod expressions;
 pub mod extensions;
-pub mod pass_theme;
 pub mod pass_component;
+pub mod pass_theme;
+pub mod references;
+pub mod tree;
 
 use serde_json::Value;
 
-use formspec_core::{detect_document_type, DocumentType};
+use formspec_core::{DocumentType, detect_document_type};
 
 // Re-export public types
 pub use types::{
-    sort_diagnostics, LintDiagnostic, LintMode, LintOptions, LintResult, LintSeverity,
+    LintDiagnostic, LintMode, LintOptions, LintResult, LintSeverity, sort_diagnostics,
 };
 
 // ── Lint pipeline ───────────────────────────────────────────────
@@ -44,8 +44,17 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
     let doc_type = detect_document_type(doc);
 
     if doc_type.is_none() {
-        diagnostics.push(LintDiagnostic::error("E100", 1, "$", "Cannot determine document type"));
-        return LintResult { document_type: None, diagnostics, valid: false };
+        diagnostics.push(LintDiagnostic::error(
+            "E100",
+            1,
+            "$",
+            "Cannot determine document type",
+        ));
+        return LintResult {
+            document_type: None,
+            diagnostics,
+            valid: false,
+        };
     }
 
     let doc_type = doc_type.unwrap();
@@ -57,17 +66,27 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
         diagnostics.append(&mut tree_index.diagnostics);
 
         // Pass gating: stop if structural errors exist from pass 2
-        if diagnostics.iter().any(|d| d.severity == LintSeverity::Error) {
+        if diagnostics
+            .iter()
+            .any(|d| d.severity == LintSeverity::Error)
+        {
             sort_diagnostics(&mut diagnostics);
             diagnostics.retain(|d| !d.suppressed_in(options.mode));
-            return LintResult { document_type: Some(doc_type), diagnostics, valid: false };
+            return LintResult {
+                document_type: Some(doc_type),
+                diagnostics,
+                valid: false,
+            };
         }
 
         // Pass 3: Reference validation (E300/E301/E302/W300)
         diagnostics.extend(references::check_references(doc, &tree_index));
 
         // Pass 3b: Extension resolution (E600/E601/E602)
-        diagnostics.extend(extensions::check_extensions(doc, &options.registry_documents));
+        diagnostics.extend(extensions::check_extensions(
+            doc,
+            &options.registry_documents,
+        ));
 
         // Pass 4: Expression compilation (E400)
         let compilation = expressions::compile_expressions(doc);
@@ -79,20 +98,32 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
 
     // ── Theme pass (6) ──────────────────────────────────────────
     if doc_type == DocumentType::Theme {
-        diagnostics.extend(pass_theme::lint_theme(doc, options.definition_document.as_ref()));
+        diagnostics.extend(pass_theme::lint_theme(
+            doc,
+            options.definition_document.as_ref(),
+        ));
     }
 
     // ── Component pass (7) ──────────────────────────────────────
     if doc_type == DocumentType::Component {
-        diagnostics.extend(pass_component::lint_component(doc, options.definition_document.as_ref()));
+        diagnostics.extend(pass_component::lint_component(
+            doc,
+            options.definition_document.as_ref(),
+        ));
     }
 
     // Sort and filter
     sort_diagnostics(&mut diagnostics);
     diagnostics.retain(|d| !d.suppressed_in(options.mode));
 
-    let valid = diagnostics.iter().all(|d| d.severity != LintSeverity::Error);
-    LintResult { document_type: Some(doc_type), diagnostics, valid }
+    let valid = diagnostics
+        .iter()
+        .all(|d| d.severity != LintSeverity::Error);
+    LintResult {
+        document_type: Some(doc_type),
+        diagnostics,
+        valid,
+    }
 }
 
 #[cfg(test)]
@@ -149,7 +180,8 @@ mod tests {
         let result = lint(&def);
         assert!(result.diagnostics.iter().any(|d| d.code == "E201"));
         assert_eq!(
-            result.diagnostics.iter().filter(|d| d.pass >= 3).count(), 0,
+            result.diagnostics.iter().filter(|d| d.pass >= 3).count(),
+            0,
             "No diagnostics from pass 3+ when pass 2 has structural errors"
         );
     }
@@ -172,7 +204,12 @@ mod tests {
             assert!(
                 (a.pass, a.severity, &a.path) <= (b.pass, b.severity, &b.path),
                 "Diagnostics not sorted: ({}, {:?}, {}) should come before ({}, {:?}, {})",
-                a.pass, a.severity, a.path, b.pass, b.severity, b.path,
+                a.pass,
+                a.severity,
+                a.path,
+                b.pass,
+                b.severity,
+                b.path,
             );
         }
     }
@@ -185,10 +222,28 @@ mod tests {
             "items": [{ "key": "f", "dataType": "boolean", "optionSet": "opts" }],
             "optionSets": { "opts": { "options": [{ "value": "yes" }] } }
         });
-        let rt = lint_with_options(&def, &LintOptions { mode: LintMode::Runtime, ..Default::default() });
-        assert_eq!(rt.diagnostics.iter().filter(|d| d.code == "W300").count(), 1);
-        let auth = lint_with_options(&def, &LintOptions { mode: LintMode::Authoring, ..Default::default() });
-        assert_eq!(auth.diagnostics.iter().filter(|d| d.code == "W300").count(), 0);
+        let rt = lint_with_options(
+            &def,
+            &LintOptions {
+                mode: LintMode::Runtime,
+                ..Default::default()
+            },
+        );
+        assert_eq!(
+            rt.diagnostics.iter().filter(|d| d.code == "W300").count(),
+            1
+        );
+        let auth = lint_with_options(
+            &def,
+            &LintOptions {
+                mode: LintMode::Authoring,
+                ..Default::default()
+            },
+        );
+        assert_eq!(
+            auth.diagnostics.iter().filter(|d| d.code == "W300").count(),
+            0
+        );
     }
 
     /// Spec: spec.md §9 — screener integration spans passes 3+4
@@ -205,7 +260,9 @@ mod tests {
             }
         });
         let result = lint(&def);
-        let e400 = result.diagnostics.iter()
+        let e400 = result
+            .diagnostics
+            .iter()
             .filter(|d| d.code == "E400" && d.path.contains("screener"))
             .collect::<Vec<_>>();
         assert_eq!(e400.len(), 1);
@@ -227,10 +284,15 @@ mod tests {
             }
         });
         let result = lint(&def);
-        let screener_errors = result.diagnostics.iter()
+        let screener_errors = result
+            .diagnostics
+            .iter()
             .filter(|d| d.path.contains("screener"))
             .count();
-        assert_eq!(screener_errors, 0, "Valid screener expressions should not produce errors");
+        assert_eq!(
+            screener_errors, 0,
+            "Valid screener expressions should not produce errors"
+        );
     }
 
     #[test]
@@ -247,7 +309,10 @@ mod tests {
             }
         });
         let result = lint(&def);
-        assert!(result.diagnostics.len() >= 2, "Should have multiple diagnostics");
+        assert!(
+            result.diagnostics.len() >= 2,
+            "Should have multiple diagnostics"
+        );
 
         // Verify sorting: pass numbers are non-decreasing
         for window in result.diagnostics.windows(2) {
@@ -258,8 +323,12 @@ mod tests {
                     || (a.pass == b.pass && a.severity <= b.severity)
                     || (a.pass == b.pass && a.severity == b.severity && a.path <= b.path),
                 "Diagnostics not sorted: ({}, {:?}, {}) should come before ({}, {:?}, {})",
-                a.pass, a.severity, a.path,
-                b.pass, b.severity, b.path,
+                a.pass,
+                a.severity,
+                a.path,
+                b.pass,
+                b.severity,
+                b.path,
             );
         }
     }
@@ -282,18 +351,23 @@ mod tests {
         let result = lint(&def);
 
         // Pass 2 error should be present
-        assert!(result.diagnostics.iter().any(|d| d.code == "E201"),
-            "E201 should be present");
+        assert!(
+            result.diagnostics.iter().any(|d| d.code == "E201"),
+            "E201 should be present"
+        );
 
         // Finding 49: verify .valid is false on early-return path
-        assert!(!result.valid, "Document with structural errors should be invalid");
+        assert!(
+            !result.valid,
+            "Document with structural errors should be invalid"
+        );
 
         // Pass 3 (E300) and pass 4 (E400) should NOT be present because of pass gating
-        let pass3_plus = result.diagnostics.iter()
-            .filter(|d| d.pass >= 3)
-            .count();
-        assert_eq!(pass3_plus, 0,
-            "No diagnostics from pass 3+ should exist when pass 2 has structural errors");
+        let pass3_plus = result.diagnostics.iter().filter(|d| d.pass >= 3).count();
+        assert_eq!(
+            pass3_plus, 0,
+            "No diagnostics from pass 3+ should exist when pass 2 has structural errors"
+        );
     }
 
     #[test]
@@ -309,19 +383,33 @@ mod tests {
         });
 
         // Runtime mode: W300 present
-        let runtime_result = lint_with_options(&def, &LintOptions {
-            mode: LintMode::Runtime,
-            ..Default::default()
-        });
-        let w300_runtime = runtime_result.diagnostics.iter().filter(|d| d.code == "W300").count();
+        let runtime_result = lint_with_options(
+            &def,
+            &LintOptions {
+                mode: LintMode::Runtime,
+                ..Default::default()
+            },
+        );
+        let w300_runtime = runtime_result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "W300")
+            .count();
         assert_eq!(w300_runtime, 1, "Runtime mode should emit W300");
 
         // Authoring mode: W300 suppressed
-        let authoring_result = lint_with_options(&def, &LintOptions {
-            mode: LintMode::Authoring,
-            ..Default::default()
-        });
-        let w300_authoring = authoring_result.diagnostics.iter().filter(|d| d.code == "W300").count();
+        let authoring_result = lint_with_options(
+            &def,
+            &LintOptions {
+                mode: LintMode::Authoring,
+                ..Default::default()
+            },
+        );
+        let w300_authoring = authoring_result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "W300")
+            .count();
         assert_eq!(w300_authoring, 0, "Authoring mode should suppress W300");
     }
 
@@ -346,10 +434,18 @@ mod tests {
             ]
         });
         let registry = json!({ "entries": [{ "name": "x-formspec-url", "status": "active" }] });
-        let result = lint_with_options(&def, &LintOptions {
-            registry_documents: vec![registry], ..Default::default()
-        });
-        let e600 = result.diagnostics.iter().filter(|d| d.code == "E600").collect::<Vec<_>>();
+        let result = lint_with_options(
+            &def,
+            &LintOptions {
+                registry_documents: vec![registry],
+                ..Default::default()
+            },
+        );
+        let e600 = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "E600")
+            .collect::<Vec<_>>();
         assert_eq!(e600.len(), 1);
         assert!(e600[0].message.contains("x-unknown-ext"));
     }
@@ -362,7 +458,14 @@ mod tests {
             "items": [{ "key": "e", "extensions": { "x-formspec-url": true } }]
         });
         let result = lint(&def);
-        assert_eq!(result.diagnostics.iter().filter(|d| d.code == "E600").count(), 0);
+        assert_eq!(
+            result
+                .diagnostics
+                .iter()
+                .filter(|d| d.code == "E600")
+                .count(),
+            0
+        );
     }
 
     /// Spec: theme-spec.md §1 — "$formspecTheme" routes to pass 6
@@ -402,21 +505,35 @@ mod tests {
         });
 
         // Runtime mode: W802 present
-        let runtime_result = lint_with_options(&comp, &LintOptions {
-            mode: LintMode::Runtime,
-            definition_document: Some(def.clone()),
-            ..Default::default()
-        });
-        let w802_runtime = runtime_result.diagnostics.iter().filter(|d| d.code == "W802").count();
+        let runtime_result = lint_with_options(
+            &comp,
+            &LintOptions {
+                mode: LintMode::Runtime,
+                definition_document: Some(def.clone()),
+                ..Default::default()
+            },
+        );
+        let w802_runtime = runtime_result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "W802")
+            .count();
         assert_eq!(w802_runtime, 1, "Runtime mode should emit W802");
 
         // Authoring mode: W802 suppressed
-        let authoring_result = lint_with_options(&comp, &LintOptions {
-            mode: LintMode::Authoring,
-            definition_document: Some(def),
-            ..Default::default()
-        });
-        let w802_authoring = authoring_result.diagnostics.iter().filter(|d| d.code == "W802").count();
+        let authoring_result = lint_with_options(
+            &comp,
+            &LintOptions {
+                mode: LintMode::Authoring,
+                definition_document: Some(def),
+                ..Default::default()
+            },
+        );
+        let w802_authoring = authoring_result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "W802")
+            .count();
         assert_eq!(w802_authoring, 0, "Authoring mode should suppress W802");
     }
 
@@ -443,9 +560,18 @@ mod tests {
             "shapes": [{ "target": "phantom", "constraint": "true" }]
         });
         let result = lint(&def);
-        assert!(result.diagnostics.iter().any(|d| d.code == "E300"), "Should have E300");
-        assert!(result.diagnostics.iter().any(|d| d.code == "E301"), "Should have E301");
-        assert!(result.diagnostics.iter().any(|d| d.code == "E500"), "Should have E500");
+        assert!(
+            result.diagnostics.iter().any(|d| d.code == "E300"),
+            "Should have E300"
+        );
+        assert!(
+            result.diagnostics.iter().any(|d| d.code == "E301"),
+            "Should have E301"
+        );
+        assert!(
+            result.diagnostics.iter().any(|d| d.code == "E500"),
+            "Should have E500"
+        );
         // Verify monotonic pass ordering
         let passes: Vec<u8> = result.diagnostics.iter().map(|d| d.pass).collect();
         for w in passes.windows(2) {

@@ -106,7 +106,10 @@ fn walk_items(
                 "E200",
                 2,
                 &json_path,
-                format!("Duplicate item key '{key}' (first seen at {})", index.by_key[key].json_path),
+                format!(
+                    "Duplicate item key '{key}' (first seen at {})",
+                    index.by_key[key].json_path
+                ),
             ));
         } else {
             index.by_key.insert(key.to_string(), item_ref.clone());
@@ -203,14 +206,22 @@ mod tests {
         });
         let index = build_item_index(&doc);
 
-        let e200: Vec<_> = index.diagnostics.iter().filter(|d| d.code == "E200").collect();
+        let e200: Vec<_> = index
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "E200")
+            .collect();
         assert_eq!(e200.len(), 1, "Expected one E200 for duplicate key 'name'");
         assert!(e200[0].message.contains("name"));
 
         assert!(index.ambiguous_keys.contains("name"));
 
         // Both full paths are distinct so no E201
-        let e201_count = index.diagnostics.iter().filter(|d| d.code == "E201").count();
+        let e201_count = index
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "E201")
+            .count();
         assert_eq!(e201_count, 0);
     }
 
@@ -224,12 +235,24 @@ mod tests {
         });
         let index = build_item_index(&doc);
 
-        let e201: Vec<_> = index.diagnostics.iter().filter(|d| d.code == "E201").collect();
-        assert_eq!(e201.len(), 1, "Expected one E201 for duplicate full path 'name'");
+        let e201: Vec<_> = index
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "E201")
+            .collect();
+        assert_eq!(
+            e201.len(),
+            1,
+            "Expected one E201 for duplicate full path 'name'"
+        );
         assert!(e201[0].message.contains("name"));
 
         // Also triggers E200 since the key is duplicated
-        let e200_count = index.diagnostics.iter().filter(|d| d.code == "E200").count();
+        let e200_count = index
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "E200")
+            .count();
         assert_eq!(e200_count, 1);
     }
 
@@ -305,7 +328,11 @@ mod tests {
         assert!(!index.ambiguous_keys.contains("z"));
 
         // Two E200 diagnostics (second and third occurrence of key "x")
-        let e200_count = index.diagnostics.iter().filter(|d| d.code == "E200").count();
+        let e200_count = index
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "E200")
+            .count();
         assert_eq!(e200_count, 2);
     }
 
@@ -350,8 +377,14 @@ mod tests {
         assert_eq!(index.by_key["outer"].json_path, "$.items[0]");
         assert_eq!(index.by_key["a"].json_path, "$.items[0].children[0]");
         assert_eq!(index.by_key["inner"].json_path, "$.items[0].children[1]");
-        assert_eq!(index.by_key["deep"].json_path, "$.items[0].children[1].children[0]");
-        assert_eq!(index.by_full_path["outer.inner.deep"].full_path, "outer.inner.deep");
+        assert_eq!(
+            index.by_key["deep"].json_path,
+            "$.items[0].children[1].children[0]"
+        );
+        assert_eq!(
+            index.by_full_path["outer.inner.deep"].full_path,
+            "outer.inner.deep"
+        );
     }
 
     // ── Edge cases: non-string keys ──────────────────────────────
@@ -420,11 +453,17 @@ mod tests {
         assert!(index.repeatable_groups.contains("sections"));
         assert!(index.repeatable_groups.contains("sections.rows"));
         assert!(index.repeatable_groups.contains("sections.rows.cells"));
-        assert!(!index.repeatable_groups.contains("sections.rows.cells.value"));
+        assert!(
+            !index
+                .repeatable_groups
+                .contains("sections.rows.cells.value")
+        );
 
         // Parent paths are correct
         assert_eq!(
-            index.by_full_path["sections.rows.cells.value"].parent_full_path.as_deref(),
+            index.by_full_path["sections.rows.cells.value"]
+                .parent_full_path
+                .as_deref(),
             Some("sections.rows.cells")
         );
 

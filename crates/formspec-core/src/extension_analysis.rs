@@ -68,7 +68,9 @@ pub struct MapRegistry {
 
 impl MapRegistry {
     pub fn new() -> Self {
-        Self { entries: HashMap::new() }
+        Self {
+            entries: HashMap::new(),
+        }
     }
 
     pub fn add(&mut self, entry: RegistryEntryInfo) {
@@ -97,7 +99,9 @@ pub trait ExtensionItem {
     /// Extensions declared on this item (extension name → enabled).
     fn declared_extensions(&self) -> Vec<String>;
     /// Child items.
-    fn children(&self) -> &[Self] where Self: Sized;
+    fn children(&self) -> &[Self]
+    where
+        Self: Sized;
 }
 
 // ── Validation ──────────────────────────────────────────────────
@@ -151,7 +155,8 @@ fn walk_items<I: ExtensionItem>(
                             });
                         }
                         RegistryEntryStatus::Deprecated => {
-                            let notice = entry.deprecation_notice.as_deref().unwrap_or("deprecated");
+                            let notice =
+                                entry.deprecation_notice.as_deref().unwrap_or("deprecated");
                             issues.push(ExtensionUsageIssue {
                                 path: path.clone(),
                                 extension: ext_name.clone(),
@@ -186,9 +191,15 @@ mod tests {
     }
 
     impl ExtensionItem for TestItem {
-        fn key(&self) -> &str { &self.key }
-        fn declared_extensions(&self) -> Vec<String> { self.extensions.clone() }
-        fn children(&self) -> &[TestItem] { &self.kids }
+        fn key(&self) -> &str {
+            &self.key
+        }
+        fn declared_extensions(&self) -> Vec<String> {
+            self.extensions.clone()
+        }
+        fn children(&self) -> &[TestItem] {
+            &self.kids
+        }
     }
 
     fn make_registry() -> MapRegistry {
@@ -291,10 +302,7 @@ mod tests {
         let registry = make_registry();
         let items = vec![TestItem {
             key: "field".to_string(),
-            extensions: vec![
-                "x-unknown".to_string(),
-                "x-formspec-old".to_string(),
-            ],
+            extensions: vec!["x-unknown".to_string(), "x-formspec-old".to_string()],
             kids: vec![],
         }];
         let issues = validate_extension_usage(&items, &registry);
@@ -319,7 +327,10 @@ mod tests {
             kids: vec![],
         }];
         let issues = validate_extension_usage(&items, &registry);
-        assert!(issues.is_empty(), "Draft extension should not produce issues");
+        assert!(
+            issues.is_empty(),
+            "Draft extension should not produce issues"
+        );
     }
 
     // ── Empty item tree — extension-registry.md §4 ──────────────
@@ -354,7 +365,11 @@ mod tests {
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].code, ExtensionErrorCode::ExtensionRetired);
         // When display_name is None, the message should use the extension name
-        assert!(issues[0].message.contains("x-formspec-gone"), "msg: {}", issues[0].message);
+        assert!(
+            issues[0].message.contains("x-formspec-gone"),
+            "msg: {}",
+            issues[0].message
+        );
     }
 
     /// Spec: extension-registry.md §3.2 — "Deprecated extension with None display_name uses extension name"
@@ -375,7 +390,11 @@ mod tests {
         let issues = validate_extension_usage(&items, &registry);
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].code, ExtensionErrorCode::ExtensionDeprecated);
-        assert!(issues[0].message.contains("x-formspec-legacy"), "msg: {}", issues[0].message);
+        assert!(
+            issues[0].message.contains("x-formspec-legacy"),
+            "msg: {}",
+            issues[0].message
+        );
     }
 
     /// Spec: extension-registry.md §3.2 — "Deprecated without notice uses 'deprecated' fallback"
@@ -395,6 +414,10 @@ mod tests {
         }];
         let issues = validate_extension_usage(&items, &registry);
         assert_eq!(issues.len(), 1);
-        assert!(issues[0].message.contains("deprecated"), "msg: {}", issues[0].message);
+        assert!(
+            issues[0].message.contains("deprecated"),
+            "msg: {}",
+            issues[0].message
+        );
     }
 }

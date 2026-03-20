@@ -8,7 +8,7 @@ use std::collections::HashSet;
 
 use serde_json::{Map, Value};
 
-use crate::fel_analysis::{rewrite_fel_references, RewriteOptions};
+use crate::fel_analysis::{RewriteOptions, rewrite_fel_references};
 use fel_core::parse;
 
 // ── Types ───────────────────────────────────────────────────────
@@ -64,7 +64,9 @@ pub struct MapResolver {
 
 impl MapResolver {
     pub fn new() -> Self {
-        Self { fragments: std::collections::HashMap::new() }
+        Self {
+            fragments: std::collections::HashMap::new(),
+        }
     }
 
     pub fn add(&mut self, uri: &str, fragment: Value) {
@@ -91,10 +93,7 @@ impl RefResolver for MapResolver {
 /// Walks the item tree, resolving `$ref` properties to inline the referenced
 /// fragment's items. Applies key prefixes, rewrites FEL paths in binds/shapes/variables,
 /// and detects circular references.
-pub fn assemble_definition(
-    definition: &Value,
-    resolver: &dyn RefResolver,
-) -> AssemblyResult {
+pub fn assemble_definition(definition: &Value, resolver: &dyn RefResolver) -> AssemblyResult {
     let mut result = AssemblyResult {
         definition: definition.clone(),
         warnings: Vec::new(),
@@ -153,16 +152,16 @@ fn resolve_item(
         let fragment = match resolver.resolve(&ref_uri) {
             Some(f) => f,
             None => {
-                result.errors.push(AssemblyError::RefNotFound(ref_uri.clone()));
+                result
+                    .errors
+                    .push(AssemblyError::RefNotFound(ref_uri.clone()));
                 visited.remove(&ref_uri);
                 return None;
             }
         };
 
         // Apply key prefix from the $ref item
-        let key_prefix = obj.get("keyPrefix")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let key_prefix = obj.get("keyPrefix").and_then(|v| v.as_str()).unwrap_or("");
 
         // Build the resolved item from the fragment
         let mut resolved = apply_fragment(item, &fragment, key_prefix, &ref_uri, result);
@@ -229,12 +228,14 @@ fn apply_fragment(
 
     // Import items from fragment with key prefix
     if let Some(frag_items) = fragment.get("items").and_then(|v| v.as_array()) {
-        let prefixed_items: Vec<Value> = frag_items.iter()
+        let prefixed_items: Vec<Value> = frag_items
+            .iter()
             .map(|item| apply_key_prefix(item, key_prefix))
             .collect();
 
         // Merge into existing children or create new
-        let existing = merged.get("children")
+        let existing = merged
+            .get("children")
             .and_then(|v| v.as_array())
             .cloned()
             .unwrap_or_default();
@@ -245,7 +246,9 @@ fn apply_fragment(
 
     // Import binds from fragment with FEL path rewriting
     if let Some(frag_binds) = fragment.get("binds").and_then(|v| v.as_object()) {
-        let existing_binds = merged.entry("binds").or_insert_with(|| Value::Object(Map::new()));
+        let existing_binds = merged
+            .entry("binds")
+            .or_insert_with(|| Value::Object(Map::new()));
         if let Some(binds_obj) = existing_binds.as_object_mut() {
             for (bind_key, bind_val) in frag_binds {
                 let new_key = if key_prefix.is_empty() {
@@ -263,7 +266,9 @@ fn apply_fragment(
 
     // Import shapes from fragment
     if let Some(frag_shapes) = fragment.get("shapes").and_then(|v| v.as_array()) {
-        let existing_shapes = merged.entry("shapes").or_insert_with(|| Value::Array(Vec::new()));
+        let existing_shapes = merged
+            .entry("shapes")
+            .or_insert_with(|| Value::Array(Vec::new()));
         if let Some(shapes_arr) = existing_shapes.as_array_mut() {
             for shape in frag_shapes {
                 let rewritten = rewrite_fel_in_shape(shape, key_prefix);
@@ -274,7 +279,9 @@ fn apply_fragment(
 
     // Import variables from fragment
     if let Some(frag_vars) = fragment.get("variables").and_then(|v| v.as_array()) {
-        let existing_vars = merged.entry("variables").or_insert_with(|| Value::Array(Vec::new()));
+        let existing_vars = merged
+            .entry("variables")
+            .or_insert_with(|| Value::Array(Vec::new()));
         if let Some(vars_arr) = existing_vars.as_array_mut() {
             for var in frag_vars {
                 let mut rewritten = var.clone();
@@ -325,7 +332,8 @@ fn apply_key_prefix(item: &Value, prefix: &str) -> Value {
             obj.insert("key".to_string(), Value::String(format!("{prefix}.{key}")));
         }
         if let Some(children) = obj.get("children").and_then(|v| v.as_array()).cloned() {
-            let prefixed: Vec<Value> = children.iter()
+            let prefixed: Vec<Value> = children
+                .iter()
                 .map(|c| apply_key_prefix(c, prefix))
                 .collect();
             obj.insert("children".to_string(), Value::Array(prefixed));
@@ -343,14 +351,19 @@ fn rewrite_fel_string(expression: &str, prefix: &str) -> String {
     // Parse → rewrite AST → print back to string
     match parse(expression) {
         Ok(expr) => {
-            let rewritten = rewrite_fel_references(&expr, &RewriteOptions {
-                rewrite_field_path: Some(Box::new({
-                    let p = prefix.to_string();
-                    move |path| Some(format!("{p}.{path}"))
-                })),
-                rewrite_variable: None,
-                rewrite_instance_name: None,
-            });
+            let rewritten = rewrite_fel_references(
+                &expr,
+                &RewriteOptions {
+                    rewrite_field_path: Some(Box::new({
+                        let p = prefix.to_string();
+                        move |path| Some(format!("{p}.{path}"))
+                    })),
+                    rewrite_current_path: None,
+                    rewrite_variable: None,
+                    rewrite_instance_name: None,
+                    rewrite_navigation_target: None,
+                },
+            );
             fel_core::print_expr(&rewritten)
         }
         Err(_) => expression.to_string(),
@@ -364,7 +377,13 @@ fn rewrite_fel_in_bind(bind: &Value, prefix: &str) -> Value {
     }
     let mut result = bind.clone();
     if let Some(obj) = result.as_object_mut() {
-        for fel_key in &["calculate", "relevant", "required", "readonly", "constraint"] {
+        for fel_key in &[
+            "calculate",
+            "relevant",
+            "required",
+            "readonly",
+            "constraint",
+        ] {
             if let Some(expr) = obj.get(*fel_key).and_then(|v| v.as_str()) {
                 obj.insert(
                     fel_key.to_string(),
@@ -438,18 +457,23 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("contact.json", json!({
-            "items": [
-                { "key": "name", "dataType": "string" },
-                { "key": "email", "dataType": "string" }
-            ]
-        }));
+        resolver.add(
+            "contact.json",
+            json!({
+                "items": [
+                    { "key": "name", "dataType": "string" },
+                    { "key": "email", "dataType": "string" }
+                ]
+            }),
+        );
 
         let result = assemble_definition(&def, &resolver);
         assert!(result.errors.is_empty());
 
         // Items should be imported with key prefix
-        let children = result.definition["items"][0]["children"].as_array().unwrap();
+        let children = result.definition["items"][0]["children"]
+            .as_array()
+            .unwrap();
         assert_eq!(children.len(), 2);
         assert_eq!(children[0]["key"], "c.name");
         assert_eq!(children[1]["key"], "c.email");
@@ -494,12 +518,15 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("frag.json", json!({
-            "items": [{ "key": "f1" }],
-            "binds": {
-                "f1": { "required": "true" }
-            }
-        }));
+        resolver.add(
+            "frag.json",
+            json!({
+                "items": [{ "key": "f1" }],
+                "binds": {
+                    "f1": { "required": "true" }
+                }
+            }),
+        );
 
         let result = assemble_definition(&def, &resolver);
         assert!(result.errors.is_empty());
@@ -546,15 +573,22 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("self.json", json!({
-            "items": [
-                { "$ref": "self.json", "key": "inner" }
-            ]
-        }));
+        resolver.add(
+            "self.json",
+            json!({
+                "items": [
+                    { "$ref": "self.json", "key": "inner" }
+                ]
+            }),
+        );
         let result = assemble_definition(&def, &resolver);
         assert!(
-            result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(r) if r == "self.json")),
-            "expected CircularRef for self.json, got: {:?}", result.errors
+            result
+                .errors
+                .iter()
+                .any(|e| matches!(e, AssemblyError::CircularRef(r) if r == "self.json")),
+            "expected CircularRef for self.json, got: {:?}",
+            result.errors
         );
     }
 
@@ -568,20 +602,30 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("a.json", json!({
-            "items": [
-                { "$ref": "b.json", "key": "from_a" }
-            ]
-        }));
-        resolver.add("b.json", json!({
-            "items": [
-                { "$ref": "a.json", "key": "from_b" }
-            ]
-        }));
+        resolver.add(
+            "a.json",
+            json!({
+                "items": [
+                    { "$ref": "b.json", "key": "from_a" }
+                ]
+            }),
+        );
+        resolver.add(
+            "b.json",
+            json!({
+                "items": [
+                    { "$ref": "a.json", "key": "from_b" }
+                ]
+            }),
+        );
         let result = assemble_definition(&def, &resolver);
         assert!(
-            result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(_))),
-            "expected CircularRef error, got: {:?}", result.errors
+            result
+                .errors
+                .iter()
+                .any(|e| matches!(e, AssemblyError::CircularRef(_))),
+            "expected CircularRef error, got: {:?}",
+            result.errors
         );
     }
 
@@ -595,19 +639,32 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("a.json", json!({
-            "items": [{ "$ref": "b.json", "key": "from_a" }]
-        }));
-        resolver.add("b.json", json!({
-            "items": [{ "$ref": "c.json", "key": "from_b" }]
-        }));
-        resolver.add("c.json", json!({
-            "items": [{ "$ref": "a.json", "key": "from_c" }]
-        }));
+        resolver.add(
+            "a.json",
+            json!({
+                "items": [{ "$ref": "b.json", "key": "from_a" }]
+            }),
+        );
+        resolver.add(
+            "b.json",
+            json!({
+                "items": [{ "$ref": "c.json", "key": "from_b" }]
+            }),
+        );
+        resolver.add(
+            "c.json",
+            json!({
+                "items": [{ "$ref": "a.json", "key": "from_c" }]
+            }),
+        );
         let result = assemble_definition(&def, &resolver);
         assert!(
-            result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(_))),
-            "expected CircularRef for transitive cycle, got: {:?}", result.errors
+            result
+                .errors
+                .iter()
+                .any(|e| matches!(e, AssemblyError::CircularRef(_))),
+            "expected CircularRef for transitive cycle, got: {:?}",
+            result.errors
         );
     }
 
@@ -623,17 +680,23 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("frag.json", json!({
-            "items": [{ "key": "f1" }]
-        }));
+        resolver.add(
+            "frag.json",
+            json!({
+                "items": [{ "key": "f1" }]
+            }),
+        );
         let result = assemble_definition(&def, &resolver);
         // The visited set is shared across siblings, so the second ref to frag.json
         // should detect it. But actually, visited.remove is called after each resolve_item,
         // so the second use is NOT circular — it's the same ref used twice at same level.
         // This actually should succeed without error.
         // Let's verify that same-level reuse is NOT flagged as circular.
-        assert!(result.errors.is_empty(),
-            "Same ref at same level should not be circular: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Same ref at same level should not be circular: {:?}",
+            result.errors
+        );
     }
 
     /// Spec: spec.md §7.3 — "Key collision after prefix MUST produce AssemblyError::KeyCollision"
@@ -645,16 +708,23 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("frag.json", json!({
-            "items": [
-                { "key": "name" },
-                { "key": "name" }
-            ]
-        }));
+        resolver.add(
+            "frag.json",
+            json!({
+                "items": [
+                    { "key": "name" },
+                    { "key": "name" }
+                ]
+            }),
+        );
         let result = assemble_definition(&def, &resolver);
         assert!(
-            result.errors.iter().any(|e| matches!(e, AssemblyError::KeyCollision { .. })),
-            "expected KeyCollision error, got: {:?}", result.errors
+            result
+                .errors
+                .iter()
+                .any(|e| matches!(e, AssemblyError::KeyCollision { .. })),
+            "expected KeyCollision error, got: {:?}",
+            result.errors
         );
     }
 
@@ -673,11 +743,14 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("child.json", json!({
-            "items": [
-                { "key": "field1", "dataType": "string" }
-            ]
-        }));
+        resolver.add(
+            "child.json",
+            json!({
+                "items": [
+                    { "key": "field1", "dataType": "string" }
+                ]
+            }),
+        );
         let result = assemble_definition(&def, &resolver);
         assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
         // The group's children should contain the resolved $ref
@@ -698,24 +771,30 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("frag.json", json!({
-            "items": [{ "key": "total" }],
-            "shapes": [
-                {
-                    "name": "totalPositive",
-                    "target": "total",
-                    "constraint": "$total > 0",
-                    "activeWhen": "$active = true"
-                }
-            ]
-        }));
+        resolver.add(
+            "frag.json",
+            json!({
+                "items": [{ "key": "total" }],
+                "shapes": [
+                    {
+                        "name": "totalPositive",
+                        "target": "total",
+                        "constraint": "$total > 0",
+                        "activeWhen": "$active = true"
+                    }
+                ]
+            }),
+        );
         let result = assemble_definition(&def, &resolver);
         assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
         let shapes = result.definition["items"][0]["shapes"].as_array().unwrap();
         assert_eq!(shapes.len(), 1);
         assert_eq!(shapes[0]["target"], "p.total");
         assert_eq!(shapes[0]["constraint"].as_str().unwrap(), "$p.total > 0");
-        assert_eq!(shapes[0]["activeWhen"].as_str().unwrap(), "$p.active = true");
+        assert_eq!(
+            shapes[0]["activeWhen"].as_str().unwrap(),
+            "$p.active = true"
+        );
     }
 
     /// Spec: spec.md §7.3 — "Variable import rewrites calculate expressions with key prefix"
@@ -727,17 +806,25 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("frag.json", json!({
-            "items": [{ "key": "qty" }, { "key": "price" }],
-            "variables": [
-                { "name": "lineTotal", "calculate": "$qty * $price" }
-            ]
-        }));
+        resolver.add(
+            "frag.json",
+            json!({
+                "items": [{ "key": "qty" }, { "key": "price" }],
+                "variables": [
+                    { "name": "lineTotal", "calculate": "$qty * $price" }
+                ]
+            }),
+        );
         let result = assemble_definition(&def, &resolver);
         assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
-        let vars = result.definition["items"][0]["variables"].as_array().unwrap();
+        let vars = result.definition["items"][0]["variables"]
+            .as_array()
+            .unwrap();
         assert_eq!(vars.len(), 1);
-        assert_eq!(vars[0]["calculate"].as_str().unwrap(), "$order.qty * $order.price");
+        assert_eq!(
+            vars[0]["calculate"].as_str().unwrap(),
+            "$order.qty * $order.price"
+        );
     }
 
     #[test]
@@ -763,26 +850,46 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("a.json", json!({
-            "items": [
-                { "$ref": "b.json", "key": "nested" }
-            ]
-        }));
-        resolver.add("b.json", json!({
-            "items": [
-                { "key": "leaf", "dataType": "string" }
-            ]
-        }));
+        resolver.add(
+            "a.json",
+            json!({
+                "items": [
+                    { "$ref": "b.json", "key": "nested" }
+                ]
+            }),
+        );
+        resolver.add(
+            "b.json",
+            json!({
+                "items": [
+                    { "key": "leaf", "dataType": "string" }
+                ]
+            }),
+        );
 
         let result = assemble_definition(&def, &resolver);
-        assert!(result.errors.is_empty(), "expected no errors, got: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "expected no errors, got: {:?}",
+            result.errors
+        );
 
         // a's children should contain the resolved nested item,
         // which itself should have children from b.json
-        let a_children = result.definition["items"][0]["children"].as_array().unwrap();
-        assert_eq!(a_children.len(), 1, "a should have 1 child (the resolved nested ref)");
+        let a_children = result.definition["items"][0]["children"]
+            .as_array()
+            .unwrap();
+        assert_eq!(
+            a_children.len(),
+            1,
+            "a should have 1 child (the resolved nested ref)"
+        );
         let nested_children = a_children[0]["children"].as_array().unwrap();
-        assert_eq!(nested_children.len(), 1, "nested should have 1 child from b.json");
+        assert_eq!(
+            nested_children.len(),
+            1,
+            "nested should have 1 child from b.json"
+        );
         assert_eq!(nested_children[0]["key"], "leaf");
     }
 
@@ -794,18 +901,31 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("a.json", json!({
-            "items": [{ "$ref": "b.json", "key": "mid" }]
-        }));
-        resolver.add("b.json", json!({
-            "items": [{ "$ref": "c.json", "key": "deep" }]
-        }));
-        resolver.add("c.json", json!({
-            "items": [{ "key": "bottom", "dataType": "number" }]
-        }));
+        resolver.add(
+            "a.json",
+            json!({
+                "items": [{ "$ref": "b.json", "key": "mid" }]
+            }),
+        );
+        resolver.add(
+            "b.json",
+            json!({
+                "items": [{ "$ref": "c.json", "key": "deep" }]
+            }),
+        );
+        resolver.add(
+            "c.json",
+            json!({
+                "items": [{ "key": "bottom", "dataType": "number" }]
+            }),
+        );
 
         let result = assemble_definition(&def, &resolver);
-        assert!(result.errors.is_empty(), "expected no errors, got: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "expected no errors, got: {:?}",
+            result.errors
+        );
 
         let bottom = &result.definition["items"][0]["children"][0]["children"][0]["children"][0];
         assert_eq!(bottom["key"], "bottom");
@@ -821,15 +941,23 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("self.json", json!({
-            "items": [
-                { "$ref": "self.json", "key": "loop" }
-            ]
-        }));
+        resolver.add(
+            "self.json",
+            json!({
+                "items": [
+                    { "$ref": "self.json", "key": "loop" }
+                ]
+            }),
+        );
 
         let result = assemble_definition(&def, &resolver);
-        assert!(result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(_))),
-            "expected CircularRef error for self-referencing $ref");
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|e| matches!(e, AssemblyError::CircularRef(_))),
+            "expected CircularRef error for self-referencing $ref"
+        );
     }
 
     #[test]
@@ -841,20 +969,31 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("a.json", json!({
-            "items": [
-                { "$ref": "b.json", "key": "from_a" }
-            ]
-        }));
-        resolver.add("b.json", json!({
-            "items": [
-                { "$ref": "a.json", "key": "from_b" }
-            ]
-        }));
+        resolver.add(
+            "a.json",
+            json!({
+                "items": [
+                    { "$ref": "b.json", "key": "from_a" }
+                ]
+            }),
+        );
+        resolver.add(
+            "b.json",
+            json!({
+                "items": [
+                    { "$ref": "a.json", "key": "from_b" }
+                ]
+            }),
+        );
 
         let result = assemble_definition(&def, &resolver);
-        assert!(result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(_))),
-            "expected CircularRef error for A->B->A cycle");
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|e| matches!(e, AssemblyError::CircularRef(_))),
+            "expected CircularRef error for A->B->A cycle"
+        );
     }
 
     #[test]
@@ -866,19 +1005,33 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("a.json", json!({
-            "items": [{ "$ref": "b.json", "key": "from_a" }]
-        }));
-        resolver.add("b.json", json!({
-            "items": [{ "$ref": "c.json", "key": "from_b" }]
-        }));
-        resolver.add("c.json", json!({
-            "items": [{ "$ref": "a.json", "key": "from_c" }]
-        }));
+        resolver.add(
+            "a.json",
+            json!({
+                "items": [{ "$ref": "b.json", "key": "from_a" }]
+            }),
+        );
+        resolver.add(
+            "b.json",
+            json!({
+                "items": [{ "$ref": "c.json", "key": "from_b" }]
+            }),
+        );
+        resolver.add(
+            "c.json",
+            json!({
+                "items": [{ "$ref": "a.json", "key": "from_c" }]
+            }),
+        );
 
         let result = assemble_definition(&def, &resolver);
-        assert!(result.errors.iter().any(|e| matches!(e, AssemblyError::CircularRef(_))),
-            "expected CircularRef error for A->B->C->A cycle");
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|e| matches!(e, AssemblyError::CircularRef(_))),
+            "expected CircularRef error for A->B->C->A cycle"
+        );
     }
 
     #[test]
@@ -889,12 +1042,15 @@ mod tests {
             ]
         });
         let mut resolver = MapResolver::new();
-        resolver.add("frag.json", json!({
-            "items": [{ "key": "total" }],
-            "binds": {
-                "total": { "calculate": "$qty * $price" }
-            }
-        }));
+        resolver.add(
+            "frag.json",
+            json!({
+                "items": [{ "key": "total" }],
+                "binds": {
+                    "total": { "calculate": "$qty * $price" }
+                }
+            }),
+        );
 
         let result = assemble_definition(&def, &resolver);
         assert!(result.errors.is_empty());

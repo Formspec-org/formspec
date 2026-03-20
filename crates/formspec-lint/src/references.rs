@@ -14,9 +14,8 @@ use crate::tree::ItemTreeIndex;
 use crate::types::LintDiagnostic;
 
 /// Data types compatible with optionSets.
-const OPTION_SET_COMPATIBLE_TYPES: &[&str] = &[
-    "string", "integer", "decimal", "choice", "multiChoice",
-];
+const OPTION_SET_COMPATIBLE_TYPES: &[&str] =
+    &["string", "integer", "decimal", "choice", "multiChoice"];
 
 /// Run pass 3 reference checks against an already-built item tree index.
 pub fn check_references(document: &Value, index: &ItemTreeIndex) -> Vec<LintDiagnostic> {
@@ -149,7 +148,12 @@ fn walk_items_for_option_sets(
         }
 
         if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-            walk_items_for_option_sets(children, defined_sets, &format!("{json_path}.children"), diagnostics);
+            walk_items_for_option_sets(
+                children,
+                defined_sets,
+                &format!("{json_path}.children"),
+                diagnostics,
+            );
         }
     }
 }
@@ -291,10 +295,7 @@ fn validate_wildcard_path(
         // and is a child of this group (its parent_full_path matches the group)
         let remainder_base = remainder.split('.').next().unwrap_or(remainder);
         let is_child = index.by_key.get(remainder_base).is_some_and(|item_ref| {
-            item_ref
-                .parent_full_path
-                .as_deref()
-                == Some(&group_ref.full_path)
+            item_ref.parent_full_path.as_deref() == Some(&group_ref.full_path)
         });
 
         if !is_child {
@@ -529,10 +530,7 @@ mod tests {
             });
             let diags = lint(&doc);
             let w300_count = diags.iter().filter(|d| d.code == "W300").count();
-            assert_eq!(
-                w300_count, 0,
-                "dataType '{dt}' should not trigger W300"
-            );
+            assert_eq!(w300_count, 0, "dataType '{dt}' should not trigger W300");
         }
     }
 
@@ -783,7 +781,11 @@ mod tests {
         let diags = lint(&doc);
         assert!(!diags.is_empty());
         for d in &diags {
-            assert_eq!(d.pass, 3, "All reference diagnostics should be pass 3, got pass {} for {}", d.pass, d.code);
+            assert_eq!(
+                d.pass, 3,
+                "All reference diagnostics should be pass 3, got pass {} for {}",
+                d.pass, d.code
+            );
         }
     }
 
@@ -801,7 +803,11 @@ mod tests {
         });
         let diags = lint(&doc);
         let e300: Vec<_> = diags.iter().filter(|d| d.code == "E300").collect();
-        assert_eq!(e300.len(), 1, "Wildcard on non-repeatable group in array-format should emit E300");
+        assert_eq!(
+            e300.len(),
+            1,
+            "Wildcard on non-repeatable group in array-format should emit E300"
+        );
         assert!(e300[0].message.contains("non-repeatable"));
     }
 
@@ -823,7 +829,10 @@ mod tests {
         });
         let index = crate::tree::build_item_index(&doc);
         // "name" should be in ambiguous_keys
-        assert!(index.ambiguous_keys.contains("name"), "Key 'name' should be ambiguous");
+        assert!(
+            index.ambiguous_keys.contains("name"),
+            "Key 'name' should be ambiguous"
+        );
 
         let diags = check_references(&doc, &index);
         // "name" matches by_full_path (top-level item has full_path "name"), so it resolves
@@ -855,6 +864,10 @@ mod tests {
         let diags = check_references(&doc, &index);
         // "x" is ambiguous and NOT a full_path (full_paths are "group1.x" and "group2.x")
         let e300: Vec<_> = diags.iter().filter(|d| d.code == "E300").collect();
-        assert_eq!(e300.len(), 1, "Ambiguous key 'x' with no matching full_path should emit E300");
+        assert_eq!(
+            e300.len(),
+            1,
+            "Ambiguous key 'x' with no matching full_path should emit E300"
+        );
     }
 }
