@@ -215,7 +215,7 @@ git branch -d <branch-name>
 - Always use `.claude/worktrees/` — no other location. Already gitignored.
 - Run `npm install` after creating a worktree. Dependencies are per-worktree.
 - Verify tests pass in the worktree before starting work. Report failures before proceeding.
-- **Commit your work.** Every worktree agent MUST commit before finishing. Uncommitted changes in a worktree are invisible to `git log`, unreviewable, and will be lost when the worktree is removed. Commit early and often with descriptive messages — this is how we track what was done, by whom, on which branch. A worktree with uncommitted changes is a worktree that wasted its work.
+- **Commit your work at logical moments.** Every worktree agent MUST commit before finishing. Uncommitted changes in a worktree are invisible to `git log`, unreviewable, and will be lost when the worktree is removed. Commit at natural stopping points — a passing test suite, a completed feature slice, a coherent refactor — not after every small change. Each commit should represent a meaningful, self-contained unit of work with a descriptive message. A worktree with uncommitted changes is a worktree that wasted its work.
 - Do not leave stale worktrees around. Clean up after merging or abandoning a branch.
 
 ## Development Workflow — Red-Green-Refactor
@@ -248,3 +248,5 @@ Every feature or bugfix follows this loop. Do NOT write implementation before a 
 ## Commit Convention
 
 Use semantic prefixes: `feat:`, `fix:`, `build:`, `docs:`, `test:`, `refactor:`.
+
+**When to commit:** At logical stopping points — not after every file edit, but when a coherent unit of work is complete. Good commit boundaries: a feature slice that passes its tests, a complete bugfix, a self-contained refactor, a full test expansion pass. Bad commit boundaries: mid-refactor with broken tests, after editing one file of a multi-file change, or "save my progress" checkpoints. When in doubt, finish the thought before committing.
