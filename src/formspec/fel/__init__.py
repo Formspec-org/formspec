@@ -1,23 +1,20 @@
-"""Public FEL runtime API for Python.
-
-The Python package now exposes the Rust-backed runtime contract rather than the
-legacy parser/evaluator internals. Parsing returns an opaque handle used only
-for syntax validation; evaluation and dependency extraction remain the primary
-entry points.
-"""
+"""Public FEL runtime API for Python — Rust-backed via formspec_rust."""
 
 from __future__ import annotations
 
-from .keywords import RESERVED_WORDS
-from .metadata import BUILTIN_NAMES, builtin_function_catalog
-from .runtime import (
-    DependencySet,
-    EvalResult,
-    FelRuntime,
-    ParsedExpression,
-    RustFelRuntime,
-    default_fel_runtime,
+import importlib as _importlib
+
+# Eagerly import leaf modules that have no circular dependencies
+from .errors import (
+    Diagnostic,
+    FelDefinitionError,
+    FelError,
+    FelEvaluationError,
+    FelSyntaxError,
+    Severity,
+    SourcePos,
 )
+from .keywords import RESERVED_WORDS
 from .types import (
     FelArray,
     FelBoolean,
@@ -36,50 +33,29 @@ from .types import (
     to_python,
     typeof,
 )
-from .errors import (
-    Diagnostic,
-    FelDefinitionError,
-    FelError,
-    FelEvaluationError,
-    FelSyntaxError,
-    Severity,
-    SourcePos,
-)
 
 __version__ = "1.0.0"
 
-
-def parse(source: str) -> ParsedExpression:
-    """Validate FEL syntax and return an opaque parsed handle."""
-
-    return default_fel_runtime().parse(source)
-
-
-def evaluate(
-    source: str,
-    data: dict | None = None,
-    *,
-    instances: dict[str, dict] | None = None,
-    mip_states: dict[str, object] | None = None,
-    extensions: dict[str, object] | None = None,
-    variables: dict[str, FelValue] | None = None,
-) -> EvalResult:
-    """Evaluate a FEL expression through the Rust runtime."""
-
-    return default_fel_runtime().evaluate(
-        source,
-        data,
-        instances=instances,
-        mip_states=mip_states,
-        extensions=extensions,
-        variables=variables,
-    )
+# Names that come from _rust — lazily resolved to break the circular import
+_RUST_NAMES = frozenset({
+    "BUILTIN_NAMES",
+    "DependencySet",
+    "EvalResult",
+    "ParsedExpression",
+    "builtin_function_catalog",
+    "evaluate",
+    "extract_dependencies",
+    "parse",
+})
 
 
-def extract_dependencies(source: str) -> DependencySet:
-    """Extract static dependencies from a FEL expression."""
-
-    return default_fel_runtime().extract_dependencies(source)
+def __getattr__(name):
+    if name in _RUST_NAMES:
+        _rust = _importlib.import_module("formspec._rust")
+        val = getattr(_rust, name)
+        globals()[name] = val
+        return val
+    raise AttributeError(f"module 'formspec.fel' has no attribute {name!r}")
 
 
 __all__ = [
@@ -98,18 +74,15 @@ __all__ = [
     "FelNull",
     "FelNumber",
     "FelObject",
-    "FelRuntime",
     "FelString",
     "FelSyntaxError",
     "FelTrue",
     "FelValue",
     "ParsedExpression",
     "RESERVED_WORDS",
-    "RustFelRuntime",
     "Severity",
     "SourcePos",
     "builtin_function_catalog",
-    "default_fel_runtime",
     "evaluate",
     "extract_dependencies",
     "fel_bool",
