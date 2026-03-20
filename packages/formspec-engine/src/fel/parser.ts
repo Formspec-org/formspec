@@ -6,7 +6,7 @@
  * This is the second stage of the FEL pipeline (Lexer -> Parser -> Interpreter).
  * It consumes the token vector produced by {@link FelLexer} and builds a
  * Concrete Syntax Tree (CST) that the {@link FelInterpreter} (stage 3) or
- * {@link FelDependencyVisitor} can walk.
+ * static analysis functions in `analysis.ts` can walk.
  *
  * The grammar defines ~25 rules implementing standard operator precedence from
  * loosest to tightest: let -> if/then/else -> ternary -> logicalOr -> logicalAnd
@@ -46,7 +46,7 @@ export class FelParser extends CstParser {
    * Every FEL expression string is parsed starting from this rule. It delegates
    * to `letExpr`, which cascades through the full precedence hierarchy.
    * The resulting CST node is passed to {@link FelInterpreter.evaluate} or
-   * {@link FelDependencyVisitor.getDependencies}.
+   * the `collectFieldReferences` function in `analysis.ts`.
    */
   public expression = this.RULE('expression', () => {
     this.SUBRULE(this.letExpr);

@@ -95,8 +95,7 @@ export interface FelCompilationResult {
  * for expression compilation and evaluation.
  *
  * Implementations:
- * - `ChevrotainFelRuntime` — current JS/Chevrotain pipeline (lexer → parser → CstVisitor)
- * - (future) `RustFelRuntime` — Rust/WASM backend compiled from the shared Rust crate
+ * - `WasmFelRuntime` — Rust/WASM backend compiled from the shared Rust crate (default)
  */
 export interface IFelRuntime {
     /**

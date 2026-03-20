@@ -2,6 +2,7 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const evalFEL: (a: number, b: number, c: number, d: number, e: number) => void;
+export const evalFELWithContext: (a: number, b: number, c: number, d: number, e: number) => void;
 export const parseFEL: (a: number, b: number) => number;
 export const printFEL: (a: number, b: number, c: number) => void;
 export const getFELDependencies: (a: number, b: number, c: number) => void;

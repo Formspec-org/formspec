@@ -8,7 +8,7 @@
   "scripts": {
     "build:wasm": "wasm-pack build ../../crates/formspec-wasm --target bundler --out-dir ../../packages/formspec-engine/wasm-pkg",
     "build": "tsc",
-    "test:unit": "node --experimental-specifier-resolution=node --test \"tests/**/*.test.mjs\"",
+    "test:unit": "node --experimental-specifier-resolution=node --import ./tests/setup.mjs --test \"tests/**/*.test.mjs\"",
     "test": "npm run build && npm run test:unit"
   },
   "dependencies": {

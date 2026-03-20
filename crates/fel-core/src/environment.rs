@@ -146,9 +146,12 @@ fn resolve_path(val: &FelValue, segments: &[String]) -> FelValue {
 impl Environment for FormspecEnvironment {
     fn resolve_field(&self, segments: &[String]) -> FelValue {
         if segments.is_empty() {
-            // Bare $ — return repeat context current or full data
+            // Bare $ — return repeat context current, data[""], or null
             if let Some(ctx) = &self.repeat_context {
                 return ctx.current.clone();
+            }
+            if let Some(val) = self.data.get("") {
+                return val.clone();
             }
             return FelValue::Null;
         }

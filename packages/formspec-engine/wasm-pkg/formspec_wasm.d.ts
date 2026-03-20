@@ -27,6 +27,12 @@ export function detectDocumentType(doc_json: string): any;
 export function evalFEL(expression: string, fields_json: string): string;
 
 /**
+ * Evaluate a FEL expression with full FormspecEnvironment context.
+ * `context_json` is a JSON object: { fields, variables?, mipStates?, repeatContext? }
+ */
+export function evalFELWithContext(expression: string, context_json: string): string;
+
+/**
  * Evaluate a Formspec definition against provided data (4-phase batch processor).
  * Returns JSON: { values, validations, nonRelevant, variables }
  */
@@ -117,6 +123,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly evalFEL: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly evalFELWithContext: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly parseFEL: (a: number, b: number) => number;
     readonly printFEL: (a: number, b: number, c: number) => void;
     readonly getFELDependencies: (a: number, b: number, c: number) => void;

@@ -2,7 +2,7 @@
  * @filedesc Bidirectional data-transform engine for Formspec mapping documents: rules, valueMap, coerce, FEL expressions, array modes, flatten/nest/concat/split.
  */
 import type { IFelRuntime, FelContext } from './fel/runtime.js';
-import { chevrotainFelRuntime } from './fel/chevrotain-runtime.js';
+import { wasmFelRuntime } from './fel/wasm-runtime.js';
 import type { MappingDirection, MappingDiagnostic, RuntimeMappingResult, IRuntimeMappingEngine } from './interfaces.js';
 
 // Re-export the types that were previously defined here for backwards compat
@@ -557,7 +557,7 @@ export class RuntimeMappingEngine implements IRuntimeMappingEngine {
      * @param mappingDocument - The mapping document containing rules, defaults, and metadata.
      * @param felRuntime - The FEL runtime to use for expression evaluation. Defaults to the Chevrotain runtime.
      */
-    constructor(mappingDocument: any, felRuntime: IFelRuntime = chevrotainFelRuntime) {
+    constructor(mappingDocument: any, felRuntime: IFelRuntime = wasmFelRuntime) {
         this.doc = mappingDocument || {};
         this.rules = Array.isArray(this.doc.rules) ? this.doc.rules : [];
         this.felRuntime = felRuntime;

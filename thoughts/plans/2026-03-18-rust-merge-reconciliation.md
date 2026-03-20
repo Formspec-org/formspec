@@ -384,41 +384,80 @@ Test files use direct construction — intentional.
 
 ## Decommission Status
 
-The goal is full replacement of TS and Python implementations with Rust. External consumers are the **migration target list**, not blockers.
+The goal is full replacement of TS and Python FEL/logic implementations with Rust. External consumers are the **migration target list**, not blockers.
 
 ### TS Migration Tiers
 
-#### Tier 1 — Ready to Swap (WASM equivalent exists, consumer changes import)
+#### Tier 1 — In Progress (520/582 engine tests passing)
 
-| TS File | WASM Replacement | Consumers to Migrate |
-|---------|-----------------|---------------------|
-| `assembler.ts` | `wasmAssembleDefinition()` | `formspec-core` (if any), `index.ts` re-export |
-| `fel/interpreter.ts` | `wasmEvalFEL()` via `WasmFelRuntime` | `ChevrotainFelRuntime` fallback path |
-| `fel/dependency-visitor.ts` | `wasmExtractDependencies()` | Internal to `ChevrotainFelRuntime` |
+**Deleted:** `fel/interpreter.ts`, `fel/dependency-visitor.ts`, `fel/chevrotain-runtime.ts`
 
-#### Tier 2 — Needs Thin WASM Wrapper (Rust capability exists, not yet exposed to JS)
+**What was done:**
+- Added `evalFELWithContext` WASM export using `FormspecEnvironment` (fields, variables, MIP states, repeat context, instances)
+- Added path resolution to `WasmCompiledExpression` (sibling, repeat scope rebase, root-relative) — mirrors the Chevrotain interpreter's `candidateLookupPaths` strategy
+- Added wildcard `[*]` dep expansion — reconstructs tree-structured instance arrays from flat FormEngine signals for the Rust evaluator
+- Added `hasSelfRef` (bare `$`) and `contextRefs` (`@variable`) handling with base-name splitting (`@source.name` → variable `source`)
+- Added `instanceRefs` forwarding — `@instance('name')` data passed via `WasmFelContext.instances`
+- Fixed Rust `FormspecEnvironment.resolve_field` to check data map for empty key (bare `$`)
+- Inlined dependency extraction into `analysis.ts` using existing `walkCst` + `readFieldRefPath`
+- Added Node.js WASM init via `initSync` + `fs.readFileSync` (browser `fetch()` doesn't work in Node)
+- Test setup file (`tests/setup.mjs`) initializes WASM before test run; `package.json` test command updated with `--import ./tests/setup.mjs`
+- Removed `FelUnsupportedFunctionError` usage from FormEngine (dead code with WASM-only runtime)
+- Updated `RuntimeMappingEngine` default from `chevrotainFelRuntime` to `wasmFelRuntime`
+- Updated stale JSDoc references to Chevrotain/DependencyVisitor across parser.ts, runtime.ts, index.ts
+- Cleaned up `wasm-bridge.ts`: extracted `WasmModule` type alias, removed unnecessary `as any` casts, simplified `wasmDetectDocumentType`
 
-| TS File | Rust Has It | What's Missing | Consumers |
-|---------|------------|----------------|-----------|
-| `extension-analysis.ts` | Lint pass E600 | Standalone `wasmValidateExtensionUsage()` export, or consumers call lint | `formspec-core/diagnostics` |
-| `runtime-mapping.ts` | `execute_mapping_wasm()` | Stateless — consumer `formspec-core/queries/mapping-queries.ts` needs adapted from class to function calls | `formspec-core` |
-| `schema-validator.ts` | `lint_document()` does schema validation internally | Standalone schema validation result, or consumers use lint pipeline instead of AJV | `formspec-mcp`, `formspec-core` |
+**Remaining gaps (62 test failures) by category:**
+
+*Repeat context (8 tests):* `@current`, `prev()`, `next()`, `parent()`, `@count`, `@index`, 1-based explicit indices. The `WasmCompiledExpression` only populates `repeatContext` when the expression references `@index`/`@count`/`@current`, but the repeat context `current` value is the field value (not the row object), and `prev()`/`next()`/`parent()` need the collection array which isn't populated.
+
+*Money arithmetic (4 tests):* `money + number`, `money - number`, `money % number`, `money / number`. Rust evaluator returns null — likely a type coercion difference where Chevrotain auto-coerced numbers to money amounts.
+
+*Variable chains involving money (6 tests):* `@totalDirect`, `@indirectCosts`, `@grandTotal`, `@projectPhasesTotal`. These use `moneyAdd()`, `moneySubtract()` etc. with variable-to-variable chains. Likely blocked by the money arithmetic gap above.
+
+*FEL type discipline (3 tests):* `conditional operators reject non-boolean conditions`, `logical operators reject non-boolean operands`, `unary not rejects non-boolean`. Chevrotain threw errors; Rust returns null.
+
+*Function catalog (4 tests):* `getBuiltinFELFunctionCatalog`, `catalog entries include signature/description`, `contains vs selected descriptions`, `dateDiff signature`. `WasmFelRuntime.listBuiltInFunctions()` returns `[]` — need Rust export of stdlib function metadata.
+
+*Specific FEL functions (8 tests):* `today()`, `dateAdd()`, `isNull()`, `abs()`, `matches()`, `number()`, `year()`, `countWhere()`. These likely work in isolation but fail in FormEngine context — probably blocked by variable chain or path resolution issues.
+
+*Display calculate (4 tests):* Display items with calculate binds. Likely blocked by upstream variable/money issues.
+
+*Instance resolution (3 tests):* `instance()` reads, writable instance loading. Instance data is now forwarded but may need deeper wiring.
+
+*Integration/complex fixtures (10 tests):* Kitchen-sink, shared suite, grant app screener, replay, tax fixture. These exercise multiple features and likely fail due to cascading effects from above gaps.
+
+*Test-specific (2 tests):* `unknown FEL functions throw explicit unsupported-function error` — test expects `FelUnsupportedFunctionError` class (deleted). `FEL runtime error emits FEL_RUNTIME diagnostic` — mapping-specific error handling.
+
+**Key architectural finding:** The Chevrotain interpreter resolved field paths lazily at eval time via `getSignalValue` callbacks, giving it access to the full FormEngine signal graph. The WASM evaluator is a pure function — all values must be pre-resolved and serialized as JSON before crossing the WASM boundary. This creates a fundamental impedance mismatch for features that need runtime JS callbacks (MIP queries on arbitrary paths, dynamic instance lookups, repeat row navigation with collection data).
+
+**NOT Tier 1:** `assembler.ts` stays — WASM `wasmAssembleDefinition(definition, fragments)` takes pre-resolved fragments; TS `assembleDefinition(definition, resolver)` takes an async resolver callback with recursive $ref resolution, provenance tracking, and bind/shape FEL rewriting. Different API.
+
+#### Tier 2 — Needs Consumer Adaptation (WASM bridge exists, but API shape differs)
+
+| TS File                  | WASM Bridge Function(s)                                | Gap                                                                                                           | Consumers                      |
+| ------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `extension-analysis.ts`  | `wasmLintDocument()` (lint pass E600)                  | No standalone extension check — consumers must use full lint pipeline or a new `wasmValidateExtensionUsage()` | `formspec-core/diagnostics`    |
+| `runtime-mapping.ts`     | `wasmExecuteMapping()`, `wasmExecuteMappingDoc()`      | TS class is stateful (holds FEL runtime + document); WASM is stateless. Consumer needs adapted from class to function calls | `formspec-core`                |
+| `schema-validator.ts`    | `wasmLintDocument()` (schema validation is internal)   | No standalone schema-only result — consumers use full lint pipeline instead of AJV                            | `formspec-mcp`, `formspec-core` |
+
+**Note:** `wasm-bridge.ts` also lacks wrappers for 7 additional lib.rs exports: `printFEL`, `lintDocumentWithRegistries`, `parseRegistry`, `findRegistryEntry`, `validateLifecycleTransition`, `wellKnownRegistryUrl`, `generateChangelog`. These need thin TS wrappers before consumers can use them.
 
 #### Tier 3 — Needs New Rust Exports (functionality gap)
 
-| TS File | What Consumers Need | Gap |
-|---------|-------------------|-----|
-| `fel/analysis.ts` | `analyzeFEL()` ✅ exists, `rewriteFELReferences()` ❌ | Add `rewrite_fel_references()` to `fel-core` + WASM export |
-| `path-utils.ts` | `normalizeIndexedPath()` ✅ exists, `itemAtPath()` ❌, `itemLocationAtPath()` ❌ | Add definition-tree traversal to `formspec-core` + WASM export |
+| TS File            | What Consumers Need                                                            | Gap                                                                      |
+| ------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `fel/analysis.ts`  | `analyzeFEL()` exists, `rewriteFELReferences()` does not                       | Add `rewrite_fel_references()` to `fel-core` + WASM export               |
+| `path-utils.ts`    | `normalizeIndexedPath()` exists, `itemAtPath()` and `itemLocationAtPath()` do not | Add definition-tree traversal to `formspec-core` + WASM export           |
 
 Consumers: `formspec-core` (6 files), `formspec-studio-core`
 
 #### Tier 4 — Architecturally Hard (Chevrotain-specific)
 
-| TS File | What Consumers Need | Why It's Hard |
-|---------|-------------------|---------------|
-| `fel/lexer.ts` | `FelLexer` — Chevrotain token objects with position/type metadata | Studio syntax highlighting needs positioned token stream; Rust lexer would need to serialize token spans to JSON |
-| `fel/parser.ts` | `parser` — Chevrotain CST for editor utils | Studio needs structured CST for bracket matching, error recovery, completion; would require serializing Rust AST to a JS-consumable format |
+| TS File          | What Consumers Need                                            | Why It's Hard                                                                                                    |
+| ---------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `fel/lexer.ts`   | `FelLexer` — Chevrotain token objects with position/type metadata | Studio syntax highlighting needs positioned token stream; Rust lexer would need to serialize token spans to JSON |
+| `fel/parser.ts`  | `parser` — Chevrotain CST for editor utils                     | Studio needs structured CST for bracket matching, error recovery, completion; would require serializing Rust AST to a JS-consumable format |
 
 Consumer: `formspec-studio` (`src/lib/fel-editor-utils.ts`)
 
@@ -427,14 +466,68 @@ Consumer: `formspec-studio` (`src/lib/fel-editor-utils.ts`)
 2. Add `wasmParseFELToAST()` returning serialized AST — covers editor utils
 3. Keep Chevrotain for Studio editor tooling only (smallest scope, but leaves the dependency)
 
+#### TS Files That Stay (architectural seams, not migration targets)
+
+| TS File                       | Role                                                           |
+| ----------------------------- | -------------------------------------------------------------- |
+| `interfaces.ts`               | `IFormEngine`, `IRuntimeMappingEngine`, supporting types        |
+| `factories.ts`                | `createFormEngine()`, `createMappingEngine()` — backend selection |
+| `fel/runtime.ts`              | `IFelRuntime`, `ICompiledExpression`, `FelContext` interfaces   |
+| `fel/wasm-runtime.ts`         | `WasmFelRuntime` — adapts WASM exports to `IFelRuntime` + path resolution |
+| `wasm-bridge.ts`              | Lazy init + typed wrappers for all WASM exports                |
+| `index.ts`                    | `FormEngine` — Preact Signals reactivity, stays TS (see below) |
+
+#### Live Consumer Inventory (verified 2026-03-19)
+
+| Consumer package | Imports from `formspec-engine` | Decommission impact |
+| ---------------- | ------------------------------ | ------------------- |
+| `formspec-webcomponent` | `createFormEngine`, `IFormEngine` | Not a blocker. Already on the stable engine/factory surface. |
+| `formspec-core` | `itemAtPath`, `itemLocationAtPath`, `rewriteFELReferences`, `getBuiltinFELFunctionCatalog`, `createSchemaValidator`, `createMappingEngine` | Main blocker for Tiers 2-3. Needs path utils exports, rewrite support, catalog metadata, and schema/mapping adaptation. |
+| `formspec-studio-core` | `analyzeFEL`, `rewriteFELReferences` | Tier 3 blocker only. Studio-core can move once rewrite is available from Rust/WASM. |
+| `formspec-studio` | `getBuiltinFELFunctionCatalog`, `FelLexer`, `parser` | Tier 1 metadata gap plus Tier 4 editor-tooling dependency. This is the only package that still truly needs Chevrotain today. |
+| `formspec-mcp` | `createSchemaValidator`, `SchemaValidationError`, `DocumentType` | Tier 2 blocker. Needs either a schema-only WASM wrapper or migration to lint-driven validation. |
+
+**Interpretation:** runtime decommission and tooling decommission are now separate tracks. The FEL runtime can be fully Rust-backed without immediately deleting the editor-oriented Chevrotain parser/lexer stack.
+
+#### Recommended Next Sequence
+
+1. **Finish Tier 1 parity inside `formspec-engine`.** Do not migrate more consumers while 62 engine tests still fail. The immediate work is repeat context, writable instances, money arithmetic, function catalog metadata, and mapping diagnostics.
+2. **Add missing thin wrappers in `wasm-bridge.ts`.** This is low-risk surface area and unblocks Tier 2 consumers without touching engine semantics.
+3. **Add Tier 3 Rust exports.** `rewrite_fel_references`, `item_at_path`, and `item_location_at_path` remove the biggest `formspec-core` and `formspec-studio-core` blockers.
+4. **Migrate package consumers in dependency order.** `formspec-core` first, then `formspec-mcp`, then `formspec-studio-core`.
+5. **Decide Studio editor strategy explicitly.** Either build Rust token/AST exports or declare Chevrotain a permanent dev-tooling dependency. Do not let Tier 4 ambiguity block the runtime path.
+
+#### TS Deletion Gates
+
+| File family | Delete when | Current status |
+| ----------- | ----------- | -------------- |
+| `fel/interpreter.ts`, `fel/dependency-visitor.ts`, `fel/chevrotain-runtime.ts` | Engine test parity is restored | **Already deleted in working tree** |
+| `runtime-mapping.ts` stateful path | `formspec-core` has switched to stateless WASM mapping wrappers and parity tests are green | Blocked on Tier 2 consumer adaptation |
+| `schema-validator.ts` | `formspec-core` + `formspec-mcp` no longer require AJV-shaped results from TS | Blocked on Tier 2 consumer adaptation |
+| `extension-analysis.ts` | consumers accept full lint-based validation or a dedicated Rust wrapper exists | Blocked on Tier 2 consumer adaptation |
+| `path-utils.ts` | `itemAtPath` / `itemLocationAtPath` exist in Rust/WASM and all consumers switch | Blocked on Tier 3 export gap |
+| `fel/analysis.ts` rewrite path | Rust/WASM exposes `rewriteFELReferences()` and consumers migrate | Blocked on Tier 3 export gap |
+| `fel/lexer.ts`, `fel/parser.ts` | Studio editor tooling no longer depends on Chevrotain tokens/CST | Blocked on Tier 4 decision |
+
 ### Python Migration Status
 
 The `RustFelRuntime` is the default FEL backend (auto-selected when `formspec_rust` is installed). Full decommission requires:
 
-1. ~~Rewrite FEL-specific tests to be backend-agnostic~~ — ✅ Done. All 2,201 tests use the public `evaluate()` API.
+1. ~~Rewrite FEL-specific tests to be backend-agnostic~~ — Done. All 2,201 tests use the public `evaluate()` API.
 2. **Make `formspec_rust` a hard dependency** — requires proper `pyproject.toml` for the `formspec` package + CI must build/install PyO3 module (Rust toolchain + maturin in Python test job).
 3. **Migrate `__init__.py` exports** — `fel/__init__.py` re-exports Python internals (`parse`, `Evaluator`, `Environment`, `build_default_registry`, `DependencySet`) that have no PyO3 equivalents. Either expose from Rust or drop from public API.
-4. **Delete Python FEL files** — `parser.py`, `evaluator.py`, `environment.py`, `functions.py`, `dependencies.py`, `ast_nodes.py` — once steps 2-3 are complete.
+4. **Delete Python FEL implementation files** — `parser.py`, `evaluator.py`, `environment.py`, `functions.py`, `dependencies.py`, `ast_nodes.py` — once steps 2-3 are complete.
+5. **Evaluate remaining FEL support files** — `types.py` (FEL value types, converters), `errors.py` (exception hierarchy, `Diagnostic`, `SourcePos`), `extensions.py` (`register_extension`) are needed by the `FelRuntime` protocol and `EvalResult`/`DependencySet` return types. These stay until Rust exposes equivalent types via PyO3. `runtime.py` stays — it defines the `FelRuntime` protocol and runtime selection.
+
+#### Python Deletion Gates
+
+| Python file group | Delete when | Current status |
+| ----------------- | ----------- | -------------- |
+| `fel/parser.py`, `fel/evaluator.py`, `fel/environment.py`, `fel/functions.py`, `fel/dependencies.py`, `fel/ast_nodes.py` | `formspec_rust` is mandatory and package exports no longer expose Python-only parser/evaluator internals | Blocked on packaging + public API decision |
+| `fel/__init__.py` internals re-exports | Rust/PyO3 provides equivalent exports or we intentionally narrow the public API | Blocked on API design decision |
+| `fel/types.py`, `fel/errors.py`, `fel/extensions.py` | PyO3 surface returns rich typed objects and extension registration no longer depends on Python helpers | Not a near-term target |
+
+**Practical stopping point:** for Python, "decommissioned" should mean "Rust is the only execution backend." It does **not** need to mean "the entire `src/formspec/fel/` package disappears." The protocol layer and Python-native adapter/error/value helpers can remain if they are just binding glue.
 
 ---
 
@@ -442,7 +535,7 @@ The `RustFelRuntime` is the default FEL backend (auto-selected when `formspec_ru
 
 ### FormEngine — Very High Complexity
 
-The only TypeScript file. Manages form state via Preact Signals:
+The core engine file among several TS files that remain. Manages form state via Preact Signals:
 
 - Field values, relevance (visibility), required/readonly state
 - Validation results, repeat group counts, option lists, computed variables
@@ -468,24 +561,29 @@ The only TypeScript file. Manages form state via Preact Signals:
 
 ## Remaining — Python Backend (`src/formspec/`)
 
-After Steps 6–10, only format adapters and the artifact orchestrator stay Python:
+After Steps 6-10, format adapters, the artifact orchestrator, and the FEL runtime protocol layer stay Python:
 
-| Module | File | Why it stays |
-|--------|------|-------------|
-| Base adapter ABC | `adapters/base.py` | Python abstract interface for format adapters |
-| JSON adapter | `adapters/json_adapter.py` | Server-side serialization, Python `json` stdlib |
-| XML adapter | `adapters/xml_adapter.py` | Server-side serialization, `xml.etree` stdlib |
-| CSV adapter | `adapters/csv_adapter.py` | Server-side serialization, `csv` stdlib |
-| Artifact Orchestrator | `validate.py` | CLI entry point, calls into Rust via PyO3 |
+| Module                 | File                     | Why it stays                                         |
+| ---------------------- | ------------------------ | ---------------------------------------------------- |
+| FEL runtime protocol   | `fel/runtime.py`         | `FelRuntime` protocol, `RustFelRuntime`, `DefaultFelRuntime`, runtime selection |
+| FEL types              | `fel/types.py`           | `FelValue` union, converters — needed by `EvalResult` return type |
+| FEL errors             | `fel/errors.py`          | `Diagnostic`, `SourcePos`, exception hierarchy — needed by protocol |
+| FEL extensions         | `fel/extensions.py`      | `register_extension()` — registry integration        |
+| FEL public API         | `fel/__init__.py`        | Re-exports, `evaluate()` and `extract_dependencies()` convenience functions |
+| Base adapter ABC       | `adapters/base.py`       | Python abstract interface for format adapters         |
+| JSON adapter           | `adapters/json_adapter.py` | Server-side serialization, Python `json` stdlib     |
+| XML adapter            | `adapters/xml_adapter.py`  | Server-side serialization, `xml.etree` stdlib       |
+| CSV adapter            | `adapters/csv_adapter.py`  | Server-side serialization, `csv` stdlib             |
+| Artifact Orchestrator  | `validate.py`            | CLI entry point, calls into Rust via PyO3             |
 
 ### Adapter Details
 
-| Adapter | File | Description |
-|---------|------|-------------|
-| Base ABC | `adapters/base.py` | `serialize(JsonValue) -> bytes`, `deserialize(bytes) -> JsonValue` |
-| JSON | `adapters/json_adapter.py` | Pretty/sort/null-handling options, Decimal serialization |
-| XML | `adapters/xml_adapter.py` | Attributes (@-prefix), CDATA, namespaces, root element |
-| CSV | `adapters/csv_adapter.py` | RFC 4180, repeat group row expansion, configurable delimiter/quote |
+| Adapter  | File                       | Description                                                       |
+| -------- | -------------------------- | ----------------------------------------------------------------- |
+| Base ABC | `adapters/base.py`         | `serialize(JsonValue) -> bytes`, `deserialize(bytes) -> JsonValue` |
+| JSON     | `adapters/json_adapter.py` | Pretty/sort/null-handling options, Decimal serialization          |
+| XML      | `adapters/xml_adapter.py`  | Attributes (@-prefix), CDATA, namespaces, root element            |
+| CSV      | `adapters/csv_adapter.py`  | RFC 4180, repeat group row expansion, configurable delimiter/quote |
 
 ---
 
@@ -548,13 +646,14 @@ After Steps 6–10, only format adapters and the artifact orchestrator stay Pyth
 - **CONTRADICTION**: Core spec S3.2.2 says FEL uses **0-based** indexing (`$lineItems[0].amount`) and `@index` is 0-based. FEL grammar S6.1/S6.2 says **1-based**. Both implementations use 1-based. **FEL grammar is authoritative for FEL semantics; core spec S3.2.2 needs amendment.**
 
 #### Context-Sensitive Null Propagation (S3.8.1)
-| Bind type | null treatment |
-|-----------|---------------|
-| `relevant` | `true` (show the field) |
-| `required` | `false` (not required) |
-| `readonly` | `false` (allow editing) |
-| `constraint` | `true` (passes validation) |
-| `if()` condition | **error** |
+
+| Bind type        | null treatment            |
+| ---------------- | ------------------------- |
+| `relevant`       | `true` (show the field)   |
+| `required`       | `false` (not required)    |
+| `readonly`       | `false` (allow editing)   |
+| `constraint`     | `true` (passes validation) |
+| `if()` condition | **error**                 |
 
 #### Bind Inheritance Rules (S4.3.2)
 - `relevant`: logical AND (child can't be relevant if parent isn't)
@@ -686,6 +785,28 @@ Wiring + cleanup. Steps 8.5–11 complete. Both TS and Python consume Rust.
 - **Step 10**: `maturin` installed (v1.12.6). `pyproject.toml` created for PyO3 crate. `formspec_rust` native module built and installed. `RustFelRuntime` class created implementing `FelRuntime` protocol via Rust. `default_fel_runtime()` auto-selects Rust. Package-level `evaluate()`/`extract_dependencies()` routed through protocol. **2,201 Python tests pass with Rust FEL backend.**
 - **Step 11**: `claude/rust-formspec-rewrite-JysP8` remote branch deleted. Stale local branches pruned (`branch`, `worktree-fancy-leaping-puffin`, `claude/refactor-formspec-interfaces-StbWv`). Remote refs pruned.
 - **Decommission analysis**: TS file deletion deferred — external packages (formspec-core, formspec-studio) depend on Chevrotain tokens, typed object traversal, AJV, and FEL analysis exports. Python file deletion deferred — Rust FEL is default but Python remains as fallback.
+
+#### Iteration 9 (2026-03-19)
+
+Tier 1 decommission — Chevrotain FEL runtime removal. 520/582 engine tests passing (62 remaining).
+
+**Deleted files:**
+- `fel/interpreter.ts` (1,304 lines — Chevrotain CstVisitor, FEL stdlib, eval engine)
+- `fel/dependency-visitor.ts` (98 lines — CST field reference walker)
+- `fel/chevrotain-runtime.ts` (103 lines — IFelRuntime adapter wrapping above two)
+
+**Rust changes:**
+- `fel-core/environment.rs`: `FormspecEnvironment.resolve_field` now checks data map for empty key (bare `$` support)
+- `formspec-wasm/lib.rs`: new `evalFELWithContext` export using `FormspecEnvironment` instead of `MapEnvironment` — accepts `{ fields, variables, mipStates, repeatContext, instances }`
+
+**TS changes:**
+- `wasm-bridge.ts`: `WasmFelContext` interface + `wasmEvalFELWithContext` wrapper; Node.js `initSync` path via `readFileSync`; `WasmModule` type alias; removed `as any` casts
+- `fel/wasm-runtime.ts`: path resolution (`resolveFieldPath` with sibling, repeat scope rebase, root-relative strategies); wildcard `[*]` tree reconstruction; variable `@name` base-name extraction; `instanceRefs` forwarding; guarded repeat context population; MIP state gathering
+- `fel/analysis.ts`: `collectFieldReferences` inlined using existing `walkCst` + `readFieldRefPath` (replaces `dependencyVisitor` import)
+- `index.ts`: all Chevrotain imports/exports removed; `FormEngine` defaults to `wasmFelRuntime`; removed `FelUnsupportedFunctionError` dead code
+- `runtime-mapping.ts`: default runtime changed from `chevrotainFelRuntime` to `wasmFelRuntime`
+- `factories.ts`: already used `wasmFelRuntime` (no change needed)
+- `tests/setup.mjs`: WASM init before test run; `package.json` test command updated
 
 ### Dependency Graph
 

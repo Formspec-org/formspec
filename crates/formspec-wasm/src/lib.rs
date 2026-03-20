@@ -13,6 +13,7 @@ use std::collections::HashMap;
 
 use fel_core::{
     evaluate, extract_dependencies, parse, print_expr, Dependencies, FelValue, MapEnvironment,
+    FormspecEnvironment, MipState,
 };
 use formspec_core::{
     analyze_fel, assemble_definition, detect_document_type, execute_mapping, execute_mapping_doc,
@@ -46,6 +47,84 @@ fn eval_fel_inner(expression: &str, fields_json: &str) -> Result<String, String>
     let env = MapEnvironment::with_fields(fields);
     let result = evaluate(&expr, &env);
 
+    let json = fel_to_json(&result.value);
+    serde_json::to_string(&json).map_err(|e| e.to_string())
+}
+
+/// Evaluate a FEL expression with full FormspecEnvironment context.
+/// `context_json` is a JSON object: { fields, variables?, mipStates?, repeatContext? }
+#[wasm_bindgen(js_name = "evalFELWithContext")]
+pub fn eval_fel_with_context(expression: &str, context_json: &str) -> Result<String, JsError> {
+    eval_fel_with_context_inner(expression, context_json).map_err(|e| JsError::new(&e))
+}
+
+fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<String, String> {
+    let expr = parse(expression).map_err(|e| e.to_string())?;
+
+    let ctx: Value = serde_json::from_str(context_json)
+        .map_err(|e| format!("invalid context JSON: {e}"))?;
+    let ctx_obj = ctx.as_object().ok_or("context must be a JSON object")?;
+
+    let mut env = FormspecEnvironment::new();
+
+    // Fields: { path: value }
+    if let Some(fields) = ctx_obj.get("fields") {
+        if let Some(obj) = fields.as_object() {
+            for (k, v) in obj {
+                env.set_field(k, json_to_fel(v));
+            }
+        }
+    }
+
+    // Variables: { name: value }
+    if let Some(vars) = ctx_obj.get("variables") {
+        if let Some(obj) = vars.as_object() {
+            for (k, v) in obj {
+                env.set_variable(k, json_to_fel(v));
+            }
+        }
+    }
+
+    // MIP states: { path: { valid, relevant, readonly, required } }
+    if let Some(mips) = ctx_obj.get("mipStates") {
+        if let Some(obj) = mips.as_object() {
+            for (k, v) in obj {
+                if let Some(mip_obj) = v.as_object() {
+                    env.set_mip(k, MipState {
+                        valid: mip_obj.get("valid").and_then(|v| v.as_bool()).unwrap_or(true),
+                        relevant: mip_obj.get("relevant").and_then(|v| v.as_bool()).unwrap_or(true),
+                        readonly: mip_obj.get("readonly").and_then(|v| v.as_bool()).unwrap_or(false),
+                        required: mip_obj.get("required").and_then(|v| v.as_bool()).unwrap_or(false),
+                    });
+                }
+            }
+        }
+    }
+
+    // Repeat context: { current, index, count, collection? }
+    if let Some(repeat) = ctx_obj.get("repeatContext") {
+        if let Some(obj) = repeat.as_object() {
+            let current = obj.get("current").map(json_to_fel).unwrap_or(FelValue::Null);
+            let index = obj.get("index").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+            let count = obj.get("count").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+            let collection = obj.get("collection")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().map(json_to_fel).collect())
+                .unwrap_or_default();
+            env.push_repeat(current, index, count, collection);
+        }
+    }
+
+    // Instances: { name: value }
+    if let Some(instances) = ctx_obj.get("instances") {
+        if let Some(obj) = instances.as_object() {
+            for (k, v) in obj {
+                env.set_instance(k, json_to_fel(v));
+            }
+        }
+    }
+
+    let result = evaluate(&expr, &env);
     let json = fel_to_json(&result.value);
     serde_json::to_string(&json).map_err(|e| e.to_string())
 }

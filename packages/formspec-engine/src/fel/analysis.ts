@@ -2,7 +2,6 @@
 import { type IToken } from 'chevrotain';
 import { FelLexer } from './lexer.js';
 import { parser } from './parser.js';
-import { dependencyVisitor } from './dependency-visitor.js';
 
 /** A parser/lexer error from FEL analysis with best-effort source location metadata. */
 export interface FELAnalysisError {
@@ -251,6 +250,22 @@ function collectFunctionNames(cst: any): string[] {
   return dedupe(functions);
 }
 
+/** Collect all unique field reference paths from a parsed CST using the existing walkCst + readFieldRefPath helpers. */
+function collectFieldReferences(cst: any): string[] {
+  const refs: string[] = [];
+  walkCst(cst, node => {
+    if (node.name !== 'fieldRef') return;
+    // Handle bare $ (self-reference) which readFieldRefPath returns undefined for
+    if (node.children.Dollar && !node.children.Identifier?.[0]) {
+      refs.push('');
+      return;
+    }
+    const path = readFieldRefPath(node);
+    if (path !== undefined) refs.push(path);
+  });
+  return dedupe(refs);
+}
+
 /** Collect non-reserved `@variable` references, excluding context refs like `@current` and `@instance(...)`. */
 function collectVariableNames(cst: any): string[] {
   const variables: string[] = [];
@@ -400,7 +415,7 @@ export function analyzeFEL(expression: string, options?: { includeCst?: boolean 
     };
   }
 
-  const references = dependencyVisitor.getDependencies(parsed.cst);
+  const references = collectFieldReferences(parsed.cst);
   const variables = collectVariableNames(parsed.cst);
   const functions = collectFunctionNames(parsed.cst);
 
