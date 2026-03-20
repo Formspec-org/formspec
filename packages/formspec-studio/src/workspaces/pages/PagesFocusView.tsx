@@ -1,5 +1,7 @@
 /** @filedesc Focus Mode container for editing a single page's layout. */
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { DragDropProvider } from '@dnd-kit/react';
+import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { WorkspacePage } from '../../components/ui/WorkspacePage';
 import { SplitPane } from '../../components/ui/SplitPane';
 import { BreakpointBar } from './BreakpointBar';
@@ -80,6 +82,34 @@ export function PagesFocusView({ pageId, onBack, onNavigate }: PagesFocusViewPro
       onNavigate(structure.pages[pageIndex + 1].id);
     }
   }, [pageIndex, totalPages, structure.pages, onNavigate]);
+
+  // D2/D3: Unified drag-end handler for grid reorder + palette-to-grid
+  const handleDragEnd = useCallback((event: any) => {
+    if (event.canceled) return;
+    const sourceData = event.operation?.source?.data ?? {};
+    const targetData = event.operation?.target?.data ?? {};
+    const targetId = String(event.operation?.target?.id ?? '');
+
+    if (sourceData.type === 'palette-item') {
+      // D3: Palette item dropped onto grid
+      project.placeOnPage(sourceData.key, pageId, { span: 12 });
+      // If dropped on a specific grid item, reorder to that position
+      if (page) {
+        const targetIndex = page.items.findIndex(i => i.key === targetId);
+        if (targetIndex >= 0) {
+          project.moveItemOnPageToIndex(pageId, sourceData.key, targetIndex);
+        }
+      }
+    } else if (sourceData.type === 'grid-item') {
+      // D2: Grid item reordered
+      if (page) {
+        const targetIndex = page.items.findIndex(i => i.key === targetId);
+        if (targetIndex >= 0 && sourceData.key !== targetId) {
+          project.moveItemOnPageToIndex(pageId, sourceData.key, targetIndex);
+        }
+      }
+    }
+  }, [project, pageId, page]);
 
   if (!page) {
     return (
@@ -208,9 +238,20 @@ export function PagesFocusView({ pageId, onBack, onNavigate }: PagesFocusViewPro
         onSelect={setActiveBreakpoint}
       />
 
-      {/* Main content area */}
+      {/* Main content area — DragDropProvider wraps both grid and palette */}
       <div className="flex-1 overflow-hidden">
-        {mainContent}
+        <DragDropProvider
+          onDragEnd={handleDragEnd}
+          sensors={() => [
+            PointerSensor.configure({
+              activationConstraints: [
+                new PointerActivationConstraints.Distance({ value: 5 }),
+              ],
+            }),
+          ]}
+        >
+          {mainContent}
+        </DragDropProvider>
       </div>
     </WorkspacePage>
   );

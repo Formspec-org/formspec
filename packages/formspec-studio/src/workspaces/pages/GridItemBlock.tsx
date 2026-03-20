@@ -7,6 +7,9 @@ export interface GridItemBlockProps {
   activeBreakpoint: string;
   onSelect: () => void;
   onRemove: () => void;
+  onResizeStart?: (e: React.PointerEvent) => void;
+  /** When set, shows the live column count during a resize drag. */
+  resizingWidth?: number;
 }
 
 /** Resolve effective width for the active breakpoint. */
@@ -44,7 +47,7 @@ function TypeIcon({ itemType }: { itemType: 'field' | 'group' | 'display' }) {
   );
 }
 
-export function GridItemBlock({ item, isSelected, activeBreakpoint, onSelect, onRemove }: GridItemBlockProps) {
+export function GridItemBlock({ item, isSelected, activeBreakpoint, onSelect, onRemove, onResizeStart, resizingWidth }: GridItemBlockProps) {
   const isBroken = item.status === 'broken';
   const isGroup = item.itemType === 'group';
   const { value: displayWidth, inherited } = effectiveWidth(item, activeBreakpoint);
@@ -84,7 +87,7 @@ export function GridItemBlock({ item, isSelected, activeBreakpoint, onSelect, on
         )}
         {isGroup && item.repeatable && (
           <svg
-            title="repeatable"
+            aria-label="repeatable"
             className="w-3 h-3 text-muted shrink-0"
             viewBox="0 0 12 12"
             fill="none"
@@ -99,10 +102,12 @@ export function GridItemBlock({ item, isSelected, activeBreakpoint, onSelect, on
         {/* Width badge */}
         <span
           className={`ml-auto text-[9px] font-mono shrink-0 ${
-            inherited ? 'text-muted italic' : 'text-ink/70'
+            resizingWidth !== undefined
+              ? 'text-accent font-bold'
+              : inherited ? 'text-muted italic' : 'text-ink/70'
           }`}
         >
-          {displayWidth}/12
+          {resizingWidth ?? displayWidth}/12
         </span>
       </div>
 
@@ -123,6 +128,11 @@ export function GridItemBlock({ item, isSelected, activeBreakpoint, onSelect, on
       <div
         data-resize-handle
         className="absolute top-0 right-0 w-2 h-full cursor-col-resize"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onResizeStart?.(e);
+        }}
       />
     </div>
   );

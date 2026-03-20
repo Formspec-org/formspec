@@ -55,9 +55,14 @@ function PageCard({
   isExpanded,
   onToggle,
   onDelete,
+  onCancelDelete,
+  onConfirmDelete,
+  confirmingDelete,
   onUpdateTitle,
   onUpdateDescription,
   onRemoveItem,
+  onAddItem,
+  unassigned,
   onEditLayout,
   sortableRef,
   dragHandleRef,
@@ -69,9 +74,14 @@ function PageCard({
   isExpanded: boolean;
   onToggle: () => void;
   onDelete: () => void;
+  onCancelDelete?: () => void;
+  onConfirmDelete?: () => void;
+  confirmingDelete?: boolean;
   onUpdateTitle: (title: string) => void;
   onUpdateDescription: (description: string | undefined) => void;
   onRemoveItem: (itemKey: string) => void;
+  onAddItem?: (key: string) => void;
+  unassigned?: Array<{ key: string; label: string }>;
   onEditLayout?: () => void;
   sortableRef?: (el: Element | null) => void;
   dragHandleRef?: (el: Element | null) => void;
@@ -278,26 +288,70 @@ function PageCard({
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex justify-end items-center gap-2 pt-2 border-t border-border">
-            {onEditLayout && (
+          {/* C5: Quick add unassigned items */}
+          {unassigned && unassigned.length > 0 && onAddItem && (
+            <div className="pt-1">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-muted mb-1">Add to this page</p>
+              <div className="flex flex-wrap gap-1">
+                {unassigned.slice(0, 8).map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => onAddItem(item.key)}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-subtle/50 text-muted hover:text-ink hover:bg-subtle transition-colors"
+                  >
+                    + {item.label}
+                  </button>
+                ))}
+                {unassigned.length > 8 && (
+                  <span className="text-[10px] text-muted px-1 py-0.5">+{unassigned.length - 8} more</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Actions / F1: Delete confirmation */}
+          {confirmingDelete ? (
+            <div className="flex items-center justify-between pt-2 border-t border-error/20 bg-error/5 -mx-3 -mb-3 px-3 py-2 rounded-b-lg">
+              <span className="text-[11px] text-error">Delete this page and its items?</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onCancelDelete?.(); }}
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded text-muted hover:text-ink transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onConfirmDelete?.(); }}
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-error/10 text-error hover:bg-error/20 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-end items-center gap-2 pt-2 border-t border-border">
+              {onEditLayout && (
+                <button
+                  type="button"
+                  aria-label="Edit Layout"
+                  onClick={(e) => { e.stopPropagation(); onEditLayout(); }}
+                  className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+                >
+                  Edit Layout
+                </button>
+              )}
               <button
                 type="button"
-                aria-label="Edit Layout"
-                onClick={(e) => { e.stopPropagation(); onEditLayout(); }}
-                className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded text-error/60 hover:text-error hover:bg-error/5 transition-colors"
               >
-                Edit Layout
+                Delete
               </button>
-            )}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded text-error/60 hover:text-error hover:bg-error/5 transition-colors"
-            >
-              Delete
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -417,6 +471,7 @@ export function PagesTab() {
   const project = useProject();
   const [expandedPageId, setExpandedPageId] = useState<string | null>(null);
   const [focusedPageId, setFocusedPageId] = useState<string | null>(null);
+  const [confirmDeletePageId, setConfirmDeletePageId] = useState<string | null>(null);
 
   const structure = usePageStructure();
 
@@ -455,12 +510,17 @@ export function PagesTab() {
 
   /** Shared callback props for PageCard / SortablePageCard */
   const pageCardProps = useCallback((page: PageView) => ({
-    onDelete: () => project.removePage(page.id),
+    onDelete: () => setConfirmDeletePageId(page.id),
+    onCancelDelete: () => setConfirmDeletePageId(null),
+    onConfirmDelete: () => { project.removePage(page.id); setConfirmDeletePageId(null); },
+    confirmingDelete: confirmDeletePageId === page.id,
     onUpdateTitle: (title: string) => project.updatePage(page.id, { title }),
     onUpdateDescription: (description: string | undefined) => project.updatePage(page.id, { description }),
     onRemoveItem: (key: string) => project.removeItemFromPage(page.id, key),
+    onAddItem: (key: string) => project.placeOnPage(key, page.id, { span: 12 }),
+    unassigned: structure.unassigned,
     onEditLayout: () => setFocusedPageId(page.id),
-  }), [project]);
+  }), [project, confirmDeletePageId, structure.unassigned]);
 
   // Focus Mode — full-width layout editor for a single page
   if (focusedPageId) {
@@ -531,6 +591,34 @@ export function PagesTab() {
               KeyboardSensor,
             ]}
           >
+            {/* F2/F3: Empty state for wizard/tabs with no pages */}
+            {!hasPages && (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <p className="text-[13px] text-muted">
+                  Create pages to organize your form into steps.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => project.autoGeneratePages()}
+                    className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+                  >
+                    Auto-generate from groups
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const result = project.addPage('Page 1');
+                      if (result.createdId) setExpandedPageId(result.createdId);
+                    }}
+                    className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded bg-subtle text-muted hover:text-ink transition-colors"
+                  >
+                    Add blank page
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Page list */}
             {hasPages && (
               <div className="space-y-3">
