@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from formspec.validator.references import check_references
-from formspec.validator.tree import build_item_index
+from formspec._rust import lint
 
 
 def _doc_with_repeat_group() -> dict:
@@ -29,8 +28,7 @@ def test_valid_wildcard_path_resolves() -> None:
     document = _doc_with_repeat_group()
     document["binds"] = [{"path": "groupA[*].amount", "calculate": "1"}]
 
-    index = build_item_index(document)
-    diagnostics = check_references(document, index)
+    diagnostics = lint(document)
 
     assert diagnostics == []
 
@@ -39,8 +37,7 @@ def test_invalid_bind_path_reports_reference_error() -> None:
     document = _doc_with_repeat_group()
     document["binds"] = [{"path": "missingField", "calculate": "1"}]
 
-    index = build_item_index(document)
-    diagnostics = check_references(document, index)
+    diagnostics = lint(document)
 
     assert len(diagnostics) == 1
     assert diagnostics[0].code == "E300"
@@ -66,8 +63,7 @@ def test_option_set_reference_and_datatype_warning() -> None:
         "optionSets": {},
     }
 
-    index = build_item_index(document)
-    diagnostics = check_references(document, index)
+    diagnostics = lint(document)
     codes = {diag.code for diag in diagnostics}
 
     assert "E302" in codes

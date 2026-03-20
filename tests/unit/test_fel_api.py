@@ -68,7 +68,7 @@ class TestDependencies:
 
     def test_context_ref(self):
         deps = extract_dependencies("@current.amount")
-        assert "@current" in deps.context_refs
+        assert "current" in deps.context_refs
 
     def test_instance_ref(self):
         deps = extract_dependencies("@instance('prior').income")

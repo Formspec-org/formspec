@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 import pytest
 
 from formspec.adapters import JsonAdapter, XmlAdapter, CsvAdapter
-from formspec.mapping import MappingEngine
+from formspec._rust import execute_mapping
 
 
 class TestJsonRoundTripContracts:
@@ -123,16 +123,15 @@ class TestMappingEngineRoundTripContracts:
                 {'sourcePath': 'age', 'targetPath': 'age', 'transform': 'coerce', 'coerce': 'string'},
             ]
         }
-        engine = MappingEngine(doc)
 
         source = {'firstName': 'John', 'lastName': 'Doe', 'age': 30}
-        target = engine.forward(source)
+        target = execute_mapping(doc, source, "forward").output
         assert target['name']['given'] == 'John'
         assert target['name']['family'] == 'Doe'
         assert target['age'] == '30'
 
         # Reverse: coerce back is still preserve (string→string)
-        restored = engine.reverse(target)
+        restored = execute_mapping(doc, target, "reverse").output
         assert restored['firstName'] == 'John'
         assert restored['lastName'] == 'Doe'
         assert restored['age'] == '30'  # coerce reverse gives string back

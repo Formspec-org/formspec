@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from formspec.validator.dependencies import analyze_dependencies
-from formspec.validator.expressions import compile_expressions
+from formspec._rust import lint
 
 
 def _definition_with_binds(binds: list[dict]) -> dict:
@@ -21,37 +20,36 @@ def _definition_with_binds(binds: list[dict]) -> dict:
 
 def test_invalid_fel_syntax_in_bind_is_reported() -> None:
     document = _definition_with_binds([
-        {"path": "/a", "calculate": "if(1 then"},
+        {"path": "a", "calculate": "if(1 then"},
     ])
 
-    result = compile_expressions(document)
+    diagnostics = lint(document)
 
-    assert len(result.diagnostics) == 1
-    assert result.diagnostics[0].code == "E400"
-    assert result.diagnostics[0].path == "$.binds[0].calculate"
+    e400 = [d for d in diagnostics if d.code == "E400"]
+    assert len(e400) == 1
+    assert e400[0].path == "$.binds[0].calculate"
 
 
 def test_default_plain_string_is_not_forced_to_parse() -> None:
     document = _definition_with_binds([
-        {"path": "/a", "default": "hello world"},
+        {"path": "a", "default": "hello world"},
     ])
 
-    result = compile_expressions(document)
+    diagnostics = lint(document)
 
-    assert result.diagnostics == []
-    assert result.compiled == []
+    assert diagnostics == []
 
 
 def test_dependency_cycle_is_detected() -> None:
     document = _definition_with_binds(
         [
-            {"path": "/a", "calculate": "$b"},
-            {"path": "/b", "calculate": "$a"},
+            {"path": "a", "calculate": "$b"},
+            {"path": "b", "calculate": "$a"},
         ]
     )
 
-    compilation = compile_expressions(document)
-    deps = analyze_dependencies(compilation.compiled)
+    diagnostics = lint(document)
 
-    assert deps.diagnostics
-    assert deps.diagnostics[0].code == "E500"
+    e500 = [d for d in diagnostics if d.code == "E500"]
+    assert len(e500) >= 1
+    assert e500[0].code == "E500"

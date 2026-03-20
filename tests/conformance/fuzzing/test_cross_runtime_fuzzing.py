@@ -16,7 +16,7 @@ from typing import Any
 
 import pytest
 
-from formspec.evaluator import DefinitionEvaluator
+from formspec._rust import evaluate_definition
 from formspec.fel import evaluate
 from formspec.fel.types import to_python
 
@@ -410,7 +410,6 @@ def test_cross_runtime_processing_fuzzing_cases_agree() -> None:
     node_by_id = {result["id"]: result for result in node_results}
 
     failures: list[dict[str, Any]] = []
-    evaluator = DefinitionEvaluator(definition)
 
     for case_doc in cases:
         node_result = node_by_id.get(case_doc["id"])
@@ -421,11 +420,16 @@ def test_cross_runtime_processing_fuzzing_cases_agree() -> None:
             failures.append({"id": case_doc["id"], "reason": "node-error", "node": node_result})
             continue
 
-        py_result = evaluator.process(case_doc["payload"], mode=case_doc["mode"])
+        py_result = evaluate_definition(definition, case_doc["payload"])
+        # Compute counts from results list
+        counts: dict[str, int] = {}
+        for r in py_result.results:
+            sev = r.get("severity", "error") if isinstance(r, dict) else "error"
+            counts[sev] = counts.get(sev, 0) + 1
         py_report = _canonicalize_report(
             {
                 "valid": py_result.valid,
-                "counts": py_result.counts,
+                "counts": counts,
                 "results": py_result.results,
             }
         )

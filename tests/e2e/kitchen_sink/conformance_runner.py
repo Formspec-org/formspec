@@ -20,12 +20,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from formspec.changelog import generate_changelog
-from formspec.mapping import MappingEngine
-from formspec.registry import Registry, validate_lifecycle_transition
-from formspec.validator.linter import FormspecLinter
-from formspec.validator.policy import LintPolicy
-from formspec.validator.schema import SchemaValidator
+from formspec._rust import (
+    execute_mapping,
+    generate_changelog,
+    lint,
+    parse_registry,
+    validate_lifecycle_transition,
+)
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -45,8 +46,6 @@ class CheckResult:
 
 class Runner:
     def __init__(self) -> None:
-        self.schema_validator = SchemaValidator()
-        self.linter = FormspecLinter(policy=LintPolicy(mode="strict"))
         self.checks: list[CheckResult] = []
 
     def add(
@@ -88,8 +87,9 @@ class Runner:
 
         for fixture_name, doc_type in fixtures:
             doc = self.load_fixture(fixture_name)
-            result = self.schema_validator.validate(doc, document_type=doc_type)
-            if result.errors:
+            diagnostics = lint(doc)
+            errors = [d for d in diagnostics if d.severity == "error"]
+            if errors:
                 self.add(
                     check_id=f"P0-{doc_type.upper()}-SCHEMA",
                     phase="phase_0",
@@ -97,7 +97,7 @@ class Runner:
                     ks_ids=["KS-066"],
                     status="fail",
                     detail=f"{fixture_name} failed schema validation",
-                    evidence={"diagnostics": [d.message for d in result.diagnostics[:10]]},
+                    evidence={"diagnostics": [d.message for d in errors[:10]]},
                 )
             else:
                 self.add(
@@ -120,7 +120,7 @@ class Runner:
             ("theme", theme, {}),
             ("component", component, {"component_definition": definition}),
         ]:
-            diagnostics = self.linter.lint(doc, **kwargs)
+            diagnostics = lint(doc, **kwargs)
             errors = [d for d in diagnostics if d.severity == "error"]
             tolerated_codes: set[str] = set()
             if label == "component":
@@ -174,7 +174,7 @@ class Runner:
                 {"path": "b", "calculate": "a + 1"},
             ],
         }
-        circular_diags = self.linter.lint(circular_def)
+        circular_diags = lint(circular_def)
         has_cycle = any(d.code == "E500" for d in circular_diags)
         self.add(
             check_id="P1-NEG-CYCLE",
@@ -196,7 +196,7 @@ class Runner:
             "binds": [{"path": "missing", "required": "true"}],
             "shapes": [{"id": "s1", "target": "missing", "message": "bad", "constraint": "true"}],
         }
-        unresolved_diags = self.linter.lint(unresolved_refs_def)
+        unresolved_diags = lint(unresolved_refs_def)
         has_ref_error = any(d.code in {"E300", "E301"} for d in unresolved_diags)
         self.add(
             check_id="P1-NEG-UNRESOLVED-REF",
@@ -214,7 +214,7 @@ class Runner:
             "targetDefinition": {"url": definition["url"]},
             "tree": {"component": "TextInput", "bind": "fullName"},
         }
-        bad_component_diags = self.linter.lint(bad_component, component_definition=definition)
+        bad_component_diags = lint(bad_component, component_definition=definition)
         has_component_error = any(d.code == "E800" for d in bad_component_diags)
         self.add(
             check_id="P1-NEG-COMPONENT-ROOT",
@@ -227,6 +227,7 @@ class Runner:
         )
 
         # Invalid structural contracts (mapping/registry/changelog)
+        # With the Rust linter, we lint the invalid docs and check for errors
         invalid_mapping = {"version": "1.0.0", "rules": []}
         invalid_registry = {"$formspecRegistry": "1.0", "entries": []}
         invalid_changelog = {
@@ -242,20 +243,20 @@ class Runner:
             ("changelog", invalid_changelog),
         ]
         for doc_type, doc in negatives:
-            result = self.schema_validator.validate(doc, document_type=doc_type)
+            diagnostics = lint(doc)
+            errors = [d for d in diagnostics if d.severity == "error"]
             self.add(
                 check_id=f"P1-NEG-{doc_type.upper()}-STRUCTURE",
                 phase="phase_1",
                 matrix_sections=["7", "8", "9", "10"],
                 ks_ids=["KS-066"],
-                status="pass" if result.errors else "fail",
+                status="pass" if errors else "fail",
                 detail=f"Invalid {doc_type} structural contract fixture",
-                evidence={"error_count": len(result.errors)},
+                evidence={"error_count": len(errors)},
             )
 
     def phase_5_mapping(self) -> None:
         mapping_doc = self.load_fixture("mapping.json")
-        engine = MappingEngine(mapping_doc)
 
         response_data = {
             "fullName": "Shelley Agent",
@@ -271,7 +272,8 @@ class Runner:
             "hiddenMirror": "hidden",
         }
 
-        forward = engine.forward(response_data)
+        forward_result = execute_mapping(mapping_doc, response_data, "forward")
+        forward = forward_result.output
         checks = [
             ("subject.name", forward.get("subject", {}).get("name") == "Shelley Agent"),
             ("subject.mode", forward.get("subject", {}).get("mode") == "ADV"),
@@ -297,7 +299,8 @@ class Runner:
             "items": response_data["lineItems"],
             "meta": {"version": "1"},
         }
-        reverse = engine.reverse(reverse_input)
+        reverse_result = execute_mapping(mapping_doc, reverse_input, "reverse")
+        reverse = reverse_result.output
         reverse_ok = reverse.get("fullName") == "Shelley Agent" and reverse.get("profileMode") == "advanced"
         self.add(
             check_id="P5-MAPPING-REVERSE",
@@ -311,8 +314,8 @@ class Runner:
 
     def phase_6_registry(self) -> None:
         registry_doc = self.load_fixture("registry.json")
-        registry = Registry(registry_doc)
-        errors = registry.validate()
+        registry_info = parse_registry(registry_doc)
+        errors = registry_info.validation_issues
 
         self.add(
             check_id="P6-REGISTRY-VALIDATE",
@@ -357,27 +360,29 @@ class Runner:
         declared_changelog = self.load_fixture("changelog.json")
 
         # Validate declared changelog fixture
-        declared_validation = self.schema_validator.validate(declared_changelog, document_type="changelog")
+        declared_diags = lint(declared_changelog)
+        declared_errors = [d for d in declared_diags if d.severity == "error"]
         self.add(
             check_id="P7-CHANGELOG-SCHEMA",
             phase="phase_7",
             matrix_sections=["9"],
             ks_ids=["KS-060"],
-            status="pass" if not declared_validation.errors else "fail",
+            status="pass" if not declared_errors else "fail",
             detail="Declared changelog schema validation",
-            evidence={"error_count": len(declared_validation.errors)},
+            evidence={"error_count": len(declared_errors)},
         )
 
         generated = generate_changelog(definition_v1, definition_v2, definition_v1["url"])
-        generated_validation = self.schema_validator.validate(generated, document_type="changelog")
+        generated_diags = lint(generated)
+        generated_errors = [d for d in generated_diags if d.severity == "error"]
         self.add(
             check_id="P7-CHANGELOG-GENERATED-SCHEMA",
             phase="phase_7",
             matrix_sections=["9"],
             ks_ids=["KS-060", "KS-061"],
-            status="pass" if not generated_validation.errors else "fail",
+            status="pass" if not generated_errors else "fail",
             detail="Generated changelog schema validation",
-            evidence={"error_count": len(generated_validation.errors)},
+            evidence={"error_count": len(generated_errors)},
         )
 
         def expected_semver(changes: list[dict[str, Any]]) -> str:

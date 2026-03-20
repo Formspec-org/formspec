@@ -24,14 +24,18 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from formspec.changelog import generate_changelog
-from formspec.registry import Registry
-from formspec.validator.linter import lint
-from formspec.validator.schema import SchemaValidator
-from formspec.factories import create_mapping_engine
+from formspec._rust import (
+    generate_changelog,
+    lint,
+    detect_document_type,
+    evaluate_definition,
+    execute_mapping,
+    parse_registry,
+    find_registry_entry,
+    extract_dependencies,
+)
 from formspec.adapters import get_adapter
-from formspec.factories import create_form_processor
-from formspec.fel import evaluate as fel_evaluate, extract_dependencies, to_python, typeof, FelSyntaxError
+from formspec.fel import evaluate as fel_evaluate, to_python, typeof, FelSyntaxError
 
 
 # ── Example discovery ──
@@ -63,7 +67,6 @@ def _load_json(path: Path) -> dict:
 
 def _build_indices() -> tuple[dict[str, Path], dict[str, list[Path]]]:
     """Index definition urls and mapping docs across examples/* (excluding the refrences app itself)."""
-    sv = SchemaValidator()
     defs_by_url: dict[str, Path] = {}
     mappings_by_defref: dict[str, list[Path]] = {}
 
@@ -77,7 +80,7 @@ def _build_indices() -> tuple[dict[str, Path], dict[str, list[Path]]]:
                 doc = _load_json(f)
             except Exception:
                 continue
-            dtype = sv.detect_document_type(doc)
+            dtype = detect_document_type(doc)
             if dtype == "definition":
                 url = doc.get("url")
                 if isinstance(url, str) and url:
@@ -245,8 +248,8 @@ def export(
     if not mapping_doc:
         raise HTTPException(status_code=400, detail="No mapping document specified or discoverable for this definition.")
 
-    engine = create_mapping_engine(mapping_doc)
-    mapped = engine.forward(request.data)
+    result = execute_mapping(mapping_doc, request.data, "forward")
+    mapped = result.output
 
     adapter_config = mapping_doc.get("adapters", {}).get(format)
     target_schema = mapping_doc.get("targetSchema")
@@ -260,32 +263,30 @@ def submit(request: SubmitRequest):
     definition = _load_definition_from_query(None, request.definitionUrl)
     mapping_doc = _load_mapping_doc(None, request.definitionUrl)
 
-    # Load registry for extension constraint enforcement
     reg_doc = _load_registry_doc("formspec-common.registry.json")
-    registries = [Registry(reg_doc)] if reg_doc else []
-
-    evaluator = create_form_processor(definition, registries=registries)
-    mapping_engine = create_mapping_engine(mapping_doc) if mapping_doc else None
-
     registry_documents = [reg_doc] if reg_doc else []
-    lint_diags = lint(definition, mode="authoring", registry_documents=registry_documents)
+    lint_diags = lint(definition, registry_documents=registry_documents)
     diagnostics = [
         f"[{d.severity}] {d.path or '(root)'}: {d.message}"
         for d in lint_diags
         if d.severity in ("error", "warning")
     ]
 
-    result = evaluator.process(request.data)
-    mapped = mapping_engine.forward(result.data) if mapping_engine else {}
+    result = evaluate_definition(definition, request.data)
+    mapped_data = {}
+    if mapping_doc:
+        mapping_result = execute_mapping(mapping_doc, result.data, "forward")
+        mapped_data = mapping_result.output
 
     return SubmitResponse(
         definitionUrl=request.definitionUrl,
         definitionVersion=request.definitionVersion,
         valid=result.valid,
         results=result.results,
-        counts=result.counts,
+        counts={"error": sum(1 for r in result.results if r.get("severity") == "error"),
+                "warning": sum(1 for r in result.results if r.get("severity") == "warning")},
         timestamp=datetime.now(timezone.utc).isoformat(),
-        mapped=mapped,
+        mapped=mapped_data,
         diagnostics=diagnostics,
     )
 
@@ -295,7 +296,7 @@ def registry_validate(registryFile: str | None = None):
     reg_doc = _load_registry_doc(registryFile)
     if not reg_doc:
         return {"errors": ["No registry loaded"]}
-    return {"errors": Registry(reg_doc).validate()}
+    return {"errors": parse_registry(reg_doc).validation_issues}
 
 
 @app.get("/registry")
@@ -308,16 +309,16 @@ def registry(
     reg_doc = _load_registry_doc(registryFile)
     if not reg_doc:
         return {"entries": []}
-    reg = Registry(reg_doc)
     if name:
-        entries = reg.find(name, category=category, status=status)
-    elif category:
-        entries = reg.list_by_category(category)
-    elif status:
-        entries = reg.list_by_status(status)
-    else:
-        entries = reg.entries
-    return {"entries": [e.raw for e in entries]}
+        entry = find_registry_entry(reg_doc, name)
+        return {"entries": [entry] if entry else []}
+    # Return all entries from the raw document
+    entries = reg_doc.get("entries", [])
+    if category:
+        entries = [e for e in entries if e.get("category") == category]
+    if status:
+        entries = [e for e in entries if e.get("status") == status]
+    return {"entries": entries}
 
 
 @app.get("/dependencies")

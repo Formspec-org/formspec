@@ -37,7 +37,7 @@ def _response(version: str, data: dict) -> dict:
 
 
 def _runtime_pass(report):
-    return next(pass_result for pass_result in report.passes if pass_result.title == "Runtime evaluation (DefinitionEvaluator)")
+    return next(pass_result for pass_result in report.passes if pass_result.title == "Runtime evaluation")
 
 
 def test_runtime_evaluation_uses_exact_pinned_definition_version(tmp_path: Path) -> None:
