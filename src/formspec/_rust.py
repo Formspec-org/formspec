@@ -320,9 +320,20 @@ def lint(
 # ── Evaluation ───────────────────────────────────────────────────
 
 
-def evaluate_definition(definition: dict, data: dict) -> ProcessingResult:
-    """Evaluate a definition against data using the Rust batch evaluator."""
-    raw = formspec_rust.evaluate_def(definition, data)
+def evaluate_definition(
+    definition: dict,
+    data: dict,
+    *,
+    mode: str = "continuous",
+) -> ProcessingResult:
+    """Evaluate a definition against data using the Rust batch evaluator.
+
+    Args:
+        definition: The Formspec definition dict.
+        data: Field values dict.
+        mode: Shape timing mode — "continuous" (default), "submit", or "disabled".
+    """
+    raw = formspec_rust.evaluate_def(definition, data, mode)
     validations = raw.get("validations", [])
     is_valid = not any(v.get("severity") == "error" for v in validations)
     return ProcessingResult(
@@ -332,6 +343,11 @@ def evaluate_definition(definition: dict, data: dict) -> ProcessingResult:
         variables=raw.get("variables", {}),
         non_relevant=raw.get("non_relevant", []),
     )
+
+
+def evaluate_screener(definition: dict, answers: dict) -> dict | None:
+    """Evaluate screener routes and return first matching route."""
+    return formspec_rust.evaluate_screener_py(definition, answers)
 
 
 # ── Mapping ──────────────────────────────────────────────────────

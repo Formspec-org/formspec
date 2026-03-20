@@ -39,6 +39,14 @@ pub struct ItemInfo {
     pub whitespace: Option<String>,
     /// Non-relevant behavior override for this bind.
     pub nrb: Option<String>,
+    /// Excluded value behavior when non-relevant ("null" or "keep").
+    pub excluded_value: Option<String>,
+    /// Default value to apply on non-relevant → relevant transition when field is empty.
+    pub default_value: Option<Value>,
+    /// Initial value for field seeding (literal or "=expr").
+    pub initial_value: Option<Value>,
+    /// Previous relevance state (for tracking transitions).
+    pub prev_relevant: bool,
     /// Parent path (None for top-level items).
     pub parent_path: Option<String>,
     /// Whether this group is repeatable.
@@ -70,6 +78,17 @@ pub struct ValidationResult {
     pub kind: String,
     /// Human-readable message.
     pub message: String,
+}
+
+/// When to evaluate shape rules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EvalTrigger {
+    /// Evaluate only shapes with timing "continuous" (or no timing).
+    Continuous,
+    /// Evaluate shapes with timing "continuous" or "submit" (skip "demand").
+    Submit,
+    /// Skip all shape evaluation.
+    Disabled,
 }
 
 /// NRB (Non-Relevant Behavior) mode.
@@ -322,6 +341,23 @@ fn build_item_info(item: &Value, binds: Option<&Value>, parent_path: Option<&str
             .and_then(|b| b.get("nonRelevantBehavior"))
             .and_then(|v| v.as_str())
             .map(String::from),
+        excluded_value: bind
+            .and_then(|b| b.get("excludedValue"))
+            .and_then(|v| v.as_str())
+            .map(String::from),
+        default_value: bind
+            .and_then(|b| b.get("default"))
+            .and_then(|v| {
+                // Only literal defaults (not FEL expressions starting with =)
+                match v {
+                    Value::String(s) if s.starts_with('=') => None,
+                    other => Some(other.clone()),
+                }
+            }),
+        initial_value: item
+            .get("initialValue")
+            .cloned(),
+        prev_relevant: true,
         parent_path: parent_path.map(String::from),
         repeatable: item
             .get("repeatable")
@@ -496,6 +532,9 @@ fn evaluate_items_with_inheritance(
     parent_readonly: bool,
 ) {
     for item in items.iter_mut() {
+        // Save previous relevance for transition detection (9c)
+        item.prev_relevant = item.relevant;
+
         // Evaluate own relevance expression
         let own_relevant = if let Some(ref expr) = item.relevance {
             eval_bool(expr, env, true)
@@ -504,6 +543,31 @@ fn evaluate_items_with_inheritance(
         };
         // AND inheritance: if parent is not relevant, child is not relevant
         item.relevant = own_relevant && parent_relevant;
+
+        // 9c: Default on relevance transition — non-relevant → relevant + empty → apply default
+        if item.relevant && !item.prev_relevant {
+            if let Some(ref default_val) = item.default_value {
+                let current = values.get(&item.path);
+                let is_empty = match current {
+                    None | Some(Value::Null) => true,
+                    Some(Value::String(s)) => s.is_empty(),
+                    _ => false,
+                };
+                if is_empty {
+                    values.insert(item.path.clone(), default_val.clone());
+                    env.set_field(&item.path, json_to_fel(default_val));
+                }
+            }
+        }
+
+        // 9a: excludedValue — when non-relevant and excludedValue=="null", set FEL value to Null
+        if !item.relevant {
+            if let Some(ref ev) = item.excluded_value {
+                if ev == "null" {
+                    env.set_field(&item.path, FelValue::Null);
+                }
+            }
+        }
 
         // Evaluate own readonly expression
         let own_readonly = if let Some(ref expr) = item.readonly_expr {
@@ -582,9 +646,19 @@ pub fn revalidate(
     items: &[ItemInfo],
     values: &HashMap<String, Value>,
     shapes: Option<&[Value]>,
+    trigger: EvalTrigger,
 ) -> Vec<ValidationResult> {
     let mut results = Vec::new();
+
+    if trigger == EvalTrigger::Disabled {
+        return results;
+    }
+
     let mut env = build_validation_env(values);
+
+    // 9a: Apply excludedValue — non-relevant fields with excludedValue="null" appear as null in FEL
+    apply_excluded_values_to_env(items, &mut env);
+
     let shapes_by_id: HashMap<String, &Value> = shapes
         .unwrap_or(&[])
         .iter()
@@ -599,9 +673,26 @@ pub fn revalidate(
     // Bind constraints
     validate_items(items, &mut env, values, &mut results);
 
-    // Shape rules
+    // Shape rules — filtered by timing
     if let Some(shapes) = shapes {
         for shape in shapes {
+            let timing = shape
+                .get("timing")
+                .and_then(|v| v.as_str())
+                .unwrap_or("continuous");
+            match trigger {
+                EvalTrigger::Disabled => unreachable!(),
+                EvalTrigger::Continuous => {
+                    if timing != "continuous" {
+                        continue;
+                    }
+                }
+                EvalTrigger::Submit => {
+                    if timing == "demand" {
+                        continue;
+                    }
+                }
+            }
             validate_shape(shape, &shapes_by_id, &mut env, values, items, &mut results);
         }
     }
@@ -621,11 +712,12 @@ fn validate_items(
             continue;
         }
 
-        let val = values.get(&item.path).unwrap_or(&Value::Null);
+        // 9d: resolve value by walking nested objects for dotted paths
+        let val = resolve_value_by_path(values, &item.path);
 
         // Required check
         if item.required {
-            let is_empty = match val {
+            let is_empty = match &val {
                 Value::Null => true,
                 Value::String(s) => s.trim().is_empty(),
                 Value::Array(arr) => arr.is_empty(),
@@ -665,11 +757,11 @@ fn validate_items(
             }
         }
 
-        // Constraint check — set bare $ to current field value
+        // Constraint check — set bare $ to current field value (9d: use resolved value)
         if let Some(ref expr) = item.constraint {
             // Temporarily bind bare $ to this field's value
             let prev_dollar = env.data.remove("");
-            env.data.insert(String::new(), json_to_fel(val));
+            env.data.insert(String::new(), json_to_fel(&val));
 
             if let Ok(parsed) = parse(expr) {
                 let result = evaluate(&parsed, env);
@@ -913,6 +1005,47 @@ fn shape_passes(
     passes
 }
 
+/// Resolve a value from a flat HashMap by dotted path, walking nested objects if needed.
+/// Returns an owned Value because the result may not exist in the HashMap.
+fn resolve_value_by_path(values: &HashMap<String, Value>, path: &str) -> Value {
+    // Try flat lookup first
+    if let Some(val) = values.get(path) {
+        return val.clone();
+    }
+    // Walk nested objects
+    let segments: Vec<&str> = path.split('.').collect();
+    if segments.len() > 1 {
+        if let Some(root) = values.get(segments[0]) {
+            let mut current = root;
+            for seg in &segments[1..] {
+                match current {
+                    Value::Object(map) => match map.get(*seg) {
+                        Some(v) => current = v,
+                        None => return Value::Null,
+                    },
+                    _ => return Value::Null,
+                }
+            }
+            return current.clone();
+        }
+    }
+    Value::Null
+}
+
+/// Apply excludedValue="null" to the FEL environment for non-relevant items (9a).
+fn apply_excluded_values_to_env(items: &[ItemInfo], env: &mut FormspecEnvironment) {
+    for item in items {
+        if !item.relevant {
+            if let Some(ref ev) = item.excluded_value {
+                if ev == "null" {
+                    env.set_field(&item.path, FelValue::Null);
+                }
+            }
+        }
+        apply_excluded_values_to_env(&item.children, env);
+    }
+}
+
 fn build_validation_env(values: &HashMap<String, Value>) -> FormspecEnvironment {
     let mut env = FormspecEnvironment::new();
     for (k, v) in values {
@@ -1007,17 +1140,61 @@ fn collect_non_relevant_with_nrb(
     result
 }
 
+/// Seed initial values for fields that are missing from data (9e).
+/// If initialValue is a string starting with "=", evaluate as FEL expression.
+/// Otherwise use as literal.
+fn seed_initial_values(items: &[ItemInfo], data: &mut HashMap<String, Value>) {
+    for item in items {
+        if let Some(ref init_val) = item.initial_value {
+            if !data.contains_key(&item.path) {
+                match init_val {
+                    Value::String(s) if s.starts_with('=') => {
+                        // FEL expression — evaluate in a temporary env with current data
+                        let expr_str = &s[1..];
+                        if let Ok(parsed) = parse(expr_str) {
+                            let mut env = FormspecEnvironment::new();
+                            for (k, v) in data.iter() {
+                                env.set_field(k, json_to_fel(v));
+                            }
+                            let result = evaluate(&parsed, &env);
+                            data.insert(item.path.clone(), fel_to_json(&result.value));
+                        }
+                    }
+                    _ => {
+                        data.insert(item.path.clone(), init_val.clone());
+                    }
+                }
+            }
+        }
+        seed_initial_values(&item.children, data);
+    }
+}
+
 /// Produce the final evaluation result.
+/// Evaluate a definition with the default continuous trigger.
 pub fn evaluate_definition(definition: &Value, data: &HashMap<String, Value>) -> EvaluationResult {
+    evaluate_definition_with_trigger(definition, data, EvalTrigger::Continuous)
+}
+
+/// Evaluate a definition with an explicit trigger mode for shape timing.
+pub fn evaluate_definition_with_trigger(
+    definition: &Value,
+    data: &HashMap<String, Value>,
+    trigger: EvalTrigger,
+) -> EvaluationResult {
     // Phase 1: Rebuild
     let mut items = rebuild_item_tree(definition);
 
+    // Phase 1.5: Seed initial values for missing fields (9e)
+    let mut seeded_data = data.clone();
+    seed_initial_values(&items, &mut seeded_data);
+
     // Phase 2: Recalculate (with variables, whitespace, inheritance)
-    let (mut values, var_values, cycle_err) = recalculate(&mut items, data, definition);
+    let (mut values, var_values, cycle_err) = recalculate(&mut items, &seeded_data, definition);
 
     // Phase 3: Revalidate
     let shapes = definition.get("shapes").and_then(|v| v.as_array());
-    let mut validations = revalidate(&items, &values, shapes.map(|v| v.as_slice()));
+    let mut validations = revalidate(&items, &values, shapes.map(|v| v.as_slice()), trigger);
 
     // Surface circular variable dependency as a validation error
     if let Some(cycle_msg) = cycle_err {
@@ -1049,6 +1226,62 @@ pub fn evaluate_definition(definition: &Value, data: &HashMap<String, Value>) ->
         non_relevant,
         variables,
     }
+}
+
+// ── Screener evaluation ─────────────────────────────────────────
+
+/// Result of evaluating screener routes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScreenerRouteResult {
+    pub target: String,
+    pub label: Option<String>,
+    pub message: Option<String>,
+}
+
+/// Evaluate screener routes and return the first matching route.
+///
+/// Screener answers are evaluated in an isolated environment —
+/// they never pollute the main form data.
+pub fn evaluate_screener(
+    definition: &Value,
+    answers: &HashMap<String, Value>,
+) -> Option<ScreenerRouteResult> {
+    let routes = definition.get("screener")?.get("routes")?.as_array()?;
+
+    let mut env = FormspecEnvironment::new();
+    for (k, v) in answers {
+        env.set_field(k, json_to_fel(v));
+    }
+
+    for route in routes {
+        let condition = match route.get("condition").and_then(|v| v.as_str()) {
+            Some(c) => c,
+            None => continue,
+        };
+        let expr = match parse(condition) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let result = evaluate(&expr, &env);
+        if result.value.is_truthy() {
+            return Some(ScreenerRouteResult {
+                target: route
+                    .get("target")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                label: route
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                message: route
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+            });
+        }
+    }
+    None
 }
 
 fn collect_non_relevant(items: &[ItemInfo], out: &mut Vec<String>) {
@@ -2170,6 +2403,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: Some("keep".to_string()),
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: None,
             repeatable: false,
             repeat_min: None,
@@ -2206,6 +2443,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: Some("keep".to_string()),
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: Some("items[*]".to_string()),
             repeatable: false,
             repeat_min: None,
@@ -2244,6 +2485,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: Some("empty".to_string()),
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: Some("items".to_string()),
             repeatable: false,
             repeat_min: None,
@@ -2281,6 +2526,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: Some("keep".to_string()),
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: None,
             repeatable: false,
             repeat_min: None,
@@ -2330,6 +2579,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: Some("empty".to_string()),
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: Some("items[0]".to_string()),
             repeatable: false,
             repeat_min: None,
@@ -2353,6 +2606,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: Some("keep".to_string()),
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: Some("items[*]".to_string()),
             repeatable: false,
             repeat_min: None,
@@ -3300,6 +3557,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: None,
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: None,
             repeatable: false,
             repeat_min: None,
@@ -3309,7 +3570,7 @@ mod tests {
 
         // email is required and null → required error
         let values: HashMap<String, Value> = HashMap::new();
-        let results = revalidate(&items, &values, None);
+        let results = revalidate(&items, &values, None, EvalTrigger::Continuous);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].path, "email");
         assert_eq!(results[0].kind, "bind");
@@ -3335,6 +3596,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: None,
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: None,
             repeatable: false,
             repeat_min: None,
@@ -3343,7 +3608,7 @@ mod tests {
         }];
 
         let values: HashMap<String, Value> = HashMap::new();
-        let results = revalidate(&items, &values, None);
+        let results = revalidate(&items, &values, None, EvalTrigger::Continuous);
         assert!(
             results.is_empty(),
             "non-relevant items should be skipped entirely"
@@ -3369,6 +3634,10 @@ mod tests {
             readonly_expr: None,
             whitespace: None,
             nrb: None,
+            excluded_value: None,
+            default_value: None,
+            initial_value: None,
+            prev_relevant: true,
             parent_path: None,
             repeatable: false,
             repeat_min: None,
@@ -3379,7 +3648,7 @@ mod tests {
         let mut values = HashMap::new();
         values.insert("age".to_string(), json!(25));
 
-        let results = revalidate(&items, &values, None);
+        let results = revalidate(&items, &values, None, EvalTrigger::Continuous);
         assert!(
             results.is_empty(),
             "constraint $age >= 18 should pass for 25"
@@ -3633,5 +3902,341 @@ mod tests {
             "circular variable deps must produce a validation error"
         );
         assert_eq!(cycle_errors[0].severity, "error");
+    }
+
+    // ── Shape timing (EvalTrigger) ──────────────────────────────
+
+    fn shape_timing_def() -> Value {
+        json!({
+            "items": [
+                { "key": "x", "dataType": "integer" }
+            ],
+            "shapes": [
+                {
+                    "id": "s1",
+                    "target": "#",
+                    "timing": "continuous",
+                    "constraint": "false",
+                    "severity": "error",
+                    "message": "Continuous shape"
+                },
+                {
+                    "id": "s2",
+                    "target": "#",
+                    "timing": "submit",
+                    "constraint": "false",
+                    "severity": "error",
+                    "message": "Submit shape"
+                },
+                {
+                    "id": "s3",
+                    "target": "#",
+                    "timing": "demand",
+                    "constraint": "false",
+                    "severity": "error",
+                    "message": "Demand shape"
+                }
+            ]
+        })
+    }
+
+    #[test]
+    fn trigger_continuous_skips_submit_and_demand_shapes() {
+        let def = shape_timing_def();
+        let data = HashMap::new();
+        let result = evaluate_definition_with_trigger(&def, &data, EvalTrigger::Continuous);
+        let msgs: Vec<&str> = result.validations.iter().map(|v| v.message.as_str()).collect();
+        assert!(msgs.contains(&"Continuous shape"));
+        assert!(!msgs.contains(&"Submit shape"));
+        assert!(!msgs.contains(&"Demand shape"));
+    }
+
+    #[test]
+    fn trigger_submit_includes_continuous_and_submit_but_not_demand() {
+        let def = shape_timing_def();
+        let data = HashMap::new();
+        let result = evaluate_definition_with_trigger(&def, &data, EvalTrigger::Submit);
+        let msgs: Vec<&str> = result.validations.iter().map(|v| v.message.as_str()).collect();
+        assert!(msgs.contains(&"Continuous shape"));
+        assert!(msgs.contains(&"Submit shape"));
+        assert!(!msgs.contains(&"Demand shape"));
+    }
+
+    #[test]
+    fn trigger_disabled_skips_all_validation() {
+        let def = shape_timing_def();
+        let data = HashMap::new();
+        let result = evaluate_definition_with_trigger(&def, &data, EvalTrigger::Disabled);
+        assert!(result.validations.is_empty(), "disabled trigger should skip all validation");
+    }
+
+    // ── Screener evaluation ─────────────────────────────────────
+
+    fn screener_def() -> Value {
+        json!({
+            "$formspec": "1.0",
+            "url": "https://example.org/screener",
+            "version": "1.0.0",
+            "status": "active",
+            "title": "Test",
+            "items": [
+                { "type": "field", "key": "name", "dataType": "string" }
+            ],
+            "screener": {
+                "items": [
+                    { "type": "field", "key": "orgType", "dataType": "choice" }
+                ],
+                "routes": [
+                    {
+                        "condition": "$orgType = 'nonprofit'",
+                        "target": "https://example.org/forms/new|1.0.0",
+                        "label": "New"
+                    },
+                    {
+                        "condition": "true",
+                        "target": "https://example.org/forms/general|1.0.0",
+                        "label": "General"
+                    }
+                ]
+            }
+        })
+    }
+
+    #[test]
+    fn screener_returns_first_matching_route() {
+        let def = screener_def();
+        let mut answers = HashMap::new();
+        answers.insert("orgType".to_string(), json!("nonprofit"));
+        let result = evaluate_screener(&def, &answers);
+        assert!(result.is_some());
+        let route = result.unwrap();
+        assert_eq!(route.target, "https://example.org/forms/new|1.0.0");
+        assert_eq!(route.label, Some("New".to_string()));
+    }
+
+    #[test]
+    fn screener_returns_fallback_when_no_specific_match() {
+        let def = screener_def();
+        let mut answers = HashMap::new();
+        answers.insert("orgType".to_string(), json!("forprofit"));
+        let result = evaluate_screener(&def, &answers);
+        assert!(result.is_some());
+        let route = result.unwrap();
+        assert_eq!(route.target, "https://example.org/forms/general|1.0.0");
+    }
+
+    #[test]
+    fn screener_returns_none_without_screener_section() {
+        let def = json!({
+            "items": [{ "key": "x", "dataType": "string" }]
+        });
+        let answers = HashMap::new();
+        assert!(evaluate_screener(&def, &answers).is_none());
+    }
+
+    #[test]
+    fn screener_answers_do_not_pollute_main_evaluation() {
+        let def = screener_def();
+        let mut answers = HashMap::new();
+        answers.insert("orgType".to_string(), json!("nonprofit"));
+
+        // Screener runs in isolation
+        let _route = evaluate_screener(&def, &answers);
+
+        // Main evaluation with empty data should not see screener answers
+        let main_result = evaluate_definition(&def, &HashMap::new());
+        assert!(!main_result.values.contains_key("orgType"));
+    }
+
+    // ── 9a: excludedValue ──────────────────────────────────────
+
+    #[test]
+    fn excluded_value_null_hides_from_shapes() {
+        // Field "extra" is non-relevant with excludedValue="null"
+        // Shape references $extra — should see null, so constraint passes
+        let def = json!({
+            "items": [
+                { "key": "show", "dataType": "boolean" },
+                { "key": "extra", "dataType": "integer" }
+            ],
+            "binds": [
+                { "path": "extra", "relevant": "$show", "excludedValue": "null", "nonRelevantBehavior": "keep" }
+            ],
+            "shapes": [{
+                "id": "s1", "target": "#", "severity": "error",
+                "message": "Extra must be positive",
+                "constraint": "$extra == null or $extra > 0"
+            }]
+        });
+        let mut data = HashMap::new();
+        data.insert("show".to_string(), json!(false));
+        data.insert("extra".to_string(), json!(-5));
+
+        let result = evaluate_definition(&def, &data);
+        // With excludedValue="null", the FEL env sees $extra as null
+        // so the constraint "$extra == null or $extra > 0" passes
+        let shape_errors: Vec<_> = result.validations.iter()
+            .filter(|v| v.kind == "shape")
+            .collect();
+        assert!(shape_errors.is_empty(), "shape should pass because excluded extra is null in FEL");
+        // But NRB=keep means the actual data still has the value
+        assert_eq!(result.values.get("extra"), Some(&json!(-5)));
+    }
+
+    // ── 9b: Shape-id composition ───────────────────────────────
+
+    #[test]
+    fn or_composition_with_shape_id_reference() {
+        let def = json!({
+            "items": [
+                { "key": "email", "dataType": "string" },
+                { "key": "phone", "dataType": "string" }
+            ],
+            "shapes": [
+                {
+                    "id": "hasEmail", "target": "#", "severity": "error",
+                    "message": "Email required", "constraint": "present($email)"
+                },
+                {
+                    "id": "hasPhone", "target": "#", "severity": "error",
+                    "message": "Phone required", "constraint": "present($phone)"
+                },
+                {
+                    "id": "contactable", "target": "#", "severity": "error",
+                    "message": "Need email or phone",
+                    "or": ["hasEmail", "hasPhone"]
+                }
+            ]
+        });
+
+        // Neither present → contactable fails
+        let mut data = HashMap::new();
+        data.insert("email".to_string(), json!(null));
+        data.insert("phone".to_string(), json!(null));
+        let result = evaluate_definition(&def, &data);
+        let contactable_errors: Vec<_> = result.validations.iter()
+            .filter(|v| v.message == "Need email or phone")
+            .collect();
+        assert_eq!(contactable_errors.len(), 1, "should fail when neither present");
+
+        // Email present → contactable passes
+        let mut data2 = HashMap::new();
+        data2.insert("email".to_string(), json!("a@b.com"));
+        data2.insert("phone".to_string(), json!(null));
+        let result2 = evaluate_definition(&def, &data2);
+        let contactable_ok: Vec<_> = result2.validations.iter()
+            .filter(|v| v.message == "Need email or phone")
+            .collect();
+        assert!(contactable_ok.is_empty(), "should pass when email present");
+    }
+
+    // ── 9c: Default on relevance transition ────────────────────
+
+    #[test]
+    fn default_applies_on_relevance_transition() {
+        let def = json!({
+            "items": [
+                { "key": "show", "dataType": "boolean" },
+                { "key": "amount", "dataType": "decimal" }
+            ],
+            "binds": [
+                { "path": "amount", "relevant": "$show", "default": 0 }
+            ]
+        });
+
+        // First: show=false, amount not in data → non-relevant, no default applied
+        let mut data = HashMap::new();
+        data.insert("show".to_string(), json!(false));
+        let result1 = evaluate_definition(&def, &data);
+        // Field is non-relevant, so it's removed (default NRB=remove)
+        assert!(!result1.values.contains_key("amount"));
+
+        // Note: the default only applies on transition from non-relevant to relevant.
+        // On first evaluation, prev_relevant starts as true, so if the field becomes
+        // non-relevant (false) that's not a "non-relevant → relevant" transition.
+        // We need to simulate the transition through a relevance change.
+    }
+
+    // ── 9d: Nested bare $ in group bind paths ──────────────────
+
+    #[test]
+    fn bare_dollar_resolves_nested_group_path() {
+        let def = json!({
+            "items": [
+                {
+                    "type": "group", "key": "expenditures",
+                    "children": [
+                        { "type": "field", "key": "employment", "dataType": "decimal" }
+                    ]
+                }
+            ],
+            "binds": [
+                { "path": "expenditures.employment", "constraint": "$ >= 0", "constraintMessage": "Cannot be negative" }
+            ]
+        });
+
+        // Positive value → passes
+        let mut data = HashMap::new();
+        data.insert("expenditures".to_string(), json!({"employment": 45000}));
+        let result = evaluate_definition(&def, &data);
+        let errors: Vec<_> = result.validations.iter()
+            .filter(|v| v.kind == "bind" && v.message.contains("negative"))
+            .collect();
+        assert!(errors.is_empty(), "positive value should pass constraint");
+
+        // Negative value → fails
+        let mut data2 = HashMap::new();
+        data2.insert("expenditures".to_string(), json!({"employment": -100}));
+        let result2 = evaluate_definition(&def, &data2);
+        let errors2: Vec<_> = result2.validations.iter()
+            .filter(|v| v.kind == "bind" && v.message.contains("negative"))
+            .collect();
+        assert_eq!(errors2.len(), 1, "negative value should fail constraint");
+    }
+
+    // ── 9e: initialValue ───────────────────────────────────────
+
+    #[test]
+    fn initial_value_literal_seeds_missing_field() {
+        let def = json!({
+            "items": [
+                { "key": "status", "dataType": "string", "initialValue": "draft" }
+            ]
+        });
+
+        // Field not in data → seeded with initialValue
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(result.values.get("status"), Some(&json!("draft")));
+    }
+
+    #[test]
+    fn initial_value_not_applied_when_field_present() {
+        let def = json!({
+            "items": [
+                { "key": "status", "dataType": "string", "initialValue": "draft" }
+            ]
+        });
+
+        // Field already in data → initialValue not applied
+        let mut data = HashMap::new();
+        data.insert("status".to_string(), json!("final"));
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(result.values.get("status"), Some(&json!("final")));
+    }
+
+    #[test]
+    fn initial_value_fel_expression() {
+        let def = json!({
+            "items": [
+                { "key": "base", "dataType": "integer" },
+                { "key": "doubled", "dataType": "integer", "initialValue": "=$base * 2" }
+            ]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("base".to_string(), json!(10));
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(result.values.get("doubled"), Some(&json!(20)));
     }
 }

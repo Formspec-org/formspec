@@ -803,3 +803,30 @@ fn test_matches_invalid_regex_returns_null_with_diagnostic() {
     assert!(!result.diagnostics.is_empty());
     assert!(result.diagnostics[0].message.contains("invalid regex"));
 }
+
+// ── 9f: Money comparison diagnostic ────────────────────────────
+
+#[test]
+fn test_money_number_comparison_returns_null_with_diagnostic() {
+    // money(...) < number should return Null + diagnostic
+    let expr = parse("money(100, 'USD') < 200").unwrap();
+    let env = MapEnvironment::new();
+    let result = evaluate(&expr, &env);
+    assert_eq!(result.value, FelValue::Null);
+    assert!(!result.diagnostics.is_empty(), "should have diagnostic");
+    assert!(
+        result.diagnostics[0].message.contains("cannot compare money with number"),
+        "diagnostic message should mention money/number mismatch, got: {}",
+        result.diagnostics[0].message
+    );
+}
+
+#[test]
+fn test_number_money_comparison_returns_null_with_diagnostic() {
+    // number > money(...) should also return Null + diagnostic
+    let expr = parse("200 > money(100, 'USD')").unwrap();
+    let env = MapEnvironment::new();
+    let result = evaluate(&expr, &env);
+    assert_eq!(result.value, FelValue::Null);
+    assert!(!result.diagnostics.is_empty());
+}

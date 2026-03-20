@@ -717,6 +717,12 @@ impl<'a> Evaluator<'a> {
             (FelValue::Number(a), FelValue::Number(b)) => a.cmp(b),
             (FelValue::String(a), FelValue::String(b)) => a.cmp(b),
             (FelValue::Date(a), FelValue::Date(b)) => a.ordinal().cmp(&b.ordinal()),
+            // 9f: Money vs Number comparison — specific diagnostic
+            (FelValue::Money(_), FelValue::Number(_))
+            | (FelValue::Number(_), FelValue::Money(_)) => {
+                self.diag("Type error: cannot compare money with number");
+                return FelValue::Null;
+            }
             _ => {
                 self.diag(format!(
                     "cannot compare {} with {}",

@@ -23,7 +23,7 @@ use formspec_core::extension_analysis::RegistryEntryStatus;
 use formspec_core::registry_client::{self, Registry};
 use formspec_core::runtime_mapping;
 use formspec_core::{analyze_fel, detect_document_type, get_fel_dependencies};
-use formspec_eval::evaluate_definition;
+use formspec_eval::{EvalTrigger, evaluate_definition_with_trigger, evaluate_screener};
 use formspec_lint::{LintMode, LintOptions, lint_with_options};
 
 // ── FEL Evaluation ──────────────────────────────────────────────
@@ -296,8 +296,8 @@ fn lint_document(
 ///
 /// Returns:
 ///     A dict with: values, validations, non_relevant
-#[pyfunction]
-fn evaluate_def(py: Python, definition: &Bound<'_, PyAny>, data: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+#[pyfunction(signature = (definition, data, trigger=None))]
+fn evaluate_def(py: Python, definition: &Bound<'_, PyAny>, data: &Bound<'_, PyAny>, trigger: Option<&str>) -> PyResult<PyObject> {
     let definition: Value = depythonize(definition)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
     let data_val: Value = depythonize(data)
@@ -308,7 +308,13 @@ fn evaluate_def(py: Python, definition: &Bound<'_, PyAny>, data: &Bound<'_, PyAn
         .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
         .unwrap_or_default();
 
-    let result = evaluate_definition(&definition, &data);
+    let eval_trigger = match trigger {
+        Some("submit") => EvalTrigger::Submit,
+        Some("disabled") => EvalTrigger::Disabled,
+        _ => EvalTrigger::Continuous,
+    };
+
+    let result = evaluate_definition_with_trigger(&definition, &data, eval_trigger);
 
     let values = PyDict::new(py);
     for (k, v) in &result.values {
@@ -337,6 +343,44 @@ fn evaluate_def(py: Python, definition: &Bound<'_, PyAny>, data: &Bound<'_, PyAn
     dict.set_item("variables", variables)?;
 
     Ok(dict.into())
+}
+
+// ── Screener Evaluation ─────────────────────────────────────────
+
+/// Evaluate screener routes and return the first matching route.
+///
+/// Args:
+///     definition: Python dict of the definition (must contain a "screener" key)
+///     answers: Python dict of screener answers
+///
+/// Returns:
+///     A dict with: target, label, message — or None if no route matches.
+#[pyfunction]
+fn evaluate_screener_py(
+    py: Python,
+    definition: &Bound<'_, PyAny>,
+    answers: &Bound<'_, PyAny>,
+) -> PyResult<PyObject> {
+    let def: Value = depythonize(definition)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    let ans_val: Value = depythonize(answers)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+    let ans_map: HashMap<String, Value> = ans_val
+        .as_object()
+        .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+        .unwrap_or_default();
+
+    match evaluate_screener(&def, &ans_map) {
+        Some(route) => {
+            let dict = PyDict::new(py);
+            dict.set_item("target", &route.target)?;
+            dict.set_item("label", route.label.as_deref())?;
+            dict.set_item("message", route.message.as_deref())?;
+            Ok(dict.into())
+        }
+        None => Ok(py.None()),
+    }
 }
 
 // ── Registry Client ──────────────────────────────────────────────
@@ -557,6 +601,7 @@ fn formspec_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(detect_type, m)?)?;
     m.add_function(wrap_pyfunction!(lint_document, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_def, m)?)?;
+    m.add_function(wrap_pyfunction!(evaluate_screener_py, m)?)?;
     // Registry
     m.add_function(wrap_pyfunction!(parse_registry, m)?)?;
     m.add_function(wrap_pyfunction!(find_registry_entry, m)?)?;
