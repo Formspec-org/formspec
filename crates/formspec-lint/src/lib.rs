@@ -59,6 +59,20 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
 
     let doc_type = doc_type.unwrap();
 
+    // ── schema_only: return after pass 1 ────────────────────────
+    if options.schema_only {
+        sort_diagnostics(&mut diagnostics);
+        diagnostics.retain(|d| !d.suppressed_in(options.mode));
+        let valid = diagnostics
+            .iter()
+            .all(|d| d.severity != LintSeverity::Error);
+        return LintResult {
+            document_type: Some(doc_type),
+            diagnostics,
+            valid,
+        };
+    }
+
     // ── Definition passes (2–5) ─────────────────────────────────
     if doc_type == DocumentType::Definition {
         // Pass 2: Tree indexing (E200/E201)
@@ -89,11 +103,12 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
         ));
 
         // Pass 4: Expression compilation (E400)
-        let compilation = expressions::compile_expressions(doc);
-        diagnostics.extend(compilation.diagnostics);
-
         // Pass 5: Dependency cycle detection (E500)
-        diagnostics.extend(dependencies::analyze_dependencies(&compilation.compiled));
+        if !options.no_fel {
+            let compilation = expressions::compile_expressions(doc);
+            diagnostics.extend(compilation.diagnostics);
+            diagnostics.extend(dependencies::analyze_dependencies(&compilation.compiled));
+        }
     }
 
     // ── Theme pass (6) ──────────────────────────────────────────
@@ -114,6 +129,16 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
 
     // Sort and filter
     sort_diagnostics(&mut diagnostics);
+
+    // Strict mode: promote component compatibility warnings to errors
+    if options.mode == LintMode::Strict {
+        for d in &mut diagnostics {
+            if matches!(d.code.as_str(), "W800" | "W802" | "W803" | "W804") {
+                d.severity = LintSeverity::Error;
+            }
+        }
+    }
+
     diagnostics.retain(|d| !d.suppressed_in(options.mode));
 
     let valid = diagnostics
@@ -428,11 +453,6 @@ mod tests {
                 }
             ]
         });
-        let registry = json!({
-            "entries": [
-                { "name": "x-formspec-url", "status": "active" }
-            ]
-        });
         let registry = json!({ "entries": [{ "name": "x-formspec-url", "status": "active" }] });
         let result = lint_with_options(
             &def,
@@ -450,9 +470,9 @@ mod tests {
         assert!(e600[0].message.contains("x-unknown-ext"));
     }
 
-    /// Spec: extension-registry.md §3 — no registries means no extension checking
+    /// No registries → every enabled extension emits E600.
     #[test]
-    fn no_registries_skips_extension_pass() {
+    fn no_registries_emits_e600() {
         let def = json!({
             "$formspec": "1.0",
             "items": [{ "key": "e", "extensions": { "x-formspec-url": true } }]
@@ -464,7 +484,8 @@ mod tests {
                 .iter()
                 .filter(|d| d.code == "E600")
                 .count(),
-            0
+            1,
+            "Should emit E600 for enabled extension with no registries"
         );
     }
 
@@ -577,5 +598,177 @@ mod tests {
         for w in passes.windows(2) {
             assert!(w[0] <= w[1], "Passes should be non-decreasing");
         }
+    }
+
+    // ── schema_only: returns after pass 1 ─────────────────────────
+
+    /// schema_only returns document type and no further diagnostics.
+    #[test]
+    fn schema_only_skips_all_semantic_passes() {
+        let def = json!({
+            "$formspec": "1.0",
+            "items": [{ "key": "a" }, { "key": "b" }],
+            "binds": {
+                "ghost": { "required": "true" },
+                "a": { "calculate": "invalid ++" }
+            }
+        });
+        let result = lint_with_options(
+            &def,
+            &LintOptions {
+                schema_only: true,
+                ..Default::default()
+            },
+        );
+        assert_eq!(result.document_type, Some(DocumentType::Definition));
+        assert!(
+            result.diagnostics.is_empty(),
+            "schema_only should produce no diagnostics for a valid document type, got: {:?}",
+            result.diagnostics.iter().map(|d| &d.code).collect::<Vec<_>>()
+        );
+        assert!(result.valid);
+    }
+
+    /// schema_only still reports E100 for unrecognized documents.
+    #[test]
+    fn schema_only_still_reports_e100() {
+        let doc = json!({ "random": "data" });
+        let result = lint_with_options(
+            &doc,
+            &LintOptions {
+                schema_only: true,
+                ..Default::default()
+            },
+        );
+        assert!(!result.valid);
+        assert!(result.diagnostics.iter().any(|d| d.code == "E100"));
+    }
+
+    // ── no_fel: skips passes 4 and 5 ────────────────────────────
+
+    /// no_fel skips expression compilation (pass 4) and dependency detection (pass 5).
+    #[test]
+    fn no_fel_skips_expression_and_dependency_passes() {
+        let def = json!({
+            "$formspec": "1.0",
+            "items": [{ "key": "a" }, { "key": "b" }],
+            "binds": {
+                "a": { "calculate": "invalid ++" },
+                "b": { "calculate": "$a + 1" }
+            }
+        });
+        // Without no_fel: should have E400 from invalid expression
+        let full_result = lint(&def);
+        assert!(
+            full_result.diagnostics.iter().any(|d| d.code == "E400"),
+            "Full lint should report E400"
+        );
+
+        // With no_fel: no E400 or E500
+        let result = lint_with_options(
+            &def,
+            &LintOptions {
+                no_fel: true,
+                ..Default::default()
+            },
+        );
+        assert!(
+            !result.diagnostics.iter().any(|d| d.code == "E400"),
+            "no_fel should skip E400"
+        );
+        assert!(
+            !result.diagnostics.iter().any(|d| d.code == "E500"),
+            "no_fel should skip E500"
+        );
+    }
+
+    /// no_fel still runs passes 2 and 3 (tree indexing and references).
+    #[test]
+    fn no_fel_still_runs_reference_checks() {
+        let def = json!({
+            "$formspec": "1.0",
+            "items": [{ "key": "name" }],
+            "binds": {
+                "ghost": { "required": "true" }
+            }
+        });
+        let result = lint_with_options(
+            &def,
+            &LintOptions {
+                no_fel: true,
+                ..Default::default()
+            },
+        );
+        assert!(
+            result.diagnostics.iter().any(|d| d.code == "E300"),
+            "no_fel should still run pass 3 reference checks"
+        );
+    }
+
+    // ── Strict mode: promotes component warnings to errors ──────
+
+    /// Strict mode promotes W800/W802/W803/W804 to errors.
+    #[test]
+    fn strict_mode_promotes_component_warnings_to_errors() {
+        // TextInput + integer = CompatibleWithWarning → W802
+        let comp = json!({
+            "$formspecComponent": "1.0",
+            "tree": {
+                "component": "Stack",
+                "children": [
+                    { "component": "TextInput", "bind": "age" }
+                ]
+            }
+        });
+        let def = json!({
+            "$formspec": "1.0",
+            "items": [{ "key": "age", "dataType": "integer" }]
+        });
+        let result = lint_with_options(
+            &comp,
+            &LintOptions {
+                mode: LintMode::Strict,
+                definition_document: Some(def),
+                ..Default::default()
+            },
+        );
+        let w802 = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "W802")
+            .collect::<Vec<_>>();
+        assert_eq!(w802.len(), 1);
+        assert_eq!(
+            w802[0].severity,
+            LintSeverity::Error,
+            "Strict mode should promote W802 to Error"
+        );
+        assert!(!result.valid, "Document with promoted error should be invalid");
+    }
+
+    // ── E600: no-registry emits E600 for every enabled extension ──
+
+    /// When no registries are loaded, every enabled extension is unresolved.
+    #[test]
+    fn no_registries_emits_e600_for_all_enabled_extensions() {
+        let def = json!({
+            "$formspec": "1.0",
+            "items": [
+                { "key": "a", "extensions": { "x-foo": true, "x-bar": false } },
+                { "key": "b", "extensions": { "x-baz": { "opt": 1 } } }
+            ]
+        });
+        let result = lint(&def);
+        let e600: Vec<_> = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "E600")
+            .collect();
+        assert_eq!(
+            e600.len(),
+            2,
+            "Should emit E600 for x-foo and x-baz (x-bar is disabled), got: {:?}",
+            e600.iter().map(|d| &d.message).collect::<Vec<_>>()
+        );
     }
 }

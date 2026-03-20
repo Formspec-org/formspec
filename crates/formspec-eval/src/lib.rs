@@ -404,7 +404,7 @@ pub fn recalculate(
     items: &mut [ItemInfo],
     data: &HashMap<String, Value>,
     definition: &Value,
-) -> (HashMap<String, Value>, HashMap<String, Value>) {
+) -> (HashMap<String, Value>, HashMap<String, Value>, Option<String>) {
     let mut env = FormspecEnvironment::new();
     let mut values = data.clone();
 
@@ -423,7 +423,7 @@ pub fn recalculate(
 
     // Step 2: Evaluate variables in topological order
     let var_defs = parse_variables(definition);
-    let var_values = evaluate_variables(&var_defs, &mut env);
+    let (var_values, cycle_err) = evaluate_variables(&var_defs, &mut env);
 
     // Set variables in environment
     for (name, val) in &var_values {
@@ -433,7 +433,7 @@ pub fn recalculate(
     // Steps 3-6: Evaluate bind expressions with inheritance
     evaluate_items_with_inheritance(items, &mut env, &mut values, true, false);
 
-    (values, var_values)
+    (values, var_values, cycle_err)
 }
 
 /// Apply whitespace normalization to all items that have a whitespace bind.
@@ -453,16 +453,18 @@ fn apply_whitespace_to_items(items: &mut [ItemInfo], values: &mut HashMap<String
     }
 }
 
-/// Evaluate variables in topological order, returning their computed values.
+/// Evaluate variables in topological order, returning their computed values
+/// and an optional cycle error message.
 fn evaluate_variables(
     var_defs: &[VariableDef],
     env: &mut FormspecEnvironment,
-) -> HashMap<String, Value> {
-    let order = match topo_sort_variables(var_defs) {
-        Ok(order) => order,
-        Err(_) => {
+) -> (HashMap<String, Value>, Option<String>) {
+    let (order, cycle_err) = match topo_sort_variables(var_defs) {
+        Ok(order) => (order, None),
+        Err(cycle_msg) => {
             // On circular deps, evaluate in declaration order (best effort)
-            var_defs.iter().map(|v| v.name.clone()).collect()
+            let order = var_defs.iter().map(|v| v.name.clone()).collect();
+            (order, Some(cycle_msg))
         }
     };
 
@@ -479,7 +481,7 @@ fn evaluate_variables(
         }
     }
 
-    var_values
+    (var_values, cycle_err)
 }
 
 /// Evaluate items with bind inheritance rules:
@@ -600,7 +602,7 @@ pub fn revalidate(
     // Shape rules
     if let Some(shapes) = shapes {
         for shape in shapes {
-            validate_shape(shape, &shapes_by_id, &mut env, values, &mut results);
+            validate_shape(shape, &shapes_by_id, &mut env, values, items, &mut results);
         }
     }
 
@@ -725,9 +727,19 @@ fn validate_shape(
     shapes_by_id: &HashMap<String, &Value>,
     env: &mut FormspecEnvironment,
     values: &HashMap<String, Value>,
+    items: &[ItemInfo],
     results: &mut Vec<ValidationResult>,
 ) {
     let target = shape.get("target").and_then(|v| v.as_str()).unwrap_or("");
+
+    // §5.6 rule 1: non-relevant targets suppress shape evaluation
+    if target != "#" && !target.is_empty() {
+        if let Some(item) = find_item_by_path(items, target) {
+            if !item.relevant {
+                return;
+            }
+        }
+    }
     let severity = shape
         .get("severity")
         .and_then(|v| v.as_str())
@@ -1001,11 +1013,21 @@ pub fn evaluate_definition(definition: &Value, data: &HashMap<String, Value>) ->
     let mut items = rebuild_item_tree(definition);
 
     // Phase 2: Recalculate (with variables, whitespace, inheritance)
-    let (mut values, var_values) = recalculate(&mut items, data, definition);
+    let (mut values, var_values, cycle_err) = recalculate(&mut items, data, definition);
 
     // Phase 3: Revalidate
     let shapes = definition.get("shapes").and_then(|v| v.as_array());
-    let validations = revalidate(&items, &values, shapes.map(|v| v.as_slice()));
+    let mut validations = revalidate(&items, &values, shapes.map(|v| v.as_slice()));
+
+    // Surface circular variable dependency as a validation error
+    if let Some(cycle_msg) = cycle_err {
+        validations.push(ValidationResult {
+            path: String::new(),
+            severity: "error".to_string(),
+            kind: "definition".to_string(),
+            message: cycle_msg,
+        });
+    }
 
     // Collect non-relevant fields
     let mut non_relevant = Vec::new();
@@ -1442,7 +1464,7 @@ mod tests {
         data.insert("section.field".to_string(), json!("test"));
 
         let mut items = rebuild_item_tree(&def);
-        let (values, _) = recalculate(&mut items, &data, &def);
+        let (values, _, _) = recalculate(&mut items, &data, &def);
 
         // The child should inherit readonly from parent
         let child = find_item_by_path(&items, "section.field").unwrap();
@@ -3093,7 +3115,7 @@ mod tests {
 
         let data = HashMap::new();
         let mut items = rebuild_item_tree(&def);
-        let (values, _) = recalculate(&mut items, &data, &def);
+        let (values, _, _) = recalculate(&mut items, &data, &def);
 
         // Parent has calculate, child does not
         assert_eq!(values.get("parent"), Some(&json!(42)));
@@ -3216,7 +3238,7 @@ mod tests {
         data.insert("qty".to_string(), json!(4));
 
         let mut items = rebuild_item_tree(&def);
-        let (values, var_values) = recalculate(&mut items, &data, &def);
+        let (values, var_values, _) = recalculate(&mut items, &data, &def);
 
         // Calculated value
         assert_eq!(values.get("total"), Some(&json!(100)));
@@ -3523,5 +3545,93 @@ mod tests {
         assert_eq!(shape_results.len(), 1);
         assert_eq!(shape_results[0].severity, "info");
         assert_eq!(shape_results[0].message, "Score should be at most 100");
+    }
+
+    /// §5.6 rule 1: shapes targeting a non-relevant field are suppressed.
+    #[test]
+    fn shape_suppressed_when_target_non_relevant() {
+        let def = json!({
+            "items": [
+                { "key": "hidden_field", "dataType": "string" }
+            ],
+            "binds": {
+                "hidden_field": { "relevant": "false" }
+            },
+            "shapes": [
+                {
+                    "target": "hidden_field",
+                    "constraint": "false",
+                    "severity": "error",
+                    "message": "Should never appear"
+                }
+            ]
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        let shape_results: Vec<&ValidationResult> = result
+            .validations
+            .iter()
+            .filter(|v| v.kind == "shape")
+            .collect();
+        assert!(
+            shape_results.is_empty(),
+            "shape targeting non-relevant field must be suppressed"
+        );
+    }
+
+    /// §5.6 rule 1: root-level shapes (target="#") are always evaluated.
+    #[test]
+    fn shape_root_target_always_evaluated() {
+        let def = json!({
+            "items": [
+                { "key": "a", "dataType": "integer" }
+            ],
+            "shapes": [
+                {
+                    "target": "#",
+                    "constraint": "false",
+                    "severity": "error",
+                    "message": "Root shape fires"
+                }
+            ]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("a".to_string(), json!(1));
+        let result = evaluate_definition(&def, &data);
+        let shape_results: Vec<&ValidationResult> = result
+            .validations
+            .iter()
+            .filter(|v| v.kind == "shape")
+            .collect();
+        assert_eq!(shape_results.len(), 1, "root shapes must always fire");
+    }
+
+    /// Circular variable dependencies surface as validation errors.
+    #[test]
+    fn circular_variable_deps_produce_validation_error() {
+        let def = json!({
+            "items": [
+                { "key": "x", "dataType": "integer" }
+            ],
+            "variables": [
+                { "name": "a", "expression": "@b + 1" },
+                { "name": "b", "expression": "@a + 1" }
+            ]
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        let cycle_errors: Vec<&ValidationResult> = result
+            .validations
+            .iter()
+            .filter(|v| v.kind == "definition" && v.message.contains("ircular"))
+            .collect();
+        assert!(
+            !cycle_errors.is_empty(),
+            "circular variable deps must produce a validation error"
+        );
+        assert_eq!(cycle_errors[0].severity, "error");
     }
 }

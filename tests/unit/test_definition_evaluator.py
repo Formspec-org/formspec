@@ -87,9 +87,19 @@ class TestEvaluateVariables:
         result = evaluate_definition({}, {})
         assert result.variables == {}
 
-    @pytest.mark.skip(reason="Rust backend does not raise on circular variable deps — returns None silently")
-    def test_circular_dependency_raises(self):
-        pass
+    def test_circular_dependency_emits_definition_result(self):
+        """Circular variable deps produce a ValidationResult with kind='definition'."""
+        defn = {
+            'variables': [
+                {'name': 'a', 'expression': '@b + 1'},
+                {'name': 'b', 'expression': '@a + 1'},
+            ],
+        }
+        result = evaluate_definition(defn, {})
+        circular = [r for r in result.results if r.get('kind') == 'definition']
+        assert len(circular) > 0, f"Expected definition-kind result for circular deps, got: {result.results}"
+        assert circular[0].get('severity') == 'error'
+        assert 'ircular' in circular[0].get('message', '')
 
     def test_process_populates_variables(self):
         defn = {
@@ -921,9 +931,24 @@ class TestNonRelevantBehavior:
         required_errors = [r for r in result.results if 'equired' in r.get('message', '')]
         assert required_errors == []
 
-    @pytest.mark.skip(reason="Rust backend shapes fire for non-relevant targets")
     def test_shape_target_nonrelevant_field_emits_no_result(self):
-        pass
+        """Shape targeting a non-relevant field should not emit a validation result."""
+        defn = {
+            'items': [
+                {'key': 'visible', 'type': 'field', 'dataType': 'boolean', 'label': 'Visible'},
+                {'key': 'name', 'type': 'field', 'dataType': 'string', 'label': 'Name'},
+            ],
+            'binds': [
+                {'path': 'name', 'relevant': '$visible'},
+            ],
+            'shapes': [{
+                'id': 's1', 'target': 'name', 'severity': 'error',
+                'message': 'Name required', 'constraint': '$name != ""',
+            }],
+        }
+        result = evaluate_definition(defn, {'visible': False, 'name': ''})
+        shape_results = [r for r in result.results if r.get('message') == 'Name required']
+        assert shape_results == [], f"Non-relevant target should not fire shape, got: {shape_results}"
 
     @pytest.mark.skip(reason="Rust backend does not support excludedValue yet")
     def test_excluded_value_null_hides_hidden_value_from_shapes_while_keep_preserves_output(self):

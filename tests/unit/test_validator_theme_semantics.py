@@ -65,7 +65,6 @@ def test_w705_fires_for_unresolved_items_key() -> None:
     assert "nonexistent.field" in w705[0].message
 
 
-@pytest.mark.skip(reason="Rust linter W705 does not resolve dotted nested paths (e.g. address.street)")
 def test_w705_clean_for_valid_items_key() -> None:
     theme = _minimal_theme(items={"address.street": {"style": {"color": "red"}}})
     definition = _minimal_definition()

@@ -49,6 +49,9 @@ pub enum LintMode {
     /// Authoring mode — suppresses certain warnings that are noisy during editing
     /// (e.g., W300 incompatible dataType for optionSet).
     Authoring,
+    /// Strict mode — all diagnostics emitted, and component compatibility warnings
+    /// (W800, W802, W803, W804) are promoted to errors.
+    Strict,
 }
 
 impl Default for LintMode {
@@ -128,7 +131,7 @@ impl LintDiagnostic {
     /// Whether this diagnostic should be suppressed in the given lint mode.
     pub fn suppressed_in(&self, mode: LintMode) -> bool {
         match mode {
-            LintMode::Runtime => false,
+            LintMode::Runtime | LintMode::Strict => false,
             LintMode::Authoring => {
                 // W300: incompatible dataType for optionSet (noisy during editing)
                 // W802: compatible-with-warning fallback (authoring mode allows it)
@@ -153,7 +156,7 @@ pub fn sort_diagnostics(diags: &mut [LintDiagnostic]) {
 /// Options for the lint pipeline.
 #[derive(Debug, Clone, Default)]
 pub struct LintOptions {
-    /// Lint mode (Runtime or Authoring).
+    /// Lint mode (Runtime, Authoring, or Strict).
     pub mode: LintMode,
     /// Optional registry documents for extension resolution (E600).
     /// Each value should be a JSON registry document with `entries` array.
@@ -162,6 +165,12 @@ pub struct LintOptions {
     /// Used by pass 6 (theme: W705-W707) and pass 7 (components: W800/E802-E803).
     /// When `None`, cross-artifact checks are skipped (single-document mode).
     pub definition_document: Option<Value>,
+    /// When `true`, run only pass 1 (document type detection) and return early.
+    /// Useful for fast schema-level validation without semantic analysis.
+    pub schema_only: bool,
+    /// When `true`, skip FEL-related passes (pass 4: expression compilation,
+    /// pass 5: dependency cycle detection). Useful when FEL is handled externally.
+    pub no_fel: bool,
 }
 
 // ── Lint result ─────────────────────────────────────────────────
@@ -235,6 +244,18 @@ mod tests {
             assert!(
                 !diag.suppressed_in(LintMode::Runtime),
                 "Runtime mode should never suppress, but suppressed {code}"
+            );
+        }
+    }
+
+    /// Spec: No diagnostics are suppressed in Strict mode.
+    #[test]
+    fn strict_mode_suppresses_nothing() {
+        for code in &["E100", "E300", "W300", "W700", "W802", "E500", "W800", "W804"] {
+            let diag = LintDiagnostic::warning(code, 1, "$", "test");
+            assert!(
+                !diag.suppressed_in(LintMode::Strict),
+                "Strict mode should never suppress, but suppressed {code}"
             );
         }
     }

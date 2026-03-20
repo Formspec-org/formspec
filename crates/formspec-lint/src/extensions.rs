@@ -159,6 +159,43 @@ fn walk_items(
 
 // ── Public API ─────────────────────────────────────────────────
 
+/// Collect all enabled extensions from the item tree.
+/// Returns `(JSONPath, extension_name)` for each extension with a truthy value.
+fn collect_all_enabled_extensions(document: &Value) -> Vec<(String, String)> {
+    let mut result = Vec::new();
+    if let Some(items) = document.get("items").and_then(|v| v.as_array()) {
+        collect_extensions_recursive(items, "", &mut result);
+    }
+    result
+}
+
+fn collect_extensions_recursive(items: &[Value], prefix: &str, out: &mut Vec<(String, String)>) {
+    for item in items {
+        let key = match item.get("key").and_then(|v| v.as_str()) {
+            Some(k) => k,
+            None => continue,
+        };
+        let path = if prefix.is_empty() {
+            format!("$.items[key={key}]")
+        } else {
+            format!("{prefix}.{key}")
+        };
+
+        if let Some(extensions) = item.get("extensions").and_then(|v| v.as_object()) {
+            for (ext_name, ext_value) in extensions {
+                if is_extension_enabled(ext_value) {
+                    let ext_path = format!("{path}.extensions.{ext_name}");
+                    out.push((ext_path, ext_name.clone()));
+                }
+            }
+        }
+
+        if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
+            collect_extensions_recursive(children, &path, out);
+        }
+    }
+}
+
 /// Validate extension declarations in a definition document against registry
 /// documents.
 ///
@@ -166,9 +203,17 @@ fn walk_items(
 /// - **E600** (Error) — extension not found in any registry
 /// - **E601** (Warning) — extension found but retired
 /// - **E602** (Info) — extension found but deprecated
+///
+/// When no registries are loaded, every enabled extension is unresolved (E600).
 pub fn check_extensions(document: &Value, registry_documents: &[Value]) -> Vec<LintDiagnostic> {
     if registry_documents.is_empty() {
-        return Vec::new();
+        // No registries → every enabled extension is unresolved
+        return collect_all_enabled_extensions(document)
+            .into_iter()
+            .map(|(path, name)| {
+                LintDiagnostic::error("E600", PASS, &path, format!("Unresolved extension: {name}"))
+            })
+            .collect();
     }
 
     let registry = build_registry(registry_documents);
@@ -384,15 +429,41 @@ mod tests {
         assert!(diags.is_empty());
     }
 
-    // Extra: no registries at all → skip entirely (empty vec)
+    // No registries at all → every enabled extension is unresolved (E600)
     #[test]
-    fn no_registries_skips_check() {
+    fn no_registries_emits_e600_for_enabled_extensions() {
         let doc = def_with_items(json!([
             { "key": "field", "extensions": { "x-anything": true } }
         ]));
         let diags = check_extensions(&doc, &[]);
 
+        assert_eq!(diags.len(), 1);
+        assert_eq!(diags[0].code, "E600");
+        assert!(diags[0].message.contains("x-anything"));
+    }
+
+    // No registries — disabled extensions not flagged
+    #[test]
+    fn no_registries_skips_disabled_extensions() {
+        let doc = def_with_items(json!([
+            { "key": "field", "extensions": { "x-off": false, "x-null": null } }
+        ]));
+        let diags = check_extensions(&doc, &[]);
+
         assert!(diags.is_empty());
+    }
+
+    // No registries — multiple enabled across items
+    #[test]
+    fn no_registries_emits_e600_for_all_enabled() {
+        let doc = def_with_items(json!([
+            { "key": "a", "extensions": { "x-one": true } },
+            { "key": "b", "extensions": { "x-two": { "opt": 1 }, "x-off": false } }
+        ]));
+        let diags = check_extensions(&doc, &[]);
+
+        assert_eq!(diags.len(), 2);
+        assert!(diags.iter().all(|d| d.code == "E600"));
     }
 
     // Extra: null extension value — treated as disabled

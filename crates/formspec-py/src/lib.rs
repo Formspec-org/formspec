@@ -198,25 +198,30 @@ fn detect_type(document: &Bound<'_, PyAny>) -> PyResult<Option<String>> {
 ///
 /// Args:
 ///     document: Python dict of the Formspec document
-///     mode: Optional lint mode — "authoring" or "runtime" (default)
+///     mode: Optional lint mode — "authoring", "strict", or "runtime" (default)
 ///     registry_documents: Optional list of registry document dicts for extension resolution
 ///     definition_document: Optional definition document dict for cross-artifact validation
+///     schema_only: When true, run only schema-level validation (skip semantic passes)
+///     no_fel: When true, skip FEL expression passes
 ///
 /// Returns:
 ///     A dict with: document_type, valid, diagnostics (list of dicts)
-#[pyfunction(signature = (document, mode=None, registry_documents=None, definition_document=None))]
+#[pyfunction(signature = (document, mode=None, registry_documents=None, definition_document=None, schema_only=None, no_fel=None))]
 fn lint_document(
     py: Python,
     document: &Bound<'_, PyAny>,
     mode: Option<&str>,
     registry_documents: Option<&Bound<'_, PyList>>,
     definition_document: Option<&Bound<'_, PyAny>>,
+    schema_only: Option<bool>,
+    no_fel: Option<bool>,
 ) -> PyResult<PyObject> {
     let doc: Value = depythonize(document)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
     let lint_mode = match mode {
         Some("authoring") => LintMode::Authoring,
+        Some("strict") => LintMode::Strict,
         _ => LintMode::Runtime,
     };
 
@@ -246,6 +251,8 @@ fn lint_document(
         mode: lint_mode,
         registry_documents: registry_docs,
         definition_document: def_doc,
+        schema_only: schema_only.unwrap_or(false),
+        no_fel: no_fel.unwrap_or(false),
     };
 
     let result = lint_with_options(&doc, &options);

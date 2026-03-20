@@ -302,22 +302,30 @@ fn extract_token_refs(text: &str) -> Vec<&str> {
 
 // ── Definition item path collection ─────────────────────────────
 
-/// Collect all item keys from a definition's item tree (flat keys, not dotted paths).
+/// Collect all item keys and dotted paths from a definition's item tree.
+/// Both bare keys (e.g., "amount") and full dotted paths (e.g., "lines.amount")
+/// are included so that theme overrides can reference items either way.
 fn collect_definition_item_keys(definition: &Value) -> HashSet<String> {
     let mut keys = HashSet::new();
     if let Some(items) = definition.get("items").and_then(|v| v.as_array()) {
-        collect_keys_recursive(items, &mut keys);
+        collect_item_paths(items, "", &mut keys);
     }
     keys
 }
 
-fn collect_keys_recursive(items: &[Value], keys: &mut HashSet<String>) {
+fn collect_item_paths(items: &[Value], prefix: &str, paths: &mut HashSet<String>) {
     for item in items {
         if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
-            keys.insert(key.to_string());
-        }
-        if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-            collect_keys_recursive(children, keys);
+            let full = if prefix.is_empty() {
+                key.to_string()
+            } else {
+                format!("{prefix}.{key}")
+            };
+            paths.insert(full.clone());
+            paths.insert(key.to_string()); // bare key for top-level matching
+            if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
+                collect_item_paths(children, &full, paths);
+            }
         }
     }
 }
@@ -1235,6 +1243,76 @@ mod tests {
         assert!(
             with_code(&diags, "W705").is_empty(),
             "amount is a nested child, should match"
+        );
+    }
+
+    /// Dotted nested path (e.g., "lines.amount") should match a nested child.
+    #[test]
+    fn w705_dotted_nested_path_matches() {
+        let theme = json!({
+            "items": {
+                "lines.amount": { "widget": "numberInput" }
+            }
+        });
+        let def = json!({
+            "$formspec": "1.0",
+            "items": [{
+                "key": "lines",
+                "children": [{ "key": "amount", "dataType": "decimal" }]
+            }]
+        });
+        let diags = lint_theme(&theme, Some(&def));
+        assert!(
+            with_code(&diags, "W705").is_empty(),
+            "lines.amount is a valid dotted path, should not warn"
+        );
+    }
+
+    /// Dotted path that doesn't correspond to the actual nesting should warn.
+    #[test]
+    fn w705_invalid_dotted_path_warns() {
+        let theme = json!({
+            "items": {
+                "lines.ghost": { "widget": "numberInput" }
+            }
+        });
+        let def = json!({
+            "$formspec": "1.0",
+            "items": [{
+                "key": "lines",
+                "children": [{ "key": "amount", "dataType": "decimal" }]
+            }]
+        });
+        let diags = lint_theme(&theme, Some(&def));
+        assert_eq!(
+            with_code(&diags, "W705").len(),
+            1,
+            "lines.ghost is not a valid path"
+        );
+    }
+
+    /// Deeply nested dotted path (3 levels) should match.
+    #[test]
+    fn w705_deep_dotted_path_matches() {
+        let theme = json!({
+            "items": {
+                "section.group.field": { "widget": "textInput" }
+            }
+        });
+        let def = json!({
+            "$formspec": "1.0",
+            "items": [{
+                "key": "section",
+                "children": [{
+                    "key": "group",
+                    "children": [{ "key": "field", "dataType": "string" }]
+                }]
+            }]
+        });
+        let diags = lint_theme(&theme, Some(&def));
+        assert!(
+            with_code(&diags, "W705").is_empty(),
+            "section.group.field is a valid dotted path"
         );
     }
 

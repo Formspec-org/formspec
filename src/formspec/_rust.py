@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from datetime import date, datetime
 
 import msgspec
@@ -282,6 +281,7 @@ def detect_document_type(document: dict) -> str | None:
 def lint(
     document: dict,
     *,
+    mode: str = "runtime",
     schema_only: bool = False,
     no_fel: bool = False,
     component_definition: dict | None = None,
@@ -291,25 +291,19 @@ def lint(
 
     Args:
         document: The Formspec document dict to lint.
-        schema_only: Not yet supported by Rust linter — emits a warning if True.
-        no_fel: Not yet supported by Rust linter — emits a warning if True.
+        mode: Lint mode — "runtime" (default), "authoring", or "strict".
+        schema_only: When True, run only schema-level validation (skip semantic passes).
+        no_fel: When True, skip FEL expression passes.
         component_definition: Optional definition document for cross-artifact checks.
         registry_documents: Optional list of registry documents for extension resolution.
     """
-    unsupported = {
-        "schema_only": schema_only,
-        "no_fel": no_fel,
-    }
-    active = [k for k, v in unsupported.items() if v]
-    if active:
-        warnings.warn(
-            f"lint() parameter(s) {', '.join(active)} not yet supported by Rust linter",
-            stacklevel=2,
-        )
     raw = formspec_rust.lint_document(
         document,
+        mode=mode,
         registry_documents=registry_documents,
         definition_document=component_definition,
+        schema_only=schema_only,
+        no_fel=no_fel,
     )
     diagnostics = raw.get("diagnostics", [])
     return [
