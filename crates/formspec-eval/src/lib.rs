@@ -425,13 +425,112 @@ fn detect_repeat_count(base: &str, data: &HashMap<String, Value>) -> usize {
     max_index
 }
 
+// ── Repeat instance expansion ───────────────────────────────────
+
+/// Expand repeatable groups into concrete indexed instances based on data.
+///
+/// For each repeatable group, counts instances in data and clones the
+/// template children N times with indexed paths: `group[0].child`, `group[1].child`.
+pub fn expand_repeat_instances(items: &mut Vec<ItemInfo>, data: &HashMap<String, Value>) {
+    expand_repeat_instances_inner(items, data);
+}
+
+fn expand_repeat_instances_inner(items: &mut Vec<ItemInfo>, data: &HashMap<String, Value>) {
+    for item in items.iter_mut() {
+        if item.repeatable {
+            let count = detect_repeat_count(&item.path, data);
+            if count > 0 {
+                // Clone template children into concrete indexed instances
+                let template_children = item.children.clone();
+                let mut expanded = Vec::new();
+                for i in 0..count {
+                    for child in &template_children {
+                        let mut concrete = child.clone();
+                        let indexed_path = format!("{}[{}].{}", item.path, i, child.key);
+                        concrete.path = indexed_path;
+                        concrete.parent_path = Some(format!("{}[{}]", item.path, i));
+                        // Recursively expand nested repeatables
+                        if !concrete.children.is_empty() {
+                            expand_repeat_instances_inner(&mut concrete.children, data);
+                        }
+                        expanded.push(concrete);
+                    }
+                }
+                item.children = expanded;
+            }
+        } else {
+            // Recurse into non-repeatable groups
+            expand_repeat_instances_inner(&mut item.children, data);
+        }
+    }
+}
+
+// ── Wildcard bind resolution ────────────────────────────────────
+
+/// Check if a bind path is a wildcard path (contains `[*]`).
+fn is_wildcard_bind(path: &str) -> bool {
+    path.contains("[*]")
+}
+
+/// Resolve a wildcard bind expression by replacing `[*]` references with
+/// a concrete index. E.g., `$items[*].qty * $items[*].price` with index 2
+/// becomes `$items[2].qty * $items[2].price`.
+fn instantiate_wildcard_expr(expr: &str, base: &str, index: usize) -> String {
+    let wildcard_pattern = format!("{}[*]", base);
+    let concrete = format!("{}[{}]", base, index);
+    expr.replace(&wildcard_pattern, &concrete)
+}
+
+/// Extract the base path from a wildcard bind path.
+/// E.g., `items[*].total` → `items`.
+fn wildcard_base(path: &str) -> Option<&str> {
+    path.find("[*]").map(|pos| &path[..pos])
+}
+
+// ── Scoped variable helpers ─────────────────────────────────────
+
+/// Compute visible variables for a given item path.
+///
+/// Variables are stored with scope-qualified keys like `"#:name"` (global)
+/// or `"section:name"` (group-scoped). Walk from global scope down through
+/// ancestors of the item path, with nearer scopes overriding farther ones.
+fn visible_variables(
+    all_vars: &HashMap<String, Value>,
+    item_path: &str,
+) -> HashMap<String, Value> {
+    let mut visible = HashMap::new();
+
+    // Global scope variables
+    for (key, val) in all_vars {
+        if let Some(name) = key.strip_prefix("#:") {
+            visible.insert(name.to_string(), val.clone());
+        }
+    }
+
+    // Walk from root down to current path (nearest scope wins via overwrite)
+    // Strip indices from the path so that `group[0].child` matches scope `group`
+    let stripped = strip_indices(item_path);
+    let parts: Vec<&str> = stripped.split('.').collect();
+    for i in 1..=parts.len() {
+        let ancestor = parts[..i].join(".");
+        let prefix = format!("{ancestor}:");
+        for (key, val) in all_vars {
+            if let Some(name) = key.strip_prefix(&prefix) {
+                visible.insert(name.to_string(), val.clone());
+            }
+        }
+    }
+
+    visible
+}
+
 // ── Phase 2: Recalculate ────────────────────────────────────────
 
 /// Recalculate all computed values with full processing model.
 ///
 /// Steps:
 /// 1. Apply whitespace normalization
-/// 2. Evaluate variables in topological order
+/// 2. Evaluate variables in topological order (scope-keyed)
 /// 3. Evaluate relevance (with AND inheritance)
 /// 4. Evaluate readonly (with OR inheritance)
 /// 5. Evaluate required (no inheritance)
@@ -459,15 +558,24 @@ pub fn recalculate(
 
     // Step 2: Evaluate variables in topological order
     let var_defs = parse_variables(definition);
-    let (var_values, cycle_err) = evaluate_variables(&var_defs, &mut env);
+    let (var_values, scoped_var_values, cycle_err) = evaluate_variables_scoped(&var_defs, &mut env);
 
-    // Set variables in environment
+    // Set all variables in environment for global access (backwards compat)
+    // For scoped resolution, we use scoped_var_values in evaluate_items_with_inheritance
     for (name, val) in &var_values {
         env.set_variable(name, json_to_fel(val));
     }
 
+    let has_scoped = var_defs.iter().any(|v| {
+        v.scope.as_deref().unwrap_or("#") != "#"
+    });
+
     // Steps 3-6: Evaluate bind expressions with inheritance
-    evaluate_items_with_inheritance(items, &mut env, &mut values, true, false);
+    if has_scoped {
+        evaluate_items_with_inheritance_scoped(items, &mut env, &mut values, true, false, &scoped_var_values);
+    } else {
+        evaluate_items_with_inheritance(items, &mut env, &mut values, true, false);
+    }
 
     (values, var_values, cycle_err)
 }
@@ -489,35 +597,47 @@ fn apply_whitespace_to_items(items: &mut [ItemInfo], values: &mut HashMap<String
     }
 }
 
-/// Evaluate variables in topological order, returning their computed values
-/// and an optional cycle error message.
-fn evaluate_variables(
+/// Evaluate variables with scope-keyed storage.
+/// Returns: (name-keyed values for output, scope-keyed values for per-bind filtering, cycle_err)
+///
+/// Variables with different scopes but the same name are stored separately
+/// in `scoped_values` (e.g., `"#:rate"` and `"section:rate"`).
+/// For the output map and backwards compat, last-evaluated wins for bare names.
+fn evaluate_variables_scoped(
     var_defs: &[VariableDef],
     env: &mut FormspecEnvironment,
-) -> (HashMap<String, Value>, Option<String>) {
+) -> (HashMap<String, Value>, HashMap<String, Value>, Option<String>) {
     let (order, cycle_err) = match topo_sort_variables(var_defs) {
         Ok(order) => (order, None),
         Err(cycle_msg) => {
-            // On circular deps, evaluate in declaration order (best effort)
             let order = var_defs.iter().map(|v| v.name.clone()).collect();
             (order, Some(cycle_msg))
         }
     };
 
-    let mut var_values = HashMap::new();
+    let mut var_values = HashMap::new(); // bare name → value (for output/backwards compat)
+    let mut scoped_values = HashMap::new(); // "scope:name" → value (for per-bind filtering)
 
+    // Evaluate each variable in topo order.
+    // For duplicate names across scopes, evaluate ALL of them.
     for name in &order {
-        if let Some(var) = var_defs.iter().find(|v| &v.name == name) {
+        // Find all var_defs with this name (may be multiple scopes)
+        let matching: Vec<_> = var_defs.iter().filter(|v| v.name == *name).collect();
+        for var in matching {
             if let Ok(parsed) = parse(&var.expression) {
                 let result = evaluate(&parsed, env);
                 let json_val = fel_to_json(&result.value);
                 env.set_variable(name, result.value);
-                var_values.insert(name.clone(), json_val);
+                var_values.insert(name.clone(), json_val.clone());
+
+                let scope = var.scope.as_deref().unwrap_or("#");
+                let scoped_key = format!("{scope}:{name}");
+                scoped_values.insert(scoped_key, json_val);
             }
         }
     }
 
-    (var_values, cycle_err)
+    (var_values, scoped_values, cycle_err)
 }
 
 /// Evaluate items with bind inheritance rules:
@@ -621,6 +741,110 @@ fn evaluate_items_with_inheritance(
             values,
             item.relevant,
             item.readonly,
+        );
+    }
+}
+
+/// Variant of evaluate_items_with_inheritance that pre-filters variables
+/// by scope before evaluating each item's expressions.
+fn evaluate_items_with_inheritance_scoped(
+    items: &mut [ItemInfo],
+    env: &mut FormspecEnvironment,
+    values: &mut HashMap<String, Value>,
+    parent_relevant: bool,
+    parent_readonly: bool,
+    scoped_vars: &HashMap<String, Value>,
+) {
+    for item in items.iter_mut() {
+        // Compute visible variables for this item's path and set them in env
+        let visible = visible_variables(scoped_vars, &item.path);
+        // Clear all variables, then set only visible ones
+        env.variables.clear();
+        for (name, val) in &visible {
+            env.set_variable(name, json_to_fel(val));
+        }
+
+        // Save previous relevance for transition detection
+        item.prev_relevant = item.relevant;
+
+        let own_relevant = if let Some(ref expr) = item.relevance {
+            eval_bool(expr, env, true)
+        } else {
+            true
+        };
+        item.relevant = own_relevant && parent_relevant;
+
+        // 9c: Default on relevance transition
+        if item.relevant && !item.prev_relevant {
+            if let Some(ref default_val) = item.default_value {
+                let current = values.get(&item.path);
+                let is_empty = match current {
+                    None | Some(Value::Null) => true,
+                    Some(Value::String(s)) => s.is_empty(),
+                    _ => false,
+                };
+                if is_empty {
+                    values.insert(item.path.clone(), default_val.clone());
+                    env.set_field(&item.path, json_to_fel(default_val));
+                }
+            }
+        }
+
+        // 9a: excludedValue
+        if !item.relevant {
+            if let Some(ref ev) = item.excluded_value {
+                if ev == "null" {
+                    env.set_field(&item.path, FelValue::Null);
+                }
+            }
+        }
+
+        let own_readonly = if let Some(ref expr) = item.readonly_expr {
+            eval_bool(expr, env, false)
+        } else {
+            false
+        };
+        item.readonly = own_readonly || parent_readonly;
+
+        if item.relevant {
+            if let Some(ref expr) = item.required_expr {
+                item.required = eval_bool(expr, env, false);
+            }
+        } else {
+            item.required = false;
+        }
+
+        if let Some(val) = values.get(&item.path) {
+            item.value = val.clone();
+        }
+
+        if let Some(ref expr) = item.calculate {
+            if let Ok(parsed) = parse(expr) {
+                let result = evaluate(&parsed, env);
+                let json_val = fel_to_json(&result.value);
+                values.insert(item.path.clone(), json_val.clone());
+                item.value = json_val;
+                env.set_field(&item.path, result.value);
+            }
+        }
+
+        env.set_mip(
+            &item.path,
+            MipState {
+                valid: true,
+                relevant: item.relevant,
+                readonly: item.readonly,
+                required: item.required,
+            },
+        );
+
+        evaluate_items_with_inheritance_scoped(
+            &mut item.children,
+            env,
+            values,
+            item.relevant,
+            item.readonly,
+            scoped_vars,
         );
     }
 }
@@ -824,6 +1048,12 @@ fn validate_shape(
 ) {
     let target = shape.get("target").and_then(|v| v.as_str()).unwrap_or("");
 
+    // Wildcard shape target: expand and evaluate per-instance
+    if is_wildcard_bind(target) {
+        validate_wildcard_shape(shape, shapes_by_id, env, values, items, results);
+        return;
+    }
+
     // §5.6 rule 1: non-relevant targets suppress shape evaluation
     if target != "#" && !target.is_empty() {
         if let Some(item) = find_item_by_path(items, target) {
@@ -870,6 +1100,94 @@ fn validate_shape(
     env.data.remove("");
     if let Some(prev) = prev_dollar {
         env.data.insert(String::new(), prev);
+    }
+}
+
+/// Validate a shape with a wildcard target, evaluating per concrete instance.
+fn validate_wildcard_shape(
+    shape: &Value,
+    _shapes_by_id: &HashMap<String, &Value>,
+    env: &mut FormspecEnvironment,
+    values: &HashMap<String, Value>,
+    items: &[ItemInfo],
+    results: &mut Vec<ValidationResult>,
+) {
+    let target = shape.get("target").and_then(|v| v.as_str()).unwrap_or("");
+    let severity = shape
+        .get("severity")
+        .and_then(|v| v.as_str())
+        .unwrap_or("error");
+    let message = shape
+        .get("message")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Shape constraint failed");
+
+    // Check activeWhen before expanding
+    if let Some(active_when) = shape.get("activeWhen").and_then(|v| v.as_str()) {
+        if !eval_bool(active_when, env, true) {
+            return;
+        }
+    }
+
+    let base = match wildcard_base(target) {
+        Some(b) => b.to_string(),
+        None => return,
+    };
+
+    let concrete_paths = expand_wildcard_path(target, values);
+
+    for concrete_path in &concrete_paths {
+        // §5.6 rule 1: skip non-relevant targets
+        if let Some(item) = find_item_by_path(items, concrete_path) {
+            if !item.relevant {
+                continue;
+            }
+        }
+
+        // Extract the index from the concrete path to instantiate the constraint
+        let index = match concrete_path.find('[') {
+            Some(pos) => {
+                let rest = &concrete_path[pos + 1..];
+                rest.split(']')
+                    .next()
+                    .and_then(|s| s.parse::<usize>().ok())
+                    .unwrap_or(0)
+            }
+            None => continue,
+        };
+
+        // Build a row-scoped environment: instantiate [*] references in the constraint
+        let prev_dollar = env.data.remove("");
+        if let Some(val) = values.get(concrete_path.as_str()) {
+            env.data.insert(String::new(), json_to_fel(val));
+        }
+
+        // Create an instantiated shape for this row
+        let constraint_expr = shape
+            .get("constraint")
+            .and_then(|v| v.as_str())
+            .map(|expr| instantiate_wildcard_expr(expr, &base, index));
+
+        let passes = if let Some(ref expr) = constraint_expr {
+            constraint_passes(&evaluate_shape_expression(expr, env))
+        } else {
+            true
+        };
+
+        if !passes {
+            results.push(ValidationResult {
+                path: concrete_path.clone(),
+                severity: severity.to_string(),
+                kind: "shape".to_string(),
+                message: message.to_string(),
+            });
+        }
+
+        // Restore bare $
+        env.data.remove("");
+        if let Some(prev) = prev_dollar {
+            env.data.insert(String::new(), prev);
+        }
     }
 }
 
@@ -1189,7 +1507,14 @@ pub fn evaluate_definition_with_trigger(
     let mut seeded_data = data.clone();
     seed_initial_values(&items, &mut seeded_data);
 
-    // Phase 2: Recalculate (with variables, whitespace, inheritance)
+    // Phase 1.6: Expand repeatable groups into concrete indexed instances
+    expand_repeat_instances(&mut items, &seeded_data);
+
+    // Phase 1.7: Apply wildcard binds to expanded concrete items
+    let binds = definition.get("binds");
+    apply_wildcard_binds(&mut items, binds, &seeded_data);
+
+    // Phase 2: Recalculate (with variables, whitespace, inheritance, scoped variables)
     let (mut values, var_values, cycle_err) = recalculate(&mut items, &seeded_data, definition);
 
     // Phase 3: Revalidate
@@ -1226,6 +1551,114 @@ pub fn evaluate_definition_with_trigger(
         non_relevant,
         variables,
     }
+}
+
+/// Apply wildcard binds to expanded concrete items.
+///
+/// For each wildcard bind (path contains `[*]`), find matching concrete items
+/// and set their bind properties (calculate, constraint, etc.) with the
+/// wildcard expression instantiated for their concrete index.
+fn apply_wildcard_binds(
+    items: &mut Vec<ItemInfo>,
+    binds: Option<&Value>,
+    data: &HashMap<String, Value>,
+) {
+    let wildcard_binds = collect_wildcard_binds(binds);
+    if wildcard_binds.is_empty() {
+        return;
+    }
+
+    for (bind_path, bind_obj) in &wildcard_binds {
+        let base = match wildcard_base(bind_path) {
+            Some(b) => b.to_string(),
+            None => continue,
+        };
+        let count = detect_repeat_count(&base, data);
+        for i in 0..count {
+            let concrete_path = bind_path.replace("[*]", &format!("[{}]", i));
+            if let Some(item) = find_item_by_path_mut(items, &concrete_path) {
+                // Instantiate expressions with the concrete index
+                item.calculate = bind_obj
+                    .get("calculate")
+                    .and_then(|v| v.as_str())
+                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
+                item.constraint = bind_obj
+                    .get("constraint")
+                    .and_then(|v| v.as_str())
+                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
+                item.constraint_message = bind_obj
+                    .get("constraintMessage")
+                    .and_then(|v| v.as_str())
+                    .map(String::from);
+                item.relevance = bind_obj
+                    .get("relevant")
+                    .and_then(|v| v.as_str())
+                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
+                item.required_expr = bind_obj
+                    .get("required")
+                    .and_then(|v| v.as_str())
+                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
+                item.readonly_expr = bind_obj
+                    .get("readonly")
+                    .and_then(|v| v.as_str())
+                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
+                item.whitespace = bind_obj
+                    .get("whitespace")
+                    .and_then(|v| v.as_str())
+                    .map(String::from);
+                item.nrb = bind_obj
+                    .get("nonRelevantBehavior")
+                    .and_then(|v| v.as_str())
+                    .map(String::from);
+                item.excluded_value = bind_obj
+                    .get("excludedValue")
+                    .and_then(|v| v.as_str())
+                    .map(String::from);
+            }
+        }
+    }
+}
+
+/// Collect wildcard bind entries from the binds object/array.
+fn collect_wildcard_binds(binds: Option<&Value>) -> Vec<(String, serde_json::Map<String, Value>)> {
+    let mut result = Vec::new();
+    match binds {
+        Some(Value::Object(map)) => {
+            for (path, val) in map {
+                if is_wildcard_bind(path) {
+                    if let Some(obj) = val.as_object() {
+                        result.push((path.clone(), obj.clone()));
+                    }
+                }
+            }
+        }
+        Some(Value::Array(arr)) => {
+            for bind in arr {
+                if let Some(path) = bind.get("path").and_then(|v| v.as_str()) {
+                    if is_wildcard_bind(path) {
+                        if let Some(obj) = bind.as_object() {
+                            result.push((path.to_string(), obj.clone()));
+                        }
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+    result
+}
+
+/// Mutable version of find_item_by_path for applying wildcard binds.
+fn find_item_by_path_mut<'a>(items: &'a mut [ItemInfo], path: &str) -> Option<&'a mut ItemInfo> {
+    for item in items.iter_mut() {
+        if item.path == path {
+            return Some(item);
+        }
+        if let Some(found) = find_item_by_path_mut(&mut item.children, path) {
+            return Some(found);
+        }
+    }
+    None
 }
 
 // ── Screener evaluation ─────────────────────────────────────────
@@ -3034,14 +3467,10 @@ mod tests {
 
     // ── LOW: Variable scope ──────────────────────────────────────
 
-    /// The `scope` field on VariableDef is parsed but not used in evaluation.
-    /// This test documents the current behavior: scope is stored but has no
-    /// effect on variable resolution.
-    // NOTE: scope is intentionally unused in the current implementation.
-    // The spec does not yet define scope semantics for variables, so it is
-    // parsed and preserved for forward-compatibility but not enforced.
+    /// A variable scoped to a non-ancestor path is invisible to the item.
+    /// `scope: "local"` is not an ancestor of `result`, so @scoped_var is null.
     #[test]
-    fn variable_scope_is_parsed_but_unused() {
+    fn variable_scoped_to_non_ancestor_is_invisible() {
         let def = json!({
             "items": [
                 { "key": "result", "dataType": "integer" }
@@ -3057,12 +3486,13 @@ mod tests {
         let data = HashMap::new();
         let result = evaluate_definition(&def, &data);
 
-        // Variable should evaluate normally despite having a scope value
-        assert_eq!(
-            result.values.get("result"),
-            Some(&json!(42)),
-            "scope field should not prevent variable evaluation"
+        // "local" is not an ancestor of "result", so @scoped_var is not visible
+        let val = result.values.get("result");
+        assert!(
+            val.is_none() || val == Some(&Value::Null),
+            "scoped variable at non-ancestor 'local' should not be visible to 'result'"
         );
+        // But the variable was still evaluated
         assert_eq!(result.variables.get("scoped_var"), Some(&json!(42)));
     }
 
@@ -4238,5 +4668,510 @@ mod tests {
         data.insert("base".to_string(), json!(10));
         let result = evaluate_definition(&def, &data);
         assert_eq!(result.values.get("doubled"), Some(&json!(20)));
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Wave 4 — Task 12: Wildcard bind paths + per-instance eval
+    // ══════════════════════════════════════════════════════════════
+
+    /// Wildcard bind path `items[*].total` applies calculate per concrete instance.
+    /// Data has 2 instances → both get calculated values.
+    #[test]
+    fn wildcard_bind_per_instance_calculate() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "items",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "qty", "dataType": "integer" },
+                        { "key": "price", "dataType": "decimal" },
+                        { "key": "total", "dataType": "decimal" }
+                    ]
+                }
+            ],
+            "binds": {
+                "items[*].total": { "calculate": "$items[*].qty * $items[*].price" }
+            }
+        });
+
+        let mut data = HashMap::new();
+        data.insert("items[0].qty".to_string(), json!(2));
+        data.insert("items[0].price".to_string(), json!(10));
+        data.insert("items[1].qty".to_string(), json!(5));
+        data.insert("items[1].price".to_string(), json!(3));
+
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(
+            result.values.get("items[0].total"),
+            Some(&json!(20)),
+            "instance 0: 2 * 10 = 20"
+        );
+        assert_eq!(
+            result.values.get("items[1].total"),
+            Some(&json!(15)),
+            "instance 1: 5 * 3 = 15"
+        );
+    }
+
+    /// Wildcard bind constraint evaluates per instance with bare `$` resolving
+    /// to each concrete field value.
+    #[test]
+    fn wildcard_bind_per_instance_constraint() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "rows",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "amount", "dataType": "decimal" }
+                    ]
+                }
+            ],
+            "binds": {
+                "rows[*].amount": {
+                    "constraint": "$ >= 0",
+                    "constraintMessage": "Amount must be non-negative"
+                }
+            }
+        });
+
+        let mut data = HashMap::new();
+        data.insert("rows[0].amount".to_string(), json!(100));
+        data.insert("rows[1].amount".to_string(), json!(-5));
+        data.insert("rows[2].amount".to_string(), json!(50));
+
+        let result = evaluate_definition(&def, &data);
+        let errors: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.kind == "bind" && v.message.contains("non-negative"))
+            .collect();
+        assert_eq!(errors.len(), 1, "only instance 1 should fail");
+        assert_eq!(errors[0].path, "rows[1].amount");
+    }
+
+    /// Wildcard shape target expands to concrete 0-based indexed paths.
+    #[test]
+    fn wildcard_shape_target_expands_to_concrete_paths() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "entries",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "value", "dataType": "integer" }
+                    ]
+                }
+            ],
+            "shapes": [{
+                "id": "s1",
+                "target": "entries[*].value",
+                "constraint": "$ > 0",
+                "severity": "error",
+                "message": "Must be positive"
+            }]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("entries[0].value".to_string(), json!(10));
+        data.insert("entries[1].value".to_string(), json!(-3));
+        data.insert("entries[2].value".to_string(), json!(7));
+
+        let result = evaluate_definition(&def, &data);
+        let shape_errors: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.kind == "shape")
+            .collect();
+        assert_eq!(shape_errors.len(), 1, "only instance 1 should fail");
+        assert_eq!(
+            shape_errors[0].path, "entries[1].value",
+            "path should be concrete 0-based"
+        );
+    }
+
+    /// Wildcard shape uses row-scoped sibling references.
+    #[test]
+    fn wildcard_shape_row_scoped_sibling_references() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "rows",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "start", "dataType": "integer" },
+                        { "key": "end", "dataType": "integer" }
+                    ]
+                }
+            ],
+            "shapes": [{
+                "id": "s1",
+                "target": "rows[*].end",
+                "constraint": "$rows[*].end > $rows[*].start",
+                "severity": "error",
+                "message": "End must exceed start"
+            }]
+        });
+
+        let mut data = HashMap::new();
+        // Row 0: start=1, end=10 → passes
+        data.insert("rows[0].start".to_string(), json!(1));
+        data.insert("rows[0].end".to_string(), json!(10));
+        // Row 1: start=20, end=5 → fails
+        data.insert("rows[1].start".to_string(), json!(20));
+        data.insert("rows[1].end".to_string(), json!(5));
+
+        let result = evaluate_definition(&def, &data);
+        let shape_errors: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.kind == "shape" && v.message == "End must exceed start")
+            .collect();
+        assert_eq!(shape_errors.len(), 1, "only row 1 should fail");
+        assert_eq!(shape_errors[0].path, "rows[1].end");
+    }
+
+    /// Repeat instance expansion creates concrete children in the item tree.
+    #[test]
+    fn repeat_instance_expansion_creates_concrete_items() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "items",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "name", "dataType": "string" }
+                    ]
+                }
+            ]
+        });
+
+        let mut items = rebuild_item_tree(&def);
+        let mut data = HashMap::new();
+        data.insert("items[0].name".to_string(), json!("first"));
+        data.insert("items[1].name".to_string(), json!("second"));
+
+        expand_repeat_instances(&mut items, &data);
+
+        // The repeatable group should now have concrete children
+        assert!(
+            find_item_by_path(&items, "items[0].name").is_some(),
+            "items[0].name should exist after expansion"
+        );
+        assert!(
+            find_item_by_path(&items, "items[1].name").is_some(),
+            "items[1].name should exist after expansion"
+        );
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Wave 4 — Task 13: Scoped variables
+    // ══════════════════════════════════════════════════════════════
+
+    /// A variable scoped to a group is visible to items within that group.
+    #[test]
+    fn scoped_variable_visible_within_group() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "section",
+                    "children": [
+                        { "key": "field", "dataType": "integer" }
+                    ]
+                }
+            ],
+            "binds": {
+                "section.field": { "calculate": "@rate * 2" }
+            },
+            "variables": [
+                { "name": "rate", "expression": "10", "scope": "section" }
+            ]
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(
+            result.values.get("section.field"),
+            Some(&json!(20)),
+            "scoped variable @rate should be visible to section.field"
+        );
+    }
+
+    /// A variable scoped to a group is NOT visible to items outside that group.
+    #[test]
+    fn scoped_variable_invisible_outside_group() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "section",
+                    "children": [
+                        { "key": "inner", "dataType": "integer" }
+                    ]
+                },
+                { "key": "outer", "dataType": "integer" }
+            ],
+            "binds": {
+                "section.inner": { "calculate": "@rate * 2" },
+                "outer": { "calculate": "@rate * 3" }
+            },
+            "variables": [
+                { "name": "rate", "expression": "10", "scope": "section" }
+            ]
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        // Inner can see the scoped variable
+        assert_eq!(
+            result.values.get("section.inner"),
+            Some(&json!(20)),
+            "inner field within scope should see @rate"
+        );
+        // Outer cannot — @rate is null, so the calculate yields null
+        let outer_val = result.values.get("outer");
+        assert!(
+            outer_val.is_none() || outer_val == Some(&Value::Null),
+            "outer field outside scope should not see @rate (got {:?})",
+            outer_val
+        );
+    }
+
+    /// Global scope variable (scope="#") is visible everywhere.
+    #[test]
+    fn global_scope_variable_visible_everywhere() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "group",
+                    "children": [
+                        { "key": "nested", "dataType": "integer" }
+                    ]
+                },
+                { "key": "top", "dataType": "integer" }
+            ],
+            "binds": {
+                "group.nested": { "calculate": "@globalRate * 2" },
+                "top": { "calculate": "@globalRate * 3" }
+            },
+            "variables": [
+                { "name": "globalRate", "expression": "5", "scope": "#" }
+            ]
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(
+            result.values.get("group.nested"),
+            Some(&json!(10)),
+            "nested field should see global variable"
+        );
+        assert_eq!(
+            result.values.get("top"),
+            Some(&json!(15)),
+            "top-level field should see global variable"
+        );
+    }
+
+    /// Nearest scope wins when same variable name exists at multiple scopes.
+    #[test]
+    fn scoped_variable_nearest_scope_wins() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "section",
+                    "children": [
+                        { "key": "field", "dataType": "integer" }
+                    ]
+                },
+                { "key": "top", "dataType": "integer" }
+            ],
+            "binds": {
+                "section.field": { "calculate": "@rate" },
+                "top": { "calculate": "@rate" }
+            },
+            "variables": [
+                { "name": "rate", "expression": "100", "scope": "#" },
+                { "name": "rate", "expression": "999", "scope": "section" }
+            ]
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        // section.field should see the section-scoped rate (999)
+        assert_eq!(
+            result.values.get("section.field"),
+            Some(&json!(999)),
+            "nearest scope (section) should win for section.field"
+        );
+        // top should see the global rate (100)
+        assert_eq!(
+            result.values.get("top"),
+            Some(&json!(100)),
+            "global scope should apply for top-level field"
+        );
+    }
+
+    // ── Edge cases: wildcard binds ───────────────────────────────
+
+    /// Wildcard bind with array-style binds (not just object-style).
+    #[test]
+    fn wildcard_bind_array_style() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "rows",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "x", "dataType": "integer" },
+                        { "key": "doubled", "dataType": "integer" }
+                    ]
+                }
+            ],
+            "binds": [
+                { "path": "rows[*].doubled", "calculate": "$rows[*].x * 2" }
+            ]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("rows[0].x".to_string(), json!(5));
+        data.insert("rows[1].x".to_string(), json!(10));
+
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(
+            result.values.get("rows[0].doubled"),
+            Some(&json!(10)),
+            "array-style wildcard bind: 5 * 2 = 10"
+        );
+        assert_eq!(
+            result.values.get("rows[1].doubled"),
+            Some(&json!(20)),
+            "array-style wildcard bind: 10 * 2 = 20"
+        );
+    }
+
+    /// Wildcard bind with zero instances produces no items and no errors.
+    #[test]
+    fn wildcard_bind_zero_instances() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "rows",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "val", "dataType": "integer" }
+                    ]
+                }
+            ],
+            "binds": {
+                "rows[*].val": { "constraint": "$ > 0", "constraintMessage": "fail" }
+            }
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        assert!(
+            result.validations.is_empty(),
+            "zero instances should produce no validation errors"
+        );
+    }
+
+    /// Wildcard bind required validation per-instance.
+    #[test]
+    fn wildcard_bind_required_per_instance() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "items",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "name", "dataType": "string" }
+                    ]
+                }
+            ],
+            "binds": {
+                "items[*].name": { "required": "true" }
+            }
+        });
+
+        let mut data = HashMap::new();
+        data.insert("items[0].name".to_string(), json!("Alice"));
+        data.insert("items[1].name".to_string(), json!(""));
+
+        let result = evaluate_definition(&def, &data);
+        let req_errors: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.message.contains("Required"))
+            .collect();
+        assert_eq!(req_errors.len(), 1, "only instance 1 should fail required");
+        assert_eq!(req_errors[0].path, "items[1].name");
+    }
+
+    // ── Edge cases: scoped variables ────────────────────────────
+
+    /// Default scope is global (#) when scope field is absent.
+    #[test]
+    fn variable_default_scope_is_global() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "group",
+                    "children": [
+                        { "key": "field", "dataType": "integer" }
+                    ]
+                }
+            ],
+            "binds": {
+                "group.field": { "calculate": "@v" }
+            },
+            "variables": [
+                { "name": "v", "expression": "77" }
+            ]
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(
+            result.values.get("group.field"),
+            Some(&json!(77)),
+            "variable with no scope should default to global (#)"
+        );
+    }
+
+    /// visible_variables helper correctly filters by scope.
+    #[test]
+    fn visible_variables_unit_test() {
+        let mut all_vars = HashMap::new();
+        all_vars.insert("#:global_var".to_string(), json!(1));
+        all_vars.insert("section:local_var".to_string(), json!(2));
+        all_vars.insert("other:other_var".to_string(), json!(3));
+
+        // Item at "section.field" should see global_var and local_var but not other_var
+        let visible = visible_variables(&all_vars, "section.field");
+        assert_eq!(visible.get("global_var"), Some(&json!(1)));
+        assert_eq!(visible.get("local_var"), Some(&json!(2)));
+        assert_eq!(visible.get("other_var"), None);
+
+        // Item at "top" should see only global_var
+        let visible_top = visible_variables(&all_vars, "top");
+        assert_eq!(visible_top.get("global_var"), Some(&json!(1)));
+        assert_eq!(visible_top.get("local_var"), None);
+    }
+
+    /// expand_repeat_instances does nothing for non-repeatable groups.
+    #[test]
+    fn expand_repeat_instances_no_repeatables() {
+        let def = json!({
+            "items": [
+                { "key": "name", "dataType": "string" }
+            ]
+        });
+
+        let mut items = rebuild_item_tree(&def);
+        let data = HashMap::new();
+        expand_repeat_instances(&mut items, &data);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].key, "name");
     }
 }
