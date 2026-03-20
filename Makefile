@@ -25,8 +25,11 @@ test-studio-e2e:
 test-python:
 	pytest
 
+WASM_OUT = packages/formspec-engine/wasm-pkg
+
 build-wasm:
-	wasm-pack build crates/formspec-wasm --target web --out-dir ../../packages/formspec-engine/wasm-pkg
+	wasm-pack build crates/formspec-wasm --target web --out-dir ../../$(WASM_OUT) --no-opt
+	wasm-opt -Os --enable-bulk-memory --enable-nontrapping-float-to-int $(WASM_OUT)/formspec_wasm_bg.wasm -o $(WASM_OUT)/formspec_wasm_bg.wasm
 
 test-rust:
 	cargo test --workspace --exclude formspec-py

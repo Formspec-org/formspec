@@ -9,7 +9,7 @@
     "site"
   ],
   "scripts": {
-    "build:wasm": "wasm-pack build crates/formspec-wasm --target web --out-dir ../../packages/formspec-engine/wasm-pkg",
+    "build:wasm": "wasm-pack build crates/formspec-wasm --target web --out-dir ../../packages/formspec-engine/wasm-pkg --no-opt && wasm-opt -Os --enable-bulk-memory --enable-nontrapping-float-to-int packages/formspec-engine/wasm-pkg/formspec_wasm_bg.wasm -o packages/formspec-engine/wasm-pkg/formspec_wasm_bg.wasm",
     "build": "npm run build:wasm && npm run build --workspace=formspec-types && npm run build --workspace=formspec-layout && npm run build --workspace=formspec-engine && npm run build --workspace=formspec-core && npm run build --workspace=formspec-webcomponent && npm run build --workspace=formspec-adapters && npm run build --workspace=formspec-studio-core && npm run build --workspace=formspec-mcp && npm run build --workspace=formspec-studio",
     "test:serve": "vite --port 8080 --host 127.0.0.1",
     "start:site": "npm run dev --workspace=formspec-site",

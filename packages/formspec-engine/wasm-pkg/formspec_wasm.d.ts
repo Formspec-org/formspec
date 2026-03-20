@@ -116,31 +116,29 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly evalFEL: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly evalFEL: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly parseFEL: (a: number, b: number) => number;
-    readonly printFEL: (a: number, b: number) => [number, number, number, number];
-    readonly getFELDependencies: (a: number, b: number) => [number, number, number, number];
-    readonly extractDependencies: (a: number, b: number) => [number, number, number, number];
-    readonly analyzeFEL: (a: number, b: number) => [number, number, number, number];
-    readonly normalizeIndexedPath: (a: number, b: number) => [number, number];
-    readonly detectDocumentType: (a: number, b: number) => [number, number, number];
-    readonly lintDocument: (a: number, b: number) => [number, number, number, number];
-    readonly lintDocumentWithRegistries: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-    readonly evaluateDefinition: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-    readonly assembleDefinition: (a: number, b: number, c: number, d: number) => [number, number, number, number];
-    readonly executeMapping: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-    readonly parseRegistry: (a: number, b: number) => [number, number, number, number];
-    readonly findRegistryEntry: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly printFEL: (a: number, b: number, c: number) => void;
+    readonly getFELDependencies: (a: number, b: number, c: number) => void;
+    readonly extractDependencies: (a: number, b: number, c: number) => void;
+    readonly analyzeFEL: (a: number, b: number, c: number) => void;
+    readonly normalizeIndexedPath: (a: number, b: number, c: number) => void;
+    readonly detectDocumentType: (a: number, b: number, c: number) => void;
+    readonly lintDocument: (a: number, b: number, c: number) => void;
+    readonly lintDocumentWithRegistries: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly evaluateDefinition: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly assembleDefinition: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly executeMapping: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly parseRegistry: (a: number, b: number, c: number) => void;
+    readonly findRegistryEntry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly validateLifecycleTransition: (a: number, b: number, c: number, d: number) => number;
-    readonly wellKnownRegistryUrl: (a: number, b: number) => [number, number];
-    readonly generateChangelog: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-    readonly executeMappingDoc: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-    readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __wbindgen_malloc: (a: number, b: number) => number;
-    readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-    readonly __externref_table_dealloc: (a: number) => void;
-    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-    readonly __wbindgen_start: () => void;
+    readonly wellKnownRegistryUrl: (a: number, b: number, c: number) => void;
+    readonly generateChangelog: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly executeMappingDoc: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+    readonly __wbindgen_export: (a: number, b: number) => number;
+    readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_export3: (a: number, b: number, c: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
