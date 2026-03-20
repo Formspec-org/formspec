@@ -401,6 +401,40 @@ pub fn expand_wildcard_path(pattern: &str, data: &HashMap<String, Value>) -> Vec
         .collect()
 }
 
+/// Flatten nested data: converts array-valued entries into indexed paths.
+/// `{"rows": [{"a": 1, "b": 2}]}` → `{"rows[0].a": 1, "rows[0].b": 2}`.
+/// Already-flat entries are passed through unchanged.
+fn flatten_nested_data(data: &HashMap<String, Value>) -> HashMap<String, Value> {
+    let mut flat = HashMap::new();
+    for (key, value) in data {
+        flatten_value(&mut flat, key, value);
+    }
+    flat
+}
+
+fn flatten_value(out: &mut HashMap<String, Value>, prefix: &str, value: &Value) {
+    match value {
+        Value::Array(arr) => {
+            for (i, elem) in arr.iter().enumerate() {
+                let indexed = format!("{prefix}[{i}]");
+                match elem {
+                    Value::Object(map) => {
+                        for (k, v) in map {
+                            flatten_value(out, &format!("{indexed}.{k}"), v);
+                        }
+                    }
+                    _ => {
+                        out.insert(indexed, elem.clone());
+                    }
+                }
+            }
+        }
+        _ => {
+            out.insert(prefix.to_string(), value.clone());
+        }
+    }
+}
+
 /// Detect the repeat count for a given base path by looking at the data keys.
 /// Supports both indexed-key format (`base[0].field`, `base[1].field`) and
 /// array-valued format (`base` -> `[...]`).
@@ -479,6 +513,45 @@ fn instantiate_wildcard_expr(expr: &str, base: &str, index: usize) -> String {
     let wildcard_pattern = format!("{}[*]", base);
     let concrete = format!("{}[{}]", base, index);
     expr.replace(&wildcard_pattern, &concrete)
+}
+
+/// Rewrite bare `$sibling` references in a wildcard bind expression to
+/// concrete paths like `$base[index].sibling`. This handles the common
+/// pattern where a wildcard bind uses `$enabled` to mean `$rows[0].enabled`.
+fn instantiate_sibling_refs(expr: &str, base: &str, index: usize, sibling_keys: &[String]) -> String {
+    let mut result = expr.to_string();
+    // Sort by length descending to avoid replacing substrings of longer names
+    let mut keys: Vec<&String> = sibling_keys.iter().collect();
+    keys.sort_by(|a, b| b.len().cmp(&a.len()));
+    for key in keys {
+        let bare = format!("${}", key);
+        let concrete = format!("${}[{}].{}", base, index, key);
+        // Only replace if it's a standalone reference (not already qualified)
+        // Check that the char before $ (if any) is not alphanumeric and
+        // the char after the key is not alphanumeric or '['
+        let mut new_result = String::new();
+        let mut i = 0;
+        let bytes = result.as_bytes();
+        while i < bytes.len() {
+            if result[i..].starts_with(&bare) {
+                let before_ok = i == 0 || !bytes[i - 1].is_ascii_alphanumeric();
+                let after_pos = i + bare.len();
+                let after_ok = after_pos >= bytes.len()
+                    || (!bytes[after_pos].is_ascii_alphanumeric()
+                        && bytes[after_pos] != b'_'
+                        && bytes[after_pos] != b'[');
+                if before_ok && after_ok {
+                    new_result.push_str(&concrete);
+                    i += bare.len();
+                    continue;
+                }
+            }
+            new_result.push(bytes[i] as char);
+            i += 1;
+        }
+        result = new_result;
+    }
+    result
 }
 
 /// Extract the base path from a wildcard bind path.
@@ -1330,15 +1403,31 @@ fn resolve_value_by_path(values: &HashMap<String, Value>, path: &str) -> Value {
     if let Some(val) = values.get(path) {
         return val.clone();
     }
-    // Walk nested objects
+    // Walk nested objects/arrays, handling indexed segments like "rows[0]"
     let segments: Vec<&str> = path.split('.').collect();
-    if segments.len() > 1 {
-        if let Some(root) = values.get(segments[0]) {
-            let mut current = root;
+    if segments.len() >= 1 {
+        let (root_key, root_index) = parse_path_segment(segments[0]);
+        if let Some(root) = values.get(root_key) {
+            let mut current = match root_index {
+                Some(idx) => match root.as_array().and_then(|a| a.get(idx)) {
+                    Some(v) => v,
+                    None => return Value::Null,
+                },
+                None => root,
+            };
             for seg in &segments[1..] {
+                let (key, index) = parse_path_segment(seg);
                 match current {
-                    Value::Object(map) => match map.get(*seg) {
-                        Some(v) => current = v,
+                    Value::Object(map) => match map.get(key) {
+                        Some(v) => {
+                            current = match index {
+                                Some(idx) => match v.as_array().and_then(|a| a.get(idx)) {
+                                    Some(el) => el,
+                                    None => return Value::Null,
+                                },
+                                None => v,
+                            };
+                        }
                         None => return Value::Null,
                     },
                     _ => return Value::Null,
@@ -1348,6 +1437,22 @@ fn resolve_value_by_path(values: &HashMap<String, Value>, path: &str) -> Value {
         }
     }
     Value::Null
+}
+
+/// Parse a path segment like "rows[0]" into ("rows", Some(0)) or "name" into ("name", None).
+fn parse_path_segment(seg: &str) -> (&str, Option<usize>) {
+    if let Some(bracket_pos) = seg.find('[') {
+        let key = &seg[..bracket_pos];
+        let rest = &seg[bracket_pos + 1..];
+        if let Some(idx_str) = rest.strip_suffix(']') {
+            if let Ok(idx) = idx_str.parse::<usize>() {
+                return (key, Some(idx));
+            }
+        }
+        (key, None)
+    } else {
+        (seg, None)
+    }
 }
 
 /// Apply excludedValue="null" to the FEL environment for non-relevant items (9a).
@@ -1500,11 +1605,16 @@ pub fn evaluate_definition_with_trigger(
     data: &HashMap<String, Value>,
     trigger: EvalTrigger,
 ) -> EvaluationResult {
+    // Phase 0: Flatten nested data into indexed paths.
+    // Converts `{"rows": [{"a": 1}]}` → `{"rows[0].a": 1}` so the FEL
+    // evaluator can resolve `$rows[0].a` via flat key lookup.
+    let flat_data = flatten_nested_data(data);
+
     // Phase 1: Rebuild
     let mut items = rebuild_item_tree(definition);
 
     // Phase 1.5: Seed initial values for missing fields (9e)
-    let mut seeded_data = data.clone();
+    let mut seeded_data = flat_data;
     seed_initial_values(&items, &mut seeded_data);
 
     // Phase 1.6: Expand repeatable groups into concrete indexed instances
@@ -1573,50 +1683,66 @@ fn apply_wildcard_binds(
             Some(b) => b.to_string(),
             None => continue,
         };
+
+        // Collect sibling keys for bare-reference rewriting.
+        // Find the repeatable group and get its template children's keys.
+        let sibling_keys = collect_sibling_keys(items, &base);
+
         let count = detect_repeat_count(&base, data);
         for i in 0..count {
             let concrete_path = bind_path.replace("[*]", &format!("[{}]", i));
             if let Some(item) = find_item_by_path_mut(items, &concrete_path) {
-                // Instantiate expressions with the concrete index
-                item.calculate = bind_obj
-                    .get("calculate")
-                    .and_then(|v| v.as_str())
-                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
-                item.constraint = bind_obj
-                    .get("constraint")
-                    .and_then(|v| v.as_str())
-                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
-                item.constraint_message = bind_obj
-                    .get("constraintMessage")
-                    .and_then(|v| v.as_str())
-                    .map(String::from);
-                item.relevance = bind_obj
-                    .get("relevant")
-                    .and_then(|v| v.as_str())
-                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
-                item.required_expr = bind_obj
-                    .get("required")
-                    .and_then(|v| v.as_str())
-                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
-                item.readonly_expr = bind_obj
-                    .get("readonly")
-                    .and_then(|v| v.as_str())
-                    .map(|expr| instantiate_wildcard_expr(expr, &base, i));
-                item.whitespace = bind_obj
-                    .get("whitespace")
-                    .and_then(|v| v.as_str())
-                    .map(String::from);
-                item.nrb = bind_obj
-                    .get("nonRelevantBehavior")
-                    .and_then(|v| v.as_str())
-                    .map(String::from);
-                item.excluded_value = bind_obj
-                    .get("excludedValue")
-                    .and_then(|v| v.as_str())
-                    .map(String::from);
+                // Instantiate: first replace [*] → [i], then rewrite bare siblings
+                let inst = |expr: &str| -> String {
+                    let s = instantiate_wildcard_expr(expr, &base, i);
+                    instantiate_sibling_refs(&s, &base, i, &sibling_keys)
+                };
+
+                // Merge bind fields — only overwrite when the bind specifies the field.
+                if let Some(expr) = bind_obj.get("calculate").and_then(|v| v.as_str()) {
+                    item.calculate = Some(inst(expr));
+                }
+                if let Some(expr) = bind_obj.get("constraint").and_then(|v| v.as_str()) {
+                    item.constraint = Some(inst(expr));
+                }
+                if let Some(msg) = bind_obj.get("constraintMessage").and_then(|v| v.as_str()) {
+                    item.constraint_message = Some(msg.to_string());
+                }
+                if let Some(expr) = bind_obj.get("relevant").and_then(|v| v.as_str()) {
+                    item.relevance = Some(inst(expr));
+                }
+                if let Some(expr) = bind_obj.get("required").and_then(|v| v.as_str()) {
+                    item.required_expr = Some(inst(expr));
+                }
+                if let Some(expr) = bind_obj.get("readonly").and_then(|v| v.as_str()) {
+                    item.readonly_expr = Some(inst(expr));
+                }
+                if let Some(ws) = bind_obj.get("whitespace").and_then(|v| v.as_str()) {
+                    item.whitespace = Some(ws.to_string());
+                }
+                if let Some(nrb) = bind_obj.get("nonRelevantBehavior").and_then(|v| v.as_str()) {
+                    item.nrb = Some(nrb.to_string());
+                }
+                if let Some(ev) = bind_obj.get("excludedValue").and_then(|v| v.as_str()) {
+                    item.excluded_value = Some(ev.to_string());
+                }
             }
         }
     }
+}
+
+/// Collect the keys of direct children of a repeatable group for sibling ref rewriting.
+fn collect_sibling_keys(items: &[ItemInfo], base: &str) -> Vec<String> {
+    for item in items {
+        if item.path == base && item.repeatable {
+            return item.children.iter().map(|c| c.key.clone()).collect();
+        }
+        let result = collect_sibling_keys(&item.children, base);
+        if !result.is_empty() {
+            return result;
+        }
+    }
+    vec![]
 }
 
 /// Collect wildcard bind entries from the binds object/array.
@@ -5106,6 +5232,40 @@ mod tests {
             .collect();
         assert_eq!(req_errors.len(), 1, "only instance 1 should fail required");
         assert_eq!(req_errors[0].path, "items[1].name");
+    }
+
+    /// Bare sibling reference in wildcard bind: `$enabled` resolves to
+    /// the same-row field, so non-relevant items suppress required errors.
+    #[test]
+    fn wildcard_bind_bare_sibling_relevance_suppresses_required() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "rows",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "enabled", "dataType": "boolean" },
+                        { "key": "note", "dataType": "string" }
+                    ]
+                }
+            ],
+            "binds": [
+                { "path": "rows[*].note", "relevant": "$enabled" },
+                { "path": "rows[*].note", "required": "true" }
+            ]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("rows[0].enabled".to_string(), json!(false));
+        data.insert("rows[0].note".to_string(), json!(""));
+
+        let result = evaluate_definition(&def, &data);
+        let req_errors: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.message.contains("Required"))
+            .collect();
+        assert!(req_errors.is_empty(), "non-relevant field should suppress required: {:?}", req_errors);
     }
 
     // ── Edge cases: scoped variables ────────────────────────────
