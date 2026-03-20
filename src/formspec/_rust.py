@@ -8,8 +8,10 @@ from decimal import Decimal
 import msgspec
 import formspec_rust
 
-from .fel.errors import Diagnostic, FelSyntaxError, Severity
-from .fel.types import (
+# Direct leaf imports — bypass fel/__init__.py to avoid circular import
+# (formspec.__init__ → _rust → fel.__init__ → _rust would deadlock)
+from formspec.fel.errors import Diagnostic, FelSyntaxError, Severity  # noqa: E402
+from formspec.fel.types import (  # noqa: E402
     FelArray,
     FelBoolean,
     FelDate,
