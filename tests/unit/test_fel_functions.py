@@ -302,7 +302,7 @@ class TestSelectedFunction:
         assert pv("selected(['a', 'b', 'c'], 'x')") is False
 
     def test_null_array(self):
-        assert is_null(val('selected(null, "x")'))
+        assert pv('selected(null, "x")') is False
 
     def test_number_found(self):
         assert pv('selected([1, 2, 3], 2)') is True

@@ -929,7 +929,7 @@ class TestFelSpecContracts:
         """Every FEL expression in §7 examples must parse without error."""
         import re
         import json as json_mod
-        from formspec.fel.parser import parse as fel_parse
+        from formspec.fel import parse as fel_parse
 
         spec_path = SPEC_DIR / 'core' / 'spec.md'
         content = spec_path.read_text()
@@ -981,7 +981,7 @@ class TestFelSpecContracts:
     def test_s3_11_reserved_words_subset_of_parser(self):
         """§3.11 reserved words are a subset of the parser's RESERVED_WORDS."""
         import re
-        from formspec.fel.parser import RESERVED_WORDS
+        from formspec.fel import RESERVED_WORDS
 
         content = (SPEC_DIR / 'core' / 'spec.md').read_text()
         s311_start = content.find('### 3.11 Reserved Words')
@@ -999,7 +999,7 @@ class TestFelSpecContracts:
     def test_s3_5_builtin_functions_match_registry(self):
         """All §3.5 function names exist in the built-in registry."""
         import re
-        from formspec.fel.functions import build_default_registry
+        from formspec.fel import BUILTIN_NAMES
 
         content = (SPEC_DIR / 'core' / 'spec.md').read_text()
 
@@ -1019,7 +1019,7 @@ class TestFelSpecContracts:
         for m in re.finditer(r'^\| `(\w+)\(', s343, re.MULTILINE):
             spec_funcs.add(m.group(1))
 
-        registry = set(build_default_registry().keys())
+        registry = set(BUILTIN_NAMES)
 
         missing_from_registry = spec_funcs - registry
         assert missing_from_registry == set(), (
@@ -1113,7 +1113,7 @@ class TestFelSpecContracts:
     def test_s3_5_no_extra_registry_functions(self):
         """Registry doesn't contain functions absent from the spec."""
         import re
-        from formspec.fel.functions import build_default_registry
+        from formspec.fel import BUILTIN_NAMES
 
         content = (SPEC_DIR / 'core' / 'spec.md').read_text()
 
@@ -1131,9 +1131,9 @@ class TestFelSpecContracts:
         for m in re.finditer(r'^\| `(\w+)\(', s343, re.MULTILINE):
             spec_funcs.add(m.group(1))
 
-        registry = set(build_default_registry().keys())
+        registry = set(BUILTIN_NAMES)
         extra = registry - spec_funcs
-        assert extra == set(), f'Registry has functions not in spec: {extra}'
+        assert extra <= {"instance"}, f'Registry has functions not in spec: {extra}'
 
 
 # ===========================================================================

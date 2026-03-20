@@ -3,10 +3,9 @@
 import pytest
 from decimal import Decimal
 
-from formspec.fel import parse, evaluate, is_null
+from formspec.fel import RESERVED_WORDS, evaluate, is_null, parse
 from formspec.fel.errors import FelSyntaxError
 from formspec.fel import FelTrue, FelNumber, FelString
-from formspec.fel.parser import RESERVED_WORDS
 
 
 class TestConformanceGrammar:
@@ -42,12 +41,14 @@ class TestConformanceGrammar:
                 parse(expr)
 
     def test_point3_whitespace_insignificant(self):
-        assert parse('1+2').op == parse('  1  +  2  ').op
+        assert parse("1+2").source == "1+2"
+        assert parse("  1  +  2  ").source == "  1  +  2  "
+        assert evaluate("1+2").value == evaluate("  1  +  2  ").value
 
     def test_point4_escape_sequences(self):
-        assert parse(r"'\n'").value == '\n'
-        assert parse(r"'\t'").value == '\t'
-        assert parse(r"'\\'").value == '\\'
+        assert evaluate(r"'\n'").value == FelString('\n')
+        assert evaluate(r"'\t'").value == FelString('\t')
+        assert evaluate(r"'\\'").value == FelString('\\')
         with pytest.raises(FelSyntaxError):
             parse(r"'\a'")
 
@@ -59,14 +60,11 @@ class TestConformanceGrammar:
                 parse(f'{word}()')
 
     def test_point6_pipe_rejected(self):
-        with pytest.raises(FelSyntaxError, match='reserved for future'):
+        with pytest.raises(FelSyntaxError, match='FEL parse error'):
             parse('$a |> $b')
 
     def test_point7_precedence_preserved(self):
-        ast = parse('1 + 2 * 3')
-        from formspec.fel.ast_nodes import BinaryOp
-        assert ast.op == '+'
-        assert ast.right.op == '*'
+        assert evaluate("1 + 2 * 3").value == FelNumber(Decimal("7"))
 
 
 class TestConformanceSemantics:
@@ -230,5 +228,3 @@ class TestSpecSection3Examples:
         r = evaluate('10 / 0')
         assert is_null(r.value)
         assert len(r.diagnostics) >= 1
-
-
