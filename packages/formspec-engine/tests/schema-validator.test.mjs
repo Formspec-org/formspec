@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSchemaValidator } from '../dist/index.js';
+import { wasmPlanSchemaValidation } from '../dist/wasm-bridge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -157,4 +158,54 @@ test('component: circular tree reference does not hang', () => {
   const elapsed = Date.now() - start;
   assert.ok(elapsed < 2000, `should complete quickly even with cycles (took ${elapsed}ms)`);
   assert.equal(result.documentType, 'component');
+});
+
+test('wasmPlanSchemaValidation enumerates component tree targets', () => {
+  const plan = wasmPlanSchemaValidation({
+    $formspecComponent: '1.0',
+    version: '1.0.0',
+    targetDefinition: { url: 'https://example.com/def' },
+    tree: {
+      component: 'Page',
+      children: [{ component: 'TextInput', bind: 'name' }],
+    },
+    components: {
+      CustomCard: {
+        tree: {
+          component: 'Stack',
+          children: [{ component: 'TextInput', bind: 'email' }],
+        },
+      },
+    },
+  });
+
+  assert.equal(plan.documentType, 'component');
+  assert.equal(plan.mode, 'component');
+  assert.deepEqual(
+    plan.componentTargets.map((target) => target.pointer),
+    [
+      '/tree',
+      '/tree/children/0',
+      '/components/CustomCard/tree',
+      '/components/CustomCard/tree/children/0',
+    ],
+  );
+});
+
+test('wasmPlanSchemaValidation preserves schema-only document types', () => {
+  const validationResultPlan = wasmPlanSchemaValidation({
+    path: 'field',
+    severity: 'error',
+    constraintKind: 'required',
+    message: 'Required',
+  });
+  assert.equal(validationResultPlan.documentType, 'validation_result');
+  assert.equal(validationResultPlan.mode, 'document');
+
+  const felFunctionsPlan = wasmPlanSchemaValidation({
+    version: '1.0.0',
+    functions: [],
+  });
+  assert.equal(felFunctionsPlan.documentType, 'fel_functions');
+  assert.equal(felFunctionsPlan.mode, 'document');
 });

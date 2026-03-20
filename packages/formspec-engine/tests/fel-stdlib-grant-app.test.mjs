@@ -84,6 +84,7 @@ test('dateAdd() — projectedEndDate adds duration months to startDate', () => {
 
 test('isNull() — hasLineItems is false when first line item category is null', () => {
   const engine = createGrantEngine();
+  engine.setValue('budget.lineItems[0].category', null);
   assert.equal(engineValue(engine, 'budget.hasLineItems'), 'false');
 });
 

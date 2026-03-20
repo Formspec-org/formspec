@@ -8,6 +8,7 @@ import {
   rewriteFELReferences,
   validateExtensionUsage,
 } from '../dist/index.js';
+import { wasmRewriteFELReferences, wasmRewriteMessageTemplate } from '../dist/wasm-bridge.js';
 
 test('analyzeFEL reports parse errors with location metadata', () => {
   const analysis = analyzeFEL('$a +');
@@ -57,6 +58,50 @@ test('rewriteFELReferences rewrites navigation targets only for literal first ar
     },
   });
   assert.equal(result, "prev(concat('amount', @suffix)) + next('pref_amount')");
+});
+
+test('wasmRewriteFELReferences preserves non-reference source text and quote style', () => {
+  const expression = 'prev( /* keep */ "members" , $member.total ) + $foo /* tail */ + @instance(\'census\').name + @current.total + @var_name';
+  const result = wasmRewriteFELReferences(expression, {
+    fieldPaths: {
+      'member.total': 'household.memberTotal',
+      foo: 'bar',
+    },
+    currentPaths: {
+      total: 'summary.total',
+    },
+    instanceNames: {
+      census: 'demographics',
+    },
+    variables: {
+      var_name: 'renamed_var',
+    },
+    navigationTargets: {
+      'prev:members': 'householdMembers',
+    },
+  });
+
+  assert.equal(
+    result,
+    'prev( /* keep */ "householdMembers" , $household.memberTotal ) + $bar /* tail */ + @instance(\'demographics\').name + @current.summary.total + @renamed_var',
+  );
+});
+
+test('wasmRewriteMessageTemplate rewrites only valid interpolation expressions', () => {
+  const message = 'Total {{ $amount /* keep */ }}; invalid {{ $ + }}; current {{ @current.total }}.';
+  const result = wasmRewriteMessageTemplate(message, {
+    fieldPaths: {
+      amount: 'totals.amount',
+    },
+    currentPaths: {
+      total: 'summary.total',
+    },
+  });
+
+  assert.equal(
+    result,
+    'Total {{ $totals.amount /* keep */ }}; invalid {{ $ + }}; current {{ @current.summary.total }}.',
+  );
 });
 
 test('getBuiltinFELFunctionCatalog is sourced from the runtime stdlib', () => {

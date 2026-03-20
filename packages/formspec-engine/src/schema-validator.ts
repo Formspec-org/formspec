@@ -8,6 +8,11 @@
 
 import Ajv2020 from "ajv/dist/2020.js";
 import type { ErrorObject, ValidateFunction } from "ajv";
+import {
+  isWasmReady,
+  wasmJsonPointerToJsonPath,
+  wasmPlanSchemaValidation,
+} from "./wasm-bridge.js";
 
 export type DocumentType =
   | "definition"
@@ -57,6 +62,16 @@ function toJsonPath(path: (string | number)[]): string {
   return out;
 }
 
+/** Convert path array to JSON Pointer string like /items/0/key. */
+function toJsonPointer(path: (string | number)[]): string {
+  if (path.length === 0) return "";
+  return path
+    .map((part) =>
+      `/${String(part).replace(/~/g, "~0").replace(/\//g, "~1")}`
+    )
+    .join("");
+}
+
 /** JSON Pointer to path segments (e.g. "/children/0" -> ["children", 0]). */
 function pointerToSegments(pointer: string): (string | number)[] {
   if (!pointer || pointer === "/") return [];
@@ -67,8 +82,36 @@ function pointerToSegments(pointer: string): (string | number)[] {
   });
 }
 
+function mergeJsonPointers(basePointer: string, instancePath: string): string {
+  if (!basePointer || basePointer === "/") return instancePath;
+  if (!instancePath || instancePath === "/") return basePointer;
+  return `${basePointer}${instancePath}`;
+}
+
 /** Merge base path with Ajv instancePath (JSON Pointer) for full document path. */
-function mergePath(basePath: (string | number)[], instancePath: string): string {
+function mergePath(
+  basePath: (string | number)[] | string,
+  instancePath: string
+): string {
+  if (typeof basePath === "string") {
+    const pointer = mergeJsonPointers(basePath, instancePath);
+    if (isWasmReady()) {
+      try {
+        return wasmJsonPointerToJsonPath(pointer);
+      } catch {
+        // Fall through to the local converter if WASM throws.
+      }
+    }
+    return toJsonPath(pointerToSegments(pointer));
+  }
+
+  if (basePath.length === 0 && isWasmReady()) {
+    try {
+      return wasmJsonPointerToJsonPath(instancePath);
+    } catch {
+      // Fall back to the local JSON Pointer converter if WASM throws.
+    }
+  }
   const segments = pointerToSegments(instancePath);
   return toJsonPath([...basePath, ...segments]);
 }
@@ -135,7 +178,7 @@ function walkComponentNodes(
   return out;
 }
 
-function detectDocumentType(document: unknown): DocumentType | null {
+function detectDocumentTypeFallback(document: unknown): DocumentType | null {
   if (document == null || typeof document !== "object") return null;
   const doc = document as Record<string, unknown>;
   if ("$formspec" in doc) return "definition";
@@ -151,6 +194,113 @@ function detectDocumentType(document: unknown): DocumentType | null {
   if (["valid", "counts", "results"].every((k) => keys.has(k))) return "validation_report";
   if (["targetSchema", "rules"].every((k) => keys.has(k))) return "mapping";
   return null;
+}
+
+function detectDocumentType(document: unknown): DocumentType | null {
+  return detectDocumentTypeFallback(document);
+}
+
+interface SchemaValidationPlan {
+  documentType: DocumentType | null;
+  mode: "unknown" | "document" | "component";
+  componentTargets: Array<{
+    pointer: string;
+    component: string;
+    node: Record<string, unknown>;
+  }>;
+  error?: string | null;
+}
+
+function buildSchemaValidationPlanFallback(
+  document: unknown,
+  documentType?: DocumentType | null
+): SchemaValidationPlan {
+  const detected = documentType ?? detectDocumentType(document);
+  if (detected === null) {
+    return {
+      documentType: null,
+      mode: "unknown",
+      componentTargets: [],
+      error: "Unable to detect Formspec document type",
+    };
+  }
+
+  if (detected !== "component") {
+    return {
+      documentType: detected,
+      mode: "document",
+      componentTargets: [],
+    };
+  }
+
+  const componentTargets: SchemaValidationPlan["componentTargets"] = [];
+  const doc = document as Record<string, unknown>;
+  const tree = doc.tree;
+  if (tree && typeof tree === "object") {
+    for (const { path, node } of walkComponentNodes(tree, ["tree"])) {
+      componentTargets.push({
+        pointer: toJsonPointer(path),
+        component: String(node.component ?? ""),
+        node,
+      });
+    }
+  }
+
+  const components = doc.components;
+  if (components && typeof components === "object") {
+    for (const [compName, compDef] of Object.entries(
+      components as Record<string, unknown>
+    )) {
+      if (compDef && typeof compDef === "object") {
+        const templateTree = (compDef as Record<string, unknown>).tree;
+        if (templateTree && typeof templateTree === "object") {
+          for (const { path, node } of walkComponentNodes(templateTree, [
+            "components",
+            compName,
+            "tree",
+          ])) {
+            componentTargets.push({
+              pointer: toJsonPointer(path),
+              component: String(node.component ?? ""),
+              node,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    documentType: "component",
+    mode: "component",
+    componentTargets,
+  };
+}
+
+function buildSchemaValidationPlan(
+  document: unknown,
+  documentType?: DocumentType | null
+): SchemaValidationPlan {
+  if (isWasmReady()) {
+    try {
+      const plan = wasmPlanSchemaValidation(
+        document,
+        documentType ?? undefined
+      ) as SchemaValidationPlan;
+      if (plan.documentType !== null) {
+        return plan;
+      }
+      return {
+        ...plan,
+        documentType: null,
+      };
+    } catch {
+      // Fall back when WASM is unavailable for this document shape
+      // (for example circular object graphs that cannot be JSON serialized).
+    }
+  }
+
+  return buildSchemaValidationPlanFallback(document, documentType);
 }
 
 export interface SchemaValidator {
@@ -222,14 +372,16 @@ export function createSchemaValidator(schemas: SchemaValidatorSchemas): SchemaVa
       document: unknown,
       documentType?: DocumentType | null
     ): SchemaValidationResult {
-      const detected = documentType ?? detectDocumentType(document);
+      const plan = buildSchemaValidationPlan(document, documentType);
+      const detected = plan.documentType;
+
       if (detected === null) {
         return {
           documentType: null,
           errors: [
             {
               path: "$",
-              message: "Unable to detect Formspec document type",
+              message: plan.error ?? "Unable to detect Formspec document type",
             },
           ],
         };
@@ -264,61 +416,20 @@ export function createSchemaValidator(schemas: SchemaValidatorSchemas): SchemaVa
             });
           }
         }
-        // Step 2: walk tree and validate each node
-        const doc = document as Record<string, unknown>;
-        const tree = doc.tree;
-        if (tree && typeof tree === "object") {
-          for (const { path: pathParts, node } of walkComponentNodes(
-            tree,
-            ["tree"]
-          )) {
-            const compName = (node.component as string) ?? "";
-            const validator =
-              componentNodeValidators.get(compName) ?? componentCustomRefValidate;
-            if (validator) {
-              const nodeOk = validator(node);
-              const errs = validator.errors;
-              if (!nodeOk && errs) {
-                for (const e of errs) {
-                  errors.push({
-                    path: mergePath(pathParts, e.instancePath ?? ""),
-                    message: e.message ?? String(e),
-                    raw: e,
-                  });
-                }
-              }
-            }
-          }
-        }
-        // Step 3: custom component template trees
-        const components = doc.components;
-        if (components && typeof components === "object") {
-          const comps = components as Record<string, unknown>;
-          for (const [compName, compDef] of Object.entries(comps)) {
-            if (compDef && typeof compDef === "object") {
-              const templateTree = (compDef as Record<string, unknown>).tree;
-              if (templateTree && typeof templateTree === "object") {
-                for (const { path: pathParts, node } of walkComponentNodes(
-                  templateTree,
-                  ["components", compName, "tree"]
-                )) {
-                  const name = (node.component as string) ?? "";
-                  const validator =
-                    componentNodeValidators.get(name) ?? componentCustomRefValidate;
-                  if (validator) {
-                    const nodeOk = validator(node);
-                    const errs = validator.errors;
-                    if (!nodeOk && errs) {
-                      for (const e of errs) {
-                        errors.push({
-                          path: mergePath(pathParts, e.instancePath ?? ""),
-                          message: e.message ?? String(e),
-                          raw: e,
-                        });
-                      }
-                    }
-                  }
-                }
+        // Step 2: validate each component node selected by the schema-planning bridge.
+        for (const target of plan.componentTargets) {
+          const validator =
+            componentNodeValidators.get(target.component) ?? componentCustomRefValidate;
+          if (validator) {
+            const nodeOk = validator(target.node);
+            const errs = validator.errors;
+            if (!nodeOk && errs) {
+              for (const e of errs) {
+                errors.push({
+                  path: mergePath(target.pointer, e.instancePath ?? ""),
+                  message: e.message ?? String(e),
+                  raw: e,
+                });
               }
             }
           }

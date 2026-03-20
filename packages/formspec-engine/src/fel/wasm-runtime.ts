@@ -7,11 +7,13 @@ import type {
     FelContext,
     FELBuiltinFunctionCatalogEntry,
 } from './runtime.js';
+import { FALLBACK_BUILTIN_FEL_FUNCTION_CATALOG } from './builtin-catalog.js';
 import {
     isWasmReady,
     wasmEvalFELWithContext,
     wasmGetFELDependencies,
     wasmExtractDependencies,
+    wasmListBuiltinFunctions,
     wasmParseFEL,
 } from '../wasm-bridge.js';
 import type { WasmFelContext } from '../wasm-bridge.js';
@@ -98,15 +100,23 @@ function resolveFieldPath(rawPath: string, context: FelContext): string {
  */
 class WasmCompiledExpression implements ICompiledExpression {
     readonly dependencies: string[];
+    readonly mipDependencies: string[];
     private readonly expression: string;
     /** Context refs like @variable names extracted at compile time. */
     private readonly contextRefs: string[];
     /** Instance names referenced via @instance('name'). */
     private readonly instanceRefs: string[];
 
-    constructor(expression: string, dependencies: string[], contextRefs: string[], instanceRefs: string[]) {
+    constructor(
+        expression: string,
+        dependencies: string[],
+        mipDependencies: string[],
+        contextRefs: string[],
+        instanceRefs: string[],
+    ) {
         this.expression = expression;
         this.dependencies = dependencies;
+        this.mipDependencies = mipDependencies;
         this.contextRefs = contextRefs;
         this.instanceRefs = instanceRefs;
     }
@@ -142,6 +152,7 @@ class WasmCompiledExpression implements ICompiledExpression {
                 const value = context.getSignalValue(resolved);
                 if (value !== undefined) {
                     fields[dep] = value;
+                    insertFieldAlias(fields, dep, value);
                 }
             }
         }
@@ -219,27 +230,41 @@ class WasmCompiledExpression implements ICompiledExpression {
         // Only provide repeat context when the expression actually uses repeat refs.
         // Setting repeatContext changes how the Rust evaluator resolves bare $ (it
         // returns repeatContext.current instead of checking the data map).
-        const needsRepeatContext = this.contextRefs.some(cr =>
-            cr === '@index' || cr === '@count' || cr === '@current');
+        const usesRepeatNavigation = this.expression.includes('prev(')
+            || this.expression.includes('next(')
+            || this.expression.includes('parent(');
+        const needsCurrentRepeatObject = this.contextRefs.some(cr =>
+            cr === '@current' || cr.startsWith('@current.'))
+            || usesRepeatNavigation;
+        const needsRepeatContext = needsCurrentRepeatObject || this.contextRefs.some(cr =>
+            cr === '@index'
+            || cr.startsWith('@index.')
+            || cr === '@count'
+            || cr.startsWith('@count.'));
         const repeatScopes = parseRepeatScopes(context.currentItemPath);
         if (needsRepeatContext && repeatScopes.length > 0) {
-            const innerScope = repeatScopes[repeatScopes.length - 1];
-            const groupPath = innerScope.prefix.replace(/\[\d+\]$/, '');
-            const instanceCount = context.getRepeatsValue(groupPath);
-            // Extract 0-based index from the signal path, convert to 1-based for FEL
-            const indexMatch = innerScope.prefix.match(/\[(\d+)\]$/);
-            const zeroBasedIndex = indexMatch ? parseInt(indexMatch[1], 10) : 0;
-            wasmCtx.repeatContext = {
-                current: context.getSignalValue(context.currentItemPath) ?? null,
-                index: zeroBasedIndex + 1,
-                count: instanceCount,
-            };
+            let parentContext: WasmFelContext['repeatContext'] | undefined;
+            for (let i = 0; i < repeatScopes.length; i++) {
+                const scope = repeatScopes[i];
+                const groupPath = scope.prefix.replace(/\[\d+\]$/, '');
+                const instanceCount = context.getRepeatsValue(groupPath);
+                const indexMatch = scope.prefix.match(/\[(\d+)\]$/);
+                const zeroBasedIndex = indexMatch ? parseInt(indexMatch[1], 10) : 0;
+                parentContext = {
+                    current: needsCurrentRepeatObject ? buildObjectSnapshot(context, scope.prefix) : null,
+                    index: zeroBasedIndex + 1,
+                    count: instanceCount,
+                    collection: needsCurrentRepeatObject ? buildRepeatCollection(context, groupPath, instanceCount) : [],
+                    parent: parentContext ?? buildContainerParentContext(context, scope.prefix),
+                };
+            }
+            wasmCtx.repeatContext = parentContext;
         }
 
         // Provide MIP states for non-wildcard field dependencies
-        if (this.dependencies.length > 0) {
+        if (this.mipDependencies.length > 0) {
             const mipStates: Record<string, { valid?: boolean; relevant?: boolean; readonly?: boolean; required?: boolean }> = {};
-            for (const dep of this.dependencies) {
+            for (const dep of this.mipDependencies) {
                 if (dep === '' || dep.includes('[*]')) continue;
                 const resolved = resolveFieldPath(dep, context);
                 const errorCount = context.getValidationErrors(resolved);
@@ -261,9 +286,16 @@ class WasmCompiledExpression implements ICompiledExpression {
             }
         }
 
+        if (context.engine && 'nowISO' in context.engine && typeof (context.engine as any).nowISO === 'function') {
+            wasmCtx.nowIso = (context.engine as any).nowISO();
+        }
+
         try {
             return wasmEvalFELWithContext(this.expression, wasmCtx);
         } catch (e) {
+            if (e instanceof Error && e.message.includes('Unsupported FEL function:')) {
+                throw e;
+            }
             console.warn(`WASM FEL eval error for "${this.expression}":`, e);
             return null;
         }
@@ -308,11 +340,13 @@ export class WasmFelRuntime implements IFelRuntime {
 
         // Extract dependencies (fields + context refs + instance refs + self-ref)
         let dependencies: string[];
+        let mipDependencies: string[];
         let contextRefs: string[];
         let instanceRefs: string[];
         try {
             const fullDeps = wasmExtractDependencies(expression);
             dependencies = fullDeps.fields;
+            mipDependencies = fullDeps.mipDeps;
             contextRefs = fullDeps.contextRefs;
             instanceRefs = fullDeps.instanceRefs;
             if (fullDeps.hasSelfRef) {
@@ -320,21 +354,31 @@ export class WasmFelRuntime implements IFelRuntime {
             }
         } catch {
             dependencies = [];
+            mipDependencies = [];
             contextRefs = [];
             instanceRefs = [];
         }
 
         return {
-            expression: new WasmCompiledExpression(expression, dependencies, contextRefs, instanceRefs),
+            expression: new WasmCompiledExpression(
+                expression,
+                dependencies,
+                mipDependencies,
+                contextRefs,
+                instanceRefs,
+            ),
             errors: [],
         };
     }
 
     listBuiltInFunctions(): FELBuiltinFunctionCatalogEntry[] {
-        // The WASM module doesn't expose a function catalog endpoint yet.
-        // Return an empty list — callers that need the catalog should use
-        // the Chevrotain runtime explicitly.
-        return [];
+        if (!isWasmReady()) return FALLBACK_BUILTIN_FEL_FUNCTION_CATALOG;
+        try {
+            const catalog = wasmListBuiltinFunctions();
+            return catalog.length > 0 ? catalog : FALLBACK_BUILTIN_FEL_FUNCTION_CATALOG;
+        } catch {
+            return FALLBACK_BUILTIN_FEL_FUNCTION_CATALOG;
+        }
     }
 
     extractDependencies(expression: string): string[] {
@@ -362,3 +406,92 @@ export class WasmFelRuntime implements IFelRuntime {
 
 /** Shared singleton instance. */
 export const wasmFelRuntime = new WasmFelRuntime();
+
+function buildRepeatCollection(context: FelContext, groupPath: string, count: number): any[] {
+    const rows: any[] = [];
+    for (let i = 0; i < count; i++) {
+        rows.push(buildObjectSnapshot(context, `${groupPath}[${i}]`));
+    }
+    return rows;
+}
+
+function buildContainerParentContext(context: FelContext, repeatRowPath: string): WasmFelContext['repeatContext'] | undefined {
+    const lastDot = repeatRowPath.lastIndexOf('.');
+    if (lastDot === -1) return undefined;
+    const containerPath = repeatRowPath.substring(0, lastDot);
+    if (!containerPath) return undefined;
+    const current = buildObjectSnapshot(context, containerPath);
+    return {
+        current,
+        index: 1,
+        count: 1,
+        collection: [current],
+    };
+}
+
+function buildObjectSnapshot(context: FelContext, prefix: string): any {
+    const root: any = {};
+    const engine = context.engine;
+    const signalKeys = Object.keys(engine?.signals ?? {});
+    for (const key of signalKeys) {
+        if (!key.startsWith(`${prefix}.`)) continue;
+        const value = key === context.currentItemPath
+            ? (context.engine?.signals?.[key]?.peek?.() ?? context.engine?.signals?.[key]?.value)
+            : context.getSignalValue(key);
+        if (value === undefined) continue;
+        insertSnapshotValue(root, key.slice(prefix.length + 1), value);
+    }
+    return Object.keys(root).length > 0 ? root : (context.getSignalValue(prefix) ?? null);
+}
+
+function insertSnapshotValue(target: any, relativePath: string, value: any): void {
+    const segments = relativePath.split('.');
+    let current = target;
+
+    for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const match = /^([^\[\]]+)(?:\[(\d+)\])?$/.exec(segment);
+        if (!match) return;
+        const [, key, rawIndex] = match;
+        const isLeaf = i === segments.length - 1;
+
+        if (rawIndex === undefined) {
+            if (isLeaf) {
+                current[key] = value;
+                return;
+            }
+            current[key] ??= {};
+            current = current[key];
+            continue;
+        }
+
+        const index = parseInt(rawIndex, 10);
+        current[key] ??= [];
+        current[key][index] ??= {};
+        if (isLeaf) {
+            current[key][index] = value;
+            return;
+        }
+        current = current[key][index];
+    }
+}
+
+function insertFieldAlias(fields: Record<string, any>, dep: string, value: any): void {
+    if (!dep || dep.includes('[*]') || !dep.includes('.')) return;
+
+    const segments = dep.split('.');
+    const rootMatch = /^([^\[\]]+)(?:\[(\d+)\])?$/.exec(segments[0] ?? '');
+    if (!rootMatch) return;
+
+    const [, rootKey, rootIndexRaw] = rootMatch;
+    if (rootIndexRaw === undefined) {
+        fields[rootKey] ??= {};
+        insertSnapshotValue(fields[rootKey], segments.slice(1).join('.'), value);
+        return;
+    }
+
+    const rootIndex = parseInt(rootIndexRaw, 10) - 1;
+    fields[rootKey] ??= [];
+    fields[rootKey][rootIndex] ??= {};
+    insertSnapshotValue(fields[rootKey][rootIndex], segments.slice(1).join('.'), value);
+}

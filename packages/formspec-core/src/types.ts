@@ -503,7 +503,7 @@ export interface FELFunctionEntry {
   category: string;
   /** Whether this function is built-in or provided by an extension. */
   source: 'builtin' | 'extension';
-  /** Function signature (e.g. `'sum(array) -> number'`). */
+  /** Function signature (e.g. `'sum(array<number>) -> number'`). */
   signature?: string;
   /** Human-readable description of what the function does. */
   description?: string;

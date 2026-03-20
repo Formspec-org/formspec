@@ -67,6 +67,8 @@ export interface FELBuiltinFunctionCatalogEntry {
 export interface ICompiledExpression {
     /** Field paths referenced by this expression (used to wire reactive dependencies). */
     readonly dependencies: string[];
+    /** Field paths used specifically for MIP queries like valid()/relevant(). */
+    readonly mipDependencies?: string[];
     /** Evaluate the expression against the given runtime context. */
     evaluate(context: FelContext): any;
 }

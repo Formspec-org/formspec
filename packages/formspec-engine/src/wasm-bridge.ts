@@ -26,16 +26,23 @@ export async function initWasm(): Promise<void> {
     _initPromise = (async () => {
         try {
             const mod = await import('../wasm-pkg/formspec_wasm.js');
+            const runtime = mod as unknown as WasmModule & {
+                default?: (() => Promise<unknown>) | (() => unknown);
+                initSync?: (input: unknown) => unknown;
+            };
 
-            // Detect Node.js: use initSync with a buffer since fetch(file://) isn't supported
-            if (typeof globalThis.process !== 'undefined' && globalThis.process.versions?.node) {
+            // Newer wasm-pack bundler output auto-initializes via static wasm import.
+            // Older output exposes default()/initSync() loader functions instead.
+            if (typeof runtime.initSync === 'function'
+                && typeof globalThis.process !== 'undefined'
+                && globalThis.process.versions?.node) {
                 const { readFileSync } = await import('node:fs');
                 const { fileURLToPath } = await import('node:url');
                 const wasmUrl = new URL('../wasm-pkg/formspec_wasm_bg.wasm', import.meta.url);
                 const wasmBytes = readFileSync(fileURLToPath(wasmUrl));
-                mod.initSync({ module: wasmBytes });
-            } else {
-                await mod.default();
+                runtime.initSync({ module: wasmBytes });
+            } else if (typeof runtime.default === 'function') {
+                await runtime.default();
             }
 
             _wasm = mod;
@@ -81,8 +88,15 @@ export interface WasmFelContext {
     fields: Record<string, any>;
     variables?: Record<string, any>;
     mipStates?: Record<string, { valid?: boolean; relevant?: boolean; readonly?: boolean; required?: boolean }>;
-    repeatContext?: { current: any; index: number; count: number; collection?: any[] };
+    repeatContext?: {
+        current: any;
+        index: number;
+        count: number;
+        collection?: any[];
+        parent?: WasmFelContext['repeatContext'];
+    };
     instances?: Record<string, any>;
+    nowIso?: string;
 }
 
 /** Evaluate a FEL expression with full FormspecEnvironment context. */
@@ -121,9 +135,52 @@ export function wasmNormalizeIndexedPath(path: string): string {
     return wasm().normalizeIndexedPath(path);
 }
 
+/** Resolve an item in a nested item tree by dotted path. */
+export function wasmItemAtPath<T = any>(items: unknown[], path: string): T | undefined {
+    const resultJson = wasm().itemAtPath(JSON.stringify(items), path);
+    const result = JSON.parse(resultJson);
+    return result === null ? undefined : result;
+}
+
+/** Resolve an item's parent path, index, and value in a nested item tree. */
+export function wasmItemLocationAtPath<T = any>(
+    items: unknown[],
+    path: string,
+): { parentPath: string; index: number; item: T } | undefined {
+    const resultJson = wasm().itemLocationAtPath(JSON.stringify(items), path);
+    const result = JSON.parse(resultJson);
+    return result === null ? undefined : result;
+}
+
 /** Detect the document type of a Formspec JSON document. */
 export function wasmDetectDocumentType(doc: unknown): string | null {
     return wasm().detectDocumentType(JSON.stringify(doc)) ?? null;
+}
+
+/** Convert a JSON Pointer into a JSONPath string. */
+export function wasmJsonPointerToJsonPath(pointer: string): string {
+    return wasm().jsonPointerToJsonPath(pointer);
+}
+
+/** Plan schema validation dispatch and component-node target enumeration. */
+export function wasmPlanSchemaValidation(
+    doc: unknown,
+    documentType?: string | null,
+): {
+    documentType: string | null;
+    mode: 'unknown' | 'document' | 'component';
+    componentTargets: Array<{
+        pointer: string;
+        component: string;
+        node: any;
+    }>;
+    error?: string | null;
+} {
+    const resultJson = wasm().planSchemaValidation(
+        JSON.stringify(doc),
+        documentType ?? undefined,
+    );
+    return JSON.parse(resultJson);
 }
 
 /** Assemble a definition by resolving $ref inclusions. */
@@ -197,5 +254,140 @@ export function wasmAnalyzeFEL(expression: string): {
     functions: string[];
 } {
     const resultJson = wasm().analyzeFEL(expression);
+    return JSON.parse(resultJson);
+}
+
+/** Collect the rewriteable targets in a FEL expression. */
+export function wasmCollectFELRewriteTargets(expression: string): {
+    fieldPaths: string[];
+    currentPaths: string[];
+    variables: string[];
+    instanceNames: string[];
+    navigationTargets: Array<{ functionName: 'prev' | 'next' | 'parent'; name: string }>;
+} {
+    const resultJson = wasm().collectFELRewriteTargets(expression);
+    return JSON.parse(resultJson);
+}
+
+/** Rewrite a FEL expression using explicit rewrite maps. */
+export function wasmRewriteFELReferences(
+    expression: string,
+    rewrites: {
+        fieldPaths?: Record<string, string>;
+        currentPaths?: Record<string, string>;
+        variables?: Record<string, string>;
+        instanceNames?: Record<string, string>;
+        navigationTargets?: Record<string, string>;
+    },
+): string {
+    return wasm().rewriteFELReferences(expression, JSON.stringify(rewrites));
+}
+
+/** Rewrite FEL expressions embedded in {{...}} interpolation segments. */
+export function wasmRewriteMessageTemplate(
+    message: string,
+    rewrites: {
+        fieldPaths?: Record<string, string>;
+        currentPaths?: Record<string, string>;
+        variables?: Record<string, string>;
+        instanceNames?: Record<string, string>;
+        navigationTargets?: Record<string, string>;
+    },
+): string {
+    return wasm().rewriteMessageTemplate(message, JSON.stringify(rewrites));
+}
+
+/** Print a FEL expression AST back to normalized source. */
+export function wasmPrintFEL(expression: string): string {
+    return wasm().printFEL(expression);
+}
+
+/** Return the builtin FEL function catalog exported by the Rust runtime. */
+export function wasmListBuiltinFunctions(): Array<{
+    name: string;
+    category: string;
+    signature: string;
+    description: string;
+}> {
+    const resultJson = wasm().listBuiltinFunctions();
+    return JSON.parse(resultJson);
+}
+
+/** Lint a Formspec document with explicit registry documents. */
+export function wasmLintDocumentWithRegistries(
+    doc: unknown,
+    registries: unknown[],
+): { documentType: string | null; valid: boolean; diagnostics: any[] } {
+    const resultJson = wasm().lintDocumentWithRegistries(
+        JSON.stringify(doc),
+        JSON.stringify(registries),
+    );
+    return JSON.parse(resultJson);
+}
+
+/** Parse and validate a registry document, returning summary metadata. */
+export function wasmParseRegistry(registry: unknown): {
+    publisher: { name?: string; url?: string; contact?: string };
+    published?: string;
+    entryCount: number;
+    validationIssues: any[];
+} {
+    const resultJson = wasm().parseRegistry(JSON.stringify(registry));
+    return JSON.parse(resultJson);
+}
+
+/** Find the highest-version registry entry matching a name and version constraint. */
+export function wasmFindRegistryEntry(
+    registry: unknown,
+    name: string,
+    versionConstraint = '',
+): any | null {
+    const resultJson = wasm().findRegistryEntry(
+        JSON.stringify(registry),
+        name,
+        versionConstraint,
+    );
+    return JSON.parse(resultJson);
+}
+
+/** Validate a lifecycle transition between two registry statuses. */
+export function wasmValidateLifecycleTransition(from: string, to: string): boolean {
+    return wasm().validateLifecycleTransition(from, to);
+}
+
+/** Construct a well-known registry URL from a base URL. */
+export function wasmWellKnownRegistryUrl(baseUrl: string): string {
+    return wasm().wellKnownRegistryUrl(baseUrl);
+}
+
+/** Generate a structured changelog between two definitions. */
+export function wasmGenerateChangelog(
+    oldDefinition: unknown,
+    newDefinition: unknown,
+    definitionUrl: string,
+): any {
+    const resultJson = wasm().generateChangelog(
+        JSON.stringify(oldDefinition),
+        JSON.stringify(newDefinition),
+        definitionUrl,
+    );
+    return JSON.parse(resultJson);
+}
+
+/** Validate enabled x-extension usage in an item tree against registry entries. */
+export function wasmValidateExtensionUsage(
+    items: unknown[],
+    registryEntries: Record<string, unknown>,
+): Array<{
+    path: string;
+    extension: string;
+    severity: 'error' | 'warning' | 'info';
+    code: 'UNRESOLVED_EXTENSION' | 'EXTENSION_RETIRED' | 'EXTENSION_DEPRECATED';
+    message: string;
+}> {
+    const resultJson = wasm().validateExtensionUsage(
+        JSON.stringify(items),
+        JSON.stringify(registryEntries),
+    );
     return JSON.parse(resultJson);
 }

@@ -4,6 +4,7 @@ import type { IFelRuntime } from './fel/runtime.js';
 import type { FormDefinition } from 'formspec-types';
 import { FormEngine } from './index.js';
 import { RuntimeMappingEngine } from './runtime-mapping.js';
+import { WasmRuntimeMappingEngine } from './wasm-runtime-mapping.js';
 import { isWasmReady } from './wasm-bridge.js';
 import { wasmFelRuntime } from './fel/wasm-runtime.js';
 
@@ -34,7 +35,7 @@ export function createMappingEngine(
     felRuntime?: IFelRuntime,
 ): IRuntimeMappingEngine {
     if (!felRuntime && isWasmReady()) {
-        felRuntime = wasmFelRuntime;
+        return new WasmRuntimeMappingEngine(mappingDocument);
     }
     return new RuntimeMappingEngine(mappingDocument, felRuntime);
 }

@@ -1,6 +1,6 @@
 /** @filedesc Resolves $ref inclusions to produce a self-contained, assembled definition. */
 import type { FormspecDefinition, FormspecItem, FormspecBind, FormspecShape, FormspecVariable } from './index.js';
-import { rewriteFELReferences } from './fel/analysis.js';
+import { rewriteFELReferences } from './fel/rewrite.js';
 
 /** Provenance record for a single `$ref` inclusion resolved during definition assembly, tracking origin URL, version, prefix, and fragment. */
 export interface AssemblyProvenance {

@@ -1,5 +1,6 @@
 /** @filedesc Validates x-extension usage in item trees against a registry catalog. */
 import type { FormspecItem, RegistryEntry } from './index.js';
+import { isWasmReady, wasmValidateExtensionUsage } from './wasm-bridge.js';
 
 /** A single extension usage finding emitted while walking a definition item tree. */
 export interface ExtensionUsageIssue {
@@ -47,6 +48,32 @@ export function validateExtensionUsage(
   items: FormspecItem[],
   options: ValidateExtensionUsageOptions,
 ): ExtensionUsageIssue[] {
+  if (isWasmReady()) {
+    const registryEntries: Record<string, unknown> = {};
+    const seen = new Set<string>();
+
+    const collect = (nodes: FormspecItem[]) => {
+      for (const item of nodes) {
+        for (const extension of declaredExtensions(item)) {
+          if (seen.has(extension)) continue;
+          seen.add(extension);
+          const entry = options.resolveEntry(extension);
+          if (entry) {
+            registryEntries[extension] = {
+              status: entry.status,
+              displayName: entry.displayName,
+              deprecationNotice: entry.deprecationNotice,
+            };
+          }
+        }
+        if (item.children?.length) collect(item.children);
+      }
+    };
+
+    collect(items);
+    return wasmValidateExtensionUsage(items as unknown as unknown[], registryEntries);
+  }
+
   const issues: ExtensionUsageIssue[] = [];
 
   const walk = (nodes: FormspecItem[], prefix: string) => {
