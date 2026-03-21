@@ -28,6 +28,79 @@ pub use printer::print_expr;
 pub use rust_decimal::Decimal;
 pub use types::{FelDate, FelMoney, FelValue, parse_date_literal, parse_datetime_literal};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PositionedToken {
+    pub token_type: String,
+    pub text: String,
+    pub start: usize,
+    pub end: usize,
+}
+
+fn token_type_name(token: &lexer::Token) -> &'static str {
+    match token {
+        lexer::Token::Number(_) => "NumberLiteral",
+        lexer::Token::StringLit(_) => "StringLiteral",
+        lexer::Token::True => "True",
+        lexer::Token::False => "False",
+        lexer::Token::Null => "Null",
+        lexer::Token::DateLiteral(_) => "DateLiteral",
+        lexer::Token::DateTimeLiteral(_) => "DateTimeLiteral",
+        lexer::Token::Identifier(_) => "Identifier",
+        lexer::Token::Let => "Let",
+        lexer::Token::In => "In",
+        lexer::Token::If => "If",
+        lexer::Token::Then => "Then",
+        lexer::Token::Else => "Else",
+        lexer::Token::And => "And",
+        lexer::Token::Or => "Or",
+        lexer::Token::Not => "Not",
+        lexer::Token::Plus => "Plus",
+        lexer::Token::Minus => "Minus",
+        lexer::Token::Star => "Asterisk",
+        lexer::Token::Slash => "Slash",
+        lexer::Token::Percent => "Percent",
+        lexer::Token::Ampersand => "Ampersand",
+        lexer::Token::Eq => "Equals",
+        lexer::Token::NotEq => "NotEquals",
+        lexer::Token::Lt => "Less",
+        lexer::Token::Gt => "Greater",
+        lexer::Token::LtEq => "LessEqual",
+        lexer::Token::GtEq => "GreaterEqual",
+        lexer::Token::DoubleQuestion => "DoubleQuestion",
+        lexer::Token::Question => "Question",
+        lexer::Token::LParen => "LRound",
+        lexer::Token::RParen => "RRound",
+        lexer::Token::LBracket => "LSquare",
+        lexer::Token::RBracket => "RSquare",
+        lexer::Token::LBrace => "LCurly",
+        lexer::Token::RBrace => "RCurly",
+        lexer::Token::Comma => "Comma",
+        lexer::Token::Dot => "Dot",
+        lexer::Token::Colon => "Colon",
+        lexer::Token::Dollar => "Dollar",
+        lexer::Token::At => "At",
+        lexer::Token::Eof => "EOF",
+    }
+}
+
+fn slice_by_char_offsets(input: &str, start: usize, end: usize) -> String {
+    input.chars().skip(start).take(end.saturating_sub(start)).collect()
+}
+
+pub fn tokenize(input: &str) -> Result<Vec<PositionedToken>, String> {
+    let mut lexer = lexer::Lexer::new(input);
+    let tokens = lexer.tokenize()?;
+    Ok(tokens
+        .into_iter()
+        .map(|token| PositionedToken {
+            token_type: token_type_name(&token.token).to_string(),
+            text: slice_by_char_offsets(input, token.span.start, token.span.end),
+            start: token.span.start,
+            end: token.span.end,
+        })
+        .collect())
+}
+
 /// Parse and evaluate a FEL expression with a flat field map.
 pub fn eval_with_fields(
     input: &str,

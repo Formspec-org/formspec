@@ -39,9 +39,9 @@ export function evalFELWithContext(expression: string, context_json: string): st
 
 /**
  * Evaluate a Formspec definition against provided data (4-phase batch processor).
- * Returns JSON: { values, validations, nonRelevant, variables }
+ * Returns JSON: { values, validations, nonRelevant, variables, required, readonly }
  */
-export function evaluateDefinition(definition_json: string, data_json: string): string;
+export function evaluateDefinition(definition_json: string, data_json: string, context_json?: string | null): string;
 
 /**
  * Execute a mapping transform (forward or reverse).
@@ -152,6 +152,8 @@ export function rewriteFELReferences(expression: string, rewrites_json: string):
  * Rewrite FEL expressions embedded in {{...}} interpolation segments.
  */
 export function rewriteMessageTemplate(message: string, rewrites_json: string): string;
+
+export function tokenizeFEL(expression: string): string;
 
 /**
  * Validate enabled x-extension usage in an item tree against a registry entry lookup map.

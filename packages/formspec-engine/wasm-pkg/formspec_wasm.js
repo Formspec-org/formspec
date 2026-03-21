@@ -5,5 +5,5 @@ import { __wbg_set_wasm } from "./formspec_wasm_bg.js";
 __wbg_set_wasm(wasm);
 
 export {
-    analyzeFEL, assembleDefinition, collectFELRewriteTargets, detectDocumentType, evalFEL, evalFELWithContext, evaluateDefinition, executeMapping, executeMappingDoc, extractDependencies, findRegistryEntry, generateChangelog, getFELDependencies, itemAtPath, itemLocationAtPath, jsonPointerToJsonPath, lintDocument, lintDocumentWithRegistries, listBuiltinFunctions, normalizeIndexedPath, parseFEL, parseRegistry, planSchemaValidation, printFEL, rewriteFELReferences, rewriteMessageTemplate, validateExtensionUsage, validateLifecycleTransition, wellKnownRegistryUrl
+    analyzeFEL, assembleDefinition, collectFELRewriteTargets, detectDocumentType, evalFEL, evalFELWithContext, evaluateDefinition, executeMapping, executeMappingDoc, extractDependencies, findRegistryEntry, generateChangelog, getFELDependencies, itemAtPath, itemLocationAtPath, jsonPointerToJsonPath, lintDocument, lintDocumentWithRegistries, listBuiltinFunctions, normalizeIndexedPath, parseFEL, parseRegistry, planSchemaValidation, printFEL, rewriteFELReferences, rewriteMessageTemplate, tokenizeFEL, validateExtensionUsage, validateLifecycleTransition, wellKnownRegistryUrl
 } from "./formspec_wasm_bg.js";

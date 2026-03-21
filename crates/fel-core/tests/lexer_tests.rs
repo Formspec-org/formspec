@@ -2,6 +2,7 @@
 ///
 /// Addresses audit finding: "Lexer has almost no tests (7 tests, all string escapes)"
 use fel_core::lexer::{Lexer, Token};
+use fel_core::tokenize;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 
@@ -476,4 +477,29 @@ fn function_call_tokenization() {
             Token::RParen,
         ]
     );
+}
+
+#[test]
+fn public_tokenize_exposes_chevrotain_compatible_names_and_spans() {
+    let tokens = tokenize("if($name != null, 1, 0)").unwrap();
+    let non_eof: Vec<_> = tokens
+        .into_iter()
+        .filter(|token| token.token_type != "EOF")
+        .collect();
+
+    assert_eq!(non_eof[0].token_type, "If");
+    assert_eq!(non_eof[0].text, "if");
+    assert_eq!(non_eof[1].token_type, "LRound");
+    assert_eq!(non_eof[2].token_type, "Dollar");
+    assert_eq!(non_eof[3].token_type, "Identifier");
+    assert_eq!(non_eof[4].token_type, "NotEquals");
+    assert_eq!(non_eof[5].token_type, "Null");
+    assert_eq!(non_eof[6].token_type, "Comma");
+    assert_eq!(non_eof[7].token_type, "NumberLiteral");
+    assert_eq!(non_eof[7].text, "1");
+    assert_eq!(non_eof[9].token_type, "NumberLiteral");
+    assert_eq!(non_eof[9].text, "0");
+    assert_eq!(non_eof[10].token_type, "RRound");
+    assert_eq!(non_eof[3].start, 4);
+    assert_eq!(non_eof[3].end, 8);
 }

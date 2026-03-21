@@ -110,6 +110,17 @@ export function wasmParseFEL(expression: string): boolean {
     return wasm().parseFEL(expression);
 }
 
+/** Tokenize a FEL expression and return positioned token records. */
+export function wasmTokenizeFEL(expression: string): Array<{
+    tokenType: string;
+    text: string;
+    start: number;
+    end: number;
+}> {
+    const resultJson = wasm().tokenizeFEL(expression);
+    return JSON.parse(resultJson);
+}
+
 /** Extract field path dependencies from a FEL expression. Returns an array of path strings. */
 export function wasmGetFELDependencies(expression: string): string[] {
     const resultJson = wasm().getFELDependencies(expression);
@@ -237,10 +248,32 @@ export function wasmLintDocument(doc: unknown): {
 export function wasmEvaluateDefinition(
     definition: unknown,
     data: Record<string, unknown>,
-): { values: any; validations: any[]; nonRelevant: string[]; variables: any } {
+    context?: {
+        nowIso?: string;
+        trigger?: 'continuous' | 'submit' | 'demand' | 'disabled';
+        previousValidations?: Array<{
+            path: string;
+            severity: string;
+            constraintKind: string;
+            code: string;
+            message: string;
+            source: string;
+            shapeId?: string;
+            context?: Record<string, unknown>;
+        }>;
+    },
+): {
+    values: any;
+    validations: any[];
+    nonRelevant: string[];
+    variables: any;
+    required: Record<string, boolean>;
+    readonly: Record<string, boolean>;
+} {
     const resultJson = wasm().evaluateDefinition(
         JSON.stringify(definition),
         JSON.stringify(data),
+        context ? JSON.stringify(context) : undefined,
     );
     return JSON.parse(resultJson);
 }
