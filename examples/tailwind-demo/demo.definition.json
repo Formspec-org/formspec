@@ -1,0 +1,84 @@
+{
+  "$formspec": "1.0",
+  "url": "https://formspec.org/examples/tailwind-demo",
+  "version": "1.0.0",
+  "title": "Tailwind Adapter Demo",
+  "description": "A compact demo form exercising all field types supported by the Tailwind adapter.",
+  "items": [
+    {
+      "name": "full_name",
+      "label": "Full Name",
+      "dataType": "string",
+      "bind": { "required": "true()" }
+    },
+    {
+      "name": "email",
+      "label": "Email Address",
+      "dataType": "string",
+      "bind": {
+        "required": "true()",
+        "constraint": "matches($email, '^[^@]+@[^@]+\\.[^@]+$')"
+      },
+      "presentation": { "widgetHint": "email" }
+    },
+    {
+      "name": "age",
+      "label": "Age",
+      "dataType": "integer",
+      "bind": {
+        "constraint": "$age >= 18 && $age <= 120",
+        "constraintMessage": "Must be between 18 and 120"
+      }
+    },
+    {
+      "name": "bio",
+      "label": "Short Bio",
+      "dataType": "text",
+      "hint": "Tell us about yourself in a few sentences."
+    },
+    {
+      "name": "role",
+      "label": "Primary Role",
+      "dataType": "choice",
+      "choices": [
+        { "value": "dev", "label": "Developer" },
+        { "value": "design", "label": "Designer" },
+        { "value": "pm", "label": "Product Manager" },
+        { "value": "other", "label": "Other" }
+      ]
+    },
+    {
+      "name": "skills",
+      "label": "Skills",
+      "dataType": "multiChoice",
+      "choices": [
+        { "value": "frontend", "label": "Frontend" },
+        { "value": "backend", "label": "Backend" },
+        { "value": "mobile", "label": "Mobile" },
+        { "value": "devops", "label": "DevOps" }
+      ]
+    },
+    {
+      "name": "start_date",
+      "label": "Available Start Date",
+      "dataType": "date"
+    },
+    {
+      "name": "newsletter",
+      "label": "Subscribe to newsletter",
+      "dataType": "boolean"
+    },
+    {
+      "name": "experience",
+      "label": "Years of Experience",
+      "dataType": "integer",
+      "presentation": { "widgetHint": "slider" }
+    },
+    {
+      "name": "satisfaction",
+      "label": "Overall Satisfaction",
+      "dataType": "integer",
+      "presentation": { "widgetHint": "rating" }
+    }
+  ]
+}

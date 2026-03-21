@@ -1,0 +1,84 @@
+{
+  "$formspecTheme": "1.0",
+  "url": "https://formspec.org/examples/tailwind-demo/theme",
+  "version": "1.0.0",
+  "name": "tailwind-demo",
+  "title": "Tailwind CSS Demo Theme",
+  "description": "Reference theme demonstrating the Tailwind CSS adapter. Uses the Tailwind Play CDN for zero-config demos.",
+  "platform": "web",
+  "stylesheets": ["https://cdn.tailwindcss.com"],
+  "breakpoints": {
+    "sm": 640,
+    "md": 768,
+    "lg": 1024
+  },
+  "tokens": {
+    "color.primary": "#3b82f6",
+    "color.primary.dark": "#2563eb",
+    "color.primary.light": "#dbeafe",
+    "color.secondary": "#8b5cf6",
+    "color.error": "#ef4444",
+    "color.warning": "#f59e0b",
+    "color.success": "#22c55e",
+    "color.background": "#f9fafb",
+    "color.surface": "#ffffff",
+    "color.text": "#111827",
+    "color.text.secondary": "#6b7280",
+    "spacing.xs": "0.25rem",
+    "spacing.sm": "0.5rem",
+    "spacing.md": "1rem",
+    "spacing.lg": "1.5rem",
+    "spacing.xl": "2rem",
+    "spacing.xxl": "3rem",
+    "typography.family": "'Inter', system-ui, sans-serif",
+    "typography.size.body": "0.875rem",
+    "typography.size.sm": "0.75rem",
+    "typography.size.lg": "1.125rem",
+    "typography.size.xl": "1.5rem",
+    "typography.weight.normal": "400",
+    "typography.weight.bold": "600",
+    "border.radius": "0.375rem",
+    "border.width": "1px",
+    "border.color": "#d1d5db"
+  },
+  "defaults": {
+    "labelPosition": "top",
+    "style": {
+      "fontFamily": "$token.typography.family"
+    }
+  },
+  "selectors": [
+    {
+      "match": { "dataType": "string" },
+      "apply": { "widget": "textInput" }
+    },
+    {
+      "match": { "dataType": "text" },
+      "apply": { "widget": "textarea", "widgetConfig": { "rows": 4 } }
+    },
+    {
+      "match": { "dataType": "choice" },
+      "apply": { "widget": "dropdown" }
+    },
+    {
+      "match": { "dataType": "multiChoice" },
+      "apply": { "widget": "checkboxGroup" }
+    },
+    {
+      "match": { "dataType": "boolean" },
+      "apply": { "widget": "checkbox" }
+    },
+    {
+      "match": { "dataType": "date" },
+      "apply": { "widget": "datePicker" }
+    },
+    {
+      "match": { "dataType": "integer" },
+      "apply": { "widget": "numberInput" }
+    },
+    {
+      "match": { "dataType": "decimal" },
+      "apply": { "widget": "numberInput" }
+    }
+  ]
+}
