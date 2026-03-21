@@ -3,7 +3,7 @@
 > **Goal:** Close all 24 actionable gaps between the Rust backend crates and the Python test suite, reducing skipped tests from 28 to 4 (non-normative spec snippets only).
 
 **Date:** 2026-03-20
-**Status:** Draft
+**Status:** Implemented — all 18 features built across 4 waves.
 **Crates affected:** `formspec-eval`, `formspec-lint`, `formspec-core` (schema infra), `formspec-py`, `fel-core`
 
 ---

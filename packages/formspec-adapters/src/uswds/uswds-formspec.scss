@@ -12,15 +12,15 @@
   // Suppress compile-time notification banner
   $theme-show-notifications: false,
 
-  // Disable USWDS font loading — theme tokens handle typography
-  // via system font stack ('Public Sans', -apple-system, ...)
-  $theme-font-path: false,
+  // Use system font stack for all roles — eliminates @font-face declarations.
+  // The theme's typography tokens provide the actual font-family
+  // ('Public Sans', -apple-system, ...) at render time.
+  $theme-font-type-sans: 'system',
+  $theme-font-type-serif: 'system',
+  $theme-font-type-mono: 'system',
 
   // Formspec layout integration: inputs fill their grid cells
   $theme-input-max-width: none,
-
-  // Formspec layout integration: grid gap handles inter-field spacing
-  $theme-form-group-margin-top: 0,
 );
 
 // ---------------------------------------------------------------------------
@@ -47,8 +47,11 @@
 // Formspec-specific overrides — no USWDS setting equivalent
 // ---------------------------------------------------------------------------
 
-// Reset fieldset/label/hint margins that USWDS applies beyond the
-// form-group margin we already zeroed via $theme-form-group-margin-top
+// Formspec layout: grid gap handles inter-field spacing, not form-group margin
+.formspec-grid .usa-form-group,
+.formspec-stack .usa-form-group { margin-top: 0; }
+
+// Reset fieldset/label/hint margins that USWDS applies
 .formspec-container .usa-fieldset { border: 0; padding: 0; margin: 0; }
 .formspec-container .usa-label { margin-top: 0; }
 .formspec-container .usa-hint { margin-top: 0; }

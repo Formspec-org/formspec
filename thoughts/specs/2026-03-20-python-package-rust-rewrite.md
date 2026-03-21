@@ -1,7 +1,7 @@
 # Python Package Rewrite — Rust-Backed Thin Wrappers
 
 **Date:** 2026-03-20
-**Status:** Proposed
+**Status:** Implemented — spec served its purpose. See errata in companion plan.
 
 ## Goal
 

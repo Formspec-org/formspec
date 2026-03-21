@@ -1,5 +1,7 @@
 # Batch FormEngine Rewrite — Implementation Plan
 
+> **Progress:** Phase 1-3 COMPLETE. Phase 4 remaining: remove legacy fallback imports from index.ts (Task 13), delete 15 dead files + remove chevrotain/ajv deps (Task 15), verify downstream packages (Task 16), performance baseline (Task 17). Task 14 (Studio migration) already done.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the reactive-graph FormEngine with a batch-evaluation engine backed entirely by Rust/WASM, deleting ~3,500 lines of duplicated TS logic.
@@ -110,14 +112,14 @@ All paths relative to `packages/formspec-engine/`:
 
 ---
 
-## Phase 1 — Rust Foundation
+## Phase 1 — Rust Foundation ✅
 
-### Task 1: Extend EvaluationResult in formspec-eval
+### Task 1: Extend EvaluationResult in formspec-eval ✅
 
 **Files:**
 - Modify: `crates/formspec-eval/src/lib.rs`
 
-- [ ] **Step 1: Write failing Rust tests for new fields**
+- [x] **Step 1: Write failing Rust tests for new fields**
 
 Add tests to `crates/formspec-eval/src/lib.rs` (or a test module):
 
@@ -172,37 +174,37 @@ fn shape_validations_include_shape_id() {
 }
 ```
 
-- [ ] **Step 2: Run tests, verify they fail**
+- [x] **Step 2: Run tests, verify they fail**
 
 Run: `cargo test -p formspec-eval`
 Expected: Compilation errors — `required`, `readonly`, `shape_id` fields don't exist yet.
 
-- [ ] **Step 3: Implement the struct changes**
+- [x] **Step 3: Implement the struct changes**
 
 Add `shape_id: Option<String>` to `ValidationResult`. Add `required: HashMap<String, bool>` and `readonly: HashMap<String, bool>` to `EvaluationResult`.
 
 Add `collect_mip_state()` helper. Update `evaluate_definition()` to collect and return the new fields. Update all `ValidationResult` construction sites: bind results get `shape_id: None`, shape results get `shape_id: Some(id)` (the shape ID is read from `shape.get("id")` — already extracted in `validate_shape()`).
 
-- [ ] **Step 4: Run tests, verify they pass**
+- [x] **Step 4: Run tests, verify they pass**
 
 Run: `cargo test -p formspec-eval`
 Expected: All pass including new tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add crates/formspec-eval/
 git commit -m "feat(eval): extend EvaluationResult with required, readonly, shape_id"
 ```
 
-### Task 2: Fix calculate fixpoint iteration (CRITICAL)
+### Task 2: Fix calculate fixpoint iteration (CRITICAL) ✅
 
 **Files:**
 - Modify: `crates/formspec-eval/src/lib.rs:383-540` (`recalculate` and `evaluate_items_with_inheritance`)
 
 The Rust evaluator does a single tree-order pass for calculate expressions. If field A's calculate depends on field B's calculate, and B appears after A in the item tree, A sees B's stale value. The spec requires iterative evaluation until fixpoint (no new dirty nodes), up to a processor-defined limit of at least 100 iterations.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```rust
 #[test]
@@ -228,28 +230,19 @@ fn calculate_fixpoint_cross_field_dependency() {
 }
 ```
 
-- [ ] **Step 2: Run test, verify it fails** (total gets stale subtotal value)
+- [x] **Step 2: Run test, verify it fails** (total gets stale subtotal value)
 
-- [ ] **Step 3: Implement topological sort for calculate evaluation**
+- [x] **Step 3: Implement fixpoint iteration for calculate evaluation**
 
-Two approaches (pick one):
-- **A) Topo-sort calculate order:** Extract all calculate binds, build dependency graph via `extract_dependencies`, topologically sort, evaluate in that order instead of tree order.
-- **B) Iterative fixpoint:** Run `evaluate_items_with_inheritance` repeatedly until no values change, up to 100 iterations.
+Implemented as iterative fixpoint (`settle_calculated_values()` in `recalculate.rs:754-771`) — runs up to 100 iterations until no values change.
 
-Option A is more efficient. Option B is simpler. Either is spec-conformant.
+- [x] **Step 4: Run test, verify it passes**
 
-- [ ] **Step 4: Run test, verify it passes**
-
-- [ ] **Step 5: Run full Rust test suite**
+- [x] **Step 5: Run full Rust test suite**
 
 Run: `cargo test -p formspec-eval`
 
-- [ ] **Step 6: Commit**
-
-```bash
-git add crates/formspec-eval/
-git commit -m "fix(eval): topological sort for calculate evaluation order"
-```
+- [x] **Step 6: Commit**
 
 ### ~~excludedValue~~ VERIFIED ALREADY FIXED
 
@@ -259,7 +252,7 @@ git commit -m "fix(eval): topological sort for calculate evaluation order"
 
 `VariableDef.scope` exists in `types.rs:65`. `evaluate_variables_scoped()` in `recalculate.rs:217-256` handles scope-qualified keys. `visible_variables()` in `recalculate.rs:81-109` filters by ancestor path. `evaluate_items_with_inheritance_scoped()` in `recalculate.rs:502-541` clears/repopulates env per item.
 
-### Task 3: Add shape context map
+### Task 3: Add shape context map ✅
 
 **Files:**
 - Modify: `crates/formspec-eval/src/revalidate.rs:422-494` (`validate_shape`)
@@ -267,7 +260,7 @@ git commit -m "fix(eval): topological sort for calculate evaluation order"
 
 **Verified still a problem:** `validate_shape()` never reads a `"context"` key from shape JSON. `ValidationResult` has no `context` field. The spec (spec.md:2584, 2663-2666) defines `context` as an object of FEL expressions evaluated when a shape fails, with results included in the output.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```rust
 #[test]
@@ -302,26 +295,19 @@ fn shape_context_evaluated_on_failure() {
 }
 ```
 
-- [ ] **Step 2: Run test, verify it fails** (no `context` field on `ValidationResult`)
+- [x] **Step 2: Run test, verify it fails** (no `context` field on `ValidationResult`)
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
-1. Add `context: Option<HashMap<String, Value>>` to `ValidationResult` in `types.rs`
-2. In `validate_shape()` in `revalidate.rs`, after a shape fails, read `shape.get("context")`, iterate entries, evaluate each FEL expression, collect into a `HashMap`, attach to the `ValidationResult`
-3. Update all other `ValidationResult` construction sites to include `context: None`
+Implemented: `context: Option<HashMap<String, Value>>` on `ValidationResult` (types.rs:95). `evaluate_shape_context()` in revalidate.rs:658-680 evaluates context expressions on shape failure.
 
-- [ ] **Step 4: Run test, verify it passes**
+- [x] **Step 4: Run test, verify it passes**
 
-- [ ] **Step 5: Run full suite:** `cargo test -p formspec-eval`
+- [x] **Step 5: Run full suite:** `cargo test -p formspec-eval`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
-```bash
-git add crates/formspec-eval/
-git commit -m "feat(eval): implement shape context map evaluation"
-```
-
-### Task 4: Fix valid() MIP query
+### Task 4: Fix valid() MIP query ✅
 
 **Files:**
 - Modify: `crates/formspec-eval/src/lib.rs:70-121` (`evaluate_definition_with_trigger`)
@@ -331,7 +317,7 @@ git commit -m "feat(eval): implement shape context map evaluation"
 
 For a batch-per-change architecture, the natural fix: accept **previous cycle's validation results** as input and use them to set MIP valid states at the START of Phase 2, before any expressions evaluate. This means `valid($field)` reflects the previous cycle's validation state — which matches XForms semantics.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```rust
 #[test]
@@ -363,289 +349,131 @@ fn valid_mip_query_reflects_validation_state() {
 }
 ```
 
-- [ ] **Step 2: Run test, verify it fails**
+- [x] **Step 2: Run test, verify it fails**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
-1. Add `previous_validations: Option<&[ValidationResult]>` to `EvalContext`
-2. In `recalculate()`, before Phase 2 evaluation, if `previous_validations` is provided:
-   - Build a set of paths that had errors
-   - When calling `set_mip`, set `valid: false` for those paths instead of unconditional `true`
-3. This means `valid($field)` during Phase 2 reflects the PREVIOUS cycle's results — one cycle behind, which is the XForms-correct semantics
+Implemented: `previous_validations` on `EvalContext` (types.rs:112-116). MIP valid/relevant/readonly/required queries in `environment.rs:249-267`. Previous validation results propagated via `recalculate.rs:179-184`.
 
-- [ ] **Step 4: Run test, verify it passes**
+- [x] **Step 4: Run test, verify it passes**
 
-- [ ] **Step 5: Run full suite:** `cargo test -p formspec-eval`
+- [x] **Step 5: Run full suite:** `cargo test -p formspec-eval`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
-```bash
-git add crates/formspec-eval/
-git commit -m "fix(eval): valid() MIP query uses previous cycle validation results"
-```
-
-### Task 5: Add runtime context support to evaluate_definition
+### Task 5: Add runtime context support to evaluate_definition ✅
 
 **Files:**
 - Modify: `crates/formspec-eval/src/lib.rs`
 
 The batch evaluator currently uses system time for `today()`/`now()`. It must accept an injected `nowIso` for deterministic evaluation.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
-```rust
-#[test]
-fn eval_with_runtime_context_uses_injected_now() {
-    let def = serde_json::json!({
-        "$formspec": "1.0", "url": "test", "version": "1.0.0", "title": "T",
-        "items": [{ "key": "d", "type": "field", "dataType": "date", "label": "D" }],
-        "binds": [{ "path": "d", "calculate": "today()" }],
-    });
-    let data = HashMap::new();
-    let ctx = EvalContext { now_iso: Some("2025-06-15T00:00:00".into()) };
-    let result = evaluate_definition_with_context(&def, &data, &ctx);
-    assert_eq!(result.values.get("d"), Some(&serde_json::json!("2025-06-15")));
-}
-```
+- [x] **Step 2: Implement**
 
-- [ ] **Step 2: Implement**
+Implemented: `EvalContext` in `types.rs:112-116`. Five public API functions in `lib.rs:30-95` (`evaluate_definition`, `evaluate_definition_with_context`, `evaluate_definition_with_trigger`, `evaluate_definition_with_trigger_and_context`, `evaluate_definition_full_with_context`). Context applied in `recalculate.rs:134-135` via `env.set_now_from_iso()`.
 
-Add `EvalContext` struct and `evaluate_definition_with_context()` that calls `env.set_now_from_iso()` before evaluation. Keep `evaluate_definition()` as a convenience that passes default context.
+- [x] **Step 3: Run tests, verify they pass**
 
-```rust
-pub struct EvalContext {
-    pub now_iso: Option<String>,
-}
+- [x] **Step 4: Commit**
 
-pub fn evaluate_definition_with_context(
-    definition: &Value,
-    data: &HashMap<String, Value>,
-    context: &EvalContext,
-) -> EvaluationResult {
-    // ... same as evaluate_definition but call env.set_now_from_iso if provided
-}
-```
-
-- [ ] **Step 3: Run tests, verify they pass**
-
-Run: `cargo test -p formspec-eval`
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add crates/formspec-eval/
-git commit -m "feat(eval): accept runtime context (nowIso) in evaluate_definition"
-```
-
-### Task 6: Wire extended result + context through WASM
+### Task 6: Wire extended result + context through WASM ✅
 
 **Files:**
 - Modify: `crates/formspec-wasm/src/lib.rs`
 - Modify: `packages/formspec-engine/src/wasm-bridge.ts`
 
-- [ ] **Step 1: Update WASM `evaluateDefinition` to accept optional context and return extended fields**
+- [x] **Step 1: Update WASM `evaluateDefinition` to accept optional context and return extended fields**
 
-In `crates/formspec-wasm/src/lib.rs`, update the function signature:
+Implemented in `crates/formspec-wasm/src/lib.rs:587-654`. Accepts `context_json` with `nowIso`, `trigger`, `previousValidations`. Returns `required`, `readonly`, `shapeId`, `context` on validations.
 
-```rust
-#[wasm_bindgen(js_name = "evaluateDefinition")]
-pub fn evaluate_definition_wasm(
-    definition_json: &str,
-    data_json: &str,
-    context_json: Option<String>,
-) -> Result<String, JsError> { ... }
-```
+- [x] **Step 2: Update TS bridge**
 
-Parse `context_json` into `EvalContext`. Add `required`, `readonly`, and `shapeId` to the output JSON.
+Implemented in `wasm-bridge.ts:247-279`. Accepts optional context with `nowIso`, `trigger`, `previousValidations`.
 
-- [ ] **Step 2: Update TS bridge**
+- [x] **Step 3: Build and verify**
 
-```typescript
-export function wasmEvaluateDefinition(
-    definition: unknown,
-    data: Record<string, unknown>,
-    context?: { nowIso?: string },
-): {
-    values: Record<string, any>;
-    validations: Array<{ path: string; severity: string; kind: string; message: string; shapeId?: string }>;
-    nonRelevant: string[];
-    variables: Record<string, any>;
-    required: Record<string, boolean>;
-    readonly: Record<string, boolean>;
-} {
-    const resultJson = wasm().evaluateDefinition(
-        JSON.stringify(definition),
-        JSON.stringify(data),
-        context ? JSON.stringify(context) : undefined,
-    );
-    return JSON.parse(resultJson);
-}
-```
+- [x] **Step 4: Commit**
 
-- [ ] **Step 3: Build and verify**
-
-Run: `cargo test -p formspec-wasm && npm --prefix packages/formspec-engine run build:wasm`
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add crates/formspec-wasm/ packages/formspec-engine/src/wasm-bridge.ts
-git commit -m "feat(wasm): wire runtime context, required, readonly, shapeId through evaluateDefinition"
-```
-
-### Task 7: Add tokenizeFEL to WASM
+### Task 7: Add tokenizeFEL to WASM ✅
 
 **Files:**
 - Modify: `crates/fel-core/src/` (expose positioned tokens)
 - Modify: `crates/formspec-wasm/src/lib.rs`
 - Modify: `packages/formspec-engine/src/wasm-bridge.ts`
 
-- [ ] **Step 1: Expose tokenize in fel-core**
+- [x] **Step 1: Expose tokenize in fel-core**
 
-`fel-core` already produces tokens with spans internally. Add a public `tokenize()` function that returns positioned token records. Note: the internal token type is likely an enum (`Token`) with a `Span { start, end }` — you need to convert the enum variant to a string name and extract the source text via `&expression[span.start..span.end]`.
+Implemented: `tokenize()` in `fel-core/src/lib.rs:90-102` returning `PositionedToken` (lines 31-37).
 
-```rust
-#[derive(Debug, Serialize)]
-pub struct PositionedToken {
-    pub token_type: String,
-    pub text: String,
-    pub start: usize,
-    pub end: usize,
-}
+- [x] **Step 2: Add WASM export and TS bridge wrapper**
 
-pub fn tokenize(expression: &str) -> Vec<PositionedToken> {
-    // Use the existing lexer, convert SpannedToken → PositionedToken
-}
-```
+WASM: `formspec-wasm/src/lib.rs:215-234`. TS: `wasm-bridge.ts:114-122` (`wasmTokenizeFEL`).
 
-- [ ] **Step 2: Add WASM export and TS bridge wrapper**
+- [x] **Step 3: Build and test**
 
-- [ ] **Step 3: Build and test**
-
-Run: `cargo test -p fel-core && cargo test -p formspec-wasm && npm --prefix packages/formspec-engine run build:wasm`
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add crates/fel-core/ crates/formspec-wasm/ packages/formspec-engine/src/wasm-bridge.ts
-git commit -m "feat(wasm): add tokenizeFEL for Studio syntax highlighting"
-```
+- [x] **Step 4: Commit**
 
 ---
 
-## Phase 2 — TS Foundation
+## Phase 2 — TS Foundation ✅
 
-### Task 8: Write and implement diff.ts
+### Task 8: Write and implement diff.ts ✅
 
 **Files:**
 - Create: `packages/formspec-engine/tests/batch-diff.test.mjs`
 - Create: `packages/formspec-engine/src/diff.ts`
 
-- [ ] **Step 1: Write failing tests** (see full test file in previous plan version — covers: no previous result, unchanged values, changed values, null transitions, money objects, relevance, required, readonly, validations, shape result grouping by shapeId, variables, new fields, removed fields)
+- [x] **Step 1: Write failing tests** (covers: no previous result, unchanged values, changed values, null transitions, money objects, relevance, required, readonly, validations, shape result grouping by shapeId, variables, new fields, removed fields)
 
-- [ ] **Step 2: Run tests, verify they fail**
+- [x] **Step 2: Run tests, verify they fail**
 
-- [ ] **Step 3: Implement `diffEvalResults` in `diff.ts`** (see previous plan version for implementation)
+- [x] **Step 3: Implement `diffEvalResults` in `diff.ts`** (~175 lines, pure function diffing two EvalResults → EvalDelta)
 
-- [ ] **Step 4: Run tests, verify they pass**
+- [x] **Step 4: Run tests, verify they pass**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
-### Task 9: Update interfaces.ts with all absorbed types
+### Task 9: Update interfaces.ts with all absorbed types ✅
 
 **Files:**
 - Modify: `packages/formspec-engine/src/interfaces.ts`
 
-- [ ] **Step 1: Copy all type definitions from the files being deleted**
+- [x] **Step 1: Copy all type definitions from the files being deleted**
 
-Read each file listed in the "Types to absorb" table. Copy the type/interface definitions into `interfaces.ts`. Organize into sections:
+All types absorbed into `interfaces.ts`.
 
-```typescript
-// ── FEL types (from fel/runtime.ts) ─────────────────────
-export interface IFelRuntime { ... }
-export interface ICompiledExpression { ... }
-export interface FelContext { ... }
-// ... etc
+- [x] **Step 2: Verify build**
 
-// ── Analysis types (from fel/analysis.ts) ────────────────
-export interface FELAnalysis { ... }
-export interface FELAnalysisError { ... }
-
-// ── Schema types (from schema-validator.ts) ──────────────
-export type DocumentType = 'definition' | 'theme' | 'component' | ...;
-export interface SchemaValidationError { path: string; message: string; }
-export interface SchemaValidationResult { ... }
-export interface SchemaValidatorSchemas { definition?: object; theme?: object; component?: object; ... }
-export interface SchemaValidator { validate(document: unknown, documentType?: DocumentType | null): SchemaValidationResult; }
-
-// ── Extension types (from extension-analysis.ts) ─────────
-export interface ExtensionUsageIssue { ... }
-export interface ValidateExtensionUsageOptions { ... }
-
-// ── Assembly types (from assembler.ts) ───────────────────
-export type DefinitionResolver = (url: string, version?: string) => any | Promise<any>;
-export interface AssemblyResult { ... }
-export interface RewriteMap { ... }
-
-// ── Component types (from index.ts) ──────────────────────
-export interface ComponentObject { ... }
-export interface ComponentDocument { ... }
-```
-
-Remove the import of `IFelRuntime` from `./fel/runtime.js` at the top.
-
-- [ ] **Step 2: Verify build**
-
-Run: `npm --prefix packages/formspec-engine run build`
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add packages/formspec-engine/src/interfaces.ts
-git commit -m "refactor(engine): absorb all types from files being deleted into interfaces.ts"
-```
+- [x] **Step 3: Commit**
 
 ---
 
-## Phase 3 — BatchFormEngine
+## Phase 3 — BatchFormEngine ✅
 
-### Task 10: Write core engine tests
+### Task 10: Write core engine tests ✅
 
 **Files:**
 - Create: `packages/formspec-engine/tests/batch-engine-core.test.mjs`
 
 These are GREEN baseline tests — they must pass against the current engine AND the new one.
 
-- [ ] **Step 1: Write tests** covering:
-  - Constructor creates signals for all fields
-  - `setValue` updates signals
-  - Calculated fields computed by Rust
-  - `setValue` on calculated fields silently ignored
-  - Relevance signals update
-  - Required signals update
-  - Readonly signals update
-  - Validation results update
-  - Variable signals update
-  - `compileExpression` returns callable that evaluates against current state
+- [x] **Step 1: Write tests** — `tests/batch-engine-core.test.mjs` (~80+ lines)
 
-- [ ] **Step 2: Run against current engine to confirm they pass (GREEN baseline)**
+- [x] **Step 2: Run against engine to confirm they pass (GREEN)**
 
-Run: `npm --prefix packages/formspec-engine run build && node --test packages/formspec-engine/tests/batch-engine-core.test.mjs`
-Expected: All PASS against the current reactive engine.
+- [x] **Step 3: Commit**
 
-- [ ] **Step 3: Commit**
+### Task 11: Write repeat lifecycle tests ✅
 
-### Task 11: Write repeat lifecycle tests
+- [x] **Step 1: Write tests** — `tests/batch-repeat-lifecycle.test.mjs` (~100+ lines)
 
-Same approach — GREEN baseline against current engine.
+- [x] **Step 2: Verify GREEN against engine**
 
-- [ ] **Step 1: Write tests** covering add/remove/shift/calculated fields across instances
+- [x] **Step 3: Commit**
 
-- [ ] **Step 2: Verify GREEN against current engine**
-
-- [ ] **Step 3: Commit**
-
-### Task 12: Implement BatchFormEngine (index.ts rewrite)
+### Task 12: Implement BatchFormEngine (index.ts rewrite) ✅
 
 **Files:**
 - Rewrite: `packages/formspec-engine/src/index.ts`
@@ -740,89 +568,51 @@ Key methods to implement:
 
 **Dropped properties:** `dependencies` and `felRuntime` are removed from `IFormEngine`. No external consumer uses them. The 2 test files that assert on `engine.dependencies` are updated to remove those assertions.
 
-- [ ] **Step 1: Write the new index.ts**
+- [x] **Step 1: Write the new index.ts**
 
-Build incrementally: start with imports, type re-exports, and an empty `FormEngine` class. Then add constructor, then `setValue`, then `_evaluate`, etc.
+Fully rewritten: ~3,058 lines. `FormEngine` class at line 272+ uses `wasmEvaluateDefinition` → `diffEvalResults` → `batch()` signal patching. WASM-only, no fallback paths.
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
-Run: `npm --prefix packages/formspec-engine run build`
+- [x] **Step 3: Run new tests (Tasks 10-11)** — All PASS.
 
-- [ ] **Step 3: Run new tests (Tasks 10-11)**
-
-Expected: All PASS.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add packages/formspec-engine/src/index.ts
-git commit -m "feat(engine): BatchFormEngine — Rust batch eval with signal patching"
-```
+- [x] **Step 4: Commit**
 
 ---
 
 ## Phase 4 — Conformance & Migration
 
-### Task 13: Run existing test suite, fix failures
+### Task 13: Run existing test suite, fix failures — IN PROGRESS
 
 **Files:**
 - Modify: `packages/formspec-engine/src/index.ts` (as needed)
 
-- [ ] **Step 1: Run full test suite**
+**Status:** Engine tests appear to be passing. However, `index.ts` still imports from 4 legacy files as fallbacks:
+- `./assembler.js` (line 21)
+- `./fel/analysis.js` (line 22, as `legacyAnalyzeFEL`)
+- `./fel/rewrite.js` (line 23, as `legacyRewriteFELReferences`)
+- `./runtime-mapping.js` (line 53, as `LegacyRuntimeMappingEngine`)
+
+These legacy imports must be removed before Task 15 can delete the files.
+
+- [ ] **Step 1: Remove legacy fallback imports from index.ts**
+
+Remove the 4 legacy imports and any code paths that use them. The WASM versions are the sole backends now.
+
+- [ ] **Step 2: Run full test suite, verify no regressions**
 
 Run: `npm --prefix packages/formspec-engine test`
 
-Expected failure categories:
-- **`compileExpression` tests** (~6 files) — should pass if `felRuntime` wrapper is correct
-- **`dependencies` access** (~2 files) — should pass if populated at init
-- **`FelLexer`/`parser` imports in test helpers** — if any test file imports these directly, update the import
-- **Timing-sensitive tests** — batch eval patches synchronously in `batch()`, so signal reads after `setValue` should see updated values immediately
-- **Precision/coercion edge cases** — may differ between TS coercion and Rust coercion
+- [ ] **Step 3: Commit**
 
-- [ ] **Step 2: Fix failures iteratively, commit after each batch of fixes**
-
-- [ ] **Step 3: Achieve 100% pass rate**
-
-Run: `npm --prefix packages/formspec-engine test`
-Expected: All 62+ files pass.
-
-- [ ] **Step 4: Commit**
-
-### Task 14: Migrate Studio FEL tooling (MANDATORY)
+### Task 14: Migrate Studio FEL tooling (MANDATORY) ✅
 
 **Files:**
 - Modify: `packages/formspec-studio/src/lib/fel-editor-utils.ts`
 
-This MUST happen before deleting `fel/lexer.ts` and `fel/parser.ts`.
+Already migrated — `fel-editor-utils.ts` now imports `analyzeFEL, tokenizeFEL` from `formspec-engine` (no `FelLexer`/`parser`).
 
-- [ ] **Step 1: Read `fel-editor-utils.ts` to understand usage**
-
-It imports `FelLexer`, `parser`, and `FormspecInstance`. It calls `FelLexer.tokenize(expression)` for syntax highlighting tokens and error detection.
-
-- [ ] **Step 2: Replace with `tokenizeFEL` from WASM**
-
-```typescript
-// Before:
-import { FelLexer, parser, type FormspecInstance } from 'formspec-engine';
-const lexResult = FelLexer.tokenize(expression);
-
-// After:
-import { tokenizeFEL, type FormspecInstance } from 'formspec-engine';
-const tokens = tokenizeFEL(expression);
-```
-
-Map token type names as needed (Chevrotain names → Rust names).
-
-- [ ] **Step 3: Verify Studio builds**
-
-Run: `npm --prefix packages/formspec-studio run build`
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add packages/formspec-studio/
-git commit -m "refactor(studio): migrate FEL editor from Chevrotain to wasmTokenizeFEL"
-```
+- [x] **Step 1-4: Complete** — Studio uses `tokenizeFEL(expression)` for syntax highlighting.
 
 ### Task 15: Delete old files and clean up
 
@@ -886,18 +676,18 @@ Use `tests/e2e/fixtures/` for the grant-app fixture (verify path first with `ls`
 
 ## Verification Checklist
 
-- [ ] `cargo test -p formspec-eval` — all Rust tests pass
-- [ ] `cargo test -p formspec-wasm` — all WASM tests pass
-- [ ] `npm --prefix packages/formspec-engine test` — all 62+ test files pass
+- [x] `cargo test -p formspec-eval` — all Rust tests pass
+- [x] `cargo test -p formspec-wasm` — all WASM tests pass
+- [ ] `npm --prefix packages/formspec-engine test` — all 62+ test files pass (need to verify after legacy import removal)
 - [ ] `npm --prefix packages/formspec-core run build && npm --prefix packages/formspec-core run test`
 - [ ] `npm --prefix packages/formspec-studio-core run build && npm --prefix packages/formspec-studio-core run test`
 - [ ] `npm --prefix packages/formspec-mcp run build`
 - [ ] `npm --prefix packages/formspec-webcomponent run build`
 - [ ] `npm --prefix packages/formspec-studio run build`
 - [ ] `npm test` (E2E)
-- [ ] `packages/formspec-engine/src/` contains exactly 4 files
-- [ ] `package.json` has no `chevrotain` or `ajv` dependency
-- [ ] No fallback code paths: `grep -r "fallback\|Fallback\|FALLBACK" packages/formspec-engine/src/` returns nothing
+- [ ] `packages/formspec-engine/src/` contains exactly 4 files (currently 19 — 15 legacy files remain)
+- [ ] `package.json` has no `chevrotain` or `ajv` dependency (both still present)
+- [ ] No fallback code paths (4 legacy imports remain in index.ts)
 - [ ] Performance: grant-app batch eval under 10ms average
 
 ---

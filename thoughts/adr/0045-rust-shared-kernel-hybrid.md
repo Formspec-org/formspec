@@ -1,6 +1,6 @@
 # ADR 0045 — Rust Shared Kernel (Hybrid Strategy)
 
-**Status:** Accepted
+**Status:** Implemented
 **Date:** 2026-03-17
 
 ## Context

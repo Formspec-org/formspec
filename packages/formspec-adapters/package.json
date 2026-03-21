@@ -9,7 +9,7 @@
     ".": "./dist/index.js"
   },
   "scripts": {
-    "build:css": "sass src/uswds/uswds-formspec.scss dist/uswds-formspec.css --style=compressed --load-path=node_modules/@uswds/uswds/packages",
+    "build:css": "node scripts/build-css.mjs",
     "build:integration-css": "node scripts/generate-integration-css.mjs",
     "prebuild": "npm run build:css && npm run build:integration-css",
     "build": "tsc",

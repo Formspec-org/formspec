@@ -2,6 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** Complete — all 4 waves executed (commits a7a948a, acc896f, 30abe74, b493707). 28 → 4 skips achieved.
 **Goal:** Close all 24 actionable gaps between the Rust backend and the Python test suite (28 → 4 skips).
 
 **Architecture:** Four waves of changes across 5 Rust crates. Each wave is independently testable. Wave 1 adds lint flags and quick eval fixes. Wave 2 adds medium eval features (timing, screener, shapes). Wave 3 adds JSON Schema validation. Wave 4 adds wildcard expansion and scoped variables.

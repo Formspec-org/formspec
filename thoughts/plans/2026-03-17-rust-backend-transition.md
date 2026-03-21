@@ -1,6 +1,7 @@
 # Rust Backend Transition Plan
 
 **Date:** 2026-03-17
+**Status:** Archived — superseded by `2026-03-20-rust-decommission-tasks.md` and successor plans.
 **Goal:** Replace the TypeScript (formspec-engine) and Python (src/formspec) implementations with a shared Rust crate, exposed via WASM (TypeScript) and PyO3 (Python), while keeping all existing tests and consumers working.
 
 ---

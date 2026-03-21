@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-19
 **Relates to:** ADR 0047 (CSS Architecture Split), ADR 0046 (Headless Component Adapters)
-**Status:** Proposed
+**Status:** Done
 
 ## Goal
 
