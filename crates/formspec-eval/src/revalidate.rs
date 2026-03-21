@@ -4,7 +4,7 @@ use fancy_regex::Regex;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
-use fel_core::{FelValue, FormspecEnvironment, evaluate, json_to_fel, parse};
+use fel_core::{FelValue, FormspecEnvironment, evaluate, fel_to_json, json_to_fel, parse};
 
 use crate::convert::resolve_value_by_path;
 use crate::rebuild::{
@@ -18,10 +18,12 @@ use crate::types::{EvalTrigger, ExtensionConstraint, ItemInfo, ValidationResult,
 pub fn revalidate(
     items: &[ItemInfo],
     values: &HashMap<String, Value>,
+    variables: &HashMap<String, Value>,
     shapes: Option<&[Value]>,
     trigger: EvalTrigger,
     extension_constraints: &[ExtensionConstraint],
     formspec_version: &str,
+    now_iso: Option<&str>,
 ) -> Vec<ValidationResult> {
     let mut results = Vec::new();
 
@@ -29,7 +31,7 @@ pub fn revalidate(
         return results;
     }
 
-    let mut env = build_validation_env(values);
+    let mut env = build_validation_env(values, variables, now_iso);
 
     // 9a: Apply excludedValue — non-relevant fields with excludedValue="null" appear as null in FEL
     apply_excluded_values_to_env(items, &mut env);
@@ -73,6 +75,11 @@ pub fn revalidate(
                         continue;
                     }
                 }
+                EvalTrigger::Demand => {
+                    if timing != "demand" {
+                        continue;
+                    }
+                }
             }
             validate_shape(shape, &shapes_by_id, &mut env, values, items, &mut results);
         }
@@ -113,8 +120,10 @@ fn validate_items(
                     constraint_kind: "required".to_string(),
                     code: "REQUIRED".to_string(),
                     message: "Required field is empty".to_string(),
+                    constraint: None,
                     source: "bind".to_string(),
                     shape_id: None,
+                    context: None,
                 });
             }
         }
@@ -146,8 +155,10 @@ fn validate_items(
                     constraint_kind: "type".to_string(),
                     code: "TYPE_MISMATCH".to_string(),
                     message: format!("Invalid {dt}"),
+                    constraint: None,
                     source: "bind".to_string(),
                     shape_id: None,
+                    context: None,
                 });
             }
         }
@@ -170,8 +181,10 @@ fn validate_items(
                             .constraint_message
                             .clone()
                             .unwrap_or_else(|| format!("Constraint failed: {expr}")),
+                        constraint: Some(expr.clone()),
                         source: "bind".to_string(),
                         shape_id: None,
+                        context: None,
                     });
                 }
             }
@@ -198,8 +211,10 @@ fn validate_items(
                     constraint_kind: "cardinality".to_string(),
                     code: "MIN_REPEAT".to_string(),
                     message: format!("Minimum {min} entries required"),
+                    constraint: None,
                     source: "bind".to_string(),
                     shape_id: None,
+                    context: None,
                 });
             }
             if let Some(max) = item.repeat_max
@@ -211,8 +226,10 @@ fn validate_items(
                     constraint_kind: "cardinality".to_string(),
                     code: "MAX_REPEAT".to_string(),
                     message: format!("Maximum {max} entries allowed"),
+                    constraint: None,
                     source: "bind".to_string(),
                     shape_id: None,
+                    context: None,
                 });
             }
         }
@@ -238,8 +255,10 @@ fn validate_extension_constraints(
                 constraint_kind: "extension".to_string(),
                 code: "UNRESOLVED_EXTENSION".to_string(),
                 message: format!("Extension '{ext_name}' not found in any loaded registry"),
+                constraint: None,
                 source: "extension".to_string(),
                 shape_id: None,
+                context: None,
             });
             continue;
         };
@@ -253,8 +272,10 @@ fn validate_extension_constraints(
                     constraint_kind: "extension".to_string(),
                     code: "EXTENSION_RETIRED".to_string(),
                     message: format!("Extension '{ext_name}' is retired"),
+                    constraint: None,
                     source: "extension".to_string(),
                     shape_id: None,
+                    context: None,
                 });
             }
             "deprecated" => {
@@ -268,8 +289,10 @@ fn validate_extension_constraints(
                     constraint_kind: "extension".to_string(),
                     code: "EXTENSION_DEPRECATED".to_string(),
                     message: format!("Extension '{ext_name}' is deprecated: {notice}"),
+                    constraint: None,
                     source: "extension".to_string(),
                     shape_id: None,
+                    context: None,
                 });
             }
             _ => {} // stable, draft — no status warnings
@@ -286,8 +309,10 @@ fn validate_extension_constraints(
                     message: format!(
                         "Extension '{ext_name}' requires formspec version {compat_range}"
                     ),
+                    constraint: None,
                     source: "extension".to_string(),
                     shape_id: None,
+                    context: None,
                 });
             }
         }
@@ -313,8 +338,10 @@ fn validate_extension_constraints(
                             constraint_kind: "extension".to_string(),
                             code: "PATTERN_MISMATCH".to_string(),
                             message: format!("Must be a valid {label}"),
+                            constraint: None,
                             source: "extension".to_string(),
                             shape_id: None,
+                            context: None,
                         });
                     }
                 }
@@ -329,12 +356,14 @@ fn validate_extension_constraints(
                         path: item.path.clone(),
                         severity: "error".to_string(),
                         constraint_kind: "extension".to_string(),
-                        code: "MAX_LENGTH_EXCEEDED".to_string(),
-                        message: format!(
+                            code: "MAX_LENGTH_EXCEEDED".to_string(),
+                            message: format!(
                             "{label} must be at most {max_len} characters"
                         ),
-                        source: "extension".to_string(),
-                        shape_id: None,
+                            constraint: None,
+                            source: "extension".to_string(),
+                            shape_id: None,
+                            context: None,
                     });
                 }
             }
@@ -348,10 +377,12 @@ fn validate_extension_constraints(
                         path: item.path.clone(),
                         severity: "error".to_string(),
                         constraint_kind: "extension".to_string(),
-                        code: "RANGE_UNDERFLOW".to_string(),
-                        message: format!("{label} must be at least {min}"),
-                        source: "extension".to_string(),
-                        shape_id: None,
+                            code: "RANGE_UNDERFLOW".to_string(),
+                            message: format!("{label} must be at least {min}"),
+                            constraint: None,
+                            source: "extension".to_string(),
+                            shape_id: None,
+                            context: None,
                     });
                 }
             }
@@ -365,10 +396,12 @@ fn validate_extension_constraints(
                         path: item.path.clone(),
                         severity: "error".to_string(),
                         constraint_kind: "extension".to_string(),
-                        code: "RANGE_OVERFLOW".to_string(),
-                        message: format!("{label} must be at most {max}"),
-                        source: "extension".to_string(),
-                        shape_id: None,
+                            code: "RANGE_OVERFLOW".to_string(),
+                            message: format!("{label} must be at most {max}"),
+                            constraint: None,
+                            source: "extension".to_string(),
+                            shape_id: None,
+                        context: None,
                     });
                 }
             }
@@ -453,9 +486,11 @@ fn validate_shape(
         .unwrap_or("Shape constraint failed");
 
     // Check activeWhen
+    let saved_repeat_arrays = bind_repeat_group_arrays(env, items, values);
     if let Some(active_when) = shape.get("activeWhen").and_then(|v| v.as_str())
         && !eval_bool(active_when, env, true)
     {
+        restore_repeat_group_arrays(env, saved_repeat_arrays);
         return;
     }
 
@@ -481,11 +516,17 @@ fn validate_shape(
             constraint_kind: "shape".to_string(),
             code: scode.to_string(),
             message: message.to_string(),
+            constraint: shape
+                .get("constraint")
+                .and_then(|v| v.as_str())
+                .map(str::to_string),
             source: "shape".to_string(),
             shape_id: sid.clone(),
+            context: evaluate_shape_context(shape, env, None),
         });
     }
 
+    restore_repeat_group_arrays(env, saved_repeat_arrays);
     // Restore previous bare $ binding
     env.data.remove("");
     if let Some(prev) = prev_dollar {
@@ -511,13 +552,6 @@ fn validate_wildcard_shape(
         .get("message")
         .and_then(|v| v.as_str())
         .unwrap_or("Shape constraint failed");
-
-    // Check activeWhen before expanding
-    if let Some(active_when) = shape.get("activeWhen").and_then(|v| v.as_str())
-        && !eval_bool(active_when, env, true)
-    {
-        return;
-    }
 
     let base = match wildcard_base(target) {
         Some(b) => b.to_string(),
@@ -546,10 +580,27 @@ fn validate_wildcard_shape(
             None => continue,
         };
 
+        let saved_aliases = bind_row_aliases(env, values, concrete_path);
+
         // Build a row-scoped environment: instantiate [*] references in the constraint
         let prev_dollar = env.data.remove("");
         if let Some(val) = values.get(concrete_path.as_str()) {
             env.data.insert(String::new(), json_to_fel(val));
+        }
+
+        let active = shape
+            .get("activeWhen")
+            .and_then(|v| v.as_str())
+            .map(|expr| instantiate_wildcard_expr(expr, &base, index))
+            .map(|expr| eval_bool(&expr, env, true))
+            .unwrap_or(true);
+        if !active {
+            restore_row_aliases(env, saved_aliases);
+            env.data.remove("");
+            if let Some(prev) = prev_dollar {
+                env.data.insert(String::new(), prev);
+            }
+            continue;
         }
 
         // Create an instantiated shape for this row
@@ -577,12 +628,15 @@ fn validate_wildcard_shape(
                 constraint_kind: "shape".to_string(),
                 code: scode.to_string(),
                 message: message.to_string(),
+                constraint: constraint_expr.clone(),
                 source: "shape".to_string(),
                 shape_id: sid.clone(),
+                context: evaluate_shape_context(shape, env, Some((&base, index))),
             });
         }
 
         // Restore bare $
+        restore_row_aliases(env, saved_aliases);
         env.data.remove("");
         if let Some(prev) = prev_dollar {
             env.data.insert(String::new(), prev);
@@ -599,6 +653,30 @@ fn evaluate_shape_expression(expr: &str, env: &FormspecEnvironment) -> FelValue 
         Ok(parsed) => evaluate(&parsed, env).value,
         Err(_) => FelValue::Null,
     }
+}
+
+fn evaluate_shape_context(
+    shape: &Value,
+    env: &FormspecEnvironment,
+    wildcard: Option<(&str, usize)>,
+) -> Option<HashMap<String, Value>> {
+    let context = shape.get("context")?.as_object()?;
+    let mut evaluated = HashMap::new();
+
+    for (key, raw_expr) in context {
+        let value = match raw_expr.as_str() {
+            Some(expr) => {
+                let expression = wildcard
+                    .map(|(base, index)| instantiate_wildcard_expr(expr, base, index))
+                    .unwrap_or_else(|| expr.to_string());
+                fel_to_json(&evaluate_shape_expression(&expression, env))
+            }
+            None => raw_expr.clone(),
+        };
+        evaluated.insert(key.clone(), value);
+    }
+
+    Some(evaluated)
 }
 
 fn evaluate_composition_element(
@@ -728,8 +806,15 @@ fn apply_excluded_values_to_env(items: &[ItemInfo], env: &mut FormspecEnvironmen
     }
 }
 
-pub(crate) fn build_validation_env(values: &HashMap<String, Value>) -> FormspecEnvironment {
+pub(crate) fn build_validation_env(
+    values: &HashMap<String, Value>,
+    variables: &HashMap<String, Value>,
+    now_iso: Option<&str>,
+) -> FormspecEnvironment {
     let mut env = FormspecEnvironment::new();
+    if let Some(now_iso) = now_iso {
+        env.set_now_from_iso(now_iso);
+    }
     for (k, v) in values {
         // Skip repeat group arrays — flat indexed keys exist and FEL should
         // use those instead (array path resolution uses 1-based indexing).
@@ -737,7 +822,221 @@ pub(crate) fn build_validation_env(values: &HashMap<String, Value>) -> FormspecE
             env.set_field(k, json_to_fel(v));
         }
     }
+    for (name, value) in variables {
+        env.set_variable(name, json_to_fel(value));
+    }
     env
+}
+
+fn bind_repeat_group_arrays(
+    env: &mut FormspecEnvironment,
+    items: &[ItemInfo],
+    values: &HashMap<String, Value>,
+) -> HashMap<String, Option<FelValue>> {
+    let mut saved = HashMap::new();
+    for item in items {
+        if item.repeatable
+            && let Some(array) = build_repeat_group_array(&item.path, values)
+        {
+            saved.insert(item.path.clone(), env.data.get(&item.path).cloned());
+            env.set_field(&item.path, json_to_fel(&array));
+        }
+        saved.extend(bind_repeat_group_arrays(env, &item.children, values));
+    }
+    saved
+}
+
+fn restore_repeat_group_arrays(
+    env: &mut FormspecEnvironment,
+    saved_arrays: HashMap<String, Option<FelValue>>,
+) {
+    for (path, previous) in saved_arrays {
+        match previous {
+            Some(value) => env.set_field(&path, value),
+            None => {
+                env.data.remove(&path);
+            }
+        }
+    }
+}
+
+fn build_repeat_group_array(group_path: &str, values: &HashMap<String, Value>) -> Option<Value> {
+    let count = detect_repeat_count(group_path, values);
+    if count == 0 {
+        return None;
+    }
+
+    let mut rows = Vec::with_capacity(count);
+    for index in 0..count {
+        let prefix = format!("{group_path}[{index}].");
+        let mut row = Value::Object(serde_json::Map::new());
+        let mut has_values = false;
+        for (path, value) in values {
+            if let Some(relative) = path.strip_prefix(&prefix) {
+                set_nested_json_path(&mut row, relative, value.clone());
+                has_values = true;
+            }
+        }
+        rows.push(if has_values {
+            row
+        } else {
+            Value::Object(serde_json::Map::new())
+        });
+    }
+
+    Some(Value::Array(rows))
+}
+
+fn set_nested_json_path(target: &mut Value, path: &str, value: Value) {
+    let tokens = tokenize_json_path(path);
+    if tokens.is_empty() {
+        *target = value;
+        return;
+    }
+
+    let mut current = target;
+    for index in 0..tokens.len() - 1 {
+        let next_is_index = matches!(tokens[index + 1], JsonPathToken::Index(_));
+        match &tokens[index] {
+            JsonPathToken::Key(key) => {
+                if !current.is_object() {
+                    *current = Value::Object(serde_json::Map::new());
+                }
+                let map = current.as_object_mut().expect("object ensured above");
+                current = map.entry(key.clone()).or_insert_with(|| {
+                    if next_is_index {
+                        Value::Array(vec![])
+                    } else {
+                        Value::Object(serde_json::Map::new())
+                    }
+                });
+            }
+            JsonPathToken::Index(array_index) => {
+                if !current.is_array() {
+                    *current = Value::Array(vec![]);
+                }
+                let array = current.as_array_mut().expect("array ensured above");
+                while array.len() <= *array_index {
+                    array.push(Value::Null);
+                }
+                if array[*array_index].is_null() {
+                    array[*array_index] = if next_is_index {
+                        Value::Array(vec![])
+                    } else {
+                        Value::Object(serde_json::Map::new())
+                    };
+                }
+                current = &mut array[*array_index];
+            }
+        }
+    }
+
+    match &tokens[tokens.len() - 1] {
+        JsonPathToken::Key(key) => {
+            if !current.is_object() {
+                *current = Value::Object(serde_json::Map::new());
+            }
+            current
+                .as_object_mut()
+                .expect("object ensured above")
+                .insert(key.clone(), value);
+        }
+        JsonPathToken::Index(array_index) => {
+            if !current.is_array() {
+                *current = Value::Array(vec![]);
+            }
+            let array = current.as_array_mut().expect("array ensured above");
+            while array.len() <= *array_index {
+                array.push(Value::Null);
+            }
+            array[*array_index] = value;
+        }
+    }
+}
+
+#[derive(Clone)]
+enum JsonPathToken {
+    Key(String),
+    Index(usize),
+}
+
+fn tokenize_json_path(path: &str) -> Vec<JsonPathToken> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let chars: Vec<char> = path.chars().collect();
+    let mut index = 0;
+
+    while index < chars.len() {
+        match chars[index] {
+            '.' => {
+                if !current.is_empty() {
+                    tokens.push(JsonPathToken::Key(std::mem::take(&mut current)));
+                }
+                index += 1;
+            }
+            '[' => {
+                if !current.is_empty() {
+                    tokens.push(JsonPathToken::Key(std::mem::take(&mut current)));
+                }
+                let mut close = index + 1;
+                while close < chars.len() && chars[close] != ']' {
+                    close += 1;
+                }
+                if close > index + 1
+                    && let Ok(array_index) = path[index + 1..close].parse::<usize>()
+                {
+                    tokens.push(JsonPathToken::Index(array_index));
+                }
+                index = close.saturating_add(1);
+            }
+            ch => {
+                current.push(ch);
+                index += 1;
+            }
+        }
+    }
+
+    if !current.is_empty() {
+        tokens.push(JsonPathToken::Key(current));
+    }
+
+    tokens
+}
+
+fn bind_row_aliases(
+    env: &mut FormspecEnvironment,
+    values: &HashMap<String, Value>,
+    concrete_path: &str,
+) -> HashMap<String, Option<FelValue>> {
+    let Some((row_prefix, _)) = concrete_path.rsplit_once('.') else {
+        return HashMap::new();
+    };
+
+    let mut saved = HashMap::new();
+    let prefix = format!("{row_prefix}.");
+    for (path, value) in values {
+        if let Some(alias) = path.strip_prefix(&prefix)
+            && !alias.contains('.')
+        {
+            saved.insert(alias.to_string(), env.data.get(alias).cloned());
+            env.set_field(alias, json_to_fel(value));
+        }
+    }
+    saved
+}
+
+fn restore_row_aliases(
+    env: &mut FormspecEnvironment,
+    saved_aliases: HashMap<String, Option<FelValue>>,
+) {
+    for (alias, previous) in saved_aliases {
+        match previous {
+            Some(value) => env.set_field(&alias, value),
+            None => {
+                env.data.remove(&alias);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -779,7 +1078,16 @@ mod tests {
         }];
 
         let values: HashMap<String, Value> = HashMap::new();
-        let results = revalidate(&items, &values, None, EvalTrigger::Continuous, &[], "1.0.0");
+        let results = revalidate(
+            &items,
+            &values,
+            &HashMap::new(),
+            None,
+            EvalTrigger::Continuous,
+            &[],
+            "1.0.0",
+            None,
+        );
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].path, "email");
         assert_eq!(results[0].constraint_kind, "required");
@@ -819,7 +1127,16 @@ mod tests {
         }];
 
         let values: HashMap<String, Value> = HashMap::new();
-        let results = revalidate(&items, &values, None, EvalTrigger::Continuous, &[], "1.0.0");
+        let results = revalidate(
+            &items,
+            &values,
+            &HashMap::new(),
+            None,
+            EvalTrigger::Continuous,
+            &[],
+            "1.0.0",
+            None,
+        );
         assert!(
             results.is_empty(),
             "non-relevant items should be skipped entirely"
@@ -861,7 +1178,16 @@ mod tests {
         let mut values = HashMap::new();
         values.insert("age".to_string(), json!(25));
 
-        let results = revalidate(&items, &values, None, EvalTrigger::Continuous, &[], "1.0.0");
+        let results = revalidate(
+            &items,
+            &values,
+            &HashMap::new(),
+            None,
+            EvalTrigger::Continuous,
+            &[],
+            "1.0.0",
+            None,
+        );
         assert!(
             results.is_empty(),
             "constraint $age >= 18 should pass for 25"
@@ -874,7 +1200,7 @@ mod tests {
         data.insert("rows".to_string(), json!([{"a": 1}]));
         data.insert("rows[0].a".to_string(), json!(1));
 
-        let env = build_validation_env(&data);
+        let env = build_validation_env(&data, &HashMap::new(), None);
         assert!(
             !env.data.contains_key("rows"),
             "build_validation_env should skip repeat group arrays entirely"

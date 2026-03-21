@@ -85,10 +85,14 @@ pub struct ValidationResult {
     pub code: String,
     /// Human-readable message.
     pub message: String,
+    /// Original constraint expression when available.
+    pub constraint: Option<String>,
     /// Source of the validation: bind, shape, definition.
     pub source: String,
     /// Shape ID (for shape validations only).
     pub shape_id: Option<String>,
+    /// Evaluated shape failure context values.
+    pub context: Option<HashMap<String, Value>>,
 }
 
 /// When to evaluate shape rules.
@@ -98,8 +102,17 @@ pub enum EvalTrigger {
     Continuous,
     /// Evaluate shapes with timing "continuous" or "submit" (skip "demand").
     Submit,
+    /// Evaluate only shapes with timing "demand".
+    Demand,
     /// Skip all shape evaluation.
     Disabled,
+}
+
+/// Optional runtime context injected into a single evaluation cycle.
+#[derive(Debug, Clone, Default)]
+pub struct EvalContext {
+    pub now_iso: Option<String>,
+    pub previous_validations: Option<Vec<ValidationResult>>,
 }
 
 /// Pre-parsed extension constraint data from a registry entry.
@@ -189,6 +202,10 @@ pub struct EvaluationResult {
     pub non_relevant: Vec<String>,
     /// Evaluated variable values.
     pub variables: HashMap<String, Value>,
+    /// Required state by path.
+    pub required: HashMap<String, bool>,
+    /// Readonly state by path.
+    pub readonly: HashMap<String, bool>,
 }
 
 // ── Path helpers ────────────────────────────────────────────────
@@ -222,45 +239,54 @@ pub(crate) fn find_item_by_path_mut<'a>(
 
 pub(crate) fn strip_indices(path: &str) -> String {
     let mut result = String::new();
-    let mut i = 0;
-    let bytes = path.as_bytes();
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            // Skip until closing ]
-            while i < bytes.len() && bytes[i] != b']' {
-                i += 1;
-            }
-            if i < bytes.len() {
-                i += 1; // skip ]
+    let mut chars = path.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '[' {
+            for inner in chars.by_ref() {
+                if inner == ']' {
+                    break;
+                }
             }
         } else {
-            result.push(bytes[i] as char);
-            i += 1;
+            result.push(ch);
         }
     }
+
     result
 }
 
 pub(crate) fn to_wildcard_path(path: &str) -> String {
     let mut result = String::new();
-    let mut i = 0;
-    let bytes = path.as_bytes();
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            result.push('[');
-            i += 1;
-            // Check if it's a numeric index
-            if i < bytes.len() && bytes[i].is_ascii_digit() {
-                result.push('*');
-                while i < bytes.len() && bytes[i] != b']' {
-                    i += 1;
+    let mut chars = path.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '[' {
+            let mut segment = String::new();
+            let mut closed = false;
+
+            for inner in chars.by_ref() {
+                if inner == ']' {
+                    closed = true;
+                    break;
                 }
+                segment.push(inner);
+            }
+
+            result.push('[');
+            if closed && !segment.is_empty() && segment.chars().all(|inner| inner.is_ascii_digit()) {
+                result.push('*');
+            } else {
+                result.push_str(&segment);
+            }
+            if closed {
+                result.push(']');
             }
         } else {
-            result.push(bytes[i] as char);
-            i += 1;
+            result.push(ch);
         }
     }
+
     result
 }
 
@@ -277,6 +303,18 @@ pub(crate) fn collect_non_relevant(items: &[ItemInfo], out: &mut Vec<String>) {
     }
 }
 
+pub(crate) fn collect_mip_state(
+    items: &[ItemInfo],
+    required: &mut HashMap<String, bool>,
+    readonly: &mut HashMap<String, bool>,
+) {
+    for item in items {
+        required.insert(item.path.clone(), item.required);
+        readonly.insert(item.path.clone(), item.readonly);
+        collect_mip_state(&item.children, required, readonly);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -286,6 +324,7 @@ mod tests {
         assert_eq!(strip_indices("items[0].total"), "items.total");
         assert_eq!(strip_indices("a[1].b[2].c"), "a.b.c");
         assert_eq!(strip_indices("simple"), "simple");
+        assert_eq!(strip_indices("naïve[0].café"), "naïve.café");
     }
 
     #[test]
@@ -293,6 +332,7 @@ mod tests {
         assert_eq!(to_wildcard_path("items[0].total"), "items[*].total");
         assert_eq!(to_wildcard_path("a[1].b[2].c"), "a[*].b[*].c");
         assert_eq!(to_wildcard_path("items[*].total"), "items[*].total");
+        assert_eq!(to_wildcard_path("naïve[12].café"), "naïve[*].café");
     }
 
     #[test]

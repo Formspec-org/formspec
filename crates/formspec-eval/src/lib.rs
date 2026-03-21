@@ -20,8 +20,8 @@ pub use recalculate::{recalculate, topo_sort_variables};
 pub use revalidate::revalidate;
 pub use screener::{ScreenerRouteResult, evaluate_screener};
 pub use types::{
-    EvalTrigger, EvaluationResult, ExtensionConstraint, ItemInfo, NrbMode, ValidationResult,
-    VariableDef, WhitespaceMode,
+    EvalContext, EvalTrigger, EvaluationResult, ExtensionConstraint, ItemInfo, NrbMode,
+    ValidationResult, VariableDef, WhitespaceMode,
 };
 
 // ── Top-level orchestration ─────────────────────────────────────
@@ -29,7 +29,16 @@ pub use types::{
 /// Produce the final evaluation result.
 /// Evaluate a definition with the default continuous trigger.
 pub fn evaluate_definition(definition: &Value, data: &HashMap<String, Value>) -> EvaluationResult {
-    evaluate_definition_with_trigger(definition, data, EvalTrigger::Continuous)
+    evaluate_definition_with_context(definition, data, &EvalContext::default())
+}
+
+/// Evaluate a definition with an explicit runtime context.
+pub fn evaluate_definition_with_context(
+    definition: &Value,
+    data: &HashMap<String, Value>,
+    context: &EvalContext,
+) -> EvaluationResult {
+    evaluate_definition_with_trigger_and_context(definition, data, EvalTrigger::Continuous, context)
 }
 
 /// Evaluate a definition with an explicit trigger mode for shape timing.
@@ -38,7 +47,17 @@ pub fn evaluate_definition_with_trigger(
     data: &HashMap<String, Value>,
     trigger: EvalTrigger,
 ) -> EvaluationResult {
-    evaluate_definition_full(definition, data, trigger, &[])
+    evaluate_definition_with_trigger_and_context(definition, data, trigger, &EvalContext::default())
+}
+
+/// Evaluate a definition with explicit trigger mode and runtime context.
+pub fn evaluate_definition_with_trigger_and_context(
+    definition: &Value,
+    data: &HashMap<String, Value>,
+    trigger: EvalTrigger,
+    context: &EvalContext,
+) -> EvaluationResult {
+    evaluate_definition_full_with_context(definition, data, trigger, &[], context)
 }
 
 /// Evaluate a definition with trigger mode and extension constraints from registries.
@@ -48,12 +67,30 @@ pub fn evaluate_definition_full(
     trigger: EvalTrigger,
     extension_constraints: &[ExtensionConstraint],
 ) -> EvaluationResult {
-    evaluate_definition_full_with_instances(
+    evaluate_definition_full_with_context(
+        definition,
+        data,
+        trigger,
+        extension_constraints,
+        &EvalContext::default(),
+    )
+}
+
+/// Evaluate a definition with trigger mode, extension constraints, and runtime context.
+pub fn evaluate_definition_full_with_context(
+    definition: &Value,
+    data: &HashMap<String, Value>,
+    trigger: EvalTrigger,
+    extension_constraints: &[ExtensionConstraint],
+    context: &EvalContext,
+) -> EvaluationResult {
+    evaluate_definition_full_with_instances_and_context(
         definition,
         data,
         trigger,
         extension_constraints,
         &HashMap::new(),
+        context,
     )
 }
 
@@ -64,6 +101,25 @@ pub fn evaluate_definition_full_with_instances(
     trigger: EvalTrigger,
     extension_constraints: &[ExtensionConstraint],
     instances: &HashMap<String, Value>,
+) -> EvaluationResult {
+    evaluate_definition_full_with_instances_and_context(
+        definition,
+        data,
+        trigger,
+        extension_constraints,
+        instances,
+        &EvalContext::default(),
+    )
+}
+
+/// Evaluate a definition with trigger mode, extension constraints, named instances, and runtime context.
+pub fn evaluate_definition_full_with_instances_and_context(
+    definition: &Value,
+    data: &HashMap<String, Value>,
+    trigger: EvalTrigger,
+    extension_constraints: &[ExtensionConstraint],
+    instances: &HashMap<String, Value>,
+    context: &EvalContext,
 ) -> EvaluationResult {
     // Phase 0: Flatten nested data into indexed paths.
     // Converts `{"rows": [{"a": 1}]}` → `{"rows[0].a": 1}` so the FEL
@@ -88,7 +144,13 @@ pub fn evaluate_definition_full_with_instances(
     rebuild::apply_wildcard_binds(&mut items, binds, &seeded_data);
 
     // Phase 2: Recalculate (with variables, whitespace, inheritance, scoped variables)
-    let (mut values, var_values, cycle_err) = recalculate(&mut items, &seeded_data, definition);
+    let (mut values, var_values, cycle_err) = recalculate(
+        &mut items,
+        &seeded_data,
+        definition,
+        context.now_iso.as_deref(),
+        context.previous_validations.as_deref(),
+    );
 
     // Phase 3: Revalidate
     let shapes = definition.get("shapes").and_then(|v| v.as_array());
@@ -99,10 +161,12 @@ pub fn evaluate_definition_full_with_instances(
     let mut validations = revalidate(
         &items,
         &values,
+        &var_values,
         shapes.map(|v| v.as_slice()),
         trigger,
         extension_constraints,
         formspec_version,
+        context.now_iso.as_deref(),
     );
 
     // Surface circular variable dependency as a validation error
@@ -113,14 +177,21 @@ pub fn evaluate_definition_full_with_instances(
             constraint_kind: "definition".to_string(),
             code: "CIRCULAR_DEPENDENCY".to_string(),
             message: cycle_msg,
+            constraint: None,
             source: "definition".to_string(),
             shape_id: None,
+            context: None,
         });
     }
 
     // Collect non-relevant fields
     let mut non_relevant = Vec::new();
     types::collect_non_relevant(&items, &mut non_relevant);
+
+    // Collect required/readonly state from the evaluated item tree.
+    let mut required = HashMap::new();
+    let mut readonly = HashMap::new();
+    types::collect_mip_state(&items, &mut required, &mut readonly);
 
     // Phase 4: Apply NRB
     let default_nrb = definition
@@ -137,6 +208,8 @@ pub fn evaluate_definition_full_with_instances(
         validations,
         non_relevant,
         variables,
+        required,
+        readonly,
     }
 }
 
@@ -1702,6 +1775,84 @@ mod tests {
         assert_eq!(result.values.get("extra"), Some(&json!(-5)));
     }
 
+    #[test]
+    fn eval_result_includes_required_state() {
+        let def = json!({
+            "$formspec": "1.0",
+            "url": "test",
+            "version": "1.0.0",
+            "title": "T",
+            "items": [{ "key": "name", "type": "field", "dataType": "string", "label": "N" }],
+            "binds": [{ "path": "name", "required": "true" }],
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(result.required.get("name"), Some(&true));
+    }
+
+    #[test]
+    fn eval_result_includes_readonly_state() {
+        let def = json!({
+            "$formspec": "1.0",
+            "url": "test",
+            "version": "1.0.0",
+            "title": "T",
+            "items": [{ "key": "name", "type": "field", "dataType": "string", "label": "N" }],
+            "binds": [{ "path": "name", "readonly": "true" }],
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(result.readonly.get("name"), Some(&true));
+    }
+
+    #[test]
+    fn eval_with_runtime_context_uses_injected_now() {
+        let def = json!({
+            "$formspec": "1.0",
+            "url": "test",
+            "version": "1.0.0",
+            "title": "T",
+            "items": [{ "key": "d", "type": "field", "dataType": "date", "label": "D" }],
+            "binds": [{ "path": "d", "calculate": "today()" }],
+        });
+
+        let data = HashMap::new();
+        let ctx = EvalContext {
+            now_iso: Some("2025-06-15T00:00:00".to_string()),
+            ..EvalContext::default()
+        };
+        let result = evaluate_definition_with_context(&def, &data, &ctx);
+        assert_eq!(result.values.get("d"), Some(&json!("2025-06-15")));
+    }
+
+    #[test]
+    fn calculate_fixpoint_cross_field_dependency() {
+        let def = json!({
+            "$formspec": "1.0",
+            "url": "test",
+            "version": "1.0.0",
+            "title": "T",
+            "items": [
+                { "key": "total", "type": "field", "dataType": "decimal", "label": "Total" },
+                { "key": "subtotal", "type": "field", "dataType": "decimal", "label": "Sub" },
+                { "key": "qty", "type": "field", "dataType": "decimal", "label": "Qty" }
+            ],
+            "binds": [
+                { "path": "subtotal", "calculate": "$qty * 10" },
+                { "path": "total", "calculate": "$subtotal * 1.1" }
+            ],
+        });
+
+        let mut data = HashMap::new();
+        data.insert("qty".into(), json!(5));
+
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(result.values.get("subtotal"), Some(&json!(50)));
+        assert_eq!(result.values.get("total"), Some(&json!(55)));
+    }
+
     // ── 9b: Shape-id composition ─────────────────────────────────
 
     #[test]
@@ -1753,6 +1904,112 @@ mod tests {
             .filter(|v| v.message == "Need email or phone")
             .collect();
         assert!(contactable_ok.is_empty(), "should pass when email present");
+    }
+
+    #[test]
+    fn shape_validations_include_shape_id() {
+        let def = json!({
+            "$formspec": "1.0",
+            "url": "test",
+            "version": "1.0.0",
+            "title": "T",
+            "items": [
+                { "key": "a", "type": "field", "dataType": "decimal", "label": "A" },
+                { "key": "b", "type": "field", "dataType": "decimal", "label": "B" }
+            ],
+            "shapes": [{
+                "id": "ab-check",
+                "target": "a",
+                "constraint": "$a > $b",
+                "message": "A must exceed B"
+            }]
+        });
+        let mut data = HashMap::new();
+        data.insert("a".into(), json!(1));
+        data.insert("b".into(), json!(10));
+
+        let result = evaluate_definition(&def, &data);
+        let shape_results: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.shape_id.as_deref() == Some("ab-check"))
+            .collect();
+        assert!(
+            !shape_results.is_empty(),
+            "shape validation should include shape_id"
+        );
+    }
+
+    #[test]
+    fn shape_context_evaluated_on_failure() {
+        let def = json!({
+            "$formspec": "1.0",
+            "url": "test",
+            "version": "1.0.0",
+            "title": "T",
+            "items": [
+                { "key": "budget", "type": "field", "dataType": "decimal", "label": "Budget" },
+                { "key": "spent", "type": "field", "dataType": "decimal", "label": "Spent" }
+            ],
+            "shapes": [{
+                "id": "budget-check",
+                "target": "spent",
+                "constraint": "$spent <= $budget",
+                "message": "Over budget",
+                "context": {
+                    "remaining": "$budget - $spent",
+                    "overBy": "$spent - $budget"
+                }
+            }]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("budget".into(), json!(100));
+        data.insert("spent".into(), json!(150));
+
+        let result = evaluate_definition(&def, &data);
+        let shape_result = result
+            .validations
+            .iter()
+            .find(|v| v.shape_id.as_deref() == Some("budget-check"))
+            .expect("shape validation should exist");
+        let ctx = shape_result
+            .context
+            .as_ref()
+            .expect("context should be populated");
+        assert_eq!(ctx.get("remaining"), Some(&json!(-50)));
+        assert_eq!(ctx.get("overBy"), Some(&json!(50)));
+    }
+
+    #[test]
+    fn valid_mip_query_reflects_previous_validation_state() {
+        let def = json!({
+            "$formspec": "1.0",
+            "url": "test",
+            "version": "1.0.0",
+            "title": "T",
+            "items": [
+                { "key": "age", "type": "field", "dataType": "decimal", "label": "Age" },
+                { "key": "ageStatus", "type": "field", "dataType": "string", "label": "Status" }
+            ],
+            "binds": [
+                { "path": "age", "constraint": "$age >= 0", "required": "true" },
+                { "path": "ageStatus", "calculate": "if(valid($age), 'ok', 'invalid')" }
+            ]
+        });
+
+        let data = HashMap::new();
+        let result = evaluate_definition(&def, &data);
+        let result2 = evaluate_definition_with_context(
+            &def,
+            &data,
+            &EvalContext {
+                now_iso: None,
+                previous_validations: Some(result.validations.clone()),
+            },
+        );
+
+        assert_eq!(result2.values.get("ageStatus"), Some(&json!("invalid")));
     }
 
     // ── 9c: Default on relevance transition ──────────────────────
@@ -2008,6 +2265,115 @@ mod tests {
             .collect();
         assert_eq!(shape_errors.len(), 1, "only row 1 should fail");
         assert_eq!(shape_errors[0].path, "rows[1].end");
+    }
+
+    #[test]
+    fn wildcard_shape_active_when_and_constraint_use_current_row_aliases() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "rows",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "role", "dataType": "string" },
+                        { "key": "age", "dataType": "integer" },
+                        { "key": "isStudent", "dataType": "boolean" }
+                    ]
+                }
+            ],
+            "shapes": [{
+                "id": "child-age",
+                "target": "rows[*].age",
+                "activeWhen": "role == 'child'",
+                "constraint": "$ < 19 or ($ < 22 and isStudent == true)",
+                "severity": "error",
+                "message": "Child age invalid"
+            }]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("rows[0].role".to_string(), json!("adult"));
+        data.insert("rows[0].age".to_string(), json!(40));
+        data.insert("rows[0].isStudent".to_string(), json!(false));
+        data.insert("rows[1].role".to_string(), json!("child"));
+        data.insert("rows[1].age".to_string(), json!(21));
+        data.insert("rows[1].isStudent".to_string(), json!(false));
+
+        let result = evaluate_definition(&def, &data);
+        let shape_errors: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.shape_id.as_deref() == Some("child-age"))
+            .collect();
+        assert_eq!(shape_errors.len(), 1, "only child row should fail");
+        assert_eq!(shape_errors[0].path, "rows[1].age");
+    }
+
+    #[test]
+    fn variables_recompute_from_repeat_calculations() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "lines",
+                    "type": "group",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "qty", "type": "field", "label": "Qty", "dataType": "integer" },
+                        { "key": "unit", "type": "field", "label": "Unit", "dataType": "integer" },
+                        { "key": "subtotal", "type": "field", "label": "Subtotal", "dataType": "integer" }
+                    ]
+                }
+            ],
+            "binds": [
+                { "path": "lines[*].subtotal", "calculate": "$lines[*].qty * $lines[*].unit" }
+            ],
+            "variables": [
+                { "name": "grandTotal", "expression": "sum($lines[*].subtotal)" }
+            ]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("lines".to_string(), json!([{ "qty": 2, "unit": 50 }]));
+
+        let result = evaluate_definition(&def, &data);
+        assert_eq!(result.values.get("lines[0].subtotal"), Some(&json!(100)));
+        assert_eq!(result.variables.get("grandTotal"), Some(&json!(100)));
+    }
+
+    #[test]
+    fn shape_constraints_can_reference_computed_variables() {
+        let def = json!({
+            "items": [
+                { "key": "qty", "type": "field", "label": "Qty", "dataType": "integer" },
+                { "key": "unit", "type": "field", "label": "Unit", "dataType": "integer" },
+                { "key": "requested", "type": "field", "label": "Requested", "dataType": "integer" }
+            ],
+            "variables": [
+                { "name": "grandTotal", "expression": "$qty * $unit" }
+            ],
+            "shapes": [{
+                "id": "budget-match",
+                "target": "requested",
+                "constraint": "$requested == @grandTotal",
+                "severity": "error",
+                "message": "Requested must equal grand total"
+            }]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("qty".to_string(), json!(2));
+        data.insert("unit".to_string(), json!(50));
+        data.insert("requested".to_string(), json!(0));
+
+        let result = evaluate_definition(&def, &data);
+        let shape_errors: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.shape_id.as_deref() == Some("budget-match"))
+            .collect();
+        assert_eq!(result.variables.get("grandTotal"), Some(&json!(100)));
+        assert_eq!(shape_errors.len(), 1, "shape should see computed @grandTotal");
+        assert_eq!(shape_errors[0].path, "requested");
     }
 
     // ── Scoped variables ─────────────────────────────────────────

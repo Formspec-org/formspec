@@ -123,12 +123,17 @@ pub fn recalculate(
     items: &mut [ItemInfo],
     data: &HashMap<String, Value>,
     definition: &Value,
+    now_iso: Option<&str>,
+    previous_validations: Option<&[crate::types::ValidationResult]>,
 ) -> (
     HashMap<String, Value>,
     HashMap<String, Value>,
     Option<String>,
 ) {
     let mut env = FormspecEnvironment::new();
+    if let Some(now_iso) = now_iso {
+        env.set_now_from_iso(now_iso);
+    }
     let mut values = data.clone();
 
     // Populate environment with ALL data (including arrays) for variable evaluation.
@@ -147,11 +152,12 @@ pub fn recalculate(
 
     // Step 2: Evaluate variables in topological order
     let var_defs = parse_variables(definition);
-    let (var_values, scoped_var_values, cycle_err) = evaluate_variables_scoped(&var_defs, &mut env);
+    let (_initial_var_values, scoped_var_values, cycle_err) =
+        evaluate_variables_scoped(&var_defs, &mut env);
 
     // Set all variables in environment for global access (backwards compat)
     // For scoped resolution, we use scoped_var_values in evaluate_items_with_inheritance
-    for (name, val) in &var_values {
+    for (name, val) in &_initial_var_values {
         env.set_variable(name, json_to_fel(val));
     }
 
@@ -170,6 +176,12 @@ pub fn recalculate(
     let has_scoped = var_defs
         .iter()
         .any(|v| v.scope.as_deref().unwrap_or("#") != "#");
+    let invalid_paths: HashSet<String> = previous_validations
+        .unwrap_or(&[])
+        .iter()
+        .filter(|result| result.severity == "error" && !result.path.is_empty())
+        .map(|result| result.path.clone())
+        .collect();
 
     // Steps 3-6: Evaluate bind expressions with inheritance
     if has_scoped {
@@ -180,12 +192,21 @@ pub fn recalculate(
             true,
             false,
             &scoped_var_values,
+            &invalid_paths,
         );
     } else {
-        evaluate_items_with_inheritance(items, &mut env, &mut values, true, false);
+        evaluate_items_with_inheritance(items, &mut env, &mut values, true, false, &invalid_paths);
     }
 
-    (values, var_values, cycle_err)
+    settle_calculated_values(items, &mut env, &mut values, has_scoped.then_some(&scoped_var_values));
+    populate_repeat_group_arrays(&*items, &values, &mut env);
+
+    let (final_var_values, _, _) = evaluate_variables_scoped(&var_defs, &mut env);
+    for (name, val) in &final_var_values {
+        env.set_variable(name, json_to_fel(val));
+    }
+
+    (values, final_var_values, cycle_err)
 }
 
 /// Apply whitespace normalization to all items that have a whitespace bind.
@@ -255,6 +276,164 @@ fn evaluate_variables_scoped(
     (var_values, scoped_values, cycle_err)
 }
 
+fn populate_repeat_group_arrays(
+    items: &[ItemInfo],
+    values: &HashMap<String, Value>,
+    env: &mut FormspecEnvironment,
+) {
+    for item in items {
+        if item.repeatable
+            && let Some(array) = build_repeat_group_array(&item.path, values)
+        {
+            env.set_field(&item.path, json_to_fel(&array));
+        }
+        populate_repeat_group_arrays(&item.children, values, env);
+    }
+}
+
+fn build_repeat_group_array(group_path: &str, values: &HashMap<String, Value>) -> Option<Value> {
+    let count = crate::rebuild::detect_repeat_count(group_path, values);
+    if count == 0 {
+        return None;
+    }
+
+    let mut rows = Vec::with_capacity(count);
+    for index in 0..count {
+        let prefix = format!("{group_path}[{index}].");
+        let mut row = Value::Object(serde_json::Map::new());
+        let mut has_values = false;
+        for (path, value) in values {
+            if let Some(relative) = path.strip_prefix(&prefix) {
+                set_nested_json_path(&mut row, relative, value.clone());
+                has_values = true;
+            }
+        }
+        rows.push(if has_values {
+            row
+        } else {
+            Value::Object(serde_json::Map::new())
+        });
+    }
+
+    Some(Value::Array(rows))
+}
+
+fn set_nested_json_path(target: &mut Value, path: &str, value: Value) {
+    let tokens = tokenize_json_path(path);
+    if tokens.is_empty() {
+        *target = value;
+        return;
+    }
+
+    let mut current = target;
+    for index in 0..tokens.len() - 1 {
+        let next_is_index = matches!(tokens[index + 1], JsonPathToken::Index(_));
+        match &tokens[index] {
+            JsonPathToken::Key(key) => {
+                if !current.is_object() {
+                    *current = Value::Object(serde_json::Map::new());
+                }
+                let map = current.as_object_mut().expect("object ensured above");
+                current = map.entry(key.clone()).or_insert_with(|| {
+                    if next_is_index {
+                        Value::Array(vec![])
+                    } else {
+                        Value::Object(serde_json::Map::new())
+                    }
+                });
+            }
+            JsonPathToken::Index(array_index) => {
+                if !current.is_array() {
+                    *current = Value::Array(vec![]);
+                }
+                let array = current.as_array_mut().expect("array ensured above");
+                while array.len() <= *array_index {
+                    array.push(Value::Null);
+                }
+                if array[*array_index].is_null() {
+                    array[*array_index] = if next_is_index {
+                        Value::Array(vec![])
+                    } else {
+                        Value::Object(serde_json::Map::new())
+                    };
+                }
+                current = &mut array[*array_index];
+            }
+        }
+    }
+
+    match &tokens[tokens.len() - 1] {
+        JsonPathToken::Key(key) => {
+            if !current.is_object() {
+                *current = Value::Object(serde_json::Map::new());
+            }
+            current
+                .as_object_mut()
+                .expect("object ensured above")
+                .insert(key.clone(), value);
+        }
+        JsonPathToken::Index(array_index) => {
+            if !current.is_array() {
+                *current = Value::Array(vec![]);
+            }
+            let array = current.as_array_mut().expect("array ensured above");
+            while array.len() <= *array_index {
+                array.push(Value::Null);
+            }
+            array[*array_index] = value;
+        }
+    }
+}
+
+#[derive(Clone)]
+enum JsonPathToken {
+    Key(String),
+    Index(usize),
+}
+
+fn tokenize_json_path(path: &str) -> Vec<JsonPathToken> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let chars: Vec<char> = path.chars().collect();
+    let mut index = 0;
+
+    while index < chars.len() {
+        match chars[index] {
+            '.' => {
+                if !current.is_empty() {
+                    tokens.push(JsonPathToken::Key(std::mem::take(&mut current)));
+                }
+                index += 1;
+            }
+            '[' => {
+                if !current.is_empty() {
+                    tokens.push(JsonPathToken::Key(std::mem::take(&mut current)));
+                }
+                let mut close = index + 1;
+                while close < chars.len() && chars[close] != ']' {
+                    close += 1;
+                }
+                if close > index + 1
+                    && let Ok(array_index) = path[index + 1..close].parse::<usize>()
+                {
+                    tokens.push(JsonPathToken::Index(array_index));
+                }
+                index = close.saturating_add(1);
+            }
+            ch => {
+                current.push(ch);
+                index += 1;
+            }
+        }
+    }
+
+    if !current.is_empty() {
+        tokens.push(JsonPathToken::Key(current));
+    }
+
+    tokens
+}
+
 /// Evaluate a single item's bind expressions with inheritance.
 ///
 /// Handles: prev_relevant save, relevance (AND inheritance), default transition,
@@ -266,6 +445,7 @@ pub(crate) fn evaluate_single_item(
     values: &mut HashMap<String, Value>,
     parent_relevant: bool,
     parent_readonly: bool,
+    invalid_paths: &HashSet<String>,
 ) {
     // Save previous relevance for transition detection (9c)
     item.prev_relevant = item.relevant;
@@ -342,7 +522,7 @@ pub(crate) fn evaluate_single_item(
     env.set_mip(
         &item.path,
         MipState {
-            valid: true, // updated in Phase 3
+            valid: !invalid_paths.contains(&item.path),
             relevant: item.relevant,
             readonly: item.readonly,
             required: item.required,
@@ -360,9 +540,17 @@ pub(crate) fn evaluate_items_with_inheritance(
     values: &mut HashMap<String, Value>,
     parent_relevant: bool,
     parent_readonly: bool,
+    invalid_paths: &HashSet<String>,
 ) {
     for item in items.iter_mut() {
-        evaluate_single_item(item, env, values, parent_relevant, parent_readonly);
+        evaluate_single_item(
+            item,
+            env,
+            values,
+            parent_relevant,
+            parent_readonly,
+            invalid_paths,
+        );
 
         // Recurse into children with inherited state.
         if item.repeatable && !item.children.is_empty() {
@@ -373,6 +561,7 @@ pub(crate) fn evaluate_items_with_inheritance(
                 item.relevant,
                 item.readonly,
                 None,
+                invalid_paths,
             );
         } else {
             evaluate_items_with_inheritance(
@@ -381,6 +570,7 @@ pub(crate) fn evaluate_items_with_inheritance(
                 values,
                 item.relevant,
                 item.readonly,
+                invalid_paths,
             );
         }
     }
@@ -398,6 +588,7 @@ fn evaluate_repeat_children_with_aliases(
     parent_relevant: bool,
     parent_readonly: bool,
     scoped_vars: Option<&HashMap<String, Value>>,
+    invalid_paths: &HashSet<String>,
 ) {
     // Group children by instance index (e.g., "rows[0]." prefix)
     // and set bare-name aliases before evaluating each batch.
@@ -447,7 +638,14 @@ fn evaluate_repeat_children_with_aliases(
         }
 
         // Process this item
-        evaluate_single_item(item, env, values, parent_relevant, parent_readonly);
+        evaluate_single_item(
+            item,
+            env,
+            values,
+            parent_relevant,
+            parent_readonly,
+            invalid_paths,
+        );
 
         // Update bare-name alias with calculated value so siblings see it
         if item.calculate.is_some()
@@ -465,6 +663,7 @@ fn evaluate_repeat_children_with_aliases(
                 item.relevant,
                 item.readonly,
                 scoped_vars,
+                invalid_paths,
             );
         } else if let Some(sv) = scoped_vars {
             evaluate_items_with_inheritance_scoped(
@@ -474,6 +673,7 @@ fn evaluate_repeat_children_with_aliases(
                 item.relevant,
                 item.readonly,
                 sv,
+                invalid_paths,
             );
         } else {
             evaluate_items_with_inheritance(
@@ -482,6 +682,7 @@ fn evaluate_repeat_children_with_aliases(
                 values,
                 item.relevant,
                 item.readonly,
+                invalid_paths,
             );
         }
     }
@@ -506,6 +707,7 @@ fn evaluate_items_with_inheritance_scoped(
     parent_relevant: bool,
     parent_readonly: bool,
     scoped_vars: &HashMap<String, Value>,
+    invalid_paths: &HashSet<String>,
 ) {
     for item in items.iter_mut() {
         // Compute visible variables for this item's path and set them in env
@@ -515,7 +717,14 @@ fn evaluate_items_with_inheritance_scoped(
             env.set_variable(name, json_to_fel(val));
         }
 
-        evaluate_single_item(item, env, values, parent_relevant, parent_readonly);
+        evaluate_single_item(
+            item,
+            env,
+            values,
+            parent_relevant,
+            parent_readonly,
+            invalid_paths,
+        );
 
         // Recurse: for repeatable groups, pass scoped_vars through
         if item.repeatable && !item.children.is_empty() {
@@ -526,6 +735,7 @@ fn evaluate_items_with_inheritance_scoped(
                 item.relevant,
                 item.readonly,
                 Some(scoped_vars),
+                invalid_paths,
             );
         } else {
             evaluate_items_with_inheritance_scoped(
@@ -535,9 +745,189 @@ fn evaluate_items_with_inheritance_scoped(
                 item.relevant,
                 item.readonly,
                 scoped_vars,
+                invalid_paths,
             );
         }
     }
+}
+
+fn settle_calculated_values(
+    items: &mut [ItemInfo],
+    env: &mut FormspecEnvironment,
+    values: &mut HashMap<String, Value>,
+    scoped_vars: Option<&HashMap<String, Value>>,
+) {
+    for _ in 0..100 {
+        let changed = match scoped_vars {
+            Some(scoped_vars) => {
+                calculate_pass_items_scoped(items, env, values, scoped_vars)
+            }
+            None => calculate_pass_items(items, env, values),
+        };
+        if !changed {
+            break;
+        }
+    }
+}
+
+fn calculate_pass_items(
+    items: &mut [ItemInfo],
+    env: &mut FormspecEnvironment,
+    values: &mut HashMap<String, Value>,
+) -> bool {
+    let mut changed = false;
+
+    for item in items.iter_mut() {
+        changed |= evaluate_calculate_only(item, env, values);
+
+        if item.repeatable && !item.children.is_empty() {
+            changed |= calculate_pass_repeat_children_with_aliases(
+                &mut item.children,
+                env,
+                values,
+                None,
+            );
+        } else {
+            changed |= calculate_pass_items(&mut item.children, env, values);
+        }
+    }
+
+    changed
+}
+
+fn calculate_pass_items_scoped(
+    items: &mut [ItemInfo],
+    env: &mut FormspecEnvironment,
+    values: &mut HashMap<String, Value>,
+    scoped_vars: &HashMap<String, Value>,
+) -> bool {
+    let mut changed = false;
+
+    for item in items.iter_mut() {
+        let visible = visible_variables(scoped_vars, &item.path);
+        env.variables.clear();
+        for (name, val) in &visible {
+            env.set_variable(name, json_to_fel(val));
+        }
+
+        changed |= evaluate_calculate_only(item, env, values);
+
+        if item.repeatable && !item.children.is_empty() {
+            changed |= calculate_pass_repeat_children_with_aliases(
+                &mut item.children,
+                env,
+                values,
+                Some(scoped_vars),
+            );
+        } else {
+            changed |= calculate_pass_items_scoped(&mut item.children, env, values, scoped_vars);
+        }
+    }
+
+    changed
+}
+
+fn calculate_pass_repeat_children_with_aliases(
+    children: &mut [ItemInfo],
+    env: &mut FormspecEnvironment,
+    values: &mut HashMap<String, Value>,
+    scoped_vars: Option<&HashMap<String, Value>>,
+) -> bool {
+    let mut changed = false;
+    let mut current_instance: Option<String> = None;
+    let mut bare_names: Vec<String> = Vec::new();
+    let mut saved_values: HashMap<String, Option<FelValue>> = HashMap::new();
+
+    for item in children.iter_mut() {
+        let instance_prefix = item.parent_path.as_deref().unwrap_or("");
+
+        if current_instance.as_deref() != Some(instance_prefix) {
+            for name in &bare_names {
+                match saved_values.remove(name) {
+                    Some(Some(val)) => env.set_field(name, val),
+                    _ => {
+                        env.data.remove(name);
+                    }
+                }
+            }
+            bare_names.clear();
+
+            current_instance = Some(instance_prefix.to_string());
+            let prefix_dot = format!("{instance_prefix}.");
+            for (k, v) in values.iter() {
+                if let Some(bare) = k.strip_prefix(&prefix_dot)
+                    && !bare.contains('.')
+                {
+                    saved_values.insert(bare.to_string(), env.data.get(bare).cloned());
+                    env.set_field(bare, json_to_fel(v));
+                    bare_names.push(bare.to_string());
+                }
+            }
+        }
+
+        if let Some(scoped_vars) = scoped_vars {
+            let visible = visible_variables(scoped_vars, &item.path);
+            env.variables.clear();
+            for (name, val) in &visible {
+                env.set_variable(name, json_to_fel(val));
+            }
+        }
+
+        changed |= evaluate_calculate_only(item, env, values);
+
+        if item.calculate.is_some()
+            && let Some(val) = values.get(&item.path)
+        {
+            env.set_field(&item.key, json_to_fel(val));
+        }
+
+        if item.repeatable && !item.children.is_empty() {
+            changed |= calculate_pass_repeat_children_with_aliases(
+                &mut item.children,
+                env,
+                values,
+                scoped_vars,
+            );
+        } else if let Some(scoped_vars) = scoped_vars {
+            changed |= calculate_pass_items_scoped(&mut item.children, env, values, scoped_vars);
+        } else {
+            changed |= calculate_pass_items(&mut item.children, env, values);
+        }
+    }
+
+    for name in &bare_names {
+        match saved_values.remove(name) {
+            Some(Some(val)) => env.set_field(name, val),
+            _ => {
+                env.data.remove(name);
+            }
+        }
+    }
+
+    changed
+}
+
+fn evaluate_calculate_only(
+    item: &mut ItemInfo,
+    env: &mut FormspecEnvironment,
+    values: &mut HashMap<String, Value>,
+) -> bool {
+    let Some(ref expr) = item.calculate else {
+        return false;
+    };
+    let Ok(parsed) = parse(expr) else {
+        return false;
+    };
+
+    let result = evaluate(&parsed, env);
+    let json_val = fel_to_json(&result.value);
+    let changed = values.get(&item.path) != Some(&json_val);
+
+    values.insert(item.path.clone(), json_val.clone());
+    item.value = json_val;
+    env.set_field(&item.path, result.value);
+
+    changed
 }
 
 pub(crate) fn eval_bool(expr: &str, env: &FormspecEnvironment, default: bool) -> bool {
@@ -660,7 +1050,7 @@ mod tests {
 
         let data = HashMap::new();
         let mut items = rebuild_item_tree(&def);
-        let _ = recalculate(&mut items, &data, &def);
+        let _ = recalculate(&mut items, &data, &def, None, None);
 
         let parent = find_item_by_path(&items, "parent").unwrap();
         assert!(!parent.relevant, "parent should be non-relevant");
@@ -689,7 +1079,7 @@ mod tests {
 
         let data = HashMap::new();
         let mut items = rebuild_item_tree(&def);
-        let _ = recalculate(&mut items, &data, &def);
+        let _ = recalculate(&mut items, &data, &def, None, None);
 
         let parent = find_item_by_path(&items, "parent").unwrap();
         assert!(parent.relevant, "parent should be relevant");
@@ -722,7 +1112,7 @@ mod tests {
         data.insert("section.field".to_string(), json!("test"));
 
         let mut items = rebuild_item_tree(&def);
-        let (values, _, _) = recalculate(&mut items, &data, &def);
+        let (values, _, _) = recalculate(&mut items, &data, &def, None, None);
 
         let child = find_item_by_path(&items, "section.field").unwrap();
         assert!(
@@ -756,7 +1146,7 @@ mod tests {
         data.insert("section.field".to_string(), json!("test"));
 
         let mut items = rebuild_item_tree(&def);
-        let _ = recalculate(&mut items, &data, &def);
+        let _ = recalculate(&mut items, &data, &def, None, None);
 
         let parent = find_item_by_path(&items, "section").unwrap();
         assert!(
@@ -791,7 +1181,7 @@ mod tests {
         data.insert("qty".to_string(), json!(4));
 
         let mut items = rebuild_item_tree(&def);
-        let (values, var_values, _) = recalculate(&mut items, &data, &def);
+        let (values, var_values, _) = recalculate(&mut items, &data, &def, None, None);
 
         assert_eq!(values.get("total"), Some(&json!(100)));
         assert!(
@@ -816,7 +1206,7 @@ mod tests {
         data.insert("toggle".to_string(), json!(false));
 
         let mut items = rebuild_item_tree(&def);
-        let _ = recalculate(&mut items, &data, &def);
+        let _ = recalculate(&mut items, &data, &def, None, None);
 
         let field = find_item_by_path(&items, "field").unwrap();
         assert!(
@@ -875,7 +1265,7 @@ mod tests {
 
         let data = HashMap::new();
         let mut items = rebuild_item_tree(&def);
-        let _ = recalculate(&mut items, &data, &def);
+        let _ = recalculate(&mut items, &data, &def, None, None);
 
         assert!(!find_item_by_path(&items, "grandparent").unwrap().relevant);
         assert!(
@@ -912,7 +1302,7 @@ mod tests {
         data.insert("grandparent.parent.child".to_string(), json!("val"));
 
         let mut items = rebuild_item_tree(&def);
-        let _ = recalculate(&mut items, &data, &def);
+        let _ = recalculate(&mut items, &data, &def, None, None);
 
         let child = find_item_by_path(&items, "grandparent.parent.child").unwrap();
         assert!(
@@ -946,7 +1336,7 @@ mod tests {
 
         let data = HashMap::new();
         let mut items = rebuild_item_tree(&def);
-        let _ = recalculate(&mut items, &data, &def);
+        let _ = recalculate(&mut items, &data, &def, None, None);
 
         let grandparent = find_item_by_path(&items, "grandparent").unwrap();
         assert!(
@@ -977,7 +1367,7 @@ mod tests {
 
         let data = HashMap::new();
         let mut items = rebuild_item_tree(&def);
-        let (values, _, _) = recalculate(&mut items, &data, &def);
+        let (values, _, _) = recalculate(&mut items, &data, &def, None, None);
 
         assert_eq!(values.get("parent"), Some(&json!(42)));
         assert_eq!(values.get("parent.child"), None);

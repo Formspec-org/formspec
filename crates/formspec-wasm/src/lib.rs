@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use fel_core::{
     Dependencies, FelValue, FormspecEnvironment, MapEnvironment, MipState,
     builtin_function_catalog, evaluate, extract_dependencies, fel_to_json, json_to_fel, parse,
-    print_expr,
+    print_expr, tokenize,
 };
 use formspec_core::changelog;
 use formspec_core::registry_client::{self, Registry};
@@ -24,7 +24,10 @@ use formspec_core::{
     parent_path, rewrite_fel_source_references, rewrite_message_template, schema_validation_plan,
     validate_extension_usage,
 };
-use formspec_eval::evaluate_definition;
+use formspec_eval::{
+    EvalContext, EvalTrigger, ValidationResult, evaluate_definition_with_context,
+    evaluate_definition_with_trigger_and_context,
+};
 use formspec_lint::{LintOptions, lint, lint_with_options};
 
 fn json_item_at_path<'a>(items: &'a [Value], path: &str) -> Option<&'a Value> {
@@ -197,7 +200,7 @@ fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<S
         .collect();
     if !undef_fns.is_empty() {
         let names = undef_fns.join(", ");
-        return Err(format!("Unsupported FEL function(s): {names}"));
+        return Err(format!("Unsupported FEL function: {names}"));
     }
     let json = fel_to_json(&result.value);
     serde_json::to_string(&json).map_err(|e| e.to_string())
@@ -207,6 +210,27 @@ fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<S
 #[wasm_bindgen(js_name = "parseFEL")]
 pub fn parse_fel(expression: &str) -> bool {
     parse(expression).is_ok()
+}
+
+#[wasm_bindgen(js_name = "tokenizeFEL")]
+pub fn tokenize_fel(expression: &str) -> Result<String, JsError> {
+    tokenize_fel_inner(expression).map_err(|e| JsError::new(&e))
+}
+
+fn tokenize_fel_inner(expression: &str) -> Result<String, String> {
+    let tokens = tokenize(expression)?;
+    let json = tokens
+        .into_iter()
+        .map(|token| {
+            serde_json::json!({
+                "tokenType": token.token_type,
+                "text": token.text,
+                "start": token.start,
+                "end": token.end,
+            })
+        })
+        .collect::<Vec<_>>();
+    serde_json::to_string(&json).map_err(|e| e.to_string())
 }
 
 /// Print a FEL expression AST back to normalized source string.
@@ -559,13 +583,21 @@ pub fn lint_document_with_registries(
 // ── Definition Evaluation ───────────────────────────────────────
 
 /// Evaluate a Formspec definition against provided data (4-phase batch processor).
-/// Returns JSON: { values, validations, nonRelevant, variables }
+/// Returns JSON: { values, validations, nonRelevant, variables, required, readonly }
 #[wasm_bindgen(js_name = "evaluateDefinition")]
-pub fn evaluate_definition_wasm(definition_json: &str, data_json: &str) -> Result<String, JsError> {
-    evaluate_definition_inner(definition_json, data_json).map_err(|e| JsError::new(&e))
+pub fn evaluate_definition_wasm(
+    definition_json: &str,
+    data_json: &str,
+    context_json: Option<String>,
+) -> Result<String, JsError> {
+    evaluate_definition_inner(definition_json, data_json, context_json).map_err(|e| JsError::new(&e))
 }
 
-fn evaluate_definition_inner(definition_json: &str, data_json: &str) -> Result<String, String> {
+fn evaluate_definition_inner(
+    definition_json: &str,
+    data_json: &str,
+    context_json: Option<String>,
+) -> Result<String, String> {
     let definition: Value = serde_json::from_str(definition_json)
         .map_err(|e| format!("invalid definition JSON: {e}"))?;
     let data_val: Value =
@@ -576,7 +608,20 @@ fn evaluate_definition_inner(definition_json: &str, data_json: &str) -> Result<S
         .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
         .unwrap_or_default();
 
-    let result = evaluate_definition(&definition, &data);
+    let (context, trigger) = match context_json {
+        Some(context_json) => {
+            let ctx: Value = serde_json::from_str(&context_json)
+                .map_err(|e| format!("invalid context JSON: {e}"))?;
+            let ctx_obj = ctx.as_object().ok_or("context must be a JSON object")?;
+            (parse_eval_context(ctx_obj)?, parse_eval_trigger(ctx_obj)?)
+        }
+        None => (EvalContext::default(), EvalTrigger::Continuous),
+    };
+
+    let result = match trigger {
+        EvalTrigger::Continuous => evaluate_definition_with_context(&definition, &data, &context),
+        _ => evaluate_definition_with_trigger_and_context(&definition, &data, trigger, &context),
+    };
 
     let json = serde_json::json!({
         "values": result.values,
@@ -589,15 +634,136 @@ fn evaluate_definition_inner(definition_json: &str, data_json: &str) -> Result<S
                 "message": v.message,
                 "source": v.source,
             });
+            if let Some(ref constraint) = v.constraint {
+                entry["constraint"] = serde_json::json!(constraint);
+            }
             if let Some(ref sid) = v.shape_id {
                 entry["shapeId"] = serde_json::json!(sid);
+            }
+            if let Some(ref context) = v.context {
+                entry["context"] = serde_json::json!(context);
             }
             entry
         }).collect::<Vec<_>>(),
         "nonRelevant": result.non_relevant,
         "variables": result.variables,
+        "required": result.required,
+        "readonly": result.readonly,
     });
     serde_json::to_string(&json).map_err(|e| e.to_string())
+}
+
+fn parse_eval_context(ctx_obj: &serde_json::Map<String, Value>) -> Result<EvalContext, String> {
+    let previous_validations = ctx_obj
+        .get("previousValidations")
+        .or_else(|| ctx_obj.get("previous_validations"))
+        .map(parse_validation_results)
+        .transpose()?;
+
+    Ok(EvalContext {
+        now_iso: ctx_obj
+            .get("nowIso")
+            .or_else(|| ctx_obj.get("now_iso"))
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
+        previous_validations,
+    })
+}
+
+fn parse_eval_trigger(ctx_obj: &serde_json::Map<String, Value>) -> Result<EvalTrigger, String> {
+    let trigger = ctx_obj
+        .get("trigger")
+        .or_else(|| ctx_obj.get("evalTrigger"))
+        .or_else(|| ctx_obj.get("eval_trigger"))
+        .and_then(|value| value.as_str())
+        .unwrap_or("continuous");
+
+    match trigger {
+        "continuous" => Ok(EvalTrigger::Continuous),
+        "submit" => Ok(EvalTrigger::Submit),
+        "demand" => Ok(EvalTrigger::Demand),
+        "disabled" => Ok(EvalTrigger::Disabled),
+        _ => Err(format!("invalid eval trigger: {trigger}")),
+    }
+}
+
+fn parse_validation_results(value: &Value) -> Result<Vec<ValidationResult>, String> {
+    let validations = value
+        .as_array()
+        .ok_or("previousValidations must be an array")?;
+
+    validations
+        .iter()
+        .map(parse_validation_result)
+        .collect::<Result<Vec<_>, _>>()
+}
+
+fn parse_validation_result(value: &Value) -> Result<ValidationResult, String> {
+    let obj = value
+        .as_object()
+        .ok_or("validation result must be an object")?;
+
+    Ok(ValidationResult {
+        path: required_string_field(obj, "path")?,
+        severity: required_string_field(obj, "severity")?,
+        constraint_kind: required_string_field_either(obj, "constraintKind", "constraint_kind")?,
+        code: required_string_field(obj, "code")?,
+        message: required_string_field(obj, "message")?,
+        constraint: optional_string_field_either(obj, "constraint", "constraint"),
+        source: required_string_field(obj, "source")?,
+        shape_id: optional_string_field_either(obj, "shapeId", "shape_id"),
+        context: match obj.get("context") {
+            Some(ctx) => {
+                let ctx_obj = ctx
+                    .as_object()
+                    .ok_or("validation context must be an object")?;
+                Some(
+                    ctx_obj
+                        .iter()
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect::<HashMap<_, _>>(),
+                )
+            }
+            None => None,
+        },
+    })
+}
+
+fn required_string_field(
+    obj: &serde_json::Map<String, Value>,
+    key: &str,
+) -> Result<String, String> {
+    obj.get(key)
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| format!("validation result missing string field '{key}'"))
+}
+
+fn required_string_field_either(
+    obj: &serde_json::Map<String, Value>,
+    primary: &str,
+    secondary: &str,
+) -> Result<String, String> {
+    obj.get(primary)
+        .or_else(|| obj.get(secondary))
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| {
+            format!(
+                "validation result missing string field '{primary}' or '{secondary}'"
+            )
+        })
+}
+
+fn optional_string_field_either(
+    obj: &serde_json::Map<String, Value>,
+    primary: &str,
+    secondary: &str,
+) -> Option<String> {
+    obj.get(primary)
+        .or_else(|| obj.get(secondary))
+        .and_then(Value::as_str)
+        .map(str::to_string)
 }
 
 // ── Assembly ────────────────────────────────────────────────────
@@ -1395,7 +1561,7 @@ mod tests {
     fn evaluate_definition_inner_output_shape() {
         let def = minimal_definition().to_string();
         let data = json!({"name": "Alice"}).to_string();
-        let result = evaluate_definition_inner(&def, &data).unwrap();
+        let result = evaluate_definition_inner(&def, &data, None).unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
 
         // Top-level keys
@@ -1409,6 +1575,8 @@ mod tests {
             "missing 'nonRelevant' key"
         );
         assert!(val.get("variables").is_some(), "missing 'variables' key");
+        assert!(val.get("required").is_some(), "missing 'required' key");
+        assert!(val.get("readonly").is_some(), "missing 'readonly' key");
 
         // values is an object
         assert!(val["values"].is_object());
@@ -1418,6 +1586,8 @@ mod tests {
         assert!(val["nonRelevant"].is_array());
         // variables is an object
         assert!(val["variables"].is_object());
+        assert!(val["required"].is_object());
+        assert!(val["readonly"].is_object());
     }
 
     /// Spec: specs/core/spec.md §5.4 — Each validation has path, severity, kind, message.
@@ -1435,7 +1605,7 @@ mod tests {
         })
         .to_string();
         let data = json!({}).to_string();
-        let result = evaluate_definition_inner(&def, &data).unwrap();
+        let result = evaluate_definition_inner(&def, &data, None).unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
 
         let validations = val["validations"].as_array().unwrap();
@@ -1464,9 +1634,74 @@ mod tests {
     /// Spec: specs/core/spec.md §5.4 — Invalid definition JSON returns error.
     #[test]
     fn evaluate_definition_inner_invalid_json() {
-        let result = evaluate_definition_inner("not json", "{}");
+        let result = evaluate_definition_inner("not json", "{}", None);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("invalid definition JSON"));
+    }
+
+    #[test]
+    fn evaluate_definition_inner_uses_runtime_context() {
+        let def = json!({
+            "title": "Test",
+            "items": [
+                { "key": "d", "label": "Date", "dataType": "date" }
+            ],
+            "binds": [
+                { "path": "d", "calculate": "today()" }
+            ]
+        })
+        .to_string();
+        let data = json!({}).to_string();
+        let context = json!({ "nowIso": "2025-06-15T00:00:00" }).to_string();
+
+        let result = evaluate_definition_inner(&def, &data, Some(context)).unwrap();
+        let val: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(val["values"]["d"], json!("2025-06-15"));
+    }
+
+    #[test]
+    fn evaluate_definition_inner_uses_previous_validations_context() {
+        let def = json!({
+            "$formspec": "1.0",
+            "title": "Test",
+            "items": [
+                { "key": "age", "label": "Age", "dataType": "decimal" },
+                { "key": "ageStatus", "label": "Status", "dataType": "string" }
+            ],
+            "binds": [
+                { "path": "age", "constraint": "$age >= 0", "required": "true" },
+                { "path": "ageStatus", "calculate": "if(valid($age), 'ok', 'invalid')" }
+            ]
+        })
+        .to_string();
+        let data = json!({}).to_string();
+
+        let first_result = evaluate_definition_inner(&def, &data, None).unwrap();
+        let first_val: Value = serde_json::from_str(&first_result).unwrap();
+        let context = json!({
+            "previousValidations": first_val["validations"]
+        })
+        .to_string();
+
+        let second_result = evaluate_definition_inner(&def, &data, Some(context)).unwrap();
+        let second_val: Value = serde_json::from_str(&second_result).unwrap();
+        assert_eq!(second_val["values"]["ageStatus"], json!("invalid"));
+    }
+
+    #[test]
+    fn tokenize_fel_returns_positioned_tokens() {
+        let result = tokenize_fel_inner("sum($items[*].qty)").unwrap();
+        let val: Value = serde_json::from_str(&result).unwrap();
+        let tokens = val.as_array().unwrap();
+
+        assert_eq!(tokens[0]["tokenType"], json!("Identifier"));
+        assert_eq!(tokens[0]["text"], json!("sum"));
+        assert_eq!(tokens[1]["tokenType"], json!("LRound"));
+        assert_eq!(tokens[2]["tokenType"], json!("Dollar"));
+        assert_eq!(tokens[4]["tokenType"], json!("LSquare"));
+        assert_eq!(tokens[5]["tokenType"], json!("Asterisk"));
+        assert_eq!(tokens[8]["tokenType"], json!("Identifier"));
+        assert_eq!(tokens[8]["text"], json!("qty"));
     }
 
     // ── Finding 69: generate_changelog_inner output shape ───────

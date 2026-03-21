@@ -371,6 +371,9 @@ fn evaluate_def(
         if let Some(ref sid) = v.shape_id {
             entry.set_item("shapeId", sid)?;
         }
+        if let Some(ref context) = v.context {
+            entry.set_item("context", json_to_python(py, &serde_json::json!(context))?)?;
+        }
         validations.append(entry)?;
     }
 
