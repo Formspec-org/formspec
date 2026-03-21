@@ -11,21 +11,30 @@ test('WASM initializes in browser', async ({ page }) => {
     expect(isWasmReady).toBe(true);
 });
 
-test('createFormEngine uses WASM runtime when available', async ({ page }) => {
+test('createFormEngine evaluates correctly when WASM is ready', async ({ page }) => {
     await page.goto('http://127.0.0.1:8080/');
     await page.waitForFunction(() => (window as any).__wasmReady === true, {}, { timeout: 10000 });
 
-    const runtimeName = await page.evaluate(() => {
+    const result = await page.evaluate(() => {
         const engine = (window as any).createFormEngine({
             $formspec: '1.0',
             version: '1.0',
             title: 'Test',
-            items: [{ key: 'x', type: 'field', dataType: 'text', label: 'X' }],
+            url: 'test://wasm-ready',
+            items: [
+                { key: 'qty', type: 'field', dataType: 'integer', label: 'Qty' },
+                { key: 'price', type: 'field', dataType: 'decimal', label: 'Price' },
+                { key: 'total', type: 'field', dataType: 'decimal', label: 'Total' },
+            ],
+            binds: [{ path: 'total', calculate: '$qty * $price' }],
         });
-        return engine.felRuntime.constructor.name;
+
+        engine.setValue('qty', 4);
+        engine.setValue('price', 5);
+        return engine.signals.total.value;
     });
 
-    expect(runtimeName).toBe('WasmFelRuntime');
+    expect(result).toBe(20);
 });
 
 test('WASM FEL evaluation produces correct results via engine', async ({ page }) => {
@@ -54,11 +63,9 @@ test('WASM FEL evaluation produces correct results via engine', async ({ page })
         const snapshot = engine.getDiagnosticsSnapshot();
         return {
             values: snapshot.values,
-            runtime: engine.felRuntime.constructor.name,
         };
     });
 
-    expect(result.runtime).toBe('WasmFelRuntime');
     expect(result.values.qty).toBe(3);
     expect(result.values.price).toBe(10);
     expect(result.values.total).toBe(30);
@@ -88,12 +95,10 @@ test('WASM FEL validation constraints work', async ({ page }) => {
         return {
             valid: report.valid,
             errorCount: report.counts?.error ?? 0,
-            runtime: engine.felRuntime.constructor.name,
             mips: snapshot.mips,
         };
     });
 
-    expect(result.runtime).toBe('WasmFelRuntime');
     expect(result.valid).toBe(false);
     expect(result.errorCount).toBeGreaterThan(0);
 });
@@ -126,11 +131,9 @@ test('WASM FEL relevance (conditional visibility) works', async ({ page }) => {
         return {
             initialRelevant,
             afterRelevant,
-            runtime: engine.felRuntime.constructor.name,
         };
     });
 
-    expect(result.runtime).toBe('WasmFelRuntime');
     expect(result.initialRelevant).toBe(false);
     expect(result.afterRelevant).toBe(true);
 });

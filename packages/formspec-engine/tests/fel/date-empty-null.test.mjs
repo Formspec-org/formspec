@@ -2,25 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FormEngine } from '../../dist/index.js';
-import { FelLexer } from '../../dist/fel/lexer.js';
-import { parser } from '../../dist/fel/parser.js';
-import { interpreter } from '../../dist/fel/interpreter.js';
+import { wasmEvalFEL } from '../../dist/wasm-bridge.js';
 
 function evalFel(expr) {
-  const { tokens } = FelLexer.tokenize(expr);
-  parser.input = tokens;
-  const cst = parser.expression();
-  const context = {
-    getSignalValue: () => undefined,
-    getRepeatsValue: () => 0,
-    getRelevantValue: () => true,
-    getRequiredValue: () => false,
-    getReadonlyValue: () => false,
-    getValidationErrors: () => 0,
-    currentItemPath: '',
-    engine: null,
-  };
-  return interpreter.evaluate(cst, context);
+  return wasmEvalFEL(expr);
 }
 
 function engineWithCalc(calculate, dataType = 'string') {
@@ -36,15 +21,15 @@ function engineWithCalc(calculate, dataType = 'string') {
 
 // A2: date("") throws instead of returning null
 
-test('date("") returns null directly from interpreter (does not throw)', () => {
-  // This is the core regression: date("") should return null, not throw
+test('date("") returns null directly from WASM evaluation (does not throw)', () => {
+  // This is the core regression: date("") should return null, not throw.
   assert.doesNotThrow(() => {
     const result = evalFel('date("")');
     assert.equal(result, null);
   });
 });
 
-test('date("") evaluated via interpreter returns null', () => {
+test('date("") evaluated via WASM returns null', () => {
   const result = evalFel('date("")');
   assert.equal(result, null);
 });

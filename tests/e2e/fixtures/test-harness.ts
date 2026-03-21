@@ -13,12 +13,12 @@ window.renderer = renderer;
 (window as any).FormEngine = FormEngine;
 (window as any).assembleDefinitionSync = assembleDefinitionSync;
 
-// Initialize WASM eagerly — non-blocking. If it fails, the engine falls back to Chevrotain.
+// Initialize WASM eagerly so browser tests can assert the Rust runtime is available.
 initWasm().then(() => {
     console.log('[formspec] WASM initialized successfully');
     (window as any).__wasmReady = true;
 }).catch((err) => {
-    console.warn('[formspec] WASM init failed, using Chevrotain fallback:', err);
+    console.warn('[formspec] WASM initialization failed:', err);
     (window as any).__wasmReady = false;
 });
 
