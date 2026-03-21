@@ -200,20 +200,21 @@ fn diff_items(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
     // Modified
     for &(key, old_val) in &old_map {
         if let Some(&(_, new_val)) = new_map.iter().find(|(k, _)| *k == key)
-            && old_val != new_val {
-                let impact = classify_item_modification(old_val, new_val);
-                changes.push(Change {
-                    change_type: ChangeType::Modified,
-                    target: ChangeTarget::Item,
-                    path: format!("items.{}", key),
-                    impact,
-                    key: Some(key.to_string()),
-                    description: None,
-                    before: Some(old_val.clone()),
-                    after: Some(new_val.clone()),
-                    migration_hint: None,
-                });
-            }
+            && old_val != new_val
+        {
+            let impact = classify_item_modification(old_val, new_val);
+            changes.push(Change {
+                change_type: ChangeType::Modified,
+                target: ChangeTarget::Item,
+                path: format!("items.{}", key),
+                impact,
+                key: Some(key.to_string()),
+                description: None,
+                before: Some(old_val.clone()),
+                after: Some(new_val.clone()),
+                migration_hint: None,
+            });
+        }
     }
 }
 
@@ -318,20 +319,21 @@ fn diff_binds(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
     // Modified
     for &(path, old_val) in &old_binds {
         if let Some(&(_, new_val)) = new_binds.iter().find(|(k, _)| *k == path)
-            && old_val != new_val {
-                let impact = classify_bind_modification(old_val, new_val);
-                changes.push(Change {
-                    change_type: ChangeType::Modified,
-                    target: ChangeTarget::Bind,
-                    path: path.to_string(),
-                    impact,
-                    key: None,
-                    description: None,
-                    before: Some(old_val.clone()),
-                    after: Some(new_val.clone()),
-                    migration_hint: None,
-                });
-            }
+            && old_val != new_val
+        {
+            let impact = classify_bind_modification(old_val, new_val);
+            changes.push(Change {
+                change_type: ChangeType::Modified,
+                target: ChangeTarget::Bind,
+                path: path.to_string(),
+                impact,
+                key: None,
+                description: None,
+                before: Some(old_val.clone()),
+                after: Some(new_val.clone()),
+                migration_hint: None,
+            });
+        }
     }
 }
 
@@ -423,19 +425,20 @@ fn diff_keyed_array(
 
     for &(key, old_val) in &old_map {
         if let Some(&(_, new_val)) = new_map.iter().find(|(k, _)| *k == key)
-            && old_val != new_val {
-                changes.push(Change {
-                    change_type: ChangeType::Modified,
-                    target: target.clone(),
-                    path: format!("{}.{}", section, key),
-                    impact: modify_impact,
-                    key: None,
-                    description: None,
-                    before: Some(old_val.clone()),
-                    after: Some(new_val.clone()),
-                    migration_hint: None,
-                });
-            }
+            && old_val != new_val
+        {
+            changes.push(Change {
+                change_type: ChangeType::Modified,
+                target: target.clone(),
+                path: format!("{}.{}", section, key),
+                impact: modify_impact,
+                key: None,
+                description: None,
+                before: Some(old_val.clone()),
+                after: Some(new_val.clone()),
+                migration_hint: None,
+            });
+        }
     }
 }
 

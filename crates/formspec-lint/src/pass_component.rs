@@ -98,6 +98,7 @@ fn should_not_bind(name: &str) -> bool {
 
 // ── Field lookup from definition ────────────────────────────────
 
+#[derive(Clone)]
 struct FieldInfo {
     data_type: Option<String>,
     has_options: bool,
@@ -107,14 +108,19 @@ struct FieldInfo {
 fn build_field_lookup(definition: &Value) -> HashMap<String, FieldInfo> {
     let mut lookup = HashMap::new();
     if let Some(items) = definition.get("items").and_then(|v| v.as_array()) {
-        collect_fields(items, &mut lookup);
+        collect_fields(items, "", &mut lookup);
     }
     lookup
 }
 
-fn collect_fields(items: &[Value], lookup: &mut HashMap<String, FieldInfo>) {
+fn collect_fields(items: &[Value], prefix: &str, lookup: &mut HashMap<String, FieldInfo>) {
     for item in items {
         if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
+            let full = if prefix.is_empty() {
+                key.to_string()
+            } else {
+                format!("{prefix}.{key}")
+            };
             let data_type = item
                 .get("dataType")
                 .and_then(|v| v.as_str())
@@ -124,15 +130,15 @@ fn collect_fields(items: &[Value], lookup: &mut HashMap<String, FieldInfo>) {
                     .get("options")
                     .and_then(|v| v.as_array())
                     .is_some_and(|a| !a.is_empty());
-            lookup.insert(
-                key.to_string(),
-                FieldInfo {
-                    data_type,
-                    has_options,
-                },
-            );
+            let info = FieldInfo {
+                data_type,
+                has_options,
+            };
+            // Insert both the full dotted path and the bare key.
+            lookup.insert(full.clone(), info.clone());
+            lookup.insert(key.to_string(), info);
             if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-                collect_fields(children, lookup);
+                collect_fields(children, &full, lookup);
             }
         }
     }
@@ -207,40 +213,45 @@ impl<'a> WalkState<'a> {
 
         // E805: Wizard children must all be Page
         if comp_type == "Wizard"
-            && let Some(children) = node.get("children").and_then(|v| v.as_array()) {
-                for (i, child) in children.iter().enumerate() {
-                    let child_type = child
-                        .get("component")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
-                    if child_type != "Page" {
-                        self.diags.push(LintDiagnostic::error(
-                            "E805",
-                            PASS,
-                            format!("{path}.children[{i}]"),
-                            format!(
-                                "Wizard children must be Page components, found '{child_type}'"
-                            ),
-                        ));
-                    }
+            && let Some(children) = node.get("children").and_then(|v| v.as_array())
+        {
+            for (i, child) in children.iter().enumerate() {
+                let child_type = child
+                    .get("component")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                if child_type != "Page" {
+                    self.diags.push(LintDiagnostic::error(
+                        "E805",
+                        PASS,
+                        format!("{path}.children[{i}]"),
+                        format!("Wizard children must be Page components, found '{child_type}'"),
+                    ));
                 }
             }
+        }
 
         // E806: Custom component missing required params
         if self.custom_names.contains(comp_type)
             && let Some(custom_defs) = self.custom_defs
-                && let Some(def) = custom_defs.get(comp_type)
-                    && let Some(params) = def.get("params").and_then(|v| v.as_array()) {
-                        for param_val in params {
-                            if let Some(param_name) = param_val.as_str()
-                                && node.get(param_name).is_none() {
-                                    self.diags.push(LintDiagnostic::error(
-                                        "E806", PASS, path,
-                                        format!("Custom component '{comp_type}' missing required param '{param_name}'"),
-                                    ));
-                                }
-                        }
-                    }
+            && let Some(def) = custom_defs.get(comp_type)
+            && let Some(params) = def.get("params").and_then(|v| v.as_array())
+        {
+            for param_val in params {
+                if let Some(param_name) = param_val.as_str()
+                    && node.get(param_name).is_none()
+                {
+                    self.diags.push(LintDiagnostic::error(
+                        "E806",
+                        PASS,
+                        path,
+                        format!(
+                            "Custom component '{comp_type}' missing required param '{param_name}'"
+                        ),
+                    ));
+                }
+            }
+        }
 
         // Bind checks
         if let Some(bind) = node.get("bind").and_then(|v| v.as_str()) {

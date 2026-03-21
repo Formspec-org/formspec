@@ -270,8 +270,12 @@ fn json_to_fel(val: &Value) -> FelValue {
         Value::Null => FelValue::Null,
         Value::Bool(b) => FelValue::Boolean(*b),
         Value::Number(n) => {
-            if let Some(d) = Decimal::from_f64(n.as_f64().unwrap_or(0.0)) {
-                FelValue::Number(d)
+            if let Some(i) = n.as_i64() {
+                FelValue::Number(Decimal::from(i))
+            } else if let Some(u) = n.as_u64() {
+                FelValue::Number(Decimal::from(u))
+            } else if let Some(f) = n.as_f64() {
+                FelValue::Number(Decimal::from_f64(f).unwrap_or(Decimal::ZERO))
             } else {
                 FelValue::Null
             }
@@ -292,9 +296,10 @@ fn fel_to_json(val: &FelValue) -> Value {
         FelValue::Boolean(b) => Value::Bool(*b),
         FelValue::Number(n) => {
             if n.fract().is_zero()
-                && let Some(i) = n.to_i64() {
-                    return Value::Number(serde_json::Number::from(i));
-                }
+                && let Some(i) = n.to_i64()
+            {
+                return Value::Number(serde_json::Number::from(i));
+            }
             if let Some(f) = n.to_f64() {
                 serde_json::Number::from_f64(f)
                     .map(Value::Number)
@@ -359,13 +364,14 @@ pub fn execute_mapping(
 
         // Check condition
         if let Some(ref cond) = rule.condition
-            && let Ok(expr) = parse(cond) {
-                let env = build_mapping_env(source, &output, None);
-                let result = evaluate(&expr, &env);
-                if !result.value.is_truthy() {
-                    continue; // condition false — skip rule
-                }
+            && let Ok(expr) = parse(cond)
+        {
+            let env = build_mapping_env(source, &output, None);
+            let result = evaluate(&expr, &env);
+            if !result.value.is_truthy() {
+                continue; // condition false — skip rule
             }
+        }
 
         // Direction-aware path resolution
         let (src_path, tgt_path) = match direction {
@@ -690,28 +696,30 @@ pub fn execute_mapping_doc(
     let mut rules = doc.rules.clone();
 
     // autoMap: generate synthetic preserve rules for unmapped top-level source keys (forward only)
-    if doc.auto_map && direction == MappingDirection::Forward
-        && let Some(obj) = source.as_object() {
-            let covered: std::collections::HashSet<&str> = doc
-                .rules
-                .iter()
-                .filter_map(|r| r.source_path.as_deref())
-                .collect();
-            for key in obj.keys() {
-                if !covered.contains(key.as_str()) {
-                    rules.push(MappingRule {
-                        source_path: Some(key.clone()),
-                        target_path: key.clone(),
-                        transform: TransformType::Preserve,
-                        condition: None,
-                        priority: -1,
-                        reverse_priority: None,
-                        default: None,
-                        bidirectional: true,
-                    });
-                }
+    if doc.auto_map
+        && direction == MappingDirection::Forward
+        && let Some(obj) = source.as_object()
+    {
+        let covered: std::collections::HashSet<&str> = doc
+            .rules
+            .iter()
+            .filter_map(|r| r.source_path.as_deref())
+            .collect();
+        for key in obj.keys() {
+            if !covered.contains(key.as_str()) {
+                rules.push(MappingRule {
+                    source_path: Some(key.clone()),
+                    target_path: key.clone(),
+                    transform: TransformType::Preserve,
+                    condition: None,
+                    priority: -1,
+                    reverse_priority: None,
+                    default: None,
+                    bidirectional: true,
+                });
             }
         }
+    }
 
     // Execute rules
     let mut result = execute_mapping(&rules, source, direction);
@@ -720,14 +728,15 @@ pub fn execute_mapping_doc(
     // we insert defaults only where no rule wrote a value). Forward only.
     if direction == MappingDirection::Forward
         && let Some(ref defaults) = doc.defaults
-            && let Value::Object(ref mut out_map) = result.output {
-                for (k, v) in defaults {
-                    // Only set default if no rule wrote to this key
-                    if !out_map.contains_key(k) {
-                        out_map.insert(k.clone(), v.clone());
-                    }
-                }
+        && let Value::Object(ref mut out_map) = result.output
+    {
+        for (k, v) in defaults {
+            // Only set default if no rule wrote to this key
+            if !out_map.contains_key(k) {
+                out_map.insert(k.clone(), v.clone());
             }
+        }
+    }
 
     result
 }

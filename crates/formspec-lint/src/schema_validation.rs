@@ -17,16 +17,24 @@ const RESPONSE_SCHEMA: &str = include_str!("../../../schemas/response.schema.jso
 const MAPPING_SCHEMA: &str = include_str!("../../../schemas/mapping.schema.json");
 const CHANGELOG_SCHEMA: &str = include_str!("../../../schemas/changelog.schema.json");
 const REGISTRY_SCHEMA: &str = include_str!("../../../schemas/registry.schema.json");
-const VALIDATION_REPORT_SCHEMA: &str = include_str!("../../../schemas/validationReport.schema.json");
-const VALIDATION_RESULT_SCHEMA: &str = include_str!("../../../schemas/validationResult.schema.json");
+const VALIDATION_REPORT_SCHEMA: &str =
+    include_str!("../../../schemas/validationReport.schema.json");
+const VALIDATION_RESULT_SCHEMA: &str =
+    include_str!("../../../schemas/validationResult.schema.json");
 
 // ── Schema text + $id pairs for cross-file $ref resolution ───────
 
 /// All schemas that may be referenced by `$ref` from other schemas.
 /// Each entry: (schema JSON text, $id URI from the schema).
 const CROSS_REF_SCHEMAS: &[(&str, &str)] = &[
-    (VALIDATION_RESULT_SCHEMA, "https://formspec.org/schemas/validationResult/1.0"),
-    (COMPONENT_SCHEMA, "https://formspec.org/schemas/component/1.0"),
+    (
+        VALIDATION_RESULT_SCHEMA,
+        "https://formspec.org/schemas/validationResult/1.0",
+    ),
+    (
+        COMPONENT_SCHEMA,
+        "https://formspec.org/schemas/component/1.0",
+    ),
 ];
 
 // ── Compiled validators (lazily initialized) ─────────────────────
@@ -45,35 +53,31 @@ struct SchemaSet {
 
 fn schema_set() -> &'static SchemaSet {
     static SET: OnceLock<SchemaSet> = OnceLock::new();
-    SET.get_or_init(|| {
-        SchemaSet {
-            definition: build_validator(DEFINITION_SCHEMA),
-            component: build_validator(COMPONENT_SCHEMA),
-            theme: build_validator(THEME_SCHEMA),
-            response: build_validator(RESPONSE_SCHEMA),
-            mapping: build_validator(MAPPING_SCHEMA),
-            changelog: build_validator(CHANGELOG_SCHEMA),
-            registry: build_validator(REGISTRY_SCHEMA),
-            validation_report: build_validator(VALIDATION_REPORT_SCHEMA),
-            validation_result: build_validator(VALIDATION_RESULT_SCHEMA),
-        }
+    SET.get_or_init(|| SchemaSet {
+        definition: build_validator(DEFINITION_SCHEMA),
+        component: build_validator(COMPONENT_SCHEMA),
+        theme: build_validator(THEME_SCHEMA),
+        response: build_validator(RESPONSE_SCHEMA),
+        mapping: build_validator(MAPPING_SCHEMA),
+        changelog: build_validator(CHANGELOG_SCHEMA),
+        registry: build_validator(REGISTRY_SCHEMA),
+        validation_report: build_validator(VALIDATION_REPORT_SCHEMA),
+        validation_result: build_validator(VALIDATION_RESULT_SCHEMA),
     })
 }
 
 fn build_validator(schema_text: &str) -> Validator {
-    let schema: Value = serde_json::from_str(schema_text)
-        .expect("embedded schema is valid JSON");
+    let schema: Value = serde_json::from_str(schema_text).expect("embedded schema is valid JSON");
 
     let mut opts = jsonschema::options();
     // Register all cross-referenced schemas so $ref resolution works.
     for &(ref_text, ref_id) in CROSS_REF_SCHEMAS {
-        let ref_val: Value = serde_json::from_str(ref_text)
-            .expect("cross-ref schema is valid JSON");
+        let ref_val: Value =
+            serde_json::from_str(ref_text).expect("cross-ref schema is valid JSON");
         let resource = Resource::from_contents(ref_val);
         opts = opts.with_resource(ref_id, resource);
     }
-    opts.build(&schema)
-        .expect("embedded schema compiles")
+    opts.build(&schema).expect("embedded schema compiles")
 }
 
 // ── Public API ───────────────────────────────────────────────────
@@ -101,12 +105,7 @@ pub fn validate_schema(doc: &Value, doc_type: DocumentType) -> Vec<LintDiagnosti
         .map(|err| {
             let pointer = err.instance_path().as_str();
             let path = json_pointer_to_jsonpath(pointer);
-            LintDiagnostic::error(
-                "E101",
-                1,
-                path,
-                err.to_string(),
-            )
+            LintDiagnostic::error("E101", 1, path, err.to_string())
         })
         .collect()
 }
@@ -131,7 +130,10 @@ mod tests {
         assert!(
             diags.iter().any(|d| d.code == "E101"),
             "Should emit E101 for invalid dataType, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.path, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -149,7 +151,10 @@ mod tests {
         assert!(
             diags.is_empty(),
             "Valid definition should produce no E101, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.path, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -166,7 +171,11 @@ mod tests {
         let diags = validate_schema(&def, DocumentType::Definition);
         // All paths should start with "$"
         for d in &diags {
-            assert!(d.path.starts_with('$'), "Path should be JSONPath: {}", d.path);
+            assert!(
+                d.path.starts_with('$'),
+                "Path should be JSONPath: {}",
+                d.path
+            );
         }
     }
 
@@ -189,9 +198,14 @@ mod tests {
         });
         let diags = validate_schema(&def, DocumentType::Definition);
         assert!(
-            diags.iter().any(|d| d.code == "E101" && d.message.contains("title")),
+            diags
+                .iter()
+                .any(|d| d.code == "E101" && d.message.contains("title")),
             "Should report missing 'title', got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -206,7 +220,10 @@ mod tests {
         assert!(
             diags.is_empty(),
             "Valid theme should produce no E101, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -227,7 +244,10 @@ mod tests {
         assert!(
             diags.is_empty(),
             "Valid component should produce no E101, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 

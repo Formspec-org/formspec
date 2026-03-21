@@ -429,18 +429,18 @@ impl<'a> ExactRewriteParser<'a> {
             }
         }
 
-        if has_name
-            && let Some(rewrite) = &self.options.rewrite_field_path {
-                let original = parts.join(".").replace(".[", "[");
-                if let Some(updated) = rewrite(&original)
-                    && updated != original {
-                        self.replacements.push(Replacement {
-                            start,
-                            end,
-                            text: format!("${updated}"),
-                        });
-                    }
+        if has_name && let Some(rewrite) = &self.options.rewrite_field_path {
+            let original = parts.join(".").replace(".[", "[");
+            if let Some(updated) = rewrite(&original)
+                && updated != original
+            {
+                self.replacements.push(Replacement {
+                    start,
+                    end,
+                    text: format!("${updated}"),
+                });
             }
+        }
 
         Ok(())
     }
@@ -481,33 +481,35 @@ impl<'a> ExactRewriteParser<'a> {
                 &self.options.rewrite_instance_name,
                 arg_value.as_deref(),
                 arg_token.as_ref(),
-            )
-                && let Some(updated) = rewrite(current_name)
-                    && updated != current_name {
-                        let raw = char_slice(self.source, token.span.start, token.span.end);
-                        let quote = raw.chars().next().unwrap_or('\'');
-                        self.replacements.push(Replacement {
-                            start: token.span.start,
-                            end: token.span.end,
-                            text: quote_string_literal(&updated, quote),
-                        });
-                    }
+            ) && let Some(updated) = rewrite(current_name)
+                && updated != current_name
+            {
+                let raw = char_slice(self.source, token.span.start, token.span.end);
+                let quote = raw.chars().next().unwrap_or('\'');
+                self.replacements.push(Replacement {
+                    start: token.span.start,
+                    end: token.span.end,
+                    text: quote_string_literal(&updated, quote),
+                });
+            }
             return Ok(());
         }
 
         if name == "current" {
             if let Some(rewrite) = &self.options.rewrite_current_path
-                && let (Some(first), Some(last)) = (tail_tokens.first(), tail_tokens.last()) {
-                    let current_path = tail_names.join(".");
-                    if let Some(updated) = rewrite(&current_path)
-                        && updated != current_path {
-                            self.replacements.push(Replacement {
-                                start: first.span.start,
-                                end: last.span.end,
-                                text: updated,
-                            });
-                        }
+                && let (Some(first), Some(last)) = (tail_tokens.first(), tail_tokens.last())
+            {
+                let current_path = tail_names.join(".");
+                if let Some(updated) = rewrite(&current_path)
+                    && updated != current_path
+                {
+                    self.replacements.push(Replacement {
+                        start: first.span.start,
+                        end: last.span.end,
+                        text: updated,
+                    });
                 }
+            }
             return Ok(());
         }
 

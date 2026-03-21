@@ -219,6 +219,10 @@ fn days_from_civil(year: i32, month: u32, day: u32) -> i64 {
 }
 
 pub fn days_in_month(year: i32, month: u32) -> u32 {
+    debug_assert!(
+        (1..=12).contains(&month),
+        "days_in_month called with invalid month: {month}"
+    );
     match month {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
@@ -261,13 +265,25 @@ pub fn parse_datetime_literal(s: &str) -> Option<FelDate> {
     if dp.len() != 3 || tp.len() != 3 {
         return None;
     }
+    let year: i32 = dp[0].parse().ok()?;
+    let month: u32 = dp[1].parse().ok()?;
+    let day: u32 = dp[2].parse().ok()?;
+    let hour: u32 = tp[0].parse().ok()?;
+    let minute: u32 = tp[1].parse().ok()?;
+    let second: u32 = tp[2].parse().ok()?;
+    if !(1..=12).contains(&month) || day < 1 || day > days_in_month(year, month) {
+        return None;
+    }
+    if hour >= 24 || minute >= 60 || second >= 60 {
+        return None;
+    }
     Some(FelDate::DateTime {
-        year: dp[0].parse().ok()?,
-        month: dp[1].parse().ok()?,
-        day: dp[2].parse().ok()?,
-        hour: tp[0].parse().ok()?,
-        minute: tp[1].parse().ok()?,
-        second: tp[2].parse().ok()?,
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
     })
 }
 

@@ -109,7 +109,7 @@ pub enum NrbMode {
 }
 
 impl NrbMode {
-    fn from_str(s: &str) -> Self {
+    fn from_str_lossy(s: &str) -> Self {
         match s {
             "empty" => NrbMode::Empty,
             "keep" => NrbMode::Keep,
@@ -128,7 +128,7 @@ pub enum WhitespaceMode {
 }
 
 impl WhitespaceMode {
-    fn from_str(s: &str) -> Self {
+    fn from_str_lossy(s: &str) -> Self {
         match s {
             "trim" => WhitespaceMode::Trim,
             "normalize" => WhitespaceMode::Normalize,
@@ -351,18 +351,14 @@ fn build_item_info(item: &Value, binds: Option<&Value>, parent_path: Option<&str
             .and_then(|b| b.get("excludedValue"))
             .and_then(|v| v.as_str())
             .map(String::from),
-        default_value: bind
-            .and_then(|b| b.get("default"))
-            .and_then(|v| {
-                // Only literal defaults (not FEL expressions starting with =)
-                match v {
-                    Value::String(s) if s.starts_with('=') => None,
-                    other => Some(other.clone()),
-                }
-            }),
-        initial_value: item
-            .get("initialValue")
-            .cloned(),
+        default_value: bind.and_then(|b| b.get("default")).and_then(|v| {
+            // Only literal defaults (not FEL expressions starting with =)
+            match v {
+                Value::String(s) if s.starts_with('=') => None,
+                other => Some(other.clone()),
+            }
+        }),
+        initial_value: item.get("initialValue").cloned(),
         prev_relevant: true,
         parent_path: parent_path.map(String::from),
         repeatable: item
@@ -463,9 +459,10 @@ fn detect_repeat_count(base: &str, data: &HashMap<String, Value>) -> usize {
     for key in data.keys() {
         if let Some(rest) = key.strip_prefix(&prefix)
             && let Some(idx_str) = rest.split(']').next()
-                && let Ok(idx) = idx_str.parse::<usize>() {
-                    max_index = max_index.max(idx + 1);
-                }
+            && let Ok(idx) = idx_str.parse::<usize>()
+        {
+            max_index = max_index.max(idx + 1);
+        }
     }
     max_index
 }
@@ -539,10 +536,7 @@ fn wildcard_base(path: &str) -> Option<&str> {
 /// Variables are stored with scope-qualified keys like `"#:name"` (global)
 /// or `"section:name"` (group-scoped). Walk from global scope down through
 /// ancestors of the item path, with nearer scopes overriding farther ones.
-fn visible_variables(
-    all_vars: &HashMap<String, Value>,
-    item_path: &str,
-) -> HashMap<String, Value> {
+fn visible_variables(all_vars: &HashMap<String, Value>, item_path: &str) -> HashMap<String, Value> {
     let mut visible = HashMap::new();
 
     // Global scope variables
@@ -584,7 +578,11 @@ pub fn recalculate(
     items: &mut [ItemInfo],
     data: &HashMap<String, Value>,
     definition: &Value,
-) -> (HashMap<String, Value>, HashMap<String, Value>, Option<String>) {
+) -> (
+    HashMap<String, Value>,
+    HashMap<String, Value>,
+    Option<String>,
+) {
     let mut env = FormspecEnvironment::new();
     let mut values = data.clone();
 
@@ -615,7 +613,8 @@ pub fn recalculate(
     // After variable evaluation, remove repeat group arrays from the env.
     // Flat indexed keys (e.g., rows[0].a) remain — FEL should resolve through
     // those instead to avoid 1-based array indexing conflicts.
-    let array_keys: Vec<String> = values.iter()
+    let array_keys: Vec<String> = values
+        .iter()
         .filter(|(_, v)| is_repeat_group_array(v))
         .map(|(k, _)| k.clone())
         .collect();
@@ -623,13 +622,20 @@ pub fn recalculate(
         env.data.remove(k);
     }
 
-    let has_scoped = var_defs.iter().any(|v| {
-        v.scope.as_deref().unwrap_or("#") != "#"
-    });
+    let has_scoped = var_defs
+        .iter()
+        .any(|v| v.scope.as_deref().unwrap_or("#") != "#");
 
     // Steps 3-6: Evaluate bind expressions with inheritance
     if has_scoped {
-        evaluate_items_with_inheritance_scoped(items, &mut env, &mut values, true, false, &scoped_var_values);
+        evaluate_items_with_inheritance_scoped(
+            items,
+            &mut env,
+            &mut values,
+            true,
+            false,
+            &scoped_var_values,
+        );
     } else {
         evaluate_items_with_inheritance(items, &mut env, &mut values, true, false);
     }
@@ -641,13 +647,14 @@ pub fn recalculate(
 fn apply_whitespace_to_items(items: &mut [ItemInfo], values: &mut HashMap<String, Value>) {
     for item in items.iter_mut() {
         if let Some(ref ws) = item.whitespace {
-            let mode = WhitespaceMode::from_str(ws);
+            let mode = WhitespaceMode::from_str_lossy(ws);
             if mode != WhitespaceMode::Preserve
-                && let Some(Value::String(s)) = values.get(&item.path) {
-                    let transformed = mode.apply(s);
-                    values.insert(item.path.clone(), Value::String(transformed.clone()));
-                    item.value = Value::String(transformed);
-                }
+                && let Some(Value::String(s)) = values.get(&item.path)
+            {
+                let transformed = mode.apply(s);
+                values.insert(item.path.clone(), Value::String(transformed.clone()));
+                item.value = Value::String(transformed);
+            }
         }
         apply_whitespace_to_items(&mut item.children, values);
     }
@@ -662,7 +669,11 @@ fn apply_whitespace_to_items(items: &mut [ItemInfo], values: &mut HashMap<String
 fn evaluate_variables_scoped(
     var_defs: &[VariableDef],
     env: &mut FormspecEnvironment,
-) -> (HashMap<String, Value>, HashMap<String, Value>, Option<String>) {
+) -> (
+    HashMap<String, Value>,
+    HashMap<String, Value>,
+    Option<String>,
+) {
     let (order, cycle_err) = match topo_sort_variables(var_defs) {
         Ok(order) => (order, None),
         Err(cycle_msg) => {
@@ -721,26 +732,29 @@ fn evaluate_single_item(
     item.relevant = own_relevant && parent_relevant;
 
     // 9c: Default on relevance transition — non-relevant → relevant + empty → apply default
-    if item.relevant && !item.prev_relevant
-        && let Some(ref default_val) = item.default_value {
-            let current = values.get(&item.path);
-            let is_empty = match current {
-                None | Some(Value::Null) => true,
-                Some(Value::String(s)) => s.is_empty(),
-                _ => false,
-            };
-            if is_empty {
-                values.insert(item.path.clone(), default_val.clone());
-                env.set_field(&item.path, json_to_fel(default_val));
-            }
+    if item.relevant
+        && !item.prev_relevant
+        && let Some(ref default_val) = item.default_value
+    {
+        let current = values.get(&item.path);
+        let is_empty = match current {
+            None | Some(Value::Null) => true,
+            Some(Value::String(s)) => s.is_empty(),
+            _ => false,
+        };
+        if is_empty {
+            values.insert(item.path.clone(), default_val.clone());
+            env.set_field(&item.path, json_to_fel(default_val));
         }
+    }
 
     // 9a: excludedValue — when non-relevant and excludedValue=="null", set FEL value to Null
     if !item.relevant
         && let Some(ref ev) = item.excluded_value
-            && ev == "null" {
-                env.set_field(&item.path, FelValue::Null);
-            }
+        && ev == "null"
+    {
+        env.set_field(&item.path, FelValue::Null);
+    }
 
     // Evaluate own readonly expression
     let own_readonly = if let Some(ref expr) = item.readonly_expr {
@@ -767,13 +781,14 @@ fn evaluate_single_item(
 
     // Evaluate calculate (continues even when non-relevant per S5.6)
     if let Some(ref expr) = item.calculate
-        && let Ok(parsed) = parse(expr) {
-            let result = evaluate(&parsed, env);
-            let json_val = fel_to_json(&result.value);
-            values.insert(item.path.clone(), json_val.clone());
-            item.value = json_val;
-            env.set_field(&item.path, result.value);
-        }
+        && let Ok(parsed) = parse(expr)
+    {
+        let result = evaluate(&parsed, env);
+        let json_val = fel_to_json(&result.value);
+        values.insert(item.path.clone(), json_val.clone());
+        item.value = json_val;
+        env.set_field(&item.path, result.value);
+    }
 
     // Update MIP state
     env.set_mip(
@@ -852,7 +867,9 @@ fn evaluate_repeat_children_with_aliases(
             for name in &bare_names {
                 match saved_values.remove(name) {
                     Some(Some(val)) => env.set_field(name, val),
-                    _ => { env.data.remove(name); }
+                    _ => {
+                        env.data.remove(name);
+                    }
                 }
             }
             bare_names.clear();
@@ -862,12 +879,13 @@ fn evaluate_repeat_children_with_aliases(
             let prefix_dot = format!("{instance_prefix}.");
             for (k, v) in values.iter() {
                 if let Some(bare) = k.strip_prefix(&prefix_dot)
-                    && !bare.contains('.') {
-                        // Save original value before overwriting
-                        saved_values.insert(bare.to_string(), env.data.get(bare).cloned());
-                        env.set_field(bare, json_to_fel(v));
-                        bare_names.push(bare.to_string());
-                    }
+                    && !bare.contains('.')
+                {
+                    // Save original value before overwriting
+                    saved_values.insert(bare.to_string(), env.data.get(bare).cloned());
+                    env.set_field(bare, json_to_fel(v));
+                    bare_names.push(bare.to_string());
+                }
             }
         }
 
@@ -885,9 +903,10 @@ fn evaluate_repeat_children_with_aliases(
 
         // Update bare-name alias with calculated value so siblings see it
         if item.calculate.is_some()
-            && let Some(val) = values.get(&item.path) {
-                env.set_field(&item.key, json_to_fel(val));
-            }
+            && let Some(val) = values.get(&item.path)
+        {
+            env.set_field(&item.key, json_to_fel(val));
+        }
 
         // Recurse into nested groups
         if item.repeatable && !item.children.is_empty() {
@@ -923,7 +942,9 @@ fn evaluate_repeat_children_with_aliases(
     for name in &bare_names {
         match saved_values.remove(name) {
             Some(Some(val)) => env.set_field(name, val),
-            _ => { env.data.remove(name); }
+            _ => {
+                env.data.remove(name);
+            }
         }
     }
 }
@@ -1083,30 +1104,37 @@ fn validate_items(
         }
 
         // Type mismatch check (only for scalar values, not arrays/objects)
-        if !val.is_null() && !val.is_array() && !val.is_object()
-            && let Some(ref dt) = item.data_type {
-                let mismatch = match dt.as_str() {
-                    "string" => !val.is_string(),
-                    "integer" => !(val.is_i64() || val.is_u64() || val.is_f64() && {
-                        let f = val.as_f64().unwrap();
-                        f.fract() == 0.0
-                    }),
-                    "number" | "decimal" => !val.is_number(),
-                    "boolean" => !val.is_boolean(),
-                    _ => false,
-                };
-                if mismatch {
-                    results.push(ValidationResult {
-                        path: item.path.clone(),
-                        severity: "error".to_string(),
-                        constraint_kind: "type".to_string(),
-                        code: "TYPE_MISMATCH".to_string(),
-                        message: format!("Invalid {dt}"),
-                        source: "bind".to_string(),
-                        shape_id: None,
-                    });
+        if !val.is_null()
+            && !val.is_array()
+            && !val.is_object()
+            && let Some(ref dt) = item.data_type
+        {
+            let mismatch = match dt.as_str() {
+                "string" => !val.is_string(),
+                "integer" => {
+                    !(val.is_i64()
+                        || val.is_u64()
+                        || val.is_f64() && {
+                            let f = val.as_f64().unwrap();
+                            f.fract() == 0.0
+                        })
                 }
+                "number" | "decimal" => !val.is_number(),
+                "boolean" => !val.is_boolean(),
+                _ => false,
+            };
+            if mismatch {
+                results.push(ValidationResult {
+                    path: item.path.clone(),
+                    severity: "error".to_string(),
+                    constraint_kind: "type".to_string(),
+                    code: "TYPE_MISMATCH".to_string(),
+                    message: format!("Invalid {dt}"),
+                    source: "bind".to_string(),
+                    shape_id: None,
+                });
             }
+        }
 
         // Constraint check — set bare $ to current field value (9d: use resolved value)
         if let Some(ref expr) = item.constraint {
@@ -1143,29 +1171,31 @@ fn validate_items(
         if item.repeatable {
             let count = detect_repeat_count(&item.path, values);
             if let Some(min) = item.repeat_min
-                && (count as u64) < min {
-                    results.push(ValidationResult {
-                        path: item.path.clone(),
-                        severity: "error".to_string(),
-                        constraint_kind: "cardinality".to_string(),
-                        code: "MIN_REPEAT".to_string(),
-                        message: format!("Minimum {min} entries required"),
-                        source: "bind".to_string(),
-                        shape_id: None,
-                    });
-                }
+                && (count as u64) < min
+            {
+                results.push(ValidationResult {
+                    path: item.path.clone(),
+                    severity: "error".to_string(),
+                    constraint_kind: "cardinality".to_string(),
+                    code: "MIN_REPEAT".to_string(),
+                    message: format!("Minimum {min} entries required"),
+                    source: "bind".to_string(),
+                    shape_id: None,
+                });
+            }
             if let Some(max) = item.repeat_max
-                && (count as u64) > max {
-                    results.push(ValidationResult {
-                        path: item.path.clone(),
-                        severity: "error".to_string(),
-                        constraint_kind: "cardinality".to_string(),
-                        code: "MAX_REPEAT".to_string(),
-                        message: format!("Maximum {max} entries allowed"),
-                        source: "bind".to_string(),
-                        shape_id: None,
-                    });
-                }
+                && (count as u64) > max
+            {
+                results.push(ValidationResult {
+                    path: item.path.clone(),
+                    severity: "error".to_string(),
+                    constraint_kind: "cardinality".to_string(),
+                    code: "MAX_REPEAT".to_string(),
+                    message: format!("Maximum {max} entries allowed"),
+                    source: "bind".to_string(),
+                    shape_id: None,
+                });
+            }
         }
 
         validate_items(&item.children, env, values, results);
@@ -1189,11 +1219,13 @@ fn validate_shape(
     }
 
     // §5.6 rule 1: non-relevant targets suppress shape evaluation
-    if target != "#" && !target.is_empty()
+    if target != "#"
+        && !target.is_empty()
         && let Some(item) = find_item_by_path(items, target)
-            && !item.relevant {
-                return;
-            }
+        && !item.relevant
+    {
+        return;
+    }
     let severity = shape
         .get("severity")
         .and_then(|v| v.as_str())
@@ -1205,19 +1237,24 @@ fn validate_shape(
 
     // Check activeWhen
     if let Some(active_when) = shape.get("activeWhen").and_then(|v| v.as_str())
-        && !eval_bool(active_when, env, true) {
-            return;
-        }
+        && !eval_bool(active_when, env, true)
+    {
+        return;
+    }
 
     // Bind bare $ to target field value for shape constraint evaluation
     let prev_dollar = env.data.remove("");
     if !target.is_empty()
-        && let Some(target_val) = values.get(target) {
-            env.data.insert(String::new(), json_to_fel(target_val));
-        }
+        && let Some(target_val) = values.get(target)
+    {
+        env.data.insert(String::new(), json_to_fel(target_val));
+    }
 
     let sid = shape.get("id").and_then(|v| v.as_str()).map(str::to_string);
-    let scode = shape.get("code").and_then(|v| v.as_str()).unwrap_or("SHAPE_FAILED");
+    let scode = shape
+        .get("code")
+        .and_then(|v| v.as_str())
+        .unwrap_or("SHAPE_FAILED");
 
     let mut visiting = HashSet::new();
     if !shape_passes(shape, shapes_by_id, env, &mut visiting) {
@@ -1260,9 +1297,10 @@ fn validate_wildcard_shape(
 
     // Check activeWhen before expanding
     if let Some(active_when) = shape.get("activeWhen").and_then(|v| v.as_str())
-        && !eval_bool(active_when, env, true) {
-            return;
-        }
+        && !eval_bool(active_when, env, true)
+    {
+        return;
+    }
 
     let base = match wildcard_base(target) {
         Some(b) => b.to_string(),
@@ -1274,9 +1312,10 @@ fn validate_wildcard_shape(
     for concrete_path in &concrete_paths {
         // §5.6 rule 1: skip non-relevant targets
         if let Some(item) = find_item_by_path(items, concrete_path)
-            && !item.relevant {
-                continue;
-            }
+            && !item.relevant
+        {
+            continue;
+        }
 
         // Extract the index from the concrete path to instantiate the constraint
         let index = match concrete_path.find('[') {
@@ -1309,7 +1348,10 @@ fn validate_wildcard_shape(
         };
 
         let sid = shape.get("id").and_then(|v| v.as_str()).map(str::to_string);
-        let scode = shape.get("code").and_then(|v| v.as_str()).unwrap_or("SHAPE_FAILED");
+        let scode = shape
+            .get("code")
+            .and_then(|v| v.as_str())
+            .unwrap_or("SHAPE_FAILED");
 
         if !passes {
             results.push(ValidationResult {
@@ -1360,24 +1402,23 @@ fn shape_passes(
     env: &FormspecEnvironment,
     visiting: &mut HashSet<String>,
 ) -> bool {
-    let shape_id = shape
-        .get("id")
-        .and_then(|v| v.as_str())
-        .map(str::to_string);
+    let shape_id = shape.get("id").and_then(|v| v.as_str()).map(str::to_string);
 
     if let Some(ref id) = shape_id
-        && !visiting.insert(id.clone()) {
-            return true;
-        }
+        && !visiting.insert(id.clone())
+    {
+        return true;
+    }
 
     // activeWhen follows the existing batch evaluator contract: null defaults to active.
     if let Some(active_when) = shape.get("activeWhen").and_then(|v| v.as_str())
-        && !eval_bool(active_when, env, true) {
-            if let Some(id) = shape_id {
-                visiting.remove(&id);
-            }
-            return true;
+        && !eval_bool(active_when, env, true)
+    {
+        if let Some(id) = shape_id {
+            visiting.remove(&id);
         }
+        return true;
+    }
 
     let passes = if let Some(expr) = shape.get("constraint").and_then(|v| v.as_str()) {
         constraint_passes(&evaluate_shape_expression(expr, env))
@@ -1439,12 +1480,8 @@ fn shape_passes(
                         clause
                             .as_str()
                             .map(|expr| {
-                                let value = evaluate_composition_element(
-                                    expr,
-                                    shapes_by_id,
-                                    env,
-                                    visiting,
-                                );
+                                let value =
+                                    evaluate_composition_element(expr, shapes_by_id, env, visiting);
                                 !value.is_null() && value.is_truthy()
                             })
                             .unwrap_or(false)
@@ -1508,9 +1545,10 @@ fn parse_path_segment(seg: &str) -> (&str, Option<usize>) {
         let key = &seg[..bracket_pos];
         let rest = &seg[bracket_pos + 1..];
         if let Some(idx_str) = rest.strip_suffix(']')
-            && let Ok(idx) = idx_str.parse::<usize>() {
-                return (key, Some(idx));
-            }
+            && let Ok(idx) = idx_str.parse::<usize>()
+        {
+            return (key, Some(idx));
+        }
         (key, None)
     } else {
         (seg, None)
@@ -1522,9 +1560,10 @@ fn apply_excluded_values_to_env(items: &[ItemInfo], env: &mut FormspecEnvironmen
     for item in items {
         if !item.relevant
             && let Some(ref ev) = item.excluded_value
-                && ev == "null" {
-                    env.set_field(&item.path, FelValue::Null);
-                }
+            && ev == "null"
+        {
+            env.set_field(&item.path, FelValue::Null);
+        }
         apply_excluded_values_to_env(&item.children, env);
     }
 }
@@ -1548,32 +1587,35 @@ fn build_validation_env(values: &HashMap<String, Value>) -> FormspecEnvironment 
 pub fn resolve_nrb(path: &str, items: &[ItemInfo], definition_default: &str) -> NrbMode {
     // Look up exact match in items
     if let Some(item) = find_item_by_path(items, path)
-        && let Some(ref nrb) = item.nrb {
-            return NrbMode::from_str(nrb);
-        }
+        && let Some(ref nrb) = item.nrb
+    {
+        return NrbMode::from_str_lossy(nrb);
+    }
 
     // Try wildcard version (replace [N] with [*])
     let wildcard_path = to_wildcard_path(path);
     if wildcard_path != path
         && let Some(item) = find_item_by_path(items, &wildcard_path)
-            && let Some(ref nrb) = item.nrb {
-                return NrbMode::from_str(nrb);
-            }
+        && let Some(ref nrb) = item.nrb
+    {
+        return NrbMode::from_str_lossy(nrb);
+    }
 
     // Try stripped indices version
     let stripped = strip_indices(path);
     if stripped != path
         && let Some(item) = find_item_by_path(items, &stripped)
-            && let Some(ref nrb) = item.nrb {
-                return NrbMode::from_str(nrb);
-            }
+        && let Some(ref nrb) = item.nrb
+    {
+        return NrbMode::from_str_lossy(nrb);
+    }
 
     // Try parent path
     if let Some(parent) = parent_path(path) {
         return resolve_nrb(&parent, items, definition_default);
     }
 
-    NrbMode::from_str(definition_default)
+    NrbMode::from_str_lossy(definition_default)
 }
 
 /// Apply NRB to non-relevant fields.
@@ -1610,8 +1652,8 @@ fn collect_non_relevant_with_nrb(
             let mode = item
                 .nrb
                 .as_deref()
-                .map(NrbMode::from_str)
-                .unwrap_or_else(|| NrbMode::from_str(definition_default));
+                .map(NrbMode::from_str_lossy)
+                .unwrap_or_else(|| NrbMode::from_str_lossy(definition_default));
             result.push((item.path.clone(), mode));
         }
         result.extend(collect_non_relevant_with_nrb(
@@ -1628,25 +1670,26 @@ fn collect_non_relevant_with_nrb(
 fn seed_initial_values(items: &[ItemInfo], data: &mut HashMap<String, Value>) {
     for item in items {
         if let Some(ref init_val) = item.initial_value
-            && !data.contains_key(&item.path) {
-                match init_val {
-                    Value::String(s) if s.starts_with('=') => {
-                        // FEL expression — evaluate in a temporary env with current data
-                        let expr_str = &s[1..];
-                        if let Ok(parsed) = parse(expr_str) {
-                            let mut env = FormspecEnvironment::new();
-                            for (k, v) in data.iter() {
-                                env.set_field(k, json_to_fel(v));
-                            }
-                            let result = evaluate(&parsed, &env);
-                            data.insert(item.path.clone(), fel_to_json(&result.value));
+            && !data.contains_key(&item.path)
+        {
+            match init_val {
+                Value::String(s) if s.starts_with('=') => {
+                    // FEL expression — evaluate in a temporary env with current data
+                    let expr_str = &s[1..];
+                    if let Ok(parsed) = parse(expr_str) {
+                        let mut env = FormspecEnvironment::new();
+                        for (k, v) in data.iter() {
+                            env.set_field(k, json_to_fel(v));
                         }
-                    }
-                    _ => {
-                        data.insert(item.path.clone(), init_val.clone());
+                        let result = evaluate(&parsed, &env);
+                        data.insert(item.path.clone(), fel_to_json(&result.value));
                     }
                 }
+                _ => {
+                    data.insert(item.path.clone(), init_val.clone());
+                }
             }
+        }
         seed_initial_values(&item.children, data);
     }
 }
@@ -1749,9 +1792,7 @@ fn apply_wildcard_binds(
         for i in 0..count {
             let concrete_path = bind_path.replace("[*]", &format!("[{}]", i));
             if let Some(item) = find_item_by_path_mut(items, &concrete_path) {
-                let inst = |expr: &str| -> String {
-                    instantiate_wildcard_expr(expr, &base, i)
-                };
+                let inst = |expr: &str| -> String { instantiate_wildcard_expr(expr, &base, i) };
 
                 // Merge bind fields — only overwrite when the bind specifies the field.
                 if let Some(expr) = bind_obj.get("calculate").and_then(|v| v.as_str()) {
@@ -1793,18 +1834,20 @@ fn collect_wildcard_binds(binds: Option<&Value>) -> Vec<(String, serde_json::Map
         Some(Value::Object(map)) => {
             for (path, val) in map {
                 if is_wildcard_bind(path)
-                    && let Some(obj) = val.as_object() {
-                        result.push((path.clone(), obj.clone()));
-                    }
+                    && let Some(obj) = val.as_object()
+                {
+                    result.push((path.clone(), obj.clone()));
+                }
             }
         }
         Some(Value::Array(arr)) => {
             for bind in arr {
                 if let Some(path) = bind.get("path").and_then(|v| v.as_str())
                     && is_wildcard_bind(path)
-                        && let Some(obj) = bind.as_object() {
-                            result.push((path.to_string(), obj.clone()));
-                        }
+                    && let Some(obj) = bind.as_object()
+                {
+                    result.push((path.to_string(), obj.clone()));
+                }
             }
         }
         _ => {}
@@ -1957,10 +2000,15 @@ fn json_to_fel(val: &Value) -> FelValue {
         Value::Null => FelValue::Null,
         Value::Bool(b) => FelValue::Boolean(*b),
         Value::Number(n) => {
-            if let Some(d) =
-                rust_decimal::prelude::FromPrimitive::from_f64(n.as_f64().unwrap_or(0.0))
-            {
-                FelValue::Number(d)
+            if let Some(i) = n.as_i64() {
+                FelValue::Number(rust_decimal::Decimal::from(i))
+            } else if let Some(u) = n.as_u64() {
+                FelValue::Number(rust_decimal::Decimal::from(u))
+            } else if let Some(f) = n.as_f64() {
+                FelValue::Number(
+                    rust_decimal::prelude::FromPrimitive::from_f64(f)
+                        .unwrap_or(rust_decimal::Decimal::ZERO),
+                )
             } else {
                 FelValue::Null
             }
@@ -1981,9 +2029,10 @@ fn fel_to_json(val: &FelValue) -> Value {
         FelValue::Boolean(b) => Value::Bool(*b),
         FelValue::Number(n) => {
             if n.fract().is_zero()
-                && let Some(i) = rust_decimal::prelude::ToPrimitive::to_i64(n) {
-                    return Value::Number(serde_json::Number::from(i));
-                }
+                && let Some(i) = rust_decimal::prelude::ToPrimitive::to_i64(n)
+            {
+                return Value::Number(serde_json::Number::from(i));
+            }
             rust_decimal::prelude::ToPrimitive::to_f64(n)
                 .and_then(serde_json::Number::from_f64)
                 .map(Value::Number)
@@ -2625,10 +2674,10 @@ mod tests {
 
     #[test]
     fn test_nrb_mode_from_str() {
-        assert_eq!(NrbMode::from_str("remove"), NrbMode::Remove);
-        assert_eq!(NrbMode::from_str("empty"), NrbMode::Empty);
-        assert_eq!(NrbMode::from_str("keep"), NrbMode::Keep);
-        assert_eq!(NrbMode::from_str("unknown"), NrbMode::Remove);
+        assert_eq!(NrbMode::from_str_lossy("remove"), NrbMode::Remove);
+        assert_eq!(NrbMode::from_str_lossy("empty"), NrbMode::Empty);
+        assert_eq!(NrbMode::from_str_lossy("keep"), NrbMode::Keep);
+        assert_eq!(NrbMode::from_str_lossy("unknown"), NrbMode::Remove);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -4537,7 +4586,11 @@ mod tests {
         let def = shape_timing_def();
         let data = HashMap::new();
         let result = evaluate_definition_with_trigger(&def, &data, EvalTrigger::Continuous);
-        let msgs: Vec<&str> = result.validations.iter().map(|v| v.message.as_str()).collect();
+        let msgs: Vec<&str> = result
+            .validations
+            .iter()
+            .map(|v| v.message.as_str())
+            .collect();
         assert!(msgs.contains(&"Continuous shape"));
         assert!(!msgs.contains(&"Submit shape"));
         assert!(!msgs.contains(&"Demand shape"));
@@ -4548,7 +4601,11 @@ mod tests {
         let def = shape_timing_def();
         let data = HashMap::new();
         let result = evaluate_definition_with_trigger(&def, &data, EvalTrigger::Submit);
-        let msgs: Vec<&str> = result.validations.iter().map(|v| v.message.as_str()).collect();
+        let msgs: Vec<&str> = result
+            .validations
+            .iter()
+            .map(|v| v.message.as_str())
+            .collect();
         assert!(msgs.contains(&"Continuous shape"));
         assert!(msgs.contains(&"Submit shape"));
         assert!(!msgs.contains(&"Demand shape"));
@@ -4559,7 +4616,10 @@ mod tests {
         let def = shape_timing_def();
         let data = HashMap::new();
         let result = evaluate_definition_with_trigger(&def, &data, EvalTrigger::Disabled);
-        assert!(result.validations.is_empty(), "disabled trigger should skip all validation");
+        assert!(
+            result.validations.is_empty(),
+            "disabled trigger should skip all validation"
+        );
     }
 
     // ── Screener evaluation ─────────────────────────────────────
@@ -4667,10 +4727,15 @@ mod tests {
         let result = evaluate_definition(&def, &data);
         // With excludedValue="null", the FEL env sees $extra as null
         // so the constraint "$extra == null or $extra > 0" passes
-        let shape_errors: Vec<_> = result.validations.iter()
+        let shape_errors: Vec<_> = result
+            .validations
+            .iter()
             .filter(|v| v.constraint_kind == "shape")
             .collect();
-        assert!(shape_errors.is_empty(), "shape should pass because excluded extra is null in FEL");
+        assert!(
+            shape_errors.is_empty(),
+            "shape should pass because excluded extra is null in FEL"
+        );
         // But NRB=keep means the actual data still has the value
         assert_eq!(result.values.get("extra"), Some(&json!(-5)));
     }
@@ -4706,17 +4771,25 @@ mod tests {
         data.insert("email".to_string(), json!(null));
         data.insert("phone".to_string(), json!(null));
         let result = evaluate_definition(&def, &data);
-        let contactable_errors: Vec<_> = result.validations.iter()
+        let contactable_errors: Vec<_> = result
+            .validations
+            .iter()
             .filter(|v| v.message == "Need email or phone")
             .collect();
-        assert_eq!(contactable_errors.len(), 1, "should fail when neither present");
+        assert_eq!(
+            contactable_errors.len(),
+            1,
+            "should fail when neither present"
+        );
 
         // Email present → contactable passes
         let mut data2 = HashMap::new();
         data2.insert("email".to_string(), json!("a@b.com"));
         data2.insert("phone".to_string(), json!(null));
         let result2 = evaluate_definition(&def, &data2);
-        let contactable_ok: Vec<_> = result2.validations.iter()
+        let contactable_ok: Vec<_> = result2
+            .validations
+            .iter()
             .filter(|v| v.message == "Need email or phone")
             .collect();
         assert!(contactable_ok.is_empty(), "should pass when email present");
@@ -4771,7 +4844,9 @@ mod tests {
         let mut data = HashMap::new();
         data.insert("expenditures".to_string(), json!({"employment": 45000}));
         let result = evaluate_definition(&def, &data);
-        let errors: Vec<_> = result.validations.iter()
+        let errors: Vec<_> = result
+            .validations
+            .iter()
             .filter(|v| v.source == "bind" && v.message.contains("negative"))
             .collect();
         assert!(errors.is_empty(), "positive value should pass constraint");
@@ -4780,7 +4855,9 @@ mod tests {
         let mut data2 = HashMap::new();
         data2.insert("expenditures".to_string(), json!({"employment": -100}));
         let result2 = evaluate_definition(&def, &data2);
-        let errors2: Vec<_> = result2.validations.iter()
+        let errors2: Vec<_> = result2
+            .validations
+            .iter()
             .filter(|v| v.source == "bind" && v.message.contains("negative"))
             .collect();
         assert_eq!(errors2.len(), 1, "negative value should fail constraint");
@@ -5301,7 +5378,11 @@ mod tests {
             .iter()
             .filter(|v| v.message.contains("Required"))
             .collect();
-        assert!(req_errors.is_empty(), "non-relevant field should suppress required: {:?}", req_errors);
+        assert!(
+            req_errors.is_empty(),
+            "non-relevant field should suppress required: {:?}",
+            req_errors
+        );
     }
 
     /// Same test but with nested data format (as Python tests use).
@@ -5333,7 +5414,11 @@ mod tests {
             .iter()
             .filter(|v| v.message.contains("Required"))
             .collect();
-        assert!(req_errors.is_empty(), "nested data: non-relevant field should suppress required: {:?}", req_errors);
+        assert!(
+            req_errors.is_empty(),
+            "nested data: non-relevant field should suppress required: {:?}",
+            req_errors
+        );
     }
 
     // ── Edge cases: scoped variables ────────────────────────────
@@ -5500,15 +5585,20 @@ mod tests {
     #[test]
     fn instantiate_wildcard_expr_no_prefix_collision() {
         let result = instantiate_wildcard_expr("$myrow[*].field + $row[*].field", "row", 0);
-        assert_eq!(result, "$myrow[*].field + $row[0].field",
-            "must not replace inside $myrow — only $row");
+        assert_eq!(
+            result, "$myrow[*].field + $row[0].field",
+            "must not replace inside $myrow — only $row"
+        );
     }
 
     #[test]
     fn instantiate_wildcard_expr_dotted_base() {
         // Nested repeat group: base is "section.rows"
         let result = instantiate_wildcard_expr(
-            "$section.rows[*].qty * $section.rows[*].price", "section.rows", 3);
+            "$section.rows[*].qty * $section.rows[*].price",
+            "section.rows",
+            3,
+        );
         assert_eq!(result, "$section.rows[3].qty * $section.rows[3].price");
     }
 
@@ -5547,7 +5637,9 @@ mod tests {
         data.insert("rows[0].a".to_string(), json!(1));
 
         let env = build_validation_env(&data);
-        assert!(!env.data.contains_key("rows"),
-            "build_validation_env should skip repeat group arrays entirely");
+        assert!(
+            !env.data.contains_key("rows"),
+            "build_validation_env should skip repeat group arrays entirely"
+        );
     }
 }

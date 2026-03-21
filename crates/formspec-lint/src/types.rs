@@ -42,8 +42,7 @@ impl Ord for LintSeverity {
 // ── Lint mode ───────────────────────────────────────────────────
 
 /// Controls which diagnostics are emitted.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LintMode {
     /// Full checking — all diagnostics emitted. Used for CI/publishing.
     #[default]
@@ -55,7 +54,6 @@ pub enum LintMode {
     /// (W800, W802, W803, W804) are promoted to errors.
     Strict,
 }
-
 
 impl LintMode {
     /// Whether this mode is the relaxed authoring mode.
@@ -248,7 +246,9 @@ mod tests {
     /// Spec: No diagnostics are suppressed in Strict mode.
     #[test]
     fn strict_mode_suppresses_nothing() {
-        for code in &["E100", "E300", "W300", "W700", "W802", "E500", "W800", "W804"] {
+        for code in &[
+            "E100", "E300", "W300", "W700", "W802", "E500", "W800", "W804",
+        ] {
             let diag = LintDiagnostic::warning(code, 1, "$", "test");
             assert!(
                 !diag.suppressed_in(LintMode::Strict),

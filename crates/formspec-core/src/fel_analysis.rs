@@ -264,42 +264,45 @@ fn rewrite_expr(expr: &Expr, opts: &RewriteOptions) -> Expr {
         Expr::ContextRef { name, arg, tail } => {
             if name == "instance" {
                 if let (Some(rewrite), Some(orig_name)) = (&opts.rewrite_instance_name, arg)
-                    && let Some(new_name) = rewrite(orig_name) {
-                        return Expr::ContextRef {
-                            name: name.clone(),
-                            arg: Some(new_name),
-                            tail: tail.clone(),
-                        };
-                    }
+                    && let Some(new_name) = rewrite(orig_name)
+                {
+                    return Expr::ContextRef {
+                        name: name.clone(),
+                        arg: Some(new_name),
+                        tail: tail.clone(),
+                    };
+                }
             } else if name == "current" {
                 if let Some(ref rewrite) = opts.rewrite_current_path
-                    && !tail.is_empty() {
-                        let current_path = tail.join(".");
-                        if let Some(new_path) = rewrite(&current_path) {
-                            return Expr::ContextRef {
-                                name: name.clone(),
-                                arg: arg.clone(),
-                                tail: if new_path.is_empty() {
-                                    vec![]
-                                } else {
-                                    new_path
-                                        .split('.')
-                                        .filter(|segment| !segment.is_empty())
-                                        .map(|segment| segment.to_string())
-                                        .collect()
-                                },
-                            };
-                        }
-                    }
-            } else if !RESERVED_CONTEXT_NAMES.contains(&name.as_str())
-                && let Some(ref rewrite) = opts.rewrite_variable
-                    && let Some(new_name) = rewrite(name) {
+                    && !tail.is_empty()
+                {
+                    let current_path = tail.join(".");
+                    if let Some(new_path) = rewrite(&current_path) {
                         return Expr::ContextRef {
-                            name: new_name,
+                            name: name.clone(),
                             arg: arg.clone(),
-                            tail: tail.clone(),
+                            tail: if new_path.is_empty() {
+                                vec![]
+                            } else {
+                                new_path
+                                    .split('.')
+                                    .filter(|segment| !segment.is_empty())
+                                    .map(|segment| segment.to_string())
+                                    .collect()
+                            },
                         };
                     }
+                }
+            } else if !RESERVED_CONTEXT_NAMES.contains(&name.as_str())
+                && let Some(ref rewrite) = opts.rewrite_variable
+                && let Some(new_name) = rewrite(name)
+            {
+                return Expr::ContextRef {
+                    name: new_name,
+                    arg: arg.clone(),
+                    tail: tail.clone(),
+                };
+            }
             expr.clone()
         }
         Expr::FunctionCall { name, args } => {
@@ -307,11 +310,12 @@ fn rewrite_expr(expr: &Expr, opts: &RewriteOptions) -> Expr {
                 args.iter().map(|a| rewrite_expr(a, opts)).collect();
             if let Some(ref rewrite) = opts.rewrite_navigation_target
                 && matches!(name.as_str(), "prev" | "next" | "parent")
-                    && let Some(Expr::String(current)) = rewritten_args.first()
-                        && let Some(new_name) = rewrite(current, name)
-                            && let Some(first) = rewritten_args.first_mut() {
-                                *first = Expr::String(new_name);
-                            }
+                && let Some(Expr::String(current)) = rewritten_args.first()
+                && let Some(new_name) = rewrite(current, name)
+                && let Some(first) = rewritten_args.first_mut()
+            {
+                *first = Expr::String(new_name);
+            }
             Expr::FunctionCall {
                 name: name.clone(),
                 args: rewritten_args,
@@ -443,15 +447,16 @@ fn collect_rewrite_targets(expr: &Expr, targets: &mut FelRewriteTargets) {
         }
         Expr::FunctionCall { name, args } => {
             if matches!(name.as_str(), "prev" | "next" | "parent")
-                && let Some(Expr::String(target_name)) = args.first() {
-                    let nav = NavigationTarget {
-                        function_name: name.clone(),
-                        name: target_name.clone(),
-                    };
-                    if !targets.navigation_targets.contains(&nav) {
-                        targets.navigation_targets.push(nav);
-                    }
+                && let Some(Expr::String(target_name)) = args.first()
+            {
+                let nav = NavigationTarget {
+                    function_name: name.clone(),
+                    name: target_name.clone(),
+                };
+                if !targets.navigation_targets.contains(&nav) {
+                    targets.navigation_targets.push(nav);
                 }
+            }
             for arg in args {
                 collect_rewrite_targets(arg, targets);
             }

@@ -125,74 +125,81 @@ fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<S
 
     // Fields: { path: value }
     if let Some(fields) = ctx_obj.get("fields")
-        && let Some(obj) = fields.as_object() {
-            for (k, v) in obj {
-                env.set_field(k, json_to_fel(v));
-            }
+        && let Some(obj) = fields.as_object()
+    {
+        for (k, v) in obj {
+            env.set_field(k, json_to_fel(v));
         }
+    }
 
     // Variables: { name: value }
     if let Some(vars) = ctx_obj.get("variables")
-        && let Some(obj) = vars.as_object() {
-            for (k, v) in obj {
-                env.set_variable(k, json_to_fel(v));
-            }
+        && let Some(obj) = vars.as_object()
+    {
+        for (k, v) in obj {
+            env.set_variable(k, json_to_fel(v));
         }
+    }
 
     // MIP states: { path: { valid, relevant, readonly, required } }
     if let Some(mips) = ctx_obj.get("mipStates")
-        && let Some(obj) = mips.as_object() {
-            for (k, v) in obj {
-                if let Some(mip_obj) = v.as_object() {
-                    env.set_mip(
-                        k,
-                        MipState {
-                            valid: mip_obj
-                                .get("valid")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(true),
-                            relevant: mip_obj
-                                .get("relevant")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(true),
-                            readonly: mip_obj
-                                .get("readonly")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(false),
-                            required: mip_obj
-                                .get("required")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(false),
-                        },
-                    );
-                }
+        && let Some(obj) = mips.as_object()
+    {
+        for (k, v) in obj {
+            if let Some(mip_obj) = v.as_object() {
+                env.set_mip(
+                    k,
+                    MipState {
+                        valid: mip_obj
+                            .get("valid")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true),
+                        relevant: mip_obj
+                            .get("relevant")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true),
+                        readonly: mip_obj
+                            .get("readonly")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false),
+                        required: mip_obj
+                            .get("required")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false),
+                    },
+                );
             }
         }
+    }
 
     // Repeat context: { current, index, count, collection?, parent? }
     if let Some(repeat) = ctx_obj.get("repeatContext") {
-        push_repeat_context(&mut env, repeat);
+        push_repeat_context(&mut env, repeat, 0);
     }
 
     // Instances: { name: value }
     if let Some(instances) = ctx_obj.get("instances")
-        && let Some(obj) = instances.as_object() {
-            for (k, v) in obj {
-                env.set_instance(k, json_to_fel(v));
-            }
+        && let Some(obj) = instances.as_object()
+    {
+        for (k, v) in obj {
+            env.set_instance(k, json_to_fel(v));
         }
+    }
 
     let result = evaluate(&expr, &env);
-    if let Some(diag) = result
+    let undef_fns: Vec<&str> = result
         .diagnostics
         .iter()
-        .find(|diag| diag.message.starts_with("undefined function: "))
-    {
-        let name = diag
-            .message
-            .trim_start_matches("undefined function: ")
-            .trim();
-        return Err(format!("Unsupported FEL function: {name}"));
+        .filter(|diag| diag.message.starts_with("undefined function: "))
+        .map(|diag| {
+            diag.message
+                .trim_start_matches("undefined function: ")
+                .trim()
+        })
+        .collect();
+    if !undef_fns.is_empty() {
+        let names = undef_fns.join(", ");
+        return Err(format!("Unsupported FEL function(s): {names}"));
     }
     let json = fel_to_json(&result.value);
     serde_json::to_string(&json).map_err(|e| e.to_string())
@@ -1039,8 +1046,12 @@ fn json_to_fel(val: &Value) -> FelValue {
         Value::Null => FelValue::Null,
         Value::Bool(b) => FelValue::Boolean(*b),
         Value::Number(n) => {
-            if let Some(d) = Decimal::from_f64(n.as_f64().unwrap_or(0.0)) {
-                FelValue::Number(d)
+            if let Some(i) = n.as_i64() {
+                FelValue::Number(Decimal::from(i))
+            } else if let Some(u) = n.as_u64() {
+                FelValue::Number(Decimal::from(u))
+            } else if let Some(f) = n.as_f64() {
+                FelValue::Number(Decimal::from_f64(f).unwrap_or(Decimal::ZERO))
             } else {
                 FelValue::Null
             }
@@ -1084,9 +1095,10 @@ fn fel_to_json(val: &FelValue) -> Value {
         FelValue::Boolean(b) => Value::Bool(*b),
         FelValue::Number(n) => {
             if n.fract().is_zero()
-                && let Some(i) = n.to_i64() {
-                    return Value::Number(serde_json::Number::from(i));
-                }
+                && let Some(i) = n.to_i64()
+            {
+                return Value::Number(serde_json::Number::from(i));
+            }
             n.to_f64()
                 .and_then(serde_json::Number::from_f64)
                 .map(Value::Number)
@@ -1144,13 +1156,16 @@ fn lint_result_to_json(result: &formspec_lint::LintResult) -> Value {
     })
 }
 
-fn push_repeat_context(env: &mut FormspecEnvironment, repeat: &Value) {
+fn push_repeat_context(env: &mut FormspecEnvironment, repeat: &Value, depth: u8) {
+    if depth > 32 {
+        return;
+    }
     let Some(obj) = repeat.as_object() else {
         return;
     };
 
     if let Some(parent) = obj.get("parent") {
-        push_repeat_context(env, parent);
+        push_repeat_context(env, parent, depth + 1);
     }
 
     let current = obj
@@ -1512,7 +1527,10 @@ mod tests {
             let v = &validations[0];
             assert!(v.get("path").is_some(), "validation missing 'path'");
             assert!(v.get("severity").is_some(), "validation missing 'severity'");
-            assert!(v.get("constraintKind").is_some(), "validation missing 'constraintKind'");
+            assert!(
+                v.get("constraintKind").is_some(),
+                "validation missing 'constraintKind'"
+            );
             assert!(v.get("code").is_some(), "validation missing 'code'");
             assert!(v.get("message").is_some(), "validation missing 'message'");
             assert!(v.get("source").is_some(), "validation missing 'source'");

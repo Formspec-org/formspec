@@ -2,7 +2,7 @@
 ///
 /// Non-fatal errors produce a Diagnostic + FelNull (never panic).
 /// Null propagation follows spec §3: most ops propagate, equality does NOT.
-use regex::Regex;
+use regex::RegexBuilder;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use std::collections::HashMap;
@@ -1090,7 +1090,10 @@ impl<'a> Evaluator<'a> {
             FelValue::Null => return FelValue::Null,
             _ => return FelValue::Null,
         };
-        match Regex::new(&pattern) {
+        match RegexBuilder::new(&pattern)
+            .size_limit(1_000_000)
+            .build()
+        {
             Ok(re) => FelValue::Boolean(re.is_match(&s)),
             Err(e) => {
                 self.diag(format!(

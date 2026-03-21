@@ -190,7 +190,15 @@ mod tests {
             "binds": [{ "path": "name", "required": "true" }]
         });
         let result = lint(&def);
-        assert!(result.valid, "got: {:?}", result.diagnostics.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>());
+        assert!(
+            result.valid,
+            "got: {:?}",
+            result
+                .diagnostics
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
+        );
         assert_eq!(result.document_type, Some(DocumentType::Definition));
     }
 
@@ -521,9 +529,21 @@ mod tests {
         let result = lint(&theme);
         assert_eq!(result.document_type, Some(DocumentType::Theme));
         assert!(result.diagnostics.iter().any(|d| d.code == "W704"));
-        let non_e101 = result.diagnostics.iter().filter(|d| d.code != "E101").count();
-        assert_eq!(non_e101, 1, "Only W704 expected (excluding any E101), got: {:?}",
-            result.diagnostics.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>());
+        let non_e101 = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code != "E101")
+            .count();
+        assert_eq!(
+            non_e101,
+            1,
+            "Only W704 expected (excluding any E101), got: {:?}",
+            result
+                .diagnostics
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
+        );
     }
 
     /// Spec: component-spec.md §4.6 — W802 (compatible-with-warning) is suppressed
@@ -556,7 +576,11 @@ mod tests {
             },
         );
         assert_eq!(
-            runtime_result.diagnostics.iter().filter(|d| d.code == "W802").count(),
+            runtime_result
+                .diagnostics
+                .iter()
+                .filter(|d| d.code == "W802")
+                .count(),
             1,
             "Runtime mode should emit W802"
         );
@@ -570,7 +594,11 @@ mod tests {
             },
         );
         assert_eq!(
-            authoring_result.diagnostics.iter().filter(|d| d.code == "W802").count(),
+            authoring_result
+                .diagnostics
+                .iter()
+                .filter(|d| d.code == "W802")
+                .count(),
             0,
             "Authoring mode should suppress W802"
         );
@@ -653,7 +681,11 @@ mod tests {
         assert!(
             result.diagnostics.is_empty(),
             "schema_only should produce no diagnostics for a schema-valid document, got: {:?}",
-            result.diagnostics.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>()
+            result
+                .diagnostics
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
         );
         assert!(result.valid);
     }
@@ -775,7 +807,10 @@ mod tests {
             LintSeverity::Error,
             "Strict mode should promote W802 to Error"
         );
-        assert!(!result.valid, "Document with promoted error should be invalid");
+        assert!(
+            !result.valid,
+            "Document with promoted error should be invalid"
+        );
     }
 
     // ── E600: no-registry emits E600 for every enabled extension ──
@@ -822,7 +857,11 @@ mod tests {
         assert!(
             result.diagnostics.iter().any(|d| d.code == "E101"),
             "Should emit E101 for invalid dataType 'blob', got: {:?}",
-            result.diagnostics.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>()
+            result
+                .diagnostics
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -841,7 +880,11 @@ mod tests {
         assert!(
             !result.diagnostics.iter().any(|d| d.code == "E101"),
             "Valid definition should not produce E101, got: {:?}",
-            result.diagnostics.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>()
+            result
+                .diagnostics
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -857,11 +900,16 @@ mod tests {
             "items": [{"key": "f1", "type": "field", "label": "F1", "dataType": "blob"}]
         });
         let result = lint(&def);
-        let e101: Vec<_> = result.diagnostics.iter().filter(|d| d.code == "E101").collect();
+        let e101: Vec<_> = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "E101")
+            .collect();
         assert!(!e101.is_empty());
         // The path should reference items[0].dataType
         assert!(
-            e101.iter().any(|d| d.path.contains("items") && d.path.contains("dataType")),
+            e101.iter()
+                .any(|d| d.path.contains("items") && d.path.contains("dataType")),
             "E101 path should reference the dataType location, got paths: {:?}",
             e101.iter().map(|d| &d.path).collect::<Vec<_>>()
         );

@@ -17,8 +17,8 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 use fel_core::{
-    BuiltinFunctionCatalogEntry, FelValue, FormspecEnvironment, MapEnvironment, MipState,
-    evaluate, extract_dependencies, parse,
+    BuiltinFunctionCatalogEntry, FelValue, FormspecEnvironment, MapEnvironment, MipState, evaluate,
+    extract_dependencies, parse,
 };
 use formspec_core::changelog;
 use formspec_core::extension_analysis::RegistryEntryStatus;
@@ -299,11 +299,16 @@ fn lint_document(
 /// Returns:
 ///     A dict with: values, validations, non_relevant
 #[pyfunction(signature = (definition, data, trigger=None))]
-fn evaluate_def(py: Python, definition: &Bound<'_, PyAny>, data: &Bound<'_, PyAny>, trigger: Option<&str>) -> PyResult<PyObject> {
+fn evaluate_def(
+    py: Python,
+    definition: &Bound<'_, PyAny>,
+    data: &Bound<'_, PyAny>,
+    trigger: Option<&str>,
+) -> PyResult<PyObject> {
     let definition: Value = depythonize(definition)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
-    let data_val: Value = depythonize(data)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    let data_val: Value =
+        depythonize(data).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
     let data: HashMap<String, Value> = data_val
         .as_object()
@@ -370,8 +375,8 @@ fn evaluate_screener_py(
 ) -> PyResult<PyObject> {
     let def: Value = depythonize(definition)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
-    let ans_val: Value = depythonize(answers)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    let ans_val: Value =
+        depythonize(answers).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
     let ans_map: HashMap<String, Value> = ans_val
         .as_object()
@@ -565,8 +570,8 @@ fn execute_mapping_doc(
     source_obj: &Bound<'_, PyAny>,
     direction: &str,
 ) -> PyResult<PyObject> {
-    let doc_val: Value = depythonize(doc_obj)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    let doc_val: Value =
+        depythonize(doc_obj).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
     let source: Value = depythonize(source_obj)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
     let dir = parse_direction(direction)?;
@@ -718,9 +723,10 @@ fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelValue> {
         return Ok(FelValue::Number(Decimal::from(i)));
     }
     if let Ok(f) = obj.extract::<f64>() {
-        return Ok(FelValue::Number(
-            Decimal::from_f64(f).unwrap_or(Decimal::ZERO),
-        ));
+        return Ok(match Decimal::from_f64(f) {
+            Some(d) => FelValue::Number(d),
+            None => FelValue::Null, // NaN, Infinity → Null, not zero
+        });
     }
     if let Ok(s) = obj.extract::<String>() {
         return Ok(FelValue::String(s));
@@ -740,25 +746,28 @@ fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelValue> {
             match tagged_type {
                 "number" => {
                     if let Some(raw) = dict.get_item("value")?
-                        && let Ok(text) = raw.extract::<String>() {
-                            return Ok(FelValue::Number(
-                                Decimal::from_str_exact(&text).unwrap_or(Decimal::ZERO),
-                            ));
-                        }
+                        && let Ok(text) = raw.extract::<String>()
+                    {
+                        return Ok(match Decimal::from_str_exact(&text) {
+                            Ok(d) => FelValue::Number(d),
+                            Err(_) => FelValue::Null,
+                        });
+                    }
                 }
                 "date" | "datetime" => {
                     if let Some(raw) = dict.get_item("value")?
-                        && let Ok(text) = raw.extract::<String>() {
-                            if let Some(date) = fel_core::parse_datetime_literal(&format!("@{text}")) {
-                                return Ok(FelValue::Date(date));
-                            }
-                            if let Some(date) = fel_core::parse_date_literal(&format!("@{text}")) {
-                                return Ok(FelValue::Date(date));
-                            }
+                        && let Ok(text) = raw.extract::<String>()
+                    {
+                        if let Some(date) = fel_core::parse_datetime_literal(&format!("@{text}")) {
+                            return Ok(FelValue::Date(date));
                         }
+                        if let Some(date) = fel_core::parse_date_literal(&format!("@{text}")) {
+                            return Ok(FelValue::Date(date));
+                        }
+                    }
                 }
                 "money" => {
-                    let amount = dict
+                    let amount_str = dict
                         .get_item("amount")?
                         .and_then(|value| value.extract::<String>().ok())
                         .unwrap_or_else(|| "0".to_string());
@@ -766,10 +775,13 @@ fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelValue> {
                         .get_item("currency")?
                         .and_then(|value| value.extract::<String>().ok())
                         .unwrap_or_default();
-                    return Ok(FelValue::Money(fel_core::FelMoney {
-                        amount: Decimal::from_str_exact(&amount).unwrap_or(Decimal::ZERO),
-                        currency,
-                    }));
+                    return Ok(match Decimal::from_str_exact(&amount_str) {
+                        Ok(d) => FelValue::Money(fel_core::FelMoney {
+                            amount: d,
+                            currency,
+                        }),
+                        Err(_) => FelValue::Null,
+                    });
                 }
                 _ => {}
             }
@@ -781,11 +793,14 @@ fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelValue> {
         let currency = dict
             .get_item("currency")?
             .and_then(|value| value.extract::<String>().ok());
-        if let (Some(amount), Some(currency)) = (amount, currency) {
-            return Ok(FelValue::Money(fel_core::FelMoney {
-                amount: Decimal::from_str_exact(&amount).unwrap_or(Decimal::ZERO),
-                currency,
-            }));
+        if let (Some(amount_str), Some(currency)) = (amount, currency) {
+            return Ok(match Decimal::from_str_exact(&amount_str) {
+                Ok(d) => FelValue::Money(fel_core::FelMoney {
+                    amount: d,
+                    currency,
+                }),
+                Err(_) => FelValue::Null,
+            });
         }
 
         let mut entries = Vec::new();
@@ -805,9 +820,10 @@ fn fel_to_python(py: Python, val: &FelValue) -> PyResult<PyObject> {
         FelValue::Boolean(b) => Ok(PyBool::new(py, *b).to_owned().into_any().unbind()),
         FelValue::Number(n) => {
             if n.fract().is_zero()
-                && let Some(i) = n.to_i64() {
-                    return Ok(i.into_pyobject(py)?.into_any().unbind());
-                }
+                && let Some(i) = n.to_i64()
+            {
+                return Ok(i.into_pyobject(py)?.into_any().unbind());
+            }
             if let Some(f) = n.to_f64() {
                 Ok(f.into_pyobject(py)?.into_any().unbind())
             } else {
@@ -963,10 +979,7 @@ fn severity_str(severity: fel_core::Severity) -> &'static str {
     }
 }
 
-fn builtin_function_to_dict(
-    py: Python,
-    entry: &BuiltinFunctionCatalogEntry,
-) -> PyResult<PyObject> {
+fn builtin_function_to_dict(py: Python, entry: &BuiltinFunctionCatalogEntry) -> PyResult<PyObject> {
     let dict = PyDict::new(py);
     dict.set_item("name", entry.name)?;
     dict.set_item("category", entry.category)?;
@@ -1086,11 +1099,6 @@ fn parse_mapping_document_inner(val: &Value) -> Result<runtime_mapping::MappingD
         defaults,
         auto_map,
     })
-}
-
-#[allow(dead_code)]
-fn parse_mapping_rules(val: &Value) -> PyResult<Vec<runtime_mapping::MappingRule>> {
-    parse_mapping_rules_inner(val).map_err(pyo3::exceptions::PyValueError::new_err)
 }
 
 /// Core mapping-rule parser returning `Result<_, String>` for testability without FFI.
@@ -1215,11 +1223,15 @@ fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<runtime_mapping::Mapping
                 .get("condition")
                 .and_then(|v| v.as_str())
                 .map(String::from),
-            priority: obj.get("priority").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
+            priority: obj
+                .get("priority")
+                .and_then(|v| v.as_i64())
+                .and_then(|n| i32::try_from(n).ok())
+                .unwrap_or(0),
             reverse_priority: obj
                 .get("reversePriority")
                 .and_then(|v| v.as_i64())
-                .map(|n| n as i32),
+                .and_then(|n| i32::try_from(n).ok()),
             default: obj.get("default").cloned(),
             bidirectional: obj
                 .get("bidirectional")

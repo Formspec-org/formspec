@@ -103,7 +103,7 @@ fn check_option_sets(
         None => return,
     };
 
-    walk_items_for_option_sets(items, &defined_sets, "$", diagnostics);
+    walk_items_for_option_sets(items, &defined_sets, "$.items", diagnostics);
 }
 
 fn walk_items_for_option_sets(
@@ -132,18 +132,19 @@ fn walk_items_for_option_sets(
 
             // W300: incompatible dataType
             if let Some(data_type) = item.get("dataType").and_then(|v| v.as_str())
-                && !OPTION_SET_COMPATIBLE_TYPES.contains(&data_type) {
-                    diagnostics.push(LintDiagnostic::warning(
-                        "W300",
-                        3,
-                        format!("{json_path}.dataType"),
-                        format!(
-                            "dataType '{data_type}' is not compatible with optionSet \
+                && !OPTION_SET_COMPATIBLE_TYPES.contains(&data_type)
+            {
+                diagnostics.push(LintDiagnostic::warning(
+                    "W300",
+                    3,
+                    format!("{json_path}.dataType"),
+                    format!(
+                        "dataType '{data_type}' is not compatible with optionSet \
                              (expected one of: {})",
-                            OPTION_SET_COMPATIBLE_TYPES.join(", ")
-                        ),
-                    ));
-                }
+                        OPTION_SET_COMPATIBLE_TYPES.join(", ")
+                    ),
+                ));
+            }
         }
 
         if let Some(children) = item.get("children").and_then(|v| v.as_array()) {

@@ -406,14 +406,15 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                         }
                         TokenCategory::LineHeight => {
                             if let Some(f) = n.as_f64()
-                                && f <= 0.0 {
-                                    diags.push(LintDiagnostic::warning(
+                                && f <= 0.0
+                            {
+                                diags.push(LintDiagnostic::warning(
                                         "W703",
                                         PASS,
                                         &path,
                                         format!("Line height token '{name}' must be a positive number, got: {f}"),
                                     ));
-                                }
+                            }
                             None
                         }
                         _ => None,
@@ -507,14 +508,15 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
         let mut seen_ids = HashSet::new();
         for (i, page) in pages.iter().enumerate() {
             if let Some(id) = page.get("id").and_then(|v| v.as_str())
-                && !seen_ids.insert(id.to_string()) {
-                    diags.push(LintDiagnostic::error(
-                        "E710",
-                        PASS,
-                        format!("$.pages[{i}].id"),
-                        format!("Duplicate page ID: '{id}'"),
-                    ));
-                }
+                && !seen_ids.insert(id.to_string())
+            {
+                diags.push(LintDiagnostic::error(
+                    "E710",
+                    PASS,
+                    format!("$.pages[{i}].id"),
+                    format!("Duplicate page ID: '{id}'"),
+                ));
+            }
         }
 
         // ── W711: Responsive breakpoint key not declared ────────
@@ -570,14 +572,15 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                 if let Some(regions) = page.get("regions").and_then(|v| v.as_array()) {
                     for (j, region) in regions.iter().enumerate() {
                         if let Some(key) = region.get("key").and_then(|v| v.as_str())
-                            && !item_keys.contains(key) {
-                                diags.push(LintDiagnostic::warning(
+                            && !item_keys.contains(key)
+                        {
+                            diags.push(LintDiagnostic::warning(
                                     "W706",
                                     PASS,
                                     format!("$.pages[{i}].regions[{j}].key"),
                                     format!("Page region key '{key}' does not match any definition item path"),
                                 ));
-                            }
+                        }
                     }
                 }
             }
@@ -589,8 +592,9 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
             .and_then(|v| v.get("url"))
             .and_then(|v| v.as_str())
             && let Some(def_url) = def.get("url").and_then(|v| v.as_str())
-                && target_url != def_url {
-                    diags.push(LintDiagnostic::warning(
+            && target_url != def_url
+        {
+            diags.push(LintDiagnostic::warning(
                         "W707",
                         PASS,
                         "$.targetDefinition.url",
@@ -598,7 +602,7 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                             "Theme targets definition URL '{target_url}' but provided definition has URL '{def_url}'"
                         ),
                     ));
-                }
+        }
     }
 
     diags

@@ -286,12 +286,13 @@ fn apply_fragment(
             for var in frag_vars {
                 let mut rewritten = var.clone();
                 if let Some(calc) = var.get("calculate").and_then(|v| v.as_str())
-                    && let Some(obj) = rewritten.as_object_mut() {
-                        obj.insert(
-                            "calculate".to_string(),
-                            Value::String(rewrite_fel_string(calc, key_prefix)),
-                        );
-                    }
+                    && let Some(obj) = rewritten.as_object_mut()
+                {
+                    obj.insert(
+                        "calculate".to_string(),
+                        Value::String(rewrite_fel_string(calc, key_prefix)),
+                    );
+                }
                 vars_arr.push(rewritten);
             }
         }
@@ -299,21 +300,22 @@ fn apply_fragment(
 
     // Detect key collisions — spec requires abort on collision
     if !key_prefix.is_empty()
-        && let Some(frag_items) = fragment.get("items").and_then(|v| v.as_array()) {
-            let mut seen_keys: HashSet<String> = HashSet::new();
-            for item in frag_items {
-                if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
-                    let prefixed = format!("{key_prefix}.{key}");
-                    if !seen_keys.insert(prefixed.clone()) {
-                        result.errors.push(AssemblyError::KeyCollision {
-                            key: prefixed,
-                            source: _ref_uri.to_string(),
-                        });
-                        return Value::Object(merged);
-                    }
+        && let Some(frag_items) = fragment.get("items").and_then(|v| v.as_array())
+    {
+        let mut seen_keys: HashSet<String> = HashSet::new();
+        for item in frag_items {
+            if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
+                let prefixed = format!("{key_prefix}.{key}");
+                if !seen_keys.insert(prefixed.clone()) {
+                    result.errors.push(AssemblyError::KeyCollision {
+                        key: prefixed,
+                        source: _ref_uri.to_string(),
+                    });
+                    return Value::Object(merged);
                 }
             }
         }
+    }
 
     Value::Object(merged)
 }
@@ -552,18 +554,8 @@ mod tests {
         assert_eq!(result, "if $order.active then $order.total * 1.1 else 0");
     }
 
-    // BUG: apply_fragment does not recursively resolve $ref items imported from fragments.
-    // This means circular refs in nested fragments (self-ref, A→B→A, A→B→C→A) are never
-    // detected, even though AssemblyError::CircularRef exists and `visited` tracking is
-    // implemented in resolve_item. The fix would be to call resolve_item on each imported
-    // item inside apply_fragment, passing the visited set through.
-    //
-    // The following three tests document the expected behavior per spec. They are marked
-    // #[ignore] because the implementation doesn't yet recursively resolve fragment items.
-
     /// Spec: spec.md §7.3 — "Self-referencing $ref MUST produce AssemblyError::CircularRef"
     #[test]
-    #[ignore = "BUG: apply_fragment does not recursively resolve imported items — circular refs in fragments undetected"]
     fn assembler_self_referencing_ref_detected() {
         let def = json!({
             "items": [
@@ -592,7 +584,6 @@ mod tests {
 
     /// Spec: spec.md §7.3 — "Direct circular $ref (A→B, B→A) MUST produce AssemblyError::CircularRef"
     #[test]
-    #[ignore = "BUG: apply_fragment does not recursively resolve imported items — circular refs in fragments undetected"]
     fn assembler_direct_circular_ref_detected() {
         let def = json!({
             "items": [
@@ -629,7 +620,6 @@ mod tests {
 
     /// Spec: spec.md §7.3 — "Transitive circular $ref (A→B→C→A) MUST produce AssemblyError::CircularRef"
     #[test]
-    #[ignore = "BUG: apply_fragment does not recursively resolve imported items — circular refs in fragments undetected"]
     fn assembler_transitive_circular_ref_detected() {
         let def = json!({
             "items": [
