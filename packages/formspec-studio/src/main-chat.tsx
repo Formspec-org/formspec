@@ -1,9 +1,10 @@
-/** @filedesc Entry point for the chat-only build; seeds a Gemini dev key and mounts ChatShell. */
+/** @filedesc Entry point for the chat-only build; seeds a Gemini dev key and mounts ChatShellV2. */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SessionStore } from 'formspec-chat';
-import { ChatShell } from './chat/index.js';
+import { ChatShellV2 } from './chat-v2/index.js';
 import './index.css';
+import './chat-v2/chat-v2.css';
 
 // Pre-seed Gemini dev key from env if no provider is configured
 const PROVIDER_KEY = 'formspec-chat:provider';
@@ -19,6 +20,6 @@ const store = new SessionStore(localStorage);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ChatShell store={store} storage={localStorage} />
+    <ChatShellV2 store={store} storage={localStorage} />
   </StrictMode>
 );
