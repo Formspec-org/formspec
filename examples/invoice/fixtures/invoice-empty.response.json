@@ -1,25 +1,38 @@
 {
-  "definitionUrl": "https://formspec.org/examples/invoice",
-  "definitionVersion": "1.0.0",
-  "status": "in-progress",
-  "authored": "2026-03-04T12:00:00Z",
-  "data": {
-    "header": {
-      "invoiceNumber": null,
-      "invoiceDate": "2026-03-04",
-      "dueDate": null,
-      "customerName": null,
-      "customerEmail": null
-    },
-    "lineItems": [],
-    "totals": {
-      "subtotal": { "amount": "0", "currency": "USD" },
-      "taxRate": 0,
-      "taxAmount": { "amount": "0", "currency": "USD" },
-      "discountPercent": 0,
-      "discountAmount": { "amount": "0", "currency": "USD" },
-      "grandTotal": { "amount": "0", "currency": "USD" }
-    },
-    "notes": null
-  }
+    "$formspecResponse": "1.0",
+    "definitionUrl": "https://formspec.org/examples/invoice",
+    "definitionVersion": "1.0.0",
+    "status": "in-progress",
+    "authored": "2026-03-04T12:00:00Z",
+    "data": {
+        "header": {
+            "invoiceNumber": null,
+            "invoiceDate": "2026-03-04",
+            "dueDate": null,
+            "customerName": null,
+            "customerEmail": null
+        },
+        "lineItems": [],
+        "totals": {
+            "subtotal": {
+                "amount": "0",
+                "currency": "USD"
+            },
+            "taxRate": 0,
+            "taxAmount": {
+                "amount": "0",
+                "currency": "USD"
+            },
+            "discountPercent": 0,
+            "discountAmount": {
+                "amount": "0",
+                "currency": "USD"
+            },
+            "grandTotal": {
+                "amount": "0",
+                "currency": "USD"
+            }
+        },
+        "notes": null
+    }
 }

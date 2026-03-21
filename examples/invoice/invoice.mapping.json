@@ -1,5 +1,6 @@
 {
   "$schema": "https://formspec.org/schemas/mapping/v1",
+  "$formspecMapping": "1.0",
   "version": "1.0.0",
   "definitionRef": "https://formspec.org/examples/invoice",
   "definitionVersion": ">=1.0.0 <2.0.0",
@@ -20,19 +21,76 @@
     }
   },
   "rules": [
-    { "sourcePath": "header.invoiceNumber", "targetPath": "invoice_number", "transform": "preserve", "priority": 100 },
-    { "sourcePath": "header.invoiceDate", "targetPath": "invoice_date", "transform": "preserve", "priority": 99 },
-    { "sourcePath": "header.dueDate", "targetPath": "due_date", "transform": "preserve", "priority": 98 },
-    { "sourcePath": "header.customerName", "targetPath": "customer_name", "transform": "preserve", "priority": 97 },
-    { "sourcePath": "header.customerEmail", "targetPath": "customer_email", "transform": "preserve", "priority": 96 },
-
-    { "sourcePath": "totals.subtotal", "targetPath": "subtotal", "transform": "expression", "expression": "moneyAmount($)", "priority": 80 },
-    { "sourcePath": "totals.taxRate", "targetPath": "tax_rate", "transform": "preserve", "priority": 79 },
-    { "sourcePath": "totals.taxAmount", "targetPath": "tax_amount", "transform": "expression", "expression": "moneyAmount($)", "priority": 78 },
-    { "sourcePath": "totals.discountPercent", "targetPath": "discount_percent", "transform": "preserve", "priority": 77 },
-    { "sourcePath": "totals.discountAmount", "targetPath": "discount_amount", "transform": "expression", "expression": "moneyAmount($)", "priority": 76 },
-    { "sourcePath": "totals.grandTotal", "targetPath": "grand_total", "transform": "expression", "expression": "moneyAmount($)", "priority": 75 },
-
+    {
+      "sourcePath": "header.invoiceNumber",
+      "targetPath": "invoice_number",
+      "transform": "preserve",
+      "priority": 100
+    },
+    {
+      "sourcePath": "header.invoiceDate",
+      "targetPath": "invoice_date",
+      "transform": "preserve",
+      "priority": 99
+    },
+    {
+      "sourcePath": "header.dueDate",
+      "targetPath": "due_date",
+      "transform": "preserve",
+      "priority": 98
+    },
+    {
+      "sourcePath": "header.customerName",
+      "targetPath": "customer_name",
+      "transform": "preserve",
+      "priority": 97
+    },
+    {
+      "sourcePath": "header.customerEmail",
+      "targetPath": "customer_email",
+      "transform": "preserve",
+      "priority": 96
+    },
+    {
+      "sourcePath": "totals.subtotal",
+      "targetPath": "subtotal",
+      "transform": "expression",
+      "expression": "moneyAmount($)",
+      "priority": 80
+    },
+    {
+      "sourcePath": "totals.taxRate",
+      "targetPath": "tax_rate",
+      "transform": "preserve",
+      "priority": 79
+    },
+    {
+      "sourcePath": "totals.taxAmount",
+      "targetPath": "tax_amount",
+      "transform": "expression",
+      "expression": "moneyAmount($)",
+      "priority": 78
+    },
+    {
+      "sourcePath": "totals.discountPercent",
+      "targetPath": "discount_percent",
+      "transform": "preserve",
+      "priority": 77
+    },
+    {
+      "sourcePath": "totals.discountAmount",
+      "targetPath": "discount_amount",
+      "transform": "expression",
+      "expression": "moneyAmount($)",
+      "priority": 76
+    },
+    {
+      "sourcePath": "totals.grandTotal",
+      "targetPath": "grand_total",
+      "transform": "expression",
+      "expression": "moneyAmount($)",
+      "priority": 75
+    },
     {
       "sourcePath": "lineItems",
       "targetPath": "rows",
@@ -40,10 +98,28 @@
       "array": {
         "mode": "each",
         "innerRules": [
-          { "sourcePath": "itemDescription", "targetPath": "item_description", "transform": "preserve" },
-          { "sourcePath": "quantity", "targetPath": "quantity", "transform": "preserve" },
-          { "sourcePath": "unitPrice", "targetPath": "unit_price", "transform": "expression", "expression": "moneyAmount($)" },
-          { "sourcePath": "lineTotal", "targetPath": "line_total", "transform": "expression", "expression": "moneyAmount($)" }
+          {
+            "sourcePath": "itemDescription",
+            "targetPath": "item_description",
+            "transform": "preserve"
+          },
+          {
+            "sourcePath": "quantity",
+            "targetPath": "quantity",
+            "transform": "preserve"
+          },
+          {
+            "sourcePath": "unitPrice",
+            "targetPath": "unit_price",
+            "transform": "expression",
+            "expression": "moneyAmount($)"
+          },
+          {
+            "sourcePath": "lineTotal",
+            "targetPath": "line_total",
+            "transform": "expression",
+            "expression": "moneyAmount($)"
+          }
         ]
       },
       "priority": 10

@@ -227,6 +227,10 @@ export type InnerRule1 = {
  */
 export interface MappingDocument {
   /**
+   * Mapping specification version. MUST be '1.0'.
+   */
+  $formspecMapping: '1.0';
+  /**
    * URI identifying the version of the Mapping DSL specification this document conforms to.
    */
   $schema?: string;

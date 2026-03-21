@@ -1,38 +1,63 @@
 {
-  "definitionUrl": "https://formspec.org/examples/invoice",
-  "definitionVersion": "1.0.0",
-  "status": "completed",
-  "authored": "2026-03-04T12:20:00Z",
-  "data": {
-    "header": {
-      "invoiceNumber": "INV-2026-0002",
-      "invoiceDate": "2026-03-04",
-      "dueDate": "2026-03-19",
-      "customerName": "Northwind Medical",
-      "customerEmail": "billing@northwind.example"
-    },
-    "lineItems": [
-      {
-        "itemDescription": "Device setup",
-        "quantity": 3,
-        "unitPrice": { "amount": "120.00", "currency": "USD" },
-        "lineTotal": { "amount": "360.00", "currency": "USD" }
-      },
-      {
-        "itemDescription": "Monthly support",
-        "quantity": 1,
-        "unitPrice": { "amount": "80.00", "currency": "USD" },
-        "lineTotal": { "amount": "80.00", "currency": "USD" }
-      }
-    ],
-    "totals": {
-      "subtotal": { "amount": "440.00", "currency": "USD" },
-      "taxRate": 8.25,
-      "taxAmount": { "amount": "36.30", "currency": "USD" },
-      "discountPercent": 10,
-      "discountAmount": { "amount": "44.00", "currency": "USD" },
-      "grandTotal": { "amount": "432.30", "currency": "USD" }
-    },
-    "notes": null
-  }
+    "$formspecResponse": "1.0",
+    "definitionUrl": "https://formspec.org/examples/invoice",
+    "definitionVersion": "1.0.0",
+    "status": "completed",
+    "authored": "2026-03-04T12:20:00Z",
+    "data": {
+        "header": {
+            "invoiceNumber": "INV-2026-0002",
+            "invoiceDate": "2026-03-04",
+            "dueDate": "2026-03-19",
+            "customerName": "Northwind Medical",
+            "customerEmail": "billing@northwind.example"
+        },
+        "lineItems": [
+            {
+                "itemDescription": "Device setup",
+                "quantity": 3,
+                "unitPrice": {
+                    "amount": "120.00",
+                    "currency": "USD"
+                },
+                "lineTotal": {
+                    "amount": "360.00",
+                    "currency": "USD"
+                }
+            },
+            {
+                "itemDescription": "Monthly support",
+                "quantity": 1,
+                "unitPrice": {
+                    "amount": "80.00",
+                    "currency": "USD"
+                },
+                "lineTotal": {
+                    "amount": "80.00",
+                    "currency": "USD"
+                }
+            }
+        ],
+        "totals": {
+            "subtotal": {
+                "amount": "440.00",
+                "currency": "USD"
+            },
+            "taxRate": 8.25,
+            "taxAmount": {
+                "amount": "36.30",
+                "currency": "USD"
+            },
+            "discountPercent": 10,
+            "discountAmount": {
+                "amount": "44.00",
+                "currency": "USD"
+            },
+            "grandTotal": {
+                "amount": "432.30",
+                "currency": "USD"
+            }
+        },
+        "notes": null
+    }
 }

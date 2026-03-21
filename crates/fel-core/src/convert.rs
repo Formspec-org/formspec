@@ -17,11 +17,15 @@ use crate::types::{FelMoney, FelValue};
 /// - `Number(n)` → `FelValue::Number` (tries i64, then u64, then f64)
 /// - `String(s)` → `FelValue::String(s)` — no silent date coercion
 /// - `Array(arr)` → `FelValue::Array` (recursive)
-/// - `Object` with `"amount"` + `"currency"` → `FelValue::Money` (heuristic)
+/// - `Object` with `"$type": "money"` + `"amount"` + `"currency"` → `FelValue::Money`
 /// - `Object` otherwise → `FelValue::Object` (recursive)
 ///
-/// The money heuristic accepts `amount` as either a JSON number or a JSON
-/// string that parses as a Decimal.
+/// Money detection requires an explicit `"$type": "money"` marker. Objects that
+/// happen to have `amount` and `currency` fields but lack the marker are treated
+/// as regular objects — no heuristic guessing.
+///
+/// The `amount` field accepts either a JSON number or a JSON string that parses
+/// as a Decimal.
 pub fn json_to_fel(val: &Value) -> FelValue {
     match val {
         Value::Null => FelValue::Null,
@@ -40,23 +44,30 @@ pub fn json_to_fel(val: &Value) -> FelValue {
         Value::String(s) => FelValue::String(s.clone()),
         Value::Array(arr) => FelValue::Array(arr.iter().map(json_to_fel).collect()),
         Value::Object(map) => {
-            if let Some(currency) = map.get("currency").and_then(|v| v.as_str())
-                && let Some(amount) = map.get("amount")
-            {
-                let maybe_decimal = match amount {
-                    Value::Number(n) => n
-                        .as_i64()
-                        .map(Decimal::from)
-                        .or_else(|| n.as_u64().map(Decimal::from))
-                        .or_else(|| n.as_f64().and_then(Decimal::from_f64)),
-                    Value::String(s) => Decimal::from_str_exact(s).ok(),
-                    _ => None,
-                };
-                if let Some(amount_decimal) = maybe_decimal {
-                    return FelValue::Money(FelMoney {
-                        amount: amount_decimal,
-                        currency: currency.to_string(),
-                    });
+            let is_money_type = map
+                .get("$type")
+                .and_then(|v| v.as_str())
+                .map(|s| s == "money")
+                .unwrap_or(false);
+            if is_money_type {
+                if let Some(currency) = map.get("currency").and_then(|v| v.as_str())
+                    && let Some(amount) = map.get("amount")
+                {
+                    let maybe_decimal = match amount {
+                        Value::Number(n) => n
+                            .as_i64()
+                            .map(Decimal::from)
+                            .or_else(|| n.as_u64().map(Decimal::from))
+                            .or_else(|| n.as_f64().and_then(Decimal::from_f64)),
+                        Value::String(s) => Decimal::from_str_exact(s).ok(),
+                        _ => None,
+                    };
+                    if let Some(amount_decimal) = maybe_decimal {
+                        return FelValue::Money(FelMoney {
+                            amount: amount_decimal,
+                            currency: currency.to_string(),
+                        });
+                    }
                 }
             }
             FelValue::Object(
@@ -76,7 +87,7 @@ pub fn json_to_fel(val: &Value) -> FelValue {
 /// - `Number(n)` → `Value::Number` (integer when whole, f64 otherwise)
 /// - `String(s)` → `Value::String(s)`
 /// - `Date(d)` → `Value::String(d.format_iso())`
-/// - `Money { amount, currency }` → `{"amount": <number>, "currency": <string>}`
+/// - `Money { amount, currency }` → `{"$type": "money", "amount": <number>, "currency": <string>}`
 /// - `Array(arr)` → `Value::Array` (recursive)
 /// - `Object(entries)` → `Value::Object` (recursive)
 pub fn fel_to_json(val: &FelValue) -> Value {
@@ -106,6 +117,7 @@ pub fn fel_to_json(val: &FelValue) -> Value {
         }
         FelValue::Money(m) => {
             let mut map = serde_json::Map::new();
+            map.insert("$type".to_string(), Value::String("money".to_string()));
             map.insert(
                 "amount".to_string(),
                 fel_to_json(&FelValue::Number(m.amount)),
@@ -192,8 +204,8 @@ mod tests {
     }
 
     #[test]
-    fn money_heuristic_numeric_amount() {
-        let val = json_to_fel(&json!({"amount": 99.99, "currency": "USD"}));
+    fn money_numeric_amount() {
+        let val = json_to_fel(&json!({"$type": "money", "amount": 99.99, "currency": "USD"}));
         match &val {
             FelValue::Money(m) => {
                 assert_eq!(m.currency, "USD");
@@ -205,8 +217,8 @@ mod tests {
     }
 
     #[test]
-    fn money_heuristic_string_amount() {
-        let val = json_to_fel(&json!({"amount": "99.99", "currency": "USD"}));
+    fn money_string_amount() {
+        let val = json_to_fel(&json!({"$type": "money", "amount": "99.99", "currency": "USD"}));
         match &val {
             FelValue::Money(m) => {
                 assert_eq!(m.currency, "USD");
@@ -218,8 +230,8 @@ mod tests {
     }
 
     #[test]
-    fn money_heuristic_integer_amount() {
-        let val = json_to_fel(&json!({"amount": 100, "currency": "EUR"}));
+    fn money_integer_amount() {
+        let val = json_to_fel(&json!({"$type": "money", "amount": 100, "currency": "EUR"}));
         match &val {
             FelValue::Money(m) => {
                 assert_eq!(m.currency, "EUR");
@@ -230,12 +242,23 @@ mod tests {
     }
 
     #[test]
+    fn money_without_type_marker_is_object() {
+        // Object with "amount" + "currency" but no "$type": "money" must NOT become Money
+        let val = json_to_fel(&json!({"amount": 99.99, "currency": "USD"}));
+        assert!(
+            matches!(val, FelValue::Object(_)),
+            "expected Object, got {val:?}"
+        );
+    }
+
+    #[test]
     fn money_roundtrip() {
         let money = FelValue::Money(FelMoney {
             amount: Decimal::from_str_exact("99.99").unwrap(),
             currency: "USD".to_string(),
         });
         let json = fel_to_json(&money);
+        assert_eq!(json.get("$type"), Some(&json!("money")));
         assert_eq!(json.get("currency"), Some(&json!("USD")));
         let amount = json.get("amount").and_then(|v| v.as_f64()).unwrap();
         assert!((amount - 99.99).abs() < 0.01, "money amount: {amount}");
@@ -244,7 +267,7 @@ mod tests {
     #[test]
     fn money_missing_currency_becomes_object() {
         // Object with "amount" but no "currency" should NOT become Money
-        let val = json_to_fel(&json!({"amount": 100}));
+        let val = json_to_fel(&json!({"$type": "money", "amount": 100}));
         assert!(
             matches!(val, FelValue::Object(_)),
             "expected Object, got {val:?}"
@@ -254,7 +277,7 @@ mod tests {
     #[test]
     fn money_non_numeric_amount_becomes_object() {
         // "amount" that isn't numeric or parseable as Decimal → plain Object
-        let val = json_to_fel(&json!({"amount": true, "currency": "USD"}));
+        let val = json_to_fel(&json!({"$type": "money", "amount": true, "currency": "USD"}));
         assert!(
             matches!(val, FelValue::Object(_)),
             "expected Object, got {val:?}"

@@ -1,4 +1,5 @@
 {
+    "$formspecResponse": "1.0",
     "definitionUrl": "https://acf.hhs.gov/formspec/csbg/tribal-short",
     "definitionVersion": "3.0.0",
     "status": "in-progress",

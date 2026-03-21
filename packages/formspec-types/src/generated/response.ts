@@ -13,6 +13,10 @@ export type { FormspecValidationResult };
  */
 export interface FormResponse {
   /**
+   * Response specification version. MUST be '1.0'.
+   */
+  $formspecResponse: '1.0';
+  /**
    * The canonical URL of the Definition this Response was created against. This is the stable logical-form identifier shared across all versions of the same form. Combined with definitionVersion to form the immutable identity reference. MUST match the 'url' property of a known Definition.
    */
   definitionUrl: string;

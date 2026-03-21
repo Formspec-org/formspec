@@ -100,7 +100,7 @@ class TestCrossSchemaConsistency:
         assert resp_ref == vr_result_id, \
             f"response validationResults ref {resp_ref!r} != shared schema {vr_result_id!r}"
         # The shared schema must have the expected required fields
-        assert set(VR_RESULT_S["required"]) == {"path", "severity", "constraintKind", "message"}
+        assert set(VR_RESULT_S["required"]) == {"$formspecValidationResult", "path", "severity", "constraintKind", "message"}
 
     def test_definition_response_use_propertynames_extensions(self):
         """Definition, Response, Registry use extensions.propertyNames pattern."""
@@ -523,7 +523,7 @@ class TestResponseSchema:
 
     def test_s2_1_6__required_fields(self):
         assert set(RESP_S["required"]) == {
-            "definitionUrl", "definitionVersion", "status", "data", "authored"
+            "$formspecResponse", "definitionUrl", "definitionVersion", "status", "data", "authored"
         }
 
     def test_s2_1_6__status_enum(self):
@@ -554,7 +554,7 @@ class TestResponseSchema:
         assert RESP_S["additionalProperties"] is False
 
     def test_s5_3__validation_result_required(self):
-        assert set(VR_RESULT_S["required"]) == {"path", "severity", "constraintKind", "message"}
+        assert set(VR_RESULT_S["required"]) == {"$formspecValidationResult", "path", "severity", "constraintKind", "message"}
 
     def test_s5_3__severity_enum(self):
         assert VR_RESULT_S["properties"]["severity"]["enum"] == ["error", "warning", "info"]
@@ -572,7 +572,7 @@ class TestResponseSchema:
 
     def test_s2_1_6__closed_world_property_set(self):
         expected = {
-            "definitionUrl", "definitionVersion", "status", "data",
+            "$formspecResponse", "definitionUrl", "definitionVersion", "status", "data",
             "authored", "id", "author", "subject",
             "validationResults", "extensions",
         }
@@ -588,7 +588,7 @@ class TestValidationReportSchema:
     """spec.md §5.4 — Validation Report."""
 
     def test_s5_4__required_fields(self):
-        assert set(VR_S["required"]) == {"valid", "results", "counts", "timestamp"}
+        assert set(VR_S["required"]) == {"$formspecValidationReport", "valid", "results", "counts", "timestamp"}
 
     def test_s5_4__counts_required(self):
         counts = VR_S["properties"]["counts"]
@@ -616,7 +616,7 @@ class TestMappingTopLevel:
 
     def test_ms3_1__required_fields(self):
         assert set(MAP_S["required"]) == {
-            "version", "definitionRef", "definitionVersion",
+            "$formspecMapping", "version", "definitionRef", "definitionVersion",
             "targetSchema", "rules",
         }
 
@@ -641,7 +641,7 @@ class TestMappingTopLevel:
 
     def test_ms3_1__closed_world_property_set(self):
         expected = {
-            "version", "$schema", "definitionRef", "definitionVersion",
+            "$formspecMapping", "version", "$schema", "definitionRef", "definitionVersion",
             "targetSchema", "direction", "autoMap", "defaults", "rules",
             "adapters", "conformanceLevel",
         }

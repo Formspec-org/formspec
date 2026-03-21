@@ -8,7 +8,7 @@ Source schema: `schemas/response.schema.json`
 ## Bottom Line Up Front
 
 - This section defines the canonical Response document shape for persisted form submissions.
-- A valid response requires `definitionUrl`, `definitionVersion`, `status`, `data`, and `authored`.
+- A valid response requires `$formspecResponse`, `definitionUrl`, `definitionVersion`, `status`, `data`, and `authored`.
 - Response validation and replay must always honor the pinned `(definitionUrl, definitionVersion)` tuple.
 - This BLUF is governed by `schemas/response.schema.json`; generated references are the structural contract.
 
@@ -16,6 +16,7 @@ Source schema: `schemas/response.schema.json`
 
 | Pointer | Required | Type | Guidance | Description |
 |---|---|---|---|---|
+| `#/properties/$formspecResponse` | yes | string | Version pin for response document compatibility. | Response specification version. MUST be '1.0'. |
 | `#/properties/authored` | yes | string | Last-modified timestamp for conflict detection and audit. | When the Response was last modified (ISO 8601 date-time with timezone). Updated on every save, not just on status transitions. Used for conflict detection, audit trails, and ordering Responses chronologically. |
 | `#/properties/data` | yes | object | Primary response payload captured from the form instance. Shape determined by the Definition's item tree. | The primary Instance — the form data. Structure mirrors the Definition's item tree: field Items produce scalar properties, non-repeatable group Items produce nested objects, repeatable group Items produce arrays of objects, display Items have no representation. Non-relevant fields are handled per the Definition's nonRelevantBehavior setting: 'remove' (default) omits them entirely, 'empty' retains the key with null value, 'keep' retains the last value. Calculated fields (those with a 'calculate' Bind) are included with their computed values. |
 | `#/properties/definitionUrl` | yes | string | Canonical identifier of the form definition used to produce this response. Stable across definition versions. | The canonical URL of the Definition this Response was created against. This is the stable logical-form identifier shared across all versions of the same form. Combined with definitionVersion to form the immutable identity reference. MUST match the 'url' property of a known Definition. |

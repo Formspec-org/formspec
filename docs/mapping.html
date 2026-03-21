@@ -248,10 +248,10 @@ explicitly redefined.</p>
 <ul>
 <li>This document defines bidirectional Mapping DSL transforms between
 Formspec Responses and external schemas.</li>
-<li>A valid mapping requires <code>version</code>,
-<code>definitionRef</code>, <code>definitionVersion</code>,
-<code>targetSchema</code>, and at least one <code>rules</code>
-entry.</li>
+<li>A valid mapping requires <code>$formspecMapping</code>,
+<code>version</code>, <code>definitionRef</code>,
+<code>definitionVersion</code>, <code>targetSchema</code>, and at least
+one <code>rules</code> entry.</li>
 <li>Field rules are declarative and can compose transforms for
 preserve/drop/expression/coerce/value map/array reshaping.</li>
 <li>This BLUF is governed by <code>schemas/mapping.schema.json</code>;
@@ -828,6 +828,14 @@ enumerates all recognized properties.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>#/properties/$formspecMapping</code></td>
+<td><code>$formspecMapping</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>const: <code>“1.0”</code>; critical</td>
+<td>Mapping specification version. MUST be ‘1.0’.</td>
+</tr>
 <tr>
 <td><code>#/properties/$schema</code></td>
 <td><code>$schema</code></td>

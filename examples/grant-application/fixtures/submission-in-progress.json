@@ -1,60 +1,64 @@
 {
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "definitionUrl": "https://example.gov/forms/grant-application",
-  "definitionVersion": "1.0.0",
-  "status": "in-progress",
-  "authored": "2026-02-28T09:30:00.000Z",
-  "author": {
-    "id": "user-002",
-    "name": "John Doe"
-  },
-  "subject": {
-    "id": "GRANT-2026-002",
-    "type": "grant-application"
-  },
-  "validationResults": [
-    {
-      "path": "applicantInfo.orgName",
-      "severity": "error",
-      "constraintKind": "required",
-      "message": "Organization Name is required.",
-      "code": "FIELD_REQUIRED",
-      "source": "bind",
-      "sourceId": "applicantInfo.orgName"
+    "$formspecResponse": "1.0",
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "definitionUrl": "https://example.gov/forms/grant-application",
+    "definitionVersion": "1.0.0",
+    "status": "in-progress",
+    "authored": "2026-02-28T09:30:00.000Z",
+    "author": {
+        "id": "user-002",
+        "name": "John Doe"
     },
-    {
-      "path": "projectNarrative.abstract",
-      "severity": "warning",
-      "constraintKind": "constraint",
-      "message": "Abstract appears to contain placeholder text. Replace 'TBD' with actual content.",
-      "code": "ABSTRACT_PLACEHOLDER",
-      "source": "shape",
-      "shapeId": "abstractNotPlaceholder",
-      "value": "TBD - will fill in later"
+    "subject": {
+        "id": "GRANT-2026-002",
+        "type": "grant-application"
     },
-    {
-      "path": "projectNarrative.startDate",
-      "severity": "error",
-      "constraintKind": "required",
-      "message": "Project Start Date is required.",
-      "code": "FIELD_REQUIRED",
-      "source": "bind",
-      "sourceId": "projectNarrative.startDate"
+    "validationResults": [
+        {
+            "path": "applicantInfo.orgName",
+            "severity": "error",
+            "constraintKind": "required",
+            "message": "Organization Name is required.",
+            "code": "FIELD_REQUIRED",
+            "source": "bind",
+            "sourceId": "applicantInfo.orgName"
+        },
+        {
+            "path": "projectNarrative.abstract",
+            "severity": "warning",
+            "constraintKind": "constraint",
+            "message": "Abstract appears to contain placeholder text. Replace 'TBD' with actual content.",
+            "code": "ABSTRACT_PLACEHOLDER",
+            "source": "shape",
+            "shapeId": "abstractNotPlaceholder",
+            "value": "TBD - will fill in later"
+        },
+        {
+            "path": "projectNarrative.startDate",
+            "severity": "error",
+            "constraintKind": "required",
+            "message": "Project Start Date is required.",
+            "code": "FIELD_REQUIRED",
+            "source": "bind",
+            "sourceId": "projectNarrative.startDate"
+        }
+    ],
+    "data": {
+        "applicantInfo": {
+            "orgType": "nonprofit",
+            "contactName": "John Doe",
+            "contactEmail": "john@example.org"
+        },
+        "projectNarrative": {
+            "projectTitle": "Community Education Program",
+            "abstract": "TBD - will fill in later"
+        },
+        "budget": {
+            "requestedAmount": {
+                "amount": "0.00",
+                "currency": "USD"
+            },
+            "usesSubcontractors": false
+        }
     }
-  ],
-  "data": {
-    "applicantInfo": {
-      "orgType": "nonprofit",
-      "contactName": "John Doe",
-      "contactEmail": "john@example.org"
-    },
-    "projectNarrative": {
-      "projectTitle": "Community Education Program",
-      "abstract": "TBD - will fill in later"
-    },
-    "budget": {
-      "requestedAmount": { "amount": "0.00", "currency": "USD" },
-      "usesSubcontractors": false
-    }
-  }
 }

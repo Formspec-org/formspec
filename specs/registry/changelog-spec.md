@@ -20,7 +20,7 @@ Semver semantics follow §6.2; migration objects follow §6.7.
 
 <!-- bluf:start file=changelog-spec.bluf.md -->
 - This document defines changelog records for structural diffs between form definition versions.
-- A valid changelog requires `definitionUrl`, `fromVersion`, `toVersion`, `semverImpact`, and `changes`.
+- A valid changelog requires `$formspecChangelog`, `definitionUrl`, `fromVersion`, `toVersion`, `semverImpact`, and `changes`.
 - Changelog impact classification drives migration planning and semver governance.
 - This BLUF is governed by `schemas/changelog.schema.json`; generated references are the structural contract.
 <!-- bluf:end -->
@@ -33,6 +33,7 @@ A Changelog Document is a JSON object at the top level.
 <!-- generated:schema-ref id=changelog-top-level -->
 | Pointer | Field | Type | Required | Notes | Description |
 |---|---|---|---|---|---|
+| `#/properties/$formspecChangelog` | `$formspecChangelog` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Changelog specification version. MUST be '1.0'. |
 | `#/properties/$schema` | `$schema` | <code>string</code> | no | — | — |
 | `#/properties/changes` | `changes` | <code>array</code> | yes | critical | Ordered array of Change objects. Each entry describes one atomic modification to a definition element. |
 | `#/properties/definitionUrl` | `definitionUrl` | <code>string</code> | yes | critical | Canonical URL of the Definition whose versions are compared. Must match the definition's top-level 'url' property. |

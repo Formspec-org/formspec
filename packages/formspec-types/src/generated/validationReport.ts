@@ -13,6 +13,10 @@ export type { FormspecValidationResult };
  */
 export interface ValidationReport {
   /**
+   * Validation report specification version. MUST be '1.0'.
+   */
+  $formspecValidationReport: '1.0';
+  /**
    * The canonical URL of the Definition that was validated against. Matches the Response's definitionUrl. Together with definitionVersion, identifies the exact Definition whose Binds, Shapes, and item tree governed this validation run. Enables consumers to retrieve the Definition for constraint introspection or re-validation.
    */
   definitionUrl?: string;

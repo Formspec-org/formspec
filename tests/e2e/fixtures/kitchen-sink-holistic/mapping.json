@@ -1,5 +1,6 @@
 {
   "$schema": "https://formspec.org/schemas/mapping/v1",
+  "$formspecMapping": "1.0",
   "version": "1.0.0",
   "definitionRef": "https://example.org/forms/kitchen-sink-holistic",
   "definitionVersion": ">=1.0.0 <3.0.0",

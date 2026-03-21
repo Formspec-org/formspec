@@ -28,6 +28,10 @@ export type FELType =
  * Structured catalog of all built-in functions in the Formspec Expression Language (FEL) v1.0. Each entry defines the function's name, signature, return type, null handling, and usage examples. This catalog is the normative reference for FEL function behavior; implementations in TypeScript (packages/formspec-engine) and Python (src/formspec/fel) must conform to these signatures and semantics.
  */
 export interface FELFunctionCatalog {
+  /**
+   * FEL function catalog specification version. MUST be '1.0'.
+   */
+  $formspecFelFunctions: '1.0';
   version?: '1.0';
   functions?: FunctionEntry[];
 }

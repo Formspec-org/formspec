@@ -19,7 +19,17 @@
     "deprecated_field": "x",
     "shape_target": 10,
     "min_group": [],
-    "max_group": [{ "item": "a" }, { "item": "b" }, { "item": "c" }]
+    "max_group": [
+      {
+        "item": "a"
+      },
+      {
+        "item": "b"
+      },
+      {
+        "item": "c"
+      }
+    ]
   },
   "mode": "submit",
   "expected": {
@@ -31,6 +41,7 @@
     },
     "results": [
       {
+        "$formspecValidationResult": "1.0",
         "code": "EXTENSION_COMPATIBILITY_MISMATCH",
         "constraintKind": "extension",
         "message": "Extension 'x-test-compat' requires formspec version >=99.0.0",
@@ -39,6 +50,7 @@
         "source": "extension"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "CONSTRAINT_FAILED",
         "constraint": "$ > 0",
         "constraintKind": "constraint",
@@ -48,6 +60,7 @@
         "source": "bind"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "EXTENSION_DEPRECATED",
         "constraintKind": "extension",
         "message": "Extension 'x-test-deprecated' is deprecated",
@@ -56,6 +69,7 @@
         "source": "extension"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "MAX_REPEAT",
         "constraintKind": "cardinality",
         "message": "Maximum 1 entries allowed",
@@ -63,6 +77,7 @@
         "severity": "error"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "MAX_LENGTH_EXCEEDED",
         "constraintKind": "extension",
         "message": "Short Code must be at most 5 characters",
@@ -71,6 +86,7 @@
         "source": "extension"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "MIN_REPEAT",
         "constraintKind": "cardinality",
         "message": "Minimum 2 entries required",
@@ -78,6 +94,7 @@
         "severity": "error"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "PATTERN_MISMATCH",
         "constraintKind": "extension",
         "message": "Must be a valid Test Pattern",
@@ -86,6 +103,7 @@
         "source": "extension"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "RANGE_OVERFLOW",
         "constraintKind": "extension",
         "message": "Ranged Value must be at most 100",
@@ -94,6 +112,7 @@
         "source": "extension"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "RANGE_UNDERFLOW",
         "constraintKind": "extension",
         "message": "Ranged Value must be at least 10",
@@ -102,6 +121,7 @@
         "source": "extension"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "REQUIRED",
         "constraintKind": "required",
         "message": "Required",
@@ -110,6 +130,7 @@
         "source": "bind"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "EXTENSION_RETIRED",
         "constraintKind": "extension",
         "message": "Extension 'x-test-retired' is retired",
@@ -118,6 +139,7 @@
         "source": "extension"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "SHAPE_FAILED",
         "constraint": "$ > 50",
         "constraintKind": "shape",
@@ -128,6 +150,7 @@
         "source": "shape"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "TYPE_MISMATCH",
         "constraintKind": "type",
         "message": "Invalid integer",
@@ -136,6 +159,7 @@
         "source": "bind"
       },
       {
+        "$formspecValidationResult": "1.0",
         "code": "UNRESOLVED_EXTENSION",
         "constraintKind": "extension",
         "message": "Unresolved extension 'x-nonexistent': no matching registry entry loaded",

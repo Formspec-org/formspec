@@ -1,56 +1,57 @@
 {
-  "id": "3f5528db-f6d6-4d6e-90eb-e12cc99ed9b6",
-  "definitionUrl": "https://example.gov/forms/grant-application",
-  "definitionVersion": "1.0.0",
-  "status": "stopped",
-  "authored": "2026-02-28T17:10:00.000Z",
-  "author": {
-    "id": "user-019",
-    "name": "Alex Rivera"
-  },
-  "subject": {
-    "id": "GRANT-2026-044",
-    "type": "grant-application"
-  },
-  "validationResults": [
-    {
-      "path": "applicantInfo.orgName",
-      "severity": "error",
-      "constraintKind": "required",
-      "message": "Organization Name is required.",
-      "code": "FIELD_REQUIRED",
-      "source": "bind",
-      "sourceId": "applicantInfo.orgName",
-      "value": ""
+    "$formspecResponse": "1.0",
+    "id": "3f5528db-f6d6-4d6e-90eb-e12cc99ed9b6",
+    "definitionUrl": "https://example.gov/forms/grant-application",
+    "definitionVersion": "1.0.0",
+    "status": "stopped",
+    "authored": "2026-02-28T17:10:00.000Z",
+    "author": {
+        "id": "user-019",
+        "name": "Alex Rivera"
     },
-    {
-      "path": "applicantInfo.ein",
-      "severity": "info",
-      "constraintKind": "external",
-      "message": "External EIN validation was skipped because the response lifecycle was stopped.",
-      "code": "EXTERNAL_SKIPPED",
-      "source": "external",
-      "sourceId": "x-irs-ein-lookup",
-      "context": {
-        "reason": "submission-stopped",
-        "checkedAt": "2026-02-28T17:09:00.000Z"
-      }
-    }
-  ],
-  "extensions": {
-    "x-lifecycle": {
-      "stoppedReason": "Applicant withdrew before submission",
-      "stoppedBy": "user-019"
-    }
-  },
-  "data": {
-    "applicantInfo": {
-      "orgType": "nonprofit",
-      "contactName": "Alex Rivera",
-      "contactEmail": "alex.rivera@example.org"
+    "subject": {
+        "id": "GRANT-2026-044",
+        "type": "grant-application"
     },
-    "projectNarrative": {
-      "projectTitle": "Community Workforce Navigation Pilot"
+    "validationResults": [
+        {
+            "path": "applicantInfo.orgName",
+            "severity": "error",
+            "constraintKind": "required",
+            "message": "Organization Name is required.",
+            "code": "FIELD_REQUIRED",
+            "source": "bind",
+            "sourceId": "applicantInfo.orgName",
+            "value": ""
+        },
+        {
+            "path": "applicantInfo.ein",
+            "severity": "info",
+            "constraintKind": "external",
+            "message": "External EIN validation was skipped because the response lifecycle was stopped.",
+            "code": "EXTERNAL_SKIPPED",
+            "source": "external",
+            "sourceId": "x-irs-ein-lookup",
+            "context": {
+                "reason": "submission-stopped",
+                "checkedAt": "2026-02-28T17:09:00.000Z"
+            }
+        }
+    ],
+    "extensions": {
+        "x-lifecycle": {
+            "stoppedReason": "Applicant withdrew before submission",
+            "stoppedBy": "user-019"
+        }
+    },
+    "data": {
+        "applicantInfo": {
+            "orgType": "nonprofit",
+            "contactName": "Alex Rivera",
+            "contactEmail": "alex.rivera@example.org"
+        },
+        "projectNarrative": {
+            "projectTitle": "Community Workforce Navigation Pilot"
+        }
     }
-  }
 }

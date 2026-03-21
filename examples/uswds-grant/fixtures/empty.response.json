@@ -1,7 +1,8 @@
 {
-  "definitionUrl": "https://example.gov/forms/community-grant",
-  "definitionVersion": "1.0.0",
-  "status": "in-progress",
-  "authored": "2026-03-19T10:00:00Z",
-  "data": {}
+    "$formspecResponse": "1.0",
+    "definitionUrl": "https://example.gov/forms/community-grant",
+    "definitionVersion": "1.0.0",
+    "status": "in-progress",
+    "authored": "2026-03-19T10:00:00Z",
+    "data": {}
 }

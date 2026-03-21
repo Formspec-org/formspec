@@ -8,7 +8,7 @@ Source schema: `schemas/changelog.schema.json`
 ## Bottom Line Up Front
 
 - This document defines changelog records for structural diffs between form definition versions.
-- A valid changelog requires `definitionUrl`, `fromVersion`, `toVersion`, `semverImpact`, and `changes`.
+- A valid changelog requires `$formspecChangelog`, `definitionUrl`, `fromVersion`, `toVersion`, `semverImpact`, and `changes`.
 - Changelog impact classification drives migration planning and semver governance.
 - This BLUF is governed by `schemas/changelog.schema.json`; generated references are the structural contract.
 
@@ -20,6 +20,7 @@ Source schema: `schemas/changelog.schema.json`
 | `#/$defs/Change/properties/path` | yes | string | Locates the affected element for programmatic diff application and human review navigation. | Dot-path to the affected element within the definition. For items: 'items.' prefix followed by group nesting (e.g., 'items.budget.personnel'). For binds: the bind's target path (e.g., 'budget.totalCost'). For shapes: 'shapes.' + shape id. For optionSets: 'optionSets.' + set name. For metadata: the property name (e.g., 'title', 'status'). |
 | `#/$defs/Change/properties/target` | yes | string | Scopes the change to a definition subsystem so tooling can route to the appropriate diff handler. | Category of affected definition element. 'item': field, group, or display node. 'bind': reactive behavioral declaration (calculate, relevant, required, readonly, constraint). 'shape': composable validation rule. 'optionSet': named reusable option list. 'dataSource': secondary instance declaration. 'screener': routing rule. 'migration': version migration map. 'metadata': top-level properties (title, description, status, formPresentation). |
 | `#/$defs/Change/properties/type` | yes | string | Determines which of before/after is present and how migration tooling interprets the change. | Kind of change. 'added': new element in toVersion. 'removed': element absent in toVersion. 'modified': element exists in both but properties differ. 'moved': element relocated to a different parent group (key preserved). 'renamed': item key changed (detected heuristically — unpaired remove/add with matching dataType, children, and binds). |
+| `#/properties/$formspecChangelog` | yes | string | Version pin for changelog document compatibility. | Changelog specification version. MUST be '1.0'. |
 | `#/properties/changes` | yes | array | Atomic change records used for migration generation, impact analysis, and reviewer notifications. | Ordered array of Change objects. Each entry describes one atomic modification to a definition element. |
 | `#/properties/definitionUrl` | yes | string | Canonical identifier of the form definition whose versions are compared. | Canonical URL of the Definition whose versions are compared. Must match the definition's top-level 'url' property. |
 | `#/properties/fromVersion` | yes | string | Starting version for the changelog diff. | Base version (before changes). Interpreted per the definition's versionAlgorithm (default: semver). |

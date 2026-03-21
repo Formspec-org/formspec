@@ -1,4 +1,5 @@
 {
+  "$formspecChangelog": "1.0",
   "definitionUrl": "https://example.org/forms/kitchen-sink-holistic",
   "fromVersion": "1.0.0",
   "toVersion": "2.0.0",

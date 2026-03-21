@@ -1,4 +1,5 @@
 {
+    "$formspecChangelog": "1.0",
     "definitionUrl": "https://acf.hhs.gov/formspec/csbg/tribal-long",
     "fromVersion": "3.0.0",
     "toVersion": "3.0.4",

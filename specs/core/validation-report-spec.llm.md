@@ -8,7 +8,7 @@ Source schema: `schemas/validationReport.schema.json`
 ## Bottom Line Up Front
 
 - This section defines the standalone ValidationReport artifact for aggregated validation state.
-- A valid validation report requires `valid`, `results`, `counts`, and `timestamp`.
+- A valid validation report requires `$formspecValidationReport`, `valid`, `results`, `counts`, and `timestamp`.
 - The `valid` flag is derived from error-level findings, while `counts` provides severity totals.
 - This BLUF is governed by `schemas/validationReport.schema.json`; generated references are the structural contract.
 
@@ -16,6 +16,7 @@ Source schema: `schemas/validationReport.schema.json`
 
 | Pointer | Required | Type | Guidance | Description |
 |---|---|---|---|---|
+| `#/properties/$formspecValidationReport` | yes | string | Version pin for validation report document compatibility. | Validation report specification version. MUST be '1.0'. |
 | `#/properties/counts` | yes | object | Severity breakdown for summary display, progress indicators, and structural QA. The error count alone determines validity. | Pre-aggregated counts of results by severity level. Invariant: counts.error + counts.warning + counts.info = results.length. Invariant: valid = (counts.error === 0). Processors MUST ensure both invariants hold. Useful for summary badges, progress indicators, and report-level QA without iterating the full results array. |
 | `#/properties/results` | yes | array | Complete set of validation findings — the primary payload consumers iterate for error display, reporting, and programmatic handling. | Complete ordered set of validation findings across all sources: Bind constraints, Bind required checks, type checks, repeatable group cardinality checks, Validation Shapes (including composed shapes), and external validation injections. Empty array means no findings of any severity — the Response is fully clean. Results for non-relevant fields are guaranteed absent. Each entry is a self-contained ValidationResult with path, severity, constraintKind, and human-readable message. Consumers can filter by severity, constraintKind, source, path prefix, or shapeId to build targeted error displays. |
 | `#/properties/timestamp` | yes | string | Validation execution timestamp for staleness detection, audit trails, and chronological ordering. | ISO 8601 date-time (with timezone) indicating when this validation run was performed. Used for staleness detection when a report is persisted alongside its Response — if the Response's 'authored' timestamp is later than this timestamp, the report may be stale. Also serves as an audit trail element and ordering key when multiple reports exist for the same Response. |

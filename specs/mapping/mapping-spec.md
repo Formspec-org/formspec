@@ -52,7 +52,7 @@ redefined.
 
 <!-- bluf:start file=mapping-spec.bluf.md -->
 - This document defines bidirectional Mapping DSL transforms between Formspec Responses and external schemas.
-- A valid mapping requires `version`, `definitionRef`, `definitionVersion`, `targetSchema`, and at least one `rules` entry.
+- A valid mapping requires `$formspecMapping`, `version`, `definitionRef`, `definitionVersion`, `targetSchema`, and at least one `rules` entry.
 - Field rules are declarative and can compose transforms for preserve/drop/expression/coerce/value map/array reshaping.
 - This BLUF is governed by `schemas/mapping.schema.json`; generated schema references are the canonical structural contract.
 <!-- bluf:end -->
@@ -594,6 +594,7 @@ The root of a Mapping Document is a JSON object. The following table enumerates 
 <!-- generated:schema-ref id=mapping-top-level -->
 | Pointer | Field | Type | Required | Notes | Description |
 |---|---|---|---|---|---|
+| `#/properties/$formspecMapping` | `$formspecMapping` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Mapping specification version. MUST be '1.0'. |
 | `#/properties/$schema` | `$schema` | <code>string</code> | no | — | URI identifying the version of the Mapping DSL specification this document conforms to. |
 | `#/properties/adapters` | `adapters` | <code>object</code> | no | — | Adapter-specific configuration keyed by adapter identifier. The active adapter is determined by targetSchema.format. Built-in adapters: 'json' (Mapping Core), 'xml' and 'csv' (Mapping Extended). Custom adapters use x- prefix. |
 | `#/properties/autoMap` | `autoMap` | <code>boolean</code> | no | default: <code>false</code> | When true, the processor generates synthetic 'preserve' rules (at priority -1) for every source field not already covered by an explicit rule's sourcePath. Synthetic rules use identical source and target paths. Explicit rules always take precedence. When targetSchema.format is 'csv', auto-mapped paths containing dots are silently skipped. |

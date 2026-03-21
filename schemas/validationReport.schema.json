@@ -4,9 +4,19 @@
   "title": "Formspec Validation Report",
   "description": "A standalone Validation Report aggregating all validation results for a Response at a point in time (§5.4). The report is the primary output of the Revalidate phase (§2.4 Phase 3) and is the sole input to conformance determination: valid = (zero error-severity results). Reports are produced by evaluating all Bind constraints, required checks, type checks, cardinality checks, and Validation Shapes against the current Instance data, then merging any external validation results injected by server-side systems. Non-relevant fields are guaranteed absent — the processor MUST suppress all validation for fields whose 'relevant' Bind evaluates to false (§5.6 rule 1). Reports MAY be persisted alongside the Response as a snapshot, but consumers SHOULD treat persisted reports as potentially stale if the Response data has changed since the timestamp. The three validation modes — continuous (evaluate on every change), deferred (evaluate on explicit request), disabled (skip entirely) — control when reports are generated but not their structure (§5.5).",
   "type": "object",
-  "required": ["valid", "results", "counts", "timestamp"],
+  "required": ["$formspecValidationReport", "valid", "results", "counts", "timestamp"],
   "additionalProperties": false,
   "properties": {
+    "$formspecValidationReport": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Validation report specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for validation report document compatibility."
+      }
+    },
     "definitionUrl": {
       "type": "string",
       "format": "uri",

@@ -1,5 +1,6 @@
 {
   "$schema": "https://formspec.org/schemas/changelog/v1",
+  "$formspecChangelog": "1.0",
   "definitionUrl": "https://example.gov/forms/grant-application",
   "fromVersion": "1.0.0",
   "toVersion": "1.1.0",

@@ -1,5 +1,6 @@
 {
   "$schema": "https://formspec.org/schemas/mapping/v1",
+  "$formspecMapping": "1.0",
   "version": "1.0.0",
   "definitionRef": "https://example.gov/forms/grant-application",
   "definitionVersion": ">=1.0.0 <2.0.0",

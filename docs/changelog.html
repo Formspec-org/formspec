@@ -102,9 +102,10 @@ follow §6.7.</p>
 <ul>
 <li>This document defines changelog records for structural diffs between
 form definition versions.</li>
-<li>A valid changelog requires <code>definitionUrl</code>,
-<code>fromVersion</code>, <code>toVersion</code>,
-<code>semverImpact</code>, and <code>changes</code>.</li>
+<li>A valid changelog requires <code>$formspecChangelog</code>,
+<code>definitionUrl</code>, <code>fromVersion</code>,
+<code>toVersion</code>, <code>semverImpact</code>, and
+<code>changes</code>.</li>
 <li>Changelog impact classification drives migration planning and semver
 governance.</li>
 <li>This BLUF is governed by <code>schemas/changelog.schema.json</code>;
@@ -134,6 +135,14 @@ generated references are the structural contract. <!-- bluf:end --></li>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>#/properties/$formspecChangelog</code></td>
+<td><code>$formspecChangelog</code></td>
+<td><code>string</code></td>
+<td>yes</td>
+<td>const: <code>“1.0”</code>; critical</td>
+<td>Changelog specification version. MUST be ‘1.0’.</td>
+</tr>
 <tr>
 <td><code>#/properties/$schema</code></td>
 <td><code>$schema</code></td>

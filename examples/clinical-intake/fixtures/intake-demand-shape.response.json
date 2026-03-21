@@ -1,54 +1,82 @@
 {
-  "definitionUrl": "https://formspec.org/examples/clinical-intake",
-  "definitionVersion": "1.0.0",
-  "status": "in-progress",
-  "authored": "2026-03-04T13:40:00Z",
-  "data": {
-    "patient": {
-      "firstName": "Jamie",
-      "lastName": "Rivera",
-      "dob": "1980-05-14",
-      "age": 45,
-      "sex": "female",
-      "phone": "(202) 555-0199",
-      "email": "jamie.rivera@example.test",
-      "insuranceMemberId": "ABC1234567",
-      "insuranceCard": null
-    },
-    "currentVisit": {
-      "symptoms": ["fatigue"],
-      "otherSymptoms": null,
-      "onsetDate": "2026-03-02",
-      "onsetTime": "13:00",
-      "appointmentDateTime": "2026-03-06T16:00:00Z",
-      "provider": "any"
-    },
-    "medicalHistory": {
-      "hasAllergies": false,
-      "allergies": null,
-      "conditions": [
-        {
-          "conditionName": "Hypertension",
-          "diagnosedDate": "2019-06-15",
-          "severity": "critical",
-          "condMedCount": 5,
-          "condWorsening": null,
-          "medications": [
-            { "medDrugName": "Lisinopril", "medDosage": "10mg", "medFrequency": "daily", "medStartDate": "2020-01-10" },
-            { "medDrugName": "Amlodipine", "medDosage": "5mg", "medFrequency": "daily", "medStartDate": "2021-03-22" },
-            { "medDrugName": "Metformin", "medDosage": "500mg", "medFrequency": "bid", "medStartDate": "2015-03-01" },
-            { "medDrugName": "Atorvastatin", "medDosage": "20mg", "medFrequency": "daily", "medStartDate": "2018-10-01" },
-            { "medDrugName": "Omeprazole", "medDosage": "20mg", "medFrequency": "daily", "medStartDate": "2022-07-07" }
-          ]
+    "$formspecResponse": "1.0",
+    "definitionUrl": "https://formspec.org/examples/clinical-intake",
+    "definitionVersion": "1.0.0",
+    "status": "in-progress",
+    "authored": "2026-03-04T13:40:00Z",
+    "data": {
+        "patient": {
+            "firstName": "Jamie",
+            "lastName": "Rivera",
+            "dob": "1980-05-14",
+            "age": 45,
+            "sex": "female",
+            "phone": "(202) 555-0199",
+            "email": "jamie.rivera@example.test",
+            "insuranceMemberId": "ABC1234567",
+            "insuranceCard": null
+        },
+        "currentVisit": {
+            "symptoms": [
+                "fatigue"
+            ],
+            "otherSymptoms": null,
+            "onsetDate": "2026-03-02",
+            "onsetTime": "13:00",
+            "appointmentDateTime": "2026-03-06T16:00:00Z",
+            "provider": "any"
+        },
+        "medicalHistory": {
+            "hasAllergies": false,
+            "allergies": null,
+            "conditions": [
+                {
+                    "conditionName": "Hypertension",
+                    "diagnosedDate": "2019-06-15",
+                    "severity": "critical",
+                    "condMedCount": 5,
+                    "condWorsening": null,
+                    "medications": [
+                        {
+                            "medDrugName": "Lisinopril",
+                            "medDosage": "10mg",
+                            "medFrequency": "daily",
+                            "medStartDate": "2020-01-10"
+                        },
+                        {
+                            "medDrugName": "Amlodipine",
+                            "medDosage": "5mg",
+                            "medFrequency": "daily",
+                            "medStartDate": "2021-03-22"
+                        },
+                        {
+                            "medDrugName": "Metformin",
+                            "medDosage": "500mg",
+                            "medFrequency": "bid",
+                            "medStartDate": "2015-03-01"
+                        },
+                        {
+                            "medDrugName": "Atorvastatin",
+                            "medDosage": "20mg",
+                            "medFrequency": "daily",
+                            "medStartDate": "2018-10-01"
+                        },
+                        {
+                            "medDrugName": "Omeprazole",
+                            "medDosage": "20mg",
+                            "medFrequency": "daily",
+                            "medStartDate": "2022-07-07"
+                        }
+                    ]
+                }
+            ]
+        },
+        "assessment": {
+            "totalConditions": 1,
+            "severeConditionCount": 1,
+            "totalMedications": 5,
+            "symptomDuration": 2,
+            "maskedInsuranceId": "****4567"
         }
-      ]
-    },
-    "assessment": {
-      "totalConditions": 1,
-      "severeConditionCount": 1,
-      "totalMedications": 5,
-      "symptomDuration": 2,
-      "maskedInsuranceId": "****4567"
     }
-  }
 }

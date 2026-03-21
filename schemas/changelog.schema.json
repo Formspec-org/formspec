@@ -4,9 +4,19 @@
   "title": "Formspec Changelog Document",
   "description": "Enumerates differences between two versions of a Formspec Definition. Each change is an atomic record describing an addition, removal, modification, move, or rename of a definition element (item, bind, shape, optionSet, dataSource, screener, migration, or metadata). Impact classification (breaking/compatible/cosmetic) drives semver governance and migration generation.",
   "type": "object",
-  "required": ["definitionUrl", "fromVersion", "toVersion", "semverImpact", "changes"],
+  "required": ["$formspecChangelog", "definitionUrl", "fromVersion", "toVersion", "semverImpact", "changes"],
   "additionalProperties": false,
   "properties": {
+    "$formspecChangelog": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Changelog specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for changelog document compatibility."
+      }
+    },
     "$schema": {
       "type": "string",
       "format": "uri"

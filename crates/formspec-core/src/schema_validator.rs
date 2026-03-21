@@ -107,65 +107,41 @@ pub struct SchemaValidationPlan {
 // ── Document type detection ─────────────────────────────────────
 
 /// Marker fields that identify document types.
-/// Only includes markers that actually exist in the schemas.
+/// Every Formspec document type has a `$formspec*` marker field (required, const "1.0"):
+///   - Definition:        `$formspec`
+///   - Theme:             `$formspecTheme`
+///   - Component:         `$formspecComponent`
+///   - Registry:          `$formspecRegistry`
+///   - Locale:            `$formspecLocale`
+///   - References:        `$formspecReferences`
+///   - Mapping:           `$formspecMapping`
+///   - Response:          `$formspecResponse`
+///   - ValidationReport:  `$formspecValidationReport`
+///   - ValidationResult:  `$formspecValidationResult`
+///   - Changelog:         `$formspecChangelog`
+///   - FEL Functions:     `$formspecFelFunctions`
 const MARKER_FIELDS: &[(&str, DocumentType)] = &[
     ("$formspec", DocumentType::Definition),
     ("$formspecTheme", DocumentType::Theme),
     ("$formspecComponent", DocumentType::Component),
     ("$formspecRegistry", DocumentType::Registry),
+    ("$formspecMapping", DocumentType::Mapping),
+    ("$formspecResponse", DocumentType::Response),
+    ("$formspecValidationReport", DocumentType::ValidationReport),
+    ("$formspecValidationResult", DocumentType::ValidationResult),
+    ("$formspecChangelog", DocumentType::Changelog),
+    ("$formspecFelFunctions", DocumentType::FelFunctions),
 ];
 
 /// Detect the document type from a JSON value by examining marker fields.
 pub fn detect_document_type(doc: &Value) -> Option<DocumentType> {
     let obj = doc.as_object()?;
 
-    // Check explicit marker fields first
+    // Check marker fields — the only authoritative signal for document type.
     for &(field, doc_type) in MARKER_FIELDS {
         if obj.contains_key(field) {
             return Some(doc_type);
         }
-    }
-
-    // Fallback: heuristic detection by required-field combinations unique to each schema.
-    if obj.contains_key("items") && obj.contains_key("title") {
-        return Some(DocumentType::Definition);
-    }
-    if obj.contains_key("tokens") || obj.contains_key("selectors") {
-        return Some(DocumentType::Theme);
-    }
-    if obj.contains_key("tree") && obj.contains_key("componentType") {
-        return Some(DocumentType::Component);
-    }
-    if obj.contains_key("entries") && obj.contains_key("extensions") {
-        return Some(DocumentType::Registry);
-    }
-    // Response: required fields include data + status + authored
-    if obj.contains_key("data") && obj.contains_key("status") && obj.contains_key("authored") {
-        return Some(DocumentType::Response);
-    }
-    // ValidationResult: path + severity + constraintKind + message
-    if obj.contains_key("path")
-        && obj.contains_key("severity")
-        && obj.contains_key("constraintKind")
-        && obj.contains_key("message")
-    {
-        return Some(DocumentType::ValidationResult);
-    }
-    // FEL Functions catalog: version + functions
-    if obj.contains_key("version") && obj.contains_key("functions") {
-        return Some(DocumentType::FelFunctions);
-    }
-    // ValidationReport: required fields include valid + results + counts
-    if obj.contains_key("valid") && obj.contains_key("results") && obj.contains_key("counts") {
-        return Some(DocumentType::ValidationReport);
-    }
-    // Mapping: required fields include rules + targetSchema
-    if obj.contains_key("rules") && obj.contains_key("targetSchema") {
-        return Some(DocumentType::Mapping);
-    }
-    // Changelog: required fields include semverImpact + changes
-    if obj.contains_key("semverImpact") && obj.contains_key("changes") {
-        return Some(DocumentType::Changelog);
     }
 
     None
@@ -327,7 +303,7 @@ mod tests {
 
     #[test]
     fn test_detect_mapping() {
-        let doc = json!({ "rules": [], "targetSchema": "urn:example", "definitionRef": "https://example.org/forms/x", "definitionVersion": "1.0.0", "version": "1.0.0" });
+        let doc = json!({ "$formspecMapping": "1.0", "rules": [], "targetSchema": "urn:example", "definitionRef": "https://example.org/forms/x", "definitionVersion": "1.0.0", "version": "1.0.0" });
         assert_eq!(detect_document_type(&doc), Some(DocumentType::Mapping));
     }
 
@@ -340,6 +316,7 @@ mod tests {
     #[test]
     fn test_detect_response() {
         let doc = json!({
+            "$formspecResponse": "1.0",
             "definitionUrl": "https://example.org/forms/x",
             "definitionVersion": "1.0.0",
             "status": "in-progress",
@@ -352,6 +329,7 @@ mod tests {
     #[test]
     fn test_detect_validation_report() {
         let doc = json!({
+            "$formspecValidationReport": "1.0",
             "valid": true,
             "results": [],
             "counts": { "error": 0, "warning": 0, "info": 0 },
@@ -366,6 +344,7 @@ mod tests {
     #[test]
     fn test_detect_validation_result() {
         let doc = json!({
+            "$formspecValidationResult": "1.0",
             "path": "field",
             "severity": "error",
             "constraintKind": "required",
@@ -380,6 +359,7 @@ mod tests {
     #[test]
     fn test_detect_fel_functions() {
         let doc = json!({
+            "$formspecFelFunctions": "1.0",
             "version": "1.0.0",
             "functions": [],
         });
@@ -389,6 +369,7 @@ mod tests {
     #[test]
     fn test_detect_changelog() {
         let doc = json!({
+            "$formspecChangelog": "1.0",
             "definitionUrl": "https://example.org/forms/x",
             "fromVersion": "1.0.0",
             "toVersion": "2.0.0",
@@ -402,13 +383,6 @@ mod tests {
     fn test_detect_unknown() {
         let doc = json!({ "random": "data" });
         assert_eq!(detect_document_type(&doc), None);
-    }
-
-    #[test]
-    fn test_detect_heuristic_definition() {
-        // No marker field but has items + title
-        let doc = json!({ "items": [], "title": "Heuristic" });
-        assert_eq!(detect_document_type(&doc), Some(DocumentType::Definition));
     }
 
     #[test]
@@ -457,12 +431,12 @@ mod tests {
         assert!(result.errors.is_empty());
     }
 
-    // ── Marker overrides heuristic — schema_validator ────────────
+    // ── Marker detection — schema_validator ──────────────────────
 
-    /// Spec: schema spec — "Marker field ($formspec) overrides heuristic detection"
+    /// Spec: schema spec — "Marker field ($formspec) identifies definition documents"
     #[test]
-    fn marker_overrides_heuristic_ambiguity() {
-        // Doc has both the definition marker AND theme heuristic fields
+    fn marker_identifies_definition() {
+        // Doc has the definition marker along with other fields
         let doc = json!({
             "$formspec": "1.0",
             "items": [],
@@ -470,33 +444,19 @@ mod tests {
             "tokens": {},
             "selectors": []
         });
-        // Marker should win
         assert_eq!(detect_document_type(&doc), Some(DocumentType::Definition));
     }
 
-    /// Spec: schema spec — "Marker field ($formspecTheme) overrides heuristic for theme"
+    /// Spec: schema spec — "Marker field ($formspecTheme) identifies theme documents"
     #[test]
-    fn theme_marker_overrides_other_heuristics() {
+    fn theme_marker_identifies_theme() {
         let doc = json!({
             "$formspecTheme": "1.0",
             "tokens": {},
-            // Also has items + title (definition heuristic), but marker wins
             "items": [],
             "title": "Test"
         });
         assert_eq!(detect_document_type(&doc), Some(DocumentType::Theme));
-    }
-
-    // ── Registry heuristic detection ─────────────────────────────
-
-    /// Spec: schema spec — "Registry detected by heuristic: entries + extensions"
-    #[test]
-    fn detect_registry_by_heuristic() {
-        let doc = json!({
-            "entries": [],
-            "extensions": {}
-        });
-        assert_eq!(detect_document_type(&doc), Some(DocumentType::Registry));
     }
 
     // ── Non-object input ─────────────────────────────────────────
@@ -509,41 +469,6 @@ mod tests {
         assert_eq!(detect_document_type(&json!(null)), None);
         assert_eq!(detect_document_type(&json!(true)), None);
         assert_eq!(detect_document_type(&json!([1, 2, 3])), None);
-    }
-
-    // ── Heuristic theme via tokens only ──────────────────────────
-
-    /// Spec: schema spec — "Theme heuristic via 'tokens' field alone"
-    #[test]
-    fn detect_theme_by_tokens_heuristic() {
-        let doc = json!({ "tokens": { "color-primary": "#000" } });
-        assert_eq!(detect_document_type(&doc), Some(DocumentType::Theme));
-    }
-
-    /// Spec: schema spec — "Theme heuristic via 'selectors' field alone"
-    #[test]
-    fn detect_theme_by_selectors_heuristic() {
-        let doc = json!({ "selectors": [{ "match": "field" }] });
-        assert_eq!(detect_document_type(&doc), Some(DocumentType::Theme));
-    }
-
-    // ── Component heuristic ──────────────────────────────────────
-
-    /// Spec: schema spec — "Component heuristic requires both 'tree' and 'componentType'"
-    #[test]
-    fn detect_component_heuristic_needs_both() {
-        // Only tree — not enough
-        assert_eq!(detect_document_type(&json!({ "tree": {} })), None);
-        // Only componentType — not enough
-        assert_eq!(
-            detect_document_type(&json!({ "componentType": "Stack" })),
-            None
-        );
-        // Both — detected
-        assert_eq!(
-            detect_document_type(&json!({ "tree": {}, "componentType": "Stack" })),
-            Some(DocumentType::Component)
-        );
     }
 
     // ── DocumentType::schema_key coverage ────────────────────────
