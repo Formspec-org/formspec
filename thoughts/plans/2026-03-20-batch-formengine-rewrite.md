@@ -251,122 +251,15 @@ git add crates/formspec-eval/
 git commit -m "fix(eval): topological sort for calculate evaluation order"
 ```
 
-### Task 3: Implement excludedValue in Rust evaluator (CRITICAL)
+### ~~Task 3: excludedValue~~ VERIFIED ALREADY FIXED
 
-**Files:**
-- Modify: `crates/formspec-eval/src/lib.rs:465-540` (`evaluate_items_with_inheritance`)
+`ItemInfo.excluded_value` exists in `types.rs:42`. Parsed from binds in `rebuild.rs:133-136`. Applied during Phase 2 evaluation at `recalculate.rs:300-305` via `env.set_field(&item.path, FelValue::Null)`. Also applied in Phase 3 via `apply_excluded_values_to_env()` in `revalidate.rs:31-32`. No action needed.
 
-When a field has `excludedValue: "null"` and is non-relevant, downstream expressions must see `null` for that field — not its actual stored value. The current evaluator only applies NRB in Phase 4 (output serialization), but `excludedValue` must affect the evaluation environment DURING Phase 2.
+### ~~Task 4: Variable scope~~ VERIFIED ALREADY FIXED
 
-- [ ] **Step 1: Write failing test**
+`VariableDef.scope` exists in `types.rs:65`. `evaluate_variables_scoped()` in `recalculate.rs:217-256` handles scope-qualified keys. `visible_variables()` in `recalculate.rs:81-109` filters by ancestor path. `evaluate_items_with_inheritance_scoped()` in `recalculate.rs:502-541` clears/repopulates env per item. No action needed.
 
-```rust
-#[test]
-fn excluded_value_null_visible_to_downstream() {
-    let def = serde_json::json!({
-        "$formspec": "1.0", "url": "test", "version": "1.0.0", "title": "T",
-        "items": [
-            { "key": "show", "type": "field", "dataType": "boolean", "label": "Show" },
-            { "key": "price", "type": "field", "dataType": "decimal", "label": "Price" },
-            { "key": "summary", "type": "field", "dataType": "string", "label": "Summary" },
-        ],
-        "binds": [
-            { "path": "price", "relevant": "$show = true", "excludedValue": "null" },
-            { "path": "summary", "calculate": "if($price != null, 'has price', 'no price')" },
-        ],
-    });
-    let mut data = HashMap::new();
-    data.insert("show".into(), serde_json::json!(false));
-    data.insert("price".into(), serde_json::json!(100));
-    let result = evaluate_definition(&def, &data);
-    // price is non-relevant with excludedValue: "null"
-    // summary's calculate should see $price as null
-    assert_eq!(result.values.get("summary"), Some(&serde_json::json!("no price")));
-}
-```
-
-- [ ] **Step 2: Run test, verify it fails** (summary sees "has price" because evaluator doesn't null out excluded fields)
-
-- [ ] **Step 3: Implement**
-
-In `evaluate_items_with_inheritance`, after computing relevance for an item, if the item is non-relevant AND has `excludedValue: "null"`:
-```rust
-if !item.relevant {
-    if let Some(ref ev) = item.excluded_value {
-        if ev == "null" {
-            env.set_field(&item.path, FelValue::Null);
-        }
-    }
-}
-```
-
-This requires:
-1. Adding `excluded_value: Option<String>` to `ItemInfo`
-2. Parsing it from the bind config in `rebuild_item_tree`
-3. Setting the field to null in the environment BEFORE downstream expressions evaluate
-
-- [ ] **Step 4: Run test, verify it passes**
-
-- [ ] **Step 5: Run full Rust test suite**
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add crates/formspec-eval/
-git commit -m "fix(eval): implement excludedValue null semantics during Phase 2"
-```
-
-### Task 4: Fix variable scope in Rust evaluator
-
-**Files:**
-- Modify: `crates/formspec-eval/src/lib.rs:436-463` (`evaluate_variables`)
-
-Variables have a `scope` property (e.g., `"lineItems"`) meaning they're only visible to that item and its descendants. The Rust evaluator treats all variables as definition-wide — it sets every variable in the global environment regardless of scope.
-
-- [ ] **Step 1: Write failing test**
-
-```rust
-#[test]
-fn variable_scope_only_visible_to_descendants() {
-    let def = serde_json::json!({
-        "$formspec": "1.0", "url": "test", "version": "1.0.0", "title": "T",
-        "items": [
-            {
-                "key": "group", "type": "group", "label": "G",
-                "items": [
-                    { "key": "amount", "type": "field", "dataType": "decimal", "label": "A" },
-                    { "key": "taxed", "type": "field", "dataType": "decimal", "label": "T" },
-                ],
-            },
-            { "key": "outside", "type": "field", "dataType": "decimal", "label": "O" },
-        ],
-        "variables": [{ "name": "taxRate", "expression": "0.1", "scope": "group" }],
-        "binds": [
-            { "path": "group.taxed", "calculate": "$group.amount * @taxRate" },
-            { "path": "outside", "calculate": "if(@taxRate != null, @taxRate, 0)" },
-        ],
-    });
-    let mut data = HashMap::new();
-    data.insert("group.amount".into(), serde_json::json!(100));
-    let result = evaluate_definition(&def, &data);
-    // taxed should see @taxRate (in scope)
-    assert_eq!(result.values.get("group.taxed"), Some(&serde_json::json!(10.0)));
-    // outside should NOT see @taxRate (out of scope) — should get 0
-    assert_eq!(result.values.get("outside"), Some(&serde_json::json!(0)));
-}
-```
-
-- [ ] **Step 2: Implement scoped variable visibility**
-
-During `evaluate_items_with_inheritance`, before evaluating an item's expressions, set/unset variables based on whether the current item path is within each variable's scope. Variables with no scope are global.
-
-- [ ] **Step 3: Run tests, commit**
-
-```bash
-git commit -m "fix(eval): implement variable scope visibility"
-```
-
-### Task 5: Add shape context map and valid() MIP query
+### Task 3: Add shape context map and valid() MIP query
 
 **Files:**
 - Modify: `crates/formspec-eval/src/lib.rs`
@@ -389,7 +282,7 @@ Two smaller fixes bundled:
 git commit -m "fix(eval): shape context map and valid() MIP query"
 ```
 
-### Task 6: Add runtime context support to evaluate_definition
+### Task 4: Add runtime context support to evaluate_definition
 
 **Files:**
 - Modify: `crates/formspec-eval/src/lib.rs`
@@ -442,7 +335,7 @@ git add crates/formspec-eval/
 git commit -m "feat(eval): accept runtime context (nowIso) in evaluate_definition"
 ```
 
-### Task 7: Wire extended result + context through WASM
+### Task 5: Wire extended result + context through WASM
 
 **Files:**
 - Modify: `crates/formspec-wasm/src/lib.rs`
@@ -498,7 +391,7 @@ git add crates/formspec-wasm/ packages/formspec-engine/src/wasm-bridge.ts
 git commit -m "feat(wasm): wire runtime context, required, readonly, shapeId through evaluateDefinition"
 ```
 
-### Task 8: Add tokenizeFEL to WASM
+### Task 6: Add tokenizeFEL to WASM
 
 **Files:**
 - Modify: `crates/fel-core/src/` (expose positioned tokens)
@@ -540,7 +433,7 @@ git commit -m "feat(wasm): add tokenizeFEL for Studio syntax highlighting"
 
 ## Phase 2 — TS Foundation
 
-### Task 9: Write and implement diff.ts
+### Task 7: Write and implement diff.ts
 
 **Files:**
 - Create: `packages/formspec-engine/tests/batch-diff.test.mjs`
@@ -556,7 +449,7 @@ git commit -m "feat(wasm): add tokenizeFEL for Studio syntax highlighting"
 
 - [ ] **Step 5: Commit**
 
-### Task 10: Update interfaces.ts with all absorbed types
+### Task 8: Update interfaces.ts with all absorbed types
 
 **Files:**
 - Modify: `packages/formspec-engine/src/interfaces.ts`
@@ -614,7 +507,7 @@ git commit -m "refactor(engine): absorb all types from files being deleted into 
 
 ## Phase 3 — BatchFormEngine
 
-### Task 11: Write core engine tests
+### Task 9: Write core engine tests
 
 **Files:**
 - Create: `packages/formspec-engine/tests/batch-engine-core.test.mjs`
@@ -640,7 +533,7 @@ Expected: All PASS against the current reactive engine.
 
 - [ ] **Step 3: Commit**
 
-### Task 12: Write repeat lifecycle tests
+### Task 10: Write repeat lifecycle tests
 
 Same approach — GREEN baseline against current engine.
 
@@ -650,7 +543,7 @@ Same approach — GREEN baseline against current engine.
 
 - [ ] **Step 3: Commit**
 
-### Task 13: Implement BatchFormEngine (index.ts rewrite)
+### Task 11: Implement BatchFormEngine (index.ts rewrite)
 
 **Files:**
 - Rewrite: `packages/formspec-engine/src/index.ts`
@@ -753,7 +646,7 @@ Build incrementally: start with imports, type re-exports, and an empty `FormEngi
 
 Run: `npm --prefix packages/formspec-engine run build`
 
-- [ ] **Step 3: Run new tests (Tasks 11-12)**
+- [ ] **Step 3: Run new tests (Tasks 9-10)**
 
 Expected: All PASS.
 
@@ -768,7 +661,7 @@ git commit -m "feat(engine): BatchFormEngine — Rust batch eval with signal pat
 
 ## Phase 4 — Conformance & Migration
 
-### Task 14: Run existing test suite, fix failures
+### Task 12: Run existing test suite, fix failures
 
 **Files:**
 - Modify: `packages/formspec-engine/src/index.ts` (as needed)
@@ -793,7 +686,7 @@ Expected: All 62+ files pass.
 
 - [ ] **Step 4: Commit**
 
-### Task 15: Migrate Studio FEL tooling (MANDATORY)
+### Task 13: Migrate Studio FEL tooling (MANDATORY)
 
 **Files:**
 - Modify: `packages/formspec-studio/src/lib/fel-editor-utils.ts`
@@ -829,7 +722,7 @@ git add packages/formspec-studio/
 git commit -m "refactor(studio): migrate FEL editor from Chevrotain to wasmTokenizeFEL"
 ```
 
-### Task 16: Delete old files and clean up
+### Task 14: Delete old files and clean up
 
 - [ ] **Step 1: Delete all 15 files listed in the deletion table**
 
@@ -849,7 +742,7 @@ git add -A packages/formspec-engine/
 git commit -m "refactor(engine): delete 3,980 lines of duplicated TS — Rust sole backend"
 ```
 
-### Task 17: Verify all downstream packages
+### Task 15: Verify all downstream packages
 
 - [ ] **Step 1: Build each downstream package**
 
@@ -879,7 +772,7 @@ Run: `npm test` (Playwright from repo root)
 
 - [ ] **Step 4: Commit any fixes**
 
-### Task 18: Performance baseline
+### Task 16: Performance baseline
 
 - [ ] **Step 1: Write and run performance test**
 
@@ -912,9 +805,9 @@ Use `tests/e2e/fixtures/` for the grant-app fixture (verify path first with `ls`
 | Risk | Mitigation |
 |---|---|
 | Batch eval too slow for large forms | Performance test catches early. Escape: debounce keystrokes, add AST caching in Rust evaluator, eventual upgrade to stateful incremental (Option 3). |
-| `formspec-eval` missing behaviors | Critical gaps (calculate fixpoint, excludedValue, variable scope, shape context, valid() MIP) fixed in Phase 1 Tasks 2-5. Remaining TS lifecycle: remote options, instance sources, pre-population, default-on-relevance-transition (TS-side state tracking in `_evaluate()`). |
+| `formspec-eval` missing behaviors | excludedValue and variable scope already implemented. Remaining Rust gaps (calculate fixpoint, shape context, valid() MIP) fixed in Phase 1 Tasks 2-3. TS lifecycle: remote options, instance sources, pre-population, default-on-relevance-transition (TS-side state tracking in `_evaluate()`). |
 | Downstream import breakage | No compat shims. Update downstream in Task 13. `createSchemaValidator` → `lintDocument`. Type aliases → import from `formspec-types`. |
 | Runtime context not reaching Rust | Task 2 adds `EvalContext` with `nowIso` to the Rust evaluator. TS converts `_nowProvider` to ISO string before each WASM call. |
 | `compileExpression` in batch model | Returns a function that reads current signal values and calls `wasmEvalFELWithContext`. Reactive when used inside `effect()` because reading `.value` from signals registers Preact dependencies. |
 | Shape timing (submit/demand) | Rust evaluates all shapes. TS filters by timing mode: `_evaluate()` only patches continuous-timing shapes into signals. `getValidationReport({mode:'submit'})` includes submit-timing. `evaluateShape(id)` handles demand-timing. |
-| Studio `FelLexer`/`parser` deletion | Task 15 migrates Studio BEFORE deletion in Task 16. Mandatory. |
+| Studio `FelLexer`/`parser` deletion | Task 13 migrates Studio BEFORE deletion in Task 14. Mandatory. |
