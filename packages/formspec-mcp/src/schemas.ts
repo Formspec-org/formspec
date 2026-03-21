@@ -6,8 +6,8 @@ import {
   type SchemaValidationError,
   type SchemaValidationResult,
   type SchemaValidator,
+  lintDocument,
 } from 'formspec-engine';
-import { wasmLintDocument } from 'formspec-engine/dist/wasm-bridge.js';
 
 let validator: SchemaValidator | null = null;
 
@@ -22,7 +22,7 @@ export function initSchemas(schemasDir: string): SchemaValidator {
 
   validator = {
     validate(document: unknown, documentType?: DocumentType | null): SchemaValidationResult {
-      const result = wasmLintDocument(document);
+      const result = lintDocument(document);
       const errors: SchemaValidationError[] = (result.diagnostics ?? []).map((diagnostic: {
         path?: string;
         message?: string;

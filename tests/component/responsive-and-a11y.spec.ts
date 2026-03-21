@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { waitForWasm } from '../e2e/browser/helpers/harness';
 
 test.describe('Components: Accessibility and Responsive Overrides', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('http://127.0.0.1:8080/');
         await page.waitForSelector('formspec-render', { state: 'attached' });
+        await waitForWasm(page);
     });
 
     test('should set aria-required, aria-invalid, and aria-readonly attributes when rendering required and readonly inputs', async ({ page }) => {

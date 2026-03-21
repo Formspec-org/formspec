@@ -1,7 +1,9 @@
 /** @filedesc E2E test harness entry point: registers formspec-render and exposes engine globals. */
 import { FormspecRender } from '../../../packages/formspec-webcomponent/src/index';
-import { FormEngine, assembleDefinitionSync, initWasm, isWasmReady, createFormEngine } from '../../../packages/formspec-engine/src/index';
-import { wasmEvalFEL, wasmGetFELDependencies, wasmParseFEL } from '../../../packages/formspec-engine/src/wasm-bridge';
+// Import from the same package path as formspec-webcomponent so both share
+// a single WASM module instance. Using relative source paths would create a
+// separate module graph entry and the webcomponent would see uninitialized WASM.
+import { FormEngine, assembleDefinitionSync, initWasm, isWasmReady, createFormEngine } from 'formspec-engine';
 
 customElements.define('formspec-render', FormspecRender);
 
@@ -25,6 +27,3 @@ initWasm().then(() => {
 // Expose WASM readiness check and factory for tests
 (window as any).isWasmReady = isWasmReady;
 (window as any).createFormEngine = createFormEngine;
-(window as any).wasmEvalFEL = wasmEvalFEL;
-(window as any).wasmGetFELDependencies = wasmGetFELDependencies;
-(window as any).wasmParseFEL = wasmParseFEL;

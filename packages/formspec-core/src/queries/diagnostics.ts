@@ -125,7 +125,7 @@ export function diagnose(state: ProjectState, schemaValidator?: SchemaValidator)
   log('extensions done');
 
   log('flattenItems...');
-  const itemRows = flattenItems(state.definition.items);
+  const itemRows = flattenItems(state.definition.items).filter((row) => row.path);
   log(`flattenItems done (${itemRows.length} rows)`);
   const itemKeySet = new Set(itemRows.map((row) => row.key));
   const itemPathSet = new Set(itemRows.map((row) => row.path));

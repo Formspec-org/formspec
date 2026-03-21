@@ -3,12 +3,10 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import * as fs from 'fs';
 import { createRawProject } from '../src/index.js';
-import { initWasm, lintDocument, type SchemaValidator } from 'formspec-engine';
+import { lintDocument, type SchemaValidator } from 'formspec-engine';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCHEMAS_DIR = path.resolve(__dirname, '../../../schemas');
-
-await initWasm();
 
 describe('diagnose', () => {
   function createLintBackedSchemaValidator(): SchemaValidator {

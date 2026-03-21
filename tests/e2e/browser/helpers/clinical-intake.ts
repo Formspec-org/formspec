@@ -2,6 +2,7 @@
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { waitForWasm } from './harness';
 
 const ROOT = path.resolve(__dirname, '../../../../');
 const INTAKE_DIR = path.join(ROOT, 'examples/clinical-intake');
@@ -24,6 +25,7 @@ export async function mountClinicalIntakeWithScreener(page: Page): Promise<void>
   const { definition, component, theme, registry } = loadClinicalIntakeArtifacts();
   await page.goto('/');
   await page.waitForSelector('formspec-render', { state: 'attached' });
+  await waitForWasm(page);
   await page.evaluate(({ def, comp, thm, reg }) => {
     const el: any = document.querySelector('formspec-render');
     el.registryDocuments = reg;
@@ -42,6 +44,7 @@ export async function mountClinicalIntake(page: Page): Promise<void> {
   const { definition, component, theme, registry } = loadClinicalIntakeArtifacts();
   await page.goto('/');
   await page.waitForSelector('formspec-render', { state: 'attached' });
+  await waitForWasm(page);
   await page.evaluate(({ def, comp, thm, reg }) => {
     const el: any = document.querySelector('formspec-render');
     el.registryDocuments = reg;

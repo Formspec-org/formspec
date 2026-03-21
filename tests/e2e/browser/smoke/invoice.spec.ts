@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { waitForWasm } from '../helpers/harness';
 import {
   loadInvoiceArtifacts,
   mountInvoice,
@@ -312,9 +313,10 @@ test.describe('Tax and Discount Calculations', () => {
     // Remove the x-formspec-percentage extension so it doesn't clamp to 100
     const discountItem = artifacts.definition.items.find((i: any) => i.key === 'totals').children.find((i: any) => i.key === 'discountPercent');
     if (discountItem) delete discountItem.extensions;
-    
+
     await page.goto('/');
     await page.waitForSelector('formspec-render', { state: 'attached' });
+    await waitForWasm(page);
     await page.evaluate(({ def, comp, thm, reg }: any) => {
       const el: any = document.querySelector('formspec-render');
       el.registryDocuments = reg;
@@ -422,9 +424,10 @@ test.describe('Validation: Required Fields and Constraints', () => {
     // Remove the x-formspec-percentage extension so it doesn't clamp to 100
     const discountItem = artifacts.definition.items.find((i: any) => i.key === 'totals').children.find((i: any) => i.key === 'discountPercent');
     if (discountItem) delete discountItem.extensions;
-    
+
     await page.goto('/');
     await page.waitForSelector('formspec-render', { state: 'attached' });
+    await waitForWasm(page);
     await page.evaluate(({ def, comp, thm, reg }: any) => {
       const el: any = document.querySelector('formspec-render');
       el.registryDocuments = reg;

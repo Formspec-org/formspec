@@ -5,9 +5,14 @@ import type { Page } from '@playwright/test';
 
 const DEFAULT_HARNESS_URL = 'http://127.0.0.1:8080/';
 
+export async function waitForWasm(page: Page): Promise<void> {
+  await page.waitForFunction(() => (window as any).__wasmReady === true, null, { timeout: 10000 });
+}
+
 export async function gotoHarness(page: Page, url = DEFAULT_HARNESS_URL): Promise<void> {
   await page.goto(url);
   await page.waitForSelector('formspec-render', { state: 'attached' });
+  await waitForWasm(page);
 }
 
 export async function mountDefinition(page: Page, definition: unknown): Promise<void> {

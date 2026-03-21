@@ -2,6 +2,7 @@
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { waitForWasm } from './harness';
 
 const ROOT = path.resolve(__dirname, '../../../../');
 const INVOICE_DIR = path.join(ROOT, 'examples/invoice');
@@ -19,6 +20,7 @@ export async function mountInvoice(page: Page): Promise<void> {
   const { definition, component, theme, registry } = loadInvoiceArtifacts();
   await page.goto('/');
   await page.waitForSelector('formspec-render', { state: 'attached' });
+  await waitForWasm(page);
   await page.evaluate(({ def, comp, thm, reg }) => {
     const el: any = document.querySelector('formspec-render');
     el.registryDocuments = reg;

@@ -2,6 +2,7 @@
 import type { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { waitForWasm } from './harness';
 
 const ROOT = path.resolve(__dirname, '../../../../');
 const REPORT_DIR = path.join(ROOT, 'examples/grant-report');
@@ -26,6 +27,7 @@ export async function mountTribalShort(page: Page): Promise<void> {
   const { definition, component, theme } = loadTribalShortArtifacts();
   await page.goto('/');
   await page.waitForSelector('formspec-render', { state: 'attached' });
+  await waitForWasm(page);
   await page.evaluate(({ def, comp, thm }) => {
     const el: any = document.querySelector('formspec-render');
     el.definition        = def;
@@ -39,6 +41,7 @@ export async function mountTribalLong(page: Page): Promise<void> {
   const { definition, component, theme } = loadTribalLongArtifacts();
   await page.goto('/');
   await page.waitForSelector('formspec-render', { state: 'attached' });
+  await waitForWasm(page);
   await page.evaluate(({ def, comp, thm }) => {
     const el: any = document.querySelector('formspec-render');
     el.definition        = def;

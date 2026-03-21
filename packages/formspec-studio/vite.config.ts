@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import wasm from 'vite-plugin-wasm';
 import path from 'path';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -8,7 +9,7 @@ const repoRoot = path.resolve(__dirname, '../..');
 export default defineConfig({
   base: '/studio/',
   appType: 'mpa',
-  plugins: [react(), tailwindcss()],
+  plugins: [wasm(), react(), tailwindcss()],
   define: {
     'process.env': '{}',
   },
@@ -27,6 +28,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   build: {
+    target: 'esnext',
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),

@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { waitForWasm } from '../e2e/browser/helpers/harness';
 
 test.describe('Components: Core Props and Regression Fixes', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('http://127.0.0.1:8080/');
         await page.waitForSelector('formspec-render', { state: 'attached' });
+        await waitForWasm(page);
     });
 
     test('should render subtitle and elevation styling when Card props are provided', async ({ page }) => {
@@ -107,6 +109,7 @@ test.describe('Components: Progressive Component Rendering', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('http://127.0.0.1:8080/');
         await page.waitForSelector('formspec-render', { state: 'attached' });
+        await waitForWasm(page);
     });
 
     test('should render a grid with the configured column count when using Columns', async ({ page }) => {

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loadGrantArtifacts } from '../helpers/grant-app';
+import { waitForWasm } from '../helpers/harness';
 
 /**
  * Mount the grant application WITHOUT skipping the screener.
@@ -9,6 +10,7 @@ async function mountWithScreener(page: any) {
   const { definition, component, theme, registry } = loadGrantArtifacts();
   await page.goto('/');
   await page.waitForSelector('formspec-render', { state: 'attached' });
+  await waitForWasm(page);
   await page.evaluate(({ def, comp, thm, reg }: any) => {
     try {
       const el: any = document.querySelector('formspec-render');
@@ -226,6 +228,7 @@ test.describe('Screener: Rendering and Route Selection', () => {
     const { definition, component, theme, registry } = loadGrantArtifacts();
     await page.goto('/');
     await page.waitForSelector('formspec-render', { state: 'attached' });
+    await waitForWasm(page);
     await page.evaluate(({ def, comp, thm, reg }: any) => {
       const el: any = document.querySelector('formspec-render');
       el.registryDocuments = reg;
