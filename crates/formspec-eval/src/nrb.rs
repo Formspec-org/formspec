@@ -118,6 +118,8 @@ mod tests {
             repeat_min: None,
             repeat_max: None,
             extensions: vec![],
+            pre_populate_instance: None,
+            pre_populate_path: None,
             children: vec![],
         }
     }

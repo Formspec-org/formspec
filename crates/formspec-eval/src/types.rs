@@ -56,6 +56,10 @@ pub struct ItemInfo {
     pub repeat_max: Option<u64>,
     /// Extension names declared on this item (only enabled ones, value=true).
     pub extensions: Vec<String>,
+    /// Pre-populate instance name (e.g. "userProfile").
+    pub pre_populate_instance: Option<String>,
+    /// Pre-populate path within the instance (e.g. "contactEmail").
+    pub pre_populate_path: Option<String>,
     /// Child items.
     pub children: Vec<ItemInfo>,
 }

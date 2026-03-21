@@ -48,6 +48,23 @@ pub fn evaluate_definition_full(
     trigger: EvalTrigger,
     extension_constraints: &[ExtensionConstraint],
 ) -> EvaluationResult {
+    evaluate_definition_full_with_instances(
+        definition,
+        data,
+        trigger,
+        extension_constraints,
+        &HashMap::new(),
+    )
+}
+
+/// Evaluate a definition with trigger mode, extension constraints, and named instances.
+pub fn evaluate_definition_full_with_instances(
+    definition: &Value,
+    data: &HashMap<String, Value>,
+    trigger: EvalTrigger,
+    extension_constraints: &[ExtensionConstraint],
+    instances: &HashMap<String, Value>,
+) -> EvaluationResult {
     // Phase 0: Flatten nested data into indexed paths.
     // Converts `{"rows": [{"a": 1}]}` → `{"rows[0].a": 1}` so the FEL
     // evaluator can resolve `$rows[0].a` via flat key lookup.
@@ -56,8 +73,11 @@ pub fn evaluate_definition_full(
     // Phase 1: Rebuild
     let mut items = rebuild_item_tree(definition);
 
-    // Phase 1.5: Seed initial values for missing fields (9e)
+    // Phase 1.4: Seed missing values from prePopulate instances
     let mut seeded_data = flat_data;
+    seed_prepopulate_tree(&items, &mut seeded_data, instances);
+
+    // Phase 1.5: Seed initial values for missing fields (9e)
     rebuild::seed_initial_values(&items, &mut seeded_data);
 
     // Phase 1.6: Expand repeatable groups into concrete indexed instances
@@ -122,6 +142,62 @@ pub fn evaluate_definition_full(
 
 // Also re-export parse_variables since it was pub
 pub use rebuild::parse_variables;
+
+// ── prePopulate helpers ─────────────────────────────────────────
+
+/// Walk the item tree and seed missing/null field values from named instances.
+fn seed_prepopulate_tree(
+    items: &[ItemInfo],
+    values: &mut HashMap<String, Value>,
+    instances: &HashMap<String, Value>,
+) {
+    for item in items {
+        seed_prepopulate(item, values, instances);
+    }
+}
+
+fn seed_prepopulate(
+    item: &ItemInfo,
+    values: &mut HashMap<String, Value>,
+    instances: &HashMap<String, Value>,
+) {
+    // Only seed if field value is missing or null
+    if let Some(existing) = values.get(&item.path) {
+        if !existing.is_null() {
+            // Recurse into children even if this item has a value
+            for child in &item.children {
+                seed_prepopulate(child, values, instances);
+            }
+            return;
+        }
+    }
+
+    if let (Some(inst_name), Some(inst_path)) =
+        (&item.pre_populate_instance, &item.pre_populate_path)
+    {
+        if let Some(instance_data) = instances.get(inst_name) {
+            let val = get_by_dotted_path(instance_data, inst_path);
+            if !val.is_null() {
+                values.insert(item.path.clone(), val);
+            }
+        }
+    }
+
+    for child in &item.children {
+        seed_prepopulate(child, values, instances);
+    }
+}
+
+fn get_by_dotted_path(val: &Value, path: &str) -> Value {
+    let mut current = val;
+    for seg in path.split('.') {
+        match current.get(seg) {
+            Some(v) => current = v,
+            None => return Value::Null,
+        }
+    }
+    current.clone()
+}
 
 // ── Integration tests ───────────────────────────────────────────
 // Tests that exercise the full pipeline (calling evaluate_definition end-to-end)

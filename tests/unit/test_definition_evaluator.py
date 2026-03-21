@@ -1221,9 +1221,45 @@ class TestCreationTimeInitializers:
         result2 = evaluate_definition(defn, {'status': 'final'})
         assert result2.data.get('status') == 'final'
 
-    @pytest.mark.skip(reason="Rust backend does not support prepopulate/instance — requires instance context in evaluate_def")
     def test_prepopulate_reads_from_instance_when_field_missing(self):
-        pass
+        """prePopulate seeds a missing field from a named instance."""
+        defn = {
+            '$formspec': '1.0',
+            'url': 'test://prepopulate',
+            'version': '1.0.0',
+            'status': 'draft',
+            'title': 'PrePopulate Test',
+            'items': [
+                {
+                    'key': 'email',
+                    'type': 'field',
+                    'dataType': 'string',
+                    'prePopulate': {
+                        'instance': 'profile',
+                        'path': 'contactEmail',
+                    },
+                },
+                {
+                    'key': 'name',
+                    'type': 'field',
+                    'dataType': 'string',
+                },
+            ],
+        }
+        instances = {
+            'profile': {
+                'contactEmail': 'alice@example.com',
+                'phone': '555-1234',
+            }
+        }
+
+        # Field missing → prePopulate fills it
+        result = evaluate_definition(defn, {}, instances=instances)
+        assert result.data.get('email') == 'alice@example.com'
+
+        # Field present → prePopulate does NOT override
+        result2 = evaluate_definition(defn, {'email': 'bob@example.com'}, instances=instances)
+        assert result2.data.get('email') == 'bob@example.com'
 
 
 class TestDefaultRelevanceTransition:

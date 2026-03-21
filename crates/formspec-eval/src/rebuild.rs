@@ -160,6 +160,16 @@ fn build_item_info(item: &Value, binds: Option<&Value>, parent_path: Option<&str
                     .collect()
             })
             .unwrap_or_default(),
+        pre_populate_instance: item
+            .get("prePopulate")
+            .and_then(|pp| pp.get("instance"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        pre_populate_path: item
+            .get("prePopulate")
+            .and_then(|pp| pp.get("path"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
         children,
     }
 }

@@ -26,7 +26,7 @@ use formspec_core::registry_client::{self, Registry};
 use formspec_core::runtime_mapping;
 use formspec_core::{analyze_fel, detect_document_type, get_fel_dependencies};
 use formspec_eval::{
-    EvalTrigger, ExtensionConstraint, evaluate_definition_full, evaluate_screener,
+    EvalTrigger, ExtensionConstraint, evaluate_definition_full_with_instances, evaluate_screener,
 };
 use formspec_lint::{LintMode, LintOptions, lint_with_options};
 
@@ -302,13 +302,14 @@ fn lint_document(
 ///
 /// Returns:
 ///     A dict with: values, validations, non_relevant, variables
-#[pyfunction(signature = (definition, data, trigger=None, registry_documents=None))]
+#[pyfunction(signature = (definition, data, trigger=None, registry_documents=None, instances=None))]
 fn evaluate_def(
     py: Python,
     definition: &Bound<'_, PyAny>,
     data: &Bound<'_, PyAny>,
     trigger: Option<&str>,
     registry_documents: Option<&Bound<'_, PyList>>,
+    instances: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<PyObject> {
     let definition: Value = depythonize(definition)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
@@ -332,7 +333,26 @@ fn evaluate_def(
         None => Vec::new(),
     };
 
-    let result = evaluate_definition_full(&definition, &data, eval_trigger, &constraints);
+    // Parse instances into HashMap<String, Value>
+    let instances_map: HashMap<String, Value> = match instances {
+        Some(inst) => {
+            let inst_val: Value = depythonize(inst)
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+            inst_val
+                .as_object()
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default()
+        }
+        None => HashMap::new(),
+    };
+
+    let result = evaluate_definition_full_with_instances(
+        &definition,
+        &data,
+        eval_trigger,
+        &constraints,
+        &instances_map,
+    );
 
     let values = PyDict::new(py);
     for (k, v) in &result.values {
