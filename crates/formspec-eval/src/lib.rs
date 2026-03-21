@@ -401,36 +401,32 @@ pub fn expand_wildcard_path(pattern: &str, data: &HashMap<String, Value>) -> Vec
         .collect()
 }
 
-/// Flatten nested data: converts array-valued entries into indexed paths.
-/// `{"rows": [{"a": 1, "b": 2}]}` → `{"rows[0].a": 1, "rows[0].b": 2}`.
-/// Already-flat entries are passed through unchanged.
+/// Augment nested data with indexed paths for repeat groups.
+/// `{"rows": [{"a": 1}]}` adds `{"rows[0].a": 1}` while keeping the original `rows` key.
+/// This lets FEL resolve `$rows[0].a` via flat lookup while preserving nested output format.
 fn flatten_nested_data(data: &HashMap<String, Value>) -> HashMap<String, Value> {
-    let mut flat = HashMap::new();
+    let mut augmented = data.clone();
     for (key, value) in data {
-        flatten_value(&mut flat, key, value);
+        augment_array_value(&mut augmented, key, value);
     }
-    flat
+    augmented
 }
 
-fn flatten_value(out: &mut HashMap<String, Value>, prefix: &str, value: &Value) {
-    match value {
-        Value::Array(arr) => {
+fn augment_array_value(out: &mut HashMap<String, Value>, prefix: &str, value: &Value) {
+    if let Value::Array(arr) = value {
+        if !arr.is_empty() && arr.iter().all(|e| e.is_object()) {
+            // Array of objects = repeat group instances — add indexed paths
             for (i, elem) in arr.iter().enumerate() {
                 let indexed = format!("{prefix}[{i}]");
-                match elem {
-                    Value::Object(map) => {
-                        for (k, v) in map {
-                            flatten_value(out, &format!("{indexed}.{k}"), v);
-                        }
-                    }
-                    _ => {
-                        out.insert(indexed, elem.clone());
+                if let Value::Object(map) = elem {
+                    for (k, v) in map {
+                        let path = format!("{indexed}.{k}");
+                        out.insert(path.clone(), v.clone());
+                        // Recurse for nested repeat groups
+                        augment_array_value(out, &path, v);
                     }
                 }
             }
-        }
-        _ => {
-            out.insert(prefix.to_string(), value.clone());
         }
     }
 }
@@ -807,14 +803,167 @@ fn evaluate_items_with_inheritance(
             },
         );
 
-        // Recurse into children with inherited state
-        evaluate_items_with_inheritance(
-            &mut item.children,
-            env,
-            values,
-            item.relevant,
-            item.readonly,
+        // Recurse into children with inherited state.
+        // For repeatable groups, add bare-name field aliases per instance
+        // so that wildcard bind expressions like `$enabled` resolve to
+        // the concrete sibling value (e.g., `rows[0].enabled`).
+        if item.repeatable && !item.children.is_empty() {
+            evaluate_repeat_children_with_aliases(
+                &mut item.children,
+                env,
+                values,
+                item.relevant,
+                item.readonly,
+                &item.path,
+            );
+        } else {
+            evaluate_items_with_inheritance(
+                &mut item.children,
+                env,
+                values,
+                item.relevant,
+                item.readonly,
+            );
+        }
+    }
+}
+
+/// Evaluate children of a repeatable group, adding bare-name field aliases
+/// so `$sibling` resolves to the concrete indexed value in each row.
+fn evaluate_repeat_children_with_aliases(
+    children: &mut [ItemInfo],
+    env: &mut FormspecEnvironment,
+    values: &mut HashMap<String, Value>,
+    parent_relevant: bool,
+    parent_readonly: bool,
+    group_path: &str,
+) {
+    // Group children by instance index (e.g., "rows[0]." prefix)
+    // and set bare-name aliases before evaluating each batch.
+    let mut current_instance: Option<String> = None;
+    let mut bare_names: Vec<String> = Vec::new();
+
+    for item in children.iter_mut() {
+        let instance_prefix = item.parent_path.as_deref().unwrap_or("");
+
+        // When the instance changes, set up bare-name aliases
+        if current_instance.as_deref() != Some(instance_prefix) {
+            // Clean up previous aliases
+            for name in &bare_names {
+                env.set_field(name, FelValue::Null);
+            }
+            bare_names.clear();
+
+            // Collect all sibling values for this instance
+            current_instance = Some(instance_prefix.to_string());
+            let prefix_dot = format!("{instance_prefix}.");
+            for (k, v) in values.iter() {
+                if let Some(bare) = k.strip_prefix(&prefix_dot) {
+                    if !bare.contains('.') {
+                        env.set_field(bare, json_to_fel(v));
+                        bare_names.push(bare.to_string());
+                    }
+                }
+            }
+        }
+
+        // Process this item normally
+        item.prev_relevant = item.relevant;
+        let own_relevant = if let Some(ref expr) = item.relevance {
+            eval_bool(expr, env, true)
+        } else {
+            true
+        };
+        item.relevant = own_relevant && parent_relevant;
+
+        if item.relevant && !item.prev_relevant {
+            if let Some(ref default_val) = item.default_value {
+                let current = values.get(&item.path);
+                let is_empty = match current {
+                    None | Some(Value::Null) => true,
+                    Some(Value::String(s)) => s.is_empty(),
+                    _ => false,
+                };
+                if is_empty {
+                    values.insert(item.path.clone(), default_val.clone());
+                    env.set_field(&item.path, json_to_fel(default_val));
+                }
+            }
+        }
+
+        if !item.relevant {
+            if let Some(ref ev) = item.excluded_value {
+                if ev == "null" {
+                    env.set_field(&item.path, FelValue::Null);
+                }
+            }
+        }
+
+        let own_readonly = if let Some(ref expr) = item.readonly_expr {
+            eval_bool(expr, env, false)
+        } else {
+            false
+        };
+        item.readonly = own_readonly || parent_readonly;
+
+        if item.relevant {
+            if let Some(ref expr) = item.required_expr {
+                item.required = eval_bool(expr, env, false);
+            }
+        } else {
+            item.required = false;
+        }
+
+        if let Some(val) = values.get(&item.path) {
+            item.value = val.clone();
+        }
+
+        if let Some(ref expr) = item.calculate {
+            if let Ok(parsed) = parse(expr) {
+                let result = evaluate(&parsed, env);
+                let json_val = fel_to_json(&result.value);
+                values.insert(item.path.clone(), json_val.clone());
+                item.value = json_val.clone();
+                env.set_field(&item.path, json_to_fel(&json_val));
+                // Update bare-name alias with calculated value
+                env.set_field(&item.key, json_to_fel(&json_val));
+            }
+        }
+
+        env.set_mip(
+            &item.path,
+            MipState {
+                valid: true,
+                relevant: item.relevant,
+                readonly: item.readonly,
+                required: item.required,
+            },
         );
+
+        // Recurse into nested groups
+        if item.repeatable && !item.children.is_empty() {
+            evaluate_repeat_children_with_aliases(
+                &mut item.children,
+                env,
+                values,
+                item.relevant,
+                item.readonly,
+                &item.path,
+            );
+        } else {
+            evaluate_items_with_inheritance(
+                &mut item.children,
+                env,
+                values,
+                item.relevant,
+                item.readonly,
+            );
+        }
+    }
+
+    // Clean up aliases
+    for name in &bare_names {
+        env.set_field(name, FelValue::Null);
     }
 }
 
@@ -1684,18 +1833,12 @@ fn apply_wildcard_binds(
             None => continue,
         };
 
-        // Collect sibling keys for bare-reference rewriting.
-        // Find the repeatable group and get its template children's keys.
-        let sibling_keys = collect_sibling_keys(items, &base);
-
         let count = detect_repeat_count(&base, data);
         for i in 0..count {
             let concrete_path = bind_path.replace("[*]", &format!("[{}]", i));
             if let Some(item) = find_item_by_path_mut(items, &concrete_path) {
-                // Instantiate: first replace [*] → [i], then rewrite bare siblings
                 let inst = |expr: &str| -> String {
-                    let s = instantiate_wildcard_expr(expr, &base, i);
-                    instantiate_sibling_refs(&s, &base, i, &sibling_keys)
+                    instantiate_wildcard_expr(expr, &base, i)
                 };
 
                 // Merge bind fields — only overwrite when the bind specifies the field.
@@ -5266,6 +5409,38 @@ mod tests {
             .filter(|v| v.message.contains("Required"))
             .collect();
         assert!(req_errors.is_empty(), "non-relevant field should suppress required: {:?}", req_errors);
+    }
+
+    /// Same test but with nested data format (as Python tests use).
+    #[test]
+    fn wildcard_bind_bare_sibling_nested_data() {
+        let def = json!({
+            "items": [
+                {
+                    "key": "rows",
+                    "repeatable": true,
+                    "children": [
+                        { "key": "enabled", "dataType": "boolean" },
+                        { "key": "note", "dataType": "string" }
+                    ]
+                }
+            ],
+            "binds": [
+                { "path": "rows[*].note", "relevant": "$enabled" },
+                { "path": "rows[*].note", "required": "true" }
+            ]
+        });
+
+        let mut data = HashMap::new();
+        data.insert("rows".to_string(), json!([{"enabled": false, "note": ""}]));
+
+        let result = evaluate_definition_with_trigger(&def, &data, EvalTrigger::Continuous);
+        let req_errors: Vec<_> = result
+            .validations
+            .iter()
+            .filter(|v| v.message.contains("Required"))
+            .collect();
+        assert!(req_errors.is_empty(), "nested data: non-relevant field should suppress required: {:?}", req_errors);
     }
 
     // ── Edge cases: scoped variables ────────────────────────────
