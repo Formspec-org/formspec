@@ -132,7 +132,7 @@ class TestEvaluateVariables:
         }
         result = evaluate_definition(defn, {'outer': {'inner': {'val': 0}}})
         # Nearest scope (inner) wins — multiplier = 10
-        assert result.data.get('outer.inner.val', result.data.get('outer', {}).get('inner', {}).get('val')) == 10
+        assert result.data['outer.inner.val'] == 10
 
     def test_scoped_variable_is_not_visible_outside_its_scope(self):
         """A variable scoped to a group is not visible to items outside that group."""
@@ -149,11 +149,10 @@ class TestEvaluateVariables:
             'variables': [
                 {'name': 'secret', 'expression': '42', 'scope': 'section'},
             ],
-            'binds': [{'path': 'outer', 'calculate': '$secret'}],
+            'binds': [{'path': 'outer', 'calculate': '@secret'}],
         }
         result = evaluate_definition(defn, {'section': {'inner': 0}, 'outer': 0})
-        # $secret is not visible outside 'section', so calculate should not resolve
-        # The value stays as-is (0) or becomes null
+        # @secret is scoped to 'section', not visible at 'outer' — calculate should not resolve
         outer_val = result.data.get('outer')
         assert outer_val is None or outer_val == 0
 
@@ -175,7 +174,7 @@ class TestEvaluateVariables:
             'binds': [{'path': 'rows[*].doubled', 'calculate': '$rows[*].amount * @factor'}],
         }
         result = evaluate_definition(defn, {'rows': [{'amount': 5, 'doubled': 0}]})
-        assert result.data.get('rows[0].doubled', result.data.get('rows', [{}])[0].get('doubled')) == 10
+        assert result.data['rows[0].doubled'] == 10
 
 
 # ── Shape evaluation ─────────────────────────────────────────────────────────

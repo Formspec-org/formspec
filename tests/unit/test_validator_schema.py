@@ -108,7 +108,6 @@ def test_component_validation_completes_on_large_tree() -> None:
     lint(doc)
 
 
-@pytest.mark.skip(reason="Rust jsonschema crate does not track unevaluatedProperties through allOf>if/then composition")
 @_with_timeout(10)
 def test_component_validation_detects_errors() -> None:
     """Component validation should still report genuine schema violations."""
