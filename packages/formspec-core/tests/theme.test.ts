@@ -186,7 +186,14 @@ describe('theme.setExtension', () => {
   it('sets a document-level extension', () => {
     const project = createRawProject();
     project.dispatch({ type: 'theme.setExtension', payload: { key: 'x-vendor', value: { flag: true } } });
-    expect((project.theme as any)['x-vendor']).toEqual({ flag: true });
+    expect((project.theme as any).extensions['x-vendor']).toEqual({ flag: true });
+  });
+
+  it('deletes an extension with null', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'theme.setExtension', payload: { key: 'x-vendor', value: { flag: true } } });
+    project.dispatch({ type: 'theme.setExtension', payload: { key: 'x-vendor', value: null } });
+    expect((project.theme as any).extensions['x-vendor']).toBeUndefined();
   });
 });
 

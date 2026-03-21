@@ -194,10 +194,11 @@ export const themeHandlers: Record<string, CommandHandler> = {
 
   'theme.setExtension': (state, payload) => {
     const { key, value } = payload as { key: string; value: unknown };
+    if (!state.theme.extensions) state.theme.extensions = {};
     if (value === null) {
-      delete (state.theme as any)[key];
+      delete (state.theme.extensions as any)[key];
     } else {
-      (state.theme as any)[key] = value;
+      (state.theme.extensions as any)[key] = value;
     }
     return { rebuildComponentTree: false };
   },
