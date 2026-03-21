@@ -30,8 +30,9 @@ pub use path_utils::{
     normalize_path_segment, parent_path, split_normalized_path,
 };
 pub use runtime_mapping::{
-    CoerceType, MappingDiagnostic, MappingDirection, MappingDocument, MappingResult, MappingRule,
-    TransformType, UnmappedStrategy, execute_mapping, execute_mapping_doc,
+    ArrayDescriptor, ArrayMode, CoerceType, MappingDiagnostic, MappingDirection, MappingDocument,
+    MappingErrorCode, MappingResult, MappingRule, ReverseOverride, TransformType,
+    UnmappedStrategy, execute_mapping, execute_mapping_doc,
 };
 pub use schema_validator::{
     ComponentValidationTarget, DocumentType, JsonSchemaValidator, SchemaValidationError,

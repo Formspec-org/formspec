@@ -7,13 +7,11 @@
   "files": [
     "formspec_wasm_bg.wasm",
     "formspec_wasm.js",
-    "formspec_wasm_bg.js",
     "formspec_wasm.d.ts"
   ],
   "main": "formspec_wasm.js",
   "types": "formspec_wasm.d.ts",
   "sideEffects": [
-    "./formspec_wasm.js",
     "./snippets/*"
   ]
 }

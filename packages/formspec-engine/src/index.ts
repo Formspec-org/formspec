@@ -51,6 +51,7 @@ import {
     wasmCollectFELRewriteTargets,
     wasmEvaluateDefinition,
     wasmEvalFELWithContext,
+    wasmExecuteMappingDoc,
     wasmFindRegistryEntry,
     wasmGenerateChangelog,
     wasmGetFELDependencies,
@@ -269,306 +270,8 @@ export function createMappingEngine(mappingDoc: unknown): IRuntimeMappingEngine 
 }
 
 // ---------------------------------------------------------------------------
-// RuntimeMappingEngine — full TS implementation with WASM FEL
+// RuntimeMappingEngine — thin WASM wrapper + TS adapter post-processing
 // ---------------------------------------------------------------------------
-
-type MappingRule = {
-    sourcePath?: string | null;
-    targetPath?: string | null;
-    transform?: string;
-    expression?: string;
-    coerce?: any;
-    valueMap?: any;
-    condition?: string;
-    reverse?: Partial<MappingRule>;
-    priority?: number;
-    reversePriority?: number;
-    bidirectional?: boolean;
-    default?: any;
-    separator?: string;
-    array?: MappingArrayDescriptor;
-};
-
-type MappingArrayDescriptor = {
-    mode: 'each' | 'whole' | 'indexed';
-    innerRules?: any[];
-};
-
-function mappingSplitPath(path: string): string[] {
-    if (!path) return [];
-    return path.replace(/\[(\d+|\*)\]/g, '.$1').split('.').filter(Boolean);
-}
-
-function mappingGetByPath(obj: any, path?: string | null): any {
-    if (!path) return undefined;
-    const parts = mappingSplitPath(path);
-    let current = obj;
-    for (const part of parts) {
-        if (current == null) return undefined;
-        if (part === '*') return Array.isArray(current) ? current : undefined;
-        current = current[part];
-    }
-    return current;
-}
-
-function mappingSetByPath(obj: any, path: string, value: any): void {
-    const parts = mappingSplitPath(path);
-    if (parts.length === 0) return;
-    let current = obj;
-    for (let i = 0; i < parts.length - 1; i++) {
-        const part = parts[i];
-        if (part === '*') {
-            if (!Array.isArray(current)) return;
-            const remainingPath = parts.slice(i + 1).join('.');
-            for (const element of current) {
-                if (element != null && typeof element === 'object') {
-                    mappingSetByPath(element, remainingPath, value);
-                }
-            }
-            return;
-        }
-        const nextPart = parts[i + 1];
-        if (nextPart === '*') {
-            if (current[part] == null) return;
-            current = current[part];
-            continue;
-        }
-        const nextIsIndex = /^\d+$/.test(nextPart);
-        if (current[part] == null || typeof current[part] !== 'object') {
-            current[part] = nextIsIndex ? [] : {};
-        }
-        current = current[part];
-    }
-    const lastPart = parts[parts.length - 1];
-    if (lastPart === '*') {
-        if (Array.isArray(current)) {
-            for (let j = 0; j < current.length; j++) current[j] = value;
-        }
-    } else {
-        current[lastPart] = value;
-    }
-}
-
-function mappingClone<T>(value: T): T {
-    if (value === null || value === undefined || typeof value !== 'object') return value;
-    if (typeof structuredClone === 'function') return structuredClone(value);
-    return JSON.parse(JSON.stringify(value));
-}
-
-function mappingEvalFEL(expression: string, currentValue: any, sourceDocument: any, arrayIndex?: number): any {
-    const fields: Record<string, any> = {};
-    if (sourceDocument && typeof sourceDocument === 'object') {
-        mappingFlattenToFields(sourceDocument, '', fields);
-    }
-    fields[''] = currentValue;
-    fields['$index'] = arrayIndex ?? null;
-    fields['index'] = arrayIndex ?? null;
-    return wasmEvalFELWithContext(expression, {
-        fields,
-        variables: { source: sourceDocument, index: arrayIndex ?? null },
-    });
-}
-
-function mappingFlattenToFields(obj: any, prefix: string, out: Record<string, any>): void {
-    if (obj == null || typeof obj !== 'object') return;
-    for (const [key, value] of Object.entries(obj)) {
-        const path = prefix ? `${prefix}.${key}` : key;
-        out[path] = value;
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-            mappingFlattenToFields(value, path, out);
-        }
-    }
-}
-
-function mappingIsBijective(forward: Record<string, any>): boolean {
-    const values = Object.values(forward);
-    return values.length === new Set(values.map(String)).size;
-}
-
-function mappingInvertMap(forward: Record<string, any>): Record<string, any> {
-    const result: Record<string, any> = {};
-    for (const [k, v] of Object.entries(forward)) result[String(v)] = k;
-    return result;
-}
-
-function mappingApplyValueMap(
-    rawValueMap: any, value: any, direction: MappingDirection,
-    ruleIndex: number, sourcePath: string | undefined, targetPath: string | undefined,
-): { value: any; skip: boolean; diagnostic?: MappingDiagnostic } {
-    const isNewShape = rawValueMap && typeof rawValueMap === 'object'
-        && ('forward' in rawValueMap || 'reverse' in rawValueMap || 'unmapped' in rawValueMap);
-
-    let lookupMap: Record<string, any>;
-    let unmapped = 'passthrough';
-    let defaultValue: any;
-
-    if (isNewShape) {
-        const forward: Record<string, any> = rawValueMap.forward ?? {};
-        unmapped = rawValueMap.unmapped ?? 'error';
-        defaultValue = rawValueMap.default;
-        if (direction === 'forward') {
-            lookupMap = forward;
-        } else {
-            if (rawValueMap.reverse) { lookupMap = rawValueMap.reverse; }
-            else if (mappingIsBijective(forward)) { lookupMap = mappingInvertMap(forward); }
-            else {
-                return { value: undefined, skip: true, diagnostic: { ruleIndex, sourcePath, targetPath, errorCode: 'UNMAPPED_VALUE', message: 'Cannot auto-invert non-bijective valueMap for reverse direction' } };
-            }
-        }
-    } else {
-        lookupMap = rawValueMap ?? {};
-    }
-
-    const key = String(value);
-    if (value !== undefined && lookupMap[key] !== undefined) {
-        return { value: lookupMap[key], skip: false };
-    }
-
-    if (unmapped === 'passthrough') return { value, skip: false };
-    if (unmapped === 'drop') return { value: undefined, skip: true };
-    if (unmapped === 'default') return { value: defaultValue, skip: false };
-    if (unmapped === 'error') {
-        return { value: undefined, skip: true, diagnostic: { ruleIndex, sourcePath, targetPath, errorCode: 'UNMAPPED_VALUE', message: `Value "${key}" has no mapping and unmapped strategy is "error"` } };
-    }
-    return { value, skip: false };
-}
-
-const MAPPING_LOSSY_PAIRS = new Set([
-    'number\u2192integer', 'money\u2192number', 'money\u2192string', 'datetime\u2192date',
-]);
-
-function mappingIsLossy(from: string, to: string): boolean {
-    return MAPPING_LOSSY_PAIRS.has(`${from}\u2192${to}`);
-}
-
-function mappingApplyCoerce(
-    value: any, desc: any, ruleIndex: number, sourcePath: string | undefined, targetPath: string | undefined,
-): { value: any; diagnostic?: MappingDiagnostic; lossy?: boolean } {
-    if (value === undefined) return { value: undefined };
-    let from: string, to: string;
-    if (typeof desc === 'string') { from = 'any'; to = desc; }
-    else if (desc == null) { return { value }; }
-    else { from = desc.from ?? 'any'; to = desc.to ?? 'string'; }
-
-    if (to === 'number') {
-        if (from === 'money') {
-            return value != null && typeof value === 'object' && 'amount' in value
-                ? { value: value.amount, lossy: true } : { value: null, lossy: true };
-        }
-        return { value: value == null ? null : Number(value) };
-    }
-    if (to === 'integer') {
-        if (from === 'boolean') return { value: value ? 1 : 0 };
-        const n = value == null ? null : Number(value);
-        if (n !== null && !Number.isFinite(n)) {
-            return { value: null, diagnostic: { ruleIndex, sourcePath, targetPath, errorCode: 'COERCE_FAILURE', message: `Cannot coerce "${value}" to integer` } };
-        }
-        if (n !== null && typeof n === 'number' && !Number.isInteger(n)) {
-            return { value: Math.trunc(n), lossy: from === 'number' };
-        }
-        return { value: n === null ? null : Math.trunc(n as number) };
-    }
-    if (to === 'string') {
-        if (from === 'money') {
-            return value != null && typeof value === 'object' && 'amount' in value
-                ? { value: String(value.amount), lossy: true } : { value: null, lossy: true };
-        }
-        return { value: value == null ? null : String(value) };
-    }
-    if (to === 'boolean') {
-        if (from === 'string' || typeof value === 'string') {
-            const s = String(value).toLowerCase().trim();
-            if (s === 'true' || s === 'yes' || s === '1') return { value: true };
-            if (s === 'false' || s === 'no' || s === '0' || s === '') return { value: false };
-            return { value: Boolean(value) };
-        }
-        return { value: Boolean(value) };
-    }
-    if (to === 'date') return { value: value == null ? null : String(value) };
-    if (to === 'datetime') {
-        return { value: value == null ? null : String(value), lossy: from === 'date' ? true : undefined };
-    }
-    return { value: null, diagnostic: { ruleIndex, sourcePath, targetPath, errorCode: 'COERCE_FAILURE', message: `Unsupported coerce type: ${to}` } };
-}
-
-function mappingReverseCoerce(desc: any): any | null | 'passthrough' {
-    if (desc == null || typeof desc === 'string') return 'passthrough';
-    const from = desc.from ?? 'any';
-    const to = desc.to ?? 'string';
-    if (mappingIsLossy(from, to)) return null;
-    return { from: to, to: from, format: desc.format };
-}
-
-function mappingApplyFlatten(value: any, targetPath: string, separator: string | undefined, output: any): void {
-    if (Array.isArray(value)) {
-        if (separator !== undefined) { mappingSetByPath(output, targetPath, value.join(separator)); }
-        else { for (let i = 0; i < value.length; i++) mappingSetByPath(output, `${targetPath}_${i}`, mappingClone(value[i])); }
-    } else if (value !== null && typeof value === 'object') {
-        const parts = mappingSplitPath(targetPath);
-        const lastSeg = parts[parts.length - 1];
-        const parentPath = parts.slice(0, -1).join('.');
-        if (parentPath) {
-            const p = mappingGetByPath(output, parentPath);
-            if (p == null || typeof p !== 'object') mappingSetByPath(output, parentPath, {});
-        }
-        const container = parentPath ? mappingGetByPath(output, parentPath) : output;
-        for (const [k, v] of Object.entries(value)) container[`${lastSeg}.${k}`] = mappingClone(v);
-    }
-}
-
-function mappingApplyNest(source: any, sourcePath: string, targetPath: string, separator: string | undefined, output: any): void {
-    const value = mappingGetByPath(source, sourcePath);
-    if (typeof value === 'string' && separator !== undefined) {
-        mappingSetByPath(output, targetPath, value.split(separator));
-        return;
-    }
-    const positional: any[] = [];
-    let i = 0;
-    while (true) {
-        const c = mappingGetByPath(source, `${sourcePath}_${i}`);
-        if (c === undefined) break;
-        positional.push(c);
-        i++;
-    }
-    if (positional.length > 0) { mappingSetByPath(output, targetPath, positional); return; }
-    if (value !== undefined) mappingSetByPath(output, targetPath, mappingClone(value));
-}
-
-function mappingExecuteEach(
-    sourceArray: any[], innerRules: any[], sourceDocument: any,
-    diagnostics: MappingDiagnostic[], parentRuleIndex: number,
-): any[] {
-    return sourceArray.map((element: any, index: number) => {
-        const itemOutput: any = {};
-        for (const ir of innerRules) {
-            const srcPath = ir.sourcePath;
-            const tgtPath = ir.targetPath;
-            if (!tgtPath && ir.transform !== 'drop') continue;
-            let value = srcPath ? mappingGetByPath(element, srcPath) : undefined;
-            const transform = ir.transform || 'preserve';
-            if (transform === 'drop') continue;
-            if (transform === 'expression') {
-                try { value = mappingEvalFEL(ir.expression, value, sourceDocument, index); }
-                catch (e) { diagnostics.push({ ruleIndex: parentRuleIndex, sourcePath: srcPath ?? undefined, targetPath: tgtPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); continue; }
-            }
-            if (ir.default !== undefined && value === undefined) value = ir.default;
-            if (value === undefined) continue;
-            mappingSetByPath(itemOutput, tgtPath!, mappingClone(value));
-        }
-        return itemOutput;
-    });
-}
-
-function mappingExecuteIndexed(sourceArray: any[], innerRules: any[], output: any, targetBasePath: string): void {
-    for (const ir of innerRules) {
-        const idx = ir.index;
-        const tgtPath = ir.targetPath;
-        if (idx === undefined || !tgtPath) continue;
-        const value = sourceArray[idx];
-        if (value === undefined) continue;
-        mappingSetByPath(output, targetBasePath ? `${targetBasePath}.${tgtPath}` : tgtPath, mappingClone(value));
-    }
-}
 
 interface MappingCSVConfig { delimiter?: string; quote?: string; header?: boolean; lineEnding?: 'crlf' | 'lf'; }
 
@@ -675,24 +378,11 @@ function mappingSortKeysDeep(obj: any): void {
     for (const [key, value] of entries) { obj[key] = value; if (typeof value === 'object') mappingSortKeysDeep(value); }
 }
 
-function mappingParseSimpleLiteral(expression: string): any {
-    const t = expression.trim();
-    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) return t.slice(1, -1);
-    if (t === 'true') return true;
-    if (t === 'false') return false;
-    if (t === 'null') return null;
-    const n = Number(t);
-    if (Number.isFinite(n)) return n;
-    return t;
-}
-
 export class RuntimeMappingEngine implements IRuntimeMappingEngine {
     private readonly doc: any;
-    private readonly rules: MappingRule[];
 
     constructor(mappingDocument: any) {
         this.doc = mappingDocument || {};
-        this.rules = Array.isArray(this.doc.rules) ? this.doc.rules : [];
     }
 
     public forward(source: any): RuntimeMappingResult {
@@ -704,139 +394,39 @@ export class RuntimeMappingEngine implements IRuntimeMappingEngine {
     }
 
     private execute(direction: MappingDirection, source: any): RuntimeMappingResult {
-        const output: any = {};
-        const diagnostics: MappingDiagnostic[] = [];
-        let appliedRules = 0;
+        // Delegate to WASM for core rule evaluation
+        let wasmResult: { direction: string; output: any; rulesApplied: number; diagnostics: any[] };
+        try {
+            wasmResult = wasmExecuteMappingDoc(this.doc, source, direction);
+        } catch (e) {
+            // WASM parser errors (e.g. unknown transform) become diagnostics
+            return {
+                direction,
+                output: {},
+                appliedRules: 0,
+                diagnostics: [{
+                    ruleIndex: -1,
+                    errorCode: 'COERCE_FAILURE',
+                    message: String(e).replace(/^Error:\s*/, ''),
+                }],
+            };
+        }
+        let output = wasmResult.output;
+        const diagnostics: MappingDiagnostic[] = wasmResult.diagnostics.map((d: any) => ({
+            ruleIndex: d.ruleIndex,
+            sourcePath: d.sourcePath ?? undefined,
+            targetPath: d.targetPath ?? undefined,
+            errorCode: d.errorCode ?? 'COERCE_FAILURE',
+            message: d.message,
+        }));
+        const appliedRules = wasmResult.rulesApplied;
 
-        const docDir = this.doc.direction;
-        if (docDir === 'forward' && direction === 'reverse') {
-            diagnostics.push({ ruleIndex: -1, errorCode: 'INVALID_DOCUMENT', message: 'This mapping document is forward-only; reverse execution is not permitted' });
+        // If direction was blocked, return early (WASM already set INVALID_DOCUMENT diagnostic)
+        if (diagnostics.some(d => d.errorCode === 'INVALID_DOCUMENT')) {
             return { direction, output, appliedRules, diagnostics };
         }
-        if (docDir === 'reverse' && direction === 'forward') {
-            diagnostics.push({ ruleIndex: -1, errorCode: 'INVALID_DOCUMENT', message: 'This mapping document is reverse-only; forward execution is not permitted' });
-            return { direction, output, appliedRules, diagnostics };
-        }
 
-        if (direction === 'forward' && this.doc.defaults && typeof this.doc.defaults === 'object') {
-            for (const [path, value] of Object.entries(this.doc.defaults)) {
-                mappingSetByPath(output, path, mappingClone(value));
-            }
-        }
-
-        const sortedRules = [...this.rules].sort((a, b) => {
-            const ap = direction === 'forward' ? (a.priority ?? 0) : (a.reversePriority ?? a.priority ?? 0);
-            const bp = direction === 'forward' ? (b.priority ?? 0) : (b.reversePriority ?? b.priority ?? 0);
-            return bp - ap;
-        });
-
-        for (let ri = 0; ri < sortedRules.length; ri++) {
-            const rule = sortedRules[ri];
-            if (direction === 'reverse' && rule.bidirectional === false) continue;
-
-            const effective = direction === 'reverse' && rule.reverse ? { ...rule, ...rule.reverse } : rule;
-            const sourcePath = direction === 'forward' ? effective.sourcePath : (effective.targetPath ?? rule.targetPath);
-            const targetPath = direction === 'forward' ? effective.targetPath : (effective.sourcePath ?? rule.sourcePath);
-
-            if (rule.condition) {
-                const conditionValue = mappingGetByPath(source, sourcePath ?? undefined);
-                try { if (!mappingEvalFEL(rule.condition, conditionValue, source)) continue; }
-                catch { continue; }
-            }
-            const transform = effective.transform || 'preserve';
-
-            if (transform === 'drop') continue;
-            if (!targetPath && transform !== 'flatten' && transform !== 'split') continue;
-
-            if (effective.array) {
-                const arr = effective.array as MappingArrayDescriptor;
-                const srcArr = mappingGetByPath(source, sourcePath ?? undefined);
-                if (arr.mode === 'whole') {
-                    let val = srcArr;
-                    if (transform === 'expression') {
-                        try { val = mappingEvalFEL(effective.expression!, val, source); }
-                        catch (e) { diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); continue; }
-                    }
-                    if (val === undefined && effective.default !== undefined) val = effective.default;
-                    if (val === undefined) continue;
-                    mappingSetByPath(output, targetPath!, mappingClone(val));
-                    appliedRules++;
-                } else if (arr.mode === 'each') {
-                    if (!Array.isArray(srcArr)) continue;
-                    mappingSetByPath(output, targetPath!, mappingExecuteEach(srcArr, arr.innerRules ?? [], source, diagnostics, ri));
-                    appliedRules++;
-                } else if (arr.mode === 'indexed') {
-                    if (!Array.isArray(srcArr)) continue;
-                    mappingExecuteIndexed(srcArr, arr.innerRules ?? [], output, targetPath ?? '');
-                    appliedRules++;
-                }
-                continue;
-            }
-
-            const rawValue = mappingGetByPath(source, sourcePath ?? undefined);
-            let value = rawValue;
-            let defaultApplied = false;
-            if (value === undefined && 'default' in effective) { value = effective.default; defaultApplied = true; }
-
-            if (transform === 'constant') {
-                value = mappingParseSimpleLiteral(String(effective.expression ?? 'null'));
-            } else if (transform === 'valueMap') {
-                if (value !== undefined) {
-                    const r = mappingApplyValueMap(effective.valueMap, value, direction, ri, sourcePath ?? undefined, targetPath ?? undefined);
-                    if (r.diagnostic) diagnostics.push(r.diagnostic);
-                    if (r.skip) continue;
-                    value = r.value;
-                }
-            } else if (transform === 'coerce') {
-                let cd = effective.coerce;
-                if (direction === 'reverse') {
-                    const rev = mappingReverseCoerce(cd);
-                    if (rev === null) continue;
-                    if (rev !== 'passthrough') {
-                        cd = rev;
-                        const r = mappingApplyCoerce(value, cd, ri, sourcePath ?? undefined, targetPath ?? undefined);
-                        if (r.diagnostic) { diagnostics.push(r.diagnostic); continue; }
-                        value = r.value;
-                    }
-                } else {
-                    const r = mappingApplyCoerce(value, cd, ri, sourcePath ?? undefined, targetPath ?? undefined);
-                    if (r.diagnostic) { diagnostics.push(r.diagnostic); continue; }
-                    value = r.value;
-                }
-            } else if (transform === 'expression') {
-                if (!defaultApplied) {
-                    try { value = mappingEvalFEL(effective.expression!, value, source); }
-                    catch (e) { diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); continue; }
-                }
-            } else if (transform === 'flatten') {
-                if (value === undefined) continue;
-                mappingApplyFlatten(value, targetPath!, effective.separator, output);
-                appliedRules++;
-                continue;
-            } else if (transform === 'nest') {
-                mappingApplyNest(source, sourcePath ?? '', targetPath!, effective.separator, output);
-                appliedRules++;
-                continue;
-            } else if (transform === 'concat') {
-                try { value = mappingEvalFEL(effective.expression!, value, source); }
-                catch (e) { diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); continue; }
-            } else if (transform === 'split') {
-                try {
-                    const sr = mappingEvalFEL(effective.expression!, value, source);
-                    if (Array.isArray(sr)) { for (let j = 0; j < sr.length; j++) mappingSetByPath(output, `${targetPath}[${j}]`, mappingClone(sr[j])); }
-                    else if (sr !== null && typeof sr === 'object') { for (const [k, v] of Object.entries(sr)) mappingSetByPath(output, `${targetPath}.${k}`, mappingClone(v)); }
-                    appliedRules++;
-                } catch (e) { diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); }
-                continue;
-            } else if (transform !== 'preserve') {
-                diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'COERCE_FAILURE', message: `Unsupported transform: ${transform}` });
-                continue;
-            }
-
-            if (value === undefined) continue;
-            mappingSetByPath(output, targetPath!, mappingClone(value));
-            appliedRules += 1;
-        }
+        // ── Adapter post-processing (TS-only — formatting, not evaluation) ──
 
         const jsonAdapter = this.doc.adapters?.json;
         if (jsonAdapter) {
@@ -847,11 +437,12 @@ export class RuntimeMappingEngine implements IRuntimeMappingEngine {
         const csvAdapter = (this.doc.adapters as any)?.csv;
         const isCsv = csvAdapter || (this.doc.targetSchema as any)?.format === 'csv';
         if (isCsv) {
+            const rules = Array.isArray(this.doc.rules) ? this.doc.rules : [];
             let hasAdapterError = false;
-            for (const rule of sortedRules) {
+            for (const rule of rules) {
                 const tp = direction === 'forward' ? rule.targetPath : (rule.sourcePath ?? rule.targetPath);
                 if (tp && /[.\[\]]/.test(tp)) {
-                    diagnostics.push({ ruleIndex: sortedRules.indexOf(rule), sourcePath: rule.sourcePath, targetPath: rule.targetPath, errorCode: 'ADAPTER_FAILURE', message: `targetPath "${tp}" is not a simple identifier (CSV requires flat keys)` } as any);
+                    diagnostics.push({ ruleIndex: rules.indexOf(rule), sourcePath: rule.sourcePath, targetPath: rule.targetPath, errorCode: 'ADAPTER_FAILURE', message: `targetPath "${tp}" is not a simple identifier (CSV requires flat keys)` });
                     hasAdapterError = true;
                 }
             }

@@ -169,3 +169,66 @@ export function validateLifecycleTransition(from: string, to: string): boolean;
  * Construct the well-known registry URL for a base URL.
  */
 export function wellKnownRegistryUrl(base_url: string): string;
+
+export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
+
+export interface InitOutput {
+    readonly memory: WebAssembly.Memory;
+    readonly evalFEL: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly evalFELWithContext: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly parseFEL: (a: number, b: number) => number;
+    readonly tokenizeFEL: (a: number, b: number, c: number) => void;
+    readonly printFEL: (a: number, b: number, c: number) => void;
+    readonly getFELDependencies: (a: number, b: number, c: number) => void;
+    readonly extractDependencies: (a: number, b: number, c: number) => void;
+    readonly analyzeFEL: (a: number, b: number, c: number) => void;
+    readonly collectFELRewriteTargets: (a: number, b: number, c: number) => void;
+    readonly rewriteFELReferences: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly rewriteMessageTemplate: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly listBuiltinFunctions: (a: number) => void;
+    readonly normalizeIndexedPath: (a: number, b: number, c: number) => void;
+    readonly itemAtPath: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly itemLocationAtPath: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly detectDocumentType: (a: number, b: number, c: number) => void;
+    readonly jsonPointerToJsonPath: (a: number, b: number, c: number) => void;
+    readonly planSchemaValidation: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly lintDocument: (a: number, b: number, c: number) => void;
+    readonly lintDocumentWithRegistries: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly evaluateDefinition: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly assembleDefinition: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly executeMapping: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly parseRegistry: (a: number, b: number, c: number) => void;
+    readonly findRegistryEntry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly validateLifecycleTransition: (a: number, b: number, c: number, d: number) => number;
+    readonly wellKnownRegistryUrl: (a: number, b: number, c: number) => void;
+    readonly validateExtensionUsage: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly generateChangelog: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly executeMappingDoc: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly __wbindgen_export: (a: number) => void;
+    readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+    readonly __wbindgen_export2: (a: number, b: number) => number;
+    readonly __wbindgen_export3: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_export4: (a: number, b: number, c: number) => void;
+}
+
+export type SyncInitInput = BufferSource | WebAssembly.Module;
+
+/**
+ * Instantiates the given `module`, which can either be bytes or
+ * a precompiled `WebAssembly.Module`.
+ *
+ * @param {{ module: SyncInitInput }} module - Passing `SyncInitInput` directly is deprecated.
+ *
+ * @returns {InitOutput}
+ */
+export function initSync(module: { module: SyncInitInput } | SyncInitInput): InitOutput;
+
+/**
+ * If `module_or_path` is {RequestInfo} or {URL}, makes a request and
+ * for everything else, calls `WebAssembly.instantiate` directly.
+ *
+ * @param {{ module_or_path: InitInput | Promise<InitInput> }} module_or_path - Passing `InitInput` directly is deprecated.
+ *
+ * @returns {Promise<InitOutput>}
+ */
+export default function __wbg_init (module_or_path?: { module_or_path: InitInput | Promise<InitInput> } | InitInput | Promise<InitInput>): Promise<InitOutput>;

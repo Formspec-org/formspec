@@ -124,12 +124,31 @@ pub enum CoerceType {
     Array,
 }
 
+/// Structured error codes for mapping diagnostics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MappingErrorCode {
+    UnmappedValue,
+    CoerceFailure,
+    FelRuntime,
+}
+
+impl MappingErrorCode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::UnmappedValue => "UNMAPPED_VALUE",
+            Self::CoerceFailure => "COERCE_FAILURE",
+            Self::FelRuntime => "FEL_RUNTIME",
+        }
+    }
+}
+
 /// A diagnostic from mapping execution.
 #[derive(Debug, Clone)]
 pub struct MappingDiagnostic {
     pub rule_index: usize,
     pub source_path: Option<String>,
     pub target_path: String,
+    pub error_code: MappingErrorCode,
     pub message: String,
 }
 
@@ -212,10 +231,15 @@ fn split_path(path: &str) -> Vec<String> {
 }
 
 /// Get a value at a path in a JSON object.
+/// Supports `[*]` wildcard: when `*` is encountered on an array, returns the array itself.
 fn get_by_path<'a>(obj: &'a Value, path: &str) -> &'a Value {
     let segments = split_path(path);
     let mut current = obj;
     for seg in &segments {
+        if seg == "*" {
+            // Wildcard: return the current value if it's an array, else null
+            return if current.is_array() { current } else { &Value::Null };
+        }
         match current {
             Value::Object(map) => {
                 current = map.get(seg.as_str()).unwrap_or(&Value::Null);
@@ -496,13 +520,117 @@ pub fn execute_mapping(
                         rule_index: rule_idx,
                         source_path: src_path.map(String::from),
                         target_path: tgt_path.to_string(),
+                        error_code: MappingErrorCode::FelRuntime,
                         message: format!("FEL parse error: {e}"),
                     });
                     Value::Null
                 }
             },
-            TransformType::Flatten { separator } => apply_flatten(&source_value, separator),
-            TransformType::Nest { separator } => apply_nest(&source_value, separator),
+            TransformType::Flatten { separator } => {
+                // Flatten writes multiple output keys for arrays (positional) and objects (dot-prefix)
+                match &source_value {
+                    Value::Array(arr) => {
+                        if !separator.is_empty() {
+                            // Join array with separator
+                            let parts: Vec<String> = arr.iter().map(value_to_flat_string).collect();
+                            set_by_path(&mut output, tgt_path, Value::String(parts.join(separator)));
+                        } else {
+                            // Positional: write to targetPath_0, targetPath_1, ...
+                            for (i, elem) in arr.iter().enumerate() {
+                                set_by_path(&mut output, &format!("{tgt_path}_{i}"), elem.clone());
+                            }
+                        }
+                        rules_applied += 1;
+                        continue;
+                    }
+                    Value::Object(map) => {
+                        // Dot-prefix: write to container[targetKey.subkey] as flat keys
+                        // e.g. flatten address→out.addr produces out["addr.street"], out["addr.city"]
+                        let segments = split_path(tgt_path);
+                        let last_seg = segments.last().map(|s| s.as_str()).unwrap_or(tgt_path);
+                        // Collect flat key-value pairs first
+                        let flat_entries: Vec<(String, Value)> = map
+                            .iter()
+                            .map(|(k, v)| (format!("{last_seg}.{k}"), v.clone()))
+                            .collect();
+                        // Ensure parent container exists, then insert
+                        if segments.len() <= 1 {
+                            // No parent — insert at root level
+                            if let Value::Object(out_map) = &mut output {
+                                for (flat_key, val) in flat_entries {
+                                    out_map.insert(flat_key, val);
+                                }
+                            }
+                        } else {
+                            let parent_path: String = segments[..segments.len() - 1].join(".");
+                            // Ensure parent exists
+                            set_by_path(&mut output, &parent_path, Value::Object(serde_json::Map::new()));
+                            // Build a temporary map and merge
+                            let flat_map = Value::Object(
+                                flat_entries.into_iter().collect::<serde_json::Map<String, Value>>()
+                            );
+                            // Navigate to parent and merge
+                            let parent = &get_by_path(&output, &parent_path).clone();
+                            if let Value::Object(existing) = parent {
+                                let mut merged = existing.clone();
+                                if let Value::Object(new_entries) = flat_map {
+                                    for (k, v) in new_entries {
+                                        merged.insert(k, v);
+                                    }
+                                }
+                                set_by_path(&mut output, &parent_path, Value::Object(merged));
+                            }
+                        }
+                        rules_applied += 1;
+                        continue;
+                    }
+                    Value::Null => continue,
+                    _ => {
+                        set_by_path(&mut output, tgt_path, Value::String(value_to_flat_string(&source_value)));
+                        rules_applied += 1;
+                        continue;
+                    }
+                }
+            }
+            TransformType::Nest { separator } => {
+                // Nest has multiple modes:
+                // 1. String + separator → split into array
+                // 2. No match → try positional keys (sourcePath_0, sourcePath_1, ...)
+                // 3. Otherwise pass through
+                match &source_value {
+                    Value::String(s) if !separator.is_empty() => {
+                        let parts: Vec<Value> = s.split(separator.as_str()).map(|p| Value::String(p.to_string())).collect();
+                        set_by_path(&mut output, tgt_path, Value::Array(parts));
+                        rules_applied += 1;
+                        continue;
+                    }
+                    _ => {
+                        // Try positional: look for sourcePath_0, sourcePath_1, ... in source
+                        if let Some(sp) = src_path {
+                            let mut positional = Vec::new();
+                            let mut i = 0;
+                            loop {
+                                let key = format!("{sp}_{i}");
+                                let val = get_by_path(source, &key);
+                                if val.is_null() { break; }
+                                positional.push(val.clone());
+                                i += 1;
+                            }
+                            if !positional.is_empty() {
+                                set_by_path(&mut output, tgt_path, Value::Array(positional));
+                                rules_applied += 1;
+                                continue;
+                            }
+                        }
+                        // Fall through to regular set_by_path
+                        if !source_value.is_null() {
+                            set_by_path(&mut output, tgt_path, source_value.clone());
+                            rules_applied += 1;
+                        }
+                        continue;
+                    }
+                }
+            }
             TransformType::Concat(fel_expr) => eval_fel_with_dollar(
                 fel_expr,
                 &source_value,
@@ -582,9 +710,10 @@ fn apply_value_map(
                 rule_index: rule_idx,
                 source_path: None,
                 target_path: target_path.to_string(),
+                error_code: MappingErrorCode::UnmappedValue,
                 message: format!("No value map entry for: {value}"),
             });
-            Some(Value::Null)
+            None // Error strategy skips the field (same as Drop)
         }
         UnmappedStrategy::Default => Some(rule_default.cloned().unwrap_or(Value::Null)),
     }
@@ -729,6 +858,7 @@ fn eval_fel_with_dollar(
                 rule_index: rule_idx,
                 source_path: src_path.map(String::from),
                 target_path: tgt_path.to_string(),
+                error_code: MappingErrorCode::FelRuntime,
                 message: format!("FEL parse error: {e}"),
             });
             Value::Null
@@ -781,16 +911,15 @@ pub fn execute_mapping_doc(
     // Execute rules
     let mut result = execute_mapping(&rules, source, direction);
 
-    // Apply defaults before rules (but since rules already ran via last-write-wins,
-    // we insert defaults only where no rule wrote a value). Forward only.
+    // Apply defaults for paths where no rule wrote a value. Forward only.
+    // Uses set_by_path for dotted defaults (e.g. "meta.source" → nested meta.source).
     if direction == MappingDirection::Forward
         && let Some(ref defaults) = doc.defaults
-        && let Value::Object(ref mut out_map) = result.output
     {
         for (k, v) in defaults {
-            // Only set default if no rule wrote to this key
-            if !out_map.contains_key(k) {
-                out_map.insert(k.clone(), v.clone());
+            let existing = get_by_path(&result.output, k);
+            if existing.is_null() {
+                set_by_path(&mut result.output, k, v.clone());
             }
         }
     }
@@ -1134,10 +1263,9 @@ mod tests {
         )];
         let source = json!({ "addr": { "city": "NYC", "zip": "10001" } });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
-        let flat = result.output["flat"].as_str().unwrap();
-        assert!(flat.contains("city=NYC"));
-        assert!(flat.contains("zip=10001"));
-        assert!(flat.contains("."));
+        // Object flatten produces dot-prefix flat keys in the output container
+        assert_eq!(result.output["flat.city"], "NYC");
+        assert_eq!(result.output["flat.zip"], "10001");
     }
 
     #[test]
@@ -1174,15 +1302,16 @@ mod tests {
     #[test]
     fn test_nest_string() {
         let rules = vec![rule(
-            Some("path"),
+            Some("tags"),
             "nested",
             TransformType::Nest {
-                separator: ".".to_string(),
+                separator: ", ".to_string(),
             },
         )];
-        let source = json!({ "path": "a.b.c" });
+        let source = json!({ "tags": "a, b, c" });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
-        assert_eq!(result.output["nested"]["a"]["b"]["c"], true);
+        // Nest with separator splits a string into an array
+        assert_eq!(result.output["nested"], json!(["a", "b", "c"]));
     }
 
     #[test]
@@ -1196,13 +1325,10 @@ mod tests {
         );
         r.default = Some(json!("x.y"));
         let rules = vec![r];
-        // source has a number — nest expects a string, so it returns Null.
-        // But default was already applied at source-resolution time (before transform),
-        // so the source_value will be "x.y" only if "num" is null/absent.
-        // Here "num" is present and a number, so default doesn't apply.
+        // source has a number — nest treats it as non-string, passes through
         let source = json!({ "num": 42 });
         let result = execute_mapping(&rules, &source, MappingDirection::Forward);
-        assert_eq!(result.output["out"], Value::Null);
+        assert_eq!(result.output["out"], json!(42));
     }
 
     #[test]
@@ -1664,15 +1790,17 @@ mod tests {
             },
         )];
         let fwd = execute_mapping(&rules, &json!({"path": "a.b"}), MappingDirection::Forward);
-        assert_eq!(fwd.output["nested"]["a"]["b"], true);
-        // Reverse: Nest applied to the object at "nested" — Nest expects a string
-        // input, so an object yields Null. This confirms Nest doesn't auto-invert.
+        // Nest with separator splits string into array
+        assert_eq!(fwd.output["nested"], json!(["a", "b"]));
+        // Reverse: nest applied to the array at "nested" — passes through since
+        // it's not a string with separator
         let rev = execute_mapping(
             &rules,
-            &json!({"nested": {"a": {"b": true}}}),
+            &json!({"nested": ["a", "b"]}),
             MappingDirection::Reverse,
         );
-        assert_eq!(rev.output["path"], Value::Null);
+        // Array passes through as-is
+        assert_eq!(rev.output["path"], json!(["a", "b"]));
     }
 
     /// Spec: mapping/mapping-spec.md §4.10 — Concat is NOT auto-reversible.

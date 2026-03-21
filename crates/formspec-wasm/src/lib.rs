@@ -957,6 +957,7 @@ fn execute_mapping_inner(
             "ruleIndex": d.rule_index,
             "sourcePath": d.source_path,
             "targetPath": d.target_path,
+            "errorCode": d.error_code.as_str(),
             "message": d.message,
         })).collect::<Vec<_>>(),
     });
@@ -1297,6 +1298,29 @@ pub fn execute_mapping_doc_wasm(
         _ => return Err(JsError::new(&format!("invalid direction: {direction}"))),
     };
 
+    // Enforce document-level direction restriction
+    let doc_direction = parse_mapping_direction(&doc_val);
+    if let Some(allowed) = doc_direction {
+        if allowed != dir {
+            let msg = if allowed == formspec_core::MappingDirection::Forward {
+                "This mapping document is forward-only; reverse execution is not permitted"
+            } else {
+                "This mapping document is reverse-only; forward execution is not permitted"
+            };
+            let json = serde_json::json!({
+                "direction": direction,
+                "output": {},
+                "rulesApplied": 0,
+                "diagnostics": [{
+                    "ruleIndex": -1,
+                    "errorCode": "INVALID_DOCUMENT",
+                    "message": msg,
+                }],
+            });
+            return serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()));
+        }
+    }
+
     let doc = parse_mapping_document_inner(&doc_val).map_err(|e| JsError::new(&e))?;
     let result = execute_mapping_doc(&doc, &source, dir);
 
@@ -1308,6 +1332,7 @@ pub fn execute_mapping_doc_wasm(
             "ruleIndex": d.rule_index,
             "sourcePath": d.source_path,
             "targetPath": d.target_path,
+            "errorCode": d.error_code.as_str(),
             "message": d.message,
         })).collect::<Vec<_>>(),
     });
@@ -1433,51 +1458,87 @@ fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<formspec_core::MappingRu
         {
             "preserve" => formspec_core::TransformType::Preserve,
             "drop" => formspec_core::TransformType::Drop,
-            "constant" => formspec_core::TransformType::Constant(
-                obj.get("value").cloned().unwrap_or(Value::Null),
-            ),
+            "constant" => {
+                // Constant maps to Expression — the expression field holds a FEL literal
+                // (e.g. '"1"' evaluates to string "1", '1.0' evaluates to number 1.0)
+                let expr = obj
+                    .get("expression")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("constant transform requires 'expression' field"))?;
+                formspec_core::TransformType::Expression(expr.to_string())
+            }
             "coerce" => {
                 let coerce_val = obj
                     .get("coerce")
                     .cloned()
                     .unwrap_or(Value::String("string".into()));
-                let coerce_type =
-                    parse_coerce_type(&coerce_val).unwrap_or(formspec_core::CoerceType::String);
+                let coerce_type = parse_coerce_type(&coerce_val)
+                    .ok_or_else(|| format!("unknown coerce type: {coerce_val}"))?;
                 formspec_core::TransformType::Coerce(coerce_type)
             }
             "valueMap" => {
-                let entries = obj.get("valueMap").and_then(|v| v.as_object());
-                let forward: Vec<(Value, Value)> = entries
-                    .map(|m| {
-                        m.iter()
-                            .map(|(k, v)| (Value::String(k.clone()), v.clone()))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                formspec_core::TransformType::ValueMap {
-                    forward,
-                    unmapped: match obj.get("unmapped").and_then(|v| v.as_str()) {
-                        Some("error") => formspec_core::UnmappedStrategy::Error,
+                let vm_val = obj.get("valueMap");
+                let vm_obj = vm_val.and_then(|v| v.as_object());
+
+                // Detect new shape: { forward, reverse, unmapped, default }
+                let is_new_shape = vm_obj.map_or(false, |m| {
+                    m.contains_key("forward") || m.contains_key("reverse") || m.contains_key("unmapped")
+                });
+
+                if is_new_shape {
+                    let inner = vm_obj.unwrap();
+                    let forward: Vec<(Value, Value)> = inner
+                        .get("forward")
+                        .and_then(|v| v.as_object())
+                        .map(|m| {
+                            m.iter()
+                                .map(|(k, v)| (Value::String(k.clone()), v.clone()))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let unmapped = match inner.get("unmapped").and_then(|v| v.as_str()) {
+                        Some("passthrough") => formspec_core::UnmappedStrategy::PassThrough,
                         Some("drop") => formspec_core::UnmappedStrategy::Drop,
                         Some("default") => formspec_core::UnmappedStrategy::Default,
-                        _ => formspec_core::UnmappedStrategy::PassThrough,
-                    },
+                        // New-shape default unmapped strategy is "error" per spec
+                        _ => formspec_core::UnmappedStrategy::Error,
+                    };
+                    formspec_core::TransformType::ValueMap { forward, unmapped }
+                } else {
+                    // Legacy flat map: { key: value, ... } — passthrough by default
+                    let forward: Vec<(Value, Value)> = vm_obj
+                        .map(|m| {
+                            m.iter()
+                                .map(|(k, v)| (Value::String(k.clone()), v.clone()))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    formspec_core::TransformType::ValueMap {
+                        forward,
+                        unmapped: formspec_core::UnmappedStrategy::PassThrough,
+                    }
                 }
             }
             "flatten" => formspec_core::TransformType::Flatten {
                 separator: obj
                     .get("separator")
                     .and_then(|v| v.as_str())
-                    .unwrap_or(".")
+                    .unwrap_or("")
                     .to_string(),
             },
             "nest" => formspec_core::TransformType::Nest {
                 separator: obj
                     .get("separator")
                     .and_then(|v| v.as_str())
-                    .unwrap_or(".")
+                    .unwrap_or("")
                     .to_string(),
             },
+            "expression" => formspec_core::TransformType::Expression(
+                obj.get("expression")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("$")
+                    .to_string(),
+            ),
             "concat" => formspec_core::TransformType::Concat(
                 obj.get("expression")
                     .and_then(|v| v.as_str())
@@ -1521,13 +1582,109 @@ fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<formspec_core::MappingRu
                 .get("reversePriority")
                 .and_then(|v| v.as_i64())
                 .map(|n| n as i32),
-            default: obj.get("default").cloned(),
+            default: obj.get("default").cloned().or_else(|| {
+                // For new-shape valueMap, also check valueMap.default
+                obj.get("valueMap")
+                    .and_then(|v| v.as_object())
+                    .and_then(|vm| vm.get("default"))
+                    .cloned()
+            }),
             bidirectional: obj
                 .get("bidirectional")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true),
-            array: None,
-            reverse: None,
+            array: obj.get("array").and_then(|v| {
+                let arr_obj = v.as_object()?;
+                let mode = match arr_obj.get("mode")?.as_str()? {
+                    "each" => formspec_core::ArrayMode::Each,
+                    "whole" => formspec_core::ArrayMode::Whole,
+                    "indexed" => formspec_core::ArrayMode::Indexed,
+                    _ => return None,
+                };
+                let inner_rules = arr_obj
+                    .get("innerRules")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        // For indexed mode, inner rules use { index: N, targetPath } instead of
+                        // standard rules. Convert index to sourcePath for the Rust engine.
+                        let patched: Vec<Value> = arr
+                            .iter()
+                            .map(|r| {
+                                if mode == formspec_core::ArrayMode::Indexed {
+                                    if let Some(obj) = r.as_object() {
+                                        if let Some(idx) = obj.get("index").and_then(|v| v.as_u64()) {
+                                            let mut patched_obj = obj.clone();
+                                            patched_obj.insert(
+                                                "sourcePath".to_string(),
+                                                Value::String(idx.to_string()),
+                                            );
+                                            return Value::Object(patched_obj);
+                                        }
+                                    }
+                                }
+                                r.clone()
+                            })
+                            .collect();
+                        parse_mapping_rules_inner(&Value::Array(patched)).ok()
+                    })
+                    .flatten()
+                    .unwrap_or_default();
+                Some(formspec_core::ArrayDescriptor { mode, inner_rules })
+            }),
+            reverse: obj.get("reverse").and_then(|v| {
+                let rev_obj = v.as_object()?;
+                // Parse the reverse transform using the same logic as the main transform
+                let rev_transform = match rev_obj
+                    .get("transform")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("preserve")
+                {
+                    "preserve" => formspec_core::TransformType::Preserve,
+                    "drop" => formspec_core::TransformType::Drop,
+                    "valueMap" => {
+                        let vm_val = rev_obj.get("valueMap");
+                        let vm_obj = vm_val.and_then(|v| v.as_object());
+                        let forward: Vec<(Value, Value)> = vm_obj
+                            .map(|m| {
+                                m.iter()
+                                    .map(|(k, v)| (Value::String(k.clone()), v.clone()))
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        formspec_core::TransformType::ValueMap {
+                            forward,
+                            unmapped: formspec_core::UnmappedStrategy::PassThrough,
+                        }
+                    }
+                    "expression" => formspec_core::TransformType::Expression(
+                        rev_obj
+                            .get("expression")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("$")
+                            .to_string(),
+                    ),
+                    "constant" => formspec_core::TransformType::Expression(
+                        rev_obj
+                            .get("expression")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("null")
+                            .to_string(),
+                    ),
+                    "coerce" => {
+                        let coerce_val = rev_obj
+                            .get("coerce")
+                            .cloned()
+                            .unwrap_or(Value::String("string".into()));
+                        let coerce_type =
+                            parse_coerce_type(&coerce_val).unwrap_or(formspec_core::CoerceType::String);
+                        formspec_core::TransformType::Coerce(coerce_type)
+                    }
+                    _ => return None,
+                };
+                Some(Box::new(formspec_core::ReverseOverride {
+                    transform: rev_transform,
+                }))
+            }),
         });
     }
     Ok(rules)
@@ -1549,6 +1706,19 @@ fn parse_mapping_document_inner(val: &Value) -> Result<MappingDocument, String> 
         defaults,
         auto_map,
     })
+}
+
+/// Parse the document-level `direction` field (if present).
+/// Returns None for bidirectional, Some(Forward) or Some(Reverse) for restricted docs.
+fn parse_mapping_direction(val: &Value) -> Option<formspec_core::MappingDirection> {
+    val.as_object()
+        .and_then(|obj| obj.get("direction"))
+        .and_then(|v| v.as_str())
+        .and_then(|s| match s {
+            "forward" => Some(formspec_core::MappingDirection::Forward),
+            "reverse" => Some(formspec_core::MappingDirection::Reverse),
+            _ => None,
+        })
 }
 
 fn parse_status_str(s: &str) -> Option<formspec_core::RegistryEntryStatus> {

@@ -707,6 +707,7 @@ fn execute_mapping_doc(
         diag.set_item("rule_index", d.rule_index)?;
         diag.set_item("source_path", d.source_path.as_deref())?;
         diag.set_item("target_path", &d.target_path)?;
+        diag.set_item("error_code", d.error_code.as_str())?;
         diag.set_item("message", &d.message)?;
         diagnostics.append(diag)?;
     }
