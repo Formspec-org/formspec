@@ -1,3 +1,17 @@
+[project]
+name = "formspec"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+test = [
+    "jsonschema[format]>=4.20",
+    "pytest>=9.0",
+    "hypothesis>=6.0",
+    "msgspec>=0.18",
+    "referencing>=0.30",
+]
+
 [tool.pytest.ini_options]
 pythonpath = "src"
 markers = [

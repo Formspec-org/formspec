@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - run: pip install "jsonschema[format]" referencing
+      - run: pip install -e ".[test]"
       - run: npm ci
       - run: npm run build
       - run: npm run test:unit
@@ -31,7 +31,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - run: pip install maturin pytest hypothesis "jsonschema[format]" msgspec
+      - run: pip install maturin
+      - run: pip install -e ".[test]"
       - run: pip install --no-build-isolation ./crates/formspec-py
       - run: pytest --ignore=tests/e2e
 
@@ -47,7 +48,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - run: pip install "jsonschema[format]" referencing fastapi "uvicorn[standard]" pydantic
+      - run: pip install -e ".[test]" fastapi "uvicorn[standard]" pydantic
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
@@ -73,7 +74,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - run: pip install "jsonschema[format]" referencing
+      - run: pip install -e ".[test]"
       - run: npm ci
       - run: npm run build
       - run: npx playwright install --with-deps chromium
