@@ -81,12 +81,6 @@ fn build_validator(schema_text: &str) -> Validator {
 
 /// Validate a document against its JSON Schema, returning E101 diagnostics.
 pub fn validate_schema(doc: &Value, doc_type: DocumentType) -> Vec<LintDiagnostic> {
-    // Skip component documents — oneOf + unevaluatedProperties in the
-    // component schema causes exponential backtracking on large trees.
-    if doc_type == DocumentType::Component {
-        return vec![];
-    }
-
     let set = schema_set();
 
     let validator = match doc_type {
