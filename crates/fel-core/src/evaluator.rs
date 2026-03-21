@@ -1232,6 +1232,10 @@ impl<'a> Evaluator<'a> {
     fn fn_date_part(&mut self, args: &[Expr], f: fn(&FelDate) -> Decimal) -> FelValue {
         match self.eval_arg(args, 0) {
             FelValue::Date(d) => FelValue::Number(f(&d)),
+            FelValue::String(s) => match self.coerce_string_to_date(&s) {
+                Some(d) => FelValue::Number(f(&d)),
+                None => FelValue::Null,
+            },
             FelValue::Null => FelValue::Null,
             _ => FelValue::Null,
         }
@@ -1293,10 +1297,18 @@ impl<'a> Evaluator<'a> {
     fn fn_date_diff(&mut self, args: &[Expr]) -> FelValue {
         let d1 = match self.eval_arg(args, 0) {
             FelValue::Date(d) => d,
+            FelValue::String(s) => match self.coerce_string_to_date(&s) {
+                Some(d) => d,
+                None => return FelValue::Null,
+            },
             _ => return FelValue::Null,
         };
         let d2 = match self.eval_arg(args, 1) {
             FelValue::Date(d) => d,
+            FelValue::String(s) => match self.coerce_string_to_date(&s) {
+                Some(d) => d,
+                None => return FelValue::Null,
+            },
             _ => return FelValue::Null,
         };
         let unit = match self.eval_arg(args, 2) {
@@ -1321,6 +1333,10 @@ impl<'a> Evaluator<'a> {
     fn fn_date_add(&mut self, args: &[Expr]) -> FelValue {
         let d = match self.eval_arg(args, 0) {
             FelValue::Date(d) => d,
+            FelValue::String(s) => match self.coerce_string_to_date(&s) {
+                Some(d) => d,
+                None => return FelValue::Null,
+            },
             _ => return FelValue::Null,
         };
         let n = match self.eval_arg(args, 1) {
@@ -1507,6 +1523,12 @@ impl<'a> Evaluator<'a> {
                 FelValue::Null
             }
         }
+    }
+
+    /// Try to coerce an ISO date/datetime string to FelDate. Returns None on failure.
+    fn coerce_string_to_date(&self, s: &str) -> Option<FelDate> {
+        parse_date_literal(&format!("@{s}"))
+            .or_else(|| parse_datetime_literal(&format!("@{s}")))
     }
 
     // ── Money helpers ───────────────────────────────────────────
