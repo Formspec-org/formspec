@@ -37,9 +37,19 @@ export async function initWasm(): Promise<void> {
                 && typeof globalThis.process !== 'undefined'
                 && globalThis.process.versions?.node) {
                 const { readFileSync } = await import('node:fs');
+                const { dirname, resolve } = await import('node:path');
                 const { fileURLToPath } = await import('node:url');
-                const wasmUrl = new URL('../wasm-pkg/formspec_wasm_bg.wasm', import.meta.url);
-                const wasmBytes = readFileSync(fileURLToPath(wasmUrl));
+                // Resolve the path to the .wasm binary relative to this module.
+                // Vitest/happy-dom may rewrite import.meta.url to a non-file scheme,
+                // so fall back to extracting the pathname when fileURLToPath fails.
+                let bridgeDir: string;
+                try {
+                    bridgeDir = dirname(fileURLToPath(import.meta.url));
+                } catch {
+                    bridgeDir = dirname(new URL(import.meta.url).pathname);
+                }
+                const wasmPath = resolve(bridgeDir, '..', 'wasm-pkg', 'formspec_wasm_bg.wasm');
+                const wasmBytes = readFileSync(wasmPath);
                 runtime.initSync({ module: wasmBytes });
             } else if (typeof runtime.default === 'function') {
                 await runtime.default();

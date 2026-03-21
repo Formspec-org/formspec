@@ -162,7 +162,7 @@ describe('input rendering — reactive signals', () => {
     });
 
     it('error signal shows error text and sets aria-invalid', () => {
-        const el = renderField({ constraint: 'false', message: 'Bad value' });
+        const el = renderField({ constraint: 'false', constraintMessage: 'Bad value' });
         const engine = el.getEngine();
         // Trigger validation by setting a value
         engine.setValue('name', 'test');
