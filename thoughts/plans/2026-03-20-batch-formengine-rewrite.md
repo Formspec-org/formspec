@@ -251,38 +251,140 @@ git add crates/formspec-eval/
 git commit -m "fix(eval): topological sort for calculate evaluation order"
 ```
 
-### ~~Task 3: excludedValue~~ VERIFIED ALREADY FIXED
+### ~~excludedValue~~ VERIFIED ALREADY FIXED
 
-`ItemInfo.excluded_value` exists in `types.rs:42`. Parsed from binds in `rebuild.rs:133-136`. Applied during Phase 2 evaluation at `recalculate.rs:300-305` via `env.set_field(&item.path, FelValue::Null)`. Also applied in Phase 3 via `apply_excluded_values_to_env()` in `revalidate.rs:31-32`. No action needed.
+`ItemInfo.excluded_value` exists in `types.rs:42`. Parsed from binds in `rebuild.rs:133-136`. Applied during Phase 2 evaluation at `recalculate.rs:300-305` via `env.set_field(&item.path, FelValue::Null)`. Also applied in Phase 3 via `apply_excluded_values_to_env()` in `revalidate.rs:31-32`.
 
-### ~~Task 4: Variable scope~~ VERIFIED ALREADY FIXED
+### ~~Variable scope~~ VERIFIED ALREADY FIXED
 
-`VariableDef.scope` exists in `types.rs:65`. `evaluate_variables_scoped()` in `recalculate.rs:217-256` handles scope-qualified keys. `visible_variables()` in `recalculate.rs:81-109` filters by ancestor path. `evaluate_items_with_inheritance_scoped()` in `recalculate.rs:502-541` clears/repopulates env per item. No action needed.
+`VariableDef.scope` exists in `types.rs:65`. `evaluate_variables_scoped()` in `recalculate.rs:217-256` handles scope-qualified keys. `visible_variables()` in `recalculate.rs:81-109` filters by ancestor path. `evaluate_items_with_inheritance_scoped()` in `recalculate.rs:502-541` clears/repopulates env per item.
 
-### Task 3: Add shape context map and valid() MIP query
+### Task 3: Add shape context map
 
 **Files:**
-- Modify: `crates/formspec-eval/src/lib.rs`
+- Modify: `crates/formspec-eval/src/revalidate.rs:422-494` (`validate_shape`)
+- Modify: `crates/formspec-eval/src/types.rs:72-88` (`ValidationResult`)
 
-Two smaller fixes bundled:
+**Verified still a problem:** `validate_shape()` never reads a `"context"` key from shape JSON. `ValidationResult` has no `context` field. The spec (spec.md:2584, 2663-2666) defines `context` as an object of FEL expressions evaluated when a shape fails, with results included in the output.
 
-**5a. Shape `context` map:** Failed shapes can declare contextual FEL expressions evaluated alongside the constraint. The Rust evaluator's `validate_shape` doesn't implement this.
+- [ ] **Step 1: Write failing test**
 
-**5b. `valid()` MIP query:** The evaluator sets `valid: true` for all MIPs during Phase 2 (line 524) but never updates after Phase 3. `valid($field)` always returns true.
-
-- [ ] **Step 1: Write failing tests for both**
-
-- [ ] **Step 2: Implement shape context** — after a shape constraint fails, evaluate each entry in its `context` map and include the results in the `ValidationResult`.
-
-- [ ] **Step 3: Implement valid() MIP update** — after `revalidate()`, walk results and update MIP valid states. Pass previous validation state into `evaluate_definition_with_context` via `EvalContext`.
-
-- [ ] **Step 4: Run tests, commit**
-
-```bash
-git commit -m "fix(eval): shape context map and valid() MIP query"
+```rust
+#[test]
+fn shape_context_evaluated_on_failure() {
+    let def = serde_json::json!({
+        "$formspec": "1.0", "url": "test", "version": "1.0.0", "title": "T",
+        "items": [
+            { "key": "budget", "type": "field", "dataType": "decimal", "label": "Budget" },
+            { "key": "spent", "type": "field", "dataType": "decimal", "label": "Spent" },
+        ],
+        "shapes": [{
+            "id": "budget-check",
+            "targets": ["spent"],
+            "constraint": "$spent <= $budget",
+            "constraintMessage": "Over budget",
+            "context": {
+                "remaining": "$budget - $spent",
+                "overBy": "$spent - $budget"
+            }
+        }],
+    });
+    let mut data = HashMap::new();
+    data.insert("budget".into(), serde_json::json!(100));
+    data.insert("spent".into(), serde_json::json!(150));
+    let result = evaluate_definition(&def, &data);
+    let shape_result = result.validations.iter()
+        .find(|v| v.shape_id.as_deref() == Some("budget-check"))
+        .expect("shape validation should exist");
+    let ctx = shape_result.context.as_ref().expect("context should be populated");
+    assert_eq!(ctx.get("remaining"), Some(&serde_json::json!(-50)));
+    assert_eq!(ctx.get("overBy"), Some(&serde_json::json!(50)));
+}
 ```
 
-### Task 4: Add runtime context support to evaluate_definition
+- [ ] **Step 2: Run test, verify it fails** (no `context` field on `ValidationResult`)
+
+- [ ] **Step 3: Implement**
+
+1. Add `context: Option<HashMap<String, Value>>` to `ValidationResult` in `types.rs`
+2. In `validate_shape()` in `revalidate.rs`, after a shape fails, read `shape.get("context")`, iterate entries, evaluate each FEL expression, collect into a `HashMap`, attach to the `ValidationResult`
+3. Update all other `ValidationResult` construction sites to include `context: None`
+
+- [ ] **Step 4: Run test, verify it passes**
+
+- [ ] **Step 5: Run full suite:** `cargo test -p formspec-eval`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add crates/formspec-eval/
+git commit -m "feat(eval): implement shape context map evaluation"
+```
+
+### Task 4: Fix valid() MIP query
+
+**Files:**
+- Modify: `crates/formspec-eval/src/lib.rs:70-121` (`evaluate_definition_with_trigger`)
+- Modify: `crates/formspec-eval/src/recalculate.rs:342-350` (`evaluate_single_item` set_mip)
+
+**Verified still a problem:** `set_mip` hardcodes `valid: true` at `recalculate.rs:342-350` with comment `// updated in Phase 3` — but Phase 3 never updates it. Phase 2 and Phase 3 use **separate `FormspecEnvironment` instances** (`recalculate()` creates its own env; `revalidate()` creates a fresh env via `build_validation_env()`). There is no shared state to propagate validation results back.
+
+For a batch-per-change architecture, the natural fix: accept **previous cycle's validation results** as input and use them to set MIP valid states at the START of Phase 2, before any expressions evaluate. This means `valid($field)` reflects the previous cycle's validation state — which matches XForms semantics.
+
+- [ ] **Step 1: Write failing test**
+
+```rust
+#[test]
+fn valid_mip_query_reflects_validation_state() {
+    let def = serde_json::json!({
+        "$formspec": "1.0", "url": "test", "version": "1.0.0", "title": "T",
+        "items": [
+            { "key": "age", "type": "field", "dataType": "decimal", "label": "Age" },
+            { "key": "ageStatus", "type": "field", "dataType": "string", "label": "Status" },
+        ],
+        "binds": [
+            { "path": "age", "constraint": "$age >= 0", "required": "true" },
+            { "path": "ageStatus", "calculate": "if(valid($age), 'ok', 'invalid')" },
+        ],
+    });
+    // First eval: age is missing (required violation) → valid($age) = false
+    let data = HashMap::new();
+    let prev_validations = vec![]; // no previous results on first call
+    let result = evaluate_definition(&def, &data);
+    // On second eval, pass previous results so valid() can reflect them
+    let result2 = evaluate_definition_with_context(
+        &def, &data,
+        &EvalContext {
+            now_iso: None,
+            previous_validations: Some(&result.validations),
+        },
+    );
+    assert_eq!(result2.values.get("ageStatus"), Some(&serde_json::json!("invalid")));
+}
+```
+
+- [ ] **Step 2: Run test, verify it fails**
+
+- [ ] **Step 3: Implement**
+
+1. Add `previous_validations: Option<&[ValidationResult]>` to `EvalContext`
+2. In `recalculate()`, before Phase 2 evaluation, if `previous_validations` is provided:
+   - Build a set of paths that had errors
+   - When calling `set_mip`, set `valid: false` for those paths instead of unconditional `true`
+3. This means `valid($field)` during Phase 2 reflects the PREVIOUS cycle's results — one cycle behind, which is the XForms-correct semantics
+
+- [ ] **Step 4: Run test, verify it passes**
+
+- [ ] **Step 5: Run full suite:** `cargo test -p formspec-eval`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add crates/formspec-eval/
+git commit -m "fix(eval): valid() MIP query uses previous cycle validation results"
+```
+
+### Task 5: Add runtime context support to evaluate_definition
 
 **Files:**
 - Modify: `crates/formspec-eval/src/lib.rs`
@@ -335,7 +437,7 @@ git add crates/formspec-eval/
 git commit -m "feat(eval): accept runtime context (nowIso) in evaluate_definition"
 ```
 
-### Task 5: Wire extended result + context through WASM
+### Task 6: Wire extended result + context through WASM
 
 **Files:**
 - Modify: `crates/formspec-wasm/src/lib.rs`
@@ -391,7 +493,7 @@ git add crates/formspec-wasm/ packages/formspec-engine/src/wasm-bridge.ts
 git commit -m "feat(wasm): wire runtime context, required, readonly, shapeId through evaluateDefinition"
 ```
 
-### Task 6: Add tokenizeFEL to WASM
+### Task 7: Add tokenizeFEL to WASM
 
 **Files:**
 - Modify: `crates/fel-core/src/` (expose positioned tokens)
@@ -433,7 +535,7 @@ git commit -m "feat(wasm): add tokenizeFEL for Studio syntax highlighting"
 
 ## Phase 2 — TS Foundation
 
-### Task 7: Write and implement diff.ts
+### Task 8: Write and implement diff.ts
 
 **Files:**
 - Create: `packages/formspec-engine/tests/batch-diff.test.mjs`
@@ -449,7 +551,7 @@ git commit -m "feat(wasm): add tokenizeFEL for Studio syntax highlighting"
 
 - [ ] **Step 5: Commit**
 
-### Task 8: Update interfaces.ts with all absorbed types
+### Task 9: Update interfaces.ts with all absorbed types
 
 **Files:**
 - Modify: `packages/formspec-engine/src/interfaces.ts`
@@ -507,7 +609,7 @@ git commit -m "refactor(engine): absorb all types from files being deleted into 
 
 ## Phase 3 — BatchFormEngine
 
-### Task 9: Write core engine tests
+### Task 10: Write core engine tests
 
 **Files:**
 - Create: `packages/formspec-engine/tests/batch-engine-core.test.mjs`
@@ -533,7 +635,7 @@ Expected: All PASS against the current reactive engine.
 
 - [ ] **Step 3: Commit**
 
-### Task 10: Write repeat lifecycle tests
+### Task 11: Write repeat lifecycle tests
 
 Same approach — GREEN baseline against current engine.
 
@@ -543,7 +645,7 @@ Same approach — GREEN baseline against current engine.
 
 - [ ] **Step 3: Commit**
 
-### Task 11: Implement BatchFormEngine (index.ts rewrite)
+### Task 12: Implement BatchFormEngine (index.ts rewrite)
 
 **Files:**
 - Rewrite: `packages/formspec-engine/src/index.ts`
@@ -646,7 +748,7 @@ Build incrementally: start with imports, type re-exports, and an empty `FormEngi
 
 Run: `npm --prefix packages/formspec-engine run build`
 
-- [ ] **Step 3: Run new tests (Tasks 9-10)**
+- [ ] **Step 3: Run new tests (Tasks 10-11)**
 
 Expected: All PASS.
 
@@ -661,7 +763,7 @@ git commit -m "feat(engine): BatchFormEngine — Rust batch eval with signal pat
 
 ## Phase 4 — Conformance & Migration
 
-### Task 12: Run existing test suite, fix failures
+### Task 13: Run existing test suite, fix failures
 
 **Files:**
 - Modify: `packages/formspec-engine/src/index.ts` (as needed)
@@ -686,7 +788,7 @@ Expected: All 62+ files pass.
 
 - [ ] **Step 4: Commit**
 
-### Task 13: Migrate Studio FEL tooling (MANDATORY)
+### Task 14: Migrate Studio FEL tooling (MANDATORY)
 
 **Files:**
 - Modify: `packages/formspec-studio/src/lib/fel-editor-utils.ts`
@@ -722,7 +824,7 @@ git add packages/formspec-studio/
 git commit -m "refactor(studio): migrate FEL editor from Chevrotain to wasmTokenizeFEL"
 ```
 
-### Task 14: Delete old files and clean up
+### Task 15: Delete old files and clean up
 
 - [ ] **Step 1: Delete all 15 files listed in the deletion table**
 
@@ -742,7 +844,7 @@ git add -A packages/formspec-engine/
 git commit -m "refactor(engine): delete 3,980 lines of duplicated TS — Rust sole backend"
 ```
 
-### Task 15: Verify all downstream packages
+### Task 16: Verify all downstream packages
 
 - [ ] **Step 1: Build each downstream package**
 
@@ -772,7 +874,7 @@ Run: `npm test` (Playwright from repo root)
 
 - [ ] **Step 4: Commit any fixes**
 
-### Task 16: Performance baseline
+### Task 17: Performance baseline
 
 - [ ] **Step 1: Write and run performance test**
 
@@ -805,9 +907,9 @@ Use `tests/e2e/fixtures/` for the grant-app fixture (verify path first with `ls`
 | Risk | Mitigation |
 |---|---|
 | Batch eval too slow for large forms | Performance test catches early. Escape: debounce keystrokes, add AST caching in Rust evaluator, eventual upgrade to stateful incremental (Option 3). |
-| `formspec-eval` missing behaviors | excludedValue and variable scope already implemented. Remaining Rust gaps (calculate fixpoint, shape context, valid() MIP) fixed in Phase 1 Tasks 2-3. TS lifecycle: remote options, instance sources, pre-population, default-on-relevance-transition (TS-side state tracking in `_evaluate()`). |
+| `formspec-eval` missing behaviors | excludedValue and variable scope already implemented. Remaining Rust gaps (calculate fixpoint, shape context, valid() MIP) fixed in Phase 1 Tasks 2-4. TS lifecycle: remote options, instance sources, pre-population, default-on-relevance-transition (TS-side state tracking in `_evaluate()`). |
 | Downstream import breakage | No compat shims. Update downstream in Task 13. `createSchemaValidator` → `lintDocument`. Type aliases → import from `formspec-types`. |
 | Runtime context not reaching Rust | Task 2 adds `EvalContext` with `nowIso` to the Rust evaluator. TS converts `_nowProvider` to ISO string before each WASM call. |
 | `compileExpression` in batch model | Returns a function that reads current signal values and calls `wasmEvalFELWithContext`. Reactive when used inside `effect()` because reading `.value` from signals registers Preact dependencies. |
 | Shape timing (submit/demand) | Rust evaluates all shapes. TS filters by timing mode: `_evaluate()` only patches continuous-timing shapes into signals. `getValidationReport({mode:'submit'})` includes submit-timing. `evaluateShape(id)` handles demand-timing. |
-| Studio `FelLexer`/`parser` deletion | Task 13 migrates Studio BEFORE deletion in Task 14. Mandatory. |
+| Studio `FelLexer`/`parser` deletion | Task 14 migrates Studio BEFORE deletion in Task 15. Mandatory. |
