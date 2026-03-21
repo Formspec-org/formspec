@@ -1,5 +1,6 @@
 //! Phase 3: Revalidate — validate all constraints and shapes.
 
+use fancy_regex::Regex;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
@@ -11,7 +12,7 @@ use crate::rebuild::{
     is_wildcard_bind, wildcard_base,
 };
 use crate::recalculate::eval_bool;
-use crate::types::{EvalTrigger, ItemInfo, ValidationResult, find_item_by_path};
+use crate::types::{EvalTrigger, ExtensionConstraint, ItemInfo, ValidationResult, find_item_by_path};
 
 /// Validate all constraints and shapes.
 pub fn revalidate(
@@ -19,6 +20,8 @@ pub fn revalidate(
     values: &HashMap<String, Value>,
     shapes: Option<&[Value]>,
     trigger: EvalTrigger,
+    extension_constraints: &[ExtensionConstraint],
+    formspec_version: &str,
 ) -> Vec<ValidationResult> {
     let mut results = Vec::new();
 
@@ -42,8 +45,14 @@ pub fn revalidate(
         })
         .collect();
 
-    // Bind constraints
-    validate_items(items, &mut env, values, &mut results);
+    // Build extension lookup map
+    let ext_by_name: HashMap<&str, &ExtensionConstraint> = extension_constraints
+        .iter()
+        .map(|c| (c.name.as_str(), c))
+        .collect();
+
+    // Bind constraints + extension constraints
+    validate_items(items, &mut env, values, &ext_by_name, formspec_version, &mut results);
 
     // Shape rules — filtered by timing
     if let Some(shapes) = shapes {
@@ -76,6 +85,8 @@ fn validate_items(
     items: &[ItemInfo],
     env: &mut FormspecEnvironment,
     values: &HashMap<String, Value>,
+    ext_by_name: &HashMap<&str, &ExtensionConstraint>,
+    formspec_version: &str,
     results: &mut Vec<ValidationResult>,
 ) {
     for item in items {
@@ -172,6 +183,9 @@ fn validate_items(
             }
         }
 
+        // Extension constraint enforcement
+        validate_extension_constraints(item, &val, ext_by_name, formspec_version, results);
+
         // Cardinality check for repeatable groups
         if item.repeatable {
             let count = detect_repeat_count(&item.path, values);
@@ -203,8 +217,206 @@ fn validate_items(
             }
         }
 
-        validate_items(&item.children, env, values, results);
+        validate_items(&item.children, env, values, ext_by_name, formspec_version, results);
     }
+}
+
+/// Check extension constraints (pattern, maxLength, min/max, status, compatibility) for a field.
+fn validate_extension_constraints(
+    item: &ItemInfo,
+    val: &Value,
+    ext_by_name: &HashMap<&str, &ExtensionConstraint>,
+    formspec_version: &str,
+    results: &mut Vec<ValidationResult>,
+) {
+    for ext_name in &item.extensions {
+        let Some(constraint) = ext_by_name.get(ext_name.as_str()) else {
+            // Extension not found in any loaded registry
+            results.push(ValidationResult {
+                path: item.path.clone(),
+                severity: "warning".to_string(),
+                constraint_kind: "extension".to_string(),
+                code: "UNRESOLVED_EXTENSION".to_string(),
+                message: format!("Extension '{ext_name}' not found in any loaded registry"),
+                source: "extension".to_string(),
+                shape_id: None,
+            });
+            continue;
+        };
+
+        // Status enforcement (§7.4)
+        match constraint.status.as_str() {
+            "retired" => {
+                results.push(ValidationResult {
+                    path: item.path.clone(),
+                    severity: "warning".to_string(),
+                    constraint_kind: "extension".to_string(),
+                    code: "EXTENSION_RETIRED".to_string(),
+                    message: format!("Extension '{ext_name}' is retired"),
+                    source: "extension".to_string(),
+                    shape_id: None,
+                });
+            }
+            "deprecated" => {
+                let notice = constraint
+                    .deprecation_notice
+                    .as_deref()
+                    .unwrap_or("No migration guidance available");
+                results.push(ValidationResult {
+                    path: item.path.clone(),
+                    severity: "info".to_string(),
+                    constraint_kind: "extension".to_string(),
+                    code: "EXTENSION_DEPRECATED".to_string(),
+                    message: format!("Extension '{ext_name}' is deprecated: {notice}"),
+                    source: "extension".to_string(),
+                    shape_id: None,
+                });
+            }
+            _ => {} // stable, draft — no status warnings
+        }
+
+        // Compatibility check (§7.3)
+        if let Some(ref compat_range) = constraint.compatibility_version {
+            if !version_satisfies(formspec_version, compat_range) {
+                results.push(ValidationResult {
+                    path: item.path.clone(),
+                    severity: "warning".to_string(),
+                    constraint_kind: "extension".to_string(),
+                    code: "EXTENSION_COMPATIBILITY_MISMATCH".to_string(),
+                    message: format!(
+                        "Extension '{ext_name}' requires formspec version {compat_range}"
+                    ),
+                    source: "extension".to_string(),
+                    shape_id: None,
+                });
+            }
+        }
+
+        // Skip value constraints if the value is null/empty
+        if val.is_null() {
+            continue;
+        }
+
+        let label = constraint
+            .display_name
+            .as_deref()
+            .unwrap_or(ext_name.as_str());
+
+        // Pattern constraint (string values only)
+        if let Some(ref pattern) = constraint.pattern {
+            if let Some(s) = val.as_str() {
+                if let Ok(re) = Regex::new(pattern) {
+                    if !re.is_match(s).unwrap_or(false) {
+                        results.push(ValidationResult {
+                            path: item.path.clone(),
+                            severity: "error".to_string(),
+                            constraint_kind: "extension".to_string(),
+                            code: "PATTERN_MISMATCH".to_string(),
+                            message: format!("Must be a valid {label}"),
+                            source: "extension".to_string(),
+                            shape_id: None,
+                        });
+                    }
+                }
+            }
+        }
+
+        // MaxLength constraint (string values only)
+        if let Some(max_len) = constraint.max_length {
+            if let Some(s) = val.as_str() {
+                if s.len() as u64 > max_len {
+                    results.push(ValidationResult {
+                        path: item.path.clone(),
+                        severity: "error".to_string(),
+                        constraint_kind: "extension".to_string(),
+                        code: "MAX_LENGTH_EXCEEDED".to_string(),
+                        message: format!(
+                            "{label} must be at most {max_len} characters"
+                        ),
+                        source: "extension".to_string(),
+                        shape_id: None,
+                    });
+                }
+            }
+        }
+
+        // Minimum constraint (numeric values)
+        if let Some(min) = constraint.minimum {
+            if let Some(n) = val.as_f64() {
+                if n < min {
+                    results.push(ValidationResult {
+                        path: item.path.clone(),
+                        severity: "error".to_string(),
+                        constraint_kind: "extension".to_string(),
+                        code: "RANGE_UNDERFLOW".to_string(),
+                        message: format!("{label} must be at least {min}"),
+                        source: "extension".to_string(),
+                        shape_id: None,
+                    });
+                }
+            }
+        }
+
+        // Maximum constraint (numeric values)
+        if let Some(max) = constraint.maximum {
+            if let Some(n) = val.as_f64() {
+                if n > max {
+                    results.push(ValidationResult {
+                        path: item.path.clone(),
+                        severity: "error".to_string(),
+                        constraint_kind: "extension".to_string(),
+                        code: "RANGE_OVERFLOW".to_string(),
+                        message: format!("{label} must be at most {max}"),
+                        source: "extension".to_string(),
+                        shape_id: None,
+                    });
+                }
+            }
+        }
+    }
+}
+
+/// Simple semver satisfaction check for extension compatibility ranges.
+fn version_satisfies(version: &str, constraint: &str) -> bool {
+    let v = parse_semver(version);
+
+    for token in constraint.split_whitespace() {
+        let (op, ver_str) = if let Some(rest) = token.strip_prefix(">=") {
+            (">=", rest)
+        } else if let Some(rest) = token.strip_prefix("<=") {
+            ("<=", rest)
+        } else if let Some(rest) = token.strip_prefix('>') {
+            (">", rest)
+        } else if let Some(rest) = token.strip_prefix('<') {
+            ("<", rest)
+        } else {
+            ("=", token)
+        };
+
+        let c = parse_semver(ver_str);
+
+        let ok = match op {
+            ">=" => v >= c,
+            "<=" => v <= c,
+            ">" => v > c,
+            "<" => v < c,
+            _ => v == c,
+        };
+        if !ok {
+            return false;
+        }
+    }
+    true
+}
+
+/// Parse a version string into a (major, minor, patch) tuple.
+fn parse_semver(v: &str) -> (u64, u64, u64) {
+    let parts: Vec<u64> = v.split('.').filter_map(|p| p.parse().ok()).collect();
+    (
+        parts.first().copied().unwrap_or(0),
+        parts.get(1).copied().unwrap_or(0),
+        parts.get(2).copied().unwrap_or(0),
+    )
 }
 
 fn validate_shape(
@@ -560,11 +772,12 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            extensions: vec![],
             children: vec![],
         }];
 
         let values: HashMap<String, Value> = HashMap::new();
-        let results = revalidate(&items, &values, None, EvalTrigger::Continuous);
+        let results = revalidate(&items, &values, None, EvalTrigger::Continuous, &[], "1.0.0");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].path, "email");
         assert_eq!(results[0].constraint_kind, "required");
@@ -597,11 +810,12 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            extensions: vec![],
             children: vec![],
         }];
 
         let values: HashMap<String, Value> = HashMap::new();
-        let results = revalidate(&items, &values, None, EvalTrigger::Continuous);
+        let results = revalidate(&items, &values, None, EvalTrigger::Continuous, &[], "1.0.0");
         assert!(
             results.is_empty(),
             "non-relevant items should be skipped entirely"
@@ -634,13 +848,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            extensions: vec![],
             children: vec![],
         }];
 
         let mut values = HashMap::new();
         values.insert("age".to_string(), json!(25));
 
-        let results = revalidate(&items, &values, None, EvalTrigger::Continuous);
+        let results = revalidate(&items, &values, None, EvalTrigger::Continuous, &[], "1.0.0");
         assert!(
             results.is_empty(),
             "constraint $age >= 18 should pass for 25"

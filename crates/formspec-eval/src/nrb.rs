@@ -117,6 +117,7 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            extensions: vec![],
             children: vec![],
         }
     }

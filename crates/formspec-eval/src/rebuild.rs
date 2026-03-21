@@ -150,6 +150,16 @@ fn build_item_info(item: &Value, binds: Option<&Value>, parent_path: Option<&str
             .unwrap_or(false),
         repeat_min: item.get("minRepeat").and_then(|v| v.as_u64()),
         repeat_max: item.get("maxRepeat").and_then(|v| v.as_u64()),
+        extensions: item
+            .get("extensions")
+            .and_then(|v| v.as_object())
+            .map(|obj| {
+                obj.iter()
+                    .filter(|(_, v)| v.as_bool().unwrap_or(false))
+                    .map(|(k, _)| k.clone())
+                    .collect()
+            })
+            .unwrap_or_default(),
         children,
     }
 }

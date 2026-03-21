@@ -325,6 +325,7 @@ def evaluate_definition(
     data: dict,
     *,
     mode: str = "continuous",
+    registry_documents: list[dict] | None = None,
 ) -> ProcessingResult:
     """Evaluate a definition against data using the Rust batch evaluator.
 
@@ -332,8 +333,10 @@ def evaluate_definition(
         definition: The Formspec definition dict.
         data: Field values dict.
         mode: Shape timing mode — "continuous" (default), "submit", or "disabled".
+        registry_documents: Optional list of registry document dicts for extension
+            constraint enforcement. Pass an empty list to disable registry loading.
     """
-    raw = formspec_rust.evaluate_def(definition, data, mode)
+    raw = formspec_rust.evaluate_def(definition, data, mode, registry_documents)
     validations = raw.get("validations", [])
     is_valid = not any(v.get("severity") == "error" for v in validations)
     return ProcessingResult(

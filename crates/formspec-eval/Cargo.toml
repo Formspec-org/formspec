@@ -6,6 +6,7 @@ license.workspace = true
 description = "Formspec Definition Evaluator — 4-phase batch processor (rebuild, recalculate, revalidate, notify)"
 
 [dependencies]
+fancy-regex = "0.14"
 fel-core = { path = "../fel-core" }
 rust_decimal = "1"
 serde_json = "1"

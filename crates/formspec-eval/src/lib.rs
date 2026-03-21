@@ -20,7 +20,8 @@ pub use recalculate::{recalculate, topo_sort_variables};
 pub use revalidate::revalidate;
 pub use screener::{ScreenerRouteResult, evaluate_screener};
 pub use types::{
-    EvalTrigger, EvaluationResult, ItemInfo, NrbMode, ValidationResult, VariableDef, WhitespaceMode,
+    EvalTrigger, EvaluationResult, ExtensionConstraint, ItemInfo, NrbMode, ValidationResult,
+    VariableDef, WhitespaceMode,
 };
 
 // ── Top-level orchestration ─────────────────────────────────────
@@ -36,6 +37,16 @@ pub fn evaluate_definition_with_trigger(
     definition: &Value,
     data: &HashMap<String, Value>,
     trigger: EvalTrigger,
+) -> EvaluationResult {
+    evaluate_definition_full(definition, data, trigger, &[])
+}
+
+/// Evaluate a definition with trigger mode and extension constraints from registries.
+pub fn evaluate_definition_full(
+    definition: &Value,
+    data: &HashMap<String, Value>,
+    trigger: EvalTrigger,
+    extension_constraints: &[ExtensionConstraint],
 ) -> EvaluationResult {
     // Phase 0: Flatten nested data into indexed paths.
     // Converts `{"rows": [{"a": 1}]}` → `{"rows[0].a": 1}` so the FEL
@@ -61,7 +72,18 @@ pub fn evaluate_definition_with_trigger(
 
     // Phase 3: Revalidate
     let shapes = definition.get("shapes").and_then(|v| v.as_array());
-    let mut validations = revalidate(&items, &values, shapes.map(|v| v.as_slice()), trigger);
+    let formspec_version = definition
+        .get("$formspec")
+        .and_then(|v| v.as_str())
+        .unwrap_or("1.0.0");
+    let mut validations = revalidate(
+        &items,
+        &values,
+        shapes.map(|v| v.as_slice()),
+        trigger,
+        extension_constraints,
+        formspec_version,
+    );
 
     // Surface circular variable dependency as a validation error
     if let Some(cycle_msg) = cycle_err {

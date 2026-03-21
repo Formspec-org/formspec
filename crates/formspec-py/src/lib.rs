@@ -25,7 +25,9 @@ use formspec_core::extension_analysis::RegistryEntryStatus;
 use formspec_core::registry_client::{self, Registry};
 use formspec_core::runtime_mapping;
 use formspec_core::{analyze_fel, detect_document_type, get_fel_dependencies};
-use formspec_eval::{EvalTrigger, evaluate_definition_with_trigger, evaluate_screener};
+use formspec_eval::{
+    EvalTrigger, ExtensionConstraint, evaluate_definition_full, evaluate_screener,
+};
 use formspec_lint::{LintMode, LintOptions, lint_with_options};
 
 // ── FEL Evaluation ──────────────────────────────────────────────
@@ -293,17 +295,20 @@ fn lint_document(
 /// Evaluate a Formspec definition against provided data.
 ///
 /// Args:
-///     definition_json: JSON string of the definition
-///     data_json: JSON string of the data (field values)
+///     definition: Python dict of the definition
+///     data: Python dict of field values
+///     trigger: Optional shape timing mode ("continuous", "submit", "disabled")
+///     registry_documents: Optional list of registry document dicts
 ///
 /// Returns:
-///     A dict with: values, validations, non_relevant
-#[pyfunction(signature = (definition, data, trigger=None))]
+///     A dict with: values, validations, non_relevant, variables
+#[pyfunction(signature = (definition, data, trigger=None, registry_documents=None))]
 fn evaluate_def(
     py: Python,
     definition: &Bound<'_, PyAny>,
     data: &Bound<'_, PyAny>,
     trigger: Option<&str>,
+    registry_documents: Option<&Bound<'_, PyList>>,
 ) -> PyResult<PyObject> {
     let definition: Value = depythonize(definition)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
@@ -321,7 +326,13 @@ fn evaluate_def(
         _ => EvalTrigger::Continuous,
     };
 
-    let result = evaluate_definition_with_trigger(&definition, &data, eval_trigger);
+    // Extract extension constraints from registry documents
+    let constraints = match registry_documents {
+        Some(docs) => extract_extension_constraints(py, docs)?,
+        None => Vec::new(),
+    };
+
+    let result = evaluate_definition_full(&definition, &data, eval_trigger, &constraints);
 
     let values = PyDict::new(py);
     for (k, v) in &result.values {
@@ -355,6 +366,94 @@ fn evaluate_def(
     dict.set_item("variables", variables)?;
 
     Ok(dict.into())
+}
+
+/// Extract ExtensionConstraint structs from raw registry JSON documents.
+fn extract_extension_constraints(
+    _py: Python,
+    docs: &Bound<'_, PyList>,
+) -> PyResult<Vec<ExtensionConstraint>> {
+    let mut constraints = Vec::new();
+
+    for doc_any in docs.iter() {
+        let doc_val: Value = depythonize(&doc_any)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let entries = match doc_val.get("entries").and_then(|v| v.as_array()) {
+            Some(arr) => arr,
+            None => continue,
+        };
+
+        for entry in entries {
+            let name = match entry.get("name").and_then(|v| v.as_str()) {
+                Some(n) => n.to_string(),
+                None => continue,
+            };
+
+            let status = entry
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("stable")
+                .to_string();
+
+            let display_name = entry
+                .get("metadata")
+                .and_then(|m| m.get("displayName"))
+                .and_then(|v| v.as_str())
+                .map(String::from);
+
+            let base_type = entry
+                .get("baseType")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+
+            let deprecation_notice = entry
+                .get("deprecationNotice")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+
+            let compatibility_version = entry
+                .get("compatibility")
+                .and_then(|c| c.get("formspecVersion"))
+                .and_then(|v| v.as_str())
+                .map(String::from);
+
+            // Extract constraint parameters
+            let constraint_obj = entry.get("constraints");
+
+            let pattern = constraint_obj
+                .and_then(|c| c.get("pattern"))
+                .and_then(|v| v.as_str())
+                .map(String::from);
+
+            let max_length = constraint_obj
+                .and_then(|c| c.get("maxLength"))
+                .and_then(|v| v.as_u64());
+
+            let minimum = constraint_obj
+                .and_then(|c| c.get("minimum"))
+                .and_then(|v| v.as_f64());
+
+            let maximum = constraint_obj
+                .and_then(|c| c.get("maximum"))
+                .and_then(|v| v.as_f64());
+
+            constraints.push(ExtensionConstraint {
+                name,
+                display_name,
+                pattern,
+                max_length,
+                minimum,
+                maximum,
+                base_type,
+                status,
+                deprecation_notice,
+                compatibility_version,
+            });
+        }
+    }
+
+    Ok(constraints)
 }
 
 // ── Screener Evaluation ─────────────────────────────────────────
