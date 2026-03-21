@@ -171,3 +171,72 @@ test('2.8 — constraint using only $ (current-node) is unchanged', () => {
   assert.equal(bind.constraint, '$ >= 0 and $ <= 100');
   assert.equal(bind.constraintMessage, 'Rate must be 0-100%');
 });
+
+// ── No-fragment assembly: $ref without # fragment ────────────────────
+
+const noFragmentLib = {
+  $formspec: '1.0',
+  url: 'https://example.org/nofrag-lib',
+  version: '1.0.0',
+  title: 'No-Fragment Library',
+  status: 'active',
+  items: [
+    { key: 'amount', type: 'field', label: 'Amount', dataType: 'decimal' },
+    { key: 'total', type: 'field', label: 'Total', dataType: 'decimal' },
+  ],
+  binds: [],
+};
+
+function makeNoFragLib(binds) {
+  const lib = JSON.parse(JSON.stringify(noFragmentLib));
+  lib.binds = binds;
+  return lib;
+}
+
+const noFragmentHost = {
+  $formspec: '1.0',
+  url: 'https://example.org/nofrag-host',
+  version: '1.0.0',
+  title: 'No-Fragment Host',
+  status: 'draft',
+  items: [
+    {
+      key: 'wrapper',
+      type: 'group',
+      label: 'Wrapper',
+      $ref: 'https://example.org/nofrag-lib|1.0.0',
+      keyPrefix: 'imp_',
+    },
+  ],
+};
+
+test('3.1 — no-fragment: multi-segment FEL path is rewritten', () => {
+  const lib = makeNoFragLib([
+    { path: 'total', calculate: 'sum($amount)' },
+  ]);
+  // Also test a multi-segment reference: $amount is single-segment here,
+  // but let's add a bind that references a multi-segment path.
+  lib.items = [
+    {
+      key: 'budget',
+      type: 'group',
+      label: 'Budget',
+      children: [
+        { key: 'cost', type: 'field', label: 'Cost', dataType: 'decimal' },
+      ],
+    },
+    { key: 'total', type: 'field', label: 'Total', dataType: 'decimal' },
+  ];
+  lib.binds = [
+    { path: 'total', calculate: '$budget.cost * 2' },
+  ];
+  const resolver = (url) => {
+    if (url === 'https://example.org/nofrag-lib') return lib;
+    throw new Error('Unknown: ' + url);
+  };
+  const { definition } = assembleDefinitionSync(JSON.parse(JSON.stringify(noFragmentHost)), resolver);
+  const bind = definition.binds.find(b => b.path === 'wrapper.imp_total');
+  assert.ok(bind, 'bind with path "wrapper.imp_total" should exist');
+  // $budget.cost → $wrapper.imp_cost (budget is imported key, cost is imported key)
+  assert.equal(bind.calculate, '$wrapper.imp_cost * 2');
+});

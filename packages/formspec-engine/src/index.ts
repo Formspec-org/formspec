@@ -14,13 +14,6 @@ import type {
 } from 'formspec-types';
 
 import { diffEvalResults, type EvalResult, type EvalValidation } from './diff.js';
-import {
-    assembleDefinition as legacyAssembleDefinition,
-    assembleDefinitionSync as legacyAssembleDefinitionSync,
-    rewriteFEL as legacyRewriteFEL,
-} from './assembler.js';
-import { analyzeFEL as legacyAnalyzeFEL } from './fel/analysis.js';
-import { rewriteFELReferences as legacyRewriteFELReferences } from './fel/rewrite.js';
 import type {
     AssemblyProvenance,
     AssemblyResult,
@@ -34,6 +27,7 @@ import type {
     ExtensionUsageIssue,
     FELAnalysis,
     FELBuiltinFunctionCatalogEntry,
+    FELRewriteOptions,
     FormEngineDiagnosticsSnapshot,
     FormEngineRuntimeContext,
     IFormEngine,
@@ -50,14 +44,13 @@ import type {
     SchemaValidator,
     SchemaValidatorSchemas,
 } from './interfaces.js';
-import { RuntimeMappingEngine as LegacyRuntimeMappingEngine } from './runtime-mapping.js';
 import {
     initWasm,
     isWasmReady,
-    wasmAssembleDefinition,
+    wasmAnalyzeFEL,
+    wasmCollectFELRewriteTargets,
     wasmEvaluateDefinition,
     wasmEvalFELWithContext,
-    wasmExecuteMappingDoc,
     wasmFindRegistryEntry,
     wasmGenerateChangelog,
     wasmGetFELDependencies,
@@ -90,6 +83,7 @@ export type {
     ExtensionUsageIssue,
     FELAnalysis,
     FELBuiltinFunctionCatalogEntry,
+    FELRewriteOptions,
     FormEngineDiagnosticsSnapshot,
     FormEngineRuntimeContext,
     IFormEngine,
@@ -121,10 +115,101 @@ export { initWasm, isWasmReady };
 
 export const normalizeIndexedPath = wasmNormalizeIndexedPath;
 export const itemAtPath = wasmItemAtPath;
-export const itemLocationAtPath = wasmItemLocationAtPath;
-export const analyzeFEL = legacyAnalyzeFEL;
 export const tokenizeFEL = wasmTokenizeFEL;
-export const rewriteFELReferences = legacyRewriteFELReferences;
+export function analyzeFEL(expression: string): FELAnalysis {
+    const raw = wasmAnalyzeFEL(expression);
+    return {
+        ...raw,
+        errors: raw.errors.map((e: string | { message: string; line?: number; column?: number; offset?: number }) =>
+            typeof e === 'string' ? { message: e, line: 1, column: 1, offset: 0 } : e,
+        ),
+    };
+}
+
+/** Basic tree item shape used by path traversal helpers. */
+export interface TreeItemLike<T extends TreeItemLike<T> = any> {
+    key: string;
+    children?: T[];
+}
+
+/** Resolved mutable location of an item in a tree. */
+export interface ItemLocation<T extends TreeItemLike<T>> {
+    parent: T[];
+    index: number;
+    item: T;
+}
+
+/** Remove repeat indices/wildcards from a path segment. */
+export function normalizePathSegment(segment: string): string {
+    return segment.replace(/\[(?:\d+|\*)\]/g, '');
+}
+
+/** Split a dotted path into normalized (index-free) segments. */
+export function splitNormalizedPath(path: string): string[] {
+    if (!path) return [];
+    return wasmNormalizeIndexedPath(path).split('.').filter(Boolean);
+}
+
+/** Find the mutable parent/index/item triple for a dotted tree path. */
+export function itemLocationAtPath<T extends TreeItemLike<T>>(items: T[], path: string): ItemLocation<T> | undefined {
+    const parts = splitNormalizedPath(path);
+    if (parts.length === 0) return undefined;
+    let currentItems = items;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const found = currentItems.find(item => item.key === parts[i]);
+        if (!found?.children) return undefined;
+        currentItems = found.children;
+    }
+    const index = currentItems.findIndex(item => item.key === parts[parts.length - 1]);
+    if (index < 0) return undefined;
+    return { parent: currentItems, index, item: currentItems[index] };
+}
+
+function mapRewriteEntries(
+    entries: string[],
+    rewrite?: (value: string) => string,
+): Record<string, string> | undefined {
+    if (!rewrite || entries.length === 0) return undefined;
+    const mapped: Record<string, string> = {};
+    let changed = false;
+    for (const entry of entries) {
+        const next = rewrite(entry);
+        if (next !== entry) {
+            mapped[entry] = next;
+            changed = true;
+        }
+    }
+    return changed ? mapped : undefined;
+}
+
+function mapRewriteNavigationTargets(
+    entries: Array<{ functionName: 'prev' | 'next' | 'parent'; name: string }>,
+    rewrite?: (name: string, fn: 'prev' | 'next' | 'parent') => string,
+): Record<string, string> | undefined {
+    if (!rewrite || entries.length === 0) return undefined;
+    const mapped: Record<string, string> = {};
+    let changed = false;
+    for (const entry of entries) {
+        const next = rewrite(entry.name, entry.functionName);
+        if (next !== entry.name) {
+            mapped[`${entry.functionName}:${entry.name}`] = next;
+            changed = true;
+        }
+    }
+    return changed ? mapped : undefined;
+}
+
+/** Rewrite FEL references using callback options (bridges to WASM rewrite). */
+export function rewriteFELReferences(expression: string, options: FELRewriteOptions): string {
+    const targets = wasmCollectFELRewriteTargets(expression);
+    return wasmRewriteFELReferences(expression, {
+        fieldPaths: mapRewriteEntries(targets.fieldPaths, options.rewriteFieldPath),
+        currentPaths: mapRewriteEntries(targets.currentPaths, options.rewriteCurrentPath),
+        variables: mapRewriteEntries(targets.variables, options.rewriteVariable),
+        instanceNames: mapRewriteEntries(targets.instanceNames, options.rewriteInstanceName),
+        navigationTargets: mapRewriteNavigationTargets(targets.navigationTargets, options.rewriteNavigationTarget),
+    });
+}
 export const rewriteMessageTemplate = wasmRewriteMessageTemplate;
 export const lintDocument = wasmLintDocument;
 export const parseRegistry = wasmParseRegistry;
@@ -180,24 +265,612 @@ export function createSchemaValidator(_schemas?: SchemaValidatorSchemas): Schema
 }
 
 export function createMappingEngine(mappingDoc: unknown): IRuntimeMappingEngine {
-    return new LegacyRuntimeMappingEngine(mappingDoc as any);
+    return new RuntimeMappingEngine(mappingDoc);
+}
+
+// ---------------------------------------------------------------------------
+// RuntimeMappingEngine — full TS implementation with WASM FEL
+// ---------------------------------------------------------------------------
+
+type MappingRule = {
+    sourcePath?: string | null;
+    targetPath?: string | null;
+    transform?: string;
+    expression?: string;
+    coerce?: any;
+    valueMap?: any;
+    condition?: string;
+    reverse?: Partial<MappingRule>;
+    priority?: number;
+    reversePriority?: number;
+    bidirectional?: boolean;
+    default?: any;
+    separator?: string;
+    array?: MappingArrayDescriptor;
+};
+
+type MappingArrayDescriptor = {
+    mode: 'each' | 'whole' | 'indexed';
+    innerRules?: any[];
+};
+
+function mappingSplitPath(path: string): string[] {
+    if (!path) return [];
+    return path.replace(/\[(\d+|\*)\]/g, '.$1').split('.').filter(Boolean);
+}
+
+function mappingGetByPath(obj: any, path?: string | null): any {
+    if (!path) return undefined;
+    const parts = mappingSplitPath(path);
+    let current = obj;
+    for (const part of parts) {
+        if (current == null) return undefined;
+        if (part === '*') return Array.isArray(current) ? current : undefined;
+        current = current[part];
+    }
+    return current;
+}
+
+function mappingSetByPath(obj: any, path: string, value: any): void {
+    const parts = mappingSplitPath(path);
+    if (parts.length === 0) return;
+    let current = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i];
+        if (part === '*') {
+            if (!Array.isArray(current)) return;
+            const remainingPath = parts.slice(i + 1).join('.');
+            for (const element of current) {
+                if (element != null && typeof element === 'object') {
+                    mappingSetByPath(element, remainingPath, value);
+                }
+            }
+            return;
+        }
+        const nextPart = parts[i + 1];
+        if (nextPart === '*') {
+            if (current[part] == null) return;
+            current = current[part];
+            continue;
+        }
+        const nextIsIndex = /^\d+$/.test(nextPart);
+        if (current[part] == null || typeof current[part] !== 'object') {
+            current[part] = nextIsIndex ? [] : {};
+        }
+        current = current[part];
+    }
+    const lastPart = parts[parts.length - 1];
+    if (lastPart === '*') {
+        if (Array.isArray(current)) {
+            for (let j = 0; j < current.length; j++) current[j] = value;
+        }
+    } else {
+        current[lastPart] = value;
+    }
+}
+
+function mappingClone<T>(value: T): T {
+    if (value === null || value === undefined || typeof value !== 'object') return value;
+    if (typeof structuredClone === 'function') return structuredClone(value);
+    return JSON.parse(JSON.stringify(value));
+}
+
+function mappingEvalFEL(expression: string, currentValue: any, sourceDocument: any, arrayIndex?: number): any {
+    const fields: Record<string, any> = {};
+    if (sourceDocument && typeof sourceDocument === 'object') {
+        mappingFlattenToFields(sourceDocument, '', fields);
+    }
+    fields[''] = currentValue;
+    fields['$index'] = arrayIndex ?? null;
+    fields['index'] = arrayIndex ?? null;
+    return wasmEvalFELWithContext(expression, {
+        fields,
+        variables: { source: sourceDocument, index: arrayIndex ?? null },
+    });
+}
+
+function mappingFlattenToFields(obj: any, prefix: string, out: Record<string, any>): void {
+    if (obj == null || typeof obj !== 'object') return;
+    for (const [key, value] of Object.entries(obj)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        out[path] = value;
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            mappingFlattenToFields(value, path, out);
+        }
+    }
+}
+
+function mappingIsBijective(forward: Record<string, any>): boolean {
+    const values = Object.values(forward);
+    return values.length === new Set(values.map(String)).size;
+}
+
+function mappingInvertMap(forward: Record<string, any>): Record<string, any> {
+    const result: Record<string, any> = {};
+    for (const [k, v] of Object.entries(forward)) result[String(v)] = k;
+    return result;
+}
+
+function mappingApplyValueMap(
+    rawValueMap: any, value: any, direction: MappingDirection,
+    ruleIndex: number, sourcePath: string | undefined, targetPath: string | undefined,
+): { value: any; skip: boolean; diagnostic?: MappingDiagnostic } {
+    const isNewShape = rawValueMap && typeof rawValueMap === 'object'
+        && ('forward' in rawValueMap || 'reverse' in rawValueMap || 'unmapped' in rawValueMap);
+
+    let lookupMap: Record<string, any>;
+    let unmapped = 'passthrough';
+    let defaultValue: any;
+
+    if (isNewShape) {
+        const forward: Record<string, any> = rawValueMap.forward ?? {};
+        unmapped = rawValueMap.unmapped ?? 'error';
+        defaultValue = rawValueMap.default;
+        if (direction === 'forward') {
+            lookupMap = forward;
+        } else {
+            if (rawValueMap.reverse) { lookupMap = rawValueMap.reverse; }
+            else if (mappingIsBijective(forward)) { lookupMap = mappingInvertMap(forward); }
+            else {
+                return { value: undefined, skip: true, diagnostic: { ruleIndex, sourcePath, targetPath, errorCode: 'UNMAPPED_VALUE', message: 'Cannot auto-invert non-bijective valueMap for reverse direction' } };
+            }
+        }
+    } else {
+        lookupMap = rawValueMap ?? {};
+    }
+
+    const key = String(value);
+    if (value !== undefined && lookupMap[key] !== undefined) {
+        return { value: lookupMap[key], skip: false };
+    }
+
+    if (unmapped === 'passthrough') return { value, skip: false };
+    if (unmapped === 'drop') return { value: undefined, skip: true };
+    if (unmapped === 'default') return { value: defaultValue, skip: false };
+    if (unmapped === 'error') {
+        return { value: undefined, skip: true, diagnostic: { ruleIndex, sourcePath, targetPath, errorCode: 'UNMAPPED_VALUE', message: `Value "${key}" has no mapping and unmapped strategy is "error"` } };
+    }
+    return { value, skip: false };
+}
+
+const MAPPING_LOSSY_PAIRS = new Set([
+    'number\u2192integer', 'money\u2192number', 'money\u2192string', 'datetime\u2192date',
+]);
+
+function mappingIsLossy(from: string, to: string): boolean {
+    return MAPPING_LOSSY_PAIRS.has(`${from}\u2192${to}`);
+}
+
+function mappingApplyCoerce(
+    value: any, desc: any, ruleIndex: number, sourcePath: string | undefined, targetPath: string | undefined,
+): { value: any; diagnostic?: MappingDiagnostic; lossy?: boolean } {
+    if (value === undefined) return { value: undefined };
+    let from: string, to: string;
+    if (typeof desc === 'string') { from = 'any'; to = desc; }
+    else if (desc == null) { return { value }; }
+    else { from = desc.from ?? 'any'; to = desc.to ?? 'string'; }
+
+    if (to === 'number') {
+        if (from === 'money') {
+            return value != null && typeof value === 'object' && 'amount' in value
+                ? { value: value.amount, lossy: true } : { value: null, lossy: true };
+        }
+        return { value: value == null ? null : Number(value) };
+    }
+    if (to === 'integer') {
+        if (from === 'boolean') return { value: value ? 1 : 0 };
+        const n = value == null ? null : Number(value);
+        if (n !== null && !Number.isFinite(n)) {
+            return { value: null, diagnostic: { ruleIndex, sourcePath, targetPath, errorCode: 'COERCE_FAILURE', message: `Cannot coerce "${value}" to integer` } };
+        }
+        if (n !== null && typeof n === 'number' && !Number.isInteger(n)) {
+            return { value: Math.trunc(n), lossy: from === 'number' };
+        }
+        return { value: n === null ? null : Math.trunc(n as number) };
+    }
+    if (to === 'string') {
+        if (from === 'money') {
+            return value != null && typeof value === 'object' && 'amount' in value
+                ? { value: String(value.amount), lossy: true } : { value: null, lossy: true };
+        }
+        return { value: value == null ? null : String(value) };
+    }
+    if (to === 'boolean') {
+        if (from === 'string' || typeof value === 'string') {
+            const s = String(value).toLowerCase().trim();
+            if (s === 'true' || s === 'yes' || s === '1') return { value: true };
+            if (s === 'false' || s === 'no' || s === '0' || s === '') return { value: false };
+            return { value: Boolean(value) };
+        }
+        return { value: Boolean(value) };
+    }
+    if (to === 'date') return { value: value == null ? null : String(value) };
+    if (to === 'datetime') {
+        return { value: value == null ? null : String(value), lossy: from === 'date' ? true : undefined };
+    }
+    return { value: null, diagnostic: { ruleIndex, sourcePath, targetPath, errorCode: 'COERCE_FAILURE', message: `Unsupported coerce type: ${to}` } };
+}
+
+function mappingReverseCoerce(desc: any): any | null | 'passthrough' {
+    if (desc == null || typeof desc === 'string') return 'passthrough';
+    const from = desc.from ?? 'any';
+    const to = desc.to ?? 'string';
+    if (mappingIsLossy(from, to)) return null;
+    return { from: to, to: from, format: desc.format };
+}
+
+function mappingApplyFlatten(value: any, targetPath: string, separator: string | undefined, output: any): void {
+    if (Array.isArray(value)) {
+        if (separator !== undefined) { mappingSetByPath(output, targetPath, value.join(separator)); }
+        else { for (let i = 0; i < value.length; i++) mappingSetByPath(output, `${targetPath}_${i}`, mappingClone(value[i])); }
+    } else if (value !== null && typeof value === 'object') {
+        const parts = mappingSplitPath(targetPath);
+        const lastSeg = parts[parts.length - 1];
+        const parentPath = parts.slice(0, -1).join('.');
+        if (parentPath) {
+            const p = mappingGetByPath(output, parentPath);
+            if (p == null || typeof p !== 'object') mappingSetByPath(output, parentPath, {});
+        }
+        const container = parentPath ? mappingGetByPath(output, parentPath) : output;
+        for (const [k, v] of Object.entries(value)) container[`${lastSeg}.${k}`] = mappingClone(v);
+    }
+}
+
+function mappingApplyNest(source: any, sourcePath: string, targetPath: string, separator: string | undefined, output: any): void {
+    const value = mappingGetByPath(source, sourcePath);
+    if (typeof value === 'string' && separator !== undefined) {
+        mappingSetByPath(output, targetPath, value.split(separator));
+        return;
+    }
+    const positional: any[] = [];
+    let i = 0;
+    while (true) {
+        const c = mappingGetByPath(source, `${sourcePath}_${i}`);
+        if (c === undefined) break;
+        positional.push(c);
+        i++;
+    }
+    if (positional.length > 0) { mappingSetByPath(output, targetPath, positional); return; }
+    if (value !== undefined) mappingSetByPath(output, targetPath, mappingClone(value));
+}
+
+function mappingExecuteEach(
+    sourceArray: any[], innerRules: any[], sourceDocument: any,
+    diagnostics: MappingDiagnostic[], parentRuleIndex: number,
+): any[] {
+    return sourceArray.map((element: any, index: number) => {
+        const itemOutput: any = {};
+        for (const ir of innerRules) {
+            const srcPath = ir.sourcePath;
+            const tgtPath = ir.targetPath;
+            if (!tgtPath && ir.transform !== 'drop') continue;
+            let value = srcPath ? mappingGetByPath(element, srcPath) : undefined;
+            const transform = ir.transform || 'preserve';
+            if (transform === 'drop') continue;
+            if (transform === 'expression') {
+                try { value = mappingEvalFEL(ir.expression, value, sourceDocument, index); }
+                catch (e) { diagnostics.push({ ruleIndex: parentRuleIndex, sourcePath: srcPath ?? undefined, targetPath: tgtPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); continue; }
+            }
+            if (ir.default !== undefined && value === undefined) value = ir.default;
+            if (value === undefined) continue;
+            mappingSetByPath(itemOutput, tgtPath!, mappingClone(value));
+        }
+        return itemOutput;
+    });
+}
+
+function mappingExecuteIndexed(sourceArray: any[], innerRules: any[], output: any, targetBasePath: string): void {
+    for (const ir of innerRules) {
+        const idx = ir.index;
+        const tgtPath = ir.targetPath;
+        if (idx === undefined || !tgtPath) continue;
+        const value = sourceArray[idx];
+        if (value === undefined) continue;
+        mappingSetByPath(output, targetBasePath ? `${targetBasePath}.${tgtPath}` : tgtPath, mappingClone(value));
+    }
+}
+
+interface MappingCSVConfig { delimiter?: string; quote?: string; header?: boolean; lineEnding?: 'crlf' | 'lf'; }
+
+function mappingSerializeCSV(output: Record<string, unknown>, config: MappingCSVConfig): string {
+    const delim = config.delimiter ?? ',';
+    const quote = config.quote ?? '"';
+    const includeHeader = config.header !== false;
+    const le = config.lineEnding === 'lf' ? '\n' : '\r\n';
+    const keys = Object.keys(output).filter(k => {
+        const v = output[k];
+        return v === null || v === undefined || typeof v !== 'object';
+    });
+    if (keys.length === 0) return '';
+    const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const q = (val: unknown): string => {
+        const str = val == null ? '' : String(val);
+        if (str.includes(delim) || str.includes(quote) || str.includes('\n') || str.includes('\r')) {
+            return quote + str.replace(new RegExp(esc(quote), 'g'), quote + quote) + quote;
+        }
+        return str;
+    };
+    const rows: string[] = [];
+    if (includeHeader) rows.push(keys.map(k => q(k)).join(delim));
+    rows.push(keys.map(k => q(output[k])).join(delim));
+    return rows.join(le);
+}
+
+interface MappingXMLConfig { rootElement?: string; declaration?: boolean; indent?: number; cdata?: string[]; }
+type MappingXMLTree = { attributes: Record<string, string>; children: Map<string, MappingXMLTree>; text?: string };
+
+function mappingBuildXMLTree(obj: Record<string, unknown>): MappingXMLTree {
+    const node: MappingXMLTree = { attributes: {}, children: new Map() };
+    for (const [key, value] of Object.entries(obj)) {
+        if (key.startsWith('@')) {
+            node.attributes[key.slice(1)] = value == null ? '' : String(value);
+        } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+            node.children.set(key, mappingBuildXMLTree(value as Record<string, unknown>));
+        } else {
+            const child: MappingXMLTree = { attributes: {}, children: new Map() };
+            child.text = value == null ? '' : String(value);
+            node.children.set(key, child);
+        }
+    }
+    return node;
+}
+
+function mappingEscapeXML(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+function mappingRenderElement(
+    name: string, node: MappingXMLTree, depth: number, indentSize: number,
+    cdataPaths: Set<string>, elementPath: string, lines: string[],
+): void {
+    const indent = indentSize > 0 ? ' '.repeat(depth * indentSize) : '';
+    const childIndent = indentSize > 0 ? ' '.repeat((depth + 1) * indentSize) : '';
+    let attrStr = '';
+    for (const [an, av] of Object.entries(node.attributes)) attrStr += ` ${an}="${mappingEscapeXML(av)}"`;
+    const hasChildren = node.children.size > 0;
+    const hasText = node.text !== undefined;
+    if (!hasChildren && !hasText) { lines.push(`${indent}<${name}${attrStr}/>`); return; }
+    if (hasText && !hasChildren) {
+        const tc = cdataPaths.has(elementPath) ? `<![CDATA[${node.text}]]>` : mappingEscapeXML(node.text!);
+        lines.push(`${indent}<${name}${attrStr}>${tc}</${name}>`); return;
+    }
+    lines.push(`${indent}<${name}${attrStr}>`);
+    if (hasText) {
+        const tc = cdataPaths.has(elementPath) ? `<![CDATA[${node.text}]]>` : mappingEscapeXML(node.text!);
+        lines.push(`${childIndent}${tc}`);
+    }
+    for (const [cn, cnode] of node.children) {
+        mappingRenderElement(cn, cnode, depth + 1, indentSize, cdataPaths, elementPath ? `${elementPath}.${cn}` : cn, lines);
+    }
+    lines.push(`${indent}</${name}>`);
+}
+
+function mappingSerializeXML(output: Record<string, unknown>, config: MappingXMLConfig): string {
+    const root = config.rootElement ?? 'root';
+    const decl = config.declaration !== false;
+    const indentSize = config.indent ?? 2;
+    const cdataPaths = new Set(config.cdata ?? []);
+    const tree = mappingBuildXMLTree(output);
+    const lines: string[] = [];
+    if (decl) lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+    mappingRenderElement(root, tree, 0, indentSize, cdataPaths, '', lines);
+    return lines.join(indentSize > 0 ? '\n' : '');
+}
+
+function mappingOmitNulls(obj: any): void {
+    if (obj == null || typeof obj !== 'object') return;
+    if (Array.isArray(obj)) { for (const item of obj) mappingOmitNulls(item); return; }
+    for (const key of Object.keys(obj)) {
+        if (obj[key] === null || obj[key] === undefined) delete obj[key];
+        else if (typeof obj[key] === 'object') mappingOmitNulls(obj[key]);
+    }
+}
+
+function mappingSortKeysDeep(obj: any): void {
+    if (obj == null || typeof obj !== 'object') return;
+    if (Array.isArray(obj)) { for (const item of obj) mappingSortKeysDeep(item); return; }
+    const keys = Object.keys(obj).sort();
+    const entries = keys.map(k => [k, obj[k]] as const);
+    for (const key of Object.keys(obj)) delete obj[key];
+    for (const [key, value] of entries) { obj[key] = value; if (typeof value === 'object') mappingSortKeysDeep(value); }
+}
+
+function mappingParseSimpleLiteral(expression: string): any {
+    const t = expression.trim();
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) return t.slice(1, -1);
+    if (t === 'true') return true;
+    if (t === 'false') return false;
+    if (t === 'null') return null;
+    const n = Number(t);
+    if (Number.isFinite(n)) return n;
+    return t;
 }
 
 export class RuntimeMappingEngine implements IRuntimeMappingEngine {
-    private readonly runtime: IRuntimeMappingEngine;
+    private readonly doc: any;
+    private readonly rules: MappingRule[];
 
-    constructor(mappingDoc: unknown) {
-        this.runtime = new LegacyRuntimeMappingEngine(mappingDoc as any);
+    constructor(mappingDocument: any) {
+        this.doc = mappingDocument || {};
+        this.rules = Array.isArray(this.doc.rules) ? this.doc.rules : [];
     }
 
     public forward(source: any): RuntimeMappingResult {
-        return this.runtime.forward(source);
+        return this.execute('forward', source ?? {});
     }
 
     public reverse(source: any): RuntimeMappingResult {
-        return this.runtime.reverse(source);
+        return this.execute('reverse', source ?? {});
+    }
+
+    private execute(direction: MappingDirection, source: any): RuntimeMappingResult {
+        const output: any = {};
+        const diagnostics: MappingDiagnostic[] = [];
+        let appliedRules = 0;
+
+        const docDir = this.doc.direction;
+        if (docDir === 'forward' && direction === 'reverse') {
+            diagnostics.push({ ruleIndex: -1, errorCode: 'INVALID_DOCUMENT', message: 'This mapping document is forward-only; reverse execution is not permitted' });
+            return { direction, output, appliedRules, diagnostics };
+        }
+        if (docDir === 'reverse' && direction === 'forward') {
+            diagnostics.push({ ruleIndex: -1, errorCode: 'INVALID_DOCUMENT', message: 'This mapping document is reverse-only; forward execution is not permitted' });
+            return { direction, output, appliedRules, diagnostics };
+        }
+
+        if (direction === 'forward' && this.doc.defaults && typeof this.doc.defaults === 'object') {
+            for (const [path, value] of Object.entries(this.doc.defaults)) {
+                mappingSetByPath(output, path, mappingClone(value));
+            }
+        }
+
+        const sortedRules = [...this.rules].sort((a, b) => {
+            const ap = direction === 'forward' ? (a.priority ?? 0) : (a.reversePriority ?? a.priority ?? 0);
+            const bp = direction === 'forward' ? (b.priority ?? 0) : (b.reversePriority ?? b.priority ?? 0);
+            return bp - ap;
+        });
+
+        for (let ri = 0; ri < sortedRules.length; ri++) {
+            const rule = sortedRules[ri];
+            if (direction === 'reverse' && rule.bidirectional === false) continue;
+
+            const effective = direction === 'reverse' && rule.reverse ? { ...rule, ...rule.reverse } : rule;
+            const sourcePath = direction === 'forward' ? effective.sourcePath : (effective.targetPath ?? rule.targetPath);
+            const targetPath = direction === 'forward' ? effective.targetPath : (effective.sourcePath ?? rule.sourcePath);
+
+            if (rule.condition) {
+                const conditionValue = mappingGetByPath(source, sourcePath ?? undefined);
+                try { if (!mappingEvalFEL(rule.condition, conditionValue, source)) continue; }
+                catch { continue; }
+            }
+            const transform = effective.transform || 'preserve';
+
+            if (transform === 'drop') continue;
+            if (!targetPath && transform !== 'flatten' && transform !== 'split') continue;
+
+            if (effective.array) {
+                const arr = effective.array as MappingArrayDescriptor;
+                const srcArr = mappingGetByPath(source, sourcePath ?? undefined);
+                if (arr.mode === 'whole') {
+                    let val = srcArr;
+                    if (transform === 'expression') {
+                        try { val = mappingEvalFEL(effective.expression!, val, source); }
+                        catch (e) { diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); continue; }
+                    }
+                    if (val === undefined && effective.default !== undefined) val = effective.default;
+                    if (val === undefined) continue;
+                    mappingSetByPath(output, targetPath!, mappingClone(val));
+                    appliedRules++;
+                } else if (arr.mode === 'each') {
+                    if (!Array.isArray(srcArr)) continue;
+                    mappingSetByPath(output, targetPath!, mappingExecuteEach(srcArr, arr.innerRules ?? [], source, diagnostics, ri));
+                    appliedRules++;
+                } else if (arr.mode === 'indexed') {
+                    if (!Array.isArray(srcArr)) continue;
+                    mappingExecuteIndexed(srcArr, arr.innerRules ?? [], output, targetPath ?? '');
+                    appliedRules++;
+                }
+                continue;
+            }
+
+            const rawValue = mappingGetByPath(source, sourcePath ?? undefined);
+            let value = rawValue;
+            let defaultApplied = false;
+            if (value === undefined && 'default' in effective) { value = effective.default; defaultApplied = true; }
+
+            if (transform === 'constant') {
+                value = mappingParseSimpleLiteral(String(effective.expression ?? 'null'));
+            } else if (transform === 'valueMap') {
+                if (value !== undefined) {
+                    const r = mappingApplyValueMap(effective.valueMap, value, direction, ri, sourcePath ?? undefined, targetPath ?? undefined);
+                    if (r.diagnostic) diagnostics.push(r.diagnostic);
+                    if (r.skip) continue;
+                    value = r.value;
+                }
+            } else if (transform === 'coerce') {
+                let cd = effective.coerce;
+                if (direction === 'reverse') {
+                    const rev = mappingReverseCoerce(cd);
+                    if (rev === null) continue;
+                    if (rev !== 'passthrough') {
+                        cd = rev;
+                        const r = mappingApplyCoerce(value, cd, ri, sourcePath ?? undefined, targetPath ?? undefined);
+                        if (r.diagnostic) { diagnostics.push(r.diagnostic); continue; }
+                        value = r.value;
+                    }
+                } else {
+                    const r = mappingApplyCoerce(value, cd, ri, sourcePath ?? undefined, targetPath ?? undefined);
+                    if (r.diagnostic) { diagnostics.push(r.diagnostic); continue; }
+                    value = r.value;
+                }
+            } else if (transform === 'expression') {
+                if (!defaultApplied) {
+                    try { value = mappingEvalFEL(effective.expression!, value, source); }
+                    catch (e) { diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); continue; }
+                }
+            } else if (transform === 'flatten') {
+                if (value === undefined) continue;
+                mappingApplyFlatten(value, targetPath!, effective.separator, output);
+                appliedRules++;
+                continue;
+            } else if (transform === 'nest') {
+                mappingApplyNest(source, sourcePath ?? '', targetPath!, effective.separator, output);
+                appliedRules++;
+                continue;
+            } else if (transform === 'concat') {
+                try { value = mappingEvalFEL(effective.expression!, value, source); }
+                catch (e) { diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); continue; }
+            } else if (transform === 'split') {
+                try {
+                    const sr = mappingEvalFEL(effective.expression!, value, source);
+                    if (Array.isArray(sr)) { for (let j = 0; j < sr.length; j++) mappingSetByPath(output, `${targetPath}[${j}]`, mappingClone(sr[j])); }
+                    else if (sr !== null && typeof sr === 'object') { for (const [k, v] of Object.entries(sr)) mappingSetByPath(output, `${targetPath}.${k}`, mappingClone(v)); }
+                    appliedRules++;
+                } catch (e) { diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'FEL_RUNTIME', message: String(e) }); }
+                continue;
+            } else if (transform !== 'preserve') {
+                diagnostics.push({ ruleIndex: ri, sourcePath: sourcePath ?? undefined, targetPath: targetPath ?? undefined, errorCode: 'COERCE_FAILURE', message: `Unsupported transform: ${transform}` });
+                continue;
+            }
+
+            if (value === undefined) continue;
+            mappingSetByPath(output, targetPath!, mappingClone(value));
+            appliedRules += 1;
+        }
+
+        const jsonAdapter = this.doc.adapters?.json;
+        if (jsonAdapter) {
+            if (jsonAdapter.nullHandling === 'omit') mappingOmitNulls(output);
+            if (jsonAdapter.sortKeys) mappingSortKeysDeep(output);
+        }
+
+        const csvAdapter = (this.doc.adapters as any)?.csv;
+        const isCsv = csvAdapter || (this.doc.targetSchema as any)?.format === 'csv';
+        if (isCsv) {
+            let hasAdapterError = false;
+            for (const rule of sortedRules) {
+                const tp = direction === 'forward' ? rule.targetPath : (rule.sourcePath ?? rule.targetPath);
+                if (tp && /[.\[\]]/.test(tp)) {
+                    diagnostics.push({ ruleIndex: sortedRules.indexOf(rule), sourcePath: rule.sourcePath, targetPath: rule.targetPath, errorCode: 'ADAPTER_FAILURE', message: `targetPath "${tp}" is not a simple identifier (CSV requires flat keys)` } as any);
+                    hasAdapterError = true;
+                }
+            }
+            if (hasAdapterError) {
+                return { direction, output: '' as any, appliedRules, diagnostics };
+            }
+            return { direction, output: mappingSerializeCSV(output, csvAdapter ?? {}) as any, appliedRules, diagnostics };
+        }
+
+        const xmlAdapter = (this.doc.adapters as any)?.xml;
+        const isXml = xmlAdapter || (this.doc.targetSchema as any)?.format === 'xml';
+        if (isXml) {
+            return { direction, output: mappingSerializeXML(output, xmlAdapter ?? {}) as any, appliedRules, diagnostics };
+        }
+
+        return { direction, output, appliedRules, diagnostics };
     }
 }
+
 
 export function createFormEngine(
     definition: FormDefinition,
@@ -208,27 +881,88 @@ export function createFormEngine(
 }
 
 export function rewriteFEL(expression: string, map: RewriteMap): string {
-    return legacyRewriteFEL(expression, map as any);
+    const targets = wasmCollectFELRewriteTargets(expression);
+    const { fragmentRootKey, hostGroupKey, importedKeys, keyPrefix } = map;
+
+    // Build fieldPaths rewrite map
+    const fieldPaths: Record<string, string> | undefined = targets.fieldPaths.length > 0
+        ? (() => {
+            const m: Record<string, string> = {};
+            let changed = false;
+            for (const path of targets.fieldPaths) {
+                const segments = path.split('.');
+                const root = segments[0].replace(/\[(?:\d+|\*)\]/g, '');
+                if (root === fragmentRootKey || (!fragmentRootKey && importedKeys.has(root))) {
+                    // Replace root with hostGroupKey, prefix remaining imported segments.
+                    // When fragmentRootKey is empty (no fragment selection), multi-segment
+                    // paths whose root is an imported key also need rewriting.
+                    const rewritten = [hostGroupKey + segments[0].slice(root.length),
+                        ...segments.slice(1).map(seg => {
+                            const bare = seg.replace(/\[(?:\d+|\*)\]/g, '');
+                            return importedKeys.has(bare) ? keyPrefix + bare + seg.slice(bare.length) : seg;
+                        })].join('.');
+                    m[path] = rewritten;
+                    changed = true;
+                } else if (segments.length === 1 && importedKeys.has(root)) {
+                    // Single-segment imported key — prefix it
+                    m[path] = keyPrefix + root + segments[0].slice(root.length);
+                    changed = true;
+                }
+            }
+            return changed ? m : undefined;
+        })()
+        : undefined;
+
+    // Build currentPaths rewrite map — prefix imported segments
+    const currentPaths: Record<string, string> | undefined = targets.currentPaths.length > 0
+        ? (() => {
+            const m: Record<string, string> = {};
+            let changed = false;
+            for (const path of targets.currentPaths) {
+                const segments = path.split('.');
+                const rewritten = segments.map(seg => {
+                    const bare = seg.replace(/\[(?:\d+|\*)\]/g, '');
+                    return importedKeys.has(bare) ? keyPrefix + bare + seg.slice(bare.length) : seg;
+                }).join('.');
+                if (rewritten !== path) {
+                    m[path] = rewritten;
+                    changed = true;
+                }
+            }
+            return changed ? m : undefined;
+        })()
+        : undefined;
+
+    // Build navigation targets rewrite map — prefix imported names
+    const navigationTargets: Record<string, string> | undefined = targets.navigationTargets.length > 0
+        ? (() => {
+            const m: Record<string, string> = {};
+            let changed = false;
+            for (const entry of targets.navigationTargets) {
+                if (importedKeys.has(entry.name)) {
+                    m[`${entry.functionName}:${entry.name}`] = keyPrefix + entry.name;
+                    changed = true;
+                }
+            }
+            return changed ? m : undefined;
+        })()
+        : undefined;
+
+    return wasmRewriteFELReferences(expression, { fieldPaths, currentPaths, navigationTargets });
 }
 
 export function assembleDefinitionSync(
     definition: FormDefinition,
     resolver: Record<string, unknown> | ((url: string, version?: string) => unknown),
 ): AssemblyResult {
-    if (typeof resolver !== 'function') {
-        return legacyAssembleDefinitionSync(
-            definition as any,
-            ((url: string, version?: string) => resolver[version ? `${url}|${version}` : url] ?? resolver[url]) as any,
-        ) as AssemblyResult;
-    }
-    return legacyAssembleDefinitionSync(definition as any, resolver as any) as AssemblyResult;
+    return assembleDefinitionSyncInternal(definition, resolver);
 }
 
 export async function assembleDefinition(
     definition: FormDefinition,
     resolver: DefinitionResolver,
 ): Promise<AssemblyResult> {
-    return legacyAssembleDefinition(definition as any, resolver as any) as Promise<AssemblyResult>;
+    return assembleDefinitionAsyncInternal(definition, resolver);
 }
 
 type EngineBindConfig = FormspecBind & {
@@ -496,7 +1230,11 @@ export class FormEngine implements IFormEngine {
             this._evaluationVersion.value;
             this.instanceVersion.value;
             this.structureVersion.value;
-            return this.evaluateExpression(expression, currentItemName);
+            // compileExpression is a public API — propagate errors (unlike internal evaluation).
+            return wasmEvalFELWithContext(
+                this.normalizeExpressionForWasm(expression, currentItemName),
+                this.buildExpressionContext(currentItemName),
+            );
         };
     }
 
@@ -554,14 +1292,23 @@ export class FormEngine implements IFormEngine {
             }
         }
 
+        // Strip source from cardinality results (spec does not require it)
+        const finalResults = results.map((result) => {
+            if (result.constraintKind === 'cardinality') {
+                const { source: _source, ...rest } = result as any;
+                return rest as ValidationResult;
+            }
+            return result;
+        });
+
         const counts = { error: 0, warning: 0, info: 0 };
-        for (const result of results) {
+        for (const result of finalResults) {
             counts[result.severity as keyof typeof counts] += 1;
         }
 
         return {
             valid: counts.error === 0,
-            results,
+            results: finalResults,
             counts,
             timestamp: this.nowISO(),
         };
@@ -798,6 +1545,10 @@ export class FormEngine implements IFormEngine {
             }
         }
         this._evaluate();
+    }
+
+    public dispose(): void {
+        // No-op — WASM-backed engine has no subscriptions to teardown.
     }
 
     public setRegistryEntries(entries: any[]): void {
@@ -1048,7 +1799,7 @@ export class FormEngine implements IFormEngine {
         const graph = new Map<string, Set<string>>();
         for (const variableDef of this._variableDefs) {
             const deps = new Set<string>();
-            for (const name of legacyAnalyzeFEL(variableDef.expression).variables) {
+            for (const name of wasmAnalyzeFEL(variableDef.expression).variables) {
                 deps.add(name);
             }
             graph.set(variableDef.name, deps);
@@ -1278,9 +2029,10 @@ export class FormEngine implements IFormEngine {
         dataOverride?: Record<string, any>,
         resultOverride?: EvalResult | null,
         scopedVariableOverrides?: Record<string, any>,
+        replaceSelfRef = false,
     ): any {
         return safeEvaluateExpression(
-            this.normalizeExpressionForWasm(expression, currentItemPath),
+            this.normalizeExpressionForWasm(expression, currentItemPath, replaceSelfRef),
             this.buildExpressionContext(currentItemPath, dataOverride, resultOverride, scopedVariableOverrides),
         );
     }
@@ -1432,16 +2184,17 @@ export class FormEngine implements IFormEngine {
             return;
         }
 
-        const visibleResult = this.filterContinuousShapeResults(fullResult);
+        const evalResult: EvalResult = fullResult;
+        const visibleResult = this.filterContinuousShapeResults(evalResult);
         const delta = diffEvalResults(this._previousVisibleResult, visibleResult);
 
         batch(() => {
-            this.patchValueSignals(fullResult.values);
+            this.patchValueSignals(evalResult.values);
             this.patchDeltaSignals(delta);
             for (let pass = 0; pass < 3; pass += 1) {
                 this.patchDerivedMipSignals();
                 this.patchBindValidationSignals();
-                this.patchVariableSignals(fullResult);
+                this.patchVariableSignals(evalResult);
                 this.patchCalculatedSignals();
             }
             this.patchDerivedMipSignals();
@@ -1452,7 +2205,7 @@ export class FormEngine implements IFormEngine {
         });
 
         this._previousVisibleResult = visibleResult;
-        this._fullResult = fullResult;
+        this._fullResult = evalResult;
     }
 
     private evaluateResultForTrigger(trigger: 'continuous' | 'submit' | 'demand' | 'disabled'): EvalResult {
@@ -1473,9 +2226,27 @@ export class FormEngine implements IFormEngine {
     }
 
     private withExtraValidations(result: EvalResult): EvalResult {
-        const validations: EvalValidation[] = result.validations.filter((validation) => validation.source !== 'extension');
+        // Filter out WASM extension validations and WASM-produced cardinality
+        // (the engine has authoritative repeat counts from signals).
+        const validations: EvalValidation[] = result.validations.filter(
+            (validation) => validation.source !== 'extension' && validation.constraintKind !== 'cardinality',
+        );
         const nonRelevant = new Set(result.nonRelevant.map(toBasePath));
-        const mergedValues = { ...this._data, ...result.values };
+        // Merge user data with calculated field values from signals. User-entered _data
+        // takes priority (it's the raw input for validation), but calculated fields use
+        // signal values since patchCalculatedSignals may have computed values that WASM
+        // couldn't (e.g., sum() over repeat groups returns null from WASM but is computed
+        // correctly by the TS-side FEL evaluator with nested context).
+        const signals = snapshotSignals(this.signals);
+        const mergedValues: Record<string, any> = { ...signals, ...this._data };
+        for (const calcPath of this._calculatedFields) {
+            const concretePaths = this.getConcretePathsForBasePath(calcPath, this.signals);
+            for (const cp of concretePaths) {
+                if (signals[cp] !== undefined && signals[cp] !== null) {
+                    mergedValues[cp] = signals[cp];
+                }
+            }
+        }
 
         for (const [path, repeatSignal] of Object.entries(this.repeats)) {
             if (nonRelevant.has(path)) {
@@ -1504,6 +2275,57 @@ export class FormEngine implements IFormEngine {
                     message: `Maximum ${item.maxRepeat} entries allowed`,
                     source: 'bind',
                 });
+            }
+        }
+
+        // Supplement shape validations via TS fallback for any shape WASM didn't produce
+        // a validation result for. WASM batch evaluation handles most shapes, but shapes
+        // using @instance() refs or certain expression patterns may not produce results.
+        // The TS supplement re-evaluates those using wasmEvalFELWithContext.
+        const evaluatedShapeIds = new Set(validations.filter((v) => v.shapeId).map((v) => v.shapeId));
+        const shapeEvalContext: WasmFelContext = {
+            fields: buildFlatFieldContext(mergedValues),
+            variables: this.getVisibleVariableEntries(''),
+            instances: cloneValue(this.instanceData),
+            nowIso: this.nowISO(),
+        };
+        for (const shape of this.definition.shapes ?? []) {
+            if (!shape.id || evaluatedShapeIds.has(shape.id)) {
+                continue;
+            }
+            const timing = this._shapeTiming.get(shape.id) ?? 'continuous';
+            if (timing !== 'continuous') {
+                continue;
+            }
+            const constraint = (shape as any).constraint;
+            if (!constraint) {
+                continue;
+            }
+            const target = (shape as any).target ?? '#';
+            // Respect non-relevant targets
+            if (target !== '#' && nonRelevant.has(toBasePath(target))) {
+                continue;
+            }
+            // Respect activeWhen guard
+            const activeWhen = (shape as any).activeWhen;
+            if (activeWhen) {
+                const active = safeEvaluateExpression(activeWhen, shapeEvalContext);
+                if (!active) {
+                    continue;
+                }
+            }
+            const passed = safeEvaluateExpression(constraint, shapeEvalContext);
+            if (passed === null || passed === undefined ? false : !passed) {
+                validations.push({
+                    path: target,
+                    severity: shape.severity ?? 'error',
+                    constraintKind: 'shape',
+                    code: (shape as any).code ?? 'SHAPE_FAILED',
+                    message: (shape as any).message ?? 'Shape constraint failed',
+                    source: 'shape',
+                    shapeId: shape.id,
+                    constraint,
+                } as unknown as EvalValidation);
             }
         }
 
@@ -1784,7 +2606,22 @@ export class FormEngine implements IFormEngine {
     private patchValueSignals(values: Record<string, any>): void {
         for (const [path, value] of Object.entries(values)) {
             if (this.signals[path]) {
-                this.signals[path].value = cloneValue(value);
+                const basePath = toBasePath(path);
+                let rawValue: any;
+                if (!this._calculatedFields.has(basePath) && path in this._data) {
+                    // For user-entered fields, prefer _data over WASM value. Whitespace
+                    // transforms (trim/normalize) are applied at setValue time via coerceFieldValue,
+                    // so _data already stores the transformed value. Signals reflect _data.
+                    rawValue = this._data[path];
+                } else if (value == null && this._calculatedFields.has(basePath)) {
+                    // For calculated fields, if WASM returns null (e.g., sum() over a
+                    // not-yet-initialized repeat group), preserve the current signal value
+                    // rather than clobbering a valid previous computation with null.
+                    rawValue = this.signals[path].value;
+                } else {
+                    rawValue = value;
+                }
+                this.signals[path].value = cloneValue(rawValue);
             }
         }
     }
@@ -1927,16 +2764,18 @@ export class FormEngine implements IFormEngine {
                 }));
             }
             if (bind.constraint && !isEmptyValue(value)) {
-                const passed = this.evaluateExpression(bind.constraint, path);
+                const passed = this.evaluateExpression(bind.constraint, path, undefined, undefined, undefined, true);
                 if (!(passed === null || passed === undefined ? true : !!passed)) {
-                    nextResults.push(makeValidationResult({
+                    const constraintResult = makeValidationResult({
                         path,
                         severity: 'error',
                         constraintKind: 'constraint',
                         code: 'CONSTRAINT_FAILED',
                         message: bind.constraintMessage || 'Invalid',
                         source: 'bind',
-                    }));
+                    });
+                    (constraintResult as any).constraint = bind.constraint;
+                    nextResults.push(constraintResult);
                 }
             }
             signalRef.value = nextResults;
@@ -1947,14 +2786,24 @@ export class FormEngine implements IFormEngine {
         return Object.keys(store).filter((path) => toBasePath(path) === basePath);
     }
 
-    private normalizeExpressionForWasm(expression: string, currentItemPath = ''): string {
+    private normalizeExpressionForWasm(expression: string, currentItemPath = '', replaceSelfRef = false): string {
         let normalized = expression;
         const currentFieldName = currentItemPath
             ? splitIndexedPath(currentItemPath).at(-1)?.replace(/\[\d+\]$/, '') ?? ''
             : '';
-        if (currentFieldName) {
+        // Only replace bare $ (self-reference) for constraint expressions,
+        // not for calculate/relevant/etc. where $ is a predicate variable in countWhere/sumWhere.
+        if (replaceSelfRef && currentFieldName) {
             normalized = replaceBareCurrentFieldRefs(normalized, currentFieldName);
         }
+
+        // Resolve $group.field qualified refs to sibling refs when inside a repeat context.
+        // E.g., for path "line_items[0].total", "$line_items.qty" becomes just "qty".
+        const repeatAncestors = getRepeatAncestors(currentItemPath, this.repeats);
+        if (repeatAncestors.length > 0) {
+            normalized = resolveQualifiedGroupRefs(normalized, currentItemPath, repeatAncestors);
+        }
+
         const repeatAliases = buildRepeatValueAliases(snapshotSignals(this.signals)).map(([path]) => path);
         repeatAliases.sort((left, right) => right.length - left.length);
 
@@ -1994,7 +2843,7 @@ export class FormEngine implements IFormEngine {
         const graph = new Map<string, Set<string>>();
         for (const def of defs) {
             const deps = new Set<string>();
-            for (const name of legacyAnalyzeFEL(def.expression).variables) {
+            for (const name of wasmAnalyzeFEL(def.expression).variables) {
                 const sameScope = defs.find((candidate) => candidate.name === name && candidate.scope === def.scope);
                 const globalScope = defs.find((candidate) => candidate.name === name && candidate.scope === '#');
                 if (sameScope) {
@@ -2223,7 +3072,13 @@ function coerceFieldValue(
     }
 
     if (typeof nextValue === 'string' && ['integer', 'decimal', 'number'].includes(item.dataType ?? '')) {
-        nextValue = nextValue === '' ? null : Number(nextValue);
+        if (nextValue === '') {
+            nextValue = null;
+        } else {
+            const parsed = Number(nextValue);
+            // Keep the original string if it can't be parsed — allows WASM to detect TYPE_MISMATCH
+            nextValue = Number.isNaN(parsed) ? nextValue : parsed;
+        }
     }
     if (item.dataType === 'money' && typeof nextValue === 'number') {
         nextValue = {
@@ -2555,7 +3410,7 @@ function replaceBareCurrentFieldRefs(expression: string, currentFieldName: strin
             && !/[A-Za-z0-9_]/.test(previous)
             && !/[A-Za-z0-9_]/.test(next)
         ) {
-            output += currentFieldName;
+            output += '$' + currentFieldName;
             continue;
         }
 
@@ -2657,11 +3512,7 @@ function isEmptyValue(value: unknown): boolean {
 function safeEvaluateExpression(expression: string, context: WasmFelContext): any {
     try {
         return wasmEvalFELWithContext(expression, context);
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes('Unsupported FEL function:')) {
-            throw error;
-        }
+    } catch {
         return null;
     }
 }
@@ -2813,6 +3664,84 @@ function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Check if a shape definition uses @instance() references that WASM can't resolve. */
+function shapeUsesInstanceRef(shape: any): boolean {
+    const check = (v: unknown) => typeof v === 'string' && v.includes('@instance');
+    return check(shape.constraint) || check(shape.activeWhen)
+        || (shape.context && Object.values(shape.context).some(check))
+        || check(shape.message);
+}
+
+
+/** Build a nested field context from flat dotted-path data (without signal snapshots). */
+function buildFlatFieldContext(data: Record<string, any>): Record<string, any> {
+    const fields: Record<string, any> = {};
+    for (const [path, value] of Object.entries(data)) {
+        setExpressionContextValue(fields, path, cloneValue(value));
+    }
+    return fields;
+}
+
+/**
+ * Resolve $group.field qualified refs to sibling refs within repeat context.
+ *
+ * When evaluating an expression for a field inside a repeat group (e.g., line_items[0].total),
+ * a reference like $line_items.qty should resolve to the sibling field "qty" in the same
+ * instance, not to a wildcard collecting all instances.
+ *
+ * For nested repeats (e.g., orders[0].items[0].line_total), $items.qty resolves to the
+ * innermost sibling, and $orders.discount_pct resolves to the enclosing group's concrete path.
+ */
+function resolveQualifiedGroupRefs(
+    expression: string,
+    currentItemPath: string,
+    repeatAncestors: Array<{ groupPath: string; index: number; count: number }>,
+): string {
+    let result = expression;
+
+    // Build a map of group name -> concrete prefix for each repeat ancestor.
+    // Process longest names first to avoid partial matches.
+    const groupReplacements: Array<{ groupName: string; concretePrefix: string; isInnermost: boolean }> = [];
+    for (let index = 0; index < repeatAncestors.length; index += 1) {
+        const ancestor = repeatAncestors[index];
+        const groupPath = ancestor.groupPath;
+        // Extract the group name (last segment of the groupPath, without any indices)
+        const groupName = groupPath.includes('.')
+            ? groupPath.split('.').at(-1)!
+            : groupPath;
+        const concretePrefix = `${groupPath}[${ancestor.index}]`;
+        groupReplacements.push({
+            groupName,
+            concretePrefix,
+            isInnermost: index === repeatAncestors.length - 1,
+        });
+    }
+
+    // Sort longest group names first to prevent partial matches
+    groupReplacements.sort((a, b) => b.groupName.length - a.groupName.length);
+
+    for (const { groupName, concretePrefix, isInnermost } of groupReplacements) {
+        const escapedGroupName = escapeRegExp(groupName);
+        // Match $groupName.fieldName — the qualified ref pattern
+        const pattern = new RegExp(
+            `\\$${escapedGroupName}\\.([A-Za-z_][A-Za-z0-9_]*)`,
+            'g',
+        );
+        result = result.replace(pattern, (_match, fieldName) => {
+            if (isInnermost) {
+                // For the innermost repeat scope, resolve to bare sibling ref
+                // (buildExpressionContext already adds siblings as short names)
+                return fieldName;
+            }
+            // For outer repeat scopes, resolve to the FEL-indexed path.
+            // FEL uses 1-based indexing; the concretePrefix uses 0-based.
+            return toFelIndexedPath(concretePrefix) + '.' + fieldName;
+        });
+    }
+
+    return result;
+}
+
 function resolveRelativeDependency(dep: string, parentPath: string, selfPath: string): string | null {
     if (!dep) {
         return selfPath;
@@ -2874,15 +3803,22 @@ function versionSatisfies(version: string, constraint: string): boolean {
     return true;
 }
 
-function parseRef(ref: string): { url: string; version?: string } {
-    const [withoutFragment] = ref.split('#');
-    const pipeIndex = withoutFragment.indexOf('|');
+function parseRef(ref: string): { url: string; version?: string; fragment?: string } {
+    let remainder = ref;
+    let fragment: string | undefined;
+    const hashIdx = remainder.indexOf('#');
+    if (hashIdx !== -1) {
+        fragment = remainder.slice(hashIdx + 1);
+        remainder = remainder.slice(0, hashIdx);
+    }
+    const pipeIndex = remainder.indexOf('|');
     if (pipeIndex === -1) {
-        return { url: withoutFragment };
+        return { url: remainder, fragment };
     }
     return {
-        url: withoutFragment.slice(0, pipeIndex),
-        version: withoutFragment.slice(pipeIndex + 1),
+        url: remainder.slice(0, pipeIndex),
+        version: remainder.slice(pipeIndex + 1),
+        fragment,
     };
 }
 
@@ -2905,41 +3841,434 @@ function collectRefs(node: unknown, refs: Set<string>): void {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Assembly helpers — TS-native implementation
+// ---------------------------------------------------------------------------
+
+const FEL_BIND_PROPERTIES = ['calculate', 'constraint', 'relevant', 'readonly', 'required'] as const;
+
+/** Recursively prefix all item keys. */
+function prefixItems(items: FormItem[], prefix: string): FormItem[] {
+    return items.map(item => {
+        const newItem = { ...item, key: prefix + item.key };
+        if (newItem.children) {
+            newItem.children = prefixItems(newItem.children, prefix);
+        }
+        return newItem;
+    });
+}
+
+/** Recursively collect all item keys into a Set. */
+function collectAllKeys(item: FormItem, keys: Set<string>): void {
+    keys.add(item.key);
+    if (item.children) {
+        for (const child of item.children) {
+            collectAllKeys(child, keys);
+        }
+    }
+}
+
+/** Collect all keys from an item tree as dotted paths. */
+function collectKeyPaths(items: FormItem[], parentPath = ''): string[] {
+    const keys: string[] = [];
+    for (const item of items) {
+        const fullPath = parentPath ? `${parentPath}.${item.key}` : item.key;
+        keys.push(fullPath);
+        if (item.children) {
+            keys.push(...collectKeyPaths(item.children, fullPath));
+        }
+    }
+    return keys;
+}
+
+/** Prefix every segment of a dotted bind/shape path that was an imported key. */
+function prefixPath(path: string, prefix: string, importedKeys: Set<string>): string {
+    if (!prefix) return path;
+    return path.split('.').map(seg => {
+        const bracketIdx = seg.indexOf('[');
+        const baseName = bracketIdx !== -1 ? seg.substring(0, bracketIdx) : seg;
+        const suffix = bracketIdx !== -1 ? seg.substring(bracketIdx) : '';
+        if (importedKeys.has(baseName)) {
+            return prefix + baseName + suffix;
+        }
+        return seg;
+    }).join('.');
+}
+
+/** Prefix bind paths and prepend the host group path. */
+function prefixBindPaths(binds: FormBind[], prefix: string, importedKeys: Set<string>, hostPath: string): FormBind[] {
+    return binds.map(bind => ({
+        ...bind,
+        path: hostPath ? `${hostPath}.${prefixPath(bind.path, prefix, importedKeys)}` : prefixPath(bind.path, prefix, importedKeys),
+    }));
+}
+
+/** Prefix shape targets and prepend the host group path. */
+function prefixShapeTargets(shapes: FormShape[], prefix: string, importedKeys: Set<string>, hostPath: string): FormShape[] {
+    return shapes.map(shape => ({
+        ...shape,
+        target: shape.target === '#'
+            ? '#'
+            : (hostPath ? `${hostPath}.${prefixPath(shape.target, prefix, importedKeys)}` : prefixPath(shape.target, prefix, importedKeys)),
+    }));
+}
+
+/** Filter binds relevant to a fragment selection. */
+function filterBindsForFragment(binds: FormBind[], fragment: string | undefined, keys: Set<string>): FormBind[] {
+    if (!fragment) return [...binds];
+    return binds.filter(b => {
+        const firstSeg = b.path.split('.')[0].replace(/\[.*\]/, '');
+        return keys.has(firstSeg);
+    });
+}
+
+/** Filter shapes relevant to a fragment selection. */
+function filterShapesForFragment(shapes: FormShape[], fragment: string | undefined, keys: Set<string>): FormShape[] {
+    if (!fragment) return [...shapes];
+    return shapes.filter(s => {
+        if (s.target === '#') return true;
+        const firstSeg = s.target.split('.')[0].replace(/\[.*\]/, '');
+        return keys.has(firstSeg);
+    });
+}
+
+/** Rewrite all FEL-bearing properties of a bind. */
+function rewriteBindFEL(bind: FormBind, map: RewriteMap): FormBind {
+    const newBind = { ...bind };
+    for (const prop of FEL_BIND_PROPERTIES) {
+        const val = (newBind as any)[prop];
+        if (typeof val === 'string') {
+            (newBind as any)[prop] = rewriteFEL(val, map);
+        }
+    }
+    const defaultVal = (newBind as any).default;
+    if (typeof defaultVal === 'string' && defaultVal.startsWith('=')) {
+        (newBind as any).default = '=' + rewriteFEL(defaultVal.substring(1), map);
+    }
+    return newBind;
+}
+
+/** Rewrite FEL in {{...}} interpolation segments of a message string. */
+function rewriteAssemblyMessageTemplate(message: string, map: RewriteMap): string {
+    return message.replace(/\{\{(.*?)\}\}/g, (_full, expr: string) => {
+        return '{{' + rewriteFEL(expr, map) + '}}';
+    });
+}
+
+/** Rewrite a single composition entry: shape ID rename or FEL rewrite. */
+function rewriteCompositionEntry(
+    entry: string,
+    map: RewriteMap,
+    shapeIdRenameMap: Map<string, string>,
+    importedShapeIds: Set<string>,
+): string {
+    if (importedShapeIds.has(entry)) {
+        return shapeIdRenameMap.get(entry) || entry;
+    }
+    return rewriteFEL(entry, map);
+}
+
+/** Rewrite all FEL-bearing properties of a shape. */
+function rewriteShapeFEL(
+    shape: FormShape,
+    map: RewriteMap,
+    shapeIdRenameMap: Map<string, string>,
+    importedShapeIds: Set<string>,
+): FormShape {
+    const s: any = { ...shape };
+    if (typeof s.constraint === 'string') {
+        s.constraint = rewriteFEL(s.constraint, map);
+    }
+    if (typeof s.activeWhen === 'string') {
+        s.activeWhen = rewriteFEL(s.activeWhen, map);
+    }
+    if (s.context) {
+        const newCtx: Record<string, string> = {};
+        for (const [key, value] of Object.entries(s.context as Record<string, string>)) {
+            newCtx[key] = rewriteFEL(value, map);
+        }
+        s.context = newCtx;
+    }
+    if (typeof s.message === 'string') {
+        s.message = rewriteAssemblyMessageTemplate(s.message, map);
+    }
+    for (const op of ['and', 'or', 'xone'] as const) {
+        const arr = s[op];
+        if (Array.isArray(arr)) {
+            s[op] = arr.map((entry: string) =>
+                rewriteCompositionEntry(entry, map, shapeIdRenameMap, importedShapeIds),
+            );
+        }
+    }
+    if (typeof s.not === 'string') {
+        s.not = rewriteCompositionEntry(s.not, map, shapeIdRenameMap, importedShapeIds);
+    }
+    return s as FormShape;
+}
+
+/** Import and rewrite variables from a referenced definition. */
+function importVariables(
+    referencedDef: FormDefinition,
+    fragment: string | undefined,
+    importedKeys: Set<string>,
+    map: RewriteMap,
+    host: FormDefinition,
+): void {
+    const vars = (referencedDef as any).variables as FormVariable[] | undefined;
+    if (!vars?.length) return;
+
+    const varsToImport = fragment
+        ? vars.filter((v: any) => {
+            if (!v.scope || v.scope === '#') return true;
+            return importedKeys.has(v.scope);
+        })
+        : [...vars];
+
+    if (!varsToImport.length) return;
+
+    const existingNames = new Set(((host as any).variables || []).map((v: any) => v.name));
+    for (const v of varsToImport) {
+        if (existingNames.has(v.name)) {
+            throw new Error(`Variable name collision during assembly: "${v.name}" already exists in host definition`);
+        }
+    }
+
+    if (!(host as any).variables) (host as any).variables = [];
+    for (const v of varsToImport) {
+        const newVar: any = { ...v };
+        newVar.expression = rewriteFEL(v.expression, map);
+        if (newVar.scope && newVar.scope !== '#') {
+            if (newVar.scope === map.fragmentRootKey) {
+                newVar.scope = map.hostGroupKey;
+            } else if (map.importedKeys.has(newVar.scope)) {
+                newVar.scope = map.keyPrefix + newVar.scope;
+            }
+        }
+        (host as any).variables.push(newVar);
+    }
+}
+
+/**
+ * Core assembly logic: imports items from a referenced definition into a host group,
+ * applying keyPrefix, rewriting FEL in binds/shapes/variables, detecting key collisions.
+ */
+function performAssembly(
+    groupItem: FormItem,
+    parentPath: string,
+    referencedDef: FormDefinition,
+    assembledFrom: AssemblyProvenance[],
+    host: FormDefinition,
+    url: string,
+    version: string | undefined,
+    fragment: string | undefined,
+): FormItem {
+    const keyPrefix = (groupItem as any).keyPrefix as string | undefined;
+
+    // Select items from referenced definition
+    let importedItems: FormItem[];
+    if (fragment) {
+        const found = referencedDef.items.find(i => i.key === fragment);
+        if (!found) {
+            throw new Error(`Fragment key "${fragment}" not found in referenced definition ${url}`);
+        }
+        importedItems = [found];
+    } else {
+        importedItems = [...referencedDef.items];
+    }
+
+    // Apply keyPrefix to imported items
+    if (keyPrefix) {
+        importedItems = prefixItems(importedItems, keyPrefix);
+    }
+
+    // Collect original root-level keys for path rewriting
+    const originalRootKeys = new Set<string>();
+    const sourceItems = fragment
+        ? referencedDef.items.filter(i => i.key === fragment)
+        : referencedDef.items;
+    for (const item of sourceItems) {
+        collectAllKeys(item, originalRootKeys);
+    }
+
+    // Build the full host path for this group
+    const groupPath = parentPath ? `${parentPath}.${groupItem.key}` : groupItem.key;
+
+    // Build RewriteMap for FEL expression rewriting
+    const rewriteMap: RewriteMap = {
+        fragmentRootKey: fragment || '',
+        hostGroupKey: groupItem.key,
+        importedKeys: originalRootKeys,
+        keyPrefix: keyPrefix || '',
+    };
+
+    // Import and rewrite binds
+    if ((referencedDef as any).binds) {
+        let importedBinds = filterBindsForFragment((referencedDef as any).binds, fragment, originalRootKeys);
+        importedBinds = prefixBindPaths(importedBinds, keyPrefix || '', originalRootKeys, groupPath);
+        importedBinds = importedBinds.map(b => rewriteBindFEL(b, rewriteMap));
+        if (!(host as any).binds) (host as any).binds = [];
+        (host as any).binds.push(...importedBinds);
+    }
+
+    // Import and rewrite shapes
+    const shapeIdRenameMap = new Map<string, string>();
+    const importedShapeIds = new Set<string>();
+    if ((referencedDef as any).shapes) {
+        let importedShapes = filterShapesForFragment((referencedDef as any).shapes, fragment, originalRootKeys);
+        importedShapes = prefixShapeTargets(importedShapes, keyPrefix || '', originalRootKeys, groupPath);
+
+        for (const shape of importedShapes) {
+            importedShapeIds.add(shape.id);
+        }
+
+        const existingShapeIds = new Set(((host as any).shapes || []).map((s: any) => s.id));
+        for (const shape of importedShapes) {
+            const originalId = shape.id;
+            if (existingShapeIds.has(originalId)) {
+                const newId = `${groupItem.key}_${originalId}`;
+                shapeIdRenameMap.set(originalId, newId);
+                (shape as any).id = newId;
+            }
+        }
+
+        importedShapes = importedShapes.map(s =>
+            rewriteShapeFEL(s, rewriteMap, shapeIdRenameMap, importedShapeIds),
+        );
+
+        if (!(host as any).shapes) (host as any).shapes = [];
+        (host as any).shapes.push(...importedShapes);
+    }
+
+    // Import and rewrite variables
+    importVariables(referencedDef, fragment, originalRootKeys, rewriteMap, host);
+
+    // Check for key collisions
+    const hostKeys = new Set(collectKeyPaths(host.items, ''));
+    const importedKeyPaths = collectKeyPaths(importedItems, groupPath);
+    for (const ik of importedKeyPaths) {
+        if (hostKeys.has(ik)) {
+            throw new Error(`Key collision after assembly: "${ik}" already exists in host definition`);
+        }
+    }
+
+    // Record provenance
+    assembledFrom.push({
+        url,
+        version: version || (referencedDef as any).version,
+        keyPrefix: keyPrefix,
+        fragment,
+    });
+
+    // Build the assembled group item (strip $ref and keyPrefix, add children)
+    const assembled: FormItem = {
+        key: groupItem.key,
+        type: 'group',
+        label: groupItem.label,
+        children: importedItems,
+    };
+    if (groupItem.repeatable) assembled.repeatable = groupItem.repeatable;
+    if (groupItem.minRepeat !== undefined) assembled.minRepeat = groupItem.minRepeat;
+    if (groupItem.maxRepeat !== undefined) assembled.maxRepeat = groupItem.maxRepeat;
+    if (groupItem.description) assembled.description = groupItem.description;
+    if ((groupItem as any).hint) (assembled as any).hint = (groupItem as any).hint;
+    if (groupItem.presentation) assembled.presentation = groupItem.presentation;
+
+    return assembled;
+}
+
+/** Recursively resolve items, inlining $ref groups via async resolver. */
+async function resolveItemsAsync(
+    items: FormItem[],
+    parentPath: string,
+    resolver: DefinitionResolver,
+    assembledFrom: AssemblyProvenance[],
+    visitedRefs: Set<string>,
+    host: FormDefinition,
+): Promise<FormItem[]> {
+    const result: FormItem[] = [];
+    for (const item of items) {
+        if (item.type === 'group' && (item as any)['$ref']) {
+            const refUri = (item as any)['$ref'] as string;
+            const { url, version, fragment } = parseRef(refUri);
+            const refKey = version ? `${url}|${version}` : url;
+            if (visitedRefs.has(refKey)) {
+                throw new Error(`Circular $ref detected: ${refKey}`);
+            }
+            visitedRefs.add(refKey);
+            const referencedDef = await resolver(url, version) as FormDefinition;
+            const assembled = performAssembly(item, parentPath, referencedDef, assembledFrom, host, url, version, fragment);
+            const fullPath = parentPath ? `${parentPath}.${assembled.key}` : assembled.key;
+            if (assembled.children) {
+                assembled.children = await resolveItemsAsync(assembled.children, fullPath, resolver, assembledFrom, visitedRefs, host);
+            }
+            visitedRefs.delete(refKey);
+            result.push(assembled);
+        } else {
+            const newItem = { ...item };
+            if (newItem.children) {
+                const fullPath = parentPath ? `${parentPath}.${item.key}` : item.key;
+                newItem.children = await resolveItemsAsync(newItem.children, fullPath, resolver, assembledFrom, visitedRefs, host);
+            }
+            result.push(newItem);
+        }
+    }
+    return result;
+}
+
+/** Recursively resolve items, inlining $ref groups via sync resolver. */
+function resolveItemsSync(
+    items: FormItem[],
+    parentPath: string,
+    resolver: (url: string, version?: string) => unknown,
+    assembledFrom: AssemblyProvenance[],
+    visitedRefs: Set<string>,
+    host: FormDefinition,
+): FormItem[] {
+    const result: FormItem[] = [];
+    for (const item of items) {
+        if (item.type === 'group' && (item as any)['$ref']) {
+            const refUri = (item as any)['$ref'] as string;
+            const { url, version, fragment } = parseRef(refUri);
+            const refKey = version ? `${url}|${version}` : url;
+            if (visitedRefs.has(refKey)) {
+                throw new Error(`Circular $ref detected: ${refKey}`);
+            }
+            visitedRefs.add(refKey);
+            const referencedDef = resolver(url, version) as FormDefinition;
+            const assembled = performAssembly(item, parentPath, referencedDef, assembledFrom, host, url, version, fragment);
+            const fullPath = parentPath ? `${parentPath}.${assembled.key}` : assembled.key;
+            if (assembled.children) {
+                assembled.children = resolveItemsSync(assembled.children, fullPath, resolver, assembledFrom, visitedRefs, host);
+            }
+            visitedRefs.delete(refKey);
+            result.push(assembled);
+        } else {
+            const newItem = { ...item };
+            if (newItem.children) {
+                const fullPath = parentPath ? `${parentPath}.${item.key}` : item.key;
+                newItem.children = resolveItemsSync(newItem.children, fullPath, resolver, assembledFrom, visitedRefs, host);
+            }
+            result.push(newItem);
+        }
+    }
+    return result;
+}
+
 async function assembleDefinitionAsyncInternal(
     definition: FormDefinition,
     resolver: DefinitionResolver,
 ): Promise<AssemblyResult> {
-    const fragments: Record<string, unknown> = {};
     const assembledFrom: AssemblyProvenance[] = [];
-    const queue = new Set<string>();
-    collectRefs(definition, queue);
-    const seen = new Set<string>();
-
-    while (queue.size > 0) {
-        const ref = queue.values().next().value as string;
-        queue.delete(ref);
-        if (seen.has(ref)) {
-            continue;
-        }
-        seen.add(ref);
-        const { url, version } = parseRef(ref);
-        const resolved = await resolver(url, version);
-        fragments[ref] = resolved;
-        assembledFrom.push({
-            url,
-            version: resolved.version ?? version ?? '',
-        });
-        collectRefs(resolved, queue);
-    }
-
-    const result = wasmAssembleDefinition(definition, fragments);
-    if ((result.errors?.length ?? 0) > 0) {
-        throw new Error(result.errors.join('\n'));
-    }
-    return {
-        definition: result.definition,
-        assembledFrom,
-    };
+    const visitedRefs = new Set<string>();
+    const assembled = { ...definition };
+    // Deep-copy mutable arrays so performAssembly doesn't mutate the caller's definition
+    if (assembled.binds) assembled.binds = [...assembled.binds];
+    if ((assembled as any).shapes) (assembled as any).shapes = [...(assembled as any).shapes];
+    if ((assembled as any).variables) (assembled as any).variables = [...(assembled as any).variables];
+    assembled.items = await resolveItemsAsync(
+        definition.items, '', resolver, assembledFrom, visitedRefs, assembled,
+    );
+    return { definition: assembled, assembledFrom };
 }
 
 function assembleDefinitionSyncInternal(
@@ -2950,109 +4279,15 @@ function assembleDefinitionSyncInternal(
         ? resolver
         : (url: string, version?: string) => resolver[version ? `${url}|${version}` : url] ?? resolver[url];
 
-    const fragments: Record<string, unknown> = {};
     const assembledFrom: AssemblyProvenance[] = [];
-    const queue = new Set<string>();
-    collectRefs(definition, queue);
-    const seen = new Set<string>();
-
-    while (queue.size > 0) {
-        const ref = queue.values().next().value as string;
-        queue.delete(ref);
-        if (seen.has(ref)) {
-            continue;
-        }
-        seen.add(ref);
-        const { url, version } = parseRef(ref);
-        const resolved = resolveOne(url, version);
-        fragments[ref] = resolved;
-        assembledFrom.push({
-            url,
-            version: (resolved as any)?.version ?? version ?? '',
-        });
-        collectRefs(resolved, queue);
-    }
-
-    const result = wasmAssembleDefinition(definition, fragments);
-    if ((result.errors?.length ?? 0) > 0) {
-        throw new Error(result.errors.join('\n'));
-    }
-    return {
-        definition: result.definition,
-        assembledFrom,
-    };
-}
-
-function rewriteFELCompat(expression: string, map: RewriteMap): string {
-    return legacyRewriteFEL(expression, map as any);
-}
-
-function collectRewriteFields(expression: string, map: RewriteMap): Record<string, string> {
-    const rewrites: Record<string, string> = {};
-    for (const fieldPath of legacyAnalyzeFEL(expression).references) {
-        const next = rewriteDollarPath(fieldPath, map);
-        if (next !== fieldPath) {
-            rewrites[fieldPath] = next;
-        }
-    }
-    return rewrites;
-}
-
-function collectRewriteCurrentPaths(expression: string, map: RewriteMap): Record<string, string> {
-    const rewrites: Record<string, string> = {};
-    for (const match of expression.matchAll(/@current\.([A-Za-z0-9_.[\]*]+)/g)) {
-        const currentPath = match[1];
-        const next = rewriteCurrentSegments(currentPath, map);
-        if (next !== currentPath) {
-            rewrites[currentPath] = next;
-        }
-    }
-    return rewrites;
-}
-
-function collectRewriteNavigationTargets(expression: string, map: RewriteMap): Record<string, string> {
-    const rewrites: Record<string, string> = {};
-    for (const match of expression.matchAll(/\b(?:prev|next|parent)\(\s*['"]([^'"]+)['"]\s*\)/g)) {
-        const fieldName = match[1];
-        if (map.importedKeys.has(fieldName)) {
-            rewrites[fieldName] = `${map.keyPrefix}${fieldName}`;
-        }
-    }
-    return rewrites;
-}
-
-function rewriteDollarPath(path: string, map: RewriteMap): string {
-    const segments = path.split('.');
-    let changed = false;
-    const next = segments.map((segment, index) => {
-        const bracketIndex = segment.indexOf('[');
-        const base = bracketIndex === -1 ? segment : segment.slice(0, bracketIndex);
-        const suffix = bracketIndex === -1 ? '' : segment.slice(bracketIndex);
-        if (index === 0 && base === map.fragmentRootKey && map.fragmentRootKey) {
-            changed = true;
-            return `${map.hostGroupKey}${suffix}`;
-        }
-        if (map.importedKeys.has(base)) {
-            changed = true;
-            return `${map.keyPrefix}${base}${suffix}`;
-        }
-        return segment;
-    });
-    return changed ? next.join('.') : path;
-}
-
-function rewriteCurrentSegments(path: string, map: RewriteMap): string {
-    const segments = path.split('.');
-    let changed = false;
-    const next = segments.map((segment) => {
-        const bracketIndex = segment.indexOf('[');
-        const base = bracketIndex === -1 ? segment : segment.slice(0, bracketIndex);
-        const suffix = bracketIndex === -1 ? '' : segment.slice(bracketIndex);
-        if (map.importedKeys.has(base)) {
-            changed = true;
-            return `${map.keyPrefix}${base}${suffix}`;
-        }
-        return segment;
-    });
-    return changed ? next.join('.') : path;
+    const visitedRefs = new Set<string>();
+    const assembled = { ...definition };
+    // Deep-copy mutable arrays so performAssembly doesn't mutate the caller's definition
+    if (assembled.binds) assembled.binds = [...assembled.binds];
+    if ((assembled as any).shapes) (assembled as any).shapes = [...(assembled as any).shapes];
+    if ((assembled as any).variables) (assembled as any).variables = [...(assembled as any).variables];
+    assembled.items = resolveItemsSync(
+        definition.items, '', resolveOne, assembledFrom, visitedRefs, assembled,
+    );
+    return { definition: assembled, assembledFrom };
 }

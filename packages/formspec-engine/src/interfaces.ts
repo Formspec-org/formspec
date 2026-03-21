@@ -9,63 +9,13 @@ import type {
     OptionEntry,
 } from 'formspec-types';
 
-// ── Runtime and FEL types ────────────────────────────────────────────
-
-export interface IFelEngineContext {
-    getInstanceData(name: string, path?: string): any;
-    getVariableValue(name: string, scopePath: string): any;
-    readonly signals?: Record<string, any>;
-    readonly relevantSignals?: Record<string, any>;
-    readonly requiredSignals?: Record<string, any>;
-    readonly readonlySignals?: Record<string, any>;
-    readonly validationResults?: Record<string, any>;
-}
-
-export interface FelContext {
-    getSignalValue: (path: string) => any;
-    getRepeatsValue: (path: string) => number;
-    getRelevantValue: (path: string) => boolean;
-    getRequiredValue: (path: string) => boolean;
-    getReadonlyValue: (path: string) => boolean;
-    getValidationErrors: (path: string) => number;
-    currentItemPath: string;
-    engine: IFelEngineContext;
-}
+// ── FEL catalog types ────────────────────────────────────────────────
 
 export interface FELBuiltinFunctionCatalogEntry {
     name: string;
     category: string;
     signature?: string;
     description?: string;
-}
-
-export interface ICompiledExpression {
-    readonly dependencies: string[];
-    readonly mipDependencies?: string[];
-    evaluate(context: FelContext): any;
-}
-
-export interface FelCompilationError {
-    message: string;
-    offset?: number;
-    line?: number;
-    column?: number;
-}
-
-export interface FelCompilationResult {
-    expression: ICompiledExpression | null;
-    errors: FelCompilationError[];
-}
-
-export interface IFelRuntime {
-    compile(expression: string): FelCompilationResult;
-    listBuiltInFunctions(): FELBuiltinFunctionCatalogEntry[];
-    extractDependencies(expression: string): string[];
-    registerFunction(
-        name: string,
-        impl: (...args: any[]) => any,
-        meta?: { signature?: string; description?: string; category?: string },
-    ): void;
 }
 
 // ── FEL analysis / rewriting ────────────────────────────────────────
@@ -218,7 +168,6 @@ export interface FormEngineRuntimeContext {
     locale?: string;
     timeZone?: string;
     seed?: string | number;
-    felRuntime?: IFelRuntime;
 }
 
 export interface RegistryEntry {
@@ -335,6 +284,8 @@ export interface IFormEngine {
     getDefinition(): FormDefinition;
     setLabelContext(context: string | null): void;
     getLabel(item: FormItem): string;
+
+    dispose(): void;
 
     injectExternalValidation?(results: Array<{ path: string; severity: string; code: string; message: string; source?: string }>): void;
     clearExternalValidation?(path?: string): void;

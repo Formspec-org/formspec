@@ -771,3 +771,141 @@ test('Backward compat — original mapping document with new structured diagnost
   assert.equal(result.output.meta.version, '1');
   assert.equal(result.diagnostics.length, 0);
 });
+
+// ---------------------------------------------------------------------------
+// Bug Fix 1: new-shape valueMap default unmapped should be "error", not "passthrough"
+// ---------------------------------------------------------------------------
+
+test('Fix 1 — new-shape valueMap with no unmapped property defaults to "error"', () => {
+  const engine = new RuntimeMappingEngine({
+    rules: [{
+      sourcePath: 'status',
+      targetPath: 'out.status',
+      transform: 'valueMap',
+      valueMap: {
+        forward: { active: 'A', inactive: 'I' }
+        // no unmapped property — spec says default is "error"
+      }
+    }]
+  });
+  const result = engine.forward({ status: 'pending' }); // not in map
+  assert.equal(result.diagnostics.length, 1);
+  assert.equal(result.diagnostics[0].errorCode, 'UNMAPPED_VALUE');
+  assert.equal(result.output.out, undefined); // skipped, not written
+});
+
+test('Fix 1 — legacy flat valueMap keeps passthrough default', () => {
+  const engine = new RuntimeMappingEngine({
+    rules: [{
+      sourcePath: 'status',
+      targetPath: 'out.status',
+      transform: 'valueMap',
+      valueMap: { active: 'A', inactive: 'I' }
+      // legacy flat map — default unmapped stays passthrough for backwards compat
+    }]
+  });
+  const result = engine.forward({ status: 'pending' });
+  assert.equal(result.diagnostics.length, 0);
+  assert.equal(result.output.out.status, 'pending'); // passthrough
+});
+
+// ---------------------------------------------------------------------------
+// Bug Fix 2: condition $ should bind to resolved sourcePath value
+// ---------------------------------------------------------------------------
+
+test('Fix 2 — condition $ binds to sourcePath value (present)', () => {
+  const engine = new RuntimeMappingEngine({
+    rules: [{
+      sourcePath: 'name',
+      targetPath: 'out.name',
+      transform: 'preserve',
+      condition: '$ != null'
+    }]
+  });
+  const result = engine.forward({ name: 'Alice' });
+  assert.equal(result.output.out.name, 'Alice'); // condition passes, rule executes
+});
+
+test('Fix 2 — condition $ binds to sourcePath value (absent)', () => {
+  const engine = new RuntimeMappingEngine({
+    rules: [{
+      sourcePath: 'missing',
+      targetPath: 'out.missing',
+      transform: 'preserve',
+      condition: '$ != null',
+      default: 'fallback'
+    }]
+  });
+  const result = engine.forward({ other: 'x' });
+  // $ is undefined/null for missing path, so condition fails, rule skipped
+  assert.equal(result.output.out, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Bug Fix 3: expression transform should skip when default was applied
+// ---------------------------------------------------------------------------
+
+test('Fix 3 — expression with default: absent source gets default, not expression result', () => {
+  const engine = new RuntimeMappingEngine({
+    rules: [{
+      sourcePath: 'missing',
+      targetPath: 'out.val',
+      transform: 'expression',
+      expression: 'upper($)',
+      default: 'fallback'
+    }]
+  });
+  const result = engine.forward({});
+  assert.equal(result.output.out.val, 'fallback'); // not "FALLBACK"
+});
+
+// ---------------------------------------------------------------------------
+// Bug Fix 4: explicit null should flow through valueMap
+// ---------------------------------------------------------------------------
+
+test('Fix 4 — valueMap looks up explicit null', () => {
+  const engine = new RuntimeMappingEngine({
+    rules: [{
+      sourcePath: 'status',
+      targetPath: 'out.status',
+      transform: 'valueMap',
+      valueMap: { 'null': 'missing' }
+    }]
+  });
+  const result = engine.forward({ status: null });
+  assert.equal(result.output.out.status, 'missing');
+});
+
+// ---------------------------------------------------------------------------
+// Bug Fix 5: coerce should omit target for absent source, not write null
+// ---------------------------------------------------------------------------
+
+test('Fix 5 — coerce with absent source omits target key', () => {
+  const engine = new RuntimeMappingEngine({
+    rules: [{
+      sourcePath: 'missing',
+      targetPath: 'out.count',
+      transform: 'coerce',
+      coerce: 'number'
+    }]
+  });
+  const result = engine.forward({});
+  assert.equal('count' in (result.output.out ?? {}), false); // key must be absent
+});
+
+// ---------------------------------------------------------------------------
+// Bug Fix 6: CSV adapter should halt on nested path error
+// ---------------------------------------------------------------------------
+
+test('Fix 6 — CSV adapter halts with empty output on nested path', () => {
+  const engine = new RuntimeMappingEngine({
+    targetSchema: { format: 'csv' },
+    rules: [
+      { sourcePath: 'a', targetPath: 'nested.path', transform: 'preserve' },
+      { sourcePath: 'b', targetPath: 'flat', transform: 'preserve' },
+    ]
+  });
+  const result = engine.forward({ a: 'x', b: 'y' });
+  assert.ok(result.diagnostics.some(d => d.errorCode === 'ADAPTER_FAILURE'));
+  assert.equal(result.output, ''); // halted — no partial output
+});

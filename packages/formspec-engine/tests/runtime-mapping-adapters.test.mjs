@@ -99,7 +99,7 @@ test('CSV: lineEnding lf uses \\n', () => {
   assert.equal(lines[1], 'val');
 });
 
-test('CSV: targetPath with dot emits ADAPTER_FAILURE diagnostic', () => {
+test('CSV: targetPath with dot emits ADAPTER_FAILURE diagnostic and halts', () => {
   const mapper = new RuntimeMappingEngine({
     adapters: { csv: {} },
     rules: [
@@ -113,8 +113,8 @@ test('CSV: targetPath with dot emits ADAPTER_FAILURE diagnostic', () => {
   assert.ok(result.diagnostics.some(d =>
     typeof d === 'object' && d.errorCode === 'ADAPTER_FAILURE' && d.message.includes('nested.path')
   ));
-  // The valid flat key still appears in the output
-  assert.ok(result.output.includes('flat'));
+  // Spec: adapter errors MUST halt with no partial output
+  assert.equal(result.output, '');
 });
 
 test('CSV: null values render as empty string', () => {
