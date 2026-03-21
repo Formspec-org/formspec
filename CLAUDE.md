@@ -125,6 +125,9 @@ npm run docs:generate
 # Regenerate filemap.json only
 npm run docs:filemap
 
+# Validate package dependency layering (no upward/lateral deps, WASM exclusivity)
+npm run check:deps
+
 # Enforce critical doc/schema gates (staleness + critical annotations + cross-spec contracts)
 npm run docs:check
 
@@ -161,6 +164,27 @@ python3 -m pytest tests/test_fel_evaluator.py -v
 # Run a specific Python test
 python3 -m pytest tests/test_fel_evaluator.py::TestClassName::test_name -v
 ```
+
+## Package Dependency Fences
+
+Internal package dependencies must flow strictly downward through defined layers. Run `npm run check:deps` to validate.
+
+| Layer | Packages |
+|-------|----------|
+| 0 | `formspec-types` |
+| 1 | `formspec-engine`, `formspec-layout` |
+| 2 | `formspec-webcomponent`, `formspec-core` |
+| 3 | `formspec-adapters`, `formspec-studio-core` |
+| 4 | `formspec-mcp` |
+| 5 | `formspec-chat` |
+| 6 | `formspec-studio` |
+
+**Rules:**
+
+- A package at layer N may only depend on packages at layer < N (strictly lower). Same-layer dependencies are forbidden — they create lateral coupling that easily becomes circular.
+- **WASM is exclusive to `formspec-engine`.** No other package may import from `wasm-pkg`, `formspec-wasm`, or `formspec_wasm`. The engine is the sole bridge between the Rust/WASM tier and the TypeScript tier.
+- When adding a new package, assign it a layer in `scripts/check-dep-fences.mjs` before adding any internal dependencies.
+- The fence checker validates `dependencies`, `peerDependencies`, and `devDependencies` — test-only imports count.
 
 ## Architecture
 
