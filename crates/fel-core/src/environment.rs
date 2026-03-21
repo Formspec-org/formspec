@@ -248,56 +248,53 @@ impl Environment for FormspecEnvironment {
 
     fn mip_valid(&self, path: &[String]) -> FelValue {
         let key = path.join(".");
-        FelValue::Boolean(self.mip_states.get(&key).map_or(true, |s| s.valid))
+        FelValue::Boolean(self.mip_states.get(&key).is_none_or(|s| s.valid))
     }
 
     fn mip_relevant(&self, path: &[String]) -> FelValue {
         let key = path.join(".");
-        FelValue::Boolean(self.mip_states.get(&key).map_or(true, |s| s.relevant))
+        FelValue::Boolean(self.mip_states.get(&key).is_none_or(|s| s.relevant))
     }
 
     fn mip_readonly(&self, path: &[String]) -> FelValue {
         let key = path.join(".");
-        FelValue::Boolean(self.mip_states.get(&key).map_or(false, |s| s.readonly))
+        FelValue::Boolean(self.mip_states.get(&key).is_some_and(|s| s.readonly))
     }
 
     fn mip_required(&self, path: &[String]) -> FelValue {
         let key = path.join(".");
-        FelValue::Boolean(self.mip_states.get(&key).map_or(false, |s| s.required))
+        FelValue::Boolean(self.mip_states.get(&key).is_some_and(|s| s.required))
     }
 
     fn repeat_prev(&self) -> FelValue {
-        if let Some(ctx) = &self.repeat_context {
-            if ctx.index > 1 {
+        if let Some(ctx) = &self.repeat_context
+            && ctx.index > 1 {
                 return ctx
                     .collection
                     .get(ctx.index - 2)
                     .cloned()
                     .unwrap_or(FelValue::Null);
             }
-        }
         FelValue::Null
     }
 
     fn repeat_next(&self) -> FelValue {
-        if let Some(ctx) = &self.repeat_context {
-            if ctx.index < ctx.count {
+        if let Some(ctx) = &self.repeat_context
+            && ctx.index < ctx.count {
                 return ctx
                     .collection
                     .get(ctx.index)
                     .cloned()
                     .unwrap_or(FelValue::Null);
             }
-        }
         FelValue::Null
     }
 
     fn repeat_parent(&self) -> FelValue {
-        if let Some(ctx) = &self.repeat_context {
-            if let Some(parent) = &ctx.parent {
+        if let Some(ctx) = &self.repeat_context
+            && let Some(parent) = &ctx.parent {
                 return parent.current.clone();
             }
-        }
         FelValue::Null
     }
 

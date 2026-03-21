@@ -1,4 +1,4 @@
-/// @filedesc Pass 1b: JSON Schema validation — validates documents against embedded schemas (E101).
+//! @filedesc Pass 1b: JSON Schema validation — validates documents against embedded schemas (E101).
 
 use std::sync::OnceLock;
 

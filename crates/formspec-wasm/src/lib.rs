@@ -124,26 +124,24 @@ fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<S
     }
 
     // Fields: { path: value }
-    if let Some(fields) = ctx_obj.get("fields") {
-        if let Some(obj) = fields.as_object() {
+    if let Some(fields) = ctx_obj.get("fields")
+        && let Some(obj) = fields.as_object() {
             for (k, v) in obj {
                 env.set_field(k, json_to_fel(v));
             }
         }
-    }
 
     // Variables: { name: value }
-    if let Some(vars) = ctx_obj.get("variables") {
-        if let Some(obj) = vars.as_object() {
+    if let Some(vars) = ctx_obj.get("variables")
+        && let Some(obj) = vars.as_object() {
             for (k, v) in obj {
                 env.set_variable(k, json_to_fel(v));
             }
         }
-    }
 
     // MIP states: { path: { valid, relevant, readonly, required } }
-    if let Some(mips) = ctx_obj.get("mipStates") {
-        if let Some(obj) = mips.as_object() {
+    if let Some(mips) = ctx_obj.get("mipStates")
+        && let Some(obj) = mips.as_object() {
             for (k, v) in obj {
                 if let Some(mip_obj) = v.as_object() {
                     env.set_mip(
@@ -170,7 +168,6 @@ fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<S
                 }
             }
         }
-    }
 
     // Repeat context: { current, index, count, collection?, parent? }
     if let Some(repeat) = ctx_obj.get("repeatContext") {
@@ -178,13 +175,12 @@ fn eval_fel_with_context_inner(expression: &str, context_json: &str) -> Result<S
     }
 
     // Instances: { name: value }
-    if let Some(instances) = ctx_obj.get("instances") {
-        if let Some(obj) = instances.as_object() {
+    if let Some(instances) = ctx_obj.get("instances")
+        && let Some(obj) = instances.as_object() {
             for (k, v) in obj {
                 env.set_instance(k, json_to_fel(v));
             }
         }
-    }
 
     let result = evaluate(&expr, &env);
     if let Some(diag) = result
@@ -1087,11 +1083,10 @@ fn fel_to_json(val: &FelValue) -> Value {
         FelValue::Null => Value::Null,
         FelValue::Boolean(b) => Value::Bool(*b),
         FelValue::Number(n) => {
-            if n.fract().is_zero() {
-                if let Some(i) = n.to_i64() {
+            if n.fract().is_zero()
+                && let Some(i) = n.to_i64() {
                     return Value::Number(serde_json::Number::from(i));
                 }
-            }
             n.to_f64()
                 .and_then(serde_json::Number::from_f64)
                 .map(Value::Number)

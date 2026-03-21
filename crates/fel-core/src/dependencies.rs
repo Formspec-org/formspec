@@ -76,11 +76,10 @@ fn walk(expr: &Expr, deps: &mut Dependencies, let_vars: &mut Vec<String>) {
         }
 
         Expr::ContextRef { name, arg, tail } => {
-            if name == "instance" {
-                if let Some(instance_name) = arg {
+            if name == "instance"
+                && let Some(instance_name) = arg {
                     deps.instance_refs.insert(instance_name.clone());
                 }
-            }
             let mut ref_str = format!("@{name}");
             if let Some(a) = arg {
                 ref_str.push_str(&format!("('{a}')"));

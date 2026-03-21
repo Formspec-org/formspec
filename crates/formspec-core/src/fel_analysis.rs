@@ -9,6 +9,12 @@ use std::collections::HashSet;
 use fel_core::ast::{Expr, PathSegment};
 use fel_core::{FelError, parse};
 
+/// Callback that rewrites a single string reference, returning `None` to keep the original.
+type RewriteFn = Box<dyn Fn(&str) -> Option<String>>;
+
+/// Callback that rewrites a two-argument reference (e.g. navigation function + field name).
+type RewriteFn2 = Box<dyn Fn(&str, &str) -> Option<String>>;
+
 // ── Analysis result ─────────────────────────────────────────────
 
 /// Result of statically analyzing a FEL expression.
@@ -213,15 +219,15 @@ fn collect_info(
 /// Return `None` to keep the original.
 pub struct RewriteOptions {
     /// Rewrite `$field.path` references.
-    pub rewrite_field_path: Option<Box<dyn Fn(&str) -> Option<String>>>,
+    pub rewrite_field_path: Option<RewriteFn>,
     /// Rewrite the dotted tail of `@current.foo.bar`.
-    pub rewrite_current_path: Option<Box<dyn Fn(&str) -> Option<String>>>,
+    pub rewrite_current_path: Option<RewriteFn>,
     /// Rewrite `@variable` names.
-    pub rewrite_variable: Option<Box<dyn Fn(&str) -> Option<String>>>,
+    pub rewrite_variable: Option<RewriteFn>,
     /// Rewrite `@instance('name')` names.
-    pub rewrite_instance_name: Option<Box<dyn Fn(&str) -> Option<String>>>,
+    pub rewrite_instance_name: Option<RewriteFn>,
     /// Rewrite literal field-name arguments to prev()/next()/parent().
-    pub rewrite_navigation_target: Option<Box<dyn Fn(&str, &str) -> Option<String>>>,
+    pub rewrite_navigation_target: Option<RewriteFn2>,
 }
 
 /// Rewrite references in a FEL expression AST.
@@ -257,18 +263,17 @@ fn rewrite_expr(expr: &Expr, opts: &RewriteOptions) -> Expr {
         }
         Expr::ContextRef { name, arg, tail } => {
             if name == "instance" {
-                if let (Some(rewrite), Some(orig_name)) = (&opts.rewrite_instance_name, arg) {
-                    if let Some(new_name) = rewrite(orig_name) {
+                if let (Some(rewrite), Some(orig_name)) = (&opts.rewrite_instance_name, arg)
+                    && let Some(new_name) = rewrite(orig_name) {
                         return Expr::ContextRef {
                             name: name.clone(),
                             arg: Some(new_name),
                             tail: tail.clone(),
                         };
                     }
-                }
             } else if name == "current" {
-                if let Some(ref rewrite) = opts.rewrite_current_path {
-                    if !tail.is_empty() {
+                if let Some(ref rewrite) = opts.rewrite_current_path
+                    && !tail.is_empty() {
                         let current_path = tail.join(".");
                         if let Some(new_path) = rewrite(&current_path) {
                             return Expr::ContextRef {
@@ -286,34 +291,27 @@ fn rewrite_expr(expr: &Expr, opts: &RewriteOptions) -> Expr {
                             };
                         }
                     }
-                }
-            } else if !RESERVED_CONTEXT_NAMES.contains(&name.as_str()) {
-                if let Some(ref rewrite) = opts.rewrite_variable {
-                    if let Some(new_name) = rewrite(name) {
+            } else if !RESERVED_CONTEXT_NAMES.contains(&name.as_str())
+                && let Some(ref rewrite) = opts.rewrite_variable
+                    && let Some(new_name) = rewrite(name) {
                         return Expr::ContextRef {
                             name: new_name,
                             arg: arg.clone(),
                             tail: tail.clone(),
                         };
                     }
-                }
-            }
             expr.clone()
         }
         Expr::FunctionCall { name, args } => {
             let mut rewritten_args: Vec<Expr> =
                 args.iter().map(|a| rewrite_expr(a, opts)).collect();
-            if let Some(ref rewrite) = opts.rewrite_navigation_target {
-                if matches!(name.as_str(), "prev" | "next" | "parent") {
-                    if let Some(Expr::String(current)) = rewritten_args.first() {
-                        if let Some(new_name) = rewrite(current, name) {
-                            if let Some(first) = rewritten_args.first_mut() {
+            if let Some(ref rewrite) = opts.rewrite_navigation_target
+                && matches!(name.as_str(), "prev" | "next" | "parent")
+                    && let Some(Expr::String(current)) = rewritten_args.first()
+                        && let Some(new_name) = rewrite(current, name)
+                            && let Some(first) = rewritten_args.first_mut() {
                                 *first = Expr::String(new_name);
                             }
-                        }
-                    }
-                }
-            }
             Expr::FunctionCall {
                 name: name.clone(),
                 args: rewritten_args,
@@ -444,8 +442,8 @@ fn collect_rewrite_targets(expr: &Expr, targets: &mut FelRewriteTargets) {
             }
         }
         Expr::FunctionCall { name, args } => {
-            if matches!(name.as_str(), "prev" | "next" | "parent") {
-                if let Some(Expr::String(target_name)) = args.first() {
+            if matches!(name.as_str(), "prev" | "next" | "parent")
+                && let Some(Expr::String(target_name)) = args.first() {
                     let nav = NavigationTarget {
                         function_name: name.clone(),
                         name: target_name.clone(),
@@ -454,7 +452,6 @@ fn collect_rewrite_targets(expr: &Expr, targets: &mut FelRewriteTargets) {
                         targets.navigation_targets.push(nav);
                     }
                 }
-            }
             for arg in args {
                 collect_rewrite_targets(arg, targets);
             }

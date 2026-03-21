@@ -43,8 +43,10 @@ impl Ord for LintSeverity {
 
 /// Controls which diagnostics are emitted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum LintMode {
     /// Full checking — all diagnostics emitted. Used for CI/publishing.
+    #[default]
     Runtime,
     /// Authoring mode — suppresses certain warnings that are noisy during editing
     /// (e.g., W300 incompatible dataType for optionSet).
@@ -54,11 +56,6 @@ pub enum LintMode {
     Strict,
 }
 
-impl Default for LintMode {
-    fn default() -> Self {
-        LintMode::Runtime
-    }
-}
 
 impl LintMode {
     /// Whether this mode is the relaxed authoring mode.

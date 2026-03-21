@@ -206,8 +206,8 @@ impl<'a> WalkState<'a> {
         }
 
         // E805: Wizard children must all be Page
-        if comp_type == "Wizard" {
-            if let Some(children) = node.get("children").and_then(|v| v.as_array()) {
+        if comp_type == "Wizard"
+            && let Some(children) = node.get("children").and_then(|v| v.as_array()) {
                 for (i, child) in children.iter().enumerate() {
                     let child_type = child
                         .get("component")
@@ -225,27 +225,22 @@ impl<'a> WalkState<'a> {
                     }
                 }
             }
-        }
 
         // E806: Custom component missing required params
-        if self.custom_names.contains(comp_type) {
-            if let Some(custom_defs) = self.custom_defs {
-                if let Some(def) = custom_defs.get(comp_type) {
-                    if let Some(params) = def.get("params").and_then(|v| v.as_array()) {
+        if self.custom_names.contains(comp_type)
+            && let Some(custom_defs) = self.custom_defs
+                && let Some(def) = custom_defs.get(comp_type)
+                    && let Some(params) = def.get("params").and_then(|v| v.as_array()) {
                         for param_val in params {
-                            if let Some(param_name) = param_val.as_str() {
-                                if node.get(param_name).is_none() {
+                            if let Some(param_name) = param_val.as_str()
+                                && node.get(param_name).is_none() {
                                     self.diags.push(LintDiagnostic::error(
                                         "E806", PASS, path,
                                         format!("Custom component '{comp_type}' missing required param '{param_name}'"),
                                     ));
                                 }
-                            }
                         }
                     }
-                }
-            }
-        }
 
         // Bind checks
         if let Some(bind) = node.get("bind").and_then(|v| v.as_str()) {

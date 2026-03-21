@@ -107,8 +107,8 @@ fn walk_binds_object(
         }
 
         // `default` — only when the value starts with `=` (FEL heuristic)
-        if let Some(default_str) = obj.get("default").and_then(|v| v.as_str()) {
-            if let Some(fel_source) = default_str.strip_prefix('=') {
+        if let Some(default_str) = obj.get("default").and_then(|v| v.as_str())
+            && let Some(fel_source) = default_str.strip_prefix('=') {
                 let expression_path = format!("{path_prefix}.binds.{bind_key}.default");
                 try_parse(
                     fel_source,
@@ -118,7 +118,6 @@ fn walk_binds_object(
                     diagnostics,
                 );
             }
-        }
     }
 }
 
@@ -157,8 +156,8 @@ fn walk_binds_array(
             }
         }
 
-        if let Some(default_str) = obj.get("default").and_then(|v| v.as_str()) {
-            if let Some(fel_source) = default_str.strip_prefix('=') {
+        if let Some(default_str) = obj.get("default").and_then(|v| v.as_str())
+            && let Some(fel_source) = default_str.strip_prefix('=') {
                 let expression_path = format!("{path_prefix}.binds[{i}].default");
                 try_parse(
                     fel_source,
@@ -168,7 +167,6 @@ fn walk_binds_array(
                     diagnostics,
                 );
             }
-        }
     }
 }
 

@@ -131,8 +131,8 @@ fn walk_items_for_option_sets(
             }
 
             // W300: incompatible dataType
-            if let Some(data_type) = item.get("dataType").and_then(|v| v.as_str()) {
-                if !OPTION_SET_COMPATIBLE_TYPES.contains(&data_type) {
+            if let Some(data_type) = item.get("dataType").and_then(|v| v.as_str())
+                && !OPTION_SET_COMPATIBLE_TYPES.contains(&data_type) {
                     diagnostics.push(LintDiagnostic::warning(
                         "W300",
                         3,
@@ -144,7 +144,6 @@ fn walk_items_for_option_sets(
                         ),
                     ));
                 }
-            }
         }
 
         if let Some(children) = item.get("children").and_then(|v| v.as_array()) {

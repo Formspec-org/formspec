@@ -6,6 +6,9 @@ use std::collections::HashMap;
 
 use crate::types::FelValue;
 
+/// Type alias for extension function implementations.
+pub type ExtensionFn = Box<dyn Fn(&[FelValue]) -> FelValue + Send + Sync>;
+
 /// Metadata for a built-in FEL function exposed to tooling surfaces.
 pub struct BuiltinFunctionCatalogEntry {
     pub name: &'static str,
@@ -24,7 +27,7 @@ pub struct ExtensionFunc {
     pub max_args: Option<usize>,
     /// The implementation: receives pre-evaluated args, returns a value.
     /// Arguments are guaranteed non-null (null propagation handled by caller).
-    pub func: Box<dyn Fn(&[FelValue]) -> FelValue + Send + Sync>,
+    pub func: ExtensionFn,
 }
 
 /// Registry of extension functions.

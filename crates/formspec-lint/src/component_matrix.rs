@@ -151,7 +151,7 @@ pub fn classify_compatibility(component: &str, data_type: &str) -> Compatibility
 ///
 /// Returns `false` for non-input components.
 pub fn requires_options_source(component: &str) -> bool {
-    find_rule(component).map_or(false, |r| r.requires_options)
+    find_rule(component).is_some_and(|r| r.requires_options)
 }
 
 /// Whether this component is one of the 12 built-in input components.

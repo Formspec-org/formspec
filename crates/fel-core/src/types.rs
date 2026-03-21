@@ -243,7 +243,7 @@ pub fn parse_date_literal(s: &str) -> Option<FelDate> {
     let year: i32 = parts[0].parse().ok()?;
     let month: u32 = parts[1].parse().ok()?;
     let day: u32 = parts[2].parse().ok()?;
-    if month < 1 || month > 12 || day < 1 || day > days_in_month(year, month) {
+    if !(1..=12).contains(&month) || day < 1 || day > days_in_month(year, month) {
         return None;
     }
     Some(FelDate::Date { year, month, day })
@@ -303,12 +303,7 @@ pub fn civil_from_days_pub(z: i64) -> FelDate {
 
 /// Format a Decimal: strip trailing zeros, show as integer when possible.
 pub fn format_number(n: Decimal) -> String {
-    let normalized = n.normalize();
-    if normalized.scale() == 0 {
-        normalized.to_string()
-    } else {
-        normalized.to_string()
-    }
+    n.normalize().to_string()
 }
 
 impl fmt::Display for FelValue {

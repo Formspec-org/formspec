@@ -228,7 +228,7 @@ fn set_by_path(obj: &mut Value, path: &str, value: Value) {
             // Intermediate segment — ensure container exists
             let next_is_index = segments
                 .get(i + 1)
-                .map_or(false, |s| s.parse::<usize>().is_ok());
+                .is_some_and(|s| s.parse::<usize>().is_ok());
             match current {
                 Value::Object(map) => {
                     if !map.contains_key(seg.as_str()) {
@@ -291,11 +291,10 @@ fn fel_to_json(val: &FelValue) -> Value {
         FelValue::Null => Value::Null,
         FelValue::Boolean(b) => Value::Bool(*b),
         FelValue::Number(n) => {
-            if n.fract().is_zero() {
-                if let Some(i) = n.to_i64() {
+            if n.fract().is_zero()
+                && let Some(i) = n.to_i64() {
                     return Value::Number(serde_json::Number::from(i));
                 }
-            }
             if let Some(f) = n.to_f64() {
                 serde_json::Number::from_f64(f)
                     .map(Value::Number)
@@ -359,15 +358,14 @@ pub fn execute_mapping(
         }
 
         // Check condition
-        if let Some(ref cond) = rule.condition {
-            if let Ok(expr) = parse(cond) {
+        if let Some(ref cond) = rule.condition
+            && let Ok(expr) = parse(cond) {
                 let env = build_mapping_env(source, &output, None);
                 let result = evaluate(&expr, &env);
                 if !result.value.is_truthy() {
                     continue; // condition false — skip rule
                 }
             }
-        }
 
         // Direction-aware path resolution
         let (src_path, tgt_path) = match direction {
@@ -546,7 +544,7 @@ fn apply_coerce(
     target_type: CoerceType,
     _rule_idx: usize,
     _target_path: &str,
-    _diagnostics: &mut Vec<MappingDiagnostic>,
+    _diagnostics: &mut [MappingDiagnostic],
 ) -> Value {
     match target_type {
         CoerceType::String => match value {
@@ -692,8 +690,8 @@ pub fn execute_mapping_doc(
     let mut rules = doc.rules.clone();
 
     // autoMap: generate synthetic preserve rules for unmapped top-level source keys (forward only)
-    if doc.auto_map && direction == MappingDirection::Forward {
-        if let Some(obj) = source.as_object() {
+    if doc.auto_map && direction == MappingDirection::Forward
+        && let Some(obj) = source.as_object() {
             let covered: std::collections::HashSet<&str> = doc
                 .rules
                 .iter()
@@ -714,16 +712,15 @@ pub fn execute_mapping_doc(
                 }
             }
         }
-    }
 
     // Execute rules
     let mut result = execute_mapping(&rules, source, direction);
 
     // Apply defaults before rules (but since rules already ran via last-write-wins,
     // we insert defaults only where no rule wrote a value). Forward only.
-    if direction == MappingDirection::Forward {
-        if let Some(ref defaults) = doc.defaults {
-            if let Value::Object(ref mut out_map) = result.output {
+    if direction == MappingDirection::Forward
+        && let Some(ref defaults) = doc.defaults
+            && let Value::Object(ref mut out_map) = result.output {
                 for (k, v) in defaults {
                     // Only set default if no rule wrote to this key
                     if !out_map.contains_key(k) {
@@ -731,8 +728,6 @@ pub fn execute_mapping_doc(
                     }
                 }
             }
-        }
-    }
 
     result
 }

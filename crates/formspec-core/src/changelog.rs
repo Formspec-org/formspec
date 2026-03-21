@@ -199,8 +199,8 @@ fn diff_items(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
 
     // Modified
     for &(key, old_val) in &old_map {
-        if let Some(&(_, new_val)) = new_map.iter().find(|(k, _)| *k == key) {
-            if old_val != new_val {
+        if let Some(&(_, new_val)) = new_map.iter().find(|(k, _)| *k == key)
+            && old_val != new_val {
                 let impact = classify_item_modification(old_val, new_val);
                 changes.push(Change {
                     change_type: ChangeType::Modified,
@@ -214,7 +214,6 @@ fn diff_items(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
                     migration_hint: None,
                 });
             }
-        }
     }
 }
 
@@ -258,7 +257,7 @@ fn classify_item_modification(old: &Value, new: &Value) -> ChangeImpact {
 /// Index binds by path. Handles both formats:
 /// - Object format: `"binds": { "name": { "required": "true" } }` (key = path)
 /// - Array format: `"binds": [{ "path": "name", "required": "true" }]`
-fn index_binds_by_path<'a>(def: &'a Value) -> Vec<(&'a str, &'a Value)> {
+fn index_binds_by_path(def: &Value) -> Vec<(&str, &Value)> {
     match def.get("binds") {
         Some(Value::Object(obj)) => obj.iter().map(|(k, v)| (k.as_str(), v)).collect(),
         Some(Value::Array(arr)) => arr
@@ -318,8 +317,8 @@ fn diff_binds(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
 
     // Modified
     for &(path, old_val) in &old_binds {
-        if let Some(&(_, new_val)) = new_binds.iter().find(|(k, _)| *k == path) {
-            if old_val != new_val {
+        if let Some(&(_, new_val)) = new_binds.iter().find(|(k, _)| *k == path)
+            && old_val != new_val {
                 let impact = classify_bind_modification(old_val, new_val);
                 changes.push(Change {
                     change_type: ChangeType::Modified,
@@ -333,7 +332,6 @@ fn diff_binds(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
                     migration_hint: None,
                 });
             }
-        }
     }
 }
 
@@ -424,8 +422,8 @@ fn diff_keyed_array(
     }
 
     for &(key, old_val) in &old_map {
-        if let Some(&(_, new_val)) = new_map.iter().find(|(k, _)| *k == key) {
-            if old_val != new_val {
+        if let Some(&(_, new_val)) = new_map.iter().find(|(k, _)| *k == key)
+            && old_val != new_val {
                 changes.push(Change {
                     change_type: ChangeType::Modified,
                     target: target.clone(),
@@ -438,7 +436,6 @@ fn diff_keyed_array(
                     migration_hint: None,
                 });
             }
-        }
     }
 }
 

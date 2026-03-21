@@ -778,13 +778,13 @@ impl<'a> Evaluator<'a> {
             // String
             "length" => self.fn_length(args),
             "contains" => self.fn_str2(args, "contains", |s, sub| {
-                FelValue::Boolean(s.contains(&*sub))
+                FelValue::Boolean(s.contains(sub))
             }),
             "startsWith" => self.fn_str2(args, "startsWith", |s, p| {
-                FelValue::Boolean(s.starts_with(&*p))
+                FelValue::Boolean(s.starts_with(p))
             }),
             "endsWith" => {
-                self.fn_str2(args, "endsWith", |s, p| FelValue::Boolean(s.ends_with(&*p)))
+                self.fn_str2(args, "endsWith", |s, p| FelValue::Boolean(s.ends_with(p)))
             }
             "substring" => self.fn_substring(args),
             "replace" => self.fn_replace(args),
@@ -972,11 +972,10 @@ impl<'a> Evaluator<'a> {
                     return FelValue::Null;
                 }
             };
-            if let Some(ord) = cmp {
-                if (is_min && ord.is_gt()) || (!is_min && ord.is_lt()) {
+            if let Some(ord) = cmp
+                && ((is_min && ord.is_gt()) || (!is_min && ord.is_lt())) {
                     best = (*elem).clone();
                 }
-            }
         }
         best
     }

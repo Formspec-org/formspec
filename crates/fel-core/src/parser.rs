@@ -31,7 +31,7 @@ pub struct Parser {
 /// Parse a FEL expression string into an AST.
 pub fn parse(input: &str) -> Result<Expr, FelError> {
     let mut lexer = Lexer::new(input);
-    let tokens = lexer.tokenize().map_err(|e| FelError::Parse(e))?;
+    let tokens = lexer.tokenize().map_err(FelError::Parse)?;
     let mut parser = Parser {
         tokens,
         pos: 0,

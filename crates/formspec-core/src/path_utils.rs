@@ -1,9 +1,7 @@
 //! Dotted path normalization and tree item navigation by path.
-
-/// Dotted path normalization and tree navigation utilities.
-///
-/// Paths use dot notation: `group.field`, `parent.child.leaf`.
-/// Indices `[N]` and wildcards `[*]` are stripped during normalization.
+//!
+//! Paths use dot notation: `group.field`, `parent.child.leaf`.
+//! Indices `[N]` and wildcards `[*]` are stripped during normalization.
 
 /// Strip repeat indices from a single path segment: `lineItems[0]` → `lineItems`.
 pub fn normalize_path_segment(segment: &str) -> &str {

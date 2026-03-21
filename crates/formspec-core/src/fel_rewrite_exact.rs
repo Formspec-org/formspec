@@ -429,20 +429,18 @@ impl<'a> ExactRewriteParser<'a> {
             }
         }
 
-        if has_name {
-            if let Some(rewrite) = &self.options.rewrite_field_path {
+        if has_name
+            && let Some(rewrite) = &self.options.rewrite_field_path {
                 let original = parts.join(".").replace(".[", "[");
-                if let Some(updated) = rewrite(&original) {
-                    if updated != original {
+                if let Some(updated) = rewrite(&original)
+                    && updated != original {
                         self.replacements.push(Replacement {
                             start,
                             end,
                             text: format!("${updated}"),
                         });
                     }
-                }
             }
-        }
 
         Ok(())
     }
@@ -483,9 +481,9 @@ impl<'a> ExactRewriteParser<'a> {
                 &self.options.rewrite_instance_name,
                 arg_value.as_deref(),
                 arg_token.as_ref(),
-            ) {
-                if let Some(updated) = rewrite(current_name) {
-                    if updated != current_name {
+            )
+                && let Some(updated) = rewrite(current_name)
+                    && updated != current_name {
                         let raw = char_slice(self.source, token.span.start, token.span.end);
                         let quote = raw.chars().next().unwrap_or('\'');
                         self.replacements.push(Replacement {
@@ -494,26 +492,22 @@ impl<'a> ExactRewriteParser<'a> {
                             text: quote_string_literal(&updated, quote),
                         });
                     }
-                }
-            }
             return Ok(());
         }
 
         if name == "current" {
-            if let Some(rewrite) = &self.options.rewrite_current_path {
-                if let (Some(first), Some(last)) = (tail_tokens.first(), tail_tokens.last()) {
+            if let Some(rewrite) = &self.options.rewrite_current_path
+                && let (Some(first), Some(last)) = (tail_tokens.first(), tail_tokens.last()) {
                     let current_path = tail_names.join(".");
-                    if let Some(updated) = rewrite(&current_path) {
-                        if updated != current_path {
+                    if let Some(updated) = rewrite(&current_path)
+                        && updated != current_path {
                             self.replacements.push(Replacement {
                                 start: first.span.start,
                                 end: last.span.end,
                                 text: updated,
                             });
                         }
-                    }
                 }
-            }
             return Ok(());
         }
 

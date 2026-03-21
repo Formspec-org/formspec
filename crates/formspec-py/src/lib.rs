@@ -704,6 +704,7 @@ fn pyany_to_mip_state(obj: &Bound<'_, PyAny>) -> PyResult<MipState> {
     Ok(MipState::default())
 }
 
+#[allow(clippy::only_used_in_recursion)]
 fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelValue> {
     if obj.is_none() {
         return Ok(FelValue::Null);
@@ -736,17 +737,16 @@ fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelValue> {
         if let Some(tagged_type) = tagged_type.as_deref() {
             match tagged_type {
                 "number" => {
-                    if let Some(raw) = dict.get_item("value")? {
-                        if let Ok(text) = raw.extract::<String>() {
+                    if let Some(raw) = dict.get_item("value")?
+                        && let Ok(text) = raw.extract::<String>() {
                             return Ok(FelValue::Number(
                                 Decimal::from_str_exact(&text).unwrap_or(Decimal::ZERO),
                             ));
                         }
-                    }
                 }
                 "date" | "datetime" => {
-                    if let Some(raw) = dict.get_item("value")? {
-                        if let Ok(text) = raw.extract::<String>() {
+                    if let Some(raw) = dict.get_item("value")?
+                        && let Ok(text) = raw.extract::<String>() {
                             if let Some(date) = fel_core::parse_datetime_literal(&format!("@{text}")) {
                                 return Ok(FelValue::Date(date));
                             }
@@ -754,7 +754,6 @@ fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelValue> {
                                 return Ok(FelValue::Date(date));
                             }
                         }
-                    }
                 }
                 "money" => {
                     let amount = dict
@@ -803,11 +802,10 @@ fn fel_to_python(py: Python, val: &FelValue) -> PyResult<PyObject> {
         FelValue::Null => Ok(py.None()),
         FelValue::Boolean(b) => Ok(PyBool::new(py, *b).to_owned().into_any().unbind()),
         FelValue::Number(n) => {
-            if n.fract().is_zero() {
-                if let Some(i) = n.to_i64() {
+            if n.fract().is_zero()
+                && let Some(i) = n.to_i64() {
                     return Ok(i.into_pyobject(py)?.into_any().unbind());
                 }
-            }
             if let Some(f) = n.to_f64() {
                 Ok(f.into_pyobject(py)?.into_any().unbind())
             } else {
@@ -1027,7 +1025,7 @@ fn parse_direction(s: &str) -> PyResult<runtime_mapping::MappingDirection> {
 }
 
 fn parse_mapping_document(val: &Value) -> PyResult<runtime_mapping::MappingDocument> {
-    parse_mapping_document_inner(val).map_err(|e| pyo3::exceptions::PyValueError::new_err(e))
+    parse_mapping_document_inner(val).map_err(pyo3::exceptions::PyValueError::new_err)
 }
 
 // ── Testable inner functions (no PyO3 dependency) ───────────────
@@ -1088,8 +1086,9 @@ fn parse_mapping_document_inner(val: &Value) -> Result<runtime_mapping::MappingD
     })
 }
 
+#[allow(dead_code)]
 fn parse_mapping_rules(val: &Value) -> PyResult<Vec<runtime_mapping::MappingRule>> {
-    parse_mapping_rules_inner(val).map_err(|e| pyo3::exceptions::PyValueError::new_err(e))
+    parse_mapping_rules_inner(val).map_err(pyo3::exceptions::PyValueError::new_err)
 }
 
 /// Core mapping-rule parser returning `Result<_, String>` for testability without FFI.

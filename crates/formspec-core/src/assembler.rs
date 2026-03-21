@@ -285,22 +285,21 @@ fn apply_fragment(
         if let Some(vars_arr) = existing_vars.as_array_mut() {
             for var in frag_vars {
                 let mut rewritten = var.clone();
-                if let Some(calc) = var.get("calculate").and_then(|v| v.as_str()) {
-                    if let Some(obj) = rewritten.as_object_mut() {
+                if let Some(calc) = var.get("calculate").and_then(|v| v.as_str())
+                    && let Some(obj) = rewritten.as_object_mut() {
                         obj.insert(
                             "calculate".to_string(),
                             Value::String(rewrite_fel_string(calc, key_prefix)),
                         );
                     }
-                }
                 vars_arr.push(rewritten);
             }
         }
     }
 
     // Detect key collisions — spec requires abort on collision
-    if !key_prefix.is_empty() {
-        if let Some(frag_items) = fragment.get("items").and_then(|v| v.as_array()) {
+    if !key_prefix.is_empty()
+        && let Some(frag_items) = fragment.get("items").and_then(|v| v.as_array()) {
             let mut seen_keys: HashSet<String> = HashSet::new();
             for item in frag_items {
                 if let Some(key) = item.get("key").and_then(|v| v.as_str()) {
@@ -315,7 +314,6 @@ fn apply_fragment(
                 }
             }
         }
-    }
 
     Value::Object(merged)
 }
