@@ -695,6 +695,25 @@ describe('previewForm — per-page validation counts', () => {
     expect(itemsPage!.validationErrors).toBe(2);
   });
 
+  it('validateResponse keeps repeat-row required errors when scenario uses explicit undefined', () => {
+    const project = createProject();
+    project.addGroup('line_items', 'Line Items');
+    project.makeRepeatable('line_items', { min: 1 });
+    project.addField('line_items.amount', 'Amount', 'decimal');
+    project.require('line_items.amount');
+
+    const report = validateResponse(project, {
+      'line_items[0].amount': undefined,
+      'line_items[1].amount': undefined,
+    });
+
+    expect(report.counts.error).toBe(2);
+    expect(report.results.map(r => r.path)).toEqual([
+      'line_items[0].amount',
+      'line_items[1].amount',
+    ]);
+  });
+
   it('errors on all pages are independent', () => {
     const project = createProject();
     project.addPage('Page A', undefined, 'page-a');

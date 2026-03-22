@@ -106,6 +106,12 @@ function loadDataIntoEngine(engine: IFormEngine, data: Record<string, unknown>):
   }
 
   for (const [path, value] of Object.entries(flatData)) {
+    // Treat explicit undefined as "not provided". We still used the indexed key above
+    // to expand repeat groups, but writing undefined into repeat children can suppress
+    // trailing required errors inside the engine.
+    if (value === undefined) {
+      continue;
+    }
     engine.setValue(path, value);
   }
 }
