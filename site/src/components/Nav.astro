@@ -5,10 +5,16 @@ export interface Props {
 
 const { currentPath = "/" } = Astro.props;
 
-/** Ignore trailing-slash differences (e.g. /references vs /references/). */
+/** Normalize pathname for nav “active” (trailing slash, references static entry). */
+function normalizeNavPath(pathname: string): string {
+  let p = pathname.replace(/\/$/, "") || "/";
+  if (p === "/references/index.html") p = "/references";
+  return p;
+}
+
 function pathForActive(pathname: string, linkHref: string): boolean {
-  const p = pathname.replace(/\/$/, "") || "/";
-  const h = linkHref.split("#")[0].replace(/\/$/, "") || "/";
+  const p = normalizeNavPath(pathname);
+  const h = normalizeNavPath(linkHref.split("#")[0]);
   return p === h;
 }
 

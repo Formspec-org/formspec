@@ -78,11 +78,16 @@
 
         <!-- Right: live rendered form -->
         <div class="split-pane split-pane--preview" id="hero-preview-pane">
-          <div class="preview-loading" id="hero-loading" aria-hidden="true">
-            <div class="preview-loading-spinner"></div>
-            <span>Rendering...</span>
+          <p class="live-demo-hint">
+            <span class="live-demo-hint-dot" aria-hidden="true"></span><span class="live-demo-hint-text">Live demo — edits on the left update this form in real time.</span>
+          </p>
+          <div class="live-demo-body">
+            <div class="preview-loading" id="hero-loading" aria-hidden="true">
+              <div class="preview-loading-spinner"></div>
+              <span>Rendering...</span>
+            </div>
+            <formspec-render id="hero-form"></formspec-render>
           </div>
-          <formspec-render id="hero-form"></formspec-render>
         </div>
 
       </div>
@@ -310,7 +315,39 @@
     transition: opacity 0.15s;
   }
 
-  .split-pane--preview.is-pending formspec-render {
+  .live-demo-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    color: var(--color-ink-secondary);
+    line-height: 1.35;
+    margin: 0 0 0.75rem;
+  }
+
+  .live-demo-hint-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-green);
+    flex-shrink: 0;
+    animation: live-demo-dot-pulse 1.75s ease-in-out infinite;
+    will-change: opacity, transform;
+  }
+
+  .live-demo-hint-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .live-demo-body {
+    position: relative;
+    flex: 1;
+    min-height: 200px;
+  }
+
+  .split-pane--preview.is-pending .live-demo-body formspec-render {
     opacity: 0.3;
     filter: blur(1px);
     transition: opacity 0.1s, filter 0.1s;
@@ -338,7 +375,7 @@
     background: #2c42c4;
   }
 
-  /* Loading overlay */
+  /* Loading overlay — scoped to live form body */
   .preview-loading {
     position: absolute;
     inset: 0;
@@ -351,6 +388,8 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s;
+    border-radius: 6px;
+    background: rgb(240 240 238 / 0.85);
   }
 
   .split-pane--preview.is-pending .preview-loading {
@@ -376,6 +415,25 @@
 
   @keyframes hero-spin {
     to { transform: rotate(360deg); }
+  }
+
+  @keyframes live-demo-dot-pulse {
+    0%, 100% {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-demo-hint-dot {
+      animation: none;
+      opacity: 0.9;
+      transform: none;
+    }
   }
 
   @media (max-width: 900px) {
@@ -409,7 +467,7 @@
 </style>
 
 <script>
-  import { FormspecRender } from 'formspec-webcomponent';
+  import { FormspecRender, initFormspecEngine } from 'formspec-webcomponent';
   import registry from '../../../registries/formspec-common.registry.json';
 
   if (!customElements.get('formspec-render')) {
@@ -486,18 +544,19 @@
   }
 
   function prefillValues() {
-    // Engine is created synchronously by the definition setter,
-    // but we need to wait for the render pass to complete
-    // before setting values so the DOM reflects them.
-    setTimeout(() => {
+    const apply = () => {
       const engine = form?.getEngine?.();
-      if (engine) {
-        engine.setValue('org_type', 'nonprofit');
-        engine.setValue('ein', '47-0123456');
-        engine.setValue('amount', { amount: 100000, currency: 'USD' });
-        engine.setValue('duration', 12);
-      }
-    }, 0);
+      if (!engine) return;
+      engine.setValue('org_type', 'nonprofit');
+      engine.setValue('ein', '47-0123456');
+      engine.setValue('amount', { amount: 100000, currency: 'USD' });
+      engine.setValue('duration', 12);
+    };
+    // Render is scheduled on a microtask; field `effect()` hooks attach during that pass.
+    // Double rAF runs after the following frame so control bindings exist before we setValue.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(apply);
+    });
   }
 
   function showStatus(type: 'ok' | 'error', text: string) {
@@ -522,10 +581,6 @@
     // Populate textarea with pretty-printed JSON (strip envelope fields for cleaner display)
     const { $formspec, url, ...display } = initialDef;
     editor.value = JSON.stringify(display, null, 2);
-
-    // Initial render
-    applyDefinition(initialDef);
-    prefillValues();
 
     // Live editing — show pending state immediately, debounce the actual render
     let timer: ReturnType<typeof setTimeout>;
@@ -560,5 +615,11 @@
         editor.dispatchEvent(new Event('input'));
       }
     });
+
+    void (async () => {
+      await initFormspecEngine();
+      applyDefinition(initialDef);
+      prefillValues();
+    })();
   }
 </script>
