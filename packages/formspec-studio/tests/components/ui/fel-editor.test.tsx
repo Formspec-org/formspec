@@ -113,7 +113,7 @@ describe('FELEditor', () => {
     const { container } = renderEditor({ value: '1 + ', onSave: vi.fn() });
     const indicator = container.querySelector('.bg-error');
     expect(indicator).toBeInTheDocument();
-    expect(indicator).toHaveAttribute('title', expect.stringMatching(/Expecting:/i));
+    expect(indicator).toHaveAttribute('title', expect.stringMatching(/line 1, column 1:/i));
   });
 
   it('selects option with Enter key', async () => {

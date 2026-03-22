@@ -92,7 +92,7 @@ describe('FieldPalette', () => {
     expect(regions[1].span).toBe(12);
   });
 
-  it('only shows top-level items (no nested fields within groups)', () => {
+  it('shows nested group children within their parent section', () => {
     renderFieldPalette({
       definition: {
         items: [
@@ -112,8 +112,8 @@ describe('FieldPalette', () => {
     // Top-level items: 'contact' and 'email'
     expect(screen.getByText('Contact Info')).toBeInTheDocument();
     expect(screen.getByText('Email')).toBeInTheDocument();
-    // 'nested_phone' should NOT appear
-    expect(screen.queryByText('Nested Phone')).not.toBeInTheDocument();
+    // Group children are listed within the group section
+    expect(screen.getByText('Nested Phone')).toBeInTheDocument();
   });
 
   it('items are grouped by parent with section headers', () => {

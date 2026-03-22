@@ -361,7 +361,7 @@ describe('GridCanvas', () => {
     );
 
     // 12 guide lines (subtle column markers)
-    const guides = container.querySelectorAll('.border-l.border-border\\/10');
+    const guides = container.querySelectorAll('.border-l.border-border\\/30.border-dashed');
     expect(guides.length).toBe(12);
   });
 });

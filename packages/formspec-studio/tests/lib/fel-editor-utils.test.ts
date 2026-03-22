@@ -125,7 +125,7 @@ describe('fel-editor-utils', () => {
     it('should return error message for invalid expression', () => {
       const error = validateFEL('1 + ');
       expect(error).not.toBeNull();
-      expect(error).toContain('Expecting:');
+      expect(error).toMatch(/line 1, column 1:/i);
     });
   });
 });

@@ -136,7 +136,7 @@ describe('GridItemBlock', () => {
       />,
     );
 
-    expect(screen.getByTitle(/repeatable/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/repeatable/i)).toBeInTheDocument();
   });
 
   it('uses different styling for groups vs fields', () => {
