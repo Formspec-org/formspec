@@ -61,7 +61,7 @@ pub(crate) fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<formspec_core
                 let expr = obj
                     .get("expression")
                     .and_then(|v| v.as_str())
-                    .ok_or_else(|| format!("constant transform requires 'expression' field"))?;
+                    .ok_or_else(|| "constant transform requires 'expression' field".to_string())?;
                 formspec_core::TransformType::Expression(expr.to_string())
             }
             "coerce" => {
@@ -78,7 +78,7 @@ pub(crate) fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<formspec_core
                 let vm_obj = vm_val.and_then(|v| v.as_object());
 
                 // Detect new shape: { forward, reverse, unmapped, default }
-                let is_new_shape = vm_obj.map_or(false, |m| {
+                let is_new_shape = vm_obj.is_some_and(|m| {
                     m.contains_key("forward") || m.contains_key("reverse") || m.contains_key("unmapped")
                 });
 
@@ -201,30 +201,28 @@ pub(crate) fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<formspec_core
                 let inner_rules = arr_obj
                     .get("innerRules")
                     .and_then(|v| v.as_array())
-                    .map(|arr| {
+                    .and_then(|arr| {
                         // For indexed mode, inner rules use { index: N, targetPath } instead of
                         // standard rules. Convert index to sourcePath for the Rust engine.
                         let patched: Vec<Value> = arr
                             .iter()
                             .map(|r| {
-                                if mode == formspec_core::ArrayMode::Indexed {
-                                    if let Some(obj) = r.as_object() {
-                                        if let Some(idx) = obj.get("index").and_then(|v| v.as_u64()) {
-                                            let mut patched_obj = obj.clone();
-                                            patched_obj.insert(
-                                                "sourcePath".to_string(),
-                                                Value::String(idx.to_string()),
-                                            );
-                                            return Value::Object(patched_obj);
-                                        }
-                                    }
+                                if mode == formspec_core::ArrayMode::Indexed
+                                    && let Some(obj) = r.as_object()
+                                    && let Some(idx) = obj.get("index").and_then(|v| v.as_u64())
+                                {
+                                    let mut patched_obj = obj.clone();
+                                    patched_obj.insert(
+                                        "sourcePath".to_string(),
+                                        Value::String(idx.to_string()),
+                                    );
+                                    return Value::Object(patched_obj);
                                 }
                                 r.clone()
                             })
                             .collect();
                         parse_mapping_rules_inner(&Value::Array(patched)).ok()
                     })
-                    .flatten()
                     .unwrap_or_default();
                 Some(formspec_core::ArrayDescriptor { mode, inner_rules })
             }),
@@ -384,25 +382,25 @@ pub fn execute_mapping_doc_wasm(
 
     // Enforce document-level direction restriction
     let doc_direction = parse_mapping_direction(&doc_val);
-    if let Some(allowed) = doc_direction {
-        if allowed != dir {
-            let msg = if allowed == formspec_core::MappingDirection::Forward {
-                "This mapping document is forward-only; reverse execution is not permitted"
-            } else {
-                "This mapping document is reverse-only; forward execution is not permitted"
-            };
-            let json = serde_json::json!({
-                "direction": direction,
-                "output": {},
-                "rulesApplied": 0,
-                "diagnostics": [{
-                    "ruleIndex": -1,
-                    "errorCode": "INVALID_DOCUMENT",
-                    "message": msg,
-                }],
-            });
-            return serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()));
-        }
+    if let Some(allowed) = doc_direction
+        && allowed != dir
+    {
+        let msg = if allowed == formspec_core::MappingDirection::Forward {
+            "This mapping document is forward-only; reverse execution is not permitted"
+        } else {
+            "This mapping document is reverse-only; forward execution is not permitted"
+        };
+        let json = serde_json::json!({
+            "direction": direction,
+            "output": {},
+            "rulesApplied": 0,
+            "diagnostics": [{
+                "ruleIndex": -1,
+                "errorCode": "INVALID_DOCUMENT",
+                "message": msg,
+            }],
+        });
+        return serde_json::to_string(&json).map_err(|e| JsError::new(&e.to_string()));
     }
 
     let doc = parse_mapping_document_inner(&doc_val).map_err(|e| JsError::new(&e))?;

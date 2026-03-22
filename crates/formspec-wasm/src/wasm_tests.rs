@@ -3,7 +3,6 @@
 #[cfg(test)]
 mod tests {
     use fel_core::{fel_to_json, json_to_fel, FelValue};
-    use formspec_core;
     use rust_decimal::Decimal;
     use rust_decimal::prelude::*;
     use serde_json::{json, Value};
