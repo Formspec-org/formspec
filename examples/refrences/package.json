@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --port 8082 --open",
     "build": "vite build",
+    "embed-tailwind": "cd ../tailwind-demo && FORMSPEC_BASE_PATH=/tailwind-demo/ npm run build && rm -rf ../refrences/dist/tailwind-demo && mkdir -p ../refrences/dist/tailwind-demo && cp -r dist/* ../refrences/dist/tailwind-demo/",
+    "build:with-tailwind": "vite build && npm run embed-tailwind",
     "preview": "vite preview --port 8082"
   },
   "dependencies": {

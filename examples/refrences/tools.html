@@ -57,6 +57,12 @@
       background: rgba(255,255,255,0.15);
     }
     .site-header h1 { font-size: 18px; font-weight: 600; flex: 1; }
+    .header-nav-links {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
     .site-header a {
       color: rgba(255,255,255,0.9);
       font-size: 14px;
@@ -264,7 +270,9 @@
 <header class="site-header">
   <a href="/" class="header-badge">Formspec</a>
   <h1>Form Intelligence Dashboard</h1>
-  <a href="index.html">Back to Examples</a>
+  <div class="header-nav-links">
+    <a href="index.html">Back to Examples</a>
+  </div>
 </header>
 
 <div class="tools-container">

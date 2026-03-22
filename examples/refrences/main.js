@@ -3,14 +3,7 @@ import 'formspec-webcomponent/formspec-layout.css';
 import 'formspec-webcomponent/formspec-default.css';
 import { FormspecRender, globalRegistry } from 'formspec-webcomponent';
 import { uswdsAdapter } from 'formspec-adapters';
-import {
-  initFormspecEngine,
-  evaluateDefinition,
-  createMappingEngine,
-  buildValidationReportEnvelope,
-  toValidationResults,
-  lintDocumentWithRegistries,
-} from 'formspec-engine';
+import { initFormspecEngine } from 'formspec-engine';
 
 await initFormspecEngine();
 document.documentElement.dataset.formspecWasmReady = '1';
@@ -33,9 +26,6 @@ const EXAMPLES = [
     dir: `${ASSET_BASE}/examples/grant-application`,
     artifacts: { definition: 'definition.json', component: 'component.json', theme: 'theme.json' },
     css: 'grant-bridge.css',
-    server: true,
-    mappings: ['mapping.json', 'mapping-csv.json', 'mapping-xml.json'],
-    mappingFile: 'mapping.json',
     registry: `${ASSET_BASE}/registries/formspec-common.registry.json`,
     fixtures: [
       { id: 'sample-submission', label: 'Complete Submission', file: 'fixtures/sample-submission.json' },
@@ -50,8 +40,6 @@ const EXAMPLES = [
     description: 'Short-form grant report with expenditure tracking',
     dir: `${ASSET_BASE}/examples/grant-report`,
     artifacts: { definition: 'tribal-short.definition.json', component: 'tribal-short.component.json', theme: 'tribal.theme.json' },
-    server: true,
-    mappingFile: 'tribal-grant.mapping.json',
     registry: `${ASSET_BASE}/registries/formspec-common.registry.json`,
     fixtures: [
       { id: 'short-empty', label: 'Empty', file: 'fixtures/short-empty.response.json' },
@@ -65,8 +53,6 @@ const EXAMPLES = [
     description: 'Detailed report with narratives and service data',
     dir: `${ASSET_BASE}/examples/grant-report`,
     artifacts: { definition: 'tribal-long.definition.json', component: 'tribal-long.component.json', theme: 'tribal.theme.json' },
-    server: true,
-    mappingFile: 'tribal-grant.mapping.json',
     registry: `${ASSET_BASE}/registries/formspec-common.registry.json`,
     fixtures: [
       { id: 'long-complete', label: 'Complete', file: 'fixtures/long-complete.response.json' },
@@ -79,8 +65,6 @@ const EXAMPLES = [
     description: 'Repeat groups + calculated totals + CSV export mapping',
     dir: `${ASSET_BASE}/examples/invoice`,
     artifacts: { definition: 'invoice.definition.json', component: 'invoice.component.json', theme: 'invoice.theme.json' },
-    server: true,
-    mappingFile: 'invoice.mapping.json',
     registry: `${ASSET_BASE}/registries/formspec-common.registry.json`,
     fixtures: [
       { id: 'invoice-empty', label: 'Empty', file: 'fixtures/invoice-empty.response.json' },
@@ -95,7 +79,6 @@ const EXAMPLES = [
     description: 'Screener routing, instances/pre-population, nested repeats',
     dir: `${ASSET_BASE}/examples/clinical-intake`,
     artifacts: { definition: 'intake.definition.json', component: 'intake.component.json', theme: 'intake.theme.json' },
-    server: true,
     registry: `${ASSET_BASE}/registries/formspec-common.registry.json`,
     fixtures: [
       { id: 'intake-empty', label: 'Empty', file: 'fixtures/intake-empty.response.json' },
@@ -176,6 +159,25 @@ for (const ex of EXAMPLES) {
   exampleListEl.appendChild(li);
 }
 
+// Tailwind adapter demo — separate static shell (same origin), linked from sidebar
+const tailwindDemoHref = `${ASSET_BASE}/tailwind-demo/`;
+const externalLi = document.createElement('li');
+externalLi.className = 'example-list-external';
+externalLi.innerHTML = `
+  <a class="example-external-link" href="${tailwindDemoHref}" aria-label="Open Tailwind adapter demo (separate UI)">
+    <span class="example-name">Tailwind adapter demo</span>
+    <span class="example-external-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/>
+        <line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+    </span>
+    <span class="example-desc">Opens the Tailwind CSS render adapter in a separate page</span>
+  </a>
+`;
+exampleListEl.appendChild(externalLi);
+
 // ── Load helpers ──
 async function loadJSON(url) {
   const res = await fetch(url);
@@ -192,6 +194,7 @@ async function loadExample(ex, fixture = null) {
 
   // Update sidebar
   exampleListEl.querySelectorAll('li').forEach(li => {
+    if (!li.dataset.id) return;
     li.classList.toggle('active', li.dataset.id === ex.id);
   });
 
@@ -224,16 +227,17 @@ async function loadExample(ex, fixture = null) {
     if (fixture) loads.push(loadJSON(`${ex.dir}/${fixture.file}`));
     else loads.push(Promise.resolve(null));
 
-    const [definition, componentDoc, themeDoc, fixtureResponse] = await Promise.all(loads);
+    const registryPromise = ex.registry
+      ? loadJSON(ex.registry).catch((err) => {
+          console.warn(`Failed to load registry ${ex.registry}:`, err);
+          return null;
+        })
+      : Promise.resolve(null);
 
-    let mappingDoc = null;
-    if (ex.mappingFile) {
-      try {
-        mappingDoc = await loadJSON(`${ex.dir}/${ex.mappingFile}`);
-      } catch (err) {
-        console.warn(`Failed to load mapping ${ex.mappingFile}:`, err);
-      }
-    }
+    const [[definition, componentDoc, themeDoc, fixtureResponse], registryDoc] = await Promise.all([
+      Promise.all(loads),
+      registryPromise,
+    ]);
 
     // Load bridge CSS if specified
     if (ex.css) {
@@ -261,15 +265,19 @@ async function loadExample(ex, fixture = null) {
     const container = document.createElement('div');
     container.className = 'form-container';
 
-    // Client submit panel (always available; shown in a tab)
+    // Submit results panel (same engine path as <formspec-render> — WASM-backed)
     const clientPanel = document.createElement('div');
     clientPanel.className = 'client-response';
     clientPanel.id = 'client-response';
     clientPanel.setAttribute('aria-live', 'polite');
     clientPanel.innerHTML = `
-      <h3>Client Submit</h3>
+      <div class="results-panel-head">
+        <span class="results-badge">Submit output</span>
+        <span class="results-head-note">Validation report and response JSON from the last run</span>
+      </div>
+      <h3 class="results-panel-title">Last submission</h3>
       <div class="client-meta" id="client-meta"></div>
-      <p class="client-empty" id="client-empty">No client-side submit yet. Click "Submit (Client)" to generate a response and validation report.</p>
+      <p class="client-empty" id="client-empty">No submit yet. Use Submit above to generate a response and validation report.</p>
       <details class="client-details" open>
         <summary>Validation Report</summary>
         <pre id="client-validation-pre"></pre>
@@ -278,30 +286,6 @@ async function loadExample(ex, fixture = null) {
         <summary>Response JSON</summary>
         <pre id="client-response-pre"></pre>
       </details>
-    `;
-
-    // Engine revalidation panel (optional; Rust/WASM parity with former Python /submit)
-    const serverPanel = document.createElement('div');
-    serverPanel.className = 'server-response';
-    serverPanel.id = 'server-response';
-    serverPanel.setAttribute('aria-live', 'polite');
-    serverPanel.innerHTML = `
-      <h3>Engine revalidation</h3>
-      <div class="server-meta" id="server-meta"></div>
-      <p class="server-empty" id="server-empty">No revalidation yet. Submit a valid form to run Rust/WASM evaluation and mapping.</p>
-      <details class="server-details" open>
-        <summary>Validation Report</summary>
-        <pre id="server-validation-pre"></pre>
-      </details>
-      <details class="server-details">
-        <summary>Mapped Data</summary>
-        <pre id="server-mapped-pre"></pre>
-      </details>
-      <details class="server-details">
-        <summary>Diagnostics</summary>
-        <pre id="server-diagnostics-pre"></pre>
-      </details>
-      <pre id="server-response-pre" style="display:none"></pre>
     `;
 
     // Toolbar actions
@@ -318,21 +302,31 @@ async function loadExample(ex, fixture = null) {
 
     actions.innerHTML = `
       ${fixtureHTML}
-      <button type="button" class="action-btn" id="action-submit">Submit (Client)</button>
+      <button type="button" class="action-btn" id="action-submit">Submit</button>
       <button type="button" class="action-btn secondary" id="action-reset">Reset</button>
     `;
 
     const formEl = document.createElement('formspec-render');
     formEl.id = 'form';
 
-    // Tabs
+    // Tabs — two visual sections: interactive (form + submit) vs read-only source JSON
     const tabs = document.createElement('div');
     tabs.className = 'example-tabs';
-    tabs.setAttribute('role', 'tablist');
+
+    const groupExperience = document.createElement('div');
+    groupExperience.className = 'tab-group tab-group--experience';
+    const labelExp = document.createElement('span');
+    labelExp.className = 'tab-group-label';
+    labelExp.id = 'tab-group-label-experience';
+    labelExp.textContent = 'Interactive';
+    const listExp = document.createElement('div');
+    listExp.className = 'tab-group-pills';
+    listExp.setAttribute('role', 'tablist');
+    listExp.setAttribute('aria-labelledby', 'tab-group-label-experience');
 
     const tabForm = document.createElement('button');
     tabForm.type = 'button';
-    tabForm.className = 'example-tab';
+    tabForm.className = 'example-tab example-tab--form';
     tabForm.id = 'tab-form';
     tabForm.setAttribute('role', 'tab');
     tabForm.setAttribute('aria-controls', 'panel-form');
@@ -340,67 +334,149 @@ async function loadExample(ex, fixture = null) {
 
     const tabClient = document.createElement('button');
     tabClient.type = 'button';
-    tabClient.className = 'example-tab';
+    tabClient.className = 'example-tab example-tab--results';
     tabClient.id = 'tab-client';
     tabClient.setAttribute('role', 'tab');
     tabClient.setAttribute('aria-controls', 'panel-client');
-    tabClient.textContent = 'Client Submit';
+    tabClient.textContent = 'Submit output';
 
-    const tabServer = document.createElement('button');
-    tabServer.type = 'button';
-    tabServer.className = 'example-tab';
-    tabServer.id = 'tab-server';
-    tabServer.setAttribute('role', 'tab');
-    tabServer.setAttribute('aria-controls', 'panel-server');
-    tabServer.textContent = 'Engine';
+    listExp.appendChild(tabForm);
+    listExp.appendChild(tabClient);
+    groupExperience.appendChild(labelExp);
+    groupExperience.appendChild(listExp);
 
-    tabs.appendChild(tabForm);
-    tabs.appendChild(tabClient);
-    if (ex.server) tabs.appendChild(tabServer);
+    const railDivider = document.createElement('div');
+    railDivider.className = 'tab-rail-divider';
+    railDivider.setAttribute('aria-hidden', 'true');
+
+    const groupSource = document.createElement('div');
+    groupSource.className = 'tab-group tab-group--source';
+    const labelSrc = document.createElement('span');
+    labelSrc.className = 'tab-group-label';
+    labelSrc.id = 'tab-group-label-source';
+    labelSrc.textContent = 'Source JSON';
+    const listSrc = document.createElement('div');
+    listSrc.className = 'tab-group-pills';
+    listSrc.setAttribute('role', 'tablist');
+    listSrc.setAttribute('aria-labelledby', 'tab-group-label-source');
+
+    groupSource.appendChild(labelSrc);
+    groupSource.appendChild(listSrc);
+    tabs.appendChild(groupExperience);
+    tabs.appendChild(railDivider);
+    tabs.appendChild(groupSource);
 
     const panelForm = document.createElement('div');
-    panelForm.className = 'example-tabpanel';
+    panelForm.className = 'example-tabpanel tabpanel-shell tabpanel-shell--form';
     panelForm.id = 'panel-form';
     panelForm.setAttribute('role', 'tabpanel');
     panelForm.setAttribute('aria-labelledby', 'tab-form');
 
     const panelClient = document.createElement('div');
-    panelClient.className = 'example-tabpanel';
+    panelClient.className = 'example-tabpanel tabpanel-shell tabpanel-shell--results';
     panelClient.id = 'panel-client';
     panelClient.setAttribute('role', 'tabpanel');
     panelClient.setAttribute('aria-labelledby', 'tab-client');
 
-    const panelServer = document.createElement('div');
-    panelServer.className = 'example-tabpanel';
-    panelServer.id = 'panel-server';
-    panelServer.setAttribute('role', 'tabpanel');
-    panelServer.setAttribute('aria-labelledby', 'tab-server');
-
-    panelForm.appendChild(formEl);
+    const formFrame = document.createElement('div');
+    formFrame.className = 'live-form-frame';
+    const formHead = document.createElement('div');
+    formHead.className = 'live-form-head';
+    formHead.innerHTML = `
+      <span class="live-form-badge">Live form</span>
+      <span class="live-form-note">Edit fields and navigate like an end user</span>
+    `;
+    formFrame.appendChild(formHead);
+    formFrame.appendChild(formEl);
+    panelForm.appendChild(formFrame);
     panelClient.appendChild(clientPanel);
-    panelServer.appendChild(serverPanel);
+
+    /** @type {{ id: string, button: HTMLButtonElement, panel: HTMLElement }[]} */
+    const tabEntries = [
+      { id: 'form', button: tabForm, panel: panelForm },
+      { id: 'client', button: tabClient, panel: panelClient },
+    ];
+
+    const jsonSpecs = [
+      {
+        id: 'json-definition',
+        label: 'Definition',
+        displayPath: `${ex.dir.replace(/^\//, '')}/${ex.artifacts.definition}`,
+        data: definition,
+      },
+    ];
+    if (componentDoc) {
+      jsonSpecs.push({
+        id: 'json-component',
+        label: 'Component',
+        displayPath: `${ex.dir.replace(/^\//, '')}/${ex.artifacts.component}`,
+        data: componentDoc,
+      });
+    }
+    if (themeDoc) {
+      jsonSpecs.push({
+        id: 'json-theme',
+        label: 'Theme',
+        displayPath: `${ex.dir.replace(/^\//, '')}/${ex.artifacts.theme}`,
+        data: themeDoc,
+      });
+    }
+    if (registryDoc) {
+      jsonSpecs.push({
+        id: 'json-registry',
+        label: 'Registry',
+        displayPath: ex.registry.replace(/^\//, ''),
+        data: registryDoc,
+      });
+    }
+    if (fixture && fixtureResponse) {
+      jsonSpecs.push({
+        id: 'json-fixture',
+        label: 'Fixture',
+        displayPath: `${ex.dir.replace(/^\//, '')}/${fixture.file}`,
+        data: fixtureResponse,
+      });
+    }
+
+    for (const spec of jsonSpecs) {
+      const tabSrc = document.createElement('button');
+      tabSrc.type = 'button';
+      tabSrc.className = 'example-tab example-tab--source';
+      tabSrc.id = `tab-${spec.id}`;
+      tabSrc.setAttribute('role', 'tab');
+      tabSrc.textContent = spec.label;
+      const panelSrc = document.createElement('div');
+      panelSrc.className = 'example-tabpanel json-source-panel tabpanel-shell tabpanel-shell--artifact';
+      panelSrc.id = `panel-${spec.id}`;
+      panelSrc.setAttribute('role', 'tabpanel');
+      panelSrc.setAttribute('aria-labelledby', tabSrc.id);
+      const pathId = `path-${spec.id}`;
+      panelSrc.innerHTML = `
+        <div class="artifact-panel-head">
+          <span class="artifact-badge">Repository file</span>
+          <span class="artifact-head-note">Read-only — same payload the app loaded</span>
+        </div>
+        <p class="json-source-path" id="${pathId}">${spec.displayPath}</p>
+        <pre class="json-source-pre" aria-labelledby="${pathId}"></pre>
+      `;
+      panelSrc.querySelector('pre').textContent = JSON.stringify(spec.data, null, 2);
+      tabSrc.setAttribute('aria-controls', panelSrc.id);
+      tabSrc.addEventListener('click', () => setActiveTab(spec.id));
+      listSrc.appendChild(tabSrc);
+      tabEntries.push({ id: spec.id, button: tabSrc, panel: panelSrc });
+    }
 
     function setActiveTab(which) {
-      const isForm = which === 'form';
-      const isClient = which === 'client';
-      const isServer = which === 'server';
-
-      tabForm.setAttribute('aria-selected', String(isForm));
-      tabClient.setAttribute('aria-selected', String(isClient));
-      if (ex.server) tabServer.setAttribute('aria-selected', String(isServer));
-
-      tabForm.classList.toggle('active', isForm);
-      tabClient.classList.toggle('active', isClient);
-      if (ex.server) tabServer.classList.toggle('active', isServer);
-
-      panelForm.classList.toggle('active', isForm);
-      panelClient.classList.toggle('active', isClient);
-      if (ex.server) panelServer.classList.toggle('active', isServer);
+      for (const { id, button, panel } of tabEntries) {
+        const on = id === which;
+        button.setAttribute('aria-selected', String(on));
+        button.classList.toggle('active', on);
+        panel.classList.toggle('active', on);
+      }
     }
 
     tabForm.addEventListener('click', () => setActiveTab('form'));
     tabClient.addEventListener('click', () => setActiveTab('client'));
-    tabServer.addEventListener('click', () => setActiveTab('server'));
 
     setActiveTab('form');
 
@@ -439,18 +515,14 @@ async function loadExample(ex, fixture = null) {
     container.appendChild(tabs);
     container.appendChild(panelForm);
     container.appendChild(panelClient);
-    if (ex.server) container.appendChild(panelServer);
+    for (let i = 2; i < tabEntries.length; i++) {
+      container.appendChild(tabEntries[i].panel);
+    }
 
     mainArea.appendChild(container);
 
-    // Load registry if specified (absolute path — not relative to ex.dir)
-    if (ex.registry) {
-      try {
-        const registryDoc = await loadJSON(ex.registry);
-        formEl.registryDocuments = registryDoc;
-      } catch (err) {
-        console.warn(`Failed to load registry ${ex.registry}:`, err);
-      }
+    if (registryDoc) {
+      formEl.registryDocuments = registryDoc;
     }
 
     // Switch adapter if specified
@@ -473,9 +545,7 @@ async function loadExample(ex, fixture = null) {
       if (engine) applyResponseData(engine, fixtureResponse.data);
     }
 
-    // Always show the client-side submit detail (response + validationReport).
-    // Optionally forward valid responses to the server (grant-application).
-    formEl.addEventListener('formspec-submit', async (e) => {
+    formEl.addEventListener('formspec-submit', (e) => {
       const submitDetail = e.detail || {};
       const vr = submitDetail.validationReport || {};
       const response = submitDetail.response || {};
@@ -490,78 +560,6 @@ async function loadExample(ex, fixture = null) {
       clientPanel.querySelector('#client-validation-pre').textContent = JSON.stringify(vr, null, 2);
       clientPanel.querySelector('#client-response-pre').textContent = JSON.stringify(response, null, 2);
       setActiveTab('client');
-
-      if (!ex.server) return;
-
-      try {
-        const registryDoc = formEl.registryDocuments;
-        const registries = registryDoc ? [registryDoc] : [];
-
-        const linted = lintDocumentWithRegistries(definition, registries);
-        const diagnostics = (linted.diagnostics ?? [])
-          .filter((d) => d?.severity === 'error' || d?.severity === 'warning')
-          .map((d) => `[${d.severity}] ${d.path ?? '(root)'}: ${d.message ?? ''}`);
-
-        const data = response.data && typeof response.data === 'object' ? response.data : {};
-        const evalResult = evaluateDefinition(definition, data, {
-          trigger: 'submit',
-          registryDocuments: registries,
-          nowIso: new Date().toISOString(),
-        });
-
-        const timestamp = new Date().toISOString();
-        const report = buildValidationReportEnvelope(
-          toValidationResults(evalResult.validations ?? []),
-          timestamp,
-        );
-
-        let mapped = {};
-        if (mappingDoc) {
-          const mapEngine = createMappingEngine(mappingDoc);
-          const sourceValues = evalResult.values && typeof evalResult.values === 'object' ? evalResult.values : data;
-          mapped = mapEngine.forward(sourceValues).output ?? {};
-        }
-
-        const result = {
-          definitionUrl: response.definitionUrl,
-          definitionVersion: response.definitionVersion,
-          valid: report.valid,
-          results: report.results,
-          counts: report.counts,
-          timestamp: report.timestamp,
-          mapped,
-          diagnostics,
-        };
-
-        const serverEmpty = serverPanel.querySelector('#server-empty');
-        if (serverEmpty) serverEmpty.remove();
-
-        const serverMeta = serverPanel.querySelector('#server-meta');
-        serverMeta.textContent = result.counts
-          ? `valid=${!!result.valid}  errors=${result.counts.error || 0}  warnings=${result.counts.warning || 0}`
-          : `valid=${!!result.valid}`;
-
-        const reportData = { valid: result.valid, results: result.results, counts: result.counts, timestamp: result.timestamp };
-        serverPanel.querySelector('#server-validation-pre').textContent = JSON.stringify(reportData, null, 2);
-
-        const mappedDisplay = typeof mapped === 'string' ? mapped : JSON.stringify(mapped, null, 2);
-        serverPanel.querySelector('#server-mapped-pre').textContent = mappedDisplay;
-
-        serverPanel.querySelector('#server-diagnostics-pre').textContent = result.diagnostics?.length
-          ? JSON.stringify(result.diagnostics, null, 2)
-          : '(none)';
-
-        serverPanel.querySelector('#server-response-pre').textContent = JSON.stringify(result, null, 2);
-
-        setActiveTab('server');
-      } catch (err) {
-        const serverEmpty = serverPanel.querySelector('#server-empty');
-        if (serverEmpty) serverEmpty.remove();
-        serverPanel.querySelector('#server-meta').textContent = 'Error';
-        serverPanel.querySelector('#server-validation-pre').textContent = `Engine revalidation failed: ${err.message}`;
-        serverPanel.querySelector('#server-response-pre').textContent = '';
-        setActiveTab('server');
-      }
     });
 
   } catch (err) {
