@@ -1,6 +1,9 @@
 //! Pass 4: Expression compilation — parses all FEL expression slots in a definition,
 //! producing `CompiledExpression` structs for downstream dependency analysis (pass 5)
 //! and E400 diagnostics for parse errors.
+//!
+//! `walk_*` helpers traverse binds, shapes, variables, and screener slots.
+#![allow(clippy::missing_docs_in_private_items)]
 
 use serde_json::Value;
 
@@ -300,6 +303,7 @@ fn try_parse(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use serde_json::json;
 

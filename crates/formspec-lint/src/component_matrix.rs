@@ -1,6 +1,9 @@
 //! Component/dataType compatibility matrix for the 12 built-in input components.
 //!
 //! Pure data module — no tree walking, no diagnostics. Consumed by `pass_component.rs`.
+//!
+//! Static `COMPAT_RULES` and `CompatRule` rows back the public classifiers; keep matrix tables maintainable.
+#![allow(clippy::missing_docs_in_private_items)]
 
 /// Result of checking a component against a dataType.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -161,6 +164,7 @@ pub fn is_input_component(component: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
 
     #[test]

@@ -5,6 +5,9 @@
 //! - **E301**: Shape target references an unknown item
 //! - **E302**: Item's `optionSet` references an undefined option set
 //! - **W300**: Item's `dataType` is incompatible with `optionSet`
+//!
+//! Private helpers validate bind paths, shapes, and option sets against the item index.
+#![allow(clippy::missing_docs_in_private_items)]
 
 use std::collections::HashSet;
 
@@ -290,6 +293,7 @@ fn ensure_repeatable_if_needed(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use crate::tree::build_item_index;
     use serde_json::json;

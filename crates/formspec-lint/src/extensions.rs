@@ -36,6 +36,9 @@
 //! - **E600**: Error — extension not found in any registry
 //! - **E601**: Warning — extension found but retired
 //! - **E602**: Info — extension found but deprecated
+//!
+//! Registry construction and item walks beyond [`check_extensions`] are internal.
+#![allow(clippy::missing_docs_in_private_items)]
 
 use serde_json::Value;
 
@@ -213,6 +216,7 @@ pub fn check_extensions(document: &Value, registry_documents: &[Value]) -> Vec<L
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use serde_json::json;
 

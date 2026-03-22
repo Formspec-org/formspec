@@ -1,9 +1,12 @@
-//! @filedesc Pass 1b: JSON Schema validation — validates documents against embedded schemas (E101).
+//! Pass 1b: JSON Schema validation — validates documents against embedded schemas (E101).
 //!
 //! Component documents use per-node validation to avoid O(N^depth) backtracking
 //! from oneOf + unevaluatedProperties on recursive component trees. Each node is
 //! validated against its specific `$defs` entry (discriminated by `component` const),
 //! while the document envelope is validated with a shallow placeholder tree.
+//!
+//! Embedded schema text, compiled validators, and per-node component validators are internal.
+#![allow(clippy::missing_docs_in_private_items)]
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -286,6 +289,7 @@ fn walk_and_validate(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use crate::LintSeverity;
     use serde_json::json;

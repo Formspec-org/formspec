@@ -2,6 +2,9 @@
 //!
 //! Validates root layout, component references, type compatibility, bind resolution,
 //! custom component cycles, and duplicate binds.
+//!
+//! Layout lists, subtree walks, and compatibility checks beyond [`lint_component`] are internal.
+#![allow(clippy::missing_docs_in_private_items)]
 
 use std::collections::{HashMap, HashSet};
 
@@ -430,6 +433,7 @@ pub fn lint_component(component: &Value, definition: Option<&Value>) -> Vec<Lint
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use serde_json::json;
 

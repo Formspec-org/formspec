@@ -19,7 +19,7 @@ pub struct ItemRef {
     pub key: String,
     /// Dotted path from root (e.g., "address.street").
     pub full_path: String,
-    /// JSONPath for diagnostics (e.g., "$.items[0].children[1]").
+    /// JSONPath for diagnostics (e.g., `$.items[0].children[1]`).
     pub json_path: String,
     /// The parent's full dotted path, if nested.
     pub parent_full_path: Option<String>,
@@ -120,6 +120,7 @@ pub fn build_item_index(document: &Value) -> ItemTreeIndex {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use serde_json::json;
 

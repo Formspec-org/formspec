@@ -3,6 +3,9 @@
 //! Only dataflow expressions (`bind_target = Some(key)`) create graph edges.
 //! Constraint expressions are excluded since they allow self-reference without
 //! creating a dataflow dependency.
+//!
+//! Graph building, DFS cycle detection, and diagnostic emission are internal.
+#![allow(clippy::missing_docs_in_private_items)]
 
 use std::collections::{HashMap, HashSet};
 
@@ -182,6 +185,7 @@ fn emit_diagnostics(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use crate::expressions::CompiledExpression;
 

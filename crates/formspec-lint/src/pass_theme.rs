@@ -2,6 +2,9 @@
 //!
 //! Validates token values by naming convention, token reference integrity,
 //! cross-artifact consistency (when a definition is provided), and page semantics.
+//!
+//! Token classification, selector walks, and page rules beyond [`lint_theme`] are internal.
+#![allow(clippy::missing_docs_in_private_items)]
 
 use std::collections::HashSet;
 
@@ -598,6 +601,7 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use serde_json::json;
 

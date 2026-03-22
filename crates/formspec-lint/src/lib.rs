@@ -9,6 +9,14 @@
 //! Pass 5 (E500): Dependency cycle detection
 //! Pass 6 (W700-W711/E710): Theme — token validation, reference integrity, page semantics
 //! Pass 7 (E800-E807/W800-W804): Components — tree validation, type compatibility, bind resolution
+//!
+//! ## Documentation
+//!
+//! - Human overview: crate `README.md` (pass map, options, module layout).
+//! - API reference: `cargo doc -p formspec-lint --no-deps --open`.
+//! - Markdown API export: `docs/rustdoc-md/API.md` (see README; regenerate with `npm run docs:formspec-lint`).
+#![warn(missing_docs)]
+#![warn(clippy::missing_docs_in_private_items)]
 
 mod lint_json;
 mod schema_validation;
@@ -161,6 +169,7 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
     use serde_json::json;
 

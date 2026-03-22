@@ -1,6 +1,5 @@
 //! Shared types for the formspec lint pipeline (diagnostics, modes, results).
 
-/// Shared types for the formspec lint pipeline.
 use std::cmp::Ordering;
 
 use serde_json::Value;
@@ -9,10 +8,14 @@ use formspec_core::DocumentType;
 
 // ── Severity ────────────────────────────────────────────────────
 
+/// Severity of a lint diagnostic (sorting, validity, and JSON wire values).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LintSeverity {
+    /// Fails [`LintResult::valid`]; blocks publishing in strict pipelines.
     Error,
+    /// Should be fixed but does not alone invalidate the document in runtime mode.
     Warning,
+    /// Informational (least severe; sorted after errors and warnings).
     Info,
 }
 
@@ -201,6 +204,7 @@ pub struct LintResult {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::missing_docs_in_private_items)]
     use super::*;
 
     // ── Finding 45: LintSeverity ordering ────────────────────────
