@@ -14,6 +14,18 @@
 //! name items. Switching extension diagnostics to indexed JSON paths would be a **user-visible**
 //! behavior change, not a refactor.
 //!
+//! ## Spec cross-references (`specs/*.llm.md`)
+//!
+//! - `specs/registry/extension-registry.llm.md` — registry entry lifecycle, compatibility, and
+//!   **UNRESOLVED_EXTENSION** when an enabled item extension has no registry match; item-level
+//!   `extensions` use `x-` property names.
+//! - `specs/core/spec.llm.md` — **§3 Item** (`key` identifies nodes in the structural tree); binds
+//!   and instance data use the same dot-separated key paths. Key-based diagnostic paths here follow
+//!   that **semantic** naming surface; indexed `$.items\[n\]` paths follow JSON array order instead
+//!   (see `formspec_core::visit_definition_items_json`).
+//! - `specs/core/definition-spec.llm.md` — items declare structure with stable keys as the primary
+//!   binding surface across tiers.
+//!
 //! ## Code naming convention
 //!
 //! The E-prefix on E600/E601/E602 stands for "Extensions pass" following the

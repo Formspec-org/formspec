@@ -13,6 +13,18 @@
 //! `visit_definition_items_json_with_policy` using require semantics — that would change
 //! evaluation. Shared helpers only align dotted-path spelling with `formspec_core`; the recursive
 //! shape stays eval-specific.
+//!
+//! ## Spec cross-references (`specs/*.llm.md`)
+//!
+//! - `specs/core/spec.llm.md` — **§3 Item**, **§4 Bind** (bind `path` / targets align with dotted
+//!   item keys; schema text requires paths to resolve to definition items), **Phase 1: Rebuild**
+//!   (structural re-index and dependency graph after definition changes).
+//! - `specs/core/definition-spec.llm.md` — item tree + stable keys as the binding surface for
+//!   behavior and data shape.
+//!
+//! Valid definitions satisfy Item `key` constraints in `schemas/definition.schema.json`. Coercing
+//! missing or non-string keys to `""` is **defensive** so eval can still traverse malformed JSON;
+//! it does not relax the normative spec for published definitions.
 
 use formspec_core::definition_items::{coerce_definition_item_key_segment, definition_item_dotted_path};
 use serde_json::Value;

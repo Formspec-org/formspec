@@ -7,6 +7,23 @@
 //! - **Runtime eval item-tree rebuild** uses [`coerce_definition_item_key_segment`] /
 //!   [`DefinitionItemKeyPolicy::CoerceNonStringKeyToEmpty`]: missing, null, or non-string `key` is
 //!   treated as `""`; every array element is visited and `children` are always walked when present.
+//!
+//! ## Spec cross-references (`specs/*.llm.md`)
+//!
+//! Normative shape and behavior for items and paths:
+//!
+//! - `specs/core/spec.llm.md` — **§3 Item** (structural tree nodes identified by `key`), **§4 Bind**
+//!   (dot-separated paths onto those keys), **Processing model · Phase 1: Rebuild** (re-index items
+//!   / dependency structure after definition change).
+//! - `specs/core/definition-spec.llm.md` — *Semantic capsule*: stable `key` identifiers as the
+//!   binding surface across rendering, validation, and mapping.
+//! - `specs/component/component-spec.llm.md` — slot `bind` resolves by item `key` (not arbitrary
+//!   FEL paths).
+//!
+//! Conformant definitions: Item `key` is required with pattern `^[a-zA-Z][a-zA-Z0-9_]*$` in
+//! `schemas/definition.schema.json`. The two policies here are **tooling/runtime** choices for
+//! walking JSON before or aside from full schema validation: skip ill-formed nodes vs coerce and
+//! keep descending.
 
 use serde_json::Value;
 
