@@ -413,6 +413,23 @@ pub fn builtin_function_catalog() -> &'static [BuiltinFunctionCatalogEntry] {
     BUILTIN_FUNCTIONS
 }
 
+/// Built-in catalog as a JSON array for WASM / tooling.
+pub fn builtin_function_catalog_json_value() -> serde_json::Value {
+    serde_json::Value::Array(
+        builtin_function_catalog()
+            .iter()
+            .map(|e| {
+                serde_json::json!({
+                    "name": e.name,
+                    "category": e.category,
+                    "signature": e.signature,
+                    "description": e.description,
+                })
+            })
+            .collect(),
+    )
+}
+
 /// Error type for extension registration failures.
 #[derive(Debug, Clone)]
 pub enum ExtensionError {

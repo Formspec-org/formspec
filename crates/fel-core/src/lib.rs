@@ -2,6 +2,7 @@
 ///
 /// Uses rust_decimal for base-10 arithmetic per spec S3.4.1 (minimum 18 significant digits).
 pub mod ast;
+pub mod context_json;
 pub mod convert;
 pub mod dependencies;
 pub mod environment;
@@ -15,13 +16,23 @@ pub mod types;
 
 // Re-export key types
 pub use ast::Expr;
-pub use convert::{fel_to_json, json_to_fel};
-pub use dependencies::{Dependencies, extract_dependencies};
+pub use context_json::formspec_environment_from_json_map;
+pub use convert::{
+    fel_to_json, field_map_from_json_str, json_object_to_field_map, json_to_fel,
+};
+pub use dependencies::{
+    Dependencies, DependenciesJsonStyle, dependencies_to_json_value,
+    dependencies_to_json_value_styled, extract_dependencies,
+};
 pub use environment::{FormspecEnvironment, MipState, RepeatContext};
-pub use error::{Diagnostic, FelError, Severity};
+pub use error::{
+    Diagnostic, FelError, Severity, reject_undefined_functions,
+    undefined_function_names_from_diagnostics,
+};
 pub use evaluator::{Environment, EvalResult, Evaluator, MapEnvironment, evaluate};
 pub use extensions::{
     BuiltinFunctionCatalogEntry, ExtensionError, ExtensionRegistry, builtin_function_catalog,
+    builtin_function_catalog_json_value,
 };
 pub use parser::parse;
 pub use printer::print_expr;
@@ -84,7 +95,11 @@ fn token_type_name(token: &lexer::Token) -> &'static str {
 }
 
 fn slice_by_char_offsets(input: &str, start: usize, end: usize) -> String {
-    input.chars().skip(start).take(end.saturating_sub(start)).collect()
+    input
+        .chars()
+        .skip(start)
+        .take(end.saturating_sub(start))
+        .collect()
 }
 
 pub fn tokenize(input: &str) -> Result<Vec<PositionedToken>, String> {
@@ -99,6 +114,43 @@ pub fn tokenize(input: &str) -> Result<Vec<PositionedToken>, String> {
             end: token.span.end,
         })
         .collect())
+}
+
+/// FEL lexer tokens as JSON (camelCase keys) for host bindings.
+pub fn tokenize_to_json_value(input: &str) -> Result<serde_json::Value, String> {
+    let tokens = tokenize(input)?;
+    Ok(serde_json::Value::Array(
+        tokens
+            .into_iter()
+            .map(|token| {
+                serde_json::json!({
+                    "tokenType": token.token_type,
+                    "text": token.text,
+                    "start": token.start,
+                    "end": token.end,
+                })
+            })
+            .collect(),
+    ))
+}
+
+/// Evaluation diagnostics as JSON objects (`message`, `severity` wire string).
+pub fn fel_diagnostics_to_json_value(diagnostics: &[Diagnostic]) -> serde_json::Value {
+    serde_json::Value::Array(
+        diagnostics
+            .iter()
+            .map(|d| {
+                serde_json::json!({
+                    "message": d.message,
+                    "severity": match d.severity {
+                        Severity::Error => "error",
+                        Severity::Warning => "warning",
+                        Severity::Info => "info",
+                    },
+                })
+            })
+            .collect(),
+    )
 }
 
 /// Parse and evaluate a FEL expression with a flat field map.

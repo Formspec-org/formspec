@@ -8,8 +8,8 @@ use serde_json::Value;
 use fel_core::{FormspecEnvironment, evaluate, parse};
 
 use crate::convert::resolve_value_by_path;
-use crate::rebuild::detect_repeat_count;
 use crate::fel_json::json_to_runtime_fel;
+use crate::rebuild::detect_repeat_count;
 use crate::types::{
     ExtensionConstraint, ItemInfo, ValidationResult, resolve_qualified_repeat_refs,
 };
@@ -89,7 +89,9 @@ pub(super) fn validate_items(
         // Constraint check — skip for empty values (§3.8.1).
         // "A constraint that cannot be evaluated due to null inputs is not considered
         // violated."  The `required` bind, not `constraint`, enforces non-emptiness.
-        if !value_skips_optional_bind_checks(&val) && let Some(ref expr) = item.constraint {
+        if !value_skips_optional_bind_checks(&val)
+            && let Some(ref expr) = item.constraint
+        {
             let normalized_expr = resolve_qualified_repeat_refs(expr, &item.path);
             let saved_aliases = bind_sibling_aliases(env, values, &item.path);
             // Temporarily bind bare $ to this field's value
@@ -162,7 +164,14 @@ pub(super) fn validate_items(
             }
         }
 
-        validate_items(&item.children, env, values, ext_by_name, formspec_version, results);
+        validate_items(
+            &item.children,
+            env,
+            values,
+            ext_by_name,
+            formspec_version,
+            results,
+        );
     }
 }
 

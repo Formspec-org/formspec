@@ -60,6 +60,15 @@ impl LintMode {
     pub fn is_authoring(self) -> bool {
         self == LintMode::Authoring
     }
+
+    /// Map host option strings (`authoring` / `strict` / default) to a lint mode.
+    pub fn from_host_option_str(mode: Option<&str>) -> Self {
+        match mode {
+            Some("authoring") => LintMode::Authoring,
+            Some("strict") => LintMode::Strict,
+            _ => LintMode::Runtime,
+        }
+    }
 }
 
 // ── Diagnostic ──────────────────────────────────────────────────

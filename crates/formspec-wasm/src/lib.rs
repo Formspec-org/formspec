@@ -5,7 +5,6 @@
 //! `formspec-eval`, and `formspec-lint`.
 //!
 //! ## Layout
-//! - `convert` — shared JSON / item-tree / FEL map helpers (`json_object_to_string_map`, …)
 //! - `fel` — FEL eval, tokenize, rewrite, path utilities
 //! - `document` — detect type, schema plan, lint
 //! - `evaluate` — batch definition evaluation, screener
@@ -16,7 +15,6 @@
 //! - `wasm_tests` — native `cargo test` coverage (`#[cfg(test)]` only)
 
 mod changelog;
-mod convert;
 mod definition;
 mod document;
 mod evaluate;

@@ -39,6 +39,17 @@ pub enum EvalTrigger {
     Disabled,
 }
 
+impl EvalTrigger {
+    /// Python `evaluate_def` trigger strings (`submit` / `disabled` / default → continuous).
+    pub fn from_python_eval_def_option(trigger: Option<&str>) -> Self {
+        match trigger {
+            Some("submit") => EvalTrigger::Submit,
+            Some("disabled") => EvalTrigger::Disabled,
+            _ => EvalTrigger::Continuous,
+        }
+    }
+}
+
 /// Optional runtime context injected into a single evaluation cycle.
 #[derive(Debug, Clone, Default)]
 pub struct EvalContext {

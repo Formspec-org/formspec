@@ -47,3 +47,27 @@ impl Diagnostic {
         }
     }
 }
+
+/// Names from `undefined function: …` diagnostics (host bindings reject these as unsupported).
+pub fn undefined_function_names_from_diagnostics(diagnostics: &[Diagnostic]) -> Vec<String> {
+    diagnostics
+        .iter()
+        .filter_map(|d| {
+            d.message
+                .strip_prefix("undefined function: ")
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+        })
+        .collect()
+}
+
+/// Returns `Err` when any undefined-function diagnostic is present (WASM / strict hosts).
+pub fn reject_undefined_functions(diagnostics: &[Diagnostic]) -> Result<(), String> {
+    let names = undefined_function_names_from_diagnostics(diagnostics);
+    if names.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("Unsupported FEL function: {}", names.join(", ")))
+    }
+}

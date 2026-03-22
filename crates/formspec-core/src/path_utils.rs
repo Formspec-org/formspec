@@ -3,6 +3,10 @@
 //! Paths use dot notation: `group.field`, `parent.child.leaf`.
 //! Indices `[N]` and wildcards `[*]` are stripped during normalization.
 
+use serde_json::{Value, json};
+
+use crate::JsonWireStyle;
+
 /// Strip repeat indices from a single path segment: `lineItems[0]` → `lineItems`.
 pub fn normalize_path_segment(segment: &str) -> &str {
     match segment.find('[') {
@@ -108,6 +112,82 @@ pub fn leaf_key(path: &str) -> &str {
     match path.rfind('.') {
         Some(idx) => &path[idx + 1..],
         None => path,
+    }
+}
+
+// ── JSON definition item arrays (`items` tree) ──────────────────
+
+fn json_item_path_segments(path: &str) -> Option<Vec<String>> {
+    let normalized = normalize_indexed_path(path);
+    let segments: Vec<String> = normalized
+        .split('.')
+        .filter(|segment| !segment.is_empty())
+        .map(str::to_string)
+        .collect();
+    if segments.is_empty() {
+        None
+    } else {
+        Some(segments)
+    }
+}
+
+/// Resolve an item in a JSON `items` array by dotted path (`key` / `children` shape).
+pub fn json_definition_item_at_path<'a>(items: &'a [Value], path: &str) -> Option<&'a Value> {
+    let segments = json_item_path_segments(path)?;
+
+    let mut current_items = items;
+    for (index, segment) in segments.iter().enumerate() {
+        let found = current_items
+            .iter()
+            .find(|item| item.get("key").and_then(Value::as_str) == Some(segment.as_str()))?;
+        if index == segments.len() - 1 {
+            return Some(found);
+        }
+        current_items = found.get("children").and_then(Value::as_array)?;
+    }
+    None
+}
+
+/// `(index, item)` within its parent `children` slice for a dotted path.
+pub fn json_definition_item_location_at_path<'a>(
+    items: &'a [Value],
+    path: &str,
+) -> Option<(usize, &'a Value)> {
+    let segments = json_item_path_segments(path)?;
+
+    let mut current_items = items;
+    for (depth, segment) in segments.iter().enumerate() {
+        let index = current_items
+            .iter()
+            .position(|item| item.get("key").and_then(Value::as_str) == Some(segment.as_str()))?;
+        let item = &current_items[index];
+        if depth == segments.len() - 1 {
+            return Some((index, item));
+        }
+        current_items = item.get("children").and_then(Value::as_array)?;
+    }
+    None
+}
+
+/// `itemLocationAtPath` JSON (`parentPath` / `parent_path`, …) or null.
+pub fn definition_item_location_to_json_value(
+    items: &[Value],
+    path: &str,
+    style: JsonWireStyle,
+) -> Value {
+    let parent_key = match style {
+        JsonWireStyle::JsCamel => "parentPath",
+        JsonWireStyle::PythonSnake => "parent_path",
+    };
+    match json_definition_item_location_at_path(items, path) {
+        Some((index, item)) => {
+            let mut m = serde_json::Map::new();
+            m.insert(parent_key.to_string(), json!(parent_path(path)));
+            m.insert("index".into(), json!(index));
+            m.insert("item".into(), item.clone());
+            Value::Object(m)
+        }
+        None => Value::Null,
     }
 }
 

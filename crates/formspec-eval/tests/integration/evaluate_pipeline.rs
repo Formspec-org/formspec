@@ -1,11 +1,11 @@
 //! Full `evaluate_*` pipeline integration tests.
 
 use formspec_eval::{
-    evaluate_definition, evaluate_definition_full_with_instances,
-    evaluate_definition_with_context, evaluate_definition_with_trigger, evaluate_screener,
-    EvalContext, EvalTrigger, ValidationResult,
+    EvalContext, EvalTrigger, ValidationResult, evaluate_definition,
+    evaluate_definition_full_with_instances, evaluate_definition_with_context,
+    evaluate_definition_with_trigger, evaluate_screener,
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 
 #[test]
@@ -1851,8 +1851,14 @@ fn repeat_calculate_has_access_to_index_and_count() {
     });
 
     let result = evaluate_definition(&def, &HashMap::new());
-    assert_eq!(result.values.get("items[0].position"), Some(&json!("1 of 2")));
-    assert_eq!(result.values.get("items[1].position"), Some(&json!("2 of 2")));
+    assert_eq!(
+        result.values.get("items[0].position"),
+        Some(&json!("1 of 2"))
+    );
+    assert_eq!(
+        result.values.get("items[1].position"),
+        Some(&json!("2 of 2"))
+    );
 }
 
 #[test]
@@ -2057,10 +2063,16 @@ fn calculated_field_reacts_to_final_scoped_variable_values() {
     });
 
     let mut data = HashMap::new();
-    data.insert("budget.lineItems[0].category".to_string(), json!("Personnel"));
+    data.insert(
+        "budget.lineItems[0].category".to_string(),
+        json!("Personnel"),
+    );
 
     let result = evaluate_definition(&def, &data);
-    assert_eq!(result.values.get("budget.hasLineItems"), Some(&json!("true")));
+    assert_eq!(
+        result.values.get("budget.hasLineItems"),
+        Some(&json!("true"))
+    );
 }
 
 #[test]
@@ -2252,10 +2264,14 @@ fn initial_value_fel_expression_uses_context_now() {
         ]
     });
 
-    let result = evaluate_definition_with_context(&def, &HashMap::new(), &EvalContext {
-        now_iso: Some("2026-03-22T12:00:00.000Z".to_string()),
-        ..EvalContext::default()
-    });
+    let result = evaluate_definition_with_context(
+        &def,
+        &HashMap::new(),
+        &EvalContext {
+            now_iso: Some("2026-03-22T12:00:00.000Z".to_string()),
+            ..EvalContext::default()
+        },
+    );
     assert_eq!(result.values.get("startDate"), Some(&json!("2026-03-22")));
 }
 
@@ -2595,7 +2611,11 @@ fn shape_constraints_can_reference_computed_variables() {
         .filter(|v| v.shape_id.as_deref() == Some("budget-match"))
         .collect();
     assert_eq!(result.variables.get("grandTotal"), Some(&json!(100)));
-    assert_eq!(shape_errors.len(), 1, "shape should see computed @grandTotal");
+    assert_eq!(
+        shape_errors.len(),
+        1,
+        "shape should see computed @grandTotal"
+    );
     assert_eq!(shape_errors[0].path, "requested");
 }
 
@@ -2618,7 +2638,10 @@ fn shape_constraints_handle_plain_money_field_values() {
     });
 
     let mut data = HashMap::new();
-    data.insert("requested".to_string(), json!({ "amount": 0, "currency": "USD" }));
+    data.insert(
+        "requested".to_string(),
+        json!({ "amount": 0, "currency": "USD" }),
+    );
 
     let result = evaluate_definition(&def, &data);
     let shape_errors: Vec<_> = result
@@ -2630,7 +2653,11 @@ fn shape_constraints_handle_plain_money_field_values() {
         result.variables.get("grandTotal"),
         Some(&json!({ "$type": "money", "amount": 100, "currency": "USD" }))
     );
-    assert_eq!(shape_errors.len(), 1, "shape should evaluate plain money field values");
+    assert_eq!(
+        shape_errors.len(),
+        1,
+        "shape should evaluate plain money field values"
+    );
     assert_eq!(shape_errors[0].path, "requested");
 }
 
@@ -2650,9 +2677,18 @@ fn calculated_money_sum_uses_plain_money_field_values() {
     });
 
     let mut data = HashMap::new();
-    data.insert("employment".to_string(), json!({ "amount": 45000, "currency": "USD" }));
-    data.insert("housing".to_string(), json!({ "amount": 32000, "currency": "USD" }));
-    data.insert("health".to_string(), json!({ "amount": 28000, "currency": "USD" }));
+    data.insert(
+        "employment".to_string(),
+        json!({ "amount": 45000, "currency": "USD" }),
+    );
+    data.insert(
+        "housing".to_string(),
+        json!({ "amount": 32000, "currency": "USD" }),
+    );
+    data.insert(
+        "health".to_string(),
+        json!({ "amount": 28000, "currency": "USD" }),
+    );
 
     let result = evaluate_definition(&def, &data);
     assert_eq!(
@@ -2788,7 +2824,11 @@ fn wildcard_bind_constraint_can_use_current_field_alias() {
         .iter()
         .filter(|v| v.constraint_kind == "constraint")
         .collect();
-    assert_eq!(constraint_errors.len(), 1, "only the negative row should fail");
+    assert_eq!(
+        constraint_errors.len(),
+        1,
+        "only the negative row should fail"
+    );
     assert_eq!(constraint_errors[0].path, "lines[1].quantity");
     assert_eq!(
         constraint_errors[0].message,
@@ -2837,7 +2877,11 @@ fn nested_repeat_wildcard_bind_constraint_applies_to_concrete_child_items() {
         .iter()
         .filter(|v| v.constraint_kind == "constraint")
         .collect();
-    assert_eq!(constraint_errors.len(), 1, "nested repeat child should fail constraint");
+    assert_eq!(
+        constraint_errors.len(),
+        1,
+        "nested repeat child should fail constraint"
+    );
     assert_eq!(
         constraint_errors[0].path,
         "projectPhases[0].phaseTasks[0].hourlyRate"
@@ -3208,7 +3252,11 @@ fn instance_ref_in_calculate_resolves() {
     let mut instances = HashMap::new();
     instances.insert("config".into(), json!({ "defaultRate": 0.15 }));
     let result = evaluate_definition_full_with_instances(
-        &def, &data, EvalTrigger::Continuous, &[], &instances,
+        &def,
+        &data,
+        EvalTrigger::Continuous,
+        &[],
+        &instances,
     );
     assert_eq!(result.values.get("rate"), Some(&json!(0.15)));
 }
@@ -3228,10 +3276,17 @@ fn instance_ref_in_constraint_resolves() {
     let mut instances = HashMap::new();
     instances.insert("limits".into(), json!({ "maxAmount": 100 }));
     let result = evaluate_definition_full_with_instances(
-        &def, &data, EvalTrigger::Continuous, &[], &instances,
+        &def,
+        &data,
+        EvalTrigger::Continuous,
+        &[],
+        &instances,
     );
     assert!(
-        result.validations.iter().any(|v| v.code == "CONSTRAINT_FAILED"),
+        result
+            .validations
+            .iter()
+            .any(|v| v.code == "CONSTRAINT_FAILED"),
         "constraint referencing @instance should fire"
     );
 }
@@ -3251,7 +3306,11 @@ fn instance_ref_in_shape_constraint_resolves() {
     let mut instances = HashMap::new();
     instances.insert("rules".into(), json!({ "cap": 100 }));
     let result = evaluate_definition_full_with_instances(
-        &def, &data, EvalTrigger::Continuous, &[], &instances,
+        &def,
+        &data,
+        EvalTrigger::Continuous,
+        &[],
+        &instances,
     );
     assert!(result.validations.iter().any(|v| v.code == "OVER_CAP"));
 }
@@ -3268,7 +3327,11 @@ fn instance_ref_in_relevant_resolves() {
     let mut instances = HashMap::new();
     instances.insert("flags".into(), json!({ "showExtra": false }));
     let result = evaluate_definition_full_with_instances(
-        &def, &data, EvalTrigger::Continuous, &[], &instances,
+        &def,
+        &data,
+        EvalTrigger::Continuous,
+        &[],
+        &instances,
     );
     assert!(result.non_relevant.contains(&"extra".to_string()));
 }
@@ -3281,13 +3344,14 @@ fn missing_instance_name_returns_null_not_panic() {
         "binds": [{ "path": "val", "calculate": "@instance('nonexistent').foo" }],
     });
     let result = evaluate_definition_full_with_instances(
-        &def, &HashMap::new(), EvalTrigger::Continuous, &[], &HashMap::new(),
+        &def,
+        &HashMap::new(),
+        EvalTrigger::Continuous,
+        &[],
+        &HashMap::new(),
     );
     // Should not panic — value should be null
-    assert!(
-        result.values.get("val").is_none()
-            || result.values.get("val") == Some(&json!(null))
-    );
+    assert!(result.values.get("val").is_none() || result.values.get("val") == Some(&json!(null)));
 }
 
 #[test]
@@ -3299,9 +3363,16 @@ fn nested_instance_path_resolves() {
         "instances": [{ "name": "org", "src": "static", "data": {} }],
     });
     let mut instances = HashMap::new();
-    instances.insert("org".into(), json!({ "address": { "city": "Springfield" } }));
+    instances.insert(
+        "org".into(),
+        json!({ "address": { "city": "Springfield" } }),
+    );
     let result = evaluate_definition_full_with_instances(
-        &def, &HashMap::new(), EvalTrigger::Continuous, &[], &instances,
+        &def,
+        &HashMap::new(),
+        EvalTrigger::Continuous,
+        &[],
+        &instances,
     );
     assert_eq!(result.values.get("city"), Some(&json!("Springfield")));
 }
@@ -3324,18 +3395,27 @@ fn expression_default_applied_on_relevance_transition() {
     let mut data = HashMap::new();
     data.insert("toggle".into(), json!(false));
     let result1 = evaluate_definition(&def, &data);
-    assert!(result1.non_relevant.contains(&"derived".to_string()),
-        "derived should be non-relevant when toggle=false");
+    assert!(
+        result1.non_relevant.contains(&"derived".to_string()),
+        "derived should be non-relevant when toggle=false"
+    );
 
     // Pass 2: toggle=true, carry forward non-relevant state → transition fires
     data.insert("toggle".into(), json!(true));
-    let result2 = evaluate_definition_with_context(&def, &data, &EvalContext {
-        now_iso: None,
-        previous_validations: None,
-        previous_non_relevant: Some(result1.non_relevant.clone()),
-    });
-    assert_eq!(result2.values.get("derived"), Some(&json!("hello world")),
-        "expression default should fire on non-relevant → relevant transition");
+    let result2 = evaluate_definition_with_context(
+        &def,
+        &data,
+        &EvalContext {
+            now_iso: None,
+            previous_validations: None,
+            previous_non_relevant: Some(result1.non_relevant.clone()),
+        },
+    );
+    assert_eq!(
+        result2.values.get("derived"),
+        Some(&json!("hello world")),
+        "expression default should fire on non-relevant → relevant transition"
+    );
 }
 
 #[test]
@@ -3354,13 +3434,20 @@ fn expression_default_does_not_overwrite_user_value() {
     let mut data = HashMap::new();
     data.insert("toggle".into(), json!(true));
     data.insert("name".into(), json!("UserValue"));
-    let result = evaluate_definition_with_context(&def, &data, &EvalContext {
-        now_iso: None,
-        previous_validations: None,
-        previous_non_relevant: Some(vec!["name".to_string()]),
-    });
-    assert_eq!(result.values.get("name"), Some(&json!("UserValue")),
-        "expression default must not overwrite user-entered value");
+    let result = evaluate_definition_with_context(
+        &def,
+        &data,
+        &EvalContext {
+            now_iso: None,
+            previous_validations: None,
+            previous_non_relevant: Some(vec!["name".to_string()]),
+        },
+    );
+    assert_eq!(
+        result.values.get("name"),
+        Some(&json!("UserValue")),
+        "expression default must not overwrite user-entered value"
+    );
 }
 
 #[test]
@@ -3383,13 +3470,20 @@ fn literal_default_still_works_after_expression_default_change() {
 
     // Pass 2: toggle=true, carry forward non-relevant → literal default fires
     data.insert("toggle".into(), json!(true));
-    let result2 = evaluate_definition_with_context(&def, &data, &EvalContext {
-        now_iso: None,
-        previous_validations: None,
-        previous_non_relevant: Some(result1.non_relevant.clone()),
-    });
-    assert_eq!(result2.values.get("status"), Some(&json!("active")),
-        "literal default should still fire on relevance transition");
+    let result2 = evaluate_definition_with_context(
+        &def,
+        &data,
+        &EvalContext {
+            now_iso: None,
+            previous_validations: None,
+            previous_non_relevant: Some(result1.non_relevant.clone()),
+        },
+    );
+    assert_eq!(
+        result2.values.get("status"),
+        Some(&json!("active")),
+        "literal default should still fire on relevance transition"
+    );
 }
 
 #[test]
@@ -3415,12 +3509,19 @@ fn expression_default_in_repeat_group() {
 
     // Pass 2: toggle=true → transition fires expression default in repeat
     data.insert("toggle".into(), json!(true));
-    let result2 = evaluate_definition_with_context(&def, &data, &EvalContext {
-        now_iso: None,
-        previous_validations: None,
-        previous_non_relevant: Some(result1.non_relevant.clone()),
-    });
+    let result2 = evaluate_definition_with_context(
+        &def,
+        &data,
+        &EvalContext {
+            now_iso: None,
+            previous_validations: None,
+            previous_non_relevant: Some(result1.non_relevant.clone()),
+        },
+    );
     let label = result2.values.get("items[0].label");
-    assert_eq!(label, Some(&json!("item-default")),
-        "expression default should fire in repeat group on relevance transition");
+    assert_eq!(
+        label,
+        Some(&json!("item-default")),
+        "expression default should fire in repeat group on relevance transition"
+    );
 }

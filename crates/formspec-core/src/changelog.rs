@@ -263,10 +263,7 @@ fn classify_item_modification(old: &Value, new: &Value) -> ChangeImpact {
 /// - Array format: `"binds": [{ "path": "name", "required": "true" }]`
 fn index_binds_by_path(def: &Value) -> Vec<(String, Value)> {
     let entries = match def.get("binds") {
-        Some(Value::Object(obj)) => obj
-            .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect(),
+        Some(Value::Object(obj)) => obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
         Some(Value::Array(arr)) => merge_bind_array_entries(arr),
         _ => vec![],
     };
@@ -335,8 +332,10 @@ fn diff_binds(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
     let old_binds = index_binds_by_path(old_def);
     let new_binds = index_binds_by_path(new_def);
 
-    let old_keys: std::collections::HashSet<&str> = old_binds.iter().map(|(k, _)| k.as_str()).collect();
-    let new_keys: std::collections::HashSet<&str> = new_binds.iter().map(|(k, _)| k.as_str()).collect();
+    let old_keys: std::collections::HashSet<&str> =
+        old_binds.iter().map(|(k, _)| k.as_str()).collect();
+    let new_keys: std::collections::HashSet<&str> =
+        new_binds.iter().map(|(k, _)| k.as_str()).collect();
 
     // Added
     for (path, val) in &new_binds {

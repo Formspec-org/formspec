@@ -5,11 +5,11 @@ use std::collections::{HashMap, HashSet};
 use fel_core::{FelValue, FormspecEnvironment, fel_to_json};
 use serde_json::Value;
 
+use crate::fel_json::json_to_runtime_fel;
 use crate::rebuild::{
     expand_wildcard_path, instantiate_wildcard_expr, is_wildcard_bind, wildcard_base,
 };
 use crate::recalculate::eval_bool;
-use crate::fel_json::json_to_runtime_fel;
 use crate::types::{ItemInfo, ValidationResult, find_item_by_path};
 
 use super::env::{

@@ -3,11 +3,34 @@
 //! These are the single source of truth for JSON↔FEL value conversion.
 //! All crates should use these instead of rolling their own.
 
+use std::collections::HashMap;
+
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use serde_json::Value;
 
 use crate::types::{FelMoney, FelValue};
+
+/// JSON object → flat field map for FEL `MapEnvironment` (`{}` / empty → empty map).
+pub fn json_object_to_field_map(val: &Value) -> HashMap<String, FelValue> {
+    let mut map = HashMap::new();
+    if let Some(obj) = val.as_object() {
+        for (k, v) in obj {
+            map.insert(k.clone(), json_to_fel(v));
+        }
+    }
+    map
+}
+
+/// Parse a JSON object string into a field map (empty or `"{}"` → empty map).
+pub fn field_map_from_json_str(fields_json: &str) -> Result<HashMap<String, FelValue>, String> {
+    if fields_json.is_empty() || fields_json == "{}" {
+        return Ok(HashMap::new());
+    }
+    let json_val: Value =
+        serde_json::from_str(fields_json).map_err(|e| format!("invalid fields JSON: {e}"))?;
+    Ok(json_object_to_field_map(&json_val))
+}
 
 /// Convert a `serde_json::Value` to a `FelValue`.
 ///

@@ -41,12 +41,8 @@ fn calculate_pass_items(
         changed |= evaluate_calculate_only(item, env, values);
 
         if item.repeatable && !item.children.is_empty() {
-            changed |= calculate_pass_repeat_children_with_aliases(
-                &mut item.children,
-                env,
-                values,
-                None,
-            );
+            changed |=
+                calculate_pass_repeat_children_with_aliases(&mut item.children, env, values, None);
         } else {
             changed |= calculate_pass_items(&mut item.children, env, values);
         }

@@ -85,7 +85,9 @@ fn parse_repeat_instance_prefix(prefix: &str) -> Option<(String, usize)> {
         return None;
     }
     let bracket = prefix.rfind('[')?;
-    let index = prefix[bracket + 1..prefix.len() - 1].parse::<usize>().ok()?;
+    let index = prefix[bracket + 1..prefix.len() - 1]
+        .parse::<usize>()
+        .ok()?;
     Some((prefix[..bracket].to_string(), index))
 }
 
@@ -110,7 +112,12 @@ pub(crate) fn push_repeat_context_for_instance(
         .iter()
         .map(json_to_runtime_fel)
         .collect::<Vec<FelValue>>();
-    env.push_repeat(json_to_runtime_fel(&current), index + 1, array.len(), collection);
+    env.push_repeat(
+        json_to_runtime_fel(&current),
+        index + 1,
+        array.len(),
+        collection,
+    );
     true
 }
 
@@ -129,7 +136,10 @@ pub(crate) fn populate_repeat_group_arrays(
     }
 }
 
-pub(crate) fn build_repeat_group_array(group_path: &str, values: &HashMap<String, Value>) -> Option<Value> {
+pub(crate) fn build_repeat_group_array(
+    group_path: &str,
+    values: &HashMap<String, Value>,
+) -> Option<Value> {
     let count = crate::rebuild::detect_repeat_count(group_path, values);
     if count == 0 {
         return None;

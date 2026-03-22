@@ -52,10 +52,7 @@ pub fn parse_variables(definition: &Value) -> Vec<VariableDef> {
         .unwrap_or_default()
 }
 
-fn resolve_bind<'a>(
-    binds: Option<&'a Value>,
-    key: &str,
-) -> Option<serde_json::Map<String, Value>> {
+fn resolve_bind<'a>(binds: Option<&'a Value>, key: &str) -> Option<serde_json::Map<String, Value>> {
     let binds = binds?;
     // Support both object-style and array-style binds
     match binds {
@@ -203,12 +200,12 @@ fn build_item_info(
             .and_then(|b| b.get("excludedValue"))
             .and_then(|v| v.as_str())
             .map(String::from),
-        default_value: Some(&bind).and_then(|b| b.get("default")).and_then(|v| {
-            match v {
+        default_value: Some(&bind)
+            .and_then(|b| b.get("default"))
+            .and_then(|v| match v {
                 Value::String(s) if s.starts_with('=') => None,
                 other => Some(other.clone()),
-            }
-        }),
+            }),
         default_expression: Some(&bind)
             .and_then(|b| b.get("default"))
             .and_then(|v| v.as_str())

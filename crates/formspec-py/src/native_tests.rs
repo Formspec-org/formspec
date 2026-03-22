@@ -1,17 +1,20 @@
 #[cfg(test)]
 mod tests {
-    use formspec_core::changelog;
+    use crate::convert::{category_str, parse_status_str, status_str};
+    use formspec_core::changelog::{
+        Change, ChangeImpact, ChangeTarget, ChangeType, Changelog, SemverImpact,
+    };
+    use formspec_core::{JsonWireStyle, changelog_to_json_value};
     use formspec_core::extension_analysis::RegistryEntryStatus;
     use formspec_core::registry_client;
     use formspec_core::runtime_mapping;
-    use serde_json::{json, Value};
-    use crate::convert::{
-        category_str, change_impact_str, change_target_str, change_type_str, parse_status_str,
-        registry_entry_count, semver_impact_str, status_str,
+    use formspec_core::registry_client::registry_entry_count_from_raw;
+    use formspec_core::{
+        MappingDirection, parse_coerce_type, parse_mapping_direction_wire,
+        parse_mapping_document_from_value as parse_mapping_document_inner,
+        parse_mapping_rules_from_value as parse_mapping_rules_inner,
     };
-    use crate::mapping::{
-        parse_coerce_type, parse_direction, parse_mapping_document_inner, parse_mapping_rules_inner,
-    };
+    use serde_json::{Value, json};
 
     // ── parse_status_str ────────────────────────────────────────
 
@@ -140,109 +143,73 @@ mod tests {
         );
     }
 
-    // ── change_type_str ─────────────────────────────────────────
-
-    /// Spec: changelog-spec — change types: added, removed, modified
-    #[test]
-    fn change_type_str_all_variants() {
-        assert_eq!(change_type_str(&changelog::ChangeType::Added), "added");
-        assert_eq!(change_type_str(&changelog::ChangeType::Removed), "removed");
-        assert_eq!(
-            change_type_str(&changelog::ChangeType::Modified),
-            "modified"
-        );
+    fn sample_changelog() -> Changelog {
+        Changelog {
+            definition_url: "https://example.com/def".to_string(),
+            from_version: "1.0.0".to_string(),
+            to_version: "1.0.1".to_string(),
+            semver_impact: SemverImpact::Patch,
+            changes: vec![Change {
+                change_type: ChangeType::Added,
+                target: ChangeTarget::Item,
+                path: "items.0".to_string(),
+                impact: ChangeImpact::Compatible,
+                key: None,
+                description: None,
+                before: None,
+                after: None,
+                migration_hint: None,
+            }],
+        }
     }
 
-    // ── change_target_str ───────────────────────────────────────
-
-    /// Spec: changelog-spec — change targets cover all definition subsystems
+    /// Spec: changelog JSON (Python snake) — top-level keys and change object strings
     #[test]
-    fn change_target_str_all_variants() {
-        assert_eq!(change_target_str(&changelog::ChangeTarget::Item), "item");
-        assert_eq!(change_target_str(&changelog::ChangeTarget::Bind), "bind");
-        assert_eq!(change_target_str(&changelog::ChangeTarget::Shape), "shape");
-        assert_eq!(
-            change_target_str(&changelog::ChangeTarget::OptionSet),
-            "optionSet"
-        );
-        assert_eq!(
-            change_target_str(&changelog::ChangeTarget::DataSource),
-            "dataSource"
-        );
-        assert_eq!(
-            change_target_str(&changelog::ChangeTarget::Screener),
-            "screener"
-        );
-        assert_eq!(
-            change_target_str(&changelog::ChangeTarget::Migration),
-            "migration"
-        );
-        assert_eq!(
-            change_target_str(&changelog::ChangeTarget::Metadata),
-            "metadata"
-        );
+    fn changelog_to_json_python_snake_shape() {
+        let v = changelog_to_json_value(&sample_changelog(), JsonWireStyle::PythonSnake);
+        assert_eq!(v["definition_url"], json!("https://example.com/def"));
+        assert_eq!(v["from_version"], json!("1.0.0"));
+        assert_eq!(v["to_version"], json!("1.0.1"));
+        assert_eq!(v["semver_impact"], json!("patch"));
+        let changes = v["changes"].as_array().unwrap();
+        let c0 = &changes[0];
+        assert_eq!(c0["change_type"], json!("added"));
+        assert_eq!(c0["target"], json!("item"));
+        assert_eq!(c0["impact"], json!("compatible"));
     }
 
-    // ── change_impact_str ───────────────────────────────────────
-
-    /// Spec: changelog-spec — impact levels for semver classification
+    /// Spec: changelog JSON (JS camel) — `type` key and camel top-level fields
     #[test]
-    fn change_impact_str_all_variants() {
-        assert_eq!(
-            change_impact_str(changelog::ChangeImpact::Cosmetic),
-            "cosmetic"
-        );
-        assert_eq!(
-            change_impact_str(changelog::ChangeImpact::Compatible),
-            "compatible"
-        );
-        assert_eq!(
-            change_impact_str(changelog::ChangeImpact::Breaking),
-            "breaking"
-        );
+    fn changelog_to_json_js_camel_shape() {
+        let v = changelog_to_json_value(&sample_changelog(), JsonWireStyle::JsCamel);
+        assert_eq!(v["definitionUrl"], json!("https://example.com/def"));
+        assert_eq!(v["semverImpact"], json!("patch"));
+        let changes = v["changes"].as_array().unwrap();
+        assert_eq!(changes[0]["type"], json!("added"));
     }
 
-    // ── semver_impact_str ───────────────────────────────────────
-
-    /// Spec: changelog-spec — semver bump classification
-    #[test]
-    fn semver_impact_str_all_variants() {
-        assert_eq!(semver_impact_str(changelog::SemverImpact::Patch), "patch");
-        assert_eq!(semver_impact_str(changelog::SemverImpact::Minor), "minor");
-        assert_eq!(semver_impact_str(changelog::SemverImpact::Major), "major");
-    }
-
-    // ── parse_direction ─────────────────────────────────────────
+    // ── parse_mapping_direction_wire ────────────────────────────
 
     /// Spec: mapping-spec.md §2 — forward mapping: Response → External
     #[test]
-    fn parse_direction_forward() {
-        let dir = parse_direction("forward").unwrap();
-        assert!(matches!(dir, runtime_mapping::MappingDirection::Forward));
+    fn parse_mapping_direction_wire_forward() {
+        let dir = parse_mapping_direction_wire("forward").unwrap();
+        assert!(matches!(dir, MappingDirection::Forward));
     }
 
     /// Spec: mapping-spec.md §2 — reverse mapping: External → Response
     #[test]
-    fn parse_direction_reverse() {
-        let dir = parse_direction("reverse").unwrap();
-        assert!(matches!(dir, runtime_mapping::MappingDirection::Reverse));
+    fn parse_mapping_direction_wire_reverse() {
+        let dir = parse_mapping_direction_wire("reverse").unwrap();
+        assert!(matches!(dir, MappingDirection::Reverse));
     }
 
-    /// Boundary: invalid direction strings must produce PyValueError
     #[test]
-    fn parse_direction_invalid_returns_err() {
-        assert!(parse_direction("").is_err());
-        assert!(parse_direction("both").is_err());
-        assert!(parse_direction("Forward").is_err()); // case-sensitive
-    }
-
-    /// Correctness: invalid direction returns Err (message inspection requires Python GIL)
-    #[test]
-    fn parse_direction_error_for_invalid_input() {
-        // NOTE: Cannot inspect PyErr message without a live Python interpreter.
-        // The error message formatting is tested via Python-side integration tests.
-        assert!(parse_direction("sideways").is_err());
-        assert!(parse_direction("backwards").is_err());
+    fn parse_mapping_direction_wire_invalid() {
+        assert!(parse_mapping_direction_wire("").is_err());
+        assert!(parse_mapping_direction_wire("both").is_err());
+        assert!(parse_mapping_direction_wire("Forward").is_err());
+        assert!(parse_mapping_direction_wire("sideways").is_err());
     }
 
     // ── registry_entry_count ────────────────────────────────────
@@ -257,28 +224,28 @@ mod tests {
                 {"name": "x-ext-c"}
             ]
         });
-        assert_eq!(registry_entry_count(&val), 3);
+        assert_eq!(registry_entry_count_from_raw(&val), 3);
     }
 
     /// Boundary: missing "entries" key returns 0
     #[test]
     fn registry_entry_count_missing_key() {
         let val = json!({"publisher": {}});
-        assert_eq!(registry_entry_count(&val), 0);
+        assert_eq!(registry_entry_count_from_raw(&val), 0);
     }
 
     /// Boundary: "entries" is not an array returns 0
     #[test]
     fn registry_entry_count_not_array() {
         let val = json!({"entries": "not an array"});
-        assert_eq!(registry_entry_count(&val), 0);
+        assert_eq!(registry_entry_count_from_raw(&val), 0);
     }
 
     /// Boundary: empty entries array returns 0
     #[test]
     fn registry_entry_count_empty_array() {
         let val = json!({"entries": []});
-        assert_eq!(registry_entry_count(&val), 0);
+        assert_eq!(registry_entry_count_from_raw(&val), 0);
     }
 
     // ── parse_mapping_rules ─────────────────────────────────────

@@ -5,6 +5,10 @@
 /// Checks for unresolved, retired, and deprecated extensions.
 use std::collections::HashMap;
 
+use serde_json::Value;
+
+use crate::registry_client;
+
 // ── Types ───────────────────────────────────────────────────────
 
 /// Severity levels for extension validation issues.
@@ -178,6 +182,121 @@ fn walk_items<I: ExtensionItem>(
 
         walk_items(item.children(), &path, registry, issues);
     }
+}
+
+// ── JSON item tree + registry map (shared by WASM / Python bindings) ─
+
+/// Definition item node parsed from JSON (`key`, `children`, `extensions`, top-level `x-*` flags).
+#[derive(Debug)]
+pub struct JsonDefinitionItem {
+    key: String,
+    children: Vec<JsonDefinitionItem>,
+    extensions: Option<HashMap<String, Value>>,
+    extra: HashMap<String, Value>,
+}
+
+impl JsonDefinitionItem {
+    /// Parse a single item object; returns `None` if `key` is missing or not a string.
+    pub fn from_json(value: &Value) -> Option<Self> {
+        let obj = value.as_object()?;
+        let key = obj.get("key")?.as_str()?.to_string();
+        let children = obj
+            .get("children")
+            .and_then(|child| child.as_array())
+            .map(|arr| arr.iter().filter_map(Self::from_json).collect())
+            .unwrap_or_default();
+        let extensions = obj
+            .get("extensions")
+            .and_then(|extensions| extensions.as_object())
+            .map(|map| map.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+        let extra = obj
+            .iter()
+            .filter(|(name, _)| *name != "key" && *name != "children" && *name != "extensions")
+            .map(|(name, value)| (name.clone(), value.clone()))
+            .collect();
+        Some(Self {
+            key,
+            children,
+            extensions,
+            extra,
+        })
+    }
+
+    /// Parse a root items array (definition `items` tree).
+    pub fn tree_from_items_json(items: &[Value]) -> Vec<JsonDefinitionItem> {
+        items.iter().filter_map(Self::from_json).collect()
+    }
+}
+
+/// Parse a JSON value as a root `items` array for extension validation.
+pub fn json_definition_items_tree_from_value(val: &Value) -> Result<Vec<JsonDefinitionItem>, String> {
+    let arr = val
+        .as_array()
+        .ok_or_else(|| "items JSON must be an array".to_string())?;
+    Ok(JsonDefinitionItem::tree_from_items_json(arr))
+}
+
+impl ExtensionItem for JsonDefinitionItem {
+    fn key(&self) -> &str {
+        &self.key
+    }
+
+    fn declared_extensions(&self) -> Vec<String> {
+        let mut found = Vec::new();
+        for (name, value) in &self.extra {
+            if !name.starts_with("x-") {
+                continue;
+            }
+            if value.is_null() || value == &Value::Bool(false) {
+                continue;
+            }
+            found.push(name.clone());
+        }
+        if let Some(extensions) = &self.extensions {
+            for (name, enabled) in extensions {
+                if !name.starts_with("x-") {
+                    continue;
+                }
+                if enabled.is_null() || enabled == &Value::Bool(false) {
+                    continue;
+                }
+                found.push(name.clone());
+            }
+        }
+        found.sort();
+        found.dedup();
+        found
+    }
+
+    fn children(&self) -> &[Self] {
+        &self.children
+    }
+}
+
+/// Build a [`MapRegistry`] from a JSON object mapping extension name → partial entry objects
+/// (`status`, `displayName`, `deprecationNotice`, …) as produced by WASM callers.
+pub fn map_registry_from_extension_entry_map(entries: &HashMap<String, Value>) -> MapRegistry {
+    let mut registry = MapRegistry::new();
+    for (name, entry) in entries {
+        let status = entry
+            .get("status")
+            .and_then(|value| value.as_str())
+            .and_then(registry_client::parse_registry_entry_status)
+            .unwrap_or(RegistryEntryStatus::Active);
+        registry.add(RegistryEntryInfo {
+            name: name.clone(),
+            status,
+            display_name: entry
+                .get("displayName")
+                .and_then(|value| value.as_str())
+                .map(String::from),
+            deprecation_notice: entry
+                .get("deprecationNotice")
+                .and_then(|value| value.as_str())
+                .map(String::from),
+        });
+    }
+    registry
 }
 
 #[cfg(test)]

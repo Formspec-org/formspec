@@ -10,7 +10,7 @@ use std::sync::OnceLock;
 
 use formspec_core::{DocumentType, json_pointer_to_jsonpath};
 use jsonschema::{Resource, Validator};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::types::LintDiagnostic;
 
@@ -161,7 +161,10 @@ fn component_node_validators() -> &'static ComponentNodeValidators {
             .build(&custom_ref_wrapper)
             .expect("embedded CustomComponentRef schema must compile");
 
-        ComponentNodeValidators { per_type, custom_ref }
+        ComponentNodeValidators {
+            per_type,
+            custom_ref,
+        }
     })
 }
 
@@ -460,7 +463,10 @@ mod tests {
         assert!(
             diags.is_empty(),
             "Deep valid tree should produce no E101, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.path, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -480,9 +486,14 @@ mod tests {
         let diags = validate_schema(&comp, DocumentType::Component);
         // "direction" is not a valid TextInput property — unevaluatedProperties: false should catch it
         assert!(
-            diags.iter().any(|d| d.code == "E101" && d.path.contains("children[0]")),
+            diags
+                .iter()
+                .any(|d| d.code == "E101" && d.path.contains("children[0]")),
             "Should emit E101 for invalid TextInput property, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.path, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -495,9 +506,14 @@ mod tests {
         });
         let diags = validate_schema(&comp, DocumentType::Component);
         assert!(
-            diags.iter().any(|d| d.code == "E101" && d.message.contains("version")),
+            diags
+                .iter()
+                .any(|d| d.code == "E101" && d.message.contains("version")),
             "Should report missing 'version', got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -518,7 +534,10 @@ mod tests {
         assert!(
             diags.is_empty(),
             "Valid custom component ref should produce no E101, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.path, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -537,9 +556,14 @@ mod tests {
         });
         let diags = validate_schema(&comp, DocumentType::Component);
         assert!(
-            diags.iter().any(|d| d.code == "E101" && d.path.contains("children[0]")),
+            diags
+                .iter()
+                .any(|d| d.code == "E101" && d.path.contains("children[0]")),
             "Should emit E101 for invalid custom component ref property, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.path, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 
@@ -568,7 +592,10 @@ mod tests {
                 && d.path.contains("components")
                 && d.path.contains("children[0]")),
             "Should catch invalid property in custom component template tree, got: {:?}",
-            diags.iter().map(|d| (&d.code, &d.path, &d.message)).collect::<Vec<_>>()
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
         );
     }
 }

@@ -8,6 +8,7 @@ use std::collections::HashSet;
 
 use fel_core::ast::{Expr, PathSegment};
 use fel_core::{FelError, parse};
+use serde_json::{json, Value};
 
 /// Callback that rewrites a single string reference, returning `None` to keep the original.
 type RewriteFn = Box<dyn Fn(&str) -> Option<String>>;
@@ -511,6 +512,105 @@ fn collect_rewrite_targets(expr: &Expr, targets: &mut FelRewriteTargets) {
         | Expr::String(_)
         | Expr::DateLiteral(_)
         | Expr::DateTimeLiteral(_) => {}
+    }
+}
+
+// ── JSON projections + rewrite map parsing (WASM / tooling) ─────
+
+/// Static analysis result as JSON (`valid`, `errors`, `references`, `variables`, `functions`).
+pub fn fel_analysis_to_json_value(result: &FelAnalysis) -> Value {
+    json!({
+        "valid": result.valid,
+        "errors": result.errors.iter().map(|e| &e.message).collect::<Vec<_>>(),
+        "references": result.references.iter().collect::<Vec<_>>(),
+        "variables": result.variables.iter().collect::<Vec<_>>(),
+        "functions": result.functions.iter().collect::<Vec<_>>(),
+    })
+}
+
+/// [`FelRewriteTargets`] as sorted JSON (camelCase keys) for `collectFELRewriteTargets`.
+pub fn fel_rewrite_targets_to_json_value(targets: &FelRewriteTargets) -> Value {
+    let mut field_paths: Vec<_> = targets.field_paths.iter().cloned().collect();
+    field_paths.sort();
+    let mut current_paths: Vec<_> = targets.current_paths.iter().cloned().collect();
+    current_paths.sort();
+    let mut variables: Vec<_> = targets.variables.iter().cloned().collect();
+    variables.sort();
+    let mut instance_names: Vec<_> = targets.instance_names.iter().cloned().collect();
+    instance_names.sort();
+    let navigation_targets = targets
+        .navigation_targets
+        .iter()
+        .map(|entry| {
+            json!({
+                "functionName": entry.function_name,
+                "name": entry.name,
+            })
+        })
+        .collect::<Vec<_>>();
+    json!({
+        "fieldPaths": field_paths,
+        "currentPaths": current_paths,
+        "variables": variables,
+        "instanceNames": instance_names,
+        "navigationTargets": navigation_targets,
+    })
+}
+
+/// Build [`RewriteOptions`] from the camelCase JSON map used by `rewriteFELReferences` / `rewriteMessageTemplate`.
+pub fn rewrite_options_from_camel_case_json(rewrites: &Value) -> RewriteOptions {
+    let empty = serde_json::Map::new();
+    let rewrites_obj = rewrites.as_object().unwrap_or(&empty);
+    let field_paths = rewrites_obj.get("fieldPaths").and_then(Value::as_object);
+    let current_paths = rewrites_obj.get("currentPaths").and_then(Value::as_object);
+    let variables = rewrites_obj.get("variables").and_then(Value::as_object);
+    let instance_names = rewrites_obj.get("instanceNames").and_then(Value::as_object);
+    let navigation_targets = rewrites_obj
+        .get("navigationTargets")
+        .and_then(Value::as_object);
+
+    RewriteOptions {
+        rewrite_field_path: field_paths.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |path: &str| {
+                map.get(path)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as RewriteFn
+        }),
+        rewrite_current_path: current_paths.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |path: &str| {
+                map.get(path)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as RewriteFn
+        }),
+        rewrite_variable: variables.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |name: &str| {
+                map.get(name)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as RewriteFn
+        }),
+        rewrite_instance_name: instance_names.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |name: &str| {
+                map.get(name)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as RewriteFn
+        }),
+        rewrite_navigation_target: navigation_targets.map(|entries| {
+            let map = entries.clone();
+            Box::new(move |name: &str, fn_name: &str| {
+                let key = format!("{fn_name}:{name}");
+                map.get(&key)
+                    .and_then(Value::as_str)
+                    .map(|value| value.to_string())
+            }) as RewriteFn2
+        }),
     }
 }
 

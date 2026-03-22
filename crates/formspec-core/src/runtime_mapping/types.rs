@@ -122,6 +122,8 @@ pub enum MappingErrorCode {
     UnmappedValue,
     CoerceFailure,
     FelRuntime,
+    /// Document-level restriction violated (e.g. forward-only doc executed in reverse).
+    InvalidDocument,
 }
 
 impl MappingErrorCode {
@@ -130,6 +132,7 @@ impl MappingErrorCode {
             Self::UnmappedValue => "UNMAPPED_VALUE",
             Self::CoerceFailure => "COERCE_FAILURE",
             Self::FelRuntime => "FEL_RUNTIME",
+            Self::InvalidDocument => "INVALID_DOCUMENT",
         }
     }
 }
@@ -161,4 +164,6 @@ pub struct MappingDocument {
     pub defaults: Option<serde_json::Map<String, Value>>,
     /// When true, generate synthetic preserve rules for unmapped top-level source keys.
     pub auto_map: bool,
+    /// When set, [`execute_mapping_doc`](super::document::execute_mapping_doc) only permits this direction.
+    pub direction_restriction: Option<MappingDirection>,
 }

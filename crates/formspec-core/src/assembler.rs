@@ -2,11 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 
-use crate::{
-    RewriteOptions, rewrite_fel_source_references, rewrite_message_template,
-};
+use crate::{JsonWireStyle, RewriteOptions, rewrite_fel_source_references, rewrite_message_template};
 
 #[derive(Debug, Clone)]
 pub enum AssemblyError {
@@ -65,6 +63,15 @@ impl MapResolver {
     pub fn add(&mut self, uri: &str, fragment: Value) {
         self.fragments.insert(uri.to_string(), fragment);
     }
+
+    /// Load URI → fragment entries from a JSON object (non-objects yield no inserts).
+    pub fn merge_from_json_object(&mut self, fragments: &Value) {
+        if let Some(obj) = fragments.as_object() {
+            for (uri, fragment) in obj {
+                self.add(uri, fragment.clone());
+            }
+        }
+    }
 }
 
 impl Default for MapResolver {
@@ -108,6 +115,41 @@ pub fn assemble_definition(definition: &Value, resolver: &dyn RefResolver) -> As
     }
 
     result
+}
+
+/// Assembly output for host bindings (camelCase vs snake_case provenance keys).
+pub fn assembly_result_to_json_value(result: &AssemblyResult, style: JsonWireStyle) -> Value {
+    let (key_prefix_k, assembled_k) = match style {
+        JsonWireStyle::JsCamel => ("keyPrefix", "assembledFrom"),
+        JsonWireStyle::PythonSnake => ("key_prefix", "assembled_from"),
+    };
+
+    let assembled: Vec<Value> = result
+        .assembled_from
+        .iter()
+        .map(|entry| {
+            let mut m = Map::new();
+            m.insert("url".into(), json!(entry.url));
+            m.insert("version".into(), json!(entry.version));
+            m.insert(key_prefix_k.into(), json!(entry.key_prefix));
+            m.insert("fragment".into(), json!(entry.fragment));
+            Value::Object(m)
+        })
+        .collect();
+
+    let mut root = Map::new();
+    root.insert("definition".into(), result.definition.clone());
+    root.insert("warnings".into(), json!(result.warnings));
+    root.insert(
+        "errors".into(),
+        json!(result
+            .errors
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()),
+    );
+    root.insert(assembled_k.into(), Value::Array(assembled));
+    Value::Object(root)
 }
 
 fn resolve_items(
@@ -171,11 +213,21 @@ fn resolve_item(
             errors,
             assembled_from,
         );
-        let full_path = current_item_path(parent_path, obj.get("key").and_then(Value::as_str).unwrap_or(""));
+        let full_path = current_item_path(
+            parent_path,
+            obj.get("key").and_then(Value::as_str).unwrap_or(""),
+        );
 
         if let Some(children) = assembled.get("children").and_then(Value::as_array).cloned() {
-            let resolved_children =
-                resolve_items(&children, &full_path, resolver, visited_refs, host, errors, assembled_from);
+            let resolved_children = resolve_items(
+                &children,
+                &full_path,
+                resolver,
+                visited_refs,
+                host,
+                errors,
+                assembled_from,
+            );
             if let Some(assembled_obj) = assembled.as_object_mut() {
                 assembled_obj.insert("children".to_string(), Value::Array(resolved_children));
             }
@@ -187,8 +239,19 @@ fn resolve_item(
 
     if let Some(children) = obj.get("children").and_then(Value::as_array) {
         let mut cloned = item.clone();
-        let full_path = current_item_path(parent_path, obj.get("key").and_then(Value::as_str).unwrap_or(""));
-        let resolved_children = resolve_items(children, &full_path, resolver, visited_refs, host, errors, assembled_from);
+        let full_path = current_item_path(
+            parent_path,
+            obj.get("key").and_then(Value::as_str).unwrap_or(""),
+        );
+        let resolved_children = resolve_items(
+            children,
+            &full_path,
+            resolver,
+            visited_refs,
+            host,
+            errors,
+            assembled_from,
+        );
         if let Some(cloned_obj) = cloned.as_object_mut() {
             cloned_obj.insert("children".to_string(), Value::Array(resolved_children));
         }
@@ -216,7 +279,8 @@ fn perform_assembly(
         .get("keyPrefix")
         .and_then(Value::as_str)
         .unwrap_or("");
-    let Some(source_items) = select_source_items(referenced_def, parsed_ref.fragment.as_deref()) else {
+    let Some(source_items) = select_source_items(referenced_def, parsed_ref.fragment.as_deref())
+    else {
         errors.push(AssemblyError::ResolutionError(format!(
             "Fragment key \"{}\" not found in referenced definition {}",
             parsed_ref.fragment.as_deref().unwrap_or(""),
@@ -243,7 +307,13 @@ fn perform_assembly(
         key_prefix: key_prefix.to_string(),
     };
 
-    import_binds(referenced_def, parsed_ref.fragment.as_deref(), &group_path, &map, host);
+    import_binds(
+        referenced_def,
+        parsed_ref.fragment.as_deref(),
+        &group_path,
+        &map,
+        host,
+    );
     import_shapes(
         referenced_def,
         parsed_ref.fragment.as_deref(),
@@ -378,7 +448,12 @@ fn import_shapes(
 
     let imported_shape_ids: HashSet<String> = shapes
         .iter()
-        .filter_map(|shape| shape.get("id").and_then(Value::as_str).map(ToString::to_string))
+        .filter_map(|shape| {
+            shape
+                .get("id")
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+        })
         .collect();
 
     let mut rename_map = HashMap::new();
@@ -396,7 +471,14 @@ fn import_shapes(
 
     let shapes: Vec<Value> = shapes
         .into_iter()
-        .map(|shape| rewrite_shape(prefix_shape_target(shape, group_path, map), map, &rename_map, &imported_shape_ids))
+        .map(|shape| {
+            rewrite_shape(
+                prefix_shape_target(shape, group_path, map),
+                map,
+                &rename_map,
+                &imported_shape_ids,
+            )
+        })
         .collect();
 
     let host_shapes = host_obj
@@ -570,7 +652,10 @@ fn prefix_item(item: &Value, prefix: &str) -> Value {
             obj.insert("key".to_string(), Value::String(format!("{prefix}{key}")));
         }
         if let Some(children) = obj.get("children").and_then(Value::as_array).cloned() {
-            let children: Vec<Value> = children.iter().map(|child| prefix_item(child, prefix)).collect();
+            let children: Vec<Value> = children
+                .iter()
+                .map(|child| prefix_item(child, prefix))
+                .collect();
             obj.insert("children".to_string(), Value::Array(children));
         }
     }
@@ -639,7 +724,13 @@ fn prefix_shape_target(shape: Value, group_path: &str, map: &FelRewriteMap) -> V
 fn rewrite_bind(bind: Value, map: &FelRewriteMap) -> Value {
     let mut bind = bind;
     if let Some(obj) = bind.as_object_mut() {
-        for key in ["calculate", "constraint", "relevant", "readonly", "required"] {
+        for key in [
+            "calculate",
+            "constraint",
+            "relevant",
+            "readonly",
+            "required",
+        ] {
             if let Some(expression) = obj.get(key).and_then(Value::as_str) {
                 obj.insert(
                     key.to_string(),
@@ -705,7 +796,12 @@ fn rewrite_shape(
         if let Some(text) = obj.get("not").and_then(Value::as_str) {
             obj.insert(
                 "not".to_string(),
-                Value::String(rewrite_shape_entry(text, map, rename_map, imported_shape_ids)),
+                Value::String(rewrite_shape_entry(
+                    text,
+                    map,
+                    rename_map,
+                    imported_shape_ids,
+                )),
             );
         }
     }
@@ -743,8 +839,12 @@ fn make_rewrite_options(map: &FelRewriteMap) -> RewriteOptions {
     let navigation_map = map.clone();
 
     RewriteOptions {
-        rewrite_field_path: Some(Box::new(move |path| Some(rewrite_field_path(path, &field_map)))),
-        rewrite_current_path: Some(Box::new(move |path| Some(rewrite_current_path(path, &current_map)))),
+        rewrite_field_path: Some(Box::new(move |path| {
+            Some(rewrite_field_path(path, &field_map))
+        })),
+        rewrite_current_path: Some(Box::new(move |path| {
+            Some(rewrite_current_path(path, &current_map))
+        })),
         rewrite_variable: None,
         rewrite_instance_name: None,
         rewrite_navigation_target: Some(Box::new(move |name, _fn_name| {
@@ -764,11 +864,11 @@ fn rewrite_field_path(path: &str, map: &FelRewriteMap) -> String {
     }
 
     let first_base = segment_base(&segments[0]);
-    let should_replace_root =
-        (!map.fragment_root_key.is_empty() && first_base == map.fragment_root_key)
-            || (map.fragment_root_key.is_empty()
-                && segments.len() > 1
-                && map.imported_keys.contains(first_base));
+    let should_replace_root = (!map.fragment_root_key.is_empty()
+        && first_base == map.fragment_root_key)
+        || (map.fragment_root_key.is_empty()
+            && segments.len() > 1
+            && map.imported_keys.contains(first_base));
 
     let mut rewritten = Vec::new();
     let mut iter = segments.into_iter();
@@ -903,10 +1003,19 @@ fn select_source_items(definition: &Value, fragment: Option<&str>) -> Option<Vec
     }
 }
 
-fn resolve_reference(resolver: &dyn RefResolver, ref_uri: &str, parsed_ref: &ParsedRef) -> Option<Value> {
+fn resolve_reference(
+    resolver: &dyn RefResolver,
+    ref_uri: &str,
+    parsed_ref: &ParsedRef,
+) -> Option<Value> {
     resolver
         .resolve(ref_uri)
-        .or_else(|| resolver.resolve(&versioned_ref_key(&parsed_ref.url, parsed_ref.version.as_deref())))
+        .or_else(|| {
+            resolver.resolve(&versioned_ref_key(
+                &parsed_ref.url,
+                parsed_ref.version.as_deref(),
+            ))
+        })
         .or_else(|| resolver.resolve(&parsed_ref.url))
 }
 
@@ -1135,9 +1244,11 @@ mod tests {
         );
 
         let result = assemble_definition(&host, &resolver);
-        assert!(result
-            .errors
-            .iter()
-            .any(|error| matches!(error, AssemblyError::CircularRef(_))));
+        assert!(
+            result
+                .errors
+                .iter()
+                .any(|error| matches!(error, AssemblyError::CircularRef(_)))
+        );
     }
 }

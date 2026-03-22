@@ -3,16 +3,22 @@
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::PyDict;
 
-use fel_core::{evaluate, extract_dependencies, parse, MapEnvironment};
-use formspec_core::{analyze_fel, get_fel_dependencies};
-
-use crate::convert::{
-    build_formspec_env, builtin_function_to_dict, fel_to_python, fel_to_python_tagged,
-    parse_fel_expr, pydict_to_field_map, severity_str,
+use fel_core::{
+    DependenciesJsonStyle, MapEnvironment, builtin_function_catalog_json_value,
+    dependencies_to_json_value_styled, evaluate, extract_dependencies, fel_diagnostics_to_json_value,
+    parse,
 };
+use formspec_core::{
+    analyze_fel, fel_analysis_to_json_value, get_fel_dependencies,
+};
+
 use crate::PyObject;
+use crate::convert::{
+    build_formspec_env, fel_to_python, fel_to_python_tagged, json_to_python, parse_fel_expr,
+    pydict_to_field_map,
+};
 
 // ── FEL Evaluation ──────────────────────────────────────────────
 
@@ -68,13 +74,7 @@ pub fn eval_fel_detailed(
     let env = build_formspec_env(py, fields, instances, mip_states, variables, now_iso)?;
     let result = evaluate(&expr, &env);
 
-    let diagnostics = PyList::empty(py);
-    for diagnostic in &result.diagnostics {
-        let entry = PyDict::new(py);
-        entry.set_item("message", &diagnostic.message)?;
-        entry.set_item("severity", severity_str(diagnostic.severity))?;
-        diagnostics.append(entry)?;
-    }
+    let diagnostics = json_to_python(py, &fel_diagnostics_to_json_value(&result.diagnostics))?;
 
     let payload = PyDict::new(py);
     payload.set_item("value", fel_to_python_tagged(py, &result.value)?)?;
@@ -104,20 +104,8 @@ pub fn get_dependencies(expression: &str) -> Vec<String> {
 pub fn extract_deps(py: Python, expression: &str) -> PyResult<PyObject> {
     let expr = parse_fel_expr(expression)?;
     let deps = extract_dependencies(&expr);
-
-    let dict = PyDict::new(py);
-    dict.set_item("fields", deps.fields.iter().collect::<Vec<_>>())?;
-    dict.set_item("context_refs", deps.context_refs.iter().collect::<Vec<_>>())?;
-    dict.set_item(
-        "instance_refs",
-        deps.instance_refs.iter().collect::<Vec<_>>(),
-    )?;
-    dict.set_item("mip_deps", deps.mip_deps.iter().collect::<Vec<_>>())?;
-    dict.set_item("has_self_ref", deps.has_self_ref)?;
-    dict.set_item("has_wildcard", deps.has_wildcard)?;
-    dict.set_item("uses_prev_next", deps.uses_prev_next)?;
-
-    Ok(dict.into())
+    let json = dependencies_to_json_value_styled(&deps, DependenciesJsonStyle::PythonSnake);
+    json_to_python(py, &json)
 }
 
 // ── FEL Analysis ────────────────────────────────────────────────
@@ -128,39 +116,13 @@ pub fn extract_deps(py: Python, expression: &str) -> PyResult<PyObject> {
 #[pyfunction]
 pub fn analyze_expression(py: Python, expression: &str) -> PyResult<PyObject> {
     let result = analyze_fel(expression);
-
-    let dict = PyDict::new(py);
-    dict.set_item("valid", result.valid)?;
-    dict.set_item(
-        "errors",
-        result
-            .errors
-            .iter()
-            .map(|e| e.message.clone())
-            .collect::<Vec<_>>(),
-    )?;
-    dict.set_item(
-        "references",
-        result.references.into_iter().collect::<Vec<_>>(),
-    )?;
-    dict.set_item(
-        "variables",
-        result.variables.into_iter().collect::<Vec<_>>(),
-    )?;
-    dict.set_item(
-        "functions",
-        result.functions.into_iter().collect::<Vec<_>>(),
-    )?;
-
-    Ok(dict.into())
+    let json = fel_analysis_to_json_value(&result);
+    json_to_python(py, &json)
 }
 
 /// Return builtin FEL function metadata for Python tooling surfaces.
 #[pyfunction]
 pub fn list_builtin_functions(py: Python) -> PyResult<PyObject> {
-    let entries = PyList::empty(py);
-    for entry in fel_core::builtin_function_catalog() {
-        entries.append(builtin_function_to_dict(py, entry)?)?;
-    }
-    Ok(entries.into())
+    let json = builtin_function_catalog_json_value();
+    json_to_python(py, &json)
 }

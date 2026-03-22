@@ -3,17 +3,18 @@
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::PyList;
 use serde_json::Value;
 
-use formspec_core::detect_document_type;
+use formspec_core::{JsonWireStyle, detect_document_type};
 use formspec_eval::{
-    EvalTrigger, ExtensionConstraint, evaluate_definition_full_with_instances, evaluate_screener,
+    evaluate_definition_full_with_instances, evaluate_screener, evaluation_result_to_json_value_styled,
+    extension_constraints_from_registry_documents, screener_route_to_json_value,
 };
-use formspec_lint::{LintMode, LintOptions, lint_with_options};
+use formspec_lint::{LintMode, LintOptions, lint_result_to_json_value, lint_with_options};
 
-use crate::convert::{depythonize_json, json_object_to_string_map, json_to_python};
 use crate::PyObject;
+use crate::convert::{depythonize_json, json_object_to_string_map, json_to_python};
 
 // ── Document Type Detection ─────────────────────────────────────
 
@@ -52,11 +53,7 @@ pub fn lint_document(
 ) -> PyResult<PyObject> {
     let doc: Value = depythonize_json(document)?;
 
-    let lint_mode = match mode {
-        Some("authoring") => LintMode::Authoring,
-        Some("strict") => LintMode::Strict,
-        _ => LintMode::Runtime,
-    };
+    let lint_mode = LintMode::from_host_option_str(mode);
 
     let registry_docs: Vec<Value> = match registry_documents {
         Some(list) => {
@@ -83,34 +80,8 @@ pub fn lint_document(
     };
 
     let result = lint_with_options(&doc, &options);
-
-    let diagnostics = PyList::empty(py);
-    for d in &result.diagnostics {
-        let diag = PyDict::new(py);
-        diag.set_item("code", &d.code)?;
-        diag.set_item("pass", d.pass)?;
-        diag.set_item(
-            "severity",
-            match d.severity {
-                formspec_lint::LintSeverity::Error => "error",
-                formspec_lint::LintSeverity::Warning => "warning",
-                formspec_lint::LintSeverity::Info => "info",
-            },
-        )?;
-        diag.set_item("path", &d.path)?;
-        diag.set_item("message", &d.message)?;
-        diagnostics.append(diag)?;
-    }
-
-    let dict = PyDict::new(py);
-    dict.set_item(
-        "document_type",
-        result.document_type.map(|dt| dt.schema_key().to_string()),
-    )?;
-    dict.set_item("valid", result.valid)?;
-    dict.set_item("diagnostics", diagnostics)?;
-
-    Ok(dict.into())
+    let json = lint_result_to_json_value(&result, JsonWireStyle::PythonSnake);
+    json_to_python(py, &json)
 }
 
 // ── Evaluation ──────────────────────────────────────────────────
@@ -124,7 +95,7 @@ pub fn lint_document(
 ///     registry_documents: Optional list of registry document dicts
 ///
 /// Returns:
-///     A dict with: values, validations, non_relevant, variables
+///     A dict with: values, validations, non_relevant, variables, required, readonly
 #[pyfunction(signature = (definition, data, trigger=None, registry_documents=None, instances=None))]
 pub fn evaluate_def(
     py: Python,
@@ -139,19 +110,20 @@ pub fn evaluate_def(
 
     let data = json_object_to_string_map(&data_val);
 
-    let eval_trigger = match trigger {
-        Some("submit") => EvalTrigger::Submit,
-        Some("disabled") => EvalTrigger::Disabled,
-        _ => EvalTrigger::Continuous,
-    };
+    let eval_trigger =
+        formspec_eval::EvalTrigger::from_python_eval_def_option(trigger);
 
-    // Extract extension constraints from registry documents
     let constraints = match registry_documents {
-        Some(docs) => extract_extension_constraints(docs)?,
+        Some(docs) => {
+            let mut raw = Vec::new();
+            for item in docs.iter() {
+                raw.push(depythonize_json(&item)?);
+            }
+            extension_constraints_from_registry_documents(&raw)
+        }
         None => Vec::new(),
     };
 
-    // Parse instances into HashMap<String, Value>
     let instances_map: HashMap<String, Value> = match instances {
         Some(inst) => json_object_to_string_map(&depythonize_json(inst)?),
         None => HashMap::new(),
@@ -165,125 +137,8 @@ pub fn evaluate_def(
         &instances_map,
     );
 
-    let values = PyDict::new(py);
-    for (k, v) in &result.values {
-        values.set_item(k, json_to_python(py, v)?)?;
-    }
-
-    let validations = PyList::empty(py);
-    for v in &result.validations {
-        let entry = PyDict::new(py);
-        entry.set_item("path", &v.path)?;
-        entry.set_item("severity", &v.severity)?;
-        entry.set_item("constraintKind", &v.constraint_kind)?;
-        entry.set_item("code", &v.code)?;
-        entry.set_item("message", &v.message)?;
-        entry.set_item("source", &v.source)?;
-        if let Some(ref sid) = v.shape_id {
-            entry.set_item("shapeId", sid)?;
-        }
-        if let Some(ref context) = v.context {
-            entry.set_item("context", json_to_python(py, &serde_json::json!(context))?)?;
-        }
-        validations.append(entry)?;
-    }
-
-    let dict = PyDict::new(py);
-    dict.set_item("values", values)?;
-    dict.set_item("validations", validations)?;
-    dict.set_item("non_relevant", &result.non_relevant)?;
-
-    let variables = PyDict::new(py);
-    for (k, v) in &result.variables {
-        variables.set_item(k, json_to_python(py, v)?)?;
-    }
-    dict.set_item("variables", variables)?;
-
-    Ok(dict.into())
-}
-
-/// Extract ExtensionConstraint structs from raw registry JSON documents.
-fn extract_extension_constraints(docs: &Bound<'_, PyList>) -> PyResult<Vec<ExtensionConstraint>> {
-    let mut constraints = Vec::new();
-
-    for doc_any in docs.iter() {
-        let doc_val: Value = depythonize_json(&doc_any)?;
-
-        let entries = match doc_val.get("entries").and_then(|v| v.as_array()) {
-            Some(arr) => arr,
-            None => continue,
-        };
-
-        for entry in entries {
-            let name = match entry.get("name").and_then(|v| v.as_str()) {
-                Some(n) => n.to_string(),
-                None => continue,
-            };
-
-            let status = entry
-                .get("status")
-                .and_then(|v| v.as_str())
-                .unwrap_or("stable")
-                .to_string();
-
-            let display_name = entry
-                .get("metadata")
-                .and_then(|m| m.get("displayName"))
-                .and_then(|v| v.as_str())
-                .map(String::from);
-
-            let base_type = entry
-                .get("baseType")
-                .and_then(|v| v.as_str())
-                .map(String::from);
-
-            let deprecation_notice = entry
-                .get("deprecationNotice")
-                .and_then(|v| v.as_str())
-                .map(String::from);
-
-            let compatibility_version = entry
-                .get("compatibility")
-                .and_then(|c| c.get("formspecVersion"))
-                .and_then(|v| v.as_str())
-                .map(String::from);
-
-            // Extract constraint parameters
-            let constraint_obj = entry.get("constraints");
-
-            let pattern = constraint_obj
-                .and_then(|c| c.get("pattern"))
-                .and_then(|v| v.as_str())
-                .map(String::from);
-
-            let max_length = constraint_obj
-                .and_then(|c| c.get("maxLength"))
-                .and_then(|v| v.as_u64());
-
-            let minimum = constraint_obj
-                .and_then(|c| c.get("minimum"))
-                .and_then(|v| v.as_f64());
-
-            let maximum = constraint_obj
-                .and_then(|c| c.get("maximum"))
-                .and_then(|v| v.as_f64());
-
-            constraints.push(ExtensionConstraint {
-                name,
-                display_name,
-                pattern,
-                max_length,
-                minimum,
-                maximum,
-                base_type,
-                status,
-                deprecation_notice,
-                compatibility_version,
-            });
-        }
-    }
-
-    Ok(constraints)
+    let json = evaluation_result_to_json_value_styled(&result, JsonWireStyle::PythonSnake);
+    json_to_python(py, &json)
 }
 
 // ── Screener Evaluation ─────────────────────────────────────────
@@ -305,14 +160,7 @@ pub fn evaluate_screener_py(
     let def: Value = depythonize_json(definition)?;
     let ans_map = json_object_to_string_map(&depythonize_json(answers)?);
 
-    match evaluate_screener(&def, &ans_map) {
-        Some(route) => {
-            let dict = PyDict::new(py);
-            dict.set_item("target", &route.target)?;
-            dict.set_item("label", route.label.as_deref())?;
-            dict.set_item("message", route.message.as_deref())?;
-            Ok(dict.into())
-        }
-        None => Ok(py.None()),
-    }
+    let route = evaluate_screener(&def, &ans_map);
+    let json = screener_route_to_json_value(route.as_ref());
+    json_to_python(py, &json)
 }

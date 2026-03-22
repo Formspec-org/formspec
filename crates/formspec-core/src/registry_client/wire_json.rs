@@ -1,0 +1,98 @@
+//! JSON projections for registry client (host bindings).
+
+use serde_json::{Map, Value, json};
+
+use crate::JsonWireStyle;
+
+use super::{extension_category_to_wire, registry_entry_status_to_wire, Registry, RegistryEntry};
+
+/// Empty string means “no constraint” for `find_one` host inputs.
+pub fn version_constraint_option(s: &str) -> Option<&str> {
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
+}
+
+/// Entry count from raw registry JSON (`entries` array length).
+pub fn registry_entry_count_from_raw(val: &Value) -> usize {
+    val.get("entries")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0)
+}
+
+/// `parseRegistry` / `parse_registry` summary object.
+pub fn registry_parse_summary_to_json_value(
+    registry: &Registry,
+    raw: &Value,
+    issues: &[String],
+    style: JsonWireStyle,
+) -> Value {
+    let (entry_count_k, validation_k) = match style {
+        JsonWireStyle::JsCamel => ("entryCount", "validationIssues"),
+        JsonWireStyle::PythonSnake => ("entry_count", "validation_issues"),
+    };
+
+    let mut publisher = Map::new();
+    publisher.insert("name".into(), json!(registry.publisher.name));
+    publisher.insert("url".into(), json!(registry.publisher.url));
+    publisher.insert("contact".into(), json!(registry.publisher.contact));
+
+    let mut root = Map::new();
+    root.insert("publisher".into(), Value::Object(publisher));
+    root.insert("published".into(), json!(registry.published));
+    root.insert(
+        entry_count_k.into(),
+        json!(registry_entry_count_from_raw(raw)),
+    );
+    root.insert(validation_k.into(), json!(issues));
+    Value::Object(root)
+}
+
+/// Single registry entry for `findRegistryEntry` / `find_registry_entry`.
+pub fn registry_entry_to_json_value(entry: &RegistryEntry, style: JsonWireStyle) -> Value {
+    let (deprecation_k, base_type_k) = match style {
+        JsonWireStyle::JsCamel => ("deprecationNotice", "baseType"),
+        JsonWireStyle::PythonSnake => ("deprecation_notice", "base_type"),
+    };
+
+    let mut m = Map::new();
+    m.insert("name".into(), json!(entry.name));
+    m.insert(
+        "category".into(),
+        json!(extension_category_to_wire(entry.category)),
+    );
+    m.insert("version".into(), json!(entry.version));
+    m.insert(
+        "status".into(),
+        json!(registry_entry_status_to_wire(entry.status)),
+    );
+    m.insert("description".into(), json!(entry.description));
+    m.insert(
+        deprecation_k.into(),
+        json!(entry.deprecation_notice),
+    );
+    m.insert(base_type_k.into(), json!(entry.base_type));
+    m.insert("returns".into(), json!(entry.returns));
+
+    let params_json: Value = match &entry.parameters {
+        None => Value::Null,
+        Some(params) => {
+            let rows: Vec<Value> = params
+                .iter()
+                .map(|p| {
+                    json!({
+                        "name": p.name,
+                        "type": p.param_type,
+                        "description": p.description,
+                    })
+                })
+                .collect();
+            Value::Array(rows)
+        }
+    };
+    m.insert("parameters".into(), params_json);
+    Value::Object(m)
+}

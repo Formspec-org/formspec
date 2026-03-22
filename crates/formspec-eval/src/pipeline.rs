@@ -5,7 +5,9 @@ use crate::rebuild;
 use crate::recalculate::recalculate;
 use crate::revalidate::revalidate;
 use crate::runtime_seed::{apply_previous_non_relevant, seed_prepopulate_tree};
-use crate::types::{self, EvalContext, EvalTrigger, EvaluationResult, ExtensionConstraint, ValidationResult};
+use crate::types::{
+    self, EvalContext, EvalTrigger, EvaluationResult, ExtensionConstraint, ValidationResult,
+};
 use crate::{expand_repeat_instances, rebuild_item_tree};
 use serde_json::Value;
 use std::collections::HashMap;

@@ -298,6 +298,7 @@ version = "0.1.0"
 dependencies = [
  "fancy-regex 0.14.0",
  "fel-core",
+ "formspec-core",
  "rust_decimal",
  "serde_json",
 ]

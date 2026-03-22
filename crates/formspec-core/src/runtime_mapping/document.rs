@@ -4,7 +4,10 @@ use serde_json::Value;
 
 use super::engine::execute_mapping;
 use super::path::{get_by_path, set_by_path};
-use super::types::{MappingDirection, MappingDocument, MappingResult, MappingRule, TransformType};
+use super::types::{
+    MappingDiagnostic, MappingDirection, MappingDocument, MappingErrorCode, MappingResult,
+    MappingRule, TransformType,
+};
 
 /// Execute a full mapping document (rules + defaults + autoMap).
 pub fn execute_mapping_doc(
@@ -12,6 +15,28 @@ pub fn execute_mapping_doc(
     source: &Value,
     direction: MappingDirection,
 ) -> MappingResult {
+    if let Some(allowed) = doc.direction_restriction {
+        if allowed != direction {
+            let message = if allowed == MappingDirection::Forward {
+                "This mapping document is forward-only; reverse execution is not permitted"
+            } else {
+                "This mapping document is reverse-only; forward execution is not permitted"
+            };
+            return MappingResult {
+                direction,
+                output: Value::Object(serde_json::Map::new()),
+                rules_applied: 0,
+                diagnostics: vec![MappingDiagnostic {
+                    rule_index: 0,
+                    source_path: None,
+                    target_path: String::new(),
+                    error_code: MappingErrorCode::InvalidDocument,
+                    message: message.to_string(),
+                }],
+            };
+        }
+    }
+
     // Build the effective rule set
     let mut rules = doc.rules.clone();
 

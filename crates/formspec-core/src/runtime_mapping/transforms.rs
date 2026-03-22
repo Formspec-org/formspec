@@ -106,7 +106,7 @@ pub(crate) fn apply_coerce(
             Value::Array(_) => value.clone(),
             Value::Null => Value::Null,
             _ => Value::Array(vec![value.clone()]),
-        }
+        },
     }
 }
 pub(crate) fn value_to_flat_string(value: &Value) -> String {

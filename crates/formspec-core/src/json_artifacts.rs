@@ -1,0 +1,147 @@
+//! `serde_json::Value` projections for WASM and Python FFI (use with `json_to_python` on the Py side).
+
+use serde_json::{json, Value};
+
+use crate::changelog::{
+    Change, ChangeImpact, ChangeTarget, ChangeType, Changelog, SemverImpact,
+};
+use crate::extension_analysis::{ExtensionErrorCode, ExtensionSeverity, ExtensionUsageIssue};
+
+/// Top-level JSON key style for host bindings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JsonWireStyle {
+    /// JavaScript / `wasm-bindgen` (camelCase keys).
+    JsCamel,
+    /// Python `formspec_rust` surface (snake_case keys).
+    PythonSnake,
+}
+
+fn semver_impact_str(i: SemverImpact) -> &'static str {
+    match i {
+        SemverImpact::Patch => "patch",
+        SemverImpact::Minor => "minor",
+        SemverImpact::Major => "major",
+    }
+}
+
+fn change_type_str(ct: &ChangeType) -> &'static str {
+    match ct {
+        ChangeType::Added => "added",
+        ChangeType::Removed => "removed",
+        ChangeType::Modified => "modified",
+    }
+}
+
+fn change_target_str(t: &ChangeTarget) -> &'static str {
+    match t {
+        ChangeTarget::Item => "item",
+        ChangeTarget::Bind => "bind",
+        ChangeTarget::Shape => "shape",
+        ChangeTarget::OptionSet => "optionSet",
+        ChangeTarget::DataSource => "dataSource",
+        ChangeTarget::Screener => "screener",
+        ChangeTarget::Migration => "migration",
+        ChangeTarget::Metadata => "metadata",
+    }
+}
+
+fn change_impact_str(i: ChangeImpact) -> &'static str {
+    match i {
+        ChangeImpact::Cosmetic => "cosmetic",
+        ChangeImpact::Compatible => "compatible",
+        ChangeImpact::Breaking => "breaking",
+    }
+}
+
+fn change_to_object(c: &Change, style: JsonWireStyle) -> Value {
+    let type_key = match style {
+        JsonWireStyle::JsCamel => "type",
+        JsonWireStyle::PythonSnake => "change_type",
+    };
+    let migration_key = match style {
+        JsonWireStyle::JsCamel => "migrationHint",
+        JsonWireStyle::PythonSnake => "migration_hint",
+    };
+    let mut m = serde_json::Map::new();
+    m.insert(
+        type_key.to_string(),
+        json!(change_type_str(&c.change_type)),
+    );
+    m.insert("target".to_string(), json!(change_target_str(&c.target)));
+    m.insert("path".to_string(), json!(c.path));
+    m.insert("impact".to_string(), json!(change_impact_str(c.impact)));
+    m.insert("key".to_string(), json!(c.key));
+    m.insert("description".to_string(), json!(c.description));
+    m.insert("before".to_string(), json!(c.before));
+    m.insert("after".to_string(), json!(c.after));
+    m.insert(
+        migration_key.to_string(),
+        json!(c.migration_hint),
+    );
+    Value::Object(m)
+}
+
+/// Serialize a generated changelog for FFI consumers.
+pub fn changelog_to_json_value(result: &Changelog, style: JsonWireStyle) -> Value {
+    let def_url_key = match style {
+        JsonWireStyle::JsCamel => "definitionUrl",
+        JsonWireStyle::PythonSnake => "definition_url",
+    };
+    let from_key = match style {
+        JsonWireStyle::JsCamel => "fromVersion",
+        JsonWireStyle::PythonSnake => "from_version",
+    };
+    let to_key = match style {
+        JsonWireStyle::JsCamel => "toVersion",
+        JsonWireStyle::PythonSnake => "to_version",
+    };
+    let semver_key = match style {
+        JsonWireStyle::JsCamel => "semverImpact",
+        JsonWireStyle::PythonSnake => "semver_impact",
+    };
+    let mut m = serde_json::Map::new();
+    m.insert(def_url_key.to_string(), json!(result.definition_url));
+    m.insert(from_key.to_string(), json!(result.from_version));
+    m.insert(to_key.to_string(), json!(result.to_version));
+    m.insert(
+        semver_key.to_string(),
+        json!(semver_impact_str(result.semver_impact)),
+    );
+    m.insert(
+        "changes".to_string(),
+        Value::Array(
+            result
+                .changes
+                .iter()
+                .map(|c| change_to_object(c, style))
+                .collect(),
+        ),
+    );
+    Value::Object(m)
+}
+
+/// Serialize extension usage validation issues (camelCase keys for JS).
+pub fn extension_usage_issues_to_json_value(issues: &[ExtensionUsageIssue]) -> Value {
+    Value::Array(
+        issues
+            .iter()
+            .map(|issue| {
+                json!({
+                    "path": issue.path,
+                    "extension": issue.extension,
+                    "severity": match issue.severity {
+                        ExtensionSeverity::Error => "error",
+                        ExtensionSeverity::Warning => "warning",
+                        ExtensionSeverity::Info => "info",
+                    },
+                    "code": match issue.code {
+                        ExtensionErrorCode::UnresolvedExtension => "UNRESOLVED_EXTENSION",
+                        ExtensionErrorCode::ExtensionRetired => "EXTENSION_RETIRED",
+                        ExtensionErrorCode::ExtensionDeprecated => "EXTENSION_DEPRECATED",
+                    },
+                    "message": issue.message,
+                })
+            })
+            .collect(),
+    )
+}

@@ -176,7 +176,8 @@ pub(crate) fn evaluate_variables_scoped(
             let saved_aliases = bind_scope_field_aliases(env, scope);
             let saved_variables = env.variables.clone();
             env.variables.clear();
-            for (visible_name, visible_value) in visible_variables_for_scope(&scoped_values, scope) {
+            for (visible_name, visible_value) in visible_variables_for_scope(&scoped_values, scope)
+            {
                 env.set_variable(&visible_name, json_to_runtime_fel(&visible_value));
             }
             if let Ok(parsed) = parse(&var.expression) {

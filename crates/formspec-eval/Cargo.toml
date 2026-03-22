@@ -8,6 +8,7 @@ description = "Formspec definition batch evaluator: rebuild, recalculate, revali
 [dependencies]
 fancy-regex = "0.14"
 fel-core = { path = "../fel-core" }
+formspec-core = { path = "../formspec-core" }
 rust_decimal = "1"
 serde_json = "1"
 

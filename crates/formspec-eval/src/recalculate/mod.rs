@@ -277,7 +277,8 @@ mod tests {
         data.insert("qty".to_string(), json!(4));
 
         let mut items = rebuild_item_tree(&def);
-        let (values, var_values, _) = recalculate(&mut items, &data, &def, None, None, &HashMap::new());
+        let (values, var_values, _) =
+            recalculate(&mut items, &data, &def, None, None, &HashMap::new());
 
         assert_eq!(values.get("total"), Some(&json!(100)));
         assert!(

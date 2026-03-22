@@ -10,12 +10,13 @@ use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use fel_core::{BuiltinFunctionCatalogEntry, FelValue, FormspecEnvironment, MipState};
-use formspec_core::changelog;
+use fel_core::{FelValue, FormspecEnvironment, MipState};
 use formspec_core::extension_analysis::RegistryEntryStatus;
 use formspec_core::registry_client;
 
 use crate::PyObject;
+
+pub(crate) use formspec_core::json_object_to_string_map;
 
 /// Deserialize a Python object into `T` (typically `serde_json::Value`), mapping errors to `PyValueError`.
 pub(crate) fn depythonize_json<T: DeserializeOwned>(obj: &Bound<'_, PyAny>) -> PyResult<T> {
@@ -25,13 +26,6 @@ pub(crate) fn depythonize_json<T: DeserializeOwned>(obj: &Bound<'_, PyAny>) -> P
 /// Parse a FEL source string into an AST; maps [`fel_core::FelError`] to `PyValueError`.
 pub(crate) fn parse_fel_expr(source: &str) -> PyResult<fel_core::Expr> {
     fel_core::parse(source).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
-}
-
-/// Clone a JSON object into a `String` → `Value` map; non-objects become empty.
-pub(crate) fn json_object_to_string_map(val: &Value) -> HashMap<String, Value> {
-    val.as_object()
-        .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
-        .unwrap_or_default()
 }
 
 fn merge_fel_dict_into_env(
@@ -350,94 +344,14 @@ pub(crate) fn json_to_python(py: Python, val: &Value) -> PyResult<PyObject> {
 
 // ── Registry helpers ────────────────────────────────────────────
 
-pub(crate) fn registry_entry_count(val: &Value) -> usize {
-    val.get("entries")
-        .and_then(|v| v.as_array())
-        .map(|a| a.len())
-        .unwrap_or(0)
-}
-
 pub(crate) fn parse_status_str(s: &str) -> Option<RegistryEntryStatus> {
-    match s {
-        "draft" => Some(RegistryEntryStatus::Draft),
-        "stable" | "active" => Some(RegistryEntryStatus::Active),
-        "deprecated" => Some(RegistryEntryStatus::Deprecated),
-        "retired" => Some(RegistryEntryStatus::Retired),
-        _ => None,
-    }
+    registry_client::parse_registry_entry_status(s)
 }
 
 pub(crate) fn status_str(s: RegistryEntryStatus) -> &'static str {
-    match s {
-        RegistryEntryStatus::Draft => "draft",
-        RegistryEntryStatus::Active => "stable",
-        RegistryEntryStatus::Deprecated => "deprecated",
-        RegistryEntryStatus::Retired => "retired",
-    }
+    registry_client::registry_entry_status_to_wire(s)
 }
 
 pub(crate) fn category_str(c: registry_client::ExtensionCategory) -> &'static str {
-    match c {
-        registry_client::ExtensionCategory::DataType => "dataType",
-        registry_client::ExtensionCategory::Function => "function",
-        registry_client::ExtensionCategory::Constraint => "constraint",
-        registry_client::ExtensionCategory::Property => "property",
-        registry_client::ExtensionCategory::Namespace => "namespace",
-    }
-}
-
-pub(crate) fn severity_str(severity: fel_core::Severity) -> &'static str {
-    match severity {
-        fel_core::Severity::Error => "error",
-        fel_core::Severity::Warning => "warning",
-        fel_core::Severity::Info => "info",
-    }
-}
-
-pub(crate) fn builtin_function_to_dict(py: Python, entry: &BuiltinFunctionCatalogEntry) -> PyResult<PyObject> {
-    let dict = PyDict::new(py);
-    dict.set_item("name", entry.name)?;
-    dict.set_item("category", entry.category)?;
-    dict.set_item("signature", entry.signature)?;
-    dict.set_item("description", entry.description)?;
-    Ok(dict.into())
-}
-
-// ── Changelog helpers ───────────────────────────────────────────
-
-pub(crate) fn change_type_str(ct: &changelog::ChangeType) -> &'static str {
-    match ct {
-        changelog::ChangeType::Added => "added",
-        changelog::ChangeType::Removed => "removed",
-        changelog::ChangeType::Modified => "modified",
-    }
-}
-
-pub(crate) fn change_target_str(t: &changelog::ChangeTarget) -> &'static str {
-    match t {
-        changelog::ChangeTarget::Item => "item",
-        changelog::ChangeTarget::Bind => "bind",
-        changelog::ChangeTarget::Shape => "shape",
-        changelog::ChangeTarget::OptionSet => "optionSet",
-        changelog::ChangeTarget::DataSource => "dataSource",
-        changelog::ChangeTarget::Screener => "screener",
-        changelog::ChangeTarget::Migration => "migration",
-        changelog::ChangeTarget::Metadata => "metadata",
-    }
-}
-
-pub(crate) fn change_impact_str(i: changelog::ChangeImpact) -> &'static str {
-    match i {
-        changelog::ChangeImpact::Cosmetic => "cosmetic",
-        changelog::ChangeImpact::Compatible => "compatible",
-        changelog::ChangeImpact::Breaking => "breaking",
-    }
-}
-
-pub(crate) fn semver_impact_str(i: changelog::SemverImpact) -> &'static str {
-    match i {
-        changelog::SemverImpact::Patch => "patch",
-        changelog::SemverImpact::Minor => "minor",
-        changelog::SemverImpact::Major => "major",
-    }
+    registry_client::extension_category_to_wire(c)
 }

@@ -1,10 +1,9 @@
 //! Unit tests for `runtime_mapping`.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::path::{get_by_path, set_by_path, split_path};
 use super::*;
-
 
 #[test]
 fn test_preserve_transform() {
@@ -461,6 +460,7 @@ fn test_mapping_doc_defaults_prepopulate() {
         rules: vec![rule(Some("name"), "name", TransformType::Preserve)],
         defaults: Some(defaults),
         auto_map: false,
+        direction_restriction: None,
     };
     let source = json!({ "name": "Alice" });
     let result = execute_mapping_doc(&doc, &source, MappingDirection::Forward);
@@ -475,6 +475,7 @@ fn test_mapping_doc_automap_copies_unmapped() {
         rules: vec![rule(Some("name"), "fullName", TransformType::Preserve)],
         defaults: None,
         auto_map: true,
+        direction_restriction: None,
     };
     let source = json!({ "name": "Alice", "age": 30, "email": "a@b.com" });
     let result = execute_mapping_doc(&doc, &source, MappingDirection::Forward);
@@ -564,12 +565,30 @@ fn automap_skipped_in_reverse() {
         rules: vec![rule(Some("name"), "fullName", TransformType::Preserve)],
         defaults: None,
         auto_map: true,
+        direction_restriction: None,
     };
     let source = json!({ "fullName": "Alice", "extra": "data" });
     let result = execute_mapping_doc(&doc, &source, MappingDirection::Reverse);
     assert_eq!(result.output["name"], "Alice");
     // "extra" should NOT be auto-mapped in reverse
     assert!(result.output.get("extra").is_none());
+}
+
+#[test]
+fn mapping_doc_direction_restriction_blocks_mismatched_execution() {
+    let doc = MappingDocument {
+        rules: vec![rule(Some("a"), "b", TransformType::Preserve)],
+        defaults: None,
+        auto_map: false,
+        direction_restriction: Some(MappingDirection::Forward),
+    };
+    let result = execute_mapping_doc(&doc, &json!({ "a": 1 }), MappingDirection::Reverse);
+    assert_eq!(result.rules_applied, 0);
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(
+        result.diagnostics[0].error_code,
+        MappingErrorCode::InvalidDocument
+    );
 }
 
 // ── UnmappedStrategy::Error — mapping-spec.md §4.5 ──────────
@@ -739,6 +758,7 @@ fn defaults_do_not_override_rule_output() {
         rules: vec![rule(Some("name"), "name", TransformType::Preserve)],
         defaults: Some(defaults),
         auto_map: false,
+        direction_restriction: None,
     };
     let source = json!({ "name": "Alice" });
     let result = execute_mapping_doc(&doc, &source, MappingDirection::Forward);
@@ -754,6 +774,7 @@ fn test_automap_does_not_duplicate_explicit() {
         rules: vec![rule(Some("name"), "fullName", TransformType::Preserve)],
         defaults: None,
         auto_map: true,
+        direction_restriction: None,
     };
     let source = json!({ "name": "Alice" });
     let result = execute_mapping_doc(&doc, &source, MappingDirection::Forward);

@@ -10,6 +10,7 @@
 //! Pass 6 (W700-W711/E710): Theme — token validation, reference integrity, page semantics
 //! Pass 7 (E800-E807/W800-W804): Components — tree validation, type compatibility, bind resolution
 
+mod lint_json;
 mod schema_validation;
 mod types;
 
@@ -27,6 +28,7 @@ use serde_json::Value;
 use formspec_core::{DocumentType, detect_document_type};
 
 // Re-export public types
+pub use lint_json::lint_result_to_json_value;
 pub use types::{
     LintDiagnostic, LintMode, LintOptions, LintResult, LintSeverity, sort_diagnostics,
 };

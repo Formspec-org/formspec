@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use fel_core::{FelValue, FormspecEnvironment, json_to_fel};
 use serde_json::Value;
 
-use crate::rebuild::is_repeat_group_array;
 use crate::fel_json::json_to_runtime_fel;
+use crate::rebuild::is_repeat_group_array;
 use crate::recalculate::repeats::build_repeat_group_array;
 use crate::types::ItemInfo;
 

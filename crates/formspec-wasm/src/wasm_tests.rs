@@ -2,17 +2,20 @@
 
 #[cfg(test)]
 mod tests {
-    use fel_core::{fel_to_json, json_to_fel, FelValue};
+    use fel_core::{FelValue, fel_to_json, json_to_fel};
     use rust_decimal::Decimal;
     use rust_decimal::prelude::*;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     use crate::changelog::generate_changelog_inner;
-    use crate::mapping::parse_coerce_type;
     use crate::evaluate::evaluate_definition_inner;
     use crate::fel::{eval_fel_inner, tokenize_fel_inner};
-    use crate::mapping::{execute_mapping_inner, parse_mapping_document_inner, parse_mapping_rules_inner};
+    use crate::mapping::execute_mapping_inner;
     use crate::registry::find_registry_entry_inner;
+    use formspec_core::{
+        parse_coerce_type, parse_mapping_document_from_value as parse_mapping_document_inner,
+        parse_mapping_rules_from_value as parse_mapping_rules_inner,
+    };
 
     fn minimal_definition() -> Value {
         json!({
@@ -548,7 +551,7 @@ mod tests {
     fn parse_mapping_document_inner_valid() {
         let doc = json!({
             "rules": [
-                { "sourcePath": "a", "targetPath": "b" }
+                { "sourcePath": "a", "targetPath": "b", "transform": "preserve" }
             ],
             "autoMap": true
         });
@@ -730,13 +733,15 @@ mod tests {
             "binds": [
                 { "path": "rate", "calculate": "@instance('config').defaultRate" }
             ]
-        }).to_string();
+        })
+        .to_string();
         let data = json!({}).to_string();
         let context = json!({
             "instances": {
                 "config": { "defaultRate": 0.05 }
             }
-        }).to_string();
+        })
+        .to_string();
 
         let result = evaluate_definition_inner(&def, &data, Some(context)).unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
@@ -759,7 +764,8 @@ mod tests {
                     "extensions": { "x-formspec-email": true }
                 }
             ]
-        }).to_string();
+        })
+        .to_string();
         let data = json!({ "email": "not-an-email" }).to_string();
         let context = json!({
             "registryDocuments": [{
@@ -778,23 +784,32 @@ mod tests {
                     }
                 }]
             }]
-        }).to_string();
+        })
+        .to_string();
 
         let result = evaluate_definition_inner(&def, &data, Some(context)).unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
         let validations = val["validations"].as_array().unwrap();
         // Must have PATTERN_MISMATCH from extension constraint, not just UNRESOLVED_EXTENSION
-        let pattern_errors: Vec<_> = validations.iter()
-            .filter(|v| v["code"].as_str() == Some("PATTERN_MISMATCH")
-                     && v["source"].as_str() == Some("extension"))
+        let pattern_errors: Vec<_> = validations
+            .iter()
+            .filter(|v| {
+                v["code"].as_str() == Some("PATTERN_MISMATCH")
+                    && v["source"].as_str() == Some("extension")
+            })
             .collect();
-        assert!(!pattern_errors.is_empty(),
-            "expected PATTERN_MISMATCH extension error, got: {validations:?}");
+        assert!(
+            !pattern_errors.is_empty(),
+            "expected PATTERN_MISMATCH extension error, got: {validations:?}"
+        );
         // Must NOT have UNRESOLVED_EXTENSION (registry was loaded)
-        let unresolved: Vec<_> = validations.iter()
+        let unresolved: Vec<_> = validations
+            .iter()
             .filter(|v| v["code"].as_str() == Some("UNRESOLVED_EXTENSION"))
             .collect();
-        assert!(unresolved.is_empty(),
-            "should not have UNRESOLVED_EXTENSION when registry is loaded, got: {validations:?}");
+        assert!(
+            unresolved.is_empty(),
+            "should not have UNRESOLVED_EXTENSION when registry is loaded, got: {validations:?}"
+        );
     }
 }

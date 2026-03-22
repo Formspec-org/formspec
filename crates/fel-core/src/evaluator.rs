@@ -253,7 +253,10 @@ impl<'a> Evaluator<'a> {
                     let mut combined = Vec::with_capacity(base_path.len() + path.len());
                     combined.extend(base_path.iter().cloned());
                     combined.extend(path.iter().cloned());
-                    if combined.iter().all(|segment| matches!(segment, PathSegment::Dot(_))) {
+                    if combined
+                        .iter()
+                        .all(|segment| matches!(segment, PathSegment::Dot(_)))
+                    {
                         for segment in &combined {
                             if let PathSegment::Dot(part) = segment {
                                 segments.push(part.clone());
@@ -1545,8 +1548,7 @@ impl<'a> Evaluator<'a> {
 
     /// Try to coerce an ISO date/datetime string to FelDate. Returns None on failure.
     fn coerce_string_to_date(&self, s: &str) -> Option<FelDate> {
-        parse_date_literal(&format!("@{s}"))
-            .or_else(|| parse_datetime_literal(&format!("@{s}")))
+        parse_date_literal(&format!("@{s}")).or_else(|| parse_datetime_literal(&format!("@{s}")))
     }
 
     // ── Money helpers ───────────────────────────────────────────

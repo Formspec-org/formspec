@@ -43,7 +43,11 @@ pub(crate) fn get_by_path<'a>(obj: &'a Value, path: &str) -> &'a Value {
     for seg in &segments {
         if seg == "*" {
             // Wildcard: return the current value if it's an array, else null
-            return if current.is_array() { current } else { &Value::Null };
+            return if current.is_array() {
+                current
+            } else {
+                &Value::Null
+            };
         }
         match current {
             Value::Object(map) => {

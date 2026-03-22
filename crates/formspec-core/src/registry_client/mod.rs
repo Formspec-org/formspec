@@ -5,14 +5,45 @@ mod parse;
 mod registry;
 mod types;
 mod version;
+mod wire_json;
 
 #[cfg(test)]
 mod tests;
 
 pub use types::{ExtensionCategory, Parameter, Publisher, Registry, RegistryEntry, RegistryError};
 pub use version::version_satisfies;
+pub use wire_json::{
+    registry_entry_count_from_raw, registry_entry_to_json_value, registry_parse_summary_to_json_value,
+    version_constraint_option,
+};
 
 use crate::extension_analysis::RegistryEntryStatus;
+
+/// Parse registry entry status strings (`draft`, `stable`, `active`, …).
+pub fn parse_registry_entry_status(s: &str) -> Option<RegistryEntryStatus> {
+    parse::parse_status(s)
+}
+
+/// Serialize status for JSON / FFI consumers (`active` → `"stable"`).
+pub fn registry_entry_status_to_wire(status: RegistryEntryStatus) -> &'static str {
+    match status {
+        RegistryEntryStatus::Draft => "draft",
+        RegistryEntryStatus::Active => "stable",
+        RegistryEntryStatus::Deprecated => "deprecated",
+        RegistryEntryStatus::Retired => "retired",
+    }
+}
+
+/// Serialize extension category for JSON / FFI consumers.
+pub fn extension_category_to_wire(category: ExtensionCategory) -> &'static str {
+    match category {
+        ExtensionCategory::DataType => "dataType",
+        ExtensionCategory::Function => "function",
+        ExtensionCategory::Constraint => "constraint",
+        ExtensionCategory::Property => "property",
+        ExtensionCategory::Namespace => "namespace",
+    }
+}
 
 /// Check whether a lifecycle transition is valid per the spec.
 ///

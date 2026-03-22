@@ -67,7 +67,8 @@ pub(crate) fn to_wildcard_path(path: &str) -> String {
             }
 
             result.push('[');
-            if closed && !segment.is_empty() && segment.chars().all(|inner| inner.is_ascii_digit()) {
+            if closed && !segment.is_empty() && segment.chars().all(|inner| inner.is_ascii_digit())
+            {
                 result.push('*');
             } else {
                 result.push_str(&segment);
@@ -114,7 +115,11 @@ fn is_ident_continue(ch: char) -> bool {
     ch == '_' || ch.is_ascii_alphanumeric()
 }
 
-fn replace_qualified_group_ref(expression: &str, group_name: &str, concrete_prefix: &str) -> String {
+fn replace_qualified_group_ref(
+    expression: &str,
+    group_name: &str,
+    concrete_prefix: &str,
+) -> String {
     let needle = format!("${group_name}.");
     let mut result = String::new();
     let mut search_from = 0usize;

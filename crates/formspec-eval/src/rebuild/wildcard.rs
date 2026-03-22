@@ -55,8 +55,9 @@ pub(crate) fn apply_wildcard_binds(
         };
         for concrete_path in concrete_paths {
             if let Some(item) = find_item_by_path_mut(items, &concrete_path) {
-                let inst =
-                    |expr: &str| -> String { instantiate_concrete_expr(expr, bind_path, &concrete_path) };
+                let inst = |expr: &str| -> String {
+                    instantiate_concrete_expr(expr, bind_path, &concrete_path)
+                };
                 if let Some(expr) = bind_obj.get("calculate").and_then(|v| v.as_str()) {
                     item.calculate = Some(inst(expr));
                 }
@@ -107,7 +108,11 @@ fn collect_matching_item_paths(items: &[ItemInfo], wildcard_path: &str) -> Vec<S
     paths
 }
 
-fn collect_matching_item_paths_inner(items: &[ItemInfo], wildcard_path: &str, out: &mut Vec<String>) {
+fn collect_matching_item_paths_inner(
+    items: &[ItemInfo],
+    wildcard_path: &str,
+    out: &mut Vec<String>,
+) {
     for item in items {
         if wildcard_path_matches(wildcard_path, &item.path) {
             out.push(item.path.clone());

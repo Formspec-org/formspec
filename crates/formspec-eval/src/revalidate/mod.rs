@@ -56,7 +56,14 @@ pub fn revalidate(
         .collect();
 
     // Bind constraints + extension constraints
-    validate_items(items, &mut env, values, &ext_by_name, formspec_version, &mut results);
+    validate_items(
+        items,
+        &mut env,
+        values,
+        &ext_by_name,
+        formspec_version,
+        &mut results,
+    );
 
     // Shape rules — filtered by timing
     if let Some(shapes) = shapes {

@@ -253,17 +253,15 @@ fn resolve_root_segment<'a>(
 ) -> Result<&'a crate::tree::ItemRef, String> {
     let parsed = parse_segment(segment);
     let current = match parsed {
-        SegmentKind::Exact(key) | SegmentKind::Wildcard(key) | SegmentKind::Indexed(key) => {
-            index
-                .by_full_path
-                .get(key)
-                .or_else(|| {
-                    index.by_key.get(key).filter(|item_ref| {
-                        !index.ambiguous_keys.contains(key) && item_ref.parent_full_path.is_none()
-                    })
+        SegmentKind::Exact(key) | SegmentKind::Wildcard(key) | SegmentKind::Indexed(key) => index
+            .by_full_path
+            .get(key)
+            .or_else(|| {
+                index.by_key.get(key).filter(|item_ref| {
+                    !index.ambiguous_keys.contains(key) && item_ref.parent_full_path.is_none()
                 })
-                .ok_or_else(|| format!("{label} references unknown item: {path}"))?
-        }
+            })
+            .ok_or_else(|| format!("{label} references unknown item: {path}"))?,
     };
 
     ensure_repeatable_if_needed(label, current.full_path.as_str(), current, parsed)?;
@@ -299,7 +297,9 @@ fn ensure_repeatable_if_needed(
     if matches!(segment, SegmentKind::Wildcard(_) | SegmentKind::Indexed(_))
         && !item_ref.is_repeatable
     {
-        return Err(format!("{label} uses wildcard on non-repeatable group: {path}"));
+        return Err(format!(
+            "{label} uses wildcard on non-repeatable group: {path}"
+        ));
     }
     Ok(())
 }
