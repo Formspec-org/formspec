@@ -7,14 +7,7 @@ use crate::changelog::{
 };
 use crate::extension_analysis::ExtensionUsageIssue;
 
-/// Top-level JSON key style for host bindings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum JsonWireStyle {
-    /// JavaScript / `wasm-bindgen` (camelCase keys).
-    JsCamel,
-    /// Python `formspec_rust` surface (snake_case keys).
-    PythonSnake,
-}
+pub use fel_core::JsonWireStyle;
 
 fn semver_impact_str(i: SemverImpact) -> &'static str {
     match i {

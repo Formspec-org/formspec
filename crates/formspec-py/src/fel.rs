@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use fel_core::{
-    DependenciesJsonStyle, MapEnvironment, builtin_function_catalog_json_value,
+    JsonWireStyle, MapEnvironment, builtin_function_catalog_json_value,
     dependencies_to_json_value_styled, evaluate, extract_dependencies, fel_diagnostics_to_json_value,
     parse,
 };
@@ -104,7 +104,7 @@ pub fn get_dependencies(expression: &str) -> Vec<String> {
 pub fn extract_deps(py: Python, expression: &str) -> PyResult<PyObject> {
     let expr = parse_fel_expr(expression)?;
     let deps = extract_dependencies(&expr);
-    let json = dependencies_to_json_value_styled(&deps, DependenciesJsonStyle::PythonSnake);
+    let json = dependencies_to_json_value_styled(&deps, JsonWireStyle::PythonSnake);
     json_to_python(py, &json)
 }
 

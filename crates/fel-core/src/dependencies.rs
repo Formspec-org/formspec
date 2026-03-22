@@ -269,27 +269,20 @@ fn extend_field_path(expr: &Expr, extra_path: &[PathSegment]) -> Option<String> 
     }
 }
 
-/// JSON key style for [`dependencies_to_json_value`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DependenciesJsonStyle {
-    /// JavaScript / WASM (`contextRefs`, …).
-    JsCamel,
-    /// Python `formspec_rust` (`context_refs`, …).
-    PythonSnake,
-}
+use crate::wire_style::JsonWireStyle;
 
 /// Serialize [`Dependencies`] for WASM / JSON FFI (camelCase keys).
 pub fn dependencies_to_json_value(deps: &Dependencies) -> serde_json::Value {
-    dependencies_to_json_value_styled(deps, DependenciesJsonStyle::JsCamel)
+    dependencies_to_json_value_styled(deps, JsonWireStyle::JsCamel)
 }
 
 /// Serialize [`Dependencies`] with explicit host key style.
 pub fn dependencies_to_json_value_styled(
     deps: &Dependencies,
-    style: DependenciesJsonStyle,
+    style: JsonWireStyle,
 ) -> serde_json::Value {
     match style {
-        DependenciesJsonStyle::JsCamel => serde_json::json!({
+        JsonWireStyle::JsCamel => serde_json::json!({
             "fields": deps.fields.iter().collect::<Vec<_>>(),
             "contextRefs": deps.context_refs.iter().collect::<Vec<_>>(),
             "instanceRefs": deps.instance_refs.iter().collect::<Vec<_>>(),
@@ -298,7 +291,7 @@ pub fn dependencies_to_json_value_styled(
             "hasWildcard": deps.has_wildcard,
             "usesPrevNext": deps.uses_prev_next,
         }),
-        DependenciesJsonStyle::PythonSnake => serde_json::json!({
+        JsonWireStyle::PythonSnake => serde_json::json!({
             "fields": deps.fields.iter().collect::<Vec<_>>(),
             "context_refs": deps.context_refs.iter().collect::<Vec<_>>(),
             "instance_refs": deps.instance_refs.iter().collect::<Vec<_>>(),

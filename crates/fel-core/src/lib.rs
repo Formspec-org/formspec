@@ -13,6 +13,7 @@ pub mod lexer;
 pub mod parser;
 pub mod printer;
 pub mod types;
+pub mod wire_style;
 
 // Re-export key types
 pub use ast::Expr;
@@ -21,8 +22,7 @@ pub use convert::{
     fel_to_json, field_map_from_json_str, json_object_to_field_map, json_to_fel,
 };
 pub use dependencies::{
-    Dependencies, DependenciesJsonStyle, dependencies_to_json_value,
-    dependencies_to_json_value_styled, extract_dependencies,
+    Dependencies, dependencies_to_json_value, dependencies_to_json_value_styled, extract_dependencies,
 };
 pub use environment::{FormspecEnvironment, MipState, RepeatContext};
 pub use error::{
@@ -38,6 +38,7 @@ pub use parser::parse;
 pub use printer::print_expr;
 pub use rust_decimal::Decimal;
 pub use types::{FelDate, FelMoney, FelValue, parse_date_literal, parse_datetime_literal};
+pub use wire_style::JsonWireStyle;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PositionedToken {
