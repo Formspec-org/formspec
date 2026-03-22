@@ -51,18 +51,18 @@ describe('Tailwind TextInput', () => {
         const label = root.querySelector('label')!;
         expect(label).toBeTruthy();
         expect(label.textContent).toBe('Full Name');
-        hasClasses(label, 'block', 'text-sm', 'font-medium');
+        hasClasses(label, 'block', 'text-sm', 'font-semibold');
 
         // Input
         const input = root.querySelector('input')!;
         expect(input).toBeTruthy();
         expect(input.type).toBe('text');
-        hasClasses(input, 'block', 'w-full', 'rounded-md');
+        hasClasses(input, 'block', 'w-full', 'rounded-xl');
 
         // Error element
         const error = root.querySelector('[role="alert"]')!;
         expect(error).toBeTruthy();
-        hasClasses(error, 'text-sm', 'text-red-600');
+        hasClasses(error, 'text-sm', 'text-rose-600');
     });
 
     it('renders textarea when maxLines > 1', () => {
@@ -77,7 +77,7 @@ describe('Tailwind TextInput', () => {
         renderTextInput(mockTextInput({ prefix: '$', suffix: '.00' }), parent, mockAdapterContext());
         const prefixes = parent.querySelectorAll('.formspec-tw-input-addon');
         // Prefix and suffix should both exist in the group
-        const texts = Array.from(parent.querySelectorAll('[class*="text-gray"]')).map(e => e.textContent);
+        const texts = Array.from(parent.querySelectorAll('[class*="text-zinc"]')).map(e => e.textContent);
         expect(texts).toContain('$');
         expect(texts).toContain('.00');
     });
@@ -118,10 +118,10 @@ describe('Tailwind TextInput', () => {
         const input = parent.querySelector('input')!;
 
         refs.onValidationChange!(true);
-        expect(input.classList.contains('border-red-500')).toBe(true);
+        expect(input.classList.contains('border-rose-500')).toBe(true);
 
         refs.onValidationChange!(false);
-        expect(input.classList.contains('border-red-500')).toBe(false);
+        expect(input.classList.contains('border-rose-500')).toBe(false);
     });
 });
 
@@ -136,7 +136,7 @@ describe('Tailwind NumberInput', () => {
         expect(input.type).toBe('number');
         expect(input.min).toBe('0');
         expect(input.max).toBe('120');
-        hasClasses(input, 'block', 'w-full', 'rounded-md');
+        hasClasses(input, 'block', 'w-full', 'rounded-xl');
     });
 
     it('calls bind() and registers dispose', () => {
@@ -162,12 +162,11 @@ describe('Tailwind RadioGroup', () => {
         expect(radios.length).toBe(2);
     });
 
-    it('options use flex layout with gap', () => {
+    it('options use a responsive grid of card labels', () => {
         const parent = makeParent();
         renderRadioGroup(mockRadioGroup(), parent, mockAdapterContext());
-        // Each option wrapper should have flex + items-center
-        const optionWrappers = parent.querySelectorAll('.flex.items-center');
-        expect(optionWrappers.length).toBeGreaterThanOrEqual(2);
+        expect(parent.querySelector('.grid.gap-3')).toBeTruthy();
+        expect(parent.querySelectorAll('label.rounded-xl').length).toBeGreaterThanOrEqual(2);
     });
 
     it('passes optionControls and rebuildOptions to bind()', () => {
@@ -209,7 +208,7 @@ describe('Tailwind Select', () => {
         renderSelect(mockSelect(), parent, mockAdapterContext());
         const select = parent.querySelector('select') as HTMLSelectElement;
         expect(select).toBeTruthy();
-        hasClasses(select, 'block', 'w-full', 'rounded-md');
+        hasClasses(select, 'block', 'w-full', 'rounded-xl');
         // placeholder + 2 options = 3
         expect(select.options.length).toBe(3);
     });
@@ -232,7 +231,7 @@ describe('Tailwind DatePicker', () => {
         const input = parent.querySelector('input') as HTMLInputElement;
         expect(input).toBeTruthy();
         expect(input.type).toBe('date');
-        hasClasses(input, 'block', 'w-full', 'rounded-md');
+        hasClasses(input, 'block', 'w-full', 'rounded-xl');
     });
 });
 
@@ -244,8 +243,8 @@ describe('Tailwind Checkbox', () => {
         renderCheckbox(mockFieldBehavior(), parent, mockAdapterContext());
         const input = parent.querySelector('input[type="checkbox"]')!;
         expect(input).toBeTruthy();
-        hasClasses(input, 'h-4', 'w-4', 'rounded');
-        expect(parent.querySelector('label')!.textContent).toBe('I agree');
+        expect(input.className).toContain('size-[1.125rem]');
+        expect(parent.querySelector('label')!.textContent).toContain('I agree');
     });
 });
 
@@ -257,8 +256,7 @@ describe('Tailwind Toggle', () => {
         renderToggle(mockToggle(), parent, mockAdapterContext());
         const input = parent.querySelector('input[type="checkbox"]')!;
         expect(input).toBeTruthy();
-        // Toggle should have a visual switch element
-        expect(parent.querySelector('[role="switch"]') || parent.querySelector('input[type="checkbox"]')).toBeTruthy();
+        expect(parent.querySelector('input[role="switch"]')).toBeTruthy();
     });
 });
 
@@ -291,7 +289,8 @@ describe('Tailwind Slider', () => {
         renderSlider(mockSlider(), parent, mockAdapterContext());
         const input = parent.querySelector('input[type="range"]') as HTMLInputElement;
         expect(input).toBeTruthy();
-        hasClasses(input, 'w-full');
+        hasClasses(input, 'flex-1', 'min-w-[10rem]');
+        expect(input.classList.contains('formspec-tw-range')).toBe(true);
     });
 });
 
@@ -416,10 +415,11 @@ describe('tailwindAdapter shape', () => {
         }
     });
 
-    it('has empty or minimal integrationCSS', async () => {
+    it('ships compact integration CSS for rating + range polish', async () => {
         const { tailwindAdapter } = await import('../../src/tailwind/index');
-        // Tailwind adapter should need little to no integration CSS
         const css = tailwindAdapter.integrationCSS || '';
-        expect(css.length).toBeLessThan(500);
+        expect(css.length).toBeGreaterThan(100);
+        expect(css.length).toBeLessThan(4000);
+        expect(css).toContain('formspec-rating-star--selected');
     });
 });

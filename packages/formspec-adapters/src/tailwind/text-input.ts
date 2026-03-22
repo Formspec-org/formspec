@@ -40,28 +40,28 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
         input.setAttribute('aria-describedby', describedBy);
 
         if (behavior.prefix || behavior.suffix) {
-            const group = el('div', { class: 'flex rounded-md shadow-sm' });
+            const group = el('div', { class: 'flex rounded-xl shadow-sm' });
             if (behavior.prefix) {
                 const prefixEl = el('span', {
-                    class: 'inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500',
+                    class: 'inline-flex items-center rounded-l-xl border border-r-0 border-zinc-700 bg-zinc-800 px-3 text-sm text-zinc-400',
                 });
                 prefixEl.textContent = behavior.prefix;
                 group.appendChild(prefixEl);
-                input.classList.remove('rounded-md');
-                input.classList.add('rounded-none', 'rounded-r-md');
+                input.classList.remove('rounded-xl');
+                input.classList.add('rounded-none', 'rounded-r-xl');
             }
             group.appendChild(input);
             if (behavior.suffix) {
                 const suffixEl = el('span', {
-                    class: 'inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500',
+                    class: 'inline-flex items-center rounded-r-xl border border-l-0 border-zinc-700 bg-zinc-800 px-3 text-sm text-zinc-400',
                 });
                 suffixEl.textContent = behavior.suffix;
                 group.appendChild(suffixEl);
                 if (!behavior.prefix) {
-                    input.classList.remove('rounded-md');
-                    input.classList.add('rounded-none', 'rounded-l-md');
+                    input.classList.remove('rounded-xl');
+                    input.classList.add('rounded-none', 'rounded-l-xl');
                 } else {
-                    input.classList.remove('rounded-r-md');
+                    input.classList.remove('rounded-r-xl');
                     input.classList.add('rounded-none');
                 }
             }

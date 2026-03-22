@@ -8,11 +8,11 @@ export const renderMoneyInput: AdapterRenderFn<MoneyInputBehavior> = (
 ) => {
     const { root, label, hint, error, describedBy } = createTailwindFieldDOM(behavior);
 
-    const container = el('div', { class: 'flex rounded-md shadow-sm' });
+    const container = el('div', { class: 'flex rounded-xl shadow-sm' });
 
     if (behavior.resolvedCurrency) {
         const prefix = el('span', {
-            class: 'inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500',
+            class: 'inline-flex items-center rounded-l-xl border border-r-0 border-zinc-700 bg-zinc-800 px-3 text-sm text-zinc-400',
             'aria-hidden': 'true',
         });
         prefix.textContent = behavior.resolvedCurrency;
@@ -31,20 +31,21 @@ export const renderMoneyInput: AdapterRenderFn<MoneyInputBehavior> = (
     amountInput.setAttribute('aria-describedby', describedBy);
 
     if (behavior.resolvedCurrency) {
-        amountInput.classList.remove('rounded-md');
-        amountInput.classList.add('rounded-none', 'rounded-r-md');
+        amountInput.classList.remove('rounded-xl');
+        amountInput.classList.add('rounded-none', 'rounded-r-xl');
     }
     container.appendChild(amountInput);
 
     if (!behavior.resolvedCurrency) {
         const currencyInput = document.createElement('input') as HTMLInputElement;
-        currencyInput.className = 'block w-20 rounded-r-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm';
+        currencyInput.className =
+            'block w-20 rounded-r-xl border border-zinc-700 bg-zinc-900/80 px-2 py-2.5 text-sm text-zinc-100 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/15';
         currencyInput.type = 'text';
         currencyInput.placeholder = 'Currency';
         currencyInput.name = `${behavior.fieldPath}__currency`;
         currencyInput.setAttribute('aria-label', 'Currency code');
-        amountInput.classList.remove('rounded-md');
-        amountInput.classList.add('rounded-none', 'rounded-l-md');
+        amountInput.classList.remove('rounded-xl');
+        amountInput.classList.add('rounded-none', 'rounded-l-xl');
         container.appendChild(currencyInput);
     }
 

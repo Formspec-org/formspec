@@ -8,10 +8,11 @@ export const renderSlider: AdapterRenderFn<SliderBehavior> = (
 ) => {
     const { root, label, hint, error } = createTailwindFieldDOM(behavior);
 
-    const container = el('div', {});
+    const container = el('div', { class: 'flex flex-wrap items-center gap-2' });
 
     const input = document.createElement('input') as HTMLInputElement;
-    input.className = 'w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-200 accent-blue-600';
+    input.className =
+        'formspec-tw-range min-w-[10rem] flex-1 h-2 cursor-pointer rounded-full bg-zinc-700 accent-teal-500 appearance-none';
     input.id = behavior.id;
     input.name = behavior.fieldPath;
     input.type = 'range';
@@ -39,7 +40,9 @@ export const renderSlider: AdapterRenderFn<SliderBehavior> = (
     container.appendChild(input);
 
     if (behavior.showValue) {
-        const valueDisplay = el('span', { class: 'ml-2 text-sm text-gray-600 formspec-slider-value' });
+        const valueDisplay = el('span', {
+            class: 'inline-flex min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg bg-teal-900/40 px-2 py-0.5 text-sm font-semibold tabular-nums text-teal-200 ring-1 ring-teal-500/20 formspec-slider-value',
+        });
         container.appendChild(valueDisplay);
     }
 
@@ -50,7 +53,7 @@ export const renderSlider: AdapterRenderFn<SliderBehavior> = (
     const dispose = behavior.bind({
         root, label, control: container, hint, error,
         onValidationChange: (hasError) => {
-            input.classList.toggle('accent-red-500', hasError);
+            input.classList.toggle('accent-rose-500', hasError);
         },
     });
     actx.onDispose(dispose);

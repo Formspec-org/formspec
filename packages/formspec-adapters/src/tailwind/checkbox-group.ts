@@ -1,7 +1,13 @@
-/** @filedesc Tailwind adapter for CheckboxGroup — renders fieldset with styled checkbox options. */
+/** @filedesc Tailwind adapter for CheckboxGroup — card-style multi-select grid. */
 import type { CheckboxGroupBehavior, AdapterRenderFn } from 'formspec-webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
-import { createTailwindError, TW } from './shared';
+import { createTailwindError, TW, TW_CARD_OPTION } from './shared';
+
+function optionGridClass(columns?: number): string {
+    if (columns === 3) return 'grid gap-3 mt-3 sm:grid-cols-2 lg:grid-cols-3';
+    if (columns === 2) return 'grid gap-3 mt-3 sm:grid-cols-2';
+    return 'grid gap-3 mt-3';
+}
 
 function buildCheckboxOptions(
     behavior: CheckboxGroupBehavior,
@@ -15,22 +21,22 @@ function buildCheckboxOptions(
         const opt = options[i];
         const optId = `${behavior.id}-${i}`;
 
-        const wrapper = el('div', { class: TW.optionWrapper });
+        const card = el('label', { class: TW_CARD_OPTION, for: optId });
 
         const input = document.createElement('input') as HTMLInputElement;
-        input.className = TW.checkbox;
+        input.className = TW.controlSm;
         input.id = optId;
         input.type = 'checkbox';
         input.name = behavior.fieldPath;
         input.value = opt.value;
         controls.set(opt.value, input);
 
-        const label = el('label', { class: TW.optionLabel, for: optId });
-        label.textContent = opt.label;
+        const text = el('span', { class: TW.optionLabelText });
+        text.textContent = opt.label;
 
-        wrapper.appendChild(input);
-        wrapper.appendChild(label);
-        container.appendChild(wrapper);
+        card.appendChild(input);
+        card.appendChild(text);
+        container.appendChild(card);
     }
 
     return controls;
@@ -59,13 +65,15 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
         fieldset.appendChild(hint);
     }
 
-    // Select All
+    // Select All — compact row above the grid
     if (behavior.selectAll && behavior.options().length > 0) {
-        const selectAllWrapper = el('div', { class: TW.optionWrapper });
+        const selectAllRow = el('div', {
+            class: 'mt-2 flex items-center gap-3 rounded-lg border border-dashed border-zinc-700/80 bg-zinc-800/50 px-3 py-2.5',
+        });
         const selectAllId = `${behavior.id}-select-all`;
 
         const selectAllCb = document.createElement('input') as HTMLInputElement;
-        selectAllCb.className = TW.checkbox;
+        selectAllCb.className = TW.controlSm;
         selectAllCb.id = selectAllId;
         selectAllCb.type = 'checkbox';
         selectAllCb.addEventListener('change', () => {
@@ -77,14 +85,17 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
             behavior.setValue(checked);
         });
 
-        const selectAllLabel = el('label', { class: `${TW.optionLabel} font-medium`, for: selectAllId });
-        selectAllLabel.textContent = 'Select All';
-        selectAllWrapper.appendChild(selectAllCb);
-        selectAllWrapper.appendChild(selectAllLabel);
-        fieldset.appendChild(selectAllWrapper);
+        const selectAllLabel = el('label', {
+            class: 'cursor-pointer text-sm font-semibold text-zinc-300',
+            for: selectAllId,
+        });
+        selectAllLabel.textContent = 'Select all';
+        selectAllRow.appendChild(selectAllCb);
+        selectAllRow.appendChild(selectAllLabel);
+        fieldset.appendChild(selectAllRow);
     }
 
-    const optionContainer = el('div', { class: 'space-y-2 mt-2' });
+    const optionContainer = el('div', { class: optionGridClass(behavior.columns) });
     let optionControlsRef = buildCheckboxOptions(behavior, optionContainer, behavior.options());
     fieldset.appendChild(optionContainer);
 
@@ -105,7 +116,9 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
             return optionControlsRef;
         },
         onValidationChange: (hasError) => {
-            fieldset.classList.toggle('border-red-500', hasError);
+            fieldset.classList.toggle('ring-2', hasError);
+            fieldset.classList.toggle('ring-rose-400/60', hasError);
+            fieldset.classList.toggle('rounded-xl', hasError);
         },
     });
     actx.onDispose(dispose);

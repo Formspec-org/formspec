@@ -1,7 +1,7 @@
-/** @filedesc Tailwind adapter for RadioGroup — renders fieldset with styled radio options. */
+/** @filedesc Tailwind adapter for RadioGroup — card-style option grid. */
 import type { RadioGroupBehavior, AdapterRenderFn } from 'formspec-webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
-import { createTailwindError, TW } from './shared';
+import { createTailwindError, TW, TW_CARD_OPTION } from './shared';
 
 function buildRadioOptions(
     behavior: RadioGroupBehavior,
@@ -15,22 +15,22 @@ function buildRadioOptions(
         const opt = options[i];
         const optId = `${behavior.id}-${i}`;
 
-        const wrapper = el('div', { class: TW.optionWrapper });
+        const card = el('label', { class: TW_CARD_OPTION, for: optId });
 
         const input = document.createElement('input') as HTMLInputElement;
-        input.className = TW.radio;
+        input.className = `${TW.radioSm} rounded-full`;
         input.id = optId;
         input.type = 'radio';
         input.name = behavior.inputName;
         input.value = opt.value;
         controls.set(opt.value, input);
 
-        const label = el('label', { class: TW.optionLabel, for: optId });
-        label.textContent = opt.label;
+        const text = el('span', { class: TW.optionLabelText });
+        text.textContent = opt.label;
 
-        wrapper.appendChild(input);
-        wrapper.appendChild(label);
-        container.appendChild(wrapper);
+        card.appendChild(input);
+        card.appendChild(text);
+        container.appendChild(card);
     }
 
     return controls;
@@ -59,7 +59,7 @@ export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
         fieldset.appendChild(hint);
     }
 
-    const optionContainer = el('div', { class: 'space-y-2 mt-2' });
+    const optionContainer = el('div', { class: 'grid gap-3 mt-3 sm:grid-cols-2' });
     const initialControls = buildRadioOptions(behavior, optionContainer, behavior.options());
     fieldset.appendChild(optionContainer);
 
@@ -78,7 +78,9 @@ export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
         rebuildOptions: (_container, newOptions) =>
             buildRadioOptions(behavior, optionContainer, newOptions),
         onValidationChange: (hasError) => {
-            fieldset.classList.toggle('border-red-500', hasError);
+            fieldset.classList.toggle('ring-2', hasError);
+            fieldset.classList.toggle('ring-rose-400/60', hasError);
+            fieldset.classList.toggle('rounded-xl', hasError);
         },
     });
     actx.onDispose(dispose);

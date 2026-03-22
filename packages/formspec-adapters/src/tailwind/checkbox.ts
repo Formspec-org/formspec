@@ -1,7 +1,7 @@
-/** @filedesc Tailwind adapter for Checkbox — renders a single boolean checkbox. */
+/** @filedesc Tailwind adapter for Checkbox — single boolean as a compact selectable card. */
 import type { FieldBehavior, AdapterRenderFn } from 'formspec-webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
-import { createTailwindError, TW } from './shared';
+import { createTailwindError, TW, TW_CARD_OPTION } from './shared';
 
 export const renderCheckbox: AdapterRenderFn<FieldBehavior> = (
     behavior, parent, actx
@@ -12,10 +12,10 @@ export const renderCheckbox: AdapterRenderFn<FieldBehavior> = (
     applyCascadeClasses(root, p);
     applyCascadeAccessibility(root, p);
 
-    const wrapper = el('div', { class: TW.optionWrapper });
+    const card = el('label', { class: TW_CARD_OPTION, for: behavior.id });
 
     const input = document.createElement('input') as HTMLInputElement;
-    input.className = TW.checkbox;
+    input.className = TW.controlSm;
     input.id = behavior.id;
     input.type = 'checkbox';
     input.name = behavior.fieldPath;
@@ -26,13 +26,14 @@ export const renderCheckbox: AdapterRenderFn<FieldBehavior> = (
     ].filter(Boolean).join(' ');
     input.setAttribute('aria-describedby', describedBy);
 
-    const label = el('label', { class: TW.optionLabel, for: behavior.id });
-    label.textContent = behavior.label;
-    if (p.labelPosition === 'hidden') label.classList.add('sr-only');
+    const text = el('span', {
+        class: p.labelPosition === 'hidden' ? 'sr-only' : TW.optionLabelText,
+    });
+    text.textContent = behavior.label;
 
-    wrapper.appendChild(input);
-    wrapper.appendChild(label);
-    root.appendChild(wrapper);
+    card.appendChild(input);
+    card.appendChild(text);
+    root.appendChild(card);
 
     let hint: HTMLElement | undefined;
     if (behavior.hint) {
@@ -48,9 +49,11 @@ export const renderCheckbox: AdapterRenderFn<FieldBehavior> = (
     parent.appendChild(root);
 
     const dispose = behavior.bind({
-        root, label, control: input, hint, error,
+        root, label: card, control: input, hint, error,
         onValidationChange: (hasError) => {
-            input.classList.toggle('border-red-500', hasError);
+            card.classList.toggle('border-rose-500', hasError);
+            card.classList.toggle('ring-2', hasError);
+            card.classList.toggle('ring-rose-400/50', hasError);
         },
     });
     actx.onDispose(dispose);

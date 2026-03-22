@@ -1,4 +1,4 @@
-/** @filedesc Tailwind adapter for Toggle — renders a toggle switch with Tailwind styling. */
+/** @filedesc Tailwind adapter for Toggle — switch with correct peer ordering for knob motion. */
 import type { ToggleBehavior, AdapterRenderFn } from 'formspec-webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
 import { createTailwindError, TW } from './shared';
@@ -12,27 +12,35 @@ export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     applyCascadeClasses(root, p);
     applyCascadeAccessibility(root, p);
 
-    const wrapper = el('div', { class: 'flex items-center gap-3' });
+    const row = el('div', {
+        class: 'flex items-center justify-between gap-4 rounded-xl border border-zinc-700/80 bg-zinc-900/50 px-4 py-3 shadow-sm',
+    });
 
-    // Hidden checkbox for form semantics
+    const copy = el('div', { class: 'min-w-0 flex-1' });
+    const title = el('span', {
+        class: p.labelPosition === 'hidden'
+            ? 'sr-only'
+            : 'block text-sm font-semibold text-zinc-200',
+    });
+    title.textContent = behavior.label;
+    copy.appendChild(title);
+    // Track: input (peer) then knob span — peer-checked translate works on immediate sibling
+    const track = el('span', {
+        class: 'relative inline-flex h-8 w-14 shrink-0 cursor-pointer items-center rounded-full bg-zinc-700 p-1 transition-colors duration-200 has-[:checked]:bg-teal-500 has-[:checked]:shadow-inner',
+    });
+
     const input = document.createElement('input') as HTMLInputElement;
     input.type = 'checkbox';
     input.id = behavior.id;
     input.name = behavior.fieldPath;
-    input.className = 'sr-only peer';
+    input.setAttribute('role', 'switch');
+    input.className =
+        'peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0';
 
-    // Visual toggle track
-    const track = el('label', {
-        class: 'relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full bg-gray-200 transition-colors peer-checked:bg-blue-600 peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-2',
-        for: behavior.id,
-        role: 'switch',
-    });
-
-    // Toggle knob
     const knob = el('span', {
-        class: 'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform translate-x-1 peer-checked:translate-x-6',
+        class: 'pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow-md ring-1 ring-black/5 transition-transform duration-200 ease-out translate-x-0 peer-checked:translate-x-6',
+        'aria-hidden': 'true',
     });
-    track.appendChild(knob);
 
     const describedBy = [
         behavior.hint ? `${behavior.id}-hint` : '',
@@ -40,17 +48,12 @@ export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     ].filter(Boolean).join(' ');
     input.setAttribute('aria-describedby', describedBy);
 
-    // Label text
-    const labelText = behavior.label + (behavior.offLabel ? ` (${behavior.offLabel})` : '');
-    const label = el('span', {
-        class: p.labelPosition === 'hidden' ? 'sr-only' : 'text-sm text-gray-700',
-    });
-    label.textContent = labelText;
+    track.appendChild(input);
+    track.appendChild(knob);
 
-    wrapper.appendChild(input);
-    wrapper.appendChild(track);
-    wrapper.appendChild(label);
-    root.appendChild(wrapper);
+    row.appendChild(copy);
+    row.appendChild(track);
+    root.appendChild(row);
 
     let hint: HTMLElement | undefined;
     if (behavior.hint) {
@@ -66,10 +69,14 @@ export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     parent.appendChild(root);
 
     const dispose = behavior.bind({
-        root, label, control: input, hint, error,
+        root,
+        label: title,
+        control: input,
+        hint,
+        error,
         onValidationChange: (hasError) => {
-            track.classList.toggle('ring-2', hasError);
-            track.classList.toggle('ring-red-500', hasError);
+            row.classList.toggle('ring-2', hasError);
+            row.classList.toggle('ring-rose-400/60', hasError);
         },
     });
     actx.onDispose(dispose);
