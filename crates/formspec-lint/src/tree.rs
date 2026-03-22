@@ -8,6 +8,8 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 
+use formspec_core::visit_definition_items_from_document;
+
 use crate::types::LintDiagnostic;
 
 /// Metadata for one item in the definition tree.
@@ -54,89 +56,66 @@ pub fn build_item_index(document: &Value) -> ItemTreeIndex {
         diagnostics: Vec::new(),
     };
 
-    let items = match document.get("items").and_then(|v| v.as_array()) {
-        Some(arr) => arr,
-        None => return index,
-    };
-
-    walk_items(items, None, "$.items", &mut index);
-    index
-}
-
-fn walk_items(
-    items: &[Value],
-    parent_full_path: Option<&str>,
-    json_path_prefix: &str,
-    index: &mut ItemTreeIndex,
-) {
-    for (i, item) in items.iter().enumerate() {
-        let key = match item.get("key").and_then(|v| v.as_str()) {
-            Some(k) => k,
-            None => continue,
-        };
-
-        let full_path = match parent_full_path {
-            Some(parent) => format!("{parent}.{key}"),
-            None => key.to_string(),
-        };
-        let json_path = format!("{json_path_prefix}[{i}]");
-        let data_type = item
+    visit_definition_items_from_document(document, &mut |ctx| {
+        let data_type = ctx
+            .item
             .get("dataType")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        let is_repeatable = item
+        let is_repeatable = ctx
+            .item
             .get("repeatable")
             .and_then(|v| v.as_bool())
             .unwrap_or(false)
-            || item.get("repeat").is_some();
+            || ctx.item.get("repeat").is_some();
 
         let item_ref = ItemRef {
-            key: key.to_string(),
-            full_path: full_path.clone(),
-            json_path: json_path.clone(),
-            parent_full_path: parent_full_path.map(|s| s.to_string()),
+            key: ctx.key.to_string(),
+            full_path: ctx.dotted_path.clone(),
+            json_path: ctx.json_path.clone(),
+            parent_full_path: ctx.parent_dotted.clone(),
             data_type,
             is_repeatable,
         };
 
         // E200: duplicate key (different location in the tree)
-        if index.by_key.contains_key(key) {
-            index.ambiguous_keys.insert(key.to_string());
+        if index.by_key.contains_key(ctx.key) {
+            index.ambiguous_keys.insert(ctx.key.to_string());
             index.diagnostics.push(LintDiagnostic::error(
                 "E200",
                 2,
-                &json_path,
+                &ctx.json_path,
                 format!(
-                    "Duplicate item key '{key}' (first seen at {})",
-                    index.by_key[key].json_path
+                    "Duplicate item key '{}' (first seen at {})",
+                    ctx.key,
+                    index.by_key[ctx.key].json_path
                 ),
             ));
         } else {
-            index.by_key.insert(key.to_string(), item_ref.clone());
+            index
+                .by_key
+                .insert(ctx.key.to_string(), item_ref.clone());
         }
 
         // E201: duplicate full path
-        if index.by_full_path.contains_key(&full_path) {
+        if index.by_full_path.contains_key(&ctx.dotted_path) {
             index.diagnostics.push(LintDiagnostic::error(
                 "E201",
                 2,
-                &json_path,
-                format!("Duplicate item path '{full_path}'"),
+                &ctx.json_path,
+                format!("Duplicate item path '{}'", ctx.dotted_path),
             ));
         } else {
-            index.by_full_path.insert(full_path.clone(), item_ref);
+            index
+                .by_full_path
+                .insert(ctx.dotted_path.clone(), item_ref);
         }
 
         if is_repeatable {
-            index.repeatable_groups.insert(full_path.clone());
+            index.repeatable_groups.insert(ctx.dotted_path.clone());
         }
-
-        // Recurse into children
-        if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-            let children_prefix = format!("{json_path}.children");
-            walk_items(children, Some(&full_path), &children_prefix, index);
-        }
-    }
+    });
+    index
 }
 
 #[cfg(test)]

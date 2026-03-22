@@ -7,6 +7,7 @@
 pub mod assembler;
 pub mod changelog;
 pub mod component_tree;
+pub mod definition_items;
 pub mod extension_analysis;
 pub mod fel_analysis;
 pub mod fel_rewrite_exact;
@@ -57,3 +58,6 @@ pub use schema_validator::{
     schema_validation_plan, validate_document,
 };
 pub use component_tree::visit_component_subtree;
+pub use definition_items::{
+    visit_definition_items_from_document, visit_definition_items_json, DefinitionItemVisitCtx,
+};

@@ -8,6 +8,7 @@
 
 use std::collections::HashSet;
 
+use formspec_core::visit_definition_items_json;
 use serde_json::Value;
 
 use crate::tree::ItemTreeIndex;
@@ -112,32 +113,24 @@ fn walk_items_for_option_sets(
     json_prefix: &str,
     diagnostics: &mut Vec<LintDiagnostic>,
 ) {
-    for (i, item) in items.iter().enumerate() {
-        if item.get("key").and_then(|v| v.as_str()).is_none() {
-            continue;
-        }
-
-        let json_path = format!("{json_prefix}[{i}]");
-
-        if let Some(option_set_ref) = item.get("optionSet").and_then(|v| v.as_str()) {
-            // E302: optionSet not found
+    visit_definition_items_json(items, json_prefix, None, &mut |ctx| {
+        if let Some(option_set_ref) = ctx.item.get("optionSet").and_then(|v| v.as_str()) {
             if !defined_sets.contains(option_set_ref) {
                 diagnostics.push(LintDiagnostic::error(
                     "E302",
                     3,
-                    format!("{json_path}.optionSet"),
+                    format!("{}.optionSet", ctx.json_path),
                     format!("optionSet references undefined set: {option_set_ref}"),
                 ));
             }
 
-            // W300: incompatible dataType
-            if let Some(data_type) = item.get("dataType").and_then(|v| v.as_str())
+            if let Some(data_type) = ctx.item.get("dataType").and_then(|v| v.as_str())
                 && !OPTION_SET_COMPATIBLE_TYPES.contains(&data_type)
             {
                 diagnostics.push(LintDiagnostic::warning(
                     "W300",
                     3,
-                    format!("{json_path}.dataType"),
+                    format!("{}.dataType", ctx.json_path),
                     format!(
                         "dataType '{data_type}' is not compatible with optionSet \
                              (expected one of: {})",
@@ -146,16 +139,7 @@ fn walk_items_for_option_sets(
                 ));
             }
         }
-
-        if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-            walk_items_for_option_sets(
-                children,
-                defined_sets,
-                &format!("{json_path}.children"),
-                diagnostics,
-            );
-        }
-    }
+    });
 }
 
 fn collect_defined_option_sets(document: &Value) -> HashSet<String> {
