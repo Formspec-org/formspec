@@ -634,9 +634,8 @@ describe('resolvePageView', () => {
 
     const result = resolvePageView(state);
 
-    // 'name' is valid and mapped; 'ghost' is broken but still mapped (it occupies a region slot)
     expect(result.itemPageMap).toHaveProperty('name', 'p1');
-    // broken regions are still mapped — they occupy space on the page
-    expect(result.itemPageMap).toHaveProperty('ghost', 'p1');
+    // Unknown region keys are not in itemPageMap (resolvePageStructure only records existing keys).
+    expect(result.itemPageMap).not.toHaveProperty('ghost');
   });
 });

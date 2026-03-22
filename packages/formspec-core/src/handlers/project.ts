@@ -12,6 +12,19 @@ import type { FormItem } from 'formspec-types';
 import { splitComponentState, hasAuthoredComponentTree } from '../component-documents.js';
 import { normalizeDefinition } from '../normalization.js';
 
+/** Every item key in the definition tree (any depth) — used to validate theme region keys. */
+function collectDefinitionItemKeys(items: FormItem[] | undefined): Set<string> {
+  const keys = new Set<string>();
+  function walk(nodes: FormItem[]) {
+    for (const item of nodes) {
+      keys.add(item.key);
+      if (item.children?.length) walk(item.children);
+    }
+  }
+  walk(items ?? []);
+  return keys;
+}
+
 export const projectHandlers: Record<string, CommandHandler> = {
 
   'project.import': (state, payload) => {
@@ -26,18 +39,19 @@ export const projectHandlers: Record<string, CommandHandler> = {
     if (p.theme) {
       state.theme = p.theme;
     } else if (p.definition) {
-      // Definition-only import: clear theme pages when none of their regions
-      // match any top-level item key in the new definition. This prevents
-      // stale pages from a previous definition contaminating the new one.
+      // Definition-only import: drop theme pages if any region references a key
+      // that does not exist in the new definition. A single accidental key match
+      // (e.g. shared field name "name") must not preserve an entire stale page graph.
       const themePages = (state.theme as any).pages as any[] | undefined;
       if (themePages && themePages.length > 0) {
-        const newItemKeys = new Set(
-          ((state.definition as any).items ?? []).map((item: any) => item.key as string)
+        const flatKeys = collectDefinitionItemKeys((state.definition as any).items as FormItem[]);
+        const allRegionsValid = themePages.every((page: any) =>
+          (page.regions ?? []).every((region: any) => {
+            const k = region.key as string | undefined;
+            return !k || flatKeys.has(k);
+          }),
         );
-        const anyRegionMatches = themePages.some((page: any) =>
-          (page.regions ?? []).some((region: any) => newItemKeys.has(region.key))
-        );
-        if (!anyRegionMatches) {
+        if (!allRegionsValid) {
           (state.theme as any).pages = [];
         }
       }

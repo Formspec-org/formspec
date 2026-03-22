@@ -143,13 +143,10 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
     })),
   }));
 
-  // Build itemPageMap: every region key -> page ID
-  const itemPageMap: Record<string, string> = {};
-  for (const p of pages) {
-    for (const item of p.items) {
-      itemPageMap[item.key] = p.id;
-    }
-  }
+  // Placement map must match resolvePageStructure (includes propagation from
+  // group regions to children). Do not rebuild from page.items only — that
+  // breaks palette "placed elsewhere" state for nested fields.
+  const itemPageMap: Record<string, string> = { ...resolved.itemPageMap };
 
   const unassigned: PlaceableItem[] = resolved.unassignedItems.map(key => ({
     key,
