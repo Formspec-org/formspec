@@ -502,17 +502,17 @@ test.describe('Clinical Intake: Computed Fields', () => {
     //   else if length(id) <= 4 then id
     //   else ('****' & substring(id, length(id) - 3, 4))
     // length("ABC1234567") = 10, so:
-    //   substring("ABC1234567", 7, 4) — FEL substring is 0-indexed
-    //   chars at index 7,8,9 = "567" (3 chars, string ends at index 9)
-    //   result = "****567"
+    //   substring("ABC1234567", 7, 4) — FEL substring is 1-indexed
+    //   chars 7,8,9,10 = "4567"
+    //   result = "****4567"
     const masked = await engineValue(page, 'assessment.maskedInsuranceId');
-    expect(masked).toBe('****567');
+    expect(masked).toBe('****4567');
   });
 
   test('maskedInsuranceId field is visible on Summary page with correct value', async ({ page }) => {
     await goToPage(page, 'Summary');
     const input = page.locator('input[name="assessment.maskedInsuranceId"]');
-    await expect(input).toHaveValue('****567');
+    await expect(input).toHaveValue('****4567');
   });
 
   test('assessment.totalConditions is zero when no conditions are added', async ({ page }) => {
@@ -835,9 +835,9 @@ test.describe('Clinical Intake: Response Contract', () => {
   });
 
   test('response includes assessment.maskedInsuranceId with correct masked value', async ({ page }) => {
-    // "ABC1234567" masked via let...in: '****' & substring(id, 7, 4) = '****567'
+    // "ABC1234567" masked via let...in: '****' & substring(id, 7, 4) = '****4567'
     const response = await getResponse(page, 'continuous');
-    expect(response.data.assessment.maskedInsuranceId).toBe('****567');
+    expect(response.data.assessment.maskedInsuranceId).toBe('****4567');
   });
 
   test('response reflects added repeat conditions', async ({ page }) => {

@@ -40,22 +40,25 @@ The suite is organized into five functional tiers as defined in **ADR 0035**:
 | | FEL Pipeline | `integration/test_fel_pipeline.py` | 13 |
 | | Validator CLI | `integration/cli/test_validator_cli.py` | 4 |
 | **E2E** | Headless Processing | `e2e/headless/` | 27 |
-| | Reference API | `e2e/api/` | 22 |
-| **Total** | | | **2110** |
+| **Total** | | | **2088** |
 
 ## Monorepo Package Tests (TypeScript/JavaScript)
 
 In addition to the root Python suite, implementation-specific unit tests reside within each package:
 
 ### 🧩 `packages/formspec-engine/tests/`
+
 Tests the TypeScript reference implementation of the Formspec engine.
+
 - **FEL Semantics:** Core logic for null handling, type discipline, and complex value semantics.
 - **State Management:** Reactive calculation chains, validation triggers, and repeat group lifecycle.
 - **Data Binding:** Path resolution, value coercion, and response pruning.
 - **Conformance:** Shared-suite parity against Python via `tests/conformance/suite/*.json` and `shared-suite.test.mjs`.
 
 ### 🏗 `packages/formspec-webcomponent/tests/`
+
 Tests the Web Component renderer and UI integration logic.
+
 - **Component Plugins:** Isolated testing of individual widget rendering (TextInput, RadioGroup, etc.).
 - **Theme Resolver:** Correct implementation of the Tier 2 selector cascade and token resolution.
 - **Render Lifecycle:** Reactive DOM updates, focus management, and accessibility attribute injection.
@@ -64,21 +67,27 @@ Tests the Web Component renderer and UI integration logic.
 ## Test Layers
 
 ### Layer 1: Schema Conformance
+
 Hand-written positive/negative test cases in `tests/conformance/schemas/`. One assertion per constraint.
 
 ### Layer 2: Spec Example Extraction
+
 Automatically extracts every ` ```json ` block from every `.md` spec file, classifies it, and validates against the appropriate schema in `tests/conformance/spec/test_spec_examples.py`.
 
 ### Layer 3: Property-Based / Generative Testing
+
 Uses Hypothesis in `tests/conformance/fuzzing/` to generate random valid documents and verify they pass validation, then applies targeted mutations to verify rejections. This directory also contains cross-runtime fuzzing that compares normalized Python and Node engine results for FEL evaluation and processing semantics.
 
 ### Layer 4: Cross-Spec Contract Tests
+
 Verifies normative spec prose matches actual JSON schema structure in `tests/conformance/spec/test_cross_spec_contracts.py`.
 
 ### Layer 5: Reference Implementation Tests
+
 Unit tests for the reference implementations. Python tests reside in `tests/unit/`, while TypeScript tests reside in `packages/*/tests/`.
 
 ### Layer 6: End-to-End (E2E)
+
 Full-stack validation including browser-based user journeys (`tests/e2e/browser/`) and headless pipeline executions (`tests/e2e/headless/`).
 
 ## Prerequisites
@@ -103,7 +112,6 @@ npm run test:e2e
 # Targeted runs:
 python3 -m pytest tests/unit/ -v
 python3 -m pytest tests/conformance/schemas/ -v
-python3 -m pytest tests/e2e/api/ -v
 python3 -m pytest tests/conformance/parity/test_shared_suite.py tests/conformance/fuzzing/test_cross_runtime_fuzzing.py -v
 
 # With coverage (Python):

@@ -67,8 +67,8 @@ async function waitForServerResponse(page: import('@playwright/test').Page, time
   return JSON.parse((await pre.textContent())!);
 }
 
-test.describe('References: Server Submit End-to-End', () => {
-  test('grant-application: server returns canonical ValidationReport shape with mapped data', async ({ page }) => {
+test.describe('References: engine revalidation (WASM)', () => {
+  test('grant-application: engine returns canonical ValidationReport shape with mapped data', async ({ page }) => {
     await loadExample(page, 'grant-application', 'sample-submission');
     // Clear optional field that trips a buggy regex constraint
     await engineClearField(page, 'applicantInfo.projectWebsite');
@@ -101,7 +101,7 @@ test.describe('References: Server Submit End-to-End', () => {
     // Should be a valid ISO 8601 timestamp
     expect(new Date(result.timestamp).getTime()).not.toBeNaN();
 
-    // Server extras
+    // Mapped output + static lint diagnostics
     expect(result).toHaveProperty('mapped');
     expect(typeof result.mapped).toBe('object');
     expect(Object.keys(result.mapped).length).toBeGreaterThan(0);
@@ -113,7 +113,7 @@ test.describe('References: Server Submit End-to-End', () => {
     expect(result.valid).toBe(result.counts.error === 0);
   });
 
-  test('grant-application: server meta line displays valid/counts', async ({ page }) => {
+  test('grant-application: engine meta line displays valid/counts', async ({ page }) => {
     await loadExample(page, 'grant-application', 'sample-submission');
     await engineClearField(page, 'applicantInfo.projectWebsite');
 
@@ -127,7 +127,7 @@ test.describe('References: Server Submit End-to-End', () => {
     await expect(meta).toContainText('warnings=');
   });
 
-  test('grant-application: server validation report section is populated', async ({ page }) => {
+  test('grant-application: engine validation report section is populated', async ({ page }) => {
     await loadExample(page, 'grant-application', 'sample-submission');
     await engineClearField(page, 'applicantInfo.projectWebsite');
 
@@ -156,7 +156,7 @@ test.describe('References: Server Submit End-to-End', () => {
     expect(Object.keys(mapped).length).toBeGreaterThan(0);
   });
 
-  test('empty form fails client validation but still posts to server', async ({ page }) => {
+  test('empty form fails client validation but still runs engine revalidation', async ({ page }) => {
     await loadExample(page, 'grant-application');
 
     await page.locator('#action-submit').click();
@@ -168,13 +168,13 @@ test.describe('References: Server Submit End-to-End', () => {
     expect(vr.valid).toBe(false);
     expect(vr.counts.error).toBeGreaterThan(0);
 
-    // Server still received the submission and returned a report
+    // Engine still ran and returned a report
     expect(result).toHaveProperty('valid');
     expect(result).toHaveProperty('results');
     expect(result).toHaveProperty('counts');
   });
 
-  test('server response replaces placeholder with structured content', async ({ page }) => {
+  test('engine panel replaces placeholder with structured content', async ({ page }) => {
     await loadExample(page, 'grant-application', 'sample-submission');
     await engineClearField(page, 'applicantInfo.projectWebsite');
 
