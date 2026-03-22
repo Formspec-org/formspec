@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 import { test, expect } from '@playwright/test';
 import { waitForApp, waitForAppWithExport, switchTab, importProject } from './helpers';
 import { createProject, type ProjectBundle } from 'formspec-studio-core';
+// Must match the same wasm-bridge instance formspec-core (dist) loads — avoids duplicate module graphs under Playwright.
+import { initWasm } from '../../../../formspec-engine/dist/wasm-bridge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -187,20 +189,9 @@ test.describe('Pages Workspace — export validation', () => {
       return fn();
     }) as ProjectBundle;
 
+    await initWasm();
     const project = createProject({ seed: bundle });
     const diagnostics = project.diagnose();
-    console.log('\n--- Node diagnose (exported bundle) ---');
-    console.log('counts:', JSON.stringify(diagnostics.counts, null, 2));
-    for (const [name, list] of [
-      ['structural', diagnostics.structural],
-      ['expressions', diagnostics.expressions],
-      ['extensions', diagnostics.extensions],
-      ['consistency', diagnostics.consistency],
-    ] as const) {
-      if (list.length > 0) {
-        console.log(`${name} (${list.length}):`, list.map((d) => ({ ...d })));
-      }
-    }
     expect(diagnostics.counts.error).toBe(0);
   });
 

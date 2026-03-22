@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import wasm from 'vite-plugin-wasm';
 import path from 'path';
 
 const repoRoot = path.resolve(__dirname, '../..');
@@ -9,7 +8,7 @@ const repoRoot = path.resolve(__dirname, '../..');
 export default defineConfig({
   base: '/studio/',
   appType: 'mpa',
-  plugins: [wasm(), react(), tailwindcss()],
+  plugins: [react(), tailwindcss()],
   define: {
     'process.env': '{}',
   },

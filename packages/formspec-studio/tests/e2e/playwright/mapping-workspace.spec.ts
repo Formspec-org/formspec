@@ -15,7 +15,7 @@ const SEED = {
     definitionRef: 'urn:formspec:test',
     rules: [
       { sourcePath: 'name', targetPath: 'fullName', transform: 'preserve' },
-      { sourcePath: 'age', targetPath: 'years', transform: 'coerce' },
+      { sourcePath: 'age', targetPath: 'years', transform: 'coerce', coerce: 'number' },
     ],
     targetSchema: { format: 'json' },
   },
@@ -106,15 +106,15 @@ test.describe('Mapping Workspace', () => {
     // Go to preview section
     await workspace.locator('[data-testid="mapping-filter-tab-preview"]').click();
 
-    // Type sample data into the "Input" JSON editor (textarea)
-    const inputArea = workspace.locator('textarea').first();
+    // Preview-only: hidden Blueprint/Rules pillars still mount textareas — scope to the preview pillar.
+    const inputArea = workspace.locator('[data-testid="mapping-pillar-preview"] textarea');
     await inputArea.clear();
     await inputArea.fill(JSON.stringify({ name: 'Bob', age: 40 }));
 
     // The output should update to show the mapped data
     // { "fullName": "Bob", "years": 40 }
     // We look for parts of the JSON in the output area
-    const outputArea = workspace.locator('pre');
+    const outputArea = workspace.locator('[data-testid="mapping-pillar-preview"] pre');
     await expect(outputArea).toContainText('"fullName": "Bob"');
     await expect(outputArea).toContainText('"years": 40');
   });

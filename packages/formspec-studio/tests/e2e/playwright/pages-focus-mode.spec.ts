@@ -359,9 +359,9 @@ test.describe('Focus Mode', () => {
     const nameItem = page.locator('[data-testid="palette-item-name"]');
     await expect(nameItem.locator('[data-placed="true"]')).toBeVisible();
 
-    // 'contact' is placed on p2 — should also show checkmark (placed on another page)
-    const contactItem = page.locator('[data-testid="palette-item-contact"]');
-    await expect(contactItem.locator('[data-placed="true"]')).toBeVisible();
+    // 'contact' is a group on p2 — palette lists children; both are placed via propagation.
+    const phoneItem = page.locator('[data-testid="palette-item-phone"]');
+    await expect(phoneItem.locator('[data-placed="true"]')).toBeVisible();
 
     // 'notes' is unplaced — should show + button, not checkmark
     const notesItem = page.locator('[data-testid="palette-item-notes"]');
