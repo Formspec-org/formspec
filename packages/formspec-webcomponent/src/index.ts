@@ -9,6 +9,9 @@ import { registerDefaultComponents } from './components';
 void initFormspecEngine();
 registerDefaultComponents();
 
+/** Await before setting `definition` if you need the engine to exist synchronously (e.g. immediate `getEngine()` / `setValue`). */
+export { initFormspecEngine } from 'formspec-engine';
+
 // Main class
 export { FormspecRender } from './element';
 
