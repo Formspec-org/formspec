@@ -1,3 +1,3 @@
-import { initWasm, isWasmReady } from 'formspec-engine';
+import { initFormspecEngine, isFormspecEngineInitialized } from 'formspec-engine';
 
-console.log(initWasm, isWasmReady);
+console.log(initFormspecEngine, isFormspecEngineInitialized);

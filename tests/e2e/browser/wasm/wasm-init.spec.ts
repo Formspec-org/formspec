@@ -5,10 +5,10 @@ test('WASM initializes in browser', async ({ page }) => {
     await page.waitForFunction(() => (window as any).__wasmReady !== undefined, {}, { timeout: 10000 });
 
     const wasmReady = await page.evaluate(() => (window as any).__wasmReady);
-    const isWasmReady = await page.evaluate(() => (window as any).isWasmReady());
+    const engineReady = await page.evaluate(() => (window as any).isFormspecEngineInitialized());
 
     expect(wasmReady).toBe(true);
-    expect(isWasmReady).toBe(true);
+    expect(engineReady).toBe(true);
 });
 
 test('createFormEngine evaluates correctly when WASM is ready', async ({ page }) => {

@@ -195,6 +195,8 @@ Internal package dependencies must flow strictly downward through defined layers
 
 Central class that manages form state. Maintains separate Preact Signals for: field values, relevance, required state, readonly state, validation results, and repeat counts. Computed signals auto-update when dependencies change. Key methods: `setDefinition()`, `setValue()`, `getResponse()`, `getValidationReport()`, `compileFEL()`.
 
+Apps that use `formspec-engine` directly (not only `formspec-webcomponent`) must call **`await initFormspecEngine()`** (alias: **`initEngine`**) once before constructing `FormEngine` or calling WASM-backed helpers. The web component package starts this automatically on import.
+
 ### FEL Pipeline (`packages/formspec-engine/src/fel/` — TypeScript)
 
 1. **Lexer** (`lexer.ts`) — Chevrotain-based tokenization

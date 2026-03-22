@@ -4,7 +4,7 @@ import 'formspec-webcomponent/formspec-default.css';
 import { FormspecRender, globalRegistry } from 'formspec-webcomponent';
 import { uswdsAdapter } from 'formspec-adapters';
 import {
-  initWasm,
+  initFormspecEngine,
   evaluateDefinition,
   createMappingEngine,
   buildValidationReportEnvelope,
@@ -12,7 +12,7 @@ import {
   lintDocumentWithRegistries,
 } from 'formspec-engine';
 
-await initWasm();
+await initFormspecEngine();
 document.documentElement.dataset.formspecWasmReady = '1';
 
 customElements.define('formspec-render', FormspecRender);

@@ -57,8 +57,12 @@ export type { EngineReactiveRuntime, EngineSignal } from './reactivity/types.js'
 export { preactReactiveRuntime } from './reactivity/preact-runtime.js';
 
 export {
-    initWasm,
-    isWasmReady,
+    initFormspecEngine,
+    initFormspecEngine as initEngine,
+    isFormspecEngineInitialized,
+} from './init-formspec-engine.js';
+
+export {
     normalizeIndexedPath,
     itemAtPath,
     tokenizeFEL,

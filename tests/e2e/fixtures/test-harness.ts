@@ -3,7 +3,13 @@ import { FormspecRender } from '../../../packages/formspec-webcomponent/src/inde
 // Import from the same package path as formspec-webcomponent so both share
 // a single WASM module instance. Using relative source paths would create a
 // separate module graph entry and the webcomponent would see uninitialized WASM.
-import { FormEngine, assembleDefinitionSync, initWasm, isWasmReady, createFormEngine } from 'formspec-engine';
+import {
+    FormEngine,
+    assembleDefinitionSync,
+    initFormspecEngine,
+    isFormspecEngineInitialized,
+    createFormEngine,
+} from 'formspec-engine';
 
 customElements.define('formspec-render', FormspecRender);
 
@@ -16,14 +22,14 @@ window.renderer = renderer;
 (window as any).assembleDefinitionSync = assembleDefinitionSync;
 
 // Initialize WASM eagerly so browser tests can assert the Rust runtime is available.
-initWasm().then(() => {
-    console.log('[formspec] WASM initialized successfully');
+initFormspecEngine().then(() => {
+    console.log('[formspec] Engine initialized successfully');
     (window as any).__wasmReady = true;
 }).catch((err) => {
-    console.warn('[formspec] WASM initialization failed:', err);
+    console.warn('[formspec] Engine initialization failed:', err);
     (window as any).__wasmReady = false;
 });
 
-// Expose WASM readiness check and factory for tests
-(window as any).isWasmReady = isWasmReady;
+// Expose readiness check and factory for tests
+(window as any).isFormspecEngineInitialized = isFormspecEngineInitialized;
 (window as any).createFormEngine = createFormEngine;

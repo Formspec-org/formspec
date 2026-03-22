@@ -98,7 +98,7 @@ let _wasm: WasmModule | null = null;
 /** Synchronous accessor — throws if WASM is not initialized. */
 function wasm(): WasmModule {
     if (!_wasm || !_wasmReady) {
-        throw new Error('WASM not initialized. Call initWasm() first.');
+        throw new Error('Formspec engine not initialized. Call await initFormspecEngine() first.');
     }
     return _wasm;
 }

@@ -14,8 +14,6 @@ import type {
     SchemaValidatorSchemas,
 } from '../interfaces.js';
 import {
-    initWasm,
-    isWasmReady,
     wasmAnalyzeFEL,
     wasmCollectFELRewriteTargets,
     wasmEvaluateDefinition,
@@ -36,8 +34,6 @@ import {
     wasmValidateLifecycleTransition,
     wasmWellKnownRegistryUrl,
 } from '../wasm-bridge.js';
-
-export { initWasm, isWasmReady };
 
 export const normalizeIndexedPath = wasmNormalizeIndexedPath;
 export const itemAtPath = wasmItemAtPath;

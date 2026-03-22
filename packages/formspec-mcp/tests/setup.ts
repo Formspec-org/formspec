@@ -1,4 +1,4 @@
 /** @filedesc Global test setup — initializes WASM before all tests. */
-import { initWasm } from 'formspec-engine';
+import { initFormspecEngine } from 'formspec-engine';
 
-await initWasm();
+await initFormspecEngine();

@@ -1,6 +1,6 @@
 /** @filedesc The <formspec-render> custom element that orchestrates form rendering. */
 import { signal } from '@preact/signals-core';
-import { createFormEngine } from 'formspec-engine';
+import { createFormEngine, initFormspecEngine, isFormspecEngineInitialized } from 'formspec-engine';
 import type { IFormEngine } from 'formspec-engine';
 import { globalRegistry } from './registry';
 import {
@@ -183,14 +183,32 @@ export class FormspecRender extends HTMLElement {
         this._screenerRoute = null;
         this.touchedFields.clear();
         this.touchedVersion.value = 0;
-        try {
+
+        const bootEngine = () => {
+            if (this._definition !== val) {
+                return;
+            }
             this.engine = createFormEngine(val, undefined, Array.from(this._registryEntries.values()));
-        } catch (e) {
-            console.error("Engine initialization failed", e);
-            throw e;
+            this.emitScreenerStateChange('definition-set');
+            this.scheduleRender();
+        };
+
+        if (isFormspecEngineInitialized()) {
+            try {
+                bootEngine();
+            } catch (e) {
+                console.error('Engine initialization failed', e);
+                throw e;
+            }
+        } else {
+            void initFormspecEngine().then(() => {
+                try {
+                    bootEngine();
+                } catch (e) {
+                    console.error('Engine initialization failed', e);
+                }
+            });
         }
-        this.emitScreenerStateChange('definition-set');
-        this.scheduleRender();
     }
 
     /** The currently loaded form definition object. */

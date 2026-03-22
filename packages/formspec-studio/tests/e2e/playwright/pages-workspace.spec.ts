@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 import { waitForApp, waitForAppWithExport, switchTab, importProject } from './helpers';
 import { createProject, type ProjectBundle } from 'formspec-studio-core';
 // Must match the same wasm-bridge instance formspec-core (dist) loads — avoids duplicate module graphs under Playwright.
-import { initWasm } from '../../../../formspec-engine/dist/wasm-bridge.js';
+import { initFormspecEngine } from '../../../../formspec-engine/dist/init-formspec-engine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -189,7 +189,7 @@ test.describe('Pages Workspace — export validation', () => {
       return fn();
     }) as ProjectBundle;
 
-    await initWasm();
+    await initFormspecEngine();
     const project = createProject({ seed: bundle });
     const diagnostics = project.diagnose();
     expect(diagnostics.counts.error).toBe(0);

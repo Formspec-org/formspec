@@ -2,7 +2,11 @@
 // Side effects — layout is always loaded; default provides visual styling
 import './formspec-layout.css';
 import './formspec-default.css';
+import { initFormspecEngine } from 'formspec-engine';
 import { registerDefaultComponents } from './components';
+
+/** Start WASM load as soon as the package is imported (FormEngine needs it before construction). */
+void initFormspecEngine();
 registerDefaultComponents();
 
 // Main class
