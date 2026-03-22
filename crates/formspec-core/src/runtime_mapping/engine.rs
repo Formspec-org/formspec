@@ -5,7 +5,9 @@ use serde_json::Value;
 
 use super::env::build_mapping_env;
 use super::path::{get_by_path, set_by_path, split_path};
-use super::transforms::{apply_coerce, apply_value_map, eval_fel_with_dollar, value_to_flat_string};
+use super::transforms::{
+    apply_coerce, apply_value_map, eval_fel_with_dollar, value_to_flat_string,
+};
 use super::types::*;
 
 /// Execute a set of mapping rules in a given direction.
@@ -72,72 +74,73 @@ pub fn execute_mapping(
         };
 
         // Handle array descriptor with innerRules
-        if let Some(ref arr_desc) = rule.array {
-            if !arr_desc.inner_rules.is_empty() {
-                match arr_desc.mode {
-                    ArrayMode::Each => {
-                        if let Value::Array(elements) = &source_value {
-                            let mut result_arr = Vec::new();
-                            for elem in elements {
-                                let inner_result =
-                                    execute_mapping(&arr_desc.inner_rules, elem, direction);
-                                result_arr.push(inner_result.output);
-                            }
-                            set_by_path(&mut output, tgt_path, Value::Array(result_arr));
-                            rules_applied += 1;
-                            continue;
+        if let Some(ref arr_desc) = rule.array
+            && !arr_desc.inner_rules.is_empty()
+        {
+            match arr_desc.mode {
+                ArrayMode::Each => {
+                    if let Value::Array(elements) = &source_value {
+                        let mut result_arr = Vec::new();
+                        for elem in elements {
+                            let inner_result =
+                                execute_mapping(&arr_desc.inner_rules, elem, direction);
+                            result_arr.push(inner_result.output);
                         }
+                        set_by_path(&mut output, tgt_path, Value::Array(result_arr));
+                        rules_applied += 1;
+                        continue;
                     }
-                    ArrayMode::Indexed => {
-                        if let Value::Array(elements) = &source_value {
-                            let mut indexed_output = Value::Object(serde_json::Map::new());
-                            for inner_rule in &arr_desc.inner_rules {
-                                if let Some(ref sp) = inner_rule.source_path {
-                                    // sourcePath encodes "index:sub_path"
-                                    // First segment is the array index
-                                    if let Ok(idx) = sp.parse::<usize>() {
-                                        // Pure index — copy the whole element
-                                        if let Some(elem) = elements.get(idx) {
-                                            set_by_path(
-                                                &mut indexed_output,
-                                                &inner_rule.target_path,
-                                                elem.clone(),
-                                            );
-                                        }
-                                    } else {
-                                        // Source path has a sub-path — find index
-                                        // from the inner_rule's array field if present,
-                                        // otherwise try to parse as "N.subpath"
-                                        let parts: Vec<&str> = sp.splitn(2, '.').collect();
-                                        if let Ok(idx) = parts[0].parse::<usize>() {
-                                            if let Some(elem) = elements.get(idx) {
-                                                let sub_val = if parts.len() > 1 {
-                                                    get_by_path(elem, parts[1]).clone()
-                                                } else {
-                                                    elem.clone()
-                                                };
-                                                set_by_path(
-                                                    &mut indexed_output,
-                                                    &inner_rule.target_path,
-                                                    sub_val,
-                                                );
-                                            }
-                                        }
+                }
+                ArrayMode::Indexed => {
+                    if let Value::Array(elements) = &source_value {
+                        let mut indexed_output = Value::Object(serde_json::Map::new());
+                        for inner_rule in &arr_desc.inner_rules {
+                            if let Some(ref sp) = inner_rule.source_path {
+                                // sourcePath encodes "index:sub_path"
+                                // First segment is the array index
+                                if let Ok(idx) = sp.parse::<usize>() {
+                                    // Pure index — copy the whole element
+                                    if let Some(elem) = elements.get(idx) {
+                                        set_by_path(
+                                            &mut indexed_output,
+                                            &inner_rule.target_path,
+                                            elem.clone(),
+                                        );
+                                    }
+                                } else {
+                                    // Source path has a sub-path — find index
+                                    // from the inner_rule's array field if present,
+                                    // otherwise try to parse as "N.subpath"
+                                    let parts: Vec<&str> = sp.splitn(2, '.').collect();
+                                    if let Ok(idx) = parts[0].parse::<usize>()
+                                        && let Some(elem) = elements.get(idx)
+                                    {
+                                        let sub_val = if parts.len() > 1 {
+                                            get_by_path(elem, parts[1]).clone()
+                                        } else {
+                                            elem.clone()
+                                        };
+                                        set_by_path(
+                                            &mut indexed_output,
+                                            &inner_rule.target_path,
+                                            sub_val,
+                                        );
                                     }
                                 }
                             }
-                            set_by_path(&mut output, tgt_path, indexed_output);
-                            rules_applied += 1;
-                            continue;
                         }
+                        set_by_path(&mut output, tgt_path, indexed_output);
+                        rules_applied += 1;
+                        continue;
                     }
-                    ArrayMode::Whole => {} // fall through to normal transform
                 }
+                ArrayMode::Whole => {} // fall through to normal transform
             }
         }
 
         // Use reverse override transform when in reverse direction
-        let using_reverse_override = direction == MappingDirection::Reverse && rule.reverse.is_some();
+        let using_reverse_override =
+            direction == MappingDirection::Reverse && rule.reverse.is_some();
         let active_transform = match direction {
             MappingDirection::Reverse => rule
                 .reverse
@@ -216,7 +219,11 @@ pub fn execute_mapping(
                         if !separator.is_empty() {
                             // Join array with separator
                             let parts: Vec<String> = arr.iter().map(value_to_flat_string).collect();
-                            set_by_path(&mut output, tgt_path, Value::String(parts.join(separator)));
+                            set_by_path(
+                                &mut output,
+                                tgt_path,
+                                Value::String(parts.join(separator)),
+                            );
                         } else {
                             // Positional: write to targetPath_0, targetPath_1, ...
                             for (i, elem) in arr.iter().enumerate() {
@@ -247,11 +254,18 @@ pub fn execute_mapping(
                         } else {
                             let parent_path: String = segments[..segments.len() - 1].join(".");
                             // Ensure parent exists
-                            set_by_path(&mut output, &parent_path, Value::Object(serde_json::Map::new()));
-                            // Build a temporary map and merge
-                            let flat_map = Value::Object(
-                                flat_entries.into_iter().collect::<serde_json::Map<String, Value>>()
+                            set_by_path(
+                                &mut output,
+                                &parent_path,
+                                Value::Object(serde_json::Map::new()),
                             );
+                            // Build a temporary map and merge
+                            let flat_map =
+                                Value::Object(flat_entries.into_iter().collect::<serde_json::Map<
+                                    String,
+                                    Value,
+                                >>(
+                                ));
                             // Navigate to parent and merge
                             let parent = &get_by_path(&output, &parent_path).clone();
                             if let Value::Object(existing) = parent {
@@ -269,7 +283,11 @@ pub fn execute_mapping(
                     }
                     Value::Null => continue,
                     _ => {
-                        set_by_path(&mut output, tgt_path, Value::String(value_to_flat_string(&source_value)));
+                        set_by_path(
+                            &mut output,
+                            tgt_path,
+                            Value::String(value_to_flat_string(&source_value)),
+                        );
                         rules_applied += 1;
                         continue;
                     }
@@ -282,7 +300,10 @@ pub fn execute_mapping(
                 // 3. Otherwise pass through
                 match &source_value {
                     Value::String(s) if !separator.is_empty() => {
-                        let parts: Vec<Value> = s.split(separator.as_str()).map(|p| Value::String(p.to_string())).collect();
+                        let parts: Vec<Value> = s
+                            .split(separator.as_str())
+                            .map(|p| Value::String(p.to_string()))
+                            .collect();
                         set_by_path(&mut output, tgt_path, Value::Array(parts));
                         rules_applied += 1;
                         continue;
@@ -295,7 +316,9 @@ pub fn execute_mapping(
                             loop {
                                 let key = format!("{sp}_{i}");
                                 let val = get_by_path(source, &key);
-                                if val.is_null() { break; }
+                                if val.is_null() {
+                                    break;
+                                }
                                 positional.push(val.clone());
                                 i += 1;
                             }
