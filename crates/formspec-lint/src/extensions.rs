@@ -129,12 +129,11 @@ fn check_extensions_object(
     }
 }
 
-/// Recursively walk the item tree, checking extensions at each node.
-fn walk_items(
+/// Semantic item paths (`$.items[key=k]`, then `{path}.{key}`) — not index-based JSON paths.
+fn walk_extension_item_paths(
     items: &[Value],
     prefix: &str,
-    registry: &dyn RegistryLookup,
-    out: &mut Vec<LintDiagnostic>,
+    visitor: &mut impl FnMut(&str, &Value),
 ) {
     for item in items {
         let key = match item.get("key").and_then(|v| v.as_str()) {
@@ -147,14 +146,25 @@ fn walk_items(
             format!("{prefix}.{key}")
         };
 
-        if let Some(extensions) = item.get("extensions").and_then(|v| v.as_object()) {
-            check_extensions_object(extensions, &path, registry, out);
-        }
+        visitor(&path, item);
 
         if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-            walk_items(children, &path, registry, out);
+            walk_extension_item_paths(children, &path, visitor);
         }
     }
+}
+
+fn walk_items(
+    items: &[Value],
+    prefix: &str,
+    registry: &dyn RegistryLookup,
+    out: &mut Vec<LintDiagnostic>,
+) {
+    walk_extension_item_paths(items, prefix, &mut |path, item| {
+        if let Some(extensions) = item.get("extensions").and_then(|v| v.as_object()) {
+            check_extensions_object(extensions, path, registry, out);
+        }
+    });
 }
 
 // ── Public API ─────────────────────────────────────────────────
@@ -164,36 +174,20 @@ fn walk_items(
 fn collect_all_enabled_extensions(document: &Value) -> Vec<(String, String)> {
     let mut result = Vec::new();
     if let Some(items) = document.get("items").and_then(|v| v.as_array()) {
-        collect_extensions_recursive(items, "", &mut result);
-    }
-    result
-}
-
-fn collect_extensions_recursive(items: &[Value], prefix: &str, out: &mut Vec<(String, String)>) {
-    for item in items {
-        let key = match item.get("key").and_then(|v| v.as_str()) {
-            Some(k) => k,
-            None => continue,
-        };
-        let path = if prefix.is_empty() {
-            format!("$.items[key={key}]")
-        } else {
-            format!("{prefix}.{key}")
-        };
-
-        if let Some(extensions) = item.get("extensions").and_then(|v| v.as_object()) {
-            for (ext_name, ext_value) in extensions {
-                if is_extension_enabled(ext_value) {
-                    let ext_path = format!("{path}.extensions.{ext_name}");
-                    out.push((ext_path, ext_name.clone()));
+        walk_extension_item_paths(items, "", &mut |path, item| {
+            if let Some(extensions) = item.get("extensions").and_then(|v| v.as_object()) {
+                for (ext_name, ext_value) in extensions {
+                    if is_extension_enabled(ext_value) {
+                        result.push((
+                            format!("{path}.extensions.{ext_name}"),
+                            ext_name.clone(),
+                        ));
+                    }
                 }
             }
-        }
-
-        if let Some(children) = item.get("children").and_then(|v| v.as_array()) {
-            collect_extensions_recursive(children, &path, out);
-        }
+        });
     }
+    result
 }
 
 /// Validate extension declarations in a definition document against registry
