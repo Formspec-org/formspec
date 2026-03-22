@@ -74,15 +74,11 @@ Radio and checkbox groups use the same wrapper-per-option pattern as USWDS but w
 
 ### CSS loading strategy
 
-Tailwind CSS is loaded via the theme's `stylesheets` array. Two supported approaches:
+**Recommended — compile Tailwind in the host app (same as `formspec-studio`).** Example hosts such as `examples/tailwind-demo` use Vite with `@tailwindcss/vite` and point Tailwind’s content/`@source` at `packages/formspec-adapters/src/tailwind/` (a directory path). Utilities are generated at build time; the theme’s `stylesheets` array is only for optional extras (e.g. Google Fonts), not for loading Tailwind itself.
 
-**Option A — Tailwind CDN (Play CDN).** For prototyping and demos:
-```json
-"stylesheets": ["https://cdn.tailwindcss.com"]
-```
-Zero build step. The Play CDN scans the DOM and generates styles on the fly. Not suitable for production but perfect for examples and getting-started flows.
+**Preflight:** When Tailwind shares a page with other design systems (e.g. USWDS), omit Preflight or scope it so global resets do not fight the host chrome.
 
-**Option B — Prebuilt Tailwind CSS.** For production use, consumers run the Tailwind CLI against their content paths (which include the adapter's classes). The adapter documents which utility classes it uses so they can be included in the `content` configuration. This is standard Tailwind workflow — no adapter-specific build step required.
+**Play CDN (discouraged for this repo).** `https://cdn.tailwindcss.com` is JavaScript, not a stylesheet — injecting it via theme `stylesheets` as a `<link>` does nothing useful. Quick experiments can still load the script in raw HTML, but our examples and docs assume a proper Tailwind build.
 
 ### Integration CSS
 
@@ -92,18 +88,16 @@ This validates the ADR 0047 design: adapters that don't fight formspec layout ne
 
 ### Example theme
 
-Create `examples/tailwind-demo/` with a definition and theme that uses the Tailwind adapter. The theme uses the CDN approach for zero-config demos:
+Create `examples/tailwind-demo/` with a definition and theme that uses the Tailwind adapter. Tailwind is bundled by the Vite app (`tailwind-app.css`); the theme typically leaves `stylesheets` empty or lists only font CSS:
 
 ```json
 {
   "$formspecTheme": "1.0",
   "name": "tailwind-demo",
-  "stylesheets": ["https://cdn.tailwindcss.com"],
+  "stylesheets": [],
   "tokens": {
-    "color.primary": "#3b82f6",
-    "color.error": "#ef4444",
-    "color.success": "#22c55e",
-    "typography.family": "'Inter', system-ui, sans-serif"
+    "color.primary": "#0d9488",
+    "typography.family": "'Outfit', system-ui, sans-serif"
   }
 }
 ```
@@ -134,6 +128,7 @@ Two complementary mechanisms address this:
   }
 }
 ```
+
 Resolved for `budget`: `["formspec-field", "text-sm", "p-8"]` — `p-4` is gone.
 
 This works for any CSS framework and requires no runtime dependency. Theme authors use it when they know a higher-priority level needs to override a specific utility from a lower level.
@@ -184,12 +179,12 @@ Layout components (Grid, Stack, Page, etc.) are not in scope — formspec's layo
 - **Validates adapter generality.** Proves the behavior/adapter split works for utility-first CSS, not just BEM design systems. If both USWDS (prescriptive, component-oriented) and Tailwind (flexible, utility-first) work cleanly, the architecture is sound.
 - **Accessible reference implementation.** Most adapter authors are more likely to start from a Tailwind example than a USWDS one. The DOM patterns are simpler, the class strategy is transparent, and there's no design-system-specific knowledge required.
 - **Near-zero integration CSS.** Demonstrates that the integration CSS mechanism (ADR 0047) scales down gracefully — adapters that don't conflict need no overrides.
-- **Demo-ready out of the box.** The CDN loading strategy means anyone can drop in the Tailwind adapter and get a styled form with zero build configuration.
+- **Demo-ready out of the box.** `npm run start:tailwind-demo` builds Tailwind alongside the demo app; no separate Tailwind CLI step for that entrypoint.
 
 ### Negative
 
 - **Second adapter to maintain.** Every behavior contract change requires updates to both USWDS and Tailwind adapters. Mitigated by the adapters being structurally identical — changes are mechanical.
-- **Tailwind CDN is not production-grade.** The Play CDN scans the DOM at runtime, is larger than a purged build, and Tailwind explicitly discourages it for production. The adapter must document this clearly and guide users toward the CLI build for production use.
+- **Host must compile Tailwind.** Class strings live in TypeScript; a normal Tailwind pipeline (Vite plugin, CLI, etc.) must include the adapter sources. Our examples document the Vite v4 pattern; Play CDN is not used in-repo.
 - **Class string maintenance.** Tailwind utility strings are long (`"block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"`). Changes to the visual design require editing string literals across multiple files. This is inherent to Tailwind's approach and acceptable for a reference implementation.
 - **`tailwind-merge` adds a runtime dependency.** ~3KB gzipped, but it's opt-in — only loaded when `classStrategy: "tailwind-merge"` is set and `setTailwindMerge()` is called. Projects that don't use Tailwind pay nothing.
 - **`cssClassReplace` prefix matching is heuristic.** The `extractUtilityPrefix()` function uses a simple regex (`/^(-?[a-z]+)-/`) that works for standard Tailwind utilities but won't handle every edge case (e.g., `2xl:` responsive prefixes). For full conflict resolution, use `classStrategy: "tailwind-merge"` instead.
