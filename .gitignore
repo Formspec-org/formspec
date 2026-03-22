@@ -44,6 +44,8 @@ firebase-debug.log
 site/public/studio/
 site/public/chat/
 site/public/references/
+# Standalone /tailwind-demo/ build (Firebase root public/ is canonical; avoid duplicate hashes in site/)
+site/public/tailwind-demo/
 
 # MCP bundle (build output)
 *.mcpb
