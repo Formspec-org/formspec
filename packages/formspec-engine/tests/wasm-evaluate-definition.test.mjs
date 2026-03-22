@@ -171,6 +171,16 @@ test('wasmPrepareFelExpression matches repeat-alias normalization', () => {
   assert.equal(out, '$rows[*].score + $rows[*].score');
 });
 
+test('wasmPrepareFelExpression does not splice repeat alias after a dot', () => {
+  const out = wasmPrepareFelExpression(
+    JSON.stringify({
+      expression: 'x.rows.score',
+      valuesByPath: { 'rows[0].score': 1, 'rows[1].score': 2 },
+    }),
+  );
+  assert.equal(out, 'x.rows.score');
+});
+
 test('wasmTokenizeFEL returns positioned tokens through the JS bridge', () => {
   const tokens = wasmTokenizeFEL('if($qty >= 1, $price, 0)');
 

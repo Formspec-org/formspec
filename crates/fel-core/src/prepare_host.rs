@@ -211,7 +211,9 @@ fn resolve_qualified_group_refs(expression: &str, repeat_ancestors: &[RepeatAnce
 }
 
 fn is_blocked_implicit_prefix(c: char) -> bool {
-    matches!(c, '$' | '@' | '_' | '0'..='9' | 'A'..='Z' | 'a'..='z')
+    // Treat `.` as blocked so `rows.score` inside `x.rows.score` is not rewritten to
+    // `x.$rows[*].score` (invalid FEL: `.` must be followed by an identifier, not `$`).
+    is_ident_char(c) || matches!(c, '$' | '@' | '.')
 }
 
 fn suffix_continues_alias(c: Option<char>) -> bool {
@@ -222,7 +224,7 @@ fn slice_eq_chars(chars: &[char], start: usize, needle: &[char]) -> bool {
     start + needle.len() <= chars.len() && chars[start..start + needle.len()] == needle[..]
 }
 
-/// Implicit `alias` → `wildcard` (TS first pass): prefix must be start or not `$@A-Za-z0-9_`; suffix must not continue an identifier.
+/// Implicit `alias` → `wildcard`: prefix must be start or not `$@.` / identifier char; suffix must not continue an identifier.
 fn replace_implicit_repeat_alias(expr: &str, alias: &str, wildcard: &str) -> String {
     if alias.is_empty() {
         return expr.to_string();
@@ -450,7 +452,7 @@ mod tests {
         );
         assert_eq!(
             out,
-            "$rows[*].score + $rows[*].score + x.$rows[*].score"
+            "$rows[*].score + $rows[*].score + x.rows.score"
         );
     }
 }
