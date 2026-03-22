@@ -40,15 +40,27 @@ def _definition_with_extensions() -> dict:
 
 
 def test_unknown_extensions_do_not_interfere_with_core_results() -> None:
-    """Extensions on items/binds/shapes should not affect core validation results."""
+    """Extensions preserve core results, plus unresolved-extension diagnostics."""
     plain_missing = evaluate_definition(_base_definition(), {})
     extended_missing = evaluate_definition(_definition_with_extensions(), {})
     plain_present = evaluate_definition(_base_definition(), {"name": "Al"})
     extended_present = evaluate_definition(_definition_with_extensions(), {"name": "Al"})
 
-    # Core results should match between plain and extended definitions
-    assert extended_missing.results == plain_missing.results
-    assert extended_present.results == plain_present.results
+    def _core(results: list[dict]) -> list[dict]:
+        return [r for r in results if r.get("constraintKind") != "extension"]
+
+    def _extension(results: list[dict]) -> list[dict]:
+        return [r for r in results if r.get("constraintKind") == "extension"]
+
+    assert _core(extended_missing.results) == plain_missing.results
+    assert _core(extended_present.results) == plain_present.results
+
+    missing_extensions = _extension(extended_missing.results)
+    present_extensions = _extension(extended_present.results)
+    assert len(missing_extensions) == 1
+    assert len(present_extensions) == 1
+    assert missing_extensions[0]["code"] == "UNRESOLVED_EXTENSION"
+    assert present_extensions[0]["code"] == "UNRESOLVED_EXTENSION"
 
 
 def test_unknown_extensions_are_preserved_on_loaded_definition_objects() -> None:

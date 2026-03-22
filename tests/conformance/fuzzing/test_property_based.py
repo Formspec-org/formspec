@@ -342,6 +342,7 @@ def gen_definition(draw):
 @st.composite
 def gen_validation_result(draw):
     vr = {
+        "$formspecValidationResult": "1.0",
         "path": draw(non_empty_str),
         "severity": draw(st.sampled_from(["error", "warning", "info"])),
         "constraintKind": draw(
@@ -359,6 +360,7 @@ def gen_validation_result(draw):
 @st.composite
 def gen_response(draw):
     resp = {
+        "$formspecResponse": "1.0",
         "definitionUrl": draw(valid_uri),
         "definitionVersion": draw(valid_semver),
         "status": draw(st.sampled_from(["in-progress", "completed", "amended", "stopped"])),
@@ -397,6 +399,7 @@ def gen_validation_report(draw):
         r["severity"] = "info"
         results.append(r)
     return {
+        "$formspecValidationReport": "1.0",
         "valid": n_err == 0,
         "results": results,
         "counts": {"error": n_err, "warning": n_warn, "info": n_info},
@@ -501,6 +504,7 @@ def gen_field_rule(draw):
 @st.composite
 def gen_mapping_doc(draw):
     return {
+        "$formspecMapping": "1.0",
         "version": draw(valid_semver),
         "definitionRef": draw(valid_uri),
         "definitionVersion": draw(valid_semver),

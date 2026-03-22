@@ -71,6 +71,7 @@ def test_unknown_document_type_is_reported() -> None:
 
 def test_detect_validation_result_doc_type() -> None:
     document = {
+        "$formspecValidationResult": "1.0",
         "path": "applicant.email",
         "severity": "error",
         "constraintKind": "required",
@@ -83,6 +84,7 @@ def test_detect_validation_result_doc_type() -> None:
 def test_detect_fel_functions_doc_type() -> None:
     schema = load_schema("fel-functions.schema.json")
     document = {
+        "$formspecFelFunctions": "1.0",
         "version": schema["version"],
         "functions": [schema["functions"][0]],
     }

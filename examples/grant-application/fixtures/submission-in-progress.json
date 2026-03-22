@@ -15,6 +15,7 @@
     },
     "validationResults": [
         {
+            "$formspecValidationResult": "1.0",
             "path": "applicantInfo.orgName",
             "severity": "error",
             "constraintKind": "required",
@@ -24,6 +25,7 @@
             "sourceId": "applicantInfo.orgName"
         },
         {
+            "$formspecValidationResult": "1.0",
             "path": "projectNarrative.abstract",
             "severity": "warning",
             "constraintKind": "constraint",
@@ -34,6 +36,7 @@
             "value": "TBD - will fill in later"
         },
         {
+            "$formspecValidationResult": "1.0",
             "path": "projectNarrative.startDate",
             "severity": "error",
             "constraintKind": "required",

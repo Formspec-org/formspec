@@ -80,7 +80,11 @@ class TestEvaluateVariables:
         }
         data = {'items': [{'amount': 1000}]}
         result = evaluate_definition(defn, data)
-        assert result.variables['totalDirect'] == {'amount': 1000, 'currency': 'USD'}
+        assert result.variables['totalDirect'] == {
+            '$type': 'money',
+            'amount': 1000,
+            'currency': 'USD',
+        }
         assert result.variables['indirectCosts'] == pytest.approx(100)
 
     def test_no_variables(self):

@@ -36,6 +36,7 @@ def _validate_report(instance: dict) -> None:
 
 def _minimal_response() -> dict:
     return {
+        "$formspecResponse": "1.0",
         "definitionUrl": "https://example.com/forms/intake",
         "definitionVersion": "1.0.0",
         "status": "in-progress",
@@ -46,6 +47,7 @@ def _minimal_response() -> dict:
 
 def _minimal_validation_result() -> dict:
     return {
+        "$formspecValidationResult": "1.0",
         "path": "patient.name",
         "severity": "error",
         "constraintKind": "required",
@@ -55,6 +57,7 @@ def _minimal_validation_result() -> dict:
 
 def _minimal_report() -> dict:
     return {
+        "$formspecValidationReport": "1.0",
         "valid": True,
         "results": [],
         "counts": {"error": 0, "warning": 0, "info": 0},

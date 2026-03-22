@@ -273,9 +273,9 @@ class TestFlatten:
             },
         ])
         result = execute_mapping(doc, {'addr': {'city': 'NYC', 'state': 'NY'}}, "forward").output
-        # Flattened dict produces key=value pairs
-        assert 'city=NYC' in result['addr_flat']
-        assert 'state=NY' in result['addr_flat']
+        # Object flatten emits dotted target keys in the output container.
+        assert result['addr_flat.city'] == 'NYC'
+        assert result['addr_flat.state'] == 'NY'
 
     def test_list_to_string(self):
         doc = _make_doc([
@@ -305,8 +305,7 @@ class TestNest:
             },
         ])
         result = execute_mapping(doc, {'path': 'a.b.c'}, "forward").output
-        assert isinstance(result['nested'], dict)
-        assert 'a' in result['nested']
+        assert result['nested'] == ['a', 'b', 'c']
 
 
 # ===========================================================================

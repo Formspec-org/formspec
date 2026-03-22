@@ -414,7 +414,7 @@ pub(crate) fn is_wildcard_bind(path: &str) -> bool {
 /// becomes `$items[2].qty * $items[2].price`.
 pub(crate) fn instantiate_wildcard_expr(expr: &str, base: &str, index: usize) -> String {
     let wildcard_pattern = format!("${}[*]", base);
-    let concrete = format!("${}[{}]", base, index + 1);
+    let concrete = format!("${}[{}]", base, index);
     expr.replace(&wildcard_pattern, &concrete)
 }
 
@@ -867,7 +867,7 @@ mod tests {
     fn instantiate_wildcard_expr_no_prefix_collision() {
         let result = instantiate_wildcard_expr("$myrow[*].field + $row[*].field", "row", 0);
         assert_eq!(
-            result, "$myrow[*].field + $row[1].field",
+            result, "$myrow[*].field + $row[0].field",
             "must not replace inside $myrow — only $row"
         );
     }
@@ -879,7 +879,7 @@ mod tests {
             "section.rows",
             3,
         );
-        assert_eq!(result, "$section.rows[4].qty * $section.rows[4].price");
+        assert_eq!(result, "$section.rows[3].qty * $section.rows[3].price");
     }
 
     #[test]

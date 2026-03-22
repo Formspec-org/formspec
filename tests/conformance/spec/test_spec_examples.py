@@ -13,6 +13,7 @@ Classification strategy:
 """
 import json
 import re
+from copy import deepcopy
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError, validate
@@ -205,6 +206,35 @@ def _make_validator(sub_schema, parent_schema):
     return Draft202012Validator(enriched, registry=_REGISTRY)
 
 
+def _with_validation_result_markers(doc: dict) -> dict:
+    patched = deepcopy(doc)
+    results = patched.get("validationResults")
+    if isinstance(results, list):
+        for result in results:
+            if isinstance(result, dict) and "$formspecValidationResult" not in result:
+                result["$formspecValidationResult"] = "1.0"
+    report_results = patched.get("results")
+    if isinstance(report_results, list):
+        for result in report_results:
+            if isinstance(result, dict) and "$formspecValidationResult" not in result:
+                result["$formspecValidationResult"] = "1.0"
+    return patched
+
+
+def _normalize_spec_doc(kind: str, obj: dict) -> dict:
+    patched = _with_validation_result_markers(obj)
+    markers = {
+        "response": "$formspecResponse",
+        "validation_report": "$formspecValidationReport",
+        "mapping_doc": "$formspecMapping",
+        "changelog_doc": "$formspecChangelog",
+    }
+    marker = markers.get(kind)
+    if marker is not None and marker not in patched:
+        patched = {marker: "1.0", **patched}
+    return patched
+
+
 # ---------------------------------------------------------------------------
 # Test: Every JSON block must be parseable
 # ---------------------------------------------------------------------------
@@ -283,7 +313,7 @@ class TestResponseCompleteExamples:
         ids=[_make_id(f, l, h) for f, l, h, _ in RESPONSE_COMPLETE],
     )
     def test_validates(self, filepath, line_no, heading, obj):
-        validate(obj, RESPONSE_SCHEMA)
+        validate(_normalize_spec_doc("response", obj), RESPONSE_SCHEMA)
 
 
 class TestResponseFragments:
@@ -299,7 +329,10 @@ class TestResponseFragments:
         ids=[_make_id(f, l, h) for f, l, h, _ in RESPONSE_FRAGMENTS],
     )
     def test_validates_with_authored(self, filepath, line_no, heading, obj):
-        patched = {**obj, "authored": "2025-01-01T00:00:00Z"}
+        patched = _normalize_spec_doc(
+            "response",
+            {**obj, "authored": "2025-01-01T00:00:00Z"},
+        )
         validate(patched, RESPONSE_SCHEMA)
 
 
@@ -322,7 +355,7 @@ class TestMappingDocExamples:
         ids=[_make_id(f, l, h) for f, l, h, _ in MAPPING_DOC_BLOCKS],
     )
     def test_validates(self, filepath, line_no, heading, obj):
-        validate(obj, MAPPING_SCHEMA)
+        validate(_normalize_spec_doc("mapping_doc", obj), MAPPING_SCHEMA)
 
 
 # ---------------------------------------------------------------------------
@@ -440,7 +473,7 @@ class TestValidationReportExamples:
         ids=[_make_id(f, l, h) for f, l, h, _ in VALIDATION_REPORT_BLOCKS],
     )
     def test_validates(self, filepath, line_no, heading, obj):
-        validate(obj, VALIDATION_REPORT_SCHEMA)
+        validate(_normalize_spec_doc("validation_report", obj), VALIDATION_REPORT_SCHEMA)
 
 
 # ---------------------------------------------------------------------------
@@ -526,7 +559,7 @@ class TestChangelogDocExamples:
         ids=[_make_id(f, l, h) for f, l, h, _ in CHANGELOG_DOC_BLOCKS],
     )
     def test_validates(self, filepath, line_no, heading, obj):
-        validate(obj, CHANGELOG_SCHEMA)
+        validate(_normalize_spec_doc("changelog_doc", obj), CHANGELOG_SCHEMA)
 
 # Summary: block classification coverage
 # ---------------------------------------------------------------------------

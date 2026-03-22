@@ -28,6 +28,7 @@ def _definition(version: str, key: str) -> dict:
 
 def _response(version: str, data: dict) -> dict:
     return {
+        "$formspecResponse": "1.0",
         "definitionUrl": "https://example.org/forms/pinned-intake",
         "definitionVersion": version,
         "status": "completed",

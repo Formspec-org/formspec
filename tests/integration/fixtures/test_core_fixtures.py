@@ -110,7 +110,7 @@ def test_grant_mapping_executes_forward_and_reverse() -> None:
     assert forward["organization"]["name"] == "Community Health Partners, Inc."
     assert forward["organization"]["type_code"] == "NPO"
     assert forward["project"]["focus_areas_csv"] == "health|equity"
-    assert forward["meta.source"] == "formspec"
+    assert forward["meta"]["source"] == "formspec"
     assert forward["meta"]["mappingVersion"] == "2026.02"
     assert "attachments" not in forward
     assert forward["budget"]["line_items"][0]["qty"] == 2.0

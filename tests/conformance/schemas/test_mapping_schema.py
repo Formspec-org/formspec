@@ -16,6 +16,7 @@ def _validate(instance):
 def _minimal_mapping(**overrides):
     """Return the smallest valid mapping document, with optional overrides."""
     doc = {
+        "$formspecMapping": "1.0",
         "version": "1.0.0",
         "definitionRef": "https://example.com/def",
         "definitionVersion": ">=1.0.0 <2.0.0",
@@ -576,4 +577,3 @@ class TestFieldRuleAdvanced:
     def test_rule_with_reverse_priority(self):
         rule = _minimal_rule(reversePriority=5)
         _validate(_minimal_mapping(rules=[rule]))
-
