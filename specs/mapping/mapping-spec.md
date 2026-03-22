@@ -263,7 +263,6 @@ plus:
 A processor claiming Mapping Extended conformance implicitly claims Mapping
 Bidirectional conformance.
 
-[rfc4180]: https://www.rfc-editor.org/rfc/rfc4180
 
 ### 1.6 Notational Conventions
 
@@ -758,7 +757,7 @@ A **Field Rule** is a JSON object that describes how a single datum (or set of d
 | `sourcePath` | `string` | CONDITIONAL | — | Dot-path identifying the value in the source document. REQUIRED for all transforms except `"constant"` and `"drop"` (when used with only a `targetPath`). |
 | `targetPath` | `string` | CONDITIONAL | — | Dot-path identifying the destination in the target document. REQUIRED for all transforms except `"drop"` (when used with only a `sourcePath`). |
 | `transform` | `string` | REQUIRED | — | The transform type. See [§ 3.3.1](#331-transform-types). |
-| `expression` | `string` | CONDITIONAL | — | A FEL expression. REQUIRED when `transform` is `"expression"`, `"constant"`, `"concat"`, or `"split"`. Within the expression `$` binds to the resolved source value and `@source` binds to the entire source document. |
+| `expression` | `string` | CONDITIONAL | — | A FEL expression. REQUIRED when `transform` is `"expression"`, `"constant"`, `"concat"`, or `"split"`. For `"flatten"` and `"nest"`, OPTIONAL when the rule uses only the structural modes defined in §4.7 and §4.8; REQUIRED when §4.7 or §4.8 specifies `expression` for non-trivial projection. Within the expression `$` binds to the resolved source value and `@source` binds to the entire source document. |
 | `coerce` | `object` | CONDITIONAL | — | Coercion descriptor. REQUIRED when `transform` is `"coerce"`. See [§ 3.3.2](#332-coerce-object). |
 | `valueMap` | `object` | CONDITIONAL | — | Value mapping descriptor. REQUIRED when `transform` is `"valueMap"`. See [§ 3.3.3](#333-valuemap-object). |
 | `reverse` | `object` | OPTIONAL | — | Explicit override configuration applied when the rule is executed in the reverse direction. The object MAY contain any Field Rule property except `sourcePath`, `targetPath`, and `reverse` itself. |
@@ -771,6 +770,8 @@ A **Field Rule** is a JSON object that describes how a single datum (or set of d
 
 At least one of `sourcePath` or `targetPath` MUST be present. If both are omitted, implementations MUST raise a validation error.
 
+When `array.innerRules` contains at least one nested rule, the parent rule SHOULD still declare `transform` (typically `"preserve"` when per-element work lives entirely in `innerRules`). The JSON Schema requires `transform` on every Field Rule for valid interchange. Conforming runtimes MAY accept a missing parent `transform` in that situation and treat it as `"preserve"` for execution; authors SHOULD not rely on that shorthand in documents that must validate everywhere.
+
 #### 3.3.1 Transform Types
 
 The `transform` property MUST be one of the following string values.
@@ -782,8 +783,8 @@ The `transform` property MUST be one of the following string values.
 | `"expression"` | Evaluate the FEL `expression` and write its result to `targetPath`. |
 | `"coerce"` | Convert the source value from one type to another according to the `coerce` descriptor. |
 | `"valueMap"` | Replace the source value using the lookup table defined in the `valueMap` descriptor. |
-| `"flatten"` | Collapse a nested source structure into a scalar or flat object at `targetPath`. The `expression` property MUST be provided to define the flattening logic. |
-| `"nest"` | Expand a scalar or flat source value into a nested structure at `targetPath`. The `expression` property MUST be provided. |
+| `"flatten"` | Collapse a nested source structure into a scalar or flat object at `targetPath`. Structural modes (delimited join, positional array keys, dot-prefix object keys) are defined in [§ 4.7](#47-flatten--collapse-nested-or-array-structures). The `expression` property is OPTIONAL for those modes and MUST be provided only when §4.7 requires it for non-trivial flattening (e.g. per-element projection before join). |
+| `"nest"` | Expand a scalar or flat source into a nested structure at `targetPath`. Structural modes (delimited split, positional reassembly, dot-prefix nesting) are defined in [§ 4.8](#48-nest--expand-flat-structures-into-nested-form). The `expression` property is OPTIONAL for those modes; provide it only when §4.8 requires `expression` for an extension beyond those modes. |
 | `"constant"` | Write a fixed value to `targetPath`. The value is defined by `expression`, which MUST be a FEL literal or deterministic expression. `sourcePath` MAY be omitted. |
 | `"concat"` | Concatenate multiple source values into a single target string. `expression` defines the template (e.g. `@source.first + ' ' + @source.last`). |
 | `"split"` | Split a single source value into multiple target values. `expression` defines the splitting logic and MUST return an array or object. |
@@ -804,8 +805,10 @@ Implementations MUST raise an error when the `from`/`to` combination is not supp
 |---|---|---|---|---|
 | `forward` | `object` | REQUIRED | — | Key-value pairs mapping source values (keys) to target values (values) in the forward direction. |
 | `reverse` | `object` | OPTIONAL | *inferred* | Key-value pairs for the reverse direction. If omitted, the implementation MUST infer the reverse map by inverting `forward`. If `forward` is not injective (multiple keys map to the same value), the implementation MUST raise an error rather than silently choose. |
-| `unmapped` | `string` | OPTIONAL | `"error"` | Strategy when a source value has no matching key. One of `"error"` (raise), `"drop"` (omit field), or `"passthrough"` (copy value unchanged). |
+| `unmapped` | `string` | OPTIONAL | `"error"` | Strategy when a source value has no matching key. One of `"error"` (raise), `"drop"` (omit field), `"passthrough"` (copy value unchanged), or `"default"` (use the rule `default` property; see §4.6). |
 | `default` | *any* | OPTIONAL | — | Value to emit when `unmapped` is `"drop"` and a fallback is desired, or when the source value is `null`. |
+
+The JSON Schema also allows a **legacy shorthand**: `valueMap` is a flat object of forward lookup entries (no nested `forward` property). For that shorthand, implementations SHOULD treat omitted `unmapped` as **`"passthrough"`** so older documents retain lenient behavior. For the **structured** shape with an explicit `forward` object, omitted `unmapped` defaults to **`"error"`** (§4.6).
 
 #### 3.3.4 Array Object
 

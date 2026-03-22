@@ -1239,9 +1239,13 @@ only a <code>sourcePath</code>).</td>
 <td>—</td>
 <td>A FEL expression. REQUIRED when <code>transform</code> is
 <code>"expression"</code>, <code>"constant"</code>,
-<code>"concat"</code>, or <code>"split"</code>. Within the expression
-<code>$</code> binds to the resolved source value and
-<code>@source</code> binds to the entire source document.</td>
+<code>"concat"</code>, or <code>"split"</code>. For
+<code>"flatten"</code> and <code>"nest"</code>, OPTIONAL when the rule
+uses only the structural modes defined in §4.7 and §4.8; REQUIRED when
+§4.7 or §4.8 specifies <code>expression</code> for non-trivial
+projection. Within the expression <code>$</code> binds to the resolved
+source value and <code>@source</code> binds to the entire source
+document.</td>
 </tr>
 <tr>
 <td><code>coerce</code></td>
@@ -1326,6 +1330,15 @@ href="#34-field-rule-ordering-and-precedence">§ 3.4</a>.</td>
 <p>At least one of <code>sourcePath</code> or <code>targetPath</code>
 MUST be present. If both are omitted, implementations MUST raise a
 validation error.</p>
+<p>When <code>array.innerRules</code> contains at least one nested rule,
+the parent rule SHOULD still declare <code>transform</code> (typically
+<code>"preserve"</code> when per-element work lives entirely in
+<code>innerRules</code>). The JSON Schema requires
+<code>transform</code> on every Field Rule for valid interchange.
+Conforming runtimes MAY accept a missing parent <code>transform</code>
+in that situation and treat it as <code>"preserve"</code> for execution;
+authors SHOULD not rely on that shorthand in documents that must
+validate everywhere.</p>
 <h4 id="transform-types">3.3.1 Transform Types</h4>
 <p>The <code>transform</code> property MUST be one of the following
 string values.</p>
@@ -1371,14 +1384,22 @@ have been written (e.g. via <code>autoMap</code>) is suppressed.</td>
 <tr>
 <td><code>"flatten"</code></td>
 <td>Collapse a nested source structure into a scalar or flat object at
-<code>targetPath</code>. The <code>expression</code> property MUST be
-provided to define the flattening logic.</td>
+<code>targetPath</code>. Structural modes (delimited join, positional
+array keys, dot-prefix object keys) are defined in <a
+href="#47-flatten--collapse-nested-or-array-structures">§ 4.7</a>. The
+<code>expression</code> property is OPTIONAL for those modes and MUST be
+provided only when §4.7 requires it for non-trivial flattening
+(e.g. per-element projection before join).</td>
 </tr>
 <tr>
 <td><code>"nest"</code></td>
-<td>Expand a scalar or flat source value into a nested structure at
-<code>targetPath</code>. The <code>expression</code> property MUST be
-provided.</td>
+<td>Expand a scalar or flat source into a nested structure at
+<code>targetPath</code>. Structural modes (delimited split, positional
+reassembly, dot-prefix nesting) are defined in <a
+href="#48-nest--expand-flat-structures-into-nested-form">§ 4.8</a>. The
+<code>expression</code> property is OPTIONAL for those modes; provide it
+only when §4.8 requires <code>expression</code> for an extension beyond
+those modes.</td>
 </tr>
 <tr>
 <td><code>"constant"</code></td>
@@ -1489,8 +1510,10 @@ rather than silently choose.</td>
 <td>OPTIONAL</td>
 <td><code>"error"</code></td>
 <td>Strategy when a source value has no matching key. One of
-<code>"error"</code> (raise), <code>"drop"</code> (omit field), or
-<code>"passthrough"</code> (copy value unchanged).</td>
+<code>"error"</code> (raise), <code>"drop"</code> (omit field),
+<code>"passthrough"</code> (copy value unchanged), or
+<code>"default"</code> (use the rule <code>default</code> property; see
+§4.6).</td>
 </tr>
 <tr>
 <td><code>default</code></td>
@@ -1503,6 +1526,14 @@ a fallback is desired, or when the source value is
 </tr>
 </tbody>
 </table>
+<p>The JSON Schema also allows a <strong>legacy shorthand</strong>:
+<code>valueMap</code> is a flat object of forward lookup entries (no
+nested <code>forward</code> property). For that shorthand,
+implementations SHOULD treat omitted <code>unmapped</code> as
+<strong><code>"passthrough"</code></strong> so older documents retain
+lenient behavior. For the <strong>structured</strong> shape with an
+explicit <code>forward</code> object, omitted <code>unmapped</code>
+defaults to <strong><code>"error"</code></strong> (§4.6).</p>
 <h4 id="array-object">3.3.4 Array Object</h4>
 <table>
 <colgroup>
