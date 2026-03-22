@@ -6,6 +6,7 @@
 |--------|--------|
 | `formspec-eval` (`lib`, `rebuild`, `recalculate`, `revalidate`, `types`) | Done — modularized + integration tests + README |
 | `formspec-py/src/lib.rs` | Done — `convert`, `fel`, `document`, `registry`, `changelog`, `mapping`, `native_tests`; thin `lib.rs` + `#[pymodule]` |
+| `formspec-wasm/src/lib.rs` | Done — `convert`, `fel`, `document`, `evaluate`, `definition`, `mapping`, `registry`, `changelog`, `wasm_tests`; thin `lib.rs` |
 | Remaining rows below | Not started in this pass |
 
 ## Scope
@@ -33,8 +34,8 @@ Script:
 3664  crates/formspec-eval/src/lib.rs
 3122  packages/formspec-studio-core/src/project.ts
 3027  packages/formspec-engine/src/index.ts
-2641  crates/formspec-py/src/lib.rs
-2591  crates/formspec-wasm/src/lib.rs
+2641  crates/formspec-py/src/lib.rs _(split; `lib.rs` is now a thin facade)_
+2591  crates/formspec-wasm/src/lib.rs _(split; `lib.rs` is now a thin facade)_
 2065  crates/formspec-core/src/runtime_mapping.rs
 1715  crates/fel-core/src/evaluator.rs
 1615  crates/formspec-eval/src/recalculate.rs

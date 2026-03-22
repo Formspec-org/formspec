@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "WASM bindings for Formspec — exposes fel-core and formspec-core to TypeScript"
+readme = "README.md"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
