@@ -1589,9 +1589,9 @@ fn parse_mapping_rules_inner(val: &Value) -> Result<Vec<runtime_mapping::Mapping
 
 // ── Tests ───────────────────────────────────────────────────────
 //
-// NOTE: PyO3 #[pyfunction] wrappers and type conversion helpers
-// require a live Python interpreter. Test via Python-side integration tests.
-// Run with: cargo test -p formspec-py --no-default-features
+// NOTE: PyO3 links libpython when the `extension-module` feature is off (default), so
+// `cargo test -p formspec-py` and `cargo test --workspace` work. Maturin enables
+// `extension-module` when building the wheel (see pyproject.toml).
 
 #[cfg(test)]
 mod tests {

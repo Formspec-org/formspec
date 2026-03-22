@@ -3,7 +3,9 @@
 use serde_json::Value;
 use std::collections::HashMap;
 
-use fel_core::{FormspecEnvironment, evaluate, json_to_fel, parse};
+use fel_core::{FormspecEnvironment, evaluate, parse};
+
+use crate::fel_json::json_to_runtime_fel;
 
 /// Result of evaluating screener routes.
 #[derive(Debug, Clone, PartialEq)]
@@ -12,26 +14,6 @@ pub struct ScreenerRouteResult {
     pub label: Option<String>,
     pub message: Option<String>,
     pub extensions: Option<Value>,
-}
-
-fn normalize_money_like_json(value: &Value) -> Value {
-    match value {
-        Value::Array(array) => Value::Array(array.iter().map(normalize_money_like_json).collect()),
-        Value::Object(object) => {
-            let mut normalized: serde_json::Map<String, Value> = object
-                .iter()
-                .map(|(key, value)| (key.clone(), normalize_money_like_json(value)))
-                .collect();
-            if !normalized.contains_key("$type")
-                && normalized.contains_key("amount")
-                && normalized.contains_key("currency")
-            {
-                normalized.insert("$type".to_string(), Value::String("money".to_string()));
-            }
-            Value::Object(normalized)
-        }
-        _ => value.clone(),
-    }
 }
 
 /// Evaluate screener routes and return the first matching route.
@@ -46,7 +28,7 @@ pub fn evaluate_screener(
 
     let mut env = FormspecEnvironment::new();
     for (k, v) in answers {
-        env.set_field(k, json_to_fel(&normalize_money_like_json(v)));
+        env.set_field(k, json_to_runtime_fel(v));
     }
 
     for route in routes {

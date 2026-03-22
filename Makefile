@@ -32,7 +32,7 @@ build-wasm:
 	wasm-opt -Os --enable-bulk-memory --enable-nontrapping-float-to-int $(WASM_OUT)/formspec_wasm_bg.wasm -o $(WASM_OUT)/formspec_wasm_bg.wasm
 
 test-rust:
-	cargo test --workspace --exclude formspec-py
+	cargo test --workspace
 
 test: test-unit test-python test-rust test-e2e test-studio-e2e
 

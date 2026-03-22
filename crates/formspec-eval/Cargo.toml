@@ -3,7 +3,7 @@ name = "formspec-eval"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Formspec Definition Evaluator — 4-phase batch processor (rebuild, recalculate, revalidate, notify)"
+description = "Formspec definition batch evaluator: rebuild, recalculate, revalidate, and NRB output shaping"
 
 [dependencies]
 fancy-regex = "0.14"
@@ -11,5 +11,10 @@ fel-core = { path = "../fel-core" }
 rust_decimal = "1"
 serde_json = "1"
 
+# Integration tests call `fel_core` directly (round-trip checks); keep this explicit.
 [dev-dependencies]
-# None
+fel-core = { path = "../fel-core" }
+
+[[test]]
+name = "integration"
+path = "tests/integration/mod.rs"
