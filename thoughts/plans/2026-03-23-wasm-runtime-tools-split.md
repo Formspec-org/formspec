@@ -114,7 +114,7 @@ Lock ambiguous rows (**especially `wasmParseFEL`**, which may overlap runtime co
 - [ ] `Makefile` / root build scripts: update any target that assumes a single `formspec-wasm` artifact (including `make build` ordering if applicable).
 - [ ] CI (e.g. `.github/workflows`): replace hardcoded monolith WASM paths or copy steps with both artifacts where needed.
 - [ ] Publish layout: both artifact dirs under `formspec-engine` package (or document if tools is optional peer — default: bundle both in `formspec-engine`).
-- [ ] Vite / Vitest: ensure dynamic import paths resolve in tests (may need `?url` or copy assets — mirror how monolith is consumed today).
+- [x] Vite / Vitest: Node `readFileSync` for `.wasm` must not assume `file:` `import.meta.url` (Vitest can rewrite it). `resolveWasmAssetPathForNode()` in `wasm-bridge.ts` + `formspec-studio-core/tests/setup.ts` loads tools WASM like engine tests.
 - [ ] Update any consumer docs that reference a single `.wasm` filename (including Python/native embedders if they document WASM loading).
 
 ## 7. Dependency fences & repo hygiene

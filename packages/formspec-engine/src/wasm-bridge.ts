@@ -8,6 +8,34 @@ let _initPromise: Promise<void> | null = null;
 let _wasmToolsReady = false;
 let _initToolsPromise: Promise<void> | null = null;
 const nodeFsModuleName = 'node:fs';
+const nodeUrlModuleName = 'node:url';
+const nodePathModuleName = 'node:path';
+const nodeModuleModuleName = 'node:module';
+
+/**
+ * Resolve a sibling `.wasm` path for Node `readFileSync`.
+ * Vitest/vite-node can rewrite `import.meta.url` to a non-`file:` URL; fall back to the `formspec-engine` package root.
+ */
+async function resolveWasmAssetPathForNode(relativeToThisModule: string): Promise<string> {
+    const { fileURLToPath } = await import(/* @vite-ignore */ nodeUrlModuleName);
+    const { dirname, join } = await import(/* @vite-ignore */ nodePathModuleName);
+    const { createRequire } = await import(/* @vite-ignore */ nodeModuleModuleName);
+
+    const meta = import.meta.url;
+    if (meta.startsWith('file:')) {
+        return fileURLToPath(new URL(relativeToThisModule, meta));
+    }
+
+    try {
+        const require = createRequire(join(process.cwd(), 'package.json'));
+        const engineRoot = dirname(require.resolve('formspec-engine/package.json'));
+        const tail = relativeToThisModule.replace(/^\.\.\//, '');
+        return join(engineRoot, tail);
+    } catch {
+        const tail = relativeToThisModule.replace(/^\.\.\//, '');
+        return join(process.cwd(), '..', 'formspec-engine', tail);
+    }
+}
 
 /** Whether the WASM module has been initialized and is ready for use. */
 export function isWasmReady(): boolean {
@@ -39,13 +67,18 @@ export async function initWasm(): Promise<void> {
 
             if (runningInNode && typeof runtime.initSync === 'function') {
                 const { readFileSync } = await import(/* @vite-ignore */ nodeFsModuleName);
-                wasmBytes = readFileSync(new URL('../wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm', import.meta.url));
+                const wasmPath = await resolveWasmAssetPathForNode(
+                    '../wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm',
+                );
+                wasmBytes = readFileSync(wasmPath);
             }
 
             if (typeof runtime.initSync === 'function' && wasmBytes) {
                 runtime.initSync({ module: wasmBytes });
             } else if (typeof runtime.default === 'function') {
-                await runtime.default({ module_or_path: new URL('../wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm', import.meta.url) });
+                await runtime.default({
+                    module_or_path: new URL('../wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm', import.meta.url),
+                });
             }
 
             _wasm = runtime;
@@ -81,13 +114,16 @@ export async function initWasmTools(): Promise<void> {
 
             if (runningInNode && typeof tools.initSync === 'function') {
                 const { readFileSync } = await import(/* @vite-ignore */ nodeFsModuleName);
-                wasmBytes = readFileSync(new URL('../wasm-pkg-tools/formspec_wasm_tools_bg.wasm', import.meta.url));
+                const wasmPath = await resolveWasmAssetPathForNode('../wasm-pkg-tools/formspec_wasm_tools_bg.wasm');
+                wasmBytes = readFileSync(wasmPath);
             }
 
             if (typeof tools.initSync === 'function' && wasmBytes) {
                 tools.initSync({ module: wasmBytes });
             } else if (typeof tools.default === 'function') {
-                await tools.default({ module_or_path: new URL('../wasm-pkg-tools/formspec_wasm_tools_bg.wasm', import.meta.url) });
+                await tools.default({
+                    module_or_path: new URL('../wasm-pkg-tools/formspec_wasm_tools_bg.wasm', import.meta.url),
+                });
             }
 
             _wasmTools = tools;
