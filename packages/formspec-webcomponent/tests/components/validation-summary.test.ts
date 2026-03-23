@@ -107,7 +107,7 @@ describe('ValidationSummary — live in wizard', () => {
     });
 
     /** Render a wizard with 2 pages: a field page and a review page with live ValidationSummary. */
-    function renderWizardWithSummary() {
+    function renderWizardWithSummary(mode: 'submit' | 'continuous' = 'submit') {
         const el = document.createElement('formspec-render') as any;
         document.body.appendChild(el);
         el.componentDocument = {
@@ -128,7 +128,7 @@ describe('ValidationSummary — live in wizard', () => {
                         component: 'Page',
                         title: 'Review',
                         children: [
-                            { component: 'ValidationSummary', source: 'live', mode: 'submit', showFieldErrors: true },
+                            { component: 'ValidationSummary', source: 'live', mode, showFieldErrors: true },
                         ],
                     },
                 ],
@@ -150,7 +150,7 @@ describe('ValidationSummary — live in wizard', () => {
         return el;
     }
 
-    it('shows live validation summary after navigating to review page via Next', () => {
+    it('keeps live submit-mode summary hidden after navigating to review page via Next', () => {
         const el = renderWizardWithSummary();
         const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
 
@@ -159,7 +159,20 @@ describe('ValidationSummary — live in wizard', () => {
         expect(nextBtn).not.toBeNull();
         nextBtn.click();
 
-        // The validation summary should now be visible — user navigated to review
+        // In submit mode, wizard navigation alone should not open the summary gate.
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(false);
+    });
+
+    it('shows live continuous-mode summary after navigating to review page via Next', () => {
+        const el = renderWizardWithSummary('continuous');
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+
+        // Click Next to advance from Details to Review
+        const nextBtn = el.querySelector('button.formspec-wizard-next') as HTMLButtonElement;
+        expect(nextBtn).not.toBeNull();
+        nextBtn.click();
+
+        // In continuous mode, wizard navigation opens the gate via touchedVersion.
         expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(true);
     });
 });
