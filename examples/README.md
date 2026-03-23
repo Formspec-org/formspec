@@ -1,6 +1,6 @@
 # Examples
 
-Seven example projects demonstrate Formspec features at increasing complexity. Each contains a `validate.py` script that runs all artifacts through the Python artifact validator.
+Example projects demonstrate Formspec features at increasing complexity. Each contains a `validate.py` script that runs all artifacts through the Python artifact validator.
 
 ```bash
 # Validate any example
@@ -88,23 +88,6 @@ See [`grant-application/README.md`](grant-application/README.md) for full detail
 
 ---
 
-## tailwind-demo/
-
-**Tailwind CSS** adapter showcase: a compact form with cards, slider, rating stars, multi-select checkboxes, and toggles. Shipped as static files under the references app (`/references/tailwind-demo/` on the docs site) or runnable alone via `npm run start:tailwind-demo` (port **8083**).
-
-**Demonstrates:** `tailwindAdapter` from `formspec-adapters`, theme tokens + cascade selectors, component layout (`Stack` / `Card` / `Grid`), `ValidationSummary` + `SubmitButton`, and Vite-bundled Tailwind v4 (`@tailwindcss/vite`) with `@source` on the adapter + demo HTML (same pattern as `formspec-studio`).
-
-| Artifact | Purpose |
-|---|---|
-| `demo.definition.json` | Profile, experience, and feedback groups with light validation |
-| `demo.component.json` | Bound widgets (including `Slider`, `Rating`, `Toggle`) |
-| `demo.theme.json` | Adapter-oriented theme (Outfit + Syne, teal/violet tokens) |
-| `fixtures/` | Empty (in-progress) and complete responses |
-
-Optional standalone dev server (port **8083**): `npm run start:tailwind-demo` from the monorepo root.
-
----
-
 ## uswds-grant/
 
 Community development grant application rendered with the **USWDS adapter**. A focused two-document example (definition + theme, no component document) that demonstrates the headless behavior/adapter architecture with USWDS v3 CSS markup.
@@ -134,5 +117,3 @@ npm run dev    # Vite only (from monorepo root: npm run start:references)
 | `tools.html` | Developer tools page |
 | `main.js` | Dashboard controller |
 | `serve.py` | Optional static preview after `npm run build` (stdlib HTTP server) |
-
-The header links **Tailwind adapter demo** to static files under `tailwind-demo/` next to the references app. The docs site (`site/`) builds `examples/tailwind-demo` with base `/references/tailwind-demo/` and copies that `dist/` into `public/references/tailwind-demo/`. For a local static tree, from `examples/refrences` run `npm run build:with-tailwind` (or `npm run start:tailwind-demo` still works as a standalone dev server on port 8083). See [`tailwind-demo/README.md`](tailwind-demo/README.md).

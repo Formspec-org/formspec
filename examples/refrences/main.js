@@ -159,25 +159,6 @@ for (const ex of EXAMPLES) {
   exampleListEl.appendChild(li);
 }
 
-// Tailwind adapter demo — separate static shell (same origin), linked from sidebar
-const tailwindDemoHref = `${ASSET_BASE}/tailwind-demo/`;
-const externalLi = document.createElement('li');
-externalLi.className = 'example-list-external';
-externalLi.innerHTML = `
-  <a class="example-external-link" href="${tailwindDemoHref}" aria-label="Open Tailwind adapter demo (separate UI)">
-    <span class="example-name">Tailwind adapter demo</span>
-    <span class="example-external-icon" aria-hidden="true">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-        <polyline points="15 3 21 3 21 9"/>
-        <line x1="10" y1="14" x2="21" y2="3"/>
-      </svg>
-    </span>
-    <span class="example-desc">Opens the Tailwind CSS render adapter in a separate page</span>
-  </a>
-`;
-exampleListEl.appendChild(externalLi);
-
 // ── Load helpers ──
 async function loadJSON(url) {
   const res = await fetch(url);

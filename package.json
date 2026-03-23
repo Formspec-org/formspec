@@ -6,7 +6,6 @@
     "packages/*",
     "packages/formspec-webcomponent/stories",
     "examples/refrences",
-    "examples/tailwind-demo",
     "site"
   ],
   "scripts": {
@@ -34,7 +33,6 @@
     "docs:formspec-lint": "cargo doc-md -p formspec-lint --no-deps -o target/doc-md-formspec-lint && node scripts/bundle-rustdoc-md.mjs formspec-lint doc-md-formspec-lint formspec_lint crates/formspec-lint/docs/rustdoc-md/API.md && cargo doc -p formspec-lint --no-deps",
     "docs:formspec-eval": "cargo doc-md -p formspec-eval --no-deps -o target/doc-md-formspec-eval && node scripts/bundle-rustdoc-md.mjs formspec-eval doc-md-formspec-eval formspec_eval crates/formspec-eval/docs/rustdoc-md/API.md && cargo doc -p formspec-eval --no-deps",
     "start:references": "npm run build --workspace=formspec-engine && npm run build --workspace=formspec-layout && npm run build --workspace=formspec-webcomponent && npm run dev --workspace=formspec-references",
-    "start:tailwind-demo": "npm run build --workspace=formspec-engine && npm run build --workspace=formspec-layout && npm run build --workspace=formspec-webcomponent && npm run build --workspace=formspec-adapters && npm run dev --workspace=formspec-tailwind-demo",
     "build:hosting": "bash scripts/build-hosting.sh",
     "deploy": "npm run build:hosting && npx -y firebase-tools@latest deploy --only hosting",
     "deploy:preview": "npm run build:hosting && npx -y firebase-tools@latest hosting:channel:deploy preview"
