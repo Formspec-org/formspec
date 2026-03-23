@@ -7,6 +7,7 @@
 
 import {
   initFormspecEngine,
+  initFormspecEngineTools,
   evalFEL,
   createMappingEngine,
   generateChangelog,
@@ -16,6 +17,7 @@ import {
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 await initFormspecEngine();
+await initFormspecEngineTools();
 document.documentElement.dataset.formspecWasmReady = '1';
 
 // ── Example registry (mirrors main.js) ──

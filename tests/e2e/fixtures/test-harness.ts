@@ -8,15 +8,17 @@ import {
     FormEngine,
     assembleDefinitionSync,
     initFormspecEngine,
+    initFormspecEngineTools,
     isFormspecEngineInitialized,
     createFormEngine,
+    tokenizeFEL,
 } from 'formspec-engine';
 
 customElements.define('formspec-render', FormspecRender);
 
 const renderer = document.createElement('formspec-render');
 document.getElementById('app')?.appendChild(renderer);
-window.renderer = renderer;
+(window as any).renderer = renderer;
 
 // Expose engine utilities for E2E tests
 (window as any).FormEngine = FormEngine;
@@ -34,3 +36,6 @@ initFormspecEngine().then(() => {
 // Expose readiness check and factory for tests
 (window as any).isFormspecEngineInitialized = isFormspecEngineInitialized;
 (window as any).createFormEngine = createFormEngine;
+/** For Playwright WASM split tests (tools load after explicit init). */
+(window as any).initFormspecEngineTools = initFormspecEngineTools;
+(window as any).tokenizeFEL = tokenizeFEL;
