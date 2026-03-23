@@ -367,11 +367,16 @@ export const ValidationSummaryPlugin: ComponentPlugin = {
                     ? fromReport
                     : (Array.isArray(fromResponse) ? fromResponse : []);
             } else {
+                const submitOccurred = ctx.latestSubmitDetailSignal.value !== null;
+                const wizardNavigated = ctx.touchedVersion.value > 0;
                 // Gate live validation display so the banner does not appear
-                // eagerly on initial page load. Show after either:
-                // - a submit attempt, or
-                // - wizard navigation (touchedVersion > 0, meaning Next was clicked)
-                if (ctx.latestSubmitDetailSignal.value === null && ctx.touchedVersion.value === 0) {
+                // until an appropriate trigger fires:
+                // - mode "submit": require an actual submit attempt
+                // - mode "continuous": require submit or wizard navigation
+                const gateOpen = mode === 'submit'
+                    ? submitOccurred
+                    : (submitOccurred || wizardNavigated);
+                if (!gateOpen) {
                     el.replaceChildren();
                     el.classList.remove('formspec-validation-summary--visible');
                     return;
