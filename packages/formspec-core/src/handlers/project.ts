@@ -39,21 +39,18 @@ export const projectHandlers: Record<string, CommandHandler> = {
     if (p.theme) {
       state.theme = p.theme;
     } else if (p.definition) {
-      // Definition-only import: drop theme pages if any region references a key
-      // that does not exist in the new definition. A single accidental key match
-      // (e.g. shared field name "name") must not preserve an entire stale page graph.
+      // Definition-only import: drop any page whose regions reference a key
+      // that does not exist in the new definition. Valid pages are preserved;
+      // only pages with at least one stale region key are removed.
       const themePages = (state.theme as any).pages as any[] | undefined;
       if (themePages && themePages.length > 0) {
         const flatKeys = collectDefinitionItemKeys((state.definition as any).items as FormItem[]);
-        const allRegionsValid = themePages.every((page: any) =>
+        (state.theme as any).pages = themePages.filter((page: any) =>
           (page.regions ?? []).every((region: any) => {
             const k = region.key as string | undefined;
             return !k || flatKeys.has(k);
           }),
         );
-        if (!allRegionsValid) {
-          (state.theme as any).pages = [];
-        }
       }
     }
     if (p.mappings) {
