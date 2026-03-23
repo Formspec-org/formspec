@@ -83,13 +83,13 @@ Lock ambiguous rows (**especially `wasmParseFEL`**, which may overlap runtime co
 | `wasmPrintFEL`, `wasmListBuiltinFunctions` | `fel-api` |
 | `wasmTokenizeFEL`, `wasmValidateExtensionUsage` | `fel-api` / `formspec-core` diagnostics (studio) |
 
-**Ambiguous / verify before locking:**
+**Ambiguous — locked (2026-03-24 grep):**
 
-| TS wrapper | Suggested bucket | Action |
-|------------|------------------|--------|
-| `wasmParseFEL` | Tools (authoring) if unused on render path | Grep monorepo callers; if only tooling, tools |
-| `wasmExtractDependencies` | Tools vs runtime | Not re-exported from `index.ts` today; grep consumers; default **tools** if only MCP/studio |
-| `wasmDetectDocumentType`, `wasmJsonPointerToJsonPath` | Tools | Used by document/lint stack; confirm no `FormEngine` import |
+| TS wrapper | Bucket | Evidence |
+|------------|--------|----------|
+| `wasmParseFEL` | **Tools** | No TS callers outside `wasm-bridge`; `Project.parseFEL` uses `analyzeFEL` (runtime), not `wasmParseFEL`. |
+| `wasmExtractDependencies` | **Tools** | No monorepo imports; `wasmGetFELDependencies` remains runtime for engine deps. |
+| `wasmDetectDocumentType`, `wasmJsonPointerToJsonPath` | **Tools** | No monorepo imports outside bridge; not on `FormEngine` path. |
 
 *Update this table if grep finds a runtime import — matrix is the contract.*
 
@@ -101,17 +101,18 @@ Lock ambiguous rows (**especially `wasmParseFEL`**, which may overlap runtime co
 - [x] Implement `initWasm()` → **runtime only** (current behavior for render-first apps).
 - [x] Implement `initWasmTools()` — idempotent promise, dynamic `import()` of tools JS glue; Node path mirrors current `readFileSync` + `initSync` resolution logic.
 - [x] `initWasmTools()` must verify runtime/tools compatibility before exposing tools APIs. On mismatch, fail fast with a targeted error that includes the runtime version, tools version, and artifact names.
-- [ ] Split implementation files:
-  - `wasm-bridge-runtime.ts` — runtime `_wasm` handle + runtime wrappers
-  - `wasm-bridge-tools.ts` — tools `_wasmTools` + tools wrappers; each public function `await ensureWasmTools()` then delegate
+- [x] Split implementation files:
+  - `wasm-bridge-shared.ts` — Node `.wasm` path resolution (Vitest-safe)
+  - `wasm-bridge-runtime.ts` — runtime `_wasm` + runtime wrappers
+  - `wasm-bridge-tools.ts` — tools `_wasmTools` + tools wrappers
   - `wasm-bridge.ts` — re-export **same** `wasmXxx` names as today (compatibility barrel per ADR)
 - [x] `createMappingEngine` / `assembleDefinition` / lint entrypoints: ensure first call triggers `initWasmTools()` only (never from `initFormspecEngine()` / `createFormEngine()` alone). *(Note: `await assembleDefinition()` calls `initWasmTools()` lazily; sync `assembleDefinitionSync` / `RuntimeMappingEngine` require explicit `initFormspecEngineTools()`.)*
-- [ ] Error messages: if tools API called before tools load fails, surface clear “tools WASM failed to load” vs “runtime not initialized”.
+- [x] Error messages: runtime vs “tools not loaded” vs `initWasmTools` load failure (see `wasm-bridge-runtime.ts` / `wasm-bridge-tools.ts`).
 
 ## 6. Build & packaging
 
 - [x] `packages/formspec-engine/package.json`: two `wasm-pack build` commands, same `wasm-opt` profile as today for apples-to-apples baseline.
-- [ ] `Makefile` / root build scripts: update any target that assumes a single `formspec-wasm` artifact (including `make build` ordering if applicable).
+- [x] `Makefile` / root build scripts: no `wasm-pack` / `wasm-pkg` references found (2026-03-24); `npm run build` in engine owns WASM. *Re-check if Makefile gains a wasm step later.*
 - [ ] CI (e.g. `.github/workflows`): replace hardcoded monolith WASM paths or copy steps with both artifacts where needed.
 - [ ] Publish layout: both artifact dirs under `formspec-engine` package (or document if tools is optional peer — default: bundle both in `formspec-engine`).
 - [x] Vite / Vitest: Node `readFileSync` for `.wasm` must not assume `file:` `import.meta.url` (Vitest can rewrite it). `resolveWasmAssetPathForNode()` in `wasm-bridge.ts` + `formspec-studio-core/tests/setup.ts` loads tools WASM like engine tests.
@@ -144,7 +145,7 @@ Lock ambiguous rows (**especially `wasmParseFEL`**, which may overlap runtime co
 
 - [x] `initFormspecEngine()` / `createFormEngine()` do not import, fetch, or initialize tools JS glue or tools WASM.
 - [x] `formspec-webcomponent` render path: no `wasm-pkg-tools` / `initFormspecEngineTools` references (grep 2026-03-23). *Formal E2E/network proof still open (§8 browser).*
-- [ ] `formspec-layout` unchanged (still no engine/WASM).
+- [x] `formspec-layout` unchanged (still no engine/WASM; grep 2026-03-24).
 - [ ] Package-root `formspec-engine` public APIs remain stable where ADR 0050 expects stability; tools-owned APIs still resolve from the top-level package and lazy-load internally.
 - [ ] Baseline doc: runtime artifact strictly smaller than monolith (raw + compressed); timings recorded using the same sequence as Phase 0 (`initFormspecEngine()` → first `createFormEngine()` → first eval).
 - [ ] Lint / registry / changelog / mapping / assembly behave the same once tools loaded.
