@@ -17,12 +17,16 @@ status: draft
 ## Abstract
 
 The Formspec Ontology Specification defines a standalone sidecar document for
-attaching semantic concept identifiers, cross-system equivalences, vocabulary
-bindings, and alignment metadata to a Formspec Definition. An Ontology Document
-lives alongside the Definition (like Theme, Component, and References documents)
-and binds ontological metadata to specific fields and option sets by path.
-Multiple Ontology Documents MAY target the same Definition — for different
-domains, standards bodies, or interoperability contexts.
+*binding* form fields to concepts defined in external ontologies and standards
+(schema.org, FHIR, ICD-10, Dublin Core, etc.). An Ontology Document does not
+define new concepts — it references existing ones by IRI, connecting Formspec's
+data collection model to the broader ecosystem of domain ontologies, controlled
+vocabularies, and data standards.
+
+An Ontology Document lives alongside the Definition (like Theme, Component, and
+References documents) and binds semantic metadata to specific fields and option
+sets by path. Multiple Ontology Documents MAY target the same Definition — for
+different domains, standards bodies, or interoperability contexts.
 
 This specification enables data scientists, integration engineers, and automated
 tooling to understand what form data *means*, not just what it *looks like* — and
@@ -68,7 +72,7 @@ Additional terms:
 ## Bottom Line Up Front
 
 <!-- bluf:start file=ontology-spec.bluf.md -->
-- Ontology Documents are standalone JSON sidecars that bind semantic concept identifiers, vocabulary bindings, and cross-system alignments to a Formspec Definition by item path — like Theme, Component, and References documents, they live alongside the Definition.
+- Ontology Documents are standalone JSON sidecars that **bind** form fields to concepts defined in external ontologies (schema.org, FHIR, ICD-10, etc.) — they reference existing concepts by URI, they do not define new ones. Like Theme, Component, and References documents, they live alongside the Definition.
 - Each Concept Binding declares a `concept` URI linking a Definition field to an external ontology (FHIR, schema.org, ICD-10, etc.), with optional cross-system `equivalents` using SKOS relationship types (exact, broader, narrower, related, close).
 - Vocabulary Bindings associate named option sets with external terminology systems, enabling terminology version tracking, cross-vocabulary alignment, and code normalization via `valueMap`.
 - Alignments declare typed relationships between Definition fields and concepts in other systems, enabling cross-form data science — two independently authored forms that align to the same concept can have their data mechanically merged.
@@ -99,30 +103,46 @@ This companion specification fills that gap by defining:
    linked data from form responses.
 5. **Conformance requirements** for ontology-aware processors.
 
-This specification does NOT define an ontology language, a reasoning engine, or
-a terminology service. It defines a metadata document that connects Formspec's
-data collection model to the broader ecosystem of domain ontologies, controlled
-vocabularies, and data standards.
+This specification does NOT define an ontology, an ontology language, a reasoning
+engine, or a terminology service. It defines a **binding document** — a metadata
+layer that references concepts defined elsewhere and attaches them to form
+fields. External ontologies (schema.org, FHIR, OWL vocabularies) define what
+concepts mean. This specification declares which of those concepts each form
+field represents.
+
+> **Clarification on naming:** Despite the name "Ontology Document," this
+> specification does not create a new ontology or define new concepts. The name
+> reflects the document's *purpose* (connecting forms to ontologies) rather than
+> its *nature* (it is a binding/annotation document, not an ontology itself).
+> The relationship to external ontologies is strictly referential — concept URIs
+> point to definitions maintained by their respective authorities (W3C, HL7,
+> WHO, etc.), and this specification neither redefines nor extends those
+> definitions.
 
 ### 1.1 Design Principles
 
-1. **Sidecar, not embedded.** Ontological metadata is authored and versioned
+1. **Binding, not definition.** This document references concepts defined in
+   external ontologies — it does not define new concepts. schema.org defines
+   what `birthDate` means. FHIR defines what `Patient.identifier` means. This
+   document says "field `dob` in this form represents `schema.org/birthDate`."
+
+2. **Sidecar, not embedded.** Ontological metadata is authored and versioned
    independently of the Definition. The same form can have multiple ontology
    overlays for different contexts (healthcare, research, government).
 
-2. **Different authority.** The ontology overlay may be authored by a different
+3. **Different authority.** The ontology overlay may be authored by a different
    party than the form author — a standards body, a data governance team, or a
    domain expert.
 
-3. **Different cadence.** Terminology systems (ICD-10, SNOMED, NAICS) update on
+4. **Different cadence.** Terminology systems (ICD-10, SNOMED, NAICS) update on
    their own schedules. Vocabulary bindings must version independently of both
    the Definition and the extension registry.
 
-4. **Pure metadata.** Like References, an Ontology Document MUST NOT affect data
+5. **Pure metadata.** Like References, an Ontology Document MUST NOT affect data
    capture, validation, or the processing model. A processor that does not
    understand ontology documents MUST ignore them without error.
 
-5. **Graceful degradation.** Every property is optional except the structural
+6. **Graceful degradation.** Every property is optional except the structural
    minimum. A document with only concept bindings is valid. A document with only
    vocabulary bindings is valid. Tooling extracts whatever is present.
 
