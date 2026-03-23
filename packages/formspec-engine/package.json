@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build:wasm:runtime": "wasm-pack build ../../crates/formspec-wasm --target web --out-dir ../../packages/formspec-engine/wasm-pkg-runtime --out-name formspec_wasm_runtime --no-opt && wasm-opt -Os --enable-bulk-memory --enable-nontrapping-float-to-int --enable-simd wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm -o wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm",
+    "build:wasm:runtime": "wasm-pack build ../../crates/formspec-wasm --target web --out-dir ../../packages/formspec-engine/wasm-pkg-runtime --out-name formspec_wasm_runtime --no-opt -- --no-default-features && wasm-opt -Os --enable-bulk-memory --enable-nontrapping-float-to-int --enable-simd wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm -o wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm",
     "build:wasm:tools": "wasm-pack build ../../crates/formspec-wasm --target web --out-dir ../../packages/formspec-engine/wasm-pkg-tools --out-name formspec_wasm_tools --no-opt && wasm-opt -Os --enable-bulk-memory --enable-nontrapping-float-to-int --enable-simd wasm-pkg-tools/formspec_wasm_tools_bg.wasm -o wasm-pkg-tools/formspec_wasm_tools_bg.wasm",
     "build:wasm": "npm run build:wasm:runtime && npm run build:wasm:tools",
     "build": "npm run build:wasm && tsc",

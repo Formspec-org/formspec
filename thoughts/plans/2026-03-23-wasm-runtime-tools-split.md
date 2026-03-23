@@ -42,10 +42,13 @@ ADR allows either **two crates** or **one crate + features + two `wasm-pack` bui
 
 **Concrete tasks:**
 
-- [ ] List every `#[wasm_bindgen]` export in current `crates/formspec-wasm/src/*.rs` and assign **runtime** vs **tools** (must match §5 matrix).
+- [x] List every `#[wasm_bindgen]` export in `crates/formspec-wasm/src/*.rs` and assign **runtime** vs **tools** (TS §5). *Rust split below: runtime Cargo build omits **lint-only** exports; all other symbols ship in both `.wasm` files until further cfg work.*
+- [x] **Single-crate feature split (landed):** `formspec-wasm` feature `lint` (default on) + optional `formspec-lint`; runtime `wasm-pack` uses `-- --no-default-features`. *Two separate crates (`formspec-wasm-runtime` / `-tools`) still optional for clearer boundaries.*
 - [ ] Ensure **runtime** build still compiles `formspec-eval` paths that use `registryDocuments` / extension constraints. **Invariant:** extension validation required during batch definition evaluation stays in **runtime** WASM (Rust eval path). The TS wrapper `wasmValidateExtensionUsage` belongs in **tools** only if it is diagnostics/authoring-only and not invoked on the `FormEngine` hot path; grep call sites before locking the matrix.
 - [x] Confirm `formspec-eval` does **not** depend on `formspec-lint` (verified in `crates/formspec-eval/Cargo.toml` — runtime split is structurally viable).
 - [x] `formspec-py` / native consumers: grep for `formspec-wasm`; update if they embed the monolith; document which artifact(s) each consumer loads. *(2026-03-23: `crates/formspec-py` has no wasm references.)*
+
+**Rust `#[wasm_bindgen]` vs Cargo `lint`:** All exports in `fel`, `evaluate`, `value_coerce`, `definition`, `mapping`, `registry`, `changelog`, `split_abi`, and the **non-lint** `document` APIs (`detectDocumentType`, `jsonPointerToJsonPath`, `planSchemaValidation`) appear in **both** WASM artifacts today. Only `lintDocument` and `lintDocumentWithRegistries` are behind `feature = "lint"` and exist **only** in the tools build. TS still routes document/lint calls through the tools module only (ADR 0050).
 
 ## 4. Export ownership matrix (`wasm-bridge.ts` → WASM)
 
@@ -147,7 +150,7 @@ Lock ambiguous rows (**especially `wasmParseFEL`**, which may overlap runtime co
 - [x] `formspec-webcomponent` render path: no `wasm-pkg-tools` / `initFormspecEngineTools` references (grep 2026-03-23). *Formal E2E/network proof still open (§8 browser).*
 - [x] `formspec-layout` unchanged (still no engine/WASM; grep 2026-03-24).
 - [ ] Package-root `formspec-engine` public APIs remain stable where ADR 0050 expects stability; tools-owned APIs still resolve from the top-level package and lazy-load internally.
-- [ ] Baseline doc: runtime artifact strictly smaller than monolith (raw + compressed); timings recorded using the same sequence as Phase 0 (`initFormspecEngine()` → first `createFormEngine()` → first eval).
+- [x] Baseline doc: runtime artifact **smaller than tools/full** (raw + gzip + brotli) — see [wasm-split-baseline.md](../reviews/2026-03-23-wasm-split-baseline.md). *Historical monolith row still optional.*
 - [ ] Lint / registry / changelog / mapping / assembly behave the same once tools loaded.
 - [ ] `registryDocuments` contract preserved for extension-aware evaluation.
 - [ ] Runtime/tools compatibility mismatch fails early with a targeted error rather than surfacing as a late lazy-load failure.

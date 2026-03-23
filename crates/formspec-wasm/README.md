@@ -2,6 +2,14 @@
 
 `wasm-bindgen` crate exposing the Rust Formspec stack to TypeScript and browsers. Public API is `#[wasm_bindgen]` functions on the crate root modules (`evalFEL`, `lintDocument`, `evaluateDefinition`, …); inputs and outputs are mostly JSON strings.
 
+## Cargo features
+
+| Feature | Default | Effect |
+|---------|---------|--------|
+| `lint` | **yes** | Enables `formspec-lint` and exports `lintDocument` / `lintDocumentWithRegistries`. |
+
+**ADR 0050:** `packages/formspec-engine` builds **runtime** WASM with `cargo … --no-default-features` (no `lint`) and **tools** WASM with default features. The TypeScript bridge loads runtime first and tools lazily.
+
 Sibling binding: **[`formspec-py`](../formspec-py/)** (`formspec_rust`) targets the same stack for Python. Mapping JSON parsing (e.g. `parse_coerce_type`, including `array` coercion) is kept aligned with that crate where practical.
 
 ## Layout
@@ -24,7 +32,11 @@ Sibling binding: **[`formspec-py`](../formspec-py/)** (`formspec_rust`) targets 
 
 ```bash
 cargo test -p formspec-wasm
-wasm-pack build crates/formspec-wasm   # when building for web
+cargo test -p formspec-wasm --no-default-features   # same graph as runtime WASM
+# Runtime WASM (no lint):
+wasm-pack build crates/formspec-wasm --target web --no-opt -- --no-default-features
+# Full / tools WASM:
+wasm-pack build crates/formspec-wasm --target web --no-opt
 ```
 
 Release profile disables `wasm-opt` in `Cargo.toml` metadata (see `package.metadata.wasm-pack`).

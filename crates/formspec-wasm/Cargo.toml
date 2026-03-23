@@ -9,11 +9,16 @@ readme = "README.md"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# Lint pulls `formspec-lint` + schema/jsonschema stack — omit from the runtime WASM artifact (ADR 0050).
+default = ["lint"]
+lint = ["dep:formspec-lint"]
+
 [dependencies]
 fel-core = { path = "../fel-core" }
 formspec-core = { path = "../formspec-core" }
 formspec-eval = { path = "../formspec-eval" }
-formspec-lint = { path = "../formspec-lint" }
+formspec-lint = { path = "../formspec-lint", optional = true }
 rust_decimal = "1"
 serde = "1"
 serde_json = "1"

@@ -383,12 +383,12 @@ Four stages, all in `src/fel/`:
 
 ### Rust / WASM (split artifacts)
 
-`npm run build` compiles `crates/formspec-wasm` twice via `wasm-pack` and runs the same `wasm-opt` pass as before:
+`npm run build` compiles `crates/formspec-wasm` twice via `wasm-pack` and runs the same `wasm-opt` pass as before. The **runtime** build passes **`--no-default-features`** to Cargo so **`formspec-lint` is not linked** (`lintDocument` exists only in the tools artifact).
 
 | Output directory | Glue module prefix | Used for |
 |------------------|-------------------|----------|
 | `wasm-pkg-runtime/` | `formspec_wasm_runtime*` | Default **`initFormspecEngine()`** path: `FormEngine`, batch eval, FEL eval, coercion, migrations, option-set inlining, path helpers |
-| `wasm-pkg-tools/` | `formspec_wasm_tools*` | Lint/schema planning, registry document helpers, mapping execution, definition assembly in WASM, FEL authoring helpers (tokenize, print, rewrites, …) |
+| `wasm-pkg-tools/` | `formspec_wasm_tools*` | Lint (7-pass) + schema planning, registry document helpers, mapping execution, definition assembly in WASM, FEL authoring helpers (tokenize, print, rewrites, …) |
 
 - Call **`await initFormspecEngine()`** before `FormEngine` or runtime WASM helpers.
 - Call **`await initFormspecEngineTools()`** before sync tooling APIs (`lintDocument`, `tokenizeFEL`, `assembleDefinitionSync`, `RuntimeMappingEngine`, …). **`await assembleDefinition()`** loads tools lazily on first use.

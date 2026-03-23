@@ -1,12 +1,12 @@
-//! WASM bindings for Formspec — exposes FEL, linting, evaluation, assembly, mapping to TS.
+//! WASM bindings for Formspec — exposes FEL, evaluation, assembly, mapping, and (with `lint`) linting to TS.
 //!
 //! All exported functions accept and return JSON strings (or simple scalars) for complex types.
 //! The binding layer performs conversion only; behavior lives in `fel-core`, `formspec-core`,
-//! `formspec-eval`, and `formspec-lint`.
+//! `formspec-eval`, and (feature `lint`) `formspec-lint`.
 //!
 //! ## Layout
 //! - `fel` — FEL eval, tokenize, rewrite, path utilities
-//! - `document` — detect type, schema plan, lint
+//! - `document` — detect type, schema plan; lint only when `feature = "lint"`
 //! - `evaluate` — batch definition evaluation, screener
 //! - `definition` — assemble definition with `$ref` fragments
 //! - `mapping` — mapping rules + mapping document execution

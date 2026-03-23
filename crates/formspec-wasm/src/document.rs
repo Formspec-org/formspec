@@ -2,13 +2,17 @@
 
 use formspec_core::{
     detect_document_type, json_pointer_to_jsonpath, schema_validation_plan, DocumentType,
-    JsonWireStyle,
 };
+#[cfg(feature = "lint")]
+use formspec_core::JsonWireStyle;
+#[cfg(feature = "lint")]
 use formspec_lint::{lint, lint_result_to_json_value, lint_with_options, LintOptions};
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
-use crate::json_host::{parse_json_as, parse_value_str, to_json_string};
+#[cfg(feature = "lint")]
+use crate::json_host::parse_json_as;
+use crate::json_host::{parse_value_str, to_json_string};
 
 // ── Schema Validation ───────────────────────────────────────────
 
@@ -44,10 +48,11 @@ pub fn plan_schema_validation_wasm(
     to_json_string(&v).map_err(|e| JsError::new(&e))
 }
 
-// ── Linting ─────────────────────────────────────────────────────
+// ── Linting (`feature = "lint"` — tools WASM only) ──────────────
 
 /// Lint a Formspec document (7-pass static analysis).
 /// Returns JSON: { documentType, valid, diagnostics: [...] }
+#[cfg(feature = "lint")]
 #[wasm_bindgen(js_name = "lintDocument")]
 pub fn lint_document(doc_json: &str) -> Result<String, JsError> {
     let doc: Value = parse_value_str(doc_json, "JSON").map_err(|e| JsError::new(&e))?;
@@ -57,6 +62,7 @@ pub fn lint_document(doc_json: &str) -> Result<String, JsError> {
 }
 
 /// Lint with registry documents for extension resolution.
+#[cfg(feature = "lint")]
 #[wasm_bindgen(js_name = "lintDocumentWithRegistries")]
 pub fn lint_document_with_registries(
     doc_json: &str,

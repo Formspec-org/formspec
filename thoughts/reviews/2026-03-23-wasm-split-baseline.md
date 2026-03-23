@@ -6,7 +6,12 @@
 
 ## Implementation note (current tree)
 
-Runtime and tools artifacts are built from the **same** `crates/formspec-wasm` crate twice (`wasm-pack` → `wasm-pkg-runtime` / `wasm-pkg-tools`). Until a **Rust crate/feature split** removes `formspec-lint` (and friends) from the runtime build, **`.wasm` byte sizes are effectively identical** between the two outputs. The delivered win today is **load order** (runtime-first) and **optional second fetch**, not a smaller runtime binary.
+Runtime and tools artifacts are built from **`crates/formspec-wasm`** with two Cargo feature sets:
+
+- **Runtime** — `wasm-pack … -- --no-default-features` (no `lint` feature → **no `formspec-lint`** link; `lintDocument` / `lintDocumentWithRegistries` are absent from the runtime `.wasm`).
+- **Tools** — default features (`lint` on) — full surface including lint passes.
+
+Further splits (e.g. moving schema-plan or mapping out of runtime) are optional follow-ups.
 
 ## Artifact sizes
 
@@ -15,8 +20,8 @@ Measured after `npm run build:wasm` in `packages/formspec-engine` (same `wasm-op
 | Artifact | Raw bytes | gzip | brotli | Notes |
 |----------|-----------|------|--------|--------|
 | ~~Monolith~~ `wasm-pkg/formspec_wasm_bg.wasm` | — | — | — | Not re-recorded here; compare from a pre-split commit if a historical row is needed. |
-| Runtime `wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm` | 3,400,310 | 1,166,169 | 820,914 | Node measurement host: darwin; `brotli` CLI used. |
-| Tools `wasm-pkg-tools/formspec_wasm_tools_bg.wasm` | 3,400,302 | 1,166,163 | 820,285 | Differs only by wasm-pack naming/metadata padding. |
+| Runtime `wasm-pkg-runtime/formspec_wasm_runtime_bg.wasm` | **1,920,002** | **706,236** | **504,583** | `--no-default-features` build; darwin; `brotli` CLI. |
+| Tools `wasm-pkg-tools/formspec_wasm_tools_bg.wasm` | 3,400,302 | 1,166,144 | 820,344 | Default features (`lint`); same `wasm-opt -Os` flags as runtime. |
 
 ## Timings (rough, Node cold process)
 
