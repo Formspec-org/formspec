@@ -14,7 +14,6 @@ The package is ESM-only. It requires `formspec-engine` and `formspec-layout` as 
 
 ```js
 import { FormspecRender } from 'formspec-webcomponent';
-import 'formspec-webcomponent/formspec-layout.css';
 import 'formspec-webcomponent/formspec-default.css';
 
 customElements.define('formspec-render', FormspecRender);
@@ -28,6 +27,8 @@ el.definition = myDefinition;
 el.componentDocument = myComponentDoc;
 el.themeDocument = myTheme;
 ```
+
+Importing `FormspecRender` loads structural `formspec-layout.css` (grid, stack, wizard chrome). Import `formspec-default.css` when you use the built-in renderer’s field styling; omit it for custom adapters (for example Tailwind) so global `input` / `label` rules do not override utility classes.
 
 The element is exported but not auto-registered. Call `customElements.define()` with your preferred tag name.
 
@@ -190,6 +191,7 @@ el.adapter = 'my-design-system';  // Override for this instance only
 ### Adapter Contract
 
 Adapters **must**:
+
 1. Create DOM elements and append the root to `parent`
 2. Apply `behavior.presentation.cssClass` to the root element (union semantics)
 3. Respect `behavior.presentation.labelPosition` (`'top'` | `'start'` | `'hidden'`)
@@ -198,6 +200,7 @@ Adapters **must**:
 6. Register the dispose function via `actx.onDispose(dispose)`
 
 Adapters **must not**:
+
 - Import `@preact/signals-core` or access the engine directly
 - Register event listeners for value sync, change detection, or touch tracking (`bind()` owns all event wiring)
 

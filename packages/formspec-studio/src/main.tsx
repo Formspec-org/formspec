@@ -2,6 +2,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initFormspecEngine } from 'formspec-engine';
+import 'formspec-webcomponent/formspec-default.css';
 import { FormspecRender } from 'formspec-webcomponent';
 import { App } from './App';
 import './index.css';

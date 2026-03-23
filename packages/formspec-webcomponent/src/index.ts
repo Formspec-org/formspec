@@ -1,7 +1,6 @@
 /** @filedesc Package entry point: registers components and re-exports public API. */
-// Side effects — layout is always loaded; default provides visual styling
+// Structural layout CSS only. Import `formspec-webcomponent/formspec-default.css` in the host when using built-in field styling.
 import './formspec-layout.css';
-import './formspec-default.css';
 import { initFormspecEngine } from 'formspec-engine';
 import { registerDefaultComponents } from './components';
 
