@@ -1,0 +1,20 @@
+---
+/** Loads Firebase Analytics (GA4) when public env is fully configured. */
+import { getFirebasePublicConfig } from "../lib/firebase-public-config";
+
+const firebaseConfig = getFirebasePublicConfig();
+---
+
+{
+  firebaseConfig && (
+    <script define:vars={{ firebaseConfig }}>
+      import { initializeApp } from "firebase/app";
+      import { getAnalytics, isSupported } from "firebase/analytics";
+
+      const app = initializeApp(firebaseConfig);
+      void isSupported().then((supported) => {
+        if (supported) getAnalytics(app);
+      });
+    </script>
+  )
+}

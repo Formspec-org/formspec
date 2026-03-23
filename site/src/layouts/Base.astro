@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import FirebaseAnalytics from "../components/FirebaseAnalytics.astro";
 
 export interface Props {
   title: string;
@@ -62,5 +63,6 @@ const fullTitle = title === "Formspec" ? title : `${title} — Formspec`;
   </head>
   <body>
     <slot />
+    <FirebaseAnalytics />
   </body>
 </html>
