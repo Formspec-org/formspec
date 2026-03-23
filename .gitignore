@@ -51,6 +51,7 @@ site/public/references/
 # Rust / WASM build artifacts
 target/
 packages/formspec-engine/wasm-pkg/
-# wasm-pkg-runtime / wasm-pkg-tools: not listed here — npm pack must see built artifacts (package.json `files`).
-# They stay untracked; do not commit (see packages/formspec-engine README).
+packages/formspec-engine/wasm-pkg-runtime/
+packages/formspec-engine/wasm-pkg-tools/
+# npm pack safety: formspec-engine/.npmignore exists so npm uses it instead of this file.
 thoughts/private/

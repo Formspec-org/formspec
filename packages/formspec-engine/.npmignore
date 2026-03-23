@@ -1,0 +1,7 @@
+# npm pack uses package.json#files as the allowlist (dist, wasm-pkg-runtime, wasm-pkg-tools).
+# This file exists so npm does not fall back to .gitignore, which excludes the wasm-pkg-* dirs.
+src/
+tests/
+scripts/
+*.ts
+tsconfig.json
