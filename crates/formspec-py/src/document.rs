@@ -12,10 +12,10 @@ use formspec_core::{
     resolve_option_sets_on_definition as resolve_option_sets_on_definition_core,
 };
 use formspec_eval::{
-    eval_context_from_json_object, evaluate_definition_full_with_instances_and_context,
-    evaluate_screener, evaluation_result_to_json_value_styled,
-    extension_constraints_from_registry_documents, screener_route_to_json_value,
-    types::EvalContext,
+    EvalContext, eval_context_from_json_object,
+    evaluate_definition_full_with_instances_and_context, evaluate_screener,
+    evaluation_result_to_json_value_styled, extension_constraints_from_registry_documents,
+    screener_route_to_json_value,
 };
 use formspec_lint::{LintMode, LintOptions, lint_result_to_json_value, lint_with_options};
 
