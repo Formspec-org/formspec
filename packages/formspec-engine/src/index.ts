@@ -19,11 +19,13 @@ export type {
     ComponentObject,
     DefinitionResolver,
     DocumentType,
+    EngineNowInput,
     EngineReplayApplyResult,
     EngineReplayEvent,
     EngineReplayResult,
     ExtensionUsageIssue,
     FELAnalysis,
+    FELAnalysisError,
     FELBuiltinFunctionCatalogEntry,
     FELRewriteOptions,
     FormEngineDiagnosticsSnapshot,
@@ -101,6 +103,7 @@ export { wasmLintDocumentWithRegistries as lintDocumentWithRegistries } from './
 
 export { buildValidationReportEnvelope } from './engine/response-assembly.js';
 export { toValidationResults } from './engine/helpers.js';
+export type { EvalValidation } from './diff.js';
 
 export { assembleDefinition, assembleDefinitionSync } from './assembly/assembleDefinition.js';
 

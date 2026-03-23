@@ -1,6 +1,6 @@
 /** @filedesc Extracts concise extension hints from a registry document for AI prompt injection. */
 
-interface RegistryEntry {
+export interface RegistryHintEntry {
   name: string;
   category: string;
   description: string;
@@ -12,8 +12,9 @@ interface RegistryEntry {
   examples?: Array<Record<string, unknown> | string>;
 }
 
-interface RegistryDocument {
-  entries: RegistryEntry[];
+/** Minimal registry document shape accepted by {@link extractRegistryHints}. */
+export interface RegistryDocument {
+  entries: RegistryHintEntry[];
 }
 
 /**

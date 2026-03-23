@@ -36,7 +36,7 @@ export type { RenderAdapter, AdapterRenderFn, AdapterContext } from './adapters/
 export { createSignatureCanvas } from './adapters/signature-canvas';
 export type { SignatureCanvasConfig, SignatureCanvasResult } from './adapters/signature-canvas';
 export type {
-    FieldBehavior, FieldRefs, ResolvedPresentationBlock, BehaviorContext,
+    FieldBehavior, FieldRefs, ResolvedPresentationBlock, BehaviorContext, SubmitDetail,
     TextInputBehavior, NumberInputBehavior, RadioGroupBehavior,
     CheckboxGroupBehavior, SelectBehavior, ToggleBehavior,
     DatePickerBehavior, MoneyInputBehavior, SliderBehavior,

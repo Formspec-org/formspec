@@ -1,7 +1,6 @@
 /** @filedesc The <formspec-render> custom element that orchestrates form rendering. */
 import { signal } from '@preact/signals-core';
-import { createFormEngine } from 'formspec-engine/render';
-import type { IFormEngine } from 'formspec-engine/render';
+import { createFormEngine, type FormEngine, type IFormEngine } from 'formspec-engine/render';
 import { initFormspecEngine, isFormspecEngineInitialized } from 'formspec-engine/init-formspec-engine';
 import { globalRegistry } from './registry';
 import {

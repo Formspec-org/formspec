@@ -48,3 +48,4 @@ export { buildBundleFromDefinition } from './bundle-builder.js';
 export { ChatSession } from './chat-session.js';
 export { McpBridge } from './mcp-bridge.js';
 export { extractRegistryHints } from './registry-hints.js';
+export type { RegistryDocument, RegistryHintEntry } from './registry-hints.js';
