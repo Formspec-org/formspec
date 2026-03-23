@@ -1,0 +1,8 @@
+- Ontology Documents are standalone JSON sidecars that bind semantic concept identifiers, vocabulary bindings, and cross-system alignments to a Formspec Definition by item path — like Theme, Component, and References documents, they live alongside the Definition.
+- Each Concept Binding declares a `concept` URI linking a Definition field to an external ontology (FHIR, schema.org, ICD-10, etc.), with optional cross-system `equivalents` using SKOS relationship types (exact, broader, narrower, related, close).
+- Vocabulary Bindings associate named option sets with external terminology systems, enabling terminology version tracking, cross-vocabulary alignment, and code normalization via `valueMap`.
+- Alignments declare typed relationships between Definition fields and concepts in other systems, enabling cross-form data science — two independently authored forms that align to the same concept can have their data mechanically merged.
+- Multiple Ontology Documents MAY target the same Definition — for different domains, standards bodies, or interoperability contexts. Bindings merge additively; last-loaded document wins for the same path.
+- Ontology metadata is pure metadata — it MUST NOT affect data capture, validation, or the processing model. Ontology property values are static; FEL expressions MUST NOT appear.
+- The specification is OWL-integrative, not OWL-compatible: it uses IRIs for concept identity and SKOS for alignment types, but does not implement OWL formal semantics, open-world reasoning, or class hierarchies. JSON-LD context fragments bridge to the semantic web when needed.
+- This BLUF is governed by `schemas/ontology.schema.json`; generated references are the structural contract.
