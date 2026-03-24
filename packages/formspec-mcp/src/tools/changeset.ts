@@ -154,6 +154,30 @@ export function withChangesetBracket<T>(
   }
 }
 
+/**
+ * Convenience wrapper for MCP tool registrations.
+ *
+ * Resolves the project from the registry and wraps `fn` with changeset
+ * brackets. If the project cannot be resolved (wrong phase, not found),
+ * `fn` is called directly — its own error handling produces the
+ * appropriate MCP error response.
+ */
+export function bracketMutation<T>(
+  registry: ProjectRegistry,
+  projectId: string,
+  toolName: string,
+  fn: () => T,
+): T {
+  let project: Project | null = null;
+  try {
+    project = registry.getProject(projectId);
+  } catch {
+    // Project not found or wrong phase — let fn() handle the error response
+    return fn();
+  }
+  return withChangesetBracket(project, toolName, fn);
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 function getProposalManager(project: Project): ProposalManager {
