@@ -140,6 +140,65 @@ describe('render lifecycle', () => {
         expect(el.getScreenerState().completed).toBe(false);
     });
 
+    it('initialData before definition hydrates main form and auto-skips internal screener', () => {
+        el.initialData = { kind: 'internal', name: 'Hydrated' };
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:screened',
+            version: '1.0.0',
+            title: 'Screened Test',
+            items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
+            screener: {
+                items: [
+                    {
+                        key: 'kind',
+                        type: 'field',
+                        dataType: 'choice',
+                        label: 'Kind',
+                        options: [{ value: 'internal', label: 'Internal' }],
+                    },
+                ],
+                binds: [{ path: 'kind', required: 'true' }],
+                routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
+            },
+        };
+        el.render();
+        expect(el.querySelector('.formspec-screener')).toBeNull();
+        expect(el.getEngine()?.signals.name?.value).toBe('Hydrated');
+    });
+
+    it('screenerSeedAnswers before definition auto-skips when route is internal', () => {
+        el.screenerSeedAnswers = { kind: 'internal' };
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:screened',
+            version: '1.0.0',
+            title: 'Screened Test',
+            items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
+            screener: {
+                items: [
+                    {
+                        key: 'kind',
+                        type: 'field',
+                        dataType: 'choice',
+                        label: 'Kind',
+                        options: [{ value: 'internal', label: 'Internal' }],
+                    },
+                ],
+                binds: [{ path: 'kind', required: 'true' }],
+                routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
+            },
+        };
+        el.render();
+        expect(el.querySelector('.formspec-screener')).toBeNull();
+        expect(el.getScreenerState()).toMatchObject({
+            hasScreener: true,
+            completed: true,
+            routeType: 'internal',
+        });
+        expect(el.getScreenerRoute()?.target).toBe('urn:test:screened');
+    });
+
     it('getScreenerState updates across internal route, restart, and skip', () => {
         const stateEvents: any[] = [];
         el.addEventListener('formspec-screener-state-change', (event: CustomEvent) => {
