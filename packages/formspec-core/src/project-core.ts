@@ -61,6 +61,18 @@ export interface IProjectCore {
   readonly log: readonly LogEntry[];
   resetHistory(): void;
 
+  // ── State restoration ─────────────────────────────────────────
+  /**
+   * Wholesale replace the project state with a prior snapshot.
+   *
+   * Used by the ProposalManager for changeset reject/partial-merge
+   * (snapshot-and-replay). History stack is cleared on restore because
+   * the changeset is the undo mechanism during its lifetime.
+   *
+   * Invalidates all cached views (component, generated component).
+   */
+  restoreState(snapshot: ProjectState): void;
+
   // ── Change notifications ─────────────────────────────────────
   onChange(listener: ChangeListener): () => void;
 
