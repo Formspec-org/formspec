@@ -201,6 +201,19 @@ fn plural_category_turkish_one_and_other() {
     assert_eq!(eval_value("pluralCategory(2)", &env), s("other"));
 }
 
+/// Fractional counts must not fall through `to_i64()` as 0 (would mis-classify, e.g. Arabic "zero").
+#[test]
+fn plural_category_truncates_fractional_count() {
+    let mut env = FormspecEnvironment::new();
+    env.set_locale("ar");
+    assert_eq!(eval_value("pluralCategory(1.5)", &env), s("one"));
+    assert_eq!(eval_value("pluralCategory(2.9)", &env), s("two"));
+
+    env.set_locale("en");
+    assert_eq!(eval_value("pluralCategory(1.5)", &env), s("one"));
+    assert_eq!(eval_value("pluralCategory(2.1)", &env), s("other"));
+}
+
 #[test]
 fn plural_category_null_propagation() {
     let mut env = FormspecEnvironment::new();

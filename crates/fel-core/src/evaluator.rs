@@ -1742,6 +1742,7 @@ impl<'a> Evaluator<'a> {
     /// `pluralCategory(count, locale?)` — returns CLDR cardinal plural category.
     ///
     /// Uses the explicit locale parameter if provided, otherwise the environment locale.
+    /// Non-integer counts use the truncated integer part (toward zero), matching CLDR integer rules.
     /// Returns one of: "zero", "one", "two", "few", "many", "other".
     fn fn_plural_category(&mut self, args: &[Expr]) -> FelValue {
         let count_val = self.eval_arg(args, 0);
@@ -1779,7 +1780,7 @@ impl<'a> Evaluator<'a> {
             .unwrap_or("")
             .to_lowercase();
 
-        let n = count.to_i64().unwrap_or(0);
+        let n = count.trunc().to_i64().unwrap_or(0);
         let category = cldr_cardinal_plural_category(&lang, n);
         FelValue::String(category.to_string())
     }
