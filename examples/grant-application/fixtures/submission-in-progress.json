@@ -47,6 +47,12 @@
         }
     ],
     "data": {
+        "applicantType": "nonprofit",
+        "isReturning": false,
+        "requestedAmount": {
+            "amount": "0.00",
+            "currency": "USD"
+        },
         "applicantInfo": {
             "orgType": "nonprofit",
             "contactName": "John Doe",

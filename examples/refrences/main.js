@@ -109,44 +109,6 @@ const emptyState = document.getElementById('empty-state');
 let activeExampleId = null;
 let activeBridgeLink = null;
 
-// ── Restore saved state ──
-// Walks a response `data` object and applies values to a fresh engine.
-// Must be called right after setDefinition — before the DOM renders —
-// so that initial renders pick up the restored values and calculated
-// fields recompute from the full dependency graph.
-//
-// Uses the engine's public `signals` and `repeats` to distinguish
-// container groups from leaf values (including complex types like money
-// and multi-valued fields like multiChoice arrays).
-function applyResponseData(engine, data, prefix = '') {
-  for (const [key, value] of Object.entries(data)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-
-    // If the engine has a signal for this path, it's a field — set directly
-    // (handles primitives, money objects, and multiChoice arrays).
-    // Skip computed signals (calculated fields) — they recompute from deps.
-    const sig = engine.signals[path];
-    if (sig && Object.getOwnPropertyDescriptor(Object.getPrototypeOf(sig), 'value')?.set) {
-      engine.setValue(path, value);
-    } else if (Array.isArray(value)) {
-      // No signal → repeat group: ensure enough instances, then recurse
-      const currentCount = engine.repeats[path]?.value ?? 0;
-      for (let i = currentCount; i < value.length; i++) {
-        engine.addRepeatInstance(path);
-      }
-      for (let i = 0; i < value.length; i++) {
-        if (value[i] != null && typeof value[i] === 'object') {
-          applyResponseData(engine, value[i], `${path}[${i}]`);
-        }
-      }
-    } else if (value !== null && typeof value === 'object') {
-      // No signal, non-array object → container group, recurse
-      applyResponseData(engine, value, path);
-    }
-    // else: primitive with no signal — skip (not a known field)
-  }
-}
-
 // ── Build sidebar ──
 for (const ex of EXAMPLES) {
   const li = document.createElement('li');
@@ -513,18 +475,14 @@ async function loadExample(ex, fixture = null) {
       globalRegistry.setAdapter('default');
     }
 
-    // Set artifacts — this creates the engine and triggers rendering
+    if (fixtureResponse?.data) {
+      formEl.initialData = fixtureResponse.data;
+    }
+
+    // Set artifacts — this creates the engine, applies initialData (screener + main form), and renders
     formEl.definition = definition;
     if (componentDoc) formEl.componentDocument = componentDoc;
     if (themeDoc) formEl.themeDocument = themeDoc;
-
-    // Restore saved state: apply fixture data to the fresh engine so that
-    // reactive signals fire, calculated fields recompute, and relevance
-    // cascades (e.g. applicableTopics → expenditure visibility).
-    if (fixtureResponse?.data) {
-      const engine = formEl.getEngine();
-      if (engine) applyResponseData(engine, fixtureResponse.data);
-    }
 
     formEl.addEventListener('formspec-submit', (e) => {
       const submitDetail = e.detail || {};

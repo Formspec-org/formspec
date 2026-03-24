@@ -53,6 +53,12 @@
         }
     },
     "data": {
+        "applicantType": "nonprofit",
+        "isReturning": false,
+        "requestedAmount": {
+            "amount": "126000.00",
+            "currency": "USD"
+        },
         "applicantInfo": {
             "orgName": "Community Health Partners, Inc.",
             "ein": "47-1234567",
