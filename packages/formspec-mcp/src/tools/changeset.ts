@@ -102,12 +102,19 @@ export function handleChangesetAccept(
 
 /**
  * Handle formspec_changeset_reject: reject a pending changeset.
+ *
+ * @param groupIndices - If provided, only reject these dependency groups
+ *   (the complement is accepted). If omitted, rejects all.
  */
-export function handleChangesetReject(registry: ProjectRegistry, projectId: string) {
+export function handleChangesetReject(
+  registry: ProjectRegistry,
+  projectId: string,
+  groupIndices?: number[],
+) {
   try {
     const project = registry.getProject(projectId);
     const pm = getProposalManager(project);
-    const result = pm.rejectChangeset();
+    const result = pm.rejectChangeset(groupIndices);
 
     return formatMergeResult(result, pm.changeset!);
   } catch (err) {

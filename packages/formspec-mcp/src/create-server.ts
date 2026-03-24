@@ -598,13 +598,14 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
 
   server.registerTool('formspec_changeset_reject', {
     title: 'Reject Changeset',
-    description: 'Reject a pending changeset. Restores state to before the changeset was opened, preserving any user edits made during the changeset.',
+    description: 'Reject a pending changeset. Pass group_indices to reject specific dependency groups (the complement is accepted), or omit to reject all.',
     inputSchema: {
       project_id: z.string(),
+      group_indices: z.array(z.number()).optional().describe('Dependency group indices to reject. Omit to reject all.'),
     },
     annotations: DESTRUCTIVE,
-  }, async ({ project_id }) => {
-    return handleChangesetReject(registry, project_id);
+  }, async ({ project_id, group_indices }) => {
+    return handleChangesetReject(registry, project_id, group_indices);
   });
 
   return server;
