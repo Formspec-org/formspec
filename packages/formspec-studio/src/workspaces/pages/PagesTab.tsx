@@ -503,6 +503,13 @@ export function PagesTab() {
   const [deleteToast, setDeleteToast] = useState<{ title: string } | null>(null);
   const [focusPageId, setFocusPageId] = useState<string | null>(null);
 
+  const handleAddPage = useCallback(() => {
+    const result = project.addPage(`Page ${structure.pages.length + 1}`);
+    if (result.createdId && result.groupKey && activeGroupCtx) {
+      activeGroupCtx.setActiveGroupKey(result.groupKey);
+    }
+  }, [activeGroupCtx, project, structure.pages.length]);
+
   if (focusPageId) {
     return (
       <PagesFocusView
@@ -512,13 +519,6 @@ export function PagesTab() {
       />
     );
   }
-
-  const handleAddPage = useCallback(() => {
-    const result = project.addPage(`Page ${structure.pages.length + 1}`);
-    if (result.createdId && result.groupKey && activeGroupCtx) {
-      activeGroupCtx.setActiveGroupKey(result.groupKey);
-    }
-  }, [activeGroupCtx, project, structure.pages.length]);
 
   return (
     <WorkspacePage maxWidth="max-w-[980px]" className="overflow-y-auto">

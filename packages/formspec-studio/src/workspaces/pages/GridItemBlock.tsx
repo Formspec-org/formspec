@@ -120,7 +120,7 @@ export function GridItemBlock({ item, isSelected, activeBreakpoint, onSelect, on
           e.stopPropagation();
           onRemove();
         }}
-        className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center text-[10px] text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity rounded"
+        className="absolute top-1 right-4 z-20 w-4 h-4 flex items-center justify-center text-[10px] text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity rounded"
       >
         &times;
       </button>
@@ -129,7 +129,7 @@ export function GridItemBlock({ item, isSelected, activeBreakpoint, onSelect, on
       <div
         data-resize-handle
         aria-label="Resize width"
-        className="absolute top-0 right-0 w-3 h-full cursor-col-resize"
+        className="absolute top-0 right-0 z-10 w-3 h-full cursor-col-resize"
         onPointerDown={(e) => {
           e.stopPropagation();
           e.preventDefault();
