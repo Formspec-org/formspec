@@ -1,369 +1,540 @@
-/** @filedesc Pages workspace tab for managing wizard pages, regions, and page-level diagnostics. */
-import { useState, useCallback, useRef, useEffect, useContext } from 'react';
+/** @filedesc Pages workspace tab for planning page flow and entering page layout edit mode. */
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { DragDropProvider, useDraggable, useDroppable } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { PointerSensor, KeyboardSensor, PointerActivationConstraints } from '@dnd-kit/dom';
+import { KeyboardSensor, PointerActivationConstraints, PointerSensor } from '@dnd-kit/dom';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { usePageStructure } from './usePageStructure';
 import { useProject } from '../../state/useProject';
-import { ActivePageContext } from '../../state/useActivePage';
+import { ActiveGroupContext } from '../../state/useActiveGroup';
 import { DragHandle } from '../editor/DragHandle';
 import { PagesFocusView } from './PagesFocusView';
-import type { PageView } from 'formspec-studio-core';
+import type { PageItemView, PageView, PlaceableItem } from 'formspec-studio-core';
 
-// ── ModeSelector ──────────────────────────────────────────────────────
+type FlowMode = 'single' | 'wizard' | 'tabs';
 
 function ModeSelector({
   mode,
   onSetMode,
 }: {
-  mode: string;
-  onSetMode: (mode: 'single' | 'wizard' | 'tabs') => void;
+  mode: FlowMode;
+  onSetMode: (mode: FlowMode) => void;
 }) {
-  const modes: Array<{ id: 'single' | 'wizard' | 'tabs'; label: string }> = [
+  const modes: Array<{ id: FlowMode; label: string }> = [
     { id: 'single', label: 'Single' },
     { id: 'wizard', label: 'Wizard' },
     { id: 'tabs', label: 'Tabs' },
   ];
+  const modeHelpText: Record<FlowMode, string> = {
+    single: 'One continuous form. Existing pages stay preserved but inactive.',
+    wizard: 'Step through pages in order and control how the form advances.',
+    tabs: 'Keep pages directly reachable from a top-level tab strip.',
+  };
 
   return (
-    <div className="flex items-center gap-1.5 p-1 bg-subtle/50 rounded-[8px] border border-border/50 w-fit">
-      {modes.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          onClick={() => onSetMode(m.id)}
-          className={`px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider rounded-[6px] transition-all duration-200 ${
-            mode === m.id
-              ? 'bg-ink text-white shadow-sm'
-              : 'text-muted hover:text-ink hover:bg-subtle'
-          }`}
-        >
-          {m.label}
-        </button>
-      ))}
+    <div className="space-y-3">
+      <div className="inline-flex items-center gap-1 rounded-[14px] border border-border bg-surface p-1 shadow-sm">
+        {modes.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            onClick={() => onSetMode(entry.id)}
+            className={`rounded-[10px] px-3.5 py-1.5 text-[12px] font-semibold tracking-wide transition-colors ${
+              mode === entry.id
+                ? 'bg-ink text-white'
+                : 'text-muted hover:bg-subtle hover:text-ink'
+            }`}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </div>
+      <p className="max-w-[560px] text-[12px] leading-5 text-muted">{modeHelpText[mode]}</p>
     </div>
   );
 }
 
-// ── PageCard ──────────────────────────────────────────────────────────
+function isDeletableItem(item: PageItemView): boolean {
+  if (item.status === 'broken') return true;
+  return item.itemType === 'group' && (item.childCount ?? 0) === 0;
+}
+
+function isEffectivelyEmpty(page: PageView): boolean {
+  if (page.items.length === 0) return true;
+  return page.items.every(isDeletableItem);
+}
+
+function itemTypeLabel(item: PageItemView): string {
+  if (item.status === 'broken') return 'Broken region';
+  if (item.itemType === 'group') {
+    const childCount = item.childCount ?? 0;
+    return childCount === 1 ? 'Group, 1 field' : `Group, ${childCount} fields`;
+  }
+  if (item.itemType === 'display') return 'Display item';
+  return 'Field';
+}
+
+function pageSummary(page: PageView): string {
+  if (isEffectivelyEmpty(page)) return 'Empty';
+  const count = page.items.length;
+  return `${count} item${count === 1 ? '' : 's'}`;
+}
+
+function LayoutPreviewGrid({ items, height }: { items: PageItemView[]; height: string }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Layout preview</p>
+      <div className={`grid ${height} grid-cols-12 gap-1`}>
+        {items.map((item) => (
+          <div
+            key={item.key}
+            className={`rounded-sm border ${
+              item.status === 'broken'
+                ? 'border-amber-400/30 bg-amber-300/30'
+                : 'border-accent/30 bg-accent/35'
+            }`}
+            style={{ gridColumn: `span ${Math.min(item.width, 12)}` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PageItemRow({
+  pageId,
+  item,
+  index,
+  total,
+  otherPages,
+  disabled,
+  onReorder,
+  onMove,
+  onUnassign,
+}: {
+  pageId: string;
+  item: PageItemView;
+  index: number;
+  total: number;
+  otherPages: Array<{ id: string; title: string }>;
+  disabled: boolean;
+  onReorder: (direction: 'up' | 'down') => void;
+  onMove: (targetPageId: string) => void;
+  onUnassign: () => void;
+}) {
+  const [destination, setDestination] = useState('');
+  const selectId = `${pageId}-${item.key}-move`;
+
+  return (
+    <div
+      className={`grid gap-3 border-t border-border/60 px-3 py-3 md:grid-cols-[minmax(0,1fr)_88px_auto_180px] ${
+        item.status === 'broken' ? 'bg-amber-50' : 'bg-surface'
+      }`}
+    >
+      <div className="min-w-0 space-y-1">
+        <p className={`truncate text-[13px] font-medium ${item.status === 'broken' ? 'text-amber-800' : 'text-ink'}`}>
+          {item.label}
+        </p>
+        <p className="text-[11px] text-muted">{itemTypeLabel(item)}</p>
+      </div>
+
+      <div className="text-[11px] font-mono text-muted">
+        {item.width}/12
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={`Move ${item.label} up`}
+          disabled={disabled || index === 0}
+          onClick={() => onReorder('up')}
+          className="rounded border border-border px-2 py-1 text-[11px] text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          aria-label={`Move ${item.label} down`}
+          disabled={disabled || index === total - 1}
+          onClick={() => onReorder('down')}
+          className="rounded border border-border px-2 py-1 text-[11px] text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          ↓
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor={selectId} className="sr-only">{`Move ${item.label} to page`}</label>
+        <select
+          id={selectId}
+          aria-label={`Move ${item.label} to page`}
+          value={destination}
+          disabled={disabled || otherPages.length === 0}
+          onChange={(event) => {
+            const next = event.target.value;
+            setDestination(next);
+            if (!next) return;
+            if (next === '__unassigned') {
+              onUnassign();
+            } else {
+              onMove(next);
+            }
+            setDestination('');
+          }}
+          className="w-full rounded border border-border bg-surface px-2.5 py-2 text-[12px] text-ink disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <option value="">Move to…</option>
+          {otherPages.map((candidate) => (
+            <option key={candidate.id} value={candidate.id}>
+              {candidate.title || candidate.id}
+            </option>
+          ))}
+          <option value="__unassigned">Unassigned</option>
+        </select>
+      </div>
+    </div>
+  );
+}
+
+interface PageActions {
+  onUpdateTitle: (title: string) => void;
+  onUpdateDescription: (description: string | undefined) => void;
+  onMovePage: (direction: 'up' | 'down') => void;
+  onReorderItem: (itemKey: string, direction: 'up' | 'down') => void;
+  onMoveItem: (itemKey: string, targetPageId: string, width: number) => void;
+  onUnassignItem: (itemKey: string) => void;
+  onAddItem: (itemKey: string) => void;
+  onEnterEditMode: () => void;
+  onDeletePage: () => void;
+}
 
 function PageCard({
   page,
   index,
-  total,
-  isExpanded,
-  onToggle,
-  onDelete,
-  onCancelDelete,
-  onConfirmDelete,
-  confirmingDelete,
-  onUpdateTitle,
-  onUpdateDescription,
-  onRemoveItem,
-  onAddItem,
+  totalPages,
+  pages,
   unassigned,
-  onEditLayout,
+  isExpanded,
+  isDormant,
+  onToggle,
+  actions,
   sortableRef,
   dragHandleRef,
   isDragging,
 }: {
   page: PageView;
   index: number;
-  total: number;
+  totalPages: number;
+  pages: PageView[];
+  unassigned: PlaceableItem[];
   isExpanded: boolean;
+  isDormant: boolean;
   onToggle: () => void;
-  onDelete: () => void;
-  onCancelDelete?: () => void;
-  onConfirmDelete?: () => void;
-  confirmingDelete?: boolean;
-  onUpdateTitle: (title: string) => void;
-  onUpdateDescription: (description: string | undefined) => void;
-  onRemoveItem: (itemKey: string) => void;
-  onAddItem?: (key: string) => void;
-  unassigned?: Array<{ key: string; label: string }>;
-  onEditLayout?: () => void;
-  sortableRef?: (el: Element | null) => void;
-  dragHandleRef?: (el: Element | null) => void;
+  actions: PageActions;
+  sortableRef?: (element: Element | null) => void;
+  dragHandleRef?: (element: Element | null) => void;
   isDragging?: boolean;
 }) {
-  const items = page.items ?? [];
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const descInputRef = useRef<HTMLInputElement>(null);
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
+
+  const canDelete = !isDormant && totalPages > 1 && isEffectivelyEmpty(page);
+  const deleteBlockedReason = isDormant
+    ? 'Switch to Wizard or Tabs before deleting pages.'
+    : totalPages <= 1
+      ? 'Keep at least one page in the flow.'
+      : 'Move every assigned item off this page before deleting it.';
+
+  const otherPages = useMemo(
+    () => pages.filter((p) => p.id !== page.id).map((p) => ({ id: p.id, title: p.title || p.id })),
+    [pages, page.id],
+  );
 
   useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus();
-      titleInputRef.current.select();
-    }
+    if (!isEditingTitle) return;
+    titleInputRef.current?.focus();
+    titleInputRef.current?.select();
   }, [isEditingTitle]);
 
   useEffect(() => {
-    if (isEditingDescription && descInputRef.current) {
-      descInputRef.current.focus();
-      descInputRef.current.select();
-    }
+    if (!isEditingDescription) return;
+    descriptionInputRef.current?.focus();
+    descriptionInputRef.current?.select();
   }, [isEditingDescription]);
+
+  useEffect(() => {
+    if (!isExpanded) setIsConfirmingDelete(false);
+  }, [isExpanded]);
 
   const commitTitle = useCallback(() => {
     if (!titleInputRef.current) return;
-    const newTitle = titleInputRef.current.value.trim();
-    if (newTitle && newTitle !== page.title) {
-      onUpdateTitle(newTitle);
-    }
+    const nextTitle = titleInputRef.current.value.trim();
+    if (nextTitle && nextTitle !== page.title) actions.onUpdateTitle(nextTitle);
     setIsEditingTitle(false);
-  }, [page.title, onUpdateTitle]);
-
-  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      commitTitle();
-    } else if (e.key === 'Escape') {
-      setIsEditingTitle(false);
-    }
-  }, [commitTitle]);
+  }, [page.title, actions]);
 
   const commitDescription = useCallback(() => {
-    if (!descInputRef.current) return;
-    const newDesc = descInputRef.current.value.trim();
-    // Empty input clears the description
-    onUpdateDescription(newDesc || undefined);
+    if (!descriptionInputRef.current) return;
+    const nextDescription = descriptionInputRef.current.value.trim() || undefined;
+    if (nextDescription !== (page.description ?? undefined)) actions.onUpdateDescription(nextDescription);
     setIsEditingDescription(false);
-  }, [onUpdateDescription]);
+  }, [page.description, actions]);
 
-  const handleDescKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      commitDescription();
-    } else if (e.key === 'Escape') {
-      setIsEditingDescription(false);
-    }
-  }, [commitDescription]);
-
-  const itemCount = items.length;
-  const itemLabel = itemCount === 0 ? 'Empty' : `${itemCount} item${itemCount !== 1 ? 's' : ''}`;
+  const pageLabel = page.title || page.id;
 
   return (
     <div
       ref={sortableRef}
       data-testid={`page-card-${page.id}`}
-      className={`group border border-border rounded-lg bg-surface overflow-hidden${isDragging ? ' opacity-40' : ''}`}
+      className={`overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-opacity ${
+        isExpanded ? 'ring-1 ring-accent/25' : ''
+      }${isDragging ? ' opacity-40' : ''}`}
     >
-      {/* Collapsed header */}
-      <div className="flex items-center gap-3 px-3 py-2">
-        {/* Drag handle — hover-visible, acts as drag activator */}
-        <DragHandle className="-ml-1" ref={dragHandleRef as React.Ref<HTMLDivElement>} />
-        {/* Number badge */}
-        <span className="font-mono text-[11px] text-muted w-5 text-center shrink-0">
+      <div className="flex items-start gap-3 px-4 py-4">
+        <div
+          onClick={(event) => event.stopPropagation()}
+          className={isDormant ? 'opacity-40' : ''}
+        >
+          <DragHandle className="-ml-1" ref={dragHandleRef as React.Ref<HTMLDivElement>} />
+        </div>
+
+        <span className="w-5 shrink-0 pt-1 text-center font-mono text-[11px] text-muted">
           {index + 1}
         </span>
 
-        {/* Title (editable) */}
-        <div className="flex-1 min-w-0 group/title">
-          {isEditingTitle ? (
-            <input
-              ref={titleInputRef}
-              type="text"
-              defaultValue={page.title || page.id}
-              onBlur={commitTitle}
-              onKeyDown={handleTitleKeyDown}
-              className="text-[13px] font-bold text-ink bg-transparent border-b border-accent outline-none w-full"
-            />
-          ) : (
-            <button
-              type="button"
-              className="text-[13px] font-bold text-ink text-left truncate w-full flex items-center gap-1.5 cursor-text"
-              onClick={() => setIsEditingTitle(true)}
-            >
-              <span className="truncate">{page.title || page.id}</span>
-              <span className="text-[10px] text-muted opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0">
-                &#9998;
-              </span>
-            </button>
-          )}
-        </div>
-
-        {/* Item count */}
-        <span className="text-[11px] text-muted shrink-0">{itemLabel}</span>
-
-        {/* Expand/collapse */}
-        <button
-          type="button"
-          aria-expanded={isExpanded}
-          onClick={onToggle}
-          className="text-[12px] text-muted hover:text-ink transition-colors shrink-0 p-0.5"
-        >
-          <span className={`inline-block transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
-            &#9656;
-          </span>
-        </button>
-      </div>
-
-      {/* Mini grid preview (collapsed only) */}
-      {!isExpanded && items.length > 0 && (
-        <div className="px-3 pb-2">
-          <div className="grid grid-cols-12 gap-0.5 h-4">
-            {items.map((item, i) => (
-              <div
-                key={i}
-                className={`rounded-sm ${item.status === 'broken' ? 'bg-amber-300/30' : 'bg-accent/20'}`}
-                style={{ gridColumn: `span ${Math.min(item.width, 12)}` }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Expanded detail */}
-      {isExpanded && (
-        <div className="border-t border-border p-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          {/* Compact grid preview */}
-          {items.length > 0 && (
-            <div className="grid grid-cols-12 gap-0.5 h-6">
-              {items.map((item, i) => (
-                <div
-                  key={i}
-                  className={`rounded-sm flex items-center justify-center text-[8px] text-muted truncate ${item.status === 'broken' ? 'bg-amber-300/30' : 'bg-accent/20'}`}
-                  style={{ gridColumn: `span ${Math.min(item.width, 12)}` }}
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
+              {isEditingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  defaultValue={pageLabel}
+                  aria-label="Edit page title"
+                  onBlur={commitTitle}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') commitTitle();
+                    if (event.key === 'Escape') setIsEditingTitle(false);
+                  }}
+                  className="w-full border-b border-accent bg-transparent text-[20px] font-semibold text-ink outline-none"
+                />
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Edit title: ${pageLabel}`}
+                  className="w-full truncate text-left text-[20px] font-semibold leading-none text-ink"
+                  onClick={() => setIsEditingTitle(true)}
                 >
-                  <span className="truncate px-0.5">{item.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Description — show if exists or editing; "Add description" button otherwise */}
-          {page.description && !isEditingDescription ? (
-            <button
-              type="button"
-              className="text-[12px] text-muted text-left w-full hover:text-ink transition-colors"
-              onClick={() => setIsEditingDescription(true)}
-            >
-              {page.description}
-            </button>
-          ) : isEditingDescription ? (
-            <input
-              ref={descInputRef}
-              type="text"
-              defaultValue={page.description ?? ''}
-              placeholder="Description…"
-              onBlur={commitDescription}
-              onKeyDown={handleDescKeyDown}
-              className="text-[12px] text-muted bg-transparent border-b border-accent outline-none w-full"
-            />
-          ) : (
-            <button
-              type="button"
-              aria-label="Add description"
-              onClick={() => setIsEditingDescription(true)}
-              className="text-[10px] text-muted hover:text-ink font-bold uppercase tracking-wider"
-            >
-              + Add description
-            </button>
-          )}
-
-          {/* Item list — simplified for Overview Mode */}
-          {items.length > 0 && (
-            <div className="space-y-0.5">
-              {items.map((item) => {
-                const isBroken = item.status === 'broken';
-                const widthLabel = item.width === 12 ? 'Full' : item.width === 6 ? 'Half' : item.width === 4 ? 'Third' : item.width === 3 ? 'Quarter' : `${item.width}/12`;
-                return (
-                  <div key={item.key} className={`flex items-center gap-2 text-[12px] px-2 py-1 rounded ${isBroken ? 'bg-amber-50' : 'bg-subtle/30'}`}>
-                    <span className={`flex-1 truncate ${isBroken ? 'text-amber-700' : 'text-ink'}`}>
-                      {item.label}
-                    </span>
-                    <span className="text-[10px] text-muted font-mono shrink-0">{widthLabel}</span>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${item.label}`}
-                      onClick={() => onRemoveItem(item.key)}
-                      className="text-[10px] text-muted hover:text-error transition-colors px-0.5 shrink-0"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* C5: Quick add unassigned items */}
-          {unassigned && unassigned.length > 0 && onAddItem && (
-            <div className="pt-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-muted mb-1">Add to this page</p>
-              <div className="flex flex-wrap gap-1">
-                {unassigned.slice(0, 8).map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => onAddItem(item.key)}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-subtle/50 text-muted hover:text-ink hover:bg-subtle transition-colors"
-                  >
-                    + {item.label}
-                  </button>
-                ))}
-                {unassigned.length > 8 && (
-                  <span className="text-[10px] text-muted px-1 py-0.5">+{unassigned.length - 8} more</span>
+                  {pageLabel}
+                </button>
+              )}
+              <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted">
+                <span>{pageSummary(page)}</span>
+                {isEffectivelyEmpty(page) && !isDormant && (
+                  <span className="rounded-full bg-subtle px-2 py-0.5 text-[11px] text-muted">
+                    Safe to delete
+                  </span>
+                )}
+                {isDormant && (
+                  <span data-testid="dormant-badge" className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-700">
+                    Dormant
+                  </span>
                 )}
               </div>
             </div>
-          )}
 
-          {/* Actions / F1: Delete confirmation */}
-          {confirmingDelete ? (
-            <div className="flex items-center justify-between pt-2 border-t border-error/20 bg-error/5 -mx-3 -mb-3 px-3 py-2 rounded-b-lg">
-              <span className="text-[11px] text-error">Delete this page and its items?</span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onCancelDelete?.(); }}
-                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded text-muted hover:text-ink transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onConfirmDelete?.(); }}
-                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-error/10 text-error hover:bg-error/20 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-end items-center gap-2 pt-2 border-t border-border">
-              {onEditLayout && (
-                <button
-                  type="button"
-                  aria-label="Edit Layout"
-                  onClick={(e) => { e.stopPropagation(); onEditLayout(); }}
-                  className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
-                >
-                  Edit Layout
-                </button>
-              )}
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded text-error/60 hover:text-error hover:bg-error/5 transition-colors"
+                aria-label={`Move ${pageLabel} up`}
+                disabled={isDormant || index === 0}
+                onClick={() => actions.onMovePage('up')}
+                className="rounded border border-border px-2 py-1 text-[11px] text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-35"
               >
-                Delete
+                ↑
               </button>
+              <button
+                type="button"
+                aria-label={`Move ${pageLabel} down`}
+                disabled={isDormant || index === totalPages - 1}
+                onClick={() => actions.onMovePage('down')}
+                className="rounded border border-border px-2 py-1 text-[11px] text-muted transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                aria-expanded={isExpanded}
+                aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${pageLabel}`}
+                onClick={onToggle}
+                className="rounded border border-border px-2.5 py-1 text-[11px] text-muted transition-colors hover:text-ink"
+              >
+                {isExpanded ? 'Collapse' : 'Expand'}
+              </button>
+            </div>
+          </div>
+
+          {!isExpanded && page.items.length > 0 && (
+            <LayoutPreviewGrid items={page.items} height="h-4" />
+          )}
+
+          {isExpanded && (
+            <div className="space-y-4 border-t border-border/70 pt-4">
+              {page.items.length > 0 && (
+                <LayoutPreviewGrid items={page.items} height="h-7" />
+              )}
+
+              {page.description && !isEditingDescription ? (
+                <button
+                  type="button"
+                  aria-label="Edit description"
+                  className="w-full text-left text-[12px] text-muted transition-colors hover:text-ink"
+                  onClick={() => setIsEditingDescription(true)}
+                >
+                  {page.description}
+                </button>
+              ) : isEditingDescription ? (
+                <input
+                  ref={descriptionInputRef}
+                  type="text"
+                  defaultValue={page.description ?? ''}
+                  placeholder="Description…"
+                  onBlur={commitDescription}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') commitDescription();
+                    if (event.key === 'Escape') setIsEditingDescription(false);
+                  }}
+                  className="w-full border-b border-accent bg-transparent text-[12px] text-muted outline-none"
+                />
+              ) : (
+                <button
+                  type="button"
+                  aria-label="Add description"
+                  onClick={() => setIsEditingDescription(true)}
+                  className="text-[12px] text-muted transition-colors hover:text-ink"
+                >
+                  + Add description
+                </button>
+              )}
+
+              <div className="rounded-xl border border-border/70 overflow-hidden">
+                <div className="grid gap-3 bg-subtle/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted md:grid-cols-[minmax(0,1fr)_88px_auto_180px]">
+                  <span>Assigned items</span>
+                  <span>Width</span>
+                  <span>Order</span>
+                  <span>Destination</span>
+                </div>
+                {page.items.length > 0 ? (
+                  page.items.map((item, itemIndex) => (
+                    <PageItemRow
+                      key={item.key}
+                      pageId={page.id}
+                      item={item}
+                      index={itemIndex}
+                      total={page.items.length}
+                      otherPages={otherPages}
+                      disabled={isDormant}
+                      onReorder={(direction) => actions.onReorderItem(item.key, direction)}
+                      onMove={(targetPageId) => actions.onMoveItem(item.key, targetPageId, item.width)}
+                      onUnassign={() => actions.onUnassignItem(item.key)}
+                    />
+                  ))
+                ) : (
+                  <div className="px-3 py-4 text-[12px] text-muted">
+                    This page is empty. Assign items here or delete it.
+                  </div>
+                )}
+              </div>
+
+              {isDormant ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+                  Switch to Wizard or Tabs to edit assignments or layout for dormant pages.
+                </p>
+              ) : unassigned.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Add from unassigned</p>
+                  <div className="flex flex-wrap gap-2">
+                    {unassigned.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        aria-label={`Add ${item.label} to ${pageLabel}`}
+                        onClick={() => actions.onAddItem(item.key)}
+                        className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-accent/30 hover:text-ink"
+                      >
+                        + {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-start justify-between gap-3 border-t border-border/70 pt-3">
+                <button
+                  type="button"
+                  aria-label="Edit mode"
+                  onClick={actions.onEnterEditMode}
+                  disabled={isDormant}
+                  className="rounded-full bg-ink px-3 py-1.5 text-[11px] font-semibold tracking-wide text-white transition-colors hover:bg-ink/90 disabled:cursor-not-allowed disabled:bg-subtle disabled:text-muted"
+                >
+                  Edit mode
+                </button>
+
+                <div className="space-y-2 text-right">
+                  {!canDelete && (
+                    <p className="max-w-[260px] text-[11px] leading-4 text-muted">
+                      {deleteBlockedReason}
+                    </p>
+                  )}
+
+                  {isConfirmingDelete ? (
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsConfirmingDelete(false)}
+                        className="rounded border border-border px-2.5 py-1 text-[11px] text-muted transition-colors hover:text-ink"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Confirm delete"
+                        onClick={actions.onDeletePage}
+                        className="rounded bg-error/10 px-2.5 py-1 text-[11px] font-semibold text-error transition-colors hover:bg-error/15"
+                      >
+                        Confirm delete
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label="Delete page"
+                      disabled={!canDelete}
+                      onClick={() => setIsConfirmingDelete(true)}
+                      className="rounded border border-error/30 px-2.5 py-1 text-[11px] font-semibold text-error transition-colors hover:bg-error/5 disabled:cursor-not-allowed disabled:border-border disabled:text-muted"
+                    >
+                      Delete page
+                    </button>
+                  )}
+
+                  {isConfirmingDelete && (
+                    <p className="text-[11px] text-error">
+                      Delete {pageLabel} permanently?
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-// ── DroppablePageOverlay ──────────────────────────────────────────────
-
-/**
- * Invisible drop zone that wraps a page card, making it a target for
- * item-drag operations. Highlights with a ring when an item is dragged over.
- */
 function DroppablePageOverlay({
   pageId,
   children,
@@ -380,23 +551,18 @@ function DroppablePageOverlay({
     <div
       ref={ref as React.Ref<HTMLDivElement>}
       data-drop-page={pageId}
-      className={`relative rounded-lg transition-all duration-150${isDropTarget ? ' ring-2 ring-accent ring-offset-1' : ''}`}
+      className={`relative rounded-2xl transition-all${isDropTarget ? ' ring-2 ring-accent ring-offset-1' : ''}`}
     >
-      {isDropTarget && (
-        <div className="absolute inset-0 bg-accent/5 rounded-lg pointer-events-none z-10" />
-      )}
+      {isDropTarget && <div className="pointer-events-none absolute inset-0 rounded-2xl bg-accent/5" />}
       {children}
     </div>
   );
 }
 
-// ── SortablePageCard ─────────────────────────────────────────────────
-
-/** Wraps PageCard with useSortable and DroppablePageOverlay. */
 function SortablePageCard({
   page,
   index,
-  ...cardProps
+  ...props
 }: {
   page: PageView;
   index: number;
@@ -405,13 +571,13 @@ function SortablePageCard({
     id: page.id,
     index,
     data: { type: 'page' },
-    transition: null, // we handle positioning via project.movePageToIndex
+    transition: null,
   });
 
   return (
     <DroppablePageOverlay pageId={page.id}>
       <PageCard
-        {...cardProps}
+        {...props}
         page={page}
         index={index}
         sortableRef={ref}
@@ -422,9 +588,6 @@ function SortablePageCard({
   );
 }
 
-// ── DraggableUnassignedItem ───────────────────────────────────────────
-
-/** Makes an unassigned item draggable so it can be dropped onto a page card. */
 function DraggableUnassignedItem({
   itemKey,
   label,
@@ -441,9 +604,10 @@ function DraggableUnassignedItem({
     <div
       ref={ref as React.Ref<HTMLDivElement>}
       data-draggable-item={itemKey}
-      className={`group text-[12px] text-muted px-2 py-1 bg-subtle/30 rounded font-mono truncate cursor-grab active:cursor-grabbing flex items-center gap-1.5 transition-opacity${isDragSource ? ' opacity-40' : ''}`}
+      className={`flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] text-muted ${
+        isDragSource ? 'opacity-40' : ''
+      }`}
     >
-      {/* Grip icon */}
       <svg
         width="6"
         height="10"
@@ -451,7 +615,7 @@ function DraggableUnassignedItem({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
-        className="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity"
+        className="shrink-0"
       >
         <circle cx="1.5" cy="2" r="1" fill="currentColor" />
         <circle cx="4.5" cy="2" r="1" fill="currentColor" />
@@ -465,64 +629,63 @@ function DraggableUnassignedItem({
   );
 }
 
-// ── Main PagesTab ────────────────────────────────────────────────────
-
 export function PagesTab() {
   const project = useProject();
+  const structure = usePageStructure();
+  const activeGroupCtx = useContext(ActiveGroupContext);
   const [expandedPageId, setExpandedPageId] = useState<string | null>(null);
   const [focusedPageId, setFocusedPageId] = useState<string | null>(null);
-  const [confirmDeletePageId, setConfirmDeletePageId] = useState<string | null>(null);
-
-  const structure = usePageStructure();
-
-  // FF10: Sidebar <-> PagesTab sync. Context is null when no provider is mounted
-  // (e.g. isolated unit tests). All operations guard with `if (!activePageCtx)`.
-  const activePageCtx = useContext(ActivePageContext);
-
-  // When activePageKey changes externally (sidebar click), find the matching page and expand it
-  useEffect(() => {
-    if (!activePageCtx) return;
-    const { activePageKey } = activePageCtx;
-    if (!activePageKey) return;
-    const matchingPage = structure.pages.find((p) =>
-      p.items.some((item) => item.key === activePageKey),
-    );
-    if (matchingPage && matchingPage.id !== expandedPageId) {
-      setExpandedPageId(matchingPage.id);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePageCtx?.activePageKey]);
-
-  const handleTogglePage = useCallback((pageId: string) => {
-    const nextId = expandedPageId === pageId ? null : pageId;
-    setExpandedPageId(nextId);
-    // Sync sidebar: set activePageKey to the first item key on the expanded page
-    if (nextId && activePageCtx) {
-      const page = structure.pages.find((p) => p.id === nextId);
-      if (page && page.items.length > 0) {
-        activePageCtx.setActivePageKey(page.items[0].key);
-      }
-    }
-  }, [expandedPageId, activePageCtx, structure.pages]);
 
   const isSingle = structure.mode === 'single';
   const hasPages = structure.pages.length > 0;
 
-  /** Shared callback props for PageCard / SortablePageCard */
-  const pageCardProps = useCallback((page: PageView) => ({
-    onDelete: () => setConfirmDeletePageId(page.id),
-    onCancelDelete: () => setConfirmDeletePageId(null),
-    onConfirmDelete: () => { project.removePage(page.id); setConfirmDeletePageId(null); },
-    confirmingDelete: confirmDeletePageId === page.id,
-    onUpdateTitle: (title: string) => project.updatePage(page.id, { title }),
-    onUpdateDescription: (description: string | undefined) => project.updatePage(page.id, { description }),
-    onRemoveItem: (key: string) => project.removeItemFromPage(page.id, key),
-    onAddItem: (key: string) => project.placeOnPage(key, page.id, { span: 12 }),
-    unassigned: structure.unassigned,
-    onEditLayout: () => setFocusedPageId(page.id),
-  }), [project, confirmDeletePageId, structure.unassigned]);
+  useEffect(() => {
+    if (focusedPageId) return;
+    if (!hasPages) {
+      setExpandedPageId(null);
+      return;
+    }
+    if (!expandedPageId || !structure.pages.some((page) => page.id === expandedPageId)) {
+      setExpandedPageId(structure.pages[0].id);
+    }
+  }, [expandedPageId, focusedPageId, hasPages, structure.pages]);
 
-  // Focus Mode — full-width layout editor for a single page
+  useEffect(() => {
+    if (!activeGroupCtx?.activeGroupKey) return;
+    const matchingPage = structure.pages.find((page) =>
+      page.items.some((item) => item.key === activeGroupCtx.activeGroupKey),
+    );
+    if (matchingPage) setExpandedPageId(matchingPage.id);
+  }, [activeGroupCtx?.activeGroupKey, structure.pages]);
+
+  const handleAddPage = useCallback(() => {
+    const result = project.addPage(`Page ${structure.pages.length + 1}`);
+    if (result.createdId) {
+      setExpandedPageId(result.createdId);
+      if (result.groupKey && activeGroupCtx) activeGroupCtx.setActiveGroupKey(result.groupKey);
+    }
+  }, [activeGroupCtx, project, structure.pages.length]);
+
+  const handleTogglePage = useCallback((pageId: string) => {
+    const nextExpandedPageId = expandedPageId === pageId ? null : pageId;
+    setExpandedPageId(nextExpandedPageId);
+    if (!nextExpandedPageId || !activeGroupCtx) return;
+    const page = structure.pages.find((p) => p.id === nextExpandedPageId);
+    const firstItem = page?.items[0];
+    if (firstItem) activeGroupCtx.setActiveGroupKey(firstItem.key);
+  }, [activeGroupCtx, expandedPageId, structure.pages]);
+
+  const handleMoveItem = useCallback((itemKey: string, targetPageId: string, width: number) => {
+    project.placeOnPage(itemKey, targetPageId, { span: width });
+    setExpandedPageId(targetPageId);
+    activeGroupCtx?.setActiveGroupKey(itemKey);
+  }, [activeGroupCtx, project]);
+
+  const handleUnassignItem = useCallback((pageId: string, itemKey: string) => {
+    project.unplaceFromPage(itemKey, pageId);
+    activeGroupCtx?.setActiveGroupKey(itemKey);
+  }, [activeGroupCtx, project]);
+
   if (focusedPageId) {
     return (
       <PagesFocusView
@@ -534,33 +697,93 @@ export function PagesTab() {
   }
 
   return (
-    <WorkspacePage className="overflow-y-auto">
-      {/* Sticky header */}
+    <WorkspacePage maxWidth="max-w-[980px]" className="overflow-y-auto">
       <WorkspacePageSection
         padding="px-7"
-        className="sticky top-0 bg-bg-default/80 backdrop-blur-md z-20 pt-6 pb-4 border-b border-border/40"
+        className="sticky top-0 z-20 border-b border-border/40 bg-bg-default/85 py-6 backdrop-blur-md"
       >
-        <ModeSelector mode={structure.mode} onSetMode={(m) => project.setFlow(m)} />
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-accent">
+                View mode
+              </span>
+              <div className="space-y-1">
+                <p className="max-w-[560px] text-[20px] font-semibold leading-tight text-ink">
+                  Plan the user journey before you touch the grid.
+                </p>
+                <p className="max-w-[620px] text-[13px] leading-5 text-muted">
+                  Reorder pages, move fields between them, and decide when a page needs precise layout editing.
+                </p>
+              </div>
+            </div>
+            <ModeSelector mode={structure.mode} onSetMode={(mode) => project.setFlow(mode)} />
+          </div>
+
+          {!isSingle && (
+            <div className="flex items-center gap-2">
+              {hasPages && (
+                <div className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] text-muted">
+                  {structure.pages.length} {structure.pages.length === 1 ? 'page' : 'pages'}
+                </div>
+              )}
+              <button
+                type="button"
+                aria-label="Add page"
+                onClick={handleAddPage}
+                className="rounded-full bg-ink px-4 py-2 text-[12px] font-semibold tracking-wide text-white transition-colors hover:bg-ink/90"
+              >
+                Add page
+              </button>
+            </div>
+          )}
+        </div>
       </WorkspacePageSection>
 
-      <WorkspacePageSection className="flex-1 py-6 space-y-6">
-        {/* Single mode: no pages */}
+      <WorkspacePageSection className="space-y-6 py-6">
         {isSingle && !hasPages && (
-          <p className="text-[12px] text-muted">
+          <p className="text-[13px] text-muted">
             Switch to Wizard or Tabs to organize your form into pages.
           </p>
         )}
 
-        {/* Single mode: has dormant pages */}
         {isSingle && hasPages && (
-          <p className="text-[12px] text-muted">
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
             Pages are preserved but not active in single mode.
           </p>
         )}
 
-        {/* Active mode (wizard/tabs): unified DragDropProvider for both page reorder
-            (FF1) and item-to-page assignment (FF4). */}
-        {!isSingle && (
+        {!isSingle && !hasPages && (
+          <div className="space-y-4 rounded-[28px] border border-dashed border-border bg-surface px-6 py-10 text-center">
+            <div className="space-y-2">
+              <p className="text-[18px] font-semibold text-ink">No pages yet</p>
+              <p className="mx-auto max-w-[460px] text-[13px] leading-5 text-muted">
+                Start with a manual page, or generate pages from your current group structure and adjust them after.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  project.autoGeneratePages();
+                  setExpandedPageId(null);
+                }}
+                className="rounded-full border border-border px-4 py-2 text-[12px] font-semibold text-muted transition-colors hover:text-ink"
+              >
+                Auto-generate from groups
+              </button>
+              <button
+                type="button"
+                onClick={handleAddPage}
+                className="rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-ink/90"
+              >
+                Add page
+              </button>
+            </div>
+          </div>
+        )}
+
+        {hasPages && (
           <DragDropProvider
             onDragEnd={(event: any) => {
               if (event.canceled) return;
@@ -568,17 +791,16 @@ export function PagesTab() {
               const targetData = event.operation?.target?.data ?? {};
 
               if (sourceData.type === 'item' && targetData.type === 'page-drop') {
-                // FF4: unassigned item dropped onto a page card — assign it
                 project.placeOnPage(sourceData.key, targetData.pageId);
+                setExpandedPageId(targetData.pageId);
+                activeGroupCtx?.setActiveGroupKey(sourceData.key);
                 return;
               }
 
-              // FF1: page dragged to reorder
               const sourceId = String(event.operation?.source?.id ?? '');
               const targetId = String(event.operation?.target?.id ?? '');
-              if (!sourceId || !targetId || sourceId === targetId) return;
-              const pages = structure.pages;
-              const targetIndex = pages.findIndex((p) => p.id === targetId);
+              if (!sourceId || !targetId || sourceId === targetId || isSingle) return;
+              const targetIndex = structure.pages.findIndex((page) => page.id === targetId);
               if (targetIndex === -1) return;
               project.movePageToIndex(sourceId, targetIndex);
             }}
@@ -591,76 +813,45 @@ export function PagesTab() {
               KeyboardSensor,
             ]}
           >
-            {/* F2/F3: Empty state for wizard/tabs with no pages */}
-            {!hasPages && (
-              <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <p className="text-[13px] text-muted">
-                  Create pages to organize your form into steps.
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => project.autoGeneratePages()}
-                    className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
-                  >
-                    Auto-generate from groups
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const result = project.addPage('Page 1');
-                      if (result.createdId) setExpandedPageId(result.createdId);
-                    }}
-                    className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded bg-subtle text-muted hover:text-ink transition-colors"
-                  >
-                    Add blank page
-                  </button>
-                </div>
-              </div>
-            )}
+            <div className={`space-y-4${isSingle ? ' opacity-75' : ''}`}>
+              {structure.pages.map((page, index) => (
+                <SortablePageCard
+                  key={page.id}
+                  page={page}
+                  index={index}
+                  totalPages={structure.pages.length}
+                  pages={structure.pages}
+                  unassigned={structure.unassigned}
+                  isExpanded={expandedPageId === page.id}
+                  isDormant={isSingle}
+                  onToggle={() => handleTogglePage(page.id)}
+                  actions={{
+                    onUpdateTitle: (title) => project.updatePage(page.id, { title }),
+                    onUpdateDescription: (description) => project.updatePage(page.id, { description }),
+                    onMovePage: (direction) => project.reorderPage(page.id, direction),
+                    onReorderItem: (itemKey, direction) => project.reorderItemOnPage(page.id, itemKey, direction),
+                    onMoveItem: (itemKey, targetPageId, width) => handleMoveItem(itemKey, targetPageId, width),
+                    onUnassignItem: (itemKey) => handleUnassignItem(page.id, itemKey),
+                    onAddItem: (itemKey) => {
+                      project.placeOnPage(itemKey, page.id, { span: 12 });
+                      activeGroupCtx?.setActiveGroupKey(itemKey);
+                    },
+                    onEnterEditMode: () => setFocusedPageId(page.id),
+                    onDeletePage: () => project.removePage(page.id),
+                  }}
+                />
+              ))}
+            </div>
 
-            {/* Page list */}
-            {hasPages && (
-              <div className="space-y-3">
-                {structure.pages.map((page, i) => (
-                  <SortablePageCard
-                    key={page.id}
-                    page={page}
-                    index={i}
-                    total={structure.pages.length}
-                    isExpanded={expandedPageId === page.id}
-                    onToggle={() => handleTogglePage(page.id)}
-                    {...pageCardProps(page)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Add page button */}
-            <button
-              type="button"
-              aria-label="Add page"
-              onClick={() => {
-                const result = project.addPage('New Page');
-                if (result.createdId) {
-                  setExpandedPageId(result.createdId);
-                  // Sync sidebar to the new page's group key
-                  const groupKey = result.affectedPaths[0];
-                  if (groupKey && activePageCtx) activePageCtx.setActivePageKey(groupKey);
-                }
-              }}
-              className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
-            >
-              + Add Page
-            </button>
-
-            {/* Unassigned items — draggable onto page cards (FF4) */}
-            {structure.unassigned.length > 0 && (
-              <div className="pt-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
-                  Unassigned
-                </p>
+            {!isSingle && structure.unassigned.length > 0 && (
+              <section aria-label="Unassigned items" className="space-y-3 rounded-[24px] border border-border/70 bg-surface px-5 py-4">
                 <div className="space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Unassigned</p>
+                  <p className="text-[12px] text-muted">
+                    Drag these onto a page card or use a page&apos;s quick-add actions.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
                   {structure.unassigned.map((item) => (
                     <DraggableUnassignedItem
                       key={item.key}
@@ -669,26 +860,9 @@ export function PagesTab() {
                     />
                   ))}
                 </div>
-              </div>
+              </section>
             )}
           </DragDropProvider>
-        )}
-
-        {/* Single mode: dormant page list (reduced opacity, still interactive for Focus Mode) */}
-        {isSingle && hasPages && (
-          <div className="opacity-50 space-y-3">
-            {structure.pages.map((page, i) => (
-              <PageCard
-                key={page.id}
-                page={page}
-                index={i}
-                total={structure.pages.length}
-                isExpanded={expandedPageId === page.id}
-                onToggle={() => handleTogglePage(page.id)}
-                {...pageCardProps(page)}
-              />
-            ))}
-          </div>
         )}
       </WorkspacePageSection>
     </WorkspacePage>
