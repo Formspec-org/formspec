@@ -1,20 +1,19 @@
 ---
-/** Loads Firebase Analytics (GA4) when public env is fully configured. */
-import { getFirebasePublicConfig } from "../lib/firebase-public-config";
-
-const firebaseConfig = getFirebasePublicConfig();
+/** Loads Firebase Analytics (GA4) and wires up data-track click delegation. */
 ---
 
-{
-  firebaseConfig && (
-    <script define:vars={{ firebaseConfig }}>
-      import { initializeApp } from "firebase/app";
-      import { getAnalytics, isSupported } from "firebase/analytics";
+<script>
+  import { initAnalytics, track } from "../lib/analytics";
 
-      const app = initializeApp(firebaseConfig);
-      void isSupported().then((supported) => {
-        if (supported) getAnalytics(app);
-      });
-    </script>
-  )
-}
+  void initAnalytics().then(() => {
+    // Global click delegation: any element with data-track="event_name" fires that event.
+    // Optional data-track-section adds a section parameter (e.g. "hero", "cta").
+    document.addEventListener("click", (e) => {
+      const el = (e.target as Element).closest<HTMLElement>("[data-track]");
+      if (!el) return;
+      const event = el.dataset.track!;
+      const section = el.dataset.trackSection;
+      track(event, section ? { section } : undefined);
+    });
+  });
+</script>

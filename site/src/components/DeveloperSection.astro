@@ -437,7 +437,7 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
 
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      const target = tab.dataset.tab;
+      const target = (tab as HTMLElement).dataset.tab;
 
       tabs.forEach((t) => {
         t.classList.remove("active");
