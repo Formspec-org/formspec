@@ -262,6 +262,114 @@ describe('bracketMutation', () => {
   });
 });
 
+describe('batch items[] mode within bracket', () => {
+  it('batch handleField with items[] produces entries within a changeset bracket', () => {
+    const { registry, projectId, project } = registryWithProject();
+    handleChangesetOpen(registry, projectId);
+
+    // Call handleField in batch mode (items[]) within a bracket
+    const result = withChangesetBracket(project, 'formspec_field', () =>
+      handleField(registry, projectId, {
+        items: [
+          { path: 'name', label: 'Full Name', type: 'text' },
+          { path: 'email', label: 'Email', type: 'email' },
+          { path: 'phone', label: 'Phone', type: 'text' },
+        ],
+      }),
+    );
+
+    expect(isError(result)).toBe(false);
+    const data = parseResult(result);
+    expect(data.succeeded).toBe(3);
+    expect(data.failed).toBe(0);
+
+    // The bracket should produce ONE AI entry that coalesces all batch dispatches.
+    // F7 fix: multi-dispatch within a single beginEntry/endEntry bracket
+    // produces one ChangeEntry with all command sets combined.
+    const cs = project.proposals!.changeset!;
+    expect(cs.aiEntries).toHaveLength(1);
+
+    const entry = cs.aiEntries[0];
+    expect(entry.toolName).toBe('formspec_field');
+    // Multiple dispatches (one per batch item) → multiple command arrays
+    expect(entry.commands.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('batch with partial failure still records the successful dispatches', () => {
+    const { registry, projectId, project } = registryWithProject();
+    // Pre-add a field so the duplicate will fail
+    project.addField('existing', 'Existing', 'text');
+
+    handleChangesetOpen(registry, projectId);
+
+    const result = withChangesetBracket(project, 'formspec_field', () =>
+      handleField(registry, projectId, {
+        items: [
+          { path: 'new1', label: 'New 1', type: 'text' },
+          { path: 'existing', label: 'Duplicate', type: 'text' }, // will fail
+          { path: 'new2', label: 'New 2', type: 'text' },
+        ],
+      }),
+    );
+
+    // Partial success — not an error
+    expect(isError(result)).toBe(false);
+    const data = parseResult(result);
+    expect(data.succeeded).toBe(2);
+    expect(data.failed).toBe(1);
+
+    // The successful items dispatched commands, so there should be an entry
+    const cs = project.proposals!.changeset!;
+    expect(cs.aiEntries).toHaveLength(1);
+    // At least the successful items' commands should be captured
+    expect(cs.aiEntries[0].commands.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('summary extraction from MCP response (O1 bug)', () => {
+  it('summary falls through to generic fallback because bracket sees MCP envelope, not HelperResult', () => {
+    // BUG O1: withChangesetBracket receives the return value of fn(),
+    // which in the MCP layer is the result of wrapHelperCall() — an MCP
+    // response envelope { content: [{type: 'text', text: ...}] }.
+    // The bracket checks `'summary' in result` to extract HelperResult.summary,
+    // but the envelope doesn't have a 'summary' property. So the summary
+    // always falls through to the `${toolName} executed` fallback.
+    const { registry, projectId, project } = registryWithProject();
+    handleChangesetOpen(registry, projectId);
+
+    // This is how the real MCP server calls it — fn returns MCP response envelope
+    withChangesetBracket(project, 'formspec_field', () =>
+      handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' }),
+    );
+
+    const entry = project.proposals!.changeset!.aiEntries[0];
+
+    // BUG O1: bracket sees MCP response envelope, not HelperResult — summary
+    // extraction is dead code. The summary is always the generic fallback.
+    expect(entry.summary).toBe('formspec_field executed');
+
+    // If O1 were fixed, we would expect something like:
+    // expect(entry.summary).toContain('Added');
+    // or the actual HelperResult.summary from project.addField()
+  });
+
+  it('bracketMutation also hits O1: summary is generic on real tool call', () => {
+    const { registry, projectId, project } = registryWithProject();
+    handleChangesetOpen(registry, projectId);
+
+    // bracketMutation is the convenience wrapper used by the real MCP server
+    bracketMutation(registry, projectId, 'formspec_behavior', () => {
+      project.addField('f1', 'F1', 'text'); // add field first (outside bracket for setup)
+      return handleBehavior(registry, projectId, { action: 'require', target: 'f1' });
+    });
+
+    const entry = project.proposals!.changeset!.aiEntries[0];
+
+    // BUG O1: same issue — summary is generic fallback
+    expect(entry.summary).toBe('formspec_behavior executed');
+  });
+});
+
 describe('bracketMutation with each mutation tool', () => {
   it('formspec_field', () => {
     const { registry, projectId, project } = registryWithProject();

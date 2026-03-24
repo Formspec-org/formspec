@@ -658,4 +658,166 @@ describe('ProposalManager', () => {
       expect(project.definition.items).toHaveLength(0);
     });
   });
+
+  describe('capturedValues for = prefix expressions', () => {
+    it('documents that capturedValues is not populated during recording', () => {
+      // The spec requires that when a field has initialValue: "=today()",
+      // the evaluated result should be captured in ChangeEntry.capturedValues
+      // so that replay produces the same value (not re-evaluating at replay time).
+      // Currently, the recording middleware does NOT populate capturedValues —
+      // it only captures commands and results.
+      pm.openChangeset();
+
+      pm.beginEntry('formspec_field');
+      project.addField('created', 'Created Date', 'date', {
+        initialValue: '=today()',
+      });
+      pm.endEntry('Added date field with today() initialValue');
+
+      const entry = pm.changeset!.aiEntries[0];
+      expect(entry.toolName).toBe('formspec_field');
+
+      // SPEC GAP: capturedValues should contain { created: <evaluated date> }
+      // but is currently undefined because the recording middleware does not
+      // evaluate or capture one-time expression values.
+      expect(entry.capturedValues).toBeUndefined();
+    });
+  });
+
+  describe('multi-dispatch coalescing (F7 verification)', () => {
+    it('coalesces addField + setBind dispatches within one bracket into one ChangeEntry', () => {
+      pm.openChangeset();
+
+      // addField dispatches once, then require dispatches separately.
+      // Both happen within the same beginEntry/endEntry bracket.
+      pm.beginEntry('formspec_field');
+      project.addField('email', 'Email', 'email');
+      project.require('email');
+      pm.endEntry('Added email and made it required');
+
+      // F7 fix: should produce ONE entry, not two
+      expect(pm.changeset!.aiEntries).toHaveLength(1);
+
+      const entry = pm.changeset!.aiEntries[0];
+      expect(entry.toolName).toBe('formspec_field');
+      expect(entry.summary).toBe('Added email and made it required');
+      // The entry should contain commands from BOTH dispatches
+      // addField produces phase1 + phase2 commands, require produces its own
+      expect(entry.commands.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('coalesces three dispatches within one bracket', () => {
+      pm.openChangeset();
+
+      pm.beginEntry('formspec_field');
+      project.addField('amount', 'Amount', 'number');
+      project.require('amount');
+      project.calculate('amount', '$price * $quantity');
+      pm.endEntry('Added amount with validation');
+
+      expect(pm.changeset!.aiEntries).toHaveLength(1);
+      expect(pm.changeset!.aiEntries[0].commands.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('separate brackets produce separate entries (not coalesced)', () => {
+      pm.openChangeset();
+
+      pm.beginEntry('formspec_field');
+      project.addField('first', 'First', 'text');
+      pm.endEntry('Added first');
+
+      pm.beginEntry('formspec_field');
+      project.addField('second', 'Second', 'text');
+      pm.endEntry('Added second');
+
+      // Two separate brackets = two separate entries
+      expect(pm.changeset!.aiEntries).toHaveLength(2);
+    });
+  });
+
+  describe('recording state transitions', () => {
+    it('full lifecycle: no changeset -> open -> beginEntry -> endEntry -> close -> accept', () => {
+      // No changeset — mutations are NOT recorded to any changeset
+      project.addField('pre', 'Pre', 'text');
+      expect(pm.changeset).toBeNull();
+
+      // Open changeset — recording starts, actor = 'user'
+      pm.openChangeset();
+      expect(pm.changeset!.status).toBe('open');
+
+      // User edit while changeset is open (actor = 'user')
+      project.addField('userField', 'User Field', 'text');
+      expect(pm.changeset!.userOverlay).toHaveLength(1);
+      expect(pm.changeset!.aiEntries).toHaveLength(0);
+
+      // Begin AI entry — actor switches to 'ai'
+      pm.beginEntry('formspec_field');
+      project.addField('aiField', 'AI Field', 'text');
+      // During bracket, commands accumulate in pending entry (not yet in aiEntries)
+      expect(pm.changeset!.aiEntries).toHaveLength(0);
+
+      // End AI entry — actor switches back to 'user', pending entry → aiEntries
+      pm.endEntry('Added AI field');
+      expect(pm.changeset!.aiEntries).toHaveLength(1);
+      expect(pm.changeset!.userOverlay).toHaveLength(1);
+
+      // After endEntry, user edits go to overlay again
+      project.addField('userField2', 'User Field 2', 'text');
+      expect(pm.changeset!.userOverlay).toHaveLength(2);
+      expect(pm.changeset!.aiEntries).toHaveLength(1);
+
+      // Close changeset — status → pending, recording continues for user overlay
+      pm.closeChangeset('Test changes');
+      expect(pm.changeset!.status).toBe('pending');
+
+      // User can still edit during pending — recorded to overlay
+      project.addField('pendingEdit', 'Pending Edit', 'text');
+      expect(pm.changeset!.userOverlay).toHaveLength(3);
+
+      // Accept — recording stops
+      pm.acceptChangeset();
+      expect(pm.changeset!.status).toBe('merged');
+
+      // After accept, mutations are NOT recorded to the changeset
+      const overlayCount = pm.changeset!.userOverlay.length;
+      project.addField('afterAccept', 'After Accept', 'text');
+      expect(pm.changeset!.userOverlay).toHaveLength(overlayCount);
+    });
+
+    it('reject path: open -> record -> close -> reject stops recording', () => {
+      pm.openChangeset();
+      expect(pm.changeset!.status).toBe('open');
+
+      pm.beginEntry('formspec_field');
+      project.addField('aiField', 'AI', 'text');
+      pm.endEntry('Added AI field');
+
+      pm.closeChangeset('Test');
+      expect(pm.changeset!.status).toBe('pending');
+
+      pm.rejectChangeset();
+      expect(pm.changeset!.status).toBe('rejected');
+
+      // After reject, mutations are NOT recorded
+      const overlayCount = pm.changeset!.userOverlay.length;
+      project.addField('afterReject', 'After', 'text');
+      expect(pm.changeset!.userOverlay).toHaveLength(overlayCount);
+    });
+
+    it('discard path: open -> record -> discard clears changeset', () => {
+      pm.openChangeset();
+
+      pm.beginEntry('formspec_field');
+      project.addField('aiField', 'AI', 'text');
+      pm.endEntry('Added AI field');
+
+      pm.discardChangeset();
+      expect(pm.changeset).toBeNull();
+
+      // After discard, mutations should not throw
+      project.addField('afterDiscard', 'After', 'text');
+      // No changeset to record into
+      expect(pm.changeset).toBeNull();
+    });
+  });
 });
