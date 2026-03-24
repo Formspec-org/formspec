@@ -7,7 +7,7 @@
 
 /* eslint-disable */
 /**
- * A single extension record. Describes one Formspec extension — its identity, category, lifecycle status, compatibility bounds, and category-specific metadata (signatures, base types, members). Category-specific properties become required based on the category value: dataType requires baseType; function requires parameters and returns; constraint requires parameters.
+ * A single registry entry. Describes one Formspec extension or semantic metadata entry — its identity, category, lifecycle status, compatibility bounds, and category-specific metadata. Category-specific properties become required based on the category value: dataType requires baseType; function requires parameters and returns; constraint requires parameters; concept requires conceptUri; vocabulary requires vocabularySystem.
  *
  * This interface was referenced by `RegistryDocument`'s JSON-Schema
  * via the `definition` "RegistryEntry".
@@ -20,9 +20,9 @@ export type RegistryEntry = {
    */
   name: string;
   /**
-   * The extension mechanism this entry represents. Determines which category-specific properties are required: dataType requires baseType; function requires parameters and returns; constraint requires parameters; property and namespace have no additional required properties.
+   * The entry category. Determines which category-specific properties are required: dataType requires baseType; function requires parameters and returns; constraint requires parameters; concept requires conceptUri; vocabulary requires vocabularySystem; property and namespace have no additional required properties.
    */
-  category: 'dataType' | 'function' | 'constraint' | 'property' | 'namespace';
+  category: 'dataType' | 'function' | 'constraint' | 'property' | 'namespace' | 'concept' | 'vocabulary';
   /**
    * Semver version of the extension itself (not the Formspec version). Within a registry document, the (name, version) tuple MUST be unique. A new major version MAY re-enter draft status.
    */
@@ -82,7 +82,7 @@ export type RegistryEntry = {
    */
   constraints?: {};
   /**
-   * Presentation-layer metadata for this custom dataType. Provides rendering hints such as prefix symbols, precision, and formatting options. Only meaningful when category is 'dataType'.
+   * Presentation and descriptive metadata for this entry. For dataType entries, provides rendering hints (prefix, precision, formatting). For concept and vocabulary entries, provides display metadata (displayName). Open object — keys are not restricted.
    */
   metadata?: {};
   /**
@@ -110,10 +110,35 @@ export type RegistryEntry = {
    * Array of x-prefixed extension names grouped under this namespace. Only meaningful when category is 'namespace'. Members should be other entries in the same or a referenced registry.
    */
   members?: string[];
+  /**
+   * The concept IRI in the external ontology or standard. REQUIRED when category is 'concept'. This is the globally unique identifier for the concept this entry represents.
+   */
+  conceptUri?: string;
+  /**
+   * The ontology or concept system URI. RECOMMENDED when category is 'concept'. Identifies which ontology or standard the concept belongs to.
+   */
+  conceptSystem?: string;
+  /**
+   * Short code within the concept system (e.g., 'EIN', 'MR'). Only meaningful when category is 'concept'.
+   */
+  conceptCode?: string;
+  /**
+   * Cross-system equivalences for this concept. Each element declares that the concept is equivalent to a concept in another system, with a SKOS-inspired relationship type. Only meaningful when category is 'concept'.
+   */
+  equivalents?: ConceptEquivalent[];
+  /**
+   * The terminology system URI. REQUIRED when category is 'vocabulary'. Identifies the external terminology system this entry represents.
+   */
+  vocabularySystem?: string;
+  /**
+   * Version of the external terminology. Only meaningful when category is 'vocabulary'.
+   */
+  vocabularyVersion?: string;
+  filter?: VocabularyFilter;
 };
 
 /**
- * A static JSON document format for publishing, discovering, and validating Formspec extensions. A Registry Document enumerates named extensions — custom data types, functions, constraints, properties, and namespaces — with metadata, version history, compatibility bounds, and machine-readable schemas. Any organization MAY publish its own Registry Document. Interoperability is achieved through the common format, not centralized authority.
+ * A static JSON document format for publishing, discovering, and validating Formspec extensions and semantic metadata. A Registry Document enumerates named entries — custom data types, functions, constraints, properties, namespaces, concept identities, and vocabulary bindings — with metadata, version history, compatibility bounds, and machine-readable schemas. Any organization MAY publish its own Registry Document. Interoperability is achieved through the common format, not centralized authority.
  */
 export interface RegistryDocument {
   /**
@@ -154,4 +179,53 @@ export interface Publisher {
    * Contact email address or URI for extension-related inquiries.
    */
   contact?: string;
+}
+/**
+ * Declares that the bound concept is equivalent to a concept in another system. Relationship types follow SKOS (Simple Knowledge Organization System) semantics.
+ *
+ * This interface was referenced by `RegistryDocument`'s JSON-Schema
+ * via the `definition` "ConceptEquivalent".
+ */
+export interface ConceptEquivalent {
+  /**
+   * The target system URI.
+   */
+  system: string;
+  /**
+   * The concept code within the target system.
+   */
+  code: string;
+  /**
+   * Human-readable name in the target system.
+   */
+  display?: string;
+  /**
+   * Relationship type (SKOS-inspired). When absent, processors MUST treat as 'exact'. Standard values: 'exact' (identical concept), 'close' (very similar), 'broader' (source is more specific), 'narrower' (source is more general), 'related' (associatively related). Custom types MUST be x-prefixed.
+   */
+  type?: string;
+}
+/**
+ * Subset constraints limiting which portion of the vocabulary is in scope. Only meaningful when category is 'vocabulary'.
+ */
+export interface VocabularyFilter {
+  /**
+   * Root code for hierarchical filtering. Only descendants of this code are included.
+   */
+  ancestor?: string;
+  /**
+   * Maximum depth from the ancestor code.
+   */
+  maxDepth?: number;
+  /**
+   * Explicit list of codes to include.
+   *
+   * @minItems 1
+   */
+  include?: [string, ...string[]];
+  /**
+   * Explicit list of codes to exclude.
+   *
+   * @minItems 1
+   */
+  exclude?: [string, ...string[]];
 }
