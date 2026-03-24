@@ -11,6 +11,17 @@
 // ── Project ─────────────────────────────────────────────────────────
 export { Project, createProject } from './project.js';
 
+// ── ProposalManager (changeset lifecycle) ────────────────────────────
+export { ProposalManager } from './proposal-manager.js';
+export type {
+  Changeset,
+  ChangeEntry,
+  ChangesetStatus,
+  DependencyGroup,
+  ReplayFailure,
+  MergeResult,
+} from './proposal-manager.js';
+
 // ── Studio-core types (own vocabulary) ──────────────────────────────
 export type {
   // Schema-derived types (from formspec-types)

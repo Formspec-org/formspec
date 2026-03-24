@@ -10,6 +10,8 @@
 
 export type { IProjectCore } from './project-core.js';
 export { RawProject, createRawProject } from './raw-project.js';
+export { createChangesetMiddleware } from './changeset-middleware.js';
+export type { ChangesetRecorderControl } from './changeset-middleware.js';
 export { resolveItemLocation } from './handlers/helpers.js';
 export { normalizeDefinition } from './normalization.js';
 export { resolveThemeCascade } from './theme-cascade.js';
