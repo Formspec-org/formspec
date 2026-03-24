@@ -194,6 +194,14 @@ fn plural_category_french_other() {
 }
 
 #[test]
+fn plural_category_turkish_one_and_other() {
+    let mut env = FormspecEnvironment::new();
+    env.set_locale("tr");
+    assert_eq!(eval_value("pluralCategory(1)", &env), s("one"));
+    assert_eq!(eval_value("pluralCategory(2)", &env), s("other"));
+}
+
+#[test]
 fn plural_category_null_propagation() {
     let mut env = FormspecEnvironment::new();
     env.set_locale("en");

@@ -55,9 +55,11 @@ pub(super) fn interpolate_message(template: &str, env: &FormspecEnvironment) -> 
                 result.push_str("{{");
                 i += 2;
             }
+        } else if let Some(ch) = template[i..].chars().next() {
+            result.push(ch);
+            i += ch.len_utf8();
         } else {
-            result.push(bytes[i] as char);
-            i += 1;
+            break;
         }
     }
 
@@ -177,5 +179,12 @@ mod tests {
         let env = make_env();
         let result = interpolate_message("Unclosed {{expr here", &env);
         assert_eq!(result, "Unclosed {{expr here");
+    }
+
+    #[test]
+    fn preserves_utf8_non_ascii_text() {
+        let env = make_env();
+        let result = interpolate_message("Café déjà vu — Привет 你好", &env);
+        assert_eq!(result, "Café déjà vu — Привет 你好");
     }
 }

@@ -1891,9 +1891,9 @@ fn cldr_cardinal_plural_category(lang: &str, n: i64) -> &'static str {
             }
         }
 
-        // ── Japanese/Chinese/Korean/Vietnamese/Thai/Turkish/Indonesian/Malay ──
+        // ── Japanese/Chinese/Korean/Vietnamese/Thai/Indonesian/Malay ──
         // No plural distinctions
-        "ja" | "zh" | "ko" | "vi" | "th" | "tr" | "id" | "ms" => "other",
+        "ja" | "zh" | "ko" | "vi" | "th" | "id" | "ms" => "other",
 
         // ── Default: English pattern (Germanic/Romance except French) ──
         // one: n=1; other: everything else

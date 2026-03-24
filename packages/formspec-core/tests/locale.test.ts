@@ -54,6 +54,12 @@ describe('locale.load', () => {
     const locale = (project.state as any).locales['fr'];
     expect(locale.strings).toEqual({ b: '2' });
   });
+
+  it('normalizes locale code with title-cased script subtags', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'locale.load', payload: { document: localeDoc('zh-hant-tw') } });
+    expect((project.state as any).locales['zh-Hant-TW']).toBeDefined();
+  });
 });
 
 describe('locale.remove', () => {
