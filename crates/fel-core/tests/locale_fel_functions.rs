@@ -193,6 +193,28 @@ fn plural_category_french_other() {
     assert_eq!(eval_value("pluralCategory(2)", &env), s("other"));
 }
 
+/// `pt-PT` and `pt-BR`: per `intl_pluralrules` CLDR cardinal data, 0 is `other`; only `1` is `one`.
+#[test]
+fn plural_category_portuguese_portugal_vs_brazil() {
+    let env = FormspecEnvironment::new();
+    assert_eq!(eval_value("pluralCategory(0, 'pt-PT')", &env), s("other"));
+    assert_eq!(eval_value("pluralCategory(1, 'pt-PT')", &env), s("one"));
+    assert_eq!(eval_value("pluralCategory(2, 'pt-PT')", &env), s("other"));
+
+    assert_eq!(eval_value("pluralCategory(0, 'pt-BR')", &env), s("other"));
+    assert_eq!(eval_value("pluralCategory(1, 'pt-BR')", &env), s("one"));
+    assert_eq!(eval_value("pluralCategory(2, 'pt-BR')", &env), s("other"));
+}
+
+/// Bare `pt` uses CLDR rules for the language subtag alone (0–1 → `one` in current data).
+#[test]
+fn plural_category_portuguese_language_tag_without_region() {
+    let mut env = FormspecEnvironment::new();
+    env.set_locale("pt");
+    assert_eq!(eval_value("pluralCategory(0)", &env), s("one"));
+    assert_eq!(eval_value("pluralCategory(1)", &env), s("one"));
+}
+
 #[test]
 fn plural_category_turkish_one_and_other() {
     let mut env = FormspecEnvironment::new();

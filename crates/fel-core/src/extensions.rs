@@ -430,7 +430,7 @@ const BUILTIN_FUNCTIONS: &[BuiltinFunctionCatalogEntry] = &[
         name: "pluralCategory",
         category: "locale",
         signature: "pluralCategory(number, string?) -> string",
-        description: "Returns the CLDR cardinal plural category (zero/one/two/few/many/other) for a count and optional locale.",
+        description: "Returns the CLDR cardinal plural category (zero/one/two/few/many/other) via intl_pluralrules for a count and optional locale.",
     },
 ];
 

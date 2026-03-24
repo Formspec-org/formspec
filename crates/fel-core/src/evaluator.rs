@@ -5,10 +5,12 @@
 //!
 //! The [`Evaluator`] owns `let` scopes and builtins; private `eval` / `fn_*` methods implement the tree walk.
 #![allow(clippy::missing_docs_in_private_items)]
+use intl_pluralrules::{PluralCategory, PluralRuleType, PluralRules};
 use regex::RegexBuilder;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use std::collections::HashMap;
+use unic_langid::LanguageIdentifier;
 
 use crate::ast::*;
 use crate::error::Diagnostic;
@@ -1742,7 +1744,7 @@ impl<'a> Evaluator<'a> {
     /// `pluralCategory(count, locale?)` — returns CLDR cardinal plural category.
     ///
     /// Uses the explicit locale parameter if provided, otherwise the environment locale.
-    /// Non-integer counts use the truncated integer part (toward zero), matching CLDR integer rules.
+    /// Non-integer counts use the truncated integer part (toward zero), then cardinal rules apply to that integer.
     /// Returns one of: "zero", "one", "two", "few", "many", "other".
     fn fn_plural_category(&mut self, args: &[Expr]) -> FelValue {
         let count_val = self.eval_arg(args, 0);
@@ -1773,16 +1775,11 @@ impl<'a> Evaluator<'a> {
             return FelValue::Null;
         };
 
-        // Extract language subtag (before first '-')
-        let lang = locale_str
-            .split('-')
-            .next()
-            .unwrap_or("")
-            .to_lowercase();
-
         let n = count.trunc().to_i64().unwrap_or(0);
-        let category = cldr_cardinal_plural_category(&lang, n);
-        FelValue::String(category.to_string())
+        match fel_cardinal_plural_category(&locale_str, n) {
+            Some(cat) => FelValue::String(cat.to_string()),
+            None => FelValue::Null,
+        }
     }
 }
 
@@ -1828,82 +1825,40 @@ fn parse_time_str(s: &str) -> Option<(i64, i64, i64)> {
     ))
 }
 
-/// CLDR cardinal plural category for integer counts.
+/// BCP 47 tag for plural rules: empty host locale behaves like `en` (prior hand-rolled default).
+fn language_id_for_plural_rules(locale_str: &str) -> LanguageIdentifier {
+    let s = locale_str.trim();
+    if s.is_empty() {
+        return "en".parse().expect("en is valid BCP 47");
+    }
+    s.parse()
+        .unwrap_or_else(|_| "en".parse().expect("en is valid BCP 47"))
+}
+
+/// Cardinal plural category string for FEL, using CLDR data from `intl_pluralrules`.
 ///
-/// Implements rules for common languages. Languages not explicitly listed
-/// fall back to the English pattern (one vs other).
-///
-/// Reference: <https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html>
-fn cldr_cardinal_plural_category(lang: &str, n: i64) -> &'static str {
-    let abs_n = n.unsigned_abs();
-    let mod10 = abs_n % 10;
-    let mod100 = abs_n % 100;
+/// Unknown or unsupported locales fall back to English cardinal rules.
+fn fel_cardinal_plural_category(locale_str: &str, n: i64) -> Option<&'static str> {
+    let langid = language_id_for_plural_rules(locale_str);
+    let rules = PluralRules::create(langid, PluralRuleType::CARDINAL).or_else(|_| {
+        PluralRules::create(
+            "en".parse::<LanguageIdentifier>()
+                .expect("en is valid BCP 47"),
+            PluralRuleType::CARDINAL,
+        )
+    });
+    let pr = rules.ok()?;
+    let cat = pr.select(n).ok()?;
+    Some(plural_category_fel_name(cat))
+}
 
-    match lang {
-        // ── Arabic: zero/one/two/few/many/other ──
-        "ar" => match abs_n {
-            0 => "zero",
-            1 => "one",
-            2 => "two",
-            _ if (3..=10).contains(&mod100) => "few",
-            _ if (11..=99).contains(&mod100) => "many",
-            _ => "other",
-        },
-
-        // ── Polish: one/few/many/other ──
-        // one: n=1; few: mod10 in 2..4 AND mod100 not in 12..14; many: rest
-        "pl" => {
-            if abs_n == 1 {
-                "one"
-            } else if (2..=4).contains(&mod10) && !(12..=14).contains(&mod100) {
-                "few"
-            } else {
-                "many"
-            }
-        }
-
-        // ── Russian/Ukrainian/Serbian/Croatian/Bosnian ──
-        // one: mod10=1 AND mod100!=11; few: mod10 in 2..4 AND mod100 not in 12..14
-        "ru" | "uk" | "sr" | "hr" | "bs" => {
-            if mod10 == 1 && mod100 != 11 {
-                "one"
-            } else if (2..=4).contains(&mod10) && !(12..=14).contains(&mod100) {
-                "few"
-            } else {
-                "many"
-            }
-        }
-
-        // ── Czech/Slovak ──
-        // one: n=1; few: n in 2..4
-        "cs" | "sk" => match abs_n {
-            1 => "one",
-            2..=4 => "few",
-            _ => "other",
-        },
-
-        // ── French/Portuguese (Brazilian) / Hindi / Bangla ──
-        // one: 0 or 1
-        "fr" | "pt" | "hi" | "bn" => {
-            if abs_n <= 1 {
-                "one"
-            } else {
-                "other"
-            }
-        }
-
-        // ── Japanese/Chinese/Korean/Vietnamese/Thai/Indonesian/Malay ──
-        // No plural distinctions
-        "ja" | "zh" | "ko" | "vi" | "th" | "id" | "ms" => "other",
-
-        // ── Default: English pattern (Germanic/Romance except French) ──
-        // one: n=1; other: everything else
-        _ => {
-            if abs_n == 1 {
-                "one"
-            } else {
-                "other"
-            }
-        }
+fn plural_category_fel_name(cat: PluralCategory) -> &'static str {
+    match cat {
+        PluralCategory::ZERO => "zero",
+        PluralCategory::ONE => "one",
+        PluralCategory::TWO => "two",
+        PluralCategory::FEW => "few",
+        PluralCategory::MANY => "many",
+        PluralCategory::OTHER => "other",
     }
 }
