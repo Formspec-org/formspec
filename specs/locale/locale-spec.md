@@ -101,9 +101,17 @@ This specification does NOT define:
 - Built-in plural tables, gender agreement tables, or number/date
   formatting patterns from CLDR — FEL expressions authored by the
   translator handle these cases.
-- Localization of Theme-tier or Component-tier properties —
-  presentation-layer strings such as `presentation.accessibility.description`
-  are Theme concerns and are not addressable by Locale Documents.
+- Locale Documents address all human-readable strings across all tiers.
+  Theme-tier page layout strings (`PageLayout.title`,
+  `PageLayout.description`) are addressable via the `$page.<pageId>` key
+  prefix (§3.1.7). Component-tier text props (`Heading.text`,
+  `Alert.text`, `Card.title`, etc.) are addressable via the
+  `$component.<nodeId>.<prop>` key prefix (§3.1.8), where `<nodeId>` is
+  the optional `id` property on the component node. OptionSet option
+  labels shared across fields are addressable via the
+  `$optionSet.<setName>` key prefix (§3.1.3). Locale Documents MUST NOT
+  alter non-string properties (layout, styling, widget configuration,
+  behavioral expressions) — those remain Theme/Component concerns.
 
 ### 1.3 Relationship to Other Specifications
 
@@ -300,6 +308,29 @@ When resolving a context label, the cascade is:
 3. Definition `labels[context]` (inline context label)
 4. Definition `label` (inline default)
 
+##### Context on other properties
+
+The `@context` suffix MAY be used with any localizable property, not
+only `label`. For properties without a Definition-side context
+equivalent (i.e., properties other than `label`), the cascade omits
+the inline context step:
+
+| Step | `label@context` | `hint@context` / `description@context` |
+|------|----------------|---------------------------------------|
+| 1 | Locale `key.label@context` | Locale `key.hint@context` |
+| 2 | Locale `key.label` | Locale `key.hint` |
+| 3 | Definition `labels[context]` | *(no equivalent — skip)* |
+| 4 | Definition `label` | Definition `hint` |
+
+Example: providing a screen-reader-specific hint:
+
+```json
+{
+  "email.hint": "Courriel professionnel",
+  "email.hint@accessibility": "Saisissez votre adresse courriel professionnelle. Ce champ est obligatoire."
+}
+```
+
 #### 3.1.3 Choice Option Labels
 
 Fields with `choices` have option display text that must be localized.
@@ -327,21 +358,62 @@ When an option `value` contains characters that are not valid in a
 dot-delimited key (`.`, `\`), those characters MUST be escaped with
 a backslash: `\.` for a literal dot, `\\` for a literal backslash.
 
+##### OptionSet-Level Keys
+
+When multiple fields share an OptionSet (core §4.6), translators MAY
+provide a single set of option translations using the `$optionSet`
+prefix:
+
+```
+$optionSet.<setName>.<optionValue>.label
+```
+
+The resolution cascade for option labels is:
+
+1. Field-level Locale key: `<fieldKey>.options.<value>.label`
+2. OptionSet-level Locale key: `$optionSet.<setName>.<value>.label`
+3. Inline option `label` from the Definition
+
+Field-level keys override OptionSet-level keys, enabling
+context-specific translations when the same value set needs different
+display text in different fields (e.g., "Yes/No" vs. "Approved/Rejected"
+for the same underlying `yesNoNA` set).
+
+Examples:
+
+```json
+{
+  "$optionSet.yesNoNA.yes.label": "Oui",
+  "$optionSet.yesNoNA.no.label": "Non",
+  "$optionSet.yesNoNA.na.label": "Sans objet",
+  "approvalStatus.options.yes.label": "Approuvé"
+}
+```
+
+The `$optionSet` prefix is reserved and cannot collide with item keys
+(item keys exclude the `$` character). Escaping rules for option values
+containing dots or backslashes (§3.1.3) apply identically to
+OptionSet-level keys.
+
 #### 3.1.4 Validation Messages
 
 Validation messages are addressable at two granularities: per
 constraint kind (coarse) and per Bind (fine-grained).
 
-##### Per constraint kind
+##### Per constraint code
 
 ```
-<itemKey>.errors.<constraintKind>
+<itemKey>.errors.<code>
 ```
 
-Where `<constraintKind>` matches the `constraintKind` value from the
-ValidationResult (e.g., `REQUIRED`, `CONSTRAINT`, `TYPE_MISMATCH`).
-This replaces the message for all validation results of that kind
-targeting the item.
+Where `<code>` matches the `code` property of the ValidationResult.
+The `code` property provides machine-readable identifiers designed for
+localization key lookups. Seven codes are reserved for built-in
+constraints: `REQUIRED`, `TYPE_MISMATCH`, `MIN_REPEAT`, `MAX_REPEAT`,
+`CONSTRAINT_FAILED`, `SHAPE_FAILED`, `EXTERNAL_FAILED`. Shape rules
+MAY define custom codes (e.g., `BUDGET_SUM_MISMATCH`). This replaces
+the message for all validation results with that code targeting the
+item.
 
 ##### Per Bind (`constraintMessage` and `requiredMessage`)
 
@@ -367,7 +439,7 @@ To localize the required-field message for an item:
 
 When resolving a validation message, the cascade is:
 
-1. Per-kind Locale key (`<key>.errors.<kind>`) — if present, wins.
+1. Per-code Locale key (`<key>.errors.<code>`) — if present, wins.
 2. Per-Bind Locale key (`<key>.constraintMessage` or
    `<key>.requiredMessage`) — if present.
 3. Inline `constraintMessage` on the Bind (Definition).
@@ -378,11 +450,29 @@ Examples:
 ```json
 {
   "email.errors.REQUIRED": "L'adresse courriel est obligatoire",
-  "email.errors.CONSTRAINT": "Veuillez entrer une adresse courriel valide",
+  "email.errors.CONSTRAINT_FAILED": "Veuillez entrer une adresse courriel valide",
   "ssn.constraintMessage": "Le NAS doit être au format 000-000-000",
   "budget.errors.TYPE_MISMATCH": "Le budget doit être un nombre"
 }
 ```
+
+##### Code synthesis
+
+The `code` property is optional on `ValidationResult`. When a result
+lacks an explicit `code`, processors MUST synthesize it from the
+`constraintKind` property using the reserved code mapping:
+
+| `constraintKind` | Synthesized `code` |
+|---|---|
+| `required` | `REQUIRED` |
+| `type` | `TYPE_MISMATCH` |
+| `cardinality` | `MIN_REPEAT` or `MAX_REPEAT` (based on violation) |
+| `constraint` | `CONSTRAINT_FAILED` |
+| `shape` | `SHAPE_FAILED` |
+| `external` | `EXTERNAL_FAILED` |
+
+This ensures locale keys are always resolvable regardless of whether
+the processor explicitly sets the `code` property.
 
 #### 3.1.5 Form-Level Strings
 
@@ -417,6 +507,111 @@ Example:
   "$shape.budget-balance.message": "Le total du budget doit correspondre au financement demandé"
 }
 ```
+
+#### 3.1.7 Page Layout Strings
+
+Theme Documents define pages via `PageLayout` objects with `id`,
+`title`, and `description` properties. These user-visible strings are
+addressable via the `$page` prefix:
+
+```
+$page.<pageId>.title
+$page.<pageId>.description
+```
+
+Where `<pageId>` is the `id` property of a `PageLayout` in the Theme
+Document (theme spec §6.1).
+
+Examples:
+
+```json
+{
+  "$page.info.title": "Informations du projet",
+  "$page.info.description": "Entrez les détails de base du projet",
+  "$page.review.title": "Révision et soumission"
+}
+```
+
+Page IDs are unique within a Theme Document and follow the pattern
+`^[a-zA-Z][a-zA-Z0-9_\-]*$`.
+
+> **Note:** `$page.` keys address Theme-tier constructs. A Locale
+> Document using `$page.` keys depends on both the target Definition
+> and the associated Theme Document. Validators SHOULD warn when a
+> `$page.` key references a page ID not present in any loaded Theme
+> Document (§7.2).
+
+#### 3.1.8 Component Node Strings
+
+Component tree nodes with an `id` property (component spec §3.1) are
+addressable via the `$component` prefix:
+
+```
+$component.<nodeId>.<property>
+$component.<nodeId>.<property>[<index>]
+$component.<nodeId>.<arrayProp>[<index>].<subProp>
+```
+
+Where `<nodeId>` is the `id` property of a component node in the
+Component Document. Only string-typed props (and string elements of
+array props) are addressable. Bracket indexing with numeric indices
+is used for array-valued properties.
+
+Examples:
+
+```json
+{
+  "$component.budgetHeading.text": "Détails du budget",
+  "$component.contactCard.title": "Coordonnées",
+  "$component.contactCard.subtitle": "Adresse courriel et téléphone",
+  "$component.submitBtn.label": "Soumettre la demande",
+  "$component.submitBtn.pendingLabel": "Soumission en cours...",
+  "$component.mainTabs.tabLabels[0]": "Personnel",
+  "$component.mainTabs.tabLabels[1]": "Emploi",
+  "$component.lineItemTable.columns[0].header": "Description",
+  "$component.lineItemTable.columns[1].header": "Montant"
+}
+```
+
+The following component properties are localizable:
+
+| Component | Localizable Props |
+|-----------|-------------------|
+| Page | `title`, `description` |
+| Heading | `text` |
+| Text | `text` |
+| Alert | `text` |
+| Divider | `label` |
+| Card | `title`, `subtitle` |
+| Collapsible | `title` |
+| ConditionalGroup | `fallback` |
+| Tabs | `tabLabels[N]` |
+| Accordion | `labels[N]` |
+| SubmitButton | `label`, `pendingLabel` |
+| DataTable | `columns[N].header` |
+| Panel | `title` |
+| Modal | `triggerLabel` |
+| Badge | `text` |
+| ProgressBar | `label` |
+| Summary | `columns[N].label` |
+| TextInput | `placeholder`, `prefix`, `suffix` |
+
+##### Repeat template nodes
+
+When a component node with `id` appears inside a repeat template
+(e.g., as a child of a DataTable or Accordion bound to a repeatable
+group), the `id` identifies the **template node**, not individual
+rendered instances. All instances share the same locale resolution —
+the key `$component.<id>.<prop>` resolves to the same string
+template, but `{{expression}}` sequences within that string are
+evaluated in each repeat instance's binding scope, giving access
+to `@index` and `@count`.
+
+> **Note:** `$component.` keys address Component-tier constructs. A
+> Locale Document using `$component.` keys depends on both the target
+> Definition and the associated Component Document. Validators SHOULD
+> warn when a `$component.` key references a node ID not present in
+> any loaded Component Document (§7.2).
 
 ### 3.2 Key Resolution Rules
 
@@ -481,6 +676,32 @@ Processors MUST apply the following rules:
    same read-only context as `calculate` expressions.
 5. Interpolation is **not recursive** — the result of evaluating an
    expression is not scanned for further `{{...}}` sequences.
+
+#### 3.3.2 Interpolation Binding Context
+
+The FEL evaluation context for `{{expression}}` sequences depends on
+the string key's prefix:
+
+| Key prefix | Binding context | `@index`/`@count` | Available references |
+|---|---|---|---|
+| `<itemKey>.*` | Item's binding scope | Yes, if item is inside a repeat group | `$fieldRef` relative to scope |
+| `$form.*` | Global form context | No | All top-level `$fieldRef` |
+| `$shape.<id>.*` | Shape's target scope | Depends on shape target | Per shape definition |
+| `$page.<id>.*` | Global form context | No | All top-level `$fieldRef` |
+| `$optionSet.*` | Global form context | No | All top-level `$fieldRef` |
+| `$component.<id>.*` (outside repeat) | Global form context | No | All top-level `$fieldRef` |
+| `$component.<id>.*` (inside repeat template) | Repeat instance scope | Yes | `$fieldRef` within repeat scope + parent scopes |
+
+For item-level keys inside repeat groups, the locale key uses the
+**template path** (indices stripped), but `{{expression}}` is evaluated
+in the **instance context** — `@index` resolves to the actual instance
+index. This enables per-instance labels:
+
+```json
+{
+  "lineItems.label": "Poste budgétaire {{@index + 1}}"
+}
+```
 
 ## 4. Fallback Cascade
 
@@ -758,6 +979,10 @@ Definition SHOULD perform the following cross-reference checks:
 | Invalid property | Error | The property segment of a key is not a recognized localizable property. |
 | Interpolation parse error | Warning | A `{{...}}` expression fails to parse as valid FEL. |
 | Version mismatch | Warning | The Definition's version does not satisfy `compatibleVersions`. |
+| Orphaned `$page` key | Warning | `$page.<id>` references a page ID not present in the Theme Document. |
+| Orphaned `$component` key | Warning | `$component.<id>` references a node ID not present in the Component Document. |
+| Orphaned `$optionSet` key | Warning | `$optionSet.<setName>` references an OptionSet name not declared in the Definition. |
+| Brackets in item key | Warning | A non-`$component` key contains `[index]` bracket notation. Item-level keys MUST use template paths. |
 
 ### 7.3 Linter Rules
 
@@ -811,8 +1036,8 @@ during the Revalidate phase. The core Revalidate phase produces
 (or processor-default) `message`. The renderer (or a locale-aware
 presentation layer) resolves the localized message by:
 
-1. Looking up `<itemKey>.errors.<constraintKind>` in the active
-   locale cascade.
+1. Looking up `<itemKey>.errors.<code>` in the active locale cascade
+   (synthesizing `code` from `constraintKind` if absent — see §3.1.4).
 2. If not found, looking up `<itemKey>.constraintMessage` or
    `<itemKey>.requiredMessage` as appropriate.
 3. If not found, using the `ValidationResult.message` as-is.
@@ -968,9 +1193,9 @@ demonstrating all key patterns defined in this specification.
     "fundingStatus.options.no.label": "Non",
     "fundingStatus.options.na.label": "Sans objet",
 
-    // Validation messages — per constraint kind (§3.1.4)
+    // Validation messages — per constraint code (§3.1.4)
     "email.errors.REQUIRED": "L'adresse courriel est obligatoire",
-    "email.errors.CONSTRAINT": "Veuillez entrer une adresse courriel valide",
+    "email.errors.CONSTRAINT_FAILED": "Veuillez entrer une adresse courriel valide",
 
     // Validation messages — per Bind (§3.1.4)
     "ssn.constraintMessage": "Le NAS doit être au format 000-000-000",
