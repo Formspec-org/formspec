@@ -61,6 +61,8 @@ Section references (§N) refer to this document unless prefixed with
   - [§3.2 Component Tree Semantics (single root)](#32-component-tree-semantics-single-root)
   - [§3.3 Children Ordering](#33-children-ordering)
   - [§3.4 Nesting Constraints](#34-nesting-constraints)
+  - [§3.5 AccessibilityBlock](#35-accessibilityblock)
+  - [§3.6 Localizable String Properties](#36-localizable-string-properties)
 - [§4 Slot Binding](#4-slot-binding)
   - [§4.1 The bind Property](#41-the-bind-property)
   - [§4.2 Bind Resolution Rules](#42-bind-resolution-rules)
@@ -342,6 +344,7 @@ are recognized on all component objects:
 | Property | Type | Cardinality | Description |
 |---|---|---|---|
 | `component` | string | **1..1** (REQUIRED) | The component type name. MUST be a built-in component name (§5, §6) or a key in the `components` registry (§7). |
+| `id` | string | **0..1** (OPTIONAL) | Unique identifier within the component tree document. See below. |
 | `bind` | string | **0..1** (varies) | Item key from the Definition. See §4 for rules per component category. |
 | `when` | string (FEL) | **0..1** (OPTIONAL) | FEL boolean expression for conditional rendering. See §8. |
 | `responsive` | object | **0..1** (OPTIONAL) | Breakpoint-keyed prop overrides. See §9. |
@@ -349,6 +352,48 @@ are recognized on all component objects:
 | `cssClass` | string \| array of strings | **0..1** (OPTIONAL) | CSS class name(s) that web renderers SHOULD apply to the component's root element. Additive to renderer-generated classes. Non-web renderers MAY ignore. Values MAY contain `$token.` references. |
 | `accessibility` | AccessibilityBlock | **0..1** (OPTIONAL) | Accessibility overrides applied to the component's root element. See §3.5. |
 | `children` | array | **0..1** (varies) | Array of child component objects. Only components that accept children (§3.4) MAY include this property. |
+
+##### `id` (Optional)
+
+Components MAY include an `id` property — a unique string identifier
+within the component tree document. The `id` MUST match the pattern
+`^[a-zA-Z][a-zA-Z0-9_\-]*$` (letters, digits, underscores, hyphens;
+must start with a letter).
+
+When present, `id` MUST be unique across the entire component tree
+document. The `id` enables:
+
+- **Locale string addressing:** `$component.<id>.<prop>` keys in
+  Locale Documents (locale spec §3.1.8).
+- **Test selectors:** Stable identifiers for automated testing.
+- **Accessibility anchoring:** Stable references for assistive
+  technology integration.
+
+Processors MUST validate `id` uniqueness when both `id` values and
+the component tree are available:
+
+- At validation/linting time, an `id` collision MUST produce an
+  **error**.
+- At runtime, an `id` collision SHOULD produce a **warning** and
+  the processor MUST bind only the **first occurrence** in document
+  order (matching the editable binding uniqueness pattern in §4.3).
+
+##### Repeat template nodes
+
+When a component node with `id` appears inside a repeat template
+(as a child of a DataTable bound to a repeatable group per §6.13, or
+an Accordion per §6.3), the `id` identifies the **template node**,
+not individual rendered instances. All rendered instances of the
+template share the same `id`. This is consistent with the
+template-instantiation rendering model defined in §4.4 — the
+component tree document contains one subtree that the renderer
+instantiates N times.
+
+For locale addressing, this means a single locale key
+`$component.<id>.<prop>` applies to all repeat instances. If
+per-instance text is needed, the locale string value may use FEL
+interpolation with `@index` and `@count` (evaluated in each repeat
+instance's binding scope).
 
 In addition to these base properties, each component type defines its own
 **component-specific props** (documented in §5 and §6). Component-specific
@@ -466,6 +511,39 @@ supplement the ARIA attributes applied to the component's root element.
 Renderers MUST apply all present `AccessibilityBlock` properties to the
 component's root DOM element. If a property is absent, the renderer's
 default behaviour is preserved.
+
+### 3.6 Localizable String Properties
+
+##### Localizable String Properties
+
+The following table lists component properties that contain
+human-readable text addressable by Locale Documents via
+`$component.<id>.<prop>` keys. Only components with an `id`
+property are addressable.
+
+| Component | Localizable Props |
+|-----------|-------------------|
+| Page | `title`, `description` |
+| Heading | `text` |
+| Text | `text` |
+| Alert | `text` |
+| Divider | `label` |
+| Card | `title`, `subtitle` |
+| Collapsible | `title` |
+| ConditionalGroup | `fallback` |
+| Tabs | `tabLabels[N]` |
+| Accordion | `labels[N]` |
+| SubmitButton | `label`, `pendingLabel` |
+| DataTable | `columns[N].header` |
+| Panel | `title` |
+| Modal | `triggerLabel` |
+| Badge | `text` |
+| ProgressBar | `label` |
+| Summary | `columns[N].label` |
+| TextInput | `placeholder`, `prefix`, `suffix` |
+
+Array-valued properties use bracket indexing with numeric indices
+(e.g., `$component.mainTabs.tabLabels[0]`).
 
 ---
 

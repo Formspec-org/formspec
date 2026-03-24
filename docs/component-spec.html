@@ -87,6 +87,9 @@ Ordering</a></li>
 Nesting Constraints</a></li>
 <li><a href="#accessibilityblock" id="toc-accessibilityblock">3.5
 AccessibilityBlock</a></li>
+<li><a href="#localizable-string-properties"
+id="toc-localizable-string-properties">3.6 Localizable String
+Properties</a></li>
 </ul></li>
 <li><a href="#slot-binding" id="toc-slot-binding">4. Slot Binding</a>
 <ul>
@@ -336,6 +339,9 @@ Base Properties</a></li>
 Tree Semantics (single root)</a></li>
 <li><a href="#33-children-ordering">§3.3 Children Ordering</a></li>
 <li><a href="#34-nesting-constraints">§3.4 Nesting Constraints</a></li>
+<li><a href="#35-accessibilityblock">§3.5 AccessibilityBlock</a></li>
+<li><a href="#36-localizable-string-properties">§3.6 Localizable String
+Properties</a></li>
 </ul></li>
 <li><a href="#4-slot-binding">§4 Slot Binding</a>
 <ul>
@@ -905,6 +911,13 @@ properties are recognized on all component objects:</p>
 or a key in the <code>components</code> registry (§7).</td>
 </tr>
 <tr>
+<td><code>id</code></td>
+<td>string</td>
+<td><strong>0..1</strong> (OPTIONAL)</td>
+<td>Unique identifier within the component tree document. See
+below.</td>
+</tr>
+<tr>
 <td><code>bind</code></td>
 <td>string</td>
 <td><strong>0..1</strong> (varies)</td>
@@ -954,6 +967,46 @@ children (§3.4) MAY include this property.</td>
 </tr>
 </tbody>
 </table>
+<h5 id="id-optional"><code>id</code> (Optional)</h5>
+<p>Components MAY include an <code>id</code> property — a unique string
+identifier within the component tree document. The <code>id</code> MUST
+match the pattern <code>^[a-zA-Z][a-zA-Z0-9_\-]*$</code> (letters,
+digits, underscores, hyphens; must start with a letter).</p>
+<p>When present, <code>id</code> MUST be unique across the entire
+component tree document. The <code>id</code> enables:</p>
+<ul>
+<li><strong>Locale string addressing:</strong>
+<code>$component.&lt;id&gt;.&lt;prop&gt;</code> keys in Locale Documents
+(locale spec §3.1.8).</li>
+<li><strong>Test selectors:</strong> Stable identifiers for automated
+testing.</li>
+<li><strong>Accessibility anchoring:</strong> Stable references for
+assistive technology integration.</li>
+</ul>
+<p>Processors MUST validate <code>id</code> uniqueness when both
+<code>id</code> values and the component tree are available:</p>
+<ul>
+<li>At validation/linting time, an <code>id</code> collision MUST
+produce an <strong>error</strong>.</li>
+<li>At runtime, an <code>id</code> collision SHOULD produce a
+<strong>warning</strong> and the processor MUST bind only the
+<strong>first occurrence</strong> in document order (matching the
+editable binding uniqueness pattern in §4.3).</li>
+</ul>
+<h5 id="repeat-template-nodes">Repeat template nodes</h5>
+<p>When a component node with <code>id</code> appears inside a repeat
+template (as a child of a DataTable bound to a repeatable group per
+§6.13, or an Accordion per §6.3), the <code>id</code> identifies the
+<strong>template node</strong>, not individual rendered instances. All
+rendered instances of the template share the same <code>id</code>. This
+is consistent with the template-instantiation rendering model defined in
+§4.4 — the component tree document contains one subtree that the
+renderer instantiates N times.</p>
+<p>For locale addressing, this means a single locale key
+<code>$component.&lt;id&gt;.&lt;prop&gt;</code> applies to all repeat
+instances. If per-instance text is needed, the locale string value may
+use FEL interpolation with <code>@index</code> and <code>@count</code>
+(evaluated in each repeat instance’s binding scope).</p>
 <p>In addition to these base properties, each component type defines its
 own <strong>component-specific props</strong> (documented in §5 and §6).
 Component-specific props are siblings of the base properties in the same
@@ -1117,6 +1170,99 @@ this property is explicitly set.</td>
 <p>Renderers MUST apply all present <code>AccessibilityBlock</code>
 properties to the component’s root DOM element. If a property is absent,
 the renderer’s default behaviour is preserved.</p>
+<h3 id="localizable-string-properties">3.6 Localizable String
+Properties</h3>
+<h5 id="localizable-string-properties-1">Localizable String
+Properties</h5>
+<p>The following table lists component properties that contain
+human-readable text addressable by Locale Documents via
+<code>$component.&lt;id&gt;.&lt;prop&gt;</code> keys. Only components
+with an <code>id</code> property are addressable.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Localizable Props</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Page</td>
+<td><code>title</code>, <code>description</code></td>
+</tr>
+<tr>
+<td>Heading</td>
+<td><code>text</code></td>
+</tr>
+<tr>
+<td>Text</td>
+<td><code>text</code></td>
+</tr>
+<tr>
+<td>Alert</td>
+<td><code>text</code></td>
+</tr>
+<tr>
+<td>Divider</td>
+<td><code>label</code></td>
+</tr>
+<tr>
+<td>Card</td>
+<td><code>title</code>, <code>subtitle</code></td>
+</tr>
+<tr>
+<td>Collapsible</td>
+<td><code>title</code></td>
+</tr>
+<tr>
+<td>ConditionalGroup</td>
+<td><code>fallback</code></td>
+</tr>
+<tr>
+<td>Tabs</td>
+<td><code>tabLabels[N]</code></td>
+</tr>
+<tr>
+<td>Accordion</td>
+<td><code>labels[N]</code></td>
+</tr>
+<tr>
+<td>SubmitButton</td>
+<td><code>label</code>, <code>pendingLabel</code></td>
+</tr>
+<tr>
+<td>DataTable</td>
+<td><code>columns[N].header</code></td>
+</tr>
+<tr>
+<td>Panel</td>
+<td><code>title</code></td>
+</tr>
+<tr>
+<td>Modal</td>
+<td><code>triggerLabel</code></td>
+</tr>
+<tr>
+<td>Badge</td>
+<td><code>text</code></td>
+</tr>
+<tr>
+<td>ProgressBar</td>
+<td><code>label</code></td>
+</tr>
+<tr>
+<td>Summary</td>
+<td><code>columns[N].label</code></td>
+</tr>
+<tr>
+<td>TextInput</td>
+<td><code>placeholder</code>, <code>prefix</code>,
+<code>suffix</code></td>
+</tr>
+</tbody>
+</table>
+<p>Array-valued properties use bracket indexing with numeric indices
+(e.g., <code>$component.mainTabs.tabLabels[0]</code>).</p>
 <hr />
 <h2 id="slot-binding">4. Slot Binding</h2>
 <p>Slot binding is the mechanism by which components in the presentation
