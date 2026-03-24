@@ -2,7 +2,13 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { DragDropProvider, useDraggable, useDroppable } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { KeyboardSensor, PointerActivationConstraints, PointerSensor } from '@dnd-kit/dom';
+import {
+  KeyboardSensor,
+  PointerActivationConstraints,
+  PointerSensor,
+  type Draggable,
+} from '@dnd-kit/dom';
+import { isInteractiveElement } from '@dnd-kit/dom/utilities';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { usePageStructure } from './usePageStructure';
 import { useProject } from '../../state/useProject';
@@ -62,6 +68,19 @@ function isDeletableItem(item: PageItemView): boolean {
 function isEffectivelyEmpty(page: PageView): boolean {
   if (page.items.length === 0) return true;
   return page.items.every(isDeletableItem);
+}
+
+/** Keep PointerSensor from competing with grid width resize (see GridItemBlock `[data-resize-handle]`). */
+function pagesTabPointerPreventActivation(event: PointerEvent, source: Draggable): boolean {
+  const target = event.target;
+  if (target instanceof Element && target.closest('[data-resize-handle]')) {
+    return true;
+  }
+  if (target === source.element) return false;
+  if (target === source.handle) return false;
+  if (!(target instanceof Element)) return false;
+  if (source.handle?.contains(target)) return false;
+  return isInteractiveElement(target);
 }
 
 function pageSummary(page: PageView): string {
@@ -582,6 +601,7 @@ export function PagesTab() {
                 activationConstraints: [
                   new PointerActivationConstraints.Distance({ value: 5 }),
                 ],
+                preventActivation: pagesTabPointerPreventActivation,
               }),
               KeyboardSensor,
             ]}

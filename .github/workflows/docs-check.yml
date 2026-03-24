@@ -7,7 +7,8 @@ on:
       - "specs/**"
       - "scripts/generate-spec-artifacts.mjs"
       - "scripts/spec-artifacts.config.json"
-      - "tests/unit/schema/contracts/test_cross_spec_contracts.py"
+      - "tests/conformance/spec/test_cross_spec_contracts.py"
+      - "scripts/run-spec-contract-tests.mjs"
       - "package.json"
       - "package-lock.json"
   push:
@@ -18,7 +19,8 @@ on:
       - "specs/**"
       - "scripts/generate-spec-artifacts.mjs"
       - "scripts/spec-artifacts.config.json"
-      - "tests/unit/schema/contracts/test_cross_spec_contracts.py"
+      - "tests/conformance/spec/test_cross_spec_contracts.py"
+      - "scripts/run-spec-contract-tests.mjs"
       - "package.json"
       - "package-lock.json"
 
@@ -40,8 +42,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Python test runner
-        run: python -m pip install --upgrade pip pytest "jsonschema[format]" referencing msgspec
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Python package and test runner
+        run: |
+          python -m pip install --upgrade pip maturin pytest "jsonschema[format]" referencing msgspec
+          pip install -e ".[test]"
+          pip install --no-build-isolation ./crates/formspec-py
 
       - name: Install Node dependencies
         run: npm ci

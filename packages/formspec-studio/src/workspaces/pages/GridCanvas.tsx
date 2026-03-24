@@ -133,9 +133,12 @@ export function GridCanvas({
 
   const handleResizeStart = useCallback((itemKey: string, currentWidth: number, e: React.PointerEvent) => {
     if (disabled) return;
+    const captureEl = e.currentTarget;
+    if (!(captureEl instanceof HTMLElement)) return;
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) return;
     const columnWidth = containerRect.width / 12;
+    const pointerId = e.pointerId;
 
     dragRef.current = {
       key: itemKey,
@@ -146,10 +149,16 @@ export function GridCanvas({
     };
     setResizingDisplay({ key: itemKey, width: currentWidth });
 
-    document.body.style.pointerEvents = 'none';
     document.body.style.userSelect = 'none';
 
+    try {
+      captureEl.setPointerCapture(pointerId);
+    } catch {
+      // Missing capture support or invalid id — fall back to document listeners below.
+    }
+
     function onPointerMove(ev: PointerEvent) {
+      if (ev.pointerId !== pointerId) return;
       const drag = dragRef.current;
       if (!drag) return;
       const deltaColumns = Math.round((ev.clientX - drag.startX) / drag.columnWidth);
@@ -160,13 +169,20 @@ export function GridCanvas({
       }
     }
 
-    function onPointerUp() {
-      const drag = dragRef.current;
-      if (!drag) return;
-      document.body.style.pointerEvents = '';
+    function finishPointer(ev: PointerEvent) {
+      if (ev.pointerId !== pointerId) return;
+      try {
+        captureEl.releasePointerCapture(pointerId);
+      } catch {
+        /* already released */
+      }
       document.body.style.userSelect = '';
       document.removeEventListener('pointermove', onPointerMove);
-      document.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('pointerup', finishPointer);
+      document.removeEventListener('pointercancel', finishPointer);
+
+      const drag = dragRef.current;
+      if (!drag) return;
 
       const { key, currentWidth: finalWidth, startWidth } = drag;
       dragRef.current = null;
@@ -183,7 +199,8 @@ export function GridCanvas({
     }
 
     document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
+    document.addEventListener('pointerup', finishPointer);
+    document.addEventListener('pointercancel', finishPointer);
   }, [disabled]);
 
   // ── Droppable: canvas itself is a fallback drop target ────────────
@@ -270,7 +287,10 @@ export function GridCanvas({
 
               {/* SelectionToolbar for valid selected items */}
               {isSelected && !isBrokenSelected && !disabled && (
-                <div className="absolute left-0 right-0 z-10 mt-1" style={{ top: '100%' }}>
+                <div
+                  className="absolute left-0 z-10 mt-1 w-max max-w-full"
+                  style={{ top: '100%' }}
+                >
                   <SelectionToolbar
                     item={item}
                     activeBreakpoint={activeBreakpoint}

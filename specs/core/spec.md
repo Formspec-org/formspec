@@ -170,9 +170,9 @@ A conformant **Extended** processor MUST support Formspec Core plus:
 
 1. Extension properties (§8).
 2. Screener routing (§4.7).
-4. Modular composition and assembly (§6.6).
-5. Version migration maps (§6.7).
-6. Pre-population declarations (§4.2.3, `prePopulate`).
+3. Modular composition and assembly (§6.6).
+4. Version migration maps (§6.7).
+5. Pre-population declarations (§4.2.3, `prePopulate`).
 
 A processor claiming Extended conformance implicitly claims Core conformance.
 
@@ -1350,6 +1350,19 @@ all expressions using `prev()` or `next()` in the affected repeat MUST be
 re-evaluated. Implementations SHOULD treat `prev()`/`next()` as depending on
 the entire repeat collection for dependency tracking purposes.
 
+#### 3.5.10 Locale, Runtime Metadata, and Instance Lookup
+
+These functions support host-provided locale and metadata, programmatic access
+to secondary instance data, and plural selection aligned with Unicode CLDR
+cardinal plural rules.
+
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `instance` | `instance(string, string?) → any` | `any` | Reads a value from a named secondary instance (§3.2.3). The first argument is the instance name; the optional second argument is a dotted path within that instance (e.g., `instance('priorYear', 'totals.income')`). Returns `null` if the instance is undefined or the path does not resolve. For literal instance names and paths, `@instance('name').field` syntax is equivalent. |
+| `locale` | `locale() → string` | `string` | Returns the active BCP 47 locale tag from the evaluation context, or `null` if the host has not set a locale. |
+| `runtimeMeta` | `runtimeMeta(string) → any` | `any` | Returns the value for `key` from the host-supplied runtime metadata map, or `null` if absent. The key MUST be a string. |
+| `pluralCategory` | `pluralCategory(number, string?) → string` | `string` | Returns the CLDR cardinal plural category for the integer part of `count` (toward zero): one of `zero`, `one`, `two`, `few`, `many`, or `other`. If the optional locale argument is omitted, the active context locale (see `locale()`) is used; if no locale is available, returns `null`. Unsupported or unparseable locale tags SHOULD fall back to English cardinal rules. |
+
 ### 3.6 Dependency Tracking
 
 FEL expressions are the source of all reactive behavior in Formspec. To
@@ -1442,6 +1455,7 @@ unambiguous and PEG-parseable, and to serve as a starting point for
 implementors.
 
 The grammar uses the following PEG conventions:
+
 - `'literal'` — literal string match
 - `/` — ordered choice
 - `*` — zero or more
@@ -1792,7 +1806,6 @@ time rather than at evaluation time:
 ***
 
 ***
-
 
 ## 4. Definition Schema
 
@@ -2370,7 +2383,6 @@ When instance data is unavailable (e.g., a network fetch fails and no `data`
 fallback exists), `@instance()` MUST return `null`. Expressions SHOULD be
 authored defensively to handle `null` instance data.
 
-
 ### 4.5 Variables
 
 **Variables** are named computed values with lexical scoping. They provide a
@@ -2423,7 +2435,6 @@ Within the same dependency tier, evaluation order is implementation-defined.
 For one-time initialization semantics (compute once at Response creation,
 never recalculate), use `initialValue` on the Item rather than a variable.
 
-
 ### 4.6 Option Sets
 
 **Option Sets** are named, reusable option lists declared at the top level of
@@ -2465,7 +2476,6 @@ An OptionSet is defined by one of:
 
 A `choice` or `multiChoice` field references a named option set via the
 `optionSet` property on the Field item (§4.2.3).
-
 
 ### 4.7 Screener Routing
 
@@ -2547,7 +2557,6 @@ Implementations MUST clearly distinguish severity levels in the user
 interface. Error-level results SHOULD be presented with prominent visual
 treatment (e.g., red borders, error icons). Warning-level results SHOULD be
 visually distinct from errors (e.g., yellow/amber treatment).
-
 
 ### 5.2 Validation Shape Schema
 
@@ -2691,7 +2700,6 @@ condition types:
 4. **Shape constraint failure** — a Shape's `constraint` or composition evaluates to invalid.
 5. **Repeat cardinality violation** — a repeatable Group has fewer than `minRepeat` or more than `maxRepeat` repetitions.
 
-
 ### 5.4 Validation Report Schema
 
 A **ValidationReport** aggregates all ValidationResults for a given Response
@@ -2732,7 +2740,6 @@ from `schemas/validationReport.schema.json`:
 Implementations MUST ensure that `valid` is consistent with `counts.error`:
 `valid` MUST be `true` when `counts.error` is `0` and `false` otherwise.
 
-
 ### 5.5 Validation Modes
 
 Formspec defines three validation modes controlling when the validation
@@ -2764,7 +2771,6 @@ property (§5.2.1) that controls when they fire (`"continuous"`, `"submit"`,
 - When the global mode is `"disabled"`, no shapes fire regardless of `timing`.
 - When the global mode is `"deferred"`, all shapes (including `"continuous"`) are deferred.
 - When the global mode is `"continuous"` (default), shapes fire per their individual `timing`.
-
 
 ### 5.6 Non-Relevant Field Handling
 
@@ -2801,7 +2807,6 @@ rules apply:
    again, its value is restored. If a `default` is declared on the node's
    Bind, the `default` value MUST be applied. If no `default` is declared,
    the node retains whatever value it had before becoming non-relevant.
-
 
 ### 5.7 External Validation Results
 
@@ -2881,7 +2886,6 @@ references are context-dependent:
 - In `$ref` composition, an unversioned reference SHOULD resolve to the
   latest `"active"` version at assembly time.
 
-
 ### 6.2 Version Algorithms
 
 The `versionAlgorithm` property governs interpretation and ordering of
@@ -2909,7 +2913,6 @@ form definition changes. This guidance is RECOMMENDED, not REQUIRED.
 | **Patch** (2.1.0 → 2.1.1) | Cosmetic only — labels, descriptions, help text. | Existing responses remain fully valid. |
 | **Minor** (2.1.0 → 2.2.0) | Additive — new optional fields, relaxed constraints. | Existing responses valid but may lack new fields. |
 | **Major** (2.1.0 → 3.0.0) | Breaking — removed/renamed fields, tightened constraints. | Existing responses MAY fail. Migration (§6.7) RECOMMENDED. |
-
 
 ### 6.3 Status Lifecycle
 
@@ -2946,7 +2949,6 @@ lifecycle transitions are:
   confirming that the Definition is internally consistent (all paths resolve,
   no circular dependencies, all referenced Shapes exist, etc.).
 
-
 ### 6.4 Response Pinning
 
 A Response MUST reference a specific Definition version using
@@ -2977,7 +2979,6 @@ status, its content MUST NOT be modified. Any change — however minor —
 requires a new version. This ensures that the `url|version` pair is a stable,
 immutable reference.
 
-
 ### 6.5 Variant Derivation
 
 A Definition MAY declare `derivedFrom` to indicate it is a variant of another
@@ -3005,7 +3006,6 @@ independent artifact.
 3. **Lineage tracking** — Audit systems MAY use `derivedFrom` to construct
    the full derivation history of a Definition.
 
-
 ### 6.6 Modular Composition
 
 Definitions MAY include items from other Definitions via the `$ref` property
@@ -3026,7 +3026,7 @@ address blocks, signature sections) across multiple Definitions.
 
 | Property | Type | Cardinality | Description |
 |---|---|---|---|
-| `$ref` | string (URI) | **0..1** (OPTIONAL) | Canonical reference to another Definition, using the `url\|version` syntax. By default, all root-level Items from the referenced Definition are included as children of this Group. A **fragment** (after `#`) MAY be appended to select a single item by `key`: e.g., `"https://grants.gov/forms/common/demographics|1.0.0#mailing_address"`. When a fragment is present, only the item with the matching key (and its descendants) is included. If the fragment key does not exist in the referenced Definition, assembly MUST fail with an error. |
+| `$ref` | string (URI) | **0..1** (OPTIONAL) | Canonical reference to another Definition, using the `url\|version` syntax. By default, all root-level Items from the referenced Definition are included as children of this Group. A **fragment** (after `#`) MAY be appended to select a single item by `key`: e.g., `"<https://grants.gov/forms/common/demographics>|1.0.0#mailing_address"`. When a fragment is present, only the item with the matching key (and its descendants) is included. If the fragment key does not exist in the referenced Definition, assembly MUST fail with an error. |
 | `keyPrefix` | string | **0..1** (OPTIONAL) | A string prepended to every `key` imported from the referenced Definition. This prevents key collisions when the same referenced Definition is included multiple times or when its keys conflict with the host Definition. The prefix MUST match `[a-zA-Z][a-zA-Z0-9_]*`. Borrowed from FHIR SDC's `linkIdPrefix` concept. |
 
 #### 6.6.2 Assembly
@@ -3071,7 +3071,6 @@ listing all referenced Definitions:
 ```
 
 This metadata is informational and MUST NOT affect runtime behavior.
-
 
 ### 6.7 Version Migrations
 
@@ -3138,7 +3137,6 @@ Each field mapping rule contains:
   signal that the respondent should review the migrated data.
 
 ***
-
 
 ## 7. Concrete Examples
 
@@ -3357,6 +3355,7 @@ The `total_budget` now equals `award_amount`. The `budget-balances`
 shape produces no results, and the Response is valid.
 
 ***
+
 ### 7.2 Conditional Section with Dependent Validation
 
 This example demonstrates a conditional "subcontracting" section that
@@ -4584,7 +4583,6 @@ combinations or new constructs not found in the source standards.
 ***
 
 *End of Part 3 — Sections 7–9.*
-
 
 ***
 

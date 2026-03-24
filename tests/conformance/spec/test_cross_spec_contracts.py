@@ -1134,7 +1134,7 @@ class TestFelSpecContracts:
 
         registry = set(BUILTIN_NAMES)
         extra = registry - spec_funcs
-        assert extra <= {"instance"}, f'Registry has functions not in spec: {extra}'
+        assert not extra, f'Registry has functions not in spec: {extra}'
 
 
 # ===========================================================================

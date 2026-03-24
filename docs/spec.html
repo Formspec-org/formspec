@@ -2910,6 +2910,68 @@ parent().section_total</code></pre>
 Implementations SHOULD treat <code>prev()</code>/<code>next()</code> as
 depending on the entire repeat collection for dependency tracking
 purposes.</p>
+<h4 id="locale-runtime-metadata-and-instance-lookup">3.5.10 Locale,
+Runtime Metadata, and Instance Lookup</h4>
+<p>These functions support host-provided locale and metadata,
+programmatic access to secondary instance data, and plural selection
+aligned with Unicode CLDR cardinal plural rules.</p>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 25%" />
+<col style="width: 20%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr>
+<th>Function</th>
+<th>Signature</th>
+<th>Returns</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>instance</code></td>
+<td><code>instance(string, string?) → any</code></td>
+<td><code>any</code></td>
+<td>Reads a value from a named secondary instance (§3.2.3). The first
+argument is the instance name; the optional second argument is a dotted
+path within that instance (e.g.,
+<code>instance('priorYear', 'totals.income')</code>). Returns
+<code>null</code> if the instance is undefined or the path does not
+resolve. For literal instance names and paths,
+<code>@instance('name').field</code> syntax is equivalent.</td>
+</tr>
+<tr>
+<td><code>locale</code></td>
+<td><code>locale() → string</code></td>
+<td><code>string</code></td>
+<td>Returns the active BCP 47 locale tag from the evaluation context, or
+<code>null</code> if the host has not set a locale.</td>
+</tr>
+<tr>
+<td><code>runtimeMeta</code></td>
+<td><code>runtimeMeta(string) → any</code></td>
+<td><code>any</code></td>
+<td>Returns the value for <code>key</code> from the host-supplied
+runtime metadata map, or <code>null</code> if absent. The key MUST be a
+string.</td>
+</tr>
+<tr>
+<td><code>pluralCategory</code></td>
+<td><code>pluralCategory(number, string?) → string</code></td>
+<td><code>string</code></td>
+<td>Returns the CLDR cardinal plural category for the integer part of
+<code>count</code> (toward zero): one of <code>zero</code>,
+<code>one</code>, <code>two</code>, <code>few</code>, <code>many</code>,
+or <code>other</code>. If the optional locale argument is omitted, the
+active context locale (see <code>locale()</code>) is used; if no locale
+is available, returns <code>null</code>. Unsupported or unparseable
+locale tags SHOULD fall back to English cardinal rules.</td>
+</tr>
+</tbody>
+</table>
 <h3 id="dependency-tracking">3.6 Dependency Tracking</h3>
 <p>FEL expressions are the source of all reactive behavior in Formspec.
 To support minimal recalculation (§2.4, Phase 2), a conformant processor
@@ -3000,11 +3062,16 @@ for FEL. It is <strong>informative</strong>, not normative — the
 normative semantics are defined in §§3.2–3.6 above. This grammar is
 provided to demonstrate that FEL is unambiguous and PEG-parseable, and
 to serve as a starting point for implementors.</p>
-<p>The grammar uses the following PEG conventions: -
-<code>'literal'</code> — literal string match - <code>/</code> — ordered
-choice - <code>*</code> — zero or more - <code>+</code> — one or more -
-<code>?</code> — optional - <code>( )</code> — grouping - <code>!</code>
-— negative lookahead</p>
+<p>The grammar uses the following PEG conventions:</p>
+<ul>
+<li><code>'literal'</code> — literal string match</li>
+<li><code>/</code> — ordered choice</li>
+<li><code>*</code> — zero or more</li>
+<li><code>+</code> — one or more</li>
+<li><code>?</code> — optional</li>
+<li><code>( )</code> — grouping</li>
+<li><code>!</code> — negative lookahead</li>
+</ul>
 <pre class="peg"><code># ============================================================
 # Formspec Expression Language (FEL) — PEG Grammar (Informative)
 # ============================================================
@@ -6344,7 +6411,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb48-1"><a href=
 the referenced Definition are included as children of this Group. A
 <strong>fragment</strong> (after <code>#</code>) MAY be appended to
 select a single item by <code>key</code>: e.g.,
-<code>"https://grants.gov/forms/common/demographics|1.0.0#mailing_address"</code>.
+<code>"&lt;https://grants.gov/forms/common/demographics&gt;|1.0.0#mailing_address"</code>.
 When a fragment is present, only the item with the matching key (and its
 descendants) is included. If the fragment key does not exist in the
 referenced Definition, assembly MUST fail with an error.</td>
