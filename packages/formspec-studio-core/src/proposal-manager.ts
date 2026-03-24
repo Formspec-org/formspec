@@ -102,6 +102,8 @@ export class ProposalManager {
   private _changeset: Changeset | null = null;
   private _pendingEntryToolName: string | null = null;
   private _pendingEntryWarnings: string[] = [];
+  /** Accumulates commands within a single beginEntry/endEntry bracket. */
+  private _pendingAiEntry: ChangeEntry | null = null;
 
   /**
    * @param core - The IProjectCore instance to manage.
@@ -172,6 +174,12 @@ export class ProposalManager {
     }
     this._pendingEntryToolName = toolName;
     this._pendingEntryWarnings = [];
+    this._pendingAiEntry = {
+      commands: [],
+      toolName,
+      affectedPaths: [],
+      warnings: [],
+    };
     this.setActor('ai');
   }
 
@@ -183,17 +191,18 @@ export class ProposalManager {
     if (!this._changeset || this._changeset.status !== 'open') {
       throw new Error('Cannot endEntry: no open changeset');
     }
+
+    // Finalize the pending AI entry (accumulated by onCommandsRecorded)
+    if (this._pendingAiEntry && this._pendingAiEntry.commands.length > 0) {
+      this._pendingAiEntry.summary = summary;
+      this._pendingAiEntry.warnings = warnings;
+      this._changeset.aiEntries.push(this._pendingAiEntry);
+    }
+
+    this._pendingAiEntry = null;
     this._pendingEntryToolName = null;
     this._pendingEntryWarnings = [];
     this.setActor('user');
-    // Note: the actual ChangeEntry was already created by onCommandsRecorded
-    // when the middleware fired. endEntry pairs it with metadata.
-    // We update the most recent AI entry with the summary.
-    const lastAiEntry = this._changeset.aiEntries[this._changeset.aiEntries.length - 1];
-    if (lastAiEntry) {
-      lastAiEntry.summary = summary;
-      lastAiEntry.warnings = warnings;
-    }
   }
 
   /**
@@ -210,18 +219,20 @@ export class ProposalManager {
     if (this._changeset.status !== 'open' && this._changeset.status !== 'pending') return;
 
     const affectedPaths = extractAffectedPaths(results);
-    const entry: ChangeEntry = {
-      commands: structuredClone(commands as AnyCommand[][]),
-      affectedPaths,
-      warnings: [],
-    };
+    const clonedCommands = structuredClone(commands as AnyCommand[][]);
 
-    if (actor === 'ai') {
-      entry.toolName = this._pendingEntryToolName ?? undefined;
-      this._changeset.aiEntries.push(entry);
+    if (actor === 'ai' && this._pendingAiEntry) {
+      // Accumulate into the bracket's pending entry
+      this._pendingAiEntry.commands.push(...clonedCommands);
+      this._pendingAiEntry.affectedPaths.push(...affectedPaths);
     } else {
-      // Auto-generate summary for user overlay entries
-      entry.summary = generateUserSummary(commands);
+      // User overlay entry — auto-generate summary
+      const entry: ChangeEntry = {
+        commands: clonedCommands,
+        affectedPaths,
+        warnings: [],
+        summary: generateUserSummary(commands),
+      };
       this._changeset.userOverlay.push(entry);
     }
   }
@@ -269,30 +280,52 @@ export class ProposalManager {
 
   /**
    * Reject a pending changeset. Restores to snapshot and replays user overlay.
+   *
+   * @param groupIndices - If provided, only reject these dependency groups
+   *   (the complement groups are accepted via partial merge). If omitted, rejects all.
    */
-  rejectChangeset(): MergeResult {
+  rejectChangeset(groupIndices?: number[]): MergeResult {
     if (!this._changeset || this._changeset.status !== 'pending') {
       throw new Error('Cannot reject: no pending changeset');
     }
 
+    // Partial rejection = accept the complement
+    if (groupIndices && groupIndices.length > 0) {
+      const allIndices = this._changeset.dependencyGroups.map((_, i) => i);
+      const rejectSet = new Set(groupIndices);
+      const complementIndices = allIndices.filter(i => !rejectSet.has(i));
+      if (complementIndices.length === 0) {
+        // Rejecting all groups — fall through to full reject
+        return this._fullReject();
+      }
+      this.setRecording(false);
+      return this._partialMerge(complementIndices);
+    }
+
+    return this._fullReject();
+  }
+
+  /** Full rejection — restore to snapshot, replay user overlay only. */
+  private _fullReject(): MergeResult {
+    const changeset = this._changeset!;
     this.setRecording(false);
 
-    if (this._changeset.userOverlay.length === 0) {
+    if (changeset.userOverlay.length === 0) {
       // Clean rollback — no user edits to replay
-      this.core.restoreState(structuredClone(this._changeset.snapshotBefore));
+      this.core.restoreState(structuredClone(changeset.snapshotBefore));
       const diagnostics = this.core.diagnose();
-      this._changeset.status = 'rejected';
+      changeset.status = 'rejected';
       return { ok: true, diagnostics };
     }
 
     // Restore and replay user overlay
-    this.core.restoreState(structuredClone(this._changeset.snapshotBefore));
+    this.core.restoreState(structuredClone(changeset.snapshotBefore));
 
-    const userReplayResult = this._replayEntries(this._changeset.userOverlay);
+    const userReplayResult = this._replayEntries(changeset.userOverlay);
     if (!userReplayResult.ok) {
       // User overlay replay failed — restore to clean snapshot
-      this.core.restoreState(structuredClone(this._changeset.snapshotBefore));
-      this._changeset.status = 'rejected';
+      this.core.restoreState(structuredClone(changeset.snapshotBefore));
+      changeset.status = 'rejected';
       return {
         ok: false,
         replayFailure: {
@@ -304,7 +337,7 @@ export class ProposalManager {
     }
 
     const diagnostics = this.core.diagnose();
-    this._changeset.status = 'rejected';
+    changeset.status = 'rejected';
     return { ok: true, diagnostics };
   }
 
@@ -419,9 +452,8 @@ export class ProposalManager {
     if (changeset.userOverlay.length > 0) {
       const userReplayResult = this._replayEntries(changeset.userOverlay);
       if (!userReplayResult.ok) {
-        // User overlay failed — restore to after-AI savepoint
+        // User overlay failed — restore to after-AI savepoint, leave as pending for retry
         this.core.restoreState(afterAiState);
-        changeset.status = 'merged'; // AI groups were accepted
         return {
           ok: false,
           replayFailure: {
@@ -435,6 +467,11 @@ export class ProposalManager {
 
     // Phase 3: Structural validation
     const diagnostics = this.core.diagnose();
+    if (diagnostics.counts.error > 0) {
+      // Validation failed — restore to snapshot and leave as pending for retry
+      this.core.restoreState(structuredClone(changeset.snapshotBefore));
+      return { ok: false, diagnostics };
+    }
     changeset.status = 'merged';
     return { ok: true, diagnostics };
   }

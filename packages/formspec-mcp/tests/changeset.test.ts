@@ -141,6 +141,41 @@ describe('changeset MCP tools', () => {
     });
   });
 
+  describe('formspec_changeset_reject (partial)', () => {
+    it('rejects specific groups via group_indices', () => {
+      const { registry, projectId, project } = registryWithProject();
+      handleChangesetOpen(registry, projectId);
+
+      const pm = project.proposals!;
+      pm.beginEntry('formspec_field');
+      project.addField('keep', 'Keep', 'text');
+      pm.endEntry('Added keep');
+
+      pm.beginEntry('formspec_field');
+      project.addField('discard', 'Discard', 'text');
+      pm.endEntry('Added discard');
+
+      handleChangesetClose(registry, projectId, 'Test');
+
+      // Force two dependency groups
+      (pm.changeset as any).dependencyGroups = [
+        { entries: [0], reason: 'keep field' },
+        { entries: [1], reason: 'discard field' },
+      ];
+
+      // Reject group 1 via MCP tool — complement (group 0) should be accepted
+      const result = handleChangesetReject(registry, projectId, [1]);
+      const data = parseResult(result);
+
+      expect(isError(result)).toBe(false);
+      expect(data.ok).toBe(true);
+
+      // keep field should exist, discard should not
+      expect(project.definition.items.some((i: any) => i.key === 'keep')).toBe(true);
+      expect(project.definition.items.some((i: any) => i.key === 'discard')).toBe(false);
+    });
+  });
+
   describe('full workflow', () => {
     it('open → record AI entries → close → accept', () => {
       const { registry, projectId, project } = registryWithProject();
