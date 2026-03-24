@@ -4,12 +4,26 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "dist/formspec-studio.js",
+  "types": "src/lib.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/formspec-studio.js",
+      "types": "./src/lib.ts"
+    },
+    "./dist/style.css": "./dist/style.css"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:lib": "vite build --config vite.config.lib.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --config playwright.config.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.3.2",
