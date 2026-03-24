@@ -229,6 +229,11 @@
       "description": "Base properties shared by all component objects. Every component inherits these via $ref.",
       "required": ["component"],
       "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_\\-]*$",
+          "description": "Optional unique identifier for this node within the component tree. Used for locale string addressing ($component.<id>.prop), test selectors, and accessibility anchoring. When present, MUST be unique across the entire component tree document. Inside repeat templates (DataTable, Accordion), the id identifies the template node — all rendered instances share the same id."
+        },
         "component": {
           "type": "string",
           "minLength": 1,
