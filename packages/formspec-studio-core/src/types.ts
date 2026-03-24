@@ -62,4 +62,9 @@ export interface CreateProjectOptions {
   registries?: unknown[];
   /** Maximum undo snapshots (default: 50). */
   maxHistoryDepth?: number;
+  /**
+   * Whether to enable changeset support (ProposalManager).
+   * Default: true. Set to false to skip the changeset middleware.
+   */
+  enableChangesets?: boolean;
 }

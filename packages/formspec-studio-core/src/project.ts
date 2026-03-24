@@ -1,7 +1,9 @@
 /** @filedesc Project class: high-level form authoring facade over formspec-core. */
-import { createRawProject } from 'formspec-core';
+import { createRawProject, createChangesetMiddleware } from 'formspec-core';
+import type { ChangesetRecorderControl } from 'formspec-core';
 // Internal-only core types — never appear in public method signatures
 import type { IProjectCore, AnyCommand, CommandResult, FELParseContext, FELParseResult, FELReferenceSet, FELFunctionEntry, FieldDependents, ItemFilter, ItemSearchResult, Change, FormspecChangelog, LocaleState } from 'formspec-core';
+import { ProposalManager } from './proposal-manager.js';
 // Studio-core's own type vocabulary for the public API
 import type {
   FormItem, FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
@@ -38,7 +40,30 @@ import { rewriteFELReferences } from 'formspec-engine/fel-tools';
  * For raw project access (dispatch, state, queries), use formspec-core directly.
  */
 export class Project {
-  constructor(private readonly core: IProjectCore) { }
+  private _proposals: ProposalManager | null = null;
+
+  constructor(
+    private readonly core: IProjectCore,
+    private readonly _recorderControl?: ChangesetRecorderControl,
+  ) {
+    if (_recorderControl) {
+      this._proposals = new ProposalManager(
+        core,
+        (on) => { _recorderControl.recording = on; },
+        (actor) => { _recorderControl.currentActor = actor; },
+      );
+      // Wire the middleware's callback to the ProposalManager
+      const pm = this._proposals;
+      const originalOnRecorded = _recorderControl.onCommandsRecorded;
+      _recorderControl.onCommandsRecorded = (actor, commands, results, priorState) => {
+        pm.onCommandsRecorded(actor, commands, results, priorState);
+        originalOnRecorded?.(actor, commands, results, priorState);
+      };
+    }
+  }
+
+  /** Access the ProposalManager for changeset operations. Null if not enabled. */
+  get proposals(): ProposalManager | null { return this._proposals; }
 
   // ── Read-only state getters (for rendering) ────────────────
 
@@ -152,10 +177,23 @@ export class Project {
 
   // ── History ────────────────────────────────────────────────
 
-  undo(): boolean { return this.core.undo(); }
-  redo(): boolean { return this.core.redo(); }
-  get canUndo(): boolean { return this.core.canUndo; }
-  get canRedo(): boolean { return this.core.canRedo; }
+  undo(): boolean {
+    // Disable undo during open changeset — the changeset IS the undo mechanism
+    if (this._proposals?.hasActiveChangeset) return false;
+    return this.core.undo();
+  }
+  redo(): boolean {
+    if (this._proposals?.hasActiveChangeset) return false;
+    return this.core.redo();
+  }
+  get canUndo(): boolean {
+    if (this._proposals?.hasActiveChangeset) return false;
+    return this.core.canUndo;
+  }
+  get canRedo(): boolean {
+    if (this._proposals?.hasActiveChangeset) return false;
+    return this.core.canRedo;
+  }
   onChange(listener: ChangeListener): () => void { return this.core.onChange(() => listener()); }
 
   // ── Bulk operations ────────────────────────────────────────
@@ -3109,6 +3147,25 @@ export class Project {
 }
 
 export function createProject(options?: CreateProjectOptions): Project {
+  // Set up changeset recording middleware if requested
+  let recorderControl: ChangesetRecorderControl | undefined;
+  const coreMiddleware: import('formspec-core').Middleware[] = [];
+
+  if (options?.enableChangesets !== false) {
+    // Default: enable changeset support
+    recorderControl = {
+      recording: false,
+      currentActor: 'user',
+      onCommandsRecorded: () => {}, // Will be overridden by ProposalManager constructor
+    };
+    coreMiddleware.push(createChangesetMiddleware(recorderControl));
+  }
+
+  const coreOptions: any = { ...options };
+  if (coreMiddleware.length > 0) {
+    coreOptions.middleware = coreMiddleware;
+  }
+
   // Bridge studio-core options → core options at the package boundary
-  return new Project(createRawProject(options as any));
+  return new Project(createRawProject(coreOptions), recorderControl);
 }

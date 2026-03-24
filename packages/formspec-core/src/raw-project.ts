@@ -399,6 +399,31 @@ export class RawProject implements IProjectCore {
 
   resetHistory(): void { this._history.clear(); }
 
+  restoreState(snapshot: ProjectState): void {
+    this._state = snapshot;
+    this._history.clear();
+    // Invalidate cached component views
+    this._cachedComponent = null;
+    this._cachedComponentForState = null;
+    // Reconcile generated component tree if needed
+    if (
+      !hasAuthoredComponentTree(this._state.component) &&
+      this._state.definition.items.length > 0
+    ) {
+      this._state.generatedComponent.tree = reconcileComponentTree(
+        this._state.definition,
+        this._state.generatedComponent.tree,
+        this._state.theme,
+      ) as any;
+      (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
+    }
+    this._notify(
+      { type: 'restoreState', payload: {} },
+      { rebuildComponentTree: true },
+      'restore',
+    );
+  }
+
   undo(): boolean {
     const prev = this._history.popUndo(this._state);
     if (!prev) return false;
