@@ -327,46 +327,37 @@ describe('batch items[] mode within bracket', () => {
 });
 
 describe('summary extraction from MCP response (O1 bug)', () => {
-  it('summary falls through to generic fallback because bracket sees MCP envelope, not HelperResult', () => {
-    // BUG O1: withChangesetBracket receives the return value of fn(),
-    // which in the MCP layer is the result of wrapHelperCall() — an MCP
-    // response envelope { content: [{type: 'text', text: ...}] }.
-    // The bracket checks `'summary' in result` to extract HelperResult.summary,
-    // but the envelope doesn't have a 'summary' property. So the summary
-    // always falls through to the `${toolName} executed` fallback.
+  // O1: withChangesetBracket receives the MCP response envelope from wrapHelperCall(),
+  // not the raw HelperResult. The `'summary' in result` check never matches because
+  // the envelope is { content: [{type: 'text', text: ...}] }. Every entry gets the
+  // generic "${toolName} executed" fallback instead of the rich HelperResult.summary.
+  // These tests assert the CORRECT behavior — they should FAIL until O1 is fixed.
+
+  it.fails('should extract rich summary from HelperResult through MCP envelope', () => {
     const { registry, projectId, project } = registryWithProject();
     handleChangesetOpen(registry, projectId);
 
-    // This is how the real MCP server calls it — fn returns MCP response envelope
     withChangesetBracket(project, 'formspec_field', () =>
       handleField(registry, projectId, { path: 'name', label: 'Name', type: 'text' }),
     );
 
     const entry = project.proposals!.changeset!.aiEntries[0];
-
-    // BUG O1: bracket sees MCP response envelope, not HelperResult — summary
-    // extraction is dead code. The summary is always the generic fallback.
-    expect(entry.summary).toBe('formspec_field executed');
-
-    // If O1 were fixed, we would expect something like:
-    // expect(entry.summary).toContain('Added');
-    // or the actual HelperResult.summary from project.addField()
+    // Should contain the rich summary from HelperResult, e.g. "Added field 'name' (text)"
+    expect(entry.summary).toContain('Added');
   });
 
-  it('bracketMutation also hits O1: summary is generic on real tool call', () => {
+  it.fails('bracketMutation should extract rich summary, not generic fallback', () => {
     const { registry, projectId, project } = registryWithProject();
     handleChangesetOpen(registry, projectId);
+    project.addField('f1', 'F1', 'text');
 
-    // bracketMutation is the convenience wrapper used by the real MCP server
     bracketMutation(registry, projectId, 'formspec_behavior', () => {
-      project.addField('f1', 'F1', 'text'); // add field first (outside bracket for setup)
       return handleBehavior(registry, projectId, { action: 'require', target: 'f1' });
     });
 
     const entry = project.proposals!.changeset!.aiEntries[0];
-
-    // BUG O1: same issue — summary is generic fallback
-    expect(entry.summary).toBe('formspec_behavior executed');
+    // Should contain the rich summary, not "formspec_behavior executed"
+    expect(entry.summary).not.toBe('formspec_behavior executed');
   });
 });
 

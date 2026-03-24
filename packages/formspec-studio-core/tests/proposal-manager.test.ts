@@ -660,12 +660,10 @@ describe('ProposalManager', () => {
   });
 
   describe('capturedValues for = prefix expressions', () => {
-    it('documents that capturedValues is not populated during recording', () => {
-      // The spec requires that when a field has initialValue: "=today()",
-      // the evaluated result should be captured in ChangeEntry.capturedValues
-      // so that replay produces the same value (not re-evaluating at replay time).
-      // Currently, the recording middleware does NOT populate capturedValues —
-      // it only captures commands and results.
+    // F3: Spec line 219 requires that =prefix initialValue expressions have their
+    // evaluated result captured in ChangeEntry.capturedValues so replay is deterministic.
+    // This test asserts the CORRECT behavior — it should FAIL until F3 is implemented.
+    it.fails('should capture evaluated result for =prefix initialValue expressions', () => {
       pm.openChangeset();
 
       pm.beginEntry('formspec_field');
@@ -675,12 +673,8 @@ describe('ProposalManager', () => {
       pm.endEntry('Added date field with today() initialValue');
 
       const entry = pm.changeset!.aiEntries[0];
-      expect(entry.toolName).toBe('formspec_field');
-
-      // SPEC GAP: capturedValues should contain { created: <evaluated date> }
-      // but is currently undefined because the recording middleware does not
-      // evaluate or capture one-time expression values.
-      expect(entry.capturedValues).toBeUndefined();
+      expect(entry.capturedValues).toBeDefined();
+      expect(entry.capturedValues).toHaveProperty('created');
     });
   });
 
