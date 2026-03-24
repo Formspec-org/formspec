@@ -7,7 +7,6 @@ import {
   handleChangesetAccept,
   handleChangesetReject,
 } from '../src/tools/changeset.js';
-import { handleField } from '../src/tools/structure.js';
 
 function parseResult(result: { content: Array<{ text: string }> }) {
   return JSON.parse(result.content[0].text);

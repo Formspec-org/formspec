@@ -144,7 +144,7 @@ describe('createChangesetMiddleware', () => {
 
     project.batchWithRebuild(
       [{ type: 'definition.addItem', payload: { key: 'name', label: 'Name', type: 'field', dataType: 'string' } }],
-      [{ type: 'definition.setTitle', payload: { title: 'Updated' } }],
+      [{ type: 'definition.setFormTitle', payload: { title: 'Updated' } }],
     );
 
     expect(control.onCommandsRecorded).toHaveBeenCalledTimes(1);
