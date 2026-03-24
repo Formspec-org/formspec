@@ -190,10 +190,7 @@ export class FormEngine implements IFormEngine {
             getDefinitionDescription: () => (this.definition as any).description,
             getPageTitle: () => undefined,
             getPageDescription: () => undefined,
-            evalFEL: (expr) => {
-                try { return wasmEvalFELWithContext(expr, this._buildLocaleFELContext()); }
-                catch { return null; }
-            },
+            evalFEL: (expr) => wasmEvalFELWithContext(expr, this._buildLocaleFELContext()),
             getValidationCounts: () => {
                 const report = this.getValidationReport();
                 return {
@@ -1235,13 +1232,7 @@ export class FormEngine implements IFormEngine {
                 return (bindConfig as any)?.optionSet ?? undefined;
             },
             setFieldValue: (value) => this.setValue(path, value),
-            evalFEL: (expr) => {
-                try {
-                    return wasmEvalFELWithContext(expr, this._buildLocaleFELContext(path));
-                } catch {
-                    return null;
-                }
-            },
+            evalFEL: (expr) => wasmEvalFELWithContext(expr, this._buildLocaleFELContext(path)),
         });
         this._fieldViewModels[path] = vm;
     }

@@ -88,6 +88,82 @@ describe('project.import', () => {
     const pages = (project.state.theme as any).pages;
     expect(pages).toHaveLength(0);
   });
+
+  it('normalizes imported locale keys to canonical BCP 47 codes', () => {
+    const project = createRawProject();
+    project.dispatch({
+      type: 'project.import',
+      payload: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:formspec:imported',
+          version: '1.0.0',
+          title: 'Imported',
+          items: [],
+        },
+        locales: {
+          'fr-ca': {
+            locale: 'fr-ca',
+            version: '0.1.0',
+            targetDefinition: { url: 'urn:formspec:imported' },
+            strings: { greeting: 'Bonjour' },
+          },
+        },
+      },
+    });
+
+    expect(project.state.locales['fr-CA']).toBeDefined();
+    expect(project.state.locales['fr-ca']).toBeUndefined();
+  });
+
+  it('clears selectedLocaleId if import removes selected locale', () => {
+    const project = createRawProject();
+    project.dispatch({
+      type: 'project.import',
+      payload: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:formspec:before',
+          version: '1.0.0',
+          title: 'Before',
+          items: [],
+        },
+        locales: {
+          fr: {
+            locale: 'fr',
+            version: '0.1.0',
+            targetDefinition: { url: 'urn:formspec:before' },
+            strings: {},
+          },
+        },
+      },
+    });
+    project.dispatch({ type: 'locale.select', payload: { localeId: 'fr' } });
+    expect(project.state.selectedLocaleId).toBe('fr');
+
+    project.dispatch({
+      type: 'project.import',
+      payload: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:formspec:after',
+          version: '1.0.0',
+          title: 'After',
+          items: [],
+        },
+        locales: {
+          de: {
+            locale: 'de',
+            version: '0.1.0',
+            targetDefinition: { url: 'urn:formspec:after' },
+            strings: {},
+          },
+        },
+      },
+    });
+
+    expect(project.state.selectedLocaleId).toBeUndefined();
+  });
 });
 
 describe('project.importSubform', () => {

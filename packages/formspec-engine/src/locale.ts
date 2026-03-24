@@ -71,9 +71,8 @@ export class LocaleStore {
     loadLocale(doc: LocaleDocument): void {
         const code = LocaleStore.normalizeCode(doc.locale);
         this._documents.set(code, { ...doc, locale: code });
-        if (code === this.activeLocale.value) {
-            this.version.value += 1;
-        }
+        // Any loaded locale can affect cascade resolution for the active locale.
+        this.version.value += 1;
     }
 
     setLocale(code: string): void {

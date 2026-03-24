@@ -230,6 +230,42 @@ test('getFieldVM label interpolates FEL expressions in locale strings', () => {
   assert.equal(vm.label.value, 'Items (3)');
 });
 
+test('getFieldVM preserves literal interpolation on FEL parse/eval failure', () => {
+  const engine = new FormEngine(minDef({
+    items: [
+      { key: 'desc', type: 'field', dataType: 'string', label: 'Description' },
+    ],
+  }));
+  engine.loadLocale(makeLocale('en', {
+    'desc.label': 'Broken {{!!!bad}} literal',
+  }));
+  engine.setLocale('en');
+  const vm = engine.getFieldVM('desc');
+  assert.equal(vm.label.value, 'Broken {{!!!bad}} literal');
+});
+
+test('getFormVM preserves literal interpolation on FEL parse/eval failure', () => {
+  const engine = new FormEngine(minDef({ title: 'Fallback Title' }));
+  engine.loadLocale(makeLocale('en', {
+    '$form.title': 'Form {{!!!bad}} title',
+  }));
+  engine.setLocale('en');
+  const formVM = engine.getFormVM();
+  assert.equal(formVM.title.value, 'Form {{!!!bad}} title');
+});
+
+test('loading fallback locale after active locale re-evaluates localized label', () => {
+  const engine = new FormEngine(minDef());
+  engine.loadLocale(makeLocale('fr-CA', {}, { fallback: 'fr' }));
+  engine.setLocale('fr-CA');
+  const vm = engine.getFieldVM('name');
+  assert.equal(vm.label.value, 'Full Name');
+
+  // Load fallback document after VM exists; label should update reactively.
+  engine.loadLocale(makeLocale('fr', { 'name.label': 'Nom' }));
+  assert.equal(vm.label.value, 'Nom');
+});
+
 // ── Edge cases: Repeat group field VMs ──
 
 test('getFieldVM returns VMs for repeat group instances', () => {

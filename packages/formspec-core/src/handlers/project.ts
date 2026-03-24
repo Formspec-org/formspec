@@ -10,6 +10,7 @@
 import type { CommandHandler, LocaleState } from '../types.js';
 import type { FormItem } from 'formspec-types';
 import { splitComponentState, hasAuthoredComponentTree } from '../component-documents.js';
+import { normalizeBcp47 } from '../locale-utils.js';
 import { normalizeDefinition } from '../normalization.js';
 
 /** Every item key in the definition tree (any depth) — used to validate theme region keys. */
@@ -64,7 +65,16 @@ export const projectHandlers: Record<string, CommandHandler> = {
     if (p.locales && typeof p.locales === 'object') {
       state.locales = {};
       for (const [code, localeData] of Object.entries(p.locales)) {
-        state.locales[code] = localeData as LocaleState;
+        const locale = normalizeBcp47((localeData as LocaleState).locale ?? code);
+        state.locales[locale] = {
+          ...(localeData as LocaleState),
+          locale,
+        };
+      }
+
+      // Clear dangling selection if imported locales do not contain it.
+      if (state.selectedLocaleId && !state.locales[state.selectedLocaleId]) {
+        state.selectedLocaleId = undefined;
       }
     }
 

@@ -117,13 +117,13 @@ test('version bumps on loading a replacement for the active locale', () => {
   assert.equal(store.lookupKey('name.label'), 'Full Name');
 });
 
-test('version does NOT bump when loading a non-active locale', () => {
+test('version bumps when loading a non-active locale (cascade can change)', () => {
   const store = new LocaleStore(rx);
   store.setLocale('en');
   const v1 = store.version.value;
 
   store.loadLocale(makeLocale('fr', { 'name.label': 'Nom' }));
-  assert.equal(store.version.value, v1, 'version should not bump for non-active locale');
+  assert.ok(store.version.value > v1, 'version should bump for non-active locale loads');
 });
 
 // --- lookupKeyWithMeta ---
