@@ -1,7 +1,7 @@
 # formspec-react — React Hooks + Auto-Renderer
 
 **Date:** 2026-03-25
-**Status:** Implemented, reviewed
+**Status:** Implemented, reviewed — see Roadmap for remaining work
 
 ## Problem
 
@@ -141,74 +141,84 @@ import { FormspecForm } from 'formspec-react';
 
 ## Implementation Status
 
-### Implemented (v0.1)
+### Implemented
 
 | Feature | File | Tests |
 |---------|------|-------|
 | `useSignal` — signal→React bridge | `use-signal.ts` | 2 unit |
-| `useField` — full FieldViewModel unwrap | `use-field.ts` | 3 unit |
+| `useField` — full FieldViewModel unwrap + touched | `use-field.ts` | 4 unit |
 | `useFieldValue` — granular value hook | `use-field-value.ts` | 1 unit |
 | `useFieldError` — granular error hook | `use-field-error.ts` | 1 unit |
 | `useForm` — form-level state | `use-form.ts` | 2 unit |
 | `useWhen` — FEL conditional evaluation | `use-when.ts` | 2 unit |
 | `useRepeatCount` — repeat instance count | `use-repeat-count.ts` | 3 unit |
-| `FormspecProvider` — context + engine | `context.tsx` | 2 unit |
+| `FormspecProvider` — context + engine + touched tracking | `context.tsx` | 2 unit |
 | `FormspecForm` — auto-renderer | `renderer.tsx` | 7 unit |
 | `FormspecNode` — recursive walker | `node-renderer.tsx` | — |
 | `WhenGuard` — conditional layout nodes | `node-renderer.tsx` | 2 unit |
 | `RepeatGroup` — repeat template stamping | `node-renderer.tsx` | 3 unit |
-| `DefaultField` — semantic HTML fields | `defaults/fields/default-field.tsx` | via renderer tests |
-| `DefaultLayout` — layout containers | `defaults/layout/default-layout.tsx` | via renderer tests |
+| `DefaultField` — semantic HTML fields | `defaults/fields/default-field.tsx` | via renderer |
+| `DefaultLayout` — layout containers | `defaults/layout/default-layout.tsx` | via renderer |
 | Component map overrides | `component-map.ts` | 2 unit |
+| Touched tracking (`touchField`, `isTouched`, `onBlur`) | `context.tsx`, `use-field.ts` | 2 unit |
 | E2E tests (react-demo) | `tests/e2e/browser/react-demo.spec.ts` | 14 Playwright |
 
-**Total: 30 unit tests + 14 E2E tests**
+**Total: 33 unit tests + 14 E2E tests — all passing**
 
-### Review Findings (spec-expert + scout, 2026-03-25)
+## Roadmap
 
-#### Must fix (pre-release)
+### v0.2 — Blocking real usage (do these first)
 
-| # | Issue | Severity | Detail |
-|---|-------|----------|--------|
-| 1 | `@preact/signals-core` as peerDependency | **Critical** | Currently devDependency. If npm deduplicates to two instances, signal subscriptions silently break. Must be peerDependency matching engine's version. |
-| 2 | `useSignal` subscribe churn | **Major** | `subscribe` closure recreated every render → effect disposed and recreated each cycle. Fix: `useCallback` with stable `signalRef`. |
-| 3 | `findItemByKey` indexOf bug | **Minor** | Uses `parts.indexOf(part)` — breaks on duplicate path segments (e.g., `a.a.b`). Fix: use loop index. |
-| 4 | No signal reactivity tests | **Major** | All unit tests verify initial render only. No test mutates a signal and verifies re-render. The core purpose of the hooks is untested. |
-| 5 | `role="alert"` on empty error elements | **Minor** | Screen readers may announce empty alert on mount. Fix: conditionally render or remove role when empty. |
-| 6 | Missing `types` in conditional exports | **Minor** | `./hooks` export lacks `"types"` condition. TS `moduleResolution: "bundler"` may fail to resolve types. |
+| # | Item | Type | Detail |
+|---|------|------|--------|
+| 1 | Move `@preact/signals-core` to peerDependencies | **Bug fix** | Currently devDependency. If npm deduplicates to two instances, signal subscriptions silently break. One-line change in `package.json`. |
+| 2 | Stabilize `useSignal` subscribe closure | **Bug fix** | Subscribe closure recreated every render → effect disposed/recreated each cycle. Fix: wrap in `useCallback` with stable `signalRef`. |
+| 3 | Add `initialData` prop to `FormspecProvider` | **Feature** | No way to load existing response data for edit flows. Pass through to `FormEngine`. |
+| 4 | Add `registryEntries` prop to `FormspecProvider` | **Feature** | Extension fields (email, phone, URL validators) won't validate without registry entries. Pass through to `createFormEngine`. |
+| 5 | Add signal reactivity tests | **Test gap** | All unit tests verify initial render only. No test mutates a signal and verifies React re-renders. The core purpose of the hooks is untested. |
+| 6 | Fix `findItemByKey` indexOf bug | **Bug fix** | Uses `parts.indexOf(part)` — breaks on duplicate path segments (e.g., `a.a.b`). Fix: use loop index. |
 
-#### Feature gaps vs webcomponent
+### v0.3 — Rendering completeness
 
-| Feature | Status | Priority | Notes |
-|---------|--------|----------|-------|
-| Repeat groups | **Implemented** | — | `RepeatGroup` + `useRepeatCount` + `rewriteBindPaths` |
-| `when` conditionals | **Implemented** | — | `WhenGuard` + `useWhen` |
-| `disabledDisplay: 'protected'` | Missing | Medium | Non-relevant fields always hidden; should render disabled when `protected` |
-| Display nodes (Heading, Paragraph, Divider) | Missing | Medium | Render as empty containers — should render content |
-| Interactive nodes (SubmitButton) | Missing | Medium | No submit button component |
-| `registryEntries` in provider | Missing | Medium | Extension validation won't work |
-| `initialData` hydration | Missing | **High** | No way to load existing response data for edit flows |
-| Runtime context (`now`, `timezone`, `locale`) | Missing | Medium | Can't configure FEL functions like `today()` |
-| Locale document loading | Missing | Low | No `loadLocale`/`setLocale` hooks |
-| Touched/dirty tracking | Missing | Low | Validation shows immediately, not after interaction |
-| External validation injection | Missing | Low | Server-side validation can't be merged |
-| Screener flow | Missing | Low | No screener rendering |
-| Wizard/pagination | Missing | Low | No multi-page navigation |
-| `description` rendering in DefaultField | Missing | Low | Subscribed but not rendered |
-| `templatePath` in UseFieldResult | Missing | Low | Useful for locale key lookups |
-| `display`/`interactive` component map categories | Missing | Low | Can't override Heading/SubmitButton via map |
-| Heading level tracking | Missing | Low | No automatic h2→h3→h4 nesting |
-| Group-level relevance | Missing | Medium | Only field-level visibility checked |
-| `scopeChange` prefix propagation | Needs verification | Medium | May already work if planner outputs fully-qualified bindPaths |
+| # | Item | Type | Detail |
+|---|------|------|--------|
+| 7 | Display node rendering | **Feature** | Heading, Paragraph, Divider, Banner nodes render as empty containers. Should render their content (`node.fieldItem.label` as text). |
+| 8 | SubmitButton component | **Feature** | No built-in submit — users wire their own. Add default component that calls `engine.getValidationReport()` + emits event. |
+| 9 | `disabledDisplay: 'protected'` | **Feature** | Non-relevant fields always hidden. When `disabledDisplay` is `protected`, should render disabled/greyed instead of hidden. |
+| 10 | Group-level relevance | **Feature** | Only field-level visibility checked via `FieldViewModel.visible`. Group container nodes should also check `engine.relevantSignals[groupPath]`. |
+| 11 | `role="alert"` on empty errors | **A11y fix** | Screen readers may announce empty alerts on mount. Conditionally render the error element, or remove `role="alert"` when empty. |
+| 12 | `types` in conditional exports | **DX fix** | `./hooks` subpath export lacks `"types"` condition. TS `moduleResolution: "bundler"` may fail to resolve `.d.ts` files. |
 
-#### Architectural notes
+### v0.4 — Engine integration
 
-- **`inputProps` spread helper** — good DX addition, not in engine VM but synthesized by `useField`. Enables `<Input {...field.inputProps} />` with any component library.
-- **`useForm.submit()` signature** — only passes `mode` to `getResponse()`, not full metadata (`author`, `subject`, `id`). Document as convenience or expand signature.
-- **Inline `components` prop** — if passed as object literal, causes unnecessary context re-renders. Document: define component maps as module-level constants.
-- **Layout plan not reactive** — computed once via `useMemo`. Definition/theme changes require new engine. Acceptable for v0.1.
+| # | Item | Type | Detail |
+|---|------|------|--------|
+| 13 | Runtime context prop (`now`, `timezone`, `locale`) | **Feature** | `FormEngineRuntimeContext` not exposed. FEL `today()` and locale-aware formatting won't be configurable. |
+| 14 | Locale hooks (`useLocale`) | **Feature** | No way to load locale documents or switch languages. Add `loadLocale`/`setLocale` forwarding. |
+| 15 | External validation injection | **Feature** | Server-side validation results can't be merged. Forward `engine.injectExternalValidation()`. |
+| 16 | `useForm.submit()` full metadata | **DX** | Currently only passes `mode`. Should accept full `{ id, author, subject, mode }` for response metadata. |
 
-### Demo App
+### Not planned (handle via component overrides)
+
+- Wizard/pagination — custom layout component
+- Screener flow — separate component outside form
+- Heading level tracking — custom layout component can track depth
+- Theme token resolution — handled by CSS variable cascade
+- `templatePath` exposure — niche, available on VM if needed
+
+## Architectural Notes
+
+- **`inputProps` spread helper** — good DX, synthesized by `useField`. Enables `<Input {...field.inputProps} />` with any component library. Includes `onBlur` for touched tracking.
+- **Inline `components` prop pitfall** — if passed as object literal, causes unnecessary context re-renders. Define component maps as module-level constants.
+- **Layout plan not reactive** — computed once via `useMemo`. Definition/theme changes require new engine. Acceptable for now.
+- **`scopeChange` prefix propagation** — needs verification. May already work if the planner outputs fully-qualified `bindPath` values on all nodes.
+
+## Review History
+
+- **2026-03-25 spec-expert review** — 6 must-fix issues, 18 feature gaps identified. Signal bridge fundamentally correct. Granular hook split praised. `inputProps` called out as strong DX.
+- **2026-03-25 scout review** — confirmed spec-expert findings. Noted craftsman added repeat groups, `when` conditionals, and touched tracking (7 additional tests). Flagged signal reactivity tests as critical gap.
+
+## Demo App
 
 `examples/react-demo/` — Community Impact Grant Application
 
