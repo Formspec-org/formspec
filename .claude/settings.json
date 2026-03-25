@@ -1,5 +1,13 @@
 {
   "enabledPlugins": {
     "formspec-specs@formspec-local": true
+  },
+  "extraKnownMarketplaces": {
+    "formspec-local": {
+      "source": {
+        "source": "directory",
+        "path": "."
+      }
+    }
   }
 }
