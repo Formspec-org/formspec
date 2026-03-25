@@ -30,12 +30,26 @@ import type {
   MetadataChanges,
 } from 'formspec-studio-core';
 
+/**
+ * Merge top-level parentPath into props when props.parentPath is absent.
+ * Handles the common LLM mistake of passing parentPath at the top level
+ * instead of nesting it inside props.
+ */
+function mergeParentPath<T extends { parentPath?: string }>(
+  props: T | undefined,
+  parentPath: string | undefined,
+): T | undefined {
+  if (!parentPath) return props;
+  if (props?.parentPath) return props; // explicit props.parentPath wins
+  return { ...props, parentPath } as T;
+}
+
 // ── Batch-enabled add tools ─────────────────────────────────────────
 
 export function handleField(
   registry: ProjectRegistry,
   projectId: string,
-  params: { path: string; label: string; type: string; props?: FieldProps },
+  params: { path: string; label: string; type: string; props?: FieldProps; parentPath?: string },
 ): ReturnType<typeof wrapHelperCall>;
 export function handleField(
   registry: ProjectRegistry,
@@ -45,30 +59,32 @@ export function handleField(
 export function handleField(
   registry: ProjectRegistry,
   projectId: string,
-  params: { path?: string; label?: string; type?: string; props?: FieldProps; items?: BatchItem[] },
+  params: { path?: string; label?: string; type?: string; props?: FieldProps; parentPath?: string; items?: BatchItem[] },
 ) {
   if (params.items) {
     const { project, error } = getProjectSafe(registry, projectId);
     if (error) return error;
     return wrapBatchCall(params.items, (item) => {
+      const props = mergeParentPath(item.props as FieldProps | undefined, (item as any).parentPath);
       return project!.addField(
         item.path as string,
         item.label as string,
         item.type as string,
-        item.props as FieldProps | undefined,
+        props,
       );
     });
   }
+  const props = mergeParentPath(params.props, params.parentPath);
   return wrapHelperCall(() => {
     const project = registry.getProject(projectId);
-    return project.addField(params.path!, params.label!, params.type!, params.props);
+    return project.addField(params.path!, params.label!, params.type!, props);
   });
 }
 
 export function handleContent(
   registry: ProjectRegistry,
   projectId: string,
-  params: { path: string; body: string; kind?: string; props?: ContentProps },
+  params: { path: string; body: string; kind?: string; props?: ContentProps; parentPath?: string },
 ): ReturnType<typeof wrapHelperCall>;
 export function handleContent(
   registry: ProjectRegistry,
@@ -78,27 +94,29 @@ export function handleContent(
 export function handleContent(
   registry: ProjectRegistry,
   projectId: string,
-  params: { path?: string; body?: string; kind?: string; props?: ContentProps; items?: BatchItem[] },
+  params: { path?: string; body?: string; kind?: string; props?: ContentProps; parentPath?: string; items?: BatchItem[] },
 ) {
   if (params.items) {
     const { project, error } = getProjectSafe(registry, projectId);
     if (error) return error;
     return wrapBatchCall(params.items, (item) => {
+      const props = mergeParentPath(item.props as ContentProps | undefined, (item as any).parentPath);
       return project!.addContent(
         item.path as string,
         item.body as string,
         item.kind as 'heading' | 'paragraph' | 'banner' | 'divider' | undefined,
-        item.props as ContentProps | undefined,
+        props,
       );
     });
   }
+  const props = mergeParentPath(params.props, params.parentPath);
   return wrapHelperCall(() => {
     const project = registry.getProject(projectId);
     return project.addContent(
       params.path!,
       params.body!,
       params.kind as 'heading' | 'paragraph' | 'banner' | 'divider' | undefined,
-      params.props,
+      props,
     );
   });
 }
@@ -106,7 +124,7 @@ export function handleContent(
 export function handleGroup(
   registry: ProjectRegistry,
   projectId: string,
-  params: { path: string; label: string; props?: GroupProps & { repeat?: RepeatProps } },
+  params: { path: string; label: string; props?: GroupProps & { repeat?: RepeatProps }; parentPath?: string },
 ): ReturnType<typeof wrapHelperCall>;
 export function handleGroup(
   registry: ProjectRegistry,
@@ -116,14 +134,17 @@ export function handleGroup(
 export function handleGroup(
   registry: ProjectRegistry,
   projectId: string,
-  params: { path?: string; label?: string; props?: GroupProps & { repeat?: RepeatProps }; items?: BatchItem[] },
+  params: { path?: string; label?: string; props?: GroupProps & { repeat?: RepeatProps }; parentPath?: string; items?: BatchItem[] },
 ) {
   if (params.items) {
     const { project, error } = getProjectSafe(registry, projectId);
     if (error) return error;
     return wrapBatchCall(params.items, (item) => {
-      const props = item.props as (GroupProps & { repeat?: RepeatProps }) | undefined;
-      const { repeat, ...groupProps } = props ?? {};
+      const merged = mergeParentPath(
+        item.props as (GroupProps & { repeat?: RepeatProps }) | undefined,
+        (item as any).parentPath,
+      );
+      const { repeat, ...groupProps } = merged ?? {};
       const result = project!.addGroup(
         item.path as string,
         item.label as string,
@@ -131,13 +152,15 @@ export function handleGroup(
       );
       if (repeat) {
         project!.makeRepeatable(item.path as string, repeat);
+        appendRepeatSummary(result, repeat);
       }
       return result;
     });
   }
   return wrapHelperCall(() => {
     const project = registry.getProject(projectId);
-    const { repeat, ...groupProps } = params.props ?? {};
+    const merged = mergeParentPath(params.props, params.parentPath);
+    const { repeat, ...groupProps } = merged ?? {};
     const result = project.addGroup(
       params.path!,
       params.label!,
@@ -145,9 +168,15 @@ export function handleGroup(
     );
     if (repeat) {
       project.makeRepeatable(params.path!, repeat);
+      appendRepeatSummary(result, repeat);
     }
     return result;
   });
+}
+
+/** Attach repeat summary to a group creation HelperResult (UX-4c). */
+function appendRepeatSummary(result: unknown, repeat: RepeatProps): void {
+  (result as any).repeat = repeat;
 }
 
 // ── Submit button (folded into content conceptually, separate handler) ──
@@ -284,12 +313,86 @@ export function editMissingAction() {
 
 type EditAction = 'remove' | 'move' | 'rename' | 'copy';
 
+type MovePosition = 'inside' | 'after' | 'before';
+
 interface EditParams {
   path: string;
   target_path?: string;
   index?: number;
   new_key?: string;
   deep?: boolean;
+  position?: MovePosition;
+}
+
+/**
+ * Resolve sibling-relative positioning into (parentPath, index) for moveItem.
+ *
+ * 'inside' (default): target_path is the parent container.
+ * 'before'/'after': target_path is a sibling. We find its parent and index,
+ * then return the parent path and the computed insertion index.
+ */
+function resolveMovePosition(
+  project: import('formspec-studio-core').Project,
+  sourcePath: string,
+  targetPath: string | undefined,
+  position: MovePosition | undefined,
+  explicitIndex: number | undefined,
+): { parentPath?: string; index?: number } {
+  if (!position || position === 'inside') {
+    return { parentPath: targetPath, index: explicitIndex };
+  }
+
+  if (!targetPath) {
+    throw new HelperError('MISSING_PARAM', 'target_path is required when position is "before" or "after"');
+  }
+
+  // Parse target_path to find parent and leaf key
+  const segments = targetPath.split('.');
+  const leafKey = segments.pop()!;
+  const parentPath = segments.length > 0 ? segments.join('.') : undefined;
+
+  // Find the sibling's index among its parent's children
+  const parentItem = parentPath ? project.itemAt(parentPath) : null;
+  const children = parentItem
+    ? (parentItem.children ?? [])
+    : (project.definition.items ?? []);
+
+  const siblingIndex = children.findIndex((c: any) => c.key === leafKey);
+  if (siblingIndex === -1) {
+    throw new HelperError('PATH_NOT_FOUND', `Target sibling not found: ${targetPath}`);
+  }
+
+  // For 'before': insert at sibling's index. For 'after': insert after it.
+  // Account for the source item being removed from the same parent first:
+  // if the source is in the same parent AND before the target, the target index
+  // shifts down by 1 after removal.
+  const sourceSegments = sourcePath.split('.');
+  const sourceLeaf = sourceSegments.pop()!;
+  const sourceParent = sourceSegments.length > 0 ? sourceSegments.join('.') : undefined;
+  const sameParent = sourceParent === parentPath;
+
+  let sourceIndex = -1;
+  if (sameParent) {
+    sourceIndex = children.findIndex((c: any) => c.key === sourceLeaf);
+  }
+
+  let insertIndex: number;
+  if (position === 'before') {
+    insertIndex = siblingIndex;
+    // If source is in same parent and before the target, removal shifts target down
+    if (sameParent && sourceIndex >= 0 && sourceIndex < siblingIndex) {
+      insertIndex -= 1;
+    }
+  } else {
+    // 'after'
+    insertIndex = siblingIndex + 1;
+    // If source is in same parent and before or at the sibling, removal shifts target down
+    if (sameParent && sourceIndex >= 0 && sourceIndex < siblingIndex) {
+      insertIndex -= 1;
+    }
+  }
+
+  return { parentPath, index: insertIndex };
 }
 
 export function handleEdit(
@@ -319,8 +422,14 @@ export function handleEdit(
       switch (itemAction) {
         case 'remove':
           return project!.removeItem(path);
-        case 'move':
-          return project!.moveItem(path, item.target_path as string | undefined, item.index as number | undefined);
+        case 'move': {
+          const pos = resolveMovePosition(
+            project!, path, item.target_path as string | undefined,
+            (item as any).position as MovePosition | undefined,
+            item.index as number | undefined,
+          );
+          return project!.moveItem(path, pos.parentPath, pos.index);
+        }
         case 'rename':
           return project!.renameItem(path, item.new_key as string);
         case 'copy':
@@ -335,8 +444,13 @@ export function handleEdit(
     switch (action) {
       case 'remove':
         return project.removeItem(params.path!);
-      case 'move':
-        return project.moveItem(params.path!, params.target_path, params.index);
+      case 'move': {
+        const pos = resolveMovePosition(
+          project, params.path!, params.target_path,
+          params.position, params.index,
+        );
+        return project.moveItem(params.path!, pos.parentPath, pos.index);
+      }
       case 'rename':
         return project.renameItem(params.path!, params.new_key!);
       case 'copy':
