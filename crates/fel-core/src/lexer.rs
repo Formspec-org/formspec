@@ -457,6 +457,50 @@ impl<'a> Lexer<'a> {
     }
 }
 
+/// FEL reserved keywords — identifiers that cannot be used as field/variable names.
+const FEL_KEYWORDS: &[&str] = &[
+    "true", "false", "null", "let", "in", "if", "then", "else", "and", "or", "not",
+];
+
+/// Returns `true` if `s` is a valid FEL identifier: `[a-zA-Z_][a-zA-Z0-9_]*` and not a reserved keyword.
+pub fn is_valid_fel_identifier(s: &str) -> bool {
+    if s.is_empty() {
+        return false;
+    }
+    let mut chars = s.chars();
+    let first = chars.next().unwrap();
+    if !first.is_ascii_alphabetic() && first != '_' {
+        return false;
+    }
+    if !chars.all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        return false;
+    }
+    !FEL_KEYWORDS.contains(&s)
+}
+
+/// Sanitizes a string into a valid FEL identifier.
+///
+/// - Strips characters that aren't ASCII alphanumeric or underscore.
+/// - Prepends `_` if the result starts with a digit.
+/// - Appends `_` if the result is a reserved keyword.
+/// - Returns `"_"` for an empty or all-invalid input.
+pub fn sanitize_fel_identifier(s: &str) -> String {
+    let mut result: String = s
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '_')
+        .collect();
+    if result.is_empty() {
+        return "_".to_string();
+    }
+    if result.chars().next().unwrap().is_ascii_digit() {
+        result.insert(0, '_');
+    }
+    if FEL_KEYWORDS.contains(&result.as_str()) {
+        result.push('_');
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::missing_docs_in_private_items)]
@@ -538,5 +582,68 @@ mod tests {
             err.contains("pipe operator `|>` is reserved for future use"),
             "got: {err}"
         );
+    }
+
+    // ── is_valid_fel_identifier tests ────────────────────────────────
+
+    #[test]
+    fn test_valid_identifiers() {
+        assert!(is_valid_fel_identifier("foo"));
+        assert!(is_valid_fel_identifier("_bar"));
+        assert!(is_valid_fel_identifier("camelCase123"));
+        assert!(is_valid_fel_identifier("_"));
+        assert!(is_valid_fel_identifier("x"));
+        assert!(is_valid_fel_identifier("snake_case_name"));
+    }
+
+    #[test]
+    fn test_invalid_identifiers() {
+        assert!(!is_valid_fel_identifier(""));
+        assert!(!is_valid_fel_identifier("123abc"));
+        assert!(!is_valid_fel_identifier("$ref"));
+        assert!(!is_valid_fel_identifier("foo-bar"));
+        assert!(!is_valid_fel_identifier("foo bar"));
+        assert!(!is_valid_fel_identifier("a.b"));
+    }
+
+    #[test]
+    fn test_keywords_are_not_valid_identifiers() {
+        for kw in FEL_KEYWORDS {
+            assert!(!is_valid_fel_identifier(kw), "keyword '{kw}' should be invalid");
+        }
+    }
+
+    // ── sanitize_fel_identifier tests ────────────────────────────────
+
+    #[test]
+    fn test_sanitize_valid_stays_unchanged() {
+        assert_eq!(sanitize_fel_identifier("foo"), "foo");
+        assert_eq!(sanitize_fel_identifier("_bar"), "_bar");
+    }
+
+    #[test]
+    fn test_sanitize_strips_invalid_chars() {
+        assert_eq!(sanitize_fel_identifier("foo-bar"), "foobar");
+        assert_eq!(sanitize_fel_identifier("hello world"), "helloworld");
+        assert_eq!(sanitize_fel_identifier("$ref"), "ref");
+        assert_eq!(sanitize_fel_identifier("a.b.c"), "abc");
+    }
+
+    #[test]
+    fn test_sanitize_prepends_underscore_for_digit_start() {
+        assert_eq!(sanitize_fel_identifier("123abc"), "_123abc");
+    }
+
+    #[test]
+    fn test_sanitize_appends_underscore_for_keyword() {
+        assert_eq!(sanitize_fel_identifier("true"), "true_");
+        assert_eq!(sanitize_fel_identifier("null"), "null_");
+        assert_eq!(sanitize_fel_identifier("and"), "and_");
+    }
+
+    #[test]
+    fn test_sanitize_empty_or_all_invalid() {
+        assert_eq!(sanitize_fel_identifier(""), "_");
+        assert_eq!(sanitize_fel_identifier("!@#$"), "_");
     }
 }

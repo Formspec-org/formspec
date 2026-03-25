@@ -86,6 +86,8 @@ export {
     evaluateDefinition,
     getBuiltinFELFunctionCatalog,
     getFELDependencies,
+    isValidFELIdentifier,
+    sanitizeFELIdentifier,
     validateExtensionUsage,
     createSchemaValidator,
     rewriteFEL,

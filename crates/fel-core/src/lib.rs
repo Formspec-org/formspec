@@ -52,6 +52,7 @@ pub use prepare_host::{
 pub use printer::print_expr;
 pub use rust_decimal::Decimal;
 pub use types::{FelDate, FelMoney, FelValue, parse_date_literal, parse_datetime_literal};
+pub use lexer::{is_valid_fel_identifier, sanitize_fel_identifier};
 pub use wire_style::JsonWireStyle;
 
 /// One lexeme from [`tokenize`] for host bindings and tooling (stable type names + source span).
