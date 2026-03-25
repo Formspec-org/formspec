@@ -7,8 +7,10 @@ import {
     wasmAnalyzeFEL,
     wasmEvaluateDefinition,
     wasmGetFELDependencies,
+    wasmIsValidFelIdentifier,
     wasmItemAtPath,
     wasmNormalizeIndexedPath,
+    wasmSanitizeFelIdentifier,
 } from '../wasm-bridge-runtime.js';
 
 export const normalizeIndexedPath = wasmNormalizeIndexedPath;
@@ -68,3 +70,9 @@ export function getFELDependencies(expression: string): string[] {
 }
 
 export const evaluateDefinition = wasmEvaluateDefinition;
+
+/** Check if a string is a valid FEL identifier (canonical Rust lexer rule). */
+export const isValidFELIdentifier = wasmIsValidFelIdentifier;
+
+/** Sanitize a string into a valid FEL identifier (strips invalid chars, escapes keywords). */
+export const sanitizeFELIdentifier = wasmSanitizeFelIdentifier;

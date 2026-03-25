@@ -212,3 +212,15 @@ pub fn item_location_at_path_wasm(items_json: &str, path: &str) -> Result<String
     let json = definition_item_location_to_json_value(&items, path, JsonWireStyle::JsCamel);
     to_json_string(&json).map_err(|e| JsError::new(&e))
 }
+
+/// Check if a string is a valid FEL identifier.
+#[wasm_bindgen(js_name = "isValidFelIdentifier")]
+pub fn is_valid_fel_identifier_wasm(s: &str) -> bool {
+    fel_core::is_valid_fel_identifier(s)
+}
+
+/// Sanitize a string into a valid FEL identifier.
+#[wasm_bindgen(js_name = "sanitizeFelIdentifier")]
+pub fn sanitize_fel_identifier_wasm(s: &str) -> String {
+    fel_core::sanitize_fel_identifier(s)
+}
