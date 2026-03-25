@@ -2,8 +2,18 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { ChatSession } from '../src/chat-session.js';
 import { MockAdapter } from '../src/mock-adapter.js';
 import type { AIAdapter, ScaffoldResult, ChatMessage, Attachment, ChatSessionState, ConversationResponse, ToolContext, RefinementResult } from '../src/types.js';
-import type { FormDefinition } from 'formspec-types';
+import type { FormDefinition, ProjectBundle } from 'formspec-types';
 // ── Test helpers ─────────────────────────────────────────────────────
+
+/** Stub buildBundle callback that wraps a definition in a minimal ProjectBundle. */
+function mockBuildBundle(def: FormDefinition): ProjectBundle {
+  return {
+    definition: def,
+    component: { tree: null } as any,
+    theme: {} as any,
+    mappings: {},
+  };
+}
 
 /** Spy adapter that records calls and delegates to mock. */
 class SpyAdapter implements AIAdapter {
