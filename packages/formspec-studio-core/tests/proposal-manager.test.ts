@@ -814,4 +814,110 @@ describe('ProposalManager', () => {
       expect(pm.changeset).toBeNull();
     });
   });
+
+  describe('WASM dependency grouping', () => {
+    it('two independent fields produce 2 groups', () => {
+      pm.openChangeset();
+
+      pm.beginEntry('formspec_field');
+      project.addField('name', 'Name', 'text');
+      pm.endEntry('Added name');
+
+      pm.beginEntry('formspec_field');
+      project.addField('email', 'Email', 'text');
+      pm.endEntry('Added email');
+
+      pm.closeChangeset('Two independent fields');
+
+      // With real WASM dependency analysis, two independent addItem entries
+      // should produce two separate groups (no cross-references).
+      expect(pm.changeset!.dependencyGroups).toHaveLength(2);
+      expect(pm.changeset!.dependencyGroups[0].entries).toEqual([0]);
+      expect(pm.changeset!.dependencyGroups[1].entries).toEqual([1]);
+      expect(pm.changeset!.dependencyGroups[0].reason).toContain('independent');
+      expect(pm.changeset!.dependencyGroups[1].reason).toContain('independent');
+    });
+
+    it('two dependent fields (FEL cross-ref) produce 1 group', () => {
+      pm.openChangeset();
+
+      pm.beginEntry('formspec_field');
+      project.addField('fieldA', 'Field A', 'number');
+      pm.endEntry('Added fieldA');
+
+      pm.beginEntry('formspec_behavior');
+      project.addField('fieldB', 'Field B', 'number');
+      project.calculate('fieldB', '$fieldA + 1');
+      pm.endEntry('Added fieldB with calculate referencing fieldA');
+
+      pm.closeChangeset('Two dependent fields');
+
+      // fieldB's calculate expression references $fieldA, so they must group together.
+      expect(pm.changeset!.dependencyGroups).toHaveLength(1);
+      expect(pm.changeset!.dependencyGroups[0].entries).toEqual([0, 1]);
+      expect(pm.changeset!.dependencyGroups[0].reason).toContain('fieldA');
+    });
+
+    it('partial accept: accept group 1, reject group 2 — only group 1 fields remain', () => {
+      pm.openChangeset();
+
+      pm.beginEntry('formspec_field');
+      project.addField('keep', 'Keep', 'text');
+      pm.endEntry('Added keep');
+
+      pm.beginEntry('formspec_field');
+      project.addField('discard', 'Discard', 'text');
+      pm.endEntry('Added discard');
+
+      pm.closeChangeset('Partial accept test');
+
+      // Two independent fields → two groups
+      expect(pm.changeset!.dependencyGroups).toHaveLength(2);
+
+      // Accept only group 0
+      const result = pm.acceptChangeset([0]);
+      expect(result.ok).toBe(true);
+
+      // Only 'keep' should remain
+      expect(project.definition.items.some((i: any) => i.key === 'keep')).toBe(true);
+      expect(project.definition.items.some((i: any) => i.key === 'discard')).toBe(false);
+    });
+
+    it('multiple operations referencing same field form a single group', () => {
+      pm.openChangeset();
+
+      // Entry 0: create field
+      pm.beginEntry('formspec_field');
+      project.addField('total', 'Total', 'number');
+      pm.endEntry('Added total');
+
+      // Entry 1: set bind on the same field
+      pm.beginEntry('formspec_behavior');
+      project.require('total');
+      pm.endEntry('Made total required');
+
+      // Entry 2: independent field
+      pm.beginEntry('formspec_field');
+      project.addField('notes', 'Notes', 'text');
+      pm.endEntry('Added notes');
+
+      pm.closeChangeset('Mixed dependencies');
+
+      // Entry 0 creates 'total', entry 1 references 'total' → grouped
+      // Entry 2 creates 'notes' → independent
+      expect(pm.changeset!.dependencyGroups).toHaveLength(2);
+
+      const totalGroup = pm.changeset!.dependencyGroups.find(g =>
+        g.entries.includes(0) && g.entries.includes(1)
+      );
+      expect(totalGroup).toBeTruthy();
+      expect(totalGroup!.entries).toEqual([0, 1]);
+
+      const notesGroup = pm.changeset!.dependencyGroups.find(g =>
+        g.entries.includes(2)
+      );
+      expect(notesGroup).toBeTruthy();
+      expect(notesGroup!.entries).toEqual([2]);
+    });
+  });
 });
