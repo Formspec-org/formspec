@@ -79,7 +79,7 @@ export const DataTablePlugin: ComponentPlugin = {
             if (dataType === 'integer') {
                 const parsed = Number.parseInt(trimmed, 10);
                 val = Number.isFinite(parsed) ? parsed : null;
-            } else if (dataType === 'decimal' || dataType === 'number' || dataType === 'money') {
+            } else if (dataType === 'decimal' || dataType === 'money') {
                 const parsed = Number.parseFloat(trimmed);
                 val = Number.isFinite(parsed) ? parsed : null;
             } else {
@@ -197,7 +197,7 @@ export const DataTablePlugin: ComponentPlugin = {
                             const input = document.createElement('input');
                             input.className = 'formspec-datatable-input';
                             input.name = sigPath;
-                            input.type = (dataType === 'integer' || dataType === 'decimal' || dataType === 'number' || dataType === 'money')
+                            input.type = (dataType === 'integer' || dataType === 'decimal' || dataType === 'money')
                                 ? 'number'
                                 : 'text';
                             if (input.type === 'number') {
@@ -210,7 +210,7 @@ export const DataTablePlugin: ComponentPlugin = {
                                 let nextValue = coerceInputValue(input.value, dataType, fieldDef, col);
                                 ctx.engine.setValue(sigPath, nextValue);
                                 // Sync back immediately if clamped or coerced
-                                if (dataType === 'integer' || dataType === 'decimal' || dataType === 'number' || dataType === 'money') {
+                                if (dataType === 'integer' || dataType === 'decimal' || dataType === 'money') {
                                     const displayVal = (nextValue && typeof nextValue === 'object' && 'amount' in nextValue) ? nextValue.amount : nextValue;
                                     const sVal = displayVal === null ? '' : String(displayVal);
                                     if (sVal !== input.value) {

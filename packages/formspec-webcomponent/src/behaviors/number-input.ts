@@ -8,7 +8,7 @@ export function useNumberInput(ctx: BehaviorContext, comp: any): NumberInputBeha
     const id = comp.id || toFieldId(fieldPath);
     const item = ctx.findItemByKey(comp.bind);
     warnIfIncompatible('NumberInput', item?.dataType || 'string');
-    const itemDesc = { key: item?.key || comp.bind, type: 'field' as const, dataType: item?.dataType || 'number' };
+    const itemDesc = { key: item?.key || comp.bind, type: 'field' as const, dataType: item?.dataType || 'decimal' };
     const rawPresentation = ctx.resolveItemPresentation(itemDesc);
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
@@ -32,7 +32,7 @@ export function useNumberInput(ctx: BehaviorContext, comp: any): NumberInputBeha
         min: comp.min,
         max: comp.max,
         step: comp.step,
-        dataType: item?.dataType || 'number',
+        dataType: item?.dataType || 'decimal',
 
         bind(refs: FieldRefs): () => void {
             const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);

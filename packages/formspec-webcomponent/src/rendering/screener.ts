@@ -66,7 +66,7 @@ export function normalizeScreenerSeedForItem(item: any, raw: any, defaultCurrenc
         const n = typeof raw === 'string' ? parseInt(raw, 10) : Number(raw);
         return Number.isNaN(n) ? null : n;
     }
-    if (item.dataType === 'decimal' || item.dataType === 'number') {
+    if (item.dataType === 'decimal') {
         if (raw === null || raw === '') return null;
         const n = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
         return Number.isNaN(n) ? null : n;
@@ -244,7 +244,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             fieldWrapper.appendChild(input);
         } else {
             const input = document.createElement('input');
-            input.type = item.dataType === 'integer' || item.dataType === 'decimal' || item.dataType === 'number' ? 'number' : 'text';
+            input.type = item.dataType === 'integer' || item.dataType === 'decimal' ? 'number' : 'text';
             input.className = 'formspec-input';
             input.id = fieldId;
             if (item.hint) input.setAttribute('aria-describedby', hintId);
@@ -256,7 +256,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
                 const val = input.value;
                 if (item.dataType === 'integer') {
                     answers[item.key] = val ? parseInt(val, 10) : null;
-                } else if (item.dataType === 'decimal' || item.dataType === 'number') {
+                } else if (item.dataType === 'decimal') {
                     answers[item.key] = val ? parseFloat(val) : null;
                 } else {
                     answers[item.key] = val || null;

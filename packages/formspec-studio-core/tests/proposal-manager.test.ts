@@ -676,6 +676,22 @@ describe('ProposalManager', () => {
       expect(entry.capturedValues).toBeDefined();
       expect(entry.capturedValues).toHaveProperty('created');
     });
+
+    it('should NOT capture calculate expressions — they are continuously reactive', () => {
+      pm.openChangeset();
+
+      pm.beginEntry('formspec_field');
+      project.addField('price', 'Price', 'decimal');
+      project.addField('quantity', 'Quantity', 'integer');
+      project.addField('total', 'Total', 'decimal');
+      project.calculate('total', '$price * $quantity');
+      pm.endEntry('Added calculated total field');
+
+      const entry = pm.changeset!.aiEntries[0];
+      // calculate is reactive — its value is ephemeral, not meaningful to capture
+      const capturedPaths = Object.keys(entry.capturedValues ?? {});
+      expect(capturedPaths).not.toContain('total');
+    });
   });
 
   describe('multi-dispatch coalescing (F7 verification)', () => {

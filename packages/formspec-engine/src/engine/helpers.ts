@@ -88,7 +88,6 @@ export function emptyValueForItem(item: FormItem): any {
     switch (item.dataType) {
         case 'integer':
         case 'decimal':
-        case 'number':
         case 'money':
         case 'date':
         case 'dateTime':
@@ -107,7 +106,7 @@ export function coerceInitialValue(item: FormItem, value: any): any {
     if (item.dataType === 'boolean' && value === '') {
         return false;
     }
-    if (['integer', 'decimal', 'number'].includes(item.dataType ?? '') && value === '') {
+    if (['integer', 'decimal'].includes(item.dataType ?? '') && value === '') {
         return null;
     }
     if (item.dataType === 'money' && typeof value === 'number') {
@@ -151,7 +150,6 @@ export function validateDataType(value: any, dataType: string): boolean {
         case 'integer':
             return typeof value === 'number' && Number.isInteger(value);
         case 'decimal':
-        case 'number':
             return typeof value === 'number' && !Number.isNaN(value);
         case 'money':
             return value && typeof value === 'object' && typeof value.amount === 'number';

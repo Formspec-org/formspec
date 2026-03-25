@@ -8,7 +8,7 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
     const id = comp.id || toFieldId(fieldPath);
     const item = ctx.findItemByKey(comp.bind);
     warnIfIncompatible('Slider', item?.dataType || 'string');
-    const itemDesc = { key: item?.key || comp.bind, type: 'field' as const, dataType: item?.dataType || 'number' };
+    const itemDesc = { key: item?.key || comp.bind, type: 'field' as const, dataType: item?.dataType || 'decimal' };
     const rawPresentation = ctx.resolveItemPresentation(itemDesc);
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
