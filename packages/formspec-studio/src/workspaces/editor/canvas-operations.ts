@@ -20,6 +20,8 @@ export interface ContextMenuState {
 export interface ContextMenuItem {
   label: string;
   action: string;
+  /** When true, render a visual divider before this item. */
+  separator?: boolean;
 }
 
 interface ExecuteContextActionOptions {
@@ -71,7 +73,7 @@ export function buildContextMenuItems(
     ];
   }
 
-  return [
+  const structuralItems: ContextMenuItem[] = [
     { label: 'Duplicate', action: 'duplicate' },
     { label: 'Delete', action: 'delete' },
     { label: 'Move Up', action: 'moveUp' },
@@ -81,6 +83,60 @@ export function buildContextMenuItems(
     { label: 'Wrap in Stack', action: 'wrapInStack' },
     { label: 'Wrap in Collapsible', action: 'wrapInCollapsible' },
   ];
+
+  const aiItems = buildAIActionItems(contextMenu.type, true);
+  return [...structuralItems, ...aiItems];
+}
+
+// ── AI context actions ───────────────────────────────────────────────
+
+/** Build AI action menu items appropriate for the given item type. */
+function buildAIActionItems(itemType: string | undefined, withSeparator: boolean): ContextMenuItem[] {
+  const items: ContextMenuItem[] = [];
+
+  if (itemType === 'field') {
+    items.push(
+      { label: 'AI: Add validation', action: 'ai:addValidation', separator: withSeparator },
+      { label: 'AI: Suggest options', action: 'ai:suggestOptions' },
+      { label: 'AI: Generate description', action: 'ai:generateDescription' },
+    );
+  } else if (itemType === 'group') {
+    items.push(
+      { label: 'AI: Add validation', action: 'ai:addValidation', separator: withSeparator },
+      { label: 'AI: Generate description', action: 'ai:generateDescription' },
+    );
+  } else if (itemType === 'display') {
+    items.push(
+      { label: 'AI: Generate description', action: 'ai:generateDescription', separator: withSeparator },
+    );
+  }
+
+  return items;
+}
+
+/** Build a pre-filled prompt for the given AI action and item path. */
+export function buildAIActionPrompt(action: string, itemPath: string): string {
+  switch (action) {
+    case 'ai:addValidation':
+      return `Add appropriate validation rules to the field "${itemPath}". Consider the field name and suggest constraints like required, pattern, min/max length, or custom constraint expressions.`;
+    case 'ai:suggestOptions':
+      return `Suggest appropriate option values for the field "${itemPath}". Based on the field name and context, generate a list of relevant choices.`;
+    case 'ai:generateDescription':
+      return `Generate a helpful description or help text for the item "${itemPath}". The description should guide the user on what information to provide.`;
+    default:
+      return '';
+  }
+}
+
+/** Dispatch a formspec:ai-action custom event. */
+function dispatchAIAction(action: string, itemPath: string): void {
+  const prompt = buildAIActionPrompt(action, itemPath);
+  if (!prompt) return;
+  window.dispatchEvent(
+    new CustomEvent('formspec:ai-action', {
+      detail: { action, itemPath, prompt },
+    }),
+  );
 }
 
 export function executeContextAction({
@@ -189,6 +245,11 @@ export function executeContextAction({
       }
       break;
     }
+    case 'ai:addValidation':
+    case 'ai:suggestOptions':
+    case 'ai:generateDescription':
+      dispatchAIAction(action, path);
+      break;
   }
 
   closeMenu();

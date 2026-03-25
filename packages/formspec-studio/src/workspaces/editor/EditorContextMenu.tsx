@@ -1,19 +1,16 @@
-/** @filedesc Right-click context menu for canvas items with duplicate, delete, move, and wrap actions. */
+/** @filedesc Right-click context menu for canvas items with duplicate, delete, move, wrap, and AI actions. */
+import type { ContextMenuItem } from './canvas-operations';
+
 interface EditorContextMenuProps {
   itemPath?: string;
   itemType?: string;
   onAction: (action: string) => void;
   onClose: () => void;
-  items?: MenuItem[];
+  items?: ContextMenuItem[];
   testId?: string;
 }
 
-interface MenuItem {
-  label: string;
-  action: string;
-}
-
-const MENU_ITEMS: MenuItem[] = [
+const MENU_ITEMS: ContextMenuItem[] = [
   { label: 'Duplicate', action: 'duplicate' },
   { label: 'Delete', action: 'delete' },
   { label: 'Move Up', action: 'moveUp' },
@@ -21,9 +18,17 @@ const MENU_ITEMS: MenuItem[] = [
   { label: 'Wrap in Group', action: 'wrapInGroup' },
 ];
 
+function IconSparkle() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="inline-block mr-1.5 -mt-px text-accent">
+      <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
+    </svg>
+  );
+}
+
 /**
  * Context menu for editor items.
- * Shows actions like duplicate, delete, move, and wrap in group.
+ * Shows actions like duplicate, delete, move, wrap in group, and AI-powered actions.
  */
 export function EditorContextMenu({
   onAction,
@@ -31,25 +36,35 @@ export function EditorContextMenu({
   items = MENU_ITEMS,
   testId = 'context-menu',
 }: EditorContextMenuProps) {
+  const isAIAction = (action: string) => action.startsWith('ai:');
+
   return (
     <div
       data-testid={testId}
       className="bg-surface border border-border rounded shadow-lg py-1 min-w-[160px]"
       role="menu"
     >
-      {items.map(({ label, action }) => (
-        <button
-          key={action}
-          role="menuitem"
-          data-testid={`ctx-${action}`}
-          className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface-hover transition-colors"
-          onClick={() => {
-            onAction(action);
-            onClose();
-          }}
-        >
-          {label}
-        </button>
+      {items.map(({ label, action, separator }) => (
+        <div key={action}>
+          {separator && (
+            <div role="separator" className="h-px bg-border my-1" />
+          )}
+          <button
+            role="menuitem"
+            data-testid={`ctx-${action}`}
+            className={[
+              'w-full text-left px-3 py-1.5 text-sm hover:bg-surface-hover transition-colors',
+              isAIAction(action) ? 'text-accent/90' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={() => {
+              onAction(action);
+              onClose();
+            }}
+          >
+            {isAIAction(action) && <IconSparkle />}
+            {label}
+          </button>
+        </div>
       ))}
     </div>
   );

@@ -1,7 +1,7 @@
 /** @filedesc Integrated studio chat panel — shares the studio Project, routes AI through MCP, shows changeset review. */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChatSession, type ChatMessage, type ToolContext, type ToolDeclaration } from 'formspec-chat';
-import { type Project, type Changeset, type MergeResult } from 'formspec-studio-core';
+import { ChatSession, MockAdapter, type ChatMessage, type ToolContext } from 'formspec-chat';
+import { type Project, type Changeset, type MergeResult, type ProposalManager } from 'formspec-studio-core';
 import { ProjectRegistry } from 'formspec-mcp/registry';
 import { createToolDispatch } from 'formspec-mcp/dispatch';
 import { ChangesetReview, type ChangesetReviewData } from './ChangesetReview.js';
@@ -46,6 +46,8 @@ function IconWarning() {
 export interface ChatPanelProps {
   project: Project;
   onClose: () => void;
+  /** When set, pre-fills the input with this prompt and clears it after applying. */
+  initialPrompt?: string | null;
 }
 
 interface DiagnosticEntry {
@@ -80,7 +82,7 @@ function changesetToReviewData(changeset: Readonly<Changeset>): ChangesetReviewD
 
 // ── ChatPanel ──────────────────────────────────────────────────────
 
-export function ChatPanel({ project, onClose }: ChatPanelProps) {
+export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
@@ -91,7 +93,10 @@ export function ChatPanel({ project, onClose }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<ChatSession | null>(null);
 
-  // Create the in-process tool context and ChatSession once
+  const [readyToScaffold, setReadyToScaffold] = useState(false);
+  const [scaffolding, setScaffolding] = useState(false);
+
+  // Create the in-process tool context once
   const { toolContext, proposalManager } = useMemo(() => {
     const registry = new ProjectRegistry();
     const projectId = registry.registerOpen('studio://current', project);
@@ -107,24 +112,14 @@ export function ChatPanel({ project, onClose }: ChatPanelProps) {
       },
     };
 
-    // Access the project's ProposalManager if it has one
-    const pm = (project as any)._proposalManager ?? null;
+    const pm: ProposalManager | null = project.proposals;
     return { toolContext: ctx, proposalManager: pm };
   }, [project]);
 
-  // Create ChatSession lazily (needs async adapter check)
+  // Create ChatSession lazily
   useEffect(() => {
     if (sessionRef.current) return;
-    // Import adapter lazily to avoid requiring API key at startup
-    const session = new ChatSession({
-      adapter: {
-        async chat() { return { message: '', readyToScaffold: false }; },
-        async generateScaffold() { return { definition: {} as any, traces: [], issues: [] }; },
-        async refineForm() { return { message: '', toolCalls: [] }; },
-        async extractFromFile() { return ''; },
-        async isAvailable() { return false; },
-      },
-    });
+    const session = new ChatSession({ adapter: new MockAdapter() });
     session.setToolContext(toolContext);
     sessionRef.current = session;
   }, [toolContext]);
@@ -137,6 +132,15 @@ export function ChatPanel({ project, onClose }: ChatPanelProps) {
     }, 500);
     return () => clearInterval(interval);
   }, [proposalManager]);
+
+  // Apply initialPrompt when it changes
+  useEffect(() => {
+    if (initialPrompt) {
+      setInputValue(initialPrompt);
+      // Focus the input after a tick so the panel is visible
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [initialPrompt]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -169,6 +173,7 @@ export function ChatPanel({ project, onClose }: ChatPanelProps) {
       if (session) {
         await session.sendMessage(text);
         setMessages(session.getMessages());
+        setReadyToScaffold(session.isReadyToScaffold());
       }
     } catch (err) {
       const errMsg: ChatMessage = {
@@ -225,6 +230,52 @@ export function ChatPanel({ project, onClose }: ChatPanelProps) {
     const result = proposalManager.rejectChangeset();
     applyMergeResult(result);
   }, [proposalManager]);
+
+  // ── Scaffold as changeset ────────────────────────────────────────
+
+  const handleGenerateForm = useCallback(async () => {
+    const session = sessionRef.current;
+    if (!session || scaffolding) return;
+
+    setScaffolding(true);
+    try {
+      // Generate the scaffold via ChatSession
+      await session.scaffold();
+      const definition = session.getDefinition();
+      if (!definition) return;
+
+      // Wrap in a changeset so the user can review
+      if (proposalManager) {
+        proposalManager.openChangeset();
+        proposalManager.beginEntry('scaffold');
+
+        project.loadBundle({ definition });
+
+        const itemCount = definition.items?.length ?? 0;
+        const label = `Initial scaffold: ${itemCount} field(s)`;
+        proposalManager.endEntry(label);
+        proposalManager.closeChangeset(label);
+
+        setChangeset(proposalManager.changeset);
+      } else {
+        // No changeset support — load directly
+        project.loadBundle({ definition });
+      }
+
+      setMessages(session.getMessages());
+      setReadyToScaffold(false);
+    } catch (err) {
+      const errMsg: ChatMessage = {
+        id: `err-${Date.now()}`,
+        role: 'system',
+        content: `Scaffold failed: ${err instanceof Error ? err.message : String(err)}`,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errMsg]);
+    } finally {
+      setScaffolding(false);
+    }
+  }, [project, proposalManager, scaffolding]);
 
   function applyMergeResult(result: MergeResult) {
     if (result.ok) {
@@ -383,6 +434,19 @@ export function ChatPanel({ project, onClose }: ChatPanelProps) {
           </div>
         )}
       </div>
+
+      {/* ── Generate Form button ─────────────────────────── */}
+      {readyToScaffold && !scaffolding && !showReview && (
+        <div className="px-4 pb-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleGenerateForm}
+            className="w-full py-2 px-4 rounded-lg text-[13px] font-semibold bg-accent text-white hover:bg-accent/90 transition-colors"
+          >
+            Generate Form
+          </button>
+        </div>
+      )}
 
       {/* ── Input bar ───────────────────────────────────── */}
       <div className="px-4 pb-3 pt-2 border-t border-border shrink-0">
