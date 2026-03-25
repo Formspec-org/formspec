@@ -6,6 +6,7 @@ set -euo pipefail
 # Layout:
 #   public/
 #   ├── index.html              ← marketing site
+#   ├── docs/                   ← HTML specs + API docs (Python, TypeScript, Rust)
 #   ├── studio/                 ← studio SPA
 #   ├── references/             ← reference frontend
 #   ├── examples/               ← form definition data (used by references)
@@ -18,6 +19,10 @@ PUBLIC="$ROOT/public"
 echo "==> Cleaning public/"
 rm -rf "$PUBLIC"
 mkdir -p "$PUBLIC"
+
+# ── 0. Generate API docs + HTML specs (must run before Astro copies docs/) ──
+echo "==> Generating API docs and HTML specs"
+(cd "$ROOT" && make api-docs html-docs)
 
 # ── 1. Marketing site + Studio (Astro SSG + Vite SPA) ──
 echo "==> Building marketing site and studio"
