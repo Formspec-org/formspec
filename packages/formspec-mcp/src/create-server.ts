@@ -20,6 +20,7 @@ import { handleStyle } from './tools/style.js';
 import { handleData } from './tools/data.js';
 import { handleScreener } from './tools/screener.js';
 import { handleDescribe, handleSearch, handleTrace, handlePreview } from './tools/query.js';
+import { handleStructureBatch } from './tools/structure-batch.js';
 import { handleFel } from './tools/fel.js';
 import { handleWidget } from './tools/widget.js';
 import {
@@ -306,6 +307,25 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
     });
   });
 
+  // ── Structure Batch ──────────────────────────────────────────────
+
+  server.registerTool('formspec_structure_batch', {
+    title: 'Structure Batch',
+    description: 'Batch structure operations: wrap items in a group, batch delete, or batch duplicate. Action "batch_delete" is DESTRUCTIVE.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['wrap_group', 'batch_delete', 'batch_duplicate']),
+      paths: z.array(z.string()).describe('Item paths to operate on'),
+      groupPath: z.string().optional().describe('Group key for wrap_group action'),
+      groupLabel: z.string().optional().describe('Group label for wrap_group action'),
+    },
+    annotations: DESTRUCTIVE,
+  }, async ({ project_id, action, paths, groupPath, groupLabel }) => {
+    return bracketMutation(registry, project_id, 'formspec_structure_batch', () =>
+      handleStructureBatch(registry, project_id, { action, paths, groupPath, groupLabel }),
+    );
+  });
+
   // ── Pages ─────────────────────────────────────────────────────────
 
   server.registerTool('formspec_page', {
@@ -520,10 +540,10 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
 
   server.registerTool('formspec_preview', {
     title: 'Preview',
-    description: 'Preview or validate the form.',
+    description: 'Preview, validate, generate sample data, or normalize the form definition. mode="preview" shows field visibility/values. mode="validate" checks a response. mode="sample_data" generates plausible values. mode="normalize" returns a cleaned-up definition.',
     inputSchema: {
       project_id: z.string(),
-      mode: z.enum(['preview', 'validate']).optional().default('preview'),
+      mode: z.enum(['preview', 'validate', 'sample_data', 'normalize']).optional().default('preview'),
       scenario: z.record(z.string(), z.unknown()).optional(),
       response: z.record(z.string(), z.unknown()).optional(),
     },
