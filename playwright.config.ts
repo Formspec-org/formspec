@@ -28,5 +28,10 @@ export default defineConfig({
       port: 8082,
       reuseExistingServer: !process.env.CI,
     },
+    {
+      command: 'npm run dev --prefix examples/react-demo',
+      port: 5200,
+      reuseExistingServer: !process.env.CI,
+    },
   ],
 });
