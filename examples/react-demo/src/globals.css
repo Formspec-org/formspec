@@ -59,10 +59,39 @@ textarea:focus {
 }
 
 input[type="checkbox"] {
+  appearance: none;
   width: 1.125rem;
   height: 1.125rem;
-  accent-color: var(--color-primary);
+  min-width: 1.125rem;
+  border: 1.5px solid var(--color-input);
+  border-radius: 0.25rem;
+  background: var(--color-card);
   cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: none;
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring) 25%, transparent);
 }
 
 textarea {
@@ -71,11 +100,15 @@ textarea {
 }
 
 label {
-  display: block;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--color-foreground);
   margin-bottom: 0.375rem;
+}
+
+/* Block labels for text/select fields — not checkbox labels */
+label[for] {
+  display: block;
 }
 
 .formspec-hint {
