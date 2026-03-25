@@ -65,3 +65,20 @@ export type {
   PageStructureView,
   PageViewInput,
 } from './page-view-resolution.js';
+
+export { flattenDefinitionTree } from './tree-flattening.js';
+export type { FlatTreeItem } from './tree-flattening.js';
+
+export { commonAncestor, pathsOverlap, expandSelection } from './selection-ops.js';
+
+export { computeDropTargets } from './drop-targets.js';
+export type { DropTarget } from './drop-targets.js';
+
+export { describeShapeConstraint } from './shape-display.js';
+
+export { optionSetUsageCount } from './optionset-usage.js';
+
+export { buildSearchIndex } from './search-index.js';
+export type { SearchIndexEntry } from './search-index.js';
+
+export { serializeToJSON } from './serialization.js';
