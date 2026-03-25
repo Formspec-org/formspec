@@ -4,12 +4,23 @@ import { MockAdapter } from '../src/mock-adapter.js';
 import { SessionStore } from '../src/session-store.js';
 import { TemplateLibrary } from '../src/template-library.js';
 import type { StorageBackend, ToolContext } from '../src/types.js';
+import type { FormDefinition, ProjectBundle } from 'formspec-types';
 
 class MemoryStorage implements StorageBackend {
   private data = new Map<string, string>();
   getItem(key: string): string | null { return this.data.get(key) ?? null; }
   setItem(key: string, value: string): void { this.data.set(key, value); }
   removeItem(key: string): void { this.data.delete(key); }
+}
+
+/** Stub buildBundle callback that wraps a definition in a minimal ProjectBundle. */
+function mockBuildBundle(def: FormDefinition): ProjectBundle {
+  return {
+    definition: def,
+    component: { tree: null } as any,
+    theme: {} as any,
+    mappings: {},
+  };
 }
 
 /** Creates a minimal ToolContext for testing. */
@@ -167,20 +178,19 @@ describe('Integration: issue lifecycle', () => {
 });
 
 describe('Integration: bundle generation flow', () => {
-  it('template → refine produces updated bundle with component tree', async () => {
+  it('template → refine produces updated bundle', async () => {
     const adapter = new MockAdapter();
-    const session = new ChatSession({ adapter });
+    const session = new ChatSession({ adapter, buildBundle: mockBuildBundle });
 
     await session.startFromTemplate('grant-application');
     const bundle1 = session.getBundle()!;
-    // component.tree may be null without WASM — host provides full bundle
     expect(bundle1.theme).toBeDefined();
     expect(bundle1.mappings).toBeDefined();
 
     session.setToolContext(createMockToolContext());
     await session.sendMessage('Add a budget section');
     const bundle2 = session.getBundle()!;
-    // component.tree may be null without WASM — host provides full bundle
+    expect(bundle2).toBeDefined();
   });
 
   it('bundle persists through save/restore cycle', async () => {
@@ -188,17 +198,16 @@ describe('Integration: bundle generation flow', () => {
     const storage = new MemoryStorage();
     const store = new SessionStore(storage);
 
-    const session = new ChatSession({ adapter });
+    const session = new ChatSession({ adapter, buildBundle: mockBuildBundle });
     await session.startFromTemplate('housing-intake');
 
     store.save(session.toState());
     const loaded = store.load(session.id)!;
-    const restored = await ChatSession.fromState(loaded, adapter);
+    const restored = await ChatSession.fromState(loaded, adapter, mockBuildBundle);
 
     const bundle = restored.getBundle()!;
     expect(bundle.definition.title).toBe(session.getDefinition()!.title);
     expect(bundle.component).toBeDefined();
-    // component.tree may be null without WASM — host provides full bundle via ToolContext
   });
 
   it('exportBundle returns complete bundle for all templates', async () => {
@@ -206,7 +215,7 @@ describe('Integration: bundle generation flow', () => {
     const library = new TemplateLibrary();
 
     for (const template of library.getAll()) {
-      const session = new ChatSession({ adapter });
+      const session = new ChatSession({ adapter, buildBundle: mockBuildBundle });
       await session.startFromTemplate(template.id);
 
       const bundle = session.exportBundle();
@@ -215,6 +224,15 @@ describe('Integration: bundle generation flow', () => {
       expect(bundle.theme).toBeDefined();
       expect(bundle.mappings).toBeDefined();
     }
+  });
+
+  it('getBundle returns null when no buildBundle callback provided', async () => {
+    const adapter = new MockAdapter();
+    const session = new ChatSession({ adapter });
+    await session.startFromTemplate('housing-intake');
+
+    expect(session.getBundle()).toBeNull();
+    expect(session.hasDefinition()).toBe(true);
   });
 });
 
