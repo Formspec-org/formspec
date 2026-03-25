@@ -23,6 +23,9 @@ import { handleDescribe, handleSearch, handleTrace, handlePreview } from './tool
 import { handleStructureBatch } from './tools/structure-batch.js';
 import { handleFel } from './tools/fel.js';
 import { handleWidget } from './tools/widget.js';
+import { handleAudit } from './tools/audit.js';
+import { handleTheme } from './tools/theme.js';
+import { handleComponent } from './tools/component.js';
 import {
   handleChangesetOpen, handleChangesetClose, handleChangesetList,
   handleChangesetAccept, handleChangesetReject,
@@ -582,6 +585,72 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
     annotations: READ_ONLY,
   }, async ({ project_id, action, data_type }) => {
     return handleWidget(registry, project_id, { action, dataType: data_type });
+  });
+
+  // ── Audit ─────────────────────────────────────────────────────────
+
+  server.registerTool('formspec_audit', {
+    title: 'Audit',
+    description: 'Audit the form structure. action="classify_items": classify all items by type, data type, and metadata. action="bind_summary": show bind properties for a target field.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['classify_items', 'bind_summary']),
+      target: z.string().optional().describe('Field path (required for bind_summary)'),
+    },
+    annotations: READ_ONLY,
+  }, async ({ project_id, action, target }) => {
+    return handleAudit(registry, project_id, { action, target });
+  });
+
+  // ── Theme ───────────────────────────────────────────────────────────
+
+  server.registerTool('formspec_theme', {
+    title: 'Theme',
+    description: 'Manage theme tokens, defaults, and selectors. Actions: set_token, remove_token, list_tokens, set_default, list_defaults, add_selector, list_selectors.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['set_token', 'remove_token', 'list_tokens', 'set_default', 'list_defaults', 'add_selector', 'list_selectors']),
+      key: z.string().optional().describe('Token key (for set_token, remove_token)'),
+      value: z.unknown().optional().describe('Token or default value (for set_token, set_default)'),
+      property: z.string().optional().describe('Default property name (for set_default)'),
+      match: z.record(z.string(), z.unknown()).optional().describe('Selector match criteria (for add_selector)'),
+      apply: z.record(z.string(), z.unknown()).optional().describe('Selector properties to apply (for add_selector)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, key, value, property, match, apply }) => {
+    const readOnlyActions = ['list_tokens', 'list_defaults', 'list_selectors'];
+    if (readOnlyActions.includes(action)) {
+      return handleTheme(registry, project_id, { action, key, value, property, match, apply });
+    }
+    return bracketMutation(registry, project_id, 'formspec_theme', () =>
+      handleTheme(registry, project_id, { action, key, value, property, match, apply }),
+    );
+  });
+
+  // ── Component ──────────────────────────────────────────────────────
+
+  server.registerTool('formspec_component', {
+    title: 'Component',
+    description: 'Manage the component tree. Actions: list_nodes, add_node, set_node_property, remove_node.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['list_nodes', 'add_node', 'set_node_property', 'remove_node']),
+      parent: z.object({ bind: z.string().optional(), nodeId: z.string().optional() }).optional().describe('Parent node reference (for add_node)'),
+      component: z.string().optional().describe('Component type name (for add_node)'),
+      bind: z.string().optional().describe('Bind to definition item key (for add_node)'),
+      props: z.record(z.string(), z.unknown()).optional().describe('Component properties (for add_node)'),
+      node: z.object({ bind: z.string().optional(), nodeId: z.string().optional() }).optional().describe('Node reference (for set_node_property, remove_node)'),
+      property: z.string().optional().describe('Property name (for set_node_property)'),
+      value: z.unknown().optional().describe('Property value (for set_node_property)'),
+    },
+    annotations: DESTRUCTIVE,
+  }, async ({ project_id, action, parent, component, bind, props, node, property, value }) => {
+    if (action === 'list_nodes') {
+      return handleComponent(registry, project_id, { action });
+    }
+    return bracketMutation(registry, project_id, 'formspec_component', () =>
+      handleComponent(registry, project_id, { action, parent, component, bind, props, node, property, value }),
+    );
   });
 
   // ── Changeset Management ─────────────────────────────────────────
