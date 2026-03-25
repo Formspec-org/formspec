@@ -469,6 +469,34 @@ describe('previewForm — repeat groups', () => {
   });
 });
 
+describe('previewForm — money fields', () => {
+  it('treats money object {amount, currency} as atomic value, not nested group', () => {
+    const project = createProject();
+    project.addField('price', 'Price', 'money');
+
+    const preview = previewForm(project, { price: { amount: 99.50, currency: 'USD' } });
+    // Money should be set as the atomic value, not flattened to price.amount + price.currency
+    const val = preview.currentValues['price'];
+    expect(val).toBeDefined();
+    expect(typeof val).toBe('object');
+    expect((val as any).amount).toBe(99.5);
+    expect((val as any).currency).toBe('USD');
+    // There should NOT be signals for price.amount or price.currency
+    expect(preview.currentValues['price.amount']).toBeUndefined();
+    expect(preview.currentValues['price.currency']).toBeUndefined();
+  });
+
+  it('validates money field with nested object in response', () => {
+    const project = createProject();
+    project.addField('total', 'Total', 'money');
+    project.require('total');
+
+    const report = validateResponse(project, { total: { amount: 50, currency: 'EUR' } });
+    // Should be valid — money value provided as object
+    expect(report.valid).toBe(true);
+  });
+});
+
 describe('validateResponse', () => {
   it('returns valid: true for valid response', () => {
     const project = createProject();

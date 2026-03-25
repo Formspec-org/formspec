@@ -112,6 +112,7 @@ export class Project {
   // ── Queries ────────────────────────────────────────────────
 
   fieldPaths(): string[] { return this.core.fieldPaths(); }
+  itemPaths(): string[] { return this.core.itemPaths(); }
   itemAt(path: string): FormItem | undefined { return this.core.itemAt(path); }
   bindFor(path: string): Record<string, unknown> | undefined { return this.core.bindFor(path); }
   variableNames(): string[] { return this.core.variableNames(); }
@@ -658,7 +659,7 @@ export class Project {
     this.core.batchWithRebuild(phase1, phase2);
 
     return {
-      summary: `Added field '${key}' (${type}) to ${parentPath ? `'${parentPath}'` : 'root'}`,
+      summary: `Added field '${label}' (${type}) at path "${fullPath}"`,
       action: { helper: 'addField', params: { path: fullPath, label, type } },
       affectedPaths: [fullPath],
     };
@@ -713,7 +714,7 @@ export class Project {
     }
 
     return {
-      summary: `Added group '${key}' to ${parentPath ? `'${parentPath}'` : 'root'}`,
+      summary: `Added group '${label}' at path "${fullPath}"`,
       action: { helper: 'addGroup', params: { path: fullPath, label, display: props?.display } },
       affectedPaths: [fullPath],
     };
@@ -786,7 +787,7 @@ export class Project {
     }
 
     return {
-      summary: `Added ${kind ?? 'paragraph'} content '${key}'`,
+      summary: `Added ${kind ?? 'paragraph'} content at path "${fullPath}"`,
       action: { helper: 'addContent', params: { path: fullPath, body, kind } },
       affectedPaths: [fullPath],
     };
@@ -794,7 +795,10 @@ export class Project {
 
   // ── Bind Helpers ──
 
-  /** Validate a FEL expression string, throwing INVALID_FEL if it fails to parse. */
+  /**
+   * Validate a FEL expression string, throwing INVALID_FEL if it fails to parse
+   * or contains unknown functions (semantic pre-validation).
+   */
   private _validateFEL(expression: string): void {
     const result = this.core.parseFEL(expression);
     if (!result.valid) {
@@ -804,6 +808,15 @@ export class Project {
           message: result.errors[0].message,
           code: result.errors[0].code,
         } : undefined,
+      });
+    }
+
+    // Semantic pre-validation: reject unknown functions at authoring time
+    const unknownFn = result.warnings?.find(w => w.code === 'FEL_UNKNOWN_FUNCTION');
+    if (unknownFn) {
+      throw new HelperError('INVALID_FEL', `Invalid FEL expression: ${unknownFn.message}`, {
+        expression,
+        parseError: { message: unknownFn.message, code: unknownFn.code },
       });
     }
   }
@@ -922,7 +935,14 @@ export class Project {
   // ── Branch ──
 
   /** Build a FEL expression for a single branch arm. */
-  private _branchExpr(on: string, when: string | number | boolean, mode: 'equals' | 'contains'): string {
+  private _branchExpr(on: string, when: string | number | boolean | undefined, mode: 'equals' | 'contains' | 'condition', condition?: string): string {
+    if (mode === 'condition') {
+      if (!condition) {
+        throw new HelperError('INVALID_PROPS', 'Branch arm with mode "condition" requires a "condition" property', {});
+      }
+      this._validateFEL(condition);
+      return condition;
+    }
     if (mode === 'contains') {
       return typeof when === 'string' ? `selected(${on}, '${when}')` : `selected(${on}, ${when})`;
     }
@@ -933,19 +953,38 @@ export class Project {
   }
 
   /**
-   * Branching — show different fields based on an answer.
+   * Branching — show different fields based on an answer or variable.
    * Auto-detects mode for multiChoice fields (uses selected() not equals).
+   * Supports variables: pass `@varName` or a bare name that matches a variable.
    */
   branch(on: string, paths: BranchPath[], otherwise?: string | string[]): HelperResult {
-    // Pre-validate: on field must exist
-    const onItem = this.core.itemAt(on);
-    if (!onItem) {
-      this._throwPathNotFound(on);
-    }
+    // Detect variable reference: explicit @prefix or bare name matching a variable
+    let felRef = on;
+    let defaultMode: 'equals' | 'contains' = 'equals';
 
-    // Auto-detect mode based on on-field dataType
-    const isMultiChoice = onItem.dataType === 'multiChoice';
-    const defaultMode = isMultiChoice ? 'contains' as const : 'equals' as const;
+    const isExplicitVariable = on.startsWith('@');
+    const varName = isExplicitVariable ? on.slice(1) : on;
+    const knownVariables = this.core.variableNames();
+    const isVariable = isExplicitVariable || (!this.core.itemAt(on) && knownVariables.includes(on));
+
+    if (isVariable) {
+      if (!knownVariables.includes(varName)) {
+        throw new HelperError('VARIABLE_NOT_FOUND', `Variable "${varName}" not found`, {
+          name: varName,
+          validVariables: knownVariables,
+        });
+      }
+      felRef = `@${varName}`;
+    } else {
+      // Pre-validate: on field must exist
+      const onItem = this.core.itemAt(on);
+      if (!onItem) {
+        this._throwPathNotFound(on);
+      }
+      // Auto-detect mode based on on-field dataType
+      const isMultiChoice = onItem.dataType === 'multiChoice';
+      defaultMode = isMultiChoice ? 'contains' : 'equals';
+    }
 
     const warnings: HelperWarning[] = [];
     const allExprs: string[] = [];
@@ -956,7 +995,7 @@ export class Project {
 
     for (const arm of paths) {
       const mode = arm.mode ?? defaultMode;
-      const expr = this._branchExpr(on, arm.when, mode);
+      const expr = this._branchExpr(felRef, arm.when, mode, arm.condition);
       allExprs.push(expr);
 
       const targets = Array.isArray(arm.show) ? arm.show : [arm.show];
@@ -1044,6 +1083,19 @@ export class Project {
     if (options?.code) payload.code = options.code;
     if (options?.activeWhen) payload.activeWhen = options.activeWhen;
 
+    // Advisory warning: field already has a bind-level constraint
+    const warnings: HelperWarning[] = [];
+    if (target !== '*' && target !== '#' && !target.includes('[*]')) {
+      const existingBind = this.core.bindFor(target);
+      if (existingBind?.constraint) {
+        warnings.push({
+          code: 'DUPLICATE_VALIDATION',
+          message: `Field "${target}" already has a bind-level constraint — shape rule adds a second validation layer`,
+          detail: { path: target, existingConstraint: existingBind.constraint },
+        });
+      }
+    }
+
     this.core.dispatch({ type: 'definition.addShape', payload });
 
     // Read the shape ID from state (addShape appends to shapes array)
@@ -1055,16 +1107,58 @@ export class Project {
       action: { helper: 'addValidation', params: { target, rule, message } },
       affectedPaths: [createdId],
       createdId,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }
 
-  /** Remove a validation shape by ID. */
-  removeValidation(shapeId: string): HelperResult {
-    this.core.dispatch({ type: 'definition.deleteShape', payload: { id: shapeId } });
+  /**
+   * Remove validation from a target — handles both shape IDs and field paths.
+   * When target matches a shape ID: deletes the shape.
+   * When target matches a field path: clears bind constraint + constraintMessage,
+   * and removes any shapes targeting that path.
+   * Tries both lookups so MCP callers don't need to know which mechanism was used.
+   */
+  removeValidation(target: string): HelperResult {
+    const commands: AnyCommand[] = [];
+    const affectedPaths: string[] = [];
+
+    // Try shape ID lookup
+    const shapes = this.core.state.definition.shapes ?? [];
+    const shapeById = shapes.find((s: any) => s.id === target);
+    if (shapeById) {
+      commands.push({ type: 'definition.deleteShape', payload: { id: target } });
+      affectedPaths.push(target);
+    }
+
+    // Try field path lookup — clear bind constraint and remove shapes targeting this path
+    const item = this.core.itemAt(target);
+    if (item) {
+      const bind = this.core.bindFor(target);
+      if (bind?.constraint || bind?.constraintMessage) {
+        commands.push({
+          type: 'definition.setBind',
+          payload: { path: target, properties: { constraint: null, constraintMessage: null } },
+        });
+        affectedPaths.push(target);
+      }
+      // Also remove shapes that target this field path
+      for (const shape of shapes) {
+        const shapeTarget = (shape as any).target;
+        if (shapeTarget === target && (shape as any).id !== target) {
+          commands.push({ type: 'definition.deleteShape', payload: { id: (shape as any).id } });
+          affectedPaths.push((shape as any).id);
+        }
+      }
+    }
+
+    if (commands.length > 0) {
+      this.core.dispatch(commands);
+    }
+
     return {
-      summary: `Removed validation '${shapeId}'`,
-      action: { helper: 'removeValidation', params: { shapeId } },
-      affectedPaths: [shapeId],
+      summary: `Removed validation '${target}'`,
+      action: { helper: 'removeValidation', params: { target } },
+      affectedPaths,
     };
   }
 
