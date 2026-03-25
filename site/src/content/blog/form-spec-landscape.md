@@ -188,4 +188,4 @@ The landscape gets thin when your requirements include more than two of these:
 
 No single existing system covers all five. That's the gap this research quantified — and the gap Formspec was built to close.
 
-The [full comparative analysis](https://github.com/mikewolfd/formspec/blob/main/thoughts/research/comparative-analysis.md) is public: 517 features, every classification documented, every design decision traceable to prior art or an explicit gap.
+The [full comparative analysis](https://github.com/focusconsulting/formspec/blob/main/thoughts/research/comparative-analysis.md) is public: 517 features, every classification documented, every design decision traceable to prior art or an explicit gap.
