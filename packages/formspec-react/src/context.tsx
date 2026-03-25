@@ -1,5 +1,7 @@
 /** @filedesc FormspecProvider — React context wrapping a FormEngine + optional layout plan. */
-import React, { createContext, useContext, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useRef, useCallback } from 'react';
+import { signal } from '@preact/signals-core';
+import type { ReadonlyEngineSignal } from 'formspec-engine';
 import type { IFormEngine } from 'formspec-engine';
 import { createFormEngine } from 'formspec-engine';
 import type { LayoutNode, PlanContext } from 'formspec-layout';
@@ -10,6 +12,12 @@ export interface FormspecContextValue {
     engine: IFormEngine;
     layoutPlan: LayoutNode | null;
     components: ComponentMap;
+    /** Mark a field as touched (e.g., on blur). */
+    touchField: (path: string) => void;
+    /** Signal that increments when touched set changes — subscribe for reactivity. */
+    touchedVersion: ReadonlyEngineSignal<number>;
+    /** Check if a field has been touched. Read touchedVersion.value first for reactivity. */
+    isTouched: (path: string) => boolean;
 }
 
 const FormspecContext = createContext<FormspecContextValue | null>(null);
@@ -75,6 +83,21 @@ export function FormspecProvider({
         };
     }, [engine, componentDocument, themeDocument]);
 
+    // Touched tracking — stable across re-renders
+    const touchedFieldsRef = useRef(new Set<string>());
+    const touchedVersionSignal = useMemo(() => signal(0), []);
+
+    const touchField = useCallback((path: string) => {
+        if (!touchedFieldsRef.current.has(path)) {
+            touchedFieldsRef.current.add(path);
+            touchedVersionSignal.value += 1;
+        }
+    }, [touchedVersionSignal]);
+
+    const isTouched = useCallback((path: string) => {
+        return touchedFieldsRef.current.has(path);
+    }, []);
+
     useEffect(() => {
         // Only dispose if we created the engine internally
         if (!externalEngine && engine) {
@@ -83,8 +106,8 @@ export function FormspecProvider({
     }, [engine, externalEngine]);
 
     const value = useMemo<FormspecContextValue>(
-        () => ({ engine, layoutPlan, components }),
-        [engine, layoutPlan, components],
+        () => ({ engine, layoutPlan, components, touchField, touchedVersion: touchedVersionSignal, isTouched }),
+        [engine, layoutPlan, components, touchField, touchedVersionSignal, isTouched],
     );
 
     return (

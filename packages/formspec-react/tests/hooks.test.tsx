@@ -1,4 +1,4 @@
-/** @filedesc Tests for formspec-react hooks: useSignal, useField, useFieldValue, useFieldError, useForm. */
+/** @filedesc Tests for formspec-react hooks: useSignal, useField, useFieldValue, useFieldError, useForm, useWhen, useRepeatCount. */
 import { describe, it, expect, beforeAll } from 'vitest';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -6,11 +6,13 @@ import { flushSync } from 'react-dom';
 import { signal, computed } from '@preact/signals-core';
 import { createFormEngine, initFormspecEngine } from 'formspec-engine';
 import { useSignal } from '../src/use-signal';
-import { FormspecProvider } from '../src/context';
+import { FormspecProvider, useFormspecContext } from '../src/context';
 import { useField } from '../src/use-field';
 import { useFieldValue } from '../src/use-field-value';
 import { useFieldError } from '../src/use-field-error';
 import { useForm } from '../src/use-form';
+import { useWhen } from '../src/use-when';
+import { useRepeatCount } from '../src/use-repeat-count';
 
 beforeAll(async () => {
     await initFormspecEngine();
@@ -234,5 +236,145 @@ describe('FormspecProvider', () => {
         })();
 
         expect(result.current.title).toBe('Test Form');
+    });
+});
+
+// ── useWhen ──────────────────────────────────────────────────────
+
+const whenDefinition = {
+    $formspec: '1.0',
+    url: 'https://test.example/when',
+    version: '1.0.0',
+    status: 'active',
+    title: 'When Test',
+    name: 'when-test',
+    items: [
+        { key: 'toggle', type: 'field', dataType: 'boolean', label: 'Toggle' },
+        { key: 'text', type: 'field', dataType: 'string', label: 'Text' },
+    ],
+};
+
+function renderHookWithEngine<T>(
+    engine: any,
+    hookFn: () => T,
+): { result: { current: T }; container: HTMLElement } {
+    const result = { current: null as T };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    function TestComponent() {
+        result.current = hookFn();
+        return null;
+    }
+
+    flushSync(() => {
+        root.render(
+            <FormspecProvider engine={engine}>
+                <TestComponent />
+            </FormspecProvider>
+        );
+    });
+
+    return { result, container };
+}
+
+describe('useWhen', () => {
+    it('returns false when the expression evaluates to falsy', () => {
+        const engine = createFormEngine(whenDefinition);
+        // toggle starts as false
+        const { result } = renderHookWithEngine(engine, () => useWhen('$toggle'));
+        expect(result.current).toBe(false);
+    });
+
+    it('returns true when the expression evaluates to truthy', () => {
+        const engine = createFormEngine(whenDefinition);
+        engine.setValue('toggle', true);
+        const { result } = renderHookWithEngine(engine, () => useWhen('$toggle'));
+        expect(result.current).toBe(true);
+    });
+});
+
+// ── useRepeatCount ───────────────────────────────────────────────
+
+const repeatDefinition = {
+    $formspec: '1.0',
+    url: 'https://test.example/repeat',
+    version: '1.0.0',
+    status: 'active',
+    title: 'Repeat Test',
+    name: 'repeat-test',
+    items: [
+        {
+            key: 'items',
+            type: 'group',
+            label: 'Items',
+            repeatable: true,
+            children: [
+                { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
+            ],
+        },
+    ],
+};
+
+describe('useRepeatCount', () => {
+    it('returns initial repeat count (minRepeat defaults to 1)', () => {
+        const engine = createFormEngine(repeatDefinition);
+        const { result } = renderHookWithEngine(engine, () => useRepeatCount('items'));
+        expect(result.current).toBe(1);
+    });
+
+    it('returns 0 for non-existent repeat path', () => {
+        const engine = createFormEngine(repeatDefinition);
+        const { result } = renderHookWithEngine(engine, () => useRepeatCount('nonexistent'));
+        expect(result.current).toBe(0);
+    });
+});
+
+// ── Touched tracking ─────────────────────────────────────────────
+
+describe('useField touched tracking', () => {
+    it('field starts untouched', () => {
+        const { result } = renderHookWithProvider(testDefinition, () => useField('name'));
+        expect(result.current.touched).toBe(false);
+    });
+
+    it('inputProps.onBlur marks field as touched', () => {
+        const { result } = renderHookWithProvider(testDefinition, () => useField('name'));
+        expect(result.current.touched).toBe(false);
+        expect(typeof result.current.inputProps.onBlur).toBe('function');
+    });
+
+    it('field becomes touched after touchField is called', () => {
+        const engine = createFormEngine(testDefinition);
+        const result = { current: null as any };
+        const touchResult = { current: null as any };
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        function Inner() {
+            result.current = useField('name');
+            const ctx = useFormspecContext();
+            touchResult.current = ctx;
+            return null;
+        }
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <Inner />
+                </FormspecProvider>
+            );
+        });
+
+        expect(result.current.touched).toBe(false);
+
+        // Touch the field
+        flushSync(() => {
+            touchResult.current.touchField('name');
+        });
+
+        expect(result.current.touched).toBe(true);
     });
 });

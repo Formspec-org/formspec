@@ -393,6 +393,69 @@ describe('repeat group rendering', () => {
         expect(removeBtn).toBeTruthy();
     });
 
+    it('renders multiple instances after adding', () => {
+        const engine = createFormEngine(repeatDefinition);
+        // Engine starts with 1 instance; add a second
+        engine.addRepeatInstance('members');
+
+        const layoutPlan: LayoutNode = {
+            id: 'root',
+            component: 'Stack',
+            category: 'layout',
+            props: {},
+            cssClasses: [],
+            children: [
+                {
+                    id: 'members-group',
+                    component: 'Stack',
+                    category: 'layout',
+                    props: { title: 'Team Members', bind: 'members' },
+                    cssClasses: [],
+                    children: [
+                        {
+                            id: 'memberName-field',
+                            component: 'TextInput',
+                            category: 'field',
+                            props: {},
+                            cssClasses: [],
+                            children: [],
+                            bindPath: 'members[0].memberName',
+                        },
+                    ],
+                    bindPath: 'members',
+                    repeatGroup: 'members',
+                    repeatPath: 'members',
+                    isRepeatTemplate: true,
+                    scopeChange: true,
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={layoutPlan} />
+                </FormspecProvider>
+            );
+        });
+
+        const instances = container.querySelectorAll('.formspec-repeat-instance');
+        expect(instances.length).toBe(2);
+
+        // Each instance should have a remove button
+        const removeBtns = container.querySelectorAll('.formspec-repeat-remove');
+        expect(removeBtns.length).toBe(2);
+
+        // Should have fields bound to correct indexed paths
+        const fields = container.querySelectorAll('[data-name]');
+        const paths = Array.from(fields).map((el) => el.getAttribute('data-name'));
+        expect(paths).toContain('members[0].memberName');
+        expect(paths).toContain('members[1].memberName');
+    });
+
     it('renders add button with group label', () => {
         const engine = createFormEngine(repeatDefinition);
 

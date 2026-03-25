@@ -21,6 +21,7 @@ export interface UseFieldResult {
     required: boolean;
     visible: boolean;
     readonly: boolean;
+    touched: boolean;
 
     // Validation (reactive)
     errors: ResolvedValidationResult[];
@@ -32,6 +33,8 @@ export interface UseFieldResult {
 
     // Write
     setValue(value: any): void;
+    /** Mark this field as touched (e.g., on blur). */
+    touch(): void;
 
     // Props spread helper — spread onto any <input>-like component
     inputProps: {
@@ -39,6 +42,7 @@ export interface UseFieldResult {
         name: string;
         value: any;
         onChange: (e: { target: { value: any } }) => void;
+        onBlur: () => void;
         required: boolean;
         readOnly: boolean;
         'aria-invalid': boolean;
@@ -52,7 +56,7 @@ export interface UseFieldResult {
  * For finer-grained subscriptions, use useFieldValue/useFieldError.
  */
 export function useField(path: string): UseFieldResult {
-    const { engine } = useFormspecContext();
+    const { engine, touchField, touchedVersion, isTouched } = useFormspecContext();
 
     const vm = useMemo(() => {
         const fieldVM = engine.getFieldVM(path);
@@ -72,16 +76,23 @@ export function useField(path: string): UseFieldResult {
     const options = useSignal(vm.options);
     const optionsState = useSignal(vm.optionsState);
 
+    // Subscribe to touched version for reactivity
+    const _touchedVersion = useSignal(touchedVersion);
+    const touched = isTouched(vm.instancePath);
+
+    const touch = useMemo(() => () => touchField(vm.instancePath), [touchField, vm]);
+
     const inputProps = useMemo(() => ({
         id: vm.id,
         name: vm.instancePath,
         value: value ?? '',
         onChange: (e: { target: { value: any } }) => vm.setValue(e.target.value),
+        onBlur: () => touchField(vm.instancePath),
         required,
         readOnly: readonly,
         'aria-invalid': !!firstError,
         'aria-required': required,
-    }), [vm, value, required, readonly, firstError]);
+    }), [vm, value, required, readonly, firstError, touchField]);
 
     return {
         id: vm.id,
@@ -95,11 +106,13 @@ export function useField(path: string): UseFieldResult {
         required,
         visible,
         readonly,
+        touched,
         errors,
         error: firstError,
         options,
         optionsState,
         setValue: vm.setValue,
+        touch,
         inputProps,
     };
 }
