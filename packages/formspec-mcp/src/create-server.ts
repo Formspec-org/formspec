@@ -26,6 +26,9 @@ import { handleWidget } from './tools/widget.js';
 import { handleAudit } from './tools/audit.js';
 import { handleTheme } from './tools/theme.js';
 import { handleComponent } from './tools/component.js';
+import { handleLocale } from './tools/locale.js';
+import { handleOntology } from './tools/ontology.js';
+import { handleReference } from './tools/reference.js';
 import {
   handleChangesetOpen, handleChangesetClose, handleChangesetList,
   handleChangesetAccept, handleChangesetReject,
@@ -650,6 +653,75 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
     }
     return bracketMutation(registry, project_id, 'formspec_component', () =>
       handleComponent(registry, project_id, { action, parent, component, bind, props, node, property, value }),
+    );
+  });
+
+  // ── Locale ───────────────────────────────────────────────────────
+
+  server.registerTool('formspec_locale', {
+    title: 'Locale',
+    description: 'Manage locale strings and form-level translations. Actions: set_string, remove_string, list_strings, set_form_string, list_form_strings. Requires a locale document to be loaded first.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['set_string', 'remove_string', 'list_strings', 'set_form_string', 'list_form_strings']),
+      locale_id: z.string().optional().describe('BCP 47 locale code (e.g. "fr", "de"). Required for mutations. For list_strings, omit to list all locales.'),
+      key: z.string().optional().describe('String key (for set_string, remove_string)'),
+      value: z.string().optional().describe('String value (for set_string, set_form_string)'),
+      property: z.string().optional().describe('Form-level property: name, title, description, version, url (for set_form_string)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, locale_id, key, value, property }) => {
+    const readOnlyActions = ['list_strings', 'list_form_strings'];
+    if (readOnlyActions.includes(action)) {
+      return handleLocale(registry, project_id, { action, locale_id, key, value, property });
+    }
+    return bracketMutation(registry, project_id, 'formspec_locale', () =>
+      handleLocale(registry, project_id, { action, locale_id, key, value, property }),
+    );
+  });
+
+  // ── Ontology ────────────────────────────────────────────────────────
+
+  server.registerTool('formspec_ontology', {
+    title: 'Ontology',
+    description: 'Manage semantic concept bindings on fields. Actions: bind_concept (associate a concept URI), remove_concept, list_concepts, set_vocabulary (set vocabulary URL for field options).',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['bind_concept', 'remove_concept', 'list_concepts', 'set_vocabulary']),
+      path: z.string().optional().describe('Field path to bind concept to'),
+      concept: z.string().optional().describe('Concept URI (e.g. "https://schema.org/givenName")'),
+      vocabulary: z.string().optional().describe('Vocabulary URL for field options'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, path, concept, vocabulary }) => {
+    if (action === 'list_concepts') {
+      return handleOntology(registry, project_id, { action, path, concept, vocabulary });
+    }
+    return bracketMutation(registry, project_id, 'formspec_ontology', () =>
+      handleOntology(registry, project_id, { action, path, concept, vocabulary }),
+    );
+  });
+
+  // ── Reference ───────────────────────────────────────────────────────
+
+  server.registerTool('formspec_reference', {
+    title: 'Reference',
+    description: 'Manage bound references on fields. Actions: add_reference (bind an external resource URI), remove_reference, list_references.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['add_reference', 'remove_reference', 'list_references']),
+      field_path: z.string().optional().describe('Field path to bind reference to'),
+      uri: z.string().optional().describe('Reference URI'),
+      type: z.string().optional().describe('Reference type (e.g. "fhir-valueset", "snomed")'),
+      description: z.string().optional().describe('Human-readable description of the reference'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, field_path, uri, type, description }) => {
+    if (action === 'list_references') {
+      return handleReference(registry, project_id, { action, field_path, uri, type, description });
+    }
+    return bracketMutation(registry, project_id, 'formspec_reference', () =>
+      handleReference(registry, project_id, { action, field_path, uri, type, description }),
     );
   });
 
