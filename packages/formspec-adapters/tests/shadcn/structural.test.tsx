@@ -54,6 +54,29 @@ describe('createReactAdapter factory', () => {
         disposeFn();
         expect(parent.innerHTML).toBe('');
     });
+
+    it('renders multiple fields into the same parent without clobbering', async () => {
+        const { createReactAdapter } = await import('../../src/shadcn/factory');
+        const React = await import('react');
+
+        const FieldA = ({ behavior }: { behavior: any }) =>
+            React.createElement('div', { 'data-testid': 'a' }, 'Field A');
+        const FieldB = ({ behavior }: { behavior: any }) =>
+            React.createElement('div', { 'data-testid': 'b' }, 'Field B');
+
+        const renderA = createReactAdapter(FieldA);
+        const renderB = createReactAdapter(FieldB);
+        const parent = makeParent();
+        const actx = mockAdapterContext();
+
+        renderA(mockFieldBehavior(), parent, actx);
+        renderB(mockFieldBehavior(), parent, actx);
+
+        // Both fields must be present in the DOM
+        expect(parent.querySelector('[data-testid="a"]')).toBeTruthy();
+        expect(parent.querySelector('[data-testid="b"]')).toBeTruthy();
+        expect(parent.children.length).toBe(2);
+    });
 });
 
 // ── TextInput ──────────────────────────────────────────────────────
@@ -69,9 +92,8 @@ describe('shadcn TextInput', () => {
         const parent = makeParent();
         renderTextInput(mockTextInput(), parent, mockAdapterContext());
 
-        const root = parent.firstElementChild!;
+        const root = parent.querySelector('[data-name="name"]')!;
         expect(root).toBeTruthy();
-        expect(root.getAttribute('data-name')).toBe('name');
 
         const label = root.querySelector('label')!;
         expect(label).toBeTruthy();
@@ -494,7 +516,7 @@ describe('shadcn cascade obligations', () => {
         const parent = makeParent();
         const b = mockTextInput({ presentation: { cssClass: 'custom-theme-class' } as any });
         renderTextInput(b, parent, mockAdapterContext());
-        const root = parent.firstElementChild!;
+        const root = parent.querySelector('[data-name="name"]')!;
         expect(root.classList.contains('custom-theme-class')).toBe(true);
     });
 
@@ -506,7 +528,7 @@ describe('shadcn cascade obligations', () => {
             } as any,
         });
         renderTextInput(b, parent, mockAdapterContext());
-        const root = parent.firstElementChild!;
+        const root = parent.querySelector('[data-name="name"]')!;
         expect(root.getAttribute('role')).toBe('region');
         expect(root.getAttribute('aria-description')).toBe('Important field');
     });

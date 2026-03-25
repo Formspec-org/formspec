@@ -8,20 +8,25 @@ import type { AdapterRenderFn, AdapterContext } from 'formspec-webcomponent';
  * Bridge a React component into the formspec adapter contract.
  *
  * The factory creates an `AdapterRenderFn` that:
- * 1. Renders the React component directly into the parent via `flushSync`
- * 2. Registers cleanup (unmount) on `actx.onDispose`
+ * 1. Creates a container div and appends it to the parent
+ * 2. Renders the React component into that container via `flushSync`
+ * 3. Registers cleanup (unmount + remove) on `actx.onDispose`
+ *
+ * A per-field container is required because `createRoot` takes exclusive
+ * ownership of its target's children. Multiple sibling fields share the
+ * same parent element in the webcomponent, so rendering directly into
+ * parent would cause each field to wipe the previous one.
  *
  * React components should call `behavior.bind(refs)` in `useLayoutEffect`
  * so the bind completes within the synchronous `flushSync` window.
- *
- * No wrapper div is created — React renders directly into the parent,
- * matching how imperative adapters append to parent.
  */
 export function createReactAdapter<B>(
     Component: React.ComponentType<{ behavior: B }>,
 ): AdapterRenderFn<B> {
     return (behavior: B, parent: HTMLElement, actx: AdapterContext) => {
-        const root = createRoot(parent);
+        const container = document.createElement('div');
+        parent.appendChild(container);
+        const root = createRoot(container);
 
         flushSync(() => {
             root.render(<Component behavior={behavior} />);
@@ -29,6 +34,7 @@ export function createReactAdapter<B>(
 
         actx.onDispose(() => {
             root.unmount();
+            container.remove();
         });
     };
 }
