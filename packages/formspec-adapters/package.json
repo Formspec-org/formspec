@@ -7,7 +7,6 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
-    "./shadcn": "./dist/shadcn/index.js",
     "./tailwind-formspec-core.css": "./dist/tailwind-formspec-core.css"
   },
   "scripts": {
@@ -19,22 +18,12 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "formspec-webcomponent": "*",
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": { "optional": true },
-    "react-dom": { "optional": true }
+    "formspec-webcomponent": "*"
   },
   "devDependencies": {
     "@uswds/uswds": "^3.11.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "formspec-webcomponent": "*",
     "happy-dom": "^17.6.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "sass": "^1.86.0",
     "typescript": "^5.0.0",
     "vitest": "^3.2.4"
