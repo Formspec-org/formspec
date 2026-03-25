@@ -3,12 +3,19 @@ import { useMemo, useCallback } from 'react';
 import { useFormspecContext } from './context';
 import { useSignal } from './use-signal';
 
+export interface SubmitOptions {
+    mode?: 'continuous' | 'submit';
+    id?: string;
+    author?: { id: string; name?: string };
+    subject?: { id: string; type?: string };
+}
+
 export interface UseFormResult {
     title: string;
     description: string;
     isValid: boolean;
     validationSummary: { errors: number; warnings: number; infos: number };
-    submit(options?: { mode?: 'continuous' | 'submit' }): any;
+    submit(options?: SubmitOptions): any;
     getResponse(meta?: Record<string, any>): any;
 }
 
@@ -26,9 +33,14 @@ export function useForm(): UseFormResult {
     const isValid = useSignal(formVM.isValid);
     const validationSummary = useSignal(formVM.validationSummary);
 
-    const submit = useCallback((options?: { mode?: 'continuous' | 'submit' }) => {
-        const report = engine.getValidationReport(options);
-        const response = engine.getResponse({ mode: options?.mode });
+    const submit = useCallback((options?: SubmitOptions) => {
+        const report = engine.getValidationReport({ mode: options?.mode });
+        const response = engine.getResponse({
+            mode: options?.mode,
+            id: options?.id,
+            author: options?.author,
+            subject: options?.subject,
+        });
         return { response, validationReport: report };
     }, [engine]);
 

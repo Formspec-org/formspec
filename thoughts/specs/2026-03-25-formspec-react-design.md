@@ -1,7 +1,7 @@
 # formspec-react — React Hooks + Auto-Renderer
 
 **Date:** 2026-03-25
-**Status:** v0.3 complete (59 unit + 14 E2E tests) — see Roadmap for v0.4 remaining work
+**Status:** v0.4 complete (63 unit + 14 E2E tests) — full roadmap implemented
 
 ## Problem
 
@@ -130,7 +130,7 @@ import { FormspecForm } from 'formspec-react';
 | Path | Contents |
 |------|----------|
 | `formspec-react` | Everything: hooks + renderer + defaults |
-| `formspec-react/hooks` | Hooks only: `FormspecProvider`, `useField`, `useFieldValue`, `useFieldError`, `useForm`, `useSignal`, `useWhen`, `useRepeatCount` |
+| `formspec-react/hooks` | Hooks only: `FormspecProvider`, `useField`, `useFieldValue`, `useFieldError`, `useForm`, `useSignal`, `useWhen`, `useRepeatCount`, `useLocale`, `useExternalValidation` |
 
 ## Peer Dependencies
 
@@ -170,7 +170,7 @@ import { FormspecForm } from 'formspec-react';
 | `@preact/signals-core` peer dep | `package.json` | — |
 | Conditional exports with `types` | `package.json` | — |
 
-**Total: 59 unit tests + 14 E2E tests — all passing**
+**Total: 63 unit tests + 14 E2E tests — all passing**
 
 ## Roadmap
 
@@ -196,14 +196,14 @@ import { FormspecForm } from 'formspec-react';
 | 10 | Group-level relevance | **Feature** | ✅ Done — `RelevanceGatedLayout` subscribes to `engine.relevantSignals[bindPath]` |
 | 11 | `role="alert"` on empty errors | **A11y fix** | ✅ Done — error element conditionally rendered only when `field.error` is truthy |
 
-### v0.4 — Engine integration
+### v0.4 — Engine integration ✅ COMPLETE
 
-| # | Item | Type | Detail |
+| # | Item | Type | Status |
 |---|------|------|--------|
-| 13 | Runtime context prop (`now`, `timezone`, `locale`) | **Feature** | `FormEngineRuntimeContext` not exposed. FEL `today()` and locale-aware formatting won't be configurable. |
-| 14 | Locale hooks (`useLocale`) | **Feature** | No way to load locale documents or switch languages. Add `loadLocale`/`setLocale` forwarding. |
-| 15 | External validation injection | **Feature** | Server-side validation results can't be merged. Forward `engine.injectExternalValidation()`. |
-| 16 | `useForm.submit()` full metadata | **DX** | Currently only passes `mode`. Should accept full `{ id, author, subject, mode }` for response metadata. |
+| 13 | Runtime context prop (`now`, `timezone`, `locale`) | **Feature** | ✅ Done — `runtimeContext` prop forwarded to `createFormEngine` |
+| 14 | Locale hooks (`useLocale`) | **Feature** | ✅ Done — `useLocale()` returns `activeLocale`, `availableLocales`, `direction`, `setLocale`, `loadLocale` |
+| 15 | External validation injection | **Feature** | ✅ Done — `useExternalValidation()` returns `inject` and `clear` functions |
+| 16 | `useForm.submit()` full metadata | **DX** | ✅ Done — `SubmitOptions` accepts `{ id, author, subject, mode }` |
 
 ### Not planned (handle via component overrides)
 

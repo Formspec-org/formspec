@@ -13,6 +13,8 @@ import { useFieldError } from '../src/use-field-error';
 import { useForm } from '../src/use-form';
 import { useWhen } from '../src/use-when';
 import { useRepeatCount } from '../src/use-repeat-count';
+import { useLocale } from '../src/use-locale';
+import { useExternalValidation } from '../src/use-external-validation';
 
 beforeAll(async () => {
     await initFormspecEngine();
@@ -743,5 +745,112 @@ describe('findItemByKey', () => {
 
     it('returns null for non-existent path', () => {
         expect(findItemByKey(nestedItems, 'info.nonexistent')).toBeNull();
+    });
+});
+
+// ── runtimeContext prop ──────────────────────────────────────────
+
+describe('FormspecProvider runtimeContext', () => {
+    it('passes runtime context to the engine', () => {
+        const result = { current: null as any };
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        function Inner() {
+            const { engine } = useFormspecContext();
+            result.current = engine;
+            return null;
+        }
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider
+                    definition={testDefinition}
+                    runtimeContext={{ locale: 'fr', timeZone: 'Europe/Paris' }}
+                >
+                    <Inner />
+                </FormspecProvider>
+            );
+        });
+
+        // Engine should have been created — basic sanity
+        expect(result.current).toBeTruthy();
+        expect(result.current.getDefinition().title).toBe('Test Form');
+    });
+});
+
+// ── useLocale ────────────────────────────────────────────────────
+
+describe('useLocale', () => {
+    it('returns active locale and available locales', () => {
+        const engine = createFormEngine(testDefinition);
+        const result = { current: null as any };
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        function Inner() {
+            result.current = useLocale();
+            return null;
+        }
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <Inner />
+                </FormspecProvider>
+            );
+        });
+
+        expect(typeof result.current.activeLocale).toBe('string');
+        expect(typeof result.current.setLocale).toBe('function');
+        expect(typeof result.current.loadLocale).toBe('function');
+        expect(Array.isArray(result.current.availableLocales)).toBe(true);
+        expect(typeof result.current.direction).toBe('string');
+    });
+});
+
+// ── useExternalValidation ────────────────────────────────────────
+
+describe('useExternalValidation', () => {
+    it('returns inject and clear functions', () => {
+        const engine = createFormEngine(testDefinition);
+        const result = { current: null as any };
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        function Inner() {
+            result.current = useExternalValidation();
+            return null;
+        }
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <Inner />
+                </FormspecProvider>
+            );
+        });
+
+        expect(typeof result.current.inject).toBe('function');
+        expect(typeof result.current.clear).toBe('function');
+    });
+});
+
+// ── useForm.submit full metadata ─────────────────────────────────
+
+describe('useForm full metadata', () => {
+    it('submit accepts full metadata options', () => {
+        const { result } = renderHookWithProvider(testDefinition, () => useForm());
+        const detail = result.current.submit({
+            mode: 'submit',
+            id: 'resp-123',
+            author: { id: 'user-1', name: 'Alice' },
+            subject: { id: 'sub-1', type: 'application' },
+        });
+        expect(detail).toHaveProperty('response');
+        expect(detail).toHaveProperty('validationReport');
     });
 });

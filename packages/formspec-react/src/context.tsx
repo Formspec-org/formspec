@@ -42,6 +42,8 @@ export interface FormspecProviderProps {
     initialData?: Record<string, any>;
     /** Registry entries for extension field validation. */
     registryEntries?: any[];
+    /** Runtime context for FEL today(), locale formatting, etc. */
+    runtimeContext?: any;
     /** Component map overrides. */
     components?: ComponentMap;
     /** Callback for form submission. If provided, a submit button is rendered. */
@@ -61,6 +63,7 @@ export function FormspecProvider({
     themeDocument,
     initialData,
     registryEntries,
+    runtimeContext,
     components = {},
     onSubmit,
     children,
@@ -68,14 +71,14 @@ export function FormspecProvider({
     const engine = useMemo(() => {
         if (externalEngine) return externalEngine;
         if (!definition) throw new Error('FormspecProvider requires either engine or definition');
-        const eng = createFormEngine(definition, undefined, registryEntries);
+        const eng = createFormEngine(definition, runtimeContext, registryEntries);
         if (initialData) {
             for (const [key, value] of Object.entries(initialData)) {
                 eng.setValue(key, value);
             }
         }
         return eng;
-    }, [externalEngine, definition, registryEntries, initialData]);
+    }, [externalEngine, definition, registryEntries, runtimeContext, initialData]);
 
     const layoutPlan = useMemo(() => {
         if (!engine) return null;
