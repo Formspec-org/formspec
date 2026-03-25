@@ -35,7 +35,7 @@ export function BreakpointBar({
             onClick={() => onSelect(bp)}
             className={`px-3 py-1 text-[11px] font-bold uppercase tracking-wider rounded transition-all ${
               isActive
-                ? 'bg-ink text-white shadow-sm'
+                ? 'bg-accent text-white shadow-sm'
                 : 'text-muted hover:text-ink hover:bg-subtle'
             }`}
           >

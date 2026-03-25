@@ -48,7 +48,7 @@ function ModeSelector({
             onClick={() => onSetMode(entry.id)}
             className={`rounded-[10px] px-3.5 py-1.5 text-[12px] font-semibold tracking-wide transition-colors ${
               mode === entry.id
-                ? 'bg-ink text-white'
+                ? 'bg-accent text-white'
                 : 'text-muted hover:bg-subtle hover:text-ink'
             }`}
           >
@@ -550,7 +550,7 @@ export function PagesTab() {
                 type="button"
                 aria-label="Add page"
                 onClick={handleAddPage}
-                className="rounded-full bg-ink px-4 py-2 text-[12px] font-semibold tracking-wide text-white transition-colors hover:bg-ink/90"
+                className="rounded-full bg-accent px-4 py-2 text-[12px] font-semibold tracking-wide text-white transition-colors hover:bg-accent/90"
               >
                 Add page
               </button>
@@ -591,7 +591,7 @@ export function PagesTab() {
               <button
                 type="button"
                 onClick={handleAddPage}
-                className="rounded-full bg-ink px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-ink/90"
+                className="rounded-full bg-accent px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-accent/90"
               >
                 Add page
               </button>
@@ -705,7 +705,7 @@ export function PagesTab() {
               project.undo();
               setDeleteToast(null);
             }}
-            className="rounded-full bg-ink px-3 py-1 text-[12px] font-semibold text-white transition-colors hover:bg-ink/90"
+            className="rounded-full bg-accent px-3 py-1 text-[12px] font-semibold text-white transition-colors hover:bg-accent/90"
           >
             Undo
           </button>

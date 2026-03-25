@@ -109,7 +109,7 @@ export function MappingTab({
               data-testid={`mapping-filter-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={`px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider rounded-[6px] transition-all duration-200 ${activeTab === tab.id
-                ? 'bg-ink text-white shadow-sm'
+                ? 'bg-accent text-white shadow-sm'
                 : 'text-muted hover:text-ink hover:bg-subtle'
                 }`}
             >
