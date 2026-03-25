@@ -11,6 +11,8 @@ export type { UseFieldValueResult } from './use-field-value';
 export { useFieldError } from './use-field-error';
 export { useForm } from './use-form';
 export type { UseFormResult } from './use-form';
+export { useWhen } from './use-when';
+export { useRepeatCount } from './use-repeat-count';
 
 // ── Component map types ──
 export type { FieldComponentProps, LayoutComponentProps, ComponentMap } from './component-map';
