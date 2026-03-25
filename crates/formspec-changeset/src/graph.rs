@@ -99,7 +99,7 @@ pub fn compute_dependency_groups(entries: &[RecordedEntry]) -> Vec<DependencyGro
     let mut target_to_first: std::collections::HashMap<&str, usize> =
         std::collections::HashMap::new();
     for (i, ek) in entry_keys.iter().enumerate() {
-        for target in &ek.references {
+        for target in &ek.targets {
             if let Some(&first) = target_to_first.get(target.as_str()) {
                 if find(&mut parent, first) != find(&mut parent, i) {
                     do_union(&mut parent, &mut rank, &mut shared_keys, first, i, target);
@@ -311,8 +311,23 @@ mod tests {
         assert_eq!(g[0].entries, vec![0, 1]);
     }
 
+    // Regression: shared reference to pre-existing key must NOT cause grouping
+    // (only shared TARGETS should group — two readers don't depend on each other)
+    #[test] fn shared_reference_to_existing_key_stays_separate() {
+        let entries = vec![
+            // Entry 0: setBind on "total" with calculate referencing pre-existing "price"
+            entry(vec![vec![cmd("definition.setBind", json!({"path": "total", "properties": {"calculate": "$price * $qty"}}))]]),
+            // Entry 1: theme override referencing pre-existing "price" (no target)
+            entry(vec![vec![cmd("theme.setItemOverride", json!({"itemKey": "price", "property": "widget", "value": "currency"}))]]),
+        ];
+        let g = compute_dependency_groups(&entries);
+        // These share a reference to "price" but neither CREATES it and they have different targets.
+        // Entry 0 targets "total", Entry 1 has no target. They should be separate.
+        assert_eq!(g.len(), 2, "shared reference without shared target should not group");
+    }
+
     // Edge #6: Theme item override
-    #[test] fn theme_item_override_groups_with_key_creator() {
+ #[test] fn theme_item_override_groups_with_key_creator() {
         let entries = vec![
             entry(vec![vec![cmd("definition.addItem", json!({"key": "email", "type": "text"}))]]),
             entry(vec![vec![cmd("theme.setItemOverride", json!({"itemKey": "email", "property": "widget", "value": "email-input"}))]]),
