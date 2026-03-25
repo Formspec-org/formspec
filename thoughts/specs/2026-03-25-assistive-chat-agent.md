@@ -543,20 +543,280 @@ The Claude Chrome extension is a **closed system with no public integration poin
 
 ---
 
-## MVP Scope (Updated Post-Research)
+## Revised Architecture: Build on WebMCP
 
-For a first cut, focus on the highest-leverage features — now informed by the WebMCP opportunity:
+### Key Insight
 
-1. **Context resolver** — given a field path, resolve all references + ontology and return structured `FieldHelp`
-2. **Agent protocol** — `form.describe`, `field.describe`, `field.getState`, `field.setValue`, `form.validate`, `form.getProgress`
-3. **WebMCP bridge** — auto-register formspec form tools via `navigator.modelContext.registerTool()` when the API is available, with `tool*` attribute annotation on rendered elements as fallback/complement
-4. **MCP filling tools** — expose the agent protocol as MCP tools (separate from the authoring tools in `formspec-mcp`)
-5. **Profile store** — concept-keyed storage with `localStorage` backend, exact-match autofill
-6. **Autocomplete + ARIA bridge** — ontology concepts → HTML `autocomplete` tokens + rich ARIA labels for free browser/agent compatibility
+Instead of inventing a custom agent protocol and then bridging it to various transports, **build directly on WebMCP as the native interface**. Every assist capability is a WebMCP tool. A shim provides the `navigator.modelContext` API for browsers that don't support it yet, routing tool calls through postMessage, CustomEvent, MCP-over-WebSocket, or in-process function calls.
 
-**Deprioritized (build later):**
-- Custom browser extension (high maintenance cost, WebMCP covers most use cases)
-- Chat mode (LLM integration — context resolver works without LLM first)
-- Document-to-form extraction (complex, needs LLM)
-- Multi-agent coordination (needs real-world usage patterns first)
-- Guided walkthrough (nice UX but not architecturally critical)
+```
+┌─────────────────────────────────────────────────────┐
+│  formspec-assist                                     │
+│                                                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
+│  │ Context      │  │ Profile      │  │ Suggestion  │ │
+│  │ Resolver     │  │ Store        │  │ Engine      │ │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬─────┘ │
+│         │                 │                  │       │
+│  ┌──────▼─────────────────▼──────────────────▼─────┐ │
+│  │           WebMCP Tool Registry                   │ │
+│  │  navigator.modelContext.registerTool(...)         │ │
+│  └──────────────────┬──────────────────────────────┘ │
+│                     │                                │
+│  ┌──────────────────▼──────────────────────────────┐ │
+│  │           WebMCP Shim (when native unavailable)  │ │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │ │
+│  │  │ In-proc  │ │ postMsg  │ │ MCP-over-WS      │ │ │
+│  │  │ (self)   │ │ (ext)    │ │ (Claude Code)    │ │ │
+│  │  └──────────┘ └──────────┘ └──────────────────┘ │ │
+│  └─────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+When Chrome ships native WebMCP, the shim becomes a no-op. Same tools, same registration code, same everything — the browser just handles discovery and invocation natively.
+
+### WebMCP API Shape (from W3C Draft, Feb 2026)
+
+```typescript
+// navigator.modelContext — SecureContext, top-level only
+interface ModelContext {
+  registerTool(tool: ModelContextTool): void;
+  unregisterTool(name: string): void;
+  provideContext(init: { tools: ModelContextTool[] }): void;
+}
+
+interface ModelContextTool {
+  name: string;                              // unique tool name
+  description: string;                       // natural language for agents
+  inputSchema?: Record<string, unknown>;     // JSON Schema draft-07
+  execute: ToolExecuteCallback;              // async handler
+  annotations?: { readOnlyHint?: boolean };  // hints for agents
+}
+
+type ToolExecuteCallback = (
+  input: Record<string, unknown>,
+  client: ModelContextClient
+) => Promise<ModelContextToolResult>;
+
+interface ModelContextToolResult {
+  content: Array<{ type: "text"; text: string }>;
+  isError?: boolean;
+}
+
+interface ModelContextClient {
+  requestUserInteraction(callback: () => Promise<any>): Promise<any>;
+}
+```
+
+Declarative HTML attributes on form elements:
+- `<form toolname="..." tooldescription="..." toolautosubmit?>`
+- `<input toolparamtitle="..." toolparamdescription="...">`
+
+### Formspec Assist Tools (registered as WebMCP tools)
+
+```typescript
+// All tools registered via navigator.modelContext.registerTool()
+
+// ── Introspection (readOnlyHint: true) ──────────────────────
+
+formspec.form.describe
+  → { title, description, fieldCount, pages, progress }
+
+formspec.field.list
+  → [{ path, label, type, required, relevant, filled }]
+
+formspec.field.describe
+  (path: string)
+  → { path, label, type, value, required, relevant, readonly,
+      validation, help: { regulations, docs, examples, concept } }
+
+formspec.field.help
+  (path: string, question?: string)
+  → { explanation, citations[], commonMistakes[] }
+
+formspec.form.progress
+  → { total, filled, valid, required, complete, pages[] }
+
+// ── Mutation ────────────────────────────────────────────────
+
+formspec.field.set
+  (path: string, value: unknown)
+  → { accepted, validationResults[] }
+
+formspec.field.bulkSet
+  (entries: Array<{path, value}>)
+  → { results[], validationReport }
+
+// ── Profile / Autofill ─────────────────────────────────────
+
+formspec.profile.match
+  (profileId?: string)
+  → { matches: Array<{path, concept, value, confidence, source}> }
+
+formspec.profile.apply
+  (matches: Array<{path, value}>, confirm?: boolean)
+  → { filled[], skipped[], validationReport }
+  // If confirm=true, uses client.requestUserInteraction()
+
+formspec.profile.learn
+  → { savedConcepts: number, savedFields: number }
+
+// ── Validation ──────────────────────────────────────────────
+
+formspec.form.validate
+  → ValidationReport
+
+formspec.field.validate
+  (path: string)
+  → { results: ValidationResult[] }
+
+// ── Navigation ──────────────────────────────────────────────
+
+formspec.form.pages
+  → { pages: Array<{id, title, fieldCount, complete}> }
+
+formspec.form.nextIncomplete
+  → { path, label, reason }
+```
+
+Each tool has a JSON Schema `inputSchema` and returns `{ content: [{ type: "text", text: JSON.stringify(result) }] }` per the WebMCP result contract.
+
+### The Shim: `navigator.modelContext` Polyfill
+
+```typescript
+// formspec-assist/src/webmcp-shim.ts
+
+/**
+ * Provides navigator.modelContext when the browser doesn't support it natively.
+ * Routes tool invocations through pluggable transports.
+ */
+
+interface ShimTransport {
+  /** Called when tools change. Transport can advertise them. */
+  onToolsChanged(tools: ModelContextTool[]): void;
+  /** Transport calls this when an external agent invokes a tool. */
+  onToolInvocation: (name: string, input: Record<string, unknown>) => Promise<ModelContextToolResult>;
+}
+
+class WebMCPShim implements ModelContext {
+  private tools = new Map<string, ModelContextTool>();
+  private transports: ShimTransport[] = [];
+
+  registerTool(tool: ModelContextTool): void { ... }
+  unregisterTool(name: string): void { ... }
+  provideContext(init: { tools: ModelContextTool[] }): void { ... }
+
+  /** Add a transport (postMessage, MCP-over-WS, CustomEvent, etc.) */
+  addTransport(transport: ShimTransport): void { ... }
+}
+
+// Install shim only if native API is absent
+function ensureModelContext(): ModelContext {
+  if (!navigator.modelContext) {
+    const shim = new WebMCPShim();
+    Object.defineProperty(navigator, 'modelContext', { value: shim });
+  }
+  return navigator.modelContext;
+}
+```
+
+**Transport implementations:**
+
+```typescript
+// 1. PostMessage transport — for browser extensions
+class PostMessageTransport implements ShimTransport {
+  // Listens for window.postMessage from extension content scripts
+  // Advertises tools via CustomEvent('formspec-tools-available')
+  // Extension content script can discover and call tools
+}
+
+// 2. MCP-over-WebSocket transport — for Claude Code/Desktop/Codex
+class MCPWebSocketTransport implements ShimTransport {
+  // Connects to local MCP relay (e.g., ws://localhost:12800)
+  // Translates WebMCP tool registrations → MCP tool declarations
+  // Translates MCP tool calls → WebMCP execute() calls
+}
+
+// 3. In-process transport — for same-page UI (chat widget, sidebar)
+class InProcessTransport implements ShimTransport {
+  // Direct function calls, no serialization
+  // Used by formspec-assist's own chat/suggestion UI
+}
+
+// 4. CustomEvent transport — for loose same-page coupling
+class CustomEventTransport implements ShimTransport {
+  // document.dispatchEvent(new CustomEvent('formspec-tool-call', ...))
+  // Good for third-party scripts on the same page
+}
+```
+
+### Declarative Attributes on `<formspec-render>`
+
+The web component renderer adds WebMCP declarative attributes to rendered HTML automatically:
+
+```typescript
+// In formspec-webcomponent's render pipeline
+function renderField(item: FormItem, ontology?: OntologyDocument) {
+  const input = document.createElement('input');
+  input.name = item.name;
+
+  // WebMCP declarative attributes
+  input.setAttribute('toolparamdescription',
+    item.hint || item.label || item.name);
+
+  // If ontology binding exists, enrich the description
+  const concept = ontology?.concepts?.[item.name];
+  if (concept) {
+    input.setAttribute('toolparamdescription',
+      `${item.label} (${concept.display} — ${concept.system})`);
+  }
+
+  // Ontology → HTML autocomplete bridge (free browser autofill)
+  const autocomplete = conceptToAutocomplete(concept?.concept);
+  if (autocomplete) input.setAttribute('autocomplete', autocomplete);
+
+  return input;
+}
+
+function renderForm(def: FormDefinition) {
+  const form = document.createElement('form');
+  form.setAttribute('toolname', `formspec.${def.name || 'form'}`);
+  form.setAttribute('tooldescription',
+    def.description || `Fill out the ${def.title || 'form'}`);
+  // No toolautosubmit — user must confirm submission
+  return form;
+}
+```
+
+This gives us **three layers of agent accessibility** from a single codebase:
+1. **Declarative WebMCP** — browser-native tool discovery from annotated HTML
+2. **Imperative WebMCP** — rich tools with profile matching, validation, help
+3. **ARIA + autocomplete** — fallback for non-WebMCP agents and screen readers
+
+### Relationship to Existing Packages
+
+| Package | Role | Depends on assist? |
+|---------|------|-------------------|
+| `formspec-assist` (new, layer 2) | Tool registration, context resolver, profile store, shim | — |
+| `formspec-webcomponent` (layer 2) | Adds declarative `tool*` attributes to rendered HTML | Optional peer dep |
+| `formspec-mcp` (layer 4) | Authoring tools. Could also host filling MCP bridge. | Optional: filling transport |
+| `formspec-chat` (layer 5) | Form *authoring* chat. Separate concern. | No |
+
+`formspec-assist` at **layer 2** (same as `formspec-webcomponent`) — depends only on `formspec-engine` and `formspec-types`. The web component optionally imports it for declarative attribute enrichment. The MCP bridge transport optionally connects to a `formspec-mcp` server process.
+
+---
+
+## MVP Scope (Updated: WebMCP-First)
+
+1. **WebMCP shim** — `navigator.modelContext` polyfill with in-process and postMessage transports
+2. **Tool registration** — the ~15 formspec.* tools listed above, wired to FormEngine + context resolver
+3. **Context resolver** — references + ontology → structured `FieldHelp` (powers `field.describe` and `field.help` tools)
+4. **Profile store** — concept-keyed `localStorage` backend, exact-match autofill (powers `profile.*` tools)
+5. **Declarative attributes** — `<formspec-render>` emits `toolname`, `tooldescription`, `toolparamdescription` on form/input elements
+6. **Autocomplete bridge** — ontology concepts → HTML `autocomplete` tokens
+
+**Deprioritized:**
+- MCP-over-WebSocket transport (add when Claude Code filling use case is clear)
+- Chat mode / LLM integration (context resolver works standalone first)
+- Custom browser extension (WebMCP + shim covers the use case)
+- Document extraction, multi-agent, guided walkthrough (later layers)
