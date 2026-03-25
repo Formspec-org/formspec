@@ -16,6 +16,7 @@ import { CommandPalette } from './CommandPalette';
 import { ImportDialog } from './ImportDialog';
 import { handleKeyboardShortcut } from '../lib/keyboard';
 import { ChatPanel } from './ChatPanel';
+import { AppSettingsDialog } from './AppSettingsDialog';
 import { CanvasTargetsProvider } from '../state/useCanvasTargets';
 import { useProject } from '../state/useProject';
 import { useSelection } from '../state/useSelection';
@@ -69,6 +70,7 @@ export function Shell() {
   const [previewViewport, setPreviewViewport] = useState<Viewport>('desktop');
   const [previewMode, setPreviewMode] = useState<PreviewMode>('form');
   const [showSettings, setShowSettings] = useState(false);
+  const [showAppSettings, setShowAppSettings] = useState(false);
   const [showBlueprintDrawer, setShowBlueprintDrawer] = useState(false);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
@@ -257,7 +259,7 @@ export function Shell() {
         onSearch={() => setShowPalette(true)}
         onHome={() => setShowSettings(true)}
         onOpenMetadata={() => setShowSettings(true)}
-        onToggleAccountMenu={() => setShowSettings(true)}
+        onToggleAccountMenu={() => setShowAppSettings(true)}
         onToggleMenu={compactLayout ? () => setShowBlueprintDrawer(true) : undefined}
         onToggleChat={() => setShowChatPanel((p) => !p)}
         isCompact={compactLayout}
@@ -366,6 +368,7 @@ export function Shell() {
       <CommandPalette open={showPalette} onClose={() => setShowPalette(false)} />
       <ImportDialog open={showImport} onClose={() => setShowImport(false)} />
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+      <AppSettingsDialog open={showAppSettings} onClose={() => setShowAppSettings(false)} />
     </div>
   );
 }

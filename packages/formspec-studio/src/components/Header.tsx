@@ -126,9 +126,16 @@ export function Header({
           <button
             type="button"
             className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors"
+            onClick={() => { setMenuOpen(false); onOpenMetadata?.(); }}
+          >
+            Form Settings
+          </button>
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors"
             onClick={() => { setMenuOpen(false); onToggleAccountMenu?.(); }}
           >
-            Settings
+            App Settings
           </button>
         </div>
       )}
