@@ -443,13 +443,120 @@ This bridges the authoring-side MCP tools (in `formspec-mcp`) with a filling-sid
 
 ---
 
-## MVP Scope
+## Research Findings: Existing Extension APIs (March 2026)
 
-For a first cut, focus on the highest-leverage features:
+### Claude Browser Extension
+
+The Claude Chrome extension is a **closed system with no public integration points**.
+
+- **Architecture:** Manifest V3 extension using a **side panel** UI. All page interaction via **Chrome DevTools Protocol (CDP)** — not content scripts. Clicks, typing, scrolling all go through `Input.dispatchMouseEvent` / `Input.insertText`.
+- **Page understanding:** Uses **accessibility tree** extraction (`__generateAccessibilityTree("all")`) + screenshots. A nested Claude Sonnet call matches elements semantically from the a11y tree. No schema-driven or structured form detection.
+- **No public API:** No `externally_connectable` manifest entry. No extension messaging protocol for third parties. No SDK or hooks for web pages.
+- **Only first-party integration:** Communicates with Claude Code via a **native messaging host** (`com.anthropic.claude_code_browser_extension`) or a **remote WebSocket bridge** (`wss://bridge.claudeusercontent.com`).
+- **MCP support:** Yes, but only when connected to Claude Code/Desktop. MCP tools operate in a separate "MCP tab group."
+- **Permission model:** PermissionManager singleton. "Once" (auto-revoked) or "always" (persistent per domain).
+
+**Implication for formspec-assist:** We cannot plug into the Claude extension. But we can make our forms **highly accessible** (good ARIA, semantic HTML) so the extension's a11y-tree-based `find` tool works well with formspec forms out of the box. And we can expose **MCP tools** that Claude Code/Desktop can call.
+
+### ChatGPT Browser Extension / Atlas
+
+- **"ChatGPT search" extension:** Minimal — just a search engine redirect. No content scripts, no form interaction, no API surface.
+- **ChatGPT Atlas** (full AI browser, launched Oct 2025): Chromium-based browser with GPT sidebar. Uses **vision-based CUA model** (screenshot → pixel processing → virtual mouse/keyboard). No DOM injection or structured form understanding.
+- **No extension SDK yet:** Atlas Dev Program planned for 2026 but not available. No `externally_connectable`.
+- **Integration paths:** GPT Actions (REST API via OpenAPI spec), ChatGPT App Directory (@mention apps), MCP in developer mode (Plus/Pro).
+- **ChatGPT Plugins:** Deprecated, replaced by GPT Actions.
+
+**Implication:** Same as Claude — we can't plug in. But GPT Actions (OpenAPI spec) and MCP are viable server-side integration paths.
+
+### WebMCP — The Emerging Standard (W3C Draft, Chrome 146 Canary)
+
+**This is the most significant finding.** WebMCP is a joint **Google + Microsoft** initiative under W3C standardization that creates a native browser bridge between AI agents and web pages.
+
+- **Timeline:** W3C Community Group accepted Sep 2025 → Draft Report Feb 2026 → Chrome 146 Canary early preview Feb 2026
+- **Status:** Early preview. Edge expected to follow. Firefox/Safari engaged but no timeline.
+
+**Two APIs:**
+
+1. **Declarative API** — annotate HTML forms with `tool*` attributes:
+   ```html
+   <form toolname="submit-grant" tooldescription="Submit a federal grant application">
+     <input name="orgName" toolparamdescription="Legal organization name" />
+     <input name="ein" type="text" toolparamdescription="Employer Identification Number" />
+     <button type="submit">Submit</button>
+   </form>
+   ```
+   The browser auto-synthesizes a JSON Schema from form elements. Agents discover tools via `navigator.modelContext`. `toolautosubmit` allows automatic form submission.
+
+2. **Imperative API** — `navigator.modelContext.registerTool()`:
+   ```js
+   navigator.modelContext.registerTool({
+     name: "set-grant-field",
+     description: "Set a field value on the grant application",
+     inputSchema: {
+       type: "object",
+       properties: {
+         path: { type: "string", description: "Field path (e.g., 'budget.totalAmount')" },
+         value: { description: "The value to set" }
+       },
+       required: ["path", "value"]
+     },
+     execute: async ({ path, value }) => {
+       engine.setValue(path, value);
+       return { success: true, validation: engine.getValidationReport() };
+     }
+   });
+   ```
+
+**Security model:** Same-origin policy, CSP integration, HTTPS required. Sensitive tools require human-in-the-loop confirmation. `SubmitEvent.agentInvoked` flag distinguishes agent vs. human submissions.
+
+**Performance:** ~89% token reduction vs screenshot-based approaches, 98% task accuracy on structured tool calls.
+
+**Implication for formspec-assist:** This is a perfect fit. Formspec already has the structured metadata (definition schema, references, ontology) to generate rich WebMCP tool descriptions automatically. The `<formspec-render>` web component can:
+- Add `tool*` attributes to rendered form elements (declarative API)
+- Register imperative tools via `navigator.modelContext` that expose the full agent protocol
+- Use ontology concepts to generate `tooldescription` values that are semantically meaningful to agents
+
+### Other Relevant Standards
+
+- **W3C AI Agent Protocol Community Group** (est. May 2025) — Open protocols for agent-to-agent communication and discovery. Broader scope than WebMCP.
+- **Chrome Built-in AI** — Client-side on-device model access via browser APIs. Complementary to WebMCP.
+- **Browser MCP** ([browsermcp.io](https://browsermcp.io)) — Open-source extension exposing browser automation as MCP server. Usable by Claude Code, Cursor, VS Code.
+- **Chrome DevTools MCP** — Gives coding agents full DevTools access via MCP.
+
+### Integration Strategy Summary
+
+| Integration Path | Viability | Effort | Reach |
+|-----------------|-----------|--------|-------|
+| **WebMCP (declarative + imperative)** | High — W3C standard, Chrome shipping | Medium | All WebMCP-capable browsers/agents |
+| **MCP tools (filling-side)** | High — protocol already used by formspec-mcp | Low | Claude Code/Desktop, Codex CLI, any MCP client |
+| **GPT Actions (OpenAPI spec)** | Medium — server-side only | Low | ChatGPT users |
+| **Good ARIA / a11y annotations** | High — no API needed | Low | All a11y-tree-based agents (Claude ext, screen readers) |
+| **HTML autocomplete attributes** | High — already standard | Very low | All browsers, password managers |
+| **Custom browser extension** | Medium — full control but must build/maintain | High | Chrome/Edge/Firefox users |
+| **Plug into Claude/ChatGPT extension** | Not viable | N/A | N/A |
+
+**Recommended priority:**
+1. WebMCP integration (highest leverage, standards-based, growing ecosystem)
+2. MCP filling tools (low effort, immediate value for Claude Code users)
+3. ARIA + autocomplete bridge (free wins)
+4. Custom extension (only if demand justifies maintenance cost)
+
+---
+
+## MVP Scope (Updated Post-Research)
+
+For a first cut, focus on the highest-leverage features — now informed by the WebMCP opportunity:
 
 1. **Context resolver** — given a field path, resolve all references + ontology and return structured `FieldHelp`
 2. **Agent protocol** — `form.describe`, `field.describe`, `field.getState`, `field.setValue`, `form.validate`, `form.getProgress`
-3. **Profile store** — concept-keyed storage with `localStorage` backend, exact-match autofill
-4. **Autocomplete bridge** — ontology concepts → HTML autocomplete tokens for free browser autofill
+3. **WebMCP bridge** — auto-register formspec form tools via `navigator.modelContext.registerTool()` when the API is available, with `tool*` attribute annotation on rendered elements as fallback/complement
+4. **MCP filling tools** — expose the agent protocol as MCP tools (separate from the authoring tools in `formspec-mcp`)
+5. **Profile store** — concept-keyed storage with `localStorage` backend, exact-match autofill
+6. **Autocomplete + ARIA bridge** — ontology concepts → HTML `autocomplete` tokens + rich ARIA labels for free browser/agent compatibility
 
-Everything else (chat, guided flow, document extraction, multi-agent, browser extension) builds on these four.
+**Deprioritized (build later):**
+- Custom browser extension (high maintenance cost, WebMCP covers most use cases)
+- Chat mode (LLM integration — context resolver works without LLM first)
+- Document-to-form extraction (complex, needs LLM)
+- Multi-agent coordination (needs real-world usage patterns first)
+- Guided walkthrough (nice UX but not architecturally critical)
