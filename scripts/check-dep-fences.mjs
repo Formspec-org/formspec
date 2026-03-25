@@ -13,6 +13,7 @@ const LAYERS = {
   'formspec-layout':       1,
   'formspec-webcomponent': 2,
   'formspec-core':         2,
+  'formspec-react':        2,
   'formspec-adapters':     3,
   'formspec-studio-core':  3,
   'formspec-mcp':          4,
