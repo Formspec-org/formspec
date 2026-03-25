@@ -234,7 +234,7 @@ public final class FormspecEngine {
             engineReadyContinuation = nil
 
         case .engineError(let message):
-            print("[FormspecEngine] Engine error: \(message)")
+            NSLog("[FormspecEngine] Engine error: %@", message)
         }
     }
 

@@ -1,24 +1,27 @@
 {
+    "$formspec": "1.0",
+    "url": "urn:formspec:test:contact",
+    "version": "1.0.0",
     "formId": "contact",
     "title": "Contact Form",
     "items": [
         {
             "key": "fullName",
-            "type": "input",
+            "type": "field",
             "dataType": "string",
             "label": "Full Name",
             "bind": { "required": "true()" }
         },
         {
             "key": "email",
-            "type": "input",
+            "type": "field",
             "dataType": "string",
             "label": "Email",
             "bind": { "required": "true()", "constraint": "regex($value, '^[^@]+@[^@]+$')" }
         },
         {
             "key": "subscribe",
-            "type": "input",
+            "type": "field",
             "dataType": "boolean",
             "label": "Subscribe to newsletter"
         }

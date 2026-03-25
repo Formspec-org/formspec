@@ -202,7 +202,6 @@ async function handleInitialize(cmd: InitCommand): Promise<void> {
         }
 
         installEffects(engine);
-
         postEvent({ type: 'engineReady' });
     } catch (err) {
         postEvent({ type: 'engineError', message: String(err) });

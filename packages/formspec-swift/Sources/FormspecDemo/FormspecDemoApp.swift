@@ -116,19 +116,22 @@ struct ContentView: View {
         do {
             // Inline the definition and layout plan
             let definition: JSONValue = .object([
+                "$formspec": .string("1.0"),
+                "url": .string("urn:formspec:demo:contact"),
+                "version": .string("1.0.0"),
                 "formId": .string("contact"),
                 "title": .string("Contact Form"),
                 "items": .array([
                     .object([
                         "key": .string("fullName"),
-                        "type": .string("input"),
+                        "type": .string("field"),
                         "dataType": .string("string"),
                         "label": .string("Full Name"),
                         "bind": .object(["required": .string("true()")])
                     ]),
                     .object([
                         "key": .string("email"),
-                        "type": .string("input"),
+                        "type": .string("field"),
                         "dataType": .string("string"),
                         "label": .string("Email"),
                         "bind": .object([
@@ -138,7 +141,7 @@ struct ContentView: View {
                     ]),
                     .object([
                         "key": .string("subscribe"),
-                        "type": .string("input"),
+                        "type": .string("field"),
                         "dataType": .string("boolean"),
                         "label": .string("Subscribe to newsletter")
                     ])
