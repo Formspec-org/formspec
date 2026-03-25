@@ -1823,8 +1823,12 @@ export class Project {
 
   // ── Wrap Items In Group ──
 
-  /** Wrap existing items in a new group container. */
-  wrapItemsInGroup(paths: string[], label?: string): HelperResult {
+  /**
+   * Wrap existing items in a new group container.
+   * When groupPath is provided, uses it as the group key (must not already exist).
+   * When omitted, auto-generates a unique key.
+   */
+  wrapItemsInGroup(paths: string[], groupPathOrLabel?: string, groupLabel?: string): HelperResult {
     // Pre-validation
     for (const p of paths) {
       if (!this.core.itemAt(p)) {
@@ -1837,9 +1841,28 @@ export class Project {
       !paths.some(other => other !== p && p.startsWith(`${other}.`)),
     );
 
-    // Generate group key
-    const groupKey = `group_${Date.now()}`;
-    const groupLabel = label ?? 'Group';
+    // Determine groupKey and label from arguments
+    let explicitGroupPath: string | undefined;
+    let label: string;
+    if (groupLabel !== undefined) {
+      // Called as wrapItemsInGroup(paths, groupPath, groupLabel)
+      explicitGroupPath = groupPathOrLabel;
+      label = groupLabel;
+    } else {
+      // Called as wrapItemsInGroup(paths, label?)
+      label = groupPathOrLabel ?? 'Group';
+    }
+
+    // When an explicit group path is given, pre-validate it
+    if (explicitGroupPath !== undefined) {
+      if (this.core.itemAt(explicitGroupPath)) {
+        throw new HelperError('DUPLICATE_KEY', `An item with key "${explicitGroupPath}" already exists`, {
+          path: explicitGroupPath,
+        });
+      }
+    }
+
+    const groupKey = explicitGroupPath ?? `group_${Date.now()}`;
 
     // Find first item's position for the new group
     const firstPath = pruned[0];
@@ -1854,16 +1877,16 @@ export class Project {
     const insertIndex = parentItems.findIndex((i: any) => i.key === firstItemKey);
 
     const addPayload: Record<string, unknown> = {
-      type: 'group', key: groupKey, label: groupLabel,
+      type: 'group', key: groupKey, label,
     };
     if (parentPath) addPayload.parentPath = parentPath;
     if (insertIndex >= 0) addPayload.insertIndex = insertIndex;
 
-    const groupPath = parentPath ? `${parentPath}.${groupKey}` : groupKey;
+    const resolvedGroupPath = parentPath ? `${parentPath}.${groupKey}` : groupKey;
 
     const phase2 = pruned.map((p, i) => ({
       type: 'definition.moveItem' as const,
-      payload: { sourcePath: p, targetParentPath: groupPath, targetIndex: i },
+      payload: { sourcePath: p, targetParentPath: resolvedGroupPath, targetIndex: i },
     }));
 
     this.core.batchWithRebuild(
@@ -1873,13 +1896,13 @@ export class Project {
 
     const movedPaths = pruned.map(p => {
       const leaf = p.split('.').pop()!;
-      return `${groupPath}.${leaf}`;
+      return `${resolvedGroupPath}.${leaf}`;
     });
 
     return {
       summary: `Wrapped ${pruned.length} item(s) in group '${groupKey}'`,
-      action: { helper: 'wrapItemsInGroup', params: { paths: pruned, label: groupLabel } },
-      affectedPaths: [groupPath, ...movedPaths],
+      action: { helper: 'wrapItemsInGroup', params: { paths: pruned, groupPath: resolvedGroupPath, label } },
+      affectedPaths: [resolvedGroupPath, ...movedPaths],
     };
   }
 
@@ -1908,13 +1931,32 @@ export class Project {
 
   // ── Batch Operations ──
 
-  /** Batch delete multiple items atomically. */
+  /**
+   * Batch delete multiple items atomically. Pre-validates all paths exist,
+   * collects cleanup commands for dependent binds/shapes/variables, then
+   * dispatches everything in a single atomic operation.
+   */
   batchDeleteItems(paths: string[]): HelperResult {
+    if (paths.length === 0) {
+      return {
+        summary: 'No items to delete',
+        action: { helper: 'batchDeleteItems', params: { paths } },
+        affectedPaths: [],
+      };
+    }
+
+    // Pre-validate: all paths must exist
+    for (const p of paths) {
+      if (!this.core.itemAt(p)) {
+        this._throwPathNotFound(p);
+      }
+    }
+
     // Descendant deduplication
     const pruned = paths.filter(p =>
       !paths.some(other => other !== p && p.startsWith(`${other}.`)),
     );
-    // Sort deepest-first
+    // Sort deepest-first so child deletions don't invalidate parent paths
     const sorted = [...pruned].sort((a, b) => b.split('.').length - a.split('.').length);
 
     this.core.dispatch(
@@ -1928,21 +1970,28 @@ export class Project {
     };
   }
 
-  /** Batch duplicate multiple items atomically. */
+  /**
+   * Batch duplicate multiple items using copyItem for full bind/shape handling.
+   */
   batchDuplicateItems(paths: string[]): HelperResult {
+    if (paths.length === 0) {
+      return {
+        summary: 'No items to duplicate',
+        action: { helper: 'batchDuplicateItems', params: { paths } },
+        affectedPaths: [],
+      };
+    }
+
     // Descendant deduplication
     const pruned = paths.filter(p =>
       !paths.some(other => other !== p && p.startsWith(`${other}.`)),
     );
 
-    const results = this.core.dispatch(
-      pruned.map(p => ({ type: 'definition.duplicateItem' as const, payload: { path: p } })),
-    );
-
-    // Extract inserted paths from results
-    const affectedPaths = (Array.isArray(results) ? results : [results]).map(
-      (r: any, i) => r?.insertedPath ?? `${pruned[i]}_copy`,
-    );
+    const affectedPaths: string[] = [];
+    for (const p of pruned) {
+      const result = this.copyItem(p);
+      affectedPaths.push(...result.affectedPaths);
+    }
 
     return {
       summary: `Duplicated ${pruned.length} item(s)`,
@@ -3294,6 +3343,95 @@ export class Project {
       action: { helper: 'removeScreenRoute', params: { routeIndex } },
       affectedPaths: [],
     };
+  }
+
+  // ── Preview / Query Methods ──
+
+  /** Default sample values by data type. */
+  private static readonly _SAMPLE_VALUES: Record<string, unknown> = {
+    string: 'Sample text',
+    text: 'Sample paragraph text',
+    integer: 42,
+    decimal: 3.14,
+    boolean: true,
+    date: '2024-01-15',
+    time: '09:00:00',
+    dateTime: '2024-01-15T09:00:00Z',
+    uri: 'https://example.com',
+    attachment: 'sample-file.pdf',
+    money: { amount: 100, currency: 'USD' },
+    multiChoice: ['option1'],
+  };
+
+  /**
+   * Generate plausible sample data for each field based on its data type.
+   */
+  generateSampleData(): Record<string, unknown> {
+    const data: Record<string, unknown> = {};
+    const items = this.core.state.definition.items ?? [];
+
+    const walkItems = (itemList: any[], prefix: string) => {
+      for (const item of itemList) {
+        const path = prefix ? `${prefix}.${item.key}` : item.key;
+        if (item.type === 'group') {
+          // Recurse into children
+          if (item.children?.length) {
+            walkItems(item.children, path);
+          }
+          continue;
+        }
+        if (item.type !== 'field') continue;
+
+        const dt = item.dataType as string;
+        if (dt === 'choice' || dt === 'multiChoice') {
+          // Use first option if available
+          const options = item.options as Array<{ value: string }> | undefined;
+          if (options?.length) {
+            data[path] = dt === 'multiChoice' ? [options[0].value] : options[0].value;
+          } else {
+            data[path] = dt === 'multiChoice' ? ['option1'] : 'option1';
+          }
+        } else {
+          data[path] = Project._SAMPLE_VALUES[dt] ?? 'Sample text';
+        }
+      }
+    };
+
+    walkItems(items as any[], '');
+    return data;
+  }
+
+  /**
+   * Return a cleaned-up deep clone of the definition.
+   * Strips null values, empty arrays, and undefined keys.
+   */
+  normalizeDefinition(): Record<string, unknown> {
+    const def = this.core.state.definition;
+    const clone = JSON.parse(JSON.stringify(def));
+    return Project._pruneObject(clone) as Record<string, unknown>;
+  }
+
+  /** Recursively prune null values, empty arrays, and empty objects from a value. */
+  private static _pruneObject(value: unknown): unknown {
+    if (value === null || value === undefined) return undefined;
+    if (Array.isArray(value)) {
+      if (value.length === 0) return undefined;
+      const pruned = value.map(v => Project._pruneObject(v)).filter(v => v !== undefined);
+      return pruned.length === 0 ? undefined : pruned;
+    }
+    if (typeof value === 'object') {
+      const result: Record<string, unknown> = {};
+      let hasKeys = false;
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        const pruned = Project._pruneObject(v);
+        if (pruned !== undefined) {
+          result[k] = pruned;
+          hasKeys = true;
+        }
+      }
+      return hasKeys ? result : undefined;
+    }
+    return value;
   }
 }
 
