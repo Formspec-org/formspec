@@ -8,7 +8,7 @@ import { useSelection } from '../../state/useSelection';
 import { useActiveGroup } from '../../state/useActiveGroup';
 import { useProject } from '../../state/useProject';
 import { useCanvasTargets } from '../../state/useCanvasTargets';
-import { flattenComponentTree, buildDefLookup, buildBindKeyMap, type FlatEntry } from '../../lib/tree-helpers';
+import { flattenComponentTree, buildDefLookup, buildBindKeyMap, type FlatEntry } from '../../lib/field-helpers';
 import { GroupTabs } from './GroupTabs';
 import { AddItemPalette, type FieldTypeOption } from '../../components/AddItemPalette';
 import { EditorContextMenu } from './EditorContextMenu';

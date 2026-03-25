@@ -1,7 +1,7 @@
 /** @filedesc Properties panel for selected layout/component-tree nodes showing component type and slot. */
 import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
-import { nodeIdFromLayoutId } from '../../../lib/tree-helpers';
+import { nodeIdFromLayoutId } from '../../../lib/field-helpers';
 import { useComponent } from '../../../state/useComponent';
 import type { Project } from 'formspec-studio-core';
 

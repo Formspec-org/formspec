@@ -6,7 +6,7 @@ import {
   nodeIdFromLayoutId,
   nodeRefFor,
   type FlatEntry,
-} from '../../src/lib/tree-helpers';
+} from '../../src/lib/field-helpers';
 
 // ── Helpers ────────────────────────────────────────────────────────
 
