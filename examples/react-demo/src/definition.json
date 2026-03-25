@@ -55,6 +55,23 @@
   ],
   "items": [
     {
+      "key": "welcomeBanner",
+      "type": "display",
+      "label": "Applications for the 2026 funding cycle are now open. Deadline: June 30, 2026.",
+      "presentation": { "widgetHint": "banner" }
+    },
+    {
+      "key": "orgHeader",
+      "type": "display",
+      "label": "Part 1: Applicant Information",
+      "presentation": { "widgetHint": "heading" }
+    },
+    {
+      "key": "orgInstructions",
+      "type": "display",
+      "label": "Provide details about your organization and primary contact. All organizations must be registered entities with a valid EIN."
+    },
+    {
       "key": "organization",
       "type": "group",
       "label": "Organization Information",
@@ -142,6 +159,18 @@
       ]
     },
     {
+      "key": "projectDivider",
+      "type": "display",
+      "label": "",
+      "presentation": { "widgetHint": "divider" }
+    },
+    {
+      "key": "projectHeader",
+      "type": "display",
+      "label": "Part 2: Project & Budget",
+      "presentation": { "widgetHint": "heading" }
+    },
+    {
       "key": "project",
       "type": "group",
       "label": "Project Details",
@@ -152,6 +181,19 @@
           "dataType": "string",
           "label": "Project Title",
           "hint": "A concise, descriptive title for your proposed project."
+        },
+        {
+          "key": "priorityLevel",
+          "type": "field",
+          "dataType": "choice",
+          "label": "Funding Priority",
+          "hint": "How urgently does this project need funding?",
+          "presentation": { "widgetHint": "radio" },
+          "options": [
+            { "value": "urgent", "label": "Urgent — community need is immediate" },
+            { "value": "high", "label": "High — significant impact within 6 months" },
+            { "value": "standard", "label": "Standard — planned initiative with flexible timeline" }
+          ]
         },
         {
           "key": "focusArea",
@@ -206,6 +248,41 @@
           "dataType": "string",
           "label": "Prior Grant ID",
           "hint": "Enter the grant ID from your previous award."
+        }
+      ]
+    },
+    {
+      "key": "personnel",
+      "type": "group",
+      "label": "Key Personnel",
+      "repeatable": true,
+      "minRepeat": 1,
+      "maxRepeat": 5,
+      "children": [
+        {
+          "key": "personName",
+          "type": "field",
+          "dataType": "string",
+          "label": "Full Name"
+        },
+        {
+          "key": "personRole",
+          "type": "field",
+          "dataType": "choice",
+          "label": "Role",
+          "options": [
+            { "value": "pi", "label": "Principal Investigator" },
+            { "value": "copi", "label": "Co-PI" },
+            { "value": "coordinator", "label": "Project Coordinator" },
+            { "value": "evaluator", "label": "Evaluator" },
+            { "value": "other", "label": "Other" }
+          ]
+        },
+        {
+          "key": "personEmail",
+          "type": "field",
+          "dataType": "string",
+          "label": "Email Address"
         }
       ]
     },

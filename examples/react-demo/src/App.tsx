@@ -74,6 +74,38 @@ function StyledSelect({ field, node }: FieldComponentProps) {
     );
 }
 
+function StyledRadioGroup({ field, node }: FieldComponentProps) {
+    if (!field.visible) return null;
+    const showError = field.error && field.touched;
+    return (
+        <fieldset className="mb-5 border-0 p-0" data-name={field.path}>
+            <legend className="mb-1.5 text-sm font-semibold text-foreground">
+                {field.label}
+                {field.required && <span className="ml-1 text-destructive">*</span>}
+            </legend>
+            {field.hint && <p className="formspec-hint">{field.hint}</p>}
+            <div className="mt-2 grid gap-2">
+                {field.options.map(o => (
+                    <label
+                        key={o.value}
+                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-input bg-card px-4 py-3 transition-colors hover:border-ring has-[input:checked]:border-primary has-[input:checked]:bg-primary/5"
+                    >
+                        <input
+                            type="radio"
+                            name={field.path}
+                            value={o.value}
+                            checked={field.value === o.value}
+                            onChange={() => { field.setValue(o.value); field.touch(); }}
+                        />
+                        <span className="text-sm font-medium">{o.label}</span>
+                    </label>
+                ))}
+            </div>
+            {showError && <p className="formspec-error">{field.error}</p>}
+        </fieldset>
+    );
+}
+
 function StyledCheckboxGroup({ field, node }: FieldComponentProps) {
     if (!field.visible) return null;
     const current = Array.isArray(field.value) ? field.value : [];
@@ -242,6 +274,7 @@ const componentOverrides = {
     fields: {
         TextInput: StyledTextInput,
         Select: StyledSelect,
+        RadioGroup: StyledRadioGroup,
         CheckboxGroup: StyledCheckboxGroup,
         Checkbox: StyledCheckbox,
         Toggle: StyledCheckbox,

@@ -88,6 +88,35 @@ input[type="checkbox"]:checked::after {
   transform: rotate(45deg);
 }
 
+input[type="radio"] {
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  min-width: 1.125rem;
+  border: 1.5px solid var(--color-input);
+  border-radius: 50%;
+  background: var(--color-card);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+
+input[type="radio"]:checked {
+  border-color: var(--color-primary);
+}
+
+input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+}
+
+input[type="radio"]:focus-visible,
 input[type="checkbox"]:focus-visible {
   outline: none;
   border-color: var(--color-ring);
