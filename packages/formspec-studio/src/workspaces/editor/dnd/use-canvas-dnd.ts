@@ -7,8 +7,7 @@ import {
   isDescendantOf,
   type DropPosition,
 } from './compute-drop-target';
-import type { FlatEntry } from '../../../lib/tree-helpers';
-import { pruneDescendants } from '../../../lib/selection-helpers';
+import { pruneDescendants, type FlatEntry } from '../../../lib/field-helpers';
 
 interface OverTarget {
   path: string;

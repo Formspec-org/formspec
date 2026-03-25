@@ -1,6 +1,5 @@
 /** @filedesc Pure functions for building context menu items and executing canvas CRUD actions. */
-import { isLayoutId, nodeIdFromLayoutId } from '../../lib/tree-helpers';
-import { pruneDescendants } from '../../lib/selection-helpers';
+import { isLayoutId, nodeIdFromLayoutId, pruneDescendants } from '../../lib/field-helpers';
 import type { Project } from 'formspec-studio-core';
 
 interface Item {
