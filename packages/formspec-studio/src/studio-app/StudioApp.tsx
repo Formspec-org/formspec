@@ -6,6 +6,7 @@ import { SelectionProvider } from '../state/useSelection';
 import { ActiveGroupProvider } from '../state/useActiveGroup';
 import { Shell } from '../components/Shell';
 import { exampleDefinition } from '../fixtures/example-definition';
+import { useColorScheme } from '../hooks/useColorScheme';
 
 /**
  * Check for a handoff bundle in localStorage (from Chat or Inquest).
@@ -61,12 +62,13 @@ interface StudioAppProps {
 
 export function StudioApp({ project }: StudioAppProps = {}): ReactElement {
   const [activeProject] = useState<Project>(() => project ?? createStudioProject());
+  const colorScheme = useColorScheme();
 
   return (
     <ProjectProvider project={activeProject}>
       <SelectionProvider>
         <ActiveGroupProvider>
-          <Shell />
+          <Shell colorScheme={colorScheme} />
         </ActiveGroupProvider>
       </SelectionProvider>
     </ProjectProvider>
