@@ -5,6 +5,7 @@
  */
 export {
   fieldPaths,
+  itemPaths,
   itemAt,
   responseSchemaRows,
   instanceNames,
