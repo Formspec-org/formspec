@@ -120,19 +120,26 @@ export function handleTrace(
   });
 }
 
-// ── formspec_preview: preview + validate ─────────────────────────
+// ── formspec_preview: preview + validate + sample_data + normalize ──
 
 export function handlePreview(
   registry: ProjectRegistry,
   projectId: string,
-  mode: 'preview' | 'validate',
+  mode: 'preview' | 'validate' | 'sample_data' | 'normalize',
   params: { scenario?: Record<string, unknown>; response?: Record<string, unknown> },
 ) {
   return wrapQuery(() => {
     const project = registry.getProject(projectId);
-    if (mode === 'validate') {
-      return validateResponse(project, params.response!);
+    switch (mode) {
+      case 'validate':
+        return validateResponse(project, params.response!);
+      case 'sample_data':
+        return project.generateSampleData();
+      case 'normalize':
+        return project.normalizeDefinition();
+      case 'preview':
+      default:
+        return previewForm(project, params.scenario);
     }
-    return previewForm(project, params.scenario);
   });
 }
