@@ -182,7 +182,7 @@ describe('ChatShell', () => {
   });
 
   describe('header', () => {
-    // TODO: fix after ChatSession constructor API change (buildBundle injection)
+    // TODO: ChatShell does not wire toolContext, so refineForm throws before MockAdapter runs
     it.skip('shows issue badge count when there are open issues', async () => {
       render(<ChatShell />);
 

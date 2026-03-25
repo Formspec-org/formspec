@@ -23,7 +23,7 @@ export interface ChangeEntry {
   affectedPaths: string[];
   /** Warnings produced during execution. */
   warnings: string[];
-  /** Captured evaluated values for one-time expressions (initialValue with = prefix). */
+  /** Captured evaluated values for one-shot expressions (initialValue/default with = prefix). */
   capturedValues?: Record<string, unknown>;
 }
 
@@ -541,11 +541,12 @@ function scanForExpressionValues(
           entry.capturedValues[path] = p.value;
         }
       }
-      // definition.setBind with calculate/initialValue/default that starts with =
+      // definition.setBind with initialValue/default that starts with =
+      // (calculate is continuously reactive — capturing its value is meaningless)
       if (cmd.type === 'definition.setBind' && p.properties && typeof p.properties === 'object') {
         const props = p.properties as Record<string, unknown>;
         const path = p.path as string;
-        for (const key of ['calculate', 'initialValue', 'default'] as const) {
+        for (const key of ['initialValue', 'default'] as const) {
           if (typeof props[key] === 'string' && (props[key] as string).startsWith('=')) {
             if (path) {
               entry.capturedValues ??= {};
