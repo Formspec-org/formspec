@@ -536,13 +536,13 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
 
   server.registerTool('formspec_fel', {
     title: 'FEL',
-    description: 'FEL utilities: list available references, function catalog, or validate an expression.',
+    description: 'FEL utilities: list available references, function catalog, validate/check an expression, get autocomplete suggestions, or humanize an expression to English.',
     inputSchema: {
       project_id: z.string(),
-      action: z.enum(['context', 'functions', 'check']),
+      action: z.enum(['context', 'functions', 'check', 'validate', 'autocomplete', 'humanize']),
       path: z.string().optional(),
-      expression: z.string().optional(),
-      context_path: z.string().optional(),
+      expression: z.string().optional().describe('FEL expression (for check/validate/humanize) or partial input (for autocomplete)'),
+      context_path: z.string().optional().describe('Field path for scope-aware validation and context-specific suggestions'),
     },
     annotations: READ_ONLY,
   }, async ({ project_id, action, path, expression, context_path }) => {

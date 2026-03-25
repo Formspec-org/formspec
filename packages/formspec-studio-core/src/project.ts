@@ -29,6 +29,8 @@ import {
   type MetadataChanges,
   type WidgetInfo,
   type FieldTypeCatalogEntry,
+  type FELValidationResult,
+  type FELSuggestion,
 } from './helper-types.js';
 import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget, _FIELD_TYPE_MAP } from './field-type-aliases.js';
 import { COMPATIBILITY_MATRIX, COMPONENT_TO_HINT } from 'formspec-types';
@@ -127,6 +129,112 @@ export class Project {
   fieldDependents(fieldPath: string): FieldDependents { return this.core.fieldDependents(fieldPath); }
   diffFromBaseline(fromVersion?: string): Change[] { return this.core.diffFromBaseline(fromVersion); }
   previewChangelog(): FormspecChangelog { return this.core.previewChangelog(); }
+
+  // ── FEL editing helpers ───────────────────────────────────────
+
+  /** Validate a FEL expression and return detailed diagnostics. */
+  validateFELExpression(expression: string, contextPath?: string): FELValidationResult {
+    const context: FELParseContext | undefined = contextPath ? { targetPath: contextPath } : undefined;
+    const parseResult = this.core.parseFEL(expression, context);
+    return {
+      valid: parseResult.valid,
+      errors: parseResult.errors.map(d => ({
+        message: d.message,
+        line: (d as any).line,
+        column: (d as any).column,
+      })),
+      references: parseResult.references,
+      functions: parseResult.functions,
+    };
+  }
+
+  /** Return autocomplete suggestions for a partial FEL expression. */
+  felAutocompleteSuggestions(partial: string, contextPath?: string): FELSuggestion[] {
+    const context: FELParseContext | undefined = contextPath ? { targetPath: contextPath } : undefined;
+    const refs = this.core.availableReferences(context);
+    const catalog = this.core.felFunctionCatalog();
+
+    // Extract the token being typed — strip leading $ or @ if present
+    const stripped = partial.replace(/^\$/, '').replace(/^@/, '');
+    const isFieldPrefix = partial.startsWith('$');
+    const isVarPrefix = partial.startsWith('@');
+    const lowerStripped = stripped.toLowerCase();
+
+    const suggestions: FELSuggestion[] = [];
+
+    // Field suggestions
+    if (!isVarPrefix) {
+      for (const field of refs.fields) {
+        if (lowerStripped && !field.path.toLowerCase().startsWith(lowerStripped)) continue;
+        suggestions.push({
+          label: field.path,
+          kind: 'field',
+          detail: field.label ? `${field.label} (${field.dataType})` : field.dataType,
+          insertText: `$${field.path}`,
+        });
+      }
+    }
+
+    // Function suggestions
+    if (!isFieldPrefix && !isVarPrefix) {
+      for (const fn of catalog) {
+        if (lowerStripped && !fn.name.toLowerCase().startsWith(lowerStripped)) continue;
+        suggestions.push({
+          label: fn.name,
+          kind: 'function',
+          detail: fn.description ?? fn.signature ?? fn.category,
+          insertText: `${fn.name}(`,
+        });
+      }
+    }
+
+    // Variable suggestions
+    if (!isFieldPrefix) {
+      for (const v of refs.variables) {
+        if (lowerStripped && !v.name.toLowerCase().startsWith(lowerStripped)) continue;
+        suggestions.push({
+          label: v.name,
+          kind: 'variable',
+          detail: v.expression ? `= ${v.expression}` : undefined,
+          insertText: `@${v.name}`,
+        });
+      }
+    }
+
+    // Instance suggestions
+    if (!isFieldPrefix && !isVarPrefix) {
+      for (const inst of refs.instances) {
+        if (lowerStripped && !inst.name.toLowerCase().startsWith(lowerStripped)) continue;
+        suggestions.push({
+          label: inst.name,
+          kind: 'instance',
+          detail: inst.source,
+          insertText: `instance('${inst.name}')`,
+        });
+      }
+    }
+
+    // Context-specific keyword suggestions (e.g. @current, @index, @count)
+    if (!isFieldPrefix) {
+      for (const ref of refs.contextRefs) {
+        const name = ref.startsWith('@') ? ref.slice(1) : ref;
+        if (lowerStripped && !name.toLowerCase().startsWith(lowerStripped)) continue;
+        suggestions.push({
+          label: ref,
+          kind: 'keyword',
+          detail: 'context reference',
+          insertText: ref.startsWith('@') ? ref : `@${name}`,
+        });
+      }
+    }
+
+    return suggestions;
+  }
+
+  /** Convert a FEL expression to a human-readable English string. */
+  humanizeFELExpression(expression: string): string {
+    return humanizeFEL(expression);
+  }
 
   // ── Widget / type vocabulary queries ──────────────────────────
 
@@ -3211,4 +3319,44 @@ export function createProject(options?: CreateProjectOptions): Project {
 
   // Bridge studio-core options → core options at the package boundary
   return new Project(createRawProject(coreOptions), recorderControl);
+}
+
+// ── humanizeFEL (string-level FEL→English transform) ──────────────
+
+const OP_MAP: Record<string, string> = {
+  '=': 'is',
+  '!=': 'is not',
+  '>': 'is greater than',
+  '>=': 'is at least',
+  '<': 'is less than',
+  '<=': 'is at most',
+};
+
+function humanizeRef(ref: string): string {
+  const name = ref.replace(/^\$/, '');
+  return name
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, c => c.toUpperCase())
+    .trim();
+}
+
+function humanizeValue(val: string): string {
+  if (val === 'true') return 'Yes';
+  if (val === 'false') return 'No';
+  return val;
+}
+
+/**
+ * Attempt to convert a FEL expression to a human-readable string.
+ * Only handles simple `$ref op value` patterns. Returns the raw expression
+ * for anything more complex.
+ */
+function humanizeFEL(expression: string): string {
+  const trimmed = expression.trim();
+  const match = trimmed.match(/^(\$\w+)\s*(!=|>=|<=|=|>|<)\s*(.+)$/);
+  if (!match) return trimmed;
+  const [, ref, op, value] = match;
+  const humanOp = OP_MAP[op];
+  if (!humanOp) return trimmed;
+  return `${humanizeRef(ref)} ${humanOp} ${humanizeValue(value.trim())}`;
 }

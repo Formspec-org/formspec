@@ -1,19 +1,19 @@
 /**
  * FEL tool (consolidated):
- *   action: 'context' | 'functions' | 'check'
+ *   action: 'context' | 'functions' | 'check' | 'validate' | 'autocomplete' | 'humanize'
  */
 
 import type { ProjectRegistry } from '../registry.js';
 import { HelperError } from 'formspec-studio-core';
 import { errorResponse, successResponse, formatToolError } from '../errors.js';
 
-type FelAction = 'context' | 'functions' | 'check';
+type FelAction = 'context' | 'functions' | 'check' | 'validate' | 'autocomplete' | 'humanize';
 
 interface FelParams {
   action: FelAction;
   path?: string;         // for context scoping
-  expression?: string;   // for check
-  context_path?: string; // for check scoping
+  expression?: string;   // for check/validate/autocomplete/humanize
+  context_path?: string; // for check/validate/autocomplete scoping
 }
 
 export function handleFel(
@@ -37,6 +37,18 @@ export function handleFel(
         const context = params.context_path ? { targetPath: params.context_path } : undefined;
         const result = project.parseFEL(params.expression!, context);
         return successResponse(result);
+      }
+      case 'validate': {
+        const result = project.validateFELExpression(params.expression!, params.context_path);
+        return successResponse(result);
+      }
+      case 'autocomplete': {
+        const suggestions = project.felAutocompleteSuggestions(params.expression ?? '', params.context_path);
+        return successResponse(suggestions);
+      }
+      case 'humanize': {
+        const humanized = project.humanizeFELExpression(params.expression!);
+        return successResponse({ humanized, original: params.expression });
       }
     }
   } catch (err) {
