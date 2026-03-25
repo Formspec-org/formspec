@@ -663,7 +663,7 @@ describe('ProposalManager', () => {
     // F3: Spec line 219 requires that =prefix initialValue expressions have their
     // evaluated result captured in ChangeEntry.capturedValues so replay is deterministic.
     // This test asserts the CORRECT behavior — it should FAIL until F3 is implemented.
-    it.fails('should capture evaluated result for =prefix initialValue expressions', () => {
+    it('should capture evaluated result for =prefix initialValue expressions', () => {
       pm.openChangeset();
 
       pm.beginEntry('formspec_field');
