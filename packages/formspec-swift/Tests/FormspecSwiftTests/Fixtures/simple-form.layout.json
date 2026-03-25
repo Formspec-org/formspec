@@ -1,0 +1,42 @@
+{
+    "id": "root",
+    "component": "Stack",
+    "category": "layout",
+    "props": {"direction": "vertical"},
+    "cssClasses": [],
+    "children": [
+        {
+            "id": "field-fullName",
+            "component": "TextInput",
+            "category": "field",
+            "props": {},
+            "cssClasses": [],
+            "children": [],
+            "bindPath": "fullName",
+            "fieldItem": {"key": "fullName", "label": "Full Name", "dataType": "string"},
+            "labelPosition": "top"
+        },
+        {
+            "id": "field-email",
+            "component": "TextInput",
+            "category": "field",
+            "props": {},
+            "cssClasses": [],
+            "children": [],
+            "bindPath": "email",
+            "fieldItem": {"key": "email", "label": "Email", "dataType": "string"},
+            "labelPosition": "top"
+        },
+        {
+            "id": "field-subscribe",
+            "component": "Checkbox",
+            "category": "field",
+            "props": {},
+            "cssClasses": [],
+            "children": [],
+            "bindPath": "subscribe",
+            "fieldItem": {"key": "subscribe", "label": "Subscribe to newsletter", "dataType": "boolean"},
+            "labelPosition": "top"
+        }
+    ]
+}
