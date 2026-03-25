@@ -20,6 +20,76 @@ describe('fieldPaths', () => {
   });
 });
 
+// ── UX-4b: itemPaths includes display/content items ──────────────
+
+describe('itemPaths', () => {
+  it('includes display items alongside fields', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'field', key: 'name' } },
+      { type: 'definition.addItem', payload: { type: 'display', key: 'banner1', label: 'Welcome' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'email' } },
+    ]);
+
+    const paths = project.itemPaths();
+    expect(paths).toContain('name');
+    expect(paths).toContain('banner1');
+    expect(paths).toContain('email');
+  });
+
+  it('includes nested display items with dot-notation paths', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'group', key: 'section' } },
+      { type: 'definition.addItem', payload: { type: 'display', key: 'heading', parentPath: 'section', label: 'Section Header' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'amount', parentPath: 'section' } },
+    ]);
+
+    const paths = project.itemPaths();
+    expect(paths).toContain('section.heading');
+    expect(paths).toContain('section.amount');
+    // Groups themselves are NOT leaf items — they should not appear
+    expect(paths).not.toContain('section');
+  });
+
+  it('returns only field paths when no display items exist', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'field', key: 'f1' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'f2' } },
+    ]);
+
+    expect(project.itemPaths()).toEqual(['f1', 'f2']);
+  });
+
+  it('returns empty array for empty form', () => {
+    const project = createRawProject();
+    expect(project.itemPaths()).toEqual([]);
+  });
+
+  it('returns only display paths when no fields exist', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'display', key: 'd1' } },
+      { type: 'definition.addItem', payload: { type: 'display', key: 'd2' } },
+    ]);
+
+    expect(project.itemPaths()).toEqual(['d1', 'd2']);
+  });
+
+  it('preserves document order', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'display', key: 'intro' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'name' } },
+      { type: 'definition.addItem', payload: { type: 'display', key: 'divider' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'email' } },
+    ]);
+
+    expect(project.itemPaths()).toEqual(['intro', 'name', 'divider', 'email']);
+  });
+});
+
 describe('itemAt', () => {
   it('resolves a root item', () => {
     const project = createRawProject();
@@ -587,6 +657,96 @@ describe('availableReferences', () => {
       mappingContext: { ruleIndex: 0, direction: 'forward' },
     });
     expect(refs.contextRefs).toEqual(expect.arrayContaining(['@source', '@target']));
+  });
+
+  // ── UX-6: scope annotations for repeat group context ──────────
+
+  it('annotates fields with scope when contextPath is inside a repeat group', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'field', key: 'global_name', dataType: 'string' } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'rows', repeatable: true } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'amount', parentPath: 'rows', dataType: 'decimal' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'desc', parentPath: 'rows', dataType: 'string' } },
+    ]);
+
+    const refs = project.availableReferences('rows[0].amount');
+    const globalField = refs.fields.find(f => f.path === 'global_name');
+    const localField = refs.fields.find(f => f.path === 'rows.amount');
+    const localField2 = refs.fields.find(f => f.path === 'rows.desc');
+
+    expect(globalField?.scope).toBe('global');
+    expect(localField?.scope).toBe('local');
+    expect(localField2?.scope).toBe('local');
+  });
+
+  it('does not annotate scope when contextPath is not inside a repeat group', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'field', key: 'name', dataType: 'string' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'email', dataType: 'string' } },
+    ]);
+
+    const refs = project.availableReferences('name');
+    // No scope annotation when not inside a repeat
+    expect(refs.fields[0].scope).toBeUndefined();
+    expect(refs.fields[1].scope).toBeUndefined();
+  });
+
+  it('does not annotate scope when no contextPath is given', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'group', key: 'rows', repeatable: true } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'amount', parentPath: 'rows', dataType: 'decimal' } },
+    ]);
+
+    const refs = project.availableReferences();
+    // Without context, no scope annotation
+    expect(refs.fields[0].scope).toBeUndefined();
+  });
+
+  it('handles nested repeat groups — local means same innermost repeat', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'field', key: 'title', dataType: 'string' } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'sections', repeatable: true } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'heading', parentPath: 'sections', dataType: 'string' } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'items', parentPath: 'sections', repeatable: true } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'qty', parentPath: 'sections.items', dataType: 'integer' } },
+    ]);
+
+    // Context is inside the inner repeat group
+    const refs = project.availableReferences('sections[0].items[0].qty');
+    const titleField = refs.fields.find(f => f.path === 'title');
+    const headingField = refs.fields.find(f => f.path === 'sections.heading');
+    const qtyField = refs.fields.find(f => f.path === 'sections.items.qty');
+
+    expect(titleField?.scope).toBe('global');
+    // heading is in the parent repeat, not the same innermost repeat
+    expect(headingField?.scope).toBe('global');
+    // qty is in the same innermost repeat group
+    expect(qtyField?.scope).toBe('local');
+  });
+
+  it('annotates fields in a non-repeatable subgroup of a repeat as local', () => {
+    const project = createRawProject();
+    project.batch([
+      { type: 'definition.addItem', payload: { type: 'field', key: 'external', dataType: 'string' } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'rows', repeatable: true } },
+      { type: 'definition.addItem', payload: { type: 'group', key: 'detail', parentPath: 'rows' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'note', parentPath: 'rows.detail', dataType: 'string' } },
+      { type: 'definition.addItem', payload: { type: 'field', key: 'amount', parentPath: 'rows', dataType: 'decimal' } },
+    ]);
+
+    const refs = project.availableReferences('rows[0].amount');
+    const note = refs.fields.find(f => f.path === 'rows.detail.note');
+    const amount = refs.fields.find(f => f.path === 'rows.amount');
+    const external = refs.fields.find(f => f.path === 'external');
+
+    // note is nested in a non-repeatable subgroup of 'rows' — still local to 'rows'
+    expect(note?.scope).toBe('local');
+    expect(amount?.scope).toBe('local');
+    expect(external?.scope).toBe('global');
   });
 });
 
