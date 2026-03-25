@@ -2,6 +2,7 @@
 import type {
   AIAdapter, Attachment, ChatMessage, ChatSessionState,
   ScaffoldRequest, SourceTrace, Issue, DebugEntry,
+  ToolContext,
 } from './types.js';
 import type { FormDefinition } from 'formspec-types';
 import type { ProjectBundle } from 'formspec-core';
@@ -9,7 +10,6 @@ import { SourceTraceManager } from './source-trace.js';
 import { IssueQueue } from './issue-queue.js';
 import { diff, type DefinitionDiff } from './form-scaffolder.js';
 import { buildBundleFromDefinition } from './bundle-builder.js';
-import { McpBridge } from './mcp-bridge.js';
 
 let sessionCounter = 0;
 
@@ -23,6 +23,10 @@ function nextSessionId(): string {
  * Composes SourceTraceManager, IssueQueue, and an AIAdapter
  * into a coherent conversation flow. Manages message history, form state,
  * and session serialization.
+ *
+ * The host (e.g. Studio) provides a `ToolContext` via `setToolContext()`
+ * after scaffolding. The ChatSession does NOT own a Project or MCP server;
+ * it delegates tool calls through the host-provided context.
  */
 export class ChatSession {
   readonly id: string;
@@ -39,7 +43,7 @@ export class ChatSession {
   private readyToScaffold = false;
   private listeners: Set<() => void> = new Set();
   private messageCounter = 0;
-  private bridge: McpBridge | null = null;
+  private toolContext: ToolContext | null = null;
   private debugLog: DebugEntry[] = [];
   private scaffoldingText: string | null = null;
 
@@ -48,6 +52,24 @@ export class ChatSession {
     this.id = options.id ?? nextSessionId();
     this.createdAt = Date.now();
     this.updatedAt = this.createdAt;
+  }
+
+  /**
+   * Provide a ToolContext for MCP-backed refinement.
+   *
+   * The host calls this after scaffolding to connect the session
+   * to the Studio's existing MCP server. The session uses this
+   * context for all subsequent tool calls (refinement, auto-fix, audit).
+   */
+  setToolContext(ctx: ToolContext): void {
+    this.toolContext = ctx;
+  }
+
+  /**
+   * Returns the currently set ToolContext, or null if none has been provided.
+   */
+  getToolContext(): ToolContext | null {
+    return this.toolContext;
   }
 
   getMessages(): ChatMessage[] {
@@ -150,20 +172,23 @@ export class ChatSession {
         assistantContent = response.message;
       } else {
         // Refine existing form via MCP tools
+        if (!this.toolContext) {
+          throw new Error('No tool context available. Call setToolContext() before refinement.');
+        }
         const previousDef = this.definition;
-        const toolContext = await this.bridge!.getToolContext();
-        this.log('sent', 'refineForm', { instruction: content, toolCount: toolContext.tools.length });
+        this.log('sent', 'refineForm', { instruction: content, toolCount: this.toolContext.tools.length });
         const result = await this.adapter.refineForm(
           this.messages,
           content,
-          toolContext,
+          this.toolContext,
         );
         this.log('received', 'refineForm', result);
 
-        // Read back updated state from the bridge
-        this.definition = this.bridge!.getDefinition();
-        this.bundle = this.bridge!.getBundle();
-        this.lastDiff = diff(previousDef, this.definition);
+        // Read back updated state from the tool context
+        await this.readBackDefinition();
+        if (this.definition) {
+          this.lastDiff = diff(previousDef, this.definition);
+        }
 
         // Generate traces from tool calls
         const traces: SourceTrace[] = result.toolCalls
@@ -223,17 +248,11 @@ export class ChatSession {
       });
       this.log('received', 'scaffold', { title: result.definition.title, itemCount: result.definition.items.length, issueCount: result.issues.length });
 
-      // Create bridge BEFORE setting definition — if it fails, session stays in interview phase
-      const bridge = await this.replaceBridge(result.definition);
-
       this.definition = result.definition;
       this.bundle = buildBundleFromDefinition(result.definition);
       this.lastDiff = null;
       this.traces.addTraces(result.traces);
       this.addIssuesFromResult(result.issues);
-
-      const loadDiags = bridge.consumeLoadDiagnostics();
-      this.addIssuesFromResult(loadDiags);
       this.readyToScaffold = false;
 
       const systemMsg: ChatMessage = {
@@ -244,10 +263,14 @@ export class ChatSession {
       };
       this.messages.push(systemMsg);
 
-      // Auto-fix: if audit found errors, run refinement rounds to correct them
-      const errors = loadDiags.filter(d => d.severity === 'error');
-      if (errors.length > 0) {
-        await this.autoFix(errors);
+      // Auto-fix: if tool context is available and audit finds errors, fix them
+      if (this.toolContext) {
+        const auditIssues = await this.auditViaTools();
+        this.addIssuesFromResult(auditIssues);
+        const errors = auditIssues.filter(d => d.severity === 'error');
+        if (errors.length > 0) {
+          await this.autoFix(errors);
+        }
       }
     } catch (err) {
       this.log('error', 'scaffold', { error: (err as Error).message, stack: (err as Error).stack });
@@ -273,14 +296,12 @@ export class ChatSession {
       type: 'template',
       templateId,
     });
-    const bridge = await this.replaceBridge(result.definition);
 
     this.definition = result.definition;
     this.bundle = buildBundleFromDefinition(result.definition);
     this.templateId = templateId;
     this.traces.addTraces(result.traces);
     this.addIssuesFromResult(result.issues);
-    this.addIssuesFromResult(bridge.consumeLoadDiagnostics());
 
     const systemMsg: ChatMessage = {
       id: this.nextMessageId(),
@@ -304,13 +325,11 @@ export class ChatSession {
       type: 'upload',
       extractedContent,
     });
-    const bridge = await this.replaceBridge(result.definition);
 
     this.definition = result.definition;
     this.bundle = buildBundleFromDefinition(result.definition);
     this.traces.addTraces(result.traces);
     this.addIssuesFromResult(result.issues);
-    this.addIssuesFromResult(bridge.consumeLoadDiagnostics());
 
     const systemMsg: ChatMessage = {
       id: this.nextMessageId(),
@@ -340,8 +359,6 @@ export class ChatSession {
       });
       this.log('received', 'regenerate', { title: result.definition.title, itemCount: result.definition.items.length });
 
-      const bridge = await this.replaceBridge(result.definition);
-
       this.definition = result.definition;
       this.bundle = buildBundleFromDefinition(result.definition);
       this.lastDiff = null;
@@ -349,9 +366,6 @@ export class ChatSession {
       this.traces.addTraces(result.traces);
       this.issues = new IssueQueue();
       this.addIssuesFromResult(result.issues);
-
-      const loadDiags = bridge.consumeLoadDiagnostics();
-      this.addIssuesFromResult(loadDiags);
 
       const systemMsg: ChatMessage = {
         id: this.nextMessageId(),
@@ -361,10 +375,14 @@ export class ChatSession {
       };
       this.messages.push(systemMsg);
 
-      // Auto-fix: if audit found errors, run refinement rounds to correct them
-      const errors = loadDiags.filter(d => d.severity === 'error');
-      if (errors.length > 0) {
-        await this.autoFix(errors);
+      // Auto-fix: if tool context is available and audit finds errors, fix them
+      if (this.toolContext) {
+        const auditIssues = await this.auditViaTools();
+        this.addIssuesFromResult(auditIssues);
+        const errors = auditIssues.filter(d => d.severity === 'error');
+        if (errors.length > 0) {
+          await this.autoFix(errors);
+        }
       }
     } catch (err) {
       this.log('error', 'regenerate', { error: (err as Error).message, stack: (err as Error).stack });
@@ -424,6 +442,9 @@ export class ChatSession {
 
   /**
    * Restore a session from serialized state.
+   *
+   * Note: The restored session has no ToolContext. The host must call
+   * `setToolContext()` before refinement can proceed.
    */
   static async fromState(state: ChatSessionState, adapter: AIAdapter): Promise<ChatSession> {
     const session = new ChatSession({ adapter, id: state.id });
@@ -439,25 +460,73 @@ export class ChatSession {
     session.debugLog = [...(state.debugLog ?? [])];
     session.messageCounter = state.messages.length;
 
-    // Recreate bridge for sessions with an existing definition
-    if (session.definition) {
-      session.bridge = await McpBridge.create(session.definition);
-    }
-
     return session;
   }
 
   /**
-   * Close any existing bridge and create a new one.
-   * Returns the new bridge so callers can consume diagnostics before assigning state.
+   * Read the current definition back from the tool context after refinement.
+   * Uses getProjectSnapshot() if available, otherwise falls back to
+   * calling formspec_describe via the tool context.
    */
-  private async replaceBridge(definition: FormDefinition): Promise<McpBridge> {
-    if (this.bridge) {
-      await this.bridge.close();
+  private async readBackDefinition(): Promise<void> {
+    if (!this.toolContext) return;
+
+    if (this.toolContext.getProjectSnapshot) {
+      const snapshot = await this.toolContext.getProjectSnapshot();
+      if (snapshot) {
+        this.definition = snapshot.definition;
+        this.bundle = buildBundleFromDefinition(snapshot.definition);
+      }
+      return;
     }
-    const bridge = await McpBridge.create(definition);
-    this.bridge = bridge;
-    return bridge;
+
+    // Fallback: call formspec_describe to get the current state
+    try {
+      const result = await this.toolContext.callTool('formspec_describe', { mode: 'summary' });
+      if (!result.isError) {
+        const parsed = JSON.parse(result.content);
+        if (parsed.definition) {
+          this.definition = parsed.definition;
+          this.bundle = buildBundleFromDefinition(parsed.definition);
+        }
+      }
+    } catch {
+      // If we can't read back, keep the existing definition
+    }
+  }
+
+  /**
+   * Run audit diagnostics via the tool context.
+   * Returns issues found in the current project state.
+   */
+  private async auditViaTools(): Promise<Omit<Issue, 'id' | 'status'>[]> {
+    if (!this.toolContext) return [];
+
+    try {
+      const result = await this.toolContext.callTool('formspec_describe', { mode: 'audit' });
+      if (result.isError) return [];
+
+      const parsed = JSON.parse(result.content);
+      // Diagnostics shape: { structural: Diagnostic[], expressions: [], extensions: [], consistency: [] }
+      const allDiags: Array<{ severity: string; code: string; message: string; path?: string }> = [
+        ...(parsed.structural ?? []),
+        ...(parsed.expressions ?? []),
+        ...(parsed.extensions ?? []),
+        ...(parsed.consistency ?? []),
+      ];
+      return allDiags
+        .filter(d => d.severity === 'error' || d.severity === 'warning')
+        .map(d => ({
+          severity: d.severity as 'error' | 'warning',
+          category: 'validation' as const,
+          title: d.code,
+          description: d.message,
+          elementPath: d.path,
+          sourceIds: [],
+        }));
+    } catch {
+      return [];
+    }
   }
 
   private addIssuesFromResult(issues: Omit<Issue, 'id' | 'status'>[]): void {
@@ -468,10 +537,12 @@ export class ChatSession {
 
   /**
    * Automatically fix errors found during audit by running refinement rounds.
-   * Uses the existing MCP tool surface — the LLM reads the diagnostics and
+   * Uses the tool context — the LLM reads the diagnostics and
    * fixes the form via tool calls, exactly like a user-initiated refinement.
    */
   private async autoFix(errors: Omit<Issue, 'id' | 'status'>[]): Promise<void> {
+    if (!this.toolContext) return;
+
     const MAX_FIX_ROUNDS = 3;
 
     for (let round = 0; round < MAX_FIX_ROUNDS; round++) {
@@ -484,14 +555,12 @@ export class ChatSession {
       this.log('sent', 'autoFix', { round: round + 1, errorCount: errors.length, errors: errorSummary });
 
       try {
-        const toolContext = await this.bridge!.getToolContext();
-        const result = await this.adapter.refineForm(this.messages, instruction, toolContext);
+        const result = await this.adapter.refineForm(this.messages, instruction, this.toolContext);
 
         this.log('received', 'autoFix', { round: round + 1, toolCalls: result.toolCalls.length, message: result.message });
 
         // Read back updated state
-        this.definition = this.bridge!.getDefinition();
-        this.bundle = this.bridge!.getBundle();
+        await this.readBackDefinition();
 
         const fixMsg: ChatMessage = {
           id: this.nextMessageId(),
@@ -504,7 +573,7 @@ export class ChatSession {
         this.notify();
 
         // Re-audit to check if errors are resolved
-        const remainingDiags = await this.bridge!.audit();
+        const remainingDiags = await this.auditViaTools();
         const remainingErrors = remainingDiags.filter(d => d.severity === 'error');
 
         if (remainingErrors.length === 0) {

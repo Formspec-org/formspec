@@ -107,6 +107,8 @@ export interface ToolCallResult {
 export interface ToolContext {
   tools: ToolDeclaration[];
   callTool(name: string, args: Record<string, unknown>): Promise<ToolCallResult>;
+  /** Get the current project state snapshot (for diff tracking after refinement). */
+  getProjectSnapshot?(): Promise<{ definition: FormDefinition } | null>;
 }
 
 /** Record of a tool call executed during refinement (for logging/traces). */
