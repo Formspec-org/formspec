@@ -146,21 +146,15 @@ All 12 passes registered and wired.
 
 ---
 
-## Milestone 6: Phase 4b — Chat Integration — PARTIAL
-
-**Goal:** Refactor `formspec-chat` to stop owning a `Project`. Make it a thin conversation orchestrator that accepts a `ToolContext` from the host. Build the integrated chat panel in studio.
-
-**Context:** Spec Section 4. Depends on Phase 2 MCP coverage (Milestone 3) being complete (it is).
+## Milestone 6: Phase 4b — Chat Integration — COMPLETE
 
 - [x] **Task 6.1: ChatSession refactor — remove McpBridge** (`954d6857`)
-
-McpBridge deleted. ChatSession now accepts ToolContext from host. Bundle tests updated (`c82c4e55`, `74dbb0f9`).
-
 - [x] **Task 6.2: Adapter interface update** (`954d6857`)
+- [x] **Task 6.3: Studio chat panel + canvas layout** (`57675e84`)
+- [x] **Task 6.4: Inline canvas AI actions** (`347fb90b`)
+- [x] **Task 6.5: Scaffold-as-changeset flow** (`58c95a68`)
 
-Covered as part of the McpBridge removal.
-
-### Task 6.3: Studio chat panel + canvas layout (REMAINING)
+### Task 6.3: Studio chat panel + canvas layout (DONE)
 
 **Agents:** `formspec-craftsman` implements. `formspec-scout` reviews. `spec-expert` consulted if questions arise about what context the chat panel should expose to the AI.
 
@@ -254,17 +248,14 @@ feat(studio): load AI scaffold as reviewable changeset (6.5)
 
 ---
 
-## Milestone 7: Phase 4c — Convergence UI — PARTIAL
-
-**Goal:** Build the changeset merge review UI in the chat panel. This is where ProposalManager (Track A) meets chat integration (Track B).
-
-**Context:** Spec Section 4, "Merge UX: The Git Model." Depends on Milestones 5 (dependency analysis — done) and 6 (chat panel — Task 6.3 must be done first).
+## Milestone 7: Phase 4c — Convergence UI — COMPLETE
 
 - [x] **Task 7.1: Changeset review component** (`16c7ba8f`)
+- [x] **Task 7.2: Wire review UI to ProposalManager** (`57675e84`)
+- [x] **Task 7.3: Conflict diagnostics display** (`57675e84`)
+- [x] **Task 7.4: E2E test harness + tests** (12/12 pass, harness already existed)
 
-`ChangesetReview.tsx` and `DependencyGroup.tsx` created with fixture-driven rendering.
-
-### Task 7.2: Wire review UI to ProposalManager (REMAINING)
+### Task 7.2: Wire review UI to ProposalManager (DONE)
 
 **Agents:** `formspec-craftsman` implements. `formspec-scout` reviews.
 
@@ -353,31 +344,18 @@ test(e2e): create changeset-review harness and verify E2E tests pass (7.4)
 
 ---
 
-## Execution Order and Dependencies
+## Completion Summary
 
-```
-REMAINING WORK ONLY:
+**All milestones complete.** 7 milestones, 30+ tasks, all tests passing.
 
-Task 2.2 (E3 fel-catalog cleanup)     ← independent, can run anytime
-    │
-    │   Task 6.3 (ChatPanel)           ← CRITICAL PATH, blocks 7.2-7.4
-    │       │
-    │       ├── Task 7.2 (wire review to ProposalManager)
-    │       │       │
-    │       │       ├── Task 7.3 (conflict diagnostics)
-    │       │       │
-    │       │       └── Task 7.4 (E2E harness + tests)
-    │       │
-    │       ├── Task 6.4 (inline AI actions)  ← independent of 7.x
-    │       │
-    │       └── Task 6.5 (scaffold-as-changeset) ← needs 7.2 for review UI
-    │
-    └── (can run in parallel with 6.3)
-```
-
-**Critical path:** 6.3 → 7.2 → 7.3 / 7.4
-
-**Parallelism:** Task 2.2 is fully independent. Task 6.4 is independent of 7.x. Tasks 7.3 and 7.4 can run in parallel after 7.2.
+Final test baselines (2026-03-25):
+| Package | Tests | Status |
+|---------|-------|--------|
+| formspec-core | 676 | All pass |
+| formspec-studio-core | 552 | All pass |
+| formspec-mcp | 463 | All pass |
+| Rust workspace | 651 | All pass |
+| E2E changeset-review | 12 | All pass |
 
 ---
 
