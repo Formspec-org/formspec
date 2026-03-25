@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/fel-core",
+    "crates/formspec-changeset",
     "crates/formspec-core",
     "crates/formspec-eval",
     "crates/formspec-lint",

@@ -5,6 +5,7 @@
 //! `formspec-eval`, and (feature `lint`) `formspec-lint`.
 //!
 //! ## Layout
+//! - `changeset` — changeset dependency analysis (key extraction, connected components)
 //! - `fel` — FEL eval, tokenize, rewrite, path utilities
 //! - `document` — `document-api`: detect type, schema plan; `lint`: lintDocument*
 //! - `evaluate` — batch definition evaluation, screener (always in runtime WASM)
@@ -15,6 +16,7 @@
 //! - `fel` — core eval + analysis + path utils always; `fel-authoring`: tokenize/parse/print/rewrites/catalog
 //! - `wasm_tests` — native `cargo test` coverage (`#[cfg(test)]` only)
 
+mod changeset;
 #[cfg(feature = "changelog-api")]
 mod changelog;
 mod definition;

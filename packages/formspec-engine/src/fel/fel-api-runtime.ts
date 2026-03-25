@@ -5,6 +5,7 @@ import type { FELAnalysis } from '../interfaces.js';
 export type { FELAnalysis } from '../interfaces.js';
 import {
     wasmAnalyzeFEL,
+    wasmComputeDependencyGroups,
     wasmEvaluateDefinition,
     wasmGetFELDependencies,
     wasmIsValidFelIdentifier,
@@ -76,3 +77,6 @@ export const isValidFELIdentifier = wasmIsValidFelIdentifier;
 
 /** Sanitize a string into a valid FEL identifier (strips invalid chars, escapes keywords). */
 export const sanitizeFELIdentifier = wasmSanitizeFelIdentifier;
+
+/** Compute dependency groups from recorded changeset entries (delegates to Rust/WASM). */
+export const computeDependencyGroups = wasmComputeDependencyGroups;

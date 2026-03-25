@@ -245,3 +245,9 @@ export function wasmIsValidFelIdentifier(s: string): boolean {
 export function wasmSanitizeFelIdentifier(s: string): string {
     return wasm().sanitizeFelIdentifier(s);
 }
+
+/** Compute dependency groups from recorded changeset entries (JSON round-trip to Rust). */
+export function wasmComputeDependencyGroups(entriesJson: string): Array<{ entries: number[]; reason: string }> {
+    const resultJson = wasm().computeDependencyGroups(entriesJson);
+    return JSON.parse(resultJson);
+}
