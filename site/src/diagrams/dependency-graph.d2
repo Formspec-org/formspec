@@ -28,10 +28,33 @@ spec: {
     style.font-size: 12
     style.font-color: "#5a6175"
   }
+  s4: "Companions (references, ontology, locale)" {
+    shape: text
+    style.font-size: 12
+    style.font-color: "#5a6175"
+  }
+}
+
+rust: {
+  label: Rust Shared Kernel
+  style: {
+    fill: "#fdf4f0"
+    stroke: "#c47a5a"
+    border-radius: 10
+    font-size: 14
+    bold: true
+  }
+
+  grid-rows: 1
+  grid-gap: 16
+
+  s1: "FEL parser & evaluator" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
+  s2: "Linter & validator" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
+  s3: "Assembler & mapping" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
 }
 
 ts: {
-  label: TypeScript Engine
+  label: TypeScript Engine (via WASM)
   style: {
     fill: "#ffffff"
     stroke: "#c4c9d4"
@@ -44,12 +67,12 @@ ts: {
   grid-gap: 16
 
   s1: "Reactive signals" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
-  s2: "FEL compiler" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
+  s2: "WASM bridge" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
   s3: "Live validation" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
 }
 
 py: {
-  label: Python Implementation
+  label: Python Implementation (via PyO3)
   style: {
     fill: "#ffffff"
     stroke: "#c4c9d4"
@@ -62,8 +85,8 @@ py: {
   grid-gap: 16
 
   s1: "CLI & server tooling" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
-  s2: "FEL compiler" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
-  s3: "Static linting & mapping" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
+  s2: "PyO3 bridge" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
+  s3: "Format adapters" {shape: text; style.font-size: 12; style.font-color: "#8b95b0"}
 }
 
 planner: {
@@ -153,8 +176,17 @@ llm: LLM {
   style.font-size: 12
 }
 
-spec -> ts
-spec -> py
+spec -> rust
+rust -> ts: WASM {
+  style.font-size: 10
+  style.font-color: "#c47a5a"
+  style.italic: true
+}
+rust -> py: PyO3 {
+  style.font-size: 10
+  style.font-color: "#c47a5a"
+  style.italic: true
+}
 
 ts -> planner: rendering {
   style.font-size: 10

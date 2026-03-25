@@ -29,7 +29,7 @@ const gh = "https://github.com/focusconsulting/formspec";
         Presentation layers (Theme, Components) never affect data collection, validation, or behavioral semantics — they are swappable overlays on an unchanging behavioral core.
       </p>
 
-      <div class="tier-stack" role="img" aria-label="Document model: Definition, Theme, Components, Sidecar Specs, and Companion Specs">
+      <div class="tier-stack" role="img" aria-label="Document model: Definition, Theme Sidecar, Component Sidecar, and Companion Specs">
         <div class="tier-box tier-box--primary">
           <div class="tier-label">Definition <span class="tier-tag">Core</span></div>
           <div class="tier-details">
@@ -50,7 +50,7 @@ const gh = "https://github.com/focusconsulting/formspec";
           <div class="tier-label">Component Sidecar <span class="tier-tag">Interaction</span></div>
           <div class="tier-details">
             <span>Explicit component tree, slot binding, responsive breakpoints</span>
-            <span>36 built-in components + custom templates</span>
+            <span>34 built-in components + custom templates</span>
           </div>
         </div>
         <div class="tier-box tier-box--muted">
@@ -88,7 +88,7 @@ const gh = "https://github.com/focusconsulting/formspec";
       <div class="diagram-wrap">
         <img
           src="/diagrams/dependency-graph.svg"
-          alt="Dependency graph: Specification at top, TypeScript and Python implementations in the middle, Layout Planner and Studio Core below, with renderers and authoring tools at the bottom"
+          alt="Dependency graph: Specification at top, Rust shared kernel in the middle exposing WASM to TypeScript and PyO3 to Python, Layout Planner and Studio Core below, with renderers and authoring tools at the bottom"
           class="diagram-svg"
           loading="lazy"
         />
@@ -231,7 +231,7 @@ const gh = "https://github.com/focusconsulting/formspec";
               <td><code>registry</code>, <code>changelog</code></td>
             </tr>
             <tr>
-              <td>Sidecars</td>
+              <td>Companions</td>
               <td>
                 <a href={`${gh}/blob/main/specs/core/references-spec.md`} target="_blank" rel="noopener noreferrer">References</a>,
                 <a href={`${gh}/blob/main/specs/ontology/ontology-spec.md`} target="_blank" rel="noopener noreferrer">Ontology</a>,
@@ -282,7 +282,7 @@ const gh = "https://github.com/focusconsulting/formspec";
             <tr>
               <td><a href={`${gh}/tree/main/packages/formspec-webcomponent`} target="_blank" rel="noopener noreferrer"><code>formspec-webcomponent</code></a></td>
               <td class="role-label">Rendering</td>
-              <td><code>&lt;formspec-render&gt;</code> — built-in browser renderer, component registry, 36 built-in components</td>
+              <td><code>&lt;formspec-render&gt;</code> — built-in browser renderer, component registry, 34 built-in components</td>
             </tr>
             <tr>
               <td><a href={`${gh}/tree/main/packages/formspec-adapters`} target="_blank" rel="noopener noreferrer"><code>formspec-adapters</code></a></td>
