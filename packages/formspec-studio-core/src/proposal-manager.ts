@@ -225,6 +225,8 @@ export class ProposalManager {
       // Accumulate into the bracket's pending entry
       this._pendingAiEntry.commands.push(...clonedCommands);
       this._pendingAiEntry.affectedPaths.push(...affectedPaths);
+      // F3: Capture evaluated values for =-prefix expressions (initialValue, default)
+      scanForExpressionValues(clonedCommands, this._pendingAiEntry);
     } else {
       // User overlay entry — auto-generate summary
       const entry: ChangeEntry = {
@@ -505,6 +507,49 @@ function extractAffectedPaths(results: Readonly<CommandResult[]>): string[] {
     if (r.newPath) paths.push(r.newPath);
   }
   return paths;
+}
+
+/**
+ * Scan commands for =-prefix expression values (initialValue, default) and
+ * record them in the entry's capturedValues so replay is deterministic.
+ */
+function scanForExpressionValues(
+  commands: AnyCommand[][],
+  entry: ChangeEntry,
+): void {
+  for (const phase of commands) {
+    for (const cmd of phase) {
+      const p = cmd.payload as Record<string, unknown> | undefined;
+      if (!p) continue;
+      // definition.setItemProperty with initialValue or default that starts with =
+      if (
+        cmd.type === 'definition.setItemProperty' &&
+        typeof p.property === 'string' &&
+        (p.property === 'initialValue' || p.property === 'default') &&
+        typeof p.value === 'string' &&
+        p.value.startsWith('=')
+      ) {
+        const path = p.path as string;
+        if (path) {
+          entry.capturedValues ??= {};
+          entry.capturedValues[path] = p.value;
+        }
+      }
+      // definition.setBind with calculate/initialValue/default that starts with =
+      if (cmd.type === 'definition.setBind' && p.properties && typeof p.properties === 'object') {
+        const props = p.properties as Record<string, unknown>;
+        const path = p.path as string;
+        for (const key of ['calculate', 'initialValue', 'default'] as const) {
+          if (typeof props[key] === 'string' && (props[key] as string).startsWith('=')) {
+            if (path) {
+              entry.capturedValues ??= {};
+              entry.capturedValues[path] = props[key];
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 /** Generate a summary for user overlay entries from command types. */
