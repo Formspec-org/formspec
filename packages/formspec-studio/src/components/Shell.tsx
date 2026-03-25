@@ -191,8 +191,13 @@ export function Shell({ colorScheme }: ShellProps = {}) {
 
   useEffect(() => {
     const onOpenSettings = () => setShowSettings(true);
+    const onOpenAppSettings = () => setShowAppSettings(true);
     window.addEventListener('formspec:open-settings', onOpenSettings);
-    return () => window.removeEventListener('formspec:open-settings', onOpenSettings);
+    window.addEventListener('formspec:open-app-settings', onOpenAppSettings);
+    return () => {
+      window.removeEventListener('formspec:open-settings', onOpenSettings);
+      window.removeEventListener('formspec:open-app-settings', onOpenAppSettings);
+    };
   }, []);
 
   useEffect(() => {

@@ -1,10 +1,11 @@
 /** @filedesc Integrated studio chat panel — shares the studio Project, routes AI through MCP, shows changeset review. */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChatSession, MockAdapter, type ChatMessage, type ToolContext } from 'formspec-chat';
+import { ChatSession, GeminiAdapter, type ChatMessage, type ToolContext } from 'formspec-chat';
 import { type Project, type Changeset, type MergeResult, type ProposalManager } from 'formspec-studio-core';
 import { ProjectRegistry } from 'formspec-mcp/registry';
 import { createToolDispatch } from 'formspec-mcp/dispatch';
 import { ChangesetReview, type ChangesetReviewData } from './ChangesetReview.js';
+import { getSavedProviderConfig } from './AppSettingsDialog.js';
 
 // ── Icons ──────────────────────────────────────────────────────────
 
@@ -89,12 +90,20 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
   const [changeset, setChangeset] = useState<Readonly<Changeset> | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticEntry[]>([]);
   const [mergeMessage, setMergeMessage] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState(() => !!getSavedProviderConfig()?.apiKey);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<ChatSession | null>(null);
 
   const [readyToScaffold, setReadyToScaffold] = useState(false);
   const [scaffolding, setScaffolding] = useState(false);
+
+  // Re-check API key when panel gains focus (user may have just saved one)
+  useEffect(() => {
+    const check = () => setHasApiKey(!!getSavedProviderConfig()?.apiKey);
+    window.addEventListener('focus', check);
+    return () => window.removeEventListener('focus', check);
+  }, []);
 
   // Create the in-process tool context once
   const { toolContext, proposalManager } = useMemo(() => {
@@ -116,13 +125,16 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
     return { toolContext: ctx, proposalManager: pm };
   }, [project]);
 
-  // Create ChatSession lazily
+  // Create ChatSession when API key becomes available
   useEffect(() => {
-    if (sessionRef.current) return;
-    const session = new ChatSession({ adapter: new MockAdapter() });
+    if (sessionRef.current || !hasApiKey) return;
+    const config = getSavedProviderConfig();
+    if (!config?.apiKey) return;
+    const adapter = new GeminiAdapter({ apiKey: config.apiKey });
+    const session = new ChatSession({ adapter });
     session.setToolContext(toolContext);
     sessionRef.current = session;
-  }, [toolContext]);
+  }, [toolContext, hasApiKey]);
 
   // Sync changeset state from ProposalManager
   useEffect(() => {
@@ -375,9 +387,28 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
             )}
           </div>
         ) : (
-          /* ── Chat messages ──────────────────────────────── */
+          /* ── Chat messages (or setup prompt) ──────────────── */
           <div className="px-4 py-4 space-y-1">
-            {messages.length === 0 && !sending && (
+            {!hasApiKey ? (
+              <div className="flex flex-col items-center justify-center min-h-[200px] gap-4 text-center">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber/10 text-amber">
+                  <IconWarning />
+                </div>
+                <div className="space-y-1.5 max-w-[260px]">
+                  <p className="text-[14px] font-semibold text-ink">API key required</p>
+                  <p className="text-[13px] text-muted leading-relaxed">
+                    Add your AI provider API key in App Settings to use the assistant.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('formspec:open-app-settings'))}
+                  className="px-4 py-2 text-[13px] font-semibold rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
+                >
+                  Open App Settings
+                </button>
+              </div>
+            ) : messages.length === 0 && !sending ? (
               <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-center">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent/10 text-accent">
                   <IconSparkle />
@@ -386,7 +417,7 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
                   Ask the AI to modify your form — add fields, set validation, change layout.
                 </p>
               </div>
-            )}
+            ) : null}
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -449,36 +480,38 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
       )}
 
       {/* ── Input bar ───────────────────────────────────── */}
-      <div className="px-4 pb-3 pt-2 border-t border-border shrink-0">
-        <div className="flex items-end gap-1 border border-border rounded-xl px-2 py-1.5 bg-bg-default focus-within:border-accent/50 transition-colors">
-          <textarea
-            ref={inputRef}
-            rows={1}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={sending}
-            placeholder="Ask the AI to modify your form..."
-            className="flex-1 resize-none bg-transparent text-[13px] leading-relaxed outline-none disabled:opacity-40 min-h-[32px] py-1 px-1"
-          />
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={sending || !inputValue.trim()}
-            aria-label="Send message"
-            className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
-              inputValue.trim() && !sending
-                ? 'bg-accent text-white hover:bg-accent/90'
-                : 'bg-subtle text-muted'
-            }`}
-          >
-            <IconArrowUp />
-          </button>
+      {hasApiKey && (
+        <div className="px-4 pb-3 pt-2 border-t border-border shrink-0">
+          <div className="flex items-end gap-1 border border-border rounded-xl px-2 py-1.5 bg-bg-default focus-within:border-accent/50 transition-colors">
+            <textarea
+              ref={inputRef}
+              rows={1}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={sending}
+              placeholder="Ask the AI to modify your form..."
+              className="flex-1 resize-none bg-transparent text-[13px] leading-relaxed outline-none disabled:opacity-40 min-h-[32px] py-1 px-1"
+            />
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sending || !inputValue.trim()}
+              aria-label="Send message"
+              className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                inputValue.trim() && !sending
+                  ? 'bg-accent text-white hover:bg-accent/90'
+                  : 'bg-subtle text-muted'
+              }`}
+            >
+              <IconArrowUp />
+            </button>
+          </div>
+          <p className="text-center text-[10px] text-muted mt-1 select-none">
+            Enter to send &middot; Shift+Enter for new line
+          </p>
         </div>
-        <p className="text-center text-[10px] text-muted mt-1 select-none">
-          Enter to send &middot; Shift+Enter for new line
-        </p>
-      </div>
+      )}
     </div>
   );
 }
