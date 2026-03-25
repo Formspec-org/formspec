@@ -87,8 +87,8 @@ This specification defines:
   locale chain from regional to base to inline defaults.
 - The **`locale()` FEL function** that exposes the active locale code
   to FEL expressions in the Definition.
-- The **`plural()` FEL function** for expressing common pluralization
-  patterns without ICU/CLDR data dependencies.
+- The use of **`pluralCategory()`** (Core §3.5) for expressing
+  pluralization patterns using CLDR plural categories.
 
 This specification does NOT define:
 
@@ -647,7 +647,7 @@ expression access to:
 - Field values via `$` references (e.g., `$budget`, `$projectName`)
 - All FEL stdlib functions
 - The `locale()` function (§5.1)
-- The `plural()` function (§5.2)
+- The `pluralCategory()` function (core spec §3.5)
 
 Examples:
 
@@ -655,7 +655,7 @@ Examples:
 {
   "itemCount.label": "Nombre d'articles : {{$itemCount}}",
   "budget.hint": "Maximum autorisé : {{formatNumber($maxBudget)}} $",
-  "lineItems.label": "Poste{{plural($count, '', 's')}}"
+  "lineItems.label": "{{$count}} {{if(pluralCategory($count) = 'one', 'poste', 'postes')}}"
 }
 ```
 
@@ -800,11 +800,16 @@ Documents consulted during string resolution. The `setLocale()` call
 
 ## 5. FEL Functions
 
-This specification introduces four FEL functions. `locale()` and
-`plural()` are part of the **Locale Core** conformance level (§10)
-and MUST be implemented by all conformant locale processors.
-`formatNumber()` and `formatDate()` are part of the **Locale Extended**
-conformance level and are OPTIONAL.
+This specification introduces three FEL functions. `locale()` is part
+of the **Locale Core** conformance level (§10) and MUST be implemented
+by all conformant locale processors. `formatNumber()` and `formatDate()`
+are part of the **Locale Extended** conformance level and are OPTIONAL.
+
+The core FEL function `pluralCategory()` (core spec §3.5) returns the
+CLDR plural category (`zero`, `one`, `two`, `few`, `many`, `other`)
+for a given number and is available in all FEL evaluation contexts
+including locale string interpolation. It replaces the need for a
+locale-specific pluralization function.
 
 These functions are registered as locale-tier extensions to the FEL
 stdlib. They MUST NOT collide with core FEL built-in function names.
@@ -841,36 +846,34 @@ This enables locale-aware logic in the Definition itself:
 }
 ```
 
-### 5.2 `plural(count, singular, plural)`
+### 5.2 Pluralization via `pluralCategory()`
 
-Returns `singular` or `plural` based on `count`.
+Pluralization in locale strings uses the core FEL function
+`pluralCategory(count)` (core spec §3.5), which returns the CLDR
+plural category for the active locale. The six possible return values
+are: `zero`, `one`, `two`, `few`, `many`, `other`.
 
-**Signature:** `plural(count: number, singular: string, plural: string) → string`
-
-- If `count` is `null`, returns `null` (standard FEL null propagation,
-  core spec §3.8).
-- If `count` equals 1 (integer) or 1.0 (decimal), returns `singular`.
-- Otherwise (including 0, negative numbers, and non-integer values
-  like 1.5), returns `plural`.
-
-This covers the common two-form pluralization pattern used by English,
-French, Spanish, Portuguese, German, and many other languages.
+Authors combine `pluralCategory()` with `if()` to select the
+appropriate word form:
 
 ```json
 {
-  "lineItems.label": "{{$count}} ligne{{plural($count, '', 's')}}"
+  "lineItems.label": "{{$count}} {{if(pluralCategory($count) = 'one', 'ligne', 'lignes')}}"
 }
 ```
 
 For languages with more than two plural forms (e.g., Arabic with six
-forms, or Polish with three), authors MUST use FEL conditional
-expressions:
+forms, or Polish with three), authors chain conditions:
 
 ```json
 {
-  "items.label": "{{$count}} {{$count = 0 ? 'elementów' : $count = 1 ? 'element' : ($count % 10 >= 2 and $count % 10 <= 4 and ($count % 100 < 10 or $count % 100 >= 20)) ? 'elementy' : 'elementów'}}"
+  "items.label": "{{$count}} {{if(pluralCategory($count) = 'one', 'element', if(pluralCategory($count) = 'few', 'elementy', 'elementów'))}}"
 }
 ```
+
+Because `pluralCategory()` uses CLDR data, it correctly handles all
+languages — including those where the `one` category does not
+correspond to the number 1 (e.g., French treats 0 as `one`).
 
 ### 5.3 `formatNumber(value, locale?)`
 
@@ -1123,7 +1126,7 @@ This specification defines two conformance levels:
 
 | Level | Name | Description |
 |-------|------|-------------|
-| 1 | **Locale Core** | Minimum viable locale support: cascade resolution, interpolation, `locale()`, `plural()`. |
+| 1 | **Locale Core** | Minimum viable locale support: cascade resolution, interpolation, `locale()`. |
 | 2 | **Locale Extended** | Full locale support: adds `formatNumber()`, `formatDate()`, cross-reference validation, reactive resolution. |
 
 ### 10.2 Locale Core Conformance
@@ -1134,8 +1137,7 @@ A **Locale Core** conformant processor MUST:
 2. Implement the fallback cascade as defined in §4.
 3. Evaluate FEL interpolation expressions as defined in §3.3.
 4. Implement the `locale()` FEL function (§5.1).
-5. Implement the `plural()` FEL function (§5.2).
-6. Provide the capabilities defined in §6 (load, set active locale,
+5. Provide the capabilities defined in §6 (load, set active locale,
    resolve string, query active locale).
 
 ### 10.3 Locale Extended Conformance
@@ -1206,7 +1208,7 @@ demonstrating all key patterns defined in this specification.
     "$shape.budget-balance.message": "Le total du budget doit correspondre au financement demandé",
 
     // FEL interpolation (§3.3)
-    "totalItems.label": "Total : {{$itemCount}} article{{plural($itemCount, '', 's')}}",
+    "totalItems.label": "Total : {{$itemCount}} {{if(pluralCategory($itemCount) = 'one', 'article', 'articles')}}",
     "budgetRemaining.hint": "Il vous reste {{formatNumber($remaining)}} $",
 
     // Repeat group with @index (§8.4)

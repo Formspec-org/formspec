@@ -147,7 +147,7 @@
           "$component.submitBtn.label": "Soumettre la demande",
           "$component.mainTabs.tabLabels[0]": "Personnel",
           "lineItems.label": "Poste {{@index}}",
-          "totalItems.label": "Total : {{$itemCount}} article{{plural($itemCount, '', 's')}}"
+          "totalItems.label": "Total : {{$itemCount}} {{if(pluralCategory($itemCount) = 'one', 'article', 'articles')}}"
         }
       ],
       "x-lm": {

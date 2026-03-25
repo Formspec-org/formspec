@@ -162,15 +162,15 @@ Locale strings can embed live expressions using `{{...}}` delimiters. These use 
 
 There is one expression language across the entire system. The same `$remaining` reference in a validation rule is the same reference in a localized hint. No parallel systems to wire together, no `{0}` placeholders that a developer must map to the right variable.
 
-For pluralization, a built-in `plural()` function handles languages where words have two forms — singular and plural — which covers English, French, Spanish, German, Portuguese, and many others:
+For pluralization, the core `pluralCategory()` function returns the CLDR plural category (`one`, `two`, `few`, `many`, `other`) for any number in any language. Authors combine it with `if()` to select the right word form:
 
 ```json
 {
-  "totalItems.label": "{{$count}} article{{plural($count, '', 's')}}"
+  "totalItems.label": "{{$count}} {{if(pluralCategory($count) = 'one', 'article', 'articles')}}"
 }
 ```
 
-Languages with more complex plural rules (Arabic has six forms, Polish has three) require more involved expressions. This is a known limitation we discuss below.
+Because `pluralCategory()` uses CLDR data, this works correctly for all languages — including those with more than two plural forms (Arabic has six, Polish has three). Authors simply chain additional conditions.
 
 ## Version compatibility
 
@@ -203,7 +203,7 @@ The Locale Document maps form strings to their translations. That's its entire s
 
 ## Known limitations
 
-**Pluralization beyond two forms.** `plural()` handles singular vs. plural — enough for English, French, Spanish, German, Portuguese, and many others. Languages with three or more plural forms (Polish, Arabic, Russian, Welsh) require handwritten FEL expressions. A translator doesn't write those — a developer does. The industry standard (ICU MessageFormat with CLDR plural rules) handles this comprehensively, but embedding ICU syntax inside FEL interpolation would create two competing expression systems in the same string. We chose one expression language and accepted the burden for complex-plural languages. If the language matrix includes Central/Eastern European or MENA languages, plural strings need developer involvement.
+**Pluralization verbosity.** `pluralCategory()` returns the correct CLDR plural category for any language, but authors must wire it to the right word form using `if()` chains. For two-form languages (English, French, Spanish), this is concise: `if(pluralCategory($count) = 'one', 'item', 'items')`. For languages with three or more forms (Polish, Arabic, Russian, Welsh), the `if()` chains get longer. The industry standard (ICU MessageFormat) has a dedicated `{count, plural, ...}` syntax that’s more compact for this case. We chose one expression language and accepted the verbosity for complex-plural languages.
 
 **Translation tooling integration.** The flat JSON format imports into Crowdin, Lokalise, and Phrase, but those tools don't natively understand the `{{...}}` expression delimiters or the `@context` suffix convention. Without custom configuration, a translator's editing environment may expose expressions as editable text. Production deployments should configure their TMS to protect `{{...}}` blocks and set up validation that checks expressions survive the round-trip intact. The spec defines the format; the TMS integration requires tooling work.
 
