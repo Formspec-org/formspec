@@ -103,6 +103,20 @@ describe('addField', () => {
     expect(project.fieldPaths()).toContain('contact.email');
   });
 
+  it('summary includes full canonical path for nested field', () => {
+    const project = createProject();
+    project.addGroup('demographics', 'Demographics');
+    const result = project.addField('demographics.age', 'Age', 'integer');
+    expect(result.summary).toContain('demographics.age');
+  });
+
+  it('summary includes full path for field with parentPath', () => {
+    const project = createProject();
+    project.addGroup('contact', 'Contact');
+    const result = project.addField('phone', 'Phone', 'phone', { parentPath: 'contact' });
+    expect(result.summary).toContain('contact.phone');
+  });
+
   it('adds field with explicit parentPath in props', () => {
     const project = createProject();
     project.addGroup('contact', 'Contact');
@@ -412,6 +426,17 @@ describe('calculate', () => {
       expect((e as HelperError).code).toBe('INVALID_FEL');
     }
   });
+
+  it('throws INVALID_FEL for unknown function (semantic pre-validation)', () => {
+    const project = createProject();
+    project.addField('f', 'F', 'integer');
+    // len() is not a built-in FEL function
+    expect(() => project.calculate('f', 'len(f)')).toThrow(HelperError);
+    try { project.calculate('f', 'len(f)'); } catch (e) {
+      expect((e as HelperError).code).toBe('INVALID_FEL');
+      expect((e as HelperError).message).toContain('len');
+    }
+  });
 });
 
 describe('branch', () => {
@@ -584,6 +609,93 @@ describe('branch', () => {
     // Still OR-combines the new expressions
     expect(project.bindFor('f')?.relevant).toBe("type = 'a' or type = 'b'");
   });
+
+  it('mode "condition" uses raw FEL expression from condition property', () => {
+    const project = createProject();
+    project.addField('score', 'Score', 'integer');
+    project.addField('high_score_details', 'Details', 'text');
+
+    project.branch('score', [
+      { mode: 'condition', condition: 'score > 90', show: 'high_score_details' },
+    ]);
+
+    expect(project.bindFor('high_score_details')?.relevant).toBe('score > 90');
+  });
+
+  it('mode "condition" validates FEL expression', () => {
+    const project = createProject();
+    project.addField('score', 'Score', 'integer');
+    project.addField('f', 'F', 'text');
+
+    expect(() => project.branch('score', [
+      { mode: 'condition', condition: '!!! bad', show: 'f' },
+    ])).toThrow(HelperError);
+  });
+
+  it('mode "condition" throws when condition is missing', () => {
+    const project = createProject();
+    project.addField('score', 'Score', 'integer');
+    project.addField('f', 'F', 'text');
+
+    expect(() => project.branch('score', [
+      { mode: 'condition', show: 'f' } as any,
+    ])).toThrow(HelperError);
+  });
+
+  it('mode "condition" works in otherwise negation', () => {
+    const project = createProject();
+    project.addField('score', 'Score', 'integer');
+    project.addField('high', 'High', 'text');
+    project.addField('low', 'Low', 'text');
+
+    project.branch('score', [
+      { mode: 'condition', condition: 'score > 90', show: 'high' },
+    ], 'low');
+
+    expect(project.bindFor('high')?.relevant).toBe('score > 90');
+    expect(project.bindFor('low')?.relevant).toBe('not(score > 90)');
+  });
+
+  it('branches on a variable with @ prefix', () => {
+    const project = createProject();
+    project.addField('f1', 'F1', 'text');
+    project.addField('f2', 'F2', 'text');
+    project.addVariable('mode', "'advanced'");
+
+    project.branch('@mode', [
+      { when: 'advanced', show: 'f1' },
+      { when: 'basic', show: 'f2' },
+    ]);
+
+    expect(project.bindFor('f1')?.relevant).toBe("@mode = 'advanced'");
+    expect(project.bindFor('f2')?.relevant).toBe("@mode = 'basic'");
+  });
+
+  it('branches on a variable name without @ prefix (auto-detected)', () => {
+    const project = createProject();
+    project.addField('f', 'F', 'text');
+    project.addVariable('tier', "'gold'");
+
+    project.branch('tier', [
+      { when: 'gold', show: 'f' },
+    ]);
+
+    expect(project.bindFor('f')?.relevant).toBe("@tier = 'gold'");
+  });
+
+  it('throws VARIABLE_NOT_FOUND for unknown @variable', () => {
+    const project = createProject();
+    project.addField('f', 'F', 'text');
+
+    expect(() => project.branch('@nonexistent', [
+      { when: 'x', show: 'f' },
+    ])).toThrow(HelperError);
+    try {
+      project.branch('@nonexistent', [{ when: 'x', show: 'f' }]);
+    } catch (e) {
+      expect((e as HelperError).code).toBe('VARIABLE_NOT_FOUND');
+    }
+  });
 });
 
 describe('addValidation', () => {
@@ -605,6 +717,23 @@ describe('addValidation', () => {
       expect((e as HelperError).code).toBe('INVALID_FEL');
     }
   });
+
+  it('emits DUPLICATE_VALIDATION warning when field already has bind constraint', () => {
+    const project = createProject();
+    project.addField('email', 'Email', 'email');
+    // email type auto-injects a bind constraint via constraintExpr
+    expect(project.bindFor('email')?.constraint).toBeDefined();
+
+    const result = project.addValidation('email', "matches($email, '.*@.*')", 'Custom email check');
+    expect(result.warnings?.some(w => w.code === 'DUPLICATE_VALIDATION')).toBe(true);
+  });
+
+  it('does not emit DUPLICATE_VALIDATION when field has no bind constraint', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    const result = project.addValidation('name', "$name != ''", 'Name required');
+    expect(result.warnings?.some(w => w.code === 'DUPLICATE_VALIDATION')).toBeFalsy();
+  });
 });
 
 describe('removeValidation', () => {
@@ -620,6 +749,44 @@ describe('removeValidation', () => {
     project.removeValidation(shapeId);
     const shapesAfter = project.definition.shapes;
     expect(shapesAfter?.some((s: any) => s.id === shapeId)).toBe(false);
+  });
+
+  it('removes bind constraint when target is a field path', () => {
+    const project = createProject();
+    project.addField('email', 'Email', 'email');
+    // email type auto-injects a bind constraint
+    expect(project.bindFor('email')?.constraint).toBeDefined();
+
+    project.removeValidation('email');
+    const bind = project.bindFor('email');
+    // constraint and constraintMessage should both be cleared
+    expect(bind?.constraint).toBeUndefined();
+    expect(bind?.constraintMessage).toBeUndefined();
+  });
+
+  it('clears bind constraint set via updateItem', () => {
+    const project = createProject();
+    project.addField('age', 'Age', 'integer');
+    project.updateItem('age', { constraint: 'age > 0', constraintMessage: 'Must be positive' });
+    expect(project.bindFor('age')?.constraint).toBe('age > 0');
+
+    project.removeValidation('age');
+    expect(project.bindFor('age')?.constraint).toBeUndefined();
+    expect(project.bindFor('age')?.constraintMessage).toBeUndefined();
+  });
+
+  it('removes both shape and bind constraint when both exist on same target', () => {
+    const project = createProject();
+    project.addField('score', 'Score', 'integer');
+    project.updateItem('score', { constraint: 'score > 0' });
+    const shapeResult = project.addValidation('score', 'score < 100', 'Must be under 100');
+
+    project.removeValidation('score');
+    // Bind constraint cleared
+    expect(project.bindFor('score')?.constraint).toBeUndefined();
+    // Shape targeting this field also removed
+    const shapes = project.definition.shapes ?? [];
+    expect(shapes.some((s: any) => s.id === shapeResult.createdId)).toBe(false);
   });
 });
 

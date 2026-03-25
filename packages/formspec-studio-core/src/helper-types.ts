@@ -78,9 +78,12 @@ export interface RepeatProps {
 
 /** Branch path — one arm of a conditional branch */
 export interface BranchPath {
-  when: string | number | boolean;
+  /** Value to match against. Required for 'equals'/'contains' modes, optional for 'condition' mode. */
+  when?: string | number | boolean;
   show: string | string[];
-  mode?: 'equals' | 'contains';
+  mode?: 'equals' | 'contains' | 'condition';
+  /** Raw FEL expression — used when mode is 'condition' (escape hatch for advanced users). */
+  condition?: string;
 }
 
 /** Layout arrangement for applyLayout */

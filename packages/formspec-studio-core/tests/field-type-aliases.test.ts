@@ -6,8 +6,10 @@ import {
   widgetHintFor,
   isTextareaWidget,
   _WIDGET_ALIAS_MAP as WIDGET_ALIAS_MAP,
+  _FIELD_TYPE_MAP as FIELD_TYPE_MAP,
 } from '../src/field-type-aliases.js';
 import { createProject } from '../src/project.js';
+import { analyzeFEL } from 'formspec-engine/fel-runtime';
 
 // ── resolveWidget: spec widgetHint coverage ─────────────────────────
 
@@ -246,6 +248,26 @@ describe('addField — dropdown widget', () => {
 });
 
 // ── WIDGET_ALIAS_MAP sanity ─────────────────────────────────────────
+
+// ── constraintExpr FEL validity ─────────────────────────────────────
+
+describe('constraintExpr — all entries parse as valid FEL', () => {
+  const entriesWithConstraint = Object.entries(FIELD_TYPE_MAP)
+    .filter(([, entry]) => entry.constraintExpr);
+
+  it.each(entriesWithConstraint)('%s constraintExpr parses without errors', (_alias, entry) => {
+    const result = analyzeFEL(entry.constraintExpr!);
+    expect(result.valid, `FEL parse failed for "${_alias}": ${JSON.stringify(result.errors)}`).toBe(true);
+  });
+
+  it('phone constraintExpr contains \\s (regex whitespace class), not bare "s"', () => {
+    const phone = FIELD_TYPE_MAP['phone'];
+    // At JS runtime, the expr must contain \\s (backslash + s) for the FEL string literal.
+    // FEL unescapes \\s to \s, which the regex engine interprets as whitespace class.
+    expect(phone.constraintExpr).toContain('\\\\s');
+    expect(phone.constraintExpr).toContain('\\\\-');
+  });
+});
 
 describe('WIDGET_ALIAS_MAP — no PascalCase keys', () => {
   it('all keys start with lowercase', () => {
