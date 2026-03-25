@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
-import { buildDefLookup } from '../../lib/tree-helpers';
+import { buildDefLookup } from '../../lib/field-helpers';
 import { FilterBar } from './FilterBar';
 import { HelpTip } from '../../components/ui/HelpTip';
 import { VariablesSection } from './VariablesSection';

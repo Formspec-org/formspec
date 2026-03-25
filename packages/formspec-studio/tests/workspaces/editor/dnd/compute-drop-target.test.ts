@@ -4,7 +4,7 @@ import {
   isDescendantOf,
   buildSequentialMoves,
 } from '../../../../src/workspaces/editor/dnd/compute-drop-target';
-import type { FlatEntry } from '../../../../src/lib/tree-helpers';
+import type { FlatEntry } from '../../../../src/lib/field-helpers';
 
 // Helper to build flat lists from a simple item tree
 interface SimpleItem {

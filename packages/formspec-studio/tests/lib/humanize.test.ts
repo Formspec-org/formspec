@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { humanizeFEL } from '../../src/lib/humanize';
+import { humanizeFEL } from '../../src/lib/field-helpers';
 
 describe('humanizeFEL', () => {
   it('translates equality comparison', () => {
