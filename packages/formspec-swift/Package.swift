@@ -10,11 +10,17 @@ let package = Package(
     ],
     products: [
         .library(name: "FormspecSwift", targets: ["FormspecSwift"]),
+        .executable(name: "FormspecDemo", targets: ["FormspecDemo"]),
     ],
     targets: [
         .target(
             name: "FormspecSwift",
             resources: [.copy("Resources/formspec-engine.html")]
+        ),
+        .executableTarget(
+            name: "FormspecDemo",
+            dependencies: ["FormspecSwift"],
+            path: "Sources/FormspecDemo"
         ),
         .testTarget(
             name: "FormspecSwiftTests",
