@@ -1,0 +1,332 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.org/forms/community-grant",
+  "version": "1.0.0",
+  "status": "active",
+  "title": "Community Impact Grant Application",
+  "description": "Apply for funding to support community-focused projects in education, health, environment, or arts.",
+  "name": "community-grant",
+  "formPresentation": {
+    "labelPosition": "top",
+    "density": "comfortable",
+    "defaultCurrency": "USD"
+  },
+  "optionSets": {
+    "focusAreas": {
+      "options": [
+        { "value": "education", "label": "Education & Literacy" },
+        { "value": "health", "label": "Public Health" },
+        { "value": "environment", "label": "Environment & Sustainability" },
+        { "value": "arts", "label": "Arts & Culture" },
+        { "value": "housing", "label": "Housing & Infrastructure" },
+        { "value": "youth", "label": "Youth Development" }
+      ]
+    },
+    "orgTypes": {
+      "options": [
+        { "value": "nonprofit", "label": "501(c)(3) Nonprofit" },
+        { "value": "school", "label": "Public School / District" },
+        { "value": "tribal", "label": "Tribal Organization" },
+        { "value": "municipal", "label": "Municipal Government" },
+        { "value": "cooperative", "label": "Community Cooperative" }
+      ]
+    },
+    "states": {
+      "options": [
+        { "value": "AL", "label": "Alabama" }, { "value": "AK", "label": "Alaska" },
+        { "value": "AZ", "label": "Arizona" }, { "value": "CA", "label": "California" },
+        { "value": "CO", "label": "Colorado" }, { "value": "CT", "label": "Connecticut" },
+        { "value": "DC", "label": "District of Columbia" }, { "value": "FL", "label": "Florida" },
+        { "value": "GA", "label": "Georgia" }, { "value": "IL", "label": "Illinois" },
+        { "value": "MA", "label": "Massachusetts" }, { "value": "MD", "label": "Maryland" },
+        { "value": "MI", "label": "Michigan" }, { "value": "MN", "label": "Minnesota" },
+        { "value": "NY", "label": "New York" }, { "value": "OH", "label": "Ohio" },
+        { "value": "OR", "label": "Oregon" }, { "value": "PA", "label": "Pennsylvania" },
+        { "value": "TX", "label": "Texas" }, { "value": "VA", "label": "Virginia" },
+        { "value": "WA", "label": "Washington" }
+      ]
+    }
+  },
+  "variables": [
+    {
+      "name": "maxAward",
+      "expression": "100000"
+    }
+  ],
+  "items": [
+    {
+      "key": "organization",
+      "type": "group",
+      "label": "Organization Information",
+      "children": [
+        {
+          "key": "orgName",
+          "type": "field",
+          "dataType": "string",
+          "label": "Organization Name",
+          "hint": "Legal name as registered with your state."
+        },
+        {
+          "key": "orgType",
+          "type": "field",
+          "dataType": "choice",
+          "label": "Organization Type",
+          "optionSet": "orgTypes"
+        },
+        {
+          "key": "ein",
+          "type": "field",
+          "dataType": "string",
+          "label": "EIN / Tax ID",
+          "hint": "Federal Employer Identification Number (XX-XXXXXXX)."
+        },
+        {
+          "key": "yearFounded",
+          "type": "field",
+          "dataType": "integer",
+          "label": "Year Founded"
+        },
+        {
+          "key": "website",
+          "type": "field",
+          "dataType": "string",
+          "label": "Website",
+          "hint": "Optional — your organization's public website."
+        },
+        {
+          "key": "annualBudget",
+          "type": "field",
+          "dataType": "decimal",
+          "label": "Annual Operating Budget",
+          "hint": "Approximate total annual budget in USD."
+        }
+      ]
+    },
+    {
+      "key": "contact",
+      "type": "group",
+      "label": "Primary Contact",
+      "children": [
+        {
+          "key": "contactName",
+          "type": "field",
+          "dataType": "string",
+          "label": "Full Name"
+        },
+        {
+          "key": "contactTitle",
+          "type": "field",
+          "dataType": "string",
+          "label": "Title / Position"
+        },
+        {
+          "key": "contactEmail",
+          "type": "field",
+          "dataType": "string",
+          "label": "Email Address"
+        },
+        {
+          "key": "contactPhone",
+          "type": "field",
+          "dataType": "string",
+          "label": "Phone Number",
+          "hint": "Include area code."
+        },
+        {
+          "key": "state",
+          "type": "field",
+          "dataType": "choice",
+          "label": "State",
+          "optionSet": "states"
+        }
+      ]
+    },
+    {
+      "key": "project",
+      "type": "group",
+      "label": "Project Details",
+      "children": [
+        {
+          "key": "projectTitle",
+          "type": "field",
+          "dataType": "string",
+          "label": "Project Title",
+          "hint": "A concise, descriptive title for your proposed project."
+        },
+        {
+          "key": "focusArea",
+          "type": "field",
+          "dataType": "choice",
+          "label": "Primary Focus Area",
+          "optionSet": "focusAreas"
+        },
+        {
+          "key": "additionalAreas",
+          "type": "field",
+          "dataType": "multiChoice",
+          "label": "Additional Focus Areas",
+          "hint": "Select any secondary areas your project touches.",
+          "optionSet": "focusAreas"
+        },
+        {
+          "key": "summary",
+          "type": "field",
+          "dataType": "text",
+          "label": "Project Summary",
+          "hint": "Describe the project in 2-3 paragraphs. Include the problem, your approach, and expected outcomes."
+        },
+        {
+          "key": "startDate",
+          "type": "field",
+          "dataType": "date",
+          "label": "Proposed Start Date"
+        },
+        {
+          "key": "endDate",
+          "type": "field",
+          "dataType": "date",
+          "label": "Proposed End Date"
+        },
+        {
+          "key": "beneficiaries",
+          "type": "field",
+          "dataType": "integer",
+          "label": "Estimated Number of Beneficiaries",
+          "hint": "How many people will directly benefit from this project?"
+        },
+        {
+          "key": "isRenewal",
+          "type": "field",
+          "dataType": "boolean",
+          "label": "This is a renewal of a previously funded project"
+        },
+        {
+          "key": "priorGrantId",
+          "type": "field",
+          "dataType": "string",
+          "label": "Prior Grant ID",
+          "hint": "Enter the grant ID from your previous award."
+        }
+      ]
+    },
+    {
+      "key": "budget",
+      "type": "group",
+      "label": "Budget",
+      "children": [
+        {
+          "key": "requestedAmount",
+          "type": "field",
+          "dataType": "decimal",
+          "label": "Requested Amount (USD)",
+          "hint": "Maximum award is $100,000."
+        },
+        {
+          "key": "matchingFunds",
+          "type": "field",
+          "dataType": "decimal",
+          "label": "Matching Funds (USD)",
+          "hint": "Amount of matching or in-kind contributions."
+        },
+        {
+          "key": "totalProjectCost",
+          "type": "field",
+          "dataType": "decimal",
+          "label": "Total Project Cost (USD)"
+        },
+        {
+          "key": "budgetNarrative",
+          "type": "field",
+          "dataType": "text",
+          "label": "Budget Narrative",
+          "hint": "Explain how the requested funds will be allocated across major categories."
+        }
+      ]
+    },
+    {
+      "key": "attachments",
+      "type": "group",
+      "label": "Supporting Documents",
+      "children": [
+        {
+          "key": "projectPlan",
+          "type": "field",
+          "dataType": "attachment",
+          "label": "Detailed Project Plan",
+          "hint": "Upload a PDF with your full project plan, timeline, and milestones."
+        },
+        {
+          "key": "financials",
+          "type": "field",
+          "dataType": "attachment",
+          "label": "Financial Statements",
+          "hint": "Most recent audited financial statements or Form 990."
+        },
+        {
+          "key": "letters",
+          "type": "field",
+          "dataType": "attachment",
+          "label": "Letters of Support",
+          "hint": "Optional — letters from partner organizations or community stakeholders."
+        }
+      ]
+    },
+    {
+      "key": "certification",
+      "type": "group",
+      "label": "Certification",
+      "children": [
+        {
+          "key": "certifyAccurate",
+          "type": "field",
+          "dataType": "boolean",
+          "label": "I certify that all information provided in this application is true and accurate to the best of my knowledge."
+        },
+        {
+          "key": "certifyAuthorized",
+          "type": "field",
+          "dataType": "boolean",
+          "label": "I am authorized to submit this application on behalf of the organization named above."
+        },
+        {
+          "key": "agreeTerms",
+          "type": "field",
+          "dataType": "boolean",
+          "label": "I have read and agree to the grant program terms and conditions."
+        }
+      ]
+    }
+  ],
+  "binds": [
+    { "path": "organization.orgName", "required": "true" },
+    { "path": "organization.orgType", "required": "true" },
+    { "path": "organization.ein", "required": "true" },
+    { "path": "organization.yearFounded", "required": "true", "constraint": "$organization.yearFounded >= 1800 and $organization.yearFounded <= 2026", "constraintMessage": "Year must be between 1800 and 2026." },
+    { "path": "contact.contactName", "required": "true" },
+    { "path": "contact.contactEmail", "required": "true" },
+    { "path": "contact.contactPhone", "required": "true" },
+    { "path": "contact.state", "required": "true" },
+    { "path": "project.projectTitle", "required": "true" },
+    { "path": "project.focusArea", "required": "true" },
+    { "path": "project.summary", "required": "true" },
+    { "path": "project.startDate", "required": "true" },
+    { "path": "project.endDate", "required": "true" },
+    { "path": "project.beneficiaries", "required": "true", "constraint": "$project.beneficiaries > 0", "constraintMessage": "Must serve at least one beneficiary." },
+    { "path": "project.priorGrantId", "relevant": "$project.isRenewal = true" },
+    { "path": "budget.requestedAmount", "required": "true", "constraint": "$budget.requestedAmount > 0 and $budget.requestedAmount <= 100000", "constraintMessage": "Requested amount must be between $1 and $100,000." },
+    { "path": "budget.totalProjectCost", "required": "true", "constraint": "$budget.totalProjectCost >= $budget.requestedAmount", "constraintMessage": "Total project cost must be at least the requested amount." },
+    { "path": "certification.certifyAccurate", "required": "true", "constraint": "$certification.certifyAccurate = true", "constraintMessage": "You must certify that the information is accurate." },
+    { "path": "certification.certifyAuthorized", "required": "true", "constraint": "$certification.certifyAuthorized = true", "constraintMessage": "You must confirm authorization." },
+    { "path": "certification.agreeTerms", "required": "true", "constraint": "$certification.agreeTerms = true", "constraintMessage": "You must agree to the terms." }
+  ],
+  "shapes": [
+    {
+      "id": "budget-consistency",
+      "target": "budget.totalProjectCost",
+      "constraint": "$budget.totalProjectCost >= $budget.requestedAmount + $budget.matchingFunds",
+      "severity": "warning",
+      "message": "Total project cost should be at least the sum of requested amount and matching funds.",
+      "activeWhen": "$budget.totalProjectCost > 0"
+    }
+  ]
+}
