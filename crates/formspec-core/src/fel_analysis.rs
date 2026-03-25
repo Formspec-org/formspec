@@ -7,9 +7,10 @@
 //! implement AST traversal; the public API wraps them.
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use fel_core::ast::{Expr, PathSegment};
+use fel_core::extensions::builtin_function_catalog;
 use fel_core::{FelError, parse};
 use serde_json::{json, Value};
 
@@ -28,6 +29,8 @@ pub struct FelAnalysis {
     pub valid: bool,
     /// Parse errors, if any.
     pub errors: Vec<FelAnalysisError>,
+    /// Non-fatal warnings (arity mismatches, etc.).
+    pub warnings: Vec<FelAnalysisWarning>,
     /// Field path references (e.g., `$name`, `$address.city`).
     pub references: HashSet<String>,
     /// Variable references via `@name` (excluding reserved: current, index, count, instance).
@@ -40,6 +43,13 @@ pub struct FelAnalysis {
 #[derive(Debug, Clone)]
 pub struct FelAnalysisError {
     /// Error text from the FEL parser or evaluator.
+    pub message: String,
+}
+
+/// A non-fatal analysis warning.
+#[derive(Debug, Clone)]
+pub struct FelAnalysisWarning {
+    /// Warning text.
     pub message: String,
 }
 
@@ -62,6 +72,46 @@ pub struct NavigationTarget {
     pub name: String,
 }
 
+/// Parse a catalog signature like `"sum(array<number>) -> number"` into `(min_args, max_args)`.
+///
+/// Conventions: `param?` = optional, `...param` = variadic (unbounded), `()` = zero args.
+fn parse_signature_arity(signature: &str) -> (usize, Option<usize>) {
+    // Extract the parameter list between ( and )
+    let Some(open) = signature.find('(') else {
+        return (0, Some(0));
+    };
+    let Some(close) = signature.find(')') else {
+        return (0, Some(0));
+    };
+    let params_str = signature[open + 1..close].trim();
+    if params_str.is_empty() {
+        return (0, Some(0));
+    }
+
+    let params: Vec<&str> = params_str.split(',').map(str::trim).collect();
+    let mut min = 0usize;
+    let mut has_variadic = false;
+
+    for param in &params {
+        if param.starts_with("...") {
+            has_variadic = true;
+            // Variadic counts as at least 0 additional args
+        } else if param.ends_with('?') {
+            // Optional — doesn't increase min
+        } else {
+            min += 1;
+        }
+    }
+
+    let max = if has_variadic {
+        None // unbounded
+    } else {
+        Some(params.len()) // all params including optionals
+    };
+
+    (min, max)
+}
+
 /// Analyze a FEL expression string, extracting structural information.
 pub fn analyze_fel(expression: &str) -> FelAnalysis {
     match parse(expression) {
@@ -69,10 +119,21 @@ pub fn analyze_fel(expression: &str) -> FelAnalysis {
             let mut references = HashSet::new();
             let mut variables = HashSet::new();
             let mut functions = HashSet::new();
-            collect_info(&expr, &mut references, &mut variables, &mut functions);
+            let mut function_calls: Vec<(String, usize)> = Vec::new();
+            collect_info(
+                &expr,
+                &mut references,
+                &mut variables,
+                &mut functions,
+                &mut function_calls,
+            );
+
+            let warnings = check_function_arity(&function_calls);
+
             FelAnalysis {
                 valid: true,
                 errors: vec![],
+                warnings,
                 references,
                 variables,
                 functions,
@@ -85,11 +146,43 @@ pub fn analyze_fel(expression: &str) -> FelAnalysis {
                     FelError::Parse(m) | FelError::Eval(m) => m,
                 },
             }],
+            warnings: vec![],
             references: HashSet::new(),
             variables: HashSet::new(),
             functions: HashSet::new(),
         },
     }
+}
+
+/// Check function call arity against the builtin catalog.
+fn check_function_arity(calls: &[(String, usize)]) -> Vec<FelAnalysisWarning> {
+    let catalog: HashMap<&str, (usize, Option<usize>)> = builtin_function_catalog()
+        .iter()
+        .map(|entry| (entry.name, parse_signature_arity(entry.signature)))
+        .collect();
+
+    let mut warnings = Vec::new();
+    for (name, arg_count) in calls {
+        let Some(&(min, max)) = catalog.get(name.as_str()) else {
+            continue; // unknown function — no arity to check
+        };
+        if *arg_count < min {
+            warnings.push(FelAnalysisWarning {
+                message: format!(
+                    "{name}() requires at least {min} arg(s), got {arg_count}"
+                ),
+            });
+        } else if let Some(mx) = max {
+            if *arg_count > mx {
+                warnings.push(FelAnalysisWarning {
+                    message: format!(
+                        "{name}() accepts at most {mx} arg(s), got {arg_count}"
+                    ),
+                });
+            }
+        }
+    }
+    warnings
 }
 
 /// Extract field dependencies from an expression (safe on parse failure).
@@ -99,7 +192,8 @@ pub fn get_fel_dependencies(expression: &str) -> HashSet<String> {
             let mut refs = HashSet::new();
             let mut vars = HashSet::new();
             let mut fns = HashSet::new();
-            collect_info(&expr, &mut refs, &mut vars, &mut fns);
+            let mut calls = Vec::new();
+            collect_info(&expr, &mut refs, &mut vars, &mut fns, &mut calls);
             refs
         }
         Err(_) => HashSet::new(),
@@ -127,6 +221,7 @@ fn collect_info(
     references: &mut HashSet<String>,
     variables: &mut HashSet<String>,
     functions: &mut HashSet<String>,
+    function_calls: &mut Vec<(String, usize)>,
 ) {
     match expr {
         Expr::FieldRef { name, path } => {
@@ -156,16 +251,17 @@ fn collect_info(
         }
         Expr::FunctionCall { name, args } => {
             functions.insert(name.clone());
+            function_calls.push((name.clone(), args.len()));
             for arg in args {
-                collect_info(arg, references, variables, functions);
+                collect_info(arg, references, variables, functions, function_calls);
             }
         }
         Expr::UnaryOp { operand, .. } => {
-            collect_info(operand, references, variables, functions);
+            collect_info(operand, references, variables, functions, function_calls);
         }
         Expr::BinaryOp { left, right, .. } => {
-            collect_info(left, references, variables, functions);
-            collect_info(right, references, variables, functions);
+            collect_info(left, references, variables, functions, function_calls);
+            collect_info(right, references, variables, functions, function_calls);
         }
         Expr::Ternary {
             condition,
@@ -177,36 +273,36 @@ fn collect_info(
             then_branch,
             else_branch,
         } => {
-            collect_info(condition, references, variables, functions);
-            collect_info(then_branch, references, variables, functions);
-            collect_info(else_branch, references, variables, functions);
+            collect_info(condition, references, variables, functions, function_calls);
+            collect_info(then_branch, references, variables, functions, function_calls);
+            collect_info(else_branch, references, variables, functions, function_calls);
         }
         Expr::Membership {
             value, container, ..
         } => {
-            collect_info(value, references, variables, functions);
-            collect_info(container, references, variables, functions);
+            collect_info(value, references, variables, functions, function_calls);
+            collect_info(container, references, variables, functions, function_calls);
         }
         Expr::NullCoalesce { left, right } => {
-            collect_info(left, references, variables, functions);
-            collect_info(right, references, variables, functions);
+            collect_info(left, references, variables, functions, function_calls);
+            collect_info(right, references, variables, functions, function_calls);
         }
         Expr::LetBinding { value, body, .. } => {
-            collect_info(value, references, variables, functions);
-            collect_info(body, references, variables, functions);
+            collect_info(value, references, variables, functions, function_calls);
+            collect_info(body, references, variables, functions, function_calls);
         }
         Expr::Array(elems) => {
             for e in elems {
-                collect_info(e, references, variables, functions);
+                collect_info(e, references, variables, functions, function_calls);
             }
         }
         Expr::Object(entries) => {
             for (_, v) in entries {
-                collect_info(v, references, variables, functions);
+                collect_info(v, references, variables, functions, function_calls);
             }
         }
         Expr::PostfixAccess { expr, .. } => {
-            collect_info(expr, references, variables, functions);
+            collect_info(expr, references, variables, functions, function_calls);
         }
         // Literals — no references
         Expr::Null
@@ -523,11 +619,12 @@ fn collect_rewrite_targets(expr: &Expr, targets: &mut FelRewriteTargets) {
 
 // ── JSON projections + rewrite map parsing (WASM / tooling) ─────
 
-/// Static analysis result as JSON (`valid`, `errors`, `references`, `variables`, `functions`).
+/// Static analysis result as JSON (`valid`, `errors`, `warnings`, `references`, `variables`, `functions`).
 pub fn fel_analysis_to_json_value(result: &FelAnalysis) -> Value {
     json!({
         "valid": result.valid,
         "errors": result.errors.iter().map(|e| &e.message).collect::<Vec<_>>(),
+        "warnings": result.warnings.iter().map(|w| &w.message).collect::<Vec<_>>(),
         "references": result.references.iter().collect::<Vec<_>>(),
         "variables": result.variables.iter().collect::<Vec<_>>(),
         "functions": result.functions.iter().collect::<Vec<_>>(),
@@ -702,7 +799,7 @@ mod tests {
         let mut refs = HashSet::new();
         let mut vars = HashSet::new();
         let mut fns = HashSet::new();
-        collect_info(&rewritten, &mut refs, &mut vars, &mut fns);
+        collect_info(&rewritten, &mut refs, &mut vars, &mut fns, &mut Vec::new());
         assert!(refs.contains("prefix_name"));
         assert!(refs.contains("prefix_age"));
         assert!(!refs.contains("name"));
@@ -732,7 +829,7 @@ mod tests {
         let mut refs = HashSet::new();
         let mut vars = HashSet::new();
         let mut fns = HashSet::new();
-        collect_info(&rewritten, &mut refs, &mut vars, &mut fns);
+        collect_info(&rewritten, &mut refs, &mut vars, &mut fns, &mut Vec::new());
         assert!(vars.contains("grandTotal"));
         assert!(!vars.contains("total"));
     }
@@ -760,7 +857,7 @@ mod tests {
         let mut refs = HashSet::new();
         let mut vars = HashSet::new();
         let mut fns = HashSet::new();
-        collect_info(&rewritten, &mut refs, &mut vars, &mut fns);
+        collect_info(&rewritten, &mut refs, &mut vars, &mut fns, &mut Vec::new());
         assert!(refs.contains("keep"));
         assert!(refs.contains("changed"));
     }
@@ -840,7 +937,7 @@ mod tests {
         let mut refs = HashSet::new();
         let mut vars = HashSet::new();
         let mut fns = HashSet::new();
-        collect_info(&rewritten, &mut refs, &mut vars, &mut fns);
+        collect_info(&rewritten, &mut refs, &mut vars, &mut fns, &mut Vec::new());
         assert!(refs.contains("pre.flag"));
         assert!(refs.contains("pre.a"));
         assert!(refs.contains("pre.b"));
@@ -863,7 +960,7 @@ mod tests {
         let mut refs = HashSet::new();
         let mut vars = HashSet::new();
         let mut fns = HashSet::new();
-        collect_info(&rewritten, &mut refs, &mut vars, &mut fns);
+        collect_info(&rewritten, &mut refs, &mut vars, &mut fns, &mut Vec::new());
         assert!(refs.contains("order.items[*].qty"), "refs: {refs:?}");
         assert!(refs.contains("order.items[*].price"), "refs: {refs:?}");
     }
@@ -885,7 +982,7 @@ mod tests {
         let mut refs = HashSet::new();
         let mut vars = HashSet::new();
         let mut fns = HashSet::new();
-        collect_info(&rewritten, &mut refs, &mut vars, &mut fns);
+        collect_info(&rewritten, &mut refs, &mut vars, &mut fns, &mut Vec::new());
         assert!(refs.contains("p.a"), "refs: {refs:?}");
         assert!(refs.contains("p.b"), "refs: {refs:?}");
     }
@@ -1058,5 +1155,110 @@ mod tests {
         );
         // coalesce is a function call
         assert!(result.functions.contains("coalesce"));
+    }
+
+    // ── BUG-5: Arity checking at analysis time ──────────────────
+
+    #[test]
+    fn arity_too_few_args_produces_warning() {
+        // sum() requires 1 arg, calling with 0 should warn
+        let result = analyze_fel("sum()");
+        assert!(result.valid, "expression should still parse");
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("sum") && w.message.contains("arg")),
+            "should warn about arity mismatch for sum(), got warnings: {:?}",
+            result.warnings
+        );
+    }
+
+    #[test]
+    fn arity_too_many_args_produces_warning() {
+        // abs() takes 1 arg, calling with 3 should warn
+        let result = analyze_fel("abs(1, 2, 3)");
+        assert!(result.valid, "expression should still parse");
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("abs") && w.message.contains("arg")),
+            "should warn about arity mismatch for abs(), got warnings: {:?}",
+            result.warnings
+        );
+    }
+
+    #[test]
+    fn arity_correct_args_no_warning() {
+        let result = analyze_fel("sum($items[*].qty) + round($total, 2)");
+        assert!(result.valid);
+        assert!(
+            result.warnings.is_empty(),
+            "correct arity should produce no warnings, got: {:?}",
+            result.warnings
+        );
+    }
+
+    #[test]
+    fn arity_optional_param_accepted() {
+        // round(number, number?) — both 1 and 2 args should be fine
+        let result1 = analyze_fel("round(1)");
+        assert!(
+            !result1
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("round")),
+            "round with 1 arg should not warn"
+        );
+        let result2 = analyze_fel("round(1, 2)");
+        assert!(
+            !result2
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("round")),
+            "round with 2 args should not warn"
+        );
+    }
+
+    #[test]
+    fn arity_variadic_accepts_many() {
+        // coalesce(...any) — any number of args >= 1
+        let result = analyze_fel("coalesce(1, 2, 3, 4, 5)");
+        assert!(
+            !result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("coalesce")),
+            "coalesce is variadic, should not warn"
+        );
+    }
+
+    #[test]
+    fn arity_zero_param_function_warns_on_args() {
+        // today() takes 0 args
+        let result = analyze_fel("today(1)");
+        assert!(result.valid);
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("today") && w.message.contains("arg")),
+            "today with args should warn, got: {:?}",
+            result.warnings
+        );
+    }
+
+    #[test]
+    fn arity_unknown_function_no_arity_warning() {
+        // Unknown functions can't have arity checked — only report "unknown function"
+        let result = analyze_fel("myCustomFunc(1, 2)");
+        assert!(
+            !result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("arg")),
+            "unknown function should not get arity warnings"
+        );
     }
 }

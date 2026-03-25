@@ -843,3 +843,81 @@ fn test_number_money_comparison_returns_null_with_diagnostic() {
     assert_eq!(result.value, FelValue::Null);
     assert!(!result.diagnostics.is_empty());
 }
+
+// ── GAP-1: *Where predicate aggregate functions ─────────────────
+
+#[test]
+fn test_sum_where() {
+    assert_eq!(eval("sumWhere([1, 2, 3, 4, 5], $ > 3)"), num(9)); // 4 + 5
+    assert_eq!(eval("sumWhere([10, 20, 30], $ < 25)"), num(30)); // 10 + 20
+}
+
+#[test]
+fn test_sum_where_empty_match() {
+    assert_eq!(eval("sumWhere([1, 2, 3], $ > 100)"), num(0));
+}
+
+#[test]
+fn test_avg_where() {
+    assert_eq!(eval("avgWhere([1, 2, 3, 4, 5], $ > 3)"), dec("4.5")); // (4+5)/2
+}
+
+#[test]
+fn test_avg_where_no_match() {
+    // avgWhere with no matching elements should return null (no values to average)
+    assert_eq!(eval("avgWhere([1, 2, 3], $ > 100)"), FelValue::Null);
+}
+
+#[test]
+fn test_min_where() {
+    assert_eq!(eval("minWhere([1, 2, 3, 4, 5], $ > 2)"), num(3));
+}
+
+#[test]
+fn test_min_where_no_match() {
+    assert_eq!(eval("minWhere([1, 2, 3], $ > 100)"), FelValue::Null);
+}
+
+#[test]
+fn test_max_where() {
+    assert_eq!(eval("maxWhere([1, 2, 3, 4, 5], $ < 4)"), num(3));
+}
+
+#[test]
+fn test_max_where_no_match() {
+    assert_eq!(eval("maxWhere([1, 2, 3], $ > 100)"), FelValue::Null);
+}
+
+#[test]
+fn test_money_sum_where() {
+    assert_eq!(
+        eval("moneySumWhere([money(100, 'USD'), money(200, 'USD'), money(300, 'USD')], moneyAmount($) > 150)"),
+        FelValue::Money(FelMoney { amount: Decimal::from(500), currency: "USD".to_string() })
+    ); // 200 + 300
+}
+
+#[test]
+fn test_money_sum_where_no_match() {
+    assert_eq!(
+        eval("moneySumWhere([money(100, 'USD'), money(200, 'USD')], moneyAmount($) > 1000)"),
+        FelValue::Null
+    );
+}
+
+#[test]
+fn test_where_functions_require_two_args() {
+    for func in &["sumWhere", "avgWhere", "minWhere", "maxWhere", "moneySumWhere"] {
+        let expr = parse(&format!("{func}([1, 2, 3])")).unwrap();
+        let env = MapEnvironment::new();
+        let result = evaluate(&expr, &env);
+        assert_eq!(
+            result.value,
+            FelValue::Null,
+            "{func} with 1 arg should return Null"
+        );
+        assert!(
+            !result.diagnostics.is_empty(),
+            "{func} with 1 arg should produce diagnostic"
+        );
+    }
+}

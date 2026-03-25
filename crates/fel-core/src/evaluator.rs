@@ -835,6 +835,10 @@ impl<'a> Evaluator<'a> {
             "min" => self.fn_min_max(args, true),
             "max" => self.fn_min_max(args, false),
             "countWhere" => self.fn_count_where(args),
+            "sumWhere" => self.fn_sum_where(args),
+            "avgWhere" => self.fn_avg_where(args),
+            "minWhere" => self.fn_min_where(args),
+            "maxWhere" => self.fn_max_where(args),
 
             // String
             "length" => self.fn_length(args),
@@ -924,6 +928,7 @@ impl<'a> Evaluator<'a> {
             }
             "moneyAdd" => self.fn_money_add(args),
             "moneySum" => self.fn_money_sum(args),
+            "moneySumWhere" => self.fn_money_sum_where(args),
 
             // MIP state queries
             "valid" => self.fn_mip(args, "valid"),
@@ -1066,6 +1071,135 @@ impl<'a> Evaluator<'a> {
             }
         }
         FelValue::Number(dec(count))
+    }
+
+    /// Filter array elements by predicate (shared by *Where functions).
+    fn filter_where(&mut self, args: &[Expr], fn_name: &str) -> Option<Vec<FelValue>> {
+        if args.len() < 2 {
+            self.diag(format!("{fn_name}: requires 2 arguments"));
+            return None;
+        }
+        let arr_val = self.eval(&args[0]);
+        let arr = self.get_array(&arr_val, fn_name)?;
+        let mut matched = Vec::new();
+        for elem in &arr {
+            self.let_scopes
+                .push(HashMap::from([("$".to_string(), elem.clone())]));
+            let pred = self.eval(&args[1]);
+            self.let_scopes.pop();
+            if pred.is_truthy() {
+                matched.push(elem.clone());
+            }
+        }
+        Some(matched)
+    }
+
+    fn fn_sum_where(&mut self, args: &[Expr]) -> FelValue {
+        let Some(matched) = self.filter_where(args, "sumWhere") else {
+            return FelValue::Null;
+        };
+        let nums: Vec<Decimal> = matched.iter().filter_map(|v| v.as_number()).collect();
+        FelValue::Number(nums.iter().copied().sum())
+    }
+
+    fn fn_avg_where(&mut self, args: &[Expr]) -> FelValue {
+        let Some(matched) = self.filter_where(args, "avgWhere") else {
+            return FelValue::Null;
+        };
+        let nums: Vec<Decimal> = matched.iter().filter_map(|v| v.as_number()).collect();
+        if nums.is_empty() {
+            return FelValue::Null;
+        }
+        FelValue::Number(nums.iter().copied().sum::<Decimal>() / Decimal::from(nums.len() as i64))
+    }
+
+    fn fn_min_where(&mut self, args: &[Expr]) -> FelValue {
+        let Some(matched) = self.filter_where(args, "minWhere") else {
+            return FelValue::Null;
+        };
+        let non_null: Vec<&FelValue> = matched.iter().filter(|v| !v.is_null()).collect();
+        if non_null.is_empty() {
+            return FelValue::Null;
+        }
+        let mut best = non_null[0].clone();
+        for elem in &non_null[1..] {
+            let cmp = match (&best, *elem) {
+                (FelValue::Number(a), FelValue::Number(b)) => Some(a.cmp(b)),
+                (FelValue::String(a), FelValue::String(b)) => Some(a.cmp(b)),
+                (FelValue::Date(a), FelValue::Date(b)) => Some(a.ordinal().cmp(&b.ordinal())),
+                _ => {
+                    self.diag("minWhere: mixed types".to_string());
+                    return FelValue::Null;
+                }
+            };
+            if let Some(ord) = cmp
+                && ord.is_gt()
+            {
+                best = (*elem).clone();
+            }
+        }
+        best
+    }
+
+    fn fn_max_where(&mut self, args: &[Expr]) -> FelValue {
+        let Some(matched) = self.filter_where(args, "maxWhere") else {
+            return FelValue::Null;
+        };
+        let non_null: Vec<&FelValue> = matched.iter().filter(|v| !v.is_null()).collect();
+        if non_null.is_empty() {
+            return FelValue::Null;
+        }
+        let mut best = non_null[0].clone();
+        for elem in &non_null[1..] {
+            let cmp = match (&best, *elem) {
+                (FelValue::Number(a), FelValue::Number(b)) => Some(a.cmp(b)),
+                (FelValue::String(a), FelValue::String(b)) => Some(a.cmp(b)),
+                (FelValue::Date(a), FelValue::Date(b)) => Some(a.ordinal().cmp(&b.ordinal())),
+                _ => {
+                    self.diag("maxWhere: mixed types".to_string());
+                    return FelValue::Null;
+                }
+            };
+            if let Some(ord) = cmp
+                && ord.is_lt()
+            {
+                best = (*elem).clone();
+            }
+        }
+        best
+    }
+
+    fn fn_money_sum_where(&mut self, args: &[Expr]) -> FelValue {
+        let Some(matched) = self.filter_where(args, "moneySumWhere") else {
+            return FelValue::Null;
+        };
+        let mut total: Option<FelMoney> = None;
+        for elem in &matched {
+            match elem {
+                FelValue::Money(m) => match &total {
+                    None => total = Some(m.clone()),
+                    Some(t) => {
+                        if t.currency != m.currency {
+                            self.diag("moneySumWhere: mixed currencies");
+                            return FelValue::Null;
+                        }
+                        total = Some(FelMoney {
+                            amount: t.amount + m.amount,
+                            currency: t.currency.clone(),
+                        });
+                    }
+                },
+                FelValue::Null => {}
+                _ => {
+                    self.diag("moneySumWhere: non-money element");
+                    return FelValue::Null;
+                }
+            }
+        }
+        match total {
+            Some(t) => FelValue::Money(t),
+            None => FelValue::Null,
+        }
     }
 
     // ── String helpers ──────────────────────────────────────────

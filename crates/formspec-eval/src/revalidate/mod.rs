@@ -468,4 +468,136 @@ mod tests {
             "constraint must not fire on empty array, got: {constraint_errors:?}"
         );
     }
+
+    /// BUG-3: A constraint calling an undefined function currently produces Null,
+    /// which constraint_passes treats as "pass." This should emit a validation error.
+    #[test]
+    fn constraint_with_undefined_function_should_fail() {
+        let items = vec![ItemInfo {
+            key: "amount".to_string(),
+            path: "amount".to_string(),
+            item_type: "field".to_string(),
+            data_type: Some("number".to_string()),
+            currency: None,
+            value: json!(100),
+            relevant: true,
+            required: false,
+            readonly: false,
+            calculate: None,
+            precision: None,
+            constraint: Some("bogusFunc($amount) > 0".to_string()),
+            constraint_message: Some("Custom message".to_string()),
+            relevance: None,
+            required_expr: None,
+            readonly_expr: None,
+            whitespace: None,
+            nrb: None,
+            excluded_value: None,
+            default_value: None,
+            default_expression: None,
+            initial_value: None,
+            prev_relevant: true,
+            parent_path: None,
+            repeatable: false,
+            repeat_min: None,
+            repeat_max: None,
+            extensions: vec![],
+            pre_populate_instance: None,
+            pre_populate_path: None,
+            children: vec![],
+        }];
+
+        let mut values = HashMap::new();
+        values.insert("amount".to_string(), json!(100));
+
+        let results = revalidate(
+            &items,
+            &values,
+            &HashMap::new(),
+            None,
+            EvalTrigger::Continuous,
+            &[],
+            "1.0.0",
+            None,
+            None,
+            &HashMap::new(),
+        );
+        let constraint_errors: Vec<_> = results
+            .iter()
+            .filter(|r| r.code == "CONSTRAINT_FAILED")
+            .collect();
+        assert!(
+            !constraint_errors.is_empty(),
+            "constraint using undefined function should produce a validation error, got none"
+        );
+    }
+
+    /// BUG-3: Shape constraint with undefined function should also fail.
+    #[test]
+    fn shape_with_undefined_function_should_fail() {
+        let items = vec![ItemInfo {
+            key: "amount".to_string(),
+            path: "amount".to_string(),
+            item_type: "field".to_string(),
+            data_type: Some("number".to_string()),
+            currency: None,
+            value: json!(100),
+            relevant: true,
+            required: false,
+            readonly: false,
+            calculate: None,
+            precision: None,
+            constraint: None,
+            constraint_message: None,
+            relevance: None,
+            required_expr: None,
+            readonly_expr: None,
+            whitespace: None,
+            nrb: None,
+            excluded_value: None,
+            default_value: None,
+            default_expression: None,
+            initial_value: None,
+            prev_relevant: true,
+            parent_path: None,
+            repeatable: false,
+            repeat_min: None,
+            repeat_max: None,
+            extensions: vec![],
+            pre_populate_instance: None,
+            pre_populate_path: None,
+            children: vec![],
+        }];
+
+        let mut values = HashMap::new();
+        values.insert("amount".to_string(), json!(100));
+
+        let shapes = vec![json!({
+            "target": "amount",
+            "constraint": "bogusFunc($amount) > 0",
+            "message": "Amount must pass bogus check",
+            "severity": "error"
+        })];
+
+        let results = revalidate(
+            &items,
+            &values,
+            &HashMap::new(),
+            Some(&shapes),
+            EvalTrigger::Continuous,
+            &[],
+            "1.0.0",
+            None,
+            None,
+            &HashMap::new(),
+        );
+        let shape_errors: Vec<_> = results
+            .iter()
+            .filter(|r| r.code == "SHAPE_FAILED")
+            .collect();
+        assert!(
+            !shape_errors.is_empty(),
+            "shape using undefined function should produce a validation error, got none"
+        );
+    }
 }

@@ -3,7 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use fel_core::{FelValue, FormspecEnvironment, fel_to_json};
+use fel_core::{EvalResult, FelValue, FormspecEnvironment, fel_to_json};
 use serde_json::Value;
 
 use crate::fel_json::json_to_runtime_fel;
@@ -17,7 +17,9 @@ use super::env::{
     bind_repeat_group_arrays, bind_sibling_aliases, restore_repeat_group_arrays,
     restore_sibling_aliases,
 };
-use super::expr::{constraint_passes, evaluate_shape_expression, interpolate_message};
+use super::expr::{
+    constraint_passes, evaluate_shape_expression, interpolate_message, result_has_eval_errors,
+};
 
 pub(super) fn validate_shape(
     shape: &Value,
@@ -233,7 +235,7 @@ fn evaluate_shape_context(
                 let expression = wildcard
                     .map(|(base, index)| instantiate_wildcard_expr(expr, base, index))
                     .unwrap_or_else(|| expr.to_string());
-                fel_to_json(&evaluate_shape_expression(&expression, env))
+                fel_to_json(&evaluate_shape_expression(&expression, env).value)
             }
             None => raw_expr.clone(),
         };
@@ -248,9 +250,12 @@ fn evaluate_composition_element(
     shapes_by_id: &HashMap<String, &Value>,
     env: &FormspecEnvironment,
     visiting: &mut HashSet<String>,
-) -> FelValue {
+) -> EvalResult {
     if let Some(shape) = shapes_by_id.get(expr) {
-        return FelValue::Boolean(shape_passes(shape, shapes_by_id, env, visiting));
+        return EvalResult {
+            value: FelValue::Boolean(shape_passes(shape, shapes_by_id, env, visiting)),
+            diagnostics: vec![],
+        };
     }
     evaluate_shape_expression(expr, env)
 }
@@ -325,8 +330,15 @@ fn shape_passes(
             .get("not")
             .and_then(|v| v.as_str())
             .map(|expr| {
-                let value = evaluate_composition_element(expr, shapes_by_id, env, visiting);
-                value.is_null() || !value.is_truthy()
+                let result = evaluate_composition_element(expr, shapes_by_id, env, visiting);
+                // NOT inverts truthiness, but eval errors always propagate as failures.
+                // null-clean → true (not evaluated, don't fire). true → false. false → true.
+                // null-with-errors → false (broken expression).
+                if result_has_eval_errors(&result) {
+                    false
+                } else {
+                    result.value.is_null() || !result.value.is_truthy()
+                }
             })
             .unwrap_or(true)
         && shape
@@ -339,9 +351,10 @@ fn shape_passes(
                         clause
                             .as_str()
                             .map(|expr| {
-                                let value =
+                                let result =
                                     evaluate_composition_element(expr, shapes_by_id, env, visiting);
-                                !value.is_null() && value.is_truthy()
+                                // Only count as "true" if it's a clean truthy result
+                                constraint_passes(&result) && !result.value.is_null()
                             })
                             .unwrap_or(false)
                     })
