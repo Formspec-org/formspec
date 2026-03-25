@@ -1,5 +1,6 @@
 /** @filedesc ProposalManager: changeset lifecycle, actor-tagged recording, and snapshot-and-replay. */
 import type { AnyCommand, CommandResult, ProjectState, IProjectCore } from 'formspec-core';
+import { computeDependencyGroups as wasmComputeDependencyGroups } from 'formspec-engine/fel-runtime';
 import type { Diagnostics } from './types.js';
 
 // ── Core types ──────────────────────────────────────────────────────
@@ -386,22 +387,27 @@ export class ProposalManager {
   // ── Internal helpers ───────────────────────────────────────────
 
   /**
-   * Compute dependency groups from AI entries.
+   * Compute dependency groups from AI entries via Rust/WASM.
    *
-   * This is a simplified implementation that puts all entries in a single group.
-   * The full implementation uses Rust/WASM for FEL expression scanning,
-   * reference edge extraction, and connected component grouping.
+   * Serializes recorded entries into the format expected by the Rust
+   * `formspec-changeset` crate, which performs key extraction, FEL
+   * $-reference scanning, and union-find connected component grouping.
    */
   private _computeDependencyGroups(): DependencyGroup[] {
-    if (this._changeset!.aiEntries.length === 0) return [];
-    if (this._changeset!.aiEntries.length === 1) {
+    const aiEntries = this._changeset!.aiEntries;
+    if (aiEntries.length === 0) return [];
+    if (aiEntries.length === 1) {
       return [{ entries: [0], reason: 'single entry' }];
     }
 
-    // Stub: all entries in one group.
-    // Real implementation will use compute_dependency_groups from Rust/WASM.
-    const indices = this._changeset!.aiEntries.map((_, i) => i);
-    return [{ entries: indices, reason: 'dependency analysis pending (all grouped)' }];
+    // Serialize to the RecordedEntry shape expected by Rust:
+    // { commands: Command[][], toolName?: string }
+    const recorded = aiEntries.map(entry => ({
+      commands: entry.commands,
+      toolName: entry.toolName,
+    }));
+
+    return wasmComputeDependencyGroups(JSON.stringify(recorded));
   }
 
   /**
