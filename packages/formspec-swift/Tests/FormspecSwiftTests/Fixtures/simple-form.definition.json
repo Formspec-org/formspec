@@ -1,0 +1,26 @@
+{
+    "formId": "contact",
+    "title": "Contact Form",
+    "items": [
+        {
+            "key": "fullName",
+            "type": "input",
+            "dataType": "string",
+            "label": "Full Name",
+            "bind": { "required": "true()" }
+        },
+        {
+            "key": "email",
+            "type": "input",
+            "dataType": "string",
+            "label": "Email",
+            "bind": { "required": "true()", "constraint": "regex($value, '^[^@]+@[^@]+$')" }
+        },
+        {
+            "key": "subscribe",
+            "type": "input",
+            "dataType": "boolean",
+            "label": "Subscribe to newsletter"
+        }
+    ]
+}

@@ -158,7 +158,17 @@ public final class FieldState: @unchecked Sendable {
         if let v = patch.visible     { visible = v }
         if let v = patch.readonly    { readonly = v }
 
-        if let v = patch.errors      { errors = v }
+        if let v = patch.errors {
+            errors = v
+            // Derive firstError from the errors array when errors is patched:
+            // an explicit empty array clears firstError; a non-empty array overrides it
+            // unless the patch also carries an explicit firstError.
+            if v.isEmpty {
+                firstError = nil
+            } else if patch.firstError == nil {
+                firstError = v.first?.message
+            }
+        }
         if let v = patch.firstError  { firstError = v }
 
         if let v = patch.options         { options = v }
