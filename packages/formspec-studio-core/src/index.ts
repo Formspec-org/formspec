@@ -66,6 +66,8 @@ export type {
   MetadataChanges,
   WidgetInfo,
   FieldTypeCatalogEntry,
+  FELValidationResult,
+  FELSuggestion,
 } from './helper-types.js';
 
 // ── Field type aliases ──────────────────────────────────────────────

@@ -115,6 +115,22 @@ export interface InstanceProps {
   description?: string;
 }
 
+/** FEL expression validation result — returned by validateFELExpression() */
+export interface FELValidationResult {
+  valid: boolean;
+  errors: Array<{ message: string; line?: number; column?: number }>;
+  references: string[];
+  functions: string[];
+}
+
+/** FEL autocomplete suggestion — returned by felAutocompleteSuggestions() */
+export interface FELSuggestion {
+  label: string;
+  kind: 'field' | 'function' | 'variable' | 'instance' | 'keyword';
+  detail?: string;
+  insertText: string;
+}
+
 /** Widget info — returned by listWidgets() */
 export interface WidgetInfo {
   name: string;
