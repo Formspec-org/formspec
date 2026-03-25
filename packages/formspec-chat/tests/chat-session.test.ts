@@ -190,14 +190,21 @@ describe('ChatSession', () => {
       expect(scaffoldCall!.args[0].type).toBe('conversation');
     });
 
-    it('builds bundle', async () => {
+    it('builds bundle when buildBundle is provided', async () => {
+      const bundleSession = new ChatSession({ adapter, buildBundle: mockBuildBundle });
+      await bundleSession.sendMessage('I need a form');
+      await bundleSession.scaffold();
+
+      const bundle = bundleSession.getBundle();
+      expect(bundle).not.toBeNull();
+      expect(bundle!.definition).toBeDefined();
+    });
+
+    it('getBundle returns null after scaffold when no buildBundle provided', async () => {
       await session.sendMessage('I need a form');
       await session.scaffold();
 
-      const bundle = session.getBundle();
-      expect(bundle).not.toBeNull();
-      // Component tree may be null when WASM engine isn't initialized (chat-only context)
-      // In production, the host (Studio) provides the full bundle via ToolContext
+      expect(session.getBundle()).toBeNull();
     });
 
     it('adds system message about generated form', async () => {
@@ -561,14 +568,25 @@ describe('ChatSession', () => {
   });
 
   describe('bundle generation', () => {
+    let bundleSession: ChatSession;
+
+    beforeEach(() => {
+      bundleSession = new ChatSession({ adapter, buildBundle: mockBuildBundle });
+    });
+
     it('getBundle returns null before any scaffold', () => {
+      expect(bundleSession.getBundle()).toBeNull();
+    });
+
+    it('getBundle returns null when no buildBundle provided', async () => {
+      await session.startFromTemplate('housing-intake');
       expect(session.getBundle()).toBeNull();
     });
 
     it('getBundle returns a full ProjectBundle after scaffold', async () => {
-      await session.startFromTemplate('housing-intake');
+      await bundleSession.startFromTemplate('housing-intake');
 
-      const bundle = session.getBundle();
+      const bundle = bundleSession.getBundle();
       expect(bundle).not.toBeNull();
       expect(bundle!.definition).toBeDefined();
       expect(bundle!.component).toBeDefined();
@@ -576,33 +594,26 @@ describe('ChatSession', () => {
       expect(bundle!.mappings).toBeDefined();
     });
 
-    it('bundle has a non-null component tree with nodes', async () => {
-      await session.startFromTemplate('housing-intake');
-
-      const bundle = session.getBundle()!;
-      // component.tree may be null without WASM — host provides full bundle via ToolContext
-    });
-
     it('bundle definition matches getDefinition()', async () => {
-      await session.startFromTemplate('housing-intake');
+      await bundleSession.startFromTemplate('housing-intake');
 
-      const bundle = session.getBundle()!;
-      expect(bundle.definition.title).toBe(session.getDefinition()!.title);
-      expect(bundle.definition.items.length).toBe(session.getDefinition()!.items.length);
+      const bundle = bundleSession.getBundle()!;
+      expect(bundle.definition.title).toBe(bundleSession.getDefinition()!.title);
+      expect(bundle.definition.items.length).toBe(bundleSession.getDefinition()!.items.length);
     });
 
     it('bundle updates after refinement via getProjectSnapshot', async () => {
-      await session.startFromTemplate('housing-intake');
-      const firstBundle = session.getBundle()!;
+      await bundleSession.startFromTemplate('housing-intake');
+      const firstBundle = bundleSession.getBundle()!;
 
       // Create a tool context that returns an updated definition via getProjectSnapshot
-      const updatedDef = { ...session.getDefinition()!, title: 'Updated Form' };
+      const updatedDef = { ...bundleSession.getDefinition()!, title: 'Updated Form' };
       const ctx = createMockToolContext();
       ctx.getProjectSnapshot = async () => ({ definition: updatedDef });
-      session.setToolContext(ctx);
+      bundleSession.setToolContext(ctx);
 
-      await session.sendMessage('Add a field for emergency contact');
-      const secondBundle = session.getBundle()!;
+      await bundleSession.sendMessage('Add a field for emergency contact');
+      const secondBundle = bundleSession.getBundle()!;
 
       // Bundle should be a new object (rebuilt from snapshot)
       expect(secondBundle).not.toBe(firstBundle);
@@ -611,12 +622,11 @@ describe('ChatSession', () => {
     });
 
     it('bundle is generated after conversation scaffold', async () => {
-      await session.sendMessage('I need a patient intake form');
-      await session.scaffold();
+      await bundleSession.sendMessage('I need a patient intake form');
+      await bundleSession.scaffold();
 
-      const bundle = session.getBundle();
+      const bundle = bundleSession.getBundle();
       expect(bundle).not.toBeNull();
-      // component.tree may be null without WASM — host provides full bundle
     });
 
     it('bundle is generated after upload scaffold', async () => {
@@ -626,17 +636,16 @@ describe('ChatSession', () => {
         name: 'fields.csv',
         data: 'Name, Email, Phone',
       };
-      await session.startFromUpload(attachment);
+      await bundleSession.startFromUpload(attachment);
 
-      const bundle = session.getBundle();
+      const bundle = bundleSession.getBundle();
       expect(bundle).not.toBeNull();
-      // component.tree may be null without WASM — host provides full bundle
     });
 
     it('exportBundle returns the full bundle', async () => {
-      await session.startFromTemplate('grant-application');
+      await bundleSession.startFromTemplate('grant-application');
 
-      const bundle = session.exportBundle();
+      const bundle = bundleSession.exportBundle();
       expect(bundle.definition.$formspec).toBe('1.0');
       expect(bundle.component).toBeDefined();
       expect(bundle.theme).toBeDefined();
@@ -644,25 +653,24 @@ describe('ChatSession', () => {
     });
 
     it('exportBundle throws when no definition exists', () => {
-      expect(() => session.exportBundle()).toThrow(/no form/i);
+      expect(() => bundleSession.exportBundle()).toThrow(/no form/i);
     });
 
     it('toState does not serialize the bundle (reconstructed on restore)', async () => {
-      await session.startFromTemplate('housing-intake');
-      const state = session.toState();
+      await bundleSession.startFromTemplate('housing-intake');
+      const state = bundleSession.toState();
 
       expect(state.projectSnapshot).not.toHaveProperty('bundle');
     });
 
     it('bundle is reconstructed from definition in fromState()', async () => {
-      await session.startFromTemplate('patient-intake');
-      const state = session.toState();
+      await bundleSession.startFromTemplate('patient-intake');
+      const state = bundleSession.toState();
 
-      const restored = await ChatSession.fromState(state, adapter);
+      const restored = await ChatSession.fromState(state, adapter, mockBuildBundle);
       const bundle = restored.getBundle();
       expect(bundle).not.toBeNull();
-      expect(bundle!.definition.title).toBe(session.getDefinition()!.title);
-      // component.tree may be null without WASM — host provides full bundle
+      expect(bundle!.definition.title).toBe(bundleSession.getDefinition()!.title);
     });
 
     it('fromState handles legacy state without bundle field', async () => {
@@ -675,25 +683,22 @@ describe('ChatSession', () => {
         createdAt: 1000,
         updatedAt: 1000,
       } as any;
-      const restored = await ChatSession.fromState(legacyState, adapter);
+      const restored = await ChatSession.fromState(legacyState, adapter, mockBuildBundle);
       expect(restored.getBundle()).toBeNull();
     });
 
     it('bundle.definition deep-equals getDefinition after restore', async () => {
-      await session.startFromTemplate('housing-intake');
-      const state = session.toState();
-      const restored = await ChatSession.fromState(state, adapter);
+      await bundleSession.startFromTemplate('housing-intake');
+      const state = bundleSession.toState();
+      const restored = await ChatSession.fromState(state, adapter, mockBuildBundle);
       expect(restored.getBundle()!.definition).toEqual(restored.getDefinition());
     });
 
-    it('component tree has children nodes when WASM is available', async () => {
-      await session.startFromTemplate('housing-intake');
-      const bundle = session.getBundle()!;
-      const tree = bundle.component.tree as any;
-      // component.tree may be null without WASM — host provides full bundle
-      if (tree) {
-        expect(tree.children?.length).toBeGreaterThan(0);
-      }
+    it('component tree from mockBuildBundle has null tree', async () => {
+      await bundleSession.startFromTemplate('housing-intake');
+      const bundle = bundleSession.getBundle()!;
+      // mockBuildBundle sets tree to null — real bundle comes from Studio
+      expect(bundle.component.tree).toBeNull();
     });
   });
 
