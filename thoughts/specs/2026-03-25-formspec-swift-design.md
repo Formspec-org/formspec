@@ -292,6 +292,13 @@ struct LayoutNode: Codable {
     let isRepeatTemplate: Bool?
 }
 
+struct FieldItemInfo: Codable {
+    let key: String
+    let label: String
+    let hint: String?
+    let dataType: String?
+}
+
 struct AccessibilityInfo: Codable {
     let role: String?
     let description: String?
