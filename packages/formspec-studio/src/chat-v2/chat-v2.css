@@ -53,6 +53,43 @@
   --v2-transition-slow: 300ms ease;
 }
 
+/* ── Dark Mode Overrides ──────────────────────────────────────────── */
+
+.dark {
+  --v2-bg: #0f172a;
+  --v2-surface: #1e293b;
+  --v2-surface-elevated: #253348;
+  --v2-surface-glass: rgba(30, 41, 59, 0.85);
+  --v2-border: #334155;
+  --v2-border-subtle: #1e293b;
+
+  --v2-text-primary: #f1f5f9;
+  --v2-text-secondary: #94a3b8;
+  --v2-text-tertiary: #64748b;
+  --v2-text-inverse: #0f172a;
+
+  --v2-accent: #6080f8;
+  --v2-accent-hover: #7090f9;
+  --v2-accent-soft: rgba(96, 128, 248, 0.12);
+  --v2-accent-medium: rgba(96, 128, 248, 0.22);
+  --v2-accent-gradient: linear-gradient(135deg, #6080f8, #8b6cf5);
+
+  --v2-success: #34d399;
+  --v2-success-soft: rgba(52, 211, 153, 0.12);
+  --v2-warning: #fbbf24;
+  --v2-warning-soft: rgba(251, 191, 36, 0.12);
+  --v2-error: #f87171;
+  --v2-error-soft: rgba(248, 113, 113, 0.12);
+
+  --v2-user-bubble: linear-gradient(135deg, #6080f8, #7c6cf5);
+  --v2-user-bubble-text: #ffffff;
+
+  --v2-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --v2-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --v2-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --v2-shadow-glow: 0 0 24px rgba(96, 128, 248, 0.2);
+}
+
 /* ── Animations ───────────────────────────────────────────────────── */
 
 @keyframes v2-fade-up {
@@ -178,7 +215,7 @@
   transform: translateY(-2px);
 }
 .v2-action-primary {
-  border-color: rgba(79, 110, 247, 0.25);
+  border-color: var(--v2-accent-medium);
   background: var(--v2-accent-soft);
 }
 .v2-action-primary:hover {

@@ -3,6 +3,9 @@
 
 @import "tailwindcss";
 
+/* Enable dark: variant utilities to respond to .dark class (Tailwind v4 requirement) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Chat UI animations */
 @keyframes typing-bounce {
   0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
@@ -61,4 +64,26 @@
   /* Border radius */
   --radius-sm: 3px;
   --radius-DEFAULT: 4px;
+}
+
+/* Dark mode overrides — applied via .dark class on <html> */
+.dark {
+  --color-ink: #f1f5f9;
+  --color-foreground: #f1f5f9;
+  --color-bg-default: #0f172a;
+  --color-surface: #1e293b;
+  --color-border: #334155;
+  --color-accent: #3b82f6;
+  --color-logic: #a78bfa;
+  --color-error: #f87171;
+  --color-muted: #94a3b8;
+  --color-subtle: #253348;
+  --color-panel: #253348;
+  --color-green: #34d399;
+  --color-amber: #fbbf24;
+  --color-teal: #5eead4;
+  --color-brass: #fcd34d;
+  --color-warm-border: #4a3728;
+  --color-warm-subtle: #1e1710;
+  --color-rust: #fb7185;
 }
