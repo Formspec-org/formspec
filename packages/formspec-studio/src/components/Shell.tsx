@@ -15,6 +15,7 @@ import { PreviewTab } from '../workspaces/preview/PreviewTab';
 import { CommandPalette } from './CommandPalette';
 import { ImportDialog } from './ImportDialog';
 import { handleKeyboardShortcut } from '../lib/keyboard';
+import { ChatPanel } from './ChatPanel';
 import { CanvasTargetsProvider } from '../state/useCanvasTargets';
 import { useProject } from '../state/useProject';
 import { useSelection } from '../state/useSelection';
@@ -70,6 +71,7 @@ export function Shell() {
   const [showSettings, setShowSettings] = useState(false);
   const [showBlueprintDrawer, setShowBlueprintDrawer] = useState(false);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
+  const [showChatPanel, setShowChatPanel] = useState(false);
   const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
   const SidebarComponent = SIDEBAR_COMPONENTS[activeSection];
   const project = useProject();
@@ -244,6 +246,7 @@ export function Shell() {
         onOpenMetadata={() => setShowSettings(true)}
         onToggleAccountMenu={() => setShowSettings(true)}
         onToggleMenu={compactLayout ? () => setShowBlueprintDrawer(true) : undefined}
+        onToggleChat={() => setShowChatPanel((p) => !p)}
         isCompact={compactLayout}
       />
       <CanvasTargetsProvider>
@@ -329,12 +332,20 @@ export function Shell() {
             </div>
           </main>
           <aside
-            className={`w-[270px] border-l border-border bg-surface overflow-y-auto shrink-0 ${compactLayout ? 'hidden' : ''}`}
+            className={`w-[270px] border-l border-border bg-surface overflow-y-auto shrink-0 ${compactLayout || showChatPanel ? 'hidden' : ''}`}
             data-testid="properties"
             data-responsive-hidden={compactLayout ? 'true' : 'false'}
           >
             <ItemProperties showActions={activeTab === 'Editor'} />
           </aside>
+          {showChatPanel && !compactLayout && (
+            <aside className="w-[360px] shrink-0" data-testid="chat-panel-container">
+              <ChatPanel
+                project={project}
+                onClose={() => setShowChatPanel(false)}
+              />
+            </aside>
+          )}
         </div>
       </CanvasTargetsProvider>
       <StatusBar />

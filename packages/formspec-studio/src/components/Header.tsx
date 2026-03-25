@@ -25,6 +25,7 @@ interface HeaderProps {
   onOpenMetadata?: () => void;
   onToggleAccountMenu?: () => void;
   onToggleMenu?: () => void;
+  onToggleChat?: () => void;
   isCompact?: boolean;
 }
 
@@ -39,6 +40,7 @@ export function Header({
   onOpenMetadata,
   onToggleAccountMenu,
   onToggleMenu,
+  onToggleChat,
   isCompact = false,
 }: HeaderProps) {
   const project = useProject();
@@ -188,6 +190,21 @@ export function Header({
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
       </button>
+
+      {onToggleChat && (
+        <button
+          type="button"
+          data-testid="toggle-chat"
+          aria-label="Toggle AI chat"
+          className="p-1.5 rounded hover:bg-subtle transition-colors"
+          onClick={onToggleChat}
+          title="AI Assistant"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
+          </svg>
+        </button>
+      )}
 
       {profileMenu}
     </div>

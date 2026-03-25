@@ -14,6 +14,10 @@
     "./registry": {
       "types": "./dist/registry.d.ts",
       "default": "./dist/registry.js"
+    },
+    "./dispatch": {
+      "types": "./dist/dispatch.d.ts",
+      "default": "./dist/dispatch.js"
     }
   },
   "bin": {
