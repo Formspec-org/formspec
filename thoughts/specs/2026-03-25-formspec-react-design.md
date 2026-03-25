@@ -1,7 +1,7 @@
 # formspec-react — React Hooks + Auto-Renderer
 
 **Date:** 2026-03-25
-**Status:** v0.2 complete (47 unit + 14 E2E tests) — see Roadmap for v0.3+ remaining work
+**Status:** v0.3 complete (59 unit + 14 E2E tests) — see Roadmap for v0.4 remaining work
 
 ## Problem
 
@@ -170,7 +170,7 @@ import { FormspecForm } from 'formspec-react';
 | `@preact/signals-core` peer dep | `package.json` | — |
 | Conditional exports with `types` | `package.json` | — |
 
-**Total: 47 unit tests + 14 E2E tests — all passing**
+**Total: 59 unit tests + 14 E2E tests — all passing**
 
 ## Roadmap
 
@@ -186,15 +186,15 @@ import { FormspecForm } from 'formspec-react';
 | 6 | Fix `findItemByKey` indexOf bug | **Bug fix** | ✅ Done — replaced `indexOf` with loop index `i` |
 | 12 | `types` in conditional exports | **DX fix** | ✅ Done — both `.` and `./hooks` have `types` condition |
 
-### v0.3 — Rendering completeness
+### v0.3 — Rendering completeness ✅ COMPLETE
 
-| # | Item | Type | Detail |
+| # | Item | Type | Status |
 |---|------|------|--------|
-| 7 | Display node rendering | **Feature** | Heading, Paragraph, Divider, Banner nodes render as empty containers. Should render their content (`node.fieldItem.label` as text). |
-| 8 | SubmitButton component | **Feature** | No built-in submit — users wire their own. Add default component that calls `engine.getValidationReport()` + emits event. |
-| 9 | `disabledDisplay: 'protected'` | **Feature** | Non-relevant fields always hidden. When `disabledDisplay` is `protected`, should render disabled/greyed instead of hidden. |
-| 10 | Group-level relevance | **Feature** | Only field-level visibility checked via `FieldViewModel.visible`. Group container nodes should also check `engine.relevantSignals[groupPath]`. |
-| 11 | `role="alert"` on empty errors | **A11y fix** | Screen readers may announce empty alerts on mount. Conditionally render the error element, or remove `role="alert"` when empty. |
+| 7 | Display node rendering | **Feature** | ✅ Done — Heading→h3, Text→p, Divider→hr, Alert→div[role=status] |
+| 8 | SubmitButton component | **Feature** | ✅ Done — `onSubmit` prop on FormspecForm, renders submit button, calls with `{response, validationReport}` |
+| 9 | `disabledDisplay: 'protected'` | **Feature** | ✅ Done — irrelevant fields render disabled/readonly with `formspec-protected` class |
+| 10 | Group-level relevance | **Feature** | ✅ Done — `RelevanceGatedLayout` subscribes to `engine.relevantSignals[bindPath]` |
+| 11 | `role="alert"` on empty errors | **A11y fix** | ✅ Done — error element conditionally rendered only when `field.error` is truthy |
 
 ### v0.4 — Engine integration
 

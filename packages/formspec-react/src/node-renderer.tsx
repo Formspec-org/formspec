@@ -1,7 +1,9 @@
 /** @filedesc Recursive LayoutNode renderer — dispatches to field or layout components. */
 import React, { useMemo } from 'react';
+import { signal as createSignal } from '@preact/signals-core';
 import type { LayoutNode } from 'formspec-layout';
 import { useFormspecContext } from './context';
+import { useSignal } from './use-signal';
 import { useField } from './use-field';
 import { useWhen } from './use-when';
 import { useRepeatCount } from './use-repeat-count';
@@ -23,6 +25,10 @@ export function FormspecNode({ node }: { node: LayoutNode }) {
 
     if (node.category === 'field' && node.bindPath) {
         return <FieldNode node={node} />;
+    }
+
+    if (node.category === 'display') {
+        return <DisplayNode node={node} />;
     }
 
     return <LayoutNodeRenderer node={node} />;
@@ -88,12 +94,31 @@ function RepeatGroup({ node }: { node: LayoutNode }) {
     );
 }
 
+/** Renders a display node (Heading, Text, Divider, Alert) with semantic HTML. */
+function DisplayNode({ node }: { node: LayoutNode }) {
+    const text = (node.props?.text as string) || node.fieldItem?.label || '';
+    const cssClass = node.cssClasses?.join(' ') || undefined;
+    const style = node.style as React.CSSProperties | undefined;
+
+    switch (node.component) {
+        case 'Heading':
+            return <h3 className={cssClass} style={style}>{text}</h3>;
+        case 'Divider':
+            return <hr className={cssClass} style={style} />;
+        case 'Alert':
+            return <div role="status" className={cssClass || 'formspec-alert'} style={style}>{text}</div>;
+        case 'Text':
+        default:
+            return <p className={cssClass} style={style}>{text}</p>;
+    }
+}
+
 /** Renders a field node via the component map or default. */
 function FieldNode({ node }: { node: LayoutNode }) {
     const { components } = useFormspecContext();
     const field = useField(node.bindPath!);
 
-    if (!field.visible) return null;
+    if (!field.visible && field.disabledDisplay !== 'protected') return null;
 
     const Component: React.ComponentType<FieldComponentProps> =
         components.fields?.[node.component] ?? DefaultField;
@@ -101,8 +126,27 @@ function FieldNode({ node }: { node: LayoutNode }) {
     return <Component field={field} node={node} />;
 }
 
-/** Renders a layout node via the component map or default, recurses into children. */
+/** Wrapper that checks group-level relevance before rendering layout nodes. */
 function LayoutNodeRenderer({ node }: { node: LayoutNode }) {
+    if (node.bindPath) {
+        return <RelevanceGatedLayout node={node} />;
+    }
+    return <LayoutNodeInner node={node} />;
+}
+
+const ALWAYS_RELEVANT = createSignal(true);
+
+/** Subscribes to relevance signal for a layout node with a bind path. */
+function RelevanceGatedLayout({ node }: { node: LayoutNode }) {
+    const { engine } = useFormspecContext();
+    const relevanceSignal = engine.relevantSignals[node.bindPath!] ?? ALWAYS_RELEVANT;
+    const isRelevant = useSignal(relevanceSignal);
+    if (!isRelevant) return null;
+    return <LayoutNodeInner node={node} />;
+}
+
+/** Renders a layout node via the component map or default, recurses into children. */
+function LayoutNodeInner({ node }: { node: LayoutNode }) {
     const { components } = useFormspecContext();
 
     const Component: React.ComponentType<LayoutComponentProps> =

@@ -8,10 +8,17 @@ import type { LayoutNode, PlanContext } from 'formspec-layout';
 import { planDefinitionFallback, planComponentTree } from 'formspec-layout';
 import type { ComponentMap } from './component-map';
 
+export interface SubmitResult {
+    response: any;
+    validationReport: any;
+}
+
 export interface FormspecContextValue {
     engine: IFormEngine;
     layoutPlan: LayoutNode | null;
     components: ComponentMap;
+    /** Callback invoked on form submission. Absent means no built-in submit button. */
+    onSubmit?: (result: SubmitResult) => void;
     /** Mark a field as touched (e.g., on blur). */
     touchField: (path: string) => void;
     /** Signal that increments when touched set changes — subscribe for reactivity. */
@@ -37,6 +44,8 @@ export interface FormspecProviderProps {
     registryEntries?: any[];
     /** Component map overrides. */
     components?: ComponentMap;
+    /** Callback for form submission. If provided, a submit button is rendered. */
+    onSubmit?: (result: SubmitResult) => void;
     children: React.ReactNode;
 }
 
@@ -53,6 +62,7 @@ export function FormspecProvider({
     initialData,
     registryEntries,
     components = {},
+    onSubmit,
     children,
 }: FormspecProviderProps) {
     const engine = useMemo(() => {
@@ -118,8 +128,8 @@ export function FormspecProvider({
     }, [engine, externalEngine]);
 
     const value = useMemo<FormspecContextValue>(
-        () => ({ engine, layoutPlan, components, touchField, touchedVersion: touchedVersionSignal, isTouched }),
-        [engine, layoutPlan, components, touchField, touchedVersionSignal, isTouched],
+        () => ({ engine, layoutPlan, components, onSubmit, touchField, touchedVersion: touchedVersionSignal, isTouched }),
+        [engine, layoutPlan, components, onSubmit, touchField, touchedVersionSignal, isTouched],
     );
 
     return (

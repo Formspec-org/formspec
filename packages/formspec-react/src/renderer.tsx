@@ -1,5 +1,5 @@
 /** @filedesc FormspecForm — auto-renderer that walks LayoutNode tree into React elements. */
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { LayoutNode } from 'formspec-layout';
 import { FormspecProvider } from './context';
 import type { FormspecProviderProps } from './context';
@@ -26,7 +26,14 @@ export function FormspecForm({ className, ...providerProps }: FormspecFormProps)
 }
 
 function FormspecFormInner({ className }: { className?: string }) {
-    const { layoutPlan } = useFormspecContext();
+    const { layoutPlan, engine, onSubmit } = useFormspecContext();
+
+    const handleSubmit = useCallback(() => {
+        if (!onSubmit) return;
+        const validationReport = engine.getValidationReport({ mode: 'submit' });
+        const response = engine.getResponse({ mode: 'submit' });
+        onSubmit({ response, validationReport });
+    }, [engine, onSubmit]);
 
     if (!layoutPlan) {
         return <div className={className}>No layout plan available.</div>;
@@ -35,6 +42,15 @@ function FormspecFormInner({ className }: { className?: string }) {
     return (
         <div className={className}>
             <FormspecNode node={layoutPlan} />
+            {onSubmit && (
+                <button
+                    type="submit"
+                    className="formspec-submit"
+                    onClick={handleSubmit}
+                >
+                    Submit
+                </button>
+            )}
         </div>
     );
 }

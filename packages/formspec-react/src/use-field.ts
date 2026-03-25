@@ -31,6 +31,9 @@ export interface UseFieldResult {
     options: ResolvedOption[];
     optionsState: { loading: boolean; error: string | null };
 
+    // Display mode when irrelevant
+    disabledDisplay: 'hidden' | 'protected';
+
     // Write
     setValue(value: any): void;
     /** Mark this field as touched (e.g., on blur). */
@@ -111,6 +114,7 @@ export function useField(path: string): UseFieldResult {
         error: firstError,
         options,
         optionsState,
+        disabledDisplay: vm.disabledDisplay,
         setValue: vm.setValue,
         touch,
         inputProps,

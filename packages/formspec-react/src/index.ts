@@ -2,7 +2,7 @@
 
 // ── Hooks (re-exported from hooks barrel) ──
 export { FormspecProvider, useFormspecContext } from './context';
-export type { FormspecProviderProps, FormspecContextValue } from './context';
+export type { FormspecProviderProps, FormspecContextValue, SubmitResult } from './context';
 export { useSignal } from './use-signal';
 export { useField } from './use-field';
 export type { UseFieldResult } from './use-field';

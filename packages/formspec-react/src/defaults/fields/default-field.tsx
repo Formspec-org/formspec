@@ -8,10 +8,11 @@ import type { FieldComponentProps } from '../../component-map';
  * Override per component type via the `components.fields` map.
  */
 export function DefaultField({ field, node }: FieldComponentProps) {
-    const cssClass = node.cssClasses?.join(' ') || '';
+    const isProtected = !field.visible && field.disabledDisplay === 'protected';
+    const cssClass = [node.cssClasses?.join(' '), isProtected ? 'formspec-protected' : ''].filter(Boolean).join(' ');
     const describedBy = [
         field.hint ? `${field.id}-hint` : '',
-        `${field.id}-error`,
+        field.error ? `${field.id}-error` : '',
     ].filter(Boolean).join(' ');
 
     return (
@@ -36,16 +37,18 @@ export function DefaultField({ field, node }: FieldComponentProps) {
                 </p>
             )}
 
-            {renderControl(field, node, describedBy)}
+            {renderControl(field, node, describedBy, isProtected)}
 
-            <p
-                id={`${field.id}-error`}
-                role="alert"
-                aria-live="polite"
-                className="formspec-error"
-            >
-                {field.error || ''}
-            </p>
+            {field.error && (
+                <p
+                    id={`${field.id}-error`}
+                    role="alert"
+                    aria-live="polite"
+                    className="formspec-error"
+                >
+                    {field.error}
+                </p>
+            )}
         </div>
     );
 }
@@ -54,6 +57,7 @@ function renderControl(
     field: FieldComponentProps['field'],
     node: FieldComponentProps['node'],
     describedBy: string,
+    isProtected = false,
 ) {
     const { dataType, id, path, value, options } = field;
     const common = {
@@ -62,7 +66,8 @@ function renderControl(
         'aria-describedby': describedBy,
         'aria-invalid': !!field.error,
         'aria-required': field.required,
-        readOnly: field.readonly,
+        readOnly: field.readonly || isProtected,
+        'aria-disabled': isProtected || undefined,
     };
 
     switch (node.component) {
