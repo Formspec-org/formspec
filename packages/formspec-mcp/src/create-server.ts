@@ -26,6 +26,16 @@ import { handleWidget } from './tools/widget.js';
 import { handleAudit } from './tools/audit.js';
 import { handleTheme } from './tools/theme.js';
 import { handleComponent } from './tools/component.js';
+import { handleLocale } from './tools/locale.js';
+import { handleOntology } from './tools/ontology.js';
+import { handleReference } from './tools/reference.js';
+import { handleBehaviorExpanded } from './tools/behavior-expanded.js';
+import { handleComposition } from './tools/composition.js';
+import { handleResponse } from './tools/response.js';
+import { handleMappingExpanded } from './tools/mapping-expanded.js';
+import { handleMigration } from './tools/migration.js';
+import { handleChangelog } from './tools/changelog.js';
+import { handlePublish } from './tools/publish.js';
 import {
   handleChangesetOpen, handleChangesetClose, handleChangesetList,
   handleChangesetAccept, handleChangesetReject,
@@ -650,6 +660,238 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
     }
     return bracketMutation(registry, project_id, 'formspec_component', () =>
       handleComponent(registry, project_id, { action, parent, component, bind, props, node, property, value }),
+    );
+  });
+
+  // ── Locale ───────────────────────────────────────────────────────
+
+  server.registerTool('formspec_locale', {
+    title: 'Locale',
+    description: 'Manage locale strings and form-level translations. Actions: set_string, remove_string, list_strings, set_form_string, list_form_strings. Requires a locale document to be loaded first.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['set_string', 'remove_string', 'list_strings', 'set_form_string', 'list_form_strings']),
+      locale_id: z.string().optional().describe('BCP 47 locale code (e.g. "fr", "de"). Required for mutations. For list_strings, omit to list all locales.'),
+      key: z.string().optional().describe('String key (for set_string, remove_string)'),
+      value: z.string().optional().describe('String value (for set_string, set_form_string)'),
+      property: z.string().optional().describe('Form-level property: name, title, description, version, url (for set_form_string)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, locale_id, key, value, property }) => {
+    const readOnlyActions = ['list_strings', 'list_form_strings'];
+    if (readOnlyActions.includes(action)) {
+      return handleLocale(registry, project_id, { action, locale_id, key, value, property });
+    }
+    return bracketMutation(registry, project_id, 'formspec_locale', () =>
+      handleLocale(registry, project_id, { action, locale_id, key, value, property }),
+    );
+  });
+
+  // ── Ontology ────────────────────────────────────────────────────────
+
+  server.registerTool('formspec_ontology', {
+    title: 'Ontology',
+    description: 'Manage semantic concept bindings on fields. Actions: bind_concept (associate a concept URI), remove_concept, list_concepts, set_vocabulary (set vocabulary URL for field options).',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['bind_concept', 'remove_concept', 'list_concepts', 'set_vocabulary']),
+      path: z.string().optional().describe('Field path to bind concept to'),
+      concept: z.string().optional().describe('Concept URI (e.g. "https://schema.org/givenName")'),
+      vocabulary: z.string().optional().describe('Vocabulary URL for field options'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, path, concept, vocabulary }) => {
+    if (action === 'list_concepts') {
+      return handleOntology(registry, project_id, { action, path, concept, vocabulary });
+    }
+    return bracketMutation(registry, project_id, 'formspec_ontology', () =>
+      handleOntology(registry, project_id, { action, path, concept, vocabulary }),
+    );
+  });
+
+  // ── Reference ───────────────────────────────────────────────────────
+
+  server.registerTool('formspec_reference', {
+    title: 'Reference',
+    description: 'Manage bound references on fields. Actions: add_reference (bind an external resource URI), remove_reference, list_references.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['add_reference', 'remove_reference', 'list_references']),
+      field_path: z.string().optional().describe('Field path to bind reference to'),
+      uri: z.string().optional().describe('Reference URI'),
+      type: z.string().optional().describe('Reference type (e.g. "fhir-valueset", "snomed")'),
+      description: z.string().optional().describe('Human-readable description of the reference'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, field_path, uri, type, description }) => {
+    if (action === 'list_references') {
+      return handleReference(registry, project_id, { action, field_path, uri, type, description });
+    }
+    return bracketMutation(registry, project_id, 'formspec_reference', () =>
+      handleReference(registry, project_id, { action, field_path, uri, type, description }),
+    );
+  });
+
+  // ── Behavior Expanded ────────────────────────────────────────────
+
+  server.registerTool('formspec_behavior_expanded', {
+    title: 'Behavior Expanded',
+    description: 'Advanced behavior operations: set individual bind properties, compose shape rules with logical operators, or update existing validation rules.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['set_bind_property', 'set_shape_composition', 'update_validation']),
+      target: z.string().describe('Field path or shape ID to operate on'),
+      property: z.string().optional().describe('Bind property name (for set_bind_property)'),
+      value: z.union([z.string(), z.null()]).optional().describe('Bind property value, or null to clear (for set_bind_property)'),
+      composition: z.enum(['and', 'or', 'not', 'xone']).optional().describe('Logical composition type (for set_shape_composition)'),
+      rules: z.array(z.object({
+        constraint: z.string(),
+        message: z.string(),
+      })).optional().describe('Shape rules to compose (for set_shape_composition)'),
+      shapeId: z.string().optional().describe('Shape ID to update (for update_validation, alternative to target)'),
+      changes: z.object({
+        rule: z.string(),
+        message: z.string(),
+        timing: z.enum(['continuous', 'submit', 'demand']),
+        severity: z.enum(['error', 'warning', 'info']),
+        code: z.string(),
+        activeWhen: z.string(),
+      }).partial().optional().describe('Validation property changes (for update_validation)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, target, property, value, composition, rules, shapeId, changes }) => {
+    return bracketMutation(registry, project_id, 'formspec_behavior_expanded', () =>
+      handleBehaviorExpanded(registry, project_id, { action, target, property, value, composition, rules, shapeId, changes }),
+    );
+  });
+
+  // ── Composition ─────────────────────────────────────────────────────
+
+  server.registerTool('formspec_composition', {
+    title: 'Composition',
+    description: 'Manage $ref composition on group items: add a reference to an external definition fragment, remove a reference, or list all references in the form.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['add_ref', 'remove_ref', 'list_refs']),
+      path: z.string().optional().describe('Group item path (for add_ref, remove_ref)'),
+      ref: z.string().optional().describe('URI of the external definition fragment (for add_ref)'),
+      keyPrefix: z.string().optional().describe('Key prefix for imported items (for add_ref)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, path, ref, keyPrefix }) => {
+    if (action === 'list_refs') {
+      return handleComposition(registry, project_id, { action, path, ref, keyPrefix });
+    }
+    return bracketMutation(registry, project_id, 'formspec_composition', () =>
+      handleComposition(registry, project_id, { action, path, ref, keyPrefix }),
+    );
+  });
+
+  // ── Response Testing ────────────────────────────────────────────────
+
+  server.registerTool('formspec_response', {
+    title: 'Response',
+    description: 'Manage test responses for form validation testing. Set field values, retrieve test data, clear responses, or validate a response against the form definition.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['set_test_response', 'get_test_response', 'clear_test_responses', 'validate_response']),
+      field: z.string().optional().describe('Field path (for set_test_response, get_test_response)'),
+      value: z.unknown().optional().describe('Field value (for set_test_response)'),
+      response: z.record(z.string(), z.unknown()).optional().describe('Full response object to validate (for validate_response)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, field, value, response }) => {
+    return handleResponse(registry, project_id, { action, field, value, response });
+  });
+
+  // ── Mapping ─────────────────────────────────────────────────────────
+
+  server.registerTool('formspec_mapping', {
+    title: 'Mapping',
+    description: 'Manage data mapping rules: add source-to-target mappings, remove rules, list all mappings, or auto-generate mapping rules from the form structure.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['add_mapping', 'remove_mapping', 'list_mappings', 'auto_map']),
+      mappingId: z.string().optional().describe('Mapping document ID (omit for the default mapping)'),
+      sourcePath: z.string().optional().describe('Source field path (for add_mapping)'),
+      targetPath: z.string().optional().describe('Target field path (for add_mapping)'),
+      transform: z.string().optional().describe('Transform type: preserve, rename, etc. (for add_mapping)'),
+      insertIndex: z.number().optional().describe('Position to insert rule (for add_mapping)'),
+      ruleIndex: z.number().optional().describe('Rule index to remove (for remove_mapping)'),
+      scopePath: z.string().optional().describe('Scope path for auto-generation (for auto_map)'),
+      replace: z.boolean().optional().describe('Replace existing rules when auto-generating (for auto_map)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, mappingId, sourcePath, targetPath, transform, insertIndex, ruleIndex, scopePath, replace }) => {
+    if (action === 'list_mappings') {
+      return handleMappingExpanded(registry, project_id, { action, mappingId });
+    }
+    return bracketMutation(registry, project_id, 'formspec_mapping', () =>
+      handleMappingExpanded(registry, project_id, { action, mappingId, sourcePath, targetPath, transform, insertIndex, ruleIndex, scopePath, replace }),
+    );
+  });
+
+  // ── Migration ───────────────────────────────────────────────────────
+
+  server.registerTool('formspec_migration', {
+    title: 'Migration',
+    description: 'Manage version migration rules: add field-map rules for upgrading responses from older versions, remove rules, or list all migration descriptors.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['add_rule', 'remove_rule', 'list_rules']),
+      fromVersion: z.string().optional().describe('Source version the migration upgrades from'),
+      description: z.string().optional().describe('Migration description (for add_rule, creates descriptor if needed)'),
+      source: z.string().optional().describe('Source field path (for add_rule)'),
+      target: z.union([z.string(), z.null()]).optional().describe('Target field path, or null to remove (for add_rule)'),
+      transform: z.string().optional().describe('Transform type: rename, remove, etc. (for add_rule)'),
+      expression: z.string().optional().describe('FEL transform expression (for add_rule)'),
+      insertIndex: z.number().optional().describe('Position to insert rule (for add_rule)'),
+      ruleIndex: z.number().optional().describe('Rule index to remove (for remove_rule)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, fromVersion, description, source, target, transform, expression, insertIndex, ruleIndex }) => {
+    if (action === 'list_rules') {
+      return handleMigration(registry, project_id, { action, fromVersion });
+    }
+    return bracketMutation(registry, project_id, 'formspec_migration', () =>
+      handleMigration(registry, project_id, { action, fromVersion, description, source, target, transform, expression, insertIndex, ruleIndex }),
+    );
+  });
+
+  // ── Changelog ───────────────────────────────────────────────────────
+
+  server.registerTool('formspec_changelog', {
+    title: 'Changelog',
+    description: 'View form change history. list_changes returns the full changelog preview. diff_from_baseline computes changes since a specific version.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['list_changes', 'diff_from_baseline']),
+      fromVersion: z.string().optional().describe('Version to diff from (for diff_from_baseline)'),
+    },
+    annotations: READ_ONLY,
+  }, async ({ project_id, action, fromVersion }) => {
+    return handleChangelog(registry, project_id, { action, fromVersion });
+  });
+
+  // ── Lifecycle ───────────────────────────────────────────────────────
+
+  server.registerTool('formspec_lifecycle', {
+    title: 'Lifecycle',
+    description: 'Manage form lifecycle status and versioning: set version string, transition lifecycle status (draft -> active -> retired), validate a proposed transition, or get current version info.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['set_version', 'set_status', 'validate_transition', 'get_version_info']),
+      version: z.string().optional().describe('Semantic version string (for set_version)'),
+      status: z.enum(['draft', 'active', 'retired']).optional().describe('Target lifecycle status (for set_status, validate_transition)'),
+    },
+    annotations: NON_DESTRUCTIVE,
+  }, async ({ project_id, action, version, status }) => {
+    const readOnlyActions: string[] = ['validate_transition', 'get_version_info'];
+    if (readOnlyActions.includes(action)) {
+      return handlePublish(registry, project_id, { action, version, status });
+    }
+    return bracketMutation(registry, project_id, 'formspec_lifecycle', () =>
+      handlePublish(registry, project_id, { action, version, status }),
     );
   });
 
