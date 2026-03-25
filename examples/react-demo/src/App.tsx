@@ -9,6 +9,7 @@ import definition from './definition.json';
 function StyledTextInput({ field, node }: FieldComponentProps) {
     if (!field.visible) return null;
     const isTextarea = field.dataType === 'text';
+    const showError = field.error && field.touched;
     return (
         <div className="mb-5" data-name={field.path}>
             <label htmlFor={field.id} className="mb-1.5 block text-sm font-semibold text-foreground">
@@ -21,10 +22,11 @@ function StyledTextInput({ field, node }: FieldComponentProps) {
                     id={field.id}
                     value={field.value ?? ''}
                     onChange={e => field.setValue(e.target.value)}
+                    onBlur={() => field.touch()}
                     required={field.required}
                     readOnly={field.readonly}
-                    aria-invalid={!!field.error}
-                    className={field.error ? 'border-destructive focus:border-destructive' : ''}
+                    aria-invalid={!!showError}
+                    className={showError ? 'border-destructive focus:border-destructive' : ''}
                 />
             ) : (
                 <input
@@ -32,19 +34,21 @@ function StyledTextInput({ field, node }: FieldComponentProps) {
                     type="text"
                     value={field.value ?? ''}
                     onChange={e => field.setValue(e.target.value)}
+                    onBlur={() => field.touch()}
                     required={field.required}
                     readOnly={field.readonly}
-                    aria-invalid={!!field.error}
-                    className={field.error ? 'border-destructive focus:border-destructive' : ''}
+                    aria-invalid={!!showError}
+                    className={showError ? 'border-destructive focus:border-destructive' : ''}
                 />
             )}
-            {field.error && <p className="formspec-error">{field.error}</p>}
+            {showError && <p className="formspec-error">{field.error}</p>}
         </div>
     );
 }
 
 function StyledSelect({ field, node }: FieldComponentProps) {
     if (!field.visible) return null;
+    const showError = field.error && field.touched;
     return (
         <div className="mb-5" data-name={field.path}>
             <label htmlFor={field.id} className="mb-1.5 block text-sm font-semibold text-foreground">
@@ -56,15 +60,16 @@ function StyledSelect({ field, node }: FieldComponentProps) {
                 id={field.id}
                 value={field.value ?? ''}
                 onChange={e => field.setValue(e.target.value)}
-                aria-invalid={!!field.error}
-                className={field.error ? 'border-destructive' : ''}
+                onBlur={() => field.touch()}
+                aria-invalid={!!showError}
+                className={showError ? 'border-destructive' : ''}
             >
                 <option value="" disabled>-- Select --</option>
                 {field.options.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
             </select>
-            {field.error && <p className="formspec-error">{field.error}</p>}
+            {showError && <p className="formspec-error">{field.error}</p>}
         </div>
     );
 }
@@ -72,6 +77,7 @@ function StyledSelect({ field, node }: FieldComponentProps) {
 function StyledCheckboxGroup({ field, node }: FieldComponentProps) {
     if (!field.visible) return null;
     const current = Array.isArray(field.value) ? field.value : [];
+    const showError = field.error && field.touched;
     return (
         <fieldset className="mb-5 border-0 p-0" data-name={field.path}>
             <legend className="mb-1.5 text-sm font-semibold text-foreground">
@@ -94,39 +100,42 @@ function StyledCheckboxGroup({ field, node }: FieldComponentProps) {
                                     ? [...current, o.value]
                                     : current.filter((v: string) => v !== o.value);
                                 field.setValue(next);
+                                field.touch();
                             }}
                         />
                         <span className="text-sm font-medium">{o.label}</span>
                     </label>
                 ))}
             </div>
-            {field.error && <p className="formspec-error">{field.error}</p>}
+            {showError && <p className="formspec-error">{field.error}</p>}
         </fieldset>
     );
 }
 
 function StyledCheckbox({ field, node }: FieldComponentProps) {
     if (!field.visible) return null;
+    const showError = field.error && field.touched;
     return (
         <div className="mb-4 flex items-start gap-3" data-name={field.path}>
             <input
                 id={field.id}
                 type="checkbox"
                 checked={!!field.value}
-                onChange={e => field.setValue(e.target.checked)}
+                onChange={e => { field.setValue(e.target.checked); field.touch(); }}
                 className="mt-0.5"
             />
             <label htmlFor={field.id} className="text-sm font-medium leading-snug text-foreground mb-0">
                 {field.label}
                 {field.required && <span className="ml-1 text-destructive">*</span>}
             </label>
-            {field.error && <p className="formspec-error">{field.error}</p>}
+            {showError && <p className="formspec-error">{field.error}</p>}
         </div>
     );
 }
 
 function StyledNumberInput({ field, node }: FieldComponentProps) {
     if (!field.visible) return null;
+    const showError = field.error && field.touched;
     return (
         <div className="mb-5" data-name={field.path}>
             <label htmlFor={field.id} className="mb-1.5 block text-sm font-semibold text-foreground">
@@ -139,18 +148,20 @@ function StyledNumberInput({ field, node }: FieldComponentProps) {
                 type="number"
                 value={field.value ?? ''}
                 onChange={e => field.setValue(e.target.value === '' ? null : Number(e.target.value))}
+                onBlur={() => field.touch()}
                 required={field.required}
                 readOnly={field.readonly}
-                aria-invalid={!!field.error}
-                className={field.error ? 'border-destructive' : ''}
+                aria-invalid={!!showError}
+                className={showError ? 'border-destructive' : ''}
             />
-            {field.error && <p className="formspec-error">{field.error}</p>}
+            {showError && <p className="formspec-error">{field.error}</p>}
         </div>
     );
 }
 
 function StyledDatePicker({ field, node }: FieldComponentProps) {
     if (!field.visible) return null;
+    const showError = field.error && field.touched;
     return (
         <div className="mb-5" data-name={field.path}>
             <label htmlFor={field.id} className="mb-1.5 block text-sm font-semibold text-foreground">
@@ -163,10 +174,11 @@ function StyledDatePicker({ field, node }: FieldComponentProps) {
                 type="date"
                 value={field.value ?? ''}
                 onChange={e => field.setValue(e.target.value)}
-                aria-invalid={!!field.error}
-                className={field.error ? 'border-destructive' : ''}
+                onBlur={() => field.touch()}
+                aria-invalid={!!showError}
+                className={showError ? 'border-destructive' : ''}
             />
-            {field.error && <p className="formspec-error">{field.error}</p>}
+            {showError && <p className="formspec-error">{field.error}</p>}
         </div>
     );
 }
@@ -248,12 +260,28 @@ const componentOverrides = {
 
 function SubmitPanel() {
     const form = useForm();
+    const { engine, touchField } = useFormspecContext();
     const [result, setResult] = useState<any>(null);
 
     const handleSubmit = useCallback(() => {
+        // Touch all fields so validation errors become visible
+        const def = engine.getDefinition();
+        const touchAllFields = (items: any[], prefix = '') => {
+            for (const item of items) {
+                const path = prefix ? `${prefix}.${item.key}` : item.key;
+                if (item.type === 'field') {
+                    touchField(path);
+                }
+                if (item.children) {
+                    touchAllFields(item.children, path);
+                }
+            }
+        };
+        touchAllFields(def.items || []);
+
         const detail = form.submit({ mode: 'submit' });
         setResult(detail);
-    }, [form]);
+    }, [form, engine, touchField]);
 
     const errors = result?.validationReport?.results?.filter((r: any) => r.severity === 'error') || [];
     const warnings = result?.validationReport?.results?.filter((r: any) => r.severity === 'warning') || [];
