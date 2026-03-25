@@ -21,6 +21,7 @@ import { handleData } from './tools/data.js';
 import { handleScreener } from './tools/screener.js';
 import { handleDescribe, handleSearch, handleTrace, handlePreview } from './tools/query.js';
 import { handleFel } from './tools/fel.js';
+import { handleWidget } from './tools/widget.js';
 import {
   handleChangesetOpen, handleChangesetClose, handleChangesetList,
   handleChangesetAccept, handleChangesetReject,
@@ -546,6 +547,21 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
     annotations: READ_ONLY,
   }, async ({ project_id, action, path, expression, context_path }) => {
     return handleFel(registry, project_id, { action, path, expression, context_path });
+  });
+
+  // ── Widget Vocabulary ────────────────────────────────────────────
+
+  server.registerTool('formspec_widget', {
+    title: 'Widget',
+    description: 'Query widget vocabulary: list all widgets, find compatible widgets for a data type, or get the field type catalog.',
+    inputSchema: {
+      project_id: z.string(),
+      action: z.enum(['list_widgets', 'compatible', 'field_types']),
+      data_type: z.string().optional().describe('Data type to check compatibility for (used with action="compatible")'),
+    },
+    annotations: READ_ONLY,
+  }, async ({ project_id, action, data_type }) => {
+    return handleWidget(registry, project_id, { action, dataType: data_type });
   });
 
   // ── Changeset Management ─────────────────────────────────────────

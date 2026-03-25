@@ -115,6 +115,20 @@ export interface InstanceProps {
   description?: string;
 }
 
+/** Widget info — returned by listWidgets() */
+export interface WidgetInfo {
+  name: string;
+  component: string;
+  compatibleDataTypes: string[];
+}
+
+/** Field type catalog entry — returned by fieldTypeCatalog() */
+export interface FieldTypeCatalogEntry {
+  alias: string;
+  dataType: string;
+  defaultWidget: string;
+}
+
 /** Metadata changes for setMetadata — split between title, presentation, and definition handlers */
 export interface MetadataChanges {
   title?: string | null;

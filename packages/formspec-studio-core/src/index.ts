@@ -64,6 +64,8 @@ export type {
   ChoiceOption,
   ItemChanges,
   MetadataChanges,
+  WidgetInfo,
+  FieldTypeCatalogEntry,
 } from './helper-types.js';
 
 // ── Field type aliases ──────────────────────────────────────────────

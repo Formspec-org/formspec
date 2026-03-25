@@ -27,8 +27,11 @@ import {
   type InstanceProps,
   type ItemChanges,
   type MetadataChanges,
+  type WidgetInfo,
+  type FieldTypeCatalogEntry,
 } from './helper-types.js';
-import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
+import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget, _FIELD_TYPE_MAP } from './field-type-aliases.js';
+import { COMPATIBILITY_MATRIX, COMPONENT_TO_HINT } from 'formspec-types';
 import { analyzeFEL } from 'formspec-engine/fel-runtime';
 import { rewriteFELReferences } from 'formspec-engine/fel-tools';
 
@@ -124,6 +127,46 @@ export class Project {
   fieldDependents(fieldPath: string): FieldDependents { return this.core.fieldDependents(fieldPath); }
   diffFromBaseline(fromVersion?: string): Change[] { return this.core.diffFromBaseline(fromVersion); }
   previewChangelog(): FormspecChangelog { return this.core.previewChangelog(); }
+
+  // ── Widget / type vocabulary queries ──────────────────────────
+
+  /** Returns all known widgets with their compatible data types. */
+  listWidgets(): WidgetInfo[] {
+    // Build a reverse map: component → set of compatible data types
+    const componentTypes = new Map<string, Set<string>>();
+    for (const [dataType, components] of Object.entries(COMPATIBILITY_MATRIX)) {
+      for (const comp of components) {
+        if (!componentTypes.has(comp)) componentTypes.set(comp, new Set());
+        componentTypes.get(comp)!.add(dataType);
+      }
+    }
+
+    const result: WidgetInfo[] = [];
+    for (const [component, dataTypes] of componentTypes) {
+      // Use the canonical hint as the user-facing name
+      const name = COMPONENT_TO_HINT[component] ?? component.toLowerCase();
+      result.push({
+        name,
+        component,
+        compatibleDataTypes: [...dataTypes],
+      });
+    }
+    return result;
+  }
+
+  /** Returns widget names (component types) compatible with a given data type. */
+  compatibleWidgets(dataType: string): string[] {
+    return COMPATIBILITY_MATRIX[dataType] ?? [];
+  }
+
+  /** Returns the field type alias table (all types the user can specify in addField). */
+  fieldTypeCatalog(): FieldTypeCatalogEntry[] {
+    return Object.entries(_FIELD_TYPE_MAP).map(([alias, entry]) => ({
+      alias,
+      dataType: entry.dataType,
+      defaultWidget: entry.defaultWidget,
+    }));
+  }
 
   /** Returns raw registry documents for passing to rendering consumers (e.g. <formspec-render>). */
   registryDocuments(): unknown[] {
