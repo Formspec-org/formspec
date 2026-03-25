@@ -25,8 +25,7 @@ describe('BindCard', () => {
     expect(container.firstChild).toBeTruthy();
   });
 
-  // TODO: update expected signatures after fel-catalog refactor
-  it.skip('copies a function signature when a FEL reference entry is clicked', async () => {
+  it('copies a function signature when a FEL reference entry is clicked', async () => {
     const writeText = vi.fn();
     vi.stubGlobal('navigator', {
       ...navigator,
@@ -47,6 +46,7 @@ describe('BindCard', () => {
       screen.getByText('sum').click();
     });
 
-    expect(writeText).toHaveBeenCalledWith('sum(nodeset)');
+    // Engine signature: "sum(array<number>) -> number" — clipboard gets params part
+    expect(writeText).toHaveBeenCalledWith('sum(array<number>)');
   });
 });

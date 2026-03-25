@@ -150,11 +150,10 @@ describe('FELEditor', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
-  // TODO: update expected signatures after fel-catalog refactor
-  it.skip('shows peek pane for focused function option', async () => {
+  it('shows peek pane for focused function option', async () => {
     renderEditor({ value: '', onSave: vi.fn() });
     const textarea = screen.getByRole('textbox');
-    
+
     await act(async () => {
       fireEvent.change(textarea, { target: { value: 'co', selectionStart: 2 } });
     });
@@ -163,9 +162,8 @@ describe('FELEditor', () => {
     const option = screen.getByText('coalesce');
     expect(option).toBeInTheDocument();
 
-    // Peek pane should show coalesce details
-    // It's identified by the "Signature" header or return type
-    expect(screen.getByText('coalesce(a, b, ...)')).toBeInTheDocument();
-    expect(screen.getByText('Return the first non-null value')).toBeInTheDocument();
+    // Peek pane shows signature (params part before ->) and description from engine
+    expect(screen.getByText('coalesce(...any)')).toBeInTheDocument();
+    expect(screen.getByText('Returns the first non-null argument.')).toBeInTheDocument();
   });
 });
