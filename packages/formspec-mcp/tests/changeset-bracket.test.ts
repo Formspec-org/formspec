@@ -40,7 +40,8 @@ describe('withChangesetBracket', () => {
       const cs = pm.changeset!;
       expect(cs.aiEntries).toHaveLength(1);
       expect(cs.aiEntries[0].toolName).toBe('formspec_field');
-      expect(cs.aiEntries[0].summary).toContain('formspec_field');
+      // With O1 fix, summary comes from HelperResult, not the generic fallback
+      expect(cs.aiEntries[0].summary).toContain('Added');
     });
 
     it('records behavior changes as an AI entry', () => {
@@ -333,7 +334,7 @@ describe('summary extraction from MCP response (O1 bug)', () => {
   // generic "${toolName} executed" fallback instead of the rich HelperResult.summary.
   // These tests assert the CORRECT behavior — they should FAIL until O1 is fixed.
 
-  it.fails('should extract rich summary from HelperResult through MCP envelope', () => {
+  it('should extract rich summary from HelperResult through MCP envelope', () => {
     const { registry, projectId, project } = registryWithProject();
     handleChangesetOpen(registry, projectId);
 
@@ -346,7 +347,7 @@ describe('summary extraction from MCP response (O1 bug)', () => {
     expect(entry.summary).toContain('Added');
   });
 
-  it.fails('bracketMutation should extract rich summary, not generic fallback', () => {
+  it('bracketMutation should extract rich summary, not generic fallback', () => {
     const { registry, projectId, project } = registryWithProject();
     handleChangesetOpen(registry, projectId);
     project.addField('f1', 'F1', 'text');

@@ -145,13 +145,22 @@ export function withChangesetBracket<T>(
   pm.beginEntry(toolName);
   try {
     const result = fn();
-    // Extract summary from HelperResult if applicable
-    const summary = (result && typeof result === 'object' && 'summary' in (result as any))
-      ? (result as any).summary
-      : `${toolName} executed`;
-    const warnings = (result && typeof result === 'object' && 'warnings' in (result as any))
-      ? ((result as any).warnings ?? []).map((w: any) => typeof w === 'string' ? w : w.message ?? String(w))
-      : [];
+    // Extract summary from either raw HelperResult or MCP envelope's structuredContent.
+    // Tool handlers return wrapHelperCall() → { content, structuredContent: HelperResult }.
+    // The raw HelperResult has .summary and .warnings; structuredContent preserves them.
+    let summary = `${toolName} executed`;
+    let warnings: string[] = [];
+    if (result && typeof result === 'object') {
+      const source = (result as any).structuredContent ?? result;
+      if (typeof source.summary === 'string') {
+        summary = source.summary;
+      }
+      if (Array.isArray(source.warnings)) {
+        warnings = source.warnings.map((w: any) =>
+          typeof w === 'string' ? w : w.message ?? String(w),
+        );
+      }
+    }
     pm.endEntry(summary, warnings);
     return result;
   } catch (err) {
