@@ -76,7 +76,8 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
 
     if (behavior.dragDrop) {
         const dropZone = document.createElement('div');
-        dropZone.className = 'formspec-file-drop-zone';
+        // Keep legacy class for compatibility with existing tests/consumers.
+        dropZone.className = 'formspec-file-drop-zone formspec-drop-zone';
 
         const content = document.createElement('div');
         content.className = 'formspec-file-drop-content';
@@ -88,7 +89,7 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
 
         const label = document.createElement('span');
         label.className = 'formspec-file-drop-label';
-        label.textContent = behavior.multiple ? 'Drag & drop files here' : 'Drag & drop a file here';
+        label.textContent = 'Drop files here';
 
         content.appendChild(icon);
         content.appendChild(label);
