@@ -295,7 +295,7 @@ function LayoutNodePreview({
     );
   }
 
-  if (node.component === 'Wizard' || node.component === 'Tabs') {
+  if (node.component === 'Tabs') {
     return (
       <div className="space-y-4 border border-border/40 rounded-lg p-4 bg-subtle/5">
         <div className="flex items-center gap-2 pb-2 border-b border-border/40">

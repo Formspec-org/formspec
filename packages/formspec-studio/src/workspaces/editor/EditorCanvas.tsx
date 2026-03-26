@@ -103,7 +103,7 @@ export function EditorCanvas() {
   const displayTreeNodes: CompNode[] = useMemo(() => {
     if (!tree?.children) return [];
 
-    // The reconciler may build a Wizard/Tabs wrapper when theme pages exist.
+    // The reconciler may build a structural wrapper when theme pages exist.
     // In that case tree.children are Page structural nodes (nodeId, no bind, no _layout)
     // that are not in defLookup. Flatten through them to get the actual content nodes.
     const flattenStructural = (nodes: CompNode[]): CompNode[] => {
@@ -112,7 +112,7 @@ export function EditorCanvas() {
         if (node._layout || node.bind) {
           result.push(node);
         } else if (node.nodeId && !defLookup.has(node.nodeId)) {
-          // Structural wrapper (Wizard Page node) — unwrap to children
+          // Structural wrapper (Page node) — unwrap to children
           result.push(...flattenStructural(node.children ?? []));
         } else {
           result.push(node);

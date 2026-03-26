@@ -667,6 +667,7 @@ const wizardStory: Story = {
     description: 'Multi-step wizard with progress indicator and navigation',
     definition: {
         title: 'Wizard Story',
+        formPresentation: { pageMode: 'wizard', showProgress: true },
         items: [
             field('name', 'Full Name', 'text'),
             field('email', 'Email Address', 'text'),
@@ -679,8 +680,7 @@ const wizardStory: Story = {
         ],
     },
     componentDoc: cdoc({
-        component: 'Wizard',
-        showProgress: true,
+        component: 'Stack',
         children: [
             {
                 component: 'Page',
