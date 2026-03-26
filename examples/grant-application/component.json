@@ -42,9 +42,7 @@
     }
   },
   "tree": {
-    "component": "Wizard",
-    "showProgress": true,
-    "allowSkip": false,
+    "component": "Stack",
     "children": [
       {
         "component": "Page",

@@ -36,7 +36,7 @@ const DISPLAY_COMPONENTS = new Set([
 ]);
 
 const INTERACTIVE_COMPONENTS = new Set([
-    'Wizard', 'Tabs', 'SubmitButton',
+    'Tabs', 'SubmitButton',
 ]);
 
 const SPECIAL_COMPONENTS = new Set([
@@ -347,7 +347,7 @@ function applyDefinitionPageMode(nodes: LayoutNode[], ctx: PlanContext): LayoutN
         return nodes;
     }
 
-    return wrapPageModePages(orphans, pages, pageMode);
+    return emitPageModePages(orphans, pages);
 }
 
 function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNode {
@@ -461,16 +461,14 @@ function planThemePagesFromDefinitionItems(items: any[], ctx: PlanContext): Layo
         .filter((item) => !assignedTopLevelKeys.has(item.key))
         .map((item) => planDefinitionItem(item, ctx, ''));
 
-    // Apply pageMode wrapping — theme pages + pageMode: "wizard" or "tabs"
-    // should produce a Wizard/Tabs node wrapping the Page nodes.
+    // When pageMode is set, emit pages as direct nodes (renderer handles navigation).
     const pageMode = ctx.formPresentation?.pageMode;
     if ((pageMode === 'wizard' || pageMode === 'tabs') && pageNodes.length > 0) {
         const pages = pageNodes.map((pn) => ({
             title: String(pn.props?.title || ''),
             children: pn.children,
         }));
-        // wrapPageModePages creates Page→Wizard/Tabs wrapping
-        return wrapPageModePages(unassigned, pages, pageMode);
+        return emitPageModePages(unassigned, pages);
     }
 
     return [...pageNodes, ...unassigned];
@@ -604,10 +602,14 @@ type PlannedPage = {
     children: LayoutNode[];
 };
 
-function wrapPageModePages(
+/**
+ * Emit orphan nodes followed by Page nodes. The renderer applies navigation
+ * behavior (wizard steps, tabs) based on `formPresentation.pageMode` — the
+ * planner no longer creates Wizard/Tabs wrapper nodes.
+ */
+function emitPageModePages(
     orphans: LayoutNode[],
     pages: PlannedPage[],
-    pageMode: 'wizard' | 'tabs',
 ): LayoutNode[] {
     if (pages.length === 0) {
         return orphans;
@@ -622,18 +624,7 @@ function wrapPageModePages(
         children: page.children,
     }));
 
-    const pagingNode: LayoutNode = {
-        id: nextId(pageMode === 'tabs' ? 'tabs' : 'wizard'),
-        component: pageMode === 'tabs' ? 'Tabs' : 'Wizard',
-        category: 'interactive',
-        props: pageMode === 'tabs'
-            ? { tabLabels: pageNodes.map((page) => String(page.props.title || '')) }
-            : {},
-        cssClasses: [],
-        children: pageNodes,
-    };
-
-    return [...orphans, pagingNode];
+    return [...orphans, ...pageNodes];
 }
 
 function applyGeneratedPageMode(
@@ -659,19 +650,12 @@ function applyGeneratedPageMode(
     }
 
     if (rootNode.children.some((child) => child.component === 'Page')) {
-        const pages = rootNode.children
-            .filter((node) => node.component === 'Page')
-            .map((node, index) => ({
-                title: String(node.props.title || `Page ${index + 1}`),
-                children: [node],
-            }));
+        // Children are already Page nodes — keep them in place, orphans first.
+        const orphans = rootNode.children.filter((node) => node.component !== 'Page');
+        const pages = rootNode.children.filter((node) => node.component === 'Page');
         return {
             ...rootNode,
-            children: wrapPageModePages(
-                rootNode.children.filter((node) => node.component !== 'Page'),
-                pages,
-                pageMode,
-            ),
+            children: [...orphans, ...pages],
         };
     }
 
@@ -720,7 +704,7 @@ function applyGeneratedPageMode(
 
     return {
         ...rootNode,
-        children: [...wrapPageModePages(orphanChildren, pages, pageMode), ...preservedExtras],
+        children: [...emitPageModePages(orphanChildren, pages), ...preservedExtras],
     };
 }
 
@@ -902,56 +886,4 @@ function findNodeByBindPath(node: any, targetPath: string, currentPrefix: string
     }
 
     return null;
-}
-
-function findNodeInWizardRun(
-    items: any[],
-    startIndex: number,
-    wizardNode: any,
-    segments: string[],
-    depth: number,
-): { found: boolean; node: any | null; nextItemIndex: number } {
-    let pageOffset = 0;
-    let nextItemIndex = startIndex;
-
-    while (nextItemIndex < items.length && isPageItem(items[nextItemIndex])) {
-        const pageItem = items[nextItemIndex];
-        const pageNode = wizardNode.children?.[pageOffset] ?? null;
-
-        if (pageItem?.key === segments[depth]) {
-            if (depth === segments.length - 1) {
-                return { found: true, node: pageNode, nextItemIndex: nextItemIndex + 1 };
-            }
-            if (!Array.isArray(pageItem.children) || !pageNode) {
-                return { found: true, node: null, nextItemIndex: nextItemIndex + 1 };
-            }
-            return {
-                found: true,
-                node: findNodeInLevel(pageItem.children, pageNode.children ?? [], segments, depth + 1),
-                nextItemIndex: nextItemIndex + 1,
-            };
-        }
-
-        nextItemIndex += 1;
-        pageOffset += 1;
-    }
-
-    return { found: false, node: null, nextItemIndex };
-}
-
-function findNodeInLevel(items: any[], nodes: any[], segments: string[], depth: number): any | null {
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const node = nodes[i] ?? null;
-        if (item?.key === segments[depth]) {
-            if (depth === segments.length - 1) return node;
-            if (!Array.isArray(item.children) || !node) return null;
-            return findNodeInLevel(item.children, node.children ?? [], segments, depth + 1);
-        }
-    }
-    return null;
-}
-
-function isPageItem(item: any): boolean {
-    return item?.type === 'group' && item?.presentation?.widgetHint === 'Page';
 }
