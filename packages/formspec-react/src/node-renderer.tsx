@@ -58,7 +58,17 @@ function simpleMarkdown(text: string): string {
         .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+            const trimmed = url.trim().toLowerCase();
+            if (
+                trimmed.startsWith('javascript:') ||
+                trimmed.startsWith('data:') ||
+                trimmed.startsWith('vbscript:')
+            ) {
+                return `<span>${text}</span>`;
+            }
+            return `<a href="${url}">${text}</a>`;
+        })
         .replace(/\n/g, '<br>');
 }
 

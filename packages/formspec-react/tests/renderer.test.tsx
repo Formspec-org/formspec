@@ -1256,3 +1256,97 @@ describe('repeat group rendering', () => {
         expect(addBtn!.textContent).toContain('Team Members');
     });
 });
+
+// ── simpleMarkdown URL sanitization ──────────────────────────────────
+
+describe('simpleMarkdown URL sanitization in Text nodes', () => {
+    function renderTextNode(text: string): HTMLElement {
+        const engine = createFormEngine(testDefinition);
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'txt', component: 'Text', category: 'display',
+                    props: { text, format: 'markdown' }, cssClasses: [], children: [],
+                },
+            ],
+        };
+        return renderInto(
+            <FormspecProvider engine={engine}>
+                <FormspecNode node={plan} />
+            </FormspecProvider>
+        );
+    }
+
+    it('renders safe https links as anchor elements', () => {
+        const container = renderTextNode('[Click here](https://example.com)');
+        const anchor = container.querySelector('a');
+        expect(anchor).toBeTruthy();
+        expect(anchor!.getAttribute('href')).toBe('https://example.com');
+        expect(anchor!.textContent).toBe('Click here');
+    });
+
+    it('renders safe http links as anchor elements', () => {
+        const container = renderTextNode('[Site](http://example.com)');
+        const anchor = container.querySelector('a');
+        expect(anchor).toBeTruthy();
+        expect(anchor!.getAttribute('href')).toBe('http://example.com');
+    });
+
+    it('renders mailto links as anchor elements', () => {
+        const container = renderTextNode('[Email us](mailto:hello@example.com)');
+        const anchor = container.querySelector('a');
+        expect(anchor).toBeTruthy();
+        expect(anchor!.getAttribute('href')).toBe('mailto:hello@example.com');
+    });
+
+    it('renders tel links as anchor elements', () => {
+        const container = renderTextNode('[Call us](tel:+15551234567)');
+        const anchor = container.querySelector('a');
+        expect(anchor).toBeTruthy();
+        expect(anchor!.getAttribute('href')).toBe('tel:+15551234567');
+    });
+
+    it('renders relative /path links as anchor elements', () => {
+        const container = renderTextNode('[Home](/home)');
+        const anchor = container.querySelector('a');
+        expect(anchor).toBeTruthy();
+        expect(anchor!.getAttribute('href')).toBe('/home');
+    });
+
+    it('renders anchor fragment links as anchor elements', () => {
+        const container = renderTextNode('[Section](#section-id)');
+        const anchor = container.querySelector('a');
+        expect(anchor).toBeTruthy();
+        expect(anchor!.getAttribute('href')).toBe('#section-id');
+    });
+
+    it('strips javascript: URLs — renders span with text only', () => {
+        const container = renderTextNode('[Click me](javascript:alert(1))');
+        expect(container.querySelector('a')).toBeNull();
+        const span = container.querySelector('span');
+        expect(span).toBeTruthy();
+        expect(span!.textContent).toBe('Click me');
+    });
+
+    it('strips data: URLs — renders span with text only', () => {
+        const container = renderTextNode('[img](data:text/html,<h1>xss</h1>)');
+        expect(container.querySelector('a')).toBeNull();
+        const span = container.querySelector('span');
+        expect(span).toBeTruthy();
+        expect(span!.textContent).toBe('img');
+    });
+
+    it('strips vbscript: URLs — renders span with text only', () => {
+        const container = renderTextNode('[Run](vbscript:MsgBox(1))');
+        expect(container.querySelector('a')).toBeNull();
+        const span = container.querySelector('span');
+        expect(span).toBeTruthy();
+        expect(span!.textContent).toBe('Run');
+    });
+
+    it('strips javascript: URL with leading whitespace — case insensitive', () => {
+        const container = renderTextNode('[XSS](  JAVASCRIPT:alert(1))');
+        expect(container.querySelector('a')).toBeNull();
+    });
+});
