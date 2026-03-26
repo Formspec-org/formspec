@@ -11,9 +11,31 @@ const BASE_ITEMS = [
   { key: 'phone', type: 'field', dataType: 'string', label: 'Phone' },
 ];
 
+/** Build a component tree seed from a pages-like structure. */
+function makeComponentTree(pages: Array<{ id: string; title: string; description?: string; regions: Array<{ key: string; span?: number; start?: number }> }>): Record<string, unknown> {
+  return {
+    $formspecComponent: '1.0',
+    tree: {
+      component: 'Stack', nodeId: 'root', children: pages.map(p => ({
+        component: 'Page',
+        nodeId: p.id,
+        title: p.title,
+        ...(p.description ? { description: p.description } : {}),
+        _layout: true,
+        children: p.regions.map(r => ({
+          component: 'TextInput',
+          bind: r.key,
+          ...(r.span !== undefined ? { span: r.span } : {}),
+          ...(r.start !== undefined ? { start: r.start } : {}),
+        })),
+      })),
+    },
+  };
+}
+
 function renderFieldPalette(overrides?: {
   definition?: Record<string, unknown>;
-  theme?: Record<string, unknown>;
+  component?: Record<string, unknown>;
   pageId?: string;
   isOpen?: boolean;
   onToggle?: () => void;
@@ -25,7 +47,7 @@ function renderFieldPalette(overrides?: {
         formPresentation: { pageMode: 'wizard' },
         ...overrides?.definition,
       } as any,
-      theme: overrides?.theme as any,
+      component: overrides?.component as any,
     },
   });
   const onToggle = overrides?.onToggle ?? vi.fn();
@@ -44,9 +66,7 @@ function renderFieldPalette(overrides?: {
 describe('FieldPalette', () => {
   it('shows unplaced items as draggable with quick-add button', () => {
     renderFieldPalette({
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] }]),
     });
     // 'email' and 'phone' are unplaced
     expect(screen.getByText('Email')).toBeInTheDocument();
@@ -58,9 +78,7 @@ describe('FieldPalette', () => {
 
   it('shows placed items as greyed out with checkmark', () => {
     renderFieldPalette({
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] }]),
     });
     // 'name' is placed — should show checkmark indicator
     const placedItem = screen.getByTestId('palette-item-name');
@@ -76,20 +94,20 @@ describe('FieldPalette', () => {
 
   it('quick-add calls placeOnPage with span 12', async () => {
     const { project } = renderFieldPalette({
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] }]),
     });
     // Click the first quick-add button (for 'email')
     const addButtons = screen.getAllByRole('button', { name: /add to page/i });
     await act(async () => {
       addButtons[0].click();
     });
-    // Verify the region was added to the page
-    const regions = (project.theme.pages as any[])[0].regions;
-    expect(regions.length).toBe(2);
-    expect(regions[1].key).toBe('email');
-    expect(regions[1].span).toBe(12);
+    // Verify the region was added to the page via the component tree
+    const tree = (project.effectiveComponent as any).tree;
+    const pageNode = tree.children.find((n: any) => n.component === 'Page' && n.nodeId === 'p1');
+    const boundChildren = pageNode.children.filter((n: any) => n.bind);
+    expect(boundChildren.length).toBe(2);
+    expect(boundChildren[1].bind).toBe('email');
+    expect(boundChildren[1].span).toBe(12);
   });
 
   it('shows nested group children within their parent section', () => {
@@ -105,9 +123,7 @@ describe('FieldPalette', () => {
           { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
         ],
       },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [] }]),
     });
     // Top-level items: 'contact' and 'email'
     expect(screen.getByText('Contact Info')).toBeInTheDocument();
@@ -130,9 +146,7 @@ describe('FieldPalette', () => {
           { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
         ],
       },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [] }]),
     });
     // Root items: 'contact' and 'name' — these are top-level
     // The contact group appears in the root section since it's itself a top-level item
@@ -143,9 +157,7 @@ describe('FieldPalette', () => {
   it('renders nothing when closed', () => {
     renderFieldPalette({
       isOpen: false,
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [] }]),
     });
     // When closed, palette content should not be visible
     expect(screen.queryByText('Name')).not.toBeInTheDocument();
@@ -154,12 +166,10 @@ describe('FieldPalette', () => {
   it('items placed on other pages are also greyed out', () => {
     renderFieldPalette({
       pageId: 'p2',
-      theme: {
-        pages: [
-          { id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] },
-          { id: 'p2', title: 'Step 2', regions: [] },
-        ],
-      },
+      component: makeComponentTree([
+        { id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] },
+        { id: 'p2', title: 'Step 2', regions: [] },
+      ]),
     });
     // 'name' is placed on p1, but we're viewing p2 — still greyed
     const placedItem = screen.getByTestId('palette-item-name');

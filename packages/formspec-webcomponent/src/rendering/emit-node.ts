@@ -13,6 +13,7 @@ import {
     ItemDescriptor,
     type LayoutNode,
 } from 'formspec-layout';
+import { useWizard } from '../behaviors/wizard';
 
 /**
  * Interface for what emitNode/renderActualComponent need from FormspecRender.
@@ -243,9 +244,61 @@ export function renderActualComponent(host: RenderHost, comp: any, parent: HTMLE
         },
     };
 
+    // pageMode-driven wizard: a Stack root with Page children and formPresentation.pageMode === 'wizard'
+    // triggers the wizard behavior/adapter pipeline instead of plain Stack rendering.
+    if (componentType === 'Stack' && isPageModeWizard(host, comp)) {
+        renderPageModeWizard(comp, parent, ctx);
+        return;
+    }
+
     if (plugin) {
         plugin.render(comp, parent, ctx);
     } else {
         console.warn(`Unknown component type: ${componentType} (custom components should be expanded by planner)`);
     }
+}
+
+/**
+ * Detect whether a Stack comp should render as a wizard based on pageMode.
+ * True when children are Pages and formPresentation.pageMode === 'wizard'.
+ */
+function isPageModeWizard(host: RenderHost, comp: any): boolean {
+    const pageMode = host._definition?.formPresentation?.pageMode;
+    if (pageMode !== 'wizard') return false;
+    const children: any[] = comp.children;
+    if (!Array.isArray(children) || children.length === 0) return false;
+    return children.some((c: any) => c.component === 'Page');
+}
+
+/**
+ * Render a Stack as a wizard when pageMode === 'wizard'.
+ * Renders orphan (non-Page) children normally, then synthesizes a wizard-like
+ * comp from the Page children and routes through the wizard behavior/adapter.
+ */
+function renderPageModeWizard(comp: any, parent: HTMLElement, ctx: RenderContext): void {
+    const allChildren: any[] = comp.children || [];
+    const orphans = allChildren.filter((c: any) => c.component !== 'Page');
+    const pageChildren = allChildren.filter((c: any) => c.component === 'Page');
+
+    // Render orphan children (non-Page nodes) as plain layout
+    for (const orphan of orphans) {
+        ctx.renderComponent(orphan, parent, ctx.prefix);
+    }
+
+    const formPres = ctx.behaviorContext.definition?.formPresentation || {};
+    const wizardComp = {
+        component: 'Wizard',
+        children: pageChildren,
+        showProgress: formPres.showProgress !== false,
+        allowSkip: !!formPres.allowSkip,
+        sidenav: formPres.sidenav,
+        cssClass: comp.cssClass,
+        style: comp.style,
+        accessibility: comp.accessibility,
+        id: comp.id,
+    };
+
+    const behavior = useWizard(ctx.behaviorContext, wizardComp);
+    const adapterFn = globalRegistry.resolveAdapterFn('Wizard');
+    if (adapterFn) adapterFn(behavior, parent, ctx.adapterContext);
 }

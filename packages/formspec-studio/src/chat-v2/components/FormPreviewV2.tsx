@@ -256,7 +256,7 @@ function LayoutNodePreview({ node, tracesByPath, diffKeys }: {
     );
   }
 
-  if (node.component === 'Wizard' || node.component === 'Tabs') {
+  if (node.component === 'Tabs') {
     return (
       <div className="v2-wizard-box space-y-4 rounded-xl p-4">
         <div className="flex items-center gap-2 pb-2 border-b v2-border">

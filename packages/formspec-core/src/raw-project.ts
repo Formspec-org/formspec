@@ -45,6 +45,7 @@ import { normalizeDefinition } from './normalization.js';
 import { HistoryManager } from './history.js';
 import { reconcileComponentTree } from './tree-reconciler.js';
 import { normalizeState } from './state-normalizer.js';
+import { migrateWizardRoot } from './handlers/migration.js';
 import {
   fieldPaths as _fieldPaths,
   itemPaths as _itemPaths,
@@ -162,6 +163,27 @@ function createDefaultState(options?: ProjectOptions): ProjectState {
   const url = definition.url;
   const componentState = splitComponentState(options?.seed?.component, url);
 
+  // Migrate deprecated Wizard/Tabs root to Stack, promoting props to formPresentation.
+  const authoredTree = componentState.component.tree;
+  if (authoredTree) {
+    const migration = migrateWizardRoot(authoredTree as Record<string, unknown>);
+    if (migration) {
+      componentState.component.tree = migration.tree;
+      if (!definition.formPresentation) (definition as Record<string, unknown>).formPresentation = {};
+      Object.assign((definition as Record<string, unknown>).formPresentation as object, migration.migratedProps);
+    }
+  }
+
+  const generatedTree = componentState.generatedComponent.tree;
+  if (generatedTree) {
+    const migration = migrateWizardRoot(generatedTree as Record<string, unknown>);
+    if (migration) {
+      componentState.generatedComponent.tree = migration.tree;
+      if (!definition.formPresentation) (definition as Record<string, unknown>).formPresentation = {};
+      Object.assign((definition as Record<string, unknown>).formPresentation as object, migration.migratedProps);
+    }
+  }
+
   const theme: ThemeState = options?.seed?.theme ?? {};
   if (!theme.targetDefinition) {
     theme.targetDefinition = { url };
@@ -229,7 +251,6 @@ export class RawProject implements IProjectCore {
       this._state.generatedComponent.tree = reconcileComponentTree(
         this._state.definition,
         this._state.generatedComponent.tree,
-        this._state.theme,
       ) as any;
       (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
     }
@@ -415,7 +436,6 @@ export class RawProject implements IProjectCore {
       this._state.generatedComponent.tree = reconcileComponentTree(
         this._state.definition,
         this._state.generatedComponent.tree,
-        this._state.theme,
       ) as any;
       (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
     }
@@ -488,7 +508,6 @@ export class RawProject implements IProjectCore {
           clone.generatedComponent.tree = reconcileComponentTree(
             clone.definition,
             clone.generatedComponent.tree,
-            clone.theme,
           ) as any;
           (clone.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
         }
@@ -510,7 +529,6 @@ export class RawProject implements IProjectCore {
       this._state.generatedComponent.tree = reconcileComponentTree(
         this._state.definition,
         this._state.generatedComponent.tree,
-        this._state.theme,
       ) as any;
       (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
     }

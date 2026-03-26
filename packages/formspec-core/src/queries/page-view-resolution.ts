@@ -1,5 +1,6 @@
-/** @filedesc Behavioral page-view query — translates schema-native page structure to UI vocabulary. */
-import type { FormItem, FormDefinition, ThemeDocument } from 'formspec-types';
+/** @filedesc Behavioral page-view query — translates page structure to UI vocabulary. */
+import type { FormItem, FormDefinition } from 'formspec-types';
+import type { ComponentState } from '../types.js';
 import { resolvePageStructure } from '../page-resolution.js';
 
 // ── Behavioral types ────────────────────────────────────────────────
@@ -112,7 +113,8 @@ const DEFAULT_BREAKPOINT_NAMES = ['sm', 'md', 'lg'];
 /** Minimal input: only the document slices resolvePageView actually reads. */
 export type PageViewInput = {
   definition: Pick<FormDefinition, 'formPresentation' | 'items'>;
-  theme: Pick<ThemeDocument, 'pages'> & { breakpoints?: Record<string, number> };
+  component?: Pick<ComponentState, 'tree'>;
+  theme?: { breakpoints?: Record<string, number> };
 };
 
 /**
@@ -127,7 +129,7 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
   const { labelMap, typeMap, childCountMap, repeatableMap, widgetHintMap } = buildItemMaps(defItems);
 
   const resolved = resolvePageStructure(
-    { theme: state.theme as any, definition: state.definition },
+    { definition: state.definition, component: state.component },
     allKeys,
   );
 
@@ -160,7 +162,7 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
     itemType: typeMap.get(key) ?? 'field',
   }));
 
-  const breakpointNames: string[] = state.theme.breakpoints
+  const breakpointNames: string[] = state.theme?.breakpoints
     ? Object.keys(state.theme.breakpoints)
     : DEFAULT_BREAKPOINT_NAMES;
 
@@ -175,7 +177,7 @@ export function resolvePageView(state: PageViewInput): PageStructureView {
     unassigned,
     itemPageMap,
     breakpointNames,
-    breakpointValues: state.theme.breakpoints ?? undefined,
+    breakpointValues: state.theme?.breakpoints ?? undefined,
     diagnostics,
   };
 }

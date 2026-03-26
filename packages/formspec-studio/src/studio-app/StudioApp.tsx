@@ -43,9 +43,9 @@ export function createStudioProject(seed?: Parameters<typeof createProject>[0]):
 
   const project = createProject(finalSeed);
 
-  // Auto-generate theme.pages from definition groups if the seed didn't provide pages
-  const themePages = project.theme.pages;
-  if (!themePages || themePages.length === 0) {
+  // Auto-generate pages from definition groups if the seed didn't provide page nodes
+  const existingPages = project.listPages();
+  if (existingPages.length === 0) {
     const items = project.definition.items ?? [];
     const hasGroups = items.some((item: any) => item.type === 'group');
     if (hasGroups) {

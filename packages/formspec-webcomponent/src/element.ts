@@ -565,8 +565,25 @@ export class FormspecRender extends HTMLElement {
             emitNodeFn(this as any, plan, container, '');
         } else {
             const plans = planDefinitionFallback(this._definition.items, planCtx);
-            for (const plan of plans) {
-                emitNodeFn(this as any, plan, container, '');
+            const pageMode = this._definition.formPresentation?.pageMode;
+            const hasPages = (pageMode === 'wizard' || pageMode === 'tabs')
+                && plans.some(p => p.component === 'Page');
+
+            if (hasPages) {
+                // Wrap in a synthetic Stack so renderActualComponent detects pageMode
+                const wrapperNode: import('formspec-layout').LayoutNode = {
+                    id: '_root-stack',
+                    component: 'Stack',
+                    category: 'layout',
+                    props: {},
+                    cssClasses: [],
+                    children: plans,
+                };
+                emitNodeFn(this as any, wrapperNode, container, '');
+            } else {
+                for (const plan of plans) {
+                    emitNodeFn(this as any, plan, container, '');
+                }
             }
         }
     }

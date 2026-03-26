@@ -41,7 +41,15 @@ export function handleDescribe(
     if (target) {
       const item = project.itemAt(target);
       const bind = project.bindFor(target);
-      return { item: item ?? null, bind: bind ?? null };
+      const result: Record<string, unknown> = { item: item ?? null, bind: bind ?? null };
+      // Include repeat config when item is repeatable
+      if (item && (item as any).repeatable) {
+        const repeat: Record<string, unknown> = {};
+        if ((item as any).minRepeat !== undefined) repeat.min = (item as any).minRepeat;
+        if ((item as any).maxRepeat !== undefined) repeat.max = (item as any).maxRepeat;
+        result.repeat = repeat;
+      }
+      return result;
     }
     // Include pages and component-tier nodes (submit buttons, etc.)
     const pages = project.listPages();
@@ -50,7 +58,7 @@ export function handleDescribe(
     if (componentTree?.children) {
       const walk = (node: any) => {
         if (!node) return;
-        if (node.component && node.component !== 'Stack' && node.component !== 'Wizard' && node.component !== 'Page') {
+        if (node.component && node.component !== 'Stack' && node.component !== 'Page') {
           componentNodes.push({
             component: node.component,
             ...(node.id ? { id: node.id } : {}),
@@ -139,7 +147,7 @@ export function handlePreview(
         return project.normalizeDefinition();
       case 'preview':
       default:
-        return previewForm(project, params.scenario);
+        return previewForm(project, params.scenario ?? params.response);
     }
   });
 }

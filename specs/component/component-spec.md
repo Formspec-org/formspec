@@ -70,7 +70,7 @@ Section references (§N) refer to this document unless prefixed with
   - [§4.4 Repeatable Group Binding](#44-repeatable-group-binding)
   - [§4.5 Unbound Required Items](#45-unbound-required-items)
   - [§4.6 Bind/dataType Compatibility Matrix](#46-binddatatype-compatibility-matrix)
-- [§5 Built-In Components — Core (18)](#5-built-in-components--core-18)
+- [§5 Built-In Components — Core (17)](#5-built-in-components--core-17)
 - [§6 Built-In Components — Progressive (16)](#6-built-in-components--progressive-16)
 - [§7 Custom Components](#7-custom-components)
   - [§7.1 The components Registry](#71-the-components-registry)
@@ -107,7 +107,7 @@ Section references (§N) refer to this document unless prefixed with
   - [§13.1 Excluded Features](#131-excluded-features)
   - [§13.2 Guard Rails](#132-guard-rails)
   - [§13.3 Extension Mechanism](#133-extension-mechanism)
-- [Appendix A: Full Example — Budget Wizard](#appendix-a-full-example--budget-wizard)
+- [Appendix A: Full Example — Budget Form](#appendix-a-full-example--budget-form)
 - [Appendix B: Component Quick Reference](#appendix-b-component-quick-reference)
 - [Appendix C: DataType ↔ Component Compatibility](#appendix-c-datatype--component-compatibility)
 
@@ -139,7 +139,7 @@ A Component Document:
   rules, required state, and relevance from the Definition.
 - Uses FEL expressions for conditional rendering (`when` property).
 - Supports responsive breakpoint overrides and design tokens.
-- Defines a fixed catalog of 34 built-in components (18 Core + 16
+- Defines a fixed catalog of 33 built-in components (17 Core + 16
   Progressive) plus a custom component registry for reuse.
 
 Multiple Component Documents MAY target the same Definition. This enables
@@ -181,14 +181,14 @@ This specification defines two conformance levels:
 
 | Level | Components | Requirement |
 |-------|-----------|-------------|
-| **Core Conformant** | 18 Core components (§5) | MUST support all 18 Core components. MUST apply fallback rules (§6.17) when encountering Progressive components. |
-| **Complete Conformant** | All 34 components (§5 + §6) | MUST support all 18 Core components and all 16 Progressive components. |
+| **Core Conformant** | 17 Core components (§5) | MUST support all 17 Core components. MUST apply fallback rules (§6.17) when encountering Progressive components. |
+| **Complete Conformant** | All 33 components (§5 + §6) | MUST support all 17 Core components and all 16 Progressive components. |
 
 A processor that claims Core conformance MUST, upon encountering a
 Progressive component, substitute the specified Core fallback (§6.17)
 and SHOULD emit an informative warning.
 
-A processor that claims Complete conformance MUST render all 34 built-in
+A processor that claims Complete conformance MUST render all 33 built-in
 components natively.
 
 Both levels MUST support the custom component mechanism (§7).
@@ -206,7 +206,7 @@ Both levels MUST support the custom component mechanism (§7).
 | **Renderer** | Software that presents a Definition to end users using a Component Document. |
 | **Token** | A named design value (color, spacing, typography) defined in the `tokens` map. |
 | **Slot binding** | The association between a component and a Definition item via the `bind` property. |
-| **Core component** | One of the 18 components that all conforming processors MUST support. |
+| **Core component** | One of the 17 components that all conforming processors MUST support. |
 | **Progressive component** | One of the 16 additional components that Complete processors MUST support, with defined fallbacks for Core processors. |
 | **Custom component** | A reusable component template defined in the `components` registry. |
 
@@ -470,7 +470,7 @@ the category:
 
 | Category | Accepts `children` | Examples |
 |----------|-------------------|----------|
-| **Layout** | Yes | Page, Stack, Grid, Wizard, Columns, Tabs, Accordion |
+| **Layout** | Yes | Page, Stack, Grid, Columns, Tabs, Accordion |
 | **Container** | Yes | Card, Collapsible, ConditionalGroup, Panel, Modal, Popover |
 | **Input** | No | TextInput, NumberInput, Select, Toggle, … |
 | **Display** | No | Heading, Text, Divider, Alert, Badge, … |
@@ -479,19 +479,16 @@ Rules:
 
 1. **Layout and Container** components MAY contain any component type
    as children (Layout, Container, Input, or Display), unless further
-   restricted by the specific component (e.g., Wizard children MUST
-   be Page components).
+   restricted by the specific component (e.g., Tabs children SHOULD
+   be Page components for correct tab rendering).
 
 2. **Input and Display** components MUST NOT have a `children` property.
    If present, processors MUST reject the document or ignore the
    `children` property and emit a warning.
 
-3. **Wizard** children MUST all be `Page` components. A processor MUST
-   reject a Wizard whose children contain non-Page components.
+3. **Spacer** MUST NOT have children (it is a Layout leaf).
 
-4. **Spacer** MUST NOT have children (it is a Layout leaf).
-
-5. Nesting depth SHOULD NOT exceed 20 levels. Processors MAY reject
+4. Nesting depth SHOULD NOT exceed 20 levels. Processors MAY reject
    documents exceeding this limit.
 
 ---
@@ -714,9 +711,9 @@ or warn on incompatible bindings.
 
 ---
 
-## 5. Built-In Components — Core (18)
+## 5. Built-In Components — Core (17)
 
-This section defines the 18 Core components that all conforming
+This section defines the 17 Core components that all conforming
 processors MUST support. Components are grouped by category: Layout,
 Input, Display, and Container.
 
@@ -740,9 +737,9 @@ For each component, the specification provides:
 #### Description
 
 A top-level page container representing a logical section of a form.
-In a multi-step form, each Page corresponds to one step. When used as
-children of a Wizard (§5.4), Pages define the wizard steps. Pages MAY
-also be used standalone within a Stack for single-page sectioned forms.
+When `formPresentation.pageMode` is `"wizard"` or `"tabs"`, Pages define
+the navigation steps or tab panels. Pages MAY also be used standalone
+within a Stack for single-page sectioned forms.
 
 #### Props
 
@@ -756,8 +753,8 @@ also be used standalone within a Stack for single-page sectioned forms.
 - MUST render as a block-level section element (e.g., `<section>` or
   equivalent).
 - When `title` is present, MUST render it as a heading element.
-- When used inside a Wizard, the Page MUST be shown/hidden according
-  to the Wizard's current step navigation state.
+- When `formPresentation.pageMode` is `"wizard"`, the Page MUST be
+  shown/hidden according to the current step navigation state.
 - MUST render children in array order within the section.
 
 #### Example
@@ -867,61 +864,13 @@ Children are placed in source order, wrapping to new rows as needed.
 
 ---
 
-### 5.4 Wizard
+### 5.4 \[Reserved\]
 
-**Category:** Layout 
-**Level:** Core 
-**Accepts children:** Yes (Page children only) 
-**Bind:** Forbidden
-
-#### Description
-
-A sequential step-by-step navigation container. Each child MUST be a
-Page component, representing one step of the wizard. The Wizard manages
-step progression, optional progress indication, and navigation controls.
-
-#### Props
-
-| Prop | Type | Default | Token-able | Description |
-|------|------|---------|------------|-------------|
-| `showProgress` | boolean | `true` | No | Whether to display a progress indicator (step counter, progress bar, or breadcrumb). |
-| `allowSkip` | boolean | `false` | No | Whether users may navigate to non-adjacent steps directly. |
-
-#### Rendering Requirements
-
-- MUST render exactly one Page at a time (the current step).
-- MUST provide "Next" and "Previous" navigation controls.
-- When `showProgress` is `true`, MUST display a progress indicator
-  showing the current step and total steps.
-- MUST validate the current Page's bound items before allowing
-  forward navigation (unless `allowSkip` is `true`).
-- All children MUST be Page components. Non-Page children MUST
-  cause a validation error.
-
-#### Example
-
-```json
-{
-  "component": "Wizard",
-  "showProgress": true,
-  "children": [
-    {
-      "component": "Page",
-      "title": "Step 1: Basics",
-      "children": [
-        { "component": "TextInput", "bind": "name" }
-      ]
-    },
-    {
-      "component": "Page",
-      "title": "Step 2: Details",
-      "children": [
-        { "component": "DatePicker", "bind": "startDate" }
-      ]
-    }
-  ]
-}
-```
+The Wizard component type was removed in favor of
+`formPresentation.pageMode: "wizard"` with a `Stack > Page*` tree
+structure. See Core §4.1.2 for normative page mode processing
+requirements. Wizard-style navigation is now a presentation mode
+applied to a Stack of Pages, not a distinct component type.
 
 ---
 
@@ -1526,7 +1475,7 @@ children.
 ## 6. Built-In Components — Progressive (16)
 
 This section defines the 16 Progressive components. A **Complete
-Conformant** processor MUST support all 15. A **Core Conformant**
+Conformant** processor MUST support all 16. A **Core Conformant**
 processor MUST substitute the specified Core fallback for each
 Progressive component and SHOULD emit an informative warning.
 
@@ -2984,8 +2933,7 @@ Structural validation MUST verify:
    (§3.4) do not have a `children` property.
 6. **ConditionalGroup `when`:** ConditionalGroup components include
    a `when` property.
-7. **Wizard children:** All children of a Wizard are Page components.
-8. **Heading props:** `level` is 1–6 and `text` is present.
+7. **Heading props:** `level` is 1–6 and `text` is present.
 
 Structural validation MUST be performed before referential integrity
 checks (§12.2).
@@ -3044,7 +2992,7 @@ A processor declares conformance at one of two levels:
 
 - MUST parse and validate all Component Document properties defined
   in this specification.
-- MUST render all 18 Core components (§5) with full prop support.
+- MUST render all 17 Core components (§5) with full prop support.
 - MUST apply fallback substitution (§6.17) for all 16 Progressive
   components.
 - MUST support custom component expansion (§7).
@@ -3133,13 +3081,15 @@ unsupported MUST NOT cause a processing failure.
 
 ---
 
-## Appendix A: Full Example — Budget Wizard
+## Appendix A: Full Example — Budget Form
 
 This appendix is **informative**.
 
-The following Component Document defines a multi-step wizard for a
+The following Component Document defines a multi-page layout for a
 budget submission form. It targets a Definition with items for project
-information, budget line items, and approval.
+information, budget line items, and approval. Wizard-style navigation
+is controlled by `formPresentation.pageMode` in the Definition, not
+by the component tree structure.
 
 ```json
 {
@@ -3147,8 +3097,8 @@ information, budget line items, and approval.
   "url": "https://agency.gov/forms/budget-2025/components/wizard",
   "version": "1.0.0",
   "name": "budget-wizard",
-  "title": "Budget Form — Wizard Layout",
-  "description": "A three-step wizard for the annual budget submission form.",
+  "title": "Budget Form — Multi-Page Layout",
+  "description": "A three-step wizard-style layout for the annual budget submission form.",
   "targetDefinition": {
     "url": "https://agency.gov/forms/budget-2025",
     "compatibleVersions": ">=1.0.0 <2.0.0"
@@ -3196,8 +3146,7 @@ information, budget line items, and approval.
     }
   },
   "tree": {
-    "component": "Wizard",
-    "showProgress": true,
+    "component": "Stack",
     "children": [
       {
         "component": "Page",
@@ -3329,7 +3278,7 @@ information, budget line items, and approval.
 
 This example demonstrates:
 
-- **Wizard with three Pages** for step-by-step navigation.
+- **Stack with three Pages** for multi-page layout (wizard behavior via `formPresentation.pageMode`).
 - **Custom component** (`AddressBlock`) for reusable address entry.
 - **Responsive Grid** that collapses to single-column on small screens.
 - **DataTable** bound to a repeatable group (`lineItems`).
@@ -3345,7 +3294,7 @@ This example demonstrates:
 
 This appendix is **normative**.
 
-The following table lists all 34 built-in components with their
+The following table lists all 33 built-in components with their
 classification and key characteristics.
 
 | # | Component | Category | Level | Children | Bind | Description |
@@ -3353,37 +3302,36 @@ classification and key characteristics.
 | 1 | Page | Layout | Core | Yes | Forbidden | Top-level page/section container. |
 | 2 | Stack | Layout | Core | Yes | Forbidden | Flexbox vertical/horizontal stacking. |
 | 3 | Grid | Layout | Core | Yes | Forbidden | Multi-column grid layout. |
-| 4 | Wizard | Layout | Core | Yes (Page only) | Forbidden | Sequential step navigation. |
-| 5 | Spacer | Layout | Core | No | Forbidden | Empty spacing element. |
-| 6 | TextInput | Input | Core | No | Required | Single/multi-line text input. |
-| 7 | NumberInput | Input | Core | No | Required | Numeric input with stepper. |
-| 8 | DatePicker | Input | Core | No | Required | Date/time/datetime picker. |
-| 9 | Select | Input | Core | No | Required | Dropdown single-select. |
-| 10 | CheckboxGroup | Input | Core | No | Required | Multi-select checkboxes. |
-| 11 | Toggle | Input | Core | No | Required | Boolean switch. |
-| 12 | FileUpload | Input | Core | No | Required | File attachment upload. |
-| 13 | Heading | Display | Core | No | Forbidden | Section heading (h1–h6). |
-| 14 | Text | Display | Core | No | Optional | Static or data-bound text. |
-| 15 | Divider | Display | Core | No | Forbidden | Horizontal rule separator. |
-| 16 | Card | Container | Core | Yes | Forbidden | Bordered surface grouping. |
-| 17 | Collapsible | Container | Core | Yes | Forbidden | Expandable/collapsible section. |
-| 18 | ConditionalGroup | Container | Core | Yes | Forbidden | Condition-based visibility group. |
-| 19 | Columns | Layout | Progressive | Yes | Forbidden | Explicit column widths layout. |
-| 20 | Tabs | Layout | Progressive | Yes | Forbidden | Tabbed navigation container. |
-| 21 | Accordion | Layout | Progressive | Yes | Forbidden | Collapsible section list. |
-| 22 | RadioGroup | Input | Progressive | No | Required | Radio button single-select. |
-| 23 | MoneyInput | Input | Progressive | No | Required | Currency-aware numeric input. |
-| 24 | Slider | Input | Progressive | No | Required | Range slider control. |
-| 25 | Rating | Input | Progressive | No | Required | Star/icon rating control. |
-| 26 | Signature | Input | Progressive | No | Required | Drawn signature capture. |
-| 27 | Alert | Display | Progressive | No | Forbidden | Status message banner. |
-| 28 | Badge | Display | Progressive | No | Forbidden | Compact label badge. |
-| 29 | ProgressBar | Display | Progressive | No | Optional | Visual progress indicator. |
-| 30 | Summary | Display | Progressive | No | Forbidden | Key-value summary display. |
-| 31 | DataTable | Display | Progressive | No | Optional² | Tabular repeatable data. |
-| 32 | Panel | Container | Progressive | Yes | Forbidden | Side panel. |
-| 33 | Modal | Container | Progressive | Yes | Forbidden | Dialog overlay. |
-| 34 | Popover | Container | Progressive | Yes | Forbidden | Anchored contextual overlay. |
+| 4 | Spacer | Layout | Core | No | Forbidden | Empty spacing element. |
+| 5 | TextInput | Input | Core | No | Required | Single/multi-line text input. |
+| 6 | NumberInput | Input | Core | No | Required | Numeric input with stepper. |
+| 7 | DatePicker | Input | Core | No | Required | Date/time/datetime picker. |
+| 8 | Select | Input | Core | No | Required | Dropdown single-select. |
+| 9 | CheckboxGroup | Input | Core | No | Required | Multi-select checkboxes. |
+| 10 | Toggle | Input | Core | No | Required | Boolean switch. |
+| 11 | FileUpload | Input | Core | No | Required | File attachment upload. |
+| 12 | Heading | Display | Core | No | Forbidden | Section heading (h1–h6). |
+| 13 | Text | Display | Core | No | Optional | Static or data-bound text. |
+| 14 | Divider | Display | Core | No | Forbidden | Horizontal rule separator. |
+| 15 | Card | Container | Core | Yes | Forbidden | Bordered surface grouping. |
+| 16 | Collapsible | Container | Core | Yes | Forbidden | Expandable/collapsible section. |
+| 17 | ConditionalGroup | Container | Core | Yes | Forbidden | Condition-based visibility group. |
+| 18 | Columns | Layout | Progressive | Yes | Forbidden | Explicit column widths layout. |
+| 19 | Tabs | Layout | Progressive | Yes | Forbidden | Tabbed navigation container. |
+| 20 | Accordion | Layout | Progressive | Yes | Forbidden | Collapsible section list. |
+| 21 | RadioGroup | Input | Progressive | No | Required | Radio button single-select. |
+| 22 | MoneyInput | Input | Progressive | No | Required | Currency-aware numeric input. |
+| 23 | Slider | Input | Progressive | No | Required | Range slider control. |
+| 24 | Rating | Input | Progressive | No | Required | Star/icon rating control. |
+| 25 | Signature | Input | Progressive | No | Required | Drawn signature capture. |
+| 26 | Alert | Display | Progressive | No | Forbidden | Status message banner. |
+| 27 | Badge | Display | Progressive | No | Forbidden | Compact label badge. |
+| 28 | ProgressBar | Display | Progressive | No | Optional | Visual progress indicator. |
+| 29 | Summary | Display | Progressive | No | Forbidden | Key-value summary display. |
+| 30 | DataTable | Display | Progressive | No | Optional² | Tabular repeatable data. |
+| 31 | Panel | Container | Progressive | Yes | Forbidden | Side panel. |
+| 32 | Modal | Container | Progressive | Yes | Forbidden | Dialog overlay. |
+| 33 | Popover | Container | Progressive | Yes | Forbidden | Anchored contextual overlay. |
 
 ² DataTable binds to a repeatable group key, not a field key.
 

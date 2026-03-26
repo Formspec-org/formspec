@@ -345,6 +345,22 @@ export interface FormDefinition {
      * Base text direction. 'auto' derives direction from the active locale code (RTL for ar, he, fa, ur, ps, sd, yi).
      */
     direction?: 'ltr' | 'rtl' | 'auto';
+    /**
+     * Wizard mode: display a step progress indicator.
+     */
+    showProgress?: boolean;
+    /**
+     * Wizard mode: allow navigating forward without validating the current page.
+     */
+    allowSkip?: boolean;
+    /**
+     * Tabs mode: zero-based index of the initially selected tab.
+     */
+    defaultTab?: number;
+    /**
+     * Tabs mode: position of the tab bar relative to the content.
+     */
+    tabPosition?: 'top' | 'bottom' | 'left' | 'right';
   };
 }
 /**

@@ -42,18 +42,6 @@ function findNode(
   return undefined;
 }
 
-function findFirstComponent(root: TreeNode, componentType: string): TreeNode | undefined {
-  const stack: TreeNode[] = [root];
-  while (stack.length) {
-    const node = stack.pop()!;
-    if (node.component === componentType) return node;
-    for (const child of node.children ?? []) {
-      stack.push(child);
-    }
-  }
-  return undefined;
-}
-
 export const componentPropertiesHandlers: Record<string, CommandHandler> = {
 
   // ── Node Properties ─────────────────────────────────────────────
@@ -164,16 +152,6 @@ export const componentPropertiesHandlers: Record<string, CommandHandler> = {
       delete node.responsive[breakpoint];
     } else {
       node.responsive[breakpoint] = patch;
-    }
-    return { rebuildComponentTree: false };
-  },
-
-  'component.setWizardProperty': (state, payload) => {
-    const { property, value } = payload as { property: string; value: unknown };
-    const root = ensureTree(state);
-    const wizard = findFirstComponent(root, 'Wizard');
-    if (wizard) {
-      wizard[property] = value;
     }
     return { rebuildComponentTree: false };
   },

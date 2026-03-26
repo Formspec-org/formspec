@@ -1,23 +1,25 @@
-/** @filedesc Resolves theme pages into enriched page structures with diagnostics. */
-import type { ThemeDocument, FormDefinition, FormItem } from './types.js';
+/** @filedesc Resolves component-tree pages into enriched page structures with diagnostics. */
+import type { FormDefinition, FormItem, ComponentState } from './types.js';
+import type { TreeNode } from './handlers/tree-utils.js';
+import { resolvePageStructureFromTree } from './queries/component-page-resolution.js';
 
 // ── Public types ─────────────────────────────────────────────────────
 
 /**
- * Enriched region from theme.schema.json Region with existence check.
- * Schema source: theme.schema.json#/$defs/Region
+ * Enriched region with existence check.
+ * Each region represents a bound item placed on a page.
  */
 export interface ResolvedRegion {
   key: string;
-  span: number;       // default 12 per schema
+  span: number;       // default 12
   start?: number;
   responsive?: Record<string, { span?: number; start?: number; hidden?: boolean }>;
   exists: boolean;     // key exists in definition items?
 }
 
 /**
- * Resolved page from theme.schema.json Page with enriched regions.
- * Schema source: theme.schema.json#/$defs/Page
+ * Resolved page with enriched regions.
+ * Derived from Page nodes in the component tree.
  */
 export interface ResolvedPage {
   id: string;
@@ -40,53 +42,58 @@ export interface ResolvedPageStructure {
   itemPageMap: Record<string, string>;
 }
 
-/** The two document slices resolvePageStructure reads. */
+/** The document slices resolvePageStructure reads. */
 export type PageStructureInput = {
-  theme: Pick<ThemeDocument, 'pages'>;
   definition: Pick<FormDefinition, 'formPresentation' | 'items'>;
+  component?: Pick<ComponentState, 'tree'>;
 };
 
 /**
- * Resolves the current page structure from studio-managed internal state.
+ * Resolves the current page structure from the component tree.
  *
- * Reads `theme.pages` as the canonical source. No tier cascade —
- * Studio is the sole writer and keeps all documents consistent.
+ * Reads Page nodes from `component.tree` (a Stack > Page* hierarchy).
+ * Applies bidirectional propagation (groups ↔ children) and emits diagnostics.
  */
 export function resolvePageStructure(
   state: PageStructureInput,
   definitionItemKeys: string[],
 ): ResolvedPageStructure {
   const diagnostics: PageDiagnostic[] = [];
-  const themePages = (state.theme.pages ?? []) as any[];
   const pageMode: string = state.definition.formPresentation?.pageMode ?? 'single';
   const knownKeys = new Set(definitionItemKeys);
 
-  // Build resolved pages from theme.pages (canonical source)
-  // Maps theme.schema.json Page/Region to enriched ResolvedPage/ResolvedRegion
-  const pages: ResolvedPage[] = themePages.map((p: any) => ({
-    id: p.id ?? '',
-    title: p.title ?? '',
-    ...(p.description !== undefined && { description: p.description }),
-    regions: (p.regions ?? []).map((r: any) => {
-      const region: ResolvedRegion = {
-        key: r.key ?? '',
-        span: r.span ?? 12,  // Region.span default per schema
-        exists: knownKeys.has(r.key ?? ''),
-      };
-      if (r.start !== undefined) region.start = r.start;
-      if (r.responsive !== undefined) region.responsive = r.responsive;
-      return region;
-    }),
-  }));
+  const effectiveMode: 'single' | 'wizard' | 'tabs' =
+    pageMode === 'tabs' ? 'tabs' : pageMode === 'wizard' ? 'wizard' : 'single';
 
-  // Build itemPageMap and emit diagnostics for unknown keys
-  // 1. Explicitly assigned keys from regions
-  const itemPageMap: Record<string, string> = {};
+  // Extract raw page structure from the component tree
+  const tree = state.component?.tree as TreeNode | undefined;
+  if (!tree) {
+    // No component tree — all items are unassigned
+    const unassignedItems: string[] = [];
+    const visited = new Set<string>();
+    collectUnassigned(state.definition.items ?? [], {}, visited, unassignedItems);
+    for (const key of definitionItemKeys) {
+      if (!visited.has(key)) unassignedItems.push(key);
+    }
+    return {
+      mode: effectiveMode,
+      pages: [],
+      diagnostics: [],
+      unassignedItems,
+      itemPageMap: {},
+    };
+  }
+
+  const rawResult = resolvePageStructureFromTree(tree, effectiveMode, definitionItemKeys);
+
+  // Start with the raw itemPageMap from tree extraction
+  const itemPageMap: Record<string, string> = { ...rawResult.itemPageMap };
+  const pages = rawResult.pages;
+
+  // Emit UNKNOWN_REGION_KEY diagnostics for non-existent region keys
   for (const page of pages) {
     for (const region of page.regions) {
-      if (region.exists) {
-        itemPageMap[region.key] = page.id;
-      } else if (region.key) {
+      if (!region.exists && region.key) {
         diagnostics.push({
           code: 'UNKNOWN_REGION_KEY',
           severity: 'warning',
@@ -96,70 +103,17 @@ export function resolvePageStructure(
     }
   }
 
-  // 2. Bidirectional page ID propagation
-  // Top-down: groups assign page IDs to their children.
+  // Bidirectional page ID propagation on the definition item tree
+  // Top-down: groups assigned to a page propagate to their children.
   // Bottom-up: groups whose children are ALL assigned inherit a page ID.
-  function propagate(items: FormItem[], parentPageId?: string) {
-    for (const item of items) {
-      const inheritedId = itemPageMap[item.key] ?? parentPageId;
-      if (inheritedId && !itemPageMap[item.key]) {
-        itemPageMap[item.key] = inheritedId;
-      }
-      if (item.children) {
-        propagate(item.children, inheritedId);
-        // Bottom-up: if all children are assigned, mark the group as assigned too
-        if (!(item.key in itemPageMap)) {
-          const allChildrenAssigned = item.children.length > 0 &&
-            item.children.every(c => c.key in itemPageMap);
-          if (allChildrenAssigned) {
-            itemPageMap[item.key] = itemPageMap[item.children[0].key];
-          }
-        }
-      }
-    }
-  }
-  propagate(state.definition.items ?? []);
+  propagatePageIds(state.definition.items ?? [], itemPageMap);
 
-  // Compute unassigned items.
-  // For groups with children: if the group is unassigned but SOME children are
-  // assigned, only show the unassigned children (not the group itself).
-  // For groups with NO children assigned: show the group (not individual children).
+  // Compute unassigned items with smart group/child logic
   const unassignedItems: string[] = [];
   const visited = new Set<string>();
-  function collectUnassigned(items: FormItem[]) {
-    for (const item of items) {
-      visited.add(item.key);
-      const isAssigned = item.key in itemPageMap;
+  collectUnassigned(state.definition.items ?? [], itemPageMap, visited, unassignedItems);
 
-      if (item.children && item.children.length > 0) {
-        const anyChildAssigned = item.children.some(c => c.key in itemPageMap);
-        if (isAssigned) {
-          // Group fully assigned (all children placed) — nothing to show
-        } else if (anyChildAssigned) {
-          // Partial: some children placed, some not — show only unassigned children
-          for (const child of item.children) {
-            visited.add(child.key);
-            if (!(child.key in itemPageMap)) {
-              unassignedItems.push(child.key);
-            }
-          }
-        } else {
-          // No children assigned — show the group itself
-          unassignedItems.push(item.key);
-          // Mark children as visited so they don't appear separately
-          for (const child of item.children) {
-            visited.add(child.key);
-          }
-        }
-      } else if (!isAssigned) {
-        unassignedItems.push(item.key);
-      }
-    }
-  }
-  collectUnassigned(state.definition.items ?? []);
-
-  // Also include keys from the input list that weren't in the items tree
-  // (guards against mismatched inputs and supports minimal test cases)
+  // Keys from the input list not in the definition item tree
   for (const key of definitionItemKeys) {
     if (!visited.has(key) && !(key in itemPageMap)) {
       unassignedItems.push(key);
@@ -171,19 +125,76 @@ export function resolvePageStructure(
     diagnostics.push({
       code: 'PAGEMODE_MISMATCH',
       severity: 'warning',
-      message: 'Theme pages exist but definition pageMode is "single". Pages may not render.',
+      message: 'Pages exist but definition pageMode is "single". Pages may not render.',
     });
   }
 
-  // Determine effective mode (definition.schema.json formPresentation.pageMode enum)
-  const mode: 'single' | 'wizard' | 'tabs' =
-    pageMode === 'tabs' ? 'tabs' : pageMode === 'wizard' ? 'wizard' : 'single';
-
   return {
-    mode,
+    mode: effectiveMode,
     pages,
     diagnostics,
     unassignedItems,
     itemPageMap,
   };
+}
+
+// ── Internal helpers ────────────────────────────────────────────────
+
+function propagatePageIds(
+  items: FormItem[],
+  itemPageMap: Record<string, string>,
+  parentPageId?: string,
+) {
+  for (const item of items) {
+    const inheritedId = itemPageMap[item.key] ?? parentPageId;
+    if (inheritedId && !itemPageMap[item.key]) {
+      itemPageMap[item.key] = inheritedId;
+    }
+    if (item.children) {
+      propagatePageIds(item.children, itemPageMap, inheritedId);
+      // Bottom-up: if all children are assigned, mark the group as assigned too
+      if (!(item.key in itemPageMap)) {
+        const allChildrenAssigned = item.children.length > 0 &&
+          item.children.every(c => c.key in itemPageMap);
+        if (allChildrenAssigned) {
+          itemPageMap[item.key] = itemPageMap[item.children[0].key];
+        }
+      }
+    }
+  }
+}
+
+function collectUnassigned(
+  items: FormItem[],
+  itemPageMap: Record<string, string>,
+  visited: Set<string>,
+  unassignedItems: string[],
+) {
+  for (const item of items) {
+    visited.add(item.key);
+    const isAssigned = item.key in itemPageMap;
+
+    if (item.children && item.children.length > 0) {
+      const anyChildAssigned = item.children.some(c => c.key in itemPageMap);
+      if (isAssigned) {
+        // Group fully assigned — nothing to show
+      } else if (anyChildAssigned) {
+        // Partial: some children placed, some not — show only unassigned children
+        for (const child of item.children) {
+          visited.add(child.key);
+          if (!(child.key in itemPageMap)) {
+            unassignedItems.push(child.key);
+          }
+        }
+      } else {
+        // No children assigned — show the group itself
+        unassignedItems.push(item.key);
+        for (const child of item.children) {
+          visited.add(child.key);
+        }
+      }
+    } else if (!isAssigned) {
+      unassignedItems.push(item.key);
+    }
+  }
 }

@@ -78,9 +78,12 @@ export interface RepeatProps {
 
 /** Branch path — one arm of a conditional branch */
 export interface BranchPath {
-  when: string | number | boolean;
+  /** Value to match against. Required for 'equals'/'contains' modes, optional for 'condition' mode. */
+  when?: string | number | boolean;
   show: string | string[];
-  mode?: 'equals' | 'contains';
+  mode?: 'equals' | 'contains' | 'condition';
+  /** Raw FEL expression — used when mode is 'condition' (escape hatch for advanced users). */
+  condition?: string;
 }
 
 /** Layout arrangement for applyLayout */
@@ -158,9 +161,14 @@ export interface MetadataChanges {
   nonRelevantBehavior?: 'empty' | 'suppress' | null;
   derivedFrom?: string | null;
   density?: 'compact' | 'comfortable' | 'spacious' | null;
-  labelPosition?: 'top' | 'left' | 'inline' | 'hidden' | null;
-  pageMode?: 'tabs' | 'wizard' | 'accordion' | null;
+  labelPosition?: 'top' | 'start' | 'hidden' | null;
+  pageMode?: 'single' | 'wizard' | 'tabs' | null;
   defaultCurrency?: string | null;
+  showProgress?: boolean | null;
+  allowSkip?: boolean | null;
+  defaultTab?: number | null;
+  tabPosition?: 'top' | 'bottom' | 'left' | 'right' | null;
+  direction?: 'ltr' | 'rtl' | 'auto' | null;
 }
 
 /** Changes for updateItem — each key routes to a different handler */

@@ -7,6 +7,6 @@ export function usePageStructure(): PageStructureView {
   const state = useProjectState();
   return useMemo(
     () => resolvePageView(state),
-    [state.theme, state.definition],
+    [state.component, state.theme, state.definition],
   );
 }

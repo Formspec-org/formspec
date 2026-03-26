@@ -98,21 +98,6 @@ def test_component_compatibility_warning_escalates_in_strict_mode() -> None:
     assert any(diag.code == "W802" and diag.severity == "error" for diag in strict)
 
 
-def test_wizard_children_must_be_page() -> None:
-    document = {
-        "$formspecComponent": "1.0",
-        "version": "1.0.0",
-        "targetDefinition": {"url": "https://example.com/forms/x"},
-        "tree": {
-            "component": "Wizard",
-            "children": [{"component": "Stack"}],
-        },
-    }
-
-    diagnostics = lint(document)
-
-    assert any(diag.code == "E805" for diag in diagnostics)
-
 
 # ── Extension resolution linting ────────────────────────────────────
 

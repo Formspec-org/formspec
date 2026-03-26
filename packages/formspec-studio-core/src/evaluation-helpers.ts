@@ -8,6 +8,27 @@ import {
 import type { Project } from './project.js';
 
 /**
+ * Collect paths of money-typed fields from a definition item tree.
+ * Money fields store atomic `{amount, currency}` objects that should not be
+ * flattened into separate signal paths.
+ */
+function collectMoneyPaths(items: any[], prefix = ''): Set<string> {
+  const paths = new Set<string>();
+  for (const item of items) {
+    const path = prefix ? `${prefix}.${item.key}` : item.key;
+    if (item.dataType === 'money') {
+      paths.add(path);
+    }
+    if (item.children?.length) {
+      for (const child of collectMoneyPaths(item.children, path)) {
+        paths.add(child);
+      }
+    }
+  }
+  return paths;
+}
+
+/**
  * Flatten a nested/mixed data object into engine signal paths.
  *
  * Handles three input shapes:
@@ -15,15 +36,18 @@ import type { Project } from './project.js';
  * - Nested objects: `{ patient: { first_name: "John" } }` -> `{ "patient.first_name": "John" }`
  * - Repeat group arrays: `{ expenses: [{ amount: 100 }] }` -> `{ "expenses[0].amount": 100 }`
  * - Array-valued fields (multichoice): `{ tags: ["a", "b"] }` -> `{ "tags": ["a", "b"] }` (preserved)
+ * - Money objects: `{ price: {amount, currency} }` -> `{ "price": {amount, currency} }` (preserved)
  *
  * @param repeatGroupPaths - Paths known to be repeat groups. Arrays at these paths
  *   are expanded into indexed signal paths. Arrays at all other paths are preserved
  *   as-is (e.g. multichoice field values).
+ * @param atomicObjectPaths - Paths whose object values are leaf values (e.g. money fields).
  */
 function flattenToSignalPaths(
   data: Record<string, unknown>,
   repeatGroupPaths: ReadonlySet<string>,
   prefix = '',
+  atomicObjectPaths: ReadonlySet<string> = new Set(),
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
@@ -37,7 +61,7 @@ function flattenToSignalPaths(
       for (let i = 0; i < value.length; i++) {
         const item = value[i];
         if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
-          Object.assign(result, flattenToSignalPaths(item as Record<string, unknown>, repeatGroupPaths, `${path}[${i}]`));
+          Object.assign(result, flattenToSignalPaths(item as Record<string, unknown>, repeatGroupPaths, `${path}[${i}]`, atomicObjectPaths));
         } else {
           result[`${path}[${i}]`] = item;
         }
@@ -46,7 +70,12 @@ function flattenToSignalPaths(
       // Non-repeat-group array (e.g. multichoice) — pass through as-is
       result[path] = value;
     } else if (value !== null && typeof value === 'object') {
-      Object.assign(result, flattenToSignalPaths(value as Record<string, unknown>, repeatGroupPaths, path));
+      if (atomicObjectPaths.has(basePath)) {
+        // Atomic object field (e.g. money) — preserve as-is
+        result[path] = value;
+      } else {
+        Object.assign(result, flattenToSignalPaths(value as Record<string, unknown>, repeatGroupPaths, path, atomicObjectPaths));
+      }
     } else {
       result[path] = value;
     }
@@ -70,6 +99,9 @@ function loadDataIntoEngine(engine: IFormEngine, data: Record<string, unknown>):
     Object.keys(engine.repeats).map(k => k.replace(/\[\d+\]/g, '')),
   );
 
+  // Collect money field paths — these hold atomic {amount, currency} objects
+  const moneyPaths = collectMoneyPaths(engine.definition.items ?? []);
+
   // Separate already-flat signal paths (contain dots or brackets) from nested objects/arrays.
   let flatData = data;
   const hasNestedValues = Object.values(data).some(
@@ -85,7 +117,7 @@ function loadDataIntoEngine(engine: IFormEngine, data: Record<string, unknown>):
         flat[key] = value;
       }
     }
-    flatData = { ...flat, ...flattenToSignalPaths(nested, repeatGroupPaths) };
+    flatData = { ...flat, ...flattenToSignalPaths(nested, repeatGroupPaths, '', moneyPaths) };
   }
 
   // Determine required repeat instance counts from indexed paths.
@@ -248,21 +280,23 @@ export function previewForm(
     cleanState[path] = { severity: entry.severity, message: entry.message };
   }
 
-  // Pages from theme — with per-page validation counts
-  const themePages = bundle.theme?.pages ?? [];
+  // Pages from component tree — with per-page validation counts
+  const comp = project.effectiveComponent as any;
+  const treeRoot = comp?.tree;
+  const pageNodes: any[] = treeRoot?.children?.filter((n: any) => n.component === 'Page') ?? [];
   const visibleFieldSet = new Set(visibleFields);
-  const pages = (themePages as any[]).map((p: any) => {
-    // Collect group paths owned by this page via its regions
-    const regionKeys: string[] = (p.regions ?? [])
-      .map((r: any) => r.key)
+  const pages = pageNodes.map((n: any) => {
+    // Collect bound keys owned by this page (equivalent of regions)
+    const boundKeys: string[] = (n.children ?? [])
+      .map((c: any) => c.bind)
       .filter(Boolean);
 
-    // Count validation entries whose path falls under one of this page's groups
+    // Count validation entries whose path falls under one of this page's bound items
     // and whose field is visible (not hidden by a show_when condition)
     let errors = 0;
     let warnings = 0;
     for (const [fieldPath, entry] of Object.entries(cleanState)) {
-      if (!regionKeys.some(rk => fieldPath === rk || fieldPath.startsWith(rk + '.') || fieldPath.startsWith(rk + '['))) {
+      if (!boundKeys.some(rk => fieldPath === rk || fieldPath.startsWith(rk + '.') || fieldPath.startsWith(rk + '['))) {
         continue;
       }
       if (!visibleFieldSet.has(fieldPath)) continue;
@@ -271,8 +305,8 @@ export function previewForm(
     }
 
     return {
-      id: p.id,
-      title: p.title ?? '',
+      id: n.nodeId as string,
+      title: (n.title as string) ?? '',
       validationErrors: errors,
       validationWarnings: warnings,
       status: 'active' as const,

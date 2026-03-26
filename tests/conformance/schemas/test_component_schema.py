@@ -46,8 +46,8 @@ def test_full_core_components():
                         { "component": "Divider", "label": "More" }
                     ]}
                 ]},
-                { "component": "Wizard", "children": [
-                    { "component": "Page", "title": "Step 1", "children": [] }
+                { "component": "Tabs", "children": [
+                    { "component": "Page", "title": "Tab 1", "children": [] }
                 ]},
                 { "component": "Spacer", "size": "20px" },
                 { "component": "ConditionalGroup", "when": "$show", "children": [] }
@@ -164,7 +164,6 @@ def test_token_references():
     ("Page", {"title": "T"}, ["children"]),
     ("Stack", {"direction": "horizontal", "gap": 10}, ["children"]),
     ("Grid", {"columns": 3, "gap": "1em"}, ["children"]),
-    ("Wizard", {"showProgress": True}, ["children"]),
     ("Spacer", {"size": 10}, []),
     ("TextInput", {"bind": "k", "placeholder": "P"}, []),
     ("NumberInput", {"bind": "k", "step": 1, "min": 0, "max": 10}, []),
@@ -307,7 +306,7 @@ def test_interpolation_escaping_in_text():
     }
     validate(instance=doc, schema=SCHEMA)
 def test_full_employee_onboarding_wizard():
-    # Example from §18 of the plan
+    # Example from §18 of the plan — Wizard deprecated, use Stack with Pages
     doc = {
         "$formspecComponent": "1.0",
         "url": "https://example.com/onboarding-ui",
@@ -333,8 +332,7 @@ def test_full_employee_onboarding_wizard():
             }
         },
         "tree": {
-            "component": "Wizard",
-            "showProgress": True,
+            "component": "Stack",
             "children": [
                 {
                     "component": "Page",
@@ -452,13 +450,14 @@ def test_invalid_custom_component_params_type():
     with pytest.raises(ValidationError):
         validate(instance=doc, schema=SCHEMA)
 
-def test_wizard_with_pages():
+def test_stack_with_pages():
+    """Pages are children of Stack; wizard behavior is controlled by formPresentation.pageMode."""
     doc = {
         "$formspecComponent": "1.0",
         "version": "1.0.0",
         "targetDefinition": { "url": "https://example.com/def" },
         "tree": {
-            "component": "Wizard",
+            "component": "Stack",
             "children": [
                 { "component": "Page", "title": "S1", "children": [] },
                 { "component": "Page", "title": "S2", "children": [] }

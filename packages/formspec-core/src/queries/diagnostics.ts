@@ -253,39 +253,39 @@ export function diagnose(state: ProjectState, schemaValidator?: SchemaValidator)
     }
   }
 
-  const pages = (state.theme as any).pages as any[] | undefined;
-  if (Array.isArray(pages)) {
-    for (let i = 0; i < pages.length; i++) {
-      const regions = pages[i]?.regions;
-      if (!Array.isArray(regions)) continue;
-      for (let j = 0; j < regions.length; j++) {
-        const key = regions[j]?.key;
-        if (typeof key !== 'string') continue;
-        if (itemKeySet.has(key) || itemPathSet.has(key) || componentNodeKeySet.has(key)) continue;
-        consistency.push({
-          artifact: 'theme',
-          path: `pages[${i}].regions[${j}].key`,
-          severity: 'warning',
-          code: 'STALE_THEME_REGION_KEY',
-          message: `Theme page region key "${key}" does not match any item key in the definition`,
-        });
-      }
+  // Consistency: stale bound keys inside component tree Page nodes
+  // Page nodes live as children of the component tree root with component === 'Page'.
+  const pageNodes: any[] = tree?.children?.filter((c: any) => c.component === 'Page') ?? [];
+  for (let i = 0; i < pageNodes.length; i++) {
+    const pageChildren = pageNodes[i]?.children as any[] | undefined;
+    if (!Array.isArray(pageChildren)) continue;
+    for (let j = 0; j < pageChildren.length; j++) {
+      const key = pageChildren[j]?.bind;
+      if (typeof key !== 'string') continue;
+      if (itemKeySet.has(key) || itemPathSet.has(key) || componentNodeKeySet.has(key)) continue;
+      consistency.push({
+        artifact: 'component',
+        path: `tree.children[${i}].children[${j}].bind`,
+        severity: 'warning',
+        code: 'STALE_THEME_REGION_KEY',
+        message: `Page region key "${key}" does not match any item key in the definition`,
+      });
     }
   }
 
   // Consistency: root-level non-group items in paged definitions
   const defPageMode = (state.definition as any).formPresentation?.pageMode;
   if (defPageMode === 'wizard' || defPageMode === 'tabs') {
-    // Build set of item keys placed on theme pages — these render correctly
-    const themePlacedKeys = new Set<string>();
-    for (const page of (state.theme.pages ?? []) as any[]) {
-      for (const region of (page.regions ?? []) as any[]) {
-        if (typeof region.key === 'string') themePlacedKeys.add(region.key);
+    // Build set of item keys placed on Page nodes in the component tree
+    const pagePlacedKeys = new Set<string>();
+    for (const pageNode of pageNodes) {
+      for (const child of (pageNode.children ?? []) as any[]) {
+        if (typeof child.bind === 'string') pagePlacedKeys.add(child.bind);
       }
     }
 
     for (const item of state.definition.items) {
-      if (item.type !== 'group' && !themePlacedKeys.has(item.key)) {
+      if (item.type !== 'group' && !pagePlacedKeys.has(item.key)) {
         consistency.push({
           artifact: 'definition',
           path: item.key,

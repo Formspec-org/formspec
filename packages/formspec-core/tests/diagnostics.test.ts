@@ -8,6 +8,14 @@ import { lintDocument, type SchemaValidator } from 'formspec-engine/fel-tools';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCHEMAS_DIR = path.resolve(__dirname, '../../../schemas');
 
+/** Get the nodeId of a Page node from the component tree. */
+function getPageId(project: ReturnType<typeof createRawProject>, index = 0): string {
+  const tree = project.generatedComponent.tree;
+  const pages = (tree?.children ?? []).filter((c: any) => c.component === 'Page');
+  if (!pages[index]) throw new Error(`No page at index ${index}`);
+  return pages[index].nodeId;
+}
+
 describe('diagnose', () => {
   function createLintBackedSchemaValidator(): SchemaValidator {
     return {
@@ -241,14 +249,13 @@ describe('diagnose', () => {
     expect(diag.consistency.filter(d => d.code === 'PAGED_ROOT_NON_GROUP')).toEqual([]);
   });
 
-  it('no PAGED_ROOT_NON_GROUP warning for theme-placed root items', () => {
+  it('no PAGED_ROOT_NON_GROUP warning for page-placed root items', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'email' } });
     // Create a page and place both items on it
     project.dispatch({ type: 'pages.addPage', payload: { title: 'Contact Info' } });
-    const pages = (project.state.theme.pages ?? []) as any[];
-    const pageId = pages[0].id;
+    const pageId = getPageId(project);
     project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
     project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'email' } });
 
@@ -257,14 +264,13 @@ describe('diagnose', () => {
     expect(pagedWarnings).toEqual([]);
   });
 
-  it('PAGED_ROOT_NON_GROUP only fires for unplaced items, not theme-placed ones', () => {
+  it('PAGED_ROOT_NON_GROUP only fires for unplaced items, not page-placed ones', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'placed_field' } });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'orphan_field' } });
     // Create a page and place only one item
     project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
-    const pages = (project.state.theme.pages ?? []) as any[];
-    const pageId = pages[0].id;
+    const pageId = getPageId(project);
     project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'placed_field' } });
 
     const diag = project.diagnose();
@@ -294,8 +300,7 @@ describe('diagnose', () => {
       payload: { type: 'group', key: 'page1', label: 'Page 1' },
     });
     project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
-    const pages = (project.state.theme.pages ?? []) as any[];
-    const pageId = pages[0].id;
+    const pageId = getPageId(project);
     project.dispatch({
       type: 'pages.assignItem',
       payload: { pageId, key: 'page1' },
@@ -324,27 +329,24 @@ describe('diagnose', () => {
     expect(stale).toEqual([]);
   });
 
-  it('still reports STALE_THEME_REGION_KEY for genuinely stale keys', () => {
+  it('reports orphan component bind for BoundItem pointing to nonexistent item', () => {
     const project = createRawProject();
     project.dispatch({
       type: 'definition.addItem',
-      payload: { type: 'group', key: 'page1', label: 'Page 1' },
+      payload: { type: 'field', key: 'real_item' },
     });
     project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
-    const pages = (project.state.theme.pages ?? []) as any[];
-    const pageId = pages[0].id;
-    // Assign a key that doesn't exist in definition or component tree
+    const pageId = getPageId(project);
+    // Assign a key that doesn't exist in the definition — creates a BoundItem placeholder
     project.dispatch({
       type: 'pages.assignItem',
       payload: { pageId, key: 'deleted_item' },
     });
 
+    // The BoundItem placeholder should trigger an ORPHAN_COMPONENT_BIND diagnostic
     const diag = project.diagnose();
-    const stale = diag.consistency.filter(
-      (d) => d.code === 'STALE_THEME_REGION_KEY',
-    );
-    expect(stale).toHaveLength(1);
-    expect(stale[0].message).toContain('deleted_item');
+    const orphan = diag.consistency.filter(d => d.code === 'ORPHAN_COMPONENT_BIND');
+    expect(orphan.some(d => d.path === 'deleted_item')).toBe(true);
   });
 
   it('detects transitive variable cycle in consistency diagnostics', () => {
@@ -385,8 +387,7 @@ describe('diagnose', () => {
   it('recognizes component node IDs as valid region keys', () => {
     const project = createRawProject();
     project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
-    const pages = (project.state.theme.pages ?? []) as any[];
-    const pageId = pages[0].id;
+    const pageId = getPageId(project);
 
     // Add two component-only nodes
     project.dispatch({

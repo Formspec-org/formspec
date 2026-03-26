@@ -210,14 +210,15 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
       path: z.string().optional().describe('Item path (e.g., "name", "contact.email", "items[0].amount")'),
       label: z.string().optional(),
       type: z.string().optional().describe('Data type: "string" (single-line text), "text" (multi-line textarea), "integer", "decimal", "boolean", "date", "choice". Also accepts aliases: "number" (-> decimal), "email"/"phone" (-> string + validation), "url" (-> uri), "money"/"currency", "file" (-> attachment), "multichoice", "rating" (-> integer + Rating widget), "slider" (-> decimal + Slider widget). For "date" fields, use initialValue: "=today()" to auto-populate with today\'s date'),
+      parentPath: z.string().optional().describe('Parent group path to nest this field under (convenience alias — also accepted inside props)'),
       props: fieldPropsSchema.optional(),
       items: z.array(fieldItemSchema).optional().describe('Batch: array of field definitions to add'),
     },
     annotations: NON_DESTRUCTIVE,
-  }, async ({ project_id, path, label, type, props, items }) => {
+  }, async ({ project_id, path, label, type, parentPath, props, items }) => {
     return bracketMutation(registry, project_id, 'formspec_field', () => {
       if (items) return structure.handleField(registry, project_id, { items });
-      return structure.handleField(registry, project_id, { path: path!, label: label!, type: type!, props });
+      return structure.handleField(registry, project_id, { path: path!, label: label!, type: type!, parentPath, props });
     });
   });
 
@@ -229,14 +230,15 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
       path: z.string().optional(),
       body: z.string().optional().describe('Display text'),
       kind: z.enum(['heading', 'paragraph', 'divider', 'banner']).optional(),
+      parentPath: z.string().optional().describe('Parent group path to nest this content under (convenience alias — also accepted inside props)'),
       props: contentItemSchema.shape.props,
       items: z.array(contentItemSchema).optional(),
     },
     annotations: NON_DESTRUCTIVE,
-  }, async ({ project_id, path, body, kind, props, items }) => {
+  }, async ({ project_id, path, body, kind, parentPath, props, items }) => {
     return bracketMutation(registry, project_id, 'formspec_content', () => {
       if (items) return structure.handleContent(registry, project_id, { items });
-      return structure.handleContent(registry, project_id, { path: path!, body: body!, kind, props });
+      return structure.handleContent(registry, project_id, { path: path!, body: body!, kind, parentPath, props });
     });
   });
 
@@ -247,14 +249,15 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
       project_id: z.string(),
       path: z.string().optional(),
       label: z.string().optional(),
+      parentPath: z.string().optional().describe('Parent group path to nest this group under (convenience alias — also accepted inside props)'),
       props: groupItemSchema.shape.props.optional(),
       items: z.array(groupItemSchema).optional(),
     },
     annotations: NON_DESTRUCTIVE,
-  }, async ({ project_id, path, label, props, items }) => {
+  }, async ({ project_id, path, label, parentPath, props, items }) => {
     return bracketMutation(registry, project_id, 'formspec_group', () => {
       if (items) return structure.handleGroup(registry, project_id, { items });
-      return structure.handleGroup(registry, project_id, { path: path!, label: label!, props });
+      return structure.handleGroup(registry, project_id, { path: path!, label: label!, parentPath, props });
     });
   });
 
@@ -293,12 +296,13 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
 
   server.registerTool('formspec_edit', {
     title: 'Edit Structure',
-    description: 'Structural tree mutations: remove, move, rename, or copy items. Action "remove" is DESTRUCTIVE.',
+    description: 'Structural tree mutations: remove, move, rename, or copy items. Action "remove" is DESTRUCTIVE.\n\nFor move: position controls how target_path is interpreted:\n- "inside" (default): target_path is the parent container\n- "before": target_path is a sibling; item is placed before it\n- "after": target_path is a sibling; item is placed after it',
     inputSchema: {
       project_id: z.string(),
       action: z.enum(['remove', 'move', 'rename', 'copy']).optional(),
       path: z.string().optional(),
-      target_path: z.string().optional(),
+      target_path: z.string().optional().describe('For move: parent container (position="inside") or sibling reference (position="before"/"after"). For copy: target parent group.'),
+      position: z.enum(['inside', 'after', 'before']).optional().describe('How to interpret target_path for move. Default: "inside"'),
       index: z.number().optional(),
       new_key: z.string().optional(),
       deep: z.boolean().optional(),
@@ -306,17 +310,18 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
         action: z.enum(['remove', 'move', 'rename', 'copy']).optional(),
         path: z.string(),
         target_path: z.string().optional(),
+        position: z.enum(['inside', 'after', 'before']).optional(),
         index: z.number().optional(),
         new_key: z.string().optional(),
         deep: z.boolean().optional(),
       })).optional(),
     },
     annotations: DESTRUCTIVE,
-  }, async ({ project_id, action, path, target_path, index, new_key, deep, items }) => {
+  }, async ({ project_id, action, path, target_path, position, index, new_key, deep, items }) => {
     return bracketMutation(registry, project_id, 'formspec_edit', () => {
       if (items) return structure.handleEdit(registry, project_id, action ?? 'remove', { items });
       if (!action) return structure.editMissingAction();
-      return structure.handleEdit(registry, project_id, action, { path: path!, target_path, index, new_key, deep });
+      return structure.handleEdit(registry, project_id, action, { path: path!, target_path, position, index, new_key, deep });
     });
   });
 
@@ -387,7 +392,7 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
 
   server.registerTool('formspec_behavior', {
     title: 'Behavior',
-    description: 'Set field logic: visibility conditions, readonly conditions, required state, calculated values, and validation rules. Supports batch via items[] array.\n\nActions: show_when, readonly_when, require, calculate, add_rule, remove_rule.',
+    description: 'Set per-field logic and cross-field validation. Supports batch via items[] array.\n\nActions show_when, readonly_when, require, calculate set per-field bind properties. Action add_rule creates a cross-field validation shape (named rules with severity). remove_rule removes validation (both bind constraints and shape rules).\n\nshow_when sets a `relevant` expression on a single field. For branching patterns (show different pages/sections based on one answer), use formspec_flow(branch) instead.',
     inputSchema: {
       project_id: z.string(),
       action: z.enum(['show_when', 'readonly_when', 'require', 'calculate', 'add_rule', 'remove_rule']).optional(),
@@ -416,7 +421,7 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
 
   server.registerTool('formspec_flow', {
     title: 'Flow',
-    description: 'Set form navigation mode or add conditional branching.',
+    description: 'Set form navigation mode or add conditional branching.\n\nAction set_mode: switch between single-page, wizard, or tabs.\nAction branch: batch shorthand for setting `relevant` expressions on page groups. Under the hood, writes the same bind property as formspec_behavior(show_when) but across multiple targets based on one field\'s value.',
     inputSchema: {
       project_id: z.string(),
       action: z.enum(['set_mode', 'branch']),
@@ -557,8 +562,8 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
     inputSchema: {
       project_id: z.string(),
       mode: z.enum(['preview', 'validate', 'sample_data', 'normalize']).optional().default('preview'),
-      scenario: z.record(z.string(), z.unknown()).optional(),
-      response: z.record(z.string(), z.unknown()).optional(),
+      scenario: z.record(z.string(), z.unknown()).optional().describe('Field values to inject for preview mode. Takes precedence over response.'),
+      response: z.record(z.string(), z.unknown()).optional().describe('For validate mode: the response to validate. For preview mode: used as scenario fallback when scenario is not provided.'),
     },
     annotations: READ_ONLY,
   }, async ({ project_id, mode, scenario, response }) => {
@@ -601,10 +606,10 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
 
   server.registerTool('formspec_audit', {
     title: 'Audit',
-    description: 'Audit the form structure. action="classify_items": classify all items by type, data type, and metadata. action="bind_summary": show bind properties for a target field.',
+    description: 'Audit the form structure. classify_items: classify all items. bind_summary: show bind properties for a field. cross_document: check cross-artifact consistency. accessibility: check labels, hints, required field descriptions.',
     inputSchema: {
       project_id: z.string(),
-      action: z.enum(['classify_items', 'bind_summary']),
+      action: z.enum(['classify_items', 'bind_summary', 'cross_document', 'accessibility']),
       target: z.string().optional().describe('Field path (required for bind_summary)'),
     },
     annotations: READ_ONLY,

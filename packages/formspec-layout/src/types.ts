@@ -11,7 +11,7 @@ export interface LayoutNode {
     /** Stable ID for diffing/keying (auto-generated during planning). */
     id: string;
 
-    /** Resolved component type: "Stack", "TextInput", "Wizard", etc. */
+    /** Resolved component type: "Stack", "TextInput", "Page", etc. */
     component: string;
 
     /** Node classification for renderer dispatch. */

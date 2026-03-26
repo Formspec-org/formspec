@@ -106,7 +106,7 @@ describe('ValidationSummary — live in wizard', () => {
         document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
     });
 
-    /** Render a wizard with 2 pages: a field page and a review page with live ValidationSummary. */
+    /** Render a wizard (via pageMode) with 2 pages: a field page and a review page with live ValidationSummary. */
     function renderWizardWithSummary(mode: 'submit' | 'continuous' = 'submit') {
         const el = document.createElement('formspec-render') as any;
         document.body.appendChild(el);
@@ -115,7 +115,7 @@ describe('ValidationSummary — live in wizard', () => {
             version: '1.0.0',
             targetDefinition: { url: 'urn:test:wizard' },
             tree: {
-                component: 'Wizard',
+                component: 'Stack',
                 children: [
                     {
                         component: 'Page',
@@ -145,6 +145,7 @@ describe('ValidationSummary — live in wizard', () => {
             binds: [
                 { path: 'name', required: 'true' },
             ],
+            formPresentation: { pageMode: 'wizard' },
         };
         el.render();
         return el;
