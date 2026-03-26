@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-25
 **Status:** Brainstorm
-**Package:** `formspec-assist` (Layer 2–3, depends on `formspec-engine`, `formspec-types`)
+**Package:** `formspec-assist` (Layer 2, depends on `formspec-engine`, `formspec-types`)
 
 ---
 
@@ -43,7 +43,7 @@ formspec-assist/
     types.ts                — Public type vocabulary
 ```
 
-**Dependency position:** Layer 2–3. Depends on `formspec-engine` (field state, validation, FEL) and `formspec-types`. Does NOT depend on `formspec-webcomponent`, `formspec-chat`, or any renderer.
+**Dependency position:** Layer 2. Depends on `formspec-engine` (field state, validation, FEL) and `formspec-types`. Does NOT depend on `formspec-webcomponent`, `formspec-chat`, or any renderer. The webcomponent discovers assist via the public DOM/property API — no import, no lateral dependency.
 
 ### Key Interfaces
 
@@ -111,10 +111,11 @@ interface FieldHelp {
   path: string;
   label: string;
 
-  // From references
-  regulations: Array<{ title: string; uri: string; excerpt?: string }>;
-  documentation: Array<{ title: string; content: string }>;
-  examples: Array<{ title: string; content: string }>;
+  // From references (keyed by spec-defined type)
+  references: Record<ReferenceType, Array<{ title: string; uri?: string; content?: string; excerpt?: string }>>;
+  // ReferenceType = 'documentation' | 'example' | 'regulation' | 'policy' | 'glossary'
+  //               | 'schema' | 'vector-store' | 'knowledge-base' | 'retrieval'
+  //               | 'tool' | 'api' | 'context'
 
   // From ontology
   concept?: { display: string; system: string; uri: string };
@@ -350,26 +351,29 @@ Example: an HR system agent claims employee fields, a finance agent claims budge
 
 ### With FormEngine (core dependency)
 
-- Subscribe to value changes → trigger suggestion recalculation
-- Subscribe to relevance changes → update guided flow
+- **Prefer `FieldViewModel` / `FormViewModel`** as primary read surface — richer than raw signals (`getFieldVM(path)`, `getFormVM()`)
+- Subscribe to value changes via Preact Signals `effect()` → trigger suggestion recalculation
+- Subscribe to relevance changes via `relevantSignals[path]` → update guided flow
 - Read validation results → power error explanation
-- Call `compileExpression()` → explain calculated fields to users
-- Call `setValue()` → apply autofill and agent writes
+- Call `compileExpression()` → evaluate calculated fields (NB: returns a callable, not an explanation — FEL AST inspection needed for natural-language explanation)
+- Call `getFieldVM(path).setValue(value)` → apply autofill and agent writes (NB: `engine.setValue()` takes a flat field name, not a dot-path; for nested/repeat paths, use FieldViewModel)
+- **Missing APIs that need to be added to FormEngine:** `getFieldPaths(): string[]` (enumerate all field paths) and `getProgress(): { total, filled, valid, required }` (completion tracking)
 
 ### With References Document
 
-- Resolve per-field references by path
+- Resolve per-field references by walking the full references array and collecting entries whose `target` matches the field path OR `#` (form-level). **References do NOT inherit parent-to-child** — consumers must walk the tree explicitly.
 - Filter by audience (`human` for rendering, `agent` for LLM context, `both` for both)
 - Follow `$ref` pointers to `referenceDefs`
 - Use `priority` for ranking (primary > supplementary > background)
-- Use `type` for categorization (regulation, documentation, example, context)
+- Use `type` for categorization — all 12 spec-defined types: `documentation`, `example`, `regulation`, `policy`, `glossary`, `schema`, `vector-store`, `knowledge-base`, `retrieval`, `tool`, `api`, `context`
 - Use `rel` for relationship semantics (constrains, defines, exemplifies)
 - Support `vectorstore:` and `kb:` URI schemes for RAG integration
 
 ### With Ontology Document
 
-- Map field paths to concept URIs via `concepts` bindings
-- Use `equivalents` for cross-system matching (SKOS relationship types)
+- Map field paths to concept URIs via `concepts` bindings. **Keys are Bind.path syntax** (e.g., `demographics.dob`, `lineItems[*].amount`) — use full path, not just `item.name`.
+- **Three-level resolution cascade** (per ontology spec §3.4): (1) Ontology Document binding, (2) Registry concept entry (by `semanticType` match), (3) `semanticType` literal. Context resolver must implement all three for full spec compliance.
+- Use `equivalents` for cross-system matching (SKOS relationship types). **When `type` is absent, treat as `exact`** (per ontology spec default).
 - Use `vocabularies` for option set alignment
 - Use `alignments` for cross-form field matching
 - Use `context` for JSON-LD export of profile data
@@ -714,7 +718,7 @@ class WebMCPShim implements ModelContext {
 function ensureModelContext(): ModelContext {
   if (!navigator.modelContext) {
     const shim = new WebMCPShim();
-    Object.defineProperty(navigator, 'modelContext', { value: shim });
+    Object.defineProperty(navigator, 'modelContext', { value: shim, configurable: true });
   }
   return navigator.modelContext;
 }
@@ -752,45 +756,53 @@ class CustomEventTransport implements ShimTransport {
 
 ### Declarative Attributes on `<formspec-render>`
 
-The web component renderer adds WebMCP declarative attributes to rendered HTML automatically:
+> **Key finding from technical validation:** `<formspec-render>` does NOT create `<input>` elements directly. The rendering pipeline is: `planComponentTree()` → `emitNode()` → `renderActualComponent()` → ComponentPlugin → behavior hooks → adapter functions. There is also no `<form>` tag in the output — the renderer creates a `div.formspec-container`. The `renderField()` function shown in earlier drafts does not exist.
+
+**Injection approach: AdapterContext extension.** Add an optional `toolAnnotations` property to `AdapterContext` that adapters can read when creating DOM elements. Adapters that don't know about WebMCP (USWDS, Tailwind) simply ignore the extra property. The default rendering path sets `toolparamdescription` from the field's label + ontology concept:
 
 ```typescript
-// In formspec-webcomponent's render pipeline
-function renderField(item: FormItem, ontology?: OntologyDocument) {
-  const input = document.createElement('input');
-  input.name = item.name;
-
-  // WebMCP declarative attributes
-  input.setAttribute('toolparamdescription',
-    item.hint || item.label || item.name);
-
-  // If ontology binding exists, enrich the description
-  const concept = ontology?.concepts?.[item.name];
-  if (concept) {
-    input.setAttribute('toolparamdescription',
-      `${item.label} (${concept.display} — ${concept.system})`);
-  }
-
-  // Ontology → HTML autocomplete bridge (free browser autofill)
-  const autocomplete = conceptToAutocomplete(concept?.concept);
-  if (autocomplete) input.setAttribute('autocomplete', autocomplete);
-
-  return input;
+// In AdapterContext (adapters/types.ts), add optional property:
+interface AdapterContext {
+  // ... existing properties ...
+  toolAnnotations?: {
+    toolparamdescription?: string;
+    toolparamtitle?: string;
+    autocomplete?: string;
+  };
 }
 
-function renderForm(def: FormDefinition) {
-  const form = document.createElement('form');
-  form.setAttribute('toolname', `formspec.${def.name || 'form'}`);
-  form.setAttribute('tooldescription',
-    def.description || `Fill out the ${def.title || 'form'}`);
-  // No toolautosubmit — user must confirm submission
-  return form;
+// In behavior bind() or the adapter function:
+if (ctx.toolAnnotations?.toolparamdescription) {
+  inputEl.setAttribute('toolparamdescription', ctx.toolAnnotations.toolparamdescription);
+}
+if (ctx.toolAnnotations?.autocomplete) {
+  inputEl.setAttribute('autocomplete', ctx.toolAnnotations.autocomplete);
 }
 ```
 
-This gives us **three layers of agent accessibility** from a single codebase:
-1. **Declarative WebMCP** — browser-native tool discovery from annotated HTML
-2. **Imperative WebMCP** — rich tools with profile matching, validation, help
+**Tool annotation source:** The webcomponent populates `toolAnnotations` from the item's label/hint plus ontology concept binding (using the field's **full path** as the ontology key, not just `item.name`):
+
+```typescript
+// Generating toolAnnotations for a field
+function buildToolAnnotations(
+  item: FormItem,
+  fieldPath: string,
+  ontology?: OntologyDocument
+): ToolAnnotations | undefined {
+  const concept = ontology?.concepts?.[fieldPath];  // Full path, not item.name
+  const desc = concept
+    ? `${item.label} (${concept.display} — ${concept.system})`
+    : (item.hint || item.label || item.name);
+  const autocomplete = concept ? conceptToAutocomplete(concept.concept) : undefined;
+  return { toolparamdescription: desc, autocomplete };
+}
+```
+
+**For the form-level `toolname`:** Since `<formspec-render>` outputs a `div.formspec-container` (not a `<form>`), form-level WebMCP discovery relies on the **imperative API** (`registerTool()`), not declarative `<form>` attributes. This is actually better — the imperative tools are richer than what declarative attributes can express.
+
+**Three layers of agent accessibility** from a single codebase:
+1. **Imperative WebMCP** — rich tools with profile matching, validation, help (primary)
+2. **Declarative WebMCP** — `toolparamdescription` on individual input elements via AdapterContext (supplementary)
 3. **ARIA + autocomplete** — fallback for non-WebMCP agents and screen readers
 
 ### Relationship to Existing Packages
@@ -798,11 +810,13 @@ This gives us **three layers of agent accessibility** from a single codebase:
 | Package | Role | Depends on assist? |
 |---------|------|-------------------|
 | `formspec-assist` (new, layer 2) | Tool registration, context resolver, profile store, shim | — |
-| `formspec-webcomponent` (layer 2) | Adds declarative `tool*` attributes to rendered HTML | Optional peer dep |
+| `formspec-webcomponent` (layer 2) | Emits declarative `tool*` attributes via AdapterContext | **No import.** Discovers assist sidecar via public `.engine` property + DOM events. |
 | `formspec-mcp` (layer 4) | Authoring tools. Could also host filling MCP bridge. | Optional: filling transport |
 | `formspec-chat` (layer 5) | Form *authoring* chat. Separate concern. | No |
 
-`formspec-assist` at **layer 2** (same as `formspec-webcomponent`) — depends only on `formspec-engine` and `formspec-types`. The web component optionally imports it for declarative attribute enrichment. The MCP bridge transport optionally connects to a `formspec-mcp` server process.
+`formspec-assist` at **layer 2** — depends only on `formspec-engine` and `formspec-types`. **No lateral dependency** with `formspec-webcomponent` — the two packages communicate via the public `<formspec-render>.engine` property and DOM events, not imports. The assist layer discovers `<formspec-render>` elements in the page and calls `attach(element.engine)`. The webcomponent handles its own `tool*` attribute emission in the adapter layer without importing from assist.
+
+> **Note on `StorageBackend`:** The `formspec-chat` package (layer 5) has a `StorageBackend` interface identical to the `localStorage` API. Since assist (layer 2) cannot import from chat (layer 5), either: (a) extract `StorageBackend` to `formspec-types` (layer 0), or (b) define an identical interface in assist. Option (a) is cleaner if other packages need it.
 
 ---
 
@@ -820,3 +834,49 @@ This gives us **three layers of agent accessibility** from a single codebase:
 - Chat mode / LLM integration (context resolver works standalone first)
 - Custom browser extension (WebMCP + shim covers the use case)
 - Document extraction, multi-agent, guided walkthrough (later layers)
+
+---
+
+## Validation Findings (2026-03-26)
+
+Two independent validation passes: **spec-expert** (schema/spec compliance) and **formspec-scout** (technical integration). All findings addressed inline above. Summary of resolved issues:
+
+### Resolved — Architecture
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 1 | **Lateral dependency violation** — webcomponent (L2) can't import from assist (L2) | Eliminated import. Assist discovers `<formspec-render>` via public `.engine` property + DOM events. Declarative attributes handled by webcomponent's own AdapterContext, no import needed. |
+| 2 | **"Layer 2-3" ambiguous** — fence system requires single layer | Fixed to Layer 2. |
+| 3 | **`renderField()` doesn't exist** — webcomponent uses behavior/adapter pipeline, no direct element creation, no `<form>` tag | Redesigned: inject via `AdapterContext.toolAnnotations`. Form-level discovery via imperative API only. |
+| 4 | **`StorageBackend` can't import from formspec-chat (L5)** | Extract to `formspec-types` (L0) or duplicate in assist. |
+
+### Resolved — Engine API
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 5 | **`setValue()` takes flat name, not dot-path** | Use `getFieldVM(path).setValue(value)` for nested/repeat paths. |
+| 6 | **No `listFields()` or progress API** | Noted as prerequisite: add `getFieldPaths()` and `getProgress()` to FormEngine. |
+| 7 | **Prefer FieldViewModel/FormViewModel** over raw signals | Updated integration section to recommend VM-first approach. |
+| 8 | **`compileExpression()` returns callable, not explanation** | Noted: FEL AST inspection needed for natural-language explanations. |
+
+### Resolved — Spec Compliance
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 9 | **FieldHelp only surfaced 2 of 12 reference types** | Expanded to `Record<ReferenceType, ...>` covering all 12 spec-defined types. |
+| 10 | **References don't inherit parent-to-child** | Added explicit walk-the-tree note to integration section. |
+| 11 | **Ontology resolution cascade (3 levels) not addressed** | Added: doc binding → registry concept → semanticType fallback. |
+| 12 | **Ontology keys use full path, not item.name** | Fixed: `ontology.concepts[fieldPath]` not `ontology.concepts[item.name]`. |
+| 13 | **Default equivalent type is `exact` when absent** | Added note to ontology integration section. |
+
+### Resolved — Shim
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 14 | **`Object.defineProperty` not configurable** | Added `configurable: true` so native WebMCP can replace shim. |
+
+### Open — Build System (for implementation)
+
+- Add `formspec-assist` to root build script in correct order (after engine, before webcomponent)
+- Add to `LAYERS` map in `scripts/check-dep-fences.mjs` with value `2`
+- Add to `test:unit` script
