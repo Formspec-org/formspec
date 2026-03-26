@@ -4,6 +4,7 @@ import type { LayoutNode } from 'formspec-layout';
 import { FormspecProvider } from './context';
 import type { FormspecProviderProps } from './context';
 import { useFormspecContext } from './context';
+import { useForm } from './use-form';
 import { FormspecNode } from './node-renderer';
 
 export interface FormspecFormProps extends Omit<FormspecProviderProps, 'children'> {
@@ -32,14 +33,13 @@ export function FormspecForm({ className, ...providerProps }: FormspecFormProps)
 }
 
 function FormspecFormInner({ className }: { className?: string }) {
-    const { layoutPlan, engine, onSubmit } = useFormspecContext();
+    const { layoutPlan, onSubmit } = useFormspecContext();
+    const form = useForm();
 
     const handleSubmit = useCallback(() => {
         if (!onSubmit) return;
-        const validationReport = engine.getValidationReport({ mode: 'submit' });
-        const response = engine.getResponse({ mode: 'submit' });
-        onSubmit({ response, validationReport });
-    }, [engine, onSubmit]);
+        onSubmit(form.submit({ mode: 'submit' }));
+    }, [form, onSubmit]);
 
     if (!layoutPlan) {
         return <div className={className}>No layout plan available.</div>;

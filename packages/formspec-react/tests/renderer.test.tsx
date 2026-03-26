@@ -920,6 +920,29 @@ describe('SubmitButton', () => {
         expect(submitted).toHaveProperty('validationReport');
         expect(submitted.validationReport).toHaveProperty('valid');
     });
+
+    it('touches all fields on submit so validation errors become visible', () => {
+        let submitted: any = null;
+        const onSubmit = (result: any) => { submitted = result; };
+
+        const container = renderInto(
+            <FormspecForm definition={testDefinition} onSubmit={onSubmit} />
+        );
+
+        // Before clicking submit, the required 'name' field error should not be visible
+        // (no aria-invalid on the input — field is untouched)
+        const nameInput = container.querySelector('input[name="name"]') as HTMLInputElement;
+        expect(nameInput).toBeTruthy();
+        expect(nameInput.getAttribute('aria-invalid')).not.toBe('true');
+
+        flushSync(() => {
+            const button = container.querySelector('button[type="submit"]') as HTMLButtonElement;
+            button.click();
+        });
+
+        // After submit, the field should be touched and error should be visible
+        expect(nameInput.getAttribute('aria-invalid')).toBe('true');
+    });
 });
 
 // ── Conditional rendering (when) ─────────────────────────────────
