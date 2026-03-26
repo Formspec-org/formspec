@@ -769,33 +769,56 @@ function FileUploadControl({ field, node, common, isReadonly }: CommonInputProps
     const accept = node.props?.accept as string | undefined;
     const multiple = node.props?.multiple as boolean | undefined;
     const maxSize = node.props?.maxSize as number | undefined;
-    // Item 22: dragDrop defaults to true
     const dragDrop = node.props?.dragDrop !== false;
+
     const [sizeError, setSizeError] = useState<string | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [files, setFiles] = useState<File[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFiles = (files: FileList | null) => {
-        if (!files || files.length === 0) return;
-        // Item 19: reject files that exceed maxSize before calling setValue
+    const addFiles = (incoming: FileList | null) => {
+        if (!incoming || incoming.length === 0) return;
+        const newFiles = Array.from(incoming);
+
         if (maxSize != null) {
-            const oversized = Array.from(files).find(f => f.size > maxSize);
+            const oversized = newFiles.find(f => f.size > maxSize);
             if (oversized) {
-                setSizeError(`File "${oversized.name}" exceeds the maximum size limit.`);
+                setSizeError(`"${oversized.name}" exceeds the maximum size of ${formatBytes(maxSize)}.`);
                 return;
             }
         }
         setSizeError(null);
-        field.setValue(files);
+
+        if (multiple) {
+            // Accumulate — deduplicate by name+size+lastModified
+            const merged = [...files];
+            for (const f of newFiles) {
+                if (!merged.some(e => e.name === f.name && e.size === f.size && e.lastModified === f.lastModified)) {
+                    merged.push(f);
+                }
+            }
+            setFiles(merged);
+            field.setValue(merged);
+        } else {
+            setFiles([newFiles[0]]);
+            field.setValue(newFiles[0]);
+        }
+        // Reset the input so the same file can be re-selected after removal
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [fileName, setFileName] = useState<string | null>(null);
+    const removeFile = (index: number) => {
+        const next = files.filter((_, i) => i !== index);
+        setFiles(next);
+        field.setValue(next.length > 0 ? (multiple ? next : next[0]) : null);
+        field.touch();
+    };
 
-    const onFileChange = (files: FileList | null) => {
-        handleFiles(files);
-        if (files && files.length > 0) {
-            setFileName(files.length === 1 ? files[0].name : `${files.length} files selected`);
-        }
+    const clearAll = () => {
+        setFiles([]);
+        setSizeError(null);
+        field.setValue(null);
+        field.touch();
     };
 
     const hiddenInput = (
@@ -807,8 +830,40 @@ function FileUploadControl({ field, node, common, isReadonly }: CommonInputProps
             disabled={isReadonly}
             accept={accept}
             multiple={multiple}
-            onChange={(e) => onFileChange(e.target.files)}
+            onChange={(e) => addFiles(e.target.files)}
         />
+    );
+
+    const fileList = files.length > 0 && (
+        <ul className="formspec-file-list" aria-label="Selected files">
+            {files.map((f, i) => (
+                <li key={`${f.name}-${f.lastModified}`} className="formspec-file-list-item">
+                    <span className="formspec-file-list-name">{f.name}</span>
+                    <span className="formspec-file-list-size">{formatBytes(f.size)}</span>
+                    {!isReadonly && (
+                        <button
+                            type="button"
+                            className="formspec-file-list-remove"
+                            aria-label={`Remove ${f.name}`}
+                            onClick={() => removeFile(i)}
+                        >
+                            <span aria-hidden="true">×</span>
+                        </button>
+                    )}
+                </li>
+            ))}
+            {multiple && files.length > 1 && !isReadonly && (
+                <li className="formspec-file-list-actions">
+                    <button type="button" className="formspec-file-list-clear" onClick={clearAll}>
+                        Clear all
+                    </button>
+                </li>
+            )}
+        </ul>
+    );
+
+    const errorEl = sizeError && (
+        <p className="formspec-file-size-error formspec-error" aria-live="polite">{sizeError}</p>
     );
 
     if (!dragDrop) {
@@ -823,12 +878,8 @@ function FileUploadControl({ field, node, common, isReadonly }: CommonInputProps
                 >
                     Choose file{multiple ? 's' : ''}
                 </button>
-                {fileName && <span className="formspec-file-name">{fileName}</span>}
-                {sizeError && (
-                    <p className="formspec-file-size-error formspec-error" aria-live="polite">
-                        {sizeError}
-                    </p>
-                )}
+                {fileList}
+                {errorEl}
             </div>
         );
     }
@@ -841,14 +892,16 @@ function FileUploadControl({ field, node, common, isReadonly }: CommonInputProps
             onDrop={(e) => {
                 e.preventDefault();
                 setIsDragOver(false);
-                onFileChange(e.dataTransfer.files);
+                addFiles(e.dataTransfer.files);
             }}
         >
             {hiddenInput}
             <div className="formspec-file-drop-content">
                 <span className="formspec-file-drop-icon" aria-hidden="true">&#8693;</span>
                 <span className="formspec-file-drop-label">
-                    {fileName || 'Drag & drop files here'}
+                    {files.length === 0
+                        ? (multiple ? 'Drag & drop files here' : 'Drag & drop a file here')
+                        : `${files.length} file${files.length !== 1 ? 's' : ''} selected`}
                 </span>
                 <button
                     type="button"
@@ -859,11 +912,16 @@ function FileUploadControl({ field, node, common, isReadonly }: CommonInputProps
                     Browse
                 </button>
             </div>
-            {sizeError && (
-                <p className="formspec-file-size-error formspec-error" aria-live="polite">
-                    {sizeError}
-                </p>
-            )}
+            {fileList}
+            {errorEl}
         </div>
     );
+}
+
+function formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const val = bytes / Math.pow(1024, i);
+    return `${val < 10 ? val.toFixed(1) : Math.round(val)} ${units[i]}`;
 }

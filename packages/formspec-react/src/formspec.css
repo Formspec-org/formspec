@@ -325,6 +325,84 @@ input[type="checkbox"]:focus-visible {
   color: var(--formspec-color-foreground-muted, #555);
 }
 
+.formspec-file-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  width: 100%;
+}
+
+.formspec-file-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+  border-radius: 4px;
+  background: var(--formspec-color-surface-hover, #f5f7fa);
+}
+
+.formspec-file-list-item + .formspec-file-list-item {
+  margin-top: 0.25rem;
+}
+
+.formspec-file-list-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formspec-file-list-size {
+  color: var(--formspec-color-foreground-muted, #888);
+  white-space: nowrap;
+}
+
+.formspec-file-list-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--formspec-color-foreground-muted, #888);
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.formspec-file-list-remove:hover {
+  background: var(--formspec-color-error-light, #fde8e8);
+  color: var(--formspec-color-error, #dc2626);
+}
+
+.formspec-file-list-remove:focus-visible {
+  outline: 2px solid var(--formspec-color-primary, #2563eb);
+  outline-offset: 1px;
+}
+
+.formspec-file-list-actions {
+  margin-top: 0.25rem;
+}
+
+.formspec-file-list-clear {
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: var(--formspec-color-foreground-muted, #888);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.125rem 0;
+  text-decoration: underline;
+}
+
+.formspec-file-list-clear:hover {
+  color: var(--formspec-color-error, #dc2626);
+}
+
 .formspec-file-size-error {
   margin-top: 0.25rem;
 }
