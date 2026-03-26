@@ -262,9 +262,17 @@ export class Project {
     return result;
   }
 
-  /** Returns widget names (component types) compatible with a given data type. */
+  /** Returns widget names (component types) compatible with a given data type or alias. */
   compatibleWidgets(dataType: string): string[] {
-    return COMPATIBILITY_MATRIX[dataType] ?? [];
+    // Direct lookup first (canonical spec type names)
+    if (COMPATIBILITY_MATRIX[dataType]) return COMPATIBILITY_MATRIX[dataType];
+    // Resolve authoring aliases (e.g. "number" → "decimal", "file" → "attachment")
+    try {
+      const resolved = resolveFieldType(dataType);
+      return COMPATIBILITY_MATRIX[resolved.dataType] ?? [];
+    } catch {
+      return [];
+    }
   }
 
   /** Returns the field type alias table (all types the user can specify in addField). */
@@ -3457,6 +3465,31 @@ export function createProject(options?: CreateProjectOptions): Project {
 
   // Bridge studio-core options → core options at the package boundary
   return new Project(createRawProject(coreOptions), recorderControl);
+}
+
+/**
+ * Build a full ProjectBundle from a bare definition.
+ *
+ * Uses createRawProject to generate the component tree, theme, and mapping
+ * that the definition implies. On failure (degenerate definition), returns
+ * a minimal bundle with the definition and empty/null documents.
+ */
+export function buildBundleFromDefinition(definition: FormDefinition): ProjectBundle {
+  try {
+    const project = createRawProject({ seed: { definition } });
+    const exported = project.export();
+    return {
+      ...exported,
+      component: structuredClone(project.component),
+    };
+  } catch {
+    return {
+      definition,
+      component: { tree: null as any, customComponents: [] } as unknown as ComponentDocument,
+      theme: null as unknown as ThemeDocument,
+      mappings: {},
+    };
+  }
 }
 
 // ── humanizeFEL (string-level FEL→English transform) ──────────────

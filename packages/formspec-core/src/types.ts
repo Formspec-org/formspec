@@ -354,22 +354,8 @@ export interface ProjectStatistics {
   screenerRouteCount: number;
 }
 
-/**
- * The four exportable artifacts as a single bundle.
- * Used for serialization, export, and project snapshot operations.
- */
-export interface ProjectBundle {
-  /** The form definition artifact (schema-valid, with envelope metadata). */
-  definition: FormDefinition;
-  /** The component (UI tree) artifact (schema-valid, with envelope metadata). */
-  component: ComponentDocument;
-  /** The theme (presentation) artifact. */
-  theme: ThemeDocument;
-  /** Named collection of mapping (data transform) artifacts. */
-  mappings: Record<string, MappingDocument>;
-  /** Locale documents keyed by BCP 47 code (present only when locales are loaded). */
-  locales?: Record<string, unknown>;
-}
+// ProjectBundle is now canonical in formspec-types.
+export type { ProjectBundle } from 'formspec-types';
 
 // ── Search & filter types ───────────────────────────────────────────
 

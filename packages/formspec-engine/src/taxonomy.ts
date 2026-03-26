@@ -1,12 +1,11 @@
-/** @filedesc Data type taxonomy predicates per spec S4.2.3. */
+/** @filedesc Data type taxonomy predicates per Core spec §4.2.3 — 13 canonical data types. */
 
-const NUMERIC_TYPES = new Set(['integer', 'decimal', 'money']);
+const NUMERIC_TYPES = new Set(['integer', 'decimal']);
 const DATE_TYPES = new Set(['date', 'time', 'dateTime']);
-const CHOICE_TYPES = new Set(['select', 'selectMany']);
+const CHOICE_TYPES = new Set(['choice', 'multiChoice']);
 const TEXT_TYPES = new Set(['string', 'text']);
-const BINARY_TYPES = new Set(['file', 'image', 'signature', 'barcode']);
 
-/** True if `dataType` is a numeric type (integer, decimal, money). */
+/** True if `dataType` is a numeric type (integer, decimal). */
 export function isNumericType(dataType: string): boolean {
     return NUMERIC_TYPES.has(dataType);
 }
@@ -16,7 +15,7 @@ export function isDateType(dataType: string): boolean {
     return DATE_TYPES.has(dataType);
 }
 
-/** True if `dataType` is a choice type (select, selectMany). */
+/** True if `dataType` is a choice type (choice, multiChoice). */
 export function isChoiceType(dataType: string): boolean {
     return CHOICE_TYPES.has(dataType);
 }
@@ -26,12 +25,22 @@ export function isTextType(dataType: string): boolean {
     return TEXT_TYPES.has(dataType);
 }
 
-/** True if `dataType` is a binary/media type (file, image, signature, barcode). */
+/** True if `dataType` is the binary/attachment type. */
 export function isBinaryType(dataType: string): boolean {
-    return BINARY_TYPES.has(dataType);
+    return dataType === 'attachment';
 }
 
 /** True if `dataType` is boolean. */
 export function isBooleanType(dataType: string): boolean {
     return dataType === 'boolean';
+}
+
+/** True if `dataType` is money ({amount, currency} object). */
+export function isMoneyType(dataType: string): boolean {
+    return dataType === 'money';
+}
+
+/** True if `dataType` is uri. */
+export function isUriType(dataType: string): boolean {
+    return dataType === 'uri';
 }

@@ -111,6 +111,7 @@ export { assembleDefinition, assembleDefinitionSync } from './assembly/assembleD
 
 export {
     isNumericType, isDateType, isChoiceType, isTextType, isBinaryType, isBooleanType,
+    isMoneyType, isUriType,
 } from './taxonomy.js';
 
 export { interpolateMessage } from './interpolate-message.js';

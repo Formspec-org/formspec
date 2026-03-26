@@ -1,0 +1,11 @@
+[package]
+name = "formspec-changeset"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Changeset dependency analysis — key extraction and connected-component grouping"
+
+[dependencies]
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

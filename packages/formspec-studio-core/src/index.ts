@@ -9,7 +9,7 @@
  */
 
 // ── Project ─────────────────────────────────────────────────────────
-export { Project, createProject } from './project.js';
+export { Project, createProject, buildBundleFromDefinition } from './project.js';
 
 // ── ProposalManager (changeset lifecycle) ────────────────────────────
 export { ProposalManager } from './proposal-manager.js';

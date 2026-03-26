@@ -83,6 +83,35 @@ describe('compatibleWidgets', () => {
     const widgets = project.compatibleWidgets('nonexistent');
     expect(widgets).toEqual([]);
   });
+
+  it('treats "number" as an alias for "decimal" (component spec compatibility)', () => {
+    const project = createProject();
+    const numberWidgets = project.compatibleWidgets('number');
+    const decimalWidgets = project.compatibleWidgets('decimal');
+    expect(numberWidgets).toEqual(decimalWidgets);
+    expect(numberWidgets.length).toBeGreaterThan(0);
+  });
+
+  it('treats "file" as an alias for "attachment"', () => {
+    const project = createProject();
+    const fileWidgets = project.compatibleWidgets('file');
+    const attachmentWidgets = project.compatibleWidgets('attachment');
+    expect(fileWidgets).toEqual(attachmentWidgets);
+  });
+
+  it('treats "currency" as an alias for "money"', () => {
+    const project = createProject();
+    const currencyWidgets = project.compatibleWidgets('currency');
+    const moneyWidgets = project.compatibleWidgets('money');
+    expect(currencyWidgets).toEqual(moneyWidgets);
+  });
+
+  it('treats "url" as an alias for "uri"', () => {
+    const project = createProject();
+    const urlWidgets = project.compatibleWidgets('url');
+    const uriWidgets = project.compatibleWidgets('uri');
+    expect(urlWidgets).toEqual(uriWidgets);
+  });
 });
 
 describe('fieldTypeCatalog', () => {

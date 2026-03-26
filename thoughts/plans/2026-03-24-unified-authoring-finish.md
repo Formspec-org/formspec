@@ -3,12 +3,14 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **Agent roles for each task:**
+>
 > - **`formspec-craftsman`** — Implement the task (write code, create tests, make them pass). Dispatch via `Agent` tool with `subagent_type: "formspec-specs:formspec-craftsman"`.
 > - **`formspec-scout`** — Review completed work (code quality, spec compliance, architecture). Dispatch via `Agent` tool with `subagent_type: "formspec-specs:formspec-scout"`.
 > - **`spec-expert`** — Validate spec assumptions, answer questions about normative behavior, resolve ambiguities. Dispatch via `Agent` tool with `subagent_type: "formspec-specs:spec-expert"`.
 > - **`test-engineer`** — Review test coverage after craftsman's work (quality, edge cases, missing scenarios, test design). Dispatch via `Agent` tool with `subagent_type: "test-engineer"`.
 >
 > **Workflow per task:**
+>
 > 1. `spec-expert` (if needed) — resolve any spec ambiguities before coding
 > 2. `formspec-craftsman` — implement with TDD (failing tests → implementation → passing tests)
 > 3. `test-engineer` — review test coverage, identify gaps, suggest missing edge cases
@@ -18,13 +20,14 @@
 
 **Goal:** Complete the Unified Authoring Architecture from spec v6 — reconcile branches, fix open issues, migrate helpers, expand MCP coverage, build new document types, implement Rust dependency analysis, integrate chat, and ship the convergence UI.
 
-**Architecture:** The spec defines a 5-phase migration (documented in `thoughts/specs/2026-03-24-unified-authoring-architecture.md` v6). Phase 4a (changeset infrastructure) is mostly done on branch `claude/unified-authoring-architecture-msWWJ`. Rust layout planner work is done on branch `claude/rust-layout-planner-pdf-c2BTe`. These branches diverged and must be reconciled first. Remaining work is Phases 1-3 (foundation, MCP expansion, new document types), Phase 4a-D (Rust dependency analysis), Phase 4b (chat integration), and Phase 4c (convergence UI).
+**Architecture:** The spec defines a 5-phase migration (documented in `thoughts/specs/2026-03-24-unified-authoring-architecture.md` v6). Phase 4a (changeset infrastructure) is mostly done on branch `claude/unified-authoring-architecture-msWWJ`. Remaining work is Phases 1-3 (foundation, MCP expansion, new document types), Phase 4a-D (Rust dependency analysis), Phase 4b (chat integration), and Phase 4c (convergence UI).
 
 **Tech Stack:** TypeScript (formspec-core, studio-core, mcp, chat, studio), Rust (fel-core, formspec-changeset), WASM (formspec-wasm), Vitest (unit/integration tests), Playwright (E2E tests)
 
 **Spec:** `thoughts/specs/2026-03-24-unified-authoring-architecture.md`
 
 **Worktree:** All work happens in the existing unified-authoring worktree:
+
 ```
 .claude/worktrees/unified-authoring/   ← working directory for all tasks
   Branch: claude/unified-authoring-architecture-msWWJ
@@ -34,41 +37,30 @@ All file paths in this plan are relative to the worktree root. All `npm`, `cargo
 
 ---
 
-## Milestone 0: Branch Reconciliation
+## Milestone 0: Verify Baseline
 
-**Goal:** Bring the Rust layout planner commits into the unified-authoring worktree branch so all work proceeds from one integrated baseline.
+**Goal:** Confirm the worktree branch builds and tests pass before starting new work.
 
-**Context:** The worktree at `.claude/worktrees/unified-authoring/` is on branch `claude/unified-authoring-architecture-msWWJ`. The Rust layout planner work lives on branch `claude/rust-layout-planner-pdf-c2BTe` in the main repo. These branches diverged from a common ancestor. The changeset branch touches TS packages; the Rust branch touches `crates/` and `tests/conformance/layout/`. No file conflicts expected.
+**Context:** The worktree at `.claude/worktrees/unified-authoring/` is on branch `claude/unified-authoring-architecture-msWWJ`. The Rust layout planner work on `claude/rust-layout-planner-pdf-c2BTe` will be integrated separately — no rebase needed here.
 
-### Task 0.1: Rebase worktree branch onto Rust branch
+### Task 0.1: Verify worktree is clean and tests pass
 
 **Files:**
-- No file modifications — git operations only
+
+- No file modifications — verification only
 
 - [ ] **Step 1: Verify worktree is clean**
 
 ```bash
 cd .claude/worktrees/unified-authoring
-git status --short  # Must be empty
-git stash list      # Must be empty
+git status --short  # Must be empty (or only expected changes)
 ```
 
-- [ ] **Step 2: Rebase onto the Rust branch**
-
-```bash
-cd .claude/worktrees/unified-authoring
-git fetch origin
-git rebase claude/rust-layout-planner-pdf-c2BTe
-```
-
-Expected: Clean rebase — no conflicts since the branches touch disjoint file sets (TS packages vs Rust crates).
-
-- [ ] **Step 3: Rebuild and verify in the worktree**
+- [ ] **Step 2: Rebuild and verify**
 
 ```bash
 cd .claude/worktrees/unified-authoring
 npm install && npm run build
-cargo test --workspace
 
 # Package-level TS tests
 cd packages/formspec-core && npx vitest run && cd ../..
@@ -76,16 +68,7 @@ cd packages/formspec-studio-core && npx vitest run && cd ../..
 cd packages/formspec-mcp && npx vitest run && cd ../..
 ```
 
-Expected: All tests pass. Rust: 1,528+. TS: core 613+, studio-core 480+, MCP 287+.
-
-- [ ] **Step 4: Verify log shows combined history**
-
-```bash
-cd .claude/worktrees/unified-authoring
-git log --oneline -20
-```
-
-Expected: Rust planner commits followed by changeset infrastructure commits on top.
+Expected: All TS tests pass. Core 613+, studio-core 480+, MCP 287+.
 
 ---
 
@@ -93,7 +76,7 @@ Expected: Rust planner commits followed by changeset infrastructure commits on t
 
 **Goal:** Close the 3 open review findings (O1, F3, F4) from the changeset infrastructure review.
 
-**Context:** Work in `.claude/worktrees/unified-authoring/` (now rebased). Expected-fail tests already exist for O1 and F3. F4 is deferred (no runtime engine in structural authoring tier).
+**Context:** Work in `.claude/worktrees/unified-authoring/`. Expected-fail tests already exist for O1 and F3. F4 is deferred (no runtime engine in structural authoring tier).
 
 ### Task 1.1: Fix O1 — bracket summary extraction
 
@@ -102,6 +85,7 @@ Expected: Rust planner commits followed by changeset infrastructure commits on t
 **Problem:** `withChangesetBracket` in `packages/formspec-mcp/src/tools/changeset.ts` sees the MCP response envelope (JSON with `content` array), not the raw `HelperResult`. Every `ChangeEntry` gets generic `"toolName executed"` fallback summary instead of the actual helper summary.
 
 **Files:**
+
 - Modify: `packages/formspec-mcp/src/tools/changeset.ts` — restructure `bracketMutation()` to wrap the raw helper call
 - Modify: `packages/formspec-mcp/src/create-server.ts` — adjust how `bracketMutation` is called
 - Test: `packages/formspec-mcp/tests/changeset-bracket.test.ts` — flip expected-fail tests to expected-pass
@@ -109,10 +93,12 @@ Expected: Rust planner commits followed by changeset infrastructure commits on t
 **Architecture of the problem:** Each tool handler function (e.g., `handleField` in `tools/structure.ts`) internally does TWO things: (1) calls the raw `Project` helper method (e.g., `project.addField()`) which returns a `HelperResult`, and (2) wraps the result with `wrapHelperCall()` to produce an MCP response envelope. The current `bracketMutation()` wraps the OUTER function (which returns the MCP envelope), so it only sees the envelope — not the raw `HelperResult.summary`.
 
 **Fix approach:** Split each tool handler into two layers:
+
 1. A raw helper lambda: `(project, params) => HelperResult` — the actual business logic
 2. The MCP wrapping: `wrapHelperCall(() => rawHelper(project, params))` — response formatting
 
 `bracketMutation()` takes the raw helper lambda. Inside the bracket:
+
 1. Call `beginEntry(toolName)`
 2. Run the raw helper → get `HelperResult`
 3. Extract `result.summary` and `result.warnings`
@@ -137,6 +123,7 @@ Expected: FAIL — summaries still contain generic fallback.
 - [ ] **Step 3: Refactor bracketMutation to accept raw helper lambdas**
 
 Change `bracketMutation(toolName, handler)` so `handler` has type `(registry: ProjectRegistry, projectId: string, params: Record<string, unknown>) => HelperResult`. Inside `bracketMutation`:
+
 ```typescript
 const result = handler(registry, projectId, params);  // raw HelperResult
 pm.endEntry(result.summary, result.warnings?.map(w => w.message) ?? []);
@@ -146,10 +133,12 @@ return successResponse(result);  // wrap AFTER extracting summary
 - [ ] **Step 4: Update each tool registration in create-server.ts**
 
 For each of the 13 mutation tools wrapped with `bracketMutation()`, change the handler lambda to return a `HelperResult` instead of an MCP response. Example for `formspec_field`:
+
 ```typescript
 // Before: bracketMutation('formspec_field', (reg, pid, p) => handleField(reg, pid, p))
 // After:  bracketMutation('formspec_field', (reg, pid, p) => rawHandleField(reg, pid, p))
 ```
+
 Where `rawHandleField` calls `project.addField()` directly and returns the `HelperResult`.
 
 - [ ] **Step 5: Run tests — verify pass**
@@ -175,18 +164,21 @@ fix: extract real helper summary in changeset bracket (O1)
 **Problem:** When the recording middleware captures commands that create items with `initialValue: "=today()"` or `default: "=$otherField"`, the evaluated result is not stored in `ChangeEntry.capturedValues`. On replay, the expression re-evaluates to a different value.
 
 **Files:**
+
 - Modify: `packages/formspec-studio-core/src/proposal-manager.ts` — populate `capturedValues` during recording
 - Test: `packages/formspec-studio-core/tests/proposal-manager.test.ts` — flip expected-fail F3 tests
 
 **Architecture of the problem:** The `onCommandsRecorded` callback receives `priorState` (before execution) but the evaluated value of `=today()` exists only AFTER execution in the engine's instance data. The ProposalManager has access to `this.project.state` (post-execution). For `initialValue` with `=` prefix, the spec (S4.2.3) says the expression is evaluated once at creation time and the result is stored as the field's value. So the evaluated result is in the post-execution definition's instance data at the field's path.
 
 **Capturing approach:**
+
 1. In `onCommandsRecorded()`, scan command payloads for `=`-prefixed `initialValue` or `default` values
 2. For each match, extract the field path from the command payload
 3. Look up the field's current value in `this.project.state` (post-execution state) — specifically, if the project has a runtime engine, read the field's evaluated value; if not (structural authoring only), read from definition instance data
 4. Store as `capturedValues[fieldPath] = evaluatedValue`
 
 **Replay approach:**
+
 1. In `_replayCommands()`, for each command with a `capturedValues` entry:
 2. Clone the command, replace the `=`-prefixed expression in `initialValue`/`default` with the captured literal value
 3. Dispatch the patched command
@@ -206,6 +198,7 @@ Run: `cd packages/formspec-studio-core && npx vitest run tests/proposal-manager.
 - [ ] **Step 3: Implement capturedValues scanning in `onCommandsRecorded`**
 
 In the `onCommandsRecorded` callback of ProposalManager, after appending to the current entry's `commands`:
+
 ```typescript
 // Scan for =-prefix expressions
 for (const phase of commands) {
@@ -227,6 +220,7 @@ for (const phase of commands) {
 - [ ] **Step 4: Implement capturedValues patching in `_replayCommands`**
 
 Before dispatching each command during replay:
+
 ```typescript
 for (const cmd of phase) {
   if (entry.capturedValues?.[cmd.payload?.key]) {
@@ -261,6 +255,7 @@ fix: populate capturedValues for =-prefix expressions during recording (F3)
 ### Task 2.1: Pass 1a — E1 FEL identifier validation (Rust)
 
 **Files:**
+
 - Modify: `crates/fel-core/src/lexer.rs` — add `pub fn is_valid_fel_identifier(s: &str) -> bool` and `pub fn sanitize_fel_identifier(s: &str) -> String`
 - Modify: `crates/formspec-wasm/src/lib.rs` — expose via WASM
 - Test: `crates/fel-core/src/tests.rs` — unit tests for identifier validation
@@ -307,6 +302,7 @@ feat(fel-core): export FEL identifier validation and sanitization (E1)
 ### Task 2.2: Pass 1a — E3 FEL function catalog consolidation
 
 **Files:**
+
 - Modify: `crates/fel-core/src/builtins.rs` (or wherever `BUILTIN_FUNCTIONS` is defined) — ensure all function metadata (description, parameter names, return types) is complete
 - Delete: `packages/formspec-studio/src/lib/fel-catalog.ts` (111 lines) — studio's supplemental `FUNCTION_DETAILS`
 - Modify: Studio components importing from `fel-catalog.ts` → import from engine's WASM-bridged catalog
@@ -342,6 +338,7 @@ refactor: consolidate FEL function catalog into Rust, delete studio duplicate (E
 ### Task 2.3: Pass 1a — E2 Data type taxonomy predicates (TS engine)
 
 **Files:**
+
 - Create: `packages/formspec-engine/src/taxonomy.ts` — `isNumericType()`, `isDateType()`, `isChoiceType()` etc.
 - Modify: `packages/formspec-engine/src/index.ts` — export new predicates from barrel
 - Test: `packages/formspec-engine/tests/taxonomy.test.mjs` (engine tests use `.test.mjs`)
@@ -369,6 +366,7 @@ feat(engine): add data type taxonomy predicates (E2)
 ### Task 2.3: Pass 1b — C1 normalizeBinds, C8 field/bind/shape lookups
 
 **Files:**
+
 - Create: `packages/formspec-core/src/queries/bind-normalization.ts` — `normalizeBinds(state, path)`
 - Modify: `packages/formspec-core/src/queries/field-queries.ts` — add/consolidate lookup functions
 - Modify: `packages/formspec-core/src/queries/index.ts` — re-export new functions
@@ -397,6 +395,7 @@ feat(core): add normalizeBinds and consolidated field/bind/shape lookups (C1, C8
 ### Task 2.4: Pass 1c — C5 drop targets, C6 tree flattening, C7 multi-select ops
 
 **Files:**
+
 - Create: `packages/formspec-core/src/queries/drop-targets.ts` — `computeDropTargets(state, draggedPaths)`
 - Create: `packages/formspec-core/src/queries/tree-flattening.ts` — `flattenDefinitionTree(state)`
 - Create: `packages/formspec-core/src/queries/selection-ops.ts` — `commonAncestor(paths)`, `pathsOverlap(a, b)`, `expandSelection(paths, state)`
@@ -415,6 +414,7 @@ feat(core): add drop targets, tree flattening, and selection ops (C5-C7)
 ### Task 2.5: Pass 1d — C2-C4, C9-C11
 
 **Files:**
+
 - Create: `packages/formspec-core/src/queries/shape-display.ts` — `describeShapeConstraint(shape)` (C2)
 - Create: `packages/formspec-core/src/queries/optionset-usage.ts` — `optionSetUsageCount(state, name)` (C3)
 - Create: `packages/formspec-core/src/queries/artifact-mapping.ts` — `artifactTypeFor(key)` (C9)
@@ -436,6 +436,7 @@ refactor(studio): use core page mode resolution instead of re-deriving (C4)
 ### Task 2.7: Delete studio originals
 
 **Files:**
+
 - Delete: `packages/formspec-studio/src/lib/tree-helpers.ts`
 - Delete: `packages/formspec-studio/src/lib/selection-helpers.ts`
 - Delete: `packages/formspec-studio/src/lib/humanize.ts`
@@ -465,6 +466,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 **Goal:** Each studio-core business logic migration ships with its MCP tool. 7 passes.
 
 **Context:** Spec Section 5, Phase 2. These items represent helper methods that need to be:
+
 1. Implemented in studio-core (if not already)
 2. Exposed as MCP tools (new tools or expanded existing tools)
 3. Wrapped with `bracketMutation()` for changeset support
@@ -472,6 +474,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 **Agents per pass:** `spec-expert` to clarify S1-S18 semantics before each pass. `formspec-craftsman` implements. `test-engineer` reviews test coverage. `formspec-scout` reviews code + spec compliance.
 
 **Pattern for each pass:**
+
 1. `spec-expert`: clarify what the S-items in this pass require (normative behavior, edge cases)
 2. `formspec-craftsman`: write failing tests for the studio-core helper
 3. `formspec-craftsman`: implement the helper in `packages/formspec-studio-core/src/project.ts`
@@ -487,6 +490,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 ### Task 3.1: Pass 2a — S1-S5 Catalogs, type metadata, widget compatibility → `formspec_widget`
 
 **Files:**
+
 - Modify: `packages/formspec-studio-core/src/project.ts` — add catalog/widget methods
 - Create: `packages/formspec-mcp/src/tools/widget.ts` — new tool handler
 - Modify: `packages/formspec-mcp/src/create-server.ts` — register `formspec_widget`
@@ -497,6 +501,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 ### Task 3.2: Pass 2b — S6-S8 FEL editing → expand `formspec_fel`
 
 **Files:**
+
 - Modify: `packages/formspec-mcp/src/tools/fel.ts` — add editing support modes
 - Modify: `packages/formspec-studio-core/src/project.ts` — FEL editing helpers
 - Tests
@@ -506,6 +511,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 ### Task 3.3: Pass 2c — S9-S13 Parsing, defaults, sanitization → expand `formspec_update`, `formspec_structure`
 
 **Files:**
+
 - Modify: `packages/formspec-mcp/src/tools/structure.ts` — add batch operations
 - Create: `packages/formspec-mcp/src/tools/structure-batch.ts` — `wrapItemsInGroup`, `batchDeleteItems`, `batchDuplicateItems`
 - Tests
@@ -515,6 +521,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 ### Task 3.4: Pass 2d — S14-S16 Document normalization, sample data → expand `formspec_preview`
 
 **Files:**
+
 - Modify: `packages/formspec-mcp/src/tools/query.ts` — expand preview tool
 - Tests
 
@@ -523,6 +530,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 ### Task 3.5: Pass 2e — S17-S18 Item classification, bind behavior → expand `formspec_audit`
 
 **Files:**
+
 - Create: `packages/formspec-mcp/src/tools/audit.ts` — new comprehensive audit tool
 - Tests
 
@@ -531,6 +539,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 ### Task 3.6: Pass 2f — Theme full coverage → expand `formspec_theme`
 
 **Files:**
+
 - Create: `packages/formspec-mcp/src/tools/theme.ts` — new tool handler
 - Modify: `packages/formspec-mcp/src/create-server.ts` — register `formspec_theme`
 - Tests
@@ -540,6 +549,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 ### Task 3.7: Pass 2g — Component full coverage → expand `formspec_component`
 
 **Files:**
+
 - Create: `packages/formspec-mcp/src/tools/component.ts` — new tool handler
 - Modify: `packages/formspec-mcp/src/create-server.ts` — register `formspec_component`
 - Tests
@@ -559,6 +569,7 @@ refactor(studio): replace local helpers with formspec-core imports, delete origi
 ### Task 4.1-4.12: One task per pass (3a through 3l)
 
 Each follows the same pattern:
+
 1. Define the document type's handlers in `formspec-core` if structural mutations are needed
 2. Add studio-core helpers for the authoring workflow
 3. Register MCP tool with schema + handler
@@ -593,6 +604,7 @@ Each follows the same pattern:
 ### Task 5.1: Create `formspec-changeset` crate scaffold
 
 **Files:**
+
 - Create: `crates/formspec-changeset/Cargo.toml`
 - Create: `crates/formspec-changeset/src/lib.rs`
 - Create: `crates/formspec-changeset/src/types.rs`
@@ -603,10 +615,12 @@ Each follows the same pattern:
 ### Task 5.2: Implement key extraction — what each entry creates and references
 
 **Files:**
+
 - Create: `crates/formspec-changeset/src/extract.rs`
 - Test: `crates/formspec-changeset/src/tests.rs`
 
 For each `RecordedEntry`:
+
 1. Extract keys it **creates** (from `definition.addItem`, `definition.addBind`, `definition.addShape`, `definition.addVariable`, etc.)
 2. Extract keys it **references** — by scanning:
    - FEL expressions via `fel-core` dependency extraction (`$key` tokens, `@instance('name')`, `@variableName`)
@@ -622,6 +636,7 @@ For each `RecordedEntry`:
 ### Task 5.3: Implement dependency graph and connected components
 
 **Files:**
+
 - Create: `crates/formspec-changeset/src/graph.rs`
 - Test additions to `tests.rs`
 
@@ -632,6 +647,7 @@ For each `RecordedEntry`:
 ### Task 5.4: Expose via WASM
 
 **Files:**
+
 - Modify: `crates/formspec-wasm/Cargo.toml` — add `formspec-changeset` dependency
 - Modify: `crates/formspec-wasm/src/lib.rs` — add `changeset-api` feature flag
 - Create: `crates/formspec-wasm/src/changeset.rs` — WASM bridge function
@@ -644,6 +660,7 @@ pub fn compute_dependency_groups(entries_json: &str, definition_json: &str) -> S
 ### Task 5.5: Wire into ProposalManager
 
 **Files:**
+
 - Modify: `packages/formspec-engine/src/fel/fel-api-tools.ts` — add `computeDependencyGroups` bridge
 - Modify: `packages/formspec-studio-core/src/proposal-manager.ts` — replace stub with WASM call
 - Tests: update existing tests that assumed single-group behavior
@@ -651,6 +668,7 @@ pub fn compute_dependency_groups(entries_json: &str, definition_json: &str) -> S
 ### Task 5.6: Integration tests with multi-group changesets
 
 **Files:**
+
 - Modify: `packages/formspec-studio-core/tests/proposal-manager.test.ts`
 
 Test: create a changeset with two independent field additions → dependency analysis produces two groups → partial accept works per group.
@@ -668,12 +686,14 @@ Test: create a changeset with two independent field additions → dependency ana
 ### Task 6.1: Pass 4b-A — ChatSession refactor
 
 **Files:**
+
 - Modify: `packages/formspec-chat/src/chat-session.ts` — remove McpBridge dependency, accept ToolContext
 - Modify: `packages/formspec-chat/src/types.ts` — extend ToolContext with `getProjectSnapshot()`
 - Delete: `packages/formspec-chat/src/mcp-bridge.ts`
 - Tests
 
 **Key change:**
+
 ```typescript
 // Before: session internally creates McpBridge + Project
 const session = new ChatSession({ adapter });
@@ -687,23 +707,27 @@ session.setToolContext(toolContext);
 ### Task 6.2: Pass 4b-B — Adapter interface update
 
 **Files:**
+
 - Modify: `packages/formspec-chat/src/gemini-adapter.ts` — keep `generateScaffold()`, remove bridge creation
 - Modify: `packages/formspec-chat/src/mock-adapter.ts`
 
 ### Task 6.3: Pass 4b-C — Studio chat panel + canvas layout
 
 **Files:**
+
 - Modify: `packages/formspec-studio/src/` — consolidate `main-chat.tsx`, `chat/`, `chat-v2/` into integrated chat panel
 - Create: `packages/formspec-studio/src/components/ChatPanel.tsx`
 
 ### Task 6.4: Pass 4b-D — Inline canvas AI actions
 
 **Files:**
+
 - Modify: `packages/formspec-studio/src/components/` — add AI-powered context menu items
 
 ### Task 6.5: Pass 4b-E — Interview → scaffold flow
 
 **Files:**
+
 - Modify: `packages/formspec-studio/` — scaffold via `generateScaffold()` loaded as changeset
 
 ---
@@ -719,6 +743,7 @@ session.setToolContext(toolContext);
 ### Task 7.1: Changeset review component
 
 **Files:**
+
 - Create: `packages/formspec-studio/src/components/ChangesetReview.tsx`
 - Create: `packages/formspec-studio/src/components/DependencyGroup.tsx`
 
@@ -727,6 +752,7 @@ session.setToolContext(toolContext);
 ### Task 7.2: Wire review UI to ProposalManager
 
 **Files:**
+
 - Modify: `packages/formspec-studio/src/components/ChatPanel.tsx`
 
 When changeset status is `pending`, the chat panel shows the review UI. Accept/reject buttons dispatch `formspec_changeset_accept`/`formspec_changeset_reject` MCP calls.
@@ -734,6 +760,7 @@ When changeset status is `pending`, the chat panel shows the review UI. Accept/r
 ### Task 7.3: Conflict diagnostics display
 
 **Files:**
+
 - Modify: `packages/formspec-studio/src/components/ChangesetReview.tsx`
 
 After partial merge, if `diagnose()` returns errors, display them inline with guidance for resolution.
@@ -741,6 +768,7 @@ After partial merge, if `diagnose()` returns errors, display them inline with gu
 ### Task 7.4: E2E tests
 
 **Files:**
+
 - Create: `tests/e2e/playwright/changeset-review.spec.ts`
 
 Test the full flow: open changeset → AI adds fields → close → review groups → partial accept → verify state.
@@ -750,7 +778,7 @@ Test the full flow: open changeset → AI adds fields → close → review group
 ## Execution Order and Dependencies
 
 ```
-Milestone 0 (branch reconciliation)
+Milestone 0 (verify baseline)
     │
     ▼
 Milestone 1 (fix O1, F3)
@@ -776,6 +804,7 @@ Milestone 4    Milestone 6     │
 ```
 
 **Key parallelism opportunities:**
+
 - **Milestone 5** (Rust crate) can run in parallel with Milestones 2-3 (TS work) — no dependencies between them until Task 5.5 (wire into ProposalManager)
 - **Milestone 4** (Phase 3 new doc types) can overlap with Milestone 6 (chat integration) — different packages
 - **Milestone 2 tasks 2.1-2.5** are independent and can run in parallel (but all within the same worktree — serialize if needed)
@@ -789,11 +818,13 @@ Milestone 4    Milestone 6     │
 **All commands run from the worktree root:** `cd .claude/worktrees/unified-authoring/` first.
 
 **Per milestone:**
+
 - **Unit tests** (Vitest) for every new function in core/studio-core/MCP
 - **Integration tests** (Vitest) for MCP tool round-trips (register tool, call it, verify project state changed)
 - **E2E tests** (Playwright) for Milestones 6-7 (UI changes)
 
 **Test commands (from worktree root):**
+
 ```bash
 cd .claude/worktrees/unified-authoring
 

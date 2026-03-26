@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
 import { ChatSession, GeminiAdapter, MockAdapter, SessionStore, validateProviderConfig, extractRegistryHints } from 'formspec-chat';
 import type { AIAdapter, Attachment, ProviderConfig, StorageBackend } from 'formspec-chat';
+import { buildBundleFromDefinition } from 'formspec-studio-core';
 import commonRegistry from '../../../../../registries/formspec-common.registry.json';
 import { ChatProvider, useChatState, useChatSession } from '../state/ChatContext.js';
 import { EntryScreen } from './EntryScreen.js';
@@ -98,12 +99,12 @@ export function ChatShell({ store, storage }: ChatShellProps = {}) {
   }, [storage]);
 
   const handleStartBlank = useCallback(() => {
-    const s = new ChatSession({ adapter: getAdapter(providerConfig) });
+    const s = new ChatSession({ adapter: getAdapter(providerConfig), buildBundle: buildBundleFromDefinition });
     setSession(s);
   }, [providerConfig]);
 
   const handleSelectTemplate = useCallback(async (templateId: string) => {
-    const s = new ChatSession({ adapter: getAdapter(providerConfig) });
+    const s = new ChatSession({ adapter: getAdapter(providerConfig), buildBundle: buildBundleFromDefinition });
     await s.startFromTemplate(templateId);
     setSession(s);
   }, [providerConfig]);
@@ -116,7 +117,7 @@ export function ChatShell({ store, storage }: ChatShellProps = {}) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const s = new ChatSession({ adapter: getAdapter(providerConfig) });
+    const s = new ChatSession({ adapter: getAdapter(providerConfig), buildBundle: buildBundleFromDefinition });
 
     const firstText = await files[0].text();
     const firstAttachment = fileToAttachment(files[0], firstText);
@@ -136,7 +137,7 @@ export function ChatShell({ store, storage }: ChatShellProps = {}) {
     if (!store) return;
     const state = store.load(sessionId);
     if (!state) return;
-    const restored = await ChatSession.fromState(state, getAdapter(providerConfig));
+    const restored = await ChatSession.fromState(state, getAdapter(providerConfig), buildBundleFromDefinition);
     setSession(restored);
   }, [store, providerConfig]);
 

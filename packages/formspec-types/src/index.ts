@@ -33,6 +33,12 @@ export type { OptionEntry as FormOption } from './generated/definition.js';
 // JSON value (number, string, null, object, etc.). This augmentation
 // widens it to `unknown` so consumers don't need casts.
 
+import type {
+  Item, Presentation, Route, Bind,
+  FormDefinition as GeneratedFormDefinition,
+  Screener as GeneratedScreener,
+} from './generated/definition.js';
+
 export type FormBind = Omit<Bind, 'default'> & {
   default?: unknown;
 };
@@ -42,12 +48,6 @@ export type FormBind = Omit<Bind, 'default'> & {
 // Conditional properties from the schema's if/then (children, dataType, etc.)
 // fall through the [k: string]: unknown index signature as `unknown`.
 // This augmentation adds them explicitly so consumers don't need casts.
-
-import type {
-  Item, Presentation, Route, Bind,
-  FormDefinition as GeneratedFormDefinition,
-  Screener as GeneratedScreener,
-} from './generated/definition.js';
 
 /**
  * A form item with all conditional properties explicitly typed.
@@ -124,3 +124,24 @@ export type FormDefinition = Omit<
     [k: string]: unknown;
   };
 };
+
+// ─── ProjectBundle ──────────────────────────────────────────────────
+// The four exportable artifacts as a single bundle.
+// Used across chat, studio-core, and core for serialization and snapshots.
+
+import type { ComponentDocument } from './generated/component.js';
+import type { ThemeDocument } from './generated/theme.js';
+import type { MappingDocument } from './generated/mapping.js';
+
+export interface ProjectBundle {
+  /** The form definition artifact. */
+  definition: FormDefinition;
+  /** The component (UI tree) artifact. */
+  component: ComponentDocument;
+  /** The theme (presentation) artifact. */
+  theme: ThemeDocument;
+  /** Named collection of mapping (data transform) artifacts. */
+  mappings: Record<string, MappingDocument>;
+  /** Locale documents keyed by BCP 47 code (present only when locales are loaded). */
+  locales?: Record<string, unknown>;
+}
