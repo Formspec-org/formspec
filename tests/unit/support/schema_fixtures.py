@@ -83,6 +83,16 @@ def validation_result_schema() -> dict:
 
 
 @pytest.fixture(scope="session")
+def references_schema() -> dict:
+    return load_schema("references.schema.json")
+
+
+@pytest.fixture(scope="session")
+def locale_schema() -> dict:
+    return load_schema("locale.schema.json")
+
+
+@pytest.fixture(scope="session")
 def schema_registry(
     definition_schema: dict,
     response_schema: dict,
@@ -93,6 +103,8 @@ def schema_registry(
     theme_schema: dict,
     component_schema: dict,
     changelog_schema: dict,
+    references_schema: dict,
+    locale_schema: dict,
 ) -> Registry:
     return build_schema_registry(
         definition_schema,
@@ -104,4 +116,6 @@ def schema_registry(
         theme_schema,
         component_schema,
         changelog_schema,
+        references_schema,
+        locale_schema,
     )

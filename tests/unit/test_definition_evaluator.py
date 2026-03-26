@@ -274,8 +274,8 @@ class TestValidate:
         assert results == []
 
     def test_shape_variable_mismatch_emits_result(self):
-        """Per spec: money vs number comparison returns null → shape passes (null=pass).
-        The diagnostic is author-facing, not a ValidationResult."""
+        """money vs number comparison returns null with eval error diagnostics.
+        Broken expressions now correctly fail constraints (BUG-3 fix)."""
         results = self._validate(
             shapes=[{
                 'id': 'mismatch', 'target': '#', 'severity': 'error',
@@ -287,10 +287,10 @@ class TestValidate:
                 {'name': 'total', 'expression': 'money(500, "USD")'},
             ]
         )
-        # money < number → Null → constraint_passes(Null) = true → no result
+        # money < number → Null + eval error diagnostic → constraint fails
         mismatch_errors = [r for r in results if r['message'] == 'Budget mismatch']
-        assert mismatch_errors == [], (
-            "Money vs number comparison yields null, which passes constraint — no ValidationResult"
+        assert len(mismatch_errors) == 1, (
+            "Money vs number comparison produces eval error, constraint should fail"
         )
 
     def test_or_composition_with_shape_id_reference(self):
