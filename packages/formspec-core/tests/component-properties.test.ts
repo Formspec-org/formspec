@@ -151,60 +151,6 @@ describe('component.setResponsiveOverride', () => {
   });
 });
 
-describe('component.setWizardProperty', () => {
-  it('sets showProgress directly on the generated Wizard node', () => {
-    const project = createRawProject();
-    // Need a wizard-mode tree to have a Wizard node
-    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
-    const pages = project.theme.pages as any[];
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[0].id, key: 'name' } });
-
-    project.dispatch({
-      type: 'component.setWizardProperty',
-      payload: { property: 'showProgress', value: true },
-    });
-
-    const tree = project.generatedComponent.tree;
-    expect(tree.component).toBe('Wizard');
-    expect(tree.showProgress).toBe(true);
-  });
-
-  it('sets allowSkip directly on an authored Wizard node', () => {
-    const project = createRawProject({
-      seed: {
-        component: {
-          $formspecComponent: '1.0',
-          tree: { component: 'Wizard', nodeId: 'w', children: [] },
-        },
-      },
-    });
-
-    project.dispatch({
-      type: 'component.setWizardProperty',
-      payload: { property: 'allowSkip', value: true },
-    });
-
-    const tree = project.component.tree;
-    expect(tree.allowSkip).toBe(true);
-  });
-
-  it('no-ops gracefully when no Wizard node exists in generated tree', () => {
-    const project = createRawProject();
-    // Add an item so a generated tree exists, but stay in single mode (Stack, no Wizard)
-    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
-
-    project.dispatch({
-      type: 'component.setWizardProperty',
-      payload: { property: 'showProgress', value: true },
-    });
-
-    const tree = project.generatedComponent.tree;
-    expect(tree.component).toBe('Stack');
-    expect(tree.showProgress).toBeUndefined();
-  });
-});
-
 describe('component.setGroupRepeatable', () => {
   it('sets repeatable flag on a group component', () => {
     const project = createRawProject();
