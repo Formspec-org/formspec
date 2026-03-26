@@ -1,16 +1,41 @@
 //! FEL expression evaluation for validation (shape and bind constraint truthiness).
 #![allow(clippy::missing_docs_in_private_items)]
 
-use fel_core::{FelValue, FormspecEnvironment, evaluate, parse};
+use fel_core::error::Severity;
+use fel_core::{EvalResult, FelValue, FormspecEnvironment, evaluate, parse};
 
-pub(super) fn constraint_passes(value: &FelValue) -> bool {
-    value.is_null() || value.is_truthy()
+/// Check whether a constraint evaluation result means "passes."
+///
+/// Null from missing data (no diagnostics) passes — the `required` bind enforces presence.
+/// Null from an eval error (diagnostics contain errors) fails — the expression is broken.
+/// Truthy values pass; falsy values fail.
+pub(super) fn constraint_passes(result: &EvalResult) -> bool {
+    if result.value.is_null() {
+        // Null + error diagnostics = broken expression, not "no data"
+        !result
+            .diagnostics
+            .iter()
+            .any(|d| d.severity == Severity::Error)
+    } else {
+        result.value.is_truthy()
+    }
 }
 
-pub(super) fn evaluate_shape_expression(expr: &str, env: &FormspecEnvironment) -> FelValue {
+/// True when the evaluation produced error-level diagnostics (broken expression).
+pub(super) fn result_has_eval_errors(result: &EvalResult) -> bool {
+    result
+        .diagnostics
+        .iter()
+        .any(|d| d.severity == Severity::Error)
+}
+
+pub(super) fn evaluate_shape_expression(expr: &str, env: &FormspecEnvironment) -> EvalResult {
     match parse(expr) {
-        Ok(parsed) => evaluate(&parsed, env).value,
-        Err(_) => FelValue::Null,
+        Ok(parsed) => evaluate(&parsed, env),
+        Err(_) => EvalResult {
+            value: FelValue::Null,
+            diagnostics: vec![],
+        },
     }
 }
 
@@ -96,7 +121,62 @@ fn fel_value_to_display(value: &FelValue) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fel_core::error::Diagnostic;
+    use fel_core::EvalResult;
     use rust_decimal::Decimal;
+
+    #[test]
+    fn constraint_passes_null_from_eval_error_should_fail() {
+        // When an expression produces Null because of an eval error (e.g. undefined function),
+        // the diagnostics contain the error signal. constraint_passes should return false.
+        let result = EvalResult {
+            value: FelValue::Null,
+            diagnostics: vec![Diagnostic::error("undefined function: bogusFunc")],
+        };
+        assert!(
+            !constraint_passes(&result),
+            "constraint_passes should fail when Null is accompanied by eval error diagnostics"
+        );
+    }
+
+    #[test]
+    fn constraint_passes_null_from_missing_data_should_pass() {
+        // When a field is simply not filled in, the expression yields Null with no diagnostics.
+        // This should still pass (the required bind enforces non-emptiness, not constraint).
+        let result = EvalResult {
+            value: FelValue::Null,
+            diagnostics: vec![],
+        };
+        assert!(
+            constraint_passes(&result),
+            "constraint_passes should pass when Null has no error diagnostics (missing data)"
+        );
+    }
+
+    #[test]
+    fn constraint_passes_true_with_diagnostics_still_passes() {
+        // If the expression evaluates to true but has warnings, it should still pass.
+        let result = EvalResult {
+            value: FelValue::Boolean(true),
+            diagnostics: vec![Diagnostic::warning("some warning")],
+        };
+        assert!(
+            constraint_passes(&result),
+            "constraint_passes should pass when value is true even with warnings"
+        );
+    }
+
+    #[test]
+    fn constraint_passes_false_is_a_failure() {
+        let result = EvalResult {
+            value: FelValue::Boolean(false),
+            diagnostics: vec![],
+        };
+        assert!(
+            !constraint_passes(&result),
+            "constraint_passes should fail when value is false"
+        );
+    }
 
     fn make_env() -> FormspecEnvironment {
         let mut env = FormspecEnvironment::new();

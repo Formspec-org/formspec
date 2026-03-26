@@ -90,6 +90,17 @@ export function parseFEL(state: ProjectState, expression: string, context?: FELP
 
   const warnings: Diagnostic[] = [];
 
+  // Surface arity warnings from the Rust analyzer
+  for (const msg of analysis.warnings ?? []) {
+    warnings.push({
+      artifact: 'definition',
+      path: 'expression',
+      severity: 'warning',
+      code: 'FEL_ARITY_MISMATCH',
+      message: msg,
+    });
+  }
+
   // Cross-reference called functions against the known catalog
   if (analysis.valid && analysis.functions.length > 0) {
     const catalog = felFunctionCatalog(state);
@@ -181,7 +192,9 @@ export function availableReferences(state: ProjectState, context?: string | FELP
     }
   }
 
+  // Find the innermost repeatable group containing contextPath (if any).
   const contextRefs: string[] = [];
+  let innermostRepeatPath: string | undefined;
   if (contextPath) {
     const normalized = normalizeIndexedPath(contextPath);
     const parts = normalized.split('.').filter(Boolean);
@@ -190,8 +203,19 @@ export function availableReferences(state: ProjectState, context?: string | FELP
       const item = itemAt(state, candidate);
       if (item?.type === 'group' && (item as any).repeatable) {
         contextRefs.push('@current', '@index', '@count');
+        innermostRepeatPath = candidate;
         break;
       }
+    }
+  }
+
+  // Annotate field scope when contextPath is inside a repeatable group.
+  // "local" = field path starts with the innermost repeat group path + ".".
+  // "global" = everything else.
+  if (innermostRepeatPath) {
+    const prefix = innermostRepeatPath + '.';
+    for (const field of fields) {
+      field.scope = field.path.startsWith(prefix) ? 'local' : 'global';
     }
   }
 

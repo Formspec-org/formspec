@@ -33,6 +33,7 @@ export interface FELAnalysisError {
 export interface FELAnalysis {
     valid: boolean;
     errors: FELAnalysisError[];
+    warnings: string[];
     references: string[];
     variables: string[];
     functions: string[];

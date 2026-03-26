@@ -103,7 +103,7 @@ pub(super) fn validate_items(
 
             if let Ok(parsed) = parse(&normalized_expr) {
                 let result = evaluate(&parsed, env);
-                if !constraint_passes(&result.value) {
+                if !constraint_passes(&result) {
                     results.push(ValidationResult {
                         path: item.path.clone(),
                         severity: "error".to_string(),

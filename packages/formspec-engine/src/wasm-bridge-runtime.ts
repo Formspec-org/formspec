@@ -228,6 +228,7 @@ export function wasmEvaluateScreener(
 export function wasmAnalyzeFEL(expression: string): {
     valid: boolean;
     errors: string[];
+    warnings: string[];
     references: string[];
     variables: string[];
     functions: string[];

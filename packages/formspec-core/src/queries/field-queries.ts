@@ -39,6 +39,27 @@ export function fieldPaths(state: ProjectState): string[] {
 }
 
 /**
+ * All leaf item paths (fields AND display/content items) in document order.
+ * Groups are traversed but not included — only leaf items appear.
+ */
+export function itemPaths(state: ProjectState): string[] {
+  const paths: string[] = [];
+  const walk = (items: FormItem[], prefix: string) => {
+    for (const item of items) {
+      const path = prefix ? `${prefix}.${item.key}` : item.key;
+      if (item.type === 'field' || item.type === 'display') {
+        paths.push(path);
+      }
+      if (item.children) {
+        walk(item.children, path);
+      }
+    }
+  };
+  walk(state.definition.items, '');
+  return paths;
+}
+
+/**
  * Resolve an item by its dot-path within the definition tree.
  */
 export function itemAt(state: ProjectState, path: string): FormItem | undefined {

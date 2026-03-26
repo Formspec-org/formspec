@@ -25,7 +25,8 @@ import {
 } from '../../lib/fel-editor-utils';
 import { flatItems, dataTypeInfo } from '../../lib/field-helpers';
 import { useOptionalDefinition } from '../../state/useDefinition';
-import { getFELCatalog, type FELFunction } from '../../lib/fel-catalog';
+import { getBuiltinFELFunctionCatalog } from 'formspec-engine';
+import { formatCategoryName } from './FELReferencePopup';
 
 interface FELEditorProps {
   value: string;
@@ -139,12 +140,12 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
   }, [definition]);
 
   const functionOptions = useMemo(() => {
-    return getFELCatalog().map(fn => ({
-      name: fn.name,
-      label: fn.name,
-      signature: fn.signature,
-      description: fn.description,
-      category: fn.category
+    return getBuiltinFELFunctionCatalog().map(entry => ({
+      name: entry.name,
+      label: entry.name,
+      signature: entry.signature ?? '',
+      description: entry.description ?? '',
+      category: formatCategoryName(entry.category),
     }));
   }, []);
 
@@ -407,13 +408,13 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted font-bold">Signature</span>
                     <span className="text-[11px] font-mono text-logic font-semibold">
-                      {activeOption.name}{activeOption.signature?.split('→')[0]}
+                      {activeOption.signature?.split('->')[0]?.trim()}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted font-bold">Returns</span>
                     <span className="text-[11px] font-mono text-ink/70">
-                      {activeOption.signature?.split('→')[1] || 'any'}
+                      {activeOption.signature?.split('->')[1]?.trim() || 'any'}
                     </span>
                   </div>
                   {activeOption.description && (

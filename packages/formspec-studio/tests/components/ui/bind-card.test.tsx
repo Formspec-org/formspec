@@ -46,6 +46,7 @@ describe('BindCard', () => {
       screen.getByText('sum').click();
     });
 
-    expect(writeText).toHaveBeenCalledWith('sum(nodeset)');
+    // Engine signature: "sum(array<number>) -> number" — clipboard gets params part
+    expect(writeText).toHaveBeenCalledWith('sum(array<number>)');
   });
 });

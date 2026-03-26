@@ -85,6 +85,36 @@ const BUILTIN_FUNCTIONS: &[BuiltinFunctionCatalogEntry] = &[
         description: "Counts elements whose predicate evaluates to true.",
     },
     BuiltinFunctionCatalogEntry {
+        name: "sumWhere",
+        category: "aggregate",
+        signature: "sumWhere(array<number>, predicate) -> number",
+        description: "Sums numeric elements whose predicate evaluates to true.",
+    },
+    BuiltinFunctionCatalogEntry {
+        name: "avgWhere",
+        category: "aggregate",
+        signature: "avgWhere(array<number>, predicate) -> number",
+        description: "Returns the mean of numeric elements whose predicate evaluates to true.",
+    },
+    BuiltinFunctionCatalogEntry {
+        name: "minWhere",
+        category: "aggregate",
+        signature: "minWhere(array<any>, predicate) -> any",
+        description: "Returns the smallest element whose predicate evaluates to true.",
+    },
+    BuiltinFunctionCatalogEntry {
+        name: "maxWhere",
+        category: "aggregate",
+        signature: "maxWhere(array<any>, predicate) -> any",
+        description: "Returns the largest element whose predicate evaluates to true.",
+    },
+    BuiltinFunctionCatalogEntry {
+        name: "moneySumWhere",
+        category: "money",
+        signature: "moneySumWhere(array<money>, predicate) -> money",
+        description: "Sums money elements whose predicate evaluates to true.",
+    },
+    BuiltinFunctionCatalogEntry {
         name: "length",
         category: "string",
         signature: "length(string | array<any>) -> number",

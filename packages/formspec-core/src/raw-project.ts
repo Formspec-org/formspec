@@ -47,6 +47,7 @@ import { reconcileComponentTree } from './tree-reconciler.js';
 import { normalizeState } from './state-normalizer.js';
 import {
   fieldPaths as _fieldPaths,
+  itemPaths as _itemPaths,
   itemAt as _itemAt,
   responseSchemaRows as _responseSchemaRows,
   instanceNames as _instanceNames,
@@ -287,6 +288,7 @@ export class RawProject implements IProjectCore {
   // ── Query wrappers ──────────────────────────────────────────────
 
   fieldPaths(): string[] { return _fieldPaths(this._state); }
+  itemPaths(): string[] { return _itemPaths(this._state); }
   itemAt(path: string): FormItem | undefined { return _itemAt(this._state, path); }
   responseSchemaRows(): ResponseSchemaRow[] { return _responseSchemaRows(this._state); }
   statistics(): ProjectStatistics {

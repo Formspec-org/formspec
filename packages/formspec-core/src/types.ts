@@ -516,7 +516,17 @@ export interface FELParseResult {
  */
 export interface FELReferenceSet {
   /** Fields that can be referenced, with their data type and optional label. */
-  fields: { path: string; dataType: string; label?: string }[];
+  fields: {
+    path: string;
+    dataType: string;
+    label?: string;
+    /**
+     * Present only when contextPath is inside a repeatable group.
+     * - `'local'` — field is inside the same innermost repeat group as contextPath.
+     * - `'global'` — field is outside that repeat group.
+     */
+    scope?: 'local' | 'global';
+  }[];
   /** Named variables declared in the definition. */
   variables: { name: string; expression: string }[];
   /** External data source instances. */

@@ -1,16 +1,48 @@
 /** @filedesc Floating popover triggered by a (?) button listing all FEL function categories and signatures. */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { 
-  getFELCatalog, 
-  CATEGORY_COLORS, 
-  CATEGORY_ORDER, 
-  formatCategoryName,
-  type FELFunction 
-} from '../../lib/fel-catalog';
+import { getBuiltinFELFunctionCatalog } from 'formspec-engine';
+
+// ── UI display constants for FEL function categories ────────────────
+
+export const CATEGORY_COLORS: Record<string, string> = {
+  Aggregate: 'text-accent',
+  String: 'text-green',
+  Numeric: 'text-amber',
+  Date: 'text-logic',
+  Logical: 'text-accent',
+  Type: 'text-muted',
+  Money: 'text-green',
+  Repeat: 'text-amber',
+  MIP: 'text-logic',
+  Instance: 'text-muted',
+  Locale: 'text-muted',
+  Function: 'text-muted',
+};
+
+export const CATEGORY_ORDER = [
+  'Aggregate', 'String', 'Numeric', 'Date', 'Logical', 'Type',
+  'Money', 'Repeat', 'MIP', 'Instance', 'Locale', 'Function',
+];
+
+export function formatCategoryName(category: string): string {
+  if (category === 'mip') return 'MIP';
+  return category
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ') || 'Function';
+}
+
+interface CatalogEntry {
+  name: string;
+  signature: string;
+  description: string;
+  category: string;
+}
 
 interface FELCategory {
   name: string;
-  functions: FELFunction[];
+  functions: CatalogEntry[];
 }
 
 interface FELReferencePopupProps {
@@ -33,8 +65,14 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
   const [activeFunction, setActiveFunction] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const catalog = useMemo<FELCategory[]>(() => {
-    const grouped = new Map<string, FELFunction[]>();
-    for (const entry of getFELCatalog()) {
+    const grouped = new Map<string, CatalogEntry[]>();
+    for (const raw of getBuiltinFELFunctionCatalog()) {
+      const entry: CatalogEntry = {
+        name: raw.name,
+        signature: raw.signature ?? '',
+        description: raw.description ?? '',
+        category: formatCategoryName(raw.category),
+      };
       const functions = grouped.get(entry.category) ?? [];
       functions.push(entry);
       grouped.set(entry.category, functions);
@@ -51,8 +89,8 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
       });
   }, []);
 
-  const handleFunctionClick = async (fn: FELFunction) => {
-    const copyText = `${fn.name}${fn.signature.split('→')[0].trim()}`;
+  const handleFunctionClick = async (fn: CatalogEntry) => {
+    const copyText = fn.signature.split('->')[0]?.trim() ?? fn.name;
     try {
       await navigator.clipboard?.writeText(copyText);
     } catch {
