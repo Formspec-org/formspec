@@ -3,9 +3,9 @@ import { createStudioProject } from '../../src/studio-app/StudioApp';
 import { exampleDefinition } from '../../src/fixtures/example-definition';
 
 describe('createStudioProject bootstrap', () => {
-  it('seeds theme.pages from definition groups when theme.pages is empty', () => {
+  it('seeds pages from definition groups when no pages exist', () => {
     const project = createStudioProject();
-    const pages = (project.theme as any).pages;
+    const pages = project.listPages();
 
     expect(pages).toBeDefined();
     expect(Array.isArray(pages)).toBe(true);
@@ -27,19 +27,21 @@ describe('createStudioProject bootstrap', () => {
     expect(fp?.pageMode).toBe('wizard');
   });
 
-  it('does NOT overwrite theme.pages when seed provides them', () => {
-    const customPages = [
-      { id: 'custom-1', title: 'My Custom Page', regions: [] },
-    ];
-
+  it('does NOT overwrite pages when seed provides them in component tree', () => {
     const project = createStudioProject({
       seed: {
         definition: exampleDefinition as any,
-        theme: { pages: customPages } as any,
+        component: {
+          tree: {
+            component: 'Stack', nodeId: 'root', children: [
+              { component: 'Page', nodeId: 'custom-1', title: 'My Custom Page', _layout: true, children: [] },
+            ],
+          },
+        } as any,
       },
     });
 
-    const pages = (project.theme as any).pages;
+    const pages = project.listPages();
     expect(pages).toHaveLength(1);
     expect(pages[0].title).toBe('My Custom Page');
   });
@@ -76,7 +78,7 @@ describe('createStudioProject bootstrap', () => {
       seed: { definition: minimalDef as any },
     });
 
-    const pages = (project.theme as any).pages;
+    const pages = project.listPages();
     expect(pages.length).toBe(2);
     expect(pages[0].title).toBe('Basic Info');
     expect(pages[1].title).toBe('Review');
@@ -97,9 +99,9 @@ describe('createStudioProject bootstrap', () => {
       seed: { definition: noGroupsDef as any },
     });
 
-    const pages = (project.theme as any).pages;
+    const pages = project.listPages();
     // Should either be empty or not have auto-generated content
     // (no groups means nothing to generate from)
-    expect(!pages || pages.length === 0).toBe(true);
+    expect(pages.length === 0).toBe(true);
   });
 });

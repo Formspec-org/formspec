@@ -1,11 +1,32 @@
 /** @filedesc Tests for ChatPanel scaffold-as-changeset flow. */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { createProject, type Project } from 'formspec-studio-core';
+
+// Replace GeminiAdapter with MockAdapter so tests don't hit real APIs
+vi.mock('formspec-chat', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('formspec-chat')>();
+  return {
+    ...actual,
+    GeminiAdapter: actual.MockAdapter,
+  };
+});
+
 import { ChatPanel } from '../../src/components/ChatPanel.js';
 
+const STORAGE_KEY = 'formspec-studio:provider-config';
+
 // ── Helpers ──────────────────────────────────────────────────────────
+
+beforeEach(() => {
+  // Seed a fake API key so ChatPanel shows the chat input instead of the API key prompt
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ provider: 'google', apiKey: 'test-key-for-unit-tests' }));
+});
+
+afterEach(() => {
+  localStorage.removeItem(STORAGE_KEY);
+});
 
 function renderChatPanel(project?: Project) {
   const p = project ?? createProject();

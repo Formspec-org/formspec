@@ -24,13 +24,13 @@ describe('MappingTab', () => {
     renderTab();
 
     // Default is 'all'
-    expect(screen.getByTestId('mapping-filter-tab-all').className).toContain('bg-ink');
+    expect(screen.getByTestId('mapping-filter-tab-all').className).toContain('bg-accent');
 
     fireEvent.click(screen.getByTestId('mapping-filter-tab-config'));
-    expect(screen.getByTestId('mapping-filter-tab-config').className).toContain('bg-ink');
+    expect(screen.getByTestId('mapping-filter-tab-config').className).toContain('bg-accent');
 
     fireEvent.click(screen.getByTestId('mapping-filter-tab-rules'));
-    expect(screen.getByTestId('mapping-filter-tab-rules').className).toContain('bg-ink');
+    expect(screen.getByTestId('mapping-filter-tab-rules').className).toContain('bg-accent');
   });
 
   it('keeps the Configuration section collapsed after switching away and back', () => {

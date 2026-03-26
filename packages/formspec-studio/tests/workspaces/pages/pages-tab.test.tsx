@@ -13,14 +13,43 @@ const BASE_DEF = {
   ],
 };
 
+/** Build a component tree seed from a pages-like structure. */
+function makeComponentTree(pages: Array<{ id: string; title: string; description?: string; regions: Array<{ key: string; span?: number; start?: number }> }>): Record<string, unknown> {
+  return {
+    $formspecComponent: '1.0',
+    tree: {
+      component: 'Stack', nodeId: 'root', children: pages.map(p => ({
+        component: 'Page',
+        nodeId: p.id,
+        title: p.title,
+        ...(p.description ? { description: p.description } : {}),
+        _layout: true,
+        children: p.regions.map(r => ({
+          component: 'TextInput',
+          bind: r.key,
+          ...(r.span !== undefined ? { span: r.span } : {}),
+          ...(r.start !== undefined ? { start: r.start } : {}),
+        })),
+      })),
+    },
+  };
+}
+
+/** Helper to read page nodes from the component tree. */
+function getPageNodes(project: any): any[] {
+  const tree = (project.effectiveComponent as any).tree;
+  if (!tree?.children) return [];
+  return tree.children.filter((n: any) => n.component === 'Page');
+}
+
 function renderPagesTab(overrides?: {
   definition?: Record<string, unknown>;
-  theme?: Record<string, unknown>;
+  component?: Record<string, unknown>;
 }) {
   const project = createProject({
     seed: {
       definition: { ...BASE_DEF, ...overrides?.definition } as any,
-      theme: overrides?.theme as any,
+      component: overrides?.component as any,
     },
   });
 
@@ -43,9 +72,7 @@ describe('PagesTab', () => {
   it('shows flow mode controls and layout heading', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [] }]),
     });
 
     expect(screen.getByText('Layout')).toBeInTheDocument();
@@ -62,9 +89,7 @@ describe('PagesTab', () => {
   it('single mode with existing pages shows preserved-pages notice', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'single' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [] }]),
     });
 
     const notice = screen.getByTestId('preserved-pages-notice');
@@ -76,9 +101,7 @@ describe('PagesTab', () => {
   it('single mode preserved-pages notice can be dismissed', async () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'single' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [] }]),
     });
 
     expect(screen.getByTestId('preserved-pages-notice')).toBeInTheDocument();
@@ -103,22 +126,21 @@ describe('PagesTab', () => {
   it('add page creates a new card', async () => {
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: { pages: [{ id: 'p1', title: 'Existing', regions: [] }] },
+      component: makeComponentTree([{ id: 'p1', title: 'Existing', regions: [] }]),
     });
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /add page/i }));
     });
 
-    expect((project.theme.pages as any[]).length).toBe(2);
+    const pageNodes = getPageNodes(project);
+    expect(pageNodes.length).toBe(2);
   });
 
   it('inline title editing updates the page title', async () => {
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Original Title', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Original Title', regions: [] }]),
     });
 
     const card = pageCard('p1');
@@ -133,15 +155,14 @@ describe('PagesTab', () => {
       fireEvent.blur(input);
     });
 
-    expect((project.theme.pages as any[])[0].title).toBe('Updated Title');
+    const pageNodes = getPageNodes(project);
+    expect(pageNodes[0].title).toBe('Updated Title');
   });
 
   it('inline description editing updates the page description', async () => {
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [] }]),
     });
 
     const card = pageCard('p1');
@@ -157,15 +178,14 @@ describe('PagesTab', () => {
       fireEvent.blur(input);
     });
 
-    expect((project.theme.pages as any[])[0].description).toBe('Fill this out first');
+    const pageNodes = getPageNodes(project);
+    expect(pageNodes[0].description).toBe('Fill this out first');
   });
 
   it('shows unassigned items and quick-adds them to a page', async () => {
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [{ key: 'email', span: 12 }] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [{ key: 'email', span: 12 }] }]),
     });
 
     const card = pageCard('p1');
@@ -176,18 +196,18 @@ describe('PagesTab', () => {
       fireEvent.click(within(card).getByRole('button', { name: /add name to step 1/i }));
     });
 
-    expect(((project.theme.pages as any[])[0].regions ?? []).some((region: any) => region.key === 'name')).toBe(true);
+    const pageNodes = getPageNodes(project);
+    const boundChildren = pageNodes[0].children.filter((n: any) => n.bind);
+    expect(boundChildren.some((c: any) => c.bind === 'name')).toBe(true);
   });
 
   it('delete action is blocked for non-empty pages with an explanation', async () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [
-          { id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] },
-          { id: 'p2', title: 'Step 2', regions: [] },
-        ],
-      },
+      component: makeComponentTree([
+        { id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] },
+        { id: 'p2', title: 'Step 2', regions: [] },
+      ]),
     });
 
     const card = pageCard('p1');
@@ -199,12 +219,10 @@ describe('PagesTab', () => {
   it('empty pages can be deleted after confirmation', async () => {
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [
-          { id: 'p1', title: 'Step 1', regions: [] },
-          { id: 'p2', title: 'Step 2', regions: [] },
-        ],
-      },
+      component: makeComponentTree([
+        { id: 'p1', title: 'Step 1', regions: [] },
+        { id: 'p2', title: 'Step 2', regions: [] },
+      ]),
     });
 
     const card = pageCard('p2');
@@ -219,15 +237,14 @@ describe('PagesTab', () => {
       fireEvent.click(within(card).getByRole('button', { name: /^confirm delete$/i }));
     });
 
-    expect((project.theme.pages as any[]).map((page: any) => page.id)).toEqual(['p1']);
+    const pageNodes = getPageNodes(project);
+    expect(pageNodes.map((p: any) => p.nodeId)).toEqual(['p1']);
   });
 
   it('delete is blocked when only one page exists', async () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Only Page', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Only Page', regions: [] }]),
     });
 
     const card = pageCard('p1');
@@ -239,9 +256,7 @@ describe('PagesTab', () => {
   it('renders inline grid canvas for assigned items', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] }]),
     });
 
     const card = pageCard('p1');
@@ -254,12 +269,10 @@ describe('PagesTab — undo toast after deletion', () => {
   it('shows undo toast after page deletion and restores page on undo', async () => {
     const { project } = renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [
-          { id: 'p1', title: 'Step 1', regions: [] },
-          { id: 'p2', title: 'Step 2', regions: [] },
-        ],
-      },
+      component: makeComponentTree([
+        { id: 'p1', title: 'Step 1', regions: [] },
+        { id: 'p2', title: 'Step 2', regions: [] },
+      ]),
     });
 
     const card = pageCard('p2');
@@ -272,7 +285,8 @@ describe('PagesTab — undo toast after deletion', () => {
     });
 
     // Page was deleted
-    expect((project.theme.pages as any[]).map((p: any) => p.id)).toEqual(['p1']);
+    let pageNodes = getPageNodes(project);
+    expect(pageNodes.map((p: any) => p.nodeId)).toEqual(['p1']);
 
     // Undo toast is visible with page title
     expect(screen.getByText(/step 2 deleted/i)).toBeInTheDocument();
@@ -284,7 +298,8 @@ describe('PagesTab — undo toast after deletion', () => {
       fireEvent.click(undoButton);
     });
 
-    expect((project.theme.pages as any[]).map((p: any) => p.id)).toEqual(['p1', 'p2']);
+    pageNodes = getPageNodes(project);
+    expect(pageNodes.map((p: any) => p.nodeId)).toEqual(['p1', 'p2']);
     // Toast disappears after undo
     expect(screen.queryByText(/step 2 deleted/i)).not.toBeInTheDocument();
   });
@@ -294,12 +309,10 @@ describe('PagesTab — wizard mode rendering', () => {
   it('renders wizard-mode-flow container with step connectors', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [
-          { id: 'p1', title: 'Step 1', regions: [] },
-          { id: 'p2', title: 'Step 2', regions: [] },
-        ],
-      },
+      component: makeComponentTree([
+        { id: 'p1', title: 'Step 1', regions: [] },
+        { id: 'p2', title: 'Step 2', regions: [] },
+      ]),
     });
 
     expect(screen.getByTestId('wizard-mode-flow')).toBeInTheDocument();
@@ -311,9 +324,7 @@ describe('PagesTab — wizard mode rendering', () => {
   it('wizard mode shows "add step" terminus button', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'wizard' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Step 1', regions: [] }]),
     });
 
     expect(screen.getByRole('button', { name: /add step/i })).toBeInTheDocument();
@@ -324,12 +335,10 @@ describe('PagesTab — tabs mode rendering', () => {
   it('renders tabs-mode-editor with tab bar', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'tabs' } },
-      theme: {
-        pages: [
-          { id: 'p1', title: 'Contact', regions: [] },
-          { id: 'p2', title: 'Address', regions: [] },
-        ],
-      },
+      component: makeComponentTree([
+        { id: 'p1', title: 'Contact', regions: [] },
+        { id: 'p2', title: 'Address', regions: [] },
+      ]),
     });
 
     expect(screen.getByTestId('tabs-mode-editor')).toBeInTheDocument();
@@ -341,12 +350,10 @@ describe('PagesTab — tabs mode rendering', () => {
   it('tabs mode selects first tab by default and shows its panel', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'tabs' } },
-      theme: {
-        pages: [
-          { id: 'p1', title: 'Contact', regions: [{ key: 'name', span: 12 }] },
-          { id: 'p2', title: 'Address', regions: [] },
-        ],
-      },
+      component: makeComponentTree([
+        { id: 'p1', title: 'Contact', regions: [{ key: 'name', span: 12 }] },
+        { id: 'p2', title: 'Address', regions: [] },
+      ]),
     });
 
     const contactTab = screen.getByRole('tab', { name: 'Contact' });
@@ -360,12 +367,10 @@ describe('PagesTab — tabs mode rendering', () => {
   it('clicking a tab switches the visible panel', async () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'tabs' } },
-      theme: {
-        pages: [
-          { id: 'p1', title: 'Contact', regions: [{ key: 'name', span: 12 }] },
-          { id: 'p2', title: 'Address', regions: [{ key: 'email', span: 12 }] },
-        ],
-      },
+      component: makeComponentTree([
+        { id: 'p1', title: 'Contact', regions: [{ key: 'name', span: 12 }] },
+        { id: 'p2', title: 'Address', regions: [{ key: 'email', span: 12 }] },
+      ]),
     });
 
     await act(async () => {
@@ -383,9 +388,7 @@ describe('PagesTab — tabs mode rendering', () => {
   it('tabs mode has a + button to add pages', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'tabs' } },
-      theme: {
-        pages: [{ id: 'p1', title: 'Contact', regions: [] }],
-      },
+      component: makeComponentTree([{ id: 'p1', title: 'Contact', regions: [] }]),
     });
 
     // The + button in the tab bar (distinct from the header "Add page" button)
