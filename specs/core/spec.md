@@ -1901,6 +1901,11 @@ these properties.
 | `labelPosition` | string | `"top"`, `"start"`, `"hidden"` | `"top"` | Default label placement for all Fields. `"top"`: label above input. `"start"`: label to the leading side (left in LTR, right in RTL). `"hidden"`: label suppressed visually but MUST remain in accessible markup. |
 | `density` | string | `"compact"`, `"comfortable"`, `"spacious"` | `"comfortable"` | Spacing density hint. |
 | `defaultCurrency` | string | ISO 4217 (e.g. `"USD"`) | (none) | Default currency code applied to all `money` fields that do not declare their own `currency` property. When set, MoneyInput widgets MUST pre-fill the currency to this value and lock it. FEL `money()` calls that omit the currency argument MAY inherit this default. |
+| `direction` | string | `"ltr"`, `"rtl"`, `"auto"` | `"ltr"` | Base text direction for the form. `"auto"` derives direction from the active locale code (RTL for ar, he, fa, ur, ps, sd, yi). |
+| `showProgress` | boolean | `true`, `false` | `true` | When `pageMode` is `"wizard"`, display a step progress indicator. Ignored for other modes. |
+| `allowSkip` | boolean | `true`, `false` | `false` | When `pageMode` is `"wizard"`, allow navigating forward without validating the current page. Ignored for other modes. |
+| `defaultTab` | integer | non-negative integer | `0` | When `pageMode` is `"tabs"`, zero-based index of the initially selected tab. Ignored for other modes. |
+| `tabPosition` | string | `"top"`, `"bottom"`, `"left"`, `"right"` | `"top"` | When `pageMode` is `"tabs"`, position of the tab bar relative to the content. Ignored for other modes. |
 
 Example:
 
@@ -1909,10 +1914,54 @@ Example:
   "formPresentation": {
     "pageMode": "wizard",
     "labelPosition": "top",
-    "density": "compact"
+    "density": "compact",
+    "showProgress": true,
+    "allowSkip": false
   }
 }
 ```
+
+#### 4.1.2 Page Mode Processing
+
+A conforming processor MAY support any subset of page modes. When a
+processor does not support the declared `pageMode`, it MUST fall back to
+`"single"` and SHOULD emit an informative warning.
+
+When a processor supports a given `pageMode`, it MUST satisfy the
+behavioral requirements below.
+
+**Wizard mode** (`pageMode: "wizard"`):
+
+1. The processor MUST render exactly one Page at a time.
+2. The processor MUST provide Next/Previous navigation controls.
+3. The processor MUST validate the current page before allowing forward
+   navigation, unless `allowSkip` is `true`.
+4. When `showProgress` is `true`, the processor MUST display a progress
+   indicator showing the current step and total steps.
+
+**Tabs mode** (`pageMode: "tabs"`):
+
+1. The processor MUST render a tab bar with one tab per Page child,
+   positioned according to `tabPosition`.
+2. The processor MUST show exactly one Page's content at a time.
+3. The processor MUST allow the user to switch tabs by clicking or
+   activating tab labels.
+4. The processor MUST select the tab at index `defaultTab` on initial
+   render.
+5. All Pages MUST remain mounted; tab switching changes visibility, not
+   lifecycle.
+
+**Property applicability:**
+
+- `showProgress` and `allowSkip` are meaningful only when `pageMode` is
+  `"wizard"`. Processors MUST ignore these properties for other modes.
+- `defaultTab` and `tabPosition` are meaningful only when `pageMode` is
+  `"tabs"`. Processors MUST ignore these properties for other modes.
+
+> **Note:** The page navigation gate in wizard mode constrains *when*
+> validation errors are surfaced to the user, not *what* constitutes a
+> valid submission. A form's validation semantics (§5) are independent
+> of its presentation mode.
 
 ### 4.2 Item Schema
 

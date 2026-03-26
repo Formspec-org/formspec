@@ -1,10 +1,10 @@
 # Core Commands Schema Reference Map
 
-> schemas/core-commands.schema.json -- 1196 lines -- Command definitions for programmatic form manipulation
+> schemas/core-commands.schema.json -- 1220 lines -- Command definitions for programmatic form manipulation
 
 ## Overview
 
-The Core Command Catalog is a structured JSON schema that defines every mutation command available through `RawProject.dispatch()` in `formspec-core`. It serves as a machine-readable catalog enabling LLM agents, CLI tools, and visual editors to discover available operations and construct valid command payloads. The schema defines 119 commands organized across 15 handler areas spanning definition manipulation, theme configuration, mapping rules, component tree management, and project-level operations.
+The Core Command Catalog is a structured JSON schema that defines every mutation command available through `RawProject.dispatch()` in `formspec-core`. It serves as a machine-readable catalog enabling LLM agents, CLI tools, and visual editors to discover available operations and construct valid command payloads. The schema defines 120 commands organized across 16 handler areas spanning definition manipulation, theme configuration, page layout, mapping rules, component tree management, and project-level operations.
 
 ## Top-Level Structure
 
@@ -116,7 +116,7 @@ The document is typed as `"object"` with `version` and `commands` as the two dat
 | `definition.deleteFieldMapRule` | Remove a migration field map rule by index. | fromVersion, index | fromVersion, index | -- |
 | `definition.setMigrationDefaults` | Set default values for newly added fields in a migration. | fromVersion, defaults | fromVersion, defaults | -- |
 
-### theme (28 commands)
+### theme (17 commands)
 
 | Command | Description | Parameters | Required Params | Returns |
 |---------|-------------|------------|-----------------|---------|
@@ -132,17 +132,6 @@ The document is typed as `"object"` with `version` and `commands` as the two dat
 | `theme.setItemStyle` | Set a style property on a per-item override. | itemKey, property, value | itemKey, property, value | -- |
 | `theme.setItemWidgetConfig` | Set a widget configuration property on a per-item override. | itemKey, property, value | itemKey, property, value | -- |
 | `theme.setItemAccessibility` | Set an accessibility property on a per-item override. | itemKey, property, value | itemKey, property, value | -- |
-| `theme.addPage` | Add a page layout definition to the theme. | id, title, description, insertIndex | -- | -- |
-| `theme.setPageProperty` | Update a property on a theme page layout. | index, property, value | index, property, value | -- |
-| `theme.deletePage` | Remove a theme page layout by index. | index | index | -- |
-| `theme.reorderPage` | Move a theme page layout one position up or down. | index, direction | index, direction | -- |
-| `theme.addRegion` | Add a grid region to a theme page. | pageId, key, span, start, insertIndex | pageId | -- |
-| `theme.setRegionProperty` | Update a property on a grid region. | pageId, regionIndex, property, value | pageId, regionIndex, property, value | -- |
-| `theme.deleteRegion` | Remove a grid region by index. | pageId, regionIndex | pageId, regionIndex | -- |
-| `theme.reorderRegion` | Move a grid region one position up or down within its page. | pageId, regionIndex, direction | pageId, regionIndex, direction | -- |
-| `theme.renamePage` | Rename a theme page ID. | pageId, newId | pageId, newId | -- |
-| `theme.setRegionKey` | Change a grid region's key. | pageId, regionIndex, newKey | pageId, regionIndex, newKey | -- |
-| `theme.setPages` | Replace the entire pages array. | pages | pages | -- |
 | `theme.setBreakpoint` | Set or remove a named viewport breakpoint. | name, minWidth | name, minWidth | -- |
 | `theme.setStylesheets` | Replace the list of external stylesheet URLs. | urls | urls | -- |
 | `theme.setDocumentProperty` | Set a top-level theme document property. | property, value | property, value | -- |
@@ -170,6 +159,24 @@ The document is typed as `"object"` with `version` and `commands` as the two dat
 | `mapping.reorderInnerRule` | Move a nested inner rule one position up or down. | ruleIndex, innerIndex, direction | ruleIndex, innerIndex, direction | -- |
 | `mapping.preview` | Execute mapping rules against sample data and return the transformed output. Does not mutate state. | sampleData, direction, ruleIndices | sampleData | `output`, `diagnostics`, `appliedRules`, `direction` |
 
+### pages (13 commands)
+
+| Command | Description | Parameters | Required Params | Returns |
+|---------|-------------|------------|-----------------|---------|
+| `pages.addPage` | Add a Page node to the component tree. Promotes pageMode to wizard if currently single or unset. | id, title, description | -- | -- |
+| `pages.deletePage` | Remove a Page node from the component tree by ID. | id | id | -- |
+| `pages.setMode` | Set the form presentation page mode. Ensures the component tree exists. | mode | mode | -- |
+| `pages.reorderPages` | Move a Page node one position up or down among its siblings. | id, direction | id, direction | -- |
+| `pages.movePageToIndex` | Move a Page node to an absolute index position, clamped to bounds. | id, targetIndex | id, targetIndex | -- |
+| `pages.setPageProperty` | Set an arbitrary property on a Page node. | id, property, value | id, property, value | -- |
+| `pages.assignItem` | Assign a bound item to a Page. Moves the node from its current location in the tree. | pageId, key, span | pageId, key | -- |
+| `pages.unassignItem` | Remove a bound item from a Page and move it back to the root level. | pageId, key | pageId, key | -- |
+| `pages.autoGenerate` | Auto-generate Page nodes from definition items using presentation.layout.page hints. Replaces all existing pages. | -- | -- | -- |
+| `pages.setPages` | Replace the entire set of Page nodes in the component tree. | pages | pages | -- |
+| `pages.reorderRegion` | Move a region (bound item) within a Page to a target index. | pageId, key, targetIndex | pageId, key, targetIndex | -- |
+| `pages.renamePage` | Rename a Page node's title. | id, newId | id, newId | -- |
+| `pages.setRegionProperty` | Set a property (span, start, or responsive) on a region within a Page. | pageId, key, property, value | pageId, key, property, value | -- |
+
 ### component-tree (7 commands)
 
 | Command | Description | Parameters | Required Params | Returns |
@@ -182,7 +189,7 @@ The document is typed as `"object"` with `version` and `commands` as the two dat
 | `component.wrapNode` | Wrap a node in a new container node. | node, wrapper | node, wrapper | `nodeRef`: Reference to the new wrapper node. |
 | `component.unwrapNode` | Replace a container node with its children (unwrap one level). | node | node | -- |
 
-### component-properties (18 commands)
+### component-properties (17 commands)
 
 | Command | Description | Parameters | Required Params | Returns |
 |---------|-------------|------------|-----------------|---------|
@@ -193,7 +200,6 @@ The document is typed as `"object"` with `version` and `commands` as the two dat
 | `component.spliceArrayProp` | Splice (insert/remove) items in an array-valued node property. | node, property, index, deleteCount, insert | node, property, index, deleteCount | -- |
 | `component.setFieldWidget` | Set which widget component renders a field. Convenience command that finds the node by field key. | fieldKey, widget | fieldKey, widget | -- |
 | `component.setResponsiveOverride` | Set or remove a responsive breakpoint override on a node. | node, breakpoint, patch | node, breakpoint, patch | -- |
-| `component.setWizardProperty` | Set a wizard-mode property on the component document. | property, value | property, value | -- |
 | `component.setGroupRepeatable` | Toggle a group's repeatable flag in the component tree. | groupKey, repeatable | groupKey, repeatable | -- |
 | `component.setGroupDisplayMode` | Set how a group renders (table, accordion, card, etc.). | groupKey, mode | groupKey, mode | -- |
 | `component.setGroupDataTable` | Configure data table rendering for a repeatable group. | groupKey, config | groupKey, config | -- |
@@ -241,7 +247,7 @@ The document is typed as `"object"` with `version` and `commands` as the two dat
 ### Per-command required payload parameters
 
 Commands where ALL parameters are optional (no required params):
-- `definition.addVariable`, `definition.addInstance`, `theme.addPage`, `mapping.addRule`, `mapping.autoGenerateRules`, `mapping.addInnerRule`, `project.import`
+- `definition.addVariable`, `definition.addInstance`, `pages.addPage`, `pages.autoGenerate`, `mapping.addRule`, `mapping.autoGenerateRules`, `mapping.addInnerRule`, `project.import`
 
 Commands with required params are listed in the Command Definitions tables above.
 
@@ -253,7 +259,7 @@ Handler area grouping for commands:
 "definition-items", "definition-binds", "definition-metadata", "definition-pages",
 "definition-shapes", "definition-variables", "definition-optionsets", "definition-instances",
 "definition-screener", "definition-migrations", "theme", "mapping",
-"component-tree", "component-properties", "project"
+"pages", "component-tree", "component-properties", "project"
 ```
 
 ### CommandEntry.sideEffects
@@ -298,16 +304,6 @@ Item type discriminant:
 "up", "down"
 ```
 
-### theme.reorderPage > direction
-```
-"up", "down"
-```
-
-### theme.reorderRegion > direction
-```
-"up", "down"
-```
-
 ### mapping.reorderRule > direction
 ```
 "up", "down"
@@ -321,6 +317,21 @@ Item type discriminant:
 ### mapping.preview > direction
 ```
 "forward", "reverse"
+```
+
+### pages.setMode > mode
+```
+"single", "wizard", "tabs"
+```
+
+### pages.reorderPages > direction
+```
+"up", "down"
+```
+
+### pages.setRegionProperty > property
+```
+"span", "start", "responsive"
 ```
 
 ### component.reorderNode > direction
@@ -394,9 +405,10 @@ At least one must be provided; the `NodeRef` schema does not enforce this via `o
 | definition-instances | 4 |
 | definition-screener | 8 |
 | definition-migrations | 7 |
-| theme | 28 |
+| theme | 17 |
 | mapping | 16 |
+| pages | 13 |
 | component-tree | 7 |
-| component-properties | 18 |
+| component-properties | 17 |
 | project | 5 |
-| **Total** | **119** |
+| **Total** | **120** |
