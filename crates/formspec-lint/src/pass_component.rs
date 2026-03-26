@@ -25,7 +25,6 @@ const LAYOUT_ROOTS: &[&str] = &[
     "Page",
     "Stack",
     "Grid",
-    "Wizard",
     "Columns",
     "Tabs",
     "Accordion",
@@ -37,7 +36,7 @@ const LAYOUT_ROOTS: &[&str] = &[
 ];
 
 /// Layout-only components that should not declare a bind.
-const LAYOUT_NO_BIND: &[&str] = &["Page", "Stack", "Grid", "Wizard", "Spacer"];
+const LAYOUT_NO_BIND: &[&str] = &["Page", "Stack", "Grid", "Spacer"];
 
 /// Container components that should not declare a bind (except DataTable and Accordion).
 const CONTAINER_NO_BIND: &[&str] = &[
@@ -56,7 +55,6 @@ const ALL_BUILTINS: &[&str] = &[
     "Page",
     "Stack",
     "Grid",
-    "Wizard",
     "Spacer",
     "TextInput",
     "NumberInput",
@@ -206,26 +204,6 @@ impl<'a> WalkState<'a> {
                 path,
                 format!("Unknown component type: '{comp_type}'"),
             ));
-        }
-
-        // E805: Wizard children must all be Page
-        if comp_type == "Wizard"
-            && let Some(children) = node.get("children").and_then(|v| v.as_array())
-        {
-            for (i, child) in children.iter().enumerate() {
-                let child_type = child
-                    .get("component")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                if child_type != "Page" {
-                    self.diags.push(LintDiagnostic::error(
-                        "E805",
-                        PASS,
-                        format!("{path}.children[{i}]"),
-                        format!("Wizard children must be Page components, found '{child_type}'"),
-                    ));
-                }
-            }
         }
 
         // E806: Custom component missing required params
@@ -531,42 +509,7 @@ mod tests {
         assert!(with_code(&diags, "E801").is_empty());
     }
 
-    // 5. Wizard non-Page children — E805
-    #[test]
-    fn wizard_non_page_children_emits_e805() {
-        let comp = json!({
-            "tree": {
-                "component": "Wizard",
-                "children": [
-                    { "component": "Page", "title": "Step 1" },
-                    { "component": "Stack", "children": [] },
-                    { "component": "Page", "title": "Step 3" }
-                ]
-            }
-        });
-        let diags = lint_component(&comp, None);
-        let e805 = with_code(&diags, "E805");
-        assert_eq!(e805.len(), 1);
-        assert!(e805[0].message.contains("Stack"));
-        assert!(e805[0].path.contains("children[1]"));
-    }
-
-    #[test]
-    fn wizard_all_pages_no_e805() {
-        let comp = json!({
-            "tree": {
-                "component": "Wizard",
-                "children": [
-                    { "component": "Page", "title": "Step 1" },
-                    { "component": "Page", "title": "Step 2" }
-                ]
-            }
-        });
-        let diags = lint_component(&comp, None);
-        assert!(with_code(&diags, "E805").is_empty());
-    }
-
-    // 6. Custom component missing params — E806
+    // 5. Custom component missing params — E806
     #[test]
     fn custom_component_missing_params_emits_e806() {
         let comp = json!({
@@ -1044,24 +987,6 @@ mod tests {
                 "Container component '{comp_type}' with bind should emit W801"
             );
         }
-    }
-
-    // ── Finding 63: Wizard with no children ──────────────────────
-
-    /// Spec: component-spec.md §5.4, §3.4 — "Children MUST all be Page."
-    /// When a Wizard has no `children` array, no E805 is emitted (vacuously true).
-    #[test]
-    fn wizard_no_children_no_e805() {
-        let comp = json!({
-            "tree": {
-                "component": "Wizard"
-            }
-        });
-        let diags = lint_component(&comp, None);
-        assert!(
-            with_code(&diags, "E805").is_empty(),
-            "Wizard with no children array should not emit E805"
-        );
     }
 
     // ── Finding 64: richtext TextInput with "text" dataType ──────
