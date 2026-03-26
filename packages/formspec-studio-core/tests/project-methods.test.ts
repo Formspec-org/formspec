@@ -1091,6 +1091,44 @@ describe('setMetadata', () => {
       expect((e as HelperError).code).toBe('INVALID_KEY');
     }
   });
+
+  it('sets showProgress as a presentation property', () => {
+    const project = createProject();
+    project.setMetadata({ showProgress: true });
+    expect((project.definition as any).formPresentation?.showProgress).toBe(true);
+  });
+
+  it('sets allowSkip as a presentation property', () => {
+    const project = createProject();
+    project.setMetadata({ allowSkip: true });
+    expect((project.definition as any).formPresentation?.allowSkip).toBe(true);
+  });
+
+  it('sets defaultTab as a presentation property', () => {
+    const project = createProject();
+    project.setMetadata({ defaultTab: 2 });
+    expect((project.definition as any).formPresentation?.defaultTab).toBe(2);
+  });
+
+  it('sets tabPosition as a presentation property', () => {
+    const project = createProject();
+    project.setMetadata({ tabPosition: 'left' });
+    expect((project.definition as any).formPresentation?.tabPosition).toBe('left');
+  });
+
+  it('sets direction as a presentation property', () => {
+    const project = createProject();
+    project.setMetadata({ direction: 'rtl' });
+    expect((project.definition as any).formPresentation?.direction).toBe('rtl');
+  });
+
+  it('clears direction with null', () => {
+    const project = createProject();
+    project.setMetadata({ direction: 'rtl' });
+    project.setMetadata({ direction: null });
+    // Handler deletes the property when value is null
+    expect((project.definition as any).formPresentation?.direction).toBeUndefined();
+  });
 });
 
 describe('defineChoices', () => {

@@ -1611,13 +1611,13 @@ export class Project {
     'title', 'name', 'description', 'url', 'version', 'status', 'date',
     'versionAlgorithm', 'nonRelevantBehavior', 'derivedFrom',
     'density', 'labelPosition', 'pageMode', 'defaultCurrency',
-    'showProgress', 'allowSkip', 'defaultTab', 'tabPosition',
+    'showProgress', 'allowSkip', 'defaultTab', 'tabPosition', 'direction',
   ]);
 
   /** Keys that route to definition.setFormPresentation. */
   private static readonly _PRESENTATION_KEYS = new Set([
     'density', 'labelPosition', 'pageMode', 'defaultCurrency',
-    'showProgress', 'allowSkip', 'defaultTab', 'tabPosition',
+    'showProgress', 'allowSkip', 'defaultTab', 'tabPosition', 'direction',
   ]);
 
   /** Form-level metadata setter. */

@@ -17,7 +17,7 @@ describe('migrateWizardRoot', () => {
     expect(result!.tree.nodeId).toBe('root');
     expect(result!.tree.children).toHaveLength(2);
     expect(result!.tree.children[0].component).toBe('Page');
-    expect(result!.migratedProps).toEqual({ showProgress: true, allowSkip: false });
+    expect(result!.migratedProps).toEqual({ showProgress: true, allowSkip: false, pageMode: 'wizard' });
     expect(result!.migratedMode).toBe('wizard');
     // Wizard-specific props should NOT be on the new Stack
     expect(result!.tree.showProgress).toBeUndefined();
@@ -34,7 +34,7 @@ describe('migrateWizardRoot', () => {
     const result = migrateWizardRoot(tree);
     expect(result).not.toBeNull();
     expect(result!.tree.component).toBe('Stack');
-    expect(result!.migratedProps).toEqual({ tabPosition: 'left', defaultTab: 1 });
+    expect(result!.migratedProps).toEqual({ tabPosition: 'left', defaultTab: 1, pageMode: 'tabs' });
     expect(result!.migratedMode).toBe('tabs');
     // Tabs-specific props should NOT be on the new Stack
     expect(result!.tree.position).toBeUndefined();
@@ -51,10 +51,10 @@ describe('migrateWizardRoot', () => {
     expect(migrateWizardRoot(undefined)).toBeNull();
   });
 
-  it('handles Wizard with no props to migrate', () => {
+  it('handles Wizard with no props to migrate — still sets pageMode', () => {
     const tree = { component: 'Wizard', nodeId: 'root', children: [] };
     const result = migrateWizardRoot(tree);
-    expect(result!.migratedProps).toEqual({});
+    expect(result!.migratedProps).toEqual({ pageMode: 'wizard' });
     expect(result!.migratedMode).toBe('wizard');
   });
 
@@ -64,10 +64,10 @@ describe('migrateWizardRoot', () => {
     expect(result!.tree.nodeId).toBe('custom-root');
   });
 
-  it('handles Tabs root with no props to migrate', () => {
+  it('handles Tabs root with no props to migrate — still sets pageMode', () => {
     const tree = { component: 'Tabs', nodeId: 'root', children: [] };
     const result = migrateWizardRoot(tree);
-    expect(result!.migratedProps).toEqual({});
+    expect(result!.migratedProps).toEqual({ pageMode: 'tabs' });
     expect(result!.migratedMode).toBe('tabs');
     expect(result!.tree.component).toBe('Stack');
   });
@@ -104,6 +104,7 @@ describe('RawProject — Wizard/Tabs root migration on load', () => {
     expect((project.component.tree as any).showProgress).toBeUndefined();
     expect((project.definition as any).formPresentation?.showProgress).toBe(true);
     expect((project.definition as any).formPresentation?.allowSkip).toBe(false);
+    expect((project.definition as any).formPresentation?.pageMode).toBe('wizard');
   });
 
   it('migrates Tabs component root to Stack and sets tabPosition/defaultTab', () => {
@@ -126,6 +127,7 @@ describe('RawProject — Wizard/Tabs root migration on load', () => {
     expect((project.component.tree as any).component).toBe('Stack');
     expect((project.definition as any).formPresentation?.tabPosition).toBe('top');
     expect((project.definition as any).formPresentation?.defaultTab).toBe(2);
+    expect((project.definition as any).formPresentation?.pageMode).toBe('tabs');
   });
 
   it('leaves Stack-rooted component trees unchanged', () => {
