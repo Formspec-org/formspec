@@ -108,11 +108,11 @@ import CallToAction from "../components/CallToAction.astro";
             </tr>
             <tr>
               <td>Forms that work offline</td>
-              <td>All form logic runs in the browser. No server connection needed while filling out the form.</td>
+              <td>All form logic runs on-device — browser, React app, iOS, or Android. No server connection needed while filling out the form.</td>
             </tr>
             <tr>
-              <td>Same validation on server as client</td>
-              <td>Server-side validation uses the same rules as client-side — guaranteed identical results. No rule duplication.</td>
+              <td>Same validation on every platform</td>
+              <td>One Rust kernel powers validation across all five runtimes: web, React, iOS, Android, and server. Guaranteed identical results everywhere — no rule duplication.</td>
             </tr>
             <tr>
               <td>Version-lock forms once deployed</td>
@@ -141,6 +141,10 @@ import CallToAction from "../components/CallToAction.astro";
             <tr>
               <td>Build forms with AI</td>
               <td>Describe what you need in plain language. An AI chat builder creates the form live. Also integrates with AI coding assistants via 28 structured tool actions. References and Ontology sidecars give AI agents domain-specific grounding — agents query authoritative sources, not training data.</td>
+            </tr>
+            <tr>
+              <td>Help people fill out the form</td>
+              <td>The Assist protocol surfaces contextual help, regulatory guidance, and field explanations to anyone filling out your form — human or AI agent. A browser extension (Formy) provides semantic autofill, cross-form data reuse, and form memory. No LLM required for basic agent interoperability.</td>
             </tr>
             <tr>
               <td>Extend forms with custom types and rules</td>
@@ -205,13 +209,12 @@ import CallToAction from "../components/CallToAction.astro";
           <p>The reference web components library targets WCAG 2.1 AA conformance and Section 508 compliance. Every built-in component ships with semantic ARIA attributes, keyboard navigation, focus management, and live validation announcements. Accessibility behavior is handled by the engine — not the adapter — so every design system integration inherits it automatically.</p>
         </div>
         <div class="feature-card">
-          <h3>Mobile support</h3>
-          <p>Forms are responsive by default. Built-in components adapt to phone, tablet, and desktop viewports.</p>
-          {/* TODO(product): Mobile support details — see revision plan section 6, item 4. Native mobile SDKs, mobile-specific renderer, or offline-capable PWA support? */}
+          <h3>Native mobile and responsive web</h3>
+          <p>Native renderers for iOS (SwiftUI) and Android (Jetpack Compose) run the same form definition with the same validation — offline, on-device. Web forms are responsive by default, adapting to phone, tablet, and desktop viewports. React apps get dedicated hooks and an auto-renderer.</p>
         </div>
         <div class="feature-card">
           <h3>Design system adapters</h3>
-          <p>A USWDS adapter ships out of the box for federal agencies that need to match government design standards. The headless adapter architecture separates behavior from DOM — swap in Bootstrap, Tailwind, Material, or your own design system. Every adapter inherits the same ARIA, validation, and keyboard behavior automatically.</p>
+          <p>A USWDS adapter ships out of the box for federal agencies that need to match government design standards. The headless adapter architecture separates behavior from DOM — swap in Bootstrap, Tailwind, Material, or your own design system. The React package supports component map overrides (e.g., Shadcn). Every adapter inherits the same ARIA, validation, and keyboard behavior automatically.</p>
         </div>
       </div>
     </section>
@@ -505,6 +508,41 @@ import CallToAction from "../components/CallToAction.astro";
         <div class="feature-card">
           <h3>Cross-form alignment</h3>
           <p>Two independently authored forms that align to the same ontology concept can have their data mechanically merged. No column-name guessing, no manual mapping.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Form-Filling Assistance ─── -->
+    <section class="features-section reveal">
+      <div class="section-eyebrow">Assist</div>
+      <h2>Help people fill out the form — not just build it.</h2>
+      <p class="section-lead">
+        You built a great form. Now the person filling it out is staring at "Employer Identification Number" with no idea what it means, re-typing their address for the third time this week, and wondering if they're doing it right. The Assist protocol closes that gap.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Contextual help at every field</h3>
+          <p>The Assist specification surfaces your References and Ontology metadata to form fillers and AI agents at runtime — regulations, worked examples, and documentation appear when someone focuses a field, not buried in a help page.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Semantic autofill across forms</h3>
+          <p>Fields tagged with ontology concepts can be auto-filled from a user's profile. EIN, organization name, and address carry across every Formspec form — matched by meaning, not by field name.</p>
+        </div>
+        <div class="feature-card">
+          <h3>No AI required</h3>
+          <p>The Assist spec and its implementation are pure structured data. Browser extensions, accessibility tools, and automation scripts get full agent access without any LLM dependency. The conversational chat layer is additive — not foundational.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Browser extension (Formy)</h3>
+          <p>A cross-site browser extension for Chrome and Firefox. Semantic autofill, field-level help in a side panel, form memory (save and restore partial responses), and multi-profile management — all encrypted at rest with WebAuthn.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Works on plain HTML forms too</h3>
+          <p>On Formspec forms, full contextual help and semantic matching. On plain HTML forms, Formy degrades gracefully — matching fields by autocomplete tokens, labels, and input types for basic autofill.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Privacy-first</h3>
+          <p>All profile data stays on-device by default. Encrypted at rest with hardware-backed keys (Touch ID, Windows Hello). Every autofill requires explicit user approval. No telemetry, no cloud sync unless you opt in.</p>
         </div>
       </div>
     </section>

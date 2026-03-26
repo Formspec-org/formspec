@@ -38,6 +38,18 @@ const codeHTML = `<span class="tok-comment">&lt;!-- Drop-in web component. No fr
   el.definition = myDefinition;
 <span class="tok-kw">&lt;/scr</span><span class="tok-kw">ipt&gt;</span>`;
 
+const codeReact = `<span class="tok-comment">// React — hooks + auto-renderer with custom components</span>
+<span class="tok-kw">import</span> { FormspecForm } <span class="tok-kw">from</span> <span class="tok-str">"formspec-react"</span>;
+
+<span class="tok-comment">// Drop in with defaults — semantic HTML, zero opinions</span>
+&lt;<span class="tok-kw">FormspecForm</span> <span class="tok-prop">definition</span>={definition} /&gt;
+
+<span class="tok-comment">// Or bring your own components</span>
+&lt;<span class="tok-kw">FormspecForm</span>
+  <span class="tok-prop">definition</span>={definition}
+  <span class="tok-prop">components</span>={{ <span class="tok-prop">fields</span>: { <span class="tok-prop">TextInput</span>: MyShadcnInput } }}
+/&gt;`;
+
 const codeMCP = `<span class="tok-comment">// AI builds a grant application via MCP tool calls</span>
 <span class="tok-kw">formspec_field</span><span class="tok-punct">({</span> <span class="tok-prop">path</span><span class="tok-punct">:</span> <span class="tok-str">"org_name"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-str">"Organization Name"</span><span class="tok-punct">,</span> <span class="tok-prop">type</span><span class="tok-punct">:</span> <span class="tok-str">"string"</span> <span class="tok-punct">})</span>
 <span class="tok-kw">formspec_field</span><span class="tok-punct">({</span> <span class="tok-prop">path</span><span class="tok-punct">:</span> <span class="tok-str">"budget"</span><span class="tok-punct">,</span> <span class="tok-prop">label</span><span class="tok-punct">:</span> <span class="tok-str">"Requested Amount"</span><span class="tok-punct">,</span> <span class="tok-prop">type</span><span class="tok-punct">:</span> <span class="tok-str">"decimal"</span> <span class="tok-punct">})</span>
@@ -73,13 +85,14 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
         </div>
 
         <div class="dev-group">
-          <h3 class="dev-group-label">The Implementations</h3>
+          <h3 class="dev-group-label">Five Runtimes</h3>
           <ul class="dev-list">
             <li>Rust shared kernel — single implementation of FEL, linting, evaluation, mapping, compiled to WASM and PyO3</li>
             <li>TypeScript form engine — reactive signals, framework-agnostic, calls Rust via WASM for all pure logic</li>
             <li><code class="inline-code">&lt;formspec-render&gt;</code> web component — drop a tag, get a form. WCAG 2.1 AA and Section 508 compliant.</li>
-            <li>Headless adapter architecture — USWDS ships built-in; plug in Bootstrap, Tailwind, Material, or your own design system. Every adapter inherits accessibility behavior automatically.</li>
-            <li>Portable layout planner — produces a renderer-agnostic blueprint that any UI framework can consume (React, Vue, native mobile, PDF)</li>
+            <li><code class="inline-code">formspec-react</code> — React hooks + auto-renderer. <code class="inline-code">useField</code>, granular subscriptions, overridable component map. Semantic HTML defaults.</li>
+            <li><code class="inline-code">formspec-swift</code> (iOS/macOS) and <code class="inline-code">formspec-kotlin</code> (Android) — native renderers with Jetpack Compose and SwiftUI, same engine via hidden WebView bridge</li>
+            <li>Headless adapter architecture — USWDS ships built-in; plug in Bootstrap, Tailwind, Material, Shadcn, or your own design system</li>
             <li>Python evaluator — server-side re-validation via PyO3, same Rust core, same results</li>
             <li>Mapping engine — output transformation to any format</li>
           </ul>
@@ -104,6 +117,9 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
       <div class="tech-pills" role="list" aria-label="Technologies">
         <span role="listitem" class="tech-pill">Rust</span>
         <span role="listitem" class="tech-pill">TypeScript</span>
+        <span role="listitem" class="tech-pill">React</span>
+        <span role="listitem" class="tech-pill">Swift</span>
+        <span role="listitem" class="tech-pill">Kotlin</span>
         <span role="listitem" class="tech-pill">Python</span>
         <span role="listitem" class="tech-pill">WASM</span>
         <span role="listitem" class="tech-pill">Web Components</span>
@@ -134,6 +150,14 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
             data-tab="ts"
             id="tab-btn-ts"
           >TypeScript</button>
+          <button
+            class="code-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="tab-react"
+            data-tab="react"
+            id="tab-btn-react"
+          >React</button>
           <button
             class="code-tab"
             role="tab"
@@ -179,6 +203,21 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
               </div>
               <div class="code-window-body">
                 <pre set:html={codeTypeScript}></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- React -->
+          <div class="code-panel hidden" id="tab-react" role="tabpanel" aria-labelledby="tab-btn-react">
+            <div class="code-window">
+              <div class="code-window-bar">
+                <span class="code-window-dot" style="background: #ff5f57;"></span>
+                <span class="code-window-dot" style="background: #febc2e;"></span>
+                <span class="code-window-dot" style="background: #28c840;"></span>
+                <span class="code-filename">App.tsx</span>
+              </div>
+              <div class="code-window-body">
+                <pre set:html={codeReact}></pre>
               </div>
             </div>
           </div>

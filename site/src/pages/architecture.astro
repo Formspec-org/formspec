@@ -16,7 +16,7 @@ const gh = "https://github.com/focusconsulting/formspec";
       <h1>Architecture</h1>
       <p class="arch-lead">
         Formspec is a JSON-native form specification where structure, behavior, and presentation are independent, composable documents.
-        A single definition drives validation, computed fields, conditional logic, and repeatable sections across any runtime — browser, server, mobile, offline.
+        A single definition drives validation, computed fields, conditional logic, and repeatable sections across five runtimes — web, React, iOS, Android, and server.
       </p>
     </header>
 
@@ -63,6 +63,7 @@ const gh = "https://github.com/focusconsulting/formspec";
             <span>References</span>
             <span>Ontology</span>
             <span>Locale</span>
+            <span>Assist</span>
           </div>
         </div>
       </div>
@@ -77,18 +78,19 @@ const gh = "https://github.com/focusconsulting/formspec";
         The specification — <a href={`${gh}/tree/main/schemas`} target="_blank" rel="noopener noreferrer">JSON Schemas</a>,
         <a href={`${gh}/tree/main/specs`} target="_blank" rel="noopener noreferrer">normative prose</a>, and the
         <a href={`${gh}/blob/main/specs/fel/fel-grammar.md`} target="_blank" rel="noopener noreferrer">FEL grammar</a> — is the stable
-        center that all implementations conform to. A <strong>Rust shared kernel</strong> (in progress) is replacing
-        the duplicated pure logic in both the TypeScript and Python implementations — FEL evaluation,
-        assembly, linting, mapping, and more — exposed via WASM to TypeScript and PyO3 to Python.
-        The TypeScript engine keeps Preact Signals for reactive UI state; everything else moves to
-        one Rust codebase. Submit a form in the browser; re-validate it on the server with full
-        confidence in semantic equivalence — backed by a single implementation, not two synchronized codebases.
+        center that all implementations conform to. A <strong>Rust shared kernel</strong> provides
+        one implementation of all pure logic — FEL evaluation,
+        assembly, linting, mapping, and more — exposed via WASM to TypeScript (browser and React) and PyO3 to Python.
+        Native mobile renderers (iOS and Android) bridge to the same WASM kernel through a hidden WebView.
+        The TypeScript engine keeps Preact Signals for reactive UI state; the React package bridges those
+        signals to React via <code>useSyncExternalStore</code>. Submit a form on Android; re-validate it on the server with full
+        confidence in semantic equivalence — backed by a single Rust implementation across all five runtimes.
       </p>
 
       <div class="diagram-wrap">
         <img
           src="/diagrams/dependency-graph.svg"
-          alt="Dependency graph: Specification at top, Rust shared kernel in the middle exposing WASM to TypeScript and PyO3 to Python, Layout Planner and Studio Core below, with renderers and authoring tools at the bottom"
+          alt="Dependency graph: Specification at top, Rust shared kernel in the middle exposing WASM to TypeScript/React and PyO3 to Python, Layout Planner and Studio Core below, with five renderers (web component, React, iOS, Android, server) and authoring tools at the bottom"
           class="diagram-svg"
           loading="lazy"
         />
@@ -100,14 +102,16 @@ const gh = "https://github.com/focusconsulting/formspec";
         theme cascade, expands custom components, merges responsive breakpoints, and
         produces a plain LayoutNode tree — a JSON-serializable blueprint that says
         "put a TextInput here with these styles" without knowing anything about the DOM,
-        React, or any other rendering technology.
+        React, SwiftUI, or Jetpack Compose.
       </p>
       <p>
-        The <code>&lt;formspec-render&gt;</code> <strong>web component</strong> is one consumer of that blueprint. It walks
-        the LayoutNode tree, creates DOM elements, and wires Preact Signals for live
-        reactivity. But the planner doesn't depend on it. A React library, a React
-        Native app, a PDF generator, or an integration with JSON Forms could consume the
-        same blueprint and produce the same form in a completely different environment.
+        Three renderers consume that blueprint today. The <code>&lt;formspec-render&gt;</code> <strong>web component</strong>
+        walks the LayoutNode tree, creates DOM elements, and wires Preact Signals for live reactivity.
+        The <code>formspec-react</code> <strong>React package</strong> does the same via hooks and <code>useSyncExternalStore</code>,
+        with an overridable component map for plugging in Shadcn, Material UI, or any React component library.
+        Native mobile renderers (<code>formspec-swift</code> and <code>formspec-kotlin</code>) bridge to
+        the engine through a hidden WebView and expose platform-native state (SwiftUI <code>@Published</code>,
+        Compose <code>State&lt;T&gt;</code>) — same engine, native components.
       </p>
       <p>
         The engine owns data and logic. The planner owns presentation decisions.
@@ -127,7 +131,10 @@ const gh = "https://github.com/focusconsulting/formspec";
         A <strong>USWDS adapter</strong> ships out of the box for federal agency branding. The same
         architecture supports Bootstrap, Tailwind, Material, or any custom design system — write a render
         adapter, and the behavior hooks handle the rest. Missing component entries fall back to the default
-        adapter, so you can adopt incrementally.
+        adapter, so you can adopt incrementally. The React package uses a different approach —
+        an overridable <strong>component map</strong> where you replace individual field renderers
+        (e.g., <code>components=&#123;&#123; fields: &#123; TextInput: MyShadcnInput &#125; &#125;&#125;</code>)
+        while keeping all behavior and accessibility logic intact.
       </p>
       <p>
         <strong>Studio Core</strong> is an authoring adapter — every edit is a serializable command with undo/redo, replay, and cross-artifact diagnostics.
@@ -235,9 +242,10 @@ const gh = "https://github.com/focusconsulting/formspec";
               <td>
                 <a href={`${gh}/blob/main/specs/core/references-spec.md`} target="_blank" rel="noopener noreferrer">References</a>,
                 <a href={`${gh}/blob/main/specs/ontology/ontology-spec.md`} target="_blank" rel="noopener noreferrer">Ontology</a>,
-                <a href={`${gh}/blob/main/specs/locale/locale-spec.md`} target="_blank" rel="noopener noreferrer">Locale</a>
+                <a href={`${gh}/blob/main/specs/locale/locale-spec.md`} target="_blank" rel="noopener noreferrer">Locale</a>,
+                Assist
               </td>
-              <td><code>references</code>, <code>ontology</code>, <code>locale</code></td>
+              <td><code>references</code>, <code>ontology</code>, <code>locale</code>, <code>assist</code></td>
             </tr>
             <tr>
               <td>Catalogs</td>
@@ -251,7 +259,7 @@ const gh = "https://github.com/focusconsulting/formspec";
 
     <!-- ─── TypeScript Packages ─── -->
     <section class="arch-section">
-      <div class="section-eyebrow">TypeScript</div>
+      <div class="section-eyebrow">TypeScript & React</div>
       <h2>TypeScript packages</h2>
 
       <div class="table-wrap">
@@ -285,6 +293,11 @@ const gh = "https://github.com/focusconsulting/formspec";
               <td><code>&lt;formspec-render&gt;</code> — built-in browser renderer, component registry, 34 built-in components</td>
             </tr>
             <tr>
+              <td><a href={`${gh}/tree/main/packages/formspec-react`} target="_blank" rel="noopener noreferrer"><code>formspec-react</code></a></td>
+              <td class="role-label">Rendering</td>
+              <td>React hooks + auto-renderer. <code>&lt;FormspecForm&gt;</code> walks the LayoutNode tree; overridable component map for Shadcn, Material UI, or any React library. Exports <code>formspec-react</code> (full) and <code>formspec-react/hooks</code> (hooks only).</td>
+            </tr>
+            <tr>
               <td><a href={`${gh}/tree/main/packages/formspec-adapters`} target="_blank" rel="noopener noreferrer"><code>formspec-adapters</code></a></td>
               <td class="role-label">Rendering</td>
               <td>Design-system render adapters — USWDS ships built-in; adapter contract supports Bootstrap, Tailwind, Material, or custom systems</td>
@@ -310,9 +323,19 @@ const gh = "https://github.com/focusconsulting/formspec";
               <td>MCP server — 28 consolidated tools for LLM-driven form authoring (stdio transport)</td>
             </tr>
             <tr>
+              <td><code>formspec-assist</code></td>
+              <td class="role-label">Integration</td>
+              <td>Form-filling agent protocol — context resolution, profile matching, WebMCP transport + shim. No LLM, no renderer.</td>
+            </tr>
+            <tr>
               <td><a href={`${gh}/tree/main/packages/formspec-chat`} target="_blank" rel="noopener noreferrer"><code>formspec-chat</code></a></td>
               <td class="role-label">Integration</td>
               <td>Chat core — conversational form builder logic, AI adapter interface, issue queue</td>
+            </tr>
+            <tr>
+              <td><code>formspec-assist-chat</code></td>
+              <td class="role-label">Integration</td>
+              <td>Conversational form-filling — LLM-powered Q&amp;A, guided walkthrough, proactive suggestions, document extraction. Consumes <code>formspec-assist</code> tools.</td>
             </tr>
           </tbody>
         </table>
@@ -412,6 +435,86 @@ const gh = "https://github.com/focusconsulting/formspec";
           </tbody>
         </table>
       </div>
+    </section>
+
+    <!-- ─── Native Mobile ─── -->
+    <section class="arch-section">
+      <div class="section-eyebrow">Native Mobile</div>
+      <h2>Native iOS and Android renderers</h2>
+      <p>
+        Native mobile packages render Formspec definitions using platform-native UI frameworks —
+        SwiftUI on iOS/macOS and Jetpack Compose on Android. Both use the same architecture:
+        a hidden WebView bridges to the Formspec engine (identical WASM kernel), while a thin
+        platform layer (~500 lines) converts engine signals into native state types
+        (<code>@Published</code> on iOS, <code>State&lt;T&gt;</code> / <code>StateFlow&lt;T&gt;</code> on Android).
+      </p>
+      <p>
+        This design keeps Rust as the shared logic layer while giving native developers the
+        experience they expect: Swift packages for iOS, Gradle/Maven for Android. Both packages
+        support "bring your own components" — override any field renderer with a custom
+        <code>@Composable</code> or SwiftUI <code>View</code>. No INTERNET permission is required
+        for basic form operation on Android; forms work fully offline on both platforms.
+      </p>
+
+      <div class="table-wrap">
+        <table aria-label="Platform runtime matrix">
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Package</th>
+              <th>UI Framework</th>
+              <th>Engine Bridge</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Web (any)</td>
+              <td><code>formspec-webcomponent</code></td>
+              <td>Custom Elements</td>
+              <td>Direct (WASM in-process)</td>
+              <td>Shipping</td>
+            </tr>
+            <tr>
+              <td>Web (React)</td>
+              <td><code>formspec-react</code></td>
+              <td>React 18+</td>
+              <td>Direct (WASM in-process)</td>
+              <td>Shipping</td>
+            </tr>
+            <tr>
+              <td>iOS / macOS</td>
+              <td><code>formspec-swift</code></td>
+              <td>SwiftUI</td>
+              <td>Hidden WKWebView</td>
+              <td>Shipping</td>
+            </tr>
+            <tr>
+              <td>Android</td>
+              <td><code>formspec-kotlin</code></td>
+              <td>Jetpack Compose 1.5+</td>
+              <td>Hidden Android WebView</td>
+              <td>ADR accepted</td>
+            </tr>
+            <tr>
+              <td>Server</td>
+              <td><code>formspec</code> (Python)</td>
+              <td>N/A</td>
+              <td>PyO3 native binding</td>
+              <td>Shipping</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Why separate native packages instead of Kotlin Multiplatform or Compose Multiplatform?
+        Because the Rust crates already provide the shared logic layer. Platform binding code is thin.
+        iOS developers expect Swift packages; Android developers expect Gradle/Maven. And Compose
+        Multiplatform would kill the "bring your own components" story — the whole point is that
+        a team using Material Design 3 on Android and a custom design system on iOS can override
+        individual components without forking the package.
+      </p>
     </section>
 
     <!-- ─── Examples ─── -->
