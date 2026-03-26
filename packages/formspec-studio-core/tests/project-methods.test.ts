@@ -2,6 +2,28 @@ import { describe, it, expect } from 'vitest';
 import { createProject } from '../src/project.js';
 import { HelperError } from '../src/helper-types.js';
 
+// ── Component tree page helpers for test assertions ──
+
+type AnyProject = ReturnType<typeof createProject>;
+
+/** Get Page nodes from the component tree (replaces theme.pages reads). */
+function getPageNodes(project: AnyProject): any[] {
+  const comp = project.effectiveComponent as any;
+  const root = comp?.tree;
+  if (!root?.children) return [];
+  return root.children.filter((n: any) => n.component === 'Page');
+}
+
+/** Get bound children (regions) of a Page node. */
+function getBoundChildren(pageNode: any): any[] {
+  return (pageNode?.children ?? []).filter((n: any) => n.bind);
+}
+
+/** Find a Page node by nodeId. */
+function findPageNode(project: AnyProject, pageId: string): any | undefined {
+  return getPageNodes(project).find((n: any) => n.nodeId === pageId);
+}
+
 describe('addField', () => {
   it('adds a text field to the definition', () => {
     const project = createProject();
@@ -198,12 +220,12 @@ describe('addGroup', () => {
 });
 
 describe('addGroup in paged mode', () => {
-  it('does NOT create a paired theme page in wizard mode — page assignment is separate', () => {
+  it('does NOT create a paired Page node in wizard mode — page assignment is separate', () => {
     const project = createProject();
     project.addPage('Existing Page'); // puts project into wizard mode
     project.addGroup('section_a', 'Section A');
 
-    const pages = project.theme.pages ?? [];
+    const pages = getPageNodes(project);
     // Only the one page from addPage — addGroup creates only response structure
     expect(pages.length).toBe(1);
     expect(pages.find((p: any) => p.title === 'Section A')).toBeUndefined();
@@ -211,33 +233,33 @@ describe('addGroup in paged mode', () => {
     expect(project.itemAt('section_a')?.type).toBe('group');
   });
 
-  it('does NOT create a paired theme page in tabs mode', () => {
+  it('does NOT create a paired Page node in tabs mode', () => {
     const project = createProject();
     project.setFlow('tabs');
     project.addPage('First Tab');
     project.addGroup('tab_two', 'Tab Two');
 
-    const pages = project.theme.pages ?? [];
+    const pages = getPageNodes(project);
     expect(pages.length).toBe(1);
     expect(pages.find((p: any) => p.title === 'Tab Two')).toBeUndefined();
     expect(project.itemAt('tab_two')?.type).toBe('group');
   });
 
-  it('does NOT create a theme page in single (non-paged) mode', () => {
+  it('does NOT create a Page node in single (non-paged) mode', () => {
     const project = createProject();
     // single mode — no addPage, no setFlow to wizard/tabs
     project.addGroup('section_a', 'Section A');
 
-    const pages = project.theme.pages ?? [];
+    const pages = getPageNodes(project);
     expect(pages.length).toBe(0);
   });
 
-  it('does NOT create a theme page for a nested (non-root) group', () => {
+  it('does NOT create a Page node for a nested (non-root) group', () => {
     const project = createProject();
     project.addPage('Page One'); // wizard mode
     project.addGroup('sub_section', 'Sub Section', { parentPath: 'page_one' });
 
-    const pages = project.theme.pages ?? [];
+    const pages = getPageNodes(project);
     // Only the one page from addPage — the nested group does not get a page
     expect(pages.length).toBe(1);
     expect(pages.find((p: any) => p.title === 'Sub Section')).toBeUndefined();
@@ -1264,15 +1286,15 @@ describe('addSubmitButton', () => {
 // ── Page Helpers ──
 
 describe('addPage', () => {
-  it('creates both a definition group AND a theme page', () => {
+  it('creates both a definition group AND a Page node in the component tree', () => {
     const project = createProject();
     const result = project.addPage('Step 1');
 
     // Returns a createdId (the page ID)
     expect(result.createdId).toBeDefined();
 
-    // Theme page exists
-    const pages = project.theme.pages ?? [];
+    // Page node exists in component tree
+    const pages = getPageNodes(project);
     expect(pages.length).toBe(1);
     const page = pages[0];
     expect(page.title).toBe('Step 1');
@@ -1284,8 +1306,8 @@ describe('addPage', () => {
     expect(item?.type).toBe('group');
     expect(item?.label).toBe('Step 1');
 
-    // Group is wired to page via regions
-    expect(page.regions?.some((r: any) => r.key === groupKey)).toBe(true);
+    // Group is wired to page via bound children
+    expect(getBoundChildren(page).some((n: any) => n.bind === groupKey)).toBe(true);
   });
 
   it('sets wizard page mode on first page', () => {
@@ -1301,7 +1323,7 @@ describe('addPage', () => {
     expect(project.definition.formPresentation?.pageMode).toBe('tabs');
   });
 
-  it('produces Wizard component tree after addPage', () => {
+  it('produces component tree with Page nodes after addPage', () => {
     const project = createProject();
     const result = project.addPage('Step 1');
     const groupKey = result.affectedPaths[0];
@@ -1310,8 +1332,7 @@ describe('addPage', () => {
     project.addField(`${groupKey}.name`, 'Name', 'text');
 
     const comp = project.effectiveComponent as any;
-    expect(comp.tree?.component).toBe('Wizard');
-    const pageNodes = comp.tree?.children ?? [];
+    const pageNodes = comp.tree?.children?.filter((n: any) => n.component === 'Page') ?? [];
     expect(pageNodes.length).toBeGreaterThanOrEqual(1);
     expect(pageNodes[0]?.component).toBe('Page');
   });
@@ -1321,7 +1342,7 @@ describe('addPage', () => {
     const r1 = project.addPage('Step 1');
     const r2 = project.addPage('Step 2');
 
-    const pages = project.theme.pages ?? [];
+    const pages = getPageNodes(project);
     expect(pages.length).toBe(2);
 
     // Different groups
@@ -1335,8 +1356,7 @@ describe('addPage', () => {
   it('handles description parameter', () => {
     const project = createProject();
     const result = project.addPage('Step 1', 'First step');
-    const pages = project.theme.pages ?? [];
-    const page = pages.find((p: any) => p.id === result.createdId);
+    const page = findPageNode(project, result.createdId!);
     expect(page?.description).toBe('First step');
   });
 
@@ -1346,12 +1366,12 @@ describe('addPage', () => {
     const groupKey = result.affectedPaths[0];
 
     expect(project.definition.items.length).toBe(1);
-    expect((project.theme.pages ?? []).length).toBe(1);
+    expect(getPageNodes(project).length).toBe(1);
 
     project.undo();
 
     expect(project.definition.items.length).toBe(0);
-    expect((project.theme.pages ?? []).length).toBe(0);
+    expect(getPageNodes(project).length).toBe(0);
   });
 });
 
@@ -1368,8 +1388,7 @@ describe('removePage', () => {
     const { createdId } = project.addPage('Page 1');
     project.addPage('Page 2');
     project.removePage(createdId!);
-    const pages = project.theme.pages ?? [];
-    expect(pages.find((p: any) => p.id === createdId)).toBeUndefined();
+    expect(findPageNode(project, createdId!)).toBeUndefined();
   });
 
   it('preserves the definition group when page is deleted', () => {
@@ -1405,21 +1424,20 @@ describe('removePage', () => {
     project.removePage(r1.createdId!);
 
     // Page gone
-    expect((project.theme.pages ?? []).find((p: any) => p.id === r1.createdId)).toBeUndefined();
+    expect(findPageNode(project, r1.createdId!)).toBeUndefined();
 
     // Single undo restores the page
     project.undo();
-    expect((project.theme.pages ?? []).find((p: any) => p.id === r1.createdId)).toBeDefined();
+    expect(findPageNode(project, r1.createdId!)).toBeDefined();
   });
 
   it('does not delete group if page has no region pointing to a root group', () => {
     // Page created manually without a corresponding definition group
     const project = createProject();
     project.addPage('Page 1');
-    // Manually add a page with no region wiring
+    // Manually add a page with no bound children
     project.setFlow('wizard');
     const pagesBefore = project.definition.items.length;
-    // Use the core dispatch to add a raw theme page (no group)
     (project as any).core.dispatch({ type: 'pages.addPage', payload: { id: 'orphan-page', title: 'Orphan' } });
     expect(project.definition.items.length).toBe(pagesBefore); // no new group
     project.removePage('orphan-page');
@@ -1427,7 +1445,7 @@ describe('removePage', () => {
     expect(project.definition.items.length).toBe(pagesBefore);
   });
 
-  it('removes only the theme page and regions, groups become unassigned', () => {
+  it('removes only the Page node, groups become unassigned', () => {
     const project = createProject();
     const r1 = project.addPage('Page 1');
     project.addPage('Page 2');
@@ -1437,8 +1455,8 @@ describe('removePage', () => {
     const itemsBefore = project.definition.items.length;
     project.removePage(r1.createdId!);
 
-    // Theme page is gone
-    expect((project.theme.pages ?? []).find((p: any) => p.id === r1.createdId)).toBeUndefined();
+    // Page node is gone
+    expect(findPageNode(project, r1.createdId!)).toBeUndefined();
     // Definition items are intact — same count
     expect(project.definition.items.length).toBe(itemsBefore);
     // Group and its field still exist
@@ -1453,8 +1471,8 @@ describe('reorderPage', () => {
     const p1 = project.addPage('Page 1');
     const p2 = project.addPage('Page 2');
     project.reorderPage(p2.createdId!, 'up');
-    const pages = project.theme.pages ?? [];
-    expect(pages[0]?.id).toBe(p2.createdId);
+    const pages = getPageNodes(project);
+    expect(pages[0]?.nodeId).toBe(p2.createdId);
   });
 });
 
@@ -1466,10 +1484,10 @@ describe('movePageToIndex', () => {
     const p3 = project.addPage('Page 3');
     // Move p1 (index 0) to index 2
     project.movePageToIndex(p1.createdId!, 2);
-    const pages = project.theme.pages ?? [];
-    expect(pages[0]?.id).toBe(p2.createdId);
-    expect(pages[1]?.id).toBe(p3.createdId);
-    expect(pages[2]?.id).toBe(p1.createdId);
+    const pages = getPageNodes(project);
+    expect(pages[0]?.nodeId).toBe(p2.createdId);
+    expect(pages[1]?.nodeId).toBe(p3.createdId);
+    expect(pages[2]?.nodeId).toBe(p1.createdId);
   });
 
   it('clamps target index to valid range', () => {
@@ -1478,8 +1496,8 @@ describe('movePageToIndex', () => {
     const p2 = project.addPage('Page 2');
     // Move p1 to index 99 — should clamp to last position
     project.movePageToIndex(p1.createdId!, 99);
-    const pages = project.theme.pages ?? [];
-    expect(pages[pages.length - 1]?.id).toBe(p1.createdId);
+    const pages = getPageNodes(project);
+    expect(pages[pages.length - 1]?.nodeId).toBe(p1.createdId);
   });
 
   it('no-op when already at target index', () => {
@@ -1487,8 +1505,8 @@ describe('movePageToIndex', () => {
     const p1 = project.addPage('Page 1');
     project.addPage('Page 2');
     project.movePageToIndex(p1.createdId!, 0);
-    const pages = project.theme.pages ?? [];
-    expect(pages[0]?.id).toBe(p1.createdId);
+    const pages = getPageNodes(project);
+    expect(pages[0]?.nodeId).toBe(p1.createdId);
   });
 });
 
@@ -1497,8 +1515,7 @@ describe('updatePage', () => {
     const project = createProject();
     const { createdId } = project.addPage('Old Title');
     project.updatePage(createdId!, { title: 'New Title' });
-    const pages = project.theme.pages ?? [];
-    const page = pages.find((p: any) => p.id === createdId);
+    const page = findPageNode(project, createdId!);
     expect(page?.title).toBe('New Title');
   });
 });
@@ -1509,9 +1526,8 @@ describe('placeOnPage', () => {
     project.addField('name', 'Name', 'text');
     const { createdId } = project.addPage('Page 1');
     project.placeOnPage('name', createdId!);
-    const pages = project.theme.pages ?? [];
-    const page = pages.find((p: any) => p.id === createdId);
-    expect(page?.regions?.some((r: any) => r.key === 'name')).toBe(true);
+    const page = findPageNode(project, createdId!);
+    expect(getBoundChildren(page).some((n: any) => n.bind === 'name')).toBe(true);
   });
 });
 
@@ -1522,33 +1538,25 @@ describe('unplaceFromPage', () => {
     const { createdId } = project.addPage('Page 1');
     project.placeOnPage('name', createdId!);
     project.unplaceFromPage('name', createdId!);
-    const pages = project.theme.pages ?? [];
-    const page = pages.find((p: any) => p.id === createdId);
-    expect(page?.regions?.some((r: any) => r.key === 'name')).toBeFalsy();
+    const page = findPageNode(project, createdId!);
+    expect(getBoundChildren(page).some((n: any) => n.bind === 'name')).toBeFalsy();
   });
 });
 
 describe('setRegionKey', () => {
-  it('replaces the key of a region at a given index', () => {
+  it('replaces the key of a bound child at a given index', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
     project.addField('email', 'Email', 'text');
     const { createdId } = project.addPage('Page 1');
     project.placeOnPage('name', createdId!);
     project.setRegionKey(createdId!, 0, 'email');
-    const page = (project.theme.pages ?? []).find((p: any) => p.id === createdId);
-    expect(page?.regions?.[0]?.key).toBe('email');
+    const page = findPageNode(project, createdId!);
+    expect(getBoundChildren(page)[0]?.bind).toBe('email');
   });
 
   it('preserves region position when replacing key', () => {
-    // Build three pages so we can place items on them as regions on a single page
-    const project = createProject();
-    const p1 = project.addPage('Page A');
-    const p2 = project.addPage('Page B');
-    const p3 = project.addPage('Page C');
-    // Each page gets its own group (from addPage). Use those group keys as regions on a fresh page.
-    // Actually, use the simpler approach: seed via createProject with an explicit theme.
-    // Easier: create a project seeded with regions directly.
+    // Seed definition, then use pages.setPages to populate component tree
     const p = createProject({
       seed: {
         definition: {
@@ -1560,91 +1568,81 @@ describe('setRegionKey', () => {
           ],
           formPresentation: { pageMode: 'wizard' },
         } as any,
-        theme: {
-          pages: [{
-            id: 'the-page',
-            title: 'The Page',
-            regions: [
-              { key: 'g1', span: 4 },
-              { key: 'g2', span: 4 },
-              { key: 'g3', span: 4 },
-            ],
-          }],
-        } as any,
+      },
+    });
+    // Populate pages in component tree
+    (p as any).core.dispatch({
+      type: 'pages.setPages',
+      payload: {
+        pages: [{
+          id: 'the-page',
+          title: 'The Page',
+          regions: [
+            { key: 'g1', span: 4 },
+            { key: 'g2', span: 4 },
+            { key: 'g3', span: 4 },
+          ],
+        }],
       },
     });
     // Replace the MIDDLE region (index 1, key 'g2') with 'x'
     p.setRegionKey('the-page', 1, 'x');
-    const page = (p.theme.pages ?? []).find((pg: any) => pg.id === 'the-page');
-    const keys = page?.regions?.map((r: any) => r.key);
+    const page = findPageNode(p, 'the-page');
+    const keys = getBoundChildren(page).map((n: any) => n.bind);
     // x must be at index 1, not appended at the end
     expect(keys).toEqual(['g1', 'x', 'g3']);
   });
 });
 
 describe('updateRegion — responsive overrides', () => {
-  it('sets responsive breakpoint overrides on a region', () => {
+  /** Helper: seed project with definition + component tree pages via dispatch. */
+  function seededProject(pages: Array<{ id: string; title: string; regions: Array<{ key: string; span?: number; responsive?: Record<string, unknown> }> }>, items: any[]) {
     const project = createProject({
       seed: {
-        definition: {
-          items: [{ key: 'sidebar', type: 'group', label: 'Sidebar', children: [] }],
-          formPresentation: { pageMode: 'wizard' },
-        } as any,
-        theme: {
-          pages: [{ id: 'p1', title: 'Page 1', regions: [{ key: 'sidebar', span: 3 }] }],
-        } as any,
+        definition: { items, formPresentation: { pageMode: 'wizard' } } as any,
       },
     });
+    (project as any).core.dispatch({ type: 'pages.setPages', payload: { pages } });
+    return project;
+  }
+
+  it('sets responsive breakpoint overrides on a region', () => {
+    const project = seededProject(
+      [{ id: 'p1', title: 'Page 1', regions: [{ key: 'sidebar', span: 3 }] }],
+      [{ key: 'sidebar', type: 'group', label: 'Sidebar', children: [] }],
+    );
 
     project.updateRegion('p1', 0, 'responsive', { sm: { hidden: true }, md: { span: 4 } });
 
-    const page = (project.theme.pages ?? []).find((p: any) => p.id === 'p1');
-    const region = page?.regions?.[0];
-    expect(region?.responsive?.sm?.hidden).toBe(true);
-    expect(region?.responsive?.md?.span).toBe(4);
+    const page = findPageNode(project, 'p1');
+    const node = getBoundChildren(page)[0];
+    expect(node?.responsive?.sm?.hidden).toBe(true);
+    expect(node?.responsive?.md?.span).toBe(4);
   });
 
   it('removes responsive overrides when set to undefined', () => {
-    const project = createProject({
-      seed: {
-        definition: {
-          items: [{ key: 'main', type: 'group', label: 'Main', children: [] }],
-          formPresentation: { pageMode: 'wizard' },
-        } as any,
-        theme: {
-          pages: [{
-            id: 'p1',
-            title: 'Page 1',
-            regions: [{ key: 'main', span: 12, responsive: { sm: { span: 12 } } }],
-          }],
-        } as any,
-      },
-    });
+    const project = seededProject(
+      [{ id: 'p1', title: 'Page 1', regions: [{ key: 'main', span: 12, responsive: { sm: { span: 12 } } }] }],
+      [{ key: 'main', type: 'group', label: 'Main', children: [] }],
+    );
 
     project.updateRegion('p1', 0, 'responsive', undefined);
 
-    const page = (project.theme.pages ?? []).find((p: any) => p.id === 'p1');
-    const region = page?.regions?.[0];
-    expect('responsive' in region).toBe(false);
+    const page = findPageNode(project, 'p1');
+    const node = getBoundChildren(page)[0];
+    expect('responsive' in node).toBe(false);
   });
 
   it('updateRegion still sets span correctly', () => {
-    const project = createProject({
-      seed: {
-        definition: {
-          items: [{ key: 'field1', type: 'group', label: 'Field1', children: [] }],
-          formPresentation: { pageMode: 'wizard' },
-        } as any,
-        theme: {
-          pages: [{ id: 'p1', title: 'Page 1', regions: [{ key: 'field1', span: 12 }] }],
-        } as any,
-      },
-    });
+    const project = seededProject(
+      [{ id: 'p1', title: 'Page 1', regions: [{ key: 'field1', span: 12 }] }],
+      [{ key: 'field1', type: 'group', label: 'Field1', children: [] }],
+    );
 
     project.updateRegion('p1', 0, 'span', 6);
 
-    const page = (project.theme.pages ?? []).find((p: any) => p.id === 'p1');
-    expect(page?.regions?.[0]?.span).toBe(6);
+    const page = findPageNode(project, 'p1');
+    expect(getBoundChildren(page)[0]?.span).toBe(6);
   });
 });
 
@@ -1931,13 +1929,13 @@ describe('updateItem edge cases', () => {
 });
 
 describe('addPage standalone option', () => {
-  it('creates only a theme page when standalone is true — no paired group', () => {
+  it('creates only a Page node when standalone is true — no paired group', () => {
     const project = createProject();
     const result = project.addPage('Empty Page', undefined, undefined, { standalone: true });
     expect(result.createdId).toBeDefined();
 
-    // Theme page exists
-    const pages = project.theme.pages ?? [];
+    // Page node exists in component tree
+    const pages = getPageNodes(project);
     expect(pages.length).toBe(1);
     expect(pages[0].title).toBe('Empty Page');
 
@@ -1946,20 +1944,20 @@ describe('addPage standalone option', () => {
     expect(result.groupKey).toBeUndefined();
   });
 
-  it('standalone page has no regions', () => {
+  it('standalone page has no bound children', () => {
     const project = createProject();
     const result = project.addPage('Standalone', undefined, undefined, { standalone: true });
-    const page = (project.theme.pages ?? []).find((p: any) => p.id === result.createdId);
-    expect(page?.regions ?? []).toHaveLength(0);
+    const page = findPageNode(project, result.createdId!);
+    expect(getBoundChildren(page)).toHaveLength(0);
   });
 
-  it('default addPage still creates paired group + region', () => {
+  it('default addPage still creates paired group + bound child', () => {
     const project = createProject();
     const result = project.addPage('Step 1');
     expect(result.groupKey).toBeDefined();
     expect(project.itemAt(result.groupKey!)).toBeDefined();
-    const page = (project.theme.pages ?? []).find((p: any) => p.id === result.createdId);
-    expect(page?.regions?.some((r: any) => r.key === result.groupKey)).toBe(true);
+    const page = findPageNode(project, result.createdId!);
+    expect(getBoundChildren(page).some((n: any) => n.bind === result.groupKey)).toBe(true);
   });
 });
 
@@ -1972,7 +1970,7 @@ describe('addPage edge cases', () => {
     project.addPage('Step 2');
     expect(project.definition.formPresentation?.pageMode).toBe('wizard');
     expect(project.definition.items).toHaveLength(2);
-    expect((project.theme.pages ?? []).length).toBe(2);
+    expect(getPageNodes(project).length).toBe(2);
   });
 });
 
@@ -1981,8 +1979,7 @@ describe('addPage with custom ID', () => {
     const project = createProject();
     const result = project.addPage('Step 1', undefined, 'my-page');
     expect(result.createdId).toBe('my-page');
-    const pages = project.theme.pages ?? [];
-    expect(pages.find((p: any) => p.id === 'my-page')).toBeDefined();
+    expect(findPageNode(project, 'my-page')).toBeDefined();
   });
 
   it('derives group key from page_id when provided, not title', () => {
@@ -2181,8 +2178,8 @@ describe('reorderPage boundary', () => {
     project.addPage('Page 2');
     // Moving first page up should be a no-op (no throw)
     project.reorderPage(p1.createdId!, 'up');
-    const pages = project.theme.pages ?? [];
-    expect(pages[0]?.id).toBe(p1.createdId);
+    const pages = getPageNodes(project);
+    expect(pages[0]?.nodeId).toBe(p1.createdId);
   });
 });
 
@@ -2193,10 +2190,11 @@ describe('addSubmitButton with pageId', () => {
     const result = project.addSubmitButton('Submit', pageId);
     expect(result.summary).toContain('submit');
     expect(result.createdId).toBeDefined();
-    // The submit button's region key should be its generated nodeId
-    const pages = project.theme.pages ?? [];
-    const page = pages.find((p: any) => p.id === pageId);
-    expect(page?.regions?.some((r: any) => r.key === result.createdId)).toBe(true);
+    // The submit button's node should be a child of the page
+    const page = findPageNode(project, pageId!);
+    // Submit buttons are unbound nodes — check all children for the nodeId
+    const allChildren = page?.children ?? [];
+    expect(allChildren.some((n: any) => n.nodeId === result.createdId || n.bind === result.createdId)).toBe(true);
   });
 });
 
@@ -2429,11 +2427,10 @@ describe('updateItem routing exhaustiveness', () => {
     project.addField('name', 'Name', 'text');
     const page = project.addPage('Page 1');
     project.updateItem('name', { page: page.createdId! });
-    // Verify the page has the item assigned via regions
-    const pages = project.theme.pages ?? [];
-    const targetPage = pages.find((p: any) => p.id === page.createdId);
-    const regionKeys = (targetPage as any)?.regions?.map((r: any) => r.key) ?? [];
-    expect(regionKeys).toContain('name');
+    // Verify the page has the item assigned via bound children
+    const targetPage = findPageNode(project, page.createdId!);
+    const boundKeys = getBoundChildren(targetPage).map((n: any) => n.bind);
+    expect(boundKeys).toContain('name');
   });
 
   it('routes dataType to setFieldDataType', () => {
@@ -2530,18 +2527,19 @@ describe('addContent defaults', () => {
 });
 
 describe('addContent page placement', () => {
-  it('places content on the specified page via pages.assignItem', () => {
+  it('adds content to the page group when page prop is given', () => {
     const project = createProject();
     const pageResult = project.addPage('Page One');
     const pageId = pageResult.createdId!;
     const groupKey = pageResult.affectedPaths[0];
 
-    // Content must go inside the page's group in a paged definition
+    // Content goes inside the page's group in a paged definition
     project.addContent(`${groupKey}.intro`, 'Welcome', 'heading', { page: pageId });
 
-    const pages = (project.core as any).state.theme.pages as any[];
-    const page = pages.find((p: any) => p.id === pageId);
-    expect(page.regions.some((r: any) => r.key === 'intro')).toBe(true);
+    // The content item exists in the definition under the page group
+    const item = project.itemAt(`${groupKey}.intro`);
+    expect(item?.type).toBe('display');
+    expect(item?.label).toBe('Welcome');
   });
 
   it('throws PAGE_NOT_FOUND when page does not exist', () => {
@@ -2953,13 +2951,14 @@ describe('*ThemePage methods removed', () => {
 // ── renamePage ──
 
 describe('renamePage', () => {
-  it('renames a page ID', () => {
+  it('sets a new title on the page', () => {
     const project = createProject();
     const { createdId } = project.addPage('Page 1');
-    project.renamePage(createdId!, 'new-id');
-    const pages = project.theme.pages ?? [];
-    expect(pages.find((p: any) => p.id === 'new-id')).toBeDefined();
-    expect(pages.find((p: any) => p.id === createdId)).toBeUndefined();
+    project.renamePage(createdId!, 'New Title');
+    const page = findPageNode(project, createdId!);
+    expect(page?.title).toBe('New Title');
+    // nodeId is unchanged
+    expect(page?.nodeId).toBe(createdId);
   });
 });
 
@@ -3028,9 +3027,9 @@ describe('behavioral page methods', () => {
       const { project, pageId } = projectWithPageAndItems();
       const result = project.setItemWidth(pageId, 'name', 6);
       expect(result.summary).toContain('name');
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const region = page?.regions?.find((r: any) => r.key === 'name');
-      expect(region?.span).toBe(6);
+      const page = findPageNode(project, pageId);
+      const node = getBoundChildren(page).find((n: any) => n.bind === 'name');
+      expect(node?.span).toBe(6);
     });
   });
 
@@ -3038,18 +3037,18 @@ describe('behavioral page methods', () => {
     it('sets the start offset of a placed item', () => {
       const { project, pageId } = projectWithPageAndItems();
       project.setItemOffset(pageId, 'email', 3);
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const region = page?.regions?.find((r: any) => r.key === 'email');
-      expect(region?.start).toBe(3);
+      const page = findPageNode(project, pageId);
+      const node = getBoundChildren(page).find((n: any) => n.bind === 'email');
+      expect(node?.start).toBe(3);
     });
 
     it('clears the start offset when undefined', () => {
       const { project, pageId } = projectWithPageAndItems();
       project.setItemOffset(pageId, 'email', 3);
       project.setItemOffset(pageId, 'email', undefined);
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const region = page?.regions?.find((r: any) => r.key === 'email');
-      expect(region?.start).toBeUndefined();
+      const page = findPageNode(project, pageId);
+      const node = getBoundChildren(page).find((n: any) => n.bind === 'email');
+      expect(node?.start).toBeUndefined();
     });
   });
 
@@ -3057,28 +3056,28 @@ describe('behavioral page methods', () => {
     it('sets responsive overrides translating width→span, offset→start', () => {
       const { project, pageId } = projectWithPageAndItems();
       project.setItemResponsive(pageId, 'name', 'sm', { width: 12, offset: 0, hidden: false });
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const region = page?.regions?.find((r: any) => r.key === 'name');
-      expect(region?.responsive?.sm).toEqual({ span: 12, start: 0, hidden: false });
+      const page = findPageNode(project, pageId);
+      const node = getBoundChildren(page).find((n: any) => n.bind === 'name');
+      expect(node?.responsive?.sm).toEqual({ span: 12, start: 0, hidden: false });
     });
 
     it('removes a breakpoint when overrides is undefined', () => {
       const { project, pageId } = projectWithPageAndItems();
       project.setItemResponsive(pageId, 'name', 'sm', { width: 12 });
       project.setItemResponsive(pageId, 'name', 'sm', undefined);
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const region = page?.regions?.find((r: any) => r.key === 'name');
-      expect(region?.responsive?.sm).toBeUndefined();
+      const page = findPageNode(project, pageId);
+      const node = getBoundChildren(page).find((n: any) => n.bind === 'name');
+      expect(node?.responsive?.sm).toBeUndefined();
     });
 
     it('preserves other breakpoints when setting one', () => {
       const { project, pageId } = projectWithPageAndItems();
       project.setItemResponsive(pageId, 'name', 'sm', { width: 12 });
       project.setItemResponsive(pageId, 'name', 'md', { width: 6 });
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const region = page?.regions?.find((r: any) => r.key === 'name');
-      expect(region?.responsive?.sm).toEqual({ span: 12 });
-      expect(region?.responsive?.md).toEqual({ span: 6 });
+      const page = findPageNode(project, pageId);
+      const node = getBoundChildren(page).find((n: any) => n.bind === 'name');
+      expect(node?.responsive?.sm).toEqual({ span: 12 });
+      expect(node?.responsive?.md).toEqual({ span: 6 });
     });
   });
 
@@ -3086,33 +3085,32 @@ describe('behavioral page methods', () => {
     it('removes an item from the page', () => {
       const { project, pageId } = projectWithPageAndItems();
       project.removeItemFromPage(pageId, 'name');
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      expect(page?.regions?.some((r: any) => r.key === 'name')).toBeFalsy();
+      const page = findPageNode(project, pageId);
+      expect(getBoundChildren(page).some((n: any) => n.bind === 'name')).toBeFalsy();
     });
   });
 
   describe('reorderItemOnPage', () => {
     it('moves an item down within a page', () => {
       const { project, pageId } = projectWithPageAndItems();
-      // Initial order: [group_key, name, email] — name is at index 1, email at 2
-      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const regionKeys = pageBefore?.regions?.map((r: any) => r.key) ?? [];
-      const nameIdx = regionKeys.indexOf('name');
-      const emailIdx = regionKeys.indexOf('email');
+      const pageBefore = findPageNode(project, pageId);
+      const boundKeys = getBoundChildren(pageBefore).map((n: any) => n.bind);
+      const nameIdx = boundKeys.indexOf('name');
+      const emailIdx = boundKeys.indexOf('email');
       expect(nameIdx).toBeLessThan(emailIdx);
 
       project.reorderItemOnPage(pageId, 'name', 'down');
 
-      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      const pageAfter = findPageNode(project, pageId);
+      const keysAfter = getBoundChildren(pageAfter).map((n: any) => n.bind);
       expect(keysAfter.indexOf('name')).toBeGreaterThan(keysAfter.indexOf('email'));
     });
 
     it('moves an item up within a page', () => {
       const { project, pageId } = projectWithPageAndItems();
       project.reorderItemOnPage(pageId, 'email', 'up');
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keys = page?.regions?.map((r: any) => r.key) ?? [];
+      const page = findPageNode(project, pageId);
+      const keys = getBoundChildren(page).map((n: any) => n.bind);
       expect(keys.indexOf('email')).toBeLessThan(keys.indexOf('name'));
     });
   });
@@ -3165,13 +3163,13 @@ describe('behavioral page methods', () => {
   describe('edge cases', () => {
     it('reorder first item up is a no-op (index clamped to 0)', () => {
       const { project, pageId } = projectWithPageAndItems();
-      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
-      // The first region is the group key from addPage — reorder it up
+      const pageBefore = findPageNode(project, pageId);
+      const keysBefore = getBoundChildren(pageBefore).map((n: any) => n.bind);
+      // The first bound child is the group key from addPage — reorder it up
       const firstKey = keysBefore[0];
       project.reorderItemOnPage(pageId, firstKey, 'up');
-      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      const pageAfter = findPageNode(project, pageId);
+      const keysAfter = getBoundChildren(pageAfter).map((n: any) => n.bind);
       expect(keysAfter).toEqual(keysBefore);
     });
 
@@ -3180,48 +3178,48 @@ describe('behavioral page methods', () => {
       project.setItemResponsive(pageId, 'name', 'lg', { width: 4, hidden: true });
       // Empty overrides — sets an empty object for the breakpoint
       project.setItemResponsive(pageId, 'name', 'lg', {});
-      const page = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const region = page?.regions?.find((r: any) => r.key === 'name');
-      expect(region?.responsive?.lg).toEqual({});
+      const page = findPageNode(project, pageId);
+      const node = getBoundChildren(page).find((n: any) => n.bind === 'name');
+      expect(node?.responsive?.lg).toEqual({});
     });
   });
 
   describe('moveItemOnPageToIndex', () => {
     it('moves item from position 0 to position 2', () => {
       const { project, pageId } = projectWithPageAndItems();
-      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      const pageBefore = findPageNode(project, pageId);
+      const keysBefore = getBoundChildren(pageBefore).map((n: any) => n.bind);
       const firstKey = keysBefore[0];
 
       project.moveItemOnPageToIndex(pageId, firstKey, 2);
 
-      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      const pageAfter = findPageNode(project, pageId);
+      const keysAfter = getBoundChildren(pageAfter).map((n: any) => n.bind);
       expect(keysAfter.indexOf(firstKey)).toBe(2);
     });
 
     it('moves item from last position to position 0', () => {
       const { project, pageId } = projectWithPageAndItems();
-      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      const pageBefore = findPageNode(project, pageId);
+      const keysBefore = getBoundChildren(pageBefore).map((n: any) => n.bind);
       const lastKey = keysBefore[keysBefore.length - 1];
 
       project.moveItemOnPageToIndex(pageId, lastKey, 0);
 
-      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      const pageAfter = findPageNode(project, pageId);
+      const keysAfter = getBoundChildren(pageAfter).map((n: any) => n.bind);
       expect(keysAfter[0]).toBe(lastKey);
     });
 
     it('with current position is a no-op', () => {
       const { project, pageId } = projectWithPageAndItems();
-      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      const pageBefore = findPageNode(project, pageId);
+      const keysBefore = getBoundChildren(pageBefore).map((n: any) => n.bind);
 
       project.moveItemOnPageToIndex(pageId, keysBefore[1], 1);
 
-      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      const pageAfter = findPageNode(project, pageId);
+      const keysAfter = getBoundChildren(pageAfter).map((n: any) => n.bind);
       expect(keysAfter).toEqual(keysBefore);
     });
 
@@ -3249,15 +3247,15 @@ describe('behavioral page methods', () => {
 
     it('clamps targetIndex beyond array length to end', () => {
       const { project, pageId } = projectWithPageAndItems();
-      const pageBefore = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysBefore = pageBefore?.regions?.map((r: any) => r.key) ?? [];
+      const pageBefore = findPageNode(project, pageId);
+      const keysBefore = getBoundChildren(pageBefore).map((n: any) => n.bind);
       const firstKey = keysBefore[0];
 
       // targetIndex = 100, should clamp to end
       project.moveItemOnPageToIndex(pageId, firstKey, 100);
 
-      const pageAfter = (project.theme.pages ?? []).find((p: any) => p.id === pageId);
-      const keysAfter = pageAfter?.regions?.map((r: any) => r.key) ?? [];
+      const pageAfter = findPageNode(project, pageId);
+      const keysAfter = getBoundChildren(pageAfter).map((n: any) => n.bind);
       expect(keysAfter[keysAfter.length - 1]).toBe(firstKey);
     });
 
