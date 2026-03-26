@@ -21,6 +21,7 @@ const autoCompleteMap: Record<string, string> = {
     'contact.contactName': 'name',
     'contact.contactEmail': 'email',
     'contact.contactPhone': 'tel',
+    'contact.state': 'address-level1',
     'organization.website': 'url',
 };
 
@@ -66,7 +67,7 @@ function StyledTextInput({ field, node }: FieldComponentProps) {
                     className={showError ? 'border-destructive focus:border-destructive' : ''}
                 />
             )}
-            {showError && <p id={`${field.id}-error`} className="formspec-error" role="alert">{field.error}</p>}
+            {showError && <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>}
         </div>
     );
 }
@@ -87,8 +88,10 @@ function StyledSelect({ field, node }: FieldComponentProps) {
                 value={field.value ?? ''}
                 onChange={e => field.setValue(e.target.value)}
                 onBlur={() => field.touch()}
+                required={field.required}
                 aria-invalid={!!showError}
                 aria-describedby={describedBy}
+                autoComplete={autoCompleteMap[field.path]}
                 className={showError ? 'border-destructive' : ''}
             >
                 <option value="" disabled>-- Select --</option>
@@ -96,7 +99,7 @@ function StyledSelect({ field, node }: FieldComponentProps) {
                     <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
             </select>
-            {showError && <p id={`${field.id}-error`} className="formspec-error" role="alert">{field.error}</p>}
+            {showError && <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>}
         </div>
     );
 }
@@ -106,7 +109,7 @@ function StyledRadioGroup({ field, node }: FieldComponentProps) {
     const showError = field.error && field.touched;
     const describedBy = buildDescribedBy(field.id, !!field.hint, showError);
     return (
-        <fieldset className="mb-5 border-0 p-0" data-name={field.path} aria-describedby={describedBy}>
+        <fieldset className="mb-5 border-0 p-0" data-name={field.path} aria-describedby={describedBy} aria-required={field.required || undefined}>
             <legend className="mb-1.5 text-sm font-semibold text-foreground">
                 {field.label}
                 {field.required && <span className="ml-1 text-destructive" aria-hidden="true">*</span>}
@@ -129,7 +132,7 @@ function StyledRadioGroup({ field, node }: FieldComponentProps) {
                     </label>
                 ))}
             </div>
-            {showError && <p id={`${field.id}-error`} className="formspec-error" role="alert">{field.error}</p>}
+            {showError && <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>}
         </fieldset>
     );
 }
@@ -140,7 +143,7 @@ function StyledCheckboxGroup({ field, node }: FieldComponentProps) {
     const showError = field.error && field.touched;
     const describedBy = buildDescribedBy(field.id, !!field.hint, showError);
     return (
-        <fieldset className="mb-5 border-0 p-0" data-name={field.path} aria-describedby={describedBy}>
+        <fieldset className="mb-5 border-0 p-0" data-name={field.path} aria-describedby={describedBy} aria-required={field.required || undefined}>
             <legend className="mb-1.5 text-sm font-semibold text-foreground">
                 {field.label}
                 {field.required && <span className="ml-1 text-destructive" aria-hidden="true">*</span>}
@@ -168,7 +171,7 @@ function StyledCheckboxGroup({ field, node }: FieldComponentProps) {
                     </label>
                 ))}
             </div>
-            {showError && <p id={`${field.id}-error`} className="formspec-error" role="alert">{field.error}</p>}
+            {showError && <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>}
         </fieldset>
     );
 }
@@ -192,7 +195,7 @@ function StyledCheckbox({ field, node }: FieldComponentProps) {
                 {field.label}
                 {field.required && <span className="ml-1 text-destructive" aria-hidden="true">*</span>}
             </label>
-            {showError && <p id={`${field.id}-error`} className="formspec-error" role="alert">{field.error}</p>}
+            {showError && <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>}
         </div>
     );
 }
@@ -220,7 +223,7 @@ function StyledNumberInput({ field, node }: FieldComponentProps) {
                 aria-describedby={describedBy}
                 className={showError ? 'border-destructive' : ''}
             />
-            {showError && <p id={`${field.id}-error`} className="formspec-error" role="alert">{field.error}</p>}
+            {showError && <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>}
         </div>
     );
 }
@@ -246,7 +249,7 @@ function StyledDatePicker({ field, node }: FieldComponentProps) {
                 aria-describedby={describedBy}
                 className={showError ? 'border-destructive' : ''}
             />
-            {showError && <p id={`${field.id}-error`} className="formspec-error" role="alert">{field.error}</p>}
+            {showError && <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>}
         </div>
     );
 }
@@ -387,7 +390,7 @@ function FormContent() {
                     <div ref={errorSummaryRef} tabIndex={-1} role="alert"
                          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                         <h2 className="mb-2 text-sm font-bold text-destructive">Validation Errors</h2>
-                        <ul className="list-inside list-disc space-y-1 text-sm text-destructive/80">
+                        <ul className="list-inside list-disc space-y-1 text-sm text-destructive">
                             {errors.map((e: any, i: number) => (
                                 <li key={i}><span className="font-medium">{e.path}</span>: {e.message}</li>
                             ))}
@@ -398,7 +401,7 @@ function FormContent() {
                 {warnings.length > 0 && (
                     <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
                         <h2 className="mb-2 text-sm font-bold text-warning">Warnings</h2>
-                        <ul className="list-inside list-disc space-y-1 text-sm text-warning/80">
+                        <ul className="list-inside list-disc space-y-1 text-sm text-warning">
                             {warnings.map((w: any, i: number) => (
                                 <li key={i}><span className="font-medium">{w.path}</span>: {w.message}</li>
                             ))}
