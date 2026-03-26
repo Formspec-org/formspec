@@ -54,12 +54,12 @@ describe('PagesTab', () => {
     expect(screen.getByRole('button', { name: 'Tabs' })).toBeInTheDocument();
   });
 
-  it('single mode with no pages shows guidance', () => {
+  it('single mode with no pages shows empty guidance', () => {
     renderPagesTab();
-    expect(screen.getByText(/switch to wizard or tabs/i)).toBeInTheDocument();
+    expect(screen.getByText(/no items yet/i)).toBeInTheDocument();
   });
 
-  it('single mode with existing pages shows dormant guidance and badge', () => {
+  it('single mode with existing pages shows preserved-pages notice', () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'single' } },
       theme: {
@@ -67,25 +67,27 @@ describe('PagesTab', () => {
       },
     });
 
-    expect(screen.getByText(/preserved but not active/i)).toBeInTheDocument();
-    expect(within(pageCard('p1')).getByTestId('dormant-badge')).toHaveTextContent('Dormant');
+    const notice = screen.getByTestId('preserved-pages-notice');
+    expect(notice).toBeInTheDocument();
+    expect(notice).toHaveTextContent(/1 page preserved/i);
+    expect(notice).toHaveTextContent(/switch to wizard or tabs/i);
   });
 
-  it('dormant pages disable page reorder controls', async () => {
+  it('single mode preserved-pages notice can be dismissed', async () => {
     renderPagesTab({
       definition: { formPresentation: { pageMode: 'single' } },
       theme: {
-        pages: [
-          { id: 'p1', title: 'Step 1', regions: [{ key: 'name', span: 12 }] },
-          { id: 'p2', title: 'Step 2', regions: [] },
-        ],
+        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
       },
     });
 
-    const card = pageCard('p1');
+    expect(screen.getByTestId('preserved-pages-notice')).toBeInTheDocument();
 
-    expect(within(card).getByRole('button', { name: /move step 1 up/i })).toBeDisabled();
-    expect(within(card).getByRole('button', { name: /delete page/i })).toBeDisabled();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));
+    });
+
+    expect(screen.queryByTestId('preserved-pages-notice')).not.toBeInTheDocument();
   });
 
   it('mode selector updates project flow mode', async () => {
@@ -285,5 +287,109 @@ describe('PagesTab — undo toast after deletion', () => {
     expect((project.theme.pages as any[]).map((p: any) => p.id)).toEqual(['p1', 'p2']);
     // Toast disappears after undo
     expect(screen.queryByText(/step 2 deleted/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('PagesTab — wizard mode rendering', () => {
+  it('renders wizard-mode-flow container with step connectors', () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Step 1', regions: [] },
+          { id: 'p2', title: 'Step 2', regions: [] },
+        ],
+      },
+    });
+
+    expect(screen.getByTestId('wizard-mode-flow')).toBeInTheDocument();
+    // Step numbers are rendered as prominent circles
+    expect(screen.getByLabelText('Step 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Step 2')).toBeInTheDocument();
+  });
+
+  it('wizard mode shows "add step" terminus button', () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'wizard' } },
+      theme: {
+        pages: [{ id: 'p1', title: 'Step 1', regions: [] }],
+      },
+    });
+
+    expect(screen.getByRole('button', { name: /add step/i })).toBeInTheDocument();
+  });
+});
+
+describe('PagesTab — tabs mode rendering', () => {
+  it('renders tabs-mode-editor with tab bar', () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'tabs' } },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Contact', regions: [] },
+          { id: 'p2', title: 'Address', regions: [] },
+        ],
+      },
+    });
+
+    expect(screen.getByTestId('tabs-mode-editor')).toBeInTheDocument();
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Contact' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Address' })).toBeInTheDocument();
+  });
+
+  it('tabs mode selects first tab by default and shows its panel', () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'tabs' } },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Contact', regions: [{ key: 'name', span: 12 }] },
+          { id: 'p2', title: 'Address', regions: [] },
+        ],
+      },
+    });
+
+    const contactTab = screen.getByRole('tab', { name: 'Contact' });
+    expect(contactTab).toHaveAttribute('aria-selected', 'true');
+
+    // Panel shows items from the selected page
+    const panel = screen.getByRole('tabpanel');
+    expect(within(panel).getByText('Name')).toBeInTheDocument();
+  });
+
+  it('clicking a tab switches the visible panel', async () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'tabs' } },
+      theme: {
+        pages: [
+          { id: 'p1', title: 'Contact', regions: [{ key: 'name', span: 12 }] },
+          { id: 'p2', title: 'Address', regions: [{ key: 'email', span: 12 }] },
+        ],
+      },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Address' }));
+    });
+
+    const addressTab = screen.getByRole('tab', { name: 'Address' });
+    expect(addressTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Contact' })).toHaveAttribute('aria-selected', 'false');
+
+    const panel = screen.getByRole('tabpanel');
+    expect(within(panel).getByText('Email')).toBeInTheDocument();
+  });
+
+  it('tabs mode has a + button to add pages', () => {
+    renderPagesTab({
+      definition: { formPresentation: { pageMode: 'tabs' } },
+      theme: {
+        pages: [{ id: 'p1', title: 'Contact', regions: [] }],
+      },
+    });
+
+    // The + button in the tab bar (distinct from the header "Add page" button)
+    const tablist = screen.getByRole('tablist');
+    expect(within(tablist).getByRole('button', { name: /add page/i })).toBeInTheDocument();
   });
 });
