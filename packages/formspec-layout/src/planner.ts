@@ -147,8 +147,8 @@ export function planComponentTree(
         }
     }
 
-    // Apply responsive overrides
-    const comp = resolveResponsiveProps(tree, ctx.activeBreakpoint ?? null);
+    // Apply responsive overrides (mobile-first cumulative cascade per §9.3)
+    const comp = resolveResponsiveProps(tree, ctx.activeBreakpoint ?? null, ctx.componentDocument?.breakpoints);
     const componentType = comp.component as string;
 
     // Check for custom component expansion

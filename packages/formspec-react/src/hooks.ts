@@ -15,4 +15,4 @@ export { useLocale } from './use-locale';
 export type { UseLocaleResult } from './use-locale';
 export { useExternalValidation } from './use-external-validation';
 export type { UseExternalValidationResult, ExternalValidationEntry } from './use-external-validation';
-export type { FieldComponentProps, LayoutComponentProps, ComponentMap } from './component-map';
+export type { FieldComponentProps, LayoutComponentProps, DisplayComponentProps, ComponentMap } from './component-map';

@@ -1,5 +1,5 @@
 /** @filedesc FormspecProvider — React context wrapping a FormEngine + optional layout plan. */
-import React, { createContext, useContext, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useEffect, useRef, useCallback, useState } from 'react';
 import { signal } from '@preact/signals-core';
 import type { ReadonlyEngineSignal } from 'formspec-engine';
 import type { IFormEngine } from 'formspec-engine';
@@ -80,6 +80,34 @@ export function FormspecProvider({
         return eng;
     }, [externalEngine, definition, registryEntries, runtimeContext, initialData]);
 
+    // Responsive breakpoint detection — match component document breakpoints via matchMedia
+    const [activeBreakpoint, setActiveBreakpoint] = useState<string | null>(() => {
+        if (typeof window === 'undefined' || !componentDocument?.breakpoints) return null;
+        return detectBreakpoint(componentDocument.breakpoints);
+    });
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !componentDocument?.breakpoints) return;
+        const breakpoints = componentDocument.breakpoints as Record<string, number | { minWidth?: number }>;
+        const entries = Object.entries(breakpoints)
+            .map(([name, bp]): [string, number] | null => {
+                const v = typeof bp === 'number' ? bp : (bp.minWidth ?? null);
+                return v != null ? [name, v] : null;
+            })
+            .filter((e): e is [string, number] => e !== null)
+            .sort(([, a], [, b]) => a - b);
+        if (entries.length === 0) return;
+
+        const queries = entries.map(([name, minWidth]) => ({
+            name,
+            mql: window.matchMedia(`(min-width: ${minWidth}px)`),
+        }));
+
+        const update = () => setActiveBreakpoint(detectBreakpoint(breakpoints));
+        for (const { mql } of queries) mql.addEventListener('change', update);
+        return () => { for (const { mql } of queries) mql.removeEventListener('change', update); };
+    }, [componentDocument]);
+
     const layoutPlan = useMemo(() => {
         if (!engine) return null;
         const def = engine.getDefinition();
@@ -90,6 +118,7 @@ export function FormspecProvider({
             formPresentation: def.formPresentation,
             componentDocument,
             theme: themeDocument,
+            activeBreakpoint,
             findItem: (key: string) => findItemByKey(items, key),
         };
 
@@ -106,7 +135,7 @@ export function FormspecProvider({
             cssClasses: ['formspec-container'],
             children: nodes,
         };
-    }, [engine, componentDocument, themeDocument]);
+    }, [engine, componentDocument, themeDocument, activeBreakpoint]);
 
     // Touched tracking — stable across re-renders
     const touchedFieldsRef = useRef(new Set<string>());
@@ -147,6 +176,27 @@ export function useFormspecContext(): FormspecContextValue {
     const ctx = useContext(FormspecContext);
     if (!ctx) throw new Error('useFormspecContext must be used within a FormspecProvider');
     return ctx;
+}
+
+/** Detect the largest matching breakpoint from a breakpoints map (mobile-first).
+ *  Breakpoint values may be plain integers `{ sm: 576 }` or objects `{ sm: { minWidth: 576 } }`.
+ */
+function detectBreakpoint(breakpoints: Record<string, number | { minWidth?: number }>): string | null {
+    if (typeof window === 'undefined') return null;
+    let match: string | null = null;
+    const entries = Object.entries(breakpoints)
+        .map(([name, bp]): [string, number] | null => {
+            const v = typeof bp === 'number' ? bp : (bp.minWidth ?? null);
+            return v != null ? [name, v] : null;
+        })
+        .filter((e): e is [string, number] => e !== null)
+        .sort(([, a], [, b]) => a - b);
+    for (const [name, minWidth] of entries) {
+        if (window.matchMedia(`(min-width: ${minWidth}px)`).matches) {
+            match = name;
+        }
+    }
+    return match;
 }
 
 /** Recursive item lookup by dotted key path. */
