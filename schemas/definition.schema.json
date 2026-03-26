@@ -385,6 +385,28 @@
           ],
           "default": "ltr",
           "description": "Base text direction. 'auto' derives direction from the active locale code (RTL for ar, he, fa, ur, ps, sd, yi)."
+        },
+        "showProgress": {
+          "type": "boolean",
+          "default": true,
+          "description": "Wizard mode: display a step progress indicator."
+        },
+        "allowSkip": {
+          "type": "boolean",
+          "default": false,
+          "description": "Wizard mode: allow navigating forward without validating the current page."
+        },
+        "defaultTab": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Tabs mode: zero-based index of the initially selected tab."
+        },
+        "tabPosition": {
+          "type": "string",
+          "enum": ["top", "bottom", "left", "right"],
+          "default": "top",
+          "description": "Tabs mode: position of the tab bar relative to the content."
         }
       }
     }
