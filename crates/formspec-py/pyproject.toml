@@ -4,9 +4,22 @@ build-backend = "maturin"
 
 [project]
 name = "formspec-rust"
-requires-python = ">=3.10"
 version = "0.1.0"
-description = "PyO3 bindings for Formspec — Rust-powered FEL, linting, evaluation"
+requires-python = ">=3.10"
+description = "Rust-powered FEL evaluation, linting, and form processing for Formspec"
+license = "AGPL-3.0-only"
+authors = [{ name = "Michael Deeb" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://formspec.org"
+Repository = "https://github.com/Formspec-org/formspec"
 
 [tool.maturin]
 features = ["extension-module"]

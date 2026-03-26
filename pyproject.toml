@@ -1,7 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "formspec"
 version = "0.1.0"
 requires-python = ">=3.12"
+description = "Formspec Python package — server-side FEL evaluation, validation, linting, and mapping"
+license = "AGPL-3.0-only"
+readme = "src/formspec/README.md"
+authors = [{ name = "Michael Deeb" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://formspec.org"
+Repository = "https://github.com/Formspec-org/formspec"
 
 [project.optional-dependencies]
 test = [
@@ -11,6 +31,10 @@ test = [
     "msgspec>=0.18",
     "referencing>=0.30",
 ]
+rust = ["formspec-rust>=0.1.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/formspec"]
 
 [tool.pytest.ini_options]
 pythonpath = "src"
