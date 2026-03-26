@@ -241,18 +241,20 @@ describe('Formspec Studio Core E2E Validation', { timeout: 60_000 }, () => {
   it('5. Designer tweaks themes and component structure', () => {
     project.batch([
       { type: 'theme.setTargetCompatibility', payload: { compatibleVersions: '>=1.0.0' } },
-      { type: 'pages.assignItem', payload: { pageId: 'p2', key: 'page2.hasPet', span: 12 } },
+      // Use short key 'hasPet' — component tree nodes use item keys, not dot-paths
+      { type: 'pages.assignItem', payload: { pageId: 'p2', key: 'hasPet' } },
     ]);
     validateProject('5-designer-theme-setup');
 
     project.batch([
-      { type: 'pages.renamePage', payload: { id: 'p2', newId: 'page2' } },
-      { type: 'pages.setPageProperty', payload: { id: 'page2', property: 'title', value: 'User Preferences' } },
+      // renamePage sets title, nodeId stays 'p2'
+      { type: 'pages.renamePage', payload: { id: 'p2', newId: 'User Preferences' } },
+      { type: 'pages.setPageProperty', payload: { id: 'p2', property: 'description', value: 'Your preferences' } },
     ]);
     validateProject('5-designer-page-rename');
 
     project.batch([
-      { type: 'pages.unassignItem', payload: { pageId: 'page2', key: 'page2.hasPet' } },
+      { type: 'pages.unassignItem', payload: { pageId: 'p2', key: 'hasPet' } },
       { type: 'theme.setExtension', payload: { key: 'x-theme-mode', value: 'dark' } },
     ]);
     validateProject('5-designer-end');

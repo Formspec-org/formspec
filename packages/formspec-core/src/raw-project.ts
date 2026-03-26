@@ -229,7 +229,6 @@ export class RawProject implements IProjectCore {
       this._state.generatedComponent.tree = reconcileComponentTree(
         this._state.definition,
         this._state.generatedComponent.tree,
-        this._state.theme,
       ) as any;
       (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
     }
@@ -415,7 +414,6 @@ export class RawProject implements IProjectCore {
       this._state.generatedComponent.tree = reconcileComponentTree(
         this._state.definition,
         this._state.generatedComponent.tree,
-        this._state.theme,
       ) as any;
       (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
     }
@@ -488,7 +486,6 @@ export class RawProject implements IProjectCore {
           clone.generatedComponent.tree = reconcileComponentTree(
             clone.definition,
             clone.generatedComponent.tree,
-            clone.theme,
           ) as any;
           (clone.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
         }
@@ -510,7 +507,6 @@ export class RawProject implements IProjectCore {
       this._state.generatedComponent.tree = reconcileComponentTree(
         this._state.definition,
         this._state.generatedComponent.tree,
-        this._state.theme,
       ) as any;
       (this._state.generatedComponent as Record<string, unknown>)['x-studio-generated'] = true;
     }

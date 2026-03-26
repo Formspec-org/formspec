@@ -1,7 +1,6 @@
 /** @filedesc Rebuilds the component tree to mirror the definition item hierarchy. */
 import type { FormDefinition, FormItem } from 'formspec-types';
 import { widgetTokenToComponent } from 'formspec-types';
-import type { ThemeState } from './types.js';
 
 /** Component tree node shape used in generated layout documents. */
 type TreeNode = {
@@ -23,7 +22,7 @@ interface WrapperSnapshot {
 /** Component types that allow `children` per the component schema. */
 const CONTAINER_COMPONENTS = new Set([
   'Accordion', 'Card', 'Collapsible', 'Columns', 'ConditionalGroup',
-  'Grid', 'Modal', 'Page', 'Panel', 'Popover', 'Stack', 'Tabs', 'Wizard',
+  'Grid', 'Modal', 'Page', 'Panel', 'Popover', 'Stack', 'Tabs',
 ]);
 
 /**
@@ -62,15 +61,14 @@ export function defaultComponentType(item: FormItem): string {
  * unbound layout nodes (re-inserted at original positions).
  *
  * The algorithm:
- *   1. Snapshot top-level layout wrappers with their full subtrees.
+ *   1. Snapshot layout wrappers (_layout: true) with their full subtrees.
  *   2. Collect existing bound/display nodes by path, rebuild from definition.
- *   3. Page-aware distribution (wizard/tabs/single).
- *   4. Re-insert layout wrappers at original positions.
+ *   3. Build a flat Stack root with all definition-derived nodes.
+ *   4. Re-insert layout wrappers (including Page nodes) at original positions.
  */
 export function reconcileComponentTree(
   definition: FormDefinition,
   currentTree: unknown | undefined,
-  theme: ThemeState,
 ): TreeNode {
   const tree = (currentTree as TreeNode) ?? { component: 'Stack', nodeId: 'root', children: [] };
 
@@ -201,71 +199,9 @@ export function reconcileComponentTree(
 
   const builtNodes: TreeNode[] = definition.items.flatMap(item => buildNodes(item));
 
-  // ── Page-aware distribution ──
-  const def = definition as any;
-  const pageMode: string = def.formPresentation?.pageMode ?? 'single';
-  const themePages = (theme.pages ?? []) as any[];
-
-  let newRoot: TreeNode;
-
-  if (themePages.length > 0 && (pageMode === 'wizard' || pageMode === 'tabs')) {
-    const nodeByKey = new Map<string, TreeNode>();
-    for (const node of builtNodes) {
-      const key = node.bind ?? node.nodeId;
-      if (key) nodeByKey.set(key, node);
-    }
-
-    const pageNodes: TreeNode[] = [];
-    const assigned = new Set<string>();
-
-    for (const themePage of themePages) {
-      const pageNode: TreeNode = {
-        component: 'Page',
-        nodeId: (themePage as any).id,
-        title: (themePage as any).title,
-        ...((themePage as any).description !== undefined && { description: (themePage as any).description }),
-        children: [],
-      };
-
-      for (const region of ((themePage as any).regions ?? []) as any[]) {
-        if (region.key && nodeByKey.has(region.key)) {
-          pageNode.children!.push(nodeByKey.get(region.key)!);
-          assigned.add(region.key);
-        }
-      }
-
-      pageNodes.push(pageNode);
-    }
-
-    const unassigned = builtNodes.filter(n => {
-      const key = n.bind ?? n.nodeId;
-      return key && !assigned.has(key);
-    });
-
-    if (pageMode === 'wizard') {
-      if (unassigned.length > 0) {
-        pageNodes.push({
-          component: 'Page',
-          nodeId: '_unassigned',
-          title: 'Other',
-          children: unassigned,
-        });
-      }
-      newRoot = { component: 'Wizard', nodeId: 'root', children: pageNodes };
-    } else {
-      if (unassigned.length > 0) {
-        pageNodes.push({
-          component: 'Page',
-          nodeId: '_unassigned',
-          title: 'Other',
-          children: unassigned,
-        });
-      }
-      newRoot = { component: 'Tabs', nodeId: 'root', children: pageNodes };
-    }
-  } else {
-    newRoot = { component: 'Stack', nodeId: 'root', children: builtNodes };
-  }
+  // Root is always Stack. Page structure is authored by page handlers
+  // and preserved via the _layout snapshot/restore mechanism above.
+  let newRoot: TreeNode = { component: 'Stack', nodeId: 'root', children: builtNodes };
 
   // ── Phase 3: Re-insert layout wrappers ──
   const findInTree = (root: TreeNode, ref: { bind?: string; nodeId?: string }): { parent: TreeNode; index: number; node: TreeNode } | undefined => {

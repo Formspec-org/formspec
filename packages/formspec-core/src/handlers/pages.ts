@@ -150,17 +150,23 @@ export const pagesHandlers: Record<string, CommandHandler> = {
     const { pageId, key, span } = payload as { pageId: string; key: string; span?: number };
     const root = ensureTree(state);
 
-    // Remove existing bound node from anywhere in the tree
-    const existing = findBoundNode(root, key);
-    if (existing) {
-      existing.parent.children!.splice(existing.index, 1);
-    }
+    // Use leaf key for bind — tree nodes use short keys, not dot-paths
+    const leafKey = key.includes('.') ? key.slice(key.lastIndexOf('.') + 1) : key;
 
-    // Find target Page and add the bound node
+    // Remove existing bound node from anywhere in the tree and reuse it
+    const existing = findBoundNode(root, leafKey);
+    let node: TreeNode;
+    if (existing) {
+      [node] = existing.parent.children!.splice(existing.index, 1);
+    } else {
+      // Placeholder — will be replaced by reconciler on next definition change
+      node = { component: 'BoundItem', bind: leafKey };
+    }
+    if (span !== undefined) node.span = span;
+
+    // Find target Page and add the node
     const targetPage = findPageNode(root, pageId);
     if (!targetPage.children) targetPage.children = [];
-    const node: TreeNode = { component: 'BoundItem', bind: key };
-    if (span !== undefined) node.span = span;
     targetPage.children.push(node);
 
     return { rebuildComponentTree: false };
@@ -172,7 +178,9 @@ export const pagesHandlers: Record<string, CommandHandler> = {
     const page = findPageNode(root, pageId);
     const children = page.children ?? [];
 
-    const index = children.findIndex(n => n.bind === key);
+    // Use leaf key for lookup — tree nodes use short keys, not dot-paths
+    const leafKey = key.includes('.') ? key.slice(key.lastIndexOf('.') + 1) : key;
+    const index = children.findIndex(n => n.bind === leafKey);
     if (index === -1) return { rebuildComponentTree: false };
 
     const [node] = children.splice(index, 1);
@@ -259,7 +267,7 @@ export const pagesHandlers: Record<string, CommandHandler> = {
   },
 
   'pages.setPages': (state, payload) => {
-    const { pages } = payload as { pages: Array<{ id: string; title?: string; description?: string; regions?: Array<{ key: string; span?: number }> }> };
+    const { pages } = payload as { pages: Array<{ id: string; title?: string; description?: string; regions?: Array<{ key: string; span?: number; responsive?: Record<string, unknown> }> }> };
     const root = ensureTree(state);
     const fp = ensureFormPresentation(state);
 
@@ -270,7 +278,7 @@ export const pagesHandlers: Record<string, CommandHandler> = {
       root.children = [];
     }
 
-    // Create new Page nodes from payload
+    // Create new Page nodes from payload, reusing existing bound nodes from tree
     for (const p of pages) {
       const pageNode: TreeNode = {
         component: 'Page',
@@ -278,8 +286,18 @@ export const pagesHandlers: Record<string, CommandHandler> = {
         title: p.title,
         _layout: true,
         children: (p.regions ?? []).map(r => {
-          const node: TreeNode = { component: 'BoundItem', bind: r.key };
+          // Use leaf key for bind — tree nodes use short keys, not dot-paths
+          const leafKey = r.key.includes('.') ? r.key.slice(r.key.lastIndexOf('.') + 1) : r.key;
+          // Reuse existing bound node from tree if available
+          const existing = findBoundNode(root, leafKey);
+          let node: TreeNode;
+          if (existing) {
+            [node] = existing.parent.children!.splice(existing.index, 1);
+          } else {
+            node = { component: 'BoundItem', bind: leafKey };
+          }
           if (r.span !== undefined) node.span = r.span;
+          if (r.responsive !== undefined) node.responsive = r.responsive;
           return node;
         }),
       };
