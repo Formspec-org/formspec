@@ -564,15 +564,179 @@ describe('Select — searchable', () => {
         const container = renderField(def, node);
         const filterInput = container.querySelector('.formspec-select-searchable input[type="text"]') as HTMLInputElement;
 
-        // Type to filter — only Canada should show
+        // Focus, then simulate typing via React's input value setter to trigger onChange
+        flushSync(() => { filterInput.focus(); });
+        // React intercepts the native setter — use Object.getOwnPropertyDescriptor to trigger it
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
         flushSync(() => {
-            filterInput.value = 'can';
+            nativeInputValueSetter?.call(filterInput, 'can');
             filterInput.dispatchEvent(new Event('input', { bubbles: true }));
         });
 
         const items = container.querySelectorAll('[role="option"]');
         expect(items.length).toBe(1);
         expect(items[0].textContent).toBe('Canada');
+    });
+
+    it('filter input does not have a separate onInput attribute (onChange is the sole handler)', () => {
+        const def = baseDef([{
+            key: 'country', type: 'field', dataType: 'choice', label: 'Country',
+            options: [{ value: 'us', label: 'United States' }],
+        }]);
+        const node: LayoutNode = {
+            id: 'country-field', component: 'Select', category: 'field',
+            props: { searchable: true }, cssClasses: [], children: [], bindPath: 'country',
+        };
+        const container = renderField(def, node);
+        const filterInput = container.querySelector('.formspec-select-searchable input[type="text"]') as HTMLInputElement;
+        // React removes redundant event handlers — no oninput attribute should be set directly
+        expect(filterInput.getAttribute('oninput')).toBeNull();
+    });
+});
+
+// ── SearchableSelect — WAI-ARIA combobox ────────────────────────────
+
+describe('SearchableSelect — WAI-ARIA combobox pattern', () => {
+    function makeSearchable(options = [
+        { value: 'us', label: 'United States' },
+        { value: 'ca', label: 'Canada' },
+        { value: 'mx', label: 'Mexico' },
+    ]) {
+        const def = baseDef([{
+            key: 'country', type: 'field', dataType: 'choice', label: 'Country',
+            options,
+        }]);
+        const node: LayoutNode = {
+            id: 'country-field', component: 'Select', category: 'field',
+            props: { searchable: true }, cssClasses: [], children: [], bindPath: 'country',
+        };
+        return renderField(def, node);
+    }
+
+    it('filter input has role="combobox"', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('.formspec-select-searchable input[type="text"]') as HTMLInputElement;
+        expect(input.getAttribute('role')).toBe('combobox');
+    });
+
+    it('filter input has aria-autocomplete="list"', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('.formspec-select-searchable input[type="text"]') as HTMLInputElement;
+        expect(input.getAttribute('aria-autocomplete')).toBe('list');
+    });
+
+    it('listbox has a stable id and input aria-controls points to it', () => {
+        const container = makeSearchable();
+        const listbox = container.querySelector('[role="listbox"]') as HTMLElement;
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        expect(listbox.id).toBeTruthy();
+        expect(input.getAttribute('aria-controls')).toBe(listbox.id);
+    });
+
+    it('aria-expanded is false when input is not focused', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        expect(input.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('aria-expanded becomes true when input is focused', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        flushSync(() => { input.focus(); });
+        expect(input.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('listbox is hidden when input is not focused', () => {
+        const container = makeSearchable();
+        const listbox = container.querySelector('[role="listbox"]') as HTMLElement;
+        expect(listbox.style.display).toBe('none');
+    });
+
+    it('listbox is visible when input is focused', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        flushSync(() => { input.focus(); });
+        const listbox = container.querySelector('[role="listbox"]') as HTMLElement;
+        expect(listbox.style.display).not.toBe('none');
+    });
+
+    it('each option has an id and role="option"', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        flushSync(() => { input.focus(); });
+        const options = container.querySelectorAll('[role="option"]');
+        expect(options.length).toBe(3);
+        options.forEach(opt => expect(opt.id).toBeTruthy());
+    });
+
+    it('ArrowDown highlights the first option and sets aria-activedescendant', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        flushSync(() => { input.focus(); });
+        flushSync(() => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); });
+        const options = container.querySelectorAll('[role="option"]');
+        expect(options[0].getAttribute('aria-selected')).toBe('true');
+        expect(input.getAttribute('aria-activedescendant')).toBe(options[0].id);
+    });
+
+    it('ArrowDown twice highlights the second option', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        flushSync(() => { input.focus(); });
+        flushSync(() => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); });
+        flushSync(() => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); });
+        const options = container.querySelectorAll('[role="option"]');
+        expect(options[1].getAttribute('aria-selected')).toBe('true');
+        expect(input.getAttribute('aria-activedescendant')).toBe(options[1].id);
+    });
+
+    it('ArrowUp from first wraps to last option', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        flushSync(() => { input.focus(); });
+        flushSync(() => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); });
+        flushSync(() => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })); });
+        const options = container.querySelectorAll('[role="option"]');
+        expect(options[options.length - 1].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('Enter selects the highlighted option and sets field value', () => {
+        const def = baseDef([{
+            key: 'country', type: 'field', dataType: 'choice', label: 'Country',
+            options: [
+                { value: 'us', label: 'United States' },
+                { value: 'ca', label: 'Canada' },
+            ],
+        }]);
+        const engine = createFormEngine(def);
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        const node: LayoutNode = {
+            id: 'country-field', component: 'Select', category: 'field',
+            props: { searchable: true }, cssClasses: [], children: [], bindPath: 'country',
+        };
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={{ id: 'root', component: 'Stack', category: 'layout', props: {}, cssClasses: [], children: [node] }} />
+                </FormspecProvider>
+            );
+        });
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        flushSync(() => { input.focus(); });
+        flushSync(() => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); });
+        flushSync(() => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+        expect(engine.getResponse().data['country']).toBe('us');
+    });
+
+    it('Escape closes the listbox', () => {
+        const container = makeSearchable();
+        const input = container.querySelector('input[role="combobox"]') as HTMLInputElement;
+        flushSync(() => { input.focus(); });
+        expect(input.getAttribute('aria-expanded')).toBe('true');
+        flushSync(() => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+        expect(input.getAttribute('aria-expanded')).toBe('false');
     });
 });
 
@@ -727,14 +891,13 @@ describe('NumberInput stepper — button aria-labels', () => {
     });
 });
 
-// ── Rating aria-pressed ────────────────────────────────────────────
+// ── Rating aria-checked (radiogroup pattern) ───────────────────────
 
-describe('Rating — aria-pressed', () => {
-    it('selected stars have aria-pressed=true', () => {
+describe('Rating — radiogroup keyboard navigation', () => {
+    function makeRating(value?: number) {
         const def = baseDef([{ key: 'stars', type: 'field', dataType: 'integer', label: 'Stars' }]);
         const engine = createFormEngine(def);
-        engine.setValue('stars', 3);
-
+        if (value != null) engine.setValue('stars', value);
         const container = document.createElement('div');
         document.body.appendChild(container);
         const root = createRoot(container);
@@ -749,13 +912,111 @@ describe('Rating — aria-pressed', () => {
                 </FormspecProvider>
             );
         });
+        return { container, engine };
+    }
 
-        const stars = container.querySelectorAll<HTMLButtonElement>('.formspec-rating-star');
-        expect(stars[0].getAttribute('aria-pressed')).toBe('true');
-        expect(stars[1].getAttribute('aria-pressed')).toBe('true');
-        expect(stars[2].getAttribute('aria-pressed')).toBe('true');
-        expect(stars[3].getAttribute('aria-pressed')).toBe('false');
-        expect(stars[4].getAttribute('aria-pressed')).toBe('false');
+    it('wraps stars in role="radiogroup"', () => {
+        const { container } = makeRating();
+        expect(container.querySelector('[role="radiogroup"]')).toBeTruthy();
+    });
+
+    it('each star has role="radio" and aria-checked', () => {
+        const { container } = makeRating(3);
+        const stars = container.querySelectorAll('[role="radio"]');
+        expect(stars.length).toBe(5);
+        expect(stars[0].getAttribute('aria-checked')).toBe('true');
+        expect(stars[1].getAttribute('aria-checked')).toBe('true');
+        expect(stars[2].getAttribute('aria-checked')).toBe('true');
+        expect(stars[3].getAttribute('aria-checked')).toBe('false');
+        expect(stars[4].getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('roving tabindex: selected star is tabIndex=0, others are -1', () => {
+        const { container } = makeRating(2);
+        const stars = container.querySelectorAll<HTMLElement>('[role="radio"]');
+        // star index 1 (value=2) is selected → tabIndex 0
+        expect(stars[1].tabIndex).toBe(0);
+        expect(stars[0].tabIndex).toBe(-1);
+        expect(stars[2].tabIndex).toBe(-1);
+    });
+
+    it('roving tabindex: first star is tabIndex=0 when no value', () => {
+        const { container } = makeRating();
+        const stars = container.querySelectorAll<HTMLElement>('[role="radio"]');
+        expect(stars[0].tabIndex).toBe(0);
+        stars.forEach((s, i) => { if (i > 0) expect(s.tabIndex).toBe(-1); });
+    });
+
+    it('ArrowRight increments the rating', () => {
+        const { container, engine } = makeRating(2);
+        const radiogroup = container.querySelector('[role="radiogroup"]') as HTMLElement;
+        flushSync(() => {
+            radiogroup.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        });
+        expect(engine.getResponse().data['stars']).toBe(3);
+    });
+
+    it('ArrowLeft decrements the rating', () => {
+        const { container, engine } = makeRating(3);
+        const radiogroup = container.querySelector('[role="radiogroup"]') as HTMLElement;
+        flushSync(() => {
+            radiogroup.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+        });
+        expect(engine.getResponse().data['stars']).toBe(2);
+    });
+
+    it('ArrowUp increments the rating', () => {
+        const { container, engine } = makeRating(1);
+        const radiogroup = container.querySelector('[role="radiogroup"]') as HTMLElement;
+        flushSync(() => {
+            radiogroup.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+        });
+        expect(engine.getResponse().data['stars']).toBe(2);
+    });
+
+    it('ArrowDown decrements the rating', () => {
+        const { container, engine } = makeRating(4);
+        const radiogroup = container.querySelector('[role="radiogroup"]') as HTMLElement;
+        flushSync(() => {
+            radiogroup.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        });
+        expect(engine.getResponse().data['stars']).toBe(3);
+    });
+
+    it('Home sets rating to 1', () => {
+        const { container, engine } = makeRating(4);
+        const radiogroup = container.querySelector('[role="radiogroup"]') as HTMLElement;
+        flushSync(() => {
+            radiogroup.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+        });
+        expect(engine.getResponse().data['stars']).toBe(1);
+    });
+
+    it('End sets rating to maxRating', () => {
+        const { container, engine } = makeRating(1);
+        const radiogroup = container.querySelector('[role="radiogroup"]') as HTMLElement;
+        flushSync(() => {
+            radiogroup.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+        });
+        expect(engine.getResponse().data['stars']).toBe(5);
+    });
+
+    it('ArrowRight clamps at maxRating', () => {
+        const { container, engine } = makeRating(5);
+        const radiogroup = container.querySelector('[role="radiogroup"]') as HTMLElement;
+        flushSync(() => {
+            radiogroup.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        });
+        expect(engine.getResponse().data['stars']).toBe(5);
+    });
+
+    it('ArrowLeft clamps at 1', () => {
+        const { container, engine } = makeRating(1);
+        const radiogroup = container.querySelector('[role="radiogroup"]') as HTMLElement;
+        flushSync(() => {
+            radiogroup.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+        });
+        expect(engine.getResponse().data['stars']).toBe(1);
     });
 });
 

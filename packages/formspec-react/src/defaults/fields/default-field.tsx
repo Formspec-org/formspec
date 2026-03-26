@@ -423,39 +423,100 @@ interface CommonInputProps {
     isReadonly: boolean;
 }
 
-/** Item 18: Searchable select — custom listbox with text filter input. */
+/** Item 18: Searchable select — WAI-ARIA combobox pattern with keyboard navigation. */
 function SearchableSelect({ field, common, isReadonly }: Omit<CommonInputProps, 'node'>) {
     const [filter, setFilter] = useState('');
+    const [open, setOpen] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
     const filtered = field.options.filter(
         opt => opt.label.toLowerCase().includes(filter.toLowerCase())
     );
+
+    const listboxId = common.id ? `${common.id}-listbox` : 'formspec-listbox';
+    const highlightedOptionId = highlightedIndex >= 0 && highlightedIndex < filtered.length
+        ? `${common.id ?? 'formspec'}-option-${highlightedIndex}`
+        : undefined;
+
+    const selectOption = (opt: { value: string; label: string }) => {
+        if (isReadonly) return;
+        field.setValue(opt.value);
+        field.touch();
+        setOpen(false);
+        setHighlightedIndex(-1);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            setOpen(true);
+            setHighlightedIndex(0);
+            e.preventDefault();
+            return;
+        }
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setHighlightedIndex(i => (i + 1) % filtered.length);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setHighlightedIndex(i => (i <= 0 ? filtered.length - 1 : i - 1));
+                break;
+            case 'Enter':
+                if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {
+                    e.preventDefault();
+                    selectOption(filtered[highlightedIndex]);
+                }
+                break;
+            case 'Escape':
+                setOpen(false);
+                setHighlightedIndex(-1);
+                break;
+        }
+    };
 
     return (
         <div className="formspec-select-searchable">
             <input
                 type="text"
+                role="combobox"
                 placeholder="Search…"
                 value={filter}
                 disabled={isReadonly}
                 aria-label="Filter options"
-                onInput={(e) => setFilter((e.target as HTMLInputElement).value)}
-                onChange={(e) => setFilter(e.target.value)}
+                aria-expanded={open}
+                aria-controls={listboxId}
+                aria-autocomplete="list"
+                aria-activedescendant={highlightedOptionId}
+                onFocus={() => setOpen(true)}
+                onBlur={() => { setOpen(false); setHighlightedIndex(-1); }}
+                onChange={(e) => { setFilter(e.target.value); setHighlightedIndex(-1); }}
+                onKeyDown={handleKeyDown}
             />
             <ul
                 role="listbox"
-                id={common.id ? `${common.id}-listbox` : undefined}
+                id={listboxId}
+                style={open ? undefined : { display: 'none' }}
             >
-                {filtered.map((opt) => (
-                    <li
-                        key={opt.value}
-                        role="option"
-                        aria-selected={field.value === opt.value}
-                        className={field.value === opt.value ? 'formspec-option--selected' : undefined}
-                        onClick={isReadonly ? undefined : () => { field.setValue(opt.value); field.touch(); }}
-                    >
-                        {opt.label}
-                    </li>
-                ))}
+                {filtered.map((opt, index) => {
+                    const optId = `${common.id ?? 'formspec'}-option-${index}`;
+                    const isHighlighted = index === highlightedIndex;
+                    return (
+                        <li
+                            key={opt.value}
+                            id={optId}
+                            role="option"
+                            aria-selected={isHighlighted}
+                            className={[
+                                field.value === opt.value ? 'formspec-option--selected' : '',
+                                isHighlighted ? 'formspec-option--highlighted' : '',
+                            ].filter(Boolean).join(' ') || undefined}
+                            onMouseDown={isReadonly ? undefined : (e) => { e.preventDefault(); selectOption(opt); }}
+                        >
+                            {opt.label}
+                        </li>
+                    );
+                })}
             </ul>
         </div>
     );
@@ -536,11 +597,41 @@ function RatingControl({ field, node, isReadonly }: { field: FieldComponentProps
     const allowHalf = node.props?.allowHalf === true;
     const currentValue = typeof field.value === 'number' ? field.value : 0;
 
+    // Roving tabindex: the active (selected or first) star is tabbable, all others are -1.
+    const activeTabIndex = currentValue > 0 ? currentValue - 1 : 0;
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (isReadonly) return;
+        let next: number | null = null;
+        switch (e.key) {
+            case 'ArrowRight':
+            case 'ArrowUp':
+                next = Math.min(maxRating, currentValue + 1);
+                break;
+            case 'ArrowLeft':
+            case 'ArrowDown':
+                next = Math.max(1, currentValue - 1);
+                break;
+            case 'Home':
+                next = 1;
+                break;
+            case 'End':
+                next = maxRating;
+                break;
+        }
+        if (next != null) {
+            e.preventDefault();
+            field.setValue(next);
+            field.touch();
+        }
+    };
+
     return (
         <div
             className="formspec-rating"
-            role="group"
+            role="radiogroup"
             aria-label={field.label}
+            onKeyDown={handleKeyDown}
         >
             {Array.from({ length: maxRating }, (_, i) => {
                 const starValue = i + 1;
@@ -549,22 +640,21 @@ function RatingControl({ field, node, isReadonly }: { field: FieldComponentProps
                 const isHalf = allowHalf && !isSelected && halfValue <= currentValue;
 
                 return (
-                    <button
+                    <div
                         key={starValue}
-                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        aria-label={`${starValue} star${starValue !== 1 ? 's' : ''}`}
+                        tabIndex={isReadonly ? -1 : (i === activeTabIndex ? 0 : -1)}
                         className={[
                             'formspec-rating-star',
                             isSelected ? 'formspec-rating-star--selected' : '',
                             isHalf ? 'formspec-rating-star--half' : '',
                         ].filter(Boolean).join(' ')}
                         onClick={isReadonly ? undefined : () => { field.setValue(starValue); field.touch(); }}
-                        aria-label={`${starValue} star${starValue !== 1 ? 's' : ''}`}
-                        // Item 27: communicate selected state to screen readers
-                        aria-pressed={isSelected}
-                        disabled={isReadonly}
                     >
                         {isSelected || isHalf ? '\u2605' : '\u2606'}
-                    </button>
+                    </div>
                 );
             })}
         </div>
