@@ -190,7 +190,6 @@ class LintDiagnostic:
 | W802 | warning | component | Fallback compatibility only |
 | E803 | error | component | Missing options source |
 | E804 | error | component | Richtext requires string field |
-| E805 | error | component | Wizard children must be Page |
 | E806 | error | component | Missing custom component params |
 | E807 | error | component | Custom component cycle |
 | W800 | warning | component | Unresolved bind path |
