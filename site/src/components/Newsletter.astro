@@ -1,7 +1,5 @@
 ---
-// Newsletter signup — email input + submit.
-// Action URL is a placeholder. Wire to Buttondown, ConvertKit, Mailchimp, etc.
-// TODO: Set the form action to your email service endpoint.
+// Newsletter signup — submits to /api/subscribe (Firebase Function → Resend).
 
 export interface Props {
   /** "inline" renders compact (for CTA sections), "stacked" renders with heading (for footer) */
@@ -21,12 +19,7 @@ const { variant = "stacked" } = Astro.props;
   {variant === "inline" && (
     <p class="newsletter-inline-label">Get spec updates and new feature announcements:</p>
   )}
-  <form
-    class="newsletter-form"
-    action="https://buttondown.com/api/emails/embed-subscribe/formspec"
-    method="post"
-    target="_blank"
-  >
+  <form class="newsletter-form" data-newsletter>
     <label for={`newsletter-email-${variant}`} class="sr-only">Email address</label>
     <input
       type="email"
@@ -37,9 +30,60 @@ const { variant = "stacked" } = Astro.props;
       autocomplete="email"
       class="newsletter-input"
     />
-    <button type="submit" class="newsletter-btn">Subscribe</button>
+    <button type="submit" class="newsletter-btn">
+      <span class="newsletter-btn-text">Subscribe</span>
+    </button>
+    <p class="newsletter-status" aria-live="polite"></p>
   </form>
 </div>
+
+<script>
+  document.querySelectorAll("[data-newsletter]").forEach((form) => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = e.currentTarget as HTMLFormElement;
+      const input = f.querySelector("input[name=email]") as HTMLInputElement;
+      const btn = f.querySelector(".newsletter-btn") as HTMLButtonElement;
+      const btnText = f.querySelector(".newsletter-btn-text") as HTMLElement;
+      const status = f.querySelector(".newsletter-status") as HTMLElement;
+      const email = input.value.trim();
+
+      if (!email) return;
+
+      btn.disabled = true;
+      btnText.textContent = "Sending...";
+      status.textContent = "";
+      status.className = "newsletter-status";
+
+      try {
+        const res = await fetch("/api/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+
+        if (res.ok) {
+          btnText.textContent = "Subscribed!";
+          status.textContent = "You're in. We'll keep it useful.";
+          status.classList.add("newsletter-status--ok");
+          input.value = "";
+          setTimeout(() => {
+            btnText.textContent = "Subscribe";
+            btn.disabled = false;
+          }, 3000);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Subscribe failed");
+        }
+      } catch {
+        btnText.textContent = "Subscribe";
+        btn.disabled = false;
+        status.textContent = "Something went wrong. Try again?";
+        status.classList.add("newsletter-status--err");
+      }
+    });
+  });
+</script>
 
 <style>
   .newsletter {
@@ -76,6 +120,7 @@ const { variant = "stacked" } = Astro.props;
 
   .newsletter-form {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     max-width: 24rem;
   }
@@ -114,17 +159,42 @@ const { variant = "stacked" } = Astro.props;
     cursor: pointer;
     font-family: var(--font-sans);
     white-space: nowrap;
-    transition: background-color 0.15s, transform 0.1s;
+    transition: background-color 0.15s, transform 0.1s, opacity 0.15s;
     box-shadow: 0 1px 2px rgb(61 82 213 / 0.3);
   }
 
-  .newsletter-btn:hover {
+  .newsletter-btn:hover:not(:disabled) {
     background: #2c42c4;
     transform: translateY(-1px);
   }
 
-  .newsletter-btn:active {
+  .newsletter-btn:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  .newsletter-btn:disabled {
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  .newsletter-status {
+    width: 100%;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    margin: 0;
+    min-height: 1.2em;
+  }
+
+  .newsletter-status:empty {
+    display: none;
+  }
+
+  .newsletter-status--ok {
+    color: #16a34a;
+  }
+
+  .newsletter-status--err {
+    color: #dc2626;
   }
 
   .sr-only {
@@ -141,8 +211,11 @@ const { variant = "stacked" } = Astro.props;
 
   @media (max-width: 480px) {
     .newsletter-form {
-      flex-direction: column;
       max-width: none;
+    }
+
+    .newsletter-input {
+      width: 100%;
     }
 
     .newsletter-btn {

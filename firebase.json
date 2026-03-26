@@ -28,6 +28,10 @@
     ],
     "rewrites": [
       {
+        "source": "/api/subscribe",
+        "function": "subscribe"
+      },
+      {
         "source": "/studio/**",
         "destination": "/studio/index.html"
       },
@@ -43,9 +47,15 @@
     "cleanUrls": true,
     "trailingSlash": false
   },
+  "functions": {
+    "source": "functions"
+  },
   "emulators": {
     "hosting": {
       "port": 5050
+    },
+    "functions": {
+      "port": 5001
     }
   }
 }
