@@ -37,9 +37,11 @@ The **HTML bundle** (`formspec-engine.html`) and **message protocol** (EngineCom
 | Field state | `@Observable class FieldState` | `class FieldState` with `State<T>` properties |
 | Form state | `@Observable class FormState` | `class FormState` with `State<T>` properties |
 | Non-Compose consumers | N/A | `StateFlow<T>` exposure |
-| Component protocol | `protocol FieldComponent: View` | `typealias FieldComponent = @Composable (FieldState, LayoutNode) -> Unit` |
+| Field component | `protocol FieldComponent: View` | `typealias FieldComponent = @Composable (FieldState, LayoutNode) -> Unit` |
+| Layout component | `protocol LayoutComponent: View` | `typealias LayoutComponent = @Composable (LayoutNode, @Composable () -> Unit) -> Unit` |
 | Component map | `struct ComponentMap` | `data class ComponentMap` |
 | Auto-renderer | `struct FormspecForm: View` | `@Composable fun FormspecForm(engine, components)` |
+| Stability | `@Observable` (implicit) | `@Stable` on `FieldState`, `FormState`; `@Immutable` on `LayoutNode` |
 
 ### WebView bridge differences
 
@@ -54,14 +56,19 @@ The **HTML bundle** (`formspec-engine.html`) and **message protocol** (EngineCom
 
 ### Minimum API level
 
-**API 26 (Android 8.0)** — WebView supports WASM from Chrome 57+ (ships with API 26+). This covers 97%+ of active devices.
+**API 26 (Android 8.0)** — WebView supports WASM from Chrome 57+ (ships with API 26+), and `onRenderProcessGone` (needed for crash recovery) requires API 26. This covers 97%+ of active devices.
+
+**Compose:** Requires Jetpack Compose 1.5+ / Compose BOM 2024+. The library ships Compose compiler plugin compatibility metadata via `build.gradle.kts`.
 
 ### Package structure
 
 ```
 packages/formspec-kotlin/
-├── build.gradle.kts
+├── build.gradle.kts                    # Android library + Compose compiler
+├── settings.gradle.kts                 # Standalone Gradle project
+├── consumer-rules.pro                  # ProGuard keep rules for @JavascriptInterface
 ├── src/main/
+│   ├── AndroidManifest.xml             # Minimal (no permissions required)
 │   ├── kotlin/org/formspec/kotlin/
 │   │   ├── types/          # JSONValue, LayoutNode, RenderingBundle
 │   │   ├── bridge/         # EngineCommand, EngineEvent, WebViewEngine
@@ -73,6 +80,20 @@ packages/formspec-kotlin/
 ├── src/test/                     # Unit tests (JUnit 5)
 └── src/androidTest/              # Instrumented tests (WebView needs Activity)
 ```
+
+**Maven coordinates:** `org.formspec:formspec-kotlin`. Published to Maven Central when stable.
+
+### Android lifecycle concerns
+
+**Configuration changes:** The hidden `WebView` must survive Activity recreation (rotation, locale, dark mode). `WebViewEngine` should be scoped to a `ViewModel` (or `AndroidViewModel(application)`) — not tied to Activity/Fragment lifecycle. The `FormspecEngine` public API is lifecycle-agnostic; lifecycle scoping is the consumer's responsibility.
+
+**Background/foreground:** Call `WebView.onPause()` / `WebView.onResume()` when the app goes to background/foreground to save battery and reduce memory pressure. `FormspecEngine` should expose `pause()` / `resume()` methods that delegate to the WebView.
+
+**Renderer process death:** Android can kill the WebView renderer process under memory pressure. `onRenderProcessGone` (API 26+) detects this. Recovery strategy mirrors Swift: attempt one automatic reload of the bridge with the same bundle. If recovery fails, surface `FormspecError.bridgeDisconnected`.
+
+**ProGuard/R8:** The `@JavascriptInterface` methods must not be obfuscated. The library ships `consumer-rules.pro` with `-keepclassmembers` rules for the bridge interface.
+
+**Network access:** The hidden WebView loads a local `file:///android_asset/` HTML file and does not require `INTERNET` permission for basic operation. If the form definition includes `choicesFrom` with a URL, the consumer must grant network permission separately.
 
 ### Why not KMP / Compose Multiplatform
 
