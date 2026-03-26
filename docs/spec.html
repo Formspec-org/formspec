@@ -2355,6 +2355,40 @@ current element. E.g.,
 <code>countWhere($line_items[*].amount, $ &gt; 10000)</code>.</td>
 </tr>
 <tr>
+<td><code>sumWhere</code></td>
+<td><code>sumWhere(array&lt;number&gt;, boolean) → number</code></td>
+<td><code>number</code></td>
+<td>Sum of numeric elements whose predicate evaluates to
+<code>true</code>. Within the expression, <code>$</code> refers to the
+current element. Non-numeric matches are skipped.</td>
+</tr>
+<tr>
+<td><code>avgWhere</code></td>
+<td><code>avgWhere(array&lt;number&gt;, boolean) → number</code></td>
+<td><code>number</code></td>
+<td>Arithmetic mean of numeric elements whose predicate evaluates to
+<code>true</code>. Returns <code>null</code> when no elements
+match.</td>
+</tr>
+<tr>
+<td><code>minWhere</code></td>
+<td><code>minWhere(array&lt;any&gt;, boolean) → any</code></td>
+<td><code>any</code></td>
+<td>Smallest element whose predicate evaluates to <code>true</code>.
+Returns <code>null</code> when no elements match. Also works on
+<code>array&lt;date&gt;</code> and
+<code>array&lt;string&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>maxWhere</code></td>
+<td><code>maxWhere(array&lt;any&gt;, boolean) → any</code></td>
+<td><code>any</code></td>
+<td>Largest element whose predicate evaluates to <code>true</code>.
+Returns <code>null</code> when no elements match. Also works on
+<code>array&lt;date&gt;</code> and
+<code>array&lt;string&gt;</code>.</td>
+</tr>
+<tr>
 <td><code>avg</code></td>
 <td><code>avg(array&lt;number&gt;) → number</code></td>
 <td><code>number</code></td>
@@ -2800,6 +2834,15 @@ mismatched currencies produce a type error.</td>
 <td><code>money</code></td>
 <td>Sum an array of Money values. All elements MUST share the same
 currency. Empty array returns <code>null</code>.</td>
+</tr>
+<tr>
+<td><code>moneySumWhere</code></td>
+<td><code>moneySumWhere(array&lt;money&gt;, boolean) → money</code></td>
+<td><code>money</code></td>
+<td>Sum of Money elements whose predicate evaluates to
+<code>true</code>. Within the expression, <code>$</code> refers to the
+current element. All matching elements MUST share the same currency.
+Returns <code>null</code> when no elements match.</td>
 </tr>
 </tbody>
 </table>
