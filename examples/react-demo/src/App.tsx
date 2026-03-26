@@ -39,6 +39,16 @@ function FormContent() {
     const errors = result?.validationReport?.results?.filter((r: any) => r.severity === 'error') || [];
     const warnings = result?.validationReport?.results?.filter((r: any) => r.severity === 'warning') || [];
 
+    /** Resolve a dotted path to a human-readable field label via the engine. */
+    const fieldLabel = useCallback((path: string): string => {
+        try {
+            const vm = engine.getFieldVM(path);
+            return vm?.label.value || path;
+        } catch {
+            return path;
+        }
+    }, [engine]);
+
     return (
         <form onSubmit={handleSubmit} noValidate>
             <FormspecNode node={layoutPlan} />
@@ -61,7 +71,7 @@ function FormContent() {
                         <h3 className="summary-heading">Validation Errors</h3>
                         <ul className="summary-list">
                             {errors.map((e: any, i: number) => (
-                                <li key={i}><strong>{e.path}</strong>: {e.message}</li>
+                                <li key={i}><strong>{fieldLabel(e.path)}</strong>: {e.message}</li>
                             ))}
                         </ul>
                     </div>
@@ -72,7 +82,7 @@ function FormContent() {
                         <h3 className="summary-heading">Warnings</h3>
                         <ul className="summary-list">
                             {warnings.map((w: any, i: number) => (
-                                <li key={i}><strong>{w.path}</strong>: {w.message}</li>
+                                <li key={i}><strong>{fieldLabel(w.path)}</strong>: {w.message}</li>
                             ))}
                         </ul>
                     </div>
