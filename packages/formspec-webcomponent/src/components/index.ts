@@ -4,12 +4,13 @@ import { defaultAdapter } from '../adapters/default/index';
 import { PagePlugin, StackPlugin, GridPlugin, DividerPlugin, CollapsiblePlugin, ColumnsPlugin, PanelPlugin, AccordionPlugin, ModalPlugin, PopoverPlugin } from './layout';
 import { InputPlugins } from './inputs';
 import { HeadingPlugin, TextPlugin, CardPlugin, SpacerPlugin, AlertPlugin, BadgePlugin, ProgressBarPlugin, SummaryPlugin, ValidationSummaryPlugin } from './display';
-import { WizardPlugin, TabsPlugin, SubmitButtonPlugin } from './interactive';
+import { TabsPlugin, SubmitButtonPlugin } from './interactive';
 import { ConditionalGroupPlugin, DataTablePlugin } from './special';
 
 /**
- * Registers all 37 built-in component plugins with the global registry.
- * Includes layout (10), input (13), display (9), interactive (3), and special (2) plugins.
+ * Registers all 36 built-in component plugins with the global registry.
+ * Includes layout (10), input (13), display (9), interactive (2), and special (2) plugins.
+ * Wizard behavior is driven by formPresentation.pageMode, not a component plugin.
  */
 export function registerDefaultComponents() {
     globalRegistry.register(PagePlugin);
@@ -31,7 +32,6 @@ export function registerDefaultComponents() {
     globalRegistry.register(BadgePlugin);
     globalRegistry.register(ProgressBarPlugin);
     globalRegistry.register(SummaryPlugin);
-    globalRegistry.register(WizardPlugin);
     globalRegistry.register(TabsPlugin);
     globalRegistry.register(SubmitButtonPlugin);
     globalRegistry.register(ValidationSummaryPlugin);

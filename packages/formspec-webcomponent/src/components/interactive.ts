@@ -1,19 +1,8 @@
-/** @filedesc Interactive component plugins: Wizard, Tabs, and SubmitButton. */
+/** @filedesc Interactive component plugins: Tabs and SubmitButton. */
 import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
-import { useWizard } from '../behaviors/wizard';
 import { useTabs } from '../behaviors/tabs';
 import { globalRegistry } from '../registry';
-
-/** Renders a multi-step wizard via the behavior-adapter pipeline. */
-export const WizardPlugin: ComponentPlugin = {
-    type: 'Wizard',
-    render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
-        const behavior = useWizard(ctx.behaviorContext, comp);
-        const adapterFn = globalRegistry.resolveAdapterFn('Wizard');
-        if (adapterFn) adapterFn(behavior, parent, ctx.adapterContext);
-    }
-};
 
 /** Renders a tabbed interface via the behavior-adapter pipeline. */
 export const TabsPlugin: ComponentPlugin = {
