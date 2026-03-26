@@ -275,7 +275,6 @@
         { "$ref": "#/$defs/Page" },
         { "$ref": "#/$defs/Stack" },
         { "$ref": "#/$defs/Grid" },
-        { "$ref": "#/$defs/Wizard" },
         { "$ref": "#/$defs/Spacer" },
         { "$ref": "#/$defs/TextInput" },
         { "$ref": "#/$defs/NumberInput" },
@@ -314,7 +313,7 @@
 
     "Page": {
       "$ref": "#/$defs/ComponentBase",
-      "description": "Top-level page/section container. In a multi-step form, each Page is one step. When used inside a Wizard, Pages define wizard steps. Pages MAY also be used standalone within a Stack for sectioned single-page forms.",
+      "description": "Top-level page/section container. In a multi-step form, each Page is one step. Pages MAY also be used standalone within a Stack for sectioned single-page forms.",
       "x-lm": {
         "category": "layout",
         "level": "core",
@@ -423,44 +422,6 @@
             { "component": "TextInput", "bind": "firstName" },
             { "component": "TextInput", "bind": "middleName" },
             { "component": "TextInput", "bind": "lastName" }
-          ]
-        }
-      ]
-    },
-
-    "Wizard": {
-      "$ref": "#/$defs/ComponentBase",
-      "description": "Sequential step-by-step navigation container. Each child MUST be a Page component representing one wizard step. Manages step progression, progress indication, and navigation controls.",
-      "x-lm": {
-        "category": "layout",
-        "level": "core",
-        "children": true,
-        "bind": "forbidden",
-        "childConstraint": "Page only"
-      },
-      "properties": {
-        "component": { "const": "Wizard" },
-        "showProgress": {
-          "type": "boolean",
-          "description": "Whether to display a progress indicator (step counter, bar, or breadcrumb)."
-        },
-        "allowSkip": {
-          "type": "boolean",
-          "description": "Whether users may navigate to non-adjacent steps directly."
-        },
-        "children": { "$ref": "#/$defs/ChildrenArray" }
-      },
-      "unevaluatedProperties": false,
-      "examples": [
-        {
-          "component": "Wizard", "showProgress": true,
-          "children": [
-            { "component": "Page", "title": "Step 1: Basics", "children": [
-              { "component": "TextInput", "bind": "name" }
-            ]},
-            { "component": "Page", "title": "Step 2: Details", "children": [
-              { "component": "DatePicker", "bind": "startDate" }
-            ]}
           ]
         }
       ]
@@ -1489,7 +1450,7 @@
           "type": "string",
           "not": {
             "enum": [
-              "Page", "Stack", "Grid", "Wizard", "Spacer",
+              "Page", "Stack", "Grid", "Spacer",
               "TextInput", "NumberInput", "DatePicker", "Select", "CheckboxGroup", "Toggle", "FileUpload",
               "Heading", "Text", "Divider",
               "Card", "Collapsible", "ConditionalGroup",
