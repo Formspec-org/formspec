@@ -28,7 +28,7 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           sudo apt-get install -y binaryen
-      - run: npm ci
+      - run: npm install
       - run: npm run build
 
       - name: Create Release Pull Request or Publish
