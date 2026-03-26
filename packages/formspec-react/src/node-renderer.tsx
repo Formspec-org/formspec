@@ -70,7 +70,9 @@ function RepeatGroup({ node }: { node: LayoutNode }) {
     return (
         <div className="formspec-repeat" data-bind={node.repeatGroup}>
             {instances.map((children, idx) => (
-                <div key={idx} className="formspec-repeat-instance">
+                <div key={idx} className="formspec-repeat-instance"
+                     role="group"
+                     aria-label={`${title} ${idx + 1} of ${count}`}>
                     {children.map((child) => (
                         <FormspecNode key={child.id} node={child} />
                     ))}
@@ -78,6 +80,7 @@ function RepeatGroup({ node }: { node: LayoutNode }) {
                         type="button"
                         className="formspec-repeat-remove"
                         onClick={() => engine.removeRepeatInstance(repeatPath, idx)}
+                        aria-label={`Remove ${title} ${idx + 1}`}
                     >
                         Remove {title}
                     </button>
@@ -102,7 +105,7 @@ function DisplayNode({ node }: { node: LayoutNode }) {
 
     switch (node.component) {
         case 'Heading':
-            return <h3 className={cssClass} style={style}>{text}</h3>;
+            return <h2 className={cssClass} style={style}>{text}</h2>;
         case 'Divider':
             return <hr className={cssClass} style={style} />;
         case 'Alert':
