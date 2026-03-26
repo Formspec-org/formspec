@@ -21,6 +21,7 @@ jobs:
           node-version: "22"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
+      - run: npm install -g npm@latest
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -28,7 +29,7 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           sudo apt-get install -y binaryen
-      - run: npm install
+      - run: npm ci
       - run: npm run build
 
       - name: Create Release Pull Request or Publish

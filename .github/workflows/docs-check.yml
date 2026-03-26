@@ -37,6 +37,8 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      - run: npm install -g npm@latest
+
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
