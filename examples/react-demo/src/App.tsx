@@ -1,61 +1,19 @@
 /** @filedesc Demo app showcasing formspec-react with zero component overrides. */
-import React, { useState, useCallback } from 'react';
-import { FormspecProvider, FormspecNode, useForm, useFormspecContext, ValidationSummary } from 'formspec-react';
+import React, { useState } from 'react';
+import { FormspecForm, ValidationSummary } from 'formspec-react';
+import type { SubmitResult } from 'formspec-react';
 import definition from './definition.json';
 import registry from '../../../registries/formspec-common.registry.json';
 
-// ── Form content (layout + submit panel) ──
+// ── App ──
 
-function FormContent() {
-    const form = useForm();
-    const { layoutPlan } = useFormspecContext();
-    const [result, setResult] = useState<any>(null);
-
-    const handleSubmit = useCallback((e: React.FormEvent) => {
-        e.preventDefault();
-        const detail = form.submit({ mode: 'submit' });
-        setResult(detail);
-    }, [form]);
-
-    if (!layoutPlan) return <p>No layout plan available.</p>;
+export function App() {
+    const [result, setResult] = useState<SubmitResult | null>(null);
 
     const results = result?.validationReport?.results || [];
     const errorCount = results.filter((r: any) => r.severity === 'error').length;
     const warningCount = results.filter((r: any) => r.severity === 'warning').length;
 
-    return (
-        <form onSubmit={handleSubmit} noValidate aria-labelledby="app-form-title">
-            <FormspecNode node={layoutPlan} />
-
-            <div className="submit-panel">
-                <div className="submit-row">
-                    <button type="submit" className="submit-button">
-                        Submit Application
-                    </button>
-                    {result && (
-                        <span className={`status-text ${result.validationReport?.valid ? 'status-text--valid' : 'status-text--invalid'}`}>
-                            {result.validationReport?.valid ? 'Valid' : `${errorCount} error(s)`}
-                            {warningCount > 0 && `, ${warningCount} warning(s)`}
-                        </span>
-                    )}
-                </div>
-
-                {results.length > 0 && <ValidationSummary results={results} />}
-
-                {result && (
-                    <details className="response-details">
-                        <summary>Response JSON</summary>
-                        <pre>{JSON.stringify(result.response, null, 2)}</pre>
-                    </details>
-                )}
-            </div>
-        </form>
-    );
-}
-
-// ── App ──
-
-export function App() {
     return (
         <div className="app-container">
             <a href="#main-content" className="skip-link">
@@ -81,9 +39,29 @@ export function App() {
             </header>
 
             <main id="main-content">
-                <FormspecProvider definition={definition} registryEntries={registry.entries}>
-                    <FormContent />
-                </FormspecProvider>
+                <FormspecForm
+                    definition={definition}
+                    registryEntries={registry.entries}
+                    onSubmit={setResult}
+                />
+
+                {result && (
+                    <div className="submit-panel">
+                        <div className="submit-row">
+                            <span className={`status-text ${result.validationReport?.valid ? 'status-text--valid' : 'status-text--invalid'}`}>
+                                {result.validationReport?.valid ? 'Valid' : `${errorCount} error(s)`}
+                                {warningCount > 0 && `, ${warningCount} warning(s)`}
+                            </span>
+                        </div>
+
+                        {results.length > 0 && <ValidationSummary results={results} />}
+
+                        <details className="response-details">
+                            <summary>Response JSON</summary>
+                            <pre>{JSON.stringify(result.response, null, 2)}</pre>
+                        </details>
+                    </div>
+                )}
             </main>
 
             <footer className="app-footer">
