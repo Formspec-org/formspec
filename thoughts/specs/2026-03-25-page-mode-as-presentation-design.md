@@ -90,10 +90,11 @@ The normative validation gate ("MUST validate current Page's bound items before 
 | Section | Change |
 |---------|--------|
 | §3.4 Nesting Constraints | Remove rule 3 ("Wizard children MUST all be Page"). Remove Wizard from the Layout category table. |
+| §5.1 Page | Update rendering requirements that reference Wizard: "When used inside a Wizard, the Page MUST be shown/hidden..." becomes "When `formPresentation.pageMode` is `wizard`, the Page MUST be shown/hidden according to the current step navigation state." Remove "When used as children of a Wizard (S5.4), Pages define the wizard steps." |
 | §5.4 Wizard | Remove entire section. Add deprecation note redirecting to `formPresentation.pageMode: "wizard"`. |
 | §6.2 Tabs | Update: Tabs is no longer used as a page-navigation wrapper. Page-level tab navigation uses `formPresentation.pageMode: "tabs"`. Tabs remains available as a Progressive layout component for within-page tabbed subsections. Remove "children SHOULD be Page components" guidance for root-level use. |
 | §12.1 Conformance check #7 | Remove "Wizard children: All children of a Wizard are Page components." |
-| §12.4 Conformance levels | Core Conformant: 18 → 17 components (remove Wizard). Progressive Conformant count unchanged (Tabs stays). |
+| §12.4 Conformance levels | Core Conformant: 18 → 17 components (remove Wizard). Schema `AnyComponent.oneOf`: 36 → 35 entries. Appendix B: 34 → 33 built-in components. Progressive count unchanged (Tabs stays). |
 | §3.6 Localizable Strings | No change — Tabs `tabLabels[N]` stays for within-page use. |
 | Appendix A | Rewrite Budget Wizard example: `Stack > Page*` with `formPresentation: { pageMode: "wizard" }`. |
 | Appendix B Quick Reference | Remove Wizard row. |
@@ -102,20 +103,21 @@ The normative validation gate ("MUST validate current Page's bound items before 
 
 | Section | Change |
 |---------|--------|
-| §4.1.1 `formPresentation` | Add four properties with prose descriptions. |
+| §4.1.1 `formPresentation` | Add four properties with prose descriptions. Note: `formPresentation.direction` (`ltr`/`rtl`/`auto`) already exists in the schema but is missing from spec prose — address as part of this update. |
+| §4.1.2 (new) Page Mode Processing Requirements | New section for normative MUST-level page mode behaviors. These requirements cannot live in §4.1.1 because that section explicitly says "All properties within `formPresentation` are OPTIONAL and advisory. A conforming processor MAY ignore any or all of these properties." The processing requirements are normative renderer obligations, not advisory hints. |
 
-New `formPresentation` properties:
+New `formPresentation` properties (§4.1.1):
 
 ```
 showProgress  boolean   default: true    Wizard mode: display a progress indicator.
 allowSkip     boolean   default: false   Wizard mode: allow skipping pages without validation.
-defaultTab    integer   default: 0       Tabs mode: zero-based index of the initially selected tab.
+defaultTab    integer   default: 0       Tabs mode: zero-based index of the initially selected tab (minimum: 0).
 tabPosition   enum      default: "top"   Tabs mode: tab bar position ("top", "bottom", "left", "right").
 ```
 
-Add a processing requirement paragraph:
+New processing requirements (§4.1.2):
 
-> When `pageMode` is `"wizard"`, a conforming renderer MUST validate the current page's bound items before allowing forward navigation unless `allowSkip` is `true`. When `pageMode` is `"tabs"`, a conforming renderer MUST keep all pages mounted; switching tabs changes visibility, not lifecycle.
+> When a renderer supports page mode and `pageMode` is `"wizard"`, it MUST validate the current page's bound items before allowing forward navigation unless `allowSkip` is `true`. When `pageMode` is `"tabs"`, a supporting renderer MUST keep all pages mounted; switching tabs changes visibility, not lifecycle. Renderers that do not support the declared mode SHOULD fall back to `"single"`.
 
 #### Component Schema (`schemas/component.schema.json`)
 
@@ -165,7 +167,7 @@ Rewrite page handlers (`handlers/pages.ts`) to write component tree nodes instea
 
 Delete `component.setWizardProperty` handler.
 
-Create a `definition.setFormPresentation` handler (or reuse `definition.setProperty` pattern) that writes to `state.definition.formPresentation[property]`. This handler does not exist today — `formPresentation` has `additionalProperties: false` in the schema, so the schema must be updated (Phase 0) before this handler can accept new properties.
+Reuse the existing `definition.setFormPresentation` handler (`definition-pages.ts:33-47`), which accepts `{ property, value }` and writes to `state.definition.formPresentation[property]`. It already supports null-deletion semantics and returns `{ rebuildComponentTree: false }`. The schema must be updated (Phase 0) to add the new properties before they can pass schema validation.
 
 Page handlers return `{ rebuildComponentTree: false }` — they manipulate the tree directly. Exception: `pages.autoGenerate` performs a bulk tree rewrite (clearing all Page children and recreating from definition hints). It mutates the tree directly in a single transaction rather than dispatching individual `component.*` commands, avoiding problematic intermediate states.
 
@@ -213,6 +215,7 @@ The wizard rendering behavior moves from component-level dispatch to form-level 
 Update `Project` helpers:
 
 - `setFlow()`: dispatch `definition.setFormPresentation` for `pageMode`, `showProgress`, `allowSkip`, `defaultTab`, `tabPosition`.
+- `_PRESENTATION_KEYS` routing set (`project.ts`): add `showProgress`, `allowSkip`, `defaultTab`, `tabPosition` so `setMetadata` routes them correctly (this is a second code path that writes to `formPresentation`).
 - `listPages()`: walk component tree for Page nodes instead of reading `theme.pages`.
 - `addField`/`addGroup`/`addContent`: validate `props.page` against component tree Page nodes instead of `theme.pages`.
 - `_resolvePageGroup()`: find Page node, inspect first bound child.
@@ -296,8 +299,8 @@ PagesTab
 | Rust linter | 1 |
 | MCP | 2 (flow, query) |
 | Fixtures | 5 |
-| Tests | ~50 |
-| **Total** | **~95** |
+| Tests | ~56 (13-15 with significant changes, remainder minor) |
+| **Total** | **~100** |
 
 ### Design Decisions
 
@@ -333,7 +336,7 @@ Existing Component Documents with `Wizard` root nodes must be migrated on projec
 2. **Tree rewrite:** Replace the `Wizard` root with a `Stack` root. All `Page` children become direct children of the new `Stack`. Non-Page children (if any) are also promoted.
 3. **Property migration:** Read `showProgress` and `allowSkip` from the old Wizard node's props. Write them to `definition.formPresentation`.
 4. **Mode sync:** Set `definition.formPresentation.pageMode` to `"wizard"` (since the old tree expressed wizard mode structurally).
-5. **Tabs root migration:** If the root is `Tabs` (used as page navigation), apply the same rewrite: `Tabs` root → `Stack`, move `defaultTab` and `position` to `formPresentation`, set `pageMode: "tabs"`. Note: only root-level `Tabs` nodes are migrated. Within-page `Tabs` nodes are untouched.
+5. **Tabs root migration:** If the root is `Tabs` (used as page navigation), apply the same rewrite: `Tabs` root → `Stack`, move `defaultTab` to `formPresentation.defaultTab`, move `position` to `formPresentation.tabPosition` (note the property rename: `position` → `tabPosition`), set `pageMode: "tabs"`. Only root-level `Tabs` nodes are migrated. Within-page `Tabs` nodes are untouched.
 6. **Location:** Migration runs in `formspec-core`'s project initialization path, before the first render. It is a one-time transform applied to the component state.
 7. **Lossless:** Every Wizard/Tabs prop has a `formPresentation` equivalent. No information is lost.
 8. **One-way:** Migrated projects cannot be read by older versions that expect a `Wizard` root. Since the project is unreleased with zero users, this is acceptable.
