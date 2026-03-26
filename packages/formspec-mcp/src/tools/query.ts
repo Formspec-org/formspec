@@ -58,7 +58,7 @@ export function handleDescribe(
     if (componentTree?.children) {
       const walk = (node: any) => {
         if (!node) return;
-        if (node.component && node.component !== 'Stack' && node.component !== 'Wizard' && node.component !== 'Page') {
+        if (node.component && node.component !== 'Stack' && node.component !== 'Page') {
           componentNodes.push({
             component: node.component,
             ...(node.id ? { id: node.id } : {}),
