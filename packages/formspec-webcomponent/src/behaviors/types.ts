@@ -146,6 +146,13 @@ export interface FileUploadBehavior extends FieldBehavior {
     accept?: string;
     multiple: boolean;
     dragDrop: boolean;
+    maxSize?: number;
+    /** Reactive snapshot of currently selected files. */
+    files(): ReadonlyArray<{ name: string; size: number; type: string }>;
+    /** Remove a file by index (multi-file mode accumulates). */
+    removeFile(index: number): void;
+    /** Clear all selected files. */
+    clearFiles(): void;
 }
 
 export interface SignatureBehavior extends FieldBehavior {

@@ -1,4 +1,4 @@
-/** @filedesc Default adapter for FileUpload — file input with optional drag-drop zone. */
+/** @filedesc Default adapter for FileUpload — file input with optional drag-drop zone and file list. */
 import type { FileUploadBehavior } from '../../behaviors/types';
 import type { AdapterRenderFn } from '../types';
 import { createFieldDOM, finalizeFieldDOM } from './shared';
@@ -11,16 +11,89 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
 
     const input = document.createElement('input');
     input.type = 'file';
-    input.className = 'formspec-input';
+    input.className = 'formspec-file-input-hidden';
     input.id = behavior.id;
     input.name = behavior.fieldPath;
     if (behavior.accept) input.accept = behavior.accept;
     if (behavior.multiple) input.multiple = true;
 
+    // Browse button (replaces raw input display)
+    const browseBtn = document.createElement('button');
+    browseBtn.type = 'button';
+    browseBtn.className = 'formspec-file-browse-btn';
+    browseBtn.textContent = behavior.multiple ? 'Choose files' : 'Choose file';
+    browseBtn.addEventListener('click', () => input.click());
+
+    // File list container — rebuilt by the behavior on each change
+    const fileListEl = document.createElement('ul');
+    fileListEl.className = 'formspec-file-list';
+    fileListEl.setAttribute('aria-label', 'Selected files');
+
+    const rebuildFileList = () => {
+        fileListEl.innerHTML = '';
+        const files = behavior.files();
+        if (files.length === 0) return;
+
+        for (let i = 0; i < files.length; i++) {
+            const f = files[i];
+            const li = document.createElement('li');
+            li.className = 'formspec-file-list-item';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'formspec-file-list-name';
+            nameSpan.textContent = f.name;
+            li.appendChild(nameSpan);
+
+            const sizeSpan = document.createElement('span');
+            sizeSpan.className = 'formspec-file-list-size';
+            sizeSpan.textContent = formatBytes(f.size);
+            li.appendChild(sizeSpan);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'formspec-file-list-remove';
+            removeBtn.setAttribute('aria-label', `Remove ${f.name}`);
+            removeBtn.innerHTML = '<span aria-hidden="true">\u00d7</span>';
+            const idx = i;
+            removeBtn.addEventListener('click', () => behavior.removeFile(idx));
+            li.appendChild(removeBtn);
+
+            fileListEl.appendChild(li);
+        }
+
+        if (behavior.multiple && files.length > 1) {
+            const actionsLi = document.createElement('li');
+            actionsLi.className = 'formspec-file-list-actions';
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'formspec-file-list-clear';
+            clearBtn.textContent = 'Clear all';
+            clearBtn.addEventListener('click', () => behavior.clearFiles());
+            actionsLi.appendChild(clearBtn);
+            fileListEl.appendChild(actionsLi);
+        }
+    };
+
     if (behavior.dragDrop) {
         const dropZone = document.createElement('div');
-        dropZone.className = 'formspec-drop-zone';
-        dropZone.textContent = 'Drop files here or click to browse';
+        dropZone.className = 'formspec-file-drop-zone';
+
+        const content = document.createElement('div');
+        content.className = 'formspec-file-drop-content';
+
+        const icon = document.createElement('span');
+        icon.className = 'formspec-file-drop-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '\u21D5';
+
+        const label = document.createElement('span');
+        label.className = 'formspec-file-drop-label';
+        label.textContent = behavior.multiple ? 'Drag & drop files here' : 'Drag & drop a file here';
+
+        content.appendChild(icon);
+        content.appendChild(label);
+        content.appendChild(browseBtn);
+        dropZone.appendChild(content);
 
         dropZone.setAttribute('tabindex', '0');
         dropZone.setAttribute('role', 'button');
@@ -34,14 +107,14 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
 
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropZone.classList.add('formspec-drop-zone--active');
+            dropZone.classList.add('formspec-file-drop-zone--active');
         });
         dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('formspec-drop-zone--active');
+            dropZone.classList.remove('formspec-file-drop-zone--active');
         });
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropZone.classList.remove('formspec-drop-zone--active');
+            dropZone.classList.remove('formspec-file-drop-zone--active');
             const files = Array.from(e.dataTransfer?.files || []);
             const fileData = files.map(f => ({ name: f.name, size: f.size, type: f.type }));
             fieldDOM.root.dispatchEvent(new CustomEvent('formspec-files-dropped', {
@@ -49,24 +122,35 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
                 bubbles: false,
             }));
         });
-        dropZone.addEventListener('click', () => input.click());
 
-        input.hidden = true;
         fieldDOM.root.appendChild(dropZone);
         fieldDOM.root.appendChild(input);
     } else {
         fieldDOM.root.appendChild(input);
+        fieldDOM.root.appendChild(browseBtn);
     }
+
+    fieldDOM.root.appendChild(fileListEl);
 
     finalizeFieldDOM(fieldDOM, behavior, actx);
     parent.appendChild(fieldDOM.root);
 
-    const dispose = behavior.bind({
+    const refs: any = {
         root: fieldDOM.root,
         label: fieldDOM.label,
         control: input,
         hint: fieldDOM.hint,
         error: fieldDOM.error,
-    });
+        _rebuildFileList: rebuildFileList,
+    };
+    const dispose = behavior.bind(refs);
     actx.onDispose(dispose);
 };
+
+function formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const val = bytes / Math.pow(1024, i);
+    return `${val < 10 ? val.toFixed(1) : Math.round(val)} ${units[i]}`;
+}
