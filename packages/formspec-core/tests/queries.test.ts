@@ -991,12 +991,12 @@ describe('parseFEL', () => {
 
   it('emits FEL_UNKNOWN_FUNCTION warning for unrecognized function names', () => {
     const project = createRawProject();
-    const result = project.parseFEL("sumWhere($x, $y, 'z')");
+    const result = project.parseFEL('totallyFake($x)');
     expect(result.valid).toBe(true); // warnings don't invalidate
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0].code).toBe('FEL_UNKNOWN_FUNCTION');
     expect(result.warnings[0].severity).toBe('warning');
-    expect(result.warnings[0].message).toContain('sumWhere');
+    expect(result.warnings[0].message).toContain('totallyFake');
   });
 
   it('does not warn for extension-registered functions', () => {
