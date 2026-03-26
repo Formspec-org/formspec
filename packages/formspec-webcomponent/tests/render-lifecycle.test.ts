@@ -322,9 +322,10 @@ describe('render lifecycle', () => {
                     ],
                 },
             ],
+            formPresentation: { pageMode: 'wizard' },
         };
         el.componentDocument = minimalComponentDoc({
-            component: 'Wizard',
+            component: 'Stack',
             children: [
                 {
                     component: 'Page',

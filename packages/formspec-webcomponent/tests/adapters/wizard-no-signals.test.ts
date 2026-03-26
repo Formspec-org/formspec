@@ -17,13 +17,24 @@ beforeAll(async () => {
 function renderWizard(tree: any) {
     const el = document.createElement('formspec-render') as any;
     document.body.appendChild(el);
-    el.componentDocument = minimalComponentDoc(tree);
+    // Convert Wizard tree to Stack + Pages + pageMode: 'wizard'
+    const children = tree.children || [];
+    el.componentDocument = minimalComponentDoc({
+        component: 'Stack',
+        children: children.map((c: any) => c.component === 'Page' ? c : { component: 'Page', children: [c] }),
+    });
     el.definition = {
         $formspec: '1.0',
         url: 'urn:test:form',
         version: '1.0.0',
         title: 'Test',
         items: [],
+        formPresentation: {
+            pageMode: 'wizard',
+            ...(tree.sidenav !== undefined ? { sidenav: tree.sidenav } : {}),
+            ...(tree.showProgress !== undefined ? { showProgress: tree.showProgress } : {}),
+            ...(tree.allowSkip !== undefined ? { allowSkip: tree.allowSkip } : {}),
+        },
     };
     el.render();
     return el;

@@ -26,20 +26,43 @@ function renderWithTree(tree: any) {
     return el;
 }
 
-describe('Wizard plugin', () => {
+describe('pageMode wizard (Stack + Pages + formPresentation)', () => {
     afterEach(() => {
         document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
     });
 
-    it('first panel visible, others hidden', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-                { component: 'Text', text: 'Step 3' },
-            ],
+    function renderPageModeWizard(pages: any[], opts?: { showProgress?: boolean; allowSkip?: boolean }) {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.componentDocument = minimalComponentDoc({
+            component: 'Stack',
+            children: pages.map(p => ({
+                component: 'Page',
+                ...p,
+            })),
         });
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:form',
+            version: '1.0.0',
+            title: 'Test',
+            items: [],
+            formPresentation: {
+                pageMode: 'wizard',
+                ...(opts?.showProgress !== undefined ? { showProgress: opts.showProgress } : {}),
+                ...(opts?.allowSkip !== undefined ? { allowSkip: opts.allowSkip } : {}),
+            },
+        };
+        el.render();
+        return el;
+    }
+
+    it('first panel visible, others hidden', () => {
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+            { title: 'Step 3', children: [{ component: 'Text', text: 'Step 3' }] },
+        ]);
         const panels = el.querySelectorAll('.formspec-wizard-panel');
         expect(panels.length).toBe(3);
         expect(panels[0].classList.contains('formspec-hidden')).toBe(false);
@@ -48,13 +71,10 @@ describe('Wizard plugin', () => {
     });
 
     it('Next advances to next panel', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+        ]);
         const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
         nextBtn.click();
         const panels = el.querySelectorAll('.formspec-wizard-panel');
@@ -63,13 +83,10 @@ describe('Wizard plugin', () => {
     });
 
     it('Previous goes back', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+        ]);
         const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
         const prevBtn = el.querySelector('.formspec-wizard-prev') as HTMLButtonElement;
         nextBtn.click();
@@ -80,25 +97,19 @@ describe('Wizard plugin', () => {
     });
 
     it('Previous hidden at step 0', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+        ]);
         const prevBtn = el.querySelector('.formspec-wizard-prev') as HTMLButtonElement;
         expect(prevBtn.classList.contains('formspec-hidden')).toBe(true);
     });
 
     it('keeps the last-step submit button enabled', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+        ]);
         const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
         nextBtn.click(); // go to last step
         expect(nextBtn.disabled).toBe(false);
@@ -106,13 +117,10 @@ describe('Wizard plugin', () => {
     });
 
     it('dispatches formspec-submit when clicking submit on the last step', async () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+        ]);
         const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
         nextBtn.click(); // go to last step
 
@@ -128,14 +136,11 @@ describe('Wizard plugin', () => {
     });
 
     it('progress indicator marks active/completed steps', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-                { component: 'Text', text: 'Step 3' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+            { title: 'Step 3', children: [{ component: 'Text', text: 'Step 3' }] },
+        ]);
         const nextBtn = el.querySelector('.formspec-wizard-next') as HTMLButtonElement;
         nextBtn.click(); // go to step 2
 
@@ -147,37 +152,27 @@ describe('Wizard plugin', () => {
     });
 
     it('skip button present when allowSkip = true', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            allowSkip: true,
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+        ], { allowSkip: true });
         expect(el.querySelector('.formspec-wizard-skip')).not.toBeNull();
     });
 
     it('skip button absent when allowSkip not set', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+        ]);
         expect(el.querySelector('.formspec-wizard-skip')).toBeNull();
     });
 
     it('responds to formspec-wizard-set-step control event', () => {
-        const el = renderWithTree({
-            component: 'Wizard',
-            children: [
-                { component: 'Text', text: 'Step 1' },
-                { component: 'Text', text: 'Step 2' },
-                { component: 'Text', text: 'Step 3' },
-            ],
-        });
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+            { title: 'Step 3', children: [{ component: 'Text', text: 'Step 3' }] },
+        ]);
         const wizard = el.querySelector('.formspec-wizard') as HTMLElement;
         wizard.dispatchEvent(new CustomEvent('formspec-wizard-set-step', {
             detail: { index: 2 },
@@ -191,14 +186,16 @@ describe('Wizard plugin', () => {
     });
 
     it('Next click touches fields in current panel, showing inline errors', () => {
-        // Required field on page 1, no field on page 2
         const el = document.createElement('formspec-render') as any;
         document.body.appendChild(el);
-        el.definition = multiFieldDef([
-            { key: 'name', label: 'Name', dataType: 'string', required: true },
-        ]);
+        el.definition = {
+            ...multiFieldDef([
+                { key: 'name', label: 'Name', dataType: 'string', required: true },
+            ]),
+            formPresentation: { pageMode: 'wizard' },
+        };
         el.componentDocument = minimalComponentDoc({
-            component: 'Wizard',
+            component: 'Stack',
             children: [
                 {
                     component: 'Page',
@@ -234,12 +231,15 @@ describe('Wizard plugin', () => {
     it('Next click shows errors but still advances (soft validation)', () => {
         const el = document.createElement('formspec-render') as any;
         document.body.appendChild(el);
-        el.definition = multiFieldDef([
-            { key: 'step1field', label: 'Step 1 Field', dataType: 'string', required: true },
-            { key: 'step2field', label: 'Step 2 Field', dataType: 'string', required: true },
-        ]);
+        el.definition = {
+            ...multiFieldDef([
+                { key: 'step1field', label: 'Step 1 Field', dataType: 'string', required: true },
+                { key: 'step2field', label: 'Step 2 Field', dataType: 'string', required: true },
+            ]),
+            formPresentation: { pageMode: 'wizard' },
+        };
         el.componentDocument = minimalComponentDoc({
-            component: 'Wizard',
+            component: 'Stack',
             children: [
                 {
                     component: 'Page',
@@ -267,11 +267,14 @@ describe('Wizard plugin', () => {
     it('navigating back to a touched page still shows errors', () => {
         const el = document.createElement('formspec-render') as any;
         document.body.appendChild(el);
-        el.definition = multiFieldDef([
-            { key: 'name', label: 'Name', dataType: 'string', required: true },
-        ]);
+        el.definition = {
+            ...multiFieldDef([
+                { key: 'name', label: 'Name', dataType: 'string', required: true },
+            ]),
+            formPresentation: { pageMode: 'wizard' },
+        };
         el.componentDocument = minimalComponentDoc({
-            component: 'Wizard',
+            component: 'Stack',
             children: [
                 {
                     component: 'Page',
@@ -304,11 +307,14 @@ describe('Wizard plugin', () => {
     it('no errors shown on Next when all required fields are filled', () => {
         const el = document.createElement('formspec-render') as any;
         document.body.appendChild(el);
-        el.definition = multiFieldDef([
-            { key: 'name', label: 'Name', dataType: 'string', required: true },
-        ]);
+        el.definition = {
+            ...multiFieldDef([
+                { key: 'name', label: 'Name', dataType: 'string', required: true },
+            ]),
+            formPresentation: { pageMode: 'wizard' },
+        };
         el.componentDocument = minimalComponentDoc({
-            component: 'Wizard',
+            component: 'Stack',
             children: [
                 {
                     component: 'Page',
@@ -331,6 +337,48 @@ describe('Wizard plugin', () => {
         const errorDiv = el.querySelector('.formspec-error') as HTMLElement;
         // Field is touched but has no error since it's filled
         expect(errorDiv.textContent).toBe('');
+    });
+
+    it('goToWizardStep works with pageMode wizard', () => {
+        const el = renderPageModeWizard([
+            { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
+            { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
+            { title: 'Step 3', children: [{ component: 'Text', text: 'Step 3' }] },
+        ]);
+
+        const success = el.goToWizardStep(2);
+        expect(success).toBe(true);
+
+        const panels = el.querySelectorAll('.formspec-wizard-panel');
+        expect(panels[0].classList.contains('formspec-hidden')).toBe(true);
+        expect(panels[1].classList.contains('formspec-hidden')).toBe(true);
+        expect(panels[2].classList.contains('formspec-hidden')).toBe(false);
+    });
+
+    it('definition-fallback (no component doc) with pageMode wizard', () => {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:form',
+            version: '1.0.0',
+            title: 'Test',
+            items: [
+                { key: 'info', type: 'group', label: 'Info', children: [
+                    { key: 'name', type: 'field', label: 'Name', dataType: 'string' },
+                ]},
+                { key: 'review', type: 'group', label: 'Review', children: [
+                    { key: 'notes', type: 'field', label: 'Notes', dataType: 'string' },
+                ]},
+            ],
+            formPresentation: { pageMode: 'wizard' },
+        };
+        el.render();
+
+        const panels = el.querySelectorAll('.formspec-wizard-panel');
+        expect(panels.length).toBe(2);
+        expect(panels[0].classList.contains('formspec-hidden')).toBe(false);
+        expect(panels[1].classList.contains('formspec-hidden')).toBe(true);
     });
 });
 
