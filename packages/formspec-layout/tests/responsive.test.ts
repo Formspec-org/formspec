@@ -156,6 +156,47 @@ describe('resolveResponsiveProps — mobile-first cumulative cascade', () => {
     });
 });
 
+// ── String (media-query) breakpoints — fall back to single-breakpoint ─
+
+describe('resolveResponsiveProps — string media query breakpoints', () => {
+    it('falls back to single-breakpoint merge when breakpoints are strings (desktop: no override → base)', () => {
+        const breakpoints = {
+            mobile: '(max-width: 600px)',
+            tablet: '(max-width: 900px)',
+            desktop: '(min-width: 901px)',
+        };
+        const comp = {
+            component: 'Grid',
+            columns: 4,
+            responsive: {
+                mobile: { columns: 1 },
+                tablet: { columns: 2 },
+            },
+        };
+        // desktop has no responsive override → must return base columns=4, not cascade into mobile/tablet
+        const result = resolveResponsiveProps(comp, 'desktop', breakpoints as any);
+        expect(result.columns).toBe(4);
+    });
+
+    it('applies single-breakpoint override at tablet with string breakpoints', () => {
+        const breakpoints = {
+            mobile: '(max-width: 600px)',
+            tablet: '(max-width: 900px)',
+            desktop: '(min-width: 901px)',
+        };
+        const comp = {
+            component: 'Grid',
+            columns: 4,
+            responsive: {
+                mobile: { columns: 1 },
+                tablet: { columns: 2 },
+            },
+        };
+        const result = resolveResponsiveProps(comp, 'tablet', breakpoints as any);
+        expect(result.columns).toBe(2);
+    });
+});
+
 // ── planner integration: cumulative cascade via ctx.componentDocument ─
 
 describe('resolveResponsiveProps — integration with planner context', () => {

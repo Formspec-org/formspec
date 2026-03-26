@@ -1,6 +1,6 @@
 /** @filedesc Demo app showcasing formspec-react with zero component overrides. */
 import React, { useState } from 'react';
-import { FormspecForm, ValidationSummary } from 'formspec-react';
+import { FormspecForm } from 'formspec-react';
 import type { SubmitResult } from 'formspec-react';
 import definition from './definition.json';
 import registry from '../../../registries/formspec-common.registry.json';
@@ -54,7 +54,31 @@ export function App() {
                             </span>
                         </div>
 
-                        {results.length > 0 && <ValidationSummary results={results} />}
+                        {errorCount > 0 && (
+                            <div className="validation-errors">
+                                <h3>Validation Errors</h3>
+                                <ul>
+                                    {results
+                                        .filter((r: any) => r.severity === 'error')
+                                        .map((r: any, i: number) => (
+                                            <li key={i}>{r.path}: {r.message}</li>
+                                        ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {warningCount > 0 && (
+                            <div className="validation-warnings">
+                                <h3>Warnings</h3>
+                                <ul>
+                                    {results
+                                        .filter((r: any) => r.severity === 'warning')
+                                        .map((r: any, i: number) => (
+                                            <li key={i}>{r.path}: {r.message}</li>
+                                        ))}
+                                </ul>
+                            </div>
+                        )}
 
                         <details className="response-details">
                             <summary>Response JSON</summary>

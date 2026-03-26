@@ -399,7 +399,7 @@
     { "path": "project.endDate", "required": "true" },
     { "path": "project.beneficiaries", "required": "true", "constraint": "$project.beneficiaries > 0", "constraintMessage": "Must serve at least one beneficiary." },
     { "path": "project.priorGrantId", "relevant": "$project.isRenewal = true" },
-    { "path": "budget.requestedAmount", "required": "true", "constraint": "$budget.requestedAmount > 0 and $budget.requestedAmount <= 100000", "constraintMessage": "Requested amount must be between $1 and $100,000." },
+    { "path": "budget.requestedAmount", "required": "true", "constraint": "moneyAmount($budget.requestedAmount) > 0 and moneyAmount($budget.requestedAmount) <= 100000", "constraintMessage": "Requested amount must be between $1 and $100,000." },
     { "path": "budget.totalProjectCost", "required": "true", "constraint": "moneyAmount($budget.totalProjectCost) >= moneyAmount($budget.requestedAmount)", "constraintMessage": "Total project cost must be at least the requested amount." },
     { "path": "certification.certifyAccurate", "required": "true", "constraint": "$certification.certifyAccurate = true", "constraintMessage": "You must certify that the information is accurate." },
     { "path": "certification.certifyAuthorized", "required": "true", "constraint": "$certification.certifyAuthorized = true", "constraintMessage": "You must confirm authorization." },

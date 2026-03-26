@@ -17,22 +17,33 @@
 export function resolveResponsiveProps(
     comp: any,
     activeBreakpoint: string | null,
-    breakpoints?: Record<string, number> | null,
+    breakpoints?: Record<string, number | string> | null,
 ): any {
     if (!comp.responsive || !activeBreakpoint) return comp;
 
-    if (!breakpoints) {
-        // Fallback: single-breakpoint merge (backwards compatible)
+    // Collect only numeric breakpoints — raw media-query strings are not cascadeable
+    const numericBreakpoints: Record<string, number> | null = breakpoints
+        ? (() => {
+            const entries = Object.entries(breakpoints).filter(
+                (e): e is [string, number] => typeof e[1] === 'number',
+            );
+            return entries.length > 0 ? Object.fromEntries(entries) : null;
+        })()
+        : null;
+
+    if (!numericBreakpoints) {
+        // No numeric breakpoints — fall back to single-breakpoint merge.
+        // Handles both the no-breakpoints-map case and raw media-query strings.
         const overrides = comp.responsive[activeBreakpoint];
         if (!overrides) return comp;
         return { ...comp, ...overrides };
     }
 
     // Mobile-first cascade: merge all breakpoints up to and including active
-    const activeWidth = breakpoints[activeBreakpoint];
+    const activeWidth = numericBreakpoints[activeBreakpoint];
     if (activeWidth == null) return comp;
 
-    const sortedNames = Object.entries(breakpoints)
+    const sortedNames = Object.entries(numericBreakpoints)
         .filter(([name]) => comp.responsive[name])
         .sort(([, a], [, b]) => a - b)
         .filter(([, width]) => width <= activeWidth)

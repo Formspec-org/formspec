@@ -8,13 +8,13 @@ const REACT_DEMO_URL = 'http://127.0.0.1:5200';
 /** Navigate to the react-demo app and wait for the form to render. */
 async function gotoReactDemo(page: import('@playwright/test').Page): Promise<void> {
   await page.goto(REACT_DEMO_URL);
-  // Wait for the main heading — proves React has mounted and rendered the form
-  await page.getByRole('heading', { name: 'Community Impact Grant Application' }).waitFor({ timeout: 5000 });
+  // Wait for the app heading — proves React has mounted and the page chrome rendered
+  await page.getByRole('heading', { name: 'Generic Form' }).waitFor({ timeout: 5000 });
 }
 
-/** Click the Submit Application button. */
+/** Click the Submit button. */
 async function clickSubmit(page: import('@playwright/test').Page): Promise<void> {
-  await page.getByRole('button', { name: 'Submit Application' }).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
 }
 
 /** Fill a text/number input by its field path (data-name attribute). */
@@ -88,11 +88,10 @@ async function checkOption(
   await page.locator(`[data-name="${path}"] input[type="checkbox"][value="${value}"]`).check();
 }
 
-/** Get the validation status text shown next to the Submit button. */
+/** Get the validation status text from the submit-panel that appears after submission. */
 async function getStatusText(page: import('@playwright/test').Page): Promise<string> {
-  const submitBtn = page.getByRole('button', { name: 'Submit Application' });
-  // Status text is a <span> sibling of the button inside the flex container
-  const statusSpan = submitBtn.locator('..').locator('span');
+  // Status span lives in .submit-panel .submit-row, only rendered after submission
+  const statusSpan = page.locator('.submit-panel .submit-row span').first();
   return statusSpan.textContent({ timeout: 2000 }).then(t => t?.trim() ?? '');
 }
 
@@ -126,9 +125,9 @@ test.describe('React Demo: Form Rendering', () => {
     await expect(page.locator('[data-name="certification.certifyAccurate"] input')).toBeVisible({ timeout: 2000 });
   });
 
-  test('renders the Submit Application button', async ({ page }) => {
+  test('renders the Submit button', async ({ page }) => {
     await gotoReactDemo(page);
-    await expect(page.getByRole('button', { name: 'Submit Application' })).toBeVisible({ timeout: 2000 });
+    await expect(page.getByRole('button', { name: 'Submit' })).toBeVisible({ timeout: 2000 });
   });
 });
 

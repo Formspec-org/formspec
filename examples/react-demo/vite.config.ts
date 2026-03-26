@@ -25,6 +25,7 @@ export default defineConfig({
     },
     server: {
         port: 5200,
+        host: '127.0.0.1',
         allowedHosts: true,
         fs: { allow: [repoRoot] },
     },
