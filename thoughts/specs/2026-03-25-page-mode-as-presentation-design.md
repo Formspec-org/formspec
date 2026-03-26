@@ -4,6 +4,7 @@
 **Status:** Draft
 **Supersedes:** ADR-0052 (proposed, not accepted)
 **Relates to:** ADR-0039 (Seamless Page Management), Unified Authoring Architecture (2026-03-24)
+**Prior art:** `thoughts/studio/2026-03-17-pages-tab-redesign.md` (validated "mode is a rendering toggle" principle, UX patterns for accordion page cards, inline title editing, region grids, `buildLabelMap` utility, bootstrap auto-sync). `thoughts/studio/2026-03-17-nested-wizard-fix.md` (planner `applyThemePages` guard — preserve during Phase 5). `thoughts/reviews/2026-03-24-planner-spec-divergences.md` (known TS planner divergences — avoid introducing new ones).
 
 ---
 
