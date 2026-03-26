@@ -34,7 +34,7 @@ function FormContent() {
     const warningCount = results.filter((r: any) => r.severity === 'warning').length;
 
     return (
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit} noValidate aria-labelledby="app-form-title">
             <FormspecNode node={layoutPlan} />
 
             <div className="submit-panel">
@@ -76,7 +76,7 @@ export function App() {
                     <span aria-hidden="true" className="app-badge app-badge--primary">Formspec</span>
                     <span aria-hidden="true" className="app-badge app-badge--outline">React</span>
                 </div>
-                <h1 className="app-title">Community Impact Grant Application</h1>
+                <h1 id="app-form-title" className="app-title">Community Impact Grant Application</h1>
                 <p className="app-subtitle">
                     Apply for up to $100,000 to fund community-focused projects in education,
                     health, environment, or arts. All fields marked <span className="formspec-required" aria-hidden="true">*</span> are required.
@@ -88,6 +88,10 @@ export function App() {
                     <FormContent />
                 </FormspecProvider>
             </main>
+
+            <footer className="app-footer">
+                <p>Powered by Formspec</p>
+            </footer>
         </div>
     );
 }

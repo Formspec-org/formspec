@@ -11,6 +11,12 @@ export interface FormspecFormProps extends Omit<FormspecProviderProps, 'children
     className?: string;
 }
 
+/** Returns true if any node in the tree has component === 'Wizard'. */
+export function planContainsWizard(node: LayoutNode): boolean {
+    if (node.component === 'Wizard') return true;
+    return node.children.some(planContainsWizard);
+}
+
 /**
  * Drop-in auto-renderer: takes a definition and renders the full form.
  *
@@ -39,10 +45,14 @@ function FormspecFormInner({ className }: { className?: string }) {
         return <div className={className}>No layout plan available.</div>;
     }
 
+    // Skip the outer submit button when the layout plan already contains a Wizard —
+    // the Wizard renders its own submit button and owns the submission flow.
+    const wizardOwnsSubmit = planContainsWizard(layoutPlan);
+
     return (
         <div className={className}>
             <FormspecNode node={layoutPlan} />
-            {onSubmit && (
+            {onSubmit && !wizardOwnsSubmit && (
                 <button
                     type="submit"
                     className="formspec-submit"

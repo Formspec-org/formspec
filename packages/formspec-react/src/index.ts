@@ -19,7 +19,7 @@ export { useExternalValidation } from './use-external-validation';
 export type { UseExternalValidationResult, ExternalValidationEntry } from './use-external-validation';
 
 // ── Component map types ──
-export type { FieldComponentProps, LayoutComponentProps, ComponentMap } from './component-map';
+export type { FieldComponentProps, LayoutComponentProps, DisplayComponentProps, ComponentMap } from './component-map';
 
 // ── Auto-renderer ──
 export { FormspecForm } from './renderer';
@@ -29,5 +29,7 @@ export { FormspecNode } from './node-renderer';
 // ── Default components (for composition / override bases) ──
 export { DefaultField } from './defaults/fields/default-field';
 export { DefaultLayout } from './defaults/layout/default-layout';
+export { Wizard } from './defaults/layout/wizard';
+export { Tabs } from './defaults/layout/tabs';
 export { ValidationSummary } from './validation-summary';
 export type { ValidationSummaryProps } from './validation-summary';

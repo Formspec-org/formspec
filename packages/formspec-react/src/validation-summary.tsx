@@ -1,11 +1,20 @@
 /** @filedesc ValidationSummary — displays validation results with jump-to-field links. */
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { useFormspecContext } from './context';
+import { useSignal } from './use-signal';
 
 export interface ValidationSummaryProps {
-    /** Validation results from engine.getValidationReport(). */
-    results: Array<{ path: string; message: string; severity: string }>;
-    /** Whether to auto-focus the summary when results appear. */
+    /** Validation results for 'submit' source mode (from engine.getValidationReport()). */
+    results?: Array<{ path: string; message: string; severity: string }>;
+    /**
+     * 'live' — subscribe to engine validation signals and re-render on every change.
+     * 'submit' — show results from the `results` prop only (existing behavior).
+     * Default: 'submit'.
+     */
+    source?: 'live' | 'submit';
+    /** Which severities to render. Default: ['error', 'warning']. */
+    severityFilter?: string[];
+    /** Whether to auto-focus the summary when results appear. Default: true. */
     autoFocus?: boolean;
     /** Optional className override for the container. */
     className?: string;
@@ -19,99 +28,160 @@ interface ResolvedResult {
     fieldId: string;
 }
 
+function resolveResults(
+    raw: Array<{ path: string; message: string; severity: string }>,
+    engine: ReturnType<typeof useFormspecContext>['engine'],
+): ResolvedResult[] {
+    return raw.map(r => {
+        try {
+            const vm = engine.getFieldVM(r.path);
+            return { ...r, label: vm?.label.value || r.path, fieldId: vm?.id || '' };
+        } catch {
+            return { ...r, label: r.path, fieldId: '' };
+        }
+    });
+}
+
+function deduplicateResults(results: ResolvedResult[]): ResolvedResult[] {
+    const seen = new Set<string>();
+    return results.filter(r => {
+        const key = `${r.severity}|${r.path}|${r.message}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
 /**
  * Renders a validation error/warning summary with clickable jump links.
  * Resolves field paths to human-readable labels and field element IDs
  * via the FormEngine's FieldViewModels.
+ *
+ * When source='live', subscribes to engine.structureVersion so the summary
+ * re-renders on any form state change without requiring a submit.
  */
-export function ValidationSummary({ results, autoFocus = true, className }: ValidationSummaryProps) {
+export function ValidationSummary({
+    results: resultsProp = [],
+    source = 'submit',
+    severityFilter = ['error', 'warning'],
+    autoFocus = true,
+    className,
+}: ValidationSummaryProps) {
     const { engine } = useFormspecContext();
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const errors = results.filter(r => r.severity === 'error');
-    const warnings = results.filter(r => r.severity === 'warning');
+    // Subscribe to structureVersion in live mode — reading the signal here
+    // causes React to re-render whenever form state changes.
+    const structureVersion = useSignal(engine.structureVersion);
 
-    // Resolve paths to labels + IDs
-    const resolve = useCallback((items: typeof results): ResolvedResult[] => {
-        return items.map(r => {
-            try {
-                const vm = engine.getFieldVM(r.path);
-                return { ...r, label: vm?.label.value || r.path, fieldId: vm?.id || '' };
-            } catch {
-                return { ...r, label: r.path, fieldId: '' };
-            }
-        });
-    }, [engine]);
+    const rawResults = useMemo(() => {
+        if (source === 'live') {
+            // structureVersion consumed above ensures this memo re-runs on changes
+            void structureVersion;
+            return engine.getValidationReport({ mode: 'continuous' }).results as Array<{
+                path: string;
+                message: string;
+                severity: string;
+            }>;
+        }
+        return resultsProp;
+    }, [source, structureVersion, resultsProp, engine]);
 
-    const resolvedErrors = resolve(errors);
-    const resolvedWarnings = resolve(warnings);
+    const filtered = useMemo(
+        () => rawResults.filter(r => severityFilter.includes(r.severity)),
+        [rawResults, severityFilter],
+    );
 
-    // Auto-focus on mount when errors exist
+    const deduped = useMemo(() => deduplicateResults(resolveResults(filtered, engine)), [filtered, engine]);
+
+    const errors = useMemo(() => deduped.filter(r => r.severity === 'error'), [deduped]);
+    const warnings = useMemo(() => deduped.filter(r => r.severity === 'warning'), [deduped]);
+    const hasErrors = errors.length > 0;
+    const hasWarnings = warnings.length > 0;
+
+    // Auto-focus the summary container when errors appear
     useEffect(() => {
-        if (autoFocus && errors.length > 0 && containerRef.current) {
+        if (autoFocus && hasErrors && containerRef.current) {
             containerRef.current.focus();
         }
-    }, [autoFocus, errors.length]);
+    }, [autoFocus, hasErrors]);
 
     const handleJump = useCallback((e: React.MouseEvent, fieldId: string) => {
         e.preventDefault();
         const el = document.getElementById(fieldId);
-        if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.focus({ preventScroll: true });
+        if (!el) return;
+
+        // Expand any collapsed <details> ancestors so the field is visible
+        let ancestor: HTMLElement | null = el.parentElement;
+        while (ancestor) {
+            if (ancestor.tagName === 'DETAILS' && !(ancestor as HTMLDetailsElement).open) {
+                (ancestor as HTMLDetailsElement).open = true;
+            }
+            ancestor = ancestor.parentElement;
         }
+
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Focus the first focusable input inside the field container, or the element itself
+        const focusTarget = el.querySelector<HTMLElement>('input, select, textarea, button') ?? el;
+        focusTarget.focus({ preventScroll: true });
     }, []);
 
-    if (errors.length === 0 && warnings.length === 0) return null;
+    if (!hasErrors && !hasWarnings) return null;
+
+    // role="alert" when errors are present (assertive), role="status" for warnings-only (polite)
+    const containerRole = hasErrors ? 'alert' : 'status';
+
+    const renderList = (items: ResolvedResult[], modifier: string) => (
+        <ul className="formspec-validation-summary__list">
+            {items.map((r, i) => (
+                <li
+                    key={i}
+                    className={`formspec-validation-summary__item formspec-validation-summary__item--${modifier}`}
+                >
+                    {r.fieldId ? (
+                        <a
+                            href={`#${r.fieldId}`}
+                            className="formspec-validation-summary__link"
+                            onClick={(e) => handleJump(e, r.fieldId)}
+                        >
+                            {r.label}
+                        </a>
+                    ) : (
+                        <span>{r.label}</span>
+                    )}
+                    {': '}{r.message}
+                </li>
+            ))}
+        </ul>
+    );
 
     return (
-        <div className={className || 'formspec-validation-summary'}>
-            {resolvedErrors.length > 0 && (
-                <div ref={containerRef} tabIndex={-1} role="alert"
-                     className="formspec-validation-summary__errors">
+        <div
+            ref={containerRef}
+            tabIndex={-1}
+            role={containerRole}
+            className={className || 'formspec-validation-summary'}
+        >
+            {hasErrors && (
+                <div className="formspec-validation-summary__errors">
                     <h3 className="formspec-validation-summary__heading">
-                        {resolvedErrors.length === 1
-                            ? 'Please fix this error before continuing:'
-                            : `Please fix these ${resolvedErrors.length} errors before continuing:`}
+                        {errors.length === 1
+                            ? '1 error found'
+                            : `${errors.length} errors found`}
                     </h3>
-                    <ul className="formspec-validation-summary__list">
-                        {resolvedErrors.map((r, i) => (
-                            <li key={i} className="formspec-validation-summary__item formspec-validation-summary__item--error">
-                                {r.fieldId ? (
-                                    <a href={`#${r.fieldId}`}
-                                       className="formspec-validation-summary__link"
-                                       onClick={(e) => handleJump(e, r.fieldId)}>
-                                        {r.label}
-                                    </a>
-                                ) : (
-                                    <span>{r.label}</span>
-                                )}
-                                : {r.message}
-                            </li>
-                        ))}
-                    </ul>
+                    {renderList(errors, 'error')}
                 </div>
             )}
 
-            {resolvedWarnings.length > 0 && (
+            {hasWarnings && (
                 <div className="formspec-validation-summary__warnings">
-                    <h3 className="formspec-validation-summary__heading">Warnings</h3>
-                    <ul className="formspec-validation-summary__list">
-                        {resolvedWarnings.map((r, i) => (
-                            <li key={i} className="formspec-validation-summary__item formspec-validation-summary__item--warning">
-                                {r.fieldId ? (
-                                    <a href={`#${r.fieldId}`}
-                                       className="formspec-validation-summary__link"
-                                       onClick={(e) => handleJump(e, r.fieldId)}>
-                                        {r.label}
-                                    </a>
-                                ) : (
-                                    <span>{r.label}</span>
-                                )}
-                                : {r.message}
-                            </li>
-                        ))}
-                    </ul>
+                    <h3 className="formspec-validation-summary__heading">
+                        {warnings.length === 1
+                            ? '1 warning found'
+                            : `${warnings.length} warnings found`}
+                    </h3>
+                    {renderList(warnings, 'warning')}
                 </div>
             )}
         </div>

@@ -19,10 +19,20 @@ export interface LayoutComponentProps {
     children: React.ReactNode;
 }
 
+/** Props passed to display components by the renderer (Heading, Text, Alert, Divider, etc.). */
+export interface DisplayComponentProps {
+    /** The LayoutNode for this display element. */
+    node: LayoutNode;
+    /** Resolved text content from props.text or fieldItem.label. */
+    text?: string;
+}
+
 /** User-provided component overrides. */
 export interface ComponentMap {
     /** Field component overrides (TextInput, Select, RadioGroup, etc.). */
     fields?: Partial<Record<string, React.ComponentType<FieldComponentProps>>>;
     /** Layout component overrides (Stack, Card, Grid, Columns, etc.). */
     layout?: Partial<Record<string, React.ComponentType<LayoutComponentProps>>>;
+    /** Display component overrides (Heading, Text, Alert, Divider, etc.). */
+    display?: Partial<Record<string, React.ComponentType<DisplayComponentProps>>>;
 }
