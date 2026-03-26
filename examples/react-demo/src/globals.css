@@ -53,9 +53,10 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: none;
+  outline: 2px solid var(--color-ring);
+  outline-offset: 1px;
   border-color: var(--color-ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring) 25%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring) 40%, transparent);
 }
 
 input[type="checkbox"] {
@@ -174,10 +175,9 @@ label[for] {
 
 /* Respect reduced-motion preference (WCAG 2.3.3) */
 @media (prefers-reduced-motion: reduce) {
-  input, select, textarea,
-  input[type="checkbox"],
-  input[type="radio"] {
-    transition: none;
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
 
