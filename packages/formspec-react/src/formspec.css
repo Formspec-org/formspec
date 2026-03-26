@@ -360,6 +360,83 @@ h2.formspec-heading {
   cursor: default;
 }
 
+/* ── Validation summary ───────────────────────────────────────── */
+.formspec-validation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formspec-validation-summary__errors {
+  padding: 1rem;
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+  border: 1px solid color-mix(in srgb, var(--formspec-color-error, #d93025) 30%, transparent);
+  background: color-mix(in srgb, var(--formspec-color-error, #d93025) 5%, white);
+}
+
+.formspec-validation-summary__errors:focus {
+  outline: none;
+}
+
+.formspec-validation-summary__errors:focus-visible {
+  outline: 2px solid var(--formspec-color-ring, #2d6a7a);
+}
+
+.formspec-validation-summary__warnings {
+  padding: 1rem;
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+  border: 1px solid color-mix(in srgb, var(--formspec-color-warning, #8a6500) 30%, transparent);
+  background: color-mix(in srgb, var(--formspec-color-warning, #8a6500) 5%, white);
+}
+
+.formspec-validation-summary__heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.formspec-validation-summary__errors .formspec-validation-summary__heading {
+  color: var(--formspec-color-error, #d93025);
+}
+
+.formspec-validation-summary__warnings .formspec-validation-summary__heading {
+  color: var(--formspec-color-warning, #8a6500);
+}
+
+.formspec-validation-summary__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.formspec-validation-summary__item--error {
+  color: var(--formspec-color-error, #d93025);
+}
+
+.formspec-validation-summary__item--warning {
+  color: var(--formspec-color-warning, #8a6500);
+}
+
+.formspec-validation-summary__link {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.formspec-validation-summary__link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.formspec-validation-summary__link:focus-visible {
+  outline: 2px solid var(--formspec-color-ring, #2d6a7a);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
 /* ── Screen reader only ───────────────────────────────────────── */
 .sr-only,
 .formspec-sr-only {

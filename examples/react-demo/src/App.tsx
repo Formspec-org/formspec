@@ -1,6 +1,6 @@
 /** @filedesc Demo app showcasing formspec-react with zero component overrides. */
-import React, { useState, useCallback, useRef } from 'react';
-import { FormspecProvider, FormspecNode, useForm, useFormspecContext } from 'formspec-react';
+import React, { useState, useCallback } from 'react';
+import { FormspecProvider, FormspecNode, useForm, useFormspecContext, ValidationSummary } from 'formspec-react';
 import definition from './definition.json';
 import registry from '../../../registries/formspec-common.registry.json';
 
@@ -10,7 +10,6 @@ function FormContent() {
     const form = useForm();
     const { engine, layoutPlan, touchField } = useFormspecContext();
     const [result, setResult] = useState<any>(null);
-    const errorSummaryRef = useRef<HTMLDivElement>(null);
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
@@ -26,28 +25,13 @@ function FormContent() {
 
         const detail = form.submit({ mode: 'submit' });
         setResult(detail);
-
-        setTimeout(() => {
-            if (!detail.validationReport?.valid && errorSummaryRef.current) {
-                errorSummaryRef.current.focus();
-            }
-        }, 0);
     }, [form, engine, touchField]);
 
     if (!layoutPlan) return <p>No layout plan available.</p>;
 
-    const errors = result?.validationReport?.results?.filter((r: any) => r.severity === 'error') || [];
-    const warnings = result?.validationReport?.results?.filter((r: any) => r.severity === 'warning') || [];
-
-    /** Resolve a dotted path to a human-readable field label via the engine. */
-    const fieldLabel = useCallback((path: string): string => {
-        try {
-            const vm = engine.getFieldVM(path);
-            return vm?.label.value || path;
-        } catch {
-            return path;
-        }
-    }, [engine]);
+    const results = result?.validationReport?.results || [];
+    const errorCount = results.filter((r: any) => r.severity === 'error').length;
+    const warningCount = results.filter((r: any) => r.severity === 'warning').length;
 
     return (
         <form onSubmit={handleSubmit} noValidate>
@@ -60,33 +44,13 @@ function FormContent() {
                     </button>
                     {result && (
                         <span className={`status-text ${result.validationReport?.valid ? 'status-text--valid' : 'status-text--invalid'}`}>
-                            {result.validationReport?.valid ? 'Valid' : `${errors.length} error(s)`}
-                            {warnings.length > 0 && `, ${warnings.length} warning(s)`}
+                            {result.validationReport?.valid ? 'Valid' : `${errorCount} error(s)`}
+                            {warningCount > 0 && `, ${warningCount} warning(s)`}
                         </span>
                     )}
                 </div>
 
-                {errors.length > 0 && (
-                    <div ref={errorSummaryRef} tabIndex={-1} role="alert" className="error-summary">
-                        <h3 className="summary-heading">Validation Errors</h3>
-                        <ul className="summary-list">
-                            {errors.map((e: any, i: number) => (
-                                <li key={i}><strong>{fieldLabel(e.path)}</strong>: {e.message}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-
-                {warnings.length > 0 && (
-                    <div className="warning-summary">
-                        <h3 className="summary-heading">Warnings</h3>
-                        <ul className="summary-list">
-                            {warnings.map((w: any, i: number) => (
-                                <li key={i}><strong>{fieldLabel(w.path)}</strong>: {w.message}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+                {results.length > 0 && <ValidationSummary results={results} />}
 
                 {result && (
                     <details className="response-details">

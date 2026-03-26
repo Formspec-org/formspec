@@ -29,3 +29,5 @@ export { FormspecNode } from './node-renderer';
 // ── Default components (for composition / override bases) ──
 export { DefaultField } from './defaults/fields/default-field';
 export { DefaultLayout } from './defaults/layout/default-layout';
+export { ValidationSummary } from './validation-summary';
+export type { ValidationSummaryProps } from './validation-summary';

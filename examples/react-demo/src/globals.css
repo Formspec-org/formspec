@@ -131,52 +131,6 @@ body {
   outline-offset: 2px;
 }
 
-/* ── Error / warning summaries ────────────────────────────────── */
-.error-summary,
-.warning-summary {
-  padding: 1rem;
-  border-radius: var(--formspec-radius-sm, 0.5rem);
-}
-
-.error-summary {
-  border: 1px solid color-mix(in srgb, var(--formspec-color-error, #d93025) 30%, transparent);
-  background: color-mix(in srgb, var(--formspec-color-error, #d93025) 5%, white);
-}
-
-.error-summary:focus {
-  outline: none;
-}
-
-.error-summary:focus-visible {
-  outline: 2px solid var(--formspec-color-ring, #2d6a7a);
-}
-
-.warning-summary {
-  border: 1px solid color-mix(in srgb, var(--formspec-color-warning, #8a6500) 30%, transparent);
-  background: color-mix(in srgb, var(--formspec-color-warning, #8a6500) 5%, white);
-}
-
-.summary-heading {
-  margin: 0 0 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.error-summary .summary-heading { color: var(--formspec-color-error, #d93025); }
-.warning-summary .summary-heading { color: var(--formspec-color-warning, #8a6500); }
-
-.summary-list {
-  margin: 0;
-  padding-left: 1.25rem;
-  font-size: 0.875rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.error-summary .summary-list { color: var(--formspec-color-error, #d93025); }
-.warning-summary .summary-list { color: var(--formspec-color-warning, #8a6500); }
-
 /* ── Response JSON ────────────────────────────────────────────── */
 .response-details {
   border: 1px solid var(--formspec-color-border, #e0e3e5);
