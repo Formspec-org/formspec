@@ -283,13 +283,17 @@ describe('L7: addPage atomicity', () => {
   it('addPage undoes both tiers in one step', () => {
     const project = createProject();
     project.addPage('Step 1');
-    // Should have created the group item + theme page + wizard mode
+    // Should have created the group item + Page node + wizard mode
     expect(project.definition.items.length).toBeGreaterThan(0);
     expect(project.definition.formPresentation?.pageMode).toBe('wizard');
-    expect((project.theme.pages ?? []).length).toBe(1);
+    const comp = project.effectiveComponent as any;
+    const pageNodes = (comp.tree?.children ?? []).filter((n: any) => n.component === 'Page');
+    expect(pageNodes.length).toBe(1);
     // Single undo reverses everything
     project.undo();
     expect(project.definition.items).toHaveLength(0);
-    expect((project.theme.pages ?? []).length).toBe(0);
+    const compAfter = project.effectiveComponent as any;
+    const pageNodesAfter = (compAfter.tree?.children ?? []).filter((n: any) => n.component === 'Page');
+    expect(pageNodesAfter.length).toBe(0);
   });
 });

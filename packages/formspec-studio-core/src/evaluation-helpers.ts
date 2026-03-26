@@ -280,21 +280,23 @@ export function previewForm(
     cleanState[path] = { severity: entry.severity, message: entry.message };
   }
 
-  // Pages from theme — with per-page validation counts
-  const themePages = bundle.theme?.pages ?? [];
+  // Pages from component tree — with per-page validation counts
+  const comp = project.effectiveComponent as any;
+  const treeRoot = comp?.tree;
+  const pageNodes: any[] = treeRoot?.children?.filter((n: any) => n.component === 'Page') ?? [];
   const visibleFieldSet = new Set(visibleFields);
-  const pages = (themePages as any[]).map((p: any) => {
-    // Collect group paths owned by this page via its regions
-    const regionKeys: string[] = (p.regions ?? [])
-      .map((r: any) => r.key)
+  const pages = pageNodes.map((n: any) => {
+    // Collect bound keys owned by this page (equivalent of regions)
+    const boundKeys: string[] = (n.children ?? [])
+      .map((c: any) => c.bind)
       .filter(Boolean);
 
-    // Count validation entries whose path falls under one of this page's groups
+    // Count validation entries whose path falls under one of this page's bound items
     // and whose field is visible (not hidden by a show_when condition)
     let errors = 0;
     let warnings = 0;
     for (const [fieldPath, entry] of Object.entries(cleanState)) {
-      if (!regionKeys.some(rk => fieldPath === rk || fieldPath.startsWith(rk + '.') || fieldPath.startsWith(rk + '['))) {
+      if (!boundKeys.some(rk => fieldPath === rk || fieldPath.startsWith(rk + '.') || fieldPath.startsWith(rk + '['))) {
         continue;
       }
       if (!visibleFieldSet.has(fieldPath)) continue;
@@ -303,8 +305,8 @@ export function previewForm(
     }
 
     return {
-      id: p.id,
-      title: p.title ?? '',
+      id: n.nodeId as string,
+      title: (n.title as string) ?? '',
       validationErrors: errors,
       validationWarnings: warnings,
       status: 'active' as const,

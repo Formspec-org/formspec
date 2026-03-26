@@ -452,12 +452,36 @@ export class Project {
     }
   }
 
-  /** Resolve a page ID to its primary definition group path (from theme regions). */
+  /** Get all Page nodes from the effective component tree. */
+  private _getPageNodes(): Array<Record<string, unknown>> {
+    const tree = (this.effectiveComponent as any).tree;
+    if (!tree?.children) return [];
+    return (tree.children as Array<Record<string, unknown>>).filter(
+      (n: any) => n.component === 'Page',
+    );
+  }
+
+  /** Find a Page node by nodeId. Throws PAGE_NOT_FOUND if absent. */
+  private _findPageNode(pageId: string): Record<string, unknown> {
+    const page = this._getPageNodes().find((n: any) => n.nodeId === pageId);
+    if (!page) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${pageId}`);
+    return page;
+  }
+
+  /** Get the bound children of a Page node (equivalent of regions). */
+  private _pageBoundChildren(page: Record<string, unknown>): Array<Record<string, unknown>> {
+    return ((page.children ?? []) as Array<Record<string, unknown>>).filter(
+      (n: any) => n.bind,
+    );
+  }
+
+  /** Resolve a page ID to its primary definition group path (from component tree). */
   private _resolvePageGroup(pageId: string): string | undefined {
-    const pages = (this.core.state.theme.pages ?? []) as Array<{ id: string; regions?: Array<{ key?: string }> }>;
-    const page = pages.find(p => p.id === pageId);
-    if (!page?.regions?.length) return undefined;
-    const groupKey = page.regions[0].key;
+    const page = this._getPageNodes().find((n: any) => n.nodeId === pageId);
+    if (!page) return undefined;
+    const boundChildren = this._pageBoundChildren(page);
+    if (boundChildren.length === 0) return undefined;
+    const groupKey = boundChildren[0].bind as string;
     if (!groupKey) return undefined;
     const item = this.core.itemAt(groupKey);
     return item?.type === 'group' ? groupKey : undefined;
@@ -515,8 +539,7 @@ export class Project {
     }
 
     if (props?.page) {
-      const pages = this.core.state.theme.pages;
-      const pageExists = pages?.some((p: any) => p.id === props.page);
+      const pageExists = this._getPageNodes().some((n: any) => n.nodeId === props.page);
       if (!pageExists) {
         throw new HelperError('PAGE_NOT_FOUND', `Page "${props.page}" does not exist`, {
           pageId: props.page,
@@ -669,8 +692,7 @@ export class Project {
   addGroup(path: string, label: string, props?: GroupProps): HelperResult {
     // Page validation
     if (props?.page) {
-      const pages = this.core.state.theme.pages;
-      const pageExists = pages?.some((p: any) => p.id === props.page);
+      const pageExists = this._getPageNodes().some((n: any) => n.nodeId === props.page);
       if (!pageExists) {
         throw new HelperError('PAGE_NOT_FOUND', `Page "${props.page}" does not exist`, {
           pageId: props.page,
@@ -739,8 +761,7 @@ export class Project {
     const widgetHint = kindToHint[kind ?? 'paragraph'] ?? 'paragraph';
 
     if (props?.page) {
-      const pages = this.core.state.theme.pages;
-      const pageExists = pages?.some((p: any) => p.id === props.page);
+      const pageExists = this._getPageNodes().some((n: any) => n.nodeId === props.page);
       if (!pageExists) {
         throw new HelperError('PAGE_NOT_FOUND', `Page "${props.page}" does not exist`, {
           pageId: props.page,
@@ -1582,11 +1603,13 @@ export class Project {
     'title', 'name', 'description', 'url', 'version', 'status', 'date',
     'versionAlgorithm', 'nonRelevantBehavior', 'derivedFrom',
     'density', 'labelPosition', 'pageMode', 'defaultCurrency',
+    'showProgress', 'allowSkip', 'defaultTab', 'tabPosition',
   ]);
 
   /** Keys that route to definition.setFormPresentation. */
   private static readonly _PRESENTATION_KEYS = new Set([
     'density', 'labelPosition', 'pageMode', 'defaultCurrency',
+    'showProgress', 'allowSkip', 'defaultTab', 'tabPosition',
   ]);
 
   /** Form-level metadata setter. */
@@ -2146,8 +2169,8 @@ export class Project {
       if (!/^[a-zA-Z][a-zA-Z0-9_\-]*$/.test(id)) {
         throw new HelperError('INVALID_PAGE_ID', `Page ID "${id}" is invalid. Must start with a letter and contain only letters, digits, underscores, or hyphens.`, { id });
       }
-      // Check for duplicate page ID
-      const existing = (this.core.state.theme.pages ?? []).find((p: any) => p.id === id);
+      // Check for duplicate page ID in the component tree
+      const existing = this._getPageNodes().find((n: any) => n.nodeId === id);
       if (existing) {
         throw new HelperError('DUPLICATE_KEY', `A page with ID "${id}" already exists`, { id });
       }
@@ -2231,13 +2254,13 @@ export class Project {
 
   /** List all pages with their id, title, description, and primary group path. */
   listPages(): Array<{ id: string; title: string; description?: string; groupPath?: string }> {
-    const pages = (this.core.state.theme.pages ?? []) as Array<{ id: string; title?: string; description?: string; regions?: Array<{ key?: string }> }>;
-    return pages.map(p => {
-      const groupPath = p.regions?.[0]?.key;
+    return this._getPageNodes().map((n: any) => {
+      const boundChildren = this._pageBoundChildren(n);
+      const groupPath = boundChildren[0]?.bind as string | undefined;
       return {
-        id: p.id,
-        title: p.title ?? 'Untitled',
-        ...(p.description ? { description: p.description } : {}),
+        id: n.nodeId as string,
+        title: (n.title as string) ?? 'Untitled',
+        ...(n.description ? { description: n.description as string } : {}),
         ...(groupPath ? { groupPath } : {}),
       };
     });
@@ -2298,13 +2321,13 @@ export class Project {
 
     if (props?.showProgress !== undefined) {
       commands.push({
-        type: 'component.setWizardProperty',
+        type: 'definition.setFormPresentation',
         payload: { property: 'showProgress', value: props.showProgress },
       });
     }
     if (props?.allowSkip !== undefined) {
       commands.push({
-        type: 'component.setWizardProperty',
+        type: 'definition.setFormPresentation',
         payload: { property: 'allowSkip', value: props.allowSkip },
       });
     }
@@ -2654,13 +2677,12 @@ export class Project {
 
   /** Set the field-key assignment for a region by index. */
   setRegionKey(pageId: string, regionIndex: number, newKey: string): HelperResult {
-    const pages = (this.core.state.theme as any).pages ?? [];
-    const page = pages.find((p: any) => p.id === pageId);
-    if (!page) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${pageId}`);
-    const region = page.regions?.[regionIndex];
-    if (!region) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
-    const oldKey = region.key as string;
-    const oldSpan = region.span as number | undefined;
+    const page = this._findPageNode(pageId);
+    const boundChildren = this._pageBoundChildren(page);
+    const child = boundChildren[regionIndex];
+    if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
+    const oldKey = child.bind as string;
+    const oldSpan = child.span as number | undefined;
 
     // assignItem appends to the end — follow with reorderRegion to restore position
     const commands: AnyCommand[] = [
@@ -2676,33 +2698,30 @@ export class Project {
     };
   }
 
-  /** Rename a page's ID. */
-  renamePage(pageId: string, newId: string): HelperResult {
-    this.core.dispatch({ type: 'pages.renamePage', payload: { id: pageId, newId } });
+  /** Rename a page's title. */
+  renamePage(pageId: string, newTitle: string): HelperResult {
+    this.core.dispatch({ type: 'pages.renamePage', payload: { id: pageId, newId: newTitle } });
     return {
-      summary: `Renamed page '${pageId}' to '${newId}'`,
-      action: { helper: 'renamePage', params: { pageId, newId } },
-      affectedPaths: [newId],
+      summary: `Renamed page '${pageId}' to '${newTitle}'`,
+      action: { helper: 'renamePage', params: { pageId, newTitle } },
+      affectedPaths: [pageId],
     };
   }
 
-  /** Look up a region's key by its index on a page. */
+  /** Look up a bound child's key by its index on a page. */
   private _regionKeyAt(pageId: string, regionIndex: number): string {
-    const pages = (this.core.state.theme as any).pages ?? [];
-    const page = pages.find((p: any) => p.id === pageId);
-    if (!page) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${pageId}`);
-    const region = page.regions?.[regionIndex];
-    if (!region) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
-    return region.key;
+    const page = this._findPageNode(pageId);
+    const boundChildren = this._pageBoundChildren(page);
+    const child = boundChildren[regionIndex];
+    if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
+    return child.bind as string;
   }
 
-  /** Find a region's index by item key on a page. Throws if page or item not found. */
+  /** Find a bound child's index by item key on a page. Throws if page or item not found. */
   private _regionIndexOf(pageId: string, itemKey: string): number {
-    const pages = (this.core.state.theme as any).pages ?? [];
-    const page = pages.find((p: any) => p.id === pageId);
-    if (!page) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${pageId}`);
-    const regions = page.regions ?? [];
-    const index = regions.findIndex((r: any) => r.key === itemKey);
+    const page = this._findPageNode(pageId);
+    const boundChildren = this._pageBoundChildren(page);
+    const index = boundChildren.findIndex((n: any) => n.bind === itemKey);
     if (index === -1) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
     return index;
   }
@@ -2744,13 +2763,13 @@ export class Project {
     breakpoint: string,
     overrides: { width?: number; offset?: number; hidden?: boolean } | undefined,
   ): HelperResult {
-    const regionIndex = this._regionIndexOf(pageId, itemKey);
-    const pages = (this.core.state.theme as any).pages ?? [];
-    const page = pages.find((p: any) => p.id === pageId);
-    const region = page.regions[regionIndex];
+    this._regionIndexOf(pageId, itemKey); // validates existence
+    const page = this._findPageNode(pageId);
+    const boundChildren = this._pageBoundChildren(page);
+    const node = boundChildren.find((n: any) => n.bind === itemKey)!;
 
     // Clone existing responsive map or start fresh
-    const responsive = { ...(region.responsive ?? {}) };
+    const responsive = { ...((node.responsive as Record<string, unknown>) ?? {}) };
 
     if (overrides === undefined) {
       delete responsive[breakpoint];
