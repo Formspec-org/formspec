@@ -31,8 +31,7 @@
     }
   },
   "tree": {
-    "component": "Wizard",
-    "allowSkip": true,
+    "component": "Stack",
     "children": [
       {
         "component": "Page",
