@@ -45,6 +45,7 @@ import { normalizeDefinition } from './normalization.js';
 import { HistoryManager } from './history.js';
 import { reconcileComponentTree } from './tree-reconciler.js';
 import { normalizeState } from './state-normalizer.js';
+import { migrateWizardRoot } from './handlers/migration.js';
 import {
   fieldPaths as _fieldPaths,
   itemPaths as _itemPaths,
@@ -161,6 +162,27 @@ function createDefaultState(options?: ProjectOptions): ProjectState {
   const definition = normalizeDefinition(rawDefinition);
   const url = definition.url;
   const componentState = splitComponentState(options?.seed?.component, url);
+
+  // Migrate deprecated Wizard/Tabs root to Stack, promoting props to formPresentation.
+  const authoredTree = componentState.component.tree;
+  if (authoredTree) {
+    const migration = migrateWizardRoot(authoredTree as Record<string, unknown>);
+    if (migration) {
+      componentState.component.tree = migration.tree;
+      if (!definition.formPresentation) (definition as Record<string, unknown>).formPresentation = {};
+      Object.assign((definition as Record<string, unknown>).formPresentation as object, migration.migratedProps);
+    }
+  }
+
+  const generatedTree = componentState.generatedComponent.tree;
+  if (generatedTree) {
+    const migration = migrateWizardRoot(generatedTree as Record<string, unknown>);
+    if (migration) {
+      componentState.generatedComponent.tree = migration.tree;
+      if (!definition.formPresentation) (definition as Record<string, unknown>).formPresentation = {};
+      Object.assign((definition as Record<string, unknown>).formPresentation as object, migration.migratedProps);
+    }
+  }
 
   const theme: ThemeState = options?.seed?.theme ?? {};
   if (!theme.targetDefinition) {
