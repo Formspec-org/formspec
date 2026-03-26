@@ -854,3 +854,207 @@ describe('useForm full metadata', () => {
         expect(detail).toHaveProperty('validationReport');
     });
 });
+
+// ── touchAllFields ──────────────────────────────────────────────
+
+describe('touchAllFields', () => {
+    it('is exposed on the context', () => {
+        const result = { current: null as any };
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        function Inner() {
+            result.current = useFormspecContext();
+            return null;
+        }
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider definition={testDefinition}>
+                    <Inner />
+                </FormspecProvider>
+            );
+        });
+
+        expect(typeof result.current.touchAllFields).toBe('function');
+    });
+
+    it('marks all fields as touched', () => {
+        const engine = createFormEngine(testDefinition);
+        const ctxResult = { current: null as any };
+        const nameResult = { current: null as any };
+        const ageResult = { current: null as any };
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        function Inner() {
+            ctxResult.current = useFormspecContext();
+            nameResult.current = useField('name');
+            ageResult.current = useField('age');
+            return null;
+        }
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <Inner />
+                </FormspecProvider>
+            );
+        });
+
+        expect(nameResult.current.touched).toBe(false);
+        expect(ageResult.current.touched).toBe(false);
+
+        flushSync(() => { ctxResult.current.touchAllFields(); });
+
+        expect(nameResult.current.touched).toBe(true);
+        expect(ageResult.current.touched).toBe(true);
+    });
+
+    it('touches nested fields inside groups', () => {
+        const nestedDef = {
+            $formspec: '1.0',
+            url: 'https://test.example/nested',
+            version: '1.0.0',
+            status: 'active',
+            title: 'Nested Test',
+            name: 'nested-test',
+            items: [
+                {
+                    key: 'group',
+                    type: 'group',
+                    label: 'Group',
+                    children: [
+                        { key: 'inner', type: 'field', dataType: 'string', label: 'Inner' },
+                    ],
+                },
+            ],
+        };
+
+        const engine = createFormEngine(nestedDef);
+        const ctxResult = { current: null as any };
+        const innerResult = { current: null as any };
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        function Inner() {
+            ctxResult.current = useFormspecContext();
+            innerResult.current = useField('group.inner');
+            return null;
+        }
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <Inner />
+                </FormspecProvider>
+            );
+        });
+
+        expect(innerResult.current.touched).toBe(false);
+
+        flushSync(() => { ctxResult.current.touchAllFields(); });
+
+        expect(innerResult.current.touched).toBe(true);
+    });
+});
+
+// ── useForm.submit touches all fields ───────────────────────────
+
+describe('useForm.submit auto-touches all fields', () => {
+    it('submit touches all fields before returning validation', () => {
+        const engine = createFormEngine(testDefinition);
+        const formResult = { current: null as any };
+        const nameResult = { current: null as any };
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        function Inner() {
+            formResult.current = useForm();
+            nameResult.current = useField('name');
+            return null;
+        }
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <Inner />
+                </FormspecProvider>
+            );
+        });
+
+        expect(nameResult.current.touched).toBe(false);
+
+        flushSync(() => { formResult.current.submit({ mode: 'submit' }); });
+
+        expect(nameResult.current.touched).toBe(true);
+    });
+});
+
+// ── emitThemeTokens ─────────────────────────────────────────────
+
+describe('emitThemeTokens', () => {
+    it('is exported from the library', async () => {
+        const mod = await import('../src/index');
+        expect(typeof mod.emitThemeTokens).toBe('function');
+    });
+
+    it('sets --formspec-* CSS custom properties on the target element', async () => {
+        const { emitThemeTokens } = await import('../src/index');
+        const el = document.createElement('div');
+        emitThemeTokens({ 'color.primary': '#ff0000', 'spacing.md': '1rem' }, el);
+        expect(el.style.getPropertyValue('--formspec-color-primary')).toBe('#ff0000');
+        expect(el.style.getPropertyValue('--formspec-spacing-md')).toBe('1rem');
+    });
+
+    it('defaults to document.documentElement when no target given', async () => {
+        const { emitThemeTokens } = await import('../src/index');
+        emitThemeTokens({ 'color.test': '#00ff00' });
+        expect(document.documentElement.style.getPropertyValue('--formspec-color-test')).toBe('#00ff00');
+        // Clean up
+        document.documentElement.style.removeProperty('--formspec-color-test');
+    });
+
+    it('converts numeric values to strings', async () => {
+        const { emitThemeTokens } = await import('../src/index');
+        const el = document.createElement('div');
+        emitThemeTokens({ 'spacing.value': 16 }, el);
+        expect(el.style.getPropertyValue('--formspec-spacing-value')).toBe('16');
+    });
+});
+
+// ── FormspecProvider auto-emits theme tokens ────────────────────
+
+describe('FormspecProvider theme token emission', () => {
+    it('emits theme tokens as CSS custom properties when themeDocument has tokens', () => {
+        const themeDoc = {
+            tokens: {
+                'color.primary': '#abcdef',
+                'spacing.lg': '2rem',
+            },
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+
+        flushSync(() => {
+            root.render(
+                <FormspecProvider definition={testDefinition} themeDocument={themeDoc}>
+                    <div />
+                </FormspecProvider>
+            );
+        });
+
+        expect(document.documentElement.style.getPropertyValue('--formspec-color-primary')).toBe('#abcdef');
+        expect(document.documentElement.style.getPropertyValue('--formspec-spacing-lg')).toBe('2rem');
+
+        // Clean up
+        document.documentElement.style.removeProperty('--formspec-color-primary');
+        document.documentElement.style.removeProperty('--formspec-spacing-lg');
+    });
+});

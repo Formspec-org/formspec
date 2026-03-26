@@ -24,7 +24,7 @@ export interface UseFormResult {
  * Provides title, validity, and submit/response access.
  */
 export function useForm(): UseFormResult {
-    const { engine } = useFormspecContext();
+    const { engine, touchAllFields } = useFormspecContext();
 
     const formVM = useMemo(() => engine.getFormVM(), [engine]);
 
@@ -34,6 +34,7 @@ export function useForm(): UseFormResult {
     const validationSummary = useSignal(formVM.validationSummary);
 
     const submit = useCallback((options?: SubmitOptions) => {
+        touchAllFields();
         const report = engine.getValidationReport({ mode: options?.mode });
         const response = engine.getResponse({
             mode: options?.mode,
@@ -42,7 +43,7 @@ export function useForm(): UseFormResult {
             subject: options?.subject,
         });
         return { response, validationReport: report };
-    }, [engine]);
+    }, [engine, touchAllFields]);
 
     const getResponse = useCallback((meta?: Record<string, any>) => {
         return engine.getResponse(meta);

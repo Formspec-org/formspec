@@ -21,6 +21,8 @@ export interface FormspecContextValue {
     onSubmit?: (result: SubmitResult) => void;
     /** Mark a field as touched (e.g., on blur). */
     touchField: (path: string) => void;
+    /** Touch every field in the definition (e.g., before submit to reveal all errors). */
+    touchAllFields: () => void;
     /** Signal that increments when touched set changes — subscribe for reactivity. */
     touchedVersion: ReadonlyEngineSignal<number>;
     /** Check if a field has been touched. Read touchedVersion.value first for reactivity. */
@@ -148,9 +150,27 @@ export function FormspecProvider({
         }
     }, [touchedVersionSignal]);
 
+    const touchAllFields = useCallback(() => {
+        const def = engine.getDefinition();
+        const walk = (items: any[], prefix: string) => {
+            for (const item of items) {
+                const path = prefix ? `${prefix}.${item.key}` : item.key;
+                if (item.type === 'field') touchField(path);
+                if (item.children) walk(item.children, path);
+            }
+        };
+        walk(def.items || [], '');
+    }, [engine, touchField]);
+
     const isTouched = useCallback((path: string) => {
         return touchedFieldsRef.current.has(path);
     }, []);
+
+    // Auto-emit theme tokens as CSS custom properties when themeDocument has tokens
+    useEffect(() => {
+        if (typeof document === 'undefined' || !themeDocument?.tokens) return;
+        emitThemeTokens(themeDocument.tokens);
+    }, [themeDocument]);
 
     useEffect(() => {
         // Only dispose if we created the engine internally
@@ -160,8 +180,8 @@ export function FormspecProvider({
     }, [engine, externalEngine]);
 
     const value = useMemo<FormspecContextValue>(
-        () => ({ engine, layoutPlan, components, onSubmit, touchField, touchedVersion: touchedVersionSignal, isTouched }),
-        [engine, layoutPlan, components, onSubmit, touchField, touchedVersionSignal, isTouched],
+        () => ({ engine, layoutPlan, components, onSubmit, touchField, touchAllFields, touchedVersion: touchedVersionSignal, isTouched }),
+        [engine, layoutPlan, components, onSubmit, touchField, touchAllFields, touchedVersionSignal, isTouched],
     );
 
     return (
@@ -197,6 +217,21 @@ function detectBreakpoint(breakpoints: Record<string, number | { minWidth?: numb
         }
     }
     return match;
+}
+
+/**
+ * Emit theme tokens as --formspec-* CSS custom properties.
+ * Converts dotted token keys (e.g., `color.primary`) to `--formspec-color-primary`.
+ * Defaults to `document.documentElement` when no target is provided.
+ */
+export function emitThemeTokens(
+    tokens: Record<string, string | number>,
+    target?: HTMLElement,
+): void {
+    const el = target ?? document.documentElement;
+    for (const [key, value] of Object.entries(tokens)) {
+        el.style.setProperty(`--formspec-${key.replace(/\./g, '-')}`, String(value));
+    }
 }
 
 /** Recursive item lookup by dotted key path. */

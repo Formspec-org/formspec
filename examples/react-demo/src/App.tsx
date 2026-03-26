@@ -8,24 +8,14 @@ import registry from '../../../registries/formspec-common.registry.json';
 
 function FormContent() {
     const form = useForm();
-    const { engine, layoutPlan, touchField } = useFormspecContext();
+    const { layoutPlan } = useFormspecContext();
     const [result, setResult] = useState<any>(null);
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
-        const def = engine.getDefinition();
-        const touchAllFields = (items: any[], prefix = '') => {
-            for (const item of items) {
-                const path = prefix ? `${prefix}.${item.key}` : item.key;
-                if (item.type === 'field') touchField(path);
-                if (item.children) touchAllFields(item.children, path);
-            }
-        };
-        touchAllFields(def.items || []);
-
         const detail = form.submit({ mode: 'submit' });
         setResult(detail);
-    }, [form, engine, touchField]);
+    }, [form]);
 
     if (!layoutPlan) return <p>No layout plan available.</p>;
 
