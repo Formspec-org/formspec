@@ -382,6 +382,145 @@ describe('pageMode wizard (Stack + Pages + formPresentation)', () => {
     });
 });
 
+describe('pageMode tabs (Stack + Pages + formPresentation)', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    function renderPageModeTabs(
+        pages: any[],
+        opts?: { defaultTab?: number; tabPosition?: string },
+    ) {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.componentDocument = minimalComponentDoc({
+            component: 'Stack',
+            children: pages.map(p => ({
+                component: 'Page',
+                ...p,
+            })),
+        });
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:form',
+            version: '1.0.0',
+            title: 'Test',
+            items: [],
+            formPresentation: {
+                pageMode: 'tabs',
+                ...(opts?.defaultTab !== undefined ? { defaultTab: opts.defaultTab } : {}),
+                ...(opts?.tabPosition !== undefined ? { tabPosition: opts.tabPosition } : {}),
+            },
+        };
+        el.render();
+        return el;
+    }
+
+    it('renders tab bar with one tab per Page child', () => {
+        const el = renderPageModeTabs([
+            { title: 'Info', children: [{ component: 'Text', text: 'Info content' }] },
+            { title: 'Review', children: [{ component: 'Text', text: 'Review content' }] },
+            { title: 'Submit', children: [{ component: 'Text', text: 'Submit content' }] },
+        ]);
+        const buttons = el.querySelectorAll('.formspec-tab');
+        expect(buttons.length).toBe(3);
+        expect(buttons[0].textContent).toBe('Info');
+        expect(buttons[1].textContent).toBe('Review');
+        expect(buttons[2].textContent).toBe('Submit');
+    });
+
+    it('first tab active and first panel visible by default', () => {
+        const el = renderPageModeTabs([
+            { title: 'Tab A', children: [{ component: 'Text', text: 'A' }] },
+            { title: 'Tab B', children: [{ component: 'Text', text: 'B' }] },
+        ]);
+        const buttons = el.querySelectorAll('.formspec-tab');
+        expect(buttons[0].getAttribute('aria-selected')).toBe('true');
+        expect(buttons[1].getAttribute('aria-selected')).toBe('false');
+
+        const panels = el.querySelectorAll('.formspec-tab-panel');
+        expect(panels[0].classList.contains('formspec-hidden')).toBe(false);
+        expect(panels[1].classList.contains('formspec-hidden')).toBe(true);
+    });
+
+    it('clicking tab switches visible panel', () => {
+        const el = renderPageModeTabs([
+            { title: 'Tab A', children: [{ component: 'Text', text: 'A' }] },
+            { title: 'Tab B', children: [{ component: 'Text', text: 'B' }] },
+        ]);
+        const buttons = el.querySelectorAll('.formspec-tab');
+        (buttons[1] as HTMLButtonElement).click();
+
+        const panels = el.querySelectorAll('.formspec-tab-panel');
+        expect(panels[0].classList.contains('formspec-hidden')).toBe(true);
+        expect(panels[1].classList.contains('formspec-hidden')).toBe(false);
+    });
+
+    it('honors defaultTab from formPresentation', () => {
+        const el = renderPageModeTabs([
+            { title: 'Tab A', children: [{ component: 'Text', text: 'A' }] },
+            { title: 'Tab B', children: [{ component: 'Text', text: 'B' }] },
+        ], { defaultTab: 1 });
+        const panels = el.querySelectorAll('.formspec-tab-panel');
+        expect(panels[0].classList.contains('formspec-hidden')).toBe(true);
+        expect(panels[1].classList.contains('formspec-hidden')).toBe(false);
+
+        const buttons = el.querySelectorAll('.formspec-tab');
+        expect(buttons[1].getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('tabPosition bottom renders panels before tab bar', () => {
+        const el = renderPageModeTabs([
+            { title: 'Tab A', children: [{ component: 'Text', text: 'A' }] },
+        ], { tabPosition: 'bottom' });
+        const tabs = el.querySelector('.formspec-tabs') as HTMLElement;
+        const children = Array.from(tabs.children);
+        const panelIndex = children.findIndex(c => c.classList.contains('formspec-tab-panels'));
+        const barIndex = children.findIndex(c => c.classList.contains('formspec-tab-bar'));
+        expect(panelIndex).toBeLessThan(barIndex);
+    });
+
+    it('renders non-Page orphan children outside tabs', () => {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.componentDocument = minimalComponentDoc({
+            component: 'Stack',
+            children: [
+                { component: 'Text', text: 'Orphan banner' },
+                { component: 'Page', title: 'Tab A', children: [{ component: 'Text', text: 'A' }] },
+                { component: 'Page', title: 'Tab B', children: [{ component: 'Text', text: 'B' }] },
+            ],
+        });
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:form',
+            version: '1.0.0',
+            title: 'Test',
+            items: [],
+            formPresentation: { pageMode: 'tabs' },
+        };
+        el.render();
+
+        // Tabs should have only 2 tabs (the Page children)
+        const buttons = el.querySelectorAll('.formspec-tab');
+        expect(buttons.length).toBe(2);
+
+        // The orphan Text should be rendered outside the tabs container
+        const tabsContainer = el.querySelector('.formspec-tabs') as HTMLElement;
+        expect(tabsContainer).not.toBeNull();
+    });
+
+    it('tab labels derived from Page title property', () => {
+        const el = renderPageModeTabs([
+            { title: 'Personal Info', children: [{ component: 'Text', text: 'A' }] },
+            { children: [{ component: 'Text', text: 'B' }] }, // no title
+        ]);
+        const buttons = el.querySelectorAll('.formspec-tab');
+        expect(buttons[0].textContent).toBe('Personal Info');
+        expect(buttons[1].textContent).toBe('Tab 2');
+    });
+});
+
 describe('Tabs plugin', () => {
     afterEach(() => {
         document.body.querySelectorAll('formspec-render').forEach(el => el.remove());

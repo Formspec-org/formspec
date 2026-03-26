@@ -4108,6 +4108,13 @@ only when <code>pageMode</code> is <code>"tabs"</code>. Processors MUST
 ignore these properties for other modes.</li>
 </ul>
 <blockquote>
+<p><strong>Note on naming:</strong> The Tabs component (§5.X) uses the
+property name <code>position</code> for tab bar placement. At the
+<code>formPresentation</code> level, the equivalent property is
+<code>tabPosition</code>. The rename avoids ambiguity with other
+component-level <code>position</code> properties (e.g., Panel).</p>
+</blockquote>
+<blockquote>
 <p><strong>Note:</strong> The page navigation gate in wizard mode
 constrains <em>when</em> validation errors are surfaced to the user, not
 <em>what</em> constitutes a valid submission. A form’s validation

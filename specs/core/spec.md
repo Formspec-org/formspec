@@ -1958,6 +1958,11 @@ behavioral requirements below.
 - `defaultTab` and `tabPosition` are meaningful only when `pageMode` is
   `"tabs"`. Processors MUST ignore these properties for other modes.
 
+> **Note on naming:** The Tabs component (§5.X) uses the property name
+> `position` for tab bar placement. At the `formPresentation` level, the
+> equivalent property is `tabPosition`. The rename avoids ambiguity with
+> other component-level `position` properties (e.g., Panel).
+
 > **Note:** The page navigation gate in wizard mode constrains *when*
 > validation errors are surfaced to the user, not *what* constitutes a
 > valid submission. A form's validation semantics (§5) are independent

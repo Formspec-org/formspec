@@ -1,4 +1,9 @@
-/** @filedesc Tailwind adapter for Wizard — step progress with styled navigation buttons. */
+/** @filedesc Tailwind adapter for page-mode wizard rendering (formPresentation.pageMode: "wizard").
+ *
+ * This file styles the wizard UI synthesized by emit-node.ts when a Stack root
+ * has Page children and formPresentation.pageMode is "wizard". The "Wizard"
+ * adapter key is a rendering concept — the Wizard schema component type was
+ * removed; all page navigation is now driven by formPresentation. */
 import type { WizardBehavior, AdapterRenderFn } from 'formspec-webcomponent';
 import { TW } from './shared';
 
