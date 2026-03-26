@@ -26,7 +26,7 @@
 
 /* ── Card / Section ───────────────────────────────────────────── */
 .formspec-card {
-  border: 1px solid var(--formspec-color-border, #e0e3e5);
+  border: 1px solid var(--formspec-color-border, #a0a4a8);
   border-radius: var(--formspec-radius-md, 0.75rem);
   padding: var(--formspec-spacing-lg, 1.5rem);
   background: var(--formspec-color-card, #ffffff);
@@ -41,7 +41,7 @@
   color: var(--formspec-color-foreground, #1a1f25);
   margin: 0 0 1.25rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--formspec-color-border, #e0e3e5);
+  border-bottom: 1px solid var(--formspec-color-border, #a0a4a8);
 }
 
 /* ── Fields ───────────────────────────────────────────────────── */
@@ -71,7 +71,7 @@
 
 .formspec-hint {
   font-size: 0.8125rem;
-  color: var(--formspec-color-muted, #7b8087);
+  color: var(--formspec-color-muted, #636970);
   line-height: 1.4;
   margin-bottom: 0.375rem;
 }
@@ -95,7 +95,7 @@ select {
   display: block;
   width: 100%;
   padding: 0.625rem 0.875rem;
-  border: 1px solid var(--formspec-color-input, #ababaf);
+  border: 1px solid var(--formspec-color-input, #767a7e);
   border-radius: var(--formspec-radius-sm, 0.5rem);
   background: var(--formspec-color-card, #ffffff);
   color: var(--formspec-color-foreground, #1a1f25);
@@ -133,7 +133,7 @@ input[type="checkbox"] {
   width: 1.125rem;
   height: 1.125rem;
   min-width: 1.125rem;
-  border: 1.5px solid var(--formspec-color-input, #ababaf);
+  border: 1.5px solid var(--formspec-color-input, #767a7e);
   border-radius: 0.25rem;
   background: var(--formspec-color-card, #ffffff);
   cursor: pointer;
@@ -166,7 +166,7 @@ input[type="radio"] {
   width: 1.125rem;
   height: 1.125rem;
   min-width: 1.125rem;
-  border: 1.5px solid var(--formspec-color-input, #ababaf);
+  border: 1.5px solid var(--formspec-color-input, #767a7e);
   border-radius: 50%;
   background: var(--formspec-color-card, #ffffff);
   cursor: pointer;
@@ -254,7 +254,7 @@ h2.formspec-heading {
 
 .formspec-divider {
   border: none;
-  border-top: 1px solid var(--formspec-color-border, #e0e3e5);
+  border-top: 1px solid var(--formspec-color-border, #a0a4a8);
   margin: 1rem 0;
 }
 
@@ -275,7 +275,7 @@ h2.formspec-heading {
 
 .formspec-repeat-instance {
   padding: 1.25rem 0 1rem;
-  border-bottom: 1px solid var(--formspec-color-border, #e0e3e5);
+  border-bottom: 1px solid var(--formspec-color-border, #a0a4a8);
 }
 
 .formspec-repeat-instance:first-of-type {

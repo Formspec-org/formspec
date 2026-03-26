@@ -58,7 +58,7 @@ function FormContent() {
 
                 {errors.length > 0 && (
                     <div ref={errorSummaryRef} tabIndex={-1} role="alert" className="error-summary">
-                        <h2 className="summary-heading">Validation Errors</h2>
+                        <h3 className="summary-heading">Validation Errors</h3>
                         <ul className="summary-list">
                             {errors.map((e: any, i: number) => (
                                 <li key={i}><strong>{e.path}</strong>: {e.message}</li>
@@ -69,7 +69,7 @@ function FormContent() {
 
                 {warnings.length > 0 && (
                     <div className="warning-summary">
-                        <h2 className="summary-heading">Warnings</h2>
+                        <h3 className="summary-heading">Warnings</h3>
                         <ul className="summary-list">
                             {warnings.map((w: any, i: number) => (
                                 <li key={i}><strong>{w.path}</strong>: {w.message}</li>

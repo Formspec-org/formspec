@@ -1,5 +1,5 @@
 /** @filedesc Recursive LayoutNode renderer — dispatches to field or layout components. */
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useCallback, useState } from 'react';
 import { signal as createSignal } from '@preact/signals-core';
 import type { LayoutNode } from 'formspec-layout';
 import { useFormspecContext } from './context';
@@ -55,6 +55,9 @@ function RepeatGroup({ node }: { node: LayoutNode }) {
     const repeatPath = node.repeatPath!;
     const count = useRepeatCount(repeatPath);
     const title = (node.props?.title as string) || node.repeatGroup || repeatPath;
+    const containerRef = useRef<HTMLDivElement>(null);
+    const addBtnRef = useRef<HTMLButtonElement>(null);
+    const [announcement, setAnnouncement] = useState('');
 
     // Build instances by rewriting template child bindPaths
     const instances = useMemo(() => {
@@ -67,8 +70,38 @@ function RepeatGroup({ node }: { node: LayoutNode }) {
         return result;
     }, [node.children, repeatPath, count]);
 
+    const handleAdd = useCallback(() => {
+        engine.addRepeatInstance(repeatPath);
+        const newCount = count + 1;
+        setAnnouncement(`${title} ${newCount} added. ${newCount} total.`);
+        // Focus first focusable element in the new instance after render
+        setTimeout(() => {
+            const instances = containerRef.current?.querySelectorAll('.formspec-repeat-instance');
+            const last = instances?.[instances.length - 1];
+            const firstInput = last?.querySelector<HTMLElement>('input, select, textarea, button');
+            firstInput?.focus();
+        }, 0);
+    }, [engine, repeatPath, count, title]);
+
+    const handleRemove = useCallback((idx: number) => {
+        engine.removeRepeatInstance(repeatPath, idx);
+        const newCount = count - 1;
+        setAnnouncement(`${title} ${idx + 1} removed. ${newCount} remaining.`);
+        // Focus: previous instance's first element, or the add button
+        setTimeout(() => {
+            if (newCount === 0) {
+                addBtnRef.current?.focus();
+            } else {
+                const instances = containerRef.current?.querySelectorAll('.formspec-repeat-instance');
+                const target = instances?.[Math.min(idx, newCount - 1)];
+                const firstInput = target?.querySelector<HTMLElement>('input, select, textarea, button');
+                firstInput?.focus();
+            }
+        }, 0);
+    }, [engine, repeatPath, count, title]);
+
     return (
-        <div className="formspec-repeat" data-bind={node.repeatGroup}>
+        <div className="formspec-repeat" data-bind={node.repeatGroup} ref={containerRef}>
             {instances.map((children, idx) => (
                 <div key={idx} className="formspec-repeat-instance"
                      role="group"
@@ -79,7 +112,7 @@ function RepeatGroup({ node }: { node: LayoutNode }) {
                     <button
                         type="button"
                         className="formspec-repeat-remove"
-                        onClick={() => engine.removeRepeatInstance(repeatPath, idx)}
+                        onClick={() => handleRemove(idx)}
                         aria-label={`Remove ${title} ${idx + 1}`}
                     >
                         Remove {title}
@@ -89,10 +122,13 @@ function RepeatGroup({ node }: { node: LayoutNode }) {
             <button
                 type="button"
                 className="formspec-repeat-add"
-                onClick={() => engine.addRepeatInstance(repeatPath)}
+                onClick={handleAdd}
+                ref={addBtnRef}
             >
                 Add {title}
             </button>
+            {/* Live region for add/remove announcements */}
+            <div aria-live="polite" className="formspec-sr-only">{announcement}</div>
         </div>
     );
 }

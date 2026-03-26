@@ -10,6 +10,7 @@ import type { FieldComponentProps } from '../../component-map';
  */
 export function DefaultField({ field, node }: FieldComponentProps) {
     const isProtected = !field.visible && field.disabledDisplay === 'protected';
+    const isReadonly = field.readonly || isProtected;
     const showError = !!(field.error && field.touched);
     const themeClass = node.cssClasses?.join(' ') || '';
 
@@ -30,20 +31,20 @@ export function DefaultField({ field, node }: FieldComponentProps) {
                     id={field.id}
                     type="checkbox"
                     checked={!!field.value}
-                    onChange={(e) => field.setValue(e.target.checked)}
+                    onChange={isReadonly ? undefined : (e) => field.setValue(e.target.checked)}
                     onBlur={() => field.touch()}
+                    disabled={isReadonly}
                     aria-invalid={showError}
+                    aria-required={field.required || undefined}
                     aria-describedby={describedBy}
-                    readOnly={field.readonly || isProtected}
-                    aria-disabled={isProtected || undefined}
                 />
                 <label htmlFor={field.id}>
                     {field.label}
                     {field.required && <span className="formspec-required" aria-hidden="true">*</span>}
                 </label>
-                {showError && (
-                    <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>
-                )}
+                <p id={`${field.id}-error`} className="formspec-error" aria-live="polite">
+                    {showError ? field.error : ''}
+                </p>
             </div>
         );
     }
@@ -66,9 +67,9 @@ export function DefaultField({ field, node }: FieldComponentProps) {
                     <p id={`${field.id}-hint`} className="formspec-hint">{field.hint}</p>
                 )}
                 {renderGroupControl(field, node)}
-                {showError && (
-                    <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>
-                )}
+                <p id={`${field.id}-error`} className="formspec-error" aria-live="polite">
+                    {showError ? field.error : ''}
+                </p>
             </fieldset>
         );
     }
@@ -96,9 +97,9 @@ export function DefaultField({ field, node }: FieldComponentProps) {
 
             {renderControl(field, node, describedBy, isProtected)}
 
-            {showError && (
-                <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>
-            )}
+            <p id={`${field.id}-error`} className="formspec-error" aria-live="polite">
+                {showError ? field.error : ''}
+            </p>
         </div>
     );
 }
@@ -161,7 +162,9 @@ function renderControl(
     isProtected = false,
 ) {
     const { dataType, id, path, value } = field;
+    const isReadonly = field.readonly || isProtected;
     const showError = !!(field.error && field.touched);
+    const autoComplete = (node.props?.autoComplete as string) || undefined;
     const common = {
         id,
         name: path,
@@ -169,9 +172,9 @@ function renderControl(
         'aria-invalid': showError,
         'aria-required': field.required,
         required: field.required,
-        readOnly: field.readonly || isProtected,
         'aria-disabled': isProtected || undefined,
         onBlur: () => field.touch(),
+        autoComplete,
     };
 
     switch (node.component) {
@@ -180,7 +183,8 @@ function renderControl(
                 <select
                     {...common}
                     value={value ?? ''}
-                    onChange={(e) => field.setValue(e.target.value)}
+                    onChange={isReadonly ? undefined : (e) => field.setValue(e.target.value)}
+                    disabled={isReadonly}
                 >
                     <option value="" disabled>- Select -</option>
                     {field.options.map((opt) => (
@@ -195,6 +199,7 @@ function renderControl(
                     {...common}
                     type="date"
                     value={value ?? ''}
+                    readOnly={isReadonly}
                     onChange={(e) => field.setValue(e.target.value)}
                 />
             );
@@ -205,6 +210,7 @@ function renderControl(
                     {...common}
                     type="number"
                     value={value ?? ''}
+                    readOnly={isReadonly}
                     onChange={(e) => field.setValue(e.target.value === '' ? null : Number(e.target.value))}
                 />
             );
@@ -214,6 +220,7 @@ function renderControl(
                 <input
                     {...common}
                     type="file"
+                    disabled={isReadonly}
                     onChange={(e) => field.setValue(e.target.files)}
                 />
             );
@@ -226,6 +233,7 @@ function renderControl(
                     <textarea
                         {...common}
                         value={value ?? ''}
+                        readOnly={isReadonly}
                         onChange={(e) => field.setValue(e.target.value)}
                     />
                 );
@@ -235,6 +243,7 @@ function renderControl(
                     {...common}
                     type="text"
                     value={value ?? ''}
+                    readOnly={isReadonly}
                     onChange={(e) => field.setValue(e.target.value)}
                 />
             );
