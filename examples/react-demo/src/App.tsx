@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { FormspecProvider, FormspecForm, FormspecNode, useField, useForm, useFormspecContext } from 'formspec-react';
 import type { FieldComponentProps, LayoutComponentProps } from 'formspec-react';
 import definition from './definition.json';
+import registry from '../../../registries/formspec-common.registry.json';
 
 // ── Custom styled components (override defaults via component map) ──
 
@@ -401,7 +402,7 @@ export function App() {
                 </p>
             </header>
 
-            <FormspecProvider definition={definition} components={componentOverrides}>
+            <FormspecProvider definition={definition} registryEntries={registry.entries} components={componentOverrides}>
                 <FormBody />
                 <SubmitPanel />
             </FormspecProvider>

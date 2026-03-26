@@ -95,7 +95,8 @@
           "type": "field",
           "dataType": "string",
           "label": "EIN / Tax ID",
-          "hint": "Federal Employer Identification Number (XX-XXXXXXX)."
+          "hint": "Federal Employer Identification Number (XX-XXXXXXX).",
+          "extensions": { "x-formspec-ein": true }
         },
         {
           "key": "yearFounded",
@@ -108,14 +109,16 @@
           "type": "field",
           "dataType": "string",
           "label": "Website",
-          "hint": "Optional — your organization's public website."
+          "hint": "Optional — your organization's public website.",
+          "extensions": { "x-formspec-url": true }
         },
         {
           "key": "annualBudget",
           "type": "field",
           "dataType": "decimal",
           "label": "Annual Operating Budget",
-          "hint": "Approximate total annual budget in USD."
+          "hint": "Approximate total annual budget in USD.",
+          "extensions": { "x-formspec-currency-usd": true }
         }
       ]
     },
@@ -140,14 +143,16 @@
           "key": "contactEmail",
           "type": "field",
           "dataType": "string",
-          "label": "Email Address"
+          "label": "Email Address",
+          "extensions": { "x-formspec-email": true }
         },
         {
           "key": "contactPhone",
           "type": "field",
           "dataType": "string",
           "label": "Phone Number",
-          "hint": "Include area code."
+          "hint": "Format: (555) 123-4567",
+          "extensions": { "x-formspec-phone-nanp": true }
         },
         {
           "key": "state",
@@ -282,7 +287,8 @@
           "key": "personEmail",
           "type": "field",
           "dataType": "string",
-          "label": "Email Address"
+          "label": "Email Address",
+          "extensions": { "x-formspec-email": true }
         }
       ]
     },
@@ -294,22 +300,25 @@
         {
           "key": "requestedAmount",
           "type": "field",
-          "dataType": "decimal",
-          "label": "Requested Amount (USD)",
+          "dataType": "money",
+          "currency": "USD",
+          "label": "Requested Amount",
           "hint": "Maximum award is $100,000."
         },
         {
           "key": "matchingFunds",
           "type": "field",
-          "dataType": "decimal",
-          "label": "Matching Funds (USD)",
+          "dataType": "money",
+          "currency": "USD",
+          "label": "Matching Funds",
           "hint": "Amount of matching or in-kind contributions."
         },
         {
           "key": "totalProjectCost",
           "type": "field",
-          "dataType": "decimal",
-          "label": "Total Project Cost (USD)"
+          "dataType": "money",
+          "currency": "USD",
+          "label": "Total Project Cost"
         },
         {
           "key": "budgetNarrative",
