@@ -42,8 +42,8 @@ describe('ComponentRegistry', () => {
             'RadioGroup', 'CheckboxGroup', 'Slider', 'Rating', 'FileUpload', 'Signature', 'MoneyInput',
             // Display
             'Heading', 'Text', 'Card', 'Spacer', 'Alert', 'Badge', 'ProgressBar', 'Summary', 'ValidationSummary',
-            // Interactive
-            'Wizard', 'Tabs', 'SubmitButton',
+            // Interactive (Wizard is driven by formPresentation.pageMode, not a plugin)
+            'Tabs', 'SubmitButton',
             // Special
             'ConditionalGroup', 'DataTable',
         ];
