@@ -144,9 +144,12 @@ describe('handleContent', () => {
     });
 
     expect(result.isError).toBeUndefined();
-    const pages = (project.core as any).state.theme.pages as any[];
-    const page = pages.find((p: any) => p.id === pageId);
-    expect(page.regions.some((r: any) => r.key === 'intro')).toBe(true);
+    // Content was placed inside the page's group — verify it exists in the definition
+    const def = (project.core as any).state.definition;
+    const group = (def.items ?? []).find((i: any) => i.key === groupKey);
+    expect(group).toBeDefined();
+    const contentItem = (group.children ?? []).find((c: any) => c.key === 'intro');
+    expect(contentItem).toBeDefined();
   });
 
   it('returns PAGE_NOT_FOUND error when props.page does not exist', () => {
