@@ -80,7 +80,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     expect(tree.component).toBe('Stack');
     expect(tree.children).toHaveLength(2);
     expect(tree.children[0].bind).toBe('name');
@@ -99,7 +99,7 @@ describe('reconcileComponentTree', () => {
       children: [{ component: 'EmailInput', bind: 'email', placeholder: 'Enter email' }],
     };
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     expect(tree.children[0].component).toBe('EmailInput');
     expect(tree.children[0].placeholder).toBe('Enter email');
   });
@@ -123,7 +123,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     // widgetHint: 'radio' → RadioGroup, not the default Select
     expect(tree.children[0].component).toBe('RadioGroup');
     // widgetHint: 'checkbox' → Checkbox, not the default Toggle
@@ -137,7 +137,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     expect(tree.children[0].component).toBe('Select');
   });
 
@@ -160,7 +160,7 @@ describe('reconcileComponentTree', () => {
       children: [{ component: 'Select', bind: 'marital' }],
     };
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     // Should update to RadioGroup based on widgetHint, not keep stale Select
     expect(tree.children[0].component).toBe('RadioGroup');
   });
@@ -183,7 +183,7 @@ describe('reconcileComponentTree', () => {
       children: [{ component: 'Select', bind: 'color', customProp: true }],
     };
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     // Should keep Select (matches widgetHint 'dropdown' → Select) and preserve customProp
     expect(tree.children[0].component).toBe('Select');
     expect(tree.children[0].customProp).toBe(true);
@@ -197,7 +197,7 @@ describe('reconcileComponentTree', () => {
       children: [{ component: 'TextInput', bind: 'deleted' }],
     };
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     expect(tree.children).toHaveLength(0);
   });
 
@@ -206,7 +206,7 @@ describe('reconcileComponentTree', () => {
       items: [{ key: 'heading', type: 'display', label: 'Hello World' }],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     expect(tree.children).toHaveLength(1);
     expect(tree.children[0].component).toBe('Text');
     expect(tree.children[0].nodeId).toBe('heading');
@@ -223,7 +223,7 @@ describe('reconcileComponentTree', () => {
       }],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     expect(tree.children).toHaveLength(1);
     const group = tree.children[0];
     expect(group.component).toBe('Stack');
@@ -238,11 +238,11 @@ describe('reconcileComponentTree', () => {
       items: [{ key: 'section', type: 'group' }],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     expect(tree.children[0].children).toEqual([]);
   });
 
-  it('generates Wizard root when pageMode is wizard with theme pages', () => {
+  it('always produces Stack root regardless of pageMode', () => {
     const definition = {
       items: [
         { key: 'name', type: 'field', dataType: 'string' },
@@ -250,52 +250,41 @@ describe('reconcileComponentTree', () => {
       ],
       formPresentation: { pageMode: 'wizard' },
     } as any;
-    const theme = {
-      pages: [
-        { id: 'p1', title: 'Page 1', regions: [{ key: 'name' }] },
-        { id: 'p2', title: 'Page 2', regions: [{ key: 'age' }] },
-      ],
-    };
 
-    const tree = reconcileComponentTree(definition, undefined, theme);
-    expect(tree.component).toBe('Wizard');
+    const tree = reconcileComponentTree(definition, undefined);
+    expect(tree.component).toBe('Stack');
     expect(tree.children).toHaveLength(2);
-    expect(tree.children[0].component).toBe('Page');
-    expect(tree.children[0].title).toBe('Page 1');
-    expect(tree.children[0].children[0].bind).toBe('name');
-    expect(tree.children[1].children[0].bind).toBe('age');
+    expect(tree.children[0].bind).toBe('name');
+    expect(tree.children[1].bind).toBe('age');
   });
 
-  it('generates Tabs root when pageMode is tabs with theme pages', () => {
-    const definition = {
-      items: [{ key: 'name', type: 'field', dataType: 'string' }],
-      formPresentation: { pageMode: 'tabs' },
-    } as any;
-    const theme = {
-      pages: [{ id: 'p1', title: 'Tab 1', regions: [{ key: 'name' }] }],
-    };
-
-    const tree = reconcileComponentTree(definition, undefined, theme);
-    expect(tree.component).toBe('Tabs');
-  });
-
-  it('places unassigned items in auto-generated "Other" page for wizard mode', () => {
+  it('preserves Page nodes marked _layout: true during reconcile', () => {
     const definition = {
       items: [
         { key: 'name', type: 'field', dataType: 'string' },
-        { key: 'extra', type: 'field', dataType: 'string' },
+        { key: 'email', type: 'field', dataType: 'string' },
       ],
-      formPresentation: { pageMode: 'wizard' },
     } as any;
-    const theme = {
-      pages: [{ id: 'p1', title: 'Page 1', regions: [{ key: 'name' }] }],
+    const existing = {
+      component: 'Stack', nodeId: 'root', children: [
+        {
+          component: 'Page', nodeId: 'p1', title: 'Page 1', _layout: true,
+          children: [{ component: 'TextInput', bind: 'name' }],
+        },
+        { component: 'TextInput', bind: 'email' },
+      ],
     };
 
-    const tree = reconcileComponentTree(definition, undefined, theme);
-    expect(tree.children).toHaveLength(2);
-    expect(tree.children[1].nodeId).toBe('_unassigned');
-    expect(tree.children[1].title).toBe('Other');
-    expect(tree.children[1].children[0].bind).toBe('extra');
+    const tree = reconcileComponentTree(definition, existing);
+    expect(tree.component).toBe('Stack');
+    const page = tree.children.find((c: any) => c.component === 'Page');
+    expect(page).toBeDefined();
+    expect(page!._layout).toBe(true);
+    expect(page!.title).toBe('Page 1');
+    // 'name' should be inside the Page (extracted from flat list and placed back)
+    expect(page!.children[0].bind).toBe('name');
+    // 'email' should remain at root level
+    expect(tree.children.find((c: any) => c.bind === 'email')).toBeDefined();
   });
 
   it('preserves layout wrappers at their original position', () => {
@@ -315,7 +304,7 @@ describe('reconcileComponentTree', () => {
       ],
     };
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     expect(tree.children).toHaveLength(3);
     expect(tree.children[2].component).toBe('SubmitButton');
   });
@@ -339,7 +328,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     expect(tree.children).toHaveLength(4); // 3 fields + submit
     // Submit button should remain at the end, not at index 1
     expect(tree.children[3].component).toBe('SubmitButton');
@@ -367,7 +356,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     // divider was at index 1 (not last) → stays at index 1
     expect(tree.children[1].component).toBe('Divider');
     // submit was last → stays last
@@ -397,7 +386,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     // Banner at 0 (was at 0, not last → stays at 0)
     expect(tree.children[0].component).toBe('Banner');
     // Divider was at 2 (not last) → clamped to min(2, ...)
@@ -429,7 +418,7 @@ describe('reconcileComponentTree', () => {
       }],
     };
 
-    const tree = reconcileComponentTree(definition, existing, {});
+    const tree = reconcileComponentTree(definition, existing);
     const section = tree.children[0];
     // Footer was last in section → stays last even after b and c are added
     expect(section.children[section.children.length - 1].component).toBe('Footer');
@@ -446,7 +435,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     expect(tree.children).toHaveLength(2);
     const summaryNode = tree.children[1];
     expect(summaryNode.component).toBe('Text');
@@ -463,7 +452,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     expect(tree.children[0].nodeId).toBe('heading');
     expect(tree.children[0].bind).toBeUndefined();
   });
@@ -478,7 +467,7 @@ describe('reconcileComponentTree', () => {
       ],
     } as any;
 
-    const tree = reconcileComponentTree(definition, undefined, {});
+    const tree = reconcileComponentTree(definition, undefined);
     expect(tree.children[0].component).toBe('Heading');
     expect(tree.children[0].bind).toBe('total_heading');
   });

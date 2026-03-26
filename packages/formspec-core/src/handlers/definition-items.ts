@@ -497,17 +497,9 @@ export const definitionItemsHandlers: Record<string, CommandHandler> = {
       }
     }
 
-    // Remove orphaned theme regions
-    if (state.theme.pages) {
-      const deletedKeys = new Set(
-        [...deletedPaths].map(k => k.includes('.') ? k.slice(k.lastIndexOf('.') + 1) : k),
-      );
-      for (const page of state.theme.pages as any[]) {
-        if (page.regions) {
-          page.regions = page.regions.filter((r: any) => !r.key || !deletedKeys.has(r.key));
-        }
-      }
-    }
+    // Page child nodes referencing deleted items are cleaned up by the
+    // reconciler (rebuildComponentTree: true) — _layout wrappers survive
+    // but their stale bound children are dropped during restore.
 
     return { rebuildComponentTree: true };
   },
@@ -561,16 +553,8 @@ export const definitionItemsHandlers: Record<string, CommandHandler> = {
       delete themeItems[oldKey];
     }
 
-    // Rename-specific: rewrite theme region keys
-    if (state.theme.pages) {
-      for (const page of state.theme.pages as any[]) {
-        if (page.regions) {
-          for (const region of page.regions) {
-            if (region.key === oldKey) region.key = newKey;
-          }
-        }
-      }
-    }
+    // Page child bind keys are updated by the component tree BFS walk above.
+    // The reconciler (rebuildComponentTree: true) preserves updated _layout nodes.
 
     return { rebuildComponentTree: true, newPath };
   },

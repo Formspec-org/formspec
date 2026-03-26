@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { createRawProject } from '../src/index.js';
 
+/** Get Page nodes from the generated component tree. */
+function getPageNodes(project: ReturnType<typeof createRawProject>): any[] {
+  const tree = project.generatedComponent.tree;
+  return (tree?.children ?? []).filter((c: any) => c.component === 'Page');
+}
+
+/** Get the nodeId of a Page node from the component tree. */
+function getPageId(project: ReturnType<typeof createRawProject>, index = 0): string {
+  const pages = getPageNodes(project);
+  if (!pages[index]) throw new Error(`No page at index ${index}`);
+  return pages[index].nodeId;
+}
+
 // ── Post-dispatch normalization ─────────────────────────────────
 
 describe('post-dispatch normalization', () => {
@@ -102,19 +115,22 @@ describe('renameItem — cross-artifact rewriting', () => {
     expect(mapping.rules[0].sourcePath).toBe('full_name');
   });
 
-  it('rewrites theme region keys across all pages', () => {
+  it('rewrites page child bind keys when item is renamed', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'phone' } });
     project.dispatch({ type: 'pages.addPage', payload: { title: 'P1' } });
     project.dispatch({ type: 'pages.addPage', payload: { title: 'P2' } });
-    const pages = project.theme.pages as any[];
+    const page1Id = getPageId(project, 0);
     // Assign 'phone' to page 1
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId: pages[0].id, key: 'phone', span: 6 } });
+    project.dispatch({ type: 'pages.assignItem', payload: { pageId: page1Id, key: 'phone', span: 6 } });
 
     project.dispatch({ type: 'definition.renameItem', payload: { path: 'phone', newKey: 'mobile' } });
 
-    const updatedPages = project.theme.pages as any[];
-    expect(updatedPages[0].regions[0].key).toBe('mobile');
+    // Verify the component tree Page child bind was rewritten
+    const pages = getPageNodes(project);
+    const page1Children = pages[0].children;
+    expect(page1Children.some((c: any) => c.bind === 'mobile')).toBe(true);
+    expect(page1Children.some((c: any) => c.bind === 'phone')).toBe(false);
   });
 });
 
@@ -143,20 +159,22 @@ describe('deleteItem — cross-artifact cleanup', () => {
     expect(theme.items?.total).toBeUndefined();
   });
 
-  it('removes orphaned theme regions when item is deleted', () => {
+  it('removes orphaned page child nodes when item is deleted', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'addr' } });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'city' } });
     project.dispatch({ type: 'pages.addPage', payload: { title: 'P1' } });
-    const pageId = (project.theme.pages as any[])[0].id;
+    const pageId = getPageId(project);
     project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'addr', span: 6 } });
     project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'city', span: 6 } });
 
     project.dispatch({ type: 'definition.deleteItem', payload: { path: 'addr' } });
 
-    const page = (project.theme.pages as any[])[0];
-    expect(page.regions).toHaveLength(1);
-    expect(page.regions[0].key).toBe('city');
+    // After reconcile, the Page should only contain 'city' (addr was deleted)
+    const pages = getPageNodes(project);
+    const pageChildren = pages[0].children;
+    expect(pageChildren).toHaveLength(1);
+    expect(pageChildren[0].bind).toBe('city');
   });
 });
 
