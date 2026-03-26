@@ -235,10 +235,98 @@ input[type="checkbox"]:focus-visible {
 }
 
 /* ── File upload ──────────────────────────────────────────────── */
-.formspec-file-upload input[type="file"] {
-  font-family: inherit;
+.formspec-file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.formspec-file-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.formspec-file-name {
   font-size: 0.875rem;
+  color: var(--formspec-color-foreground-muted, #555);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 20rem;
+}
+
+.formspec-file-browse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--formspec-color-foreground, #1a1f25);
+  background: var(--formspec-color-surface, #fff);
+  border: 1px solid var(--formspec-color-border, #c8ccd0);
+  border-radius: 6px;
   cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.formspec-file-browse-btn:hover:not(:disabled) {
+  border-color: var(--formspec-color-primary, #2563eb);
+  background: var(--formspec-color-surface-hover, #f5f7fa);
+}
+
+.formspec-file-browse-btn:focus-visible {
+  outline: 2px solid var(--formspec-color-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+.formspec-file-browse-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.formspec-file-drop-zone {
+  position: relative;
+  border: 2px dashed var(--formspec-color-border, #c8ccd0);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.formspec-file-drop-zone--active {
+  border-color: var(--formspec-color-primary, #2563eb);
+  background: var(--formspec-color-primary-light, #eff6ff);
+}
+
+.formspec-file-drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.formspec-file-drop-icon {
+  font-size: 1.75rem;
+  color: var(--formspec-color-foreground-muted, #888);
+  line-height: 1;
+}
+
+.formspec-file-drop-label {
+  font-size: 0.875rem;
+  color: var(--formspec-color-foreground-muted, #555);
+}
+
+.formspec-file-size-error {
+  margin-top: 0.25rem;
 }
 
 /* ── Display nodes ────────────────────────────────────────────── */

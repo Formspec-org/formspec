@@ -788,27 +788,48 @@ function FileUploadControl({ field, node, common, isReadonly }: CommonInputProps
         field.setValue(files);
     };
 
-    const inputEl = (
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [fileName, setFileName] = useState<string | null>(null);
+
+    const onFileChange = (files: FileList | null) => {
+        handleFiles(files);
+        if (files && files.length > 0) {
+            setFileName(files.length === 1 ? files[0].name : `${files.length} files selected`);
+        }
+    };
+
+    const hiddenInput = (
         <input
             {...common}
+            ref={fileInputRef}
             type="file"
+            className="formspec-file-input-hidden"
             disabled={isReadonly}
             accept={accept}
             multiple={multiple}
-            onChange={(e) => handleFiles(e.target.files)}
+            onChange={(e) => onFileChange(e.target.files)}
         />
     );
 
     if (!dragDrop) {
         return (
-            <>
-                {inputEl}
+            <div className="formspec-file-upload">
+                {hiddenInput}
+                <button
+                    type="button"
+                    className="formspec-file-browse-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isReadonly}
+                >
+                    Choose file{multiple ? 's' : ''}
+                </button>
+                {fileName && <span className="formspec-file-name">{fileName}</span>}
                 {sizeError && (
                     <p className="formspec-file-size-error formspec-error" aria-live="polite">
                         {sizeError}
                     </p>
                 )}
-            </>
+            </div>
         );
     }
 
@@ -820,11 +841,24 @@ function FileUploadControl({ field, node, common, isReadonly }: CommonInputProps
             onDrop={(e) => {
                 e.preventDefault();
                 setIsDragOver(false);
-                handleFiles(e.dataTransfer.files);
+                onFileChange(e.dataTransfer.files);
             }}
         >
-            {inputEl}
-            <span className="formspec-file-drop-label">Drop files here</span>
+            {hiddenInput}
+            <div className="formspec-file-drop-content">
+                <span className="formspec-file-drop-icon" aria-hidden="true">&#8693;</span>
+                <span className="formspec-file-drop-label">
+                    {fileName || 'Drag & drop files here'}
+                </span>
+                <button
+                    type="button"
+                    className="formspec-file-browse-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isReadonly}
+                >
+                    Browse
+                </button>
+            </div>
             {sizeError && (
                 <p className="formspec-file-size-error formspec-error" aria-live="polite">
                     {sizeError}
