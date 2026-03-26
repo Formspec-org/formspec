@@ -1220,6 +1220,10 @@ Aggregate functions operate on arrays and reduce them to a single value.
 | `sum` | `sum(array<number>) → number` | `number` | Sum of all elements. `sum([])` returns `0`. Null elements are skipped. |
 | `count` | `count(array<T>) → number` | `number` | Number of non-null elements. `count([])` returns `0`. |
 | `countWhere` | `countWhere(array, boolean) → number` | `number` | Count of elements where the expression evaluates to `true`. Within the expression, `$` refers to the current element. E.g., `countWhere($line_items[*].amount, $ > 10000)`. |
+| `sumWhere` | `sumWhere(array<number>, boolean) → number` | `number` | Sum of numeric elements whose predicate evaluates to `true`. Within the expression, `$` refers to the current element. Non-numeric matches are skipped. |
+| `avgWhere` | `avgWhere(array<number>, boolean) → number` | `number` | Arithmetic mean of numeric elements whose predicate evaluates to `true`. Returns `null` when no elements match. |
+| `minWhere` | `minWhere(array<any>, boolean) → any` | `any` | Smallest element whose predicate evaluates to `true`. Returns `null` when no elements match. Also works on `array<date>` and `array<string>`. |
+| `maxWhere` | `maxWhere(array<any>, boolean) → any` | `any` | Largest element whose predicate evaluates to `true`. Returns `null` when no elements match. Also works on `array<date>` and `array<string>`. |
 | `avg` | `avg(array<number>) → number` | `number` | Arithmetic mean of non-null elements. `avg([])` MUST signal an error (division by zero). |
 | `min` | `min(array<number>) → number` | `number` | Smallest non-null element. `min([])` returns `null`. Also works on `array<date>` and `array<string>`. |
 | `max` | `max(array<number>) → number` | `number` | Largest non-null element. `max([])` returns `null`. Also works on `array<date>` and `array<string>`. |
@@ -1307,6 +1311,7 @@ Aggregate functions operate on arrays and reduce them to a single value.
 | `moneyCurrency` | `moneyCurrency(money) → string` | `string` | Extract the ISO 4217 currency code. |
 | `moneyAdd` | `moneyAdd(money, money) → money` | `money` | Add two Money values. Operands MUST have the same currency; mismatched currencies produce a type error. |
 | `moneySum` | `moneySum(array) → money` | `money` | Sum an array of Money values. All elements MUST share the same currency. Empty array returns `null`. |
+| `moneySumWhere` | `moneySumWhere(array<money>, boolean) → money` | `money` | Sum of Money elements whose predicate evaluates to `true`. Within the expression, `$` refers to the current element. All matching elements MUST share the same currency. Returns `null` when no elements match. |
 
 #### 3.5.8 MIP-State Query Functions
 

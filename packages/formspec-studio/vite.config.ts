@@ -43,6 +43,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         chat: path.resolve(__dirname, 'chat.html'),
+        'changeset-review-harness': path.resolve(__dirname, 'changeset-review-harness.html'),
       },
     },
   },

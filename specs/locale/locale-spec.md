@@ -38,7 +38,7 @@ document unless explicitly redefined.
 
 <!-- bluf:start file=locale-spec.bluf.md -->
 - This document defines the Locale Document — a sidecar JSON artifact for internationalizing Formspec Definitions.
-- A valid locale requires `$formspecLocale`, `version`, `locale`, `targetDefinition`, and a non-empty `strings` object.
+- A valid locale requires `$formspecLocale`, `version`, `locale`, `targetDefinition`, and a `strings` object.
 - String resolution uses a fallback cascade (regional → base → inline defaults) with FEL interpolation via `{{expression}}` syntax.
 - This BLUF is governed by `schemas/locale.schema.json`; generated schema references are the canonical structural contract.
 <!-- bluf:end -->
@@ -180,24 +180,22 @@ Locale Document that omits a REQUIRED property.
 
 ### 2.1 Top-Level Properties
 
-> **Note:** The hand-authored table below is a placeholder. Once
-> `schemas/locale.schema.json` is authored, this section will be
-> replaced by a `<!-- schema-ref:start ... -->` generated table that
-> serves as the canonical structural contract.
-
-| Property | Type | Required | Description |
-|---|---|---|---|
-| `$formspecLocale` | string | **Yes** | Locale specification version. MUST be `"1.0"`. |
-| `url` | string (URI) | No | Canonical URI identifier for this Locale Document. Stable across versions — the tuple (`url`, `version`) SHOULD be globally unique. |
-| `version` | string | **Yes** | Version of this Locale Document. SemVer is RECOMMENDED. |
-| `name` | string | No | Machine-friendly short identifier. |
-| `title` | string | No | Human-readable display name. |
-| `description` | string | No | Human-readable description of the locale's purpose. |
-| `locale` | string | **Yes** | BCP 47 language tag identifying the locale this document provides strings for. |
-| `fallback` | string | No | BCP 47 language tag of the locale to consult when a key is not found in this document's `strings`. See §4 for cascade rules. |
-| `targetDefinition` | object | **Yes** | Binding to the target Definition. Same structure as Theme's `targetDefinition` (§2.2). |
-| `strings` | object | **Yes** | Map of string keys to localized values. Keys follow the format defined in §3.1. Values are strings, optionally containing FEL interpolation (§3.3). SHOULD contain at least one entry; an empty `strings` object is a valid no-op (all strings fall through to inline defaults). |
-| `extensions` | object | No | Extension namespace. All keys MUST be `x-` prefixed. Processors MUST ignore unrecognized extensions. |
+<!-- schema-ref:start id=locale-top-level schema=schemas/locale.schema.json pointers=# -->
+<!-- generated:schema-ref id=locale-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/$formspecLocale` | `$formspecLocale` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Locale specification version. MUST be '1.0'. |
+| `#/properties/description` | `description` | <code>string</code> | no | — | Human-readable description of the locale's purpose and target audience. |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | Extension namespace for vendor-specific or tooling-specific metadata. All keys MUST be x- prefixed. Processors MUST ignore unrecognized extensions. Extensions MUST NOT alter locale resolution semantics. |
+| `#/properties/fallback` | `fallback` | <code>string</code> | no | pattern: <code>^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*&#36;</code> | BCP 47 language tag of the locale to consult when a key is not found in this document's strings. Enables explicit fallback chains (e.g., fr-CA → fr). If absent, the cascade proceeds to implicit language fallback (strip region subtag) or inline defaults. Processors MUST detect circular fallback chains and terminate the cascade with a warning. |
+| `#/properties/locale` | `locale` | <code>string</code> | yes | pattern: <code>^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*&#36;</code>; critical | BCP 47 language tag identifying the locale this document provides strings for. Processors MUST perform case-insensitive comparison and SHOULD normalize to lowercase language with title-case region (e.g., 'fr-CA'). |
+| `#/properties/name` | `name` | <code>string</code> | no | — | Machine-friendly short identifier for programmatic use. |
+| `#/properties/strings` | `strings` | <code>object</code> | yes | critical | Map of string keys to localized values. Keys follow the dot-delimited path format defined in the Locale Specification §3.1. Values are strings, optionally containing FEL interpolation via {{expression}} syntax. Keys address item properties (key.label, key.description, key.hint), context labels (key.label@context, key.hint@context), choice options (key.options.value.label), shared option sets ($optionSet.setName.value.label), validation messages (key.errors.CODE, key.constraintMessage, key.requiredMessage), form-level strings ($form.title, $form.description), shape messages ($shape.id.message), theme page strings ($page.pageId.title, $page.pageId.description), and component node strings ($component.nodeId.property). |
+| `#/properties/targetDefinition` | `targetDefinition` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>https://formspec.org/schemas/component/1.0#/&#36;defs/TargetDefinition</code>; critical | Binding to the target Formspec Definition and compatible version range. The locale will only be applied to Definitions matching this target. If compatibleVersions is present and the Definition version falls outside the range, the processor SHOULD warn and MAY fall back to inline strings only. The processor MUST NOT fail on a version mismatch. |
+| `#/properties/title` | `title` | <code>string</code> | no | — | Human-readable display name for the Locale Document. |
+| `#/properties/url` | `url` | <code>string</code> | no | — | Canonical identifier for this Locale Document. Stable across versions — the tuple (url, version) SHOULD be globally unique. |
+| `#/properties/version` | `version` | <code>string</code> | yes | critical | Version of this Locale Document. SemVer is RECOMMENDED. The tuple (url, version) SHOULD be unique across all published locale versions. |
+<!-- schema-ref:end -->
 
 ### 2.2 Target Definition Binding
 

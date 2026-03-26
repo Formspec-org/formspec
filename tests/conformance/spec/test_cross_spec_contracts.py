@@ -28,6 +28,8 @@ REG_S = _load("registry.schema.json")
 THEME_S = _load("theme.schema.json")
 COMP_S = _load("component.schema.json")
 CHGLOG_S = _load("changelog.schema.json")
+REFS_S = _load("references.schema.json")
+LOCALE_S = _load("locale.schema.json")
 
 ALL_SCHEMAS = {
     "definition": DEF_S,
@@ -39,6 +41,8 @@ ALL_SCHEMAS = {
     "theme": THEME_S,
     "component": COMP_S,
     "changelog": CHGLOG_S,
+    "references": REFS_S,
+    "locale": LOCALE_S,
 }
 
 
