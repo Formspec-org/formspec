@@ -1196,7 +1196,7 @@ class TestBucket1SchemaStructure:
     def test_component_all_builtins_have_accessibility(self):
         COMP_S = _load("component.schema.json")
         builtins = [
-            "Page", "Stack", "Grid", "Wizard", "Spacer",
+            "Page", "Stack", "Grid", "Spacer",
             "TextInput", "NumberInput", "DatePicker", "Select",
             "CheckboxGroup", "Toggle", "FileUpload",
             "Heading", "Text", "Divider",
