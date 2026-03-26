@@ -317,12 +317,9 @@ describe('planComponentTree', () => {
         expect(node.accessibility).toEqual({ role: 'region', description: 'Main form' });
     });
 
-    it('does not produce nested wizards when root Stack has no bind and groups have explicit pages', () => {
-        // Reproduces the S8 intake bug: studio-generated component doc with
-        // an unbound root Stack, 3 groups with explicit page names, wizard mode.
-        // The bug was that `!prefix` matched on every child (since root has no
-        // bind, childPrefix stays ''), causing each child group to get its own
-        // inner Wizard via applyGeneratedPageMode.
+    it('leaves pages as direct Stack children in wizard mode (no Wizard wrapper)', () => {
+        // Wizard component type is deprecated. Pages are direct children of the
+        // root Stack; the renderer applies navigation behavior based on pageMode.
         const items = [
             {
                 key: 'basics',
@@ -384,7 +381,7 @@ describe('planComponentTree', () => {
 
         const node = planComponentTree(tree, ctx);
 
-        // There should be exactly ONE Wizard node — at the root level
+        // No Wizard node anywhere in the tree
         function countWizards(n: LayoutNode): number {
             let count = n.component === 'Wizard' ? 1 : 0;
             for (const child of n.children) {
@@ -393,17 +390,16 @@ describe('planComponentTree', () => {
             return count;
         }
 
-        expect(countWizards(node)).toBe(1);
+        expect(countWizards(node)).toBe(0);
 
-        // The root should be a Stack wrapping a single Wizard
+        // Root is a Stack with Page children directly
         expect(node.component).toBe('Stack');
-        const wizard = node.children.find(c => c.component === 'Wizard');
-        expect(wizard).toBeDefined();
-        expect(wizard!.children).toHaveLength(3);
-        expect(wizard!.children.every(c => c.component === 'Page')).toBe(true);
+        const pages = node.children.filter(c => c.component === 'Page');
+        expect(pages).toHaveLength(3);
+        expect(pages.every(c => c.component === 'Page')).toBe(true);
     });
 
-    it('strips group title from Stack nodes inside explicit wizard pages', () => {
+    it('strips group title from Stack nodes inside explicit pages (wizard mode)', () => {
         // When a group is placed on an explicit page, the Page already shows
         // the title in its heading. The inner Stack should not duplicate it.
         const items = [
@@ -452,9 +448,10 @@ describe('planComponentTree', () => {
 
         const node = planComponentTree(tree, ctx);
 
-        // Find the Stack nodes inside each Page
-        const wizard = node.children.find(c => c.component === 'Wizard')!;
-        for (const page of wizard.children) {
+        // Pages are direct children of the root Stack (no Wizard wrapper)
+        const pages = node.children.filter(c => c.component === 'Page');
+        expect(pages.length).toBeGreaterThan(0);
+        for (const page of pages) {
             expect(page.component).toBe('Page');
             const stackInPage = page.children.find(c => c.component === 'Stack');
             expect(stackInPage).toBeDefined();
@@ -508,14 +505,13 @@ describe('planComponentTree', () => {
         expect(node.component).toBe('Stack');
         expect(node.children[0].component).toBe('TextInput');
         expect(node.children[0].bindPath).toBe('intro');
-        expect(node.children[1].component).toBe('Wizard');
-        expect(node.children[1].children).toHaveLength(1);
-        expect(node.children[1].children[0].component).toBe('Page');
-        expect(node.children[1].children[0].props.title).toBe('Page One');
-        expect(node.children[1].children[0].children[0].component).toBe('Stack');
-        expect(node.children[1].children[0].children[0].bindPath).toBe('pageOne');
-        expect(node.children[1].children[0].children[0].children[0].component).toBe('RadioGroup');
-        expect(node.children[1].children[0].children[0].children[0].bindPath).toBe('pageOne.priority');
+        // Page is a direct child of the root Stack (no Wizard wrapper)
+        expect(node.children[1].component).toBe('Page');
+        expect(node.children[1].props.title).toBe('Page One');
+        expect(node.children[1].children[0].component).toBe('Stack');
+        expect(node.children[1].children[0].bindPath).toBe('pageOne');
+        expect(node.children[1].children[0].children[0].component).toBe('RadioGroup');
+        expect(node.children[1].children[0].children[0].bindPath).toBe('pageOne.priority');
     });
 
     it('sets scopeChange on group nodes from the component tree', () => {
@@ -717,19 +713,15 @@ describe('planDefinitionFallback', () => {
 
         const nodes = planDefinitionFallback(items, ctx);
 
-        // When theme pages + pageMode: "wizard", pages are wrapped in a Wizard node.
-        // Unassigned items (intro) come before the Wizard.
-        expect(nodes).toHaveLength(2);
+        // Pages are direct children (no Wizard wrapper). Unassigned items come first.
+        expect(nodes).toHaveLength(3);
         const introNode = nodes.find(n => n.bindPath === 'intro');
         expect(introNode).toBeDefined();
-        const wizardNode = nodes.find(n => n.component === 'Wizard');
-        expect(wizardNode).toBeDefined();
-        expect(wizardNode!.children).toHaveLength(2);
-        expect(wizardNode!.children[0].component).toBe('Page');
-        expect(wizardNode!.children[0].props.title).toBe('Applicant');
-        expect(wizardNode!.children[0].children[0].component).toBe('Grid');
-        expect(wizardNode!.children[1].component).toBe('Page');
-        expect(wizardNode!.children[1].props.title).toBe('Review');
+        const pages = nodes.filter(n => n.component === 'Page');
+        expect(pages).toHaveLength(2);
+        expect(pages[0].props.title).toBe('Applicant');
+        expect(pages[0].children[0].component).toBe('Grid');
+        expect(pages[1].props.title).toBe('Review');
     });
 
     it('groups top-level definition pages without wrapping nested groups again', () => {
@@ -787,21 +779,20 @@ describe('planDefinitionFallback', () => {
 
         const nodes = planDefinitionFallback(items, ctx);
 
-        expect(nodes).toHaveLength(2);
+        // Pages are direct children (no Wizard wrapper). Orphan intro comes first.
+        expect(nodes).toHaveLength(3);
         expect(nodes[0].bindPath).toBe('intro');
-        expect(nodes[1].component).toBe('Wizard');
+        expect(nodes[1].component).toBe('Page');
+        expect(nodes[1].props.title).toBe('Applicant');
         expect(nodes[1].children).toHaveLength(2);
-        expect(nodes[1].children[0].component).toBe('Page');
-        expect(nodes[1].children[0].props.title).toBe('Applicant');
-        expect(nodes[1].children[0].children).toHaveLength(2);
-        expect(nodes[1].children[0].children[0].bindPath).toBe('applicant');
-        expect(nodes[1].children[0].children[1].bindPath).toBe('attachments');
-        expect(nodes[1].children[0].children[0].children[1].component).toBe('Stack');
-        expect(nodes[1].children[0].children[0].children[1].bindPath).toBe('applicant.address');
-        expect(nodes[1].children[0].children[0].children[1].children[0].bindPath).toBe('applicant.address.city');
-        expect(nodes[1].children[1].component).toBe('Page');
-        expect(nodes[1].children[1].props.title).toBe('Review');
-        expect(nodes[1].children[1].children[0].bindPath).toBe('review');
+        expect(nodes[1].children[0].bindPath).toBe('applicant');
+        expect(nodes[1].children[1].bindPath).toBe('attachments');
+        expect(nodes[1].children[0].children[1].component).toBe('Stack');
+        expect(nodes[1].children[0].children[1].bindPath).toBe('applicant.address');
+        expect(nodes[1].children[0].children[1].children[0].bindPath).toBe('applicant.address.city');
+        expect(nodes[2].component).toBe('Page');
+        expect(nodes[2].props.title).toBe('Review');
+        expect(nodes[2].children[0].bindPath).toBe('review');
     });
 });
 
@@ -849,11 +840,11 @@ describe('grant-application integration', () => {
 
         const node = planComponentTree(component.tree, ctx);
 
-        // Root should be Wizard
-        expect(node.component).toBe('Wizard');
-        expect(node.category).toBe('interactive');
+        // Root should be a Stack with Page children (no Wizard wrapper)
+        expect(node.component).toBe('Stack');
+        expect(node.category).toBe('layout');
 
-        // Should have children (wizard pages)
+        // Should have Page children directly
         expect(node.children.length).toBeGreaterThan(0);
 
         // First child should be a theme-defined page
@@ -904,7 +895,7 @@ describe('grant-application integration', () => {
         const json = JSON.stringify(node);
         const parsed = JSON.parse(json);
 
-        expect(parsed.component).toBe('Wizard');
+        expect(parsed.component).toBe('Stack');
         expect(parsed.children.length).toBe(node.children.length);
     });
 
@@ -920,8 +911,8 @@ describe('grant-application integration', () => {
         const nodes = planDefinitionFallback(definition.items, ctx);
         expect(nodes.length).toBeGreaterThan(0);
 
-        // When formPresentation.pageMode is 'wizard', groups are wrapped in a Wizard node.
-        // Find applicantInfo either at top level or inside the wizard's children.
+        // When formPresentation.pageMode is 'wizard', groups become Page children.
+        // Find applicantInfo either at top level or inside a Page's children.
         function findNode(list: LayoutNode[], bindPath: string): LayoutNode | undefined {
             for (const n of list) {
                 if (n.bindPath === bindPath) return n;
