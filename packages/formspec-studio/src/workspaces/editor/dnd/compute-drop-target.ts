@@ -1,5 +1,5 @@
 /** @filedesc Computes drop target position (above/below/inside) and builds sequential move descriptors. */
-import { nodeRefFor, type FlatEntry } from '../../../lib/tree-helpers';
+import { nodeRefFor, type FlatEntry } from '../../../lib/field-helpers';
 
 export interface DefinitionMove {
   sourcePath: string;

@@ -1,7 +1,6 @@
 /** @filedesc Root properties panel that routes to definition, layout, multi-select, or item properties. */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { bindsFor, shapesFor } from '../../../lib/field-helpers';
-import { buildDefLookup, isLayoutId } from '../../../lib/tree-helpers';
+import { bindsFor, shapesFor, buildDefLookup, isLayoutId } from '../../../lib/field-helpers';
 import { useDefinition } from '../../../state/useDefinition';
 import { useProject } from '../../../state/useProject';
 import { useSelection } from '../../../state/useSelection';

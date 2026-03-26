@@ -86,6 +86,8 @@ export {
     evaluateDefinition,
     getBuiltinFELFunctionCatalog,
     getFELDependencies,
+    isValidFELIdentifier,
+    sanitizeFELIdentifier,
     validateExtensionUsage,
     createSchemaValidator,
     rewriteFEL,
@@ -106,6 +108,10 @@ export { toValidationResults } from './engine/helpers.js';
 export type { EvalValidation } from './diff.js';
 
 export { assembleDefinition, assembleDefinitionSync } from './assembly/assembleDefinition.js';
+
+export {
+    isNumericType, isDateType, isChoiceType, isTextType, isBinaryType, isBooleanType,
+} from './taxonomy.js';
 
 export { interpolateMessage } from './interpolate-message.js';
 export type { InterpolateResult, InterpolationWarning } from './interpolate-message.js';

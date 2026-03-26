@@ -1,4 +1,4 @@
-/** @filedesc Helpers for flattening item trees, resolving binds/shapes, and widget compatibility queries. */
+/** @filedesc Helpers for flattening item trees, resolving binds/shapes, widget compatibility, and editor-canvas utilities. */
 
 import type { FormItem, FormBind } from 'formspec-types';
 import {
@@ -159,3 +159,270 @@ export const propertyHelp: Record<string, string> = {
   path: 'Dot-notation path within the instance to read the value from.',
   editable: 'When false, the field is locked (readonly) after pre-population.',
 };
+
+// ── Migrated from tree-helpers.ts ──────────────────────────────────
+
+/** A component tree node (matches the shape from studio-core). */
+interface CompNode {
+  component: string;
+  bind?: string;
+  nodeId?: string;
+  _layout?: boolean;
+  children?: CompNode[];
+  [key: string]: unknown;
+}
+
+/** Result of buildDefLookup — maps item paths to their definition item + context. */
+export interface DefLookupEntry {
+  item: FormItem;
+  path: string;
+  parentPath: string | null;
+}
+
+/** A flattened entry from the component tree, used by EditorCanvas and DnD. */
+export interface FlatEntry {
+  /** defPath for bound nodes, '__node:<nodeId>' for layout nodes */
+  id: string;
+  /** The original component tree node */
+  node: CompNode;
+  /** Nesting depth (layout containers contribute depth) */
+  depth: number;
+  /** Whether this node has children that will render */
+  hasChildren: boolean;
+  /** Definition path for bound/display nodes, null for layout */
+  defPath: string | null;
+  /** Node category */
+  category: 'field' | 'group' | 'display' | 'layout';
+  /** Present for bound nodes */
+  nodeId: string | undefined;
+  /** Present for layout/display nodes */
+  bind: string | undefined;
+}
+
+const LAYOUT_PREFIX = '__node:';
+
+/** Check if an ID is a layout node reference. */
+export function isLayoutId(id: string): boolean {
+  return id.startsWith(LAYOUT_PREFIX);
+}
+
+/** Extract the nodeId from a layout ID. Returns input unchanged if not a layout ID. */
+export function nodeIdFromLayoutId(id: string): string {
+  return id.startsWith(LAYOUT_PREFIX) ? id.slice(LAYOUT_PREFIX.length) : id;
+}
+
+/** Build a NodeRef (for component tree commands) from a flat entry. */
+export function nodeRefFor(entry: Pick<FlatEntry, 'bind' | 'nodeId'>): { bind: string } | { nodeId: string } {
+  if (entry.bind) return { bind: entry.bind };
+  return { nodeId: entry.nodeId! };
+}
+
+/**
+ * Build a flat lookup map from definition item paths to their items.
+ * Recursively walks nested children, building dot-separated paths.
+ */
+export function buildDefLookup(items: FormItem[], prefix = '', parentPath: string | null = null): Map<string, DefLookupEntry> {
+  const map = new Map<string, DefLookupEntry>();
+  for (const item of items) {
+    const path = prefix ? `${prefix}.${item.key}` : item.key;
+    map.set(path, { item, path, parentPath });
+    if (item.children) {
+      for (const [k, v] of buildDefLookup(item.children, path, path)) {
+        map.set(k, v);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Build a secondary lookup from item key (bind value) to definition path.
+ * Used when a bound node has been moved into a layout container at a
+ * different tree level.
+ */
+export function buildBindKeyMap(defLookup: Map<string, DefLookupEntry>): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const [path, entry] of defLookup) {
+    if (!map.has(entry.item.key)) {
+      map.set(entry.item.key, path);
+    }
+  }
+  return map;
+}
+
+/**
+ * Walk the component tree and produce a flat list of entries for the canvas.
+ *
+ * - Bound nodes (fields/groups) advance the defPathPrefix.
+ * - Layout nodes are transparent — they don't change the defPathPrefix.
+ * - Display nodes (nodeId, no _layout) use the defPathPrefix for their defPath.
+ */
+export function flattenComponentTree(
+  root: CompNode,
+  defLookup: Map<string, DefLookupEntry>,
+  bindKeyMap?: Map<string, string>,
+): FlatEntry[] {
+  const result: FlatEntry[] = [];
+
+  function walk(nodes: CompNode[], depth: number, defPathPrefix: string): void {
+    for (const node of nodes) {
+      if (node._layout) {
+        const id = `${LAYOUT_PREFIX}${node.nodeId}`;
+        const children = node.children ?? [];
+        result.push({
+          id,
+          node,
+          depth,
+          hasChildren: children.length > 0,
+          defPath: null,
+          category: 'layout',
+          nodeId: node.nodeId,
+          bind: undefined,
+        });
+        walk(children, depth + 1, defPathPrefix);
+      } else if (node.bind) {
+        let defPath = defPathPrefix ? `${defPathPrefix}.${node.bind}` : node.bind;
+        let defEntry = defLookup.get(defPath);
+        if (!defEntry && bindKeyMap) {
+          const altPath = bindKeyMap.get(node.bind);
+          if (altPath) {
+            defPath = altPath;
+            defEntry = defLookup.get(altPath);
+          }
+        }
+        const itemType = defEntry?.item.type;
+        const isGroup = itemType === 'group';
+        const children = node.children ?? [];
+        result.push({
+          id: defPath,
+          node,
+          depth,
+          hasChildren: children.length > 0,
+          defPath,
+          category: isGroup ? 'group' : 'field',
+          nodeId: undefined,
+          bind: node.bind,
+        });
+        if (children.length > 0) {
+          walk(children, depth + 1, defPath);
+        }
+      } else if (node.nodeId) {
+        let defPath = defPathPrefix ? `${defPathPrefix}.${node.nodeId}` : node.nodeId;
+        if (!defLookup.get(defPath) && bindKeyMap) {
+          const altPath = bindKeyMap.get(node.nodeId);
+          if (altPath) defPath = altPath;
+        }
+        result.push({
+          id: defPath,
+          node,
+          depth,
+          hasChildren: false,
+          defPath,
+          category: 'display',
+          nodeId: node.nodeId,
+          bind: undefined,
+        });
+      }
+    }
+  }
+
+  walk(root.children ?? [], 0, '');
+  return result;
+}
+
+// ── Migrated from selection-helpers.ts ─────────────────────────────
+
+/** Remove paths whose ancestors are also in the set. */
+export function pruneDescendants(paths: Set<string>): string[] {
+  const result: string[] = [];
+  for (const p of paths) {
+    let hasAncestor = false;
+    for (const other of paths) {
+      if (other !== p && p.startsWith(other + '.')) {
+        hasAncestor = true;
+        break;
+      }
+    }
+    if (!hasAncestor) result.push(p);
+  }
+  return result;
+}
+
+/** Sort paths deepest-first (most dots first) for safe batch delete. */
+export function sortForBatchDelete(paths: string[]): string[] {
+  return [...paths].sort((a, b) => {
+    const depthA = a.split('.').length;
+    const depthB = b.split('.').length;
+    return depthB - depthA;
+  });
+}
+
+interface MoveCommand {
+  type: 'definition.moveItem';
+  payload: { sourcePath: string; targetParentPath: string; targetIndex: number };
+}
+
+/**
+ * Build batch move commands for moving paths into a target group.
+ * Filters out the target itself and prunes descendants.
+ */
+export function buildBatchMoveCommands(
+  paths: Set<string>,
+  targetGroupPath: string,
+): MoveCommand[] {
+  const filtered = new Set<string>();
+  for (const p of paths) {
+    if (p === targetGroupPath || p.startsWith(targetGroupPath + '.')) continue;
+    filtered.add(p);
+  }
+  const pruned = pruneDescendants(filtered);
+  return pruned.map((sourcePath, index) => ({
+    type: 'definition.moveItem' as const,
+    payload: { sourcePath, targetParentPath: targetGroupPath, targetIndex: index },
+  }));
+}
+
+// ── Migrated from humanize.ts ──────────────────────────────────────
+
+/** Convert a FEL field reference to a human-readable label. */
+function humanizeRef(ref: string): string {
+  const name = ref.replace(/^\$/, '');
+  return name
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, c => c.toUpperCase())
+    .trim();
+}
+
+/** Convert a value literal to human-readable form. */
+function humanizeValue(val: string): string {
+  if (val === 'true') return 'Yes';
+  if (val === 'false') return 'No';
+  return val;
+}
+
+const OP_MAP: Record<string, string> = {
+  '=': 'is',
+  '!=': 'is not',
+  '>': 'is greater than',
+  '>=': 'is at least',
+  '<': 'is less than',
+  '<=': 'is at most',
+};
+
+/**
+ * Attempt to convert a FEL expression to a human-readable string.
+ * Only handles simple `$ref op value` patterns. Returns the raw expression
+ * for anything more complex.
+ */
+export function humanizeFEL(expression: string): string {
+  const trimmed = expression.trim();
+
+  const match = trimmed.match(/^(\$\w+)\s*(!=|>=|<=|=|>|<)\s*(.+)$/);
+  if (!match) return trimmed;
+
+  const [, ref, op, value] = match;
+  const humanOp = OP_MAP[op];
+  if (!humanOp) return trimmed;
+
+  return `${humanizeRef(ref)} ${humanOp} ${humanizeValue(value.trim())}`;
+}

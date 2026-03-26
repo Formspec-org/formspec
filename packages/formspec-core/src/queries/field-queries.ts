@@ -5,7 +5,7 @@
  * Every function receives `state: ProjectState` as its first parameter
  * and returns a result with no side effects.
  */
-import type { FormItem } from 'formspec-types';
+import type { FormItem, FormShape } from 'formspec-types';
 import { itemAtPath, normalizeIndexedPath } from 'formspec-engine/fel-runtime';
 import { getCurrentComponentDocument, getEditableComponentDocument } from '../component-documents.js';
 import type {
@@ -264,4 +264,64 @@ export function allDataTypes(state: ProjectState): DataTypeInfo[] {
   }
 
   return core;
+}
+
+/**
+ * All shape rules targeting a given path.
+ * A shape matches if its `target` equals the path (exact) or matches via wildcard (`[*]`).
+ */
+export function shapesForPath(state: ProjectState, path: string): FormShape[] {
+  const shapes = (state.definition.shapes ?? []) as FormShape[];
+  const normalized = normalizeIndexedPath(path);
+  return shapes.filter(s => {
+    const target = (s as any).target as string | undefined;
+    if (!target) return false;
+    if (target === path || target === normalized) return true;
+    // Wildcard match: target "items[*].amount" matches path "items.amount"
+    const normalizedTarget = normalizeIndexedPath(target);
+    return normalizedTarget === normalized;
+  });
+}
+
+/** Merged view of all bind constraints and prePopulate affecting a field path. */
+export interface NormalizedBinds {
+  required?: string;
+  readonly?: string;
+  relevant?: string;
+  calculate?: string;
+  constraint?: string;
+  constraintMessage?: string;
+  initialValue?: unknown;
+  default?: unknown;
+  prePopulate?: unknown;
+  [key: string]: unknown;
+}
+
+/**
+ * Merge all bind properties targeting `path` with any `prePopulate`/`initialValue`
+ * from the item definition into a flat record of constraints.
+ */
+export function normalizeBinds(state: ProjectState, path: string): NormalizedBinds {
+  const result: NormalizedBinds = {};
+
+  // Collect from binds
+  const binds = state.definition.binds ?? [];
+  for (const b of binds) {
+    const bind = b as any;
+    if (bind.path !== path) continue;
+    for (const [key, val] of Object.entries(bind)) {
+      if (key === 'path') continue;
+      result[key] = val;
+    }
+  }
+
+  // Overlay from item's prePopulate/initialValue
+  const item = itemAt(state, path) as any;
+  if (item) {
+    if (item.prePopulate !== undefined) result.prePopulate = item.prePopulate;
+    if (item.initialValue !== undefined) result.initialValue = item.initialValue;
+    if (item.default !== undefined) result.default = item.default;
+  }
+
+  return result;
 }

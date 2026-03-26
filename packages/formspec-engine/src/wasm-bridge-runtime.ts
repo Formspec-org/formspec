@@ -235,3 +235,13 @@ export function wasmAnalyzeFEL(expression: string): {
     const resultJson = wasm().analyzeFEL(expression);
     return JSON.parse(resultJson);
 }
+
+/** Check if a string is a valid FEL identifier. */
+export function wasmIsValidFelIdentifier(s: string): boolean {
+    return wasm().isValidFelIdentifier(s);
+}
+
+/** Sanitize a string into a valid FEL identifier. */
+export function wasmSanitizeFelIdentifier(s: string): string {
+    return wasm().sanitizeFelIdentifier(s);
+}
