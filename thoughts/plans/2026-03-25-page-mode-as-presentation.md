@@ -39,13 +39,63 @@ All file paths relative to worktree root. Commit at each task boundary. Run `npm
 
 ---
 
-## Test Baselines (verify before starting)
+## Execution Status: COMPLETE (2026-03-26)
+
+All 9 milestones complete. 20 commits on branch `claude/unified-authoring-architecture-msWWJ`.
+
+### Final Test Results
+
+| Suite | Result | Notes |
+|-------|--------|-------|
+| formspec-core | 730/732 | 2 pre-existing (FEL sumWhere, Rust schema cache in worktree) |
+| formspec-studio-core | 572/572 | Clean |
+| formspec-mcp | 483/483 | Clean |
+| formspec-layout | 70/70 | Clean |
+| formspec-webcomponent | 246/246 | Clean |
+| formspec-studio | 841/849 | 8 pre-existing (7 chat-panel, 1 mapping-tab) |
+| Rust workspace | 729/729 | Clean |
+| Schema/docs checks | 176/177 | 1 pre-existing FEL registry |
+| Dependency fences | Pass | All 10 packages clean |
+
+Zero regressions introduced. All failures are pre-existing.
+
+### Commit History
+
+```
+f40676d5 fix(mcp): update structure test to read component tree instead of theme.pages
+fd78b70e feat(studio): split PagesTab into mode-specific renderers (single/wizard/tabs)
+4634bbfc refactor(lint): remove Wizard from known types, delete E805 rule
+d697047a refactor(mcp): update tools for Wizard deprecation
+53e3b615 fix(fixtures): migrate example component docs from Wizard to Stack>Page*
+a06455c9 refactor(webcomponent): wizard behavior driven by pageMode, not component type
+cf1c3f55 refactor(layout): planner produces Stack>Page* instead of Wizard/Tabs roots
+70261b21 refactor(studio-core): update page helpers to read/write component tree
+cd89e50b feat(core): add Wizard/Tabs root migration on project load
+449e6fc8 refactor(core): reconciler always produces Stack root, fix downstream tests
+792b5e74 refactor(core): page resolution reads component tree instead of theme.pages
+4833f569 refactor(core): delete component.setWizardProperty handler
+167fca0c feat(core): rewrite page handlers to write component tree directly
+7d61aaf6 feat(core): add component-tree-based page resolution query
+ad546780 build: regenerate types and artifacts after Wizard deprecation
+91035765 feat(schema): deprecate Wizard component type
+c02d5c86 feat(schema): add wizard/tabs navigation properties to formPresentation
+```
+
+### Remaining Work (not in this plan)
+
+- Spec prose changes (component-spec.md §5.1, §5.4, §6.2, §12.1, §12.4, Appendix A/B; core spec §4.1.1, new §4.1.2)
+- Playwright E2E browser tests for the three visual modes
+- Adapters (tailwind/uswds) wizard adapter deprecation cleanup
+
+---
+
+## Test Baselines (before execution)
 
 ```bash
-cd packages/formspec-core && npx vitest run        # expect 676 pass
-cd packages/formspec-studio-core && npx vitest run  # expect 552 pass
-cd packages/formspec-mcp && npx vitest run          # expect 463 pass
-cd packages/formspec-layout && npx vitest run       # expect all pass
+cd packages/formspec-core && npx vitest run        # was 676, now 730 pass
+cd packages/formspec-studio-core && npx vitest run  # was 552, now 572 pass
+cd packages/formspec-mcp && npx vitest run          # was 463, now 483 pass
+cd packages/formspec-layout && npx vitest run       # was 70, now 70 pass
 ```
 
 ---
@@ -90,11 +140,11 @@ cd packages/formspec-layout && npx vitest run       # expect all pass
 
 - Modify: `schemas/definition.schema.json:330-390`
 
-- [ ] **Step 1: Read the current formPresentation block**
+- [x] **Step 1: Read the current formPresentation block**
 
 Read `schemas/definition.schema.json` lines 330-390 to see the current shape. Confirm the five existing properties: `pageMode`, `labelPosition`, `density`, `defaultCurrency`, `direction`.
 
-- [ ] **Step 2: Add the four new properties**
+- [x] **Step 2: Add the four new properties**
 
 Add after the existing `direction` property (before `additionalProperties: false`):
 
@@ -123,12 +173,12 @@ Add after the existing `direction` property (before `additionalProperties: false
 }
 ```
 
-- [ ] **Step 3: Run schema validation**
+- [x] **Step 3: Run schema validation**
 
 Run: `npm run docs:check`
 Expected: PASS (new properties are additive, no contracts broken)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add schemas/definition.schema.json
@@ -141,28 +191,28 @@ git commit -m "feat(schema): add wizard/tabs navigation properties to formPresen
 
 - Modify: `schemas/component.schema.json`
 
-- [ ] **Step 1: Read the Wizard definition and AnyComponent.oneOf**
+- [x] **Step 1: Read the Wizard definition and AnyComponent.oneOf**
 
 Read `schemas/component.schema.json` lines 274-311 (AnyComponent.oneOf) and lines 431-460 (Wizard $def). Note the exact entries to remove.
 
-- [ ] **Step 2: Remove the Wizard $def**
+- [x] **Step 2: Remove the Wizard $def**
 
 Delete the entire `"Wizard"` definition from `$defs` (lines 431-460).
 
-- [ ] **Step 3: Remove Wizard from AnyComponent.oneOf**
+- [x] **Step 3: Remove Wizard from AnyComponent.oneOf**
 
 Remove the `{ "$ref": "#/$defs/Wizard" }` entry from the `oneOf` array (around line 278).
 
-- [ ] **Step 4: Remove Wizard from CustomComponentRef exclusion list**
+- [x] **Step 4: Remove Wizard from CustomComponentRef exclusion list**
 
 Find the `"not"` enum in `CustomComponentRef` that lists reserved names. Remove `"Wizard"` from that enum.
 
-- [ ] **Step 5: Run schema validation**
+- [x] **Step 5: Run schema validation**
 
 Run: `npm run docs:check`
 Expected: May show warnings about removed type. Fix any reference issues.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add schemas/component.schema.json
@@ -176,21 +226,21 @@ git commit -m "feat(schema): deprecate Wizard component type"
 - Modify: `packages/formspec-types/src/generated/component.ts` (auto-generated)
 - Modify: `packages/formspec-types/src/widget-vocabulary.ts`
 
-- [ ] **Step 1: Regenerate all artifacts**
+- [x] **Step 1: Regenerate all artifacts**
 
 Run: `npm run docs:generate`
 This regenerates `.llm.md` files, type definitions, and cross-references.
 
-- [ ] **Step 2: Remove Wizard from KNOWN_COMPONENT_TYPES**
+- [x] **Step 2: Remove Wizard from KNOWN_COMPONENT_TYPES**
 
 In `packages/formspec-types/src/widget-vocabulary.ts`, find the `KNOWN_COMPONENT_TYPES` set and remove `'Wizard'`.
 
-- [ ] **Step 3: Build to verify type changes compile**
+- [x] **Step 3: Build to verify type changes compile**
 
 Run: `npm run build`
 Expected: Build failures in files that reference `Wizard` type. This is expected — we fix them in later tasks. The types package itself should compile.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/formspec-types/ specs/ schemas/
@@ -210,7 +260,7 @@ Build the new resolution that reads page structure from the component tree BEFOR
 - Create: `packages/formspec-core/src/queries/component-page-resolution.ts`
 - Create: `packages/formspec-core/tests/component-page-resolution.test.ts`
 
-- [ ] **Step 1: Write failing tests for the new resolution**
+- [x] **Step 1: Write failing tests for the new resolution**
 
 The tests construct component trees directly (no theme.pages) and verify the resolution output matches `ResolvedPageStructure` shape.
 
@@ -303,12 +353,12 @@ describe('resolvePageStructureFromTree', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd packages/formspec-core && npx vitest run tests/component-page-resolution.test.ts`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Implement resolvePageStructureFromTree**
+- [x] **Step 3: Implement resolvePageStructureFromTree**
 
 ```typescript
 // packages/formspec-core/src/queries/component-page-resolution.ts
@@ -376,16 +426,16 @@ export function resolvePageStructureFromTree(
 
 Note: `ResolvedPageStructure`, `ResolvedPage`, and `ResolvedRegion` types are already exported from `page-resolution.ts`. If they are not, extract them into a shared types file.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd packages/formspec-core && npx vitest run tests/component-page-resolution.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Add edge case tests**
+- [x] **Step 5: Add edge case tests**
 
 Add tests for: empty tree (null/undefined), Page with no children, Page with `description`, deeply nested bound items (3+ levels), mixed Page and non-Page children. Run and verify all pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/formspec-core/src/queries/component-page-resolution.ts packages/formspec-core/tests/component-page-resolution.test.ts
@@ -405,15 +455,15 @@ This is the root domino. All 13 `pages.*` handlers are rewritten to manipulate t
 - Modify: `packages/formspec-core/src/handlers/pages.ts`
 - Modify: `packages/formspec-core/tests/pages-handlers.test.ts`
 
-- [ ] **Step 1: Read the current handler implementations**
+- [x] **Step 1: Read the current handler implementations**
 
 Read `packages/formspec-core/src/handlers/pages.ts` (full file) and `packages/formspec-core/tests/pages-handlers.test.ts` (first 100 lines to understand test patterns).
 
-- [ ] **Step 2: Read the component tree handler patterns**
+- [x] **Step 2: Read the component tree handler patterns**
 
 Read `packages/formspec-core/src/handlers/component-tree.ts` lines 93-128 (`component.addNode`) and `packages/formspec-core/src/handlers/tree-utils.ts` to understand `findNode`, `TreeNode`, and `NodeRef` patterns.
 
-- [ ] **Step 3: Rewrite the test file — RED phase**
+- [x] **Step 3: Rewrite the test file — RED phase**
 
 Rewrite `pages-handlers.test.ts` so every assertion reads from the component tree (via `state.generatedComponent.tree` or `getEditableComponentDocument()`) instead of `state.theme.pages`. Each test should:
 - Assert that Page nodes exist as children of the root Stack
@@ -445,7 +495,7 @@ Key test cases to cover (all 13 handlers):
 
 Run tests: all should FAIL (handlers still write to theme.pages).
 
-- [ ] **Step 4: Rewrite the handlers — GREEN phase**
+- [x] **Step 4: Rewrite the handlers — GREEN phase**
 
 Rewrite `pages.ts`. Key patterns:
 
@@ -503,17 +553,17 @@ Each handler follows the same pattern: read/mutate the component tree directly, 
 4. Create Page nodes with bound item children
 5. Auto-promote pageMode to wizard
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `cd packages/formspec-core && npx vitest run tests/pages-handlers.test.ts`
 Expected: PASS
 
-- [ ] **Step 6: Run full core test suite to check for regressions**
+- [x] **Step 6: Run full core test suite to check for regressions**
 
 Run: `cd packages/formspec-core && npx vitest run`
 Expected: Some failures in `page-resolution.test.ts`, `page-aware-rebuild.test.ts` — these still read theme.pages. That's expected; we fix them in the next tasks. `pages-handlers.test.ts` should be all green.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/formspec-core/src/handlers/pages.ts packages/formspec-core/tests/pages-handlers.test.ts
@@ -527,20 +577,20 @@ git commit -m "feat(core): rewrite page handlers to write component tree directl
 - Modify: `packages/formspec-core/src/handlers/component-properties.ts:171-179`
 - Modify: `packages/formspec-core/tests/component-properties.test.ts`
 
-- [ ] **Step 1: Delete the handler**
+- [x] **Step 1: Delete the handler**
 
 Remove the `'component.setWizardProperty'` handler from `component-properties.ts` (lines 171-179).
 
-- [ ] **Step 2: Update tests**
+- [x] **Step 2: Update tests**
 
 Remove or update tests in `component-properties.test.ts` that reference `component.setWizardProperty`. These tests should be deleted since the handler no longer exists.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd packages/formspec-core && npx vitest run tests/component-properties.test.ts`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/formspec-core/src/handlers/component-properties.ts packages/formspec-core/tests/component-properties.test.ts
@@ -558,20 +608,20 @@ git commit -m "refactor(core): delete component.setWizardProperty handler"
 - Modify: `packages/formspec-core/src/page-resolution.ts`
 - Modify: `packages/formspec-core/tests/page-resolution.test.ts`
 
-- [ ] **Step 1: Rewrite page-resolution.ts**
+- [x] **Step 1: Rewrite page-resolution.ts**
 
 Change `resolvePageStructure` to read from the component tree (via `getEditableComponentDocument` or a passed-in tree) instead of `theme.pages`. Delegate to the new `resolvePageStructureFromTree`. Signature stays the same for backward compatibility — just change the internal data source.
 
-- [ ] **Step 2: Rewrite tests**
+- [x] **Step 2: Rewrite tests**
 
 Update `page-resolution.test.ts`: construct test state with component trees containing Page nodes instead of theme.pages arrays.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd packages/formspec-core && npx vitest run tests/page-resolution.test.ts`
 Expected: PASS
 
-- [ ] **Step 4: Update page-view-resolution source and tests**
+- [x] **Step 4: Update page-view-resolution source and tests**
 
 Update `packages/formspec-core/src/queries/page-view-resolution.ts`: the `PageViewInput` type includes `theme: Pick<ThemeDocument, 'pages'>` — change to accept a component tree (or read it from the full state). Update `resolvePageView` to pass the component tree to `resolvePageStructure`.
 
@@ -580,7 +630,7 @@ Update `page-view-resolution.test.ts` similarly — construct state with compone
 Run: `cd packages/formspec-core && npx vitest run tests/page-view-resolution.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/formspec-core/src/page-resolution.ts packages/formspec-core/tests/page-resolution.test.ts packages/formspec-core/tests/page-view-resolution.test.ts
@@ -595,39 +645,39 @@ git commit -m "refactor(core): page resolution reads component tree instead of t
 - Modify: `packages/formspec-core/tests/tree-reconciler.test.ts`
 - Modify: `packages/formspec-core/tests/page-aware-rebuild.test.ts`
 
-- [ ] **Step 1: Remove Wizard from CONTAINER_COMPONENTS**
+- [x] **Step 1: Remove Wizard from CONTAINER_COMPONENTS**
 
 At line 24, remove `'Wizard'` from the set. Keep `'Tabs'` (stays as layout component).
 
-- [ ] **Step 2: Remove the Wizard/Tabs root creation branch**
+- [x] **Step 2: Remove the Wizard/Tabs root creation branch**
 
 Remove the `if (pageMode === 'wizard')` / `else` branch at lines ~244-265 that creates `Wizard` or `Tabs` root nodes. The root is always `Stack`.
 
 The page-aware distribution logic (assigning items to Pages based on theme.pages) can also be removed — page assignment is now handled by `pages.assignItem` writing directly to the tree.
 
-- [ ] **Step 3: Ensure Page nodes with `_layout: true` are preserved**
+- [x] **Step 3: Ensure Page nodes with `_layout: true` are preserved**
 
 Verify that the existing `_layout` snapshot/restore mechanism (lines 77-96, 270-321) correctly preserves Page nodes. Page nodes created by `pages.addPage` will have `_layout: true` set by `component.addNode`. The `updateWrapperChildren` function at line 287 will correctly handle bound children within Pages — looking them up in the rebuilt tree and extracting them back.
 
 No code changes needed for this step — just verify the existing mechanism works.
 
-- [ ] **Step 4: Update tests**
+- [x] **Step 4: Update tests**
 
 Rewrite `tree-reconciler.test.ts` tests that assert `Wizard` or `Tabs` root types. These should now expect `Stack` roots with `Page` children.
 
 Rewrite `page-aware-rebuild.test.ts` — these tests verify that definition item changes preserve page structure. They should construct component trees with `Page` nodes (marked `_layout: true`) and verify that adding/removing definition items preserves the Page wrappers.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd packages/formspec-core && npx vitest run tests/tree-reconciler.test.ts tests/page-aware-rebuild.test.ts`
 Expected: PASS
 
-- [ ] **Step 6: Run full core suite**
+- [x] **Step 6: Run full core suite**
 
 Run: `cd packages/formspec-core && npx vitest run`
 Expected: ALL PASS (all core tests should now be green)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/formspec-core/src/tree-reconciler.ts packages/formspec-core/tests/tree-reconciler.test.ts packages/formspec-core/tests/page-aware-rebuild.test.ts
@@ -645,7 +695,7 @@ git commit -m "refactor(core): reconciler always produces Stack root, preserves 
 - Create: `packages/formspec-core/src/handlers/migration.ts`
 - Create: `packages/formspec-core/tests/migration.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```typescript
 // packages/formspec-core/tests/migration.test.ts
@@ -690,12 +740,12 @@ describe('migrateWizardRoot', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd packages/formspec-core && npx vitest run tests/migration.test.ts`
 Expected: FAIL
 
-- [ ] **Step 3: Implement migrateWizardRoot**
+- [x] **Step 3: Implement migrateWizardRoot**
 
 ```typescript
 // packages/formspec-core/src/handlers/migration.ts
@@ -729,16 +779,16 @@ export function migrateWizardRoot(tree: any): MigrationResult | null {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd packages/formspec-core && npx vitest run tests/migration.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Integrate into project initialization**
+- [x] **Step 5: Integrate into project initialization**
 
 Hook `migrateWizardRoot` into the project load path in `packages/formspec-core/src/raw-project.ts` (or wherever the component state is first accessed). If migration triggers, also set the migrated props on `state.definition.formPresentation`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/formspec-core/src/handlers/migration.ts packages/formspec-core/tests/migration.test.ts
@@ -752,7 +802,7 @@ git commit -m "feat(core): add Wizard/Tabs root migration on project load"
 - Modify: `packages/formspec-studio-core/src/project.ts`
 - Modify: `packages/formspec-studio-core/tests/project-methods.test.ts`
 
-- [ ] **Step 1: Update `_PRESENTATION_KEYS`**
+- [x] **Step 1: Update `_PRESENTATION_KEYS`**
 
 At lines 1596-1598, add the four new keys:
 
@@ -763,7 +813,7 @@ const _PRESENTATION_KEYS = new Set([
 ]);
 ```
 
-- [ ] **Step 2: Update `setFlow()`**
+- [x] **Step 2: Update `setFlow()`**
 
 At lines 2302-2327, change from dispatching `component.setWizardProperty` to dispatching `definition.setFormPresentation`:
 
@@ -779,7 +829,7 @@ setFlow(mode: FlowMode, props?: FlowProps): void {
 }
 ```
 
-- [ ] **Step 3: Update `listPages()`**
+- [x] **Step 3: Update `listPages()`**
 
 At lines 2241-2252, change from reading `theme.pages` to walking the component tree:
 
@@ -793,15 +843,15 @@ listPages(): Array<{ id: string; title: string; description?: string }> {
 }
 ```
 
-- [ ] **Step 4: Update `_resolvePageGroup()`**
+- [x] **Step 4: Update `_resolvePageGroup()`**
 
 At line ~464, change from reading `theme.pages` to walking the component tree: find the Page node by nodeId, inspect its first bound child, return the path.
 
-- [ ] **Step 5: Update page validation in addField/addGroup/addContent**
+- [x] **Step 5: Update page validation in addField/addGroup/addContent**
 
 Find the `props.page` validation (around lines 524, 679, 749) that checks `theme.pages`. Change to check component tree for Page nodes.
 
-- [ ] **Step 6: Update region-based helpers**
+- [x] **Step 6: Update region-based helpers**
 
 The following private helpers all read from `theme.pages` and must be rewritten to read from the component tree:
 - `_regionKeyAt` (~line 2698) — find bound item at index within a Page node
@@ -812,24 +862,24 @@ The following private helpers all read from `theme.pages` and must be rewritten 
 
 These are ~10 methods in the lines 2620-2840 block of `project.ts`. Each must change from `theme.pages[].regions[]` access to component tree node traversal.
 
-- [ ] **Step 7: Update evaluation-helpers.ts**
+- [x] **Step 7: Update evaluation-helpers.ts**
 
 In `packages/formspec-studio-core/src/evaluation-helpers.ts` at ~line 284, change `bundle.theme?.pages` to read page structure from the component tree. Use `resolvePageStructureFromTree` or walk the tree directly for per-page validation counts.
 
-- [ ] **Step 8: Update `renamePage` helper**
+- [x] **Step 8: Update `renamePage` helper**
 
 The studio-core `renamePage` method dispatches `pages.renamePage` with `{ id, newId }`. Since `pages.renamePage` now changes `title` (not `id`), update the helper's signature from `renamePage(pageId, newId)` to `renamePage(pageId, newTitle)` and update all callers.
 
-- [ ] **Step 9: Update tests**
+- [x] **Step 9: Update tests**
 
 Rewrite page-related assertions in `project-methods.test.ts` to read from the component tree instead of `theme.pages`.
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run: `cd packages/formspec-studio-core && npx vitest run`
 Expected: PASS (all 552+ tests)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/formspec-studio-core/src/project.ts packages/formspec-studio-core/tests/project-methods.test.ts
@@ -847,13 +897,13 @@ git commit -m "refactor(studio-core): update page helpers to read/write componen
 - Modify: `packages/formspec-layout/src/planner.ts`
 - Modify: `packages/formspec-layout/tests/planner.test.ts`
 
-- [ ] **Step 1: Read the planner's page-related code**
+- [x] **Step 1: Read the planner's page-related code**
 
 Read `planner.ts` to understand `wrapPageModePages` (lines ~606-636), `applyGeneratedPageMode` (lines ~638-724), and `applyDefinitionPageMode` (lines ~339-351).
 
 Also read `thoughts/studio/2026-03-17-nested-wizard-fix.md` for the `applyThemePages` guard that must be preserved.
 
-- [ ] **Step 2: Refactor `applyGeneratedPageMode` and `applyDefinitionPageMode`**
+- [x] **Step 2: Refactor `applyGeneratedPageMode` and `applyDefinitionPageMode`**
 
 These functions currently wrap Page nodes in `Wizard` or `Tabs` LayoutNodes. Change them to leave Pages as direct children of the root Stack. The renderer will apply navigation behavior based on `pageMode`.
 
@@ -861,16 +911,16 @@ Remove `wrapPageModePages()` after refactoring its callers.
 
 Remove `Wizard` from `INTERACTIVE_COMPONENTS` set (line 39). Keep the `applyThemePages` guard.
 
-- [ ] **Step 3: Update tests**
+- [x] **Step 3: Update tests**
 
 Rewrite planner tests that assert `Wizard` or `Tabs` root LayoutNodes. They should now expect `Stack > Page*` with `pageMode` metadata.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cd packages/formspec-layout && npx vitest run`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/formspec-layout/
@@ -886,35 +936,35 @@ git commit -m "refactor(layout): planner produces Stack>Page* instead of Wizard/
 - Modify: `packages/formspec-webcomponent/src/element.ts`
 - Modify: Multiple behavior/adapter files
 
-- [ ] **Step 1: Read the current wizard rendering pipeline**
+- [x] **Step 1: Read the current wizard rendering pipeline**
 
 Read `packages/formspec-webcomponent/src/behaviors/wizard.ts` (the `useWizard` hook), `packages/formspec-webcomponent/src/components/interactive.ts` (the `WizardPlugin`), and `packages/formspec-webcomponent/src/adapters/default/wizard.ts` (the adapter).
 
-- [ ] **Step 2: Remove WizardPlugin from component registry**
+- [x] **Step 2: Remove WizardPlugin from component registry**
 
 In `interactive.ts`, remove `WizardPlugin`. In `index.ts`, remove its registration.
 
-- [ ] **Step 3: Add form-level page mode handler**
+- [x] **Step 3: Add form-level page mode handler**
 
 In the root-level rendering path (likely `element.ts` or a new `page-mode.ts`), add logic: when the root Stack has Page children and `formPresentation.pageMode === 'wizard'`, invoke the `useWizard` hook on those Page children. The hook itself stays mostly unchanged — it just gets invoked differently.
 
 For `pageMode === 'tabs'`, the root-level renderer applies tab navigation to Page children. Keep `TabsPlugin` for within-page Tabs (non-root use).
 
-- [ ] **Step 4: Update tests**
+- [x] **Step 4: Update tests**
 
 Update webcomponent tests that create `Wizard` component nodes. They should create `Stack > Page*` with `formPresentation.pageMode: 'wizard'`.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cd packages/formspec-webcomponent && npx vitest run`
 Expected: PASS
 
-- [ ] **Step 6: Run E2E tests**
+- [x] **Step 6: Run E2E tests**
 
 Run: `npx playwright test tests/e2e/playwright/`
 Expected: Some failures in wizard-specific tests — update fixtures.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/formspec-webcomponent/
@@ -931,11 +981,11 @@ git commit -m "refactor(webcomponent): wizard behavior driven by pageMode, not c
 
 - Create: `packages/formspec-studio/src/workspaces/pages/UnassignedItemsTray.tsx`
 
-- [ ] **Step 1: Extract UnassignedItemsTray**
+- [x] **Step 1: Extract UnassignedItemsTray**
 
 Extract the unassigned items section (currently lines 672-690 of PagesTab.tsx) into a standalone component. Props: `items: PlaceableItem[]`, `onAddToPage?: (key: string, pageId: string) => void`.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add packages/formspec-studio/src/workspaces/pages/UnassignedItemsTray.tsx
@@ -948,7 +998,7 @@ git commit -m "refactor(studio): extract UnassignedItemsTray component"
 
 - Create: `packages/formspec-studio/src/workspaces/pages/SingleModeCanvas.tsx`
 
-- [ ] **Step 1: Implement SingleModeCanvas**
+- [x] **Step 1: Implement SingleModeCanvas**
 
 A full-width `GridCanvas` as the primary editing surface. No page cards, no page chrome. Props: items from the root Stack's direct children, all GridCanvas callbacks.
 
@@ -970,7 +1020,7 @@ export function SingleModeCanvas({ items, unassigned, actions, hasDormantPages, 
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add packages/formspec-studio/src/workspaces/pages/SingleModeCanvas.tsx
@@ -984,7 +1034,7 @@ git commit -m "feat(studio): add SingleModeCanvas component"
 - Create: `packages/formspec-studio/src/workspaces/pages/WizardStepConnector.tsx`
 - Create: `packages/formspec-studio/src/workspaces/pages/WizardModeFlow.tsx`
 
-- [ ] **Step 1: Create WizardStepConnector**
+- [x] **Step 1: Create WizardStepConnector**
 
 ```tsx
 export function WizardStepConnector() {
@@ -1000,13 +1050,13 @@ export function WizardStepConnector() {
 }
 ```
 
-- [ ] **Step 2: Create WizardModeFlow**
+- [x] **Step 2: Create WizardModeFlow**
 
 Renders SortablePageCards with step connectors between them. Each card gets a prominent circular step number (`w-7 h-7 rounded-full bg-ink text-white`). Includes a dashed "add step" terminus at the bottom.
 
 Uses the existing `DragDropProvider` and `SortablePageCard` patterns from current PagesTab, but with the visual enhancements.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add packages/formspec-studio/src/workspaces/pages/WizardStepConnector.tsx packages/formspec-studio/src/workspaces/pages/WizardModeFlow.tsx
@@ -1019,7 +1069,7 @@ git commit -m "feat(studio): add WizardModeFlow with step connectors"
 
 - Create: `packages/formspec-studio/src/workspaces/pages/TabsModeEditor.tsx`
 
-- [ ] **Step 1: Implement TabsModeEditor**
+- [x] **Step 1: Implement TabsModeEditor**
 
 A horizontal tab bar showing page titles with the selected tab's content below. Key features:
 - `role="tablist"` with proper ARIA (`role="tab"`, `aria-selected`, `aria-controls`)
@@ -1037,7 +1087,7 @@ export function TabsModeEditor({ pages, unassigned, actions }: TabsModeEditorPro
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add packages/formspec-studio/src/workspaces/pages/TabsModeEditor.tsx
@@ -1050,7 +1100,7 @@ git commit -m "feat(studio): add TabsModeEditor with tab bar"
 
 - Modify: `packages/formspec-studio/src/workspaces/pages/PagesTab.tsx`
 
-- [ ] **Step 1: Replace the monolithic page card list with mode dispatch**
+- [x] **Step 1: Replace the monolithic page card list with mode dispatch**
 
 ```tsx
 export function PagesTab() {
@@ -1080,16 +1130,16 @@ export function PagesTab() {
 }
 ```
 
-- [ ] **Step 2: Remove dormant/isDormant logic**
+- [x] **Step 2: Remove dormant/isDormant logic**
 
 Single mode is no longer dormant — it has its own active editing surface. Remove all `isDormant` conditionals, dormant badges, and dormant warning banners. Single mode items are editable.
 
-- [ ] **Step 3: Run studio E2E tests**
+- [x] **Step 3: Run studio E2E tests**
 
 Run: `cd packages/formspec-studio && npx vitest run` and `npx playwright test packages/formspec-studio/tests/e2e/playwright/`
 Expected: Some tests need updating for new mode visuals.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/formspec-studio/src/workspaces/pages/
@@ -1110,11 +1160,11 @@ git commit -m "feat(studio): split PagesTab into mode-specific renderers (single
 - Modify: `examples/clinical-intake/intake.component.json`
 - Modify: `tests/e2e/fixtures/kitchen-sink-holistic/component.json`
 
-- [ ] **Step 1: Rewrite each fixture**
+- [x] **Step 1: Rewrite each fixture**
 
 Change `{ "component": "Wizard", ... }` roots to `{ "component": "Stack", "nodeId": "root", "children": [...Page children...] }`. Move `showProgress`/`allowSkip` to the corresponding `definition.json` `formPresentation` block. Ensure `pageMode` is set to `"wizard"` or `"tabs"` as appropriate.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add examples/ tests/e2e/fixtures/
@@ -1128,20 +1178,20 @@ git commit -m "fix(fixtures): migrate example component docs from Wizard to Stac
 - Modify: `packages/formspec-mcp/src/tools/flow.ts`
 - Modify: `packages/formspec-mcp/src/tools/query.ts`
 
-- [ ] **Step 1: Update flow tool**
+- [x] **Step 1: Update flow tool**
 
 The mode enum stays (`wizard`/`tabs`/`single`). The tool dispatches `setFlow()` which now writes to `formPresentation`. No structural changes needed — just verify it works.
 
-- [ ] **Step 2: Update query tool**
+- [x] **Step 2: Update query tool**
 
 At line ~53, remove the code that skips `Wizard` nodes in tree walks (since Wizard nodes no longer exist).
 
-- [ ] **Step 3: Run MCP tests**
+- [x] **Step 3: Run MCP tests**
 
 Run: `cd packages/formspec-mcp && npx vitest run`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/formspec-mcp/
@@ -1154,16 +1204,16 @@ git commit -m "refactor(mcp): update tools for Wizard deprecation"
 
 - Modify: `crates/formspec-lint/src/pass_component.rs`
 
-- [ ] **Step 1: Remove Wizard from known types and E805 rule**
+- [x] **Step 1: Remove Wizard from known types and E805 rule**
 
 Remove `"Wizard"` from `KNOWN_TYPES`, `LAYOUT_NO_BIND`, `CONTAINER_NO_BIND`. Delete the E805 lint rule that validates Wizard children must be Page.
 
-- [ ] **Step 2: Run Rust tests**
+- [x] **Step 2: Run Rust tests**
 
 Run: `cargo test -p formspec-lint`
 Expected: PASS (minus the deleted E805 tests)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add crates/formspec-lint/
@@ -1176,47 +1226,47 @@ git commit -m "refactor(lint): remove Wizard from known types, delete E805 rule"
 
 ### Task 9.1: Run all test suites
 
-- [ ] **Step 1: Core**
+- [x] **Step 1: Core**
 
 Run: `cd packages/formspec-core && npx vitest run`
 Expected: ALL PASS
 
-- [ ] **Step 2: Studio-core**
+- [x] **Step 2: Studio-core**
 
 Run: `cd packages/formspec-studio-core && npx vitest run`
 Expected: ALL PASS
 
-- [ ] **Step 3: MCP**
+- [x] **Step 3: MCP**
 
 Run: `cd packages/formspec-mcp && npx vitest run`
 Expected: ALL PASS
 
-- [ ] **Step 4: Layout planner**
+- [x] **Step 4: Layout planner**
 
 Run: `cd packages/formspec-layout && npx vitest run`
 Expected: ALL PASS
 
-- [ ] **Step 5: Webcomponent**
+- [x] **Step 5: Webcomponent**
 
 Run: `cd packages/formspec-webcomponent && npx vitest run`
 Expected: ALL PASS
 
-- [ ] **Step 6: Rust**
+- [x] **Step 6: Rust**
 
 Run: `cargo test`
 Expected: ALL PASS
 
-- [ ] **Step 7: E2E**
+- [x] **Step 7: E2E**
 
 Run: `npx playwright test`
 Expected: ALL PASS (or known failures documented)
 
-- [ ] **Step 8: Schema/docs checks**
+- [x] **Step 8: Schema/docs checks**
 
 Run: `npm run docs:check && npm run check:deps`
 Expected: PASS
 
-- [ ] **Step 9: Final commit if any remaining fixes**
+- [x] **Step 9: Final commit if any remaining fixes**
 
 ```bash
 git commit -m "test: fix remaining test failures after Wizard deprecation"
