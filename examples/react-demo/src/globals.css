@@ -16,6 +16,38 @@ body {
   padding: 2.5rem 1rem;
 }
 
+/* ── Demo banner ─────────────────────────────────────────────── */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  margin-bottom: 1.25rem;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #92400e;
+}
+
+.demo-banner-label {
+  flex-shrink: 0;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 0.25rem;
+}
+
+.demo-banner-text strong {
+  font-weight: 700;
+  color: #78350f;
+}
+
 /* ── Header ───────────────────────────────────────────────────── */
 .app-header {
   margin-bottom: 2.5rem;
@@ -163,6 +195,23 @@ body {
 
 .status-text--valid { color: var(--formspec-color-success, #188038); }
 .status-text--invalid { color: var(--formspec-color-error, #d93025); }
+
+/* ── Footer ───────────────────────────────────────────────────── */
+.app-footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--formspec-color-border, #e0e3e5);
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--formspec-color-muted, #7b8087);
+}
+
+.app-footer code {
+  padding: 0.125rem 0.375rem;
+  font-size: 0.75rem;
+  background: var(--formspec-color-surface, #f8f9fa);
+  border-radius: 0.25rem;
+}
 
 /* ── Reduced motion ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
