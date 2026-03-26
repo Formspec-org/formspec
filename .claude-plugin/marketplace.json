@@ -26,7 +26,8 @@
         "./agents/spec-expert.md",
         "./agents/formspec-scout.md",
         "./agents/formspec-craftsman.md",
-        "./agents/formspec-pm.md"
+        "./agents/formspec-pm.md",
+        "./agents/content-writer.md"
       ],
       "commands": [
         "./commands"
