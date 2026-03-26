@@ -1,35 +1,35 @@
-/** @filedesc Default layout component — semantic HTML containers with theme cascade. */
+/** @filedesc Default layout component — semantic HTML containers with CSS class structure. */
 import React from 'react';
 import type { LayoutComponentProps } from '../../component-map';
 
 /**
  * Default layout renderer — wraps children in a semantic container
- * with theme-resolved CSS classes and styles.
+ * with formspec CSS class names and theme-resolved styles.
  */
 export function DefaultLayout({ node, children }: LayoutComponentProps) {
-    const cssClass = node.cssClasses?.join(' ') || '';
+    const themeClass = node.cssClasses?.join(' ') || '';
     const style = node.style as React.CSSProperties | undefined;
 
-    // Card gets a heading from the bound group label
+    // Card / Section — bordered card with optional heading
     if (node.component === 'Card' || node.component === 'Section') {
         const label = node.fieldItem?.label || node.props?.title as string;
         return (
             <section
-                className={cssClass || `formspec-${node.component.toLowerCase()}`}
+                className={themeClass || 'formspec-card'}
                 style={style}
             >
-                {label && <h3>{label}</h3>}
+                {label && <h3 className="formspec-card-title">{label}</h3>}
                 {children}
             </section>
         );
     }
 
-    // Grid/Columns get CSS grid
+    // Grid / Columns — CSS grid
     if (node.component === 'Grid' || node.component === 'Columns') {
         const columns = (node.props?.columns as number) || 1;
         return (
             <div
-                className={cssClass || 'formspec-grid'}
+                className={themeClass || 'formspec-grid'}
                 style={{
                     display: 'grid',
                     gridTemplateColumns: `repeat(${columns}, 1fr)`,
@@ -42,10 +42,23 @@ export function DefaultLayout({ node, children }: LayoutComponentProps) {
         );
     }
 
-    // Stack (default) — vertical flex
+    // Stack — default vertical container, with optional card treatment for titled groups
+    const title = node.props?.title as string | undefined;
+    if (title && node.bindPath) {
+        return (
+            <section
+                className={themeClass || 'formspec-card'}
+                style={style}
+            >
+                <h3 className="formspec-card-title">{title}</h3>
+                {children}
+            </section>
+        );
+    }
+
     return (
         <div
-            className={cssClass || `formspec-${node.component.toLowerCase()}`}
+            className={themeClass || `formspec-${node.component.toLowerCase()}`}
             style={style}
         >
             {children}

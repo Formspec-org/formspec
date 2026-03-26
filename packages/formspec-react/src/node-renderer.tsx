@@ -105,9 +105,9 @@ function DisplayNode({ node }: { node: LayoutNode }) {
 
     switch (node.component) {
         case 'Heading':
-            return <h2 className={cssClass} style={style}>{text}</h2>;
+            return <h2 className={cssClass || 'formspec-heading'} style={style}>{text}</h2>;
         case 'Divider':
-            return <hr className={cssClass} style={style} />;
+            return <hr className={cssClass || 'formspec-divider'} style={style} />;
         case 'Alert':
             return <div role="status" className={cssClass || 'formspec-alert'} style={style}>{text}</div>;
         case 'Text':

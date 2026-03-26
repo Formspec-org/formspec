@@ -1,0 +1,30 @@
+{
+  "$formspecTheme": "1.0",
+  "version": "1.0.0",
+  "name": "react-demo-theme",
+  "title": "React Demo Theme",
+  "tokens": {
+    "color.primary":          "#2d6a7a",
+    "color.primaryForeground": "#f5f7f8",
+    "color.background":       "#f8f9fa",
+    "color.foreground":       "#1a1f25",
+    "color.card":             "#ffffff",
+    "color.border":           "#e0e3e5",
+    "color.input":            "#ababaf",
+    "color.ring":             "#2d6a7a",
+    "color.muted":            "#7b8087",
+    "color.error":            "#d93025",
+    "color.success":          "#188038",
+    "color.warning":          "#8a6500",
+    "color.surface":          "#f8f9fa",
+    "font.family":            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "spacing.sm":             "0.5rem",
+    "spacing.md":             "1rem",
+    "spacing.lg":             "1.5rem",
+    "radius.sm":              "0.5rem",
+    "radius.md":              "0.75rem"
+  },
+  "defaults": {
+    "labelPosition": "top"
+  }
+}

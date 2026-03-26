@@ -1,224 +1,70 @@
-@import "tailwindcss";
+/* @filedesc Demo app styles — theme token emission + app shell styling.
+ * Form component styling comes from formspec-react/src/formspec.css. */
 
-@theme {
-  --color-background: oklch(0.985 0.002 247.858);
-  --color-foreground: oklch(0.145 0.014 247.858);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0.014 247.858);
-  --color-primary: oklch(0.398 0.07 227.392);
-  --color-primary-foreground: oklch(0.985 0.002 247.858);
-  --color-secondary: oklch(0.96 0.005 247.858);
-  --color-secondary-foreground: oklch(0.205 0.014 247.858);
-  --color-muted: oklch(0.96 0.005 247.858);
-  --color-muted-foreground: oklch(0.556 0.014 247.858);
-  --color-accent: oklch(0.96 0.005 247.858);
-  --color-accent-foreground: oklch(0.205 0.014 247.858);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-border: oklch(0.895 0.005 247.858);
-  --color-input: oklch(0.74 0.005 247.858);
-  --color-ring: oklch(0.398 0.07 227.392);
-  --color-success: oklch(0.527 0.154 150.069);
-  --color-warning: oklch(0.55 0.162 75.834);
-}
-
+/* ── App shell ────────────────────────────────────────────────── */
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  margin: 0;
+  background-color: var(--formspec-color-background, #f8f9fa);
+  color: var(--formspec-color-foreground, #1a1f25);
+  font-family: var(--formspec-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Form field defaults (applied by DefaultField via theme cascade) ── */
-
-input[type="text"],
-input[type="number"],
-input[type="email"],
-input[type="tel"],
-input[type="date"],
-input[type="url"],
-select,
-textarea {
-  display: block;
-  width: 100%;
-  padding: 0.625rem 0.875rem;
-  border: 1px solid var(--color-input);
-  border-radius: 0.5rem;
-  background: var(--color-card);
-  color: var(--color-foreground);
-  font-size: 0.875rem;
-  line-height: 1.5;
-  transition: border-color 0.15s, box-shadow 0.15s;
+.app-container {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2.5rem 1rem;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 1px;
-  border-color: var(--color-ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring) 40%, transparent);
+/* ── Header ───────────────────────────────────────────────────── */
+.app-header {
+  margin-bottom: 2.5rem;
 }
 
-input[type="checkbox"] {
-  appearance: none;
-  width: 1.125rem;
-  height: 1.125rem;
-  min-width: 1.125rem;
-  border: 1.5px solid var(--color-input);
-  border-radius: 0.25rem;
-  background: var(--color-card);
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
-  position: relative;
-}
-
-input[type="checkbox"]:checked {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-input[type="checkbox"]:checked::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 5px;
-  height: 9px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-input[type="radio"] {
-  appearance: none;
-  width: 1.125rem;
-  height: 1.125rem;
-  min-width: 1.125rem;
-  border: 1.5px solid var(--color-input);
-  border-radius: 50%;
-  background: var(--color-card);
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
-  position: relative;
-}
-
-input[type="radio"]:checked {
-  border-color: var(--color-primary);
-}
-
-input[type="radio"]:checked::after {
-  content: '';
-  position: absolute;
-  left: 3px;
-  top: 3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--color-primary);
-}
-
-input[type="radio"]:focus-visible,
-input[type="checkbox"]:focus-visible {
-  outline: none;
-  border-color: var(--color-ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring) 25%, transparent);
-}
-
-textarea {
-  min-height: 6rem;
-  resize: vertical;
-}
-
-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-foreground);
-  margin-bottom: 0.375rem;
-}
-
-/* Block labels for text/select fields — not checkbox labels */
-label[for] {
-  display: block;
-}
-
-.formspec-hint {
-  font-size: 0.8125rem;
-  color: var(--color-muted-foreground);
-  margin-bottom: 0.375rem;
-  line-height: 1.4;
-}
-
-.formspec-error {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--color-destructive);
-  min-height: 1.25rem;
-  margin-top: 0.25rem;
-}
-
-.formspec-error:empty {
-  display: none;
-}
-
-/* Repeat group buttons */
-.formspec-repeat-add,
-.formspec-repeat-remove {
-  display: inline-flex;
+.app-badges {
+  display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  gap: 0.75rem;
 }
 
-.formspec-repeat-add {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  border: 1px solid var(--color-primary);
-  margin-top: 1.25rem;
-  margin-bottom: 1.5rem;
+.app-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 0.375rem;
 }
 
-.formspec-repeat-add:hover {
-  filter: brightness(1.1);
+.app-badge--primary {
+  background: var(--formspec-color-primary, #2d6a7a);
+  color: var(--formspec-color-primaryForeground, #fff);
 }
 
-.formspec-repeat-remove {
-  background: transparent;
-  color: var(--color-destructive);
-  border: 1px solid var(--color-destructive);
-  margin-top: 1rem;
+.app-badge--outline {
+  border: 1px solid var(--formspec-color-border, #e0e3e5);
+  background: var(--formspec-color-card, #fff);
+  color: var(--formspec-color-muted, #7b8087);
 }
 
-.formspec-repeat-remove:hover {
-  background: color-mix(in oklch, var(--color-destructive) 8%, transparent);
+.app-title {
+  margin: 1rem 0 0;
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--formspec-color-foreground, #1a1f25);
 }
 
-.formspec-repeat-add:focus-visible,
-.formspec-repeat-remove:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 1px;
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring) 40%, transparent);
+.app-subtitle {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--formspec-color-muted, #7b8087);
 }
 
-.formspec-repeat-instance {
-  padding: 1.25rem 0 1rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.formspec-repeat-instance:first-of-type {
-  padding-top: 0;
-}
-
-.formspec-repeat-instance:last-of-type {
-  border-bottom: none;
-}
-
-/* Screen reader only */
-.sr-only {
+/* ── Skip link ────────────────────────────────────────────────── */
+.skip-link {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -228,17 +74,146 @@ label[for] {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+  text-decoration: none;
 }
 
-/* Respect reduced-motion preference (WCAG 2.3.3) */
+.skip-link:focus {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 50;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  background: var(--formspec-color-primary, #2d6a7a);
+  color: var(--formspec-color-primaryForeground, #fff);
+  border-radius: 0.375rem;
+  font-weight: 600;
+}
+
+/* ── Submit panel ─────────────────────────────────────────────── */
+.submit-panel {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.submit-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.submit-button {
+  display: inline-flex;
+  padding: 0.625rem 1.5rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--formspec-color-primary, #2d6a7a);
+  color: var(--formspec-color-primaryForeground, #fff);
+  border: none;
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.submit-button:hover {
+  filter: brightness(1.1);
+}
+
+.submit-button:focus-visible {
+  outline: 2px solid var(--formspec-color-ring, #2d6a7a);
+  outline-offset: 2px;
+}
+
+/* ── Error / warning summaries ────────────────────────────────── */
+.error-summary,
+.warning-summary {
+  padding: 1rem;
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+}
+
+.error-summary {
+  border: 1px solid color-mix(in srgb, var(--formspec-color-error, #d93025) 30%, transparent);
+  background: color-mix(in srgb, var(--formspec-color-error, #d93025) 5%, white);
+}
+
+.error-summary:focus {
+  outline: none;
+}
+
+.error-summary:focus-visible {
+  outline: 2px solid var(--formspec-color-ring, #2d6a7a);
+}
+
+.warning-summary {
+  border: 1px solid color-mix(in srgb, var(--formspec-color-warning, #8a6500) 30%, transparent);
+  background: color-mix(in srgb, var(--formspec-color-warning, #8a6500) 5%, white);
+}
+
+.summary-heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.error-summary .summary-heading { color: var(--formspec-color-error, #d93025); }
+.warning-summary .summary-heading { color: var(--formspec-color-warning, #8a6500); }
+
+.summary-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.error-summary .summary-list { color: var(--formspec-color-error, #d93025); }
+.warning-summary .summary-list { color: var(--formspec-color-warning, #8a6500); }
+
+/* ── Response JSON ────────────────────────────────────────────── */
+.response-details {
+  border: 1px solid var(--formspec-color-border, #e0e3e5);
+  background: var(--formspec-color-card, #fff);
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+  padding: 1rem;
+}
+
+.response-details summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.response-details pre {
+  margin-top: 0.75rem;
+  max-height: 24rem;
+  overflow: auto;
+  padding: 1rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  background: var(--formspec-color-surface, #f8f9fa);
+  border-radius: 0.375rem;
+}
+
+.status-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-text--valid { color: var(--formspec-color-success, #188038); }
+.status-text--invalid { color: var(--formspec-color-error, #d93025); }
+
+/* ── Reduced motion ───────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
-}
-
-/* Hidden fields (non-relevant) */
-.formspec-hidden {
-  display: none !important;
 }

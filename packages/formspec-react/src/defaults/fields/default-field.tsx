@@ -1,23 +1,82 @@
-/** @filedesc Default field component — semantic HTML with theme cascade. */
+/** @filedesc Default field component — semantic HTML with ARIA, touch-gated errors, and CSS class structure. */
 import React from 'react';
 import type { FieldComponentProps } from '../../component-map';
 
 /**
  * Default field renderer — works for any field type.
- * Renders semantic HTML with ARIA attributes and theme-resolved classes.
+ * Renders semantic HTML with ARIA attributes, theme-resolved classes,
+ * onBlur touch behavior, and touch-gated error display.
  * Override per component type via the `components.fields` map.
  */
 export function DefaultField({ field, node }: FieldComponentProps) {
     const isProtected = !field.visible && field.disabledDisplay === 'protected';
-    const cssClass = [node.cssClasses?.join(' '), isProtected ? 'formspec-protected' : ''].filter(Boolean).join(' ');
+    const showError = !!(field.error && field.touched);
+    const themeClass = node.cssClasses?.join(' ') || '';
+
     const describedBy = [
         field.hint ? `${field.id}-hint` : '',
-        field.error ? `${field.id}-error` : '',
-    ].filter(Boolean).join(' ');
+        showError ? `${field.id}-error` : '',
+    ].filter(Boolean).join(' ') || undefined;
 
+    // Checkbox / Toggle: inline layout
+    if (node.component === 'Checkbox' || node.component === 'Toggle') {
+        return (
+            <div
+                className={`formspec-field formspec-field--inline ${isProtected ? 'formspec-protected' : ''} ${themeClass}`.trim()}
+                style={node.style as React.CSSProperties | undefined}
+                data-name={field.path}
+            >
+                <input
+                    id={field.id}
+                    type="checkbox"
+                    checked={!!field.value}
+                    onChange={(e) => field.setValue(e.target.checked)}
+                    onBlur={() => field.touch()}
+                    aria-invalid={showError}
+                    aria-describedby={describedBy}
+                    readOnly={field.readonly || isProtected}
+                    aria-disabled={isProtected || undefined}
+                />
+                <label htmlFor={field.id}>
+                    {field.label}
+                    {field.required && <span className="formspec-required" aria-hidden="true">*</span>}
+                </label>
+                {showError && (
+                    <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>
+                )}
+            </div>
+        );
+    }
+
+    // RadioGroup / CheckboxGroup: fieldset + legend
+    if (node.component === 'RadioGroup' || node.component === 'CheckboxGroup') {
+        return (
+            <fieldset
+                className={`formspec-field ${isProtected ? 'formspec-protected' : ''} ${themeClass}`.trim()}
+                style={node.style as React.CSSProperties | undefined}
+                data-name={field.path}
+                aria-describedby={describedBy}
+                aria-required={field.required || undefined}
+            >
+                <legend>
+                    {field.label}
+                    {field.required && <span className="formspec-required" aria-hidden="true">*</span>}
+                </legend>
+                {field.hint && (
+                    <p id={`${field.id}-hint`} className="formspec-hint">{field.hint}</p>
+                )}
+                {renderGroupControl(field, node)}
+                {showError && (
+                    <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>
+                )}
+            </fieldset>
+        );
+    }
+
+    // Standard field: div + label + control
     return (
         <div
-            className={cssClass || undefined}
+            className={`formspec-field ${isProtected ? 'formspec-protected' : ''} ${themeClass}`.trim()}
             style={node.style as React.CSSProperties | undefined}
             data-name={field.path}
             {...(node.accessibility?.role ? { role: node.accessibility.role } : {})}
@@ -28,46 +87,91 @@ export function DefaultField({ field, node }: FieldComponentProps) {
                 className={node.labelPosition === 'hidden' ? 'sr-only' : undefined}
             >
                 {field.label}
-                {field.required && <span aria-hidden="true"> *</span>}
+                {field.required && <span className="formspec-required" aria-hidden="true">*</span>}
             </label>
 
             {field.hint && (
-                <p id={`${field.id}-hint`} className="formspec-hint">
-                    {field.hint}
-                </p>
+                <p id={`${field.id}-hint`} className="formspec-hint">{field.hint}</p>
             )}
 
             {renderControl(field, node, describedBy, isProtected)}
 
-            {field.error && (
-                <p
-                    id={`${field.id}-error`}
-                    role="alert"
-                    aria-live="polite"
-                    className="formspec-error"
-                >
-                    {field.error}
-                </p>
+            {showError && (
+                <p id={`${field.id}-error`} className="formspec-error">{field.error}</p>
             )}
         </div>
     );
 }
 
+/** Renders radio/checkbox group options. */
+function renderGroupControl(
+    field: FieldComponentProps['field'],
+    node: FieldComponentProps['node'],
+) {
+    if (node.component === 'RadioGroup') {
+        return (
+            <div className="formspec-radio-group">
+                {field.options.map((opt) => (
+                    <label key={opt.value}>
+                        <input
+                            type="radio"
+                            name={field.path}
+                            value={opt.value}
+                            checked={field.value === opt.value}
+                            onChange={() => { field.setValue(opt.value); field.touch(); }}
+                        />
+                        {opt.label}
+                    </label>
+                ))}
+            </div>
+        );
+    }
+
+    // CheckboxGroup
+    const current = Array.isArray(field.value) ? field.value : [];
+    return (
+        <div className="formspec-checkbox-group">
+            {field.options.map((opt) => (
+                <label key={opt.value}>
+                    <input
+                        type="checkbox"
+                        name={field.path}
+                        value={opt.value}
+                        checked={current.includes(opt.value)}
+                        onChange={(e) => {
+                            const next = e.target.checked
+                                ? [...current, opt.value]
+                                : current.filter((v: string) => v !== opt.value);
+                            field.setValue(next);
+                            field.touch();
+                        }}
+                    />
+                    {opt.label}
+                </label>
+            ))}
+        </div>
+    );
+}
+
+/** Renders the form control for standard (non-group) field types. */
 function renderControl(
     field: FieldComponentProps['field'],
     node: FieldComponentProps['node'],
-    describedBy: string,
+    describedBy: string | undefined,
     isProtected = false,
 ) {
-    const { dataType, id, path, value, options } = field;
+    const { dataType, id, path, value } = field;
+    const showError = !!(field.error && field.touched);
     const common = {
         id,
         name: path,
         'aria-describedby': describedBy,
-        'aria-invalid': !!field.error,
+        'aria-invalid': showError,
         'aria-required': field.required,
+        required: field.required,
         readOnly: field.readonly || isProtected,
         'aria-disabled': isProtected || undefined,
+        onBlur: () => field.touch(),
     };
 
     switch (node.component) {
@@ -79,66 +183,10 @@ function renderControl(
                     onChange={(e) => field.setValue(e.target.value)}
                 >
                     <option value="" disabled>- Select -</option>
-                    {options.map((opt) => (
+                    {field.options.map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                 </select>
-            );
-
-        case 'CheckboxGroup':
-            return (
-                <fieldset>
-                    {options.map((opt) => (
-                        <label key={opt.value}>
-                            <input
-                                type="checkbox"
-                                name={path}
-                                value={opt.value}
-                                checked={Array.isArray(value) && value.includes(opt.value)}
-                                onChange={(e) => {
-                                    const current = Array.isArray(value) ? [...value] : [];
-                                    if (e.target.checked) {
-                                        current.push(opt.value);
-                                    } else {
-                                        const idx = current.indexOf(opt.value);
-                                        if (idx >= 0) current.splice(idx, 1);
-                                    }
-                                    field.setValue(current);
-                                }}
-                            />
-                            {opt.label}
-                        </label>
-                    ))}
-                </fieldset>
-            );
-
-        case 'RadioGroup':
-            return (
-                <fieldset>
-                    {options.map((opt) => (
-                        <label key={opt.value}>
-                            <input
-                                type="radio"
-                                name={path}
-                                value={opt.value}
-                                checked={value === opt.value}
-                                onChange={() => field.setValue(opt.value)}
-                            />
-                            {opt.label}
-                        </label>
-                    ))}
-                </fieldset>
-            );
-
-        case 'Toggle':
-        case 'Checkbox':
-            return (
-                <input
-                    {...common}
-                    type="checkbox"
-                    checked={!!value}
-                    onChange={(e) => field.setValue(e.target.checked)}
-                />
             );
 
         case 'DatePicker':
