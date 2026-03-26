@@ -15,7 +15,6 @@ export type AnyComponent = {
   | Page
   | Stack
   | Grid
-  | Wizard
   | Spacer
   | TextInput
   | NumberInput
@@ -61,7 +60,6 @@ export type AnyComponent2 =
   | Page
   | Stack
   | Grid
-  | Wizard
   | Spacer
   | TextInput
   | NumberInput
@@ -111,7 +109,6 @@ export type AnyComponent3 = {
   | Page
   | Stack
   | Grid
-  | Wizard
   | Spacer
   | TextInput
   | NumberInput
@@ -233,7 +230,7 @@ export interface CustomComponentDef {
   tree: AnyComponent;
 }
 /**
- * Top-level page/section container. In a multi-step form, each Page is one step. When used inside a Wizard, Pages define wizard steps. Pages MAY also be used standalone within a Stack for sectioned single-page forms.
+ * Top-level page/section container. In a multi-step form, each Page is one step. Pages MAY also be used standalone within a Stack for sectioned single-page forms.
  */
 export interface Page {
   component: 'Page';
@@ -287,21 +284,6 @@ export interface Grid {
    * Vertical spacing between rows. Inherits gap if absent.
    */
   rowGap?: string | number;
-  children?: ChildrenArray;
-}
-/**
- * Sequential step-by-step navigation container. Each child MUST be a Page component representing one wizard step. Manages step progression, progress indication, and navigation controls.
- */
-export interface Wizard {
-  component: 'Wizard';
-  /**
-   * Whether to display a progress indicator (step counter, bar, or breadcrumb).
-   */
-  showProgress?: boolean;
-  /**
-   * Whether users may navigate to non-adjacent steps directly.
-   */
-  allowSkip?: boolean;
   children?: ChildrenArray;
 }
 /**

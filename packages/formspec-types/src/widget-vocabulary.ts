@@ -12,7 +12,7 @@ export const KNOWN_COMPONENT_TYPES = new Set([
     'FileUpload', 'Signature', 'MoneyInput',
     'Stack', 'Card', 'Accordion', 'Collapsible',
     'Heading', 'Text', 'Divider', 'Alert',
-    'Wizard', 'Tabs', 'Page',
+    'Tabs', 'Page',
 ]);
 
 /**
