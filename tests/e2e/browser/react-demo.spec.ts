@@ -40,7 +40,11 @@ async function checkField(
   page: import('@playwright/test').Page,
   path: string,
 ): Promise<void> {
-  await page.locator(`[data-name="${path}"] input[type="checkbox"]`).check();
+  const checkbox = page.locator(`[data-name="${path}"] input[type="checkbox"]`).first();
+  await checkbox.scrollIntoViewIfNeeded();
+  if (!(await checkbox.isChecked())) {
+    await checkbox.click();
+  }
 }
 
 /** Uncheck a boolean checkbox by field path. */
@@ -48,7 +52,31 @@ async function uncheckField(
   page: import('@playwright/test').Page,
   path: string,
 ): Promise<void> {
-  await page.locator(`[data-name="${path}"] input[type="checkbox"]`).uncheck();
+  const checkbox = page.locator(`[data-name="${path}"] input[type="checkbox"]`).first();
+  await checkbox.scrollIntoViewIfNeeded();
+  if (await checkbox.isChecked()) {
+    await checkbox.click();
+  }
+}
+
+/** Fill all required non-budget, non-certification fields. */
+async function fillRequiredCoreFields(page: import('@playwright/test').Page): Promise<void> {
+  await fillField(page, 'organization.orgName', 'Test Nonprofit Foundation');
+  await selectField(page, 'organization.orgType', 'nonprofit');
+  await fillField(page, 'organization.ein', '12-3456789');
+  await fillField(page, 'organization.yearFounded', '2001');
+
+  await fillField(page, 'contact.contactName', 'Alex Rivera');
+  await fillField(page, 'contact.contactEmail', 'alex@example.org');
+  await fillField(page, 'contact.contactPhone', '(555) 867-5309');
+  await selectField(page, 'contact.state', 'NY');
+
+  await fillField(page, 'project.projectTitle', 'Neighborhood Support Program');
+  await selectField(page, 'project.focusArea', 'education');
+  await fillField(page, 'project.summary', 'Community programming focused on student outcomes.');
+  await fillField(page, 'project.startDate', '2026-07-01');
+  await fillField(page, 'project.endDate', '2027-06-30');
+  await fillField(page, 'project.beneficiaries', '250');
 }
 
 /** Check a specific option within a multiChoice checkbox group by field path and value. */
@@ -195,8 +223,12 @@ test.describe('React Demo: Validation', () => {
   test('Budget constraint — total cost less than requested shows error', async ({ page }) => {
     await gotoReactDemo(page);
 
+    await fillRequiredCoreFields(page);
     await fillField(page, 'budget.requestedAmount', '50000');
     await fillField(page, 'budget.totalProjectCost', '30000');
+    await checkField(page, 'certification.certifyAccurate');
+    await checkField(page, 'certification.certifyAuthorized');
+    await checkField(page, 'certification.agreeTerms');
     await clickSubmit(page);
 
     const errorList = page.locator('h3:has-text("Validation Errors") ~ ul');
@@ -263,7 +295,7 @@ test.describe('React Demo: Valid Submission', () => {
     // -- Primary Contact --
     await fillField(page, 'contact.contactName', 'Jane Doe');
     await fillField(page, 'contact.contactEmail', 'jane@greenfield.org');
-    await fillField(page, 'contact.contactPhone', '555-867-5309');
+    await fillField(page, 'contact.contactPhone', '(555) 867-5309');
     await selectField(page, 'contact.state', 'NY');
 
     // -- Project Details --
@@ -314,9 +346,13 @@ test.describe('React Demo: Shape Rules', () => {
   test('budget consistency warning when total < requested + matching', async ({ page }) => {
     await gotoReactDemo(page);
 
+    await fillRequiredCoreFields(page);
     await fillField(page, 'budget.requestedAmount', '50000');
     await fillField(page, 'budget.matchingFunds', '30000');
     await fillField(page, 'budget.totalProjectCost', '60000');
+    await checkField(page, 'certification.certifyAccurate');
+    await checkField(page, 'certification.certifyAuthorized');
+    await checkField(page, 'certification.agreeTerms');
 
     await clickSubmit(page);
 
