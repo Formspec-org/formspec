@@ -353,8 +353,12 @@ export const pagesHandlers: Record<string, CommandHandler> = {
 
     if (value === undefined) {
       delete node[property];
-    } else {
-      node[property] = value;
+    } else if (property === 'span' && typeof value === 'number') {
+      node.span = value;
+    } else if (property === 'start' && typeof value === 'number') {
+      node.start = value;
+    } else if (property === 'responsive' && typeof value === 'object') {
+      node.responsive = value;
     }
 
     return { rebuildComponentTree: false };
