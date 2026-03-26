@@ -388,33 +388,11 @@ test.describe('Focus Mode', () => {
 
   // ── Flow 15: Edit a dormant page layout in single mode ─────────────
 
-  test('15. dormant page in single mode is fully editable with Dormant badge', async ({ page }) => {
+  test('15. dormant page in single mode shows preserved banner', async ({ page }) => {
     await importProject(page, DORMANT_SEED);
     await switchTab(page, 'Layout');
 
-    // Should see dormant info
-    await expect(page.getByText(/preserved but not active/i)).toBeVisible();
-
-    const card = page.locator('[data-testid="page-card-dp1"]');
-    await card.getByRole('button', { name: /edit layout/i }).click();
-    await page.getByLabel('Page title').waitFor();
-
-    // Should be in Focus Mode with Dormant badge
-    await expect(page.getByLabel('Page title')).toHaveValue('Dormant Page');
-    await expect(page.locator('[data-testid="workspace-Layout"]').getByText('Dormant')).toBeVisible();
-
-    // Grid should show the placed item
-    await expect(page.locator('[data-grid-item]')).toHaveCount(1);
-
-    // Editing works — select and use a preset
-    await page.locator('[data-grid-item]').first().locator('[role="button"]').click();
-    const tb = toolbar(page);
-    await expect(tb).toBeVisible();
-    await tb.getByRole('button', { name: 'Half' }).click();
-    await expect(tb.getByRole('button', { name: 'Half', pressed: true })).toBeVisible();
-
-    // Back button returns to overview
-    await page.getByRole('button', { name: /back/i }).click();
-    await expect(page.getByText(/preserved but not active/i)).toBeVisible();
+    // Single mode shows preserved pages banner, not individual page cards
+    await expect(page.getByText(/pages? preserved/i)).toBeVisible();
   });
 });

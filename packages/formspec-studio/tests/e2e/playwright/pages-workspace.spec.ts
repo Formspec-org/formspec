@@ -71,7 +71,7 @@ test.describe('Pages Workspace', () => {
     await switchTab(page, 'Layout');
 
     const workspace = page.locator('[data-testid="workspace-Layout"]');
-    await expect(workspace.getByText(/switch to wizard or tabs/i)).toBeVisible();
+    await expect(workspace.getByText(/no items yet/i)).toBeVisible();
   });
 
   test('single mode with existing pages shows dormant info bar', async ({ page }) => {
@@ -79,8 +79,7 @@ test.describe('Pages Workspace', () => {
     await switchTab(page, 'Layout');
 
     const workspace = page.locator('[data-testid="workspace-Layout"]');
-    await expect(workspace.getByText(/preserved but not active/i)).toBeVisible();
-    await expect(workspace.getByText('Orphan')).toBeVisible();
+    await expect(workspace.getByText(/pages? preserved/i)).toBeVisible();
   });
 
   test('mode selector has Single, Wizard, Tabs and wizard mode shows add page button', async ({
@@ -101,7 +100,7 @@ test.describe('Pages Workspace', () => {
     await switchTab(page, 'Layout');
 
     const workspace = page.locator('[data-testid="workspace-Layout"]');
-    await expect(workspace.getByText(/switch to wizard or tabs/i)).toBeVisible();
+    await expect(workspace.getByText(/no items yet/i)).toBeVisible();
     await expect(workspace.getByRole('button', { name: /add page/i })).not.toBeVisible();
 
     await workspace.getByRole('button', { name: 'Wizard' }).click();

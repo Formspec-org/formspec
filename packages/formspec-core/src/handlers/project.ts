@@ -9,7 +9,7 @@
  */
 import type { CommandHandler, LocaleState } from '../types.js';
 import type { FormItem } from '@formspec-org/types';
-import { splitComponentState, hasAuthoredComponentTree } from '../component-documents.js';
+import { splitComponentState, hasAuthoredComponentTree, createGeneratedLayoutDocument } from '../component-documents.js';
 import { normalizeBcp47 } from '../locale-utils.js';
 import { normalizeDefinition } from '../normalization.js';
 
@@ -36,6 +36,8 @@ export const projectHandlers: Record<string, CommandHandler> = {
       const componentState = splitComponentState(p.component, state.definition.url);
       state.component = componentState.component;
       state.generatedComponent = componentState.generatedComponent;
+    } else if (p.definition) {
+      state.generatedComponent = createGeneratedLayoutDocument(state.definition.url);
     }
     if (p.theme) {
       state.theme = p.theme;
@@ -54,6 +56,55 @@ export const projectHandlers: Record<string, CommandHandler> = {
         );
       }
     }
+    // Materialize theme.pages into the generated component tree
+    const themePages2 = (p.theme ?? state.theme)?.pages as Array<{ id: string; title?: string; description?: string; regions?: Array<{ key: string; span?: number; responsive?: Record<string, unknown> }> }> | undefined;
+    let materializedPages = false;
+    if (themePages2 && themePages2.length > 0) {
+      const root: any = state.generatedComponent.tree ?? { component: 'Stack', nodeId: 'root', children: [] };
+      if (root.children) {
+        root.children = root.children.filter((n: any) => n.component !== 'Page');
+      } else {
+        root.children = [];
+      }
+      // Recursively find and extract a bound node from the tree
+      const findAndExtract = (parent: any, bind: string): any | undefined => {
+        const ch = parent.children ?? [];
+        for (let i = 0; i < ch.length; i++) {
+          if (ch[i].bind === bind) return ch.splice(i, 1)[0];
+          if (ch[i].children && ch[i].component !== 'Page') {
+            const found = findAndExtract(ch[i], bind);
+            if (found) return found;
+          }
+        }
+        return undefined;
+      };
+      for (const tp of themePages2) {
+        const pageNode: any = {
+          component: 'Page',
+          nodeId: tp.id,
+          title: tp.title,
+          _layout: true,
+          children: (tp.regions ?? []).map((r: any) => {
+            const leafKey = r.key.includes('.') ? r.key.slice(r.key.lastIndexOf('.') + 1) : r.key;
+            const found = findAndExtract(root, leafKey);
+            const node: any = found ?? { component: 'BoundItem', bind: leafKey };
+            if (r.span !== undefined) node.span = r.span;
+            if (r.responsive !== undefined) node.responsive = r.responsive;
+            return node;
+          }),
+        };
+        if (tp.description !== undefined) pageNode.description = tp.description;
+        root.children.push(pageNode);
+      }
+      state.generatedComponent.tree = root as any;
+      materializedPages = true;
+      if (!state.definition.formPresentation) {
+        (state.definition as any).formPresentation = { pageMode: 'wizard' };
+      } else if (!state.definition.formPresentation.pageMode) {
+        (state.definition.formPresentation as any).pageMode = 'wizard';
+      }
+    }
+
     if (p.mappings) {
       state.mappings = p.mappings;
     } else if (p.mapping) {
@@ -87,7 +138,10 @@ export const projectHandlers: Record<string, CommandHandler> = {
     if (!state.theme.targetDefinition) state.theme.targetDefinition = { url };
     else state.theme.targetDefinition.url = url;
 
-    return { rebuildComponentTree: !hasAuthoredComponentTree(state.component), clearHistory: false };
+    // Reconcile tree when definition changed or a fresh component was imported.
+    // Skip when only theme.pages were materialized (tree already has correct nodes from prior reconciliation).
+    const needsTreeRebuild = (!!p.definition || !!p.component) && !hasAuthoredComponentTree(state.component);
+    return { rebuildComponentTree: needsTreeRebuild, clearHistory: false };
   },
 
   'project.importSubform': (state, payload) => {

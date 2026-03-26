@@ -109,7 +109,7 @@ export function PagesTab() {
             <ModeSelector mode={structure.mode} onSetMode={(mode) => project.setFlow(mode)} />
           </div>
 
-          {!isSingle && (
+          {!isSingle && hasPages && (
             <div className="flex items-center gap-2">
               {hasPages && (
                 <div className="rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] text-muted">

@@ -50,5 +50,11 @@ export function normalizeDefinition(definition: FormDefinition): FormDefinition 
     result = { ...result, binds: bindsArray };
   }
 
+  // Normalize legacy presentation → formPresentation at the definition root
+  if (result.presentation && !result.formPresentation) {
+    const { presentation, ...rest } = result;
+    result = { ...rest, formPresentation: presentation };
+  }
+
   return result as FormDefinition;
 }

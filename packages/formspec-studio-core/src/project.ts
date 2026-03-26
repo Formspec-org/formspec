@@ -83,7 +83,7 @@ export class Project {
       this._snapshotSource = s;
       this._snapshot = {
         definition: s.definition as unknown as FormDefinition,
-        component: s.component as unknown as ComponentDocument,
+        component: this.core.component as unknown as ComponentDocument,
         theme: s.theme as unknown as ThemeDocument,
         mappings: s.mappings as unknown as Record<string, MappingDocument>,
         selectedMappingId: s.selectedMappingId,

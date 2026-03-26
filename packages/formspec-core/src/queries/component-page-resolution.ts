@@ -69,17 +69,36 @@ export function resolvePageStructureFromTree(
     const pageId: string = (child.id as string) ?? (child.nodeId as string) ?? '';
     const title: string = (child.title as string) ?? '';
 
-    const boundKeys = collectBoundKeys(child);
-    const regions: ResolvedRegion[] = boundKeys.map((key) => ({
-      key,
-      span: 12,
-      exists: knownKeys.has(key),
-    }));
-
-    for (const key of boundKeys) {
+    // Build regions from all bound items within this Page.
+    // Direct children with `bind` carry layout metadata (span, start, responsive).
+    // Items nested inside non-bind containers (Grid, Columns) use default span=12.
+    const regions: ResolvedRegion[] = [];
+    const addRegion = (key: string, node?: TreeNode) => {
+      const regionSpan = node && typeof node.span === 'number' ? node.span : 12;
+      const region: ResolvedRegion = { key, span: regionSpan, exists: knownKeys.has(key) };
+      if (node && typeof node.start === 'number') region.start = node.start;
+      if (node?.responsive && typeof node.responsive === 'object') {
+        region.responsive = node.responsive as Record<string, { span?: number; start?: number; hidden?: boolean }>;
+      }
+      regions.push(region);
       assignedKeys.add(key);
       itemPageMap[key] = pageId;
-    }
+    };
+    const walkPageChildren = (nodes: TreeNode[]) => {
+      for (const n of nodes) {
+        if (n.bind) {
+          addRegion(n.bind, n);
+          // Also associate deeply nested bound keys with this page
+          for (const nested of collectBoundKeys(n)) {
+            assignedKeys.add(nested);
+            itemPageMap[nested] = pageId;
+          }
+        } else if (n.children) {
+          walkPageChildren(n.children);
+        }
+      }
+    };
+    walkPageChildren(child.children ?? []);
 
     const resolvedPage: ResolvedPage = { id: pageId, title, regions };
     if (typeof child.description === 'string') {

@@ -100,8 +100,8 @@ function cleanTreeForExport(
   definition: { items: FormItem[] },
   prefix: string,
 ): Record<string, unknown> {
-  // Strip schema-undefined internal properties (nodeId, _layout fail unevaluatedProperties: false)
-  const { nodeId: _nodeId, _layout: _lay, bind: bindKey, children, ...base } = node;
+  // Strip schema-undefined internal properties (nodeId, _layout, span/start/responsive fail unevaluatedProperties: false)
+  const { nodeId: _nodeId, _layout: _lay, span: _span, start: _start, responsive: _resp, bind: bindKey, children, ...base } = node;
 
   const component = base.component as string | undefined;
   let output: Record<string, unknown>;

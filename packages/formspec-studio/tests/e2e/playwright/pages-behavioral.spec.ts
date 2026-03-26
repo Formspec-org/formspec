@@ -313,15 +313,12 @@ test.describe('Story 4: Mode switching', () => {
 
     // Switch to Single — pages go dormant
     await workspace.getByRole('button', { name: 'Single' }).click();
-    await expect(workspace.getByText(/preserved but not active/i)).toBeVisible({ timeout: 3000 });
-    // Page card titles still visible in dormant state
-    await expect(workspace.getByText('Personal Info').first()).toBeVisible();
-    await expect(workspace.getByText('Address').first()).toBeVisible();
+    await expect(workspace.getByText(/2 pages preserved/i)).toBeVisible({ timeout: 3000 });
 
     // Switch back to Wizard — pages active again
     await workspace.getByRole('button', { name: 'Wizard' }).click();
     await expect(card(page, 'p-personal')).toBeVisible({ timeout: 3000 });
-    await expect(workspace.getByText(/preserved but not active/i)).not.toBeVisible();
+    await expect(workspace.getByText(/pages? preserved/i)).not.toBeVisible();
   });
 });
 
@@ -445,9 +442,10 @@ test.describe('Story 9: Wizard to Tabs mode switch', () => {
     // Switch to Tabs
     await ws(page).getByRole('button', { name: 'Tabs' }).click();
 
-    // Page cards still there
+    // Tab buttons visible for both pages (only active tab renders its panel)
+    await expect(ws(page).getByRole('tab', { name: 'Personal Info' })).toBeVisible();
+    await expect(ws(page).getByRole('tab', { name: 'Address' })).toBeVisible();
     await expect(card(page, 'p-personal')).toBeVisible();
-    await expect(card(page, 'p-address')).toBeVisible();
 
     // Preview should render with tab navigation using theme page titles
     await switchTab(page, 'Preview');
@@ -455,9 +453,8 @@ test.describe('Story 9: Wizard to Tabs mode switch', () => {
     const host = preview.locator('[data-testid="formspec-preview-host"]');
     const tabs = host.locator('[role="tab"]');
     await expect(tabs).toHaveCount(2, { timeout: 8000 });
-    // Runtime uses generic tab labels (Tab 1, Tab 2) — not theme page titles.
-    await expect(tabs.nth(0)).toContainText(/Tab 1/i);
-    await expect(tabs.nth(1)).toContainText(/Tab 2/i);
+    await expect(tabs.nth(0)).toContainText(/Personal Info/i);
+    await expect(tabs.nth(1)).toContainText(/Address/i);
     // Tabs mode: no wizard Continue/Next in the live preview chrome
     await expect(preview.getByRole('button', { name: /continue|next/i }).first()).not.toBeVisible({ timeout: 1000 });
   });
