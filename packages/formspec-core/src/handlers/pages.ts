@@ -117,8 +117,18 @@ export const pagesHandlers: Record<string, CommandHandler> = {
     const children = root.children ?? [];
     const index = findPageIndex(root, id);
 
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= children.length) return { rebuildComponentTree: false };
+    // Find the next Page node in the requested direction, skipping non-Page children.
+    let swapIndex = -1;
+    if (direction === 'up') {
+      for (let i = index - 1; i >= 0; i--) {
+        if (children[i].component === 'Page') { swapIndex = i; break; }
+      }
+    } else {
+      for (let i = index + 1; i < children.length; i++) {
+        if (children[i].component === 'Page') { swapIndex = i; break; }
+      }
+    }
+    if (swapIndex === -1) return { rebuildComponentTree: false };
 
     [children[index], children[swapIndex]] = [children[swapIndex], children[index]];
     return { rebuildComponentTree: false };
@@ -130,11 +140,37 @@ export const pagesHandlers: Record<string, CommandHandler> = {
     const children = root.children ?? [];
     const fromIndex = findPageIndex(root, id);
 
-    const clamped = Math.max(0, Math.min(targetIndex, children.length - 1));
-    if (fromIndex === clamped) return { rebuildComponentTree: false };
+    // Collect raw indices of all Page nodes to interpret targetIndex as page-relative.
+    const pageIndices: number[] = [];
+    for (let i = 0; i < children.length; i++) {
+      if (children[i].component === 'Page') pageIndices.push(i);
+    }
 
+    const currentPagePos = pageIndices.indexOf(fromIndex);
+    const clampedPagePos = Math.max(0, Math.min(targetIndex, pageIndices.length - 1));
+    if (currentPagePos === clampedPagePos) return { rebuildComponentTree: false };
+
+    // Remove the page from its current position.
     const [page] = children.splice(fromIndex, 1);
-    children.splice(clamped, 0, page);
+
+    // Recalculate page indices after removal.
+    const updatedPageIndices: number[] = [];
+    for (let i = 0; i < children.length; i++) {
+      if (children[i].component === 'Page') updatedPageIndices.push(i);
+    }
+
+    // Insert at the raw position corresponding to the target page slot.
+    let insertAt: number;
+    if (clampedPagePos >= updatedPageIndices.length) {
+      // After the last existing page.
+      insertAt = updatedPageIndices.length > 0
+        ? updatedPageIndices[updatedPageIndices.length - 1] + 1
+        : children.length;
+    } else {
+      insertAt = updatedPageIndices[clampedPagePos];
+    }
+
+    children.splice(insertAt, 0, page);
     return { rebuildComponentTree: false };
   },
 

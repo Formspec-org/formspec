@@ -24,7 +24,7 @@ export function migrateWizardRoot(
 
   if (component === 'Wizard') {
     const { component: _c, showProgress, allowSkip, ...rest } = tree;
-    const migratedProps: Record<string, unknown> = {};
+    const migratedProps: Record<string, unknown> = { pageMode: 'wizard' };
     if (showProgress !== undefined) migratedProps.showProgress = showProgress;
     if (allowSkip !== undefined) migratedProps.allowSkip = allowSkip;
     return {
@@ -36,7 +36,7 @@ export function migrateWizardRoot(
 
   if (component === 'Tabs') {
     const { component: _c, position, defaultTab, ...rest } = tree;
-    const migratedProps: Record<string, unknown> = {};
+    const migratedProps: Record<string, unknown> = { pageMode: 'tabs' };
     if (position !== undefined) migratedProps.tabPosition = position;
     if (defaultTab !== undefined) migratedProps.defaultTab = defaultTab;
     return {

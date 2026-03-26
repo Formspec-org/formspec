@@ -193,6 +193,59 @@ describe('pages.reorderPages', () => {
 
     expect(result.rebuildComponentTree).toBe(false);
   });
+
+  it('skips interleaved non-Page children when swapping down', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pA', title: 'Page A' } });
+    // Insert a non-Page node between the two pages
+    project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'TextInput', bind: 'x' },
+    });
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pB', title: 'Page B' } });
+
+    // Reorder Page A down — should swap with Page B, not the TextInput
+    project.dispatch({ type: 'pages.reorderPages', payload: { id: 'pA', direction: 'down' } });
+
+    const tree = project.component.tree as any;
+    const pageOrder = tree.children.filter((n: any) => n.component === 'Page').map((n: any) => n.title);
+    expect(pageOrder).toEqual(['Page B', 'Page A']);
+    // TextInput should still exist
+    expect(tree.children.some((n: any) => n.bind === 'x')).toBe(true);
+  });
+
+  it('skips interleaved non-Page children when swapping up', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pA', title: 'Page A' } });
+    project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'TextInput', bind: 'y' },
+    });
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pB', title: 'Page B' } });
+
+    project.dispatch({ type: 'pages.reorderPages', payload: { id: 'pB', direction: 'up' } });
+
+    const tree = project.component.tree as any;
+    const pageOrder = tree.children.filter((n: any) => n.component === 'Page').map((n: any) => n.title);
+    expect(pageOrder).toEqual(['Page B', 'Page A']);
+  });
+
+  it('is a no-op when no adjacent Page exists in the requested direction', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pA', title: 'Page A' } });
+    project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'TextInput', bind: 'z' },
+    });
+
+    // Page A is the only page — moving down should be a no-op
+    project.dispatch({ type: 'pages.reorderPages', payload: { id: 'pA', direction: 'down' } });
+
+    const tree = project.component.tree as any;
+    const pages = tree.children.filter((n: any) => n.component === 'Page');
+    expect(pages).toHaveLength(1);
+    expect(pages[0].title).toBe('Page A');
+  });
 });
 
 describe('pages.movePageToIndex', () => {
@@ -229,6 +282,43 @@ describe('pages.movePageToIndex', () => {
     const result = project.dispatch({ type: 'pages.movePageToIndex', payload: { id, targetIndex: 0 } });
 
     expect(result.rebuildComponentTree).toBe(false);
+  });
+
+  it('interprets targetIndex as page-relative, ignoring interleaved non-Page children', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pA', title: 'A' } });
+    project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'TextInput', bind: 'x' },
+    });
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pB', title: 'B' } });
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pC', title: 'C' } });
+
+    // Move pC to page-index 0 — should be first Page, TextInput stays in place
+    project.dispatch({ type: 'pages.movePageToIndex', payload: { id: 'pC', targetIndex: 0 } });
+
+    const tree = project.component.tree as any;
+    const pageOrder = tree.children.filter((n: any) => n.component === 'Page').map((n: any) => n.title);
+    expect(pageOrder).toEqual(['C', 'A', 'B']);
+    // Non-Page child preserved
+    expect(tree.children.some((n: any) => n.bind === 'x')).toBe(true);
+  });
+
+  it('moves page to last position among pages when targetIndex exceeds page count', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pA', title: 'A' } });
+    project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'TextInput', bind: 'x' },
+    });
+    project.dispatch({ type: 'pages.addPage', payload: { id: 'pB', title: 'B' } });
+
+    // Move pA to page-index 99 — should end up as the last page
+    project.dispatch({ type: 'pages.movePageToIndex', payload: { id: 'pA', targetIndex: 99 } });
+
+    const tree = project.component.tree as any;
+    const pageOrder = tree.children.filter((n: any) => n.component === 'Page').map((n: any) => n.title);
+    expect(pageOrder).toEqual(['B', 'A']);
   });
 });
 
