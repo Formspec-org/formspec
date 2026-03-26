@@ -1,0 +1,817 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/mapping/v1",
+  "title": "Formspec Mapping Document",
+  "description": "A Formspec Mapping DSL v1.0 document describing bidirectional data transformation between a Formspec Response and an external schema. A Mapping Document is a standalone JSON artifact — not embedded in a Definition — that declares field-level correspondences, structural reorganizations, type coercions, value translations, and conditional logic sufficient to convert a Response into an API payload, database record, CSV export, or XML document, and to reverse that transformation when importing. All computed transforms use the Formspec Expression Language (FEL). The DSL generalizes the version-migration fieldMap from §6.7 of the core specification.",
+  "type": "object",
+  "required": ["$formspecMapping", "version", "definitionRef", "definitionVersion", "targetSchema", "rules"],
+  "additionalProperties": false,
+  "patternProperties": { "^x-": {} },
+  "properties": {
+    "$formspecMapping": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Mapping specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for mapping document compatibility."
+      }
+    },
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "URI identifying the version of the Mapping DSL specification this document conforms to.",
+      "examples": ["https://formspec.org/schemas/mapping/v1"]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+      "description": "Semantic version of this Mapping Document. Independent of both the Formspec Definition version and the DSL specification version. Implementations SHOULD use this for cache invalidation and change detection.",
+      "examples": ["1.0.0", "2.3.1"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version identifier for the mapping document itself, independent of the definition version."
+      }
+    },
+    "definitionRef": {
+      "type": "string",
+      "minLength": 1,
+      "format": "uri",
+      "description": "URI or stable identifier of the Formspec Definition this mapping targets. Corresponds to the Definition's 'url' property — the canonical identity that is stable across versions.",
+      "examples": [
+        "https://clinic.example.com/forms/patient-intake",
+        "https://grants.example.gov/forms/sf-424"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Canonical identifier of the definition this mapping targets."
+      }
+    },
+    "definitionVersion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semver range of compatible Formspec Definition versions per node-semver syntax. An implementation MUST refuse to execute a Mapping Document when the resolved Definition version does not satisfy this range.",
+      "examples": [
+        ">=1.0.0 <2.0.0",
+        "1.x",
+        "2.1.0",
+        ">=3.0.0 <4.0.0"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Compatibility window; processor MUST reject execution when definition version is out of range."
+      }
+    },
+    "targetSchema": {
+      "$ref": "#/$defs/TargetSchema",
+      "description": "Descriptor for the external system schema targeted by this mapping. Determines the adapter used for serialization and the path syntax rules for targetPath values.",
+      "examples": [
+        {
+          "format": "json",
+          "name": "FHIR Patient R4",
+          "url": "https://hl7.org/fhir/R4/patient.schema.json"
+        },
+        {
+          "format": "xml",
+          "name": "CDA R2 ClinicalDocument",
+          "rootElement": "ClinicalDocument",
+          "namespaces": { "": "urn:hl7-org:v3" }
+        },
+        {
+          "format": "csv"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declares the output format and shape that transform rules must produce."
+      }
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["forward", "reverse", "both"],
+      "default": "forward",
+      "description": "Execution direction. 'forward': Response→External (default), reverse execution MUST raise an error. 'reverse': External→Response only, forward execution MUST raise an error. 'both': rules are evaluated in either direction; each Field Rule MAY supply an explicit reverse override.",
+      "examples": ["forward", "both"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Controls whether forward, reverse, or bidirectional execution is permitted."
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Leaf values applied to the target document before any Field Rules execute. Keys are dot-notation target paths; values are literal JSON values. Any Field Rule that writes to the same path will overwrite the default. Defaults are applied only in the forward direction.",
+      "examples": [
+        {
+          "resourceType": "Patient",
+          "meta.profile": ["https://hl7.org/fhir/R4/patient.html"]
+        },
+        {
+          "submissionType": "initial",
+          "schemaVersion": "2024-07-01"
+        }
+      ]
+    },
+    "autoMap": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, the processor generates synthetic 'preserve' rules (at priority -1) for every source field not already covered by an explicit rule's sourcePath. Synthetic rules use identical source and target paths. Explicit rules always take precedence. When targetSchema.format is 'csv', auto-mapped paths containing dots are silently skipped."
+    },
+    "conformanceLevel": {
+      "type": "string",
+      "enum": ["core", "bidirectional", "extended"],
+      "description": "Declares the minimum conformance level required to process this mapping document. 'core': forward JSON mapping only. 'bidirectional': adds reverse mapping with round-trip fidelity. 'extended': adds XML and CSV adapters. Each level is a strict superset of the preceding level."
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/FieldRule" },
+      "description": "Ordered array of Field Rule objects. Rules are sorted by priority (descending, stable sort) before execution. Equal-priority rules retain document order. When two rules write to the same targetPath, last-write-wins. MUST contain at least one element.",
+      "examples": [
+        [
+          {
+            "sourcePath": "patient_name.first",
+            "targetPath": "name[0].given[0]",
+            "transform": "preserve"
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declarative transform pipeline from source paths to target paths."
+      }
+    },
+    "adapters": {
+      "type": "object",
+      "description": "Adapter-specific configuration keyed by adapter identifier. The active adapter is determined by targetSchema.format. Built-in adapters: 'json' (Mapping Core), 'xml' and 'csv' (Mapping Extended). Custom adapters use x- prefix.",
+      "properties": {
+        "json": { "$ref": "#/$defs/JsonAdapter" },
+        "xml": { "$ref": "#/$defs/XmlAdapter" },
+        "csv": { "$ref": "#/$defs/CsvAdapter" }
+      },
+      "patternProperties": {
+        "^x-": { "type": "object" }
+      },
+      "additionalProperties": false,
+      "examples": [
+        { "json": { "pretty": true, "nullHandling": "omit" } },
+        { "csv": { "delimiter": ",", "header": true, "lineEnding": "lf" } }
+      ]
+    }
+  },
+
+  "$defs": {
+
+    "TargetSchema": {
+      "type": "object",
+      "required": ["format"],
+      "description": "Descriptor for the external target schema. Determines path syntax rules and serialization adapter. JSON targets use dot-notation with bracket indexing (e.g. 'name[0].given[0]'). XML targets use dot-notation for elements and '@' prefix for attributes (e.g. 'Patient.name.@use'). CSV targets require simple identifiers only — no dot-notation or brackets.",
+      "properties": {
+        "format": {
+          "type": "string",
+          "description": "Structural format of the target. 'json': dot-notation paths with bracket indexing, identity serialization. 'xml': dot-notation for elements, '@' prefix for attributes, requires rootElement. 'csv': flat column-name paths only (no dots), per RFC 4180. Custom formats use x- prefix (e.g. 'x-protobuf').",
+          "anyOf": [
+            { "enum": ["json", "xml", "csv"] },
+            { "pattern": "^x-" }
+          ],
+          "examples": ["json", "xml", "csv", "x-protobuf"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name of the target schema for documentation and diagnostics.",
+          "examples": ["FHIR Patient R4", "Federal Grant API v2"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Canonical URL or URI pointing to the target schema definition. Informational; not fetched at runtime.",
+          "examples": ["https://hl7.org/fhir/R4/patient.schema.json"]
+        },
+        "rootElement": {
+          "type": "string",
+          "description": "Local name of the root XML element. REQUIRED when format is 'xml'; ignored otherwise.",
+          "examples": ["ClinicalDocument", "Order", "Patient"]
+        },
+        "namespaces": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "XML namespace prefix-to-URI map. The default namespace uses the empty string key. Prefixes are used in target paths with colon notation (e.g. 'xsi:type').",
+          "examples": [
+            { "": "urn:hl7-org:v3", "xsi": "http://www.w3.org/2001/XMLSchema-instance" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "format": { "const": "xml" } },
+            "required": ["format"]
+          },
+          "then": {
+            "required": ["rootElement"]
+          }
+        }
+      ],
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "FieldRule": {
+      "type": "object",
+      "required": ["transform"],
+      "description": "A single field mapping rule — the atomic unit of a Mapping Document. Binds a source path to a target path and specifies how the value is transformed in transit. At least one of sourcePath or targetPath MUST be present. Rules are executed in priority-sorted order; when two rules target the same path, last-write-wins.",
+      "properties": {
+        "sourcePath": {
+          "type": "string",
+          "description": "Dot-notation path identifying the value in the source document. Supports bracket indexing for arrays (e.g. 'items[0].name') and wildcard '[*]' for all elements. REQUIRED for all transforms except 'constant' (sourcePath ignored) and 'drop' (when used with targetPath only).",
+          "examples": [
+            "applicant.full_name",
+            "budget_items[0].amount",
+            "address.lines"
+          ]
+        },
+        "targetPath": {
+          "type": ["string", "null"],
+          "description": "Dot-notation path identifying the destination in the target document. Path syntax depends on targetSchema.format: JSON uses dot + bracket indexing, XML uses dot for elements and '@' for attributes, CSV requires simple identifiers (no dots). May be null for drop rules. REQUIRED for all transforms except 'drop'.",
+          "examples": [
+            "organization.name",
+            "name[0].given[0]",
+            "patient_name"
+          ]
+        },
+        "transform": {
+          "type": "string",
+          "enum": [
+            "preserve", "drop", "expression", "coerce",
+            "valueMap", "flatten", "nest", "constant",
+            "concat", "split"
+          ],
+          "description": "Transform type determining how the source value is converted to the target value. 'preserve': identity copy, auto-reversible. 'drop': discard field from output, never reversible. 'expression': evaluate a FEL expression (requires 'expression' property), not auto-reversible — supply explicit reverse block for bidirectional. 'coerce': type conversion (requires 'coerce' property), auto-reversible only for lossless pairs (string<->integer, string<->number, string<->boolean, date<->string with ISO format). 'valueMap': lookup-table substitution (requires 'valueMap' property), auto-reversible only when forward map is bijective (one-to-one). 'flatten': collapse nested/array structure to flat representation per mapping spec §4.7; 'expression' optional for structural modes, required only for non-trivial projection; auto-reversible (pairs with nest). 'nest': expand flat structure to nested form per mapping spec §4.8; 'expression' optional for structural modes; auto-reversible (pairs with flatten). 'constant': fixed value injection (requires 'expression'), sourcePath ignored, never reversible. 'concat': join multiple source values into one string (requires 'expression'), not auto-reversible. 'split': decompose single value into multiple targets (requires 'expression'), not auto-reversible.",
+          "examples": ["preserve", "expression", "coerce", "valueMap", "drop"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Core discriminator that determines which properties are required and how the value flows from source to target."
+          }
+        },
+        "expression": {
+          "type": "string",
+          "description": "FEL expression evaluated to produce the target value. Within the expression: '$' binds to the resolved source value at sourcePath (or null if absent); '@source' binds to the entire source document root. REQUIRED when transform is 'expression', 'constant', 'concat', or 'split'. For 'flatten' and 'nest', OPTIONAL when using only the structural modes in the mapping spec (delimited/positional/dot-prefix); REQUIRED when the spec calls for non-trivial projection. For 'constant', the expression SHOULD be a FEL literal or deterministic expression. For 'concat', MUST evaluate to a string. For 'split', MUST return an array or object.",
+          "examples": [
+            "round($ * 100)",
+            "format('{0}, {1}', @source.last_name, @source.first_name)",
+            "'2024-07-01'",
+            "if(length($) > 140, substring($, 1, 137) & '...', $)"
+          ]
+        },
+        "coerce": {
+          "oneOf": [
+            { "$ref": "#/$defs/Coerce" },
+            { "type": "string", "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"] }
+          ],
+          "description": "Type conversion descriptor. Object form specifies 'from', 'to', and optional 'format'. Shorthand string form specifies only the target type (source type is inferred). REQUIRED when transform is 'coerce'. Lossless pairs (string<->integer, string<->number, string<->boolean, date<->string with ISO format) are auto-reversible. Lossy pairs (datetime->date loses time, money->number loses currency) MUST NOT be auto-reversed.",
+          "examples": [
+            "string",
+            "number",
+            { "from": "date", "to": "string", "format": "MM/DD/YYYY" },
+            { "from": "money", "to": "number" }
+          ]
+        },
+        "valueMap": {
+          "oneOf": [
+            { "$ref": "#/$defs/ValueMap" },
+            { "type": "object", "not": { "required": ["forward"] }, "description": "Legacy shorthand: flat object keys are forward lookup entries; unmapped strategy is 'passthrough' (explicit structured form defaults unmapped to 'error' when 'forward' is used). Prefer the structured ValueMap with 'forward' and optional 'unmapped' for new documents." }
+          ],
+          "description": "Lookup table for value substitution. Full form has 'forward', optional 'reverse', 'unmapped' strategy, and 'default'. Shorthand form is a flat object treated as the forward map. REQUIRED when transform is 'valueMap'. Auto-reversible only when the forward map is bijective (every value is unique); non-injective maps require an explicit reverse.valueMap.",
+          "examples": [
+            { "low": 1, "medium": 2, "high": 3 },
+            {
+              "forward": { "male": "M", "female": "F", "other": "O" },
+              "unmapped": "passthrough"
+            }
+          ]
+        },
+        "reverse": {
+          "$ref": "#/$defs/ReverseOverride",
+          "description": "Explicit override configuration for reverse-direction execution. sourcePath and targetPath are swapped automatically during reverse — the reverse block MUST NOT re-specify them. Required for bidirectional 'expression' rules (no auto-reversal). May override any Field Rule property except sourcePath, targetPath, and reverse itself."
+        },
+        "bidirectional": {
+          "type": "boolean",
+          "default": true,
+          "description": "Controls whether this rule participates in reverse execution. If false, the rule is skipped during reverse mapping (even when document direction is 'both'). MUST be false (or omitted) for inherently lossy transforms: 'drop', and 'expression'/'constant'/'concat'/'split' without an explicit reverse block. 'preserve' is always auto-reversible. Setting true on a lossy rule without a reverse block MUST produce a validation error."
+        },
+        "condition": {
+          "type": "string",
+          "description": "FEL boolean guard expression. Evaluated before any transform. If the expression evaluates to false or null, the entire rule is skipped — no target value is written and no error is produced even if the expression or sourcePath would be invalid. '$' binds to the sourcePath value; '@source' binds to the full source document. During reverse mapping, '$' and '@source' bind to external values.",
+          "examples": [
+            "$ != null and $ != ''",
+            "@source.contact_type = 'organization'",
+            "present($) and length($) > 0"
+          ]
+        },
+        "default": {
+          "description": "Fallback value emitted when sourcePath resolves to undefined, null, or is absent from the source document. For 'preserve': writes the default instead. For 'expression': writes the default and skips expression evaluation. For 'coerce'/'valueMap': writes the default instead. When sourcePath is absent and no default is provided: 'preserve'/'coerce'/'valueMap' omit the target field; 'expression' evaluates with $ = null.",
+          "examples": [0, "", false, "N/A"]
+        },
+        "array": {
+          "$ref": "#/$defs/ArrayDescriptor",
+          "description": "Array handling descriptor for mapping Formspec repeat groups or array-valued fields. Controls how array elements are iterated and transformed."
+        },
+        "separator": {
+          "type": "string",
+          "description": "Delimiter for flatten/nest string serialization. For 'flatten': joins array elements into a delimited string. For 'nest': splits a delimited string into an array.",
+          "examples": [", ", "|", "; "]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the rule's intent. Implementations MUST ignore this property during execution."
+        },
+        "priority": {
+          "type": "integer",
+          "default": 0,
+          "description": "Execution priority. Rules are sorted by priority descending (higher executes first) with stable sort preserving document order for equal priorities. When two rules write to the same targetPath, the later-executing rule overwrites the earlier one (last-write-wins). Auto-mapped synthetic rules use priority -1.",
+          "examples": [0, 10, -1]
+        },
+        "reversePriority": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reverse-direction precedence when multiple rules write to the same Response path during reverse mapping. Highest reversePriority wins regardless of document order; equal values fall back to last-rule-wins. Only meaningful when direction is 'both' or 'reverse'.",
+          "examples": [10, 20]
+        }
+      },
+      "anyOf": [
+        { "required": ["sourcePath"] },
+        { "required": ["targetPath"] }
+      ],
+      "allOf": [
+        {
+          "if": { "properties": { "transform": { "enum": ["expression", "constant", "concat", "split"] } }, "required": ["transform"] },
+          "then": { "required": ["expression"] }
+        },
+        {
+          "if": { "properties": { "transform": { "const": "coerce" } }, "required": ["transform"] },
+          "then": { "required": ["coerce"] }
+        },
+        {
+          "if": { "properties": { "transform": { "const": "valueMap" } }, "required": ["transform"] },
+          "then": { "required": ["valueMap"] }
+        }
+      ],
+      "examples": [
+        {
+          "sourcePath": "applicant_name",
+          "targetPath": "organization.name",
+          "transform": "preserve"
+        },
+        {
+          "sourcePath": "price_dollars",
+          "targetPath": "price_cents",
+          "transform": "expression",
+          "expression": "round($ * 100)",
+          "bidirectional": true,
+          "reverse": {
+            "transform": "expression",
+            "expression": "$ / 100"
+          }
+        },
+        {
+          "sourcePath": "biological_sex",
+          "targetPath": "gender",
+          "transform": "valueMap",
+          "valueMap": {
+            "forward": { "male": "male", "female": "female", "intersex": "other" },
+            "reverse": { "male": "male", "female": "female", "other": "intersex" },
+            "unmapped": "drop",
+            "default": "unknown"
+          }
+        },
+        {
+          "sourcePath": "date_of_birth",
+          "targetPath": "dob",
+          "transform": "coerce",
+          "coerce": { "from": "date", "to": "string", "format": "MM/DD/YYYY" }
+        },
+        {
+          "targetPath": "api_version",
+          "transform": "constant",
+          "expression": "'2024-07-01'",
+          "bidirectional": false
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Atomic unit of the mapping — binds a source path to a target path with a declared transform, condition, and reversibility."
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "Coerce": {
+      "type": "object",
+      "required": ["from", "to"],
+      "description": "Type conversion descriptor specifying source type, target type, and optional format pattern. Supported conversions: string<->number, string<->integer, string<->boolean, string<->date, string<->datetime, number<->integer, number<->boolean, integer<->boolean, date<->datetime, money->string, money->number (lossy), money->integer (lossy). Unsupported pairs MUST be rejected at validation time.",
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"],
+          "description": "Source data type before conversion."
+        },
+        "to": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"],
+          "description": "Target data type after conversion."
+        },
+        "format": {
+          "type": "string",
+          "description": "Format pattern applied during coercion. For date/datetime->string: output pattern (e.g. 'YYYY-MM-DD', 'MM/DD/YYYY'). If omitted for date types, ISO 8601 is the default. For number->string: numeric format (e.g. '0.00').",
+          "examples": ["YYYY-MM-DD", "MM/DD/YYYY", "0.00"]
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        { "from": "date", "to": "string", "format": "YYYY-MM-DD" },
+        { "from": "datetime", "to": "date" },
+        { "from": "string", "to": "boolean" },
+        { "from": "money", "to": "number" }
+      ]
+    },
+
+    "ValueMap": {
+      "type": "object",
+      "required": ["forward"],
+      "description": "Lookup table for value translation between source and target code systems. The forward map is always required. The reverse map is auto-derived by inverting forward when the forward map is bijective (every value is unique). If forward contains duplicate values (many-to-one), auto-reversal is impossible and an explicit reverse map MUST be provided for bidirectional rules. The unmapped strategy controls behavior when a source value has no matching key.",
+      "properties": {
+        "forward": {
+          "type": "object",
+          "description": "Forward-direction lookup: each key is a source value (as string), each value is the corresponding target value. Keys are matched by string equality.",
+          "examples": [
+            { "low": 1, "medium": 2, "high": 3, "critical": 4 },
+            { "true": "Y", "false": "N" }
+          ]
+        },
+        "reverse": {
+          "type": "object",
+          "description": "Reverse-direction lookup: each key is a target value (as string), each value is the corresponding source value. If omitted and forward is bijective, auto-inferred by inverting forward. If forward is not injective (multiple keys map to same value), omission MUST produce a validation error for bidirectional rules.",
+          "examples": [
+            { "1": "low", "2": "medium", "3": "high", "4": "critical" }
+          ]
+        },
+        "unmapped": {
+          "type": "string",
+          "enum": ["error", "drop", "passthrough", "default"],
+          "default": "error",
+          "description": "Strategy when a source value has no matching key in the lookup table. 'error' (default): produce a runtime mapping error. 'drop': omit the target field entirely. 'passthrough': copy the source value through unchanged. 'default': use the value from the 'default' property. Applied in both forward and reverse directions unless the reverse block specifies its own unmapped override."
+        },
+        "default": {
+          "description": "Fallback value when unmapped is 'drop' or 'default', or when the source value is null. MUST be defined when unmapped is 'default'.",
+          "examples": ["unknown", 0, "N/A"]
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "forward": { "male": "M", "female": "F", "other": "O", "unknown": "U" },
+          "unmapped": "error"
+        },
+        {
+          "forward": { "active": "Y", "inactive": "N" },
+          "unmapped": "default",
+          "default": "N"
+        }
+      ]
+    },
+
+    "ArrayDescriptor": {
+      "type": "object",
+      "required": ["mode"],
+      "description": "Controls how array-valued source fields — including Formspec repeat groups — are mapped to the target. The mode determines iteration strategy: per-element, whole-array, or positional indexing.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["each", "whole", "indexed"],
+          "description": "'each': iterate every source element, applying the parent rule's transform or innerRules per element. Within scope: $ = current element, $index = zero-based index, @source = full document. Target produces one output element per source element, in order. 'whole': treat the entire array as a single value ($ = complete array). Appropriate for aggregate operations (sum, filter, join). 'indexed': apply innerRules by positional index. Each inner rule MUST include an 'index' property. Uncovered elements are dropped."
+        },
+        "separator": {
+          "type": "string",
+          "description": "Delimiter for string serialization. Valid only with 'whole' mode. Used when flattening an array to a delimited string or nesting a delimited string back to an array.",
+          "examples": [", ", "|", "; "]
+        },
+        "innerRules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/InnerRule" },
+          "description": "Nested Field Rules applied within the array context. Paths in innerRules resolve relative to the current array element (for 'each' mode) or the element at the declared index (for 'indexed' mode). InnerRules support the same transform types and properties as top-level FieldRules, plus an optional 'index' property for indexed mode."
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "mode": "each",
+          "innerRules": [
+            { "sourcePath": "description", "targetPath": "label", "transform": "preserve" },
+            { "sourcePath": "amount", "targetPath": "value", "transform": "coerce", "coerce": "string" },
+            { "sourcePath": "category", "targetPath": "type", "transform": "valueMap", "valueMap": { "travel": "TRAVEL", "supplies": "EQUIP" } }
+          ]
+        },
+        {
+          "mode": "whole",
+          "separator": ", "
+        },
+        {
+          "mode": "indexed",
+          "innerRules": [
+            { "index": 0, "sourcePath": "name", "targetPath": "medication_1", "transform": "preserve" },
+            { "index": 1, "sourcePath": "name", "targetPath": "medication_2", "transform": "preserve" }
+          ]
+        }
+      ]
+    },
+
+    "InnerRule": {
+      "description": "A Field Rule used inside array.innerRules. Identical to FieldRule with an additional optional 'index' property for indexed mode. Paths resolve relative to the current array element, not the document root.",
+      "type": "object",
+      "required": ["transform"],
+      "properties": {
+        "sourcePath": {
+          "type": "string",
+          "description": "Element-relative dot-notation path in the source array element.",
+          "examples": ["description", "amount", "name"]
+        },
+        "targetPath": {
+          "type": ["string", "null"],
+          "description": "Element-relative dot-notation path in the target array element, or absolute target path for indexed mode.",
+          "examples": ["label", "value", "medication_1"]
+        },
+        "transform": {
+          "type": "string",
+          "enum": [
+            "preserve", "drop", "expression", "coerce",
+            "valueMap", "flatten", "nest", "constant",
+            "concat", "split"
+          ],
+          "description": "Transform type. Same semantics as FieldRule.transform."
+        },
+        "expression": {
+          "type": "string",
+          "description": "FEL expression. $ = current element's sourcePath value; @source = full source document."
+        },
+        "coerce": {
+          "oneOf": [
+            { "$ref": "#/$defs/Coerce" },
+            { "type": "string", "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"] }
+          ],
+          "description": "Type conversion descriptor or shorthand target-type string."
+        },
+        "valueMap": {
+          "oneOf": [
+            { "$ref": "#/$defs/ValueMap" },
+            { "type": "object", "not": { "required": ["forward"] } }
+          ],
+          "description": "Lookup table (full or shorthand form)."
+        },
+        "reverse": {
+          "$ref": "#/$defs/ReverseOverride",
+          "description": "Explicit reverse-direction override."
+        },
+        "bidirectional": {
+          "type": "boolean",
+          "default": true,
+          "description": "If false, this inner rule is skipped during reverse execution."
+        },
+        "condition": {
+          "type": "string",
+          "description": "FEL boolean guard. Inner rule is skipped when false or null."
+        },
+        "default": {
+          "description": "Fallback value when the element-relative sourcePath is absent or null."
+        },
+        "array": {
+          "$ref": "#/$defs/ArrayDescriptor",
+          "description": "Nested array handling for multi-level array structures."
+        },
+        "separator": {
+          "type": "string",
+          "description": "Delimiter for flatten/nest string serialization within the element."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description. Ignored during execution."
+        },
+        "priority": {
+          "type": "integer",
+          "default": 0,
+          "description": "Execution priority within the innerRules array."
+        },
+        "reversePriority": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reverse-direction precedence within innerRules."
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based positional index into the source array. REQUIRED when parent array.mode is 'indexed'. Only the element at this index is processed by this inner rule; all other elements are ignored by this rule.",
+          "examples": [0, 1, 2]
+        }
+      },
+      "anyOf": [
+        { "required": ["sourcePath"] },
+        { "required": ["targetPath"] }
+      ],
+      "allOf": [
+        {
+          "if": { "properties": { "transform": { "enum": ["expression", "constant", "concat", "split"] } }, "required": ["transform"] },
+          "then": { "required": ["expression"] }
+        },
+        {
+          "if": { "properties": { "transform": { "const": "coerce" } }, "required": ["transform"] },
+          "then": { "required": ["coerce"] }
+        },
+        {
+          "if": { "properties": { "transform": { "const": "valueMap" } }, "required": ["transform"] },
+          "then": { "required": ["valueMap"] }
+        }
+      ],
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false
+    },
+
+    "ReverseOverride": {
+      "type": "object",
+      "description": "Explicit override configuration applied when a Field Rule is executed in the reverse direction. sourcePath and targetPath are swapped automatically — the reverse block MUST NOT re-specify them. A conformant processor MUST report a validation error if sourcePath, targetPath, or reverse appears inside this object. Use this to provide a reverse FEL expression for non-invertible transforms, override the coercion direction, or supply a reverse value map.",
+      "properties": {
+        "transform": {
+          "type": "string",
+          "enum": [
+            "preserve", "drop", "expression", "coerce",
+            "valueMap", "flatten", "nest", "constant",
+            "concat", "split"
+          ],
+          "description": "Reverse transform type. If omitted, uses the forward rule's transform type."
+        },
+        "expression": {
+          "type": "string",
+          "description": "FEL expression for the reverse direction. $ = the external value; @source = the full external document.",
+          "examples": ["$ / 100", "money($, 'USD')", "substring($, 1, 2) & '-' & substring($, 3)"]
+        },
+        "coerce": {
+          "oneOf": [
+            { "$ref": "#/$defs/Coerce" },
+            { "type": "string", "enum": ["string", "number", "boolean", "date", "datetime", "integer", "array", "object", "money"] }
+          ],
+          "description": "Reverse coercion descriptor (from/to types for the reverse direction)."
+        },
+        "valueMap": {
+          "oneOf": [
+            { "$ref": "#/$defs/ValueMap" },
+            { "type": "object" }
+          ],
+          "description": "Reverse value map overriding auto-derived inverse."
+        },
+        "condition": {
+          "type": "string",
+          "description": "FEL boolean guard for the reverse direction. Overrides the forward condition."
+        },
+        "default": {
+          "description": "Default value for reverse direction when external field is absent."
+        },
+        "bidirectional": { "type": "boolean" },
+        "array": {
+          "$ref": "#/$defs/ArrayDescriptor",
+          "description": "Reverse-direction array handling override."
+        },
+        "separator": {
+          "type": "string",
+          "description": "Reverse-direction delimiter override."
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Reverse-direction execution priority override."
+        },
+        "reversePriority": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reverse precedence override."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the reverse transform intent."
+        }
+      },
+      "patternProperties": { "^x-": {} },
+      "additionalProperties": false,
+      "examples": [
+        {
+          "transform": "expression",
+          "expression": "$ / 100"
+        },
+        {
+          "transform": "expression",
+          "expression": "money($, 'USD')"
+        },
+        {
+          "transform": "split",
+          "expression": "split($, ', ')"
+        }
+      ]
+    },
+
+    "JsonAdapter": {
+      "type": "object",
+      "description": "JSON format adapter configuration. The JSON adapter performs identity serialization — the engine's internal representation is already JSON. Target paths use dot-notation with bracket indexing (e.g. 'user.tags[0]'). Intermediate objects and arrays are created automatically.",
+      "properties": {
+        "pretty": {
+          "type": "boolean",
+          "default": false,
+          "description": "Emit indented JSON for human readability."
+        },
+        "sortKeys": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sort object keys lexicographically in output."
+        },
+        "nullHandling": {
+          "type": "string",
+          "enum": ["include", "omit"],
+          "default": "include",
+          "description": "'include': null-valued keys appear in output. 'omit': null-valued keys are suppressed from output."
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        { "pretty": true, "nullHandling": "omit" }
+      ]
+    },
+
+    "XmlAdapter": {
+      "type": "object",
+      "description": "XML format adapter configuration (Mapping Extended conformance). Serializes internal JSON as an XML 1.0 document. Target paths use dot-notation for elements and '@' prefix for attributes (e.g. 'order.@id'). Namespace prefixes use colon notation in paths (e.g. 'xsi:type'). The targetSchema MUST declare rootElement and SHOULD declare namespaces.",
+      "properties": {
+        "declaration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include '<?xml version=\"1.0\" encoding=\"UTF-8\"?>' declaration at the start of the document."
+        },
+        "indent": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2,
+          "description": "Spaces per indentation level. 0 disables indentation (compact output)."
+        },
+        "cdata": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Target paths whose text content is wrapped in CDATA sections. Use for values containing characters that would need XML escaping (e.g. '&', '<').",
+          "examples": [["order.notes", "order.description"]]
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        { "declaration": true, "indent": 2, "cdata": ["order.notes"] }
+      ]
+    },
+
+    "CsvAdapter": {
+      "type": "object",
+      "description": "CSV format adapter configuration (Mapping Extended conformance). Serializes internal JSON as RFC 4180 delimited text. STRUCTURAL CONSTRAINT: all targetPath values MUST be simple identifiers (no dot-notation, no brackets). A nested targetPath MUST produce a validation error. Repeat groups emit one row per iteration; fields outside the repeat are duplicated across rows.",
+      "properties": {
+        "delimiter": {
+          "type": "string",
+          "default": ",",
+          "minLength": 1,
+          "maxLength": 1,
+          "description": "Field delimiter character.",
+          "examples": [",", "\t", "|"]
+        },
+        "quote": {
+          "type": "string",
+          "default": "\"",
+          "minLength": 1,
+          "maxLength": 1,
+          "description": "Quote character for field values containing the delimiter, newlines, or the quote character itself."
+        },
+        "header": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to emit a header row with column names derived from targetPath values."
+        },
+        "encoding": {
+          "type": "string",
+          "default": "utf-8",
+          "description": "Character encoding for the output file.",
+          "examples": ["utf-8", "iso-8859-1"]
+        },
+        "lineEnding": {
+          "type": "string",
+          "enum": ["crlf", "lf"],
+          "default": "crlf",
+          "description": "Line ending style. 'crlf' (\\r\\n) per RFC 4180. 'lf' (\\n) for Unix-style output."
+        }
+      },
+      "additionalProperties": false,
+      "examples": [
+        { "delimiter": ",", "header": true, "lineEnding": "lf" },
+        { "delimiter": "\t", "header": true, "encoding": "utf-8" }
+      ]
+    }
+  }
+}

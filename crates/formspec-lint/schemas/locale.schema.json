@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/locale/1.0",
+  "title": "Formspec Locale Document",
+  "description": "A Formspec Locale Document — a sidecar JSON artifact that provides internationalized strings for a Formspec Definition. A Locale Document binds to a Definition by URL, maps item paths to localized strings via a flat key-value structure, supports FEL interpolation for dynamic content via {{expression}} syntax, and composes via a fallback cascade (regional → base language → inline defaults). Multiple Locale Documents MAY target the same Definition, one per locale. A Locale Document MUST NOT affect data collection, validation logic, or behavioral semantics — it controls only the display strings presented to the user.",
+  "type": "object",
+  "required": [
+    "$formspecLocale",
+    "version",
+    "locale",
+    "targetDefinition",
+    "strings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$formspecLocale": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Locale specification version. MUST be '1.0'.",
+      "examples": [
+        "1.0"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for locale document compatibility. Processors MUST reject locale documents with an unrecognized version."
+      }
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical identifier for this Locale Document. Stable across versions — the tuple (url, version) SHOULD be globally unique.",
+      "examples": [
+        "https://agency.gov/forms/budget/locales/fr-CA",
+        "https://example.org/forms/intake/locales/es"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Version of this Locale Document. SemVer is RECOMMENDED. The tuple (url, version) SHOULD be unique across all published locale versions.",
+      "examples": [
+        "1.0.0",
+        "2.1.0-beta.1"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Locale document revision identifier. Enables cache-busting and auditing which locale version was applied."
+      }
+    },
+    "name": {
+      "type": "string",
+      "description": "Machine-friendly short identifier for programmatic use.",
+      "examples": [
+        "budget-fr-CA",
+        "intake-es"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable display name for the Locale Document.",
+      "examples": [
+        "Budget Form — Canadian French",
+        "Patient Intake — Spanish"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the locale's purpose and target audience.",
+      "examples": [
+        "French-Canadian localization for the annual budget form.",
+        "Latin American Spanish translations for the patient intake questionnaire."
+      ]
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 2,
+      "pattern": "^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$",
+      "description": "BCP 47 language tag identifying the locale this document provides strings for. Processors MUST perform case-insensitive comparison and SHOULD normalize to lowercase language with title-case region (e.g., 'fr-CA').",
+      "examples": [
+        "en",
+        "en-US",
+        "fr-CA",
+        "zh-Hans",
+        "ar",
+        "pt-BR"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Identifies the language/region this locale covers. Used as the lookup key when setLocale() is called and as the cascade entry point."
+      }
+    },
+    "fallback": {
+      "type": "string",
+      "minLength": 2,
+      "pattern": "^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$",
+      "description": "BCP 47 language tag of the locale to consult when a key is not found in this document's strings. Enables explicit fallback chains (e.g., fr-CA → fr). If absent, the cascade proceeds to implicit language fallback (strip region subtag) or inline defaults. Processors MUST detect circular fallback chains and terminate the cascade with a warning.",
+      "examples": [
+        "fr",
+        "en",
+        "zh"
+      ]
+    },
+    "targetDefinition": {
+      "$ref": "https://formspec.org/schemas/component/1.0#/$defs/TargetDefinition",
+      "description": "Binding to the target Formspec Definition and compatible version range. The locale will only be applied to Definitions matching this target. If compatibleVersions is present and the Definition version falls outside the range, the processor SHOULD warn and MAY fall back to inline strings only. The processor MUST NOT fail on a version mismatch.",
+      "examples": [
+        {
+          "url": "https://agency.gov/forms/budget",
+          "compatibleVersions": ">=1.0.0 <2.0.0"
+        },
+        {
+          "url": "https://example.org/forms/intake"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declares which form definition this locale can be applied to. Prevents accidental application to unrelated definitions."
+      }
+    },
+    "strings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "pattern": "^(\\$form\\.|\\$shape\\.|\\$page\\.|\\$optionSet\\.|\\$component\\.|[a-zA-Z])[a-zA-Z0-9_@.\\\\\\[\\]\\-]*$",
+        "description": "String keys use dot-delimited paths: <itemKey>.<property> for item strings, $form.<property> for form-level strings, $shape.<id>.message for shape messages, $page.<pageId>.<property> for theme page strings, $optionSet.<setName>.<value>.label for shared option translations, $component.<nodeId>.<property> for component node strings. Context labels use @suffix (e.g., key.label@short). Option values with dots or backslashes are escaped with backslash. Component array properties use bracket indexing (e.g., $component.tabs.tabLabels[0])."
+      },
+      "description": "Map of string keys to localized values. Keys follow the dot-delimited path format defined in the Locale Specification §3.1. Values are strings, optionally containing FEL interpolation via {{expression}} syntax. Keys address item properties (key.label, key.description, key.hint), context labels (key.label@context, key.hint@context), choice options (key.options.value.label), shared option sets ($optionSet.setName.value.label), validation messages (key.errors.CODE, key.constraintMessage, key.requiredMessage), form-level strings ($form.title, $form.description), shape messages ($shape.id.message), theme page strings ($page.pageId.title, $page.pageId.description), and component node strings ($component.nodeId.property).",
+      "examples": [
+        {
+          "$form.title": "Rapport annuel sur les subventions",
+          "projectName.label": "Nom du projet",
+          "projectName.hint": "Entrez le nom officiel du projet",
+          "budgetSection.label": "Section budgétaire",
+          "budgetSection.label@short": "Budget",
+          "fundingStatus.options.yes.label": "Oui",
+          "fundingStatus.options.no.label": "Non",
+          "$optionSet.yesNoNA.yes.label": "Oui",
+          "$optionSet.yesNoNA.no.label": "Non",
+          "email.errors.REQUIRED": "L'adresse courriel est obligatoire",
+          "email.errors.CONSTRAINT_FAILED": "Veuillez entrer une adresse courriel valide",
+          "ssn.constraintMessage": "Le NAS doit être au format 000-000-000",
+          "$shape.budget-balance.message": "Le total doit correspondre au financement",
+          "$page.info.title": "Informations du projet",
+          "$page.review.title": "Révision et soumission",
+          "$component.submitBtn.label": "Soumettre la demande",
+          "$component.mainTabs.tabLabels[0]": "Personnel",
+          "lineItems.label": "Poste {{@index}}",
+          "totalItems.label": "Total : {{$itemCount}} {{if(pluralCategory($itemCount) = 'one', 'article', 'articles')}}"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "The core payload of a Locale Document. Each entry overrides one localizable string in the target Definition. Keys are path-based so validators can cross-reference against the Definition's item tree. Values support FEL interpolation for dynamic content."
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x-"
+      },
+      "description": "Extension namespace for vendor-specific or tooling-specific metadata. All keys MUST be x- prefixed. Processors MUST ignore unrecognized extensions. Extensions MUST NOT alter locale resolution semantics.",
+      "examples": [
+        {
+          "x-translator": { "tool": "Crowdin", "projectId": "budget-form" },
+          "x-coverage": { "percentage": 92, "lastUpdated": "2026-03-15" }
+        }
+      ]
+    }
+  },
+  "$defs": {}
+}

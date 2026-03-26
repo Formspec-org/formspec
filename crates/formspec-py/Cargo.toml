@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "PyO3 bindings for Formspec — exposes all Rust crates to Python"
+repository = "https://github.com/Formspec-org/formspec"
+publish = false
 readme = "README.md"
 
 [lib]

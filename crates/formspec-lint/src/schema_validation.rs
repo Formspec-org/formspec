@@ -19,17 +19,17 @@ use crate::types::LintDiagnostic;
 
 // ── Embedded schemas ─────────────────────────────────────────────
 
-const DEFINITION_SCHEMA: &str = include_str!("../../../schemas/definition.schema.json");
-const COMPONENT_SCHEMA: &str = include_str!("../../../schemas/component.schema.json");
-const THEME_SCHEMA: &str = include_str!("../../../schemas/theme.schema.json");
-const RESPONSE_SCHEMA: &str = include_str!("../../../schemas/response.schema.json");
-const MAPPING_SCHEMA: &str = include_str!("../../../schemas/mapping.schema.json");
-const CHANGELOG_SCHEMA: &str = include_str!("../../../schemas/changelog.schema.json");
-const REGISTRY_SCHEMA: &str = include_str!("../../../schemas/registry.schema.json");
+const DEFINITION_SCHEMA: &str = include_str!("../schemas/definition.schema.json");
+const COMPONENT_SCHEMA: &str = include_str!("../schemas/component.schema.json");
+const THEME_SCHEMA: &str = include_str!("../schemas/theme.schema.json");
+const RESPONSE_SCHEMA: &str = include_str!("../schemas/response.schema.json");
+const MAPPING_SCHEMA: &str = include_str!("../schemas/mapping.schema.json");
+const CHANGELOG_SCHEMA: &str = include_str!("../schemas/changelog.schema.json");
+const REGISTRY_SCHEMA: &str = include_str!("../schemas/registry.schema.json");
 const VALIDATION_REPORT_SCHEMA: &str =
-    include_str!("../../../schemas/validationReport.schema.json");
+    include_str!("../schemas/validationReport.schema.json");
 const VALIDATION_RESULT_SCHEMA: &str =
-    include_str!("../../../schemas/validationResult.schema.json");
+    include_str!("../schemas/validationResult.schema.json");
 
 // ── Schema text + $id pairs for cross-file $ref resolution ───────
 

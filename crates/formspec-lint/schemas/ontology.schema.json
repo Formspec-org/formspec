@@ -1,0 +1,429 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/ontology/1.0",
+  "title": "Formspec Ontology Document",
+  "description": "A Formspec Ontology Document per the Ontology specification. A standalone sidecar that attaches semantic concept identifiers, cross-system equivalences, vocabulary bindings, and alignment metadata to a Formspec Definition. Like Theme, Component, and References documents, an Ontology Document targets a Definition but lives alongside it. Multiple Ontology Documents MAY target the same Definition (e.g., different domains, standards bodies, or interoperability contexts). Ontology metadata MUST NOT alter core behavioral semantics (required, relevant, readonly, calculate, validation). Ontology property values are static — FEL expressions MUST NOT appear in any ontology property.",
+  "type": "object",
+  "required": [
+    "$formspecOntology",
+    "version",
+    "targetDefinition"
+  ],
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "$formspecOntology": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Ontology specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for ontology document compatibility."
+      }
+    },
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Optional JSON Schema URI for editor validation and autocompletion."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Version of this Ontology Document.",
+      "examples": ["1.0.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Revision identifier for the ontology document."
+      }
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical URI identifier for this Ontology Document."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_\\-]*$",
+      "description": "Machine-readable short name for this Ontology Document. Pattern: letters, digits, hyphens, underscores; must start with a letter.",
+      "examples": [
+        "clinical-intake-fhir-r4",
+        "grant-app-federal-standards"
+      ]
+    },
+    "targetDefinition": {
+      "$ref": "https://formspec.org/schemas/component/1.0#/$defs/TargetDefinition",
+      "description": "Binding to the target Formspec Definition and optional compatibility range.",
+      "examples": [
+        { "url": "https://example.org/forms/clinical-intake", "compatibleVersions": ">=1.0.0 <2.0.0" }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declares which Definition this ontology document is designed for."
+      }
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable name for this Ontology Document.",
+      "examples": [
+        "Clinical Intake — FHIR R4 Ontology Overlay",
+        "Grant Application — Federal Data Standards"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of this document's purpose and scope."
+    },
+    "publisher": {
+      "$ref": "#/$defs/Publisher",
+      "description": "Organization publishing this ontology document."
+    },
+    "published": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp indicating when this ontology document was published."
+    },
+    "defaultSystem": {
+      "type": "string",
+      "format": "uri",
+      "description": "Default concept system URI. Applied when a concept binding omits 'system'.",
+      "examples": ["http://hl7.org/fhir", "https://schema.org"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Behavioral default that determines concept system for bindings that omit system."
+      }
+    },
+    "concepts": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/ConceptBinding"
+      },
+      "description": "Map of item paths to Concept Bindings. Keys use the same path syntax as Bind.path in Core §4.3.3. Dot notation for nesting, [*] for all repeat instances.",
+      "examples": [
+        {
+          "mrn": {
+            "concept": "http://terminology.hl7.org/CodeSystem/v2-0203#MR",
+            "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "display": "Medical Record Number"
+          }
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "The concept bindings that connect Definition fields to external ontology concepts."
+      }
+    },
+    "vocabularies": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/VocabularyBinding"
+      },
+      "description": "Map of option set names to Vocabulary Bindings. Keys match names in the Definition's optionSets.",
+      "examples": [
+        {
+          "diagnosisCodes": {
+            "system": "http://hl7.org/fhir/sid/icd-10",
+            "version": "2024",
+            "display": "ICD-10-CM"
+          }
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Vocabulary bindings that connect option sets to external terminology systems."
+      }
+    },
+    "alignments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Alignment"
+      },
+      "description": "Array of cross-system alignment declarations. Each entry declares a typed relationship between a Definition field and a concept in an external system.",
+      "x-lm": {
+        "critical": true,
+        "intent": "Explicit alignment declarations for cross-form and cross-system data interoperability."
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "@context": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "object" },
+            { "type": "array" }
+          ],
+          "description": "JSON-LD @context fragment. When applied to a response document, makes the response a valid JSON-LD document. May be a URI string, a context object, or an array of both.",
+          "x-lm": {
+            "critical": true,
+            "intent": "The JSON-LD bridge that enables form responses to participate in linked data ecosystems."
+          }
+        }
+      },
+      "description": "JSON-LD context fragment for response export. Enables form responses to participate in linked data ecosystems."
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^x-" },
+      "description": "Document-level extension properties. All keys MUST be x-prefixed."
+    }
+  },
+
+  "$defs": {
+    "Publisher": {
+      "type": "object",
+      "required": ["name", "url"],
+      "additionalProperties": false,
+      "description": "Organization publishing this ontology document.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable organization name."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Organization home page."
+        },
+        "contact": {
+          "type": "string",
+          "description": "Contact email or URI."
+        }
+      },
+      "examples": [
+        { "name": "Health Data Standards Board", "url": "https://hdsb.example.org", "contact": "standards@hdsb.example.org" }
+      ]
+    },
+
+    "ConceptBinding": {
+      "type": "object",
+      "required": ["concept"],
+      "additionalProperties": false,
+      "description": "Associates a Definition item with a concept in an external ontology or standard.",
+      "properties": {
+        "concept": {
+          "type": "string",
+          "format": "uri",
+          "description": "The concept URI in the external system.",
+          "examples": [
+            "http://terminology.hl7.org/CodeSystem/v2-0203#MR",
+            "https://schema.org/birthDate",
+            "https://www.irs.gov/terms/employer-identification-number"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "The globally unique identifier for the concept this field represents."
+          }
+        },
+        "system": {
+          "type": "string",
+          "format": "uri",
+          "description": "The concept system or ontology URI. Falls back to the document's defaultSystem if omitted.",
+          "examples": [
+            "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "https://schema.org",
+            "https://www.irs.gov/terms"
+          ]
+        },
+        "display": {
+          "type": "string",
+          "description": "Human-readable name of the concept.",
+          "examples": ["Medical Record Number", "Date of Birth", "Employer Identification Number"]
+        },
+        "code": {
+          "type": "string",
+          "description": "Short code within the system (e.g., 'MR' for Medical Record Number).",
+          "examples": ["MR", "EIN"]
+        },
+        "equivalents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConceptEquivalent"
+          },
+          "description": "Cross-system equivalences for this concept."
+        }
+      }
+    },
+
+    "ConceptEquivalent": {
+      "type": "object",
+      "required": ["system", "code"],
+      "additionalProperties": false,
+      "description": "Declares that the bound concept is equivalent to a concept in another system.",
+      "properties": {
+        "system": {
+          "type": "string",
+          "format": "uri",
+          "description": "The target system URI.",
+          "examples": ["https://schema.org", "urn:fhir:r4"]
+        },
+        "code": {
+          "type": "string",
+          "description": "The concept code within the target system.",
+          "examples": ["taxID", "Patient.identifier"]
+        },
+        "display": {
+          "type": "string",
+          "description": "Human-readable name in the target system."
+        },
+        "type": {
+          "type": "string",
+          "description": "Relationship type (SKOS-inspired). When absent, processors MUST treat as 'exact'. Values: 'exact', 'close', 'broader', 'narrower', 'related'. Custom types MUST be x-prefixed.",
+          "examples": ["exact", "broader", "narrower", "related", "close"]
+        }
+      },
+      "examples": [
+        { "system": "https://schema.org", "code": "taxID", "type": "broader" }
+      ]
+    },
+
+    "VocabularyBinding": {
+      "type": "object",
+      "required": ["system"],
+      "additionalProperties": false,
+      "description": "Associates a named option set with an external terminology system.",
+      "properties": {
+        "system": {
+          "type": "string",
+          "format": "uri",
+          "description": "The terminology system URI.",
+          "examples": [
+            "http://hl7.org/fhir/sid/icd-10",
+            "http://hl7.org/fhir/ValueSet/administrative-gender"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Identifies which external terminology system this option set comes from."
+          }
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the terminology.",
+          "examples": ["2024", "5.0.0"]
+        },
+        "display": {
+          "type": "string",
+          "description": "Human-readable name of the terminology.",
+          "examples": ["ICD-10-CM", "Administrative Gender"]
+        },
+        "filter": {
+          "$ref": "#/$defs/VocabularyFilter",
+          "description": "Subset constraints limiting which portion of the vocabulary is in scope."
+        },
+        "valueMap": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Map from option set 'value' strings to terminology codes, when they differ. Keys are the Definition's option values; values are the external terminology codes."
+        }
+      }
+    },
+
+    "VocabularyFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Constrains which portion of a terminology is in scope for this option set.",
+      "properties": {
+        "ancestor": {
+          "type": "string",
+          "description": "Root code for hierarchical filtering. Only descendants of this code are included.",
+          "examples": ["F00-F99", "11"]
+        },
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum depth from the ancestor code."
+        },
+        "include": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Explicit list of codes to include."
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Explicit list of codes to exclude."
+        }
+      },
+      "examples": [
+        { "ancestor": "F00-F99", "maxDepth": 3 }
+      ]
+    },
+
+    "Alignment": {
+      "type": "object",
+      "required": ["field", "target", "type"],
+      "additionalProperties": false,
+      "description": "Declares a typed relationship between a Definition field and a concept in an external system.",
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Item path in the Definition. Uses the same path syntax as Bind.path.",
+          "examples": ["mrn", "demographics.dob", "lineItems[*].amount"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Identifies which Definition field this alignment applies to."
+          }
+        },
+        "target": {
+          "type": "object",
+          "required": ["system", "code"],
+          "additionalProperties": false,
+          "properties": {
+            "system": {
+              "type": "string",
+              "format": "uri",
+              "description": "External system URI.",
+              "examples": ["urn:fhir:r4", "urn:salesforce", "https://schema.org"]
+            },
+            "code": {
+              "type": "string",
+              "description": "Concept code in the external system.",
+              "examples": ["Patient.identifier", "Account.TaxId__c", "gender"]
+            },
+            "display": {
+              "type": "string",
+              "description": "Human-readable name in the external system."
+            }
+          },
+          "description": "External system concept reference.",
+          "x-lm": {
+            "critical": true,
+            "intent": "Identifies the concept in the external system that this field aligns with."
+          }
+        },
+        "type": {
+          "type": "string",
+          "description": "Relationship type (SKOS-inspired). 'exact', 'close', 'broader', 'narrower', 'related'. Custom types MUST be x-prefixed.",
+          "examples": ["exact", "broader", "narrower"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Qualifies the nature of the alignment — identical concept, broader, narrower, or related."
+          }
+        },
+        "bidirectional": {
+          "type": "boolean",
+          "description": "Whether the alignment applies in both directions. When absent, processors MUST treat as false.",
+          "examples": [true, false]
+        },
+        "notes": {
+          "type": "string",
+          "description": "Human-readable explanation of the alignment rationale."
+        }
+      },
+      "examples": [
+        {
+          "field": "mrn",
+          "target": { "system": "urn:fhir:r4", "code": "Patient.identifier" },
+          "type": "exact",
+          "bidirectional": true
+        }
+      ]
+    }
+  }
+}

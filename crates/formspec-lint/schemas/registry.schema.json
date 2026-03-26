@@ -1,0 +1,647 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/registry/v1.0/registry.json",
+  "title": "Formspec Registry Document",
+  "description": "A static JSON document format for publishing, discovering, and validating Formspec extensions and semantic metadata. A Registry Document enumerates named entries — custom data types, functions, constraints, properties, namespaces, concept identities, and vocabulary bindings — with metadata, version history, compatibility bounds, and machine-readable schemas. Any organization MAY publish its own Registry Document. Interoperability is achieved through the common format, not centralized authority.",
+  "type": "object",
+  "required": [
+    "$formspecRegistry",
+    "publisher",
+    "published",
+    "entries"
+  ],
+  "properties": {
+    "$formspecRegistry": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Registry specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for registry document compatibility."
+      }
+    },
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Optional JSON Schema URI for editor validation and autocompletion."
+    },
+    "publisher": {
+      "$ref": "#/$defs/Publisher",
+      "description": "Organization publishing this registry document. Provides provenance and contact information for all entries unless overridden at the entry level.",
+      "examples": [
+        {
+          "name": "Federal Grants Commission",
+          "url": "https://grants.gov",
+          "contact": "formspec@grants.gov"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Publisher identity and contact provenance for this registry."
+      }
+    },
+    "published": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp indicating when this registry version was published. Used for freshness checks and conditional GET cache validation.",
+      "examples": ["2025-07-10T14:30:00Z"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Publication timestamp used for freshness and cache validation."
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RegistryEntry"
+      },
+      "description": "Array of extension registry entries. Each entry describes one extension with its category, version, compatibility bounds, and category-specific metadata. Within a single document, the (name, version) tuple MUST be unique.",
+      "examples": [
+        [
+          {
+            "name": "x-acme-currency",
+            "category": "dataType",
+            "version": "1.0.0",
+            "status": "stable",
+            "description": "Custom currency data type extending decimal with 2-digit precision.",
+            "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+            "baseType": "decimal",
+            "constraints": { "minimum": 0 },
+            "metadata": { "prefix": "$", "precision": 2 }
+          },
+          {
+            "name": "x-acme-fiscal-year",
+            "category": "function",
+            "version": "1.0.0",
+            "status": "stable",
+            "description": "Returns the federal fiscal year for a given date.",
+            "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+            "parameters": [
+              { "name": "date", "type": "date", "description": "The date to classify." }
+            ],
+            "returns": "integer"
+          },
+          {
+            "name": "x-acme-duns-check",
+            "category": "constraint",
+            "version": "1.0.0",
+            "status": "stable",
+            "description": "Validates that a string is a well-formed DUNS number (9 digits, valid check digit).",
+            "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+            "parameters": [
+              { "name": "value", "type": "string", "description": "The DUNS number to validate." }
+            ]
+          },
+          {
+            "name": "x-acme-grants",
+            "category": "namespace",
+            "version": "2.0.0",
+            "status": "stable",
+            "description": "Namespace grouping federal grants management extensions.",
+            "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+            "members": [
+              "x-acme-currency",
+              "x-acme-fiscal-year",
+              "x-acme-duns-check"
+            ]
+          },
+          {
+            "name": "x-onto-ein",
+            "category": "concept",
+            "version": "1.0.0",
+            "status": "stable",
+            "description": "IRS Employer Identification Number — a 9-digit tax identifier assigned to business entities.",
+            "compatibility": { "formspecVersion": ">=1.0.0" },
+            "conceptUri": "https://www.irs.gov/terms/employer-identification-number",
+            "conceptSystem": "https://www.irs.gov/terms",
+            "conceptCode": "EIN",
+            "metadata": { "displayName": "Employer Identification Number" },
+            "equivalents": [
+              { "system": "https://schema.org", "code": "taxID", "type": "broader" },
+              { "system": "urn:fhir:r4", "code": "Organization.identifier", "type": "exact" }
+            ]
+          },
+          {
+            "name": "x-vocab-icd10-mental-health",
+            "category": "vocabulary",
+            "version": "1.0.0",
+            "status": "stable",
+            "description": "ICD-10-CM mental and behavioural disorders chapter (F00-F99), depth-limited to 3 levels.",
+            "compatibility": { "formspecVersion": ">=1.0.0" },
+            "vocabularySystem": "http://hl7.org/fhir/sid/icd-10",
+            "vocabularyVersion": "2024",
+            "metadata": { "displayName": "ICD-10-CM Mental Health Codes" },
+            "filter": { "ancestor": "F00-F99", "maxDepth": 3 }
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Primary catalog of extension definitions exposed by the registry."
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Registry-level extension properties for vendor-specific metadata. All property keys MUST be x-prefixed.",
+      "propertyNames": {
+        "pattern": "^x-"
+      },
+      "examples": [
+        {
+          "x-acme-registry-policy": {
+            "reviewRequired": true,
+            "autoRetireAfterDays": 365
+          }
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Publisher": {
+      "type": "object",
+      "description": "Identity and contact information for the organization publishing extensions.",
+      "required": [
+        "name",
+        "url"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable organization name.",
+          "examples": ["Federal Grants Commission", "Acme Healthcare Systems"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Organization home page URI.",
+          "examples": ["https://grants.gov", "https://acme-health.example.com"]
+        },
+        "contact": {
+          "type": "string",
+          "description": "Contact email address or URI for extension-related inquiries.",
+          "examples": ["formspec@grants.gov", "https://acme-health.example.com/contact"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "RegistryEntry": {
+      "type": "object",
+      "description": "A single registry entry. Describes one Formspec extension or semantic metadata entry — its identity, category, lifecycle status, compatibility bounds, and category-specific metadata. Category-specific properties become required based on the category value: dataType requires baseType; function requires parameters and returns; constraint requires parameters; concept requires conceptUri; vocabulary requires vocabularySystem.",
+      "required": [
+        "name",
+        "category",
+        "version",
+        "status",
+        "description",
+        "compatibility"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^x-[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$",
+          "description": "The x-prefixed extension identifier. Must be lowercase ASCII with hyphen-separated segments, each starting with a letter. The prefix x-formspec- is reserved for future core promotion.",
+          "examples": ["x-acme-currency", "x-gov-grants-fiscal-year", "x-health-icd10", "x-onto-ein", "x-vocab-icd10-cm"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Globally unique extension identifier used for resolution and collision avoidance."
+          }
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "dataType",
+            "function",
+            "constraint",
+            "property",
+            "namespace",
+            "concept",
+            "vocabulary"
+          ],
+          "description": "The entry category. Determines which category-specific properties are required: dataType requires baseType; function requires parameters and returns; constraint requires parameters; concept requires conceptUri; vocabulary requires vocabularySystem; property and namespace have no additional required properties.",
+          "examples": ["dataType", "function", "constraint", "namespace", "concept", "vocabulary"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Discriminator that drives conditional required properties and tells processors how to consume the extension."
+          }
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+          "description": "Semver version of the extension itself (not the Formspec version). Within a registry document, the (name, version) tuple MUST be unique. A new major version MAY re-enter draft status.",
+          "examples": ["1.0.0", "2.1.3", "0.9.0"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Extension version for uniqueness, ordering, and compatibility resolution."
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "stable",
+            "deprecated",
+            "retired"
+          ],
+          "description": "Lifecycle status. Transitions: draft → stable → deprecated → retired. Transitions MUST NOT skip states. Stable means the interface is frozen for the major version. Deprecated requires a deprecationNotice. Processors encountering retired extensions SHOULD emit a warning.",
+          "examples": ["stable", "deprecated"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Lifecycle stage governing processor behavior — warnings for retired, notices for deprecated."
+          }
+        },
+        "publisher": {
+          "$ref": "#/$defs/Publisher",
+          "description": "Entry-level publisher override. When present, takes precedence over the document-level publisher for this specific entry. Useful for multi-organization registries."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable summary of the extension's purpose and behavior.",
+          "examples": [
+            "US Dollar currency type with 2-digit precision and non-negative constraint.",
+            "Returns the federal fiscal year (Oct 1 start) for a given date."
+          ]
+        },
+        "specUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Link to the full human-readable extension documentation or specification.",
+          "examples": ["https://grants.gov/formspec/x-gov-grants/v2.0/spec.html"]
+        },
+        "schemaUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Link to a JSON Schema for validating the extension's data as it appears in a Formspec Definition document. Registry-aware processors SHOULD fetch and validate against this schema.",
+          "examples": ["https://grants.gov/formspec/x-gov-grants/v2.0/schema.json"]
+        },
+        "compatibility": {
+          "type": "object",
+          "description": "Version compatibility bounds. Processors MUST verify the current Formspec version satisfies formspecVersion. A mismatch produces a warning (or hard error if x-formspec-strict is set in extensions).",
+          "required": [
+            "formspecVersion"
+          ],
+          "properties": {
+            "formspecVersion": {
+              "type": "string",
+              "description": "Semver range of compatible Formspec core specification versions. Uses npm-style range syntax.",
+              "examples": [">=1.0.0 <2.0.0", ">=1.2.0"]
+            },
+            "mappingDslVersion": {
+              "type": "string",
+              "description": "Semver range of compatible Mapping DSL versions. Only relevant for extensions that interact with the Mapping specification.",
+              "examples": [">=1.0.0 <2.0.0"]
+            }
+          },
+          "additionalProperties": false,
+          "examples": [
+            { "formspecVersion": ">=1.0.0 <2.0.0" },
+            { "formspecVersion": ">=1.0.0 <2.0.0", "mappingDslVersion": ">=1.0.0" }
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Compatibility bounds that processors MUST check before accepting an extension."
+          }
+        },
+        "license": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9.\\-]*[A-Za-z0-9]$",
+          "description": "SPDX license identifier for the extension (e.g. 'Apache-2.0', 'MIT', 'CC0-1.0'). See https://spdx.org/licenses/ for valid identifiers.",
+          "examples": ["Apache-2.0", "MIT", "CC0-1.0"]
+        },
+        "deprecationNotice": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable deprecation message explaining why the extension is deprecated and identifying a replacement if one exists. REQUIRED when status is 'deprecated'. Processors SHOULD surface this message to form authors.",
+          "examples": [
+            "Superseded by x-acme-currency-v2. Migrate by 2026-01-01.",
+            "Use the core money dataType instead. This extension will be retired in v3.0."
+          ]
+        },
+        "examples": {
+          "type": "array",
+          "items": true,
+          "description": "Array of JSON values demonstrating how this extension is used in a Formspec Definition. Each element is a free-form JSON value — typically a fragment of a definition document or an item using the extension."
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Entry-level extension properties for vendor-specific metadata. All property keys MUST be x-prefixed.",
+          "propertyNames": {
+            "pattern": "^x-"
+          }
+        },
+        "baseType": {
+          "type": "string",
+          "enum": [
+            "string",
+            "integer",
+            "decimal",
+            "boolean",
+            "date",
+            "dateTime",
+            "time",
+            "uri"
+          ],
+          "description": "The core Formspec data type that this custom dataType extends. REQUIRED when category is 'dataType'. The custom type inherits the base type's serialization, comparison, and FEL operator semantics.",
+          "examples": ["decimal", "string", "date"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Base type inheritance for custom dataType extensions — determines serialization and operator semantics."
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "description": "Default constraint values applied to fields using this custom dataType. Keys are constraint names, values are their defaults. Only meaningful when category is 'dataType'.",
+          "examples": [
+            { "minimum": 0 },
+            { "minimum": 0, "maxLength": 11 }
+          ]
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Presentation and descriptive metadata for this entry. For dataType entries, provides rendering hints (prefix, precision, formatting). For concept and vocabulary entries, provides display metadata (displayName). Open object — keys are not restricted.",
+          "examples": [
+            { "prefix": "$", "precision": 2, "thousandsSeparator": true },
+            { "prefix": "EUR ", "precision": 2 }
+          ]
+        },
+        "parameters": {
+          "type": "array",
+          "description": "Function or constraint signature parameters. REQUIRED when category is 'function' or 'constraint'. Each parameter declares name, type, and optional description. Parameters are positional — order matters for function calls in FEL.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "type"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Parameter name used in documentation and error messages."
+              },
+              "type": {
+                "type": "string",
+                "description": "Core Formspec data type name for this parameter (e.g. 'string', 'number', 'date', 'boolean', 'array')."
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable explanation of what this parameter represents."
+              }
+            },
+            "additionalProperties": false
+          },
+          "examples": [
+            [
+              { "name": "date", "type": "date", "description": "The date to classify." }
+            ],
+            [
+              { "name": "value", "type": "string", "description": "The string to validate." },
+              { "name": "pattern", "type": "string", "description": "Regex pattern to match against." }
+            ]
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Function/constraint signature for arity checking and type validation in FEL expressions."
+          }
+        },
+        "returns": {
+          "type": "string",
+          "description": "Core Formspec data type name for the return value of a custom function. REQUIRED when category is 'function'. Used by processors for type checking in FEL expressions.",
+          "examples": ["integer", "boolean", "string", "number"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Return type declaration enabling static type checking of custom function calls in FEL."
+          }
+        },
+        "members": {
+          "type": "array",
+          "description": "Array of x-prefixed extension names grouped under this namespace. Only meaningful when category is 'namespace'. Members should be other entries in the same or a referenced registry.",
+          "items": {
+            "type": "string",
+            "pattern": "^x-[a-z][a-z0-9]*(-[a-z][a-z0-9]*)*$"
+          },
+          "examples": [
+            ["x-acme-currency", "x-acme-fiscal-year", "x-acme-duns-check"]
+          ]
+        },
+        "conceptUri": {
+          "type": "string",
+          "format": "uri",
+          "description": "The concept IRI in the external ontology or standard. REQUIRED when category is 'concept'. This is the globally unique identifier for the concept this entry represents.",
+          "examples": [
+            "https://www.irs.gov/terms/employer-identification-number",
+            "https://schema.org/birthDate",
+            "http://terminology.hl7.org/CodeSystem/v2-0203#MR"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "The globally unique IRI for the concept this registry entry represents."
+          }
+        },
+        "conceptSystem": {
+          "type": "string",
+          "format": "uri",
+          "description": "The ontology or concept system URI. RECOMMENDED when category is 'concept'. Identifies which ontology or standard the concept belongs to.",
+          "examples": [
+            "https://www.irs.gov/terms",
+            "https://schema.org",
+            "http://terminology.hl7.org/CodeSystem/v2-0203"
+          ]
+        },
+        "conceptCode": {
+          "type": "string",
+          "description": "Short code within the concept system (e.g., 'EIN', 'MR'). Only meaningful when category is 'concept'.",
+          "examples": ["EIN", "MR", "SSN"]
+        },
+        "equivalents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConceptEquivalent"
+          },
+          "description": "Cross-system equivalences for this concept. Each element declares that the concept is equivalent to a concept in another system, with a SKOS-inspired relationship type. Only meaningful when category is 'concept'.",
+          "examples": [
+            [
+              { "system": "https://schema.org", "code": "taxID", "type": "broader" },
+              { "system": "urn:fhir:r4", "code": "Organization.identifier", "type": "exact" }
+            ]
+          ]
+        },
+        "vocabularySystem": {
+          "type": "string",
+          "format": "uri",
+          "description": "The terminology system URI. REQUIRED when category is 'vocabulary'. Identifies the external terminology system this entry represents.",
+          "examples": [
+            "http://hl7.org/fhir/sid/icd-10",
+            "http://hl7.org/fhir/ValueSet/administrative-gender"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Identifies which external terminology system this vocabulary entry represents."
+          }
+        },
+        "vocabularyVersion": {
+          "type": "string",
+          "description": "Version of the external terminology. Only meaningful when category is 'vocabulary'.",
+          "examples": ["2024", "5.0.0"]
+        },
+        "filter": {
+          "$ref": "#/$defs/VocabularyFilter",
+          "description": "Subset constraints limiting which portion of the vocabulary is in scope. Only meaningful when category is 'vocabulary'."
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "dataType"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "baseType"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "function"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "parameters",
+              "returns"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "constraint"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "parameters"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "concept"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "conceptUri"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "vocabulary"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "vocabularySystem"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "deprecated"
+              }
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "required": [
+              "deprecationNotice"
+            ]
+          }
+        }
+      ]
+    },
+    "ConceptEquivalent": {
+      "type": "object",
+      "required": ["system", "code"],
+      "additionalProperties": false,
+      "description": "Declares that the bound concept is equivalent to a concept in another system. Relationship types follow SKOS (Simple Knowledge Organization System) semantics.",
+      "properties": {
+        "system": {
+          "type": "string",
+          "format": "uri",
+          "description": "The target system URI.",
+          "examples": ["https://schema.org", "urn:fhir:r4"]
+        },
+        "code": {
+          "type": "string",
+          "description": "The concept code within the target system.",
+          "examples": ["taxID", "Patient.identifier"]
+        },
+        "display": {
+          "type": "string",
+          "description": "Human-readable name in the target system."
+        },
+        "type": {
+          "type": "string",
+          "description": "Relationship type (SKOS-inspired). When absent, processors MUST treat as 'exact'. Standard values: 'exact' (identical concept), 'close' (very similar), 'broader' (source is more specific), 'narrower' (source is more general), 'related' (associatively related). Custom types MUST be x-prefixed.",
+          "examples": ["exact", "broader", "narrower", "related", "close"]
+        }
+      },
+      "examples": [
+        { "system": "https://schema.org", "code": "taxID", "type": "broader" }
+      ]
+    },
+    "VocabularyFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Constrains which portion of a terminology is in scope for this vocabulary entry.",
+      "properties": {
+        "ancestor": {
+          "type": "string",
+          "description": "Root code for hierarchical filtering. Only descendants of this code are included.",
+          "examples": ["F00-F99", "11"]
+        },
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum depth from the ancestor code."
+        },
+        "include": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Explicit list of codes to include."
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Explicit list of codes to exclude."
+        }
+      },
+      "examples": [
+        { "ancestor": "F00-F99", "maxDepth": 3 }
+      ]
+    }
+  }
+}

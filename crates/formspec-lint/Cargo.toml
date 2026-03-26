@@ -4,10 +4,11 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Formspec Linter — 8-pass static analysis pipeline"
+repository = "https://github.com/Formspec-org/formspec"
 
 [dependencies]
-fel-core = { path = "../fel-core" }
-formspec-core = { path = "../formspec-core" }
+fel-core = { version = "0.1.0", path = "../fel-core" }
+formspec-core = { version = "0.1.0", path = "../formspec-core" }
 jsonschema = { version = "0.45", default-features = false }
 rust_decimal = "1"
 serde_json = "1"

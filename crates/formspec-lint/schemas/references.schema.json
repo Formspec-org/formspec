@@ -1,0 +1,324 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/references/1.0",
+  "title": "Formspec References Document",
+  "description": "A Formspec References Document per the References specification. A standalone layer that attaches external resources — documentation, regulations, knowledge bases, tool schemas, and other context — to a Formspec Definition. Like Theme (Tier 2) and Component (Tier 3) documents, a References Document targets a Definition but lives alongside it. Multiple References Documents MAY target the same Definition (e.g., different audiences, languages, or domains). References MUST NOT alter core behavioral semantics (required, relevant, readonly, calculate, validation). Reference properties are static — FEL expressions MUST NOT appear in any reference property.",
+  "type": "object",
+  "required": [
+    "$formspecReferences",
+    "version",
+    "targetDefinition",
+    "references"
+  ],
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "$formspecReferences": {
+      "type": "string",
+      "const": "1.0",
+      "description": "References specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for references document compatibility."
+      }
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical URI identifier for this References Document."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_\\-]*$",
+      "description": "Machine-readable short name for this References Document. Pattern: letters, digits, hyphens, underscores; must start with a letter.",
+      "examples": [
+        "sf-425-federal-refs",
+        "grant-agent-context"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable name for this References Document.",
+      "examples": [
+        "SF-425 Federal Guidance References",
+        "Grant Application Agent Context"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of this document's purpose and scope."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Version of this References Document.",
+      "examples": ["1.0.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Revision identifier for the references document."
+      }
+    },
+    "targetDefinition": {
+      "$ref": "https://formspec.org/schemas/component/1.0#/$defs/TargetDefinition",
+      "description": "Binding to the target Formspec Definition and optional compatibility range.",
+      "examples": [
+        { "url": "https://example.gov/forms/sf-425", "compatibleVersions": ">=2025.1.0" }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Declares which definition this references document is designed for."
+      }
+    },
+    "referenceDefs": {
+      "$ref": "#/$defs/ReferenceDefs",
+      "description": "Registry of reusable Reference objects. Entries in the 'references' array may use {\"$ref\": \"#/referenceDefs/{key}\"} to include a definition from this registry with optional property overrides."
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/BoundReference"
+      },
+      "description": "Ordered list of references bound to the target Definition. Each entry specifies a target path (item key or '#' for form-level) and a reference or $ref pointer. References are static and resolved at load time.",
+      "examples": [
+        [
+          {
+            "target": "#",
+            "type": "regulation",
+            "audience": "both",
+            "title": "2 CFR Part 200",
+            "uri": "https://www.ecfr.gov/current/title-2/subtitle-A/chapter-II/part-200"
+          },
+          {
+            "target": "indirectCostRate",
+            "type": "context",
+            "audience": "agent",
+            "content": "The indirect cost rate is a percentage negotiated with the cognizant federal agency."
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "The reference bindings that connect resources to definition items."
+      }
+    }
+  },
+
+  "$defs": {
+    "BoundReference": {
+      "type": "object",
+      "description": "A reference bound to a specific location in the target Definition. The 'target' path identifies which item(s) this reference applies to. Uses the same path syntax as Bind.path (core §4.3.3). The special value '#' targets the entire form (form-level reference).",
+      "required": [
+        "target"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/$defs/ReferenceOrRef"
+        }
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path identifying which Definition item(s) this reference applies to. Uses dot notation for nesting and [*] for all instances of a repeatable group. The special value '#' means form-level (applies to the entire form). Multiple references may target the same path.",
+          "examples": [
+            "#",
+            "indirectCostRate",
+            "budget.lineItems",
+            "lineItems[*].amount"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Binds this reference to a specific item or the form as a whole."
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "Reference": {
+      "type": "object",
+      "description": "A single reference to an external or inline resource that provides context for a form element. At least one of 'uri' or 'content' MUST be present.",
+      "required": [
+        "type",
+        "audience"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+          "description": "Identifier for this reference. RECOMMENDED. When present, MUST be unique within this References Document. When used as a referenceDefs key, the key and id MUST match (processing-time validation).",
+          "examples": [
+            "cfr-200-414",
+            "grant-kb",
+            "budget-help"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "description": "Classification of the referenced resource. Human-oriented: 'documentation', 'example'. Shared: 'regulation', 'policy', 'glossary', 'schema'. Agent-oriented: 'vector-store', 'knowledge-base', 'retrieval', 'tool', 'api', 'context'. Custom types MUST be prefixed with 'x-'. Unrecognized non-'x-' types: processor SHOULD warn and MAY skip.",
+          "examples": [
+            "regulation",
+            "documentation",
+            "vector-store",
+            "context",
+            "x-org-training-video"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Determines discovery, fetching, and presentation behavior for this reference."
+          }
+        },
+        "audience": {
+          "type": "string",
+          "enum": [
+            "human",
+            "agent",
+            "both"
+          ],
+          "description": "Who consumes this reference. 'human': rendered in the UI (help panels, links, tooltips). 'agent': consumed programmatically by AI agents (not rendered). 'both': available to both rendering and agent pipelines.",
+          "examples": [
+            "human",
+            "agent",
+            "both"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Controls whether the reference is rendered in UI, consumed by agents, or both."
+          }
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable label for this reference. RECOMMENDED.",
+          "examples": [
+            "2 CFR § 200.414 — Indirect Costs",
+            "Budget Line Item Help"
+          ]
+        },
+        "uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "URI of the referenced resource. REQUIRED unless 'content' is provided. Supports https:, vectorstore:, kb:, formspec-fn:, and urn: schemes.",
+          "examples": [
+            "https://www.ecfr.gov/current/title-2/subtitle-A/chapter-II/part-200/subpart-E/subject-group-ECFRd93f2a98b1f6455/section-200.414",
+            "vectorstore:pinecone/grant-regulations",
+            "kb:bedrock/ABCDEF1234",
+            "formspec-fn:resolve-policy"
+          ]
+        },
+        "content": {
+          "description": "Inline content of the reference. REQUIRED unless 'uri' is provided. May be a plain text string, markdown, or structured JSON object.",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "object" }
+          ],
+          "examples": [
+            "Indirect cost rate must not exceed the organization's federally negotiated rate.",
+            { "name": "verify_ein", "parameters": { "ein": "string" } }
+          ]
+        },
+        "mediaType": {
+          "type": "string",
+          "description": "MIME type of the referenced resource (RFC 2045).",
+          "examples": ["text/html", "application/pdf", "text/markdown", "application/json"]
+        },
+        "language": {
+          "type": "string",
+          "description": "BCP 47 language tag for the referenced content.",
+          "examples": ["en", "es", "fr-CA"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Longer explanation of what this reference provides and why it is relevant."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Categorization tags for filtering and grouping references.",
+          "examples": [["regulation", "2-cfr-200"], ["help", "budget"]]
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["primary", "supplementary", "background"],
+          "description": "Relative importance. 'primary': surfaced first. 'supplementary' (implicit default): normal. 'background': contextual."
+        },
+        "rel": {
+          "type": "string",
+          "description": "Semantic relationship to the target. Known values: 'authorizes', 'constrains', 'defines', 'exemplifies', 'supersedes', 'superseded-by', 'derived-from', 'see-also' (implicit default). Custom types MUST be prefixed with 'x-'. Unrecognized non-'x-' values: processor SHOULD warn and treat as 'see-also'.",
+          "examples": ["constrains", "defines", "see-also"]
+        },
+        "selector": {
+          "type": "string",
+          "description": "Fragment-targeting hint for resources without native fragment semantics.",
+          "examples": ["Section 414(f)", "Table 3, Row 'Indirect Costs'"]
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": { "pattern": "^x-" },
+          "description": "Reference-level extension data. All keys MUST be prefixed with 'x-'."
+        }
+      },
+      "anyOf": [
+        { "required": ["uri"] },
+        { "required": ["content"] }
+      ],
+      "additionalProperties": false
+    },
+    "ReferenceOrRef": {
+      "description": "Either a full inline Reference object, or a $ref pointer to a referenceDefs entry with optional property overrides. When $ref is present, the base object is shallow-merged with sibling properties (overrides win). The 'id' property MUST NOT appear alongside $ref — the referenceDefs key becomes the resolved id. MAINTENANCE NOTE: The $ref branch explicitly lists override properties — if a property is added to Reference, it must also be added to the $ref branch or overrides for that property will be silently rejected.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Reference"
+        },
+        {
+          "type": "object",
+          "required": ["$ref"],
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "pattern": "^#/referenceDefs/[a-zA-Z][a-zA-Z0-9_-]*$",
+              "description": "JSON Pointer (RFC 6901) to a referenceDefs entry. Resolved at load time."
+            },
+            "title": { "type": "string" },
+            "uri": { "type": "string", "format": "uri" },
+            "content": {
+              "oneOf": [{ "type": "string" }, { "type": "object" }]
+            },
+            "mediaType": { "type": "string" },
+            "language": { "type": "string" },
+            "description": { "type": "string" },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "priority": {
+              "type": "string",
+              "enum": ["primary", "supplementary", "background"]
+            },
+            "rel": { "type": "string" },
+            "selector": { "type": "string" },
+            "audience": {
+              "type": "string",
+              "enum": ["human", "agent", "both"]
+            },
+            "type": { "type": "string" },
+            "extensions": {
+              "type": "object",
+              "propertyNames": { "pattern": "^x-" }
+            }
+          },
+          "not": { "required": ["id"] },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ReferenceDefs": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Reference"
+      },
+      "description": "Registry of reusable Reference objects keyed by identifier. Entries MUST NOT use $ref to other entries (no recursion). The key becomes the resolved reference's 'id' — if the entry also declares 'id', it MUST match the key (processing-time validation, not schema-enforceable). Broken $ref pointers are document errors."
+    }
+  }
+}

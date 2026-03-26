@@ -1,0 +1,1220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/core/commands/0.1",
+  "title": "Core Command Catalog",
+  "description": "Structured catalog of all commands available in formspec-core. Each entry defines the command type string, payload shape, side effects, and optional examples. Consumers — LLM agents, CLI tools, visual editors — read this catalog to discover available mutations and construct valid command payloads for RawProject.dispatch().",
+  "type": "object",
+  "properties": {
+    "version": { "const": "0.1" },
+    "commands": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/CommandEntry" }
+    }
+  },
+  "$defs": {
+    "PayloadProperty": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Property name in the payload object."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type annotation. Uses JSON Schema primitives (string, number, boolean, object, array) with clarifications in description."
+        },
+        "description": { "type": "string" },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "enum": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "When present, restricts the property to these literal values."
+        },
+        "default": {
+          "description": "Default value when property is omitted."
+        }
+      },
+      "additionalProperties": false
+    },
+    "NodeRef": {
+      "type": "object",
+      "description": "Reference to a component tree node. Provide either bind (field key) or nodeId (for unbound layout nodes).",
+      "properties": {
+        "bind": { "type": "string" },
+        "nodeId": { "type": "string" }
+      }
+    },
+    "CommandEntry": {
+      "type": "object",
+      "required": ["type", "area", "description", "payload"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Command discriminant passed as command.type to Project.dispatch()."
+        },
+        "area": {
+          "type": "string",
+          "enum": [
+            "definition-items",
+            "definition-binds",
+            "definition-metadata",
+            "definition-pages",
+            "definition-shapes",
+            "definition-variables",
+            "definition-optionsets",
+            "definition-instances",
+            "definition-screener",
+            "definition-migrations",
+            "theme",
+            "mapping",
+            "pages",
+            "component-tree",
+            "component-properties",
+            "project"
+          ],
+          "description": "Handler module area for grouping."
+        },
+        "description": {
+          "type": "string",
+          "description": "What this command does."
+        },
+        "payload": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/PayloadProperty" },
+          "description": "Ordered list of payload properties."
+        },
+        "sideEffects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["rebuildComponentTree", "clearHistory"]
+          },
+          "description": "Side effects triggered after the command executes."
+        },
+        "returns": {
+          "type": "object",
+          "description": "Extra return properties beyond standard CommandResult.",
+          "additionalProperties": { "type": "string" }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "command": { "type": "object" },
+              "note": { "type": "string" }
+            },
+            "required": ["command"]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "version": "0.1",
+  "commands": [
+
+    { "type": "definition.addItem", "area": "definition-items",
+      "description": "Add a field, group, or display item to the definition tree.",
+      "payload": [
+        { "name": "type", "type": "string", "required": true, "enum": ["field", "group", "display"] },
+        { "name": "parentPath", "type": "string", "description": "Dot-path of parent group. Root if omitted." },
+        { "name": "insertIndex", "type": "number", "description": "Position within parent children. Appends if omitted." },
+        { "name": "key", "type": "string", "description": "Item name. Auto-generated if omitted." },
+        { "name": "dataType", "type": "string", "description": "Data type (field items only)." },
+        { "name": "label", "type": "string" },
+        { "name": "description", "type": "string" },
+        { "name": "hint", "type": "string" },
+        { "name": "options", "type": "array", "description": "Array of {value, label} objects for choice/multiChoice fields." },
+        { "name": "labels", "type": "object", "description": "i18n label overrides keyed by locale." },
+        { "name": "repeatable", "type": "boolean", "description": "Group only: whether the group is repeatable." },
+        { "name": "minRepeat", "type": "number", "description": "Group only: minimum repeat instances." },
+        { "name": "maxRepeat", "type": "number", "description": "Group only: maximum repeat instances." },
+        { "name": "optionSet", "type": "string", "description": "Name of a shared option set." },
+        { "name": "currency", "type": "string", "description": "ISO 4217 currency code for money fields." },
+        { "name": "presentation", "type": "object" },
+        { "name": "prePopulate", "type": "object" },
+        { "name": "relevant", "type": "string", "description": "FEL expression. Shorthand for creating a bind on the new item." },
+        { "name": "required", "type": "string", "description": "FEL expression or boolean string." },
+        { "name": "readonly", "type": "string", "description": "FEL expression or boolean string." },
+        { "name": "calculate", "type": "string", "description": "FEL expression." },
+        { "name": "constraint", "type": "string", "description": "FEL expression." },
+        { "name": "constraintMessage", "type": "string" },
+        { "name": "initialValue", "type": "string" }
+      ],
+      "sideEffects": ["rebuildComponentTree"],
+      "returns": { "insertedPath": "Dot-path of the newly added item." },
+      "examples": [
+        {
+          "command": { "type": "definition.addItem", "payload": { "type": "field", "key": "email", "label": "Email address", "dataType": "string" } },
+          "note": "Add a string field at the root level."
+        },
+        {
+          "command": { "type": "definition.addItem", "payload": { "type": "group", "key": "contacts", "label": "Contact list", "repeatable": true, "minRepeat": 1, "maxRepeat": 10 } },
+          "note": "Add a repeatable group."
+        }
+      ]
+    },
+
+    { "type": "definition.deleteItem", "area": "definition-items",
+      "description": "Remove an item and its children from the definition tree. Cascades to binds and component references.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true, "description": "Dot-path of the item to delete." }
+      ],
+      "sideEffects": ["rebuildComponentTree"]
+    },
+
+    { "type": "definition.renameItem", "area": "definition-items",
+      "description": "Rename an item's key. Cascades to binds, shapes, variables, and component references via FEL rewriting.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true, "description": "Dot-path of the item to rename." },
+        { "name": "newKey", "type": "string", "required": true, "description": "New key (validated for uniqueness among siblings)." }
+      ],
+      "sideEffects": ["rebuildComponentTree"],
+      "returns": { "newPath": "Updated dot-path after rename." }
+    },
+
+    { "type": "definition.moveItem", "area": "definition-items",
+      "description": "Move an item to a different parent or position. Cascades path references.",
+      "payload": [
+        { "name": "sourcePath", "type": "string", "required": true, "description": "Dot-path of the item to move." },
+        { "name": "targetParentPath", "type": "string", "description": "Dot-path of the new parent group. Root if omitted." },
+        { "name": "targetIndex", "type": "number", "description": "Position within new parent. Appends if omitted." }
+      ],
+      "sideEffects": ["rebuildComponentTree"],
+      "returns": { "newPath": "Updated dot-path after move." }
+    },
+
+    { "type": "definition.reorderItem", "area": "definition-items",
+      "description": "Move an item one position up or down among its siblings.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true },
+        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
+      ],
+      "sideEffects": ["rebuildComponentTree"]
+    },
+
+    { "type": "definition.duplicateItem", "area": "definition-items",
+      "description": "Deep-copy an item and insert the clone after the original. Generates a unique key for the copy.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true }
+      ],
+      "sideEffects": ["rebuildComponentTree"],
+      "returns": { "insertedPath": "Dot-path of the duplicated item." }
+    },
+
+
+    { "type": "definition.setBind", "area": "definition-binds",
+      "description": "Set or update bind properties for a field path. Creates the bind entry if it doesn't exist.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true, "description": "Dot-path of the target field." },
+        { "name": "properties", "type": "object", "required": true, "description": "Bind properties to set: calculate, relevant, required, readonly, constraint, constraintMessage, default, nonRelevantBehavior, whitespace, excludedValue, disabledDisplay, extensions." }
+      ],
+      "examples": [
+        {
+          "command": { "type": "definition.setBind", "payload": { "path": "age", "properties": { "required": true, "constraint": "$age >= 18", "constraintMessage": "Must be 18 or older" } } }
+        }
+      ]
+    },
+
+    { "type": "definition.setItemProperty", "area": "definition-binds",
+      "description": "Set an arbitrary property on a definition item. Supports dotted paths for nested properties.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true, "description": "Dot-path of the item." },
+        { "name": "property", "type": "string", "required": true, "description": "Property name (supports dotted paths for nesting)." },
+        { "name": "value", "type": "any", "required": true, "description": "Value to set. Null to remove." }
+      ]
+    },
+
+    { "type": "definition.setFieldDataType", "area": "definition-binds",
+      "description": "Change a field's data type.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true },
+        { "name": "dataType", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "definition.setFieldOptions", "area": "definition-binds",
+      "description": "Set inline options or assign a named option set to a field.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true },
+        { "name": "options", "type": "array|string", "required": true, "description": "Array of {value, label} objects for inline options, or a string for named option set reference." }
+      ]
+    },
+
+    { "type": "definition.setItemExtension", "area": "definition-binds",
+      "description": "Set or remove an extension on a definition item.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true },
+        { "name": "extension", "type": "string", "required": true, "description": "Extension name (must be x-prefixed)." },
+        { "name": "value", "type": "any", "required": true, "description": "Extension value. Null to remove." }
+      ]
+    },
+
+
+    { "type": "definition.setFormTitle", "area": "definition-metadata",
+      "description": "Set the form definition's title.",
+      "payload": [
+        { "name": "title", "type": "string", "required": true }
+      ]
+    },
+
+
+    { "type": "definition.setDefinitionProperty", "area": "definition-pages",
+      "description": "Set a top-level definition property (name, description, url, version, status, date, derivedFrom, versionAlgorithm, nonRelevantBehavior).",
+      "payload": [
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Value to set. Null to remove." }
+      ]
+    },
+
+    { "type": "definition.setFormPresentation", "area": "definition-pages",
+      "description": "Set a presentation-level property (e.g. pageMode, labelPosition, density, defaultCurrency). Null value removes the property.",
+      "payload": [
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "definition.setGroupRef", "area": "definition-pages",
+      "description": "Set or clear a group's ref (subform reference).",
+      "payload": [
+        { "name": "path", "type": "string", "required": true },
+        { "name": "ref", "type": "string", "required": true, "description": "Ref URL or null to clear." },
+        { "name": "keyPrefix", "type": "string", "description": "Optional prefix for imported item keys." }
+      ],
+      "sideEffects": ["rebuildComponentTree"]
+    },
+
+
+    { "type": "definition.addShape", "area": "definition-shapes",
+      "description": "Add a cross-field validation shape.",
+      "payload": [
+        { "name": "target", "type": "string", "required": true, "description": "Dot-path or wildcard target for validation results." },
+        { "name": "id", "type": "string", "description": "Shape identifier. Auto-generated if omitted." },
+        { "name": "message", "type": "string" },
+        { "name": "severity", "type": "string", "enum": ["error", "warning", "info"] },
+        { "name": "constraint", "type": "string", "description": "FEL expression that must evaluate to true." },
+        { "name": "code", "type": "string" },
+        { "name": "activeWhen", "type": "string", "description": "FEL expression: shape only applies when this is true." },
+        { "name": "timing", "type": "string", "enum": ["continuous", "submit", "demand"] },
+        { "name": "context", "type": "object", "description": "Record<string, string> for named FEL sub-expressions." }
+      ]
+    },
+
+    { "type": "definition.setShapeProperty", "area": "definition-shapes",
+      "description": "Update a property on an existing shape.",
+      "payload": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "definition.setShapeComposition", "area": "definition-shapes",
+      "description": "Set a shape's composition mode (combine child shapes via and/or/xone/not).",
+      "payload": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "mode", "type": "string", "required": true, "enum": ["and", "or", "xone", "not"] },
+        { "name": "refs", "type": "array", "description": "Shape IDs to compose (for and/or/xone)." },
+        { "name": "ref", "type": "string", "description": "Single shape ID (for not)." }
+      ]
+    },
+
+    { "type": "definition.renameShape", "area": "definition-shapes",
+      "description": "Rename a shape's ID. Updates composition references.",
+      "payload": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "newId", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "definition.deleteShape", "area": "definition-shapes",
+      "description": "Remove a shape by ID.",
+      "payload": [
+        { "name": "id", "type": "string", "required": true }
+      ]
+    },
+
+
+    { "type": "definition.addVariable", "area": "definition-variables",
+      "description": "Add a named FEL variable to the definition.",
+      "payload": [
+        { "name": "name", "type": "string", "description": "Variable name. Auto-generated if omitted." },
+        { "name": "expression", "type": "string", "description": "FEL expression." },
+        { "name": "scope", "type": "string", "description": "Scope path (limits visibility to a subtree)." }
+      ]
+    },
+
+    { "type": "definition.setVariable", "area": "definition-variables",
+      "description": "Update a property on an existing variable.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "definition.deleteVariable", "area": "definition-variables",
+      "description": "Remove a named variable.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true }
+      ]
+    },
+
+
+    { "type": "definition.setOptionSet", "area": "definition-optionsets",
+      "description": "Create or update a named option set with inline options or an external source.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "options", "type": "array", "description": "Array of option objects (inline)." },
+        { "name": "source", "type": "string", "description": "External URI (alternative to inline options)." }
+      ]
+    },
+
+    { "type": "definition.deleteOptionSet", "area": "definition-optionsets",
+      "description": "Remove a named option set.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "definition.promoteToOptionSet", "area": "definition-optionsets",
+      "description": "Extract a field's inline options into a shared named option set and replace with a reference.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true, "description": "Dot-path of the field with inline options." },
+        { "name": "name", "type": "string", "required": true, "description": "Name for the new option set." }
+      ]
+    },
+
+
+    { "type": "definition.addInstance", "area": "definition-instances",
+      "description": "Add an external data source instance.",
+      "payload": [
+        { "name": "name", "type": "string", "description": "Instance name. Auto-generated if omitted." },
+        { "name": "source", "type": "object", "description": "Source configuration." },
+        { "name": "schema", "type": "object", "description": "JSON Schema for the instance data." },
+        { "name": "data", "type": "any", "description": "Static inline data." },
+        { "name": "static", "type": "boolean" },
+        { "name": "readonly", "type": "boolean" },
+        { "name": "description", "type": "string" },
+        { "name": "extensions", "type": "object" }
+      ]
+    },
+
+    { "type": "definition.setInstance", "area": "definition-instances",
+      "description": "Update a property on an existing instance.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "definition.renameInstance", "area": "definition-instances",
+      "description": "Rename an instance. Updates FEL @instance() references.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "newName", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "definition.deleteInstance", "area": "definition-instances",
+      "description": "Remove an instance by name.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true }
+      ]
+    },
+
+
+    { "type": "definition.setScreener", "area": "definition-screener",
+      "description": "Enable or disable the pre-form screener.",
+      "payload": [
+        { "name": "enabled", "type": "boolean", "required": true }
+      ]
+    },
+
+    { "type": "definition.addScreenerItem", "area": "definition-screener",
+      "description": "Add an item to the screener.",
+      "payload": [
+        { "name": "type", "type": "string", "required": true },
+        { "name": "key", "type": "string", "required": true },
+        { "name": "label", "type": "string" },
+        { "name": "dataType", "type": "string" }
+      ]
+    },
+
+    { "type": "definition.deleteScreenerItem", "area": "definition-screener",
+      "description": "Remove a screener item by key.",
+      "payload": [
+        { "name": "key", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "definition.setScreenerBind", "area": "definition-screener",
+      "description": "Set bind properties for a screener field.",
+      "payload": [
+        { "name": "path", "type": "string", "required": true },
+        { "name": "properties", "type": "object", "required": true }
+      ]
+    },
+
+    { "type": "definition.addRoute", "area": "definition-screener",
+      "description": "Add a screener routing rule.",
+      "payload": [
+        { "name": "condition", "type": "string", "required": true, "description": "FEL expression." },
+        { "name": "target", "type": "string", "required": true, "description": "Target page or action." },
+        { "name": "label", "type": "string" },
+        { "name": "insertIndex", "type": "number" }
+      ]
+    },
+
+    { "type": "definition.setRouteProperty", "area": "definition-screener",
+      "description": "Update a property on an existing route.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "definition.deleteRoute", "area": "definition-screener",
+      "description": "Remove a route by index.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true }
+      ]
+    },
+
+    { "type": "definition.reorderRoute", "area": "definition-screener",
+      "description": "Move a route one position up or down.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true },
+        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
+      ]
+    },
+
+
+    { "type": "definition.addMigration", "area": "definition-migrations",
+      "description": "Add a version migration entry.",
+      "payload": [
+        { "name": "fromVersion", "type": "string", "required": true, "description": "Source version this migration upgrades from." },
+        { "name": "description", "type": "string" }
+      ]
+    },
+
+    { "type": "definition.deleteMigration", "area": "definition-migrations",
+      "description": "Remove a migration by source version.",
+      "payload": [
+        { "name": "fromVersion", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "definition.setMigrationProperty", "area": "definition-migrations",
+      "description": "Update a property on an existing migration.",
+      "payload": [
+        { "name": "fromVersion", "type": "string", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "definition.addFieldMapRule", "area": "definition-migrations",
+      "description": "Add a field mapping rule to a migration.",
+      "payload": [
+        { "name": "fromVersion", "type": "string", "required": true },
+        { "name": "source", "type": "string", "required": true, "description": "Source field path." },
+        { "name": "target", "type": "string", "required": true, "description": "Target field path or null for removal." },
+        { "name": "transform", "type": "string", "required": true, "description": "Transform type." },
+        { "name": "expression", "type": "string", "description": "FEL expression for computed transforms." },
+        { "name": "insertIndex", "type": "number" }
+      ]
+    },
+
+    { "type": "definition.setFieldMapRule", "area": "definition-migrations",
+      "description": "Update a property on a migration field map rule.",
+      "payload": [
+        { "name": "fromVersion", "type": "string", "required": true },
+        { "name": "index", "type": "number", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "definition.deleteFieldMapRule", "area": "definition-migrations",
+      "description": "Remove a migration field map rule by index.",
+      "payload": [
+        { "name": "fromVersion", "type": "string", "required": true },
+        { "name": "index", "type": "number", "required": true }
+      ]
+    },
+
+    { "type": "definition.setMigrationDefaults", "area": "definition-migrations",
+      "description": "Set default values for newly added fields in a migration.",
+      "payload": [
+        { "name": "fromVersion", "type": "string", "required": true },
+        { "name": "defaults", "type": "object", "required": true, "description": "Map of field path to default value." }
+      ]
+    },
+
+
+    { "type": "theme.setToken", "area": "theme",
+      "description": "Set or remove a single design token. Supports dot-delimited paths for nested tokens.",
+      "payload": [
+        { "name": "key", "type": "string", "required": true, "description": "Dot-delimited token path." },
+        { "name": "value", "type": "any", "required": true, "description": "Token value. Null to remove." }
+      ]
+    },
+
+    { "type": "theme.setTokens", "area": "theme",
+      "description": "Replace the entire tokens object.",
+      "payload": [
+        { "name": "tokens", "type": "object", "required": true }
+      ]
+    },
+
+    { "type": "theme.setDefaults", "area": "theme",
+      "description": "Set or remove a form-wide default presentation property (cascade level 1).",
+      "payload": [
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "theme.addSelector", "area": "theme",
+      "description": "Add a selector-based presentation override (cascade level 2).",
+      "payload": [
+        { "name": "match", "type": "object", "required": true, "description": "Selector criteria: { type?, dataType? }." },
+        { "name": "apply", "type": "object", "required": true, "description": "Presentation properties to apply when matched." },
+        { "name": "insertIndex", "type": "number" }
+      ]
+    },
+
+    { "type": "theme.setSelector", "area": "theme",
+      "description": "Update an existing selector's match criteria or applied properties.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true },
+        { "name": "match", "type": "object" },
+        { "name": "apply", "type": "object" }
+      ]
+    },
+
+    { "type": "theme.deleteSelector", "area": "theme",
+      "description": "Remove a selector by index.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true }
+      ]
+    },
+
+    { "type": "theme.reorderSelector", "area": "theme",
+      "description": "Move a selector one position up or down. Order determines cascade priority.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true },
+        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
+      ]
+    },
+
+    { "type": "theme.setItemOverride", "area": "theme",
+      "description": "Set or remove a per-item presentation override (cascade level 3).",
+      "payload": [
+        { "name": "itemKey", "type": "string", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "theme.deleteItemOverride", "area": "theme",
+      "description": "Remove all per-item presentation overrides for an item.",
+      "payload": [
+        { "name": "itemKey", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "theme.setItemStyle", "area": "theme",
+      "description": "Set a style property on a per-item override.",
+      "payload": [
+        { "name": "itemKey", "type": "string", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "theme.setItemWidgetConfig", "area": "theme",
+      "description": "Set a widget configuration property on a per-item override.",
+      "payload": [
+        { "name": "itemKey", "type": "string", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "theme.setItemAccessibility", "area": "theme",
+      "description": "Set an accessibility property on a per-item override.",
+      "payload": [
+        { "name": "itemKey", "type": "string", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "theme.setBreakpoint", "area": "theme",
+      "description": "Set or remove a named viewport breakpoint.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "minWidth", "type": "number", "required": true, "description": "Minimum viewport width in pixels. Null to remove." }
+      ]
+    },
+
+    { "type": "theme.setStylesheets", "area": "theme",
+      "description": "Replace the list of external stylesheet URLs.",
+      "payload": [
+        { "name": "urls", "type": "array", "required": true, "description": "Array of stylesheet URL strings." }
+      ]
+    },
+
+    { "type": "theme.setDocumentProperty", "area": "theme",
+      "description": "Set a top-level theme document property.",
+      "payload": [
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "theme.setExtension", "area": "theme",
+      "description": "Set or remove an extension on the theme document.",
+      "payload": [
+        { "name": "key", "type": "string", "required": true, "description": "Extension name (must be x-prefixed)." },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "theme.setTargetCompatibility", "area": "theme",
+      "description": "Set the semver compatibility range for the target definition.",
+      "payload": [
+        { "name": "compatibleVersions", "type": "string", "required": true, "description": "Semver range string." }
+      ]
+    },
+
+
+    { "type": "mapping.setProperty", "area": "mapping",
+      "description": "Set a top-level mapping document property (direction, definitionRef, url).",
+      "payload": [
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "mapping.setTargetSchema", "area": "mapping",
+      "description": "Set a property on the mapping target schema.",
+      "payload": [
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "mapping.addRule", "area": "mapping",
+      "description": "Add a mapping rule.",
+      "payload": [
+        { "name": "sourcePath", "type": "string" },
+        { "name": "targetPath", "type": "string" },
+        { "name": "transform", "type": "string" },
+        { "name": "insertIndex", "type": "number" }
+      ]
+    },
+
+    { "type": "mapping.setRule", "area": "mapping",
+      "description": "Update a property on an existing mapping rule.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "mapping.deleteRule", "area": "mapping",
+      "description": "Remove a mapping rule by index.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true }
+      ]
+    },
+
+    { "type": "mapping.reorderRule", "area": "mapping",
+      "description": "Move a mapping rule one position up or down.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true },
+        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
+      ]
+    },
+
+    { "type": "mapping.setAdapter", "area": "mapping",
+      "description": "Set the output adapter format and configuration.",
+      "payload": [
+        { "name": "format", "type": "string", "required": true, "description": "Adapter format (json, xml, csv)." },
+        { "name": "config", "type": "object", "required": true }
+      ]
+    },
+
+    { "type": "mapping.setDefaults", "area": "mapping",
+      "description": "Set default values for the mapping output.",
+      "payload": [
+        { "name": "defaults", "type": "object", "required": true }
+      ]
+    },
+
+    { "type": "mapping.autoGenerateRules", "area": "mapping",
+      "description": "Auto-generate mapping rules from definition fields.",
+      "payload": [
+        { "name": "scopePath", "type": "string", "description": "Limit generation to fields under this path." },
+        { "name": "priority", "type": "number" },
+        { "name": "replace", "type": "boolean", "description": "If true, replaces existing rules. Otherwise appends." }
+      ]
+    },
+
+    { "type": "mapping.setExtension", "area": "mapping",
+      "description": "Set or remove an extension on the mapping document.",
+      "payload": [
+        { "name": "key", "type": "string", "required": true, "description": "Extension name (must be x-prefixed)." },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "mapping.setRuleExtension", "area": "mapping",
+      "description": "Set or remove an extension on a specific mapping rule.",
+      "payload": [
+        { "name": "index", "type": "number", "required": true },
+        { "name": "key", "type": "string", "required": true, "description": "Extension name (must be x-prefixed)." },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "mapping.addInnerRule", "area": "mapping",
+      "description": "Add a nested inner rule to a mapping rule (for group/array transforms).",
+      "payload": [
+        { "name": "ruleIndex", "type": "number", "required": true },
+        { "name": "sourcePath", "type": "string" },
+        { "name": "targetPath", "type": "string" },
+        { "name": "transform", "type": "string" },
+        { "name": "insertIndex", "type": "number" }
+      ]
+    },
+
+    { "type": "mapping.setInnerRule", "area": "mapping",
+      "description": "Update a property on a nested inner rule.",
+      "payload": [
+        { "name": "ruleIndex", "type": "number", "required": true },
+        { "name": "innerIndex", "type": "number", "required": true },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "mapping.deleteInnerRule", "area": "mapping",
+      "description": "Remove a nested inner rule by index.",
+      "payload": [
+        { "name": "ruleIndex", "type": "number", "required": true },
+        { "name": "innerIndex", "type": "number", "required": true }
+      ]
+    },
+
+    { "type": "mapping.reorderInnerRule", "area": "mapping",
+      "description": "Move a nested inner rule one position up or down.",
+      "payload": [
+        { "name": "ruleIndex", "type": "number", "required": true },
+        { "name": "innerIndex", "type": "number", "required": true },
+        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
+      ]
+    },
+
+    { "type": "mapping.preview", "area": "mapping",
+      "description": "Execute mapping rules against sample data and return the transformed output. Does not mutate state.",
+      "payload": [
+        { "name": "sampleData", "type": "object", "required": true },
+        { "name": "direction", "type": "string", "enum": ["forward", "reverse"] },
+        { "name": "ruleIndices", "type": "array", "description": "Limit to specific rule indices." }
+      ],
+      "returns": { "output": "Transformed data", "diagnostics": "Transform issues", "appliedRules": "Rules that matched", "direction": "Resolved direction" }
+    },
+
+
+    { "type": "component.addNode", "area": "component-tree",
+      "description": "Add a node to the component tree.",
+      "payload": [
+        { "name": "parent", "type": "object", "required": true, "description": "Parent node ref: { bind?, nodeId? }." },
+        { "name": "insertIndex", "type": "number" },
+        { "name": "component", "type": "string", "required": true, "description": "Component type name." },
+        { "name": "bind", "type": "string", "description": "Field key to bind to." },
+        { "name": "props", "type": "object" }
+      ],
+      "returns": { "nodeRef": "Reference to the new node." }
+    },
+
+    { "type": "component.deleteNode", "area": "component-tree",
+      "description": "Remove a node and its children from the component tree.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref: { bind?, nodeId? }." }
+      ]
+    },
+
+    { "type": "component.moveNode", "area": "component-tree",
+      "description": "Move a node to a different parent or position.",
+      "payload": [
+        { "name": "source", "type": "object", "required": true, "description": "Node ref of the node to move." },
+        { "name": "targetParent", "type": "object", "required": true, "description": "Node ref of the new parent." },
+        { "name": "targetIndex", "type": "number" }
+      ]
+    },
+
+    { "type": "component.reorderNode", "area": "component-tree",
+      "description": "Move a node one position up or down among its siblings.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref." },
+        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
+      ]
+    },
+
+    { "type": "component.duplicateNode", "area": "component-tree",
+      "description": "Deep-copy a node and insert the clone after the original.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref." }
+      ],
+      "returns": { "nodeRef": "Reference to the duplicated node." }
+    },
+
+    { "type": "component.wrapNode", "area": "component-tree",
+      "description": "Wrap a node in a new container node.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref of the node to wrap." },
+        { "name": "wrapper", "type": "object", "required": true, "description": "{ component: string, props?: object } for the wrapper." }
+      ],
+      "returns": { "nodeRef": "Reference to the new wrapper node." }
+    },
+
+    { "type": "component.unwrapNode", "area": "component-tree",
+      "description": "Replace a container node with its children (unwrap one level).",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref of the wrapper to remove." }
+      ]
+    },
+
+
+    { "type": "component.setNodeProperty", "area": "component-properties",
+      "description": "Set an arbitrary property on a component tree node.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref." },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "component.setNodeType", "area": "component-properties",
+      "description": "Change a node's component type.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref." },
+        { "name": "component", "type": "string", "required": true, "description": "New component type name." },
+        { "name": "preserveProps", "type": "boolean", "description": "If true, keep existing props. If false, reset to defaults.", "default": false }
+      ]
+    },
+
+    { "type": "component.setNodeStyle", "area": "component-properties",
+      "description": "Set a style property on a component tree node.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref." },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "component.setNodeAccessibility", "area": "component-properties",
+      "description": "Set an accessibility property on a component tree node.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref." },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "component.spliceArrayProp", "area": "component-properties",
+      "description": "Splice (insert/remove) items in an array-valued node property.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref." },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "index", "type": "number", "required": true },
+        { "name": "deleteCount", "type": "number", "required": true },
+        { "name": "insert", "type": "array", "description": "Items to insert at the splice point." }
+      ]
+    },
+
+    { "type": "component.setFieldWidget", "area": "component-properties",
+      "description": "Set which widget component renders a field. Convenience command that finds the node by field key.",
+      "payload": [
+        { "name": "fieldKey", "type": "string", "required": true },
+        { "name": "widget", "type": "string", "required": true, "description": "Component type name." }
+      ]
+    },
+
+    { "type": "component.setResponsiveOverride", "area": "component-properties",
+      "description": "Set or remove a responsive breakpoint override on a node.",
+      "payload": [
+        { "name": "node", "type": "object", "required": true, "description": "Node ref." },
+        { "name": "breakpoint", "type": "string", "required": true, "description": "Breakpoint name." },
+        { "name": "patch", "type": "object", "required": true, "description": "Properties to override at this breakpoint. Null to remove." }
+      ]
+    },
+
+    { "type": "component.setGroupRepeatable", "area": "component-properties",
+      "description": "Toggle a group's repeatable flag in the component tree.",
+      "payload": [
+        { "name": "groupKey", "type": "string", "required": true },
+        { "name": "repeatable", "type": "boolean", "required": true }
+      ],
+      "sideEffects": ["rebuildComponentTree"]
+    },
+
+    { "type": "component.setGroupDisplayMode", "area": "component-properties",
+      "description": "Set how a group renders (table, accordion, card, etc.).",
+      "payload": [
+        { "name": "groupKey", "type": "string", "required": true },
+        { "name": "mode", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "component.setGroupDataTable", "area": "component-properties",
+      "description": "Configure data table rendering for a repeatable group.",
+      "payload": [
+        { "name": "groupKey", "type": "string", "required": true },
+        { "name": "config", "type": "object", "required": true }
+      ]
+    },
+
+    { "type": "component.registerCustom", "area": "component-properties",
+      "description": "Register a custom component template.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "params", "type": "object", "required": true, "description": "Parameter definitions for the template." },
+        { "name": "tree", "type": "object", "required": true, "description": "Component subtree template." }
+      ]
+    },
+
+    { "type": "component.updateCustom", "area": "component-properties",
+      "description": "Update an existing custom component template.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "params", "type": "object" },
+        { "name": "tree", "type": "object" }
+      ]
+    },
+
+    { "type": "component.deleteCustom", "area": "component-properties",
+      "description": "Remove a custom component template.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "component.renameCustom", "area": "component-properties",
+      "description": "Rename a custom component template.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "newName", "type": "string", "required": true }
+      ]
+    },
+
+    { "type": "component.setToken", "area": "component-properties",
+      "description": "Set or remove a Tier 3 design token override on the component document.",
+      "payload": [
+        { "name": "key", "type": "string", "required": true, "description": "Dot-delimited token path." },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "component.setBreakpoint", "area": "component-properties",
+      "description": "Set or remove a named breakpoint on the component document.",
+      "payload": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "minWidth", "type": "number", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "component.setDocumentProperty", "area": "component-properties",
+      "description": "Set a top-level component document property.",
+      "payload": [
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true, "description": "Null to remove." }
+      ]
+    },
+
+    { "type": "pages.addPage", "area": "pages",
+      "description": "Add a Page node to the component tree. Promotes pageMode to wizard if currently single or unset.",
+      "payload": [
+        { "name": "id", "type": "string", "description": "Page node ID. Auto-generated if omitted." },
+        { "name": "title", "type": "string", "description": "Page title. Defaults to 'Page N'." },
+        { "name": "description", "type": "string" }
+      ],
+      "examples": [
+        {
+          "command": { "type": "pages.addPage", "payload": { "title": "Contact Information" } },
+          "note": "Add a page with a custom title."
+        }
+      ]
+    },
+
+    { "type": "pages.deletePage", "area": "pages",
+      "description": "Remove a Page node from the component tree by ID.",
+      "payload": [
+        { "name": "id", "type": "string", "required": true, "description": "Page node ID." }
+      ]
+    },
+
+    { "type": "pages.setMode", "area": "pages",
+      "description": "Set the form presentation page mode. Ensures the component tree exists.",
+      "payload": [
+        { "name": "mode", "type": "string", "required": true, "enum": ["single", "wizard", "tabs"] }
+      ],
+      "examples": [
+        {
+          "command": { "type": "pages.setMode", "payload": { "mode": "tabs" } },
+          "note": "Switch the form to tabbed page navigation."
+        }
+      ]
+    },
+
+    { "type": "pages.reorderPages", "area": "pages",
+      "description": "Move a Page node one position up or down among its siblings.",
+      "payload": [
+        { "name": "id", "type": "string", "required": true, "description": "Page node ID." },
+        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
+      ]
+    },
+
+    { "type": "pages.movePageToIndex", "area": "pages",
+      "description": "Move a Page node to an absolute index position, clamped to bounds.",
+      "payload": [
+        { "name": "id", "type": "string", "required": true, "description": "Page node ID." },
+        { "name": "targetIndex", "type": "number", "required": true, "description": "Target position index." }
+      ]
+    },
+
+    { "type": "pages.setPageProperty", "area": "pages",
+      "description": "Set an arbitrary property on a Page node.",
+      "payload": [
+        { "name": "id", "type": "string", "required": true, "description": "Page node ID." },
+        { "name": "property", "type": "string", "required": true },
+        { "name": "value", "type": "any", "required": true }
+      ]
+    },
+
+    { "type": "pages.assignItem", "area": "pages",
+      "description": "Assign a bound item to a Page. Moves the node from its current location in the tree.",
+      "payload": [
+        { "name": "pageId", "type": "string", "required": true, "description": "Target Page node ID." },
+        { "name": "key", "type": "string", "required": true, "description": "Item key (dot-path or leaf key)." },
+        { "name": "span", "type": "number", "description": "Optional column span." }
+      ],
+      "examples": [
+        {
+          "command": { "type": "pages.assignItem", "payload": { "pageId": "page-1", "key": "email", "span": 6 } },
+          "note": "Place the email field on page-1 spanning half the grid."
+        }
+      ]
+    },
+
+    { "type": "pages.unassignItem", "area": "pages",
+      "description": "Remove a bound item from a Page and move it back to the root level.",
+      "payload": [
+        { "name": "pageId", "type": "string", "required": true, "description": "Page node ID." },
+        { "name": "key", "type": "string", "required": true, "description": "Item key (dot-path or leaf key)." }
+      ]
+    },
+
+    { "type": "pages.autoGenerate", "area": "pages",
+      "description": "Auto-generate Page nodes from definition items using presentation.layout.page hints. Replaces all existing pages.",
+      "payload": []
+    },
+
+    { "type": "pages.setPages", "area": "pages",
+      "description": "Replace the entire set of Page nodes in the component tree.",
+      "payload": [
+        { "name": "pages", "type": "array", "required": true, "description": "Array of page objects with id, optional title, description, and regions array of {key, span?, responsive?}." }
+      ],
+      "examples": [
+        {
+          "command": { "type": "pages.setPages", "payload": { "pages": [{ "id": "intro", "title": "Introduction", "regions": [{ "key": "name", "span": 12 }] }] } },
+          "note": "Set a single page with one full-width region."
+        }
+      ]
+    },
+
+    { "type": "pages.reorderRegion", "area": "pages",
+      "description": "Move a region (bound item) within a Page to a target index.",
+      "payload": [
+        { "name": "pageId", "type": "string", "required": true, "description": "Page node ID." },
+        { "name": "key", "type": "string", "required": true, "description": "Region bind key." },
+        { "name": "targetIndex", "type": "number", "required": true, "description": "Target position index." }
+      ]
+    },
+
+    { "type": "pages.renamePage", "area": "pages",
+      "description": "Rename a Page node's title.",
+      "payload": [
+        { "name": "id", "type": "string", "required": true, "description": "Page node ID." },
+        { "name": "newId", "type": "string", "required": true, "description": "New title for the page." }
+      ]
+    },
+
+    { "type": "pages.setRegionProperty", "area": "pages",
+      "description": "Set a property (span, start, or responsive) on a region within a Page.",
+      "payload": [
+        { "name": "pageId", "type": "string", "required": true, "description": "Page node ID." },
+        { "name": "key", "type": "string", "required": true, "description": "Region bind key." },
+        { "name": "property", "type": "string", "required": true, "enum": ["span", "start", "responsive"] },
+        { "name": "value", "type": "any", "required": true, "description": "Property value. Undefined to remove." }
+      ]
+    },
+
+    { "type": "project.import", "area": "project",
+      "description": "Replace one or more project artifacts wholesale. Clears undo history.",
+      "payload": [
+        { "name": "definition", "type": "object", "description": "Full definition document." },
+        { "name": "component", "type": "object", "description": "Full component document." },
+        { "name": "theme", "type": "object", "description": "Full theme document." },
+        { "name": "mapping", "type": "object", "description": "Full mapping document." }
+      ],
+      "sideEffects": ["rebuildComponentTree", "clearHistory"]
+    },
+
+    { "type": "project.importSubform", "area": "project",
+      "description": "Import items from an external definition into a target group.",
+      "payload": [
+        { "name": "definition", "type": "object", "required": true, "description": "External definition to import from." },
+        { "name": "targetGroupPath", "type": "string", "description": "Group to import into. Root if omitted." },
+        { "name": "keyPrefix", "type": "string", "description": "Prefix added to imported item keys to avoid collisions." }
+      ],
+      "sideEffects": ["rebuildComponentTree"]
+    },
+
+    { "type": "project.loadRegistry", "area": "project",
+      "description": "Load an extension registry into the project.",
+      "payload": [
+        { "name": "registry", "type": "object", "required": true, "description": "Registry document: { url: string, entries?: object[] }." }
+      ]
+    },
+
+    { "type": "project.removeRegistry", "area": "project",
+      "description": "Unload an extension registry.",
+      "payload": [
+        { "name": "url", "type": "string", "required": true, "description": "Canonical URL of the registry to remove." }
+      ]
+    },
+
+    { "type": "project.publish", "area": "project",
+      "description": "Publish the current definition as a versioned release. Creates a changelog and frozen snapshot.",
+      "payload": [
+        { "name": "version", "type": "string", "required": true, "description": "Semver version string." },
+        { "name": "summary", "type": "string", "description": "Optional release summary." }
+      ]
+    }
+  ]
+}
