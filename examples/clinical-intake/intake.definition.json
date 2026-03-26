@@ -15,6 +15,7 @@
   "nonRelevantBehavior": "keep",
   "formPresentation": {
     "pageMode": "wizard",
+    "showProgress": true,
     "labelPosition": "top",
     "density": "comfortable"
   },

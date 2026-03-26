@@ -11,6 +11,7 @@
   "nonRelevantBehavior": "remove",
   "formPresentation": {
     "pageMode": "wizard",
+    "allowSkip": true,
     "labelPosition": "top",
     "density": "comfortable"
   },
