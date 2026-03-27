@@ -17,7 +17,9 @@ test.describe('Editor Authoring', () => {
     await expect(page.locator('[data-testid="status-bar"]')).toContainText('1 field');
   });
 
-  test('adding an item on a later wizard page selects the new field in the inspector', async ({ page }) => {
+  test('adding an item in wizard mode selects the new field in the inspector', async ({ page }) => {
+    // Editor/Layout split: The Editor is now a flat tree — no page tabs.
+    // Adding an item always appends to the root definition items list.
     await importDefinition(page, {
       $formspec: '1.0',
       url: 'urn:wizard-add-select',
@@ -38,18 +40,22 @@ test.describe('Editor Authoring', () => {
       ],
     });
 
+    // Select an existing field first
     await page.click('[data-testid="field-marital"]');
-    await page.locator('[data-testid="workspace-Editor"] [role="tab"]').nth(1).click();
 
+    // Add a new field via palette
     await addFromPalette(page, 'Text');
 
-    const newField = page.locator('[data-testid="workspace-Editor"] [data-testid^="field-"]').first();
-    const newFieldTestId = await newField.getAttribute('data-testid');
+    // The newly added field should be auto-selected in the inspector
+    const fields = page.locator('[data-testid="workspace-Editor"] [data-testid^="field-"]');
+    // marital is inside pageOne group, new field is at root — find the last field
+    const allFields = await fields.all();
+    const lastField = allFields[allFields.length - 1];
+    const newFieldTestId = await lastField.getAttribute('data-testid');
     const newFieldKey = newFieldTestId?.replace('field-', '');
 
     const properties = page.locator('[data-testid="properties"]');
     await expect(properties.locator('input[type="text"]').first()).toHaveValue(newFieldKey || '');
-    await expect(properties).not.toContainText('Marital Status');
   });
 
   test('adding a Single Choice field immediately focuses the key input for renaming', async ({ page }) => {
