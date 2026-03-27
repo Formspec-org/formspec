@@ -3,6 +3,12 @@ import { effect } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
 import { formatMoney } from '../format';
 
+/** Resolve a component string via $component.<id>.<prop> locale key, falling back to inline. */
+function resolveCompText(ctx: RenderContext, comp: any, prop: string, fallback: string): string {
+    if (!comp.id) return fallback;
+    return ctx.engine.resolveLocaleString(`$component.${comp.id}.${prop}`, fallback);
+}
+
 /**
  * Minimal markdown-to-HTML converter for Text component `format: 'markdown'`.
  * Handles: **bold**, *italic*, `code`, ordered/unordered lists, line breaks.
@@ -78,7 +84,7 @@ export const HeadingPlugin: ComponentPlugin = {
                 el.textContent = v != null ? String(v) : '';
             }));
         } else {
-            el.textContent = comp.text || '';
+            el.textContent = resolveCompText(ctx, comp, 'text', comp.text || '');
         }
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);
@@ -114,9 +120,9 @@ export const TextPlugin: ComponentPlugin = {
                 }
             }));
         } else if (isMarkdown && comp.text) {
-            el.innerHTML = renderMarkdown(comp.text);
+            el.innerHTML = renderMarkdown(resolveCompText(ctx, comp, 'text', comp.text));
         } else {
-            el.textContent = comp.text || '';
+            el.textContent = resolveCompText(ctx, comp, 'text', comp.text || '');
         }
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);
@@ -138,13 +144,13 @@ export const CardPlugin: ComponentPlugin = {
         if (comp.title) {
             const h3 = document.createElement('h3');
             h3.className = 'formspec-card-title';
-            h3.textContent = comp.title;
+            h3.textContent = resolveCompText(ctx, comp, 'title', comp.title);
             el.appendChild(h3);
         }
         if (comp.subtitle) {
             const sub = document.createElement('p');
             sub.className = 'formspec-card-subtitle';
-            sub.textContent = comp.subtitle;
+            sub.textContent = resolveCompText(ctx, comp, 'subtitle', comp.subtitle);
             el.appendChild(sub);
         }
         ctx.applyCssClass(el, comp);
@@ -204,7 +210,7 @@ export const AlertPlugin: ComponentPlugin = {
                 textSpan.textContent = v != null ? String(v) : '';
             }));
         } else {
-            textSpan.textContent = comp.text || '';
+            textSpan.textContent = resolveCompText(ctx, comp, 'text', comp.text || '');
         }
         el.appendChild(textSpan);
         ctx.applyCssClass(el, comp);
@@ -221,7 +227,7 @@ export const BadgePlugin: ComponentPlugin = {
         const el = document.createElement('span');
         if (comp.id) el.id = comp.id;
         el.className = `formspec-badge formspec-badge--${comp.variant || 'default'}`;
-        el.textContent = comp.text || '';
+        el.textContent = resolveCompText(ctx, comp, 'text', comp.text || '');
         ctx.applyCssClass(el, comp);
         ctx.applyAccessibility(el, comp);
         ctx.applyStyle(el, comp.style);
@@ -243,7 +249,7 @@ export const ProgressBarPlugin: ComponentPlugin = {
         const progressEl = document.createElement('progress');
         const maxVal = comp.max || 100;
         progressEl.max = maxVal;
-        if (comp.label) progressEl.setAttribute('aria-label', comp.label);
+        if (comp.label) progressEl.setAttribute('aria-label', resolveCompText(ctx, comp, 'label', comp.label));
 
         if (comp.bind) {
             const fullName = ctx.prefix ? `${ctx.prefix}.${comp.bind}` : comp.bind;

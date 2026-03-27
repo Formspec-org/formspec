@@ -13,6 +13,7 @@ export function useNumberInput(ctx: BehaviorContext, comp: any): NumberInputBeha
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     return {
         fieldPath,
@@ -20,6 +21,7 @@ export function useNumberInput(ctx: BehaviorContext, comp: any): NumberInputBeha
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -35,7 +37,7 @@ export function useNumberInput(ctx: BehaviorContext, comp: any): NumberInputBeha
         dataType: item?.dataType || 'decimal',
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             const bindableInput = refs.control.querySelector('input') || refs.control;
 

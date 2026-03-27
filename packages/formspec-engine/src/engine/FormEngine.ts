@@ -10,6 +10,7 @@ import type {
     ValidationResult,
 } from '@formspec-org/types';
 import { diffEvalResults, type EvalResult, type EvalValidation } from '../diff.js';
+import { interpolateMessage } from '../interpolate-message.js';
 import type {
     EngineReplayApplyResult,
     EngineReplayEvent,
@@ -637,6 +638,16 @@ export class FormEngine implements IFormEngine {
 
     public getFormVM(): FormViewModel {
         return this._formViewModel;
+    }
+
+    public resolveLocaleString(key: string, fallback: string): string {
+        const localized = this._localeStore.lookupKey(key);
+        if (localized !== null) {
+            return interpolateMessage(localized, (expr: string) => {
+                try { return this.compileExpression(expr, '')(); } catch { return null; }
+            }).text;
+        }
+        return fallback;
     }
 
     public injectExternalValidation(

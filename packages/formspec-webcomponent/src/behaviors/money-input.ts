@@ -13,6 +13,7 @@ export function useMoneyInput(ctx: BehaviorContext, comp: any): MoneyInputBehavi
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     // Resolve currency: fixed from item or definition default, or null for editable
     const resolvedCurrency = item?.currency || ctx.definition?.formPresentation?.defaultCurrency || null;
@@ -23,6 +24,7 @@ export function useMoneyInput(ctx: BehaviorContext, comp: any): MoneyInputBehavi
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -39,7 +41,7 @@ export function useMoneyInput(ctx: BehaviorContext, comp: any): MoneyInputBehavi
         resolvedCurrency,
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             // Find amount and currency inputs by class name convention
             const amountInput = refs.control.querySelector('input[type="number"]') as HTMLInputElement | null;

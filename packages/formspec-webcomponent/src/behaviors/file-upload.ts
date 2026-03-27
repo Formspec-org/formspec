@@ -15,6 +15,7 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
 
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
     const multiple = comp.multiple === true;
     const maxSize = typeof comp.maxSize === 'number' ? comp.maxSize : undefined;
 
@@ -51,6 +52,7 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -77,7 +79,7 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
         },
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             // Wire adapter's file-list rebuild callback
             fileListCallback = (refs as any)._rebuildFileList || null;

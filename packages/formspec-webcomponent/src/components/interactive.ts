@@ -4,6 +4,12 @@ import { ComponentPlugin, RenderContext } from '../types';
 import { useTabs } from '../behaviors/tabs';
 import { globalRegistry } from '../registry';
 
+/** Resolve a component string via $component.<id>.<prop> locale key, falling back to inline. */
+function resolveCompText(ctx: RenderContext, comp: any, prop: string, fallback: string): string {
+    if (!comp.id) return fallback;
+    return ctx.engine.resolveLocaleString(`$component.${comp.id}.${prop}`, fallback);
+}
+
 /** Renders a tabbed interface via the behavior-adapter pipeline. */
 export const TabsPlugin: ComponentPlugin = {
     type: 'Tabs',
@@ -25,8 +31,8 @@ export const SubmitButtonPlugin: ComponentPlugin = {
         if (comp.id) button.id = comp.id;
         button.type = 'button';
         button.className = 'formspec-submit';
-        const defaultLabel = comp.label || 'Submit';
-        const pendingLabel = comp.pendingLabel || 'Submitting\u2026';
+        const defaultLabel = resolveCompText(ctx, comp, 'label', comp.label || 'Submit');
+        const pendingLabel = resolveCompText(ctx, comp, 'pendingLabel', comp.pendingLabel || 'Submitting\u2026');
         const disableWhenPending = comp.disableWhenPending !== false;
         button.textContent = defaultLabel;
         ctx.applyCssClass(button, comp);

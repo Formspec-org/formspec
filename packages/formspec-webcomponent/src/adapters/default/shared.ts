@@ -18,6 +18,7 @@ export interface FieldDOM {
 /**
  * Create the common field wrapper structure: root div, label, description, hint, error.
  * Uses behavior.widgetClassSlots for x-classes support (from theme widgetConfig).
+ * When a FieldViewModel is available, reads current locale-resolved values from VM signals.
  * Returns element references for adapter-specific control insertion.
  */
 export function createFieldDOM(
@@ -32,6 +33,12 @@ export function createFieldDOM(
     const errorId = `${fieldId}-error`;
     const describedBy: string[] = [];
 
+    // Read from VM signals when available; fall back to static behavior properties.
+    const vm = behavior.vm;
+    const labelText = vm ? vm.label.value : behavior.label;
+    const hintText = vm ? vm.hint.value : behavior.hint;
+    const descText = vm ? vm.description.value : behavior.description;
+
     const root = document.createElement('div');
     root.className = 'formspec-field';
     root.dataset.name = behavior.fieldPath;
@@ -41,7 +48,7 @@ export function createFieldDOM(
 
     const label = document.createElement('label');
     label.className = 'formspec-label';
-    label.textContent = behavior.label;
+    label.textContent = labelText;
     if (options?.labelFor !== false) {
         label.htmlFor = fieldId;
     }
@@ -55,22 +62,22 @@ export function createFieldDOM(
 
     root.appendChild(label);
 
-    if (behavior.description) {
+    if (descText) {
         const descId = `${fieldId}-desc`;
         const desc = document.createElement('div');
         desc.className = 'formspec-description';
         desc.id = descId;
-        desc.textContent = behavior.description;
+        desc.textContent = descText;
         root.appendChild(desc);
         describedBy.push(descId);
     }
 
     let hint: HTMLElement | undefined;
-    if (behavior.hint) {
+    if (hintText) {
         hint = document.createElement('div');
         hint.className = 'formspec-hint';
         hint.id = hintId;
-        hint.textContent = behavior.hint;
+        hint.textContent = hintText;
         if (slots.hint) actx.applyClassValue(hint, slots.hint);
         root.appendChild(hint);
         describedBy.push(hintId);

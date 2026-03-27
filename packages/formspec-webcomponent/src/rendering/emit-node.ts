@@ -235,6 +235,7 @@ export function renderActualComponent(host: RenderHost, comp: any, parent: HTMLE
             submit: (opts?: any) => host.submit(opts),
             registryEntries: host._registryEntries,
             rerender: () => host.render(),
+            getFieldVM: (fieldPath: string) => host.engine.getFieldVM(fieldPath),
         },
         adapterContext: {
             onDispose: (fn: () => void) => host.cleanupFns.push(fn),

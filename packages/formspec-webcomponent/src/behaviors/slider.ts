@@ -14,6 +14,7 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
 
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     return {
         fieldPath,
@@ -21,6 +22,7 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -37,7 +39,7 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
         showValue: comp.showValue !== false,
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             const rangeInput = refs.control.querySelector('input[type="range"]') || refs.control;
 

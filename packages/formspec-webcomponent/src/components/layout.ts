@@ -3,6 +3,12 @@ import { effect, signal } from '@preact/signals-core';
 import { ComponentPlugin, RenderContext } from '../types';
 import { focusFirstIn } from '../dom-utils';
 
+/** Resolve a component string via $component.<id>.<prop> locale key, falling back to inline. */
+function resolveCompText(ctx: RenderContext, comp: any, prop: string, fallback: string): string {
+    if (!comp.id) return fallback;
+    return ctx.engine.resolveLocaleString(`$component.${comp.id}.${prop}`, fallback);
+}
+
 type PopupPlacement = 'top' | 'right' | 'bottom' | 'left';
 
 const POPUP_EDGE_PADDING = 8;
@@ -63,7 +69,7 @@ export const PagePlugin: ComponentPlugin = {
         if (comp.title) {
             const headingLevel = comp.headingLevel || 'h2';
             const h = document.createElement(headingLevel);
-            h.textContent = comp.title;
+            h.textContent = resolveCompText(ctx, comp, 'title', comp.title);
             el.appendChild(h);
         }
         if (comp.description) {
@@ -146,7 +152,7 @@ export const DividerPlugin: ComponentPlugin = {
 
             const labelEl = document.createElement('span');
             labelEl.className = 'formspec-divider-label';
-            labelEl.textContent = comp.label;
+            labelEl.textContent = resolveCompText(ctx, comp, 'label', comp.label);
 
             const lineAfter = document.createElement('hr');
             lineAfter.className = 'formspec-divider-line';
@@ -180,7 +186,7 @@ export const CollapsiblePlugin: ComponentPlugin = {
         if (comp.defaultOpen) details.open = true;
 
         const summary = document.createElement('summary');
-        summary.textContent = comp.title || 'Details';
+        summary.textContent = resolveCompText(ctx, comp, 'title', comp.title || 'Details');
         details.appendChild(summary);
 
         const content = document.createElement('div');
@@ -242,7 +248,7 @@ export const PanelPlugin: ComponentPlugin = {
         if (comp.title) {
             const header = document.createElement('div');
             header.className = 'formspec-panel-header';
-            header.textContent = comp.title;
+            header.textContent = resolveCompText(ctx, comp, 'title', comp.title);
             el.appendChild(header);
         }
 
@@ -400,7 +406,7 @@ export const ModalPlugin: ComponentPlugin = {
             const titleEl = document.createElement('h2');
             titleEl.className = 'formspec-modal-title';
             titleEl.id = titleId;
-            titleEl.textContent = comp.title;
+            titleEl.textContent = resolveCompText(ctx, comp, 'title', comp.title);
             dialog.appendChild(titleEl);
             dialog.setAttribute('aria-labelledby', titleId);
         } else if (comp.triggerLabel) {
@@ -447,7 +453,7 @@ export const ModalPlugin: ComponentPlugin = {
         const triggerBtn = document.createElement('button');
         triggerBtn.type = 'button';
         triggerBtn.className = 'formspec-modal-trigger';
-        triggerBtn.textContent = comp.triggerLabel || 'Open';
+        triggerBtn.textContent = resolveCompText(ctx, comp, 'triggerLabel', comp.triggerLabel || 'Open');
         const repositionDialog = () => {
             if (dialog.open) positionOverlayNearTrigger(triggerBtn, dialog, placement);
         };
@@ -506,7 +512,7 @@ export const PopoverPlugin: ComponentPlugin = {
         const content = document.createElement('div');
         content.className = 'formspec-popover-content';
         content.setAttribute('role', 'dialog');
-        content.setAttribute('aria-label', comp.title || comp.triggerLabel || 'Popover');
+        content.setAttribute('aria-label', resolveCompText(ctx, comp, 'title', comp.title || comp.triggerLabel || 'Popover'));
         if (comp.placement) {
             content.dataset.placement = comp.placement;
         }

@@ -299,6 +299,8 @@ export interface IFormEngine {
     getLocaleDirection(): 'ltr' | 'rtl';
     getFieldVM(path: string): FieldViewModel | undefined;
     getFormVM(): FormViewModel;
+    /** Resolve a locale string key with fallback. For component-tier `$component.` keys. */
+    resolveLocaleString(key: string, fallback: string): string;
 
     dispose(): void;
 

@@ -14,6 +14,7 @@ export function useDatePicker(ctx: BehaviorContext, comp: any): DatePickerBehavi
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     // Resolve input type from dataType + showTime prop
     let inputType = dataType === 'date' ? 'date' : (dataType === 'time' ? 'time' : 'datetime-local');
@@ -26,6 +27,7 @@ export function useDatePicker(ctx: BehaviorContext, comp: any): DatePickerBehavi
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -40,7 +42,7 @@ export function useDatePicker(ctx: BehaviorContext, comp: any): DatePickerBehavi
         maxDate: comp.maxDate,
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             const bindableInput = refs.control.querySelector('input') || refs.control;
 

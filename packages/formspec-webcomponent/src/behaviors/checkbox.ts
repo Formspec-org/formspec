@@ -13,6 +13,7 @@ export function useCheckbox(ctx: BehaviorContext, comp: any): FieldBehavior {
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     // GOTCHA: when labelPosition is 'top' (default), force it to 'start' so
     // createFieldDOM adds formspec-field--inline
@@ -26,6 +27,7 @@ export function useCheckbox(ctx: BehaviorContext, comp: any): FieldBehavior {
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -37,7 +39,7 @@ export function useCheckbox(ctx: BehaviorContext, comp: any): FieldBehavior {
         options: () => [],
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             const checkbox = refs.control.querySelector('input[type="checkbox"]') || refs.control;
 

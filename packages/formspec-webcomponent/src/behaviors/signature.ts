@@ -13,6 +13,7 @@ export function useSignature(ctx: BehaviorContext, comp: any): SignatureBehavior
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
 
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     return {
         fieldPath,
@@ -20,6 +21,7 @@ export function useSignature(ctx: BehaviorContext, comp: any): SignatureBehavior
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -33,7 +35,7 @@ export function useSignature(ctx: BehaviorContext, comp: any): SignatureBehavior
         strokeColor: comp.strokeColor || '#000',
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             // Listen for signature drawn event from adapter
             refs.root.addEventListener('formspec-signature-drawn', (e: Event) => {

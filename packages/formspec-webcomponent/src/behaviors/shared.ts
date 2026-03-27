@@ -2,6 +2,7 @@
 import { effect, Signal } from '@preact/signals-core';
 import { type PresentationBlock, COMPATIBILITY_MATRIX } from '@formspec-org/layout';
 import type { ResolvedPresentationBlock, FieldRefs, BehaviorContext } from './types';
+import type { FieldViewModel } from '@formspec-org/engine';
 
 /** Build full field path from bind key and prefix. */
 export function resolveFieldPath(bind: string, prefix: string): string {
@@ -53,14 +54,21 @@ export function warnIfIncompatible(componentType: string, dataType: string): voi
  * Wire the shared reactive effects that all field behaviors need:
  * required indicator, validation display, readonly, relevance, touched tracking.
  *
+ * Accepts either a FieldViewModel (reactive locale-resolved signals) or a
+ * legacy (fieldPath, labelText) pair for backwards compatibility.
+ *
  * Returns an array of dispose functions.
  */
 export function bindSharedFieldEffects(
     ctx: BehaviorContext,
     fieldPath: string,
-    labelText: string,
+    labelTextOrVM: string | FieldViewModel,
     refs: FieldRefs
 ): Array<() => void> {
+    const hasVM = typeof labelTextOrVM !== 'string';
+    const vm = hasVM ? labelTextOrVM as FieldViewModel : undefined;
+    const staticLabel = hasVM ? '' : labelTextOrVM as string;
+
     const disposers: Array<() => void> = [];
 
     // Resolve the actual interactive element for ARIA attributes.
@@ -70,10 +78,13 @@ export function bindSharedFieldEffects(
         || refs.control.querySelector('textarea')
         || refs.control;
 
-    // Required indicator
+    // Required indicator + reactive label
     disposers.push(effect(() => {
-        const isRequired = ctx.engine.requiredSignals[fieldPath]?.value ?? false;
-        refs.label.textContent = labelText;
+        const isRequired = vm
+            ? vm.required.value
+            : (ctx.engine.requiredSignals[fieldPath]?.value ?? false);
+        const currentLabel = vm ? vm.label.value : staticLabel;
+        refs.label.textContent = currentLabel;
         if (isRequired) {
             const indicator = document.createElement('span');
             indicator.className = 'formspec-required';
@@ -87,16 +98,21 @@ export function bindSharedFieldEffects(
     // Validation display
     disposers.push(effect(() => {
         ctx.touchedVersion.value; // subscribe to touch changes
-        const error = ctx.engine.errorSignals[fieldPath]?.value;
 
-        // Shape errors from latest submit (external 1-indexed paths)
-        const submitDetail = ctx.latestSubmitDetailSignal?.value;
-        const externalPath = fieldPath.replace(/\[(\d+)\]/g, (_, p1) => `[${parseInt(p1) + 1}]`);
-        const submitError = submitDetail?.validationReport?.results?.find((r: any) =>
-            r.severity === 'error' && (r.path === fieldPath || r.path === externalPath || r.path === `${fieldPath}[*]`)
-        )?.message;
+        let effectiveError: string | null | undefined;
+        if (vm) {
+            effectiveError = vm.firstError.value;
+        } else {
+            const error = ctx.engine.errorSignals[fieldPath]?.value;
+            // Shape errors from latest submit (external 1-indexed paths)
+            const submitDetail = ctx.latestSubmitDetailSignal?.value;
+            const externalPath = fieldPath.replace(/\[(\d+)\]/g, (_, p1) => `[${parseInt(p1) + 1}]`);
+            const submitError = submitDetail?.validationReport?.results?.find((r: any) =>
+                r.severity === 'error' && (r.path === fieldPath || r.path === externalPath || r.path === `${fieldPath}[*]`)
+            )?.message;
+            effectiveError = error || submitError;
+        }
 
-        const effectiveError = error || submitError;
         const showError = ctx.touchedFields.has(fieldPath) ? (effectiveError || '') : '';
         if (refs.error) refs.error.textContent = showError;
         actualInput.setAttribute('aria-invalid', String(!!showError));
@@ -105,7 +121,9 @@ export function bindSharedFieldEffects(
 
     // Readonly
     disposers.push(effect(() => {
-        const isReadonly = ctx.engine.readonlySignals[fieldPath]?.value ?? false;
+        const isReadonly = vm
+            ? vm.readonly.value
+            : (ctx.engine.readonlySignals[fieldPath]?.value ?? false);
         if (actualInput instanceof HTMLInputElement || actualInput instanceof HTMLTextAreaElement) {
             actualInput.readOnly = isReadonly;
         } else if (actualInput instanceof HTMLSelectElement) {
@@ -117,7 +135,9 @@ export function bindSharedFieldEffects(
 
     // Relevance
     disposers.push(effect(() => {
-        const isRelevant = ctx.engine.relevantSignals[fieldPath]?.value ?? true;
+        const isRelevant = vm
+            ? vm.visible.value
+            : (ctx.engine.relevantSignals[fieldPath]?.value ?? true);
         refs.root.classList.toggle('formspec-hidden', !isRelevant);
         if (!isRelevant) {
             refs.root.setAttribute('aria-hidden', 'true');

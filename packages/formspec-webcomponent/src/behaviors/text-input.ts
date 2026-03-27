@@ -41,6 +41,7 @@ export function useTextInput(ctx: BehaviorContext, comp: any): TextInputBehavior
     }
 
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     return {
         fieldPath,
@@ -48,6 +49,7 @@ export function useTextInput(ctx: BehaviorContext, comp: any): TextInputBehavior
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -66,7 +68,7 @@ export function useTextInput(ctx: BehaviorContext, comp: any): TextInputBehavior
         extensionAttrs,
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             // Resolve the actual input element once for both sync directions
             const inputEl = refs.control.querySelector('input') || refs.control.querySelector('textarea') || refs.control;

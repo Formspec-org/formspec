@@ -36,6 +36,7 @@ function makeBehaviorContext(items: any[], prefix = '') {
         submit: () => null,
         registryEntries: new Map(),
         rerender: () => {},
+        getFieldVM: () => undefined,
     };
 }
 

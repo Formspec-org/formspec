@@ -25,6 +25,7 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
 
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
     const maxRating = comp.max || 5;
     const isInteger = item?.dataType === 'integer';
     const allowHalf = comp.allowHalf === true;
@@ -36,6 +37,7 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -56,7 +58,7 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
         },
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             // Sync star selection classes from engine value
             const stars = refs.control.querySelectorAll('.formspec-rating-star');

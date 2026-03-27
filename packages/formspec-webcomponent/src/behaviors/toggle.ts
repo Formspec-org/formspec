@@ -13,6 +13,7 @@ export function useToggle(ctx: BehaviorContext, comp: any): ToggleBehavior {
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     // GOTCHA: when labelPosition is 'top' (default), force it to 'start' so
     // createFieldDOM adds formspec-field--inline
@@ -26,6 +27,7 @@ export function useToggle(ctx: BehaviorContext, comp: any): ToggleBehavior {
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -39,7 +41,7 @@ export function useToggle(ctx: BehaviorContext, comp: any): ToggleBehavior {
         offLabel: comp.offLabel,
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             const checkbox = refs.control.querySelector('input[type="checkbox"]') || refs.control;
 

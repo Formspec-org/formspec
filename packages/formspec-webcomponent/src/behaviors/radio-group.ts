@@ -13,6 +13,7 @@ export function useRadioGroup(ctx: BehaviorContext, comp: any): RadioGroupBehavi
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     // Handle remote options
     const optionSignal = ctx.engine.getOptionsSignal?.(fieldPath);
@@ -37,6 +38,7 @@ export function useRadioGroup(ctx: BehaviorContext, comp: any): RadioGroupBehavi
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -51,7 +53,7 @@ export function useRadioGroup(ctx: BehaviorContext, comp: any): RadioGroupBehavi
         orientation: comp.orientation,
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             // Register change listeners on each radio via optionControls
             if (refs.optionControls) {

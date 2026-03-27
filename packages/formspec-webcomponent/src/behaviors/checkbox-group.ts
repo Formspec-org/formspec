@@ -13,6 +13,7 @@ export function useCheckboxGroup(ctx: BehaviorContext, comp: any): CheckboxGroup
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
     const widgetClassSlots = ctx.resolveWidgetClassSlots(rawPresentation);
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
+    const vm = ctx.getFieldVM(fieldPath);
 
     // Handle remote options
     const optionSignal = ctx.engine.getOptionsSignal?.(fieldPath);
@@ -40,6 +41,7 @@ export function useCheckboxGroup(ctx: BehaviorContext, comp: any): CheckboxGroup
         label: labelText,
         hint: comp.hintOverride || item?.hint || null,
         description: item?.description || null,
+        vm,
         presentation,
         widgetClassSlots,
         compOverrides: {
@@ -58,7 +60,7 @@ export function useCheckboxGroup(ctx: BehaviorContext, comp: any): CheckboxGroup
         },
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
             currentOptionControls = refs.optionControls;
 
             // Register change listeners on each checkbox via optionControls

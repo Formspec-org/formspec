@@ -1,6 +1,7 @@
 /** @filedesc Core behavior contract types for the headless component architecture. */
 import type { Signal } from '@preact/signals-core';
 import type { IFormEngine } from '@formspec-org/engine/render';
+import type { FieldViewModel } from '@formspec-org/engine';
 import type { PresentationBlock, ItemDescriptor } from '@formspec-org/layout';
 
 /**
@@ -49,6 +50,8 @@ export interface FieldBehavior {
     label: string;
     hint: string | null;
     description: string | null;
+    /** FieldViewModel for reactive locale-resolved state. When present, bind() uses VM signals. */
+    vm?: FieldViewModel;
     presentation: ResolvedPresentationBlock;
     /**
      * Widget class slots from theme widgetConfig x-classes.
@@ -247,4 +250,6 @@ export interface BehaviorContext {
     submit: (options?: { mode?: 'continuous' | 'submit'; emitEvent?: boolean }) => SubmitDetail | null;
     registryEntries: Map<string, any>;
     rerender: () => void;
+    /** Resolve the FieldViewModel for a component's bound field. Returns undefined if no VM exists. */
+    getFieldVM: (fieldPath: string) => FieldViewModel | undefined;
 }
