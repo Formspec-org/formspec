@@ -40,8 +40,10 @@ A tree view of `definition.items`:
 - Click item → select, open definition properties panel
 - `+ Add Item` → palette (fields, groups, display — no layout category)
 - Drag-to-reorder within tree → reorders `definition.items` array (data structure order)
-- Right-click → delete, duplicate, move into/out of group
+- Right-click → delete, duplicate, move up/down, wrap in group
 - Multi-select with Cmd+click, Shift+click (same patterns as current Editor)
+
+**Editor always shows the full item tree** regardless of `formPresentation.pageMode`. Even in wizard or tabs mode, the Editor displays all items across all groups — there is no page-filtered view. This is a deliberate UX change: the current Editor shows one page at a time in wizard mode, but since pages are a Layout concern, the Editor presents the complete data structure.
 
 ### Properties Panel (Right Sidebar)
 
@@ -53,7 +55,7 @@ Definition and behavior properties only:
 | Field config | initialValue, prePopulate, semanticType, currency, precision, prefix, suffix |
 | Options | options (inline), optionSet, choicesFrom |
 | Group config | repeatable, minRepeat, maxRepeat |
-| Display content | label (body text), advisory `presentation.widgetHint` |
+| Display content | label (body text), advisory `presentation.widgetHint` (read-only annotation showing current hint) |
 | Binds | required, calculate, relevant, readonly, constraint, constraintMessage, default, whitespace, excludedValue |
 | Advisory hints | `presentation.layout.page` (shown as annotation — "assigned to page X") |
 
@@ -71,7 +73,7 @@ Properties NOT shown (moved to Layout): widget override, style, CSS classes, gri
 - `flattenStructural` and page-aware filtering — no longer needed
 - `properties/AppearanceSection.tsx` — moves to Layout
 - `properties/LayoutProperties.tsx` — moves to Layout
-- `properties/WidgetHintSection.tsx` — moves to Layout (queries component tree)
+- `properties/WidgetHintSection.tsx` — split: the advisory `widgetHint` annotation stays in Editor (read-only in `ContentSection`); the actual widget override selector moves to Layout as `WidgetSection.tsx` (queries component tree, sets component type)
 
 ## The New Layout Tab — Visual Form Builder
 
@@ -104,7 +106,7 @@ Dragging an item from the tray into the canvas creates a component node with `bi
 
 - Drag-and-drop reorder within component tree (visual order, not data order)
 - Drag from unassigned tray onto pages/containers
-- Right-click → wrap in Card/Grid/Panel, unwrap, move to page
+- Right-click → wrap in Card/Grid/Panel/Stack/Collapsible, unwrap, move to page, delete from tree
 - Add Page button, page reordering, page deletion
 - Grid region editing (span/start within pages)
 
@@ -136,11 +138,49 @@ The Layout tab exposes component `when` expressions. The Editor tab exposes bind
 
 The Layout properties panel should clearly label `when` as "Visual Condition (data preserved)" to prevent confusion with `relevant`.
 
+## Selection Behavior Across Tabs
+
+Each tab maintains independent selection state. Switching tabs does not clear or transfer selection.
+
+- **Editor selection** — definition item paths (e.g., `"contacts.email"`)
+- **Layout selection** — definition paths for bound items OR layout node IDs (e.g., `"__node:abc123"`)
+
+These are separate selection scopes within `SelectionProvider`. When Editor is active, only Editor's selection drives the properties panel. When Layout is active, only Layout's selection drives its properties panel. Selecting an item in Editor does not highlight it in Layout, and vice versa.
+
+The Blueprint sidebar sections (Structure tree, Component Tree) interact with the selection of the currently active tab. The **Component Tree** sidebar section is hidden when the Editor tab is active, since the Editor has no concept of component tree nodes.
+
+## Context Menu Actions Split
+
+| Action | Editor | Layout |
+|--------|--------|--------|
+| Delete | Yes | Yes |
+| Duplicate | Yes | Yes |
+| Move Up / Move Down | Yes (definition order) | Yes (component tree order) |
+| Wrap in Group | Yes (creates group item) | No |
+| Wrap in Card/Stack/Grid/Panel/Collapsible | No | Yes |
+| Unwrap | No | Yes |
+| Move to Page | No | Yes |
+| Add Item | Yes | Yes (also places in tree) |
+
+## Atomic Add-from-Layout
+
+When adding an item from the Layout tab's palette, the operation dispatches as a single undo step using `project.core.dispatch([...commands])` (batch array dispatch, same mechanism as `project.addPage`). The batch contains:
+
+1. `definition.addItem` — creates the item in the definition
+2. `pages.assignItem` — places the new item's component node in the target page/container
+
+Undoing reverts both operations. This requires no new handler — the existing batch dispatch API already supports this pattern.
+
 ## Shell & Routing Changes
 
 ### Tab Bar
 
 No tab additions or removals. Same seven tabs: Editor, Logic, Data, Layout, Theme, Mapping, Preview.
+
+Update the `TABS` help text in `Header.tsx`:
+
+- **Editor**: "Definition tree — items, types, and data binds" (was: "Visual form builder canvas for adding and arranging items")
+- **Layout**: "Visual form builder — pages, layout containers, and widget selection" (was: "Multi-page form structure — wizard, tabs, and page grid layouts")
 
 ### WORKSPACES Map
 
@@ -162,10 +202,10 @@ const WORKSPACES: Record<string, React.FC> = {
 |------|--------|--------|-------|
 | `useDefinition` | Yes | Yes | Shared — both read definition |
 | `useComponent` | No | Yes | Layout only — Editor never reads component tree |
-| `useSelection` | Yes | Yes | Shared SelectionProvider; both tabs select by path |
+| `useSelection` | Yes | Yes | Shared provider, but independent per-tab selection scopes (see Selection Behavior) |
 | `useActiveGroup` | No | Yes | Layout only — page navigation is a Layout concern |
 | `useProject` | Yes | Yes | Shared — both dispatch commands |
-| `useCanvasTargets` | Yes | Yes | Shared — scroll-to-target in both |
+| `useCanvasTargets` | Yes | Yes | Per-tab target registries — targets rebuild on tab switch to avoid cross-tab DOM conflicts |
 | `useTheme` | No | Yes | Layout only — theme cascade resolution |
 | `usePageStructure` | No | Yes | Layout only — from current PagesTab |
 
@@ -203,7 +243,7 @@ workspaces/
       OptionsSection.tsx            # Stays as-is
       GroupConfigSection.tsx         # Stays as-is
       ContentSection.tsx            # Stays — strip widget override
-      BindsInlineSection.tsx        # New — inline bind editing for selected item
+      BindsInlineSection.tsx        # Extracted from SelectedItemProperties — inline bind editing for selected item
       MultiSelectSummary.tsx        # Stays — batch delete/duplicate
       shared.tsx                    # Stays — PropInput, AddPlaceholder
 
@@ -246,6 +286,7 @@ workspaces/
 ### Extracted to `components/ui/`
 
 - `DragHandle.tsx` — shared between Editor (definition reorder) and Layout (component tree reorder)
+- `block-utils.ts` — `blockRef` and `blockIndent` utilities relocated here (used by Layout canvas blocks)
 
 ## Concerns Not Affected by This Split
 
@@ -298,7 +339,7 @@ This minimizes E2E test breakage. Layout-specific test IDs (`layout-{nodeId}`, w
 **Editor unit tests (rewrite):** 13 files in `tests/workspaces/editor/`
 **Pages unit tests (rewrite):** 7 files in `tests/workspaces/pages/`
 **Integration tests (update):** `editor-workflow`, `import-export`, `undo-redo`
-**E2E tests (update selectively):** ~13 files — primarily `editor-authoring`, `layout-components`, `interaction-patterns`, `wizard-mode`
+**E2E tests (update selectively):** ~14 files — primarily `editor-authoring`, `layout-components`, `interaction-patterns`, `wizard-mode`, `pages-workspace`, `pages-behavioral`, `pages-focus-mode`
 
 ## Migration
 
