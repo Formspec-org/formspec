@@ -133,7 +133,7 @@
         },
         "compatibleVersions": {
           "type": "string",
-          "description": "Semver range expression describing which Definition versions this document supports. When absent, compatible with any version."
+          "description": "Semver range expression using node/npm-style range syntax describing which Definition versions this document supports. When absent, compatible with any version."
         }
       }
     },

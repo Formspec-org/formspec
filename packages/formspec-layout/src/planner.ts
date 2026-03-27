@@ -465,6 +465,7 @@ function planThemePagesFromDefinitionItems(items: any[], ctx: PlanContext): Layo
     const pageMode = ctx.formPresentation?.pageMode;
     if ((pageMode === 'wizard' || pageMode === 'tabs') && pageNodes.length > 0) {
         const pages = pageNodes.map((pn) => ({
+            id: typeof pn.props?.id === 'string' ? pn.props.id : undefined,
             title: String(pn.props?.title || ''),
             children: pn.children,
         }));
@@ -598,6 +599,7 @@ function wrapRegionNode(
 }
 
 type PlannedPage = {
+    id?: string;
     title: string;
     children: LayoutNode[];
 };
@@ -619,7 +621,10 @@ function emitPageModePages(
         id: nextId('page'),
         component: 'Page',
         category: 'layout' as const,
-        props: { title: page.title || `Page ${index + 1}` },
+        props: {
+            ...(page.id ? { id: page.id } : {}),
+            title: page.title || `Page ${index + 1}`,
+        },
         cssClasses: [],
         children: page.children,
     }));

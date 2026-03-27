@@ -200,6 +200,15 @@ export interface PinnedResponseReference {
     definitionVersion: string;
 }
 
+export interface FormProgress {
+    total: number;
+    filled: number;
+    valid: number;
+    required: number;
+    requiredFilled: number;
+    complete: boolean;
+}
+
 export interface FormEngineDiagnosticsSnapshot {
     definition: { url: string; version: string; title: string };
     timestamp: string;
@@ -277,6 +286,8 @@ export interface IFormEngine {
     getValidationReport(options?: { mode?: 'continuous' | 'submit' }): ValidationReport;
     evaluateShape(shapeId: string): ValidationResult[];
     isPathRelevant(path: string): boolean;
+    getFieldPaths(): string[];
+    getProgress(): FormProgress;
     getResponse(meta?: {
         id?: string;
         author?: { id: string; name?: string };

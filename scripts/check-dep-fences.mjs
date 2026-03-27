@@ -8,17 +8,18 @@ import { execSync } from 'node:child_process';
  * Rule: a package at layer N may only depend on packages at layer < N.
  */
 const LAYERS = {
-  '@formspec/types':        0,
-  '@formspec/engine':       1,
-  '@formspec/layout':       1,
-  '@formspec/webcomponent': 2,
-  '@formspec/core':         2,
-  '@formspec/react':        2,
-  '@formspec/adapters':     3,
-  '@formspec/studio-core':  3,
-  '@formspec/mcp':          4,
-  '@formspec/chat':         5,
-  '@formspec/studio':       6,
+  '@formspec-org/types':    0,
+  '@formspec-org/engine':   1,
+  '@formspec-org/layout':   1,
+  '@formspec-org/assist':   2,
+  '@formspec-org/webcomponent': 2,
+  '@formspec-org/core':         2,
+  '@formspec-org/react':        2,
+  '@formspec-org/adapters':     3,
+  '@formspec-org/studio-core':  3,
+  '@formspec-org/mcp':          4,
+  '@formspec-org/chat':         5,
+  '@formspec-org/studio':       6,
 };
 
 const PACKAGES_DIR = new URL('../packages/', import.meta.url).pathname;

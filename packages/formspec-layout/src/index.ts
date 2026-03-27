@@ -52,6 +52,8 @@ export {
 
 // Layout planner
 export { planComponentTree, planDefinitionFallback, resetNodeIdCounter } from './planner.js';
+export { resolvePageSequence } from './page-sequence.js';
+export type { PageSequenceEntry } from './page-sequence.js';
 
 // Types
 export type { LayoutNode, PlanContext } from './types.js';

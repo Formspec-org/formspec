@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-26
 **Status:** Draft
-**Spec path:** `specs/assist/assist-spec.md` (proposed)
+**Spec path:** `specs/assist/assist-spec.md`
 
 ---
 

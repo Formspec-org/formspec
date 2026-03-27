@@ -14,7 +14,7 @@
     "site"
   ],
   "scripts": {
-    "build": "npm run build --workspace=@formspec-org/types && npm run build --workspace=@formspec-org/layout && npm run build --workspace=@formspec-org/engine && npm run build --workspace=@formspec-org/core && npm run build --workspace=@formspec-org/webcomponent && npm run build --workspace=@formspec-org/adapters && npm run build --workspace=@formspec-org/studio-core && npm run build --workspace=@formspec-org/mcp && npm run build --workspace=@formspec-org/studio",
+    "build": "npm run build --workspace=@formspec-org/types && npm run build --workspace=@formspec-org/layout && npm run build --workspace=@formspec-org/engine && npm run build --workspace=@formspec-org/assist && npm run build --workspace=@formspec-org/core && npm run build --workspace=@formspec-org/webcomponent && npm run build --workspace=@formspec-org/adapters && npm run build --workspace=@formspec-org/studio-core && npm run build --workspace=@formspec-org/mcp && npm run build --workspace=@formspec-org/studio",
     "test:serve": "vite --port 8080 --host 127.0.0.1",
     "start:site": "npm run dev --workspace=formspec-site",
     "start:stories": "npm run dev --workspace=formspec-stories",
@@ -26,7 +26,7 @@
     "test:studio:e2e": "npm run --workspace=@formspec-org/studio test:e2e",
     "docs:api:studio": "npm run --workspace=@formspec-org/studio build",
     "build:types": "npm run --workspace @formspec-org/types build",
-    "test:unit": "npm run build:types && npm run --workspace @formspec-org/engine test && npm run --workspace @formspec-org/webcomponent test && npm run --workspace @formspec-org/adapters test && npm run --workspace @formspec-org/layout test && npm run --workspace @formspec-org/core test && npm run --workspace @formspec-org/studio-core test && npm run --workspace @formspec-org/mcp test && npm run --workspace @formspec-org/studio test",
+    "test:unit": "npm run build:types && npm run --workspace @formspec-org/engine test && npm run --workspace @formspec-org/assist test && npm run --workspace @formspec-org/webcomponent test && npm run --workspace @formspec-org/adapters test && npm run --workspace @formspec-org/layout test && npm run --workspace @formspec-org/core test && npm run --workspace @formspec-org/studio-core test && npm run --workspace @formspec-org/mcp test && npm run --workspace @formspec-org/studio test",
     "test:all": "npm run test:unit && npm run test:e2e && npm run test:studio:e2e",
     "docs:generate": "node scripts/generate-spec-artifacts.mjs && node scripts/generate-filemap.mjs",
     "docs:filemap": "node scripts/generate-filemap.mjs",

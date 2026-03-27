@@ -74,6 +74,7 @@ import {
     getAncestorBasePaths,
     getNestedValue,
     getScopeAncestors,
+    isEmptyValue,
     makeValidationResult,
     normalizeRemoteOptions,
     parseInstanceTarget,
@@ -452,6 +453,50 @@ export class FormEngine implements IFormEngine {
             }
         }
         return true;
+    }
+
+    public getFieldPaths(): string[] {
+        return Object.keys(this._fieldViewModels).sort();
+    }
+
+    public getProgress(): import('../interfaces.js').FormProgress {
+        let total = 0;
+        let filled = 0;
+        let valid = 0;
+        let required = 0;
+        let requiredFilled = 0;
+
+        for (const path of this.getFieldPaths()) {
+            if (!this.isPathRelevant(path)) {
+                continue;
+            }
+            total += 1;
+            const fieldFilled = !isEmptyValue(this.signals[path]?.value);
+            const fieldValid = !(this.validationResults[path]?.value ?? []).some(
+                (result) => result.severity === 'error',
+            );
+            if (fieldFilled) {
+                filled += 1;
+            }
+            if (fieldValid) {
+                valid += 1;
+            }
+            if (this.requiredSignals[path]?.value) {
+                required += 1;
+                if (fieldFilled) {
+                    requiredFilled += 1;
+                }
+            }
+        }
+
+        return {
+            total,
+            filled,
+            valid,
+            required,
+            requiredFilled,
+            complete: required === requiredFilled && this.getValidationReport().valid,
+        };
     }
 
     public getResponse(meta?: {
@@ -1276,4 +1321,3 @@ export class FormEngine implements IFormEngine {
         });
     }
 }
-
