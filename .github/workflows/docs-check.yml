@@ -26,6 +26,7 @@ on:
 
 jobs:
   docs-check:
+    if: github.repository == 'Formspec-org/formspec'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

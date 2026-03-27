@@ -6,6 +6,7 @@ on:
 
 jobs:
   deploy:
+    if: github.repository == 'Formspec-org/formspec'
     name: Firebase Hosting
     runs-on: ubuntu-latest
     steps:
