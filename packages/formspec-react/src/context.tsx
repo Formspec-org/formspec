@@ -75,9 +75,7 @@ export function FormspecProvider({
         if (!definition) throw new Error('FormspecProvider requires either engine or definition');
         const eng = createFormEngine(definition, runtimeContext, registryEntries);
         if (initialData) {
-            for (const [key, value] of Object.entries(initialData)) {
-                eng.setValue(key, value);
-            }
+            applyInitialData(eng, initialData);
         }
         return eng;
     }, [externalEngine, definition, registryEntries, runtimeContext, initialData]);
@@ -124,8 +122,8 @@ export function FormspecProvider({
             findItem: (key: string) => findItemByKey(items, key),
         };
 
-        if (componentDocument?.pages || componentDocument?.tree) {
-            return planComponentTree(componentDocument, planCtx);
+        if (componentDocument?.tree) {
+            return planComponentTree(componentDocument.tree, planCtx);
         }
         // planDefinitionFallback returns an array — wrap in a root Stack node
         const nodes = planDefinitionFallback(items, planCtx);
@@ -231,6 +229,29 @@ export function emitThemeTokens(
     const el = target ?? document.documentElement;
     for (const [key, value] of Object.entries(tokens)) {
         el.style.setProperty(`--formspec-${key.replace(/\./g, '-')}`, String(value));
+    }
+}
+
+/** Walk nested initial data and set leaf values on the engine with dotted paths. */
+function applyInitialData(engine: IFormEngine, data: Record<string, any>, prefix = ''): void {
+    for (const [key, value] of Object.entries(data)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        if (Array.isArray(value)) {
+            // Repeat group: ensure instances exist, then recurse into each
+            const currentCount = engine.repeats[path]?.value ?? 0;
+            for (let i = currentCount; i < value.length; i++) {
+                engine.addRepeatInstance(path);
+            }
+            for (let i = 0; i < value.length; i++) {
+                if (value[i] != null && typeof value[i] === 'object') {
+                    applyInitialData(engine, value[i], `${path}[${i}]`);
+                }
+            }
+        } else if (value !== null && typeof value === 'object') {
+            applyInitialData(engine, value, path);
+        } else {
+            engine.setValue(path, value);
+        }
     }
 }
 

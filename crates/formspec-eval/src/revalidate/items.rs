@@ -101,18 +101,37 @@ pub(super) fn validate_items(
             let prev_dollar = env.data.remove("");
             env.data.insert(String::new(), json_to_runtime_fel(&val));
 
-            if let Ok(parsed) = parse(&normalized_expr) {
-                let result = evaluate(&parsed, env);
-                if !constraint_passes(&result) {
+            match parse(&normalized_expr) {
+                Ok(parsed) => {
+                    let result = evaluate(&parsed, env);
+                    if !constraint_passes(&result) {
+                        results.push(ValidationResult {
+                            path: item.path.clone(),
+                            severity: "error".to_string(),
+                            constraint_kind: "constraint".to_string(),
+                            code: "CONSTRAINT_FAILED".to_string(),
+                            message: item
+                                .constraint_message
+                                .clone()
+                                .unwrap_or_else(|| format!("Constraint failed: {expr}")),
+                            constraint: Some(expr.clone()),
+                            source: "bind".to_string(),
+                            shape_id: None,
+                            context: None,
+                        });
+                    }
+                }
+                Err(e) => {
+                    // A constraint that cannot parse must not silently pass.
                     results.push(ValidationResult {
                         path: item.path.clone(),
                         severity: "error".to_string(),
                         constraint_kind: "constraint".to_string(),
-                        code: "CONSTRAINT_FAILED".to_string(),
+                        code: "CONSTRAINT_PARSE_ERROR".to_string(),
                         message: item
                             .constraint_message
                             .clone()
-                            .unwrap_or_else(|| format!("Constraint failed: {expr}")),
+                            .unwrap_or_else(|| format!("Constraint expression error: {e}")),
                         constraint: Some(expr.clone()),
                         source: "bind".to_string(),
                         shape_id: None,

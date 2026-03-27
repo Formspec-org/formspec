@@ -89,9 +89,10 @@
 }
 
 /* ── Input / Select / Textarea ────────────────────────────────── */
-input:not([type="radio"]):not([type="checkbox"]):not([type="range"]):not([type="file"]):not([hidden]),
-textarea,
-select {
+/* :where() keeps specificity at (0,0,1) so compound wrapper overrides win */
+:where(input:not([type="radio"]):not([type="checkbox"]):not([type="range"]):not([type="file"]):not([hidden])),
+:where(textarea),
+:where(select) {
   display: block;
   width: 100%;
   padding: 0.625rem 0.875rem;
@@ -106,9 +107,9 @@ select {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-input:not([type="radio"]):not([type="checkbox"]):not([type="range"]):not([type="file"]):not([hidden]):focus,
-textarea:focus,
-select:focus {
+:where(input:not([type="radio"]):not([type="checkbox"]):not([type="range"]):not([type="file"]):not([hidden])):focus,
+:where(textarea):focus,
+:where(select):focus {
   outline: 2px solid var(--formspec-color-ring, #2d6a7a);
   outline-offset: 1px;
   border-color: var(--formspec-color-ring, #2d6a7a);
@@ -524,6 +525,311 @@ h2.formspec-heading {
 .formspec-submit:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ── Compound wrappers — strip inner input borders ───────────── */
+.formspec-stepper input,
+.formspec-money-field input,
+.formspec-input-adornment input {
+  border: none;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+/* ── Toggle switch ────────────────────────────────────────────── */
+.formspec-field--inline input[type="checkbox"][role="switch"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 2.5rem;
+  height: 1.375rem;
+  background: var(--formspec-color-border, #a0a4a8);
+  border-radius: 1rem;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+  border: none;
+  margin: 0;
+}
+
+.formspec-field--inline input[type="checkbox"][role="switch"]::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1rem;
+  height: 1rem;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.formspec-field--inline input[type="checkbox"][role="switch"]:checked {
+  background: var(--formspec-color-primary, #2d6a7a);
+}
+
+.formspec-field--inline input[type="checkbox"][role="switch"]:checked::after {
+  transform: translateX(1.125rem);
+}
+
+.formspec-field--inline input[type="checkbox"][role="switch"]:focus-visible {
+  outline: 2px solid var(--formspec-color-ring, #2d6a7a);
+  outline-offset: 2px;
+}
+
+/* Reorder toggle children: label first, then Off/switch/On */
+.formspec-field--inline:has([role="switch"]) label { order: -1; flex-basis: 100%; }
+.formspec-toggle-off { order: 0; }
+.formspec-field--inline:has([role="switch"]) input { order: 1; }
+.formspec-toggle-on { order: 2; }
+
+.formspec-field--inline:has([role="switch"]) {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.formspec-toggle-label {
+  font-size: 0.75rem;
+  color: var(--formspec-color-mutedForeground, #6b7280);
+  user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+}
+
+/* ── Stepper ──────────────────────────────────────────────────── */
+.formspec-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--formspec-color-input, #767a7e);
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+  overflow: hidden;
+  background: var(--formspec-color-card, #ffffff);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.formspec-stepper:focus-within {
+  border-color: var(--formspec-color-ring, #2d6a7a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--formspec-color-ring, #2d6a7a) 25%, transparent);
+}
+
+.formspec-stepper input[type="number"] {
+  border: none;
+  border-left: 1px solid var(--formspec-color-border, #a0a4a8);
+  border-right: 1px solid var(--formspec-color-border, #a0a4a8);
+  text-align: center;
+  width: 3.5rem;
+  padding: 0.625rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--formspec-color-foreground, #1a1f25);
+  background: transparent;
+  -moz-appearance: textfield;
+  font-variant-numeric: tabular-nums;
+}
+
+.formspec-stepper input[type="number"]::-webkit-inner-spin-button,
+.formspec-stepper input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.formspec-stepper-decrement,
+.formspec-stepper-increment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--formspec-color-foreground, #1a1f25);
+  transition: background-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+/* Borders are on the input sides — buttons have no borders */
+
+.formspec-stepper-decrement:hover:not(:disabled),
+.formspec-stepper-increment:hover:not(:disabled) {
+  background: var(--formspec-color-muted, #f0f0f0);
+  color: var(--formspec-color-primary, #2d6a7a);
+}
+
+.formspec-stepper-decrement:active:not(:disabled),
+.formspec-stepper-increment:active:not(:disabled) {
+  background: color-mix(in srgb, var(--formspec-color-primary, #2d6a7a) 12%, transparent);
+}
+
+.formspec-stepper-decrement:focus-visible,
+.formspec-stepper-increment:focus-visible {
+  outline: none;
+}
+
+.formspec-stepper-decrement:disabled,
+.formspec-stepper-increment:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--formspec-color-muted, #636970);
+}
+
+/* ── Money input ─────────────────────────────────────────────── */
+.formspec-money-field {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--formspec-color-input, #767a7e);
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+  overflow: hidden;
+  background: var(--formspec-color-card, #ffffff);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.formspec-money-field:focus-within {
+  border-color: var(--formspec-color-ring, #2d6a7a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--formspec-color-ring, #2d6a7a) 25%, transparent);
+}
+
+.formspec-money-currency {
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  background: var(--formspec-color-surface, #f0f0f0);
+  color: var(--formspec-color-muted, #6b7280);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-right: 1px solid var(--formspec-color-border, #a0a4a8);
+}
+
+.formspec-money-field input {
+  border: none;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Slider ──────────────────────────────────────────────────── */
+.formspec-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.formspec-slider input[type="range"] {
+  flex: 1;
+  accent-color: var(--formspec-color-primary, #2d6a7a);
+}
+
+.formspec-slider-value {
+  min-width: 2rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--formspec-color-foreground, #1a1a1a);
+}
+
+/* ── Rating ──────────────────────────────────────────────────── */
+.formspec-rating {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.formspec-rating-star {
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--formspec-color-border, #a0a4a8);
+  transition: color 0.1s;
+  user-select: none;
+}
+
+.formspec-rating-star--selected {
+  color: var(--formspec-color-warning, #e6a700);
+}
+
+.formspec-rating-star--half {
+  color: var(--formspec-color-warning, #e6a700);
+}
+
+.formspec-rating-star:focus-visible {
+  outline: 2px solid var(--formspec-color-ring, #2d6a7a);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── Input adornment (prefix/suffix) ─────────────────────────── */
+.formspec-input-adornment {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--formspec-color-input, #767a7e);
+  background: var(--formspec-color-card, #ffffff);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+  overflow: hidden;
+}
+
+.formspec-input-adornment:focus-within {
+  border-color: var(--formspec-color-ring, #2d6a7a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--formspec-color-ring, #2d6a7a) 25%, transparent);
+}
+
+.formspec-input-prefix,
+.formspec-input-suffix {
+  display: flex;
+  align-items: center;
+  padding: 0 0.625rem;
+  background: var(--formspec-color-muted, #f0f0f0);
+  color: var(--formspec-color-mutedForeground, #6b7280);
+  font-size: 0.875rem;
+}
+
+.formspec-input-prefix {
+  border-right: 1px solid var(--formspec-color-border, #a0a4a8);
+}
+
+.formspec-input-suffix {
+  border-left: 1px solid var(--formspec-color-border, #a0a4a8);
+}
+
+.formspec-input-adornment input {
+  border: none;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Signature ────────────────────────────────────────────────── */
+.formspec-signature {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formspec-signature-clear {
+  align-self: flex-start;
+  padding: 0.375rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: transparent;
+  color: var(--formspec-color-error, #d93025);
+  border: 1px solid var(--formspec-color-error, #d93025);
+  border-radius: var(--formspec-radius-sm, 0.5rem);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.formspec-signature-clear:hover {
+  background: color-mix(in srgb, var(--formspec-color-error, #d93025) 8%, transparent);
+}
+
+.formspec-signature-clear:focus-visible {
+  outline: 2px solid var(--formspec-color-ring, #2d6a7a);
+  outline-offset: 1px;
 }
 
 /* ── Validation summary ───────────────────────────────────────── */

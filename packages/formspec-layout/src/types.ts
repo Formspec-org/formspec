@@ -15,7 +15,7 @@ export interface LayoutNode {
     component: string;
 
     /** Node classification for renderer dispatch. */
-    category: 'layout' | 'field' | 'display' | 'interactive' | 'special';
+    category: 'layout' | 'container' | 'field' | 'display' | 'interactive' | 'special';
 
     /** All resolved component props (tokens resolved, responsive merged). JSON-serializable. */
     props: Record<string, unknown>;

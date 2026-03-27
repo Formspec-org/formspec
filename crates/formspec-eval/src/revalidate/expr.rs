@@ -1,7 +1,7 @@
 //! FEL expression evaluation for validation (shape and bind constraint truthiness).
 #![allow(clippy::missing_docs_in_private_items)]
 
-use fel_core::error::Severity;
+use fel_core::error::{Diagnostic, Severity};
 use fel_core::{EvalResult, FelValue, FormspecEnvironment, evaluate, parse};
 
 /// Check whether a constraint evaluation result means "passes."
@@ -29,12 +29,19 @@ pub(super) fn result_has_eval_errors(result: &EvalResult) -> bool {
         .any(|d| d.severity == Severity::Error)
 }
 
+/// Evaluate a FEL expression for constraint/shape validation.
+///
+/// Parse errors produce `Null` with an error diagnostic so that
+/// `constraint_passes` treats them as failures — a broken expression
+/// must never silently pass validation.
 pub(super) fn evaluate_shape_expression(expr: &str, env: &FormspecEnvironment) -> EvalResult {
     match parse(expr) {
         Ok(parsed) => evaluate(&parsed, env),
-        Err(_) => EvalResult {
+        Err(e) => EvalResult {
             value: FelValue::Null,
-            diagnostics: vec![],
+            diagnostics: vec![Diagnostic::error(format!(
+                "FEL parse error in constraint: {e}"
+            ))],
         },
     }
 }

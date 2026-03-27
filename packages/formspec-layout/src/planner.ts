@@ -19,9 +19,13 @@ import { widgetTokenToComponent } from './widget-vocabulary.js';
 
 // ── Component category classification ────────────────────────────────
 
+// Component category sets — aligned with Component Spec §4 categories.
 const LAYOUT_COMPONENTS = new Set([
-    'Page', 'Stack', 'Grid', 'Divider', 'Collapsible', 'Columns',
-    'Panel', 'Accordion', 'Modal', 'Popover',
+    'Page', 'Stack', 'Grid', 'Columns', 'Tabs', 'Accordion',
+]);
+
+const CONTAINER_COMPONENTS = new Set([
+    'Card', 'Collapsible', 'ConditionalGroup', 'Panel', 'Modal', 'Popover',
 ]);
 
 const INPUT_COMPONENTS = new Set([
@@ -31,24 +35,20 @@ const INPUT_COMPONENTS = new Set([
 ]);
 
 const DISPLAY_COMPONENTS = new Set([
-    'Heading', 'Text', 'Card', 'Spacer', 'Alert', 'Badge',
+    'Heading', 'Text', 'Divider', 'Spacer', 'Alert', 'Badge',
     'ProgressBar', 'Summary', 'ValidationSummary',
 ]);
 
 const INTERACTIVE_COMPONENTS = new Set([
-    'Tabs', 'SubmitButton',
-]);
-
-const SPECIAL_COMPONENTS = new Set([
-    'ConditionalGroup', 'DataTable',
+    'SubmitButton', 'DataTable',
 ]);
 
 function classifyComponent(type: string): LayoutNode['category'] {
     if (LAYOUT_COMPONENTS.has(type)) return 'layout';
+    if (CONTAINER_COMPONENTS.has(type)) return 'container';
     if (INPUT_COMPONENTS.has(type)) return 'field';
     if (DISPLAY_COMPONENTS.has(type)) return 'display';
     if (INTERACTIVE_COMPONENTS.has(type)) return 'interactive';
-    if (SPECIAL_COMPONENTS.has(type)) return 'special';
     // Unknown components default to layout (custom components are usually structural)
     return 'layout';
 }
@@ -399,9 +399,12 @@ function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNod
         const tier1Widget = widgetTokenToComponent(item.presentation?.widgetHint);
         const widget = themeWidget || tier1Widget || getDefaultComponent(item);
 
+        // Forward definition-level presentation props (min, max, showStepper, currency, etc.)
+        // into node.props so renderers can read them uniformly.
+        const { widgetHint: _, cssClass: _c, labelPosition: _l, ...presentationProps } = item.presentation ?? {};
+        const fieldProps: Record<string, unknown> = { bind: key, ...presentationProps };
         // Default maxLines for text dataType fields rendered as TextInput
-        const fieldProps: Record<string, unknown> = { bind: key };
-        if (widget === 'TextInput' && item.dataType === 'text') {
+        if (widget === 'TextInput' && item.dataType === 'text' && !fieldProps.maxLines) {
             fieldProps.maxLines = 3;
         }
 
