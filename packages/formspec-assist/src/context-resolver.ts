@@ -90,6 +90,12 @@ function buildTargetCandidates(path: string): Set<string> {
   for (let index = parts.length - 1; index > 0; index -= 1) {
     targets.add(parts.slice(0, index).join('.'));
   }
+  if (path !== base) {
+    const wildcardParts = wildcard.split('.');
+    for (let index = wildcardParts.length - 1; index > 0; index -= 1) {
+      targets.add(wildcardParts.slice(0, index).join('.'));
+    }
+  }
   return targets;
 }
 
@@ -211,7 +217,7 @@ function buildFieldMetadata(definition: FormDefinition): Map<string, FieldMetada
   function visit(items: FormItem[], prefix = '', currentPage?: string): void {
     for (const item of items) {
       const path = prefix ? `${prefix}.${item.key}` : item.key;
-      const nextPage = (item as any).presentation?.layout?.page ?? currentPage;
+      const nextPage = item.presentation?.layout?.page ?? currentPage;
       if (item.type === 'field') {
         fields.set(path, { path, item, pageId: nextPage });
       }

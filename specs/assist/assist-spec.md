@@ -204,7 +204,7 @@ action: `formspec.{category}.{action}`.
 | `formspec.form.describe` | `{}` | `FormDescription` | High-level form metadata and status. |
 | `formspec.field.list` | `{ filter?: "all" \| "required" \| "empty" \| "invalid" \| "relevant" }` | `FieldSummary[]` | Default filter is `"relevant"`. |
 | `formspec.field.describe` | `{ path: string }` | `FieldDescription` | Includes live state and resolved help. |
-| `formspec.field.help` | `{ path: string, audience?: "human" \| "agent" \| "both" }` | `FieldHelp` | Default audience is implementation-defined; providers SHOULD default to `"agent"` for tool consumers. |
+| `formspec.field.help` | `{ path: string, audience?: "human" \| "agent" \| "both" }` | `FieldHelp` | Default audience is `"agent"`. Providers MAY allow consumers to override this default. |
 | `formspec.form.progress` | `{}` | `FormProgress` | Progress summary across required and total fields. |
 
 ### 3.3 Required Core Mutation Tools
@@ -213,6 +213,8 @@ action: `formspec.{category}.{action}`.
 |---|---|---|---|
 | `formspec.field.set` | `{ path: string, value: unknown }` | `SetValueResult` | MUST reject writes to readonly or non-relevant fields. |
 | `formspec.field.bulkSet` | `{ entries: Array<{ path: string, value: unknown }> }` | `BulkSetResult` | MAY partially succeed; each entry is independent unless a transport defines stronger atomicity. |
+
+The `value` property in `formspec.field.set` MAY be omitted. An omitted `value` is treated as `null` and clears the field. Providers MUST treat `undefined` (from omission) identically to `null` for the purpose of setting field values.
 
 ### 3.4 Required Core Validation Tools
 
@@ -226,7 +228,7 @@ action: `formspec.{category}.{action}`.
 | Tool | Input | Output | Notes |
 |---|---|---|---|
 | `formspec.profile.match` | `{ profileId?: string }` | `{ matches: ProfileMatch[] }` | Suggests reusable values. |
-| `formspec.profile.apply` | `{ matches: Array<{ path: string, value: unknown }>, confirm?: boolean }` | `ProfileApplyResult` | `confirm: true` requires human-in-the-loop. |
+| `formspec.profile.apply` | `{ matches: Array<{ path: string, value: unknown }>, confirm?: boolean }` | `ProfileApplyResult` | `confirm: true` requires human-in-the-loop. When `confirm` is `true` and the provider has no confirmation mechanism, the provider MUST return an error with code `x-confirmation-required`. The provider MUST NOT silently apply values without confirmation when confirmation was explicitly requested. |
 | `formspec.profile.learn` | `{ profileId?: string }` | `{ savedConcepts: number, savedFields: number }` | Saves concept-bound values and permitted fallbacks. |
 
 ### 3.6 Optional Navigation Tools
@@ -275,6 +277,13 @@ interface ToolError {
 Providers MAY define additional `x-`-prefixed error codes. Consumers MUST treat
 unknown non-`x-` codes as generic failures.
 
+The following `x-`-prefixed error codes are RECOMMENDED for common provider conditions:
+
+| Code | Meaning |
+| --- | --- |
+| `x-confirmation-required` | A mutation requiring `confirm: true` was requested but no confirmation mechanism is available. |
+| `x-invalid-sidecar` | A loaded References or Ontology document has a structural error or its `targetDefinition` does not match the active form. |
+
 ### 4.3 Mutation Rules
 
 For every mutation tool:
@@ -310,6 +319,8 @@ interface FieldSummary {
   valid: boolean;
 }
 
+A field is **valid** if it has no validation results with severity `"error"` for its path. Warning-level and info-level results do not affect field validity. This is the field-scoped application of the core specification's validity rule (core §5.1, "A Response is valid if and only if zero validation results with severity `error` exist").
+
 interface FormProgress {
   total: number;
   filled: number;
@@ -319,6 +330,8 @@ interface FormProgress {
   complete: boolean;
   pages?: PageProgress[];
 }
+
+A field is **filled** if its current value is not empty. A value is "empty" if it is `null`, `undefined` in host languages that distinguish it, an empty string `""`, or an empty array `[]`. This definition extends the core specification's `empty()` function (core §3.5.5) to additionally cover `undefined` for host languages that distinguish it. It is otherwise consistent with `required` bind semantics (core §2.1.4).
 
 interface PageProgress {
   id: string;
@@ -350,6 +363,8 @@ interface FieldDescription {
   help: FieldHelp;
 }
 
+`widget` — the `presentation.widgetHint` value from the field's Definition item, if present. This is advisory and reflects the form author's intended control type, not the resolved component-tree widget.
+
 interface SetValueResult {
   accepted: boolean;
   value: unknown;
@@ -372,11 +387,23 @@ interface ProfileApplyResult {
   validation?: ValidationReport;
 }
 
+The `reason` field in skipped entries SHOULD use one of the following standard values:
+
+| Value | Meaning |
+| --- | --- |
+| `NOT_FOUND` | The target path does not exist in the form. |
+| `READONLY` | The target field is readonly. |
+| `NOT_RELEVANT` | The target field is currently not relevant. |
+| `INVALID_VALUE` | The value was rejected by the engine. |
+| `DECLINED` | The user declined the mutation during confirmation. |
+
+Providers MAY use additional `x-`-prefixed reason strings. Consumers MUST treat unrecognized reason strings as generic skips.
+
 interface NextIncompleteResult {
   path?: string;
   pageId?: string;
   label: string;
-  reason: "empty" | "invalid" | "required";
+  reason: "empty" | "invalid" | "required" | "complete";
 }
 ```
 
@@ -442,13 +469,17 @@ interface ConceptEquivalent {
 
 To resolve `FieldHelp.references`, a conformant provider MUST:
 
-1. Load every active References Document targeting the live Definition.
-2. Determine the field path and its explicit ancestor paths by walking the item
-   tree.
+1. Load every active References Document targeting the live Definition. When multiple References Documents target the active Definition, a provider MUST process all documents. Entries from all documents are collected into a single candidate set for target matching and audience filtering. The document-order position of each entry (its position within its source document, with earlier documents preceding later ones) is used as the secondary sort key within priority tiers during the step 8 sort.
+2. Determine the field path and its ancestor paths by splitting the path on `.`
+   and taking progressively shorter prefixes. For path
+   `organization.details.ein`, the ancestors are `organization.details` and
+   `organization`. When the path contains repeat indices (e.g.,
+   `items[0].field`), ancestor candidates MUST include both the index-stripped
+   form (`items`) and the wildcard form (`items[*]`) for each ancestor segment.
 3. Collect references whose `target` matches:
    - the exact field path,
    - any explicit ancestor path selected during that walk, and
-   - `"#"` for form-level context.
+   - `"#"` for form-level context. Wildcard ancestor paths (e.g., `items[*]`) are valid candidates and MUST be included when building the candidate set for indexed paths.
 4. **MUST NOT** treat references as implicitly inherited. Any ancestor context
    included in `FieldHelp` is included because the provider explicitly walked
    ancestor targets, not because the References specification defines
@@ -469,7 +500,7 @@ Concept identity for a field may come from up to three sources. Providers MUST
 resolve them in the following order:
 
 1. **Ontology Document binding** — a concept binding for the field's full path
-   in an active Ontology Document.
+   in an active Ontology Document. When multiple Ontology Documents are loaded, a provider MUST resolve concept bindings using the last-loaded document's binding for a given path. The load order is the array order in which documents were provided to the provider. This pins the Ontology Specification's implementation-defined load order (ontology §8.2) to the concrete array order of the Assist API.
 2. **Registry concept entry** — a loaded registry entry whose `name` matches
    the field's `semanticType`.
 3. **`semanticType` literal** — the raw `semanticType` string treated as a
@@ -483,6 +514,8 @@ When processing `equivalents`, an absent relationship type MUST be treated as
 `summary` and `commonMistakes` are OPTIONAL synthesized outputs. Providers MAY
 leave them empty. If present, they MUST be treated as advisory material and
 MUST NOT override the authoritative meaning of References or Ontology bindings.
+
+When providers synthesize `summary`, the result SHOULD be a concise plain-text sentence suitable for display in a tooltip or chat context. Providers MAY use LLM-generated content. The synthesis method is implementation-defined.
 
 ## 6. Profile Matching
 
@@ -555,7 +588,7 @@ When implementing `formspec.profile.learn`, a provider:
 Any conformant Assist transport MUST provide:
 
 1. **Tool discovery** — the consumer can enumerate available tools together
-   with descriptions and JSON input schemas.
+   with descriptions and JSON input schemas. Tool discovery results SHOULD include only tools the provider actually supports. Consumers SHOULD NOT assume all tools from the normative catalog are present. Consumers SHOULD check tool enumeration before invocation, or handle `UNSUPPORTED` errors gracefully.
 2. **Tool invocation** — the consumer can invoke a tool by name with JSON input
    and receive the §4 envelope.
 3. **Error preservation** — transport adapters MUST preserve `ToolError`
@@ -570,7 +603,7 @@ For browser-native environments, Assist tools SHOULD be exposed through
 
 A conformant WebMCP binding:
 
-- **SHOULD** register tools individually rather than through bulk replacement.
+- **SHOULD** register tools incrementally via `registerTool()` rather than replacing the entire tool set atomically.
 - **SHOULD** use `requestUserInteraction()` or an equivalent browser-mediated
   confirmation path for `confirm: true` mutations.
 - **MAY** install a polyfill when native WebMCP is unavailable.
@@ -594,6 +627,8 @@ A conformant browser messaging binding SHOULD:
 - correlate requests and responses with stable call identifiers,
 - isolate privileged extension APIs from injected page code.
 
+Consumers and providers SHOULD use a `callId` string property to correlate requests and responses. The format is implementation-defined; UUIDs are RECOMMENDED.
+
 ### 7.5 HTTP Binding
 
 Remote agents MAY use an HTTP transport.
@@ -602,6 +637,8 @@ A conformant HTTP binding SHOULD expose:
 
 - `GET /formspec/tools` for discovery, and
 - `POST /formspec/tools/{name}` for invocation.
+
+The `{name}` segment uses the full dot-delimited tool name. Servers MUST NOT interpret dots in the tool name as path separators or file extensions.
 
 HTTP is a binding detail only. The normative contract remains the Assist tool
 surface and result envelope.

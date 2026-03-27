@@ -22,6 +22,14 @@ import type {
   UserProfile,
 } from './types.js';
 
+type ExtendedFormItem = FormItem & {
+  calculate?: string;
+  presentation?: { widgetHint?: string };
+  repeatable?: boolean;
+  minRepeat?: number;
+  maxRepeat?: number;
+};
+
 interface FieldStatus {
   path: string;
   label: string;
@@ -82,6 +90,22 @@ function findItem(definition: FormDefinition, path: string): FormItem | undefine
   return collectFieldMetadata(definition).get(path)?.item;
 }
 
+function findItemByPath(items: FormItem[], path: string, prefix = ''): FormItem | undefined {
+  for (const item of items) {
+    const itemPath = prefix ? `${prefix}.${item.key}` : item.key;
+    if (itemPath === path) {
+      return item;
+    }
+    if ('children' in item && Array.isArray(item.children) && (path.startsWith(`${itemPath}.`) || path.startsWith(`${itemPath}[`))) {
+      const result = findItemByPath(item.children as FormItem[], path, itemPath);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  return undefined;
+}
+
 function readPath(input: Record<string, unknown>): string {
   if (typeof input.path !== 'string' || input.path.length === 0) {
     throw new AssistError('INVALID_PATH', 'Expected a non-empty string path');
@@ -117,8 +141,8 @@ function readEntries(input: Record<string, unknown>): Array<{ path: string; valu
   if (!Array.isArray(input.entries) && !Array.isArray(input.matches)) {
     throw new AssistError('INVALID_VALUE', 'Expected entries or matches array');
   }
-  const entries = (Array.isArray(input.entries) ? input.entries : input.matches) as Array<Record<string, unknown>>;
-  return entries.map((entry, index) => {
+  const entries = Array.isArray(input.entries) ? input.entries : input.matches;
+  return (entries as unknown[]).map((entry, index) => {
     if (!isPlainObject(entry) || typeof entry.path !== 'string' || entry.path.length === 0) {
       throw new AssistError('INVALID_VALUE', `Expected entries[${index}].path to be a non-empty string`);
     }
@@ -236,7 +260,7 @@ function buildToolDeclarations(): ToolDeclaration[] {
     {
       name: 'formspec.field.list',
       description: 'List fields with summary state.',
-      inputSchema: { type: 'object', properties: { filter: { type: 'string' } }, additionalProperties: false },
+      inputSchema: { type: 'object', properties: { filter: { type: 'string', enum: ['all', 'required', 'empty', 'invalid', 'relevant'] } }, additionalProperties: false },
       annotations: { readOnlyHint: true },
     },
     {
@@ -502,7 +526,7 @@ class AssistProviderImpl implements AssistProvider {
       case 'formspec.form.describe':
         return () => ({
           title: this.engine.getDefinition().title,
-          description: (this.engine.getDefinition() as any).description,
+          description: this.engine.getDefinition().description,
           url: this.engine.getDefinition().url,
           version: this.engine.getDefinition().version,
           fieldCount: this.engine.getFieldPaths().length,
@@ -533,7 +557,7 @@ class AssistProviderImpl implements AssistProvider {
         });
       case 'formspec.profile.apply':
         return (input) => this.applyProfileMatches(
-          readEntries(input) as Array<{ path: string; value: unknown }>,
+          readEntries(input),
           input.confirm === true,
         );
       case 'formspec.profile.learn':
@@ -600,8 +624,18 @@ class AssistProviderImpl implements AssistProvider {
   private describeField(path: string): Record<string, unknown> {
     const vm = this.requireField(path);
     const basePath = normalizeFieldPath(path);
-    const item = findItem(this.engine.getDefinition(), basePath) as (FormItem & { calculate?: string }) | undefined;
+    const item = findItem(this.engine.getDefinition(), basePath) as ExtendedFormItem | undefined;
     const expression = typeof item?.calculate === 'string' ? item.calculate : undefined;
+    const widgetHint = item?.presentation?.widgetHint;
+    const indexMatch = path.match(/^(.*)\[(\d+)\]/);
+    const repeatIndex = indexMatch ? Number.parseInt(indexMatch[2], 10) : undefined;
+    const parentGroupPath = indexMatch ? indexMatch[1] : undefined;
+    const repeatCount = parentGroupPath ? this.engine.repeats[parentGroupPath]?.value : undefined;
+    const parentItem = parentGroupPath
+      ? findItemByPath(this.engine.getDefinition().items, parentGroupPath) as ExtendedFormItem | undefined
+      : undefined;
+    const minRepeat = parentItem?.minRepeat;
+    const maxRepeat = parentItem?.maxRepeat;
     return {
       path,
       label: vm.label.value,
@@ -616,7 +650,11 @@ class AssistProviderImpl implements AssistProvider {
       options: vm.options.value,
       calculated: expression !== undefined,
       expression,
-      calculationSource: expression ? 'definition' : undefined,
+      widget: widgetHint,
+      ...(repeatIndex !== undefined ? { repeatIndex } : {}),
+      ...(repeatCount !== undefined ? { repeatCount } : {}),
+      ...(minRepeat !== undefined ? { minRepeat } : {}),
+      ...(maxRepeat !== undefined ? { maxRepeat } : {}),
       help: this.getFieldHelp(path),
     };
   }
@@ -760,18 +798,13 @@ class AssistProviderImpl implements AssistProvider {
       const page = this.getPageProgress().find((entry) => !entry.complete);
       if (page) {
         const issue = this.getPageIssue(page.id);
-        return issue
-          ? {
-            pageId: page.id,
-            label: page.title ?? 'Next page',
-            reason: issue.reason,
-          }
-          : {
-            pageId: page.id,
-            label: page.title ?? 'Next page',
-          };
+        return {
+          pageId: page.id,
+          label: page.title ?? 'Next page',
+          reason: issue?.reason ?? 'empty',
+        };
       }
-      return { label: 'Complete' };
+      return { label: 'Complete', reason: 'complete' as const };
     }
 
     for (const path of this.fieldOrder) {
@@ -790,7 +823,7 @@ class AssistProviderImpl implements AssistProvider {
         return { path, label: status.label, reason: 'empty' };
       }
     }
-    return { label: 'Complete' };
+    return { label: 'Complete', reason: 'complete' as const };
   }
 
   private getPageProgress(): Array<{ id: string; title?: string; fieldCount: number; filledCount: number; complete: boolean }> {
@@ -915,7 +948,7 @@ class AssistProviderImpl implements AssistProvider {
       return { code: 'NOT_RELEVANT', message: `Field is not relevant: ${path}`, path };
     }
     try {
-      vm.setValue(value);
+      vm.setValue(value ?? null);
       return {
         accepted: true,
         value: vm.value.value,

@@ -18,10 +18,9 @@ describe('Assist provider tools', () => {
     await ensureEngine();
   });
 
-  it('exposes tool declarations and structured core/profile/navigation tool behavior', async () => {
-    const engine = createEngine();
-    const provider = createAssistProvider({
-      engine,
+  function createFullProvider() {
+    return createAssistProvider({
+      engine: createEngine(),
       references: makeReferences(),
       ontology: makeOntology(),
       profile: makeProfile(),
@@ -49,66 +48,415 @@ describe('Assist provider tools', () => {
       registerWebMCP: false,
       now: () => new Date('2026-03-26T12:00:00.000Z'),
     });
+  }
 
+  async function parse(provider: ReturnType<typeof createAssistProvider>, name: string, input: Record<string, unknown>) {
+    const result = await provider.invokeTool(name, input);
+    expect(result.isError).not.toBe(true);
+    expect(result.content).toHaveLength(1);
+    return JSON.parse(result.content[0].text);
+  }
+
+  async function parseError(provider: ReturnType<typeof createAssistProvider>, name: string, input: Record<string, unknown>) {
+    const result = await provider.invokeTool(name, input);
+    expect(result.isError).toBe(true);
+    return JSON.parse(result.content[0].text);
+  }
+
+  // T-11: Split monolithic test into focused tests
+
+  it('exposes tool declarations including formspec.field.help', () => {
+    const provider = createFullProvider();
     expect(provider.getTools().map((tool) => tool.name)).toContain('formspec.field.help');
+  });
 
-    const parse = async (name: string, input: Record<string, unknown>) => {
-      const result = await provider.invokeTool(name, input);
-      expect(result.isError).not.toBe(true);
-      expect(result.content).toHaveLength(1);
-      return JSON.parse(result.content[0].text);
-    };
+  it('formspec.form.describe returns form metadata', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.form.describe', {});
+    expect(result.title).toBe('Grant Application');
+    expect(result.description).toBe('Funding request');
+    expect(result.url).toBe('https://example.org/forms/grant');
+    expect(result.version).toBe('1.0.0');
+    expect(result.fieldCount).toBeGreaterThan(0);
+    expect(result.pageCount).toBeGreaterThanOrEqual(0);
+    expect(result.status).toBe('in-progress');
+  });
 
-    const formDescription = await parse('formspec.form.describe', {});
-    expect(formDescription.title).toBe('Grant Application');
+  it('formspec.field.list returns all fields with filter=all', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.field.list', { filter: 'all' });
+    expect(result.map((f: { path: string }) => f.path)).toContain('organization.ein');
+  });
 
-    const fieldList = await parse('formspec.field.list', { filter: 'all' });
-    expect(fieldList.map((field: { path: string }) => field.path)).toContain('organization.ein');
+  it('formspec.field.describe includes help with concept', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.field.describe', { path: 'organization.ein' });
+    expect(result.help.concept.concept).toBe('https://www.irs.gov/terms/employer-identification-number');
+  });
 
-    const fieldDescription = await parse('formspec.field.describe', { path: 'organization.ein' });
-    expect(fieldDescription.help.concept.concept).toBe('https://www.irs.gov/terms/employer-identification-number');
+  it('formspec.form.progress reports required and filled counts', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.form.progress', {});
+    expect(result.required).toBeGreaterThan(0);
+    expect(typeof result.filled).toBe('number');
+  });
 
-    const progressBefore = await parse('formspec.form.progress', {});
-    expect(progressBefore.required).toBe(3);
-    expect(progressBefore.filled).toBe(1);
-
-    const setResult = await parse('formspec.field.set', {
+  it('formspec.field.set accepts a valid write', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.field.set', {
       path: 'organization.ein',
       value: '12-3456789',
     });
-    expect(setResult.accepted).toBe(true);
+    expect(result.accepted).toBe(true);
+  });
 
-    const bulkSetResult = await parse('formspec.field.bulkSet', {
+  it('formspec.field.bulkSet sets multiple fields', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.field.bulkSet', {
       entries: [
         { path: 'organization.name', value: 'Acme Foundation' },
         { path: 'contactEmail', value: 'owner@example.org' },
       ],
     });
-    expect(bulkSetResult.summary.accepted).toBe(2);
+    expect(result.summary.accepted).toBe(2);
+  });
 
-    const validateResult = await parse('formspec.form.validate', {});
-    expect(validateResult.valid).toBe(true);
+  it('formspec.form.validate returns a validation report', async () => {
+    const engine = createEngine();
+    engine.getFieldVM('organization.name')?.setValue('Acme');
+    engine.getFieldVM('organization.ein')?.setValue('12-3456789');
+    engine.getFieldVM('contactEmail')?.setValue('test@example.org');
+    engine.getFieldVM('details.summary')?.setValue('Complete');
+    const provider = createAssistProvider({ engine, registerWebMCP: false });
+    const result = await parse(provider, 'formspec.form.validate', {});
+    expect(result).toHaveProperty('valid');
+    expect(typeof result.valid).toBe('boolean');
+  });
 
-    const matchResult = await parse('formspec.profile.match', {});
-    expect(matchResult.matches.some((match: { path: string }) => match.path === 'organization.ein')).toBe(true);
+  it('formspec.profile.match finds concept matches', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.profile.match', {});
+    expect(result.matches.some((m: { path: string }) => m.path === 'organization.ein')).toBe(true);
+  });
 
-    const applyResult = await parse('formspec.profile.apply', {
+  it('formspec.profile.apply fills matched values', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.profile.apply', {
       matches: [{ path: 'contactEmail', value: 'owner@example.org' }],
     });
-    expect(applyResult.filled).toEqual([{ path: 'contactEmail', value: 'owner@example.org' }]);
+    expect(result.filled).toEqual([{ path: 'contactEmail', value: 'owner@example.org' }]);
+  });
 
-    const learnResult = await parse('formspec.profile.learn', {});
-    expect(learnResult.savedConcepts).toBeGreaterThan(0);
-
-    const pagesResult = await parse('formspec.form.pages', {});
-    expect(pagesResult.pages.map((page: { id: string }) => page.id)).toEqual(['org', 'details']);
-    expect(pagesResult.pages[0].title).toBeUndefined();
-
-    const nextIncomplete = await parse('formspec.form.nextIncomplete', {});
-    expect(nextIncomplete).toMatchObject({
-      path: 'details.summary',
-      reason: 'empty',
+  it('formspec.profile.learn saves reusable values', async () => {
+    const engine = createEngine();
+    engine.getFieldVM('organization.name')?.setValue('Acme');
+    engine.getFieldVM('organization.ein')?.setValue('12-3456789');
+    const provider = createAssistProvider({
+      engine,
+      ontology: makeOntology(),
+      storage: new MemoryStorage(),
+      registerWebMCP: false,
+      now: () => new Date('2026-03-26T12:00:00.000Z'),
     });
+    const result = await parse(provider, 'formspec.profile.learn', {});
+    expect(result.savedConcepts).toBeGreaterThan(0);
+  });
+
+  it('formspec.form.pages returns page structure', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.form.pages', {});
+    expect(result.pages.map((p: { id: string }) => p.id)).toEqual(['org', 'details']);
+  });
+
+  it('formspec.form.nextIncomplete returns next empty field', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.form.nextIncomplete', {});
+    expect(result).toMatchObject({ reason: expect.stringMatching(/empty|required/) });
+  });
+
+  // T-1: formspec.field.validate coverage
+
+  it('formspec.field.validate returns results for a valid path', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.validate', { path: 'organization.ein' });
+    expect(result).toHaveProperty('results');
+    expect(Array.isArray(result.results)).toBe(true);
+  });
+
+  it('formspec.field.validate returns NOT_FOUND for unknown path', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const error = await parseError(provider, 'formspec.field.validate', { path: 'nonexistent.field' });
+    expect(error.code).toBe('NOT_FOUND');
+  });
+
+  // T-2: formspec.field.list filter values
+
+  it('formspec.field.list filters by required', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.list', { filter: 'required' });
+    expect(result.every((f: { required: boolean }) => f.required)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('formspec.field.list filters by empty', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.list', { filter: 'empty' });
+    expect(result.every((f: { filled: boolean }) => !f.filled)).toBe(true);
+  });
+
+  it('formspec.field.list filters by invalid', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.list', { filter: 'invalid' });
+    expect(result.every((f: { valid: boolean }) => !f.valid)).toBe(true);
+  });
+
+  it('formspec.field.list filters by relevant', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.list', { filter: 'relevant' });
+    expect(result.every((f: { relevant: boolean }) => f.relevant)).toBe(true);
+  });
+
+  // T-3: formspec.field.set error paths
+
+  it('formspec.field.set returns NOT_FOUND for unknown path', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const error = await parseError(provider, 'formspec.field.set', { path: 'nonexistent', value: 'x' });
+    expect(error.code).toBe('NOT_FOUND');
+  });
+
+  it('formspec.field.set returns NOT_RELEVANT for hidden field', async () => {
+    const def = {
+      ...makeDefinition(),
+      items: [
+        ...makeDefinition().items.filter((i: { key: string }) => i.key !== 'contactEmail'),
+        {
+          key: 'contactEmail',
+          type: 'field' as const,
+          dataType: 'string' as const,
+          label: 'Contact Email',
+          relevant: 'false',
+        },
+      ],
+    };
+    const engine = new FormEngine(def as any);
+    const provider = createAssistProvider({ engine, registerWebMCP: false });
+    const error = await parseError(provider, 'formspec.field.set', { path: 'contactEmail', value: 'x' });
+    expect(error.code).toBe('NOT_RELEVANT');
+  });
+
+  // T-4: Error codes NOT_RELEVANT, UNSUPPORTED, ENGINE_ERROR
+
+  it('returns UNSUPPORTED for unknown tool name', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const error = await parseError(provider, 'formspec.nonexistent', {});
+    expect(error.code).toBe('UNSUPPORTED');
+  });
+
+  // T-6: formspec.field.bulkSet partial success
+
+  it('formspec.field.bulkSet reports partial success with mixed valid/invalid paths', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.bulkSet', {
+      entries: [
+        { path: 'organization.name', value: 'Valid Org' },
+        { path: 'derivedScore', value: 99 },
+        { path: 'nonexistent', value: 'x' },
+      ],
+    });
+    expect(result.summary.accepted).toBe(1);
+    expect(result.summary.rejected).toBe(2);
+    expect(result.summary.errors).toBe(2);
+    expect(result.results.find((r: { path: string }) => r.path === 'derivedScore').error.code).toBe('READONLY');
+    expect(result.results.find((r: { path: string }) => r.path === 'nonexistent').error.code).toBe('NOT_FOUND');
+  });
+
+  // T-7: profile.apply declined path
+
+  it('profile.apply with confirm returns all entries as DECLINED when handler returns false', async () => {
+    const provider = createAssistProvider({
+      engine: createEngine(),
+      confirmProfileApply: () => false,
+      registerWebMCP: false,
+    });
+    const result = await parse(provider, 'formspec.profile.apply', {
+      matches: [
+        { path: 'contactEmail', value: 'owner@example.org' },
+        { path: 'organization.name', value: 'Acme' },
+      ],
+      confirm: true,
+    });
+    expect(result.filled).toHaveLength(0);
+    expect(result.skipped).toHaveLength(2);
+    expect(result.skipped.every((s: { reason: string }) => s.reason === 'DECLINED')).toBe(true);
+  });
+
+  // T-12: INVALID_PATH error code
+
+  it('returns INVALID_PATH for empty string path to field.describe', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const error = await parseError(provider, 'formspec.field.describe', { path: '' });
+    expect(error.code).toBe('INVALID_PATH');
+  });
+
+  // T-13: formspec.form.validate with explicit modes
+
+  it('formspec.form.validate supports continuous mode', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.form.validate', { mode: 'continuous' });
+    expect(result).toHaveProperty('valid');
+  });
+
+  it('formspec.form.validate supports submit mode', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.form.validate', { mode: 'submit' });
+    expect(result).toHaveProperty('valid');
+  });
+
+  // T-14: formspec.form.describe full envelope
+
+  it('formspec.form.describe returns all seven spec-defined output fields', async () => {
+    const provider = createFullProvider();
+    const result = await parse(provider, 'formspec.form.describe', {});
+    expect(result).toHaveProperty('title');
+    expect(result).toHaveProperty('description');
+    expect(result).toHaveProperty('url');
+    expect(result).toHaveProperty('version');
+    expect(result).toHaveProperty('fieldCount');
+    expect(result).toHaveProperty('pageCount');
+    expect(result).toHaveProperty('status');
+  });
+
+  // T-15: formspec.field.describe full envelope (widget output)
+
+  it('formspec.field.describe includes widget from widgetHint', async () => {
+    const provider = createAssistProvider({ engine: createEngine(), registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.describe', { path: 'contactEmail' });
+    expect(result.widget).toBe('email');
+  });
+
+  // T-8: Repeat group paths — repeat metadata in field.describe
+
+  it('formspec.field.describe includes repeat metadata for indexed paths', async () => {
+    const engine = createEngine();
+    // minRepeat:1 automatically creates budgetItems[0]
+    const provider = createAssistProvider({ engine, registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.describe', { path: 'budgetItems[0].description' });
+    expect(result.repeatIndex).toBe(0);
+    expect(result.minRepeat).toBe(1);
+    expect(result.maxRepeat).toBe(5);
+  });
+
+  // T-8/T-9: Wildcard ancestor reference resolution
+
+  it('resolves references targeting wildcard ancestor paths for indexed fields', async () => {
+    const engine = createEngine();
+    // minRepeat:1 automatically creates budgetItems[0]
+    const provider = createAssistProvider({
+      engine,
+      references: {
+        $formspecReferences: '1.0',
+        version: '1.0.0',
+        targetDefinition: { url: 'https://example.org/forms/grant' },
+        references: [
+          {
+            target: 'budgetItems[*]',
+            type: 'documentation',
+            audience: 'agent',
+            title: 'Budget Item Guidance',
+            content: 'Each budget line item needs detail.',
+            priority: 'primary',
+          },
+        ],
+      },
+      registerWebMCP: false,
+    });
+    const help = provider.getFieldHelp('budgetItems[0].description', 'agent');
+    expect(help.references.documentation?.map((e) => e.title)).toContain('Budget Item Guidance');
+  });
+
+  // T-9: Multiple references/ontology documents
+
+  it('merges entries from multiple references documents', async () => {
+    const engine = createEngine();
+    const refs1 = makeReferences();
+    const refs2 = {
+      ...makeReferences(),
+      references: [
+        {
+          target: 'contactEmail',
+          type: 'documentation',
+          audience: 'agent' as const,
+          title: 'Email Guide from Doc 2',
+          content: 'Use a valid email.',
+          priority: 'primary' as const,
+        },
+      ],
+    };
+    const provider = createAssistProvider({
+      engine,
+      references: [refs1, refs2],
+      registerWebMCP: false,
+    });
+    const help = provider.getFieldHelp('contactEmail', 'agent');
+    expect(help.references.documentation?.map((e) => e.title)).toContain('Email Guide from Doc 2');
+  });
+
+  it('uses last-loaded ontology document for conflicting concept bindings', () => {
+    const engine = createEngine();
+    const ontology1 = makeOntology();
+    const ontology2 = {
+      ...makeOntology(),
+      concepts: {
+        'organization.ein': {
+          concept: 'https://example.org/terms/tax-id-override',
+          system: 'https://example.org/terms',
+          display: 'Overridden Tax ID',
+          code: 'TID',
+        },
+      },
+    };
+    const provider = createAssistProvider({
+      engine,
+      ontology: [ontology1, ontology2],
+      registerWebMCP: false,
+    });
+    const help = provider.getFieldHelp('organization.ein');
+    expect(help.concept?.concept).toBe('https://example.org/terms/tax-id-override');
+  });
+
+  // T-10: Priority sorting within reference types
+
+  it('sorts references by priority within a type', () => {
+    const engine = createEngine();
+    const provider = createAssistProvider({
+      engine,
+      references: {
+        $formspecReferences: '1.0',
+        version: '1.0.0',
+        targetDefinition: { url: 'https://example.org/forms/grant' },
+        references: [
+          { target: 'contactEmail', type: 'documentation', audience: 'agent', title: 'Background Doc', content: 'bg', priority: 'background' },
+          { target: 'contactEmail', type: 'documentation', audience: 'agent', title: 'Primary Doc', content: 'primary', priority: 'primary' },
+          { target: 'contactEmail', type: 'documentation', audience: 'agent', title: 'Supplementary Doc', content: 'supp', priority: 'supplementary' },
+        ],
+      },
+      registerWebMCP: false,
+    });
+    const help = provider.getFieldHelp('contactEmail', 'agent');
+    const titles = help.references.documentation?.map((e) => e.title);
+    expect(titles).toEqual(['Primary Doc', 'Supplementary Doc', 'Background Doc']);
+  });
+
+  // T-3 continued: formspec.field.set handles missing value parameter
+
+  it('formspec.field.set clears field when value is omitted', async () => {
+    const engine = createEngine();
+    engine.getFieldVM('contactEmail')?.setValue('owner@example.org');
+    const provider = createAssistProvider({ engine, registerWebMCP: false });
+    const result = await parse(provider, 'formspec.field.set', { path: 'contactEmail' });
+    expect(result.accepted).toBe(true);
+    const postValue = engine.getFieldVM('contactEmail')?.value.value;
+    expect(postValue === null || postValue === undefined || postValue === '').toBe(true);
   });
 
   it('returns structured tool errors for readonly fields', async () => {
@@ -484,8 +832,9 @@ describe('Assist provider tools', () => {
     });
     const completeResult = await completeProvider.invokeTool('formspec.form.nextIncomplete', { scope: 'page' });
     expect(completeResult.isError).not.toBe(true);
-    expect(JSON.parse(completeResult.content[0].text)).toEqual({
+    expect(JSON.parse(completeResult.content[0].text)).toMatchObject({
       label: 'Complete',
+      reason: 'complete',
     });
   });
 

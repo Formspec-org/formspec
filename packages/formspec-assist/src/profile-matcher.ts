@@ -59,15 +59,17 @@ export class ProfileMatcher {
           continue;
         }
         const entry = profile.concepts[key];
-        equivalentMatch = {
-          path,
-          concept: key,
-          value: entry.value,
-          confidence: confidenceForRelationship(equivalent.type),
-          relationship: equivalent.type ?? 'exact',
-          source: entry.source,
-        };
-        break;
+        const confidence = confidenceForRelationship(equivalent.type);
+        if (!equivalentMatch || confidence > equivalentMatch.confidence) {
+          equivalentMatch = {
+            path,
+            concept: key,
+            value: entry.value,
+            confidence,
+            relationship: equivalent.type ?? 'exact',
+            source: entry.source,
+          };
+        }
       }
       if (equivalentMatch && equivalentMatch.confidence >= this.threshold) {
         matches.push(equivalentMatch);

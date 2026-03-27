@@ -19,7 +19,7 @@ export interface ReferenceEntry {
   id?: string;
   type: string;
   audience: 'human' | 'agent' | 'both';
-  title?: string;
+  title: string;
   uri?: string;
   content?: string | Record<string, unknown>;
   mediaType?: string;
@@ -53,7 +53,7 @@ export interface ConceptEquivalent {
   system: string;
   code: string;
   display?: string;
-  type?: string;
+  type?: 'exact' | 'close' | 'broader' | 'narrower' | 'related';
   concept?: string;
 }
 
@@ -101,7 +101,7 @@ export interface ProfileMatch {
   concept?: string;
   value: unknown;
   confidence: number;
-  relationship?: string;
+  relationship?: 'exact' | 'close' | 'broader' | 'narrower' | 'related' | 'field-key';
   source: ProfileEntrySource;
 }
 

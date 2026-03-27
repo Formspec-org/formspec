@@ -57,6 +57,7 @@ export function makeDefinition() {
         dataType: 'string',
         label: 'Contact Email',
         required: true,
+        presentation: { widgetHint: 'email' },
       },
       {
         key: 'details',
@@ -70,6 +71,30 @@ export function makeDefinition() {
             dataType: 'string',
             label: 'Project Summary',
             required: false,
+          },
+        ],
+      },
+      {
+        key: 'budgetItems',
+        type: 'group',
+        label: 'Budget Items',
+        repeatable: true,
+        minRepeat: 1,
+        maxRepeat: 5,
+        children: [
+          {
+            key: 'description',
+            type: 'field',
+            dataType: 'string',
+            label: 'Item Description',
+            required: true,
+          },
+          {
+            key: 'amount',
+            type: 'field',
+            dataType: 'number',
+            label: 'Amount',
+            required: true,
           },
         ],
       },
