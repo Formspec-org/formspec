@@ -10,6 +10,9 @@ export function DisplayBlock({ itemKey, label, widgetHint }: DisplayBlockProps) 
   return (
     <div
       data-testid={`layout-display-${itemKey}`}
+      data-layout-node
+      data-layout-node-type="display"
+      data-layout-node-id={itemKey}
       className="flex items-center gap-2 rounded border-l-2 border-accent/40 bg-surface px-3 py-1.5"
     >
       {widgetHint && (

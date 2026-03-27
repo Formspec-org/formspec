@@ -11,6 +11,9 @@ export function LayoutContainer({ component, nodeId, children }: LayoutContainer
   return (
     <div
       data-testid={`layout-container-${nodeId}`}
+      data-layout-node
+      data-layout-node-type="layout"
+      data-layout-node-id={nodeId}
       className="rounded border border-dashed border-muted bg-surface px-3 py-2"
     >
       <div className="mb-1.5 flex items-center gap-2">
