@@ -10,6 +10,9 @@ interface GroupNodeProps {
   maxRepeat?: number;
   depth: number;
   children: ReactNode;
+  selected?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 export function GroupNode({
@@ -20,18 +23,30 @@ export function GroupNode({
   maxRepeat,
   depth,
   children,
+  selected,
+  onClick,
+  onContextMenu,
 }: GroupNodeProps) {
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <div data-testid={`group-${itemKey}`} style={{ paddingLeft: depth * 20 }}>
+    <div
+      data-testid={`group-${itemKey}`}
+      style={{ paddingLeft: depth * 20 }}
+      className={selected ? 'border border-accent rounded bg-accent/5' : ''}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+    >
       {/* Group header */}
       <div
         className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-subtle rounded transition-colors"
-        onClick={() => setExpanded(!expanded)}
       >
         {/* Expand/collapse toggle */}
-        <span className="text-[10px] text-muted w-3 shrink-0 select-none">
+        <span
+          data-testid={`toggle-${itemKey}`}
+          className="text-[10px] text-muted w-3 shrink-0 select-none"
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+        >
           {expanded ? '\u25BE' : '\u25B8'}
         </span>
 

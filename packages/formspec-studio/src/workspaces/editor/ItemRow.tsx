@@ -11,6 +11,9 @@ interface ItemRowProps {
   widgetHint?: string;
   binds: Record<string, string>;
   depth: number;
+  selected?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 export function ItemRow({
@@ -21,6 +24,9 @@ export function ItemRow({
   widgetHint,
   binds,
   depth,
+  selected,
+  onClick,
+  onContextMenu,
 }: ItemRowProps) {
   const isField = itemType === 'field';
   const testId = isField ? `field-${itemKey}` : `display-${itemKey}`;
@@ -33,8 +39,13 @@ export function ItemRow({
   return (
     <div
       data-testid={testId}
-      className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-subtle transition-colors"
+      className={[
+        'flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors',
+        selected ? 'border border-accent bg-accent/5' : 'hover:bg-subtle',
+      ].join(' ')}
       style={{ paddingLeft: depth * 20 + 8 }}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
     >
       {/* Type icon */}
       {isField && dt && (

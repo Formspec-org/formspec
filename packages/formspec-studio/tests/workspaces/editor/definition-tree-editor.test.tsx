@@ -205,12 +205,12 @@ describe('DefinitionTreeEditor', () => {
     // Child visible by default
     expect(screen.getByText('Child Field')).toBeInTheDocument();
 
-    // Click the group header to collapse
-    fireEvent.click(screen.getByTestId('group-section').querySelector('[class*="cursor-pointer"]')!);
+    // Click the expand/collapse toggle to collapse
+    fireEvent.click(screen.getByTestId('toggle-section'));
     expect(screen.queryByText('Child Field')).toBeNull();
 
     // Click again to expand
-    fireEvent.click(screen.getByTestId('group-section').querySelector('[class*="cursor-pointer"]')!);
+    fireEvent.click(screen.getByTestId('toggle-section'));
     expect(screen.getByText('Child Field')).toBeInTheDocument();
   });
 });
