@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { useDroppable } from '@dnd-kit/react';
-import { DragHandle } from '../editor/DragHandle';
+import { DragHandle } from '../../components/ui/DragHandle';
 import { GridCanvas } from './GridCanvas';
 import type { PageItemView, PageView, PlaceableItem } from '@formspec-org/studio-core';
 import type { PageActions } from './mode-renderer-props';
