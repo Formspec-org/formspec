@@ -1,5 +1,5 @@
 /** @filedesc Main editor canvas with drag-and-drop, page tabs, context menu, and item palette. */
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react';
 import { PointerSensor, KeyboardSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { useDefinition } from '../../state/useDefinition';
@@ -258,6 +258,17 @@ export function EditorCanvas() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('mousedown', onMouseDown);
     };
+  }, [contextMenu]);
+
+  // Clamp context menu to viewport using actual rendered dimensions
+  useLayoutEffect(() => {
+    const el = contextMenuRef.current;
+    if (!contextMenu || !el) return;
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (rect.right > vw) el.style.left = `${Math.max(0, vw - rect.width)}px`;
+    if (rect.bottom > vh) el.style.top = `${Math.max(0, vh - rect.height)}px`;
   }, [contextMenu]);
 
   // Escape to deselect (only when context menu is not open)
