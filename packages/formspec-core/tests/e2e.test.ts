@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
-import { ensureCurrentFormspecRust, pythonTestEnv, resolvePython } from './python.js';
+import { pythonTestEnv, resolvePython } from './python.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,7 +79,6 @@ describe('Formspec Studio Core E2E Validation', { timeout: 60_000 }, () => {
   };
 
   beforeAll(() => {
-    ensureCurrentFormspecRust(PYTHON, path.resolve(__dirname, '../../..'));
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'formspec-e2e-'));
     project = createRawProject();
   });

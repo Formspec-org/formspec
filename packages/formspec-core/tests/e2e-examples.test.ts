@@ -5,7 +5,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
-import { ensureCurrentFormspecRust, pythonTestEnv, resolvePython } from './python.js';
+import { pythonTestEnv, resolvePython } from './python.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -261,7 +261,6 @@ describe('Formspec Studio E2E Examples Rehydration', () => {
 
   beforeAll(() => {
     process.env.DIAGNOSE_DEBUG = '1';
-    ensureCurrentFormspecRust(PYTHON, path.resolve(__dirname, '../../..'));
     tmpDir = path.resolve(__dirname, '../../../reconstructed-examples');
     if (fs.existsSync(tmpDir)) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
