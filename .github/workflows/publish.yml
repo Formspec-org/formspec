@@ -22,7 +22,7 @@ jobs:
           node-version: "22"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
-      - run: npm install -g npm@latest
+      - run: npm install -g npm@10
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
