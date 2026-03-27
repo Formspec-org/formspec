@@ -1,5 +1,5 @@
 /** @filedesc Main studio shell; composes the header, blueprint sidebar, workspace tabs, and status bar. */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { type ColorScheme } from '../hooks/useColorScheme';
 import JSZip from 'jszip';
 import { createProject, type Project } from '@formspec-org/studio-core';
@@ -7,8 +7,10 @@ import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
 import { StructureTree } from './blueprint/StructureTree';
-import { EditorCanvas } from '../workspaces/editor/EditorCanvas';
-import { ItemProperties } from '../workspaces/editor/ItemProperties';
+import { DefinitionTreeEditor } from '../workspaces/editor/DefinitionTreeEditor';
+import { EditorPropertiesPanel } from '../workspaces/editor/properties/EditorPropertiesPanel';
+import { LayoutCanvas } from '../workspaces/layout/LayoutCanvas';
+import { ComponentProperties } from '../workspaces/layout/properties/ComponentProperties';
 import { LogicTab } from '../workspaces/logic/LogicTab';
 import { ThemeTab } from '../workspaces/theme/ThemeTab';
 import { MappingTab } from '../workspaces/mapping/MappingTab';
@@ -33,16 +35,15 @@ import { SettingsSection } from './blueprint/SettingsSection';
 import { SettingsDialog } from './SettingsDialog';
 import { ThemeOverview } from './blueprint/ThemeOverview';
 import { DataTab, type DataSectionFilter } from '../workspaces/data/DataTab';
-import { PagesTab } from '../workspaces/pages/PagesTab';
 import { type MappingTabId } from '../workspaces/mapping/MappingTab';
 import { type Viewport } from '../workspaces/preview/ViewportSwitcher';
 import { type PreviewMode } from '../workspaces/preview/PreviewTab';
 
 const WORKSPACES: Record<string, React.FC> = {
-  Editor: EditorCanvas,
+  Editor: DefinitionTreeEditor,
   Logic: LogicTab,
   Data: DataTab,
-  Layout: PagesTab,
+  Layout: LayoutCanvas,
   Theme: ThemeTab,
   Mapping: MappingTab,
   Preview: PreviewTab,
@@ -81,6 +82,9 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [chatPrompt, setChatPrompt] = useState<string | null>(null);
   const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
+  const blueprintCloseRef = useRef<HTMLButtonElement | null>(null);
+  const propertiesBackRef = useRef<HTMLButtonElement | null>(null);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
   const SidebarComponent = SIDEBAR_COMPONENTS[activeSection];
   const project = useProject();
   const { selectedKey, deselect } = useSelection();
@@ -88,6 +92,9 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     ? Math.min(window.innerWidth, document.documentElement?.clientWidth || window.innerWidth)
     : Infinity;
   const compactLayout = isTabletLayout || viewportWidth <= 1024;
+  const overlayOpen = compactLayout && (showBlueprintDrawer || showPropertiesModal);
+  const activePanelId = `studio-panel-${activeTab.toLowerCase()}`;
+  const activeTabId = `studio-tab-${activeTab.toLowerCase()}`;
 
   const workspaceContent = (() => {
     switch (activeTab) {
@@ -201,6 +208,40 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   }, []);
 
   useEffect(() => {
+    if (!compactLayout || !showBlueprintDrawer) return;
+    lastFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    blueprintCloseRef.current?.focus();
+    return () => {
+      lastFocusRef.current?.focus();
+    };
+  }, [compactLayout, showBlueprintDrawer]);
+
+  useEffect(() => {
+    if (!compactLayout || !showPropertiesModal || !selectedKey) return;
+    lastFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    propertiesBackRef.current?.focus();
+    return () => {
+      lastFocusRef.current?.focus();
+    };
+  }, [compactLayout, showPropertiesModal, selectedKey]);
+
+  useEffect(() => {
+    if (!overlayOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (showPropertiesModal) {
+        deselect();
+        return;
+      }
+      if (showBlueprintDrawer) {
+        setShowBlueprintDrawer(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [overlayOpen, showBlueprintDrawer, showPropertiesModal, deselect]);
+
+  useEffect(() => {
     const onAIAction = (event: Event) => {
       const { prompt } = (event as CustomEvent<{ prompt: string }>).detail ?? {};
       if (prompt) {
@@ -276,77 +317,23 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         colorScheme={colorScheme}
       />
       <CanvasTargetsProvider>
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden" aria-hidden={overlayOpen ? true : undefined}>
           {/* Desktop Left Sidebar */}
-          <aside className={`w-[230px] border-r border-border bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}>
+          <aside
+            className={`w-[230px] border-r border-border bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}
+            aria-label="Blueprint sidebar"
+          >
             <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
             <div className="flex-1 overflow-y-auto px-4 py-2">
               {SidebarComponent && <SidebarComponent />}
             </div>
           </aside>
 
-          {/* Compact Blueprint Drawer */}
-          {compactLayout && showBlueprintDrawer && (
-            <div
-              className="fixed inset-0 z-40 bg-black/40 transition-opacity"
-              onClick={() => setShowBlueprintDrawer(false)}
-            >
-              <aside
-                className="w-[280px] h-full bg-surface shadow-xl flex flex-col animate-in slide-in-from-left duration-200"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <span className="font-bold text-sm">Blueprint</span>
-                  <button
-                    type="button"
-                    className="p-1 rounded hover:bg-subtle"
-                    onClick={() => setShowBlueprintDrawer(false)}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
-                  <div className="px-4 py-2">
-                    {SidebarComponent && <SidebarComponent />}
-                  </div>
-                </div>
-              </aside>
-            </div>
-          )}
-
-          {/* Compact Properties Modal (Full Screen) */}
-          {compactLayout && showPropertiesModal && selectedKey && (
-            <div className="fixed inset-0 z-50 bg-surface flex flex-col animate-in slide-in-from-bottom duration-300">
-              <div className="flex items-center justify-between p-4 border-b border-border bg-surface shrink-0">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="p-1 -ml-1 rounded hover:bg-subtle"
-                    onClick={() => deselect()}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m15 18-6-6 6-6"/>
-                    </svg>
-                  </button>
-                  <span className="font-bold text-sm truncate max-w-[200px]">{selectedKey}</span>
-                </div>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 bg-accent text-white text-[13px] font-bold rounded hover:bg-accent/90 transition-colors"
-                  onClick={() => setShowPropertiesModal(false)}
-                >
-                  Done
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 pb-24">
-                <ItemProperties showActions={activeTab === 'Editor'} />
-              </div>
-            </div>
-          )}
-
           <main className="flex-1 overflow-y-auto bg-bg-default min-w-0">
             <div
+              id={activePanelId}
+              role="tabpanel"
+              aria-labelledby={activeTabId}
               data-testid={`workspace-${activeTab}`}
               data-workspace={activeTab}
               className="h-full flex flex-col"
@@ -361,8 +348,10 @@ export function Shell({ colorScheme }: ShellProps = {}) {
             className={`w-[270px] border-l border-border bg-surface overflow-y-auto shrink-0 ${compactLayout || showChatPanel ? 'hidden' : ''}`}
             data-testid="properties"
             data-responsive-hidden={compactLayout ? 'true' : 'false'}
+            aria-label="Properties panel"
           >
-            <ItemProperties showActions={activeTab === 'Editor'} />
+            {activeTab === 'Editor' && <EditorPropertiesPanel />}
+            {activeTab === 'Layout' && <ComponentProperties />}
           </aside>
           {showChatPanel && !compactLayout && (
             <aside className="w-[360px] shrink-0" data-testid="chat-panel-container">
@@ -374,6 +363,79 @@ export function Shell({ colorScheme }: ShellProps = {}) {
             </aside>
           )}
         </div>
+
+        {/* Compact Blueprint Drawer */}
+        {compactLayout && showBlueprintDrawer && (
+          <div
+            className="fixed inset-0 z-40 bg-black/40 transition-opacity"
+            onClick={() => setShowBlueprintDrawer(false)}
+          >
+            <aside
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="blueprint-drawer-title"
+              className="w-[280px] h-full bg-surface shadow-xl flex flex-col animate-in slide-in-from-left duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 id="blueprint-drawer-title" className="font-bold text-sm">Blueprint</h2>
+                <button
+                  ref={blueprintCloseRef}
+                  type="button"
+                  aria-label="Close blueprint drawer"
+                  className="p-1 rounded hover:bg-subtle"
+                  onClick={() => setShowBlueprintDrawer(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
+                <div className="px-4 py-2">
+                  {SidebarComponent && <SidebarComponent />}
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {/* Compact Properties Modal (Full Screen) */}
+        {compactLayout && showPropertiesModal && selectedKey && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="properties-modal-title"
+            className="fixed inset-0 z-50 bg-surface flex flex-col animate-in slide-in-from-bottom duration-300"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-border bg-surface shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  ref={propertiesBackRef}
+                  type="button"
+                  aria-label="Close properties panel"
+                  className="p-1 -ml-1 rounded hover:bg-subtle"
+                  onClick={() => deselect()}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                  </svg>
+                </button>
+                <h2 id="properties-modal-title" className="font-bold text-sm truncate max-w-[200px]">{selectedKey}</h2>
+              </div>
+              <button
+                type="button"
+                className="px-3 py-1.5 bg-accent text-white text-[13px] font-bold rounded hover:bg-accent/90 transition-colors"
+                onClick={() => setShowPropertiesModal(false)}
+              >
+                Done
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 pb-24">
+              {activeTab === 'Editor' && <EditorPropertiesPanel />}
+              {activeTab === 'Layout' && <ComponentProperties />}
+            </div>
+          </div>
+        )}
       </CanvasTargetsProvider>
       <StatusBar />
       <CommandPalette open={showPalette} onClose={() => setShowPalette(false)} />
