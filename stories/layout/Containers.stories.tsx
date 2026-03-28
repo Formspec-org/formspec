@@ -1,28 +1,20 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { WebComponentStory } from '../helpers/WebComponentStory';
+import { SideBySideStory } from '../_shared/SideBySideStory';
+import { contactFormDef } from '../_shared/definitions';
 import {
-    contactFormDef,
-    contactFormComponentDoc,
     groupedFormDef,
+    contactFormComponentDoc,
     groupedFormComponentDoc,
-} from '../helpers/definitions';
+} from './definitions';
 
-const meta: Meta<typeof WebComponentStory> = {
-    title: 'Layout/Web Component',
-    component: WebComponentStory,
-    args: { showSubmit: false },  // Layout demos — submission shown in Examples
-    parameters: {
-        docs: {
-            story: { inline: false },
-            description: {
-                component: 'Container layouts rendered via the **Web Component** (`<formspec-render>`). Uses the shared layout planner with the built-in DOM renderer.',
-            },
-        },
-    },
+const meta: Meta<typeof SideBySideStory> = {
+    title: 'Layout/Containers',
+    component: SideBySideStory,
+    args: { showSubmit: false },
 };
 export default meta;
 
-type Story = StoryObj<typeof WebComponentStory>;
+type Story = StoryObj<typeof SideBySideStory>;
 
 /** Flat fields — no groups, no component document. */
 export const ContactForm: Story = {

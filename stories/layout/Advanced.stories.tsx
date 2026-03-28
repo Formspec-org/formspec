@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { FormStory } from '../helpers/FormStory';
+import { SideBySideStory } from '../_shared/SideBySideStory';
+import { contactFormDef } from '../_shared/definitions';
 import {
-    contactFormDef,
     collapsibleComponentDoc,
     accordionComponentDoc,
     accordionMultiComponentDoc,
@@ -10,16 +10,16 @@ import {
     popoverComponentDoc,
     wizardComponentDoc,
     tabsComponentDoc,
-} from '../helpers/definitions';
+} from './definitions';
 
-const meta: Meta<typeof FormStory> = {
+const meta: Meta<typeof SideBySideStory> = {
     title: 'Layout/Advanced',
-    component: FormStory,
+    component: SideBySideStory,
     args: { showSubmit: false, definition: contactFormDef },
 };
 export default meta;
 
-type Story = StoryObj<typeof FormStory>;
+type Story = StoryObj<typeof SideBySideStory>;
 
 export const Collapsible: Story = {
     name: 'Collapsible',

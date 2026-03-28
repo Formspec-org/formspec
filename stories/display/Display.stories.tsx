@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { FormStory } from '../helpers/FormStory';
+import { SideBySideStory } from '../_shared/SideBySideStory';
+import { contactFormDef } from '../_shared/definitions';
 import {
     allDisplayDef,
-    contactFormDef,
     alertVariantsComponentDoc,
     headingHierarchyComponentDoc,
     badgeSpacerComponentDoc,
@@ -12,16 +12,16 @@ import {
     validationSummaryComponentDoc,
     dataTableDef,
     dataTableComponentDoc,
-} from '../helpers/definitions';
+} from './definitions';
 
-const meta: Meta<typeof FormStory> = {
+const meta: Meta<typeof SideBySideStory> = {
     title: 'Display/Components',
-    component: FormStory,
+    component: SideBySideStory,
     args: { showSubmit: false },
 };
 export default meta;
 
-type Story = StoryObj<typeof FormStory>;
+type Story = StoryObj<typeof SideBySideStory>;
 
 /** Heading, Text (paragraph), Divider, and Alert (banner) in one form. */
 export const AllDisplayTypes: Story = {

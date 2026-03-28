@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { FormStory } from '../helpers/FormStory';
-import { textInputDef, textInputDetailedDef, textareaDef } from '../helpers/definitions';
+import { SideBySideStory } from '../_shared/SideBySideStory';
+import { textInputDef, textInputDetailedDef, textareaDef } from './definitions';
 
-const meta: Meta<typeof FormStory> = {
-    title: 'Fields/TextInput',
-    component: FormStory,
+const meta: Meta<typeof SideBySideStory> = {
+    title: 'Fields/Text',
+    component: SideBySideStory,
 };
 export default meta;
 
-type Story = StoryObj<typeof FormStory>;
+type Story = StoryObj<typeof SideBySideStory>;
 
 export const Basic: Story = {
     args: { definition: textInputDef },

@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { WebComponentStory } from '../helpers/WebComponentStory';
+import { WebComponentStory } from '../_shared/WebComponentStory';
 import { uswdsAdapter } from '@formspec-org/adapters';
 import definition from '../../examples/uswds-grant/grant.definition.json';
 import theme from '../../examples/uswds-grant/grant.theme.json';
 
 const meta: Meta<typeof WebComponentStory> = {
-    title: 'Examples/Grant Application (Web Component)',
+    title: 'Examples/USWDS Grant Form',
     component: WebComponentStory,
     parameters: {
         docs: {

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { WebComponentStory } from '../helpers/WebComponentStory';
+import { WebComponentStory } from '../_shared/WebComponentStory';
 import { uswdsAdapter } from '@formspec-org/adapters';
+import { contactFormDef, displayDef } from '../_shared/definitions';
 import {
     textInputDef,
     textInputDetailedDef,
@@ -14,15 +15,11 @@ import {
     datePickerDef,
     moneyInputDef,
     toggleDef,
-    contactFormDef,
-    displayDef,
-    repeatGroupDef,
-    conditionalDef,
-    validationDef,
-} from '../helpers/definitions';
+} from '../fields/definitions';
+import { repeatGroupDef, conditionalDef, validationDef } from '../behavior/definitions';
 
 const meta: Meta<typeof WebComponentStory> = {
-    title: 'Web Component/USWDS Adapter',
+    title: 'Adapters/USWDS',
     component: WebComponentStory,
     parameters: {
         docs: {
