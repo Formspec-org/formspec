@@ -266,14 +266,14 @@ export const popoverComponentDoc = {
     },
 };
 
-/** Wizard component document — multi-step form with navigation. */
+/** Wizard component document — multi-step form via pageMode on Stack > Page. */
 export const wizardComponentDoc = {
     "$formspecComponent": "1.0",
     name: "wizard-demo",
     title: "Wizard Demo",
+    formPresentation: { pageMode: "wizard", showProgress: true },
     tree: {
-        component: "Wizard",
-        showProgress: true,
+        component: "Stack",
         children: [
             {
                 component: "Page",
@@ -302,7 +302,7 @@ export const tabsComponentDoc = {
     title: "Tabs Demo",
     tree: {
         component: "Tabs",
-        labels: ["Personal", "Contact"],
+        tabLabels: ["Personal", "Contact"],
         children: [
             {
                 component: "Stack",

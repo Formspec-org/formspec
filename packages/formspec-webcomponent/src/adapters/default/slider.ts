@@ -20,6 +20,7 @@ export const renderSlider: AdapterRenderFn<SliderBehavior> = (
     if (behavior.min != null) input.min = String(behavior.min);
     if (behavior.max != null) input.max = String(behavior.max);
     if (behavior.step != null) input.step = String(behavior.step);
+    input.value = String(behavior.min ?? 0);
 
     if (behavior.showTicks && behavior.min != null && behavior.max != null && behavior.step != null) {
         const tickCount = Math.floor((behavior.max - behavior.min) / behavior.step) + 1;

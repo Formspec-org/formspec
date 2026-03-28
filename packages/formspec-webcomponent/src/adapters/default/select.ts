@@ -13,10 +13,10 @@ export const renderSelect: AdapterRenderFn<SelectBehavior> = (
     select.name = behavior.fieldPath;
     select.id = behavior.id;
 
-    if (behavior.placeholder) {
+    {
         const placeholderOpt = document.createElement('option');
         placeholderOpt.value = '';
-        placeholderOpt.textContent = behavior.placeholder;
+        placeholderOpt.textContent = behavior.placeholder || 'Select\u2026';
         placeholderOpt.disabled = true;
         placeholderOpt.selected = true;
         select.appendChild(placeholderOpt);

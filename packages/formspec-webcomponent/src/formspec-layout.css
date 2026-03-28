@@ -157,8 +157,23 @@
   opacity: 0.85;
 }
 
-.formspec-repeat-add:hover {
+.formspec-repeat-add:hover,
+.formspec-repeat-remove:hover {
   opacity: 1;
+}
+
+.formspec-repeat-remove {
+  align-self: flex-start;
+  margin-top: var(--formspec-spacing-sm, 0.5rem);
+  padding: 0.5em 1em;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: 1px solid var(--formspec-color-error, #dc2626);
+  border-radius: var(--formspec-radius-sm, 0.25rem);
+  background: transparent;
+  color: var(--formspec-color-error, #dc2626);
+  opacity: 0.85;
 }
 
 /* ── Group (definition-only fallback) ──────────────────────────── */

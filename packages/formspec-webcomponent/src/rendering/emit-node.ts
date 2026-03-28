@@ -116,7 +116,7 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
 
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
-                removeBtn.className = 'formspec-repeat-add';
+                removeBtn.className = 'formspec-repeat-remove';
                 removeBtn.textContent = `Remove ${item?.label || bindKey}`;
                 const removeIdx = idx;
                 removeBtn.addEventListener('click', () => {

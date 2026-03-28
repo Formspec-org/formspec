@@ -6,7 +6,7 @@ export const allDisplayDef = {
     title: "All Display Components",
     items: [
         { key: "h1", type: "display", label: "Primary Heading", presentation: { widgetHint: "heading" } },
-        { key: "text1", type: "display", label: "This is a **paragraph** with *markdown* support and a [link](https://example.com).", presentation: { widgetHint: "paragraph" } },
+        { key: "text1", type: "display", label: "This is a paragraph of informational text with plain formatting. Markdown requires the Text component with format: markdown.", presentation: { widgetHint: "paragraph" } },
         { key: "divider1", type: "display", label: "", presentation: { widgetHint: "divider" } },
         { key: "infoAlert", type: "display", label: "This is an informational message.", presentation: { widgetHint: "banner" } },
         { key: "name", type: "field", dataType: "string", label: "Your Name" },

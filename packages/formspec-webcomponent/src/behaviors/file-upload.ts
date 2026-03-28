@@ -64,7 +64,7 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
         options: () => [],
         accept: comp.accept,
         multiple,
-        dragDrop: comp.dragDrop === true,
+        dragDrop: comp.dragDrop !== false,
         maxSize,
         files: () => accumulated,
 
