@@ -64,7 +64,7 @@ const TYPE_MAP: Record<string, DataTypeDisplay> = {
 };
 
 const ITEM_TYPE_WIDGETS: Record<string, string[]> = {
-  group: ['Stack', 'Card', 'Accordion', 'Collapsible'],
+  group: ['Stack', 'Card', 'Accordion', 'Collapsible', 'Tabs'],
   display: ['Text', 'Heading', 'Divider', 'Alert'],
 };
 
@@ -85,13 +85,14 @@ const FIELD_TYPE_CATALOG: FieldTypeCatalogEntry[] = [
   { label: 'Group', description: 'Container for a set of related fields', icon: '▦', color: 'text-muted', itemType: 'group', category: 'Structure', keywords: ['group', 'section', 'container', 'nest'] },
   { label: 'Repeatable Group', description: 'A group the respondent fills in multiple times', icon: '⟳▦', color: 'text-accent', itemType: 'group', extra: { repeatable: true }, category: 'Structure', keywords: ['repeat', 'repeatable', 'group', 'loop', 'multiple'] },
   { label: 'Text Block', description: 'Read-only text, instructions, or content', icon: 'ℹ', color: 'text-accent', itemType: 'display', category: 'Content', keywords: ['display', 'text', 'note', 'read-only', 'info', 'instruction'] },
-  { label: 'Heading', description: 'Section heading or title', icon: 'H', color: 'text-accent', itemType: 'display', extra: { presentation: { widgetHint: 'Heading' } }, category: 'Content', keywords: ['heading', 'title', 'header', 'h1', 'h2'] },
-  { label: 'Divider', description: 'Horizontal line to separate content', icon: '—', color: 'text-muted', itemType: 'display', extra: { presentation: { widgetHint: 'Divider' } }, category: 'Content', keywords: ['divider', 'separator', 'line', 'hr'] },
-  { label: 'Spacer', description: 'Vertical space between items', icon: '↕', color: 'text-muted', itemType: 'display', extra: { presentation: { widgetHint: 'Spacer' } }, category: 'Content', keywords: ['spacer', 'space', 'gap', 'padding'] },
+  { label: 'Heading', description: 'Section heading or title', icon: 'H', color: 'text-accent', itemType: 'display', extra: { presentation: { widgetHint: 'heading' } }, category: 'Content', keywords: ['heading', 'title', 'header', 'h1', 'h2'] },
+  { label: 'Divider', description: 'Horizontal line to separate content', icon: '—', color: 'text-muted', itemType: 'display', extra: { presentation: { widgetHint: 'divider' } }, category: 'Content', keywords: ['divider', 'separator', 'line', 'hr'] },
   { label: 'Card', description: 'Bordered container with optional title', icon: '▢', color: 'text-accent', itemType: 'layout', component: 'Card', category: 'Layout', keywords: ['card', 'box', 'container', 'panel'] },
   { label: 'Columns', description: 'Side-by-side column layout', icon: '▥', color: 'text-accent', itemType: 'layout', component: 'Columns', category: 'Layout', keywords: ['columns', 'grid', 'side', 'two', 'multi'] },
   { label: 'Collapsible', description: 'Expandable/collapsible section', icon: '▽', color: 'text-accent', itemType: 'layout', component: 'Collapsible', category: 'Layout', keywords: ['collapsible', 'accordion', 'expand', 'collapse', 'toggle'] },
   { label: 'Stack', description: 'Vertical or horizontal stack container', icon: '▤', color: 'text-accent', itemType: 'layout', component: 'Stack', category: 'Layout', keywords: ['stack', 'vertical', 'horizontal', 'list', 'column'] },
+  // Spacer is a Component Spec §5.5 layout component — no Tier 1 widgetHint (CoreSpec §4.2.5.1)
+  { label: 'Spacer', description: 'Vertical space between items', icon: '↕', color: 'text-muted', itemType: 'layout', component: 'Spacer', category: 'Layout', keywords: ['spacer', 'space', 'gap', 'padding'] },
 ];
 
 export interface DefLookupEntry {

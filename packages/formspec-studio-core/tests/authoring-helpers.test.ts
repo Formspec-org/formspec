@@ -4,6 +4,7 @@ import {
   buildBatchMoveCommands,
   buildBindKeyMap,
   buildDefLookup,
+  compatibleWidgets,
   computeUnassignedItems,
   countDefinitionFields,
   dataTypeInfo,
@@ -157,10 +158,37 @@ describe('authoring-helpers', () => {
     const catalog = getFieldTypeCatalog();
     expect(catalog.find((entry) => entry.label === 'Single Choice')?.dataType).toBe('choice');
     expect(catalog.find((entry) => entry.label === 'Multiple Choice')?.dataType).toBe('multiChoice');
-    expect(catalog.find((entry) => entry.label === 'Heading')?.extra).toEqual({ presentation: { widgetHint: 'Heading' } });
     expect(catalog.filter((entry) => entry.itemType === 'layout').map((entry) => entry.label)).toEqual(
-      expect.arrayContaining(['Card', 'Columns', 'Collapsible', 'Stack']),
+      expect.arrayContaining(['Card', 'Columns', 'Collapsible', 'Stack', 'Spacer']),
     );
+  });
+
+  it('uses spec-lowercase widgetHint values (CoreSpec S4.2.5.1)', () => {
+    const catalog = getFieldTypeCatalog();
+    const VALID_DISPLAY_HINTS = new Set(['paragraph', 'heading', 'divider', 'banner']);
+    const displayEntries = catalog.filter((e) => e.extra?.presentation && (e.extra.presentation as any).widgetHint);
+    for (const entry of displayEntries) {
+      const hint = (entry.extra!.presentation as any).widgetHint as string;
+      expect(
+        VALID_DISPLAY_HINTS.has(hint),
+        `'${entry.label}' uses widgetHint '${hint}' — must be spec-lowercase (one of: ${[...VALID_DISPLAY_HINTS].join(', ')})`,
+      ).toBe(true);
+    }
+  });
+
+  it('Spacer is a layout component (not a display widgetHint) (CoreSpec §4.2.5.1, ComponentSpec §5.5)', () => {
+    const catalog = getFieldTypeCatalog();
+    const spacer = catalog.find((e) => e.label === 'Spacer');
+    expect(spacer).toBeDefined();
+    expect(spacer!.itemType).toBe('layout');
+    expect(spacer!.component).toBe('Spacer');
+    // Must NOT carry a widgetHint — Spacer has no Tier 1 spec representation
+    expect((spacer!.extra as any)?.presentation?.widgetHint).toBeUndefined();
+  });
+
+  it('includes Tabs in the group widget list (CoreSpec S4.2.5.1 tab → Tabs)', () => {
+    const groupWidgets = compatibleWidgets('group');
+    expect(groupWidgets).toContain('Tabs');
   });
 
   it('uses only spec-normative dataType values and covers all 13 spec types', () => {

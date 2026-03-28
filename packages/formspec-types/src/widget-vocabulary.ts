@@ -86,7 +86,6 @@ export const COMPONENT_TO_HINT: Record<string, string> = {
     Stack: 'section',
     Card: 'card',
     Accordion: 'accordion',
-    Collapsible: 'accordion',
     Heading: 'heading',
     Text: 'paragraph',
     Divider: 'divider',

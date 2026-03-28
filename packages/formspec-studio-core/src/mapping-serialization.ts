@@ -58,7 +58,7 @@ function toJSON(data: any, options: AdapterOptions): string {
   let output = data;
   if (options.nullHandling === 'omit') output = stripNulls(output);
   if (options.sortKeys) output = sortKeysDeep(output);
-  const indent = options.pretty !== false ? 2 : undefined;
+  const indent = options.pretty ? 2 : undefined;
   return JSON.stringify(output, null, indent);
 }
 

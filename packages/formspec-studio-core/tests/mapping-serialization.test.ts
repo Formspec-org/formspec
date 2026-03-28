@@ -6,7 +6,7 @@ describe('serializeMappedData', () => {
   it('serializes JSON with null omission and stable key sorting', () => {
     const result = serializeMappedData(
       { b: null, a: { d: 2, c: 1 } },
-      { format: 'json', nullHandling: 'omit', sortKeys: true },
+      { format: 'json', nullHandling: 'omit', sortKeys: true, pretty: true },
     );
 
     expect(result).toBe('{\n  "a": {\n    "c": 1,\n    "d": 2\n  }\n}');
@@ -35,6 +35,17 @@ describe('serializeMappedData', () => {
     );
 
     expect(result).toBe('name,note\r\n"Doe, Jane","He said ""hello"""');
+  });
+
+  it('JSON pretty defaults to false when not specified (Mapping Spec S6.2)', () => {
+    // Default: no indent (compact output)
+    const compact = serializeMappedData({ a: 1 }, { format: 'json' });
+    expect(compact).toBe('{"a":1}');
+  });
+
+  it('JSON pretty: true produces indented output', () => {
+    const pretty = serializeMappedData({ a: 1 }, { format: 'json', pretty: true });
+    expect(pretty).toBe('{\n  "a": 1\n}');
   });
 
   it('returns a serialization error string instead of throwing', () => {
