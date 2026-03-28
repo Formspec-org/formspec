@@ -376,9 +376,11 @@ impl Parser {
     // ── Unary ───────────────────────────────────────────────────
 
     fn parse_unary(&mut self) -> Result<Expr, FelError> {
-        if matches!(self.peek(), Token::Not) {
-            // Make sure it's not `not in` (handled by membership)
-            if self.pos + 1 < self.tokens.len()
+        let is_bang = matches!(self.peek(), Token::Bang);
+        if matches!(self.peek(), Token::Not | Token::Bang) {
+            // Make sure it's not `not in` (handled by membership) — `!` cannot mean `! in`
+            if !is_bang
+                && self.pos + 1 < self.tokens.len()
                 && matches!(self.tokens[self.pos + 1].token, Token::In)
             {
                 return self.parse_postfix();
@@ -388,6 +390,7 @@ impl Parser {
             return Ok(Expr::UnaryOp {
                 op: UnaryOp::Not,
                 operand: Box::new(operand),
+                bang: is_bang,
             });
         }
         if matches!(self.peek(), Token::Minus) {
@@ -398,6 +401,7 @@ impl Parser {
             return Ok(Expr::UnaryOp {
                 op: UnaryOp::Neg,
                 operand: Box::new(operand),
+                bang: false,
             });
         }
         self.parse_postfix()

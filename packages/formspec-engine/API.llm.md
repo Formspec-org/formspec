@@ -1119,8 +1119,9 @@ Resolve `{{expr}}` sequences in a locale string.
 
 Rules (§3.3.1):
 1. `{{{{` → literal `{{` (escape before scanning)
-2. Failed parse/eval → preserve literal `{{expr}}` + warning (no crash)
-3. null/undefined → "", booleans → "true"/"false", numbers → default coercion
+2. Failed parse/eval → preserve literal `{{expr}}` + warning.
+   Includes any eval where WASM records error-severity diagnostics (side-channel check).
+3–4. Coerce values; `null` → "" except rule 3a (no `$`/`@` and not a static literal → preserve)
 5. Replacement text is NOT re-scanned for `{{`
 
 #### interface `InterpolationWarning`
@@ -1294,6 +1295,16 @@ Evaluate a FEL expression with optional field values. Returns the evaluated resu
 ## `wasmEvalFELWithContext(expression: string, context: WasmFelContext): any`
 
 Evaluate a FEL expression with full FormspecEnvironment context.
+
+## `wasmFelExprIsInterpolationStaticLiteral(expression: string): boolean`
+
+Locale §3.3.1 — true if the expression AST is only literals and unary `not` / `!` / `-`.
+
+## `wasmConsumeLastEvalErrorDiagnostics(): boolean`
+
+Locale §3.3.1 rule 2 — read and reset the error-diagnostics flag.
+Returns `true` if the most recent WASM FEL eval recorded error-severity
+diagnostics. The flag is reset to `false` after reading.
 
 ## `wasmPrepareFelExpression(optionsJson: string): string`
 

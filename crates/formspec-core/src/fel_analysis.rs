@@ -424,9 +424,10 @@ fn rewrite_expr(expr: &Expr, opts: &RewriteOptions) -> Expr {
                 args: rewritten_args,
             }
         }
-        Expr::UnaryOp { op, operand } => Expr::UnaryOp {
+        Expr::UnaryOp { op, operand, bang } => Expr::UnaryOp {
             op: *op,
             operand: Box::new(rewrite_expr(operand, opts)),
+            bang: *bang,
         },
         Expr::BinaryOp { op, left, right } => Expr::BinaryOp {
             op: *op,

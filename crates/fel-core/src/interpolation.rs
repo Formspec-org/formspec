@@ -20,6 +20,7 @@ pub fn expr_is_interpolation_static_literal(expr: &Expr) -> bool {
         Expr::UnaryOp {
             op: UnaryOp::Not | UnaryOp::Neg,
             operand,
+            ..
         } => expr_is_interpolation_static_literal(operand),
         _ => false,
     }

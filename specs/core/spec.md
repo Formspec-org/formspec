@@ -772,6 +772,9 @@ recalculation guarantee, borrowed from XForms.
 1. For each relevant field that is in the affected subgraph or whose
    `required` / `relevant` state changed in Phase 2:
    a. If the field has a `constraint` Bind, evaluate the constraint expression.
+      If the expression fails to parse, record a ValidationResult with severity
+      `"error"`, code `CONSTRAINT_PARSE_ERROR`, and a processor-generated
+      message describing the parse failure.
       If the result is `false`, record a ValidationResult with severity
       `"error"` and the Bind’s `constraintMessage`.
    b. If the field has a `required` Bind that evaluated to `true`, and the
@@ -865,6 +868,7 @@ codes override the generic defaults.
 | `MIN_REPEAT` | `cardinality` | Fewer repeat instances than `minRepeat`. |
 | `MAX_REPEAT` | `cardinality` | More repeat instances than `maxRepeat`. |
 | `CONSTRAINT_FAILED` | `constraint` | Bind `constraint` returned `false`. |
+| `CONSTRAINT_PARSE_ERROR` | `constraint` | Bind `constraint` expression failed to parse. |
 | `SHAPE_FAILED` | `shape` | Shape's constraint returned `false`. |
 | `EXTERNAL_FAILED` | `external` | External validation source reported a failure. |
 
@@ -1047,7 +1051,7 @@ noted.
 | 7 | `??` | Null-coalescing | Left |
 | 8 | `+`, `-`, `&` | Addition / concatenation | Left |
 | 9 | `*`, `/`, `%` | Multiplication | Left |
-| 10 (highest) | `not` (prefix), `-` (negate) | Unary | Right |
+| 10 (highest) | `not` / `!` (prefix), `-` (negate) | Unary | Right |
 
 #### Operator Semantics
 
@@ -1075,7 +1079,7 @@ noted.
 - `null = <any non-null value>` evaluates to `false`.
 - Cross-type equality (e.g., `number = string`) MUST signal a type error.
 
-**Logical operators** (`and`, `or`, `not`):
+**Logical operators** (`and`, `or`, `not` / `!`):
 
 - Operands MUST be of type `boolean`. Non-boolean operands MUST signal a type
   error (no truthy/falsy coercion).
@@ -2756,6 +2760,7 @@ condition types:
 1. **Type mismatch** — the value does not conform to the Field's `dataType`.
 2. **Required violation** — a required node has an empty value.
 3. **Bind constraint failure** — a Bind's `constraint` evaluates to `false`.
+3a. **Bind constraint parse error** — a Bind's `constraint` expression fails to parse. Processors MUST surface this as a validation error rather than silently passing.
 4. **Shape constraint failure** — a Shape's `constraint` or composition evaluates to invalid.
 5. **Repeat cardinality violation** — a repeatable Group has fewer than `minRepeat` or more than `maxRepeat` repetitions.
 

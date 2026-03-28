@@ -1418,9 +1418,12 @@ This is the minimal recalculation guarantee, borrowed from XForms.</p>
 <code>required</code> / <code>relevant</code> state changed in Phase 2:
 <ol type="a">
 <li>If the field has a <code>constraint</code> Bind, evaluate the
-constraint expression. If the result is <code>false</code>, record a
-ValidationResult with severity <code>"error"</code> and the Bind’s
-<code>constraintMessage</code>.</li>
+constraint expression. If the expression fails to parse, record a
+ValidationResult with severity <code>"error"</code>, code
+<code>CONSTRAINT_PARSE_ERROR</code>, and a processor-generated message
+describing the parse failure. If the result is <code>false</code>,
+record a ValidationResult with severity <code>"error"</code> and the
+Bind’s <code>constraintMessage</code>.</li>
 <li>If the field has a <code>required</code> Bind that evaluated to
 <code>true</code>, and the field’s value is empty (<code>null</code>,
 empty string <code>""</code>, or empty array <code>[]</code>), record a
@@ -1619,6 +1622,11 @@ Shape-level and external codes override the generic defaults.</p>
 <td><code>CONSTRAINT_FAILED</code></td>
 <td><code>constraint</code></td>
 <td>Bind <code>constraint</code> returned <code>false</code>.</td>
+</tr>
+<tr>
+<td><code>CONSTRAINT_PARSE_ERROR</code></td>
+<td><code>constraint</code></td>
+<td>Bind <code>constraint</code> expression failed to parse.</td>
 </tr>
 <tr>
 <td><code>SHAPE_FAILED</code></td>
@@ -1972,7 +1980,8 @@ unless otherwise noted.</p>
 </tr>
 <tr>
 <td>10 (highest)</td>
-<td><code>not</code> (prefix), <code>-</code> (negate)</td>
+<td><code>not</code> / <code>!</code> (prefix), <code>-</code>
+(negate)</td>
 <td>Unary</td>
 <td>Right</td>
 </tr>
@@ -2013,7 +2022,7 @@ is defined below.</li>
 a type error.</li>
 </ul>
 <p><strong>Logical operators</strong> (<code>and</code>,
-<code>or</code>, <code>not</code>):</p>
+<code>or</code>, <code>not</code> / <code>!</code>):</p>
 <ul>
 <li>Operands MUST be of type <code>boolean</code>. Non-boolean operands
 MUST signal a type error (no truthy/falsy coercion).</li>
@@ -5969,7 +5978,10 @@ Field’s <code>dataType</code>.</li>
 <li><strong>Required violation</strong> — a required node has an empty
 value.</li>
 <li><strong>Bind constraint failure</strong> — a Bind’s
-<code>constraint</code> evaluates to <code>false</code>.</li>
+<code>constraint</code> evaluates to <code>false</code>. 3a.
+<strong>Bind constraint parse error</strong> — a Bind’s
+<code>constraint</code> expression fails to parse. Processors MUST
+surface this as a validation error rather than silently passing.</li>
 <li><strong>Shape constraint failure</strong> — a Shape’s
 <code>constraint</code> or composition evaluates to invalid.</li>
 <li><strong>Repeat cardinality violation</strong> — a repeatable Group

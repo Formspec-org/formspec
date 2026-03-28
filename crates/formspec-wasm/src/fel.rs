@@ -1,8 +1,10 @@
 //! FEL evaluation, analysis, and path utilities (`wasm_bindgen`). `fel-authoring` adds parse/tokenize/print/rewrites/catalog.
 
+use std::cell::Cell;
+
 use fel_core::{
     evaluate, expr_is_interpolation_static_literal, fel_to_json, field_map_from_json_str,
-    formspec_environment_from_json_map, parse, prepare_fel_expression_owned,
+    formspec_environment_from_json_map, has_error_diagnostics, parse, prepare_fel_expression_owned,
     prepare_fel_host_options_from_json_map, reject_undefined_functions,
 };
 #[cfg(feature = "fel-authoring")]
@@ -37,6 +39,30 @@ pub fn fel_expr_is_interpolation_static_literal(expression: &str) -> bool {
         .unwrap_or(false)
 }
 
+// ── Diagnostic side-channel for interpolation rule 2 ────────────
+//
+// Locale §3.3.1 rule 2: if FEL evaluation records error-severity diagnostics,
+// the interpolation is treated as failed even if a value was produced.
+// The TS `interpolateMessage` receives an opaque evaluator callback and cannot
+// inspect diagnostics directly. This thread-local flag lets the TS side check
+// *after* evaluation whether error diagnostics were recorded.
+// Safe because WASM is single-threaded.
+thread_local! {
+    static LAST_EVAL_HAD_ERROR_DIAGNOSTICS: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Read and reset the error-diagnostics flag. Returns `true` if the most
+/// recent `evalFEL` / `evalFELWithContext` call recorded error-severity
+/// diagnostics. The flag is reset to `false` after reading.
+#[wasm_bindgen(js_name = "consumeLastEvalErrorDiagnostics")]
+pub fn consume_last_eval_error_diagnostics() -> bool {
+    LAST_EVAL_HAD_ERROR_DIAGNOSTICS.with(|c| {
+        let had = c.get();
+        c.set(false);
+        had
+    })
+}
+
 // ── FEL Evaluation ──────────────────────────────────────────────
 
 /// Parse and evaluate a FEL expression with optional field values (JSON object).
@@ -51,6 +77,7 @@ pub(crate) fn eval_fel_inner(expression: &str, fields_json: &str) -> Result<Stri
     let fields = field_map_from_json_str(fields_json)?;
     let env = fel_core::MapEnvironment::with_fields(fields);
     let result = evaluate(&expr, &env);
+    LAST_EVAL_HAD_ERROR_DIAGNOSTICS.with(|c| c.set(has_error_diagnostics(&result.diagnostics)));
     let json = fel_to_json(&result.value);
     to_json_string(&json)
 }
@@ -71,6 +98,7 @@ pub(crate) fn eval_fel_with_context_inner(
     let ctx_obj = ctx.as_object().ok_or("context must be a JSON object")?;
     let env = formspec_environment_from_json_map(ctx_obj);
     let result = evaluate(&expr, &env);
+    LAST_EVAL_HAD_ERROR_DIAGNOSTICS.with(|c| c.set(has_error_diagnostics(&result.diagnostics)));
     reject_undefined_functions(&result.diagnostics)?;
     let json = fel_to_json(&result.value);
     to_json_string(&json)

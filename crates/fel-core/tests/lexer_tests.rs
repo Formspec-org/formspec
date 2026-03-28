@@ -371,12 +371,12 @@ fn unexpected_character_rejected() {
     assert!(err.contains("unexpected character"), "got: {err}");
 }
 
-/// Prefix `!` is logical NOT (same token as keyword `not`); `!=` is inequality.
+/// Prefix `!` lexes as `Token::Bang` (distinct from keyword `not` for printer fidelity); `!=` is inequality.
 #[test]
 fn bang_logical_not_prefix_lexes() {
     assert_eq!(
         tokens("!(true)"),
-        vec![Token::Not, Token::LParen, Token::True, Token::RParen]
+        vec![Token::Bang, Token::LParen, Token::True, Token::RParen]
     );
 }
 

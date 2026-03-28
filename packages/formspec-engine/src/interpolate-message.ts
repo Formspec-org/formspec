@@ -1,6 +1,6 @@
 /** @filedesc Template string interpolator for locale {{expr}} sequences (spec §3.3.1). */
 
-import { isWasmReady, wasmFelExprIsInterpolationStaticLiteral } from './wasm-bridge-runtime.js';
+import { isWasmReady, wasmConsumeLastEvalErrorDiagnostics, wasmFelExprIsInterpolationStaticLiteral } from './wasm-bridge-runtime.js';
 
 export interface InterpolationWarning {
   expression: string;
@@ -17,7 +17,8 @@ export interface InterpolateResult {
  *
  * Rules (§3.3.1):
  * 1. `{{{{` → literal `{{` (escape before scanning)
- * 2. Failed parse/eval (or eval error diagnostics from WASM) → preserve literal `{{expr}}` + warning
+ * 2. Failed parse/eval → preserve literal `{{expr}}` + warning.
+ *    Includes any eval where WASM records error-severity diagnostics (side-channel check).
  * 3–4. Coerce values; `null` → "" except rule 3a (no `$`/`@` and not a static literal → preserve)
  * 5. Replacement text is NOT re-scanned for `{{`
  *
@@ -56,7 +57,16 @@ export function interpolateMessage(
     // Rule 2 / 3a: error recovery and null-without-binding preservation
     try {
       const raw = evaluator(expr);
-      if (
+      // Rule 2: error-severity diagnostics → preserve literal.
+      // The WASM evaluator records diagnostics in a side-channel flag;
+      // consumeLastEvalErrorDiagnostics reads and resets it atomically.
+      if (isWasmReady() && wasmConsumeLastEvalErrorDiagnostics()) {
+        segments.push(match[0]);
+        warnings.push({
+          expression: expr,
+          error: 'Error-severity diagnostics during evaluation',
+        });
+      } else if (
         (raw === null || raw === undefined) &&
         shouldPreserveLiteralForNullInterpolation(expr)
       ) {

@@ -69,9 +69,13 @@ fn write_expr(buf: &mut String, expr: &Expr, needs_parens: bool) {
             }
         }
 
-        Expr::UnaryOp { op, operand } => match op {
+        Expr::UnaryOp { op, operand, bang } => match op {
             UnaryOp::Not => {
-                buf.push_str("not ");
+                if *bang {
+                    buf.push('!');
+                } else {
+                    buf.push_str("not ");
+                }
                 write_expr(buf, operand, true);
             }
             UnaryOp::Neg => {
@@ -307,6 +311,16 @@ mod tests {
         round_trip("$a and $b");
         round_trip("$a or $b");
         round_trip("not $a");
+        round_trip("!$a");
+    }
+
+    #[test]
+    fn test_bang_not_round_trip_fidelity() {
+        // `!` and `not` are semantically identical but must preserve source form
+        let bang_ast = parse("!$flag").unwrap();
+        let not_ast = parse("not $flag").unwrap();
+        assert_eq!(print_expr(&bang_ast), "!$flag");
+        assert_eq!(print_expr(&not_ast), "not $flag");
     }
 
     #[test]

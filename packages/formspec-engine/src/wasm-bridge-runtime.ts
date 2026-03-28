@@ -120,6 +120,15 @@ export function wasmFelExprIsInterpolationStaticLiteral(expression: string): boo
     return wasm().felExprIsInterpolationStaticLiteral(expression);
 }
 
+/**
+ * Locale §3.3.1 rule 2 — read and reset the error-diagnostics flag.
+ * Returns `true` if the most recent WASM FEL eval recorded error-severity
+ * diagnostics. The flag is reset to `false` after reading.
+ */
+export function wasmConsumeLastEvalErrorDiagnostics(): boolean {
+    return wasm().consumeLastEvalErrorDiagnostics();
+}
+
 /** Normalize FEL source before evaluation (bare `$`, repeat qualifiers, repeat aliases). */
 export function wasmPrepareFelExpression(optionsJson: string): string {
     return wasm().prepareFelExpression(optionsJson);
