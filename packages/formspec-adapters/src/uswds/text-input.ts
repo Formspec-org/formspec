@@ -1,7 +1,7 @@
 /** @filedesc USWDS v3 adapter for TextInput — renders usa-input or usa-textarea markup. */
 import type { TextInputBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
 import { el } from '../helpers';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
     behavior, parent, actx
@@ -74,11 +74,7 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
     const dispose = behavior.bind({
         root, label, control, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
-            actualInput.classList.toggle(
-                actualInput.classList.contains('usa-textarea') ? 'usa-textarea--error' : 'usa-input--error',
-                hasError,
-            );
+            applyUSWDSValidationState(root, label, hasError, actualInput as HTMLElement);
         },
     });
     actx.onDispose(dispose);

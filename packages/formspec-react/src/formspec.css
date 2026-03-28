@@ -46,7 +46,7 @@
 
 /* ── Fields ───────────────────────────────────────────────────── */
 .formspec-field {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
 .formspec-field label,
@@ -501,16 +501,16 @@ h2.formspec-heading {
 
 /* ── Submit button ────────────────────────────────────────────── */
 .formspec-submit {
-  display: inline-flex;
-  align-self: flex-start;
-  padding: 0.625rem 1.5rem;
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1.5rem;
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 600;
-  background: var(--formspec-color-primary, #2d6a7a);
+  background: var(--formspec-color-primary, #4f88e8);
   color: var(--formspec-color-primaryForeground, #ffffff);
   border: none;
-  border-radius: var(--formspec-radius-sm, 0.5rem);
+  border-radius: var(--formspec-radius-sm, 0.25rem);
   cursor: pointer;
   margin-top: 1rem;
   transition: filter 0.15s;

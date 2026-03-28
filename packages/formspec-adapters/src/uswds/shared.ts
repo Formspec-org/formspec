@@ -73,3 +73,15 @@ export function createUSWDSError(behaviorId: string): HTMLElement {
         'aria-live': 'polite',
     });
 }
+
+/** Apply native USWDS error classes to the wrapper, label/legend, and optional control. */
+export function applyUSWDSValidationState(
+    root: HTMLElement,
+    label: HTMLElement,
+    hasError: boolean,
+    control?: HTMLElement | null,
+): void {
+    root.classList.toggle('usa-form-group--error', hasError);
+    label.classList.toggle('usa-label--error', hasError);
+    if (control) control.classList.toggle('usa-input--error', hasError);
+}

@@ -1,6 +1,6 @@
 /** @filedesc USWDS v3 adapter for DatePicker — renders native date input with USWDS styling. */
 import type { DatePickerBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderDatePicker: AdapterRenderFn<DatePickerBehavior> = (
     behavior, parent, actx
@@ -31,8 +31,7 @@ export const renderDatePicker: AdapterRenderFn<DatePickerBehavior> = (
     const dispose = behavior.bind({
         root, label, control: input, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
-            input.classList.toggle('usa-input--error', hasError);
+            applyUSWDSValidationState(root, label, hasError, input);
         },
     });
     actx.onDispose(dispose);

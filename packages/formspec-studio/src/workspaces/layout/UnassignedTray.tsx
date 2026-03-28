@@ -4,7 +4,7 @@ import type { FormItem } from '@formspec-org/types';
 import {
   computeUnassignedItems,
   type UnassignedItem,
-} from '../../lib/field-helpers';
+} from '@formspec-org/studio-core';
 
 interface CompNode {
   component: string;

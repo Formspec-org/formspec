@@ -1,6 +1,6 @@
 /** @filedesc USWDS v3 adapter for NumberInput — renders usa-input with type="number". */
 import type { NumberInputBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderNumberInput: AdapterRenderFn<NumberInputBehavior> = (
     behavior, parent, actx
@@ -30,8 +30,7 @@ export const renderNumberInput: AdapterRenderFn<NumberInputBehavior> = (
     const dispose = behavior.bind({
         root, label, control: input, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
-            input.classList.toggle('usa-input--error', hasError);
+            applyUSWDSValidationState(root, label, hasError, input);
         },
     });
     actx.onDispose(dispose);

@@ -1,6 +1,6 @@
 /** @filedesc Panel for viewing and editing inline data sources attached to the form definition. */
 import { useState } from 'react';
-import { sanitizeIdentifier } from '../../lib/field-helpers';
+import { sanitizeIdentifier } from '@formspec-org/studio-core';
 import { useProject } from '../../state/useProject';
 import { useDefinition } from '../../state/useDefinition';
 import { InlineExpression } from '../../components/ui/InlineExpression';

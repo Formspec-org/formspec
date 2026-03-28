@@ -7,7 +7,7 @@ import {
   normalizeComponentDoc,
   normalizeDefinitionDoc,
   normalizeThemeDoc,
-} from './preview-documents';
+} from '@formspec-org/studio-core';
 
 const DEBOUNCE_MS = 300;
 

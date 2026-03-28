@@ -1,9 +1,8 @@
 /** @filedesc Panel for creating and editing named option sets (static choices or data-sourced) on a form. */
 import { useState } from 'react';
-import { sanitizeIdentifier } from '../../lib/field-helpers';
+import { sanitizeIdentifier, flatItems } from '@formspec-org/studio-core';
 import { useDefinition } from '../../state/useDefinition';
 import { useProject } from '../../state/useProject';
-import { flatItems } from '../../lib/field-helpers';
 import { InlineExpression } from '../../components/ui/InlineExpression';
 
 interface OptionEntry {

@@ -1,31 +1,34 @@
 /** @filedesc Generates sample response data from a Formspec definition for mapping previews. */
-import { faker } from '@faker-js/faker';
 import { createFormEngine } from '@formspec-org/engine';
 import type { FormDefinition, FormItem } from '@formspec-org/types';
+
+type Faker = typeof import('@faker-js/faker').faker;
 
 export interface MappingSampleOptions {
   seed?: number;
 }
 
-export function generateDefinitionSampleData(
+export async function generateDefinitionSampleData(
   definition: FormDefinition,
   options: MappingSampleOptions = {},
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
+  const { faker } = await import('@faker-js/faker');
+
   if (typeof options.seed === 'number') {
     faker.seed(options.seed);
   }
 
   const engine = createFormEngine({ ...definition });
-  walkItems(engine, definition.items ?? []);
+  walkItems(faker, engine, definition.items ?? []);
   return engine.getResponse().data as Record<string, unknown>;
 }
 
-function walkItems(engine: ReturnType<typeof createFormEngine>, items: FormItem[], prefix = ''): void {
+function walkItems(faker: Faker, engine: ReturnType<typeof createFormEngine>, items: FormItem[], prefix = ''): void {
   for (const item of items) {
     const path = prefix ? `${prefix}.${item.key}` : item.key;
 
     if (item.type === 'field') {
-      engine.setValue(path, sampleValueForField(item));
+      engine.setValue(path, sampleValueForField(faker, item));
     }
 
     if (item.type === 'group') {
@@ -34,17 +37,17 @@ function walkItems(engine: ReturnType<typeof createFormEngine>, items: FormItem[
         for (let index = 0; index < count; index += 1) {
           engine.addRepeatInstance(path);
           if (item.children) {
-            walkItems(engine, item.children as FormItem[], `${path}[${index}]`);
+            walkItems(faker, engine, item.children as FormItem[], `${path}[${index}]`);
           }
         }
       } else if (item.children) {
-        walkItems(engine, item.children as FormItem[], path);
+        walkItems(faker, engine, item.children as FormItem[], path);
       }
     }
   }
 }
 
-function sampleValueForField(item: FormItem): unknown {
+function sampleValueForField(faker: Faker, item: FormItem): unknown {
   const dataType = item.dataType;
   const keyLower = item.key.toLowerCase();
 

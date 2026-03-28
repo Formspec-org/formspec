@@ -6,7 +6,7 @@ import {
   normalizeComponentDoc,
   normalizeDefinitionDoc,
   normalizeThemeDoc,
-} from './preview-documents';
+} from '@formspec-org/studio-core';
 
 const DOC_IDS = ['Definition', 'Component', 'Theme', 'Mapping'] as const;
 type DocId = (typeof DOC_IDS)[number];

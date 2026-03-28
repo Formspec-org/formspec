@@ -21,7 +21,7 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     const browseBtn = document.createElement('button');
     browseBtn.type = 'button';
     browseBtn.className = 'formspec-file-browse-btn';
-    browseBtn.textContent = behavior.multiple ? 'Choose files' : 'Choose file';
+    browseBtn.textContent = 'Browse';
     browseBtn.addEventListener('click', () => input.click());
 
     // File list container — rebuilt by the behavior on each change
@@ -85,11 +85,11 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
         const icon = document.createElement('span');
         icon.className = 'formspec-file-drop-icon';
         icon.setAttribute('aria-hidden', 'true');
-        icon.textContent = '\u21D5';
+        icon.textContent = '\u21F5';
 
         const label = document.createElement('span');
         label.className = 'formspec-file-drop-label';
-        label.textContent = 'Drop files here';
+        label.textContent = behavior.multiple ? 'Drag & drop files here' : 'Drag & drop a file here';
 
         content.appendChild(icon);
         content.appendChild(label);

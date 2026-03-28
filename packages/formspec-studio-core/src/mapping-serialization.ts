@@ -14,6 +14,7 @@ export interface AdapterOptions {
   quote?: string;
   header?: boolean;
   lineEnding?: 'crlf' | 'lf';
+  encoding?: string;
 }
 
 export function serializeMappedData(data: any, options: AdapterOptions = {}): string {

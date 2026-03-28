@@ -1,7 +1,6 @@
 /** @filedesc Layout properties section for selecting the component type (Tier 3 override). */
 import { Section } from '../../../components/ui/Section';
-import { compatibleWidgets } from '../../../lib/field-helpers';
-import type { Project } from '@formspec-org/studio-core';
+import { compatibleWidgets, type Project } from '@formspec-org/studio-core';
 
 export function WidgetSection({
   itemKey,

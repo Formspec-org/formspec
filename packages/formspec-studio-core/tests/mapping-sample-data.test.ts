@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { generateDefinitionSampleData } from '../src/mapping-sample-data';
 
 describe('generateDefinitionSampleData', () => {
-  it('generates stable field-shaped sample data when seeded', () => {
+  it('generates stable field-shaped sample data when seeded', async () => {
     const definition = {
       $formspec: '1.0',
       url: 'urn:test',
@@ -15,7 +15,7 @@ describe('generateDefinitionSampleData', () => {
       ],
     } as any;
 
-    const result = generateDefinitionSampleData(definition, { seed: 123 });
+    const result = await generateDefinitionSampleData(definition, { seed: 123 });
 
     expect(result).toHaveProperty('first_name');
     expect(typeof result.first_name).toBe('string');
@@ -25,7 +25,7 @@ describe('generateDefinitionSampleData', () => {
     expect(typeof result.isActive).toBe('boolean');
   });
 
-  it('creates at least one instance for repeatable groups', () => {
+  it('creates at least one instance for repeatable groups', async () => {
     const definition = {
       $formspec: '1.0',
       url: 'urn:test-repeat',
@@ -40,14 +40,14 @@ describe('generateDefinitionSampleData', () => {
       ],
     } as any;
 
-    const result = generateDefinitionSampleData(definition, { seed: 123 });
+    const result = await generateDefinitionSampleData(definition, { seed: 123 });
 
     expect(Array.isArray(result.children)).toBe(true);
     expect(result.children.length).toBeGreaterThan(0);
     expect(result.children[0]).toHaveProperty('child_name');
   });
 
-  it('produces nested objects for non-repeatable groups', () => {
+  it('produces nested objects for non-repeatable groups', async () => {
     const definition = {
       $formspec: '1.0',
       url: 'urn:test-nested',
@@ -64,7 +64,7 @@ describe('generateDefinitionSampleData', () => {
       ],
     } as any;
 
-    const result = generateDefinitionSampleData(definition, { seed: 123 });
+    const result = await generateDefinitionSampleData(definition, { seed: 123 });
 
     expect(result.address).toMatchObject({
       street: expect.any(String),

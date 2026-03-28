@@ -1,4 +1,12 @@
-/** @filedesc Project class: high-level form authoring facade over formspec-core. */
+/** @filedesc Project class: high-level form authoring facade over formspec-core.
+ *
+ * TECH-DEBT: ~25 `as any` casts remain in this file.  Most exist at the
+ * IProjectCore delegation boundary where studio-core's public types
+ * (FormItem, FormDefinition, etc.) don't align 1:1 with core's internal
+ * types.  Resolution path: refine IProjectCore's generic signatures so
+ * the delegation layer can type-check without casts.  Track progress by
+ * periodically running `grep -c 'as any' project.ts` — target is zero.
+ */
 import { createRawProject, createChangesetMiddleware } from '@formspec-org/core';
 import type { ChangesetRecorderControl } from '@formspec-org/core';
 // Internal-only core types — never appear in public method signatures

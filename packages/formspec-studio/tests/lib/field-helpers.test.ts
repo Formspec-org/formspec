@@ -7,7 +7,7 @@ import {
   compatibleWidgets,
   widgetHintForComponent,
   componentForWidgetHint,
-} from '../../src/lib/field-helpers';
+} from '@formspec-org/studio-core';
 
 describe('flatItems', () => {
   it('flattens nested items with paths', () => {

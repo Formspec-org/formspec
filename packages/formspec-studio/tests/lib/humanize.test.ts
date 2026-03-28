@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { humanizeFEL } from '../../src/lib/field-helpers';
+import { humanizeFEL } from '@formspec-org/studio-core';
 
 describe('humanizeFEL', () => {
   it('translates equality comparison', () => {

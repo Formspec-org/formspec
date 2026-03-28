@@ -3,7 +3,16 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useProject } from '../../state/useProject';
 import { useSelection } from '../../state/useSelection';
-import { bindsFor, buildDefLookup } from '../../lib/field-helpers';
+import {
+  bindsFor,
+  buildDefLookup,
+  buildMissingPropertyActions,
+  buildRowSummaries,
+  buildStatusPills,
+  type MissingPropertyAction,
+  type RowStatusPill,
+  type RowSummaryEntry,
+} from '@formspec-org/studio-core';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { AddItemPalette, type FieldTypeOption } from '../../components/AddItemPalette';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -13,14 +22,6 @@ import { GroupNode } from './GroupNode';
 import { EditorDndProvider } from './EditorDndProvider';
 import { SortableItemWrapper } from './dnd/SortableItemWrapper';
 import { clampContextMenuPosition, type ContextMenuState, type ContextMenuItem } from '../../components/ui/context-menu-utils';
-import {
-  buildMissingPropertyActions,
-  buildRowSummaries,
-  buildStatusPills,
-  type MissingPropertyAction,
-  type RowStatusPill,
-  type RowSummaryEntry,
-} from '@formspec-org/studio-core';
 
 import type { FormItem, FormBind } from '@formspec-org/types';
 

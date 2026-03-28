@@ -1,6 +1,6 @@
 /** @filedesc Editor-tab properties panel showing only Tier 1 (definition) properties — no appearance, widget, or layout. */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { bindsFor, shapesFor, buildDefLookup, isLayoutId } from '../../../lib/field-helpers';
+import { bindsFor, shapesFor, buildDefLookup, isLayoutId, dataTypeInfo, propertyHelp } from '@formspec-org/studio-core';
 import { useDefinition } from '../../../state/useDefinition';
 import { useProject } from '../../../state/useProject';
 import { useSelection } from '../../../state/useSelection';
@@ -14,7 +14,6 @@ import { ContentSection } from './ContentSection';
 import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
 import { HelpTip } from '../../../components/ui/HelpTip';
-import { dataTypeInfo, propertyHelp } from '../../../lib/field-helpers';
 import type { FormItem } from '@formspec-org/types';
 
 export function EditorPropertiesPanel({ showActions = true }: { showActions?: boolean }) {

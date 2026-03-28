@@ -1,6 +1,6 @@
 /** @filedesc Bottom status bar showing formspec version, form status, field count, and bind/shape counts with interactive enhancements. */
 import { useState } from 'react';
-import { countDefinitionFields } from '../lib/field-helpers';
+import { countDefinitionFields } from '@formspec-org/studio-core';
 import { useDefinition } from '../state/useDefinition';
 
 function plural(n: number, singular: string): string {

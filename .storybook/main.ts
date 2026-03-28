@@ -11,6 +11,7 @@ const config: StorybookConfig = {
     addons: [],
     staticDirs: [
         { from: '../node_modules/@uswds/uswds/dist/img', to: '/img' },
+        { from: '../node_modules/@uswds/uswds/packages/uswds-core/src/assets/fonts', to: '/fonts' },
     ],
     framework: {
         name: '@storybook/react-vite',

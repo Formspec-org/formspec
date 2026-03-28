@@ -94,6 +94,8 @@ export function FormspecScreener({
                         key={item.key}
                         item={item}
                         screener={definition.screener}
+                        engine={engine}
+                        answers={screener.answers}
                         value={screener.answers[item.key]}
                         error={screener.errors[item.key]}
                         onChange={(val) => screener.setAnswer(item.key, val)}
@@ -115,12 +117,16 @@ export function FormspecScreener({
 function ScreenerField({
     item,
     screener,
+    engine,
+    answers,
     value,
     error,
     onChange,
 }: {
     item: any;
     screener: any;
+    engine: IFormEngine;
+    answers: Record<string, any>;
     value: any;
     error?: string;
     onChange: (val: any) => void;
@@ -128,7 +134,7 @@ function ScreenerField({
     const id = `screener-${item.key}`;
     const showError = !!error;
     const dt = itemDataType(item);
-    const required = isItemRequired(item, screener);
+    const required = isItemRequired(item, screener, engine, answers);
 
     const renderInput = () => {
         switch (dt) {
@@ -159,7 +165,7 @@ function ScreenerField({
                             onChange={(e) => onChange(e.target.value)}
                             aria-invalid={showError}
                         >
-                            <option value="" disabled hidden>- Select -</option>
+                            <option value="" disabled hidden>Select…</option>
                             {itemOptions(item).map((c: any) => (
                                 <option key={c.value ?? c} value={c.value ?? c}>
                                     {c.label ?? c}

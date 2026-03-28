@@ -23,12 +23,11 @@ export interface WebComponentStoryProps {
     adapter?: RenderAdapter;
     /** Whether to show a submit button. Defaults to true. */
     showSubmit?: boolean;
-    /** Optional width constraint for the preview. */
-    maxWidth?: number;
+
 }
 
 /** Mounts a <formspec-render> custom element inside a React story. */
-export function WebComponentStory({ definition, theme, componentDocument, adapter, showSubmit = true, maxWidth = 640 }: WebComponentStoryProps) {
+export function WebComponentStory({ definition, theme, componentDocument, adapter, showSubmit = true }: WebComponentStoryProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const elementRef = useRef<FormspecRender | null>(null);
 
@@ -66,5 +65,5 @@ export function WebComponentStory({ definition, theme, componentDocument, adapte
         };
     }, [definition, theme, componentDocument, adapter, showSubmit]);
 
-    return <div ref={containerRef} style={{ maxWidth, margin: '0 auto' }} />;
+    return <div ref={containerRef} />;
 }

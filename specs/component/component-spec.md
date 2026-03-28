@@ -70,8 +70,8 @@ Section references (§N) refer to this document unless prefixed with
   - [§4.4 Repeatable Group Binding](#44-repeatable-group-binding)
   - [§4.5 Unbound Required Items](#45-unbound-required-items)
   - [§4.6 Bind/dataType Compatibility Matrix](#46-binddatatype-compatibility-matrix)
-- [§5 Built-In Components — Core (17)](#5-built-in-components--core-17)
-- [§6 Built-In Components — Progressive (16)](#6-built-in-components--progressive-16)
+- [§5 Built-In Components — Core (18)](#5-built-in-components--core-18)
+- [§6 Built-In Components — Progressive (17)](#6-built-in-components--progressive-17)
 - [§7 Custom Components](#7-custom-components)
   - [§7.1 The components Registry](#71-the-components-registry)
   - [§7.2 {param} Interpolation Grammar (ABNF)](#72-param-interpolation-grammar-abnf)
@@ -139,7 +139,7 @@ A Component Document:
   rules, required state, and relevance from the Definition.
 - Uses FEL expressions for conditional rendering (`when` property).
 - Supports responsive breakpoint overrides and design tokens.
-- Defines a fixed catalog of 33 built-in components (17 Core + 16
+- Defines a fixed catalog of 35 built-in components (18 Core + 17
   Progressive) plus a custom component registry for reuse.
 
 Multiple Component Documents MAY target the same Definition. This enables
@@ -181,14 +181,14 @@ This specification defines two conformance levels:
 
 | Level | Components | Requirement |
 |-------|-----------|-------------|
-| **Core Conformant** | 17 Core components (§5) | MUST support all 17 Core components. MUST apply fallback rules (§6.17) when encountering Progressive components. |
-| **Complete Conformant** | All 33 components (§5 + §6) | MUST support all 17 Core components and all 16 Progressive components. |
+| **Core Conformant** | 18 Core components (§5) | MUST support all 18 Core components. MUST apply fallback rules (§6.18) when encountering Progressive components. |
+| **Complete Conformant** | All 35 components (§5 + §6) | MUST support all 18 Core components and all 17 Progressive components. |
 
 A processor that claims Core conformance MUST, upon encountering a
-Progressive component, substitute the specified Core fallback (§6.17)
+Progressive component, substitute the specified Core fallback (§6.18)
 and SHOULD emit an informative warning.
 
-A processor that claims Complete conformance MUST render all 33 built-in
+A processor that claims Complete conformance MUST render all 35 built-in
 components natively.
 
 Both levels MUST support the custom component mechanism (§7).
@@ -381,7 +381,7 @@ the component tree are available:
 ##### Repeat template nodes
 
 When a component node with `id` appears inside a repeat template
-(as a child of a DataTable bound to a repeatable group per §6.13, or
+(as a child of a DataTable bound to a repeatable group per §6.14, or
 an Accordion per §6.3), the `id` identifies the **template node**,
 not individual rendered instances. All rendered instances of the
 template share the same `id`. This is consistent with the
@@ -585,7 +585,7 @@ The meaning and requirement of `bind` varies by component category:
 | **Input** | REQUIRED | The component reads and writes the bound item's value. The renderer MUST propagate the item's `required`, `readOnly`, and `relevant` state to the input control. Validation errors for the bound key MUST be displayed adjacent to this component. |
 | **Display** | OPTIONAL | When present, the component displays the bound item's current value as read-only content. When absent, the component renders its static `text` prop. |
 | **Layout** | FORBIDDEN | Layout components MUST NOT have a `bind` property. If present, processors MUST ignore it and emit a warning. |
-| **Container** | FORBIDDEN | Container components MUST NOT have a `bind` property, with the exceptions of **DataTable** (§6.13) and **Accordion** (§6.3), which MAY bind to a repeatable group. |
+| **Container** | FORBIDDEN | Container components MUST NOT have a `bind` property, with the exceptions of **DataTable** (§6.14) and **Accordion** (§6.3), which MAY bind to a repeatable group. |
 
 When an Input component is bound to a field item:
 
@@ -646,7 +646,7 @@ The renderer MUST:
 3. Provide affordances for adding and removing repeat instances, subject
    to `minRepeat` and `maxRepeat` constraints from the Definition.
 
-Repeatable group binding is available on **DataTable** (§6.13), where each
+Repeatable group binding is available on **DataTable** (§6.14), where each
 repeat instance becomes a table row, and on **Accordion** (§6.3), where
 each repeat instance becomes a collapsible section.
 
@@ -711,9 +711,9 @@ or warn on incompatible bindings.
 
 ---
 
-## 5. Built-In Components — Core (17)
+## 5. Built-In Components — Core (18)
 
-This section defines the 17 Core components that all conforming
+This section defines the 18 Core components that all conforming
 processors MUST support. Components are grouped by category: Layout,
 Input, Display, and Container.
 
@@ -1470,18 +1470,69 @@ children.
 }
 ```
 
+### 5.19 SubmitButton
+
+**Category:** Display
+**Level:** Core
+**Accepts children:** No
+**Bind:** Forbidden
+
+#### Description
+
+A button that triggers the renderer's submit flow. When clicked, the
+renderer collects the current form response, generates a validation
+report in the configured `mode`, and either dispatches a
+`formspec-submit` CustomEvent (when `emitEvent` is `true`) or calls
+the host renderer's submit API directly.
+
+While a submission is pending (the shared submit-pending state is
+`true`), the button SHOULD display `pendingLabel` (when provided) in
+place of `label`, and — unless `disableWhenPending` is `false` — MUST
+be rendered in a disabled/inert state to prevent duplicate submissions.
+
+SubmitButton has no `bind` relationship. It interacts with the form
+as a whole, not with any individual item.
+
+#### Props
+
+| Prop | Type | Default | Token-able | Description |
+|------|------|---------|------------|-------------|
+| `label` | string | `"Submit"` | No | Button label text. |
+| `mode` | string | `"submit"` | No | Validation mode used when clicked. MUST be one of `"continuous"` or `"submit"`. Controls which validation pass produces the report emitted with the event. |
+| `emitEvent` | boolean | `false` | No | When `true`, clicking the button dispatches a `formspec-submit` CustomEvent whose `detail` carries the current response and validation report. |
+| `pendingLabel` | string | — | No | Label text shown while the shared submit-pending state is `true`. Falls back to `label` when absent. |
+| `disableWhenPending` | boolean | `true` | No | Whether the button is rendered in a disabled/inert state while the shared submit-pending state is `true`. |
+
+#### Rendering Requirements
+
+- MUST render as a native button element or equivalent accessible
+  interactive control.
+- MUST NOT accept a `bind` property.
+- When clicked and `emitEvent` is `true`, MUST dispatch a
+  `formspec-submit` CustomEvent on the host element.
+- When the shared submit-pending state is `true`:
+  - If `disableWhenPending` is `true`, MUST render the button as
+    disabled/inert.
+  - MUST display `pendingLabel` when present.
+
+#### Example
+
+```json
+{ "component": "SubmitButton", "label": "Submit Application", "mode": "submit", "emitEvent": true, "pendingLabel": "Submitting…" }
+```
+
 ---
 
-## 6. Built-In Components — Progressive (16)
+## 6. Built-In Components — Progressive (17)
 
-This section defines the 16 Progressive components. A **Complete
-Conformant** processor MUST support all 16. A **Core Conformant**
+This section defines the 17 Progressive components. A **Complete
+Conformant** processor MUST support all 17. A **Core Conformant**
 processor MUST substitute the specified Core fallback for each
 Progressive component and SHOULD emit an informative warning.
 
 Each Progressive component entry includes a **Fallback** line
 identifying the Core component that replaces it in Core-level
-processors. §6.17 provides a consolidated fallback table.
+processors. §6.18 provides a consolidated fallback table.
 
 ---
 
@@ -2097,7 +2148,59 @@ one **Text** component per item, with `text` set to
 
 ---
 
-### 6.13 DataTable
+### 6.13 ValidationSummary
+
+**Category:** Display
+**Level:** Progressive
+**Accepts children:** No
+**Bind:** Forbidden
+**Fallback:** Alert (severity + message rows shown as warning/error alerts)
+
+#### Description
+
+A validation message panel that surfaces the current form validation
+state. Can operate in `"live"` mode (reading continuous engine
+state) or `"submit"` mode (reading the latest `formspec-submit`
+event detail). Optionally renders jump links that invoke
+`focusField(path)` on affected input fields.
+
+#### Props
+
+| Prop | Type | Default | Token-able | Description |
+|------|------|---------|------------|-------------|
+| `source` | string | `"live"` | No | Validation source. `"live"` reads continuous engine state; `"submit"` reads the latest `formspec-submit` event detail. |
+| `mode` | string | `"continuous"` | No | Validation mode used when `source` is `"live"`. MUST be one of `"continuous"` or `"submit"`. |
+| `showFieldErrors` | boolean | `false` | No | Whether to include bind-level field errors in addition to shape-level findings. |
+| `jumpLinks` | boolean | `false` | No | Whether to render clickable links or buttons that call `focusField(path)` for jumpable targets. |
+| `dedupe` | boolean | `true` | No | Whether duplicate messages (same severity, path, and message) are collapsed into a single row. |
+
+#### Rendering Requirements
+
+- MUST render as a list or panel of validation messages.
+- MUST display each finding's severity (error, warning, info) and
+  message text.
+- When `jumpLinks` is `true` and the finding has a `path`, MUST
+  render a clickable control that calls `focusField(path)`.
+- When `dedupe` is `true`, MUST collapse duplicate findings before
+  rendering.
+- When no findings are present, the component SHOULD render nothing
+  (empty state) or a brief "No issues" indicator.
+
+#### Fallback Behavior
+
+Core processors MUST replace ValidationSummary with one or more
+**Alert** components — one per validation finding, using the
+finding's severity as the Alert `variant`.
+
+#### Example
+
+```json
+{ "component": "ValidationSummary", "source": "submit", "jumpLinks": true, "showFieldErrors": true }
+```
+
+---
+
+### 6.14 DataTable
 
 **Category:** Display 
 **Level:** Progressive 
@@ -2154,7 +2257,7 @@ are rendered as TextInput or appropriate Core components.
 
 ---
 
-### 6.14 Panel
+### 6.15 Panel
 
 **Category:** Container 
 **Level:** Progressive 
@@ -2203,7 +2306,7 @@ is preserved. The `position` and `width` props are discarded.
 
 ---
 
-### 6.15 Modal
+### 6.16 Modal
 
 **Category:** Container 
 **Level:** Progressive 
@@ -2258,7 +2361,7 @@ collapsible body, initially collapsed (`defaultOpen: false`).
 
 ---
 
-### 6.16 Popover
+### 6.17 Popover
 
 **Category:** Container
 **Level:** Progressive
@@ -2309,7 +2412,7 @@ property is discarded.
 
 ---
 
-### 6.17 Fallback Requirements
+### 6.18 Fallback Requirements
 
 The following table defines the complete set of Progressive → Core
 fallback substitutions. A Core Conformant processor MUST apply these
@@ -2329,6 +2432,7 @@ fallbacks when it encounters a Progressive component.
 | Badge | Text | Same `text` prop. |
 | ProgressBar | Text | Text shows `"<value> / <max> (<percent>%)"`. |
 | Summary | Stack of Text | One Text per item: `"<label>: <value>"`. |
+| ValidationSummary | Alert | One Alert per finding; severity preserved as `variant`. |
 | DataTable | Stack of Card | One Card per repeat instance with child inputs. |
 | Panel | Card | `title` preserved; position/width discarded. |
 | Modal | Collapsible | `title` preserved; `defaultOpen: false`. |
@@ -2992,8 +3096,8 @@ A processor declares conformance at one of two levels:
 
 - MUST parse and validate all Component Document properties defined
   in this specification.
-- MUST render all 17 Core components (§5) with full prop support.
-- MUST apply fallback substitution (§6.17) for all 16 Progressive
+- MUST render all 18 Core components (§5) with full prop support.
+- MUST apply fallback substitution (§6.18) for all 17 Progressive
   components.
 - MUST support custom component expansion (§7).
 - MUST evaluate `when` expressions (§8).
@@ -3004,7 +3108,7 @@ A processor declares conformance at one of two levels:
 **Complete Conformant:**
 
 - MUST satisfy all Core Conformant requirements.
-- MUST additionally render all 16 Progressive components (§6)
+- MUST additionally render all 17 Progressive components (§6)
   natively, without fallback substitution.
 
 Processors SHOULD declare their conformance level in their
@@ -3294,7 +3398,7 @@ This example demonstrates:
 
 This appendix is **normative**.
 
-The following table lists all 33 built-in components with their
+The following table lists all 35 built-in components with their
 classification and key characteristics.
 
 | # | Component | Category | Level | Children | Bind | Description |
@@ -3313,26 +3417,29 @@ classification and key characteristics.
 | 12 | Heading | Display | Core | No | Forbidden | Section heading (h1–h6). |
 | 13 | Text | Display | Core | No | Optional | Static or data-bound text. |
 | 14 | Divider | Display | Core | No | Forbidden | Horizontal rule separator. |
-| 15 | Card | Container | Core | Yes | Forbidden | Bordered surface grouping. |
-| 16 | Collapsible | Container | Core | Yes | Forbidden | Expandable/collapsible section. |
-| 17 | ConditionalGroup | Container | Core | Yes | Forbidden | Condition-based visibility group. |
-| 18 | Columns | Layout | Progressive | Yes | Forbidden | Explicit column widths layout. |
-| 19 | Tabs | Layout | Progressive | Yes | Forbidden | Tabbed navigation container. |
-| 20 | Accordion | Layout | Progressive | Yes | Forbidden | Collapsible section list. |
-| 21 | RadioGroup | Input | Progressive | No | Required | Radio button single-select. |
-| 22 | MoneyInput | Input | Progressive | No | Required | Currency-aware numeric input. |
-| 23 | Slider | Input | Progressive | No | Required | Range slider control. |
-| 24 | Rating | Input | Progressive | No | Required | Star/icon rating control. |
-| 25 | Signature | Input | Progressive | No | Required | Drawn signature capture. |
-| 26 | Alert | Display | Progressive | No | Forbidden | Status message banner. |
-| 27 | Badge | Display | Progressive | No | Forbidden | Compact label badge. |
-| 28 | ProgressBar | Display | Progressive | No | Optional | Visual progress indicator. |
-| 29 | Summary | Display | Progressive | No | Forbidden | Key-value summary display. |
-| 30 | DataTable | Display | Progressive | No | Optional² | Tabular repeatable data. |
-| 31 | Panel | Container | Progressive | Yes | Forbidden | Side panel. |
-| 32 | Modal | Container | Progressive | Yes | Forbidden | Dialog overlay. |
-| 33 | Popover | Container | Progressive | Yes | Forbidden | Anchored contextual overlay. |
+| 15 | SubmitButton | Display | Core | No | Forbidden | Form submission trigger button. |
+| 16 | Card | Container | Core | Yes | Forbidden | Bordered surface grouping. |
+| 17 | Collapsible | Container | Core | Yes | Forbidden | Expandable/collapsible section. |
+| 18 | ConditionalGroup | Container | Core | Yes | Forbidden | Condition-based visibility group. |
+| 19 | Columns | Layout | Progressive | Yes | Forbidden | Explicit column widths layout. |
+| 20 | Tabs | Layout | Progressive | Yes | Forbidden | Tabbed navigation container. |
+| 21 | Accordion | Layout | Progressive | Yes | Optional¹ | Collapsible section list. |
+| 22 | RadioGroup | Input | Progressive | No | Required | Radio button single-select. |
+| 23 | MoneyInput | Input | Progressive | No | Required | Currency-aware numeric input. |
+| 24 | Slider | Input | Progressive | No | Required | Range slider control. |
+| 25 | Rating | Input | Progressive | No | Required | Star/icon rating control. |
+| 26 | Signature | Input | Progressive | No | Required | Drawn signature capture. |
+| 27 | Alert | Display | Progressive | No | Forbidden | Status message banner. |
+| 28 | Badge | Display | Progressive | No | Forbidden | Compact label badge. |
+| 29 | ProgressBar | Display | Progressive | No | Optional | Visual progress indicator. |
+| 30 | Summary | Display | Progressive | No | Forbidden | Key-value summary display. |
+| 31 | ValidationSummary | Display | Progressive | No | Forbidden | Live or submit validation message panel. |
+| 32 | DataTable | Display | Progressive | No | Optional² | Tabular repeatable data. |
+| 33 | Panel | Container | Progressive | Yes | Forbidden | Side panel. |
+| 34 | Modal | Container | Progressive | Yes | Forbidden | Dialog overlay. |
+| 35 | Popover | Container | Progressive | Yes | Forbidden | Anchored contextual overlay. |
 
+¹ Accordion `bind` is optional; when provided it MUST reference a repeatable group key (see §6.3).
 ² DataTable binds to a repeatable group key, not a field key.
 
 ---

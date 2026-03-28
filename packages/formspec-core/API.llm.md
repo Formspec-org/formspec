@@ -199,17 +199,18 @@ definition-optionsets
 
 ## `definitionOptionsetsHandlers: Record<string, CommandHandler>`
 
-Page, form-presentation, definition-property, and group-ref command handlers.
+Definition-level metadata and form-presentation handlers.
 
-Pages define the wizard / multi-step form structure. When page mode is enabled
-the definition's `formPresentation.pages` array contains an ordered list of page
-descriptors, each with a stable `key` and a user-facing `title`. Items are
-assigned to pages, giving the form a paginated navigation flow.
+This module is intentionally narrow: it only mutates Tier 1 authoring state
+that belongs on the definition itself.
 
-This module also houses the general-purpose `definition.setDefinitionProperty`
-handler for top-level definition metadata, `definition.setFormPresentation` for
-presentation-level settings, and `definition.setGroupRef` for modular composition
-via `$ref` on group items.
+That includes:
+- top-level definition metadata (`definition.setDefinitionProperty`)
+- form presentation behavior such as `pageMode` (`definition.setFormPresentation`)
+- group `$ref` composition (`definition.setGroupRef`)
+
+It does not author Tier 2 theme pages or Tier 3 component Page nodes. Those
+higher-precedence layout surfaces are handled elsewhere.
 
 definition-pages
 

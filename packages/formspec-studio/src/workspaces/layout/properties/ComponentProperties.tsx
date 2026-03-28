@@ -11,7 +11,7 @@ import {
   findComponentNodeById,
   isLayoutId,
   nodeIdFromLayoutId,
-} from '../../../lib/field-helpers';
+} from '@formspec-org/studio-core';
 import { AppearanceSection } from './AppearanceSection';
 import { WidgetSection } from './WidgetSection';
 import { LayoutSection } from './LayoutSection';

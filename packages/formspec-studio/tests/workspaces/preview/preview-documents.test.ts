@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeComponentDoc,
   normalizeThemeDoc,
-} from '../../../src/workspaces/preview/preview-documents';
+} from '@formspec-org/studio-core';
 
 describe('normalizeComponentDoc', () => {
   it('stamps a valid component envelope when preview receives a bare tree doc', () => {

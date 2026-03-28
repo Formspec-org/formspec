@@ -3,8 +3,7 @@ import { Section } from '../../../components/ui/Section';
 import { BindCard } from '../../../components/ui/BindCard';
 import { InlineExpression } from '../../../components/ui/InlineExpression';
 import { AddBehaviorMenu } from '../../../components/ui/AddBehaviorMenu';
-import { humanizeFEL } from '../../../lib/field-helpers';
-import type { Project } from '@formspec-org/studio-core';
+import { humanizeFEL, type Project } from '@formspec-org/studio-core';
 
 export function BindsInlineSection({
   path,

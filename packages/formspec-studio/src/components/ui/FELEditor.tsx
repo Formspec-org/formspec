@@ -19,11 +19,12 @@ import {
   getInstanceFieldOptions,
   getInstanceNameOptions,
   validateFEL,
+  flatItems,
+  dataTypeInfo,
   type FELAutocompleteTrigger,
   type FELEditorFieldOption,
   type FELEditorFunctionOption,
-} from '../../lib/fel-editor-utils';
-import { flatItems, dataTypeInfo } from '../../lib/field-helpers';
+} from '@formspec-org/studio-core';
 import { useOptionalDefinition } from '../../state/useDefinition';
 import { getBuiltinFELFunctionCatalog } from '@formspec-org/engine';
 import { formatCategoryName } from './FELReferencePopup';

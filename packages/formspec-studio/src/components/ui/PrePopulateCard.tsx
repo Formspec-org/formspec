@@ -1,6 +1,6 @@
 /** @filedesc Card editor for a pre-populate bind rule specifying the external instance and field path. */
 import { HelpTip } from './HelpTip';
-import { propertyHelp } from '../../lib/field-helpers';
+import { propertyHelp } from '@formspec-org/studio-core';
 
 interface PrePopulateCardProps {
   value: { instance: string; path: string; editable?: boolean };

@@ -9,11 +9,12 @@ import { renderTextInput } from '../../src/uswds/text-input';
 import { renderNumberInput } from '../../src/uswds/number-input';
 import { renderSelect } from '../../src/uswds/select';
 import { renderCheckbox } from '../../src/uswds/checkbox';
+import { renderCheckboxGroup } from '../../src/uswds/checkbox-group';
 import { renderToggle } from '../../src/uswds/toggle';
 import { renderRating } from '../../src/uswds/rating';
 import { renderSignature } from '../../src/uswds/signature';
 import {
-    mockTextInput, mockNumberInput, mockSelect, mockFieldBehavior, mockToggle,
+    mockTextInput, mockNumberInput, mockSelect, mockFieldBehavior, mockToggle, mockCheckboxGroup,
     mockRating, mockSignature, mockAdapterContext, captureBindRefs,
     mockCanvasContext,
 } from '../helpers';
@@ -65,12 +66,49 @@ describe('Error-class toggling (onValidationChange)', () => {
         expect(input.classList.contains('usa-input--error')).toBe(true);
     });
 
+    it('TextInput onValidationChange toggles usa-label--error on the label', () => {
+        const parent = makeParent();
+        const b = mockTextInput();
+        renderTextInput(b, parent, mockAdapterContext());
+        const refs = captureBindRefs(b);
+
+        refs.onValidationChange!(true, 'Required');
+        const label = parent.querySelector('.usa-label')!;
+        expect(label.classList.contains('usa-label--error')).toBe(true);
+    });
+
     it('NumberInput passes onValidationChange to bind()', () => {
         const parent = makeParent();
         const b = mockNumberInput();
         renderNumberInput(b, parent, mockAdapterContext());
         const refs = captureBindRefs(b);
         expect(typeof refs.onValidationChange).toBe('function');
+    });
+
+    it('Select onValidationChange uses usa-input--error and usa-label--error', () => {
+        const parent = makeParent();
+        const b = mockSelect();
+        renderSelect(b, parent, mockAdapterContext());
+        const refs = captureBindRefs(b);
+
+        refs.onValidationChange!(true, 'Required');
+        const label = parent.querySelector('.usa-label')!;
+        const select = parent.querySelector('.usa-select')!;
+        expect(label.classList.contains('usa-label--error')).toBe(true);
+        expect(select.classList.contains('usa-input--error')).toBe(true);
+    });
+
+    it('CheckboxGroup onValidationChange uses usa-form-group--error and legend error styling', () => {
+        const parent = makeParent();
+        const b = mockCheckboxGroup();
+        renderCheckboxGroup(b, parent, mockAdapterContext());
+        const refs = captureBindRefs(b);
+
+        refs.onValidationChange!(true, 'Required');
+        const fieldset = parent.querySelector('.usa-fieldset')!;
+        const legend = parent.querySelector('.usa-legend')!;
+        expect(fieldset.classList.contains('usa-form-group--error')).toBe(true);
+        expect(legend.classList.contains('usa-label--error')).toBe(true);
     });
 });
 

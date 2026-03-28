@@ -14,8 +14,8 @@ export function MappingPreview() {
   const [showRaw, setShowRaw] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const generateSchemaSample = () => {
-    const sample = generateDefinitionSampleData(project.definition);
+  const generateSchemaSample = async () => {
+    const sample = await generateDefinitionSampleData(project.definition);
     setSampleInput(JSON.stringify(sample, null, 2));
   };
 

@@ -3,7 +3,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Pill } from '../../components/ui/Pill';
 import { FieldIcon } from '../../components/ui/FieldIcon';
 import { DragHandle } from '../../components/ui/DragHandle';
-import { dataTypeInfo } from '../../lib/field-helpers';
+import { dataTypeInfo } from '@formspec-org/studio-core';
 import type { FormItem } from '@formspec-org/types';
 
 interface SummaryEntry {

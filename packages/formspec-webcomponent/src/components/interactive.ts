@@ -27,6 +27,40 @@ export const TabsPlugin: ComponentPlugin = {
 export const SubmitButtonPlugin: ComponentPlugin = {
     type: 'SubmitButton',
     render: (comp: any, parent: HTMLElement, ctx: RenderContext) => {
+        const adapterFn = globalRegistry.resolveAdapterFn('SubmitButton');
+        if (adapterFn) {
+            const defaultLabel = resolveCompText(ctx, comp, 'label', comp.label || 'Submit');
+            const pendingLabel = resolveCompText(ctx, comp, 'pendingLabel', comp.pendingLabel || 'Submitting\u2026');
+            const disableWhenPending = comp.disableWhenPending !== false;
+            adapterFn({
+                id: comp.id,
+                compOverrides: comp,
+                defaultLabel,
+                pendingLabel,
+                disableWhenPending,
+                bind: (refs: { root: HTMLButtonElement }) => {
+                    const button = refs.root;
+                    const disposeEffect = effect(() => {
+                        const pending = ctx.submitPendingSignal.value;
+                        button.textContent = pending ? pendingLabel : defaultLabel;
+                        button.disabled = disableWhenPending ? pending : false;
+                    });
+                    const handleClick = () => {
+                        ctx.submit({
+                            mode: comp.mode || 'submit',
+                            emitEvent: comp.emitEvent !== false,
+                        });
+                    };
+                    button.addEventListener('click', handleClick);
+                    return () => {
+                        disposeEffect();
+                        button.removeEventListener('click', handleClick);
+                    };
+                },
+            }, parent, ctx.adapterContext);
+            return;
+        }
+
         const button = document.createElement('button');
         if (comp.id) button.id = comp.id;
         button.type = 'button';

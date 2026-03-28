@@ -102,6 +102,33 @@ describe('editor-tree-helpers', () => {
     expect(optionsEntry?.value).toBe('2 choices');
   });
 
+  it('surfaces default bind as a status pill', () => {
+    const pills = buildStatusPills(
+      { default: '42' },
+      { key: 'age', type: 'field' } as any,
+    );
+    expect(pills).toContainEqual({ text: 'def', color: 'green' });
+  });
+
+  it('includes default bind value in row summaries', () => {
+    const summaries = buildRowSummaries(
+      { key: 'age', type: 'field', dataType: 'integer', label: 'Age' } as any,
+      { default: '42' },
+    );
+    expect(summaries).toContainEqual({ label: 'Default', value: '42' });
+  });
+
+  it('humanizes FEL default bind expressions in row summaries', () => {
+    const summaries = buildRowSummaries(
+      { key: 'age', type: 'field', dataType: 'integer', label: 'Age' } as any,
+      { default: '$baseAge + 1' },
+    );
+    const def = summaries.find((s) => s.label === 'Default');
+    expect(def).toBeDefined();
+    // summarizeExpression returns humanized form or passthrough
+    expect(def!.value).toBe('$baseAge + 1');
+  });
+
   it('does not fall back to a non-spec choices property when options is absent', () => {
     const summaries = buildRowSummaries(
       {

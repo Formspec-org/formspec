@@ -30,7 +30,7 @@ export const conditionalDef = {
             type: "field",
             dataType: "boolean",
             label: "Other (specify)",
-            presentation: { widgetHint: "Checkbox" },
+            presentation: { widgetHint: "checkbox" },
         },
         {
             key: "otherDetail",

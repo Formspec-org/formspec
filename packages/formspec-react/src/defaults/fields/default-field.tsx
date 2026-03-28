@@ -72,7 +72,7 @@ export function DefaultField({ field, node }: FieldComponentProps) {
                 />
                 <label htmlFor={field.id}>
                     {field.label}
-                    {field.required && <span className="formspec-required" aria-hidden="true">*</span>}
+                    {field.required && <span className="formspec-required" aria-hidden="true"> *</span>}
                 </label>
                 {hasToggleLabels && (
                     <span className="formspec-toggle-label formspec-toggle-on" aria-hidden="true">
@@ -98,7 +98,7 @@ export function DefaultField({ field, node }: FieldComponentProps) {
             >
                 <legend>
                     {field.label}
-                    {field.required && <span className="formspec-required" aria-hidden="true">*</span>}
+                    {field.required && <span className="formspec-required" aria-hidden="true"> *</span>}
                 </legend>
                 {field.hint && (
                     <p id={`${field.id}-hint`} className="formspec-hint">{field.hint}</p>
@@ -126,7 +126,7 @@ export function DefaultField({ field, node }: FieldComponentProps) {
                 className={node.labelPosition === 'hidden' ? 'sr-only' : undefined}
             >
                 {field.label}
-                {field.required && <span className="formspec-required" aria-hidden="true">*</span>}
+                {field.required && <span className="formspec-required" aria-hidden="true"> *</span>}
             </label>
 
             {field.hint && (
@@ -269,7 +269,7 @@ function renderControl(
                         disabled={isReadonly}
                     >
                         {/* Item 5: hidden prevents placeholder appearing in iOS picker dropdown */}
-                        <option value="" disabled hidden>- Select -</option>
+                        <option value="" disabled hidden>Select…</option>
                         {field.options.map((opt) => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}

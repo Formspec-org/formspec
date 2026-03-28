@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { WebComponentStory } from '../_shared/WebComponentStory';
-import { uswdsAdapter } from '@formspec-org/adapters';
+import { USWDSSideBySideStory } from '../_shared/USWDSSideBySideStory';
 import { contactFormDef, displayDef } from '../_shared/definitions';
 import {
     textInputDef,
@@ -14,95 +13,105 @@ import {
     numberStepperDef,
     datePickerDef,
     moneyInputDef,
+    sliderDef,
     toggleDef,
+    fileUploadDef,
 } from '../fields/definitions';
 import { repeatGroupDef, conditionalDef, validationDef } from '../behavior/definitions';
 
-const meta: Meta<typeof WebComponentStory> = {
+const meta: Meta<typeof USWDSSideBySideStory> = {
     title: 'Adapters/USWDS',
-    component: WebComponentStory,
+    component: USWDSSideBySideStory,
     parameters: {
         docs: {
             story: { inline: false },
             description: {
-                component: 'The `<formspec-render>` custom element using the USWDS v3 adapter. Renders U.S. Web Design System markup patterns, typography, and component styling.',
+                component: 'Compares the Formspec USWDS adapter against equivalent native U.S. Web Design System components. The real-USWDS pane runs the official component JavaScript inside an isolated shadow root so its CSS and behavior do not leak into the adapter pane.',
             },
         },
     },
 };
 export default meta;
 
-type Story = StoryObj<typeof WebComponentStory>;
+type Story = StoryObj<typeof USWDSSideBySideStory>;
 
-const withUswds = (definition: any) => ({
+const withComparison = (definition: any) => ({
     definition,
-    adapter: uswdsAdapter,
+    maxWidth: 1400,
 });
 
 export const TextInput: Story = {
-    args: withUswds(textInputDef),
+    args: withComparison(textInputDef),
 };
 
 export const TextInputDetailed: Story = {
-    args: withUswds(textInputDetailedDef),
+    args: withComparison(textInputDetailedDef),
 };
 
 export const Textarea: Story = {
-    args: withUswds(textareaDef),
+    args: withComparison(textareaDef),
 };
 
 export const Select: Story = {
-    args: withUswds(selectDef),
+    args: withComparison(selectDef),
 };
 
 export const RadioGroup: Story = {
-    args: withUswds(radioGroupDef),
+    args: withComparison(radioGroupDef),
 };
 
 export const Checkbox: Story = {
-    args: withUswds(checkboxDef),
+    args: withComparison(checkboxDef),
 };
 
 export const CheckboxGroup: Story = {
-    args: withUswds(checkboxGroupDef),
+    args: withComparison(checkboxGroupDef),
 };
 
 export const NumberInput: Story = {
-    args: withUswds(numberInputDef),
+    args: withComparison(numberInputDef),
 };
 
 export const NumberStepper: Story = {
-    args: withUswds(numberStepperDef),
+    args: withComparison(numberStepperDef),
 };
 
 export const DatePicker: Story = {
-    args: withUswds(datePickerDef),
+    args: withComparison(datePickerDef),
 };
 
 export const MoneyInput: Story = {
-    args: withUswds(moneyInputDef),
+    args: withComparison(moneyInputDef),
 };
 
 export const Toggle: Story = {
-    args: withUswds(toggleDef),
+    args: withComparison(toggleDef),
 };
 
 export const ContactForm: Story = {
-    args: withUswds(contactFormDef),
+    args: withComparison(contactFormDef),
 };
 
 export const Display: Story = {
-    args: withUswds(displayDef),
+    args: withComparison(displayDef),
 };
 
 export const RepeatGroup: Story = {
-    args: withUswds(repeatGroupDef),
+    args: withComparison(repeatGroupDef),
 };
 
 export const Conditional: Story = {
-    args: withUswds(conditionalDef),
+    args: withComparison(conditionalDef),
 };
 
 export const Validation: Story = {
-    args: withUswds(validationDef),
+    args: withComparison(validationDef),
+};
+
+export const Slider: Story = {
+    args: withComparison(sliderDef),
+};
+
+export const FileUpload: Story = {
+    args: withComparison(fileUploadDef),
 };

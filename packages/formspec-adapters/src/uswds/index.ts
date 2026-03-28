@@ -15,6 +15,7 @@ import { renderFileUpload } from './file-upload';
 import { renderSignature } from './signature';
 import { renderWizard } from './wizard';
 import { renderTabs } from './tabs';
+import { renderSubmitButton } from './submit-button';
 import { integrationCSS } from './integration-css';
 
 /**
@@ -43,5 +44,6 @@ export const uswdsAdapter: RenderAdapter = {
         Signature: renderSignature,
         Wizard: renderWizard,
         Tabs: renderTabs,
+        SubmitButton: renderSubmitButton,
     },
 };

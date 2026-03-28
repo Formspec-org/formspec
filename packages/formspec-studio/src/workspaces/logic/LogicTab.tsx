@@ -1,9 +1,8 @@
 /** @filedesc Logic workspace tab composing Variables, Binds, and Shapes sections with a FilterBar. */
 import { useState, useMemo } from 'react';
-import { normalizeBindsView } from '../../lib/field-helpers';
+import { normalizeBindsView, buildDefLookup } from '@formspec-org/studio-core';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
-import { buildDefLookup } from '../../lib/field-helpers';
 import { FilterBar } from './FilterBar';
 import { HelpTip } from '../../components/ui/HelpTip';
 import { VariablesSection } from './VariablesSection';

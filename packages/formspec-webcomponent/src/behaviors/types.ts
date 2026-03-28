@@ -140,6 +140,7 @@ export interface SliderBehavior extends FieldBehavior {
 export interface RatingBehavior extends FieldBehavior {
     maxRating: number;
     icon: string;
+    unselectedIcon: string;
     allowHalf: boolean;
     isInteger: boolean;
     setValue(value: number): void;

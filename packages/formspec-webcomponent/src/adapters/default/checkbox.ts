@@ -22,7 +22,8 @@ export const renderCheckbox: AdapterRenderFn<FieldBehavior> = (
     checkbox.id = behavior.id;
     checkbox.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
 
-    fieldDOM.root.appendChild(checkbox);
+    // Insert checkbox before the label for leading position (conventional form UX)
+    fieldDOM.root.insertBefore(checkbox, fieldDOM.label);
     applyControlSlotClass(checkbox, behavior, actx);
     finalizeFieldDOM(fieldDOM, behavior, actx);
     parent.appendChild(fieldDOM.root);

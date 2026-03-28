@@ -84,6 +84,9 @@ export function buildRowSummaries(item: FormItem, binds: Record<string, string>)
   if (binds.required?.trim() && binds.required.trim() !== 'true') {
     behaviorFacts.push({ label: 'Required', value: summarizeExpression(binds.required) });
   }
+  if (binds.default?.trim()) {
+    behaviorFacts.push({ label: 'Default', value: summarizeExpression(binds.default) });
+  }
   if (binds.constraint?.trim()) {
     behaviorFacts.push({ label: 'Constraint', value: summarizeExpression(binds.constraint) });
   }
@@ -107,6 +110,7 @@ export function buildStatusPills(binds: Record<string, string>, item: FormItem):
   if (binds.required) pills.push({ text: 'req', color: 'accent' });
   if (binds.relevant) pills.push({ text: 'rel', color: 'logic' });
   if (binds.calculate) pills.push({ text: 'ƒx', color: 'green' });
+  if (binds.default) pills.push({ text: 'def', color: 'green' });
   if (item.prePopulate) pills.push({ text: 'pre', color: 'amber' });
   if (binds.constraint) pills.push({ text: 'rule', color: 'error' });
   if (binds.readonly) pills.push({ text: 'ro', color: 'muted' });
@@ -124,6 +128,7 @@ export function buildMissingPropertyActions(
     binds.required?.trim()
       || binds.relevant?.trim()
       || binds.calculate?.trim()
+      || binds.default?.trim()
       || binds.readonly?.trim()
       || binds.constraint?.trim()
       || binds.constraintMessage?.trim(),

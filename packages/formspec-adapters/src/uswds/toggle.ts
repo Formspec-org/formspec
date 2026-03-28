@@ -1,7 +1,7 @@
 /** @filedesc USWDS v3 adapter for Toggle — USWDS has no toggle; uses usa-checkbox with label. */
 import type { ToggleBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
-import { createUSWDSError } from './shared';
+import { applyUSWDSValidationState, createUSWDSError } from './shared';
 
 export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     behavior, parent, actx
@@ -52,7 +52,7 @@ export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     const dispose = behavior.bind({
         root, label, control: input, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
+            applyUSWDSValidationState(root, label, hasError);
         },
     });
     actx.onDispose(dispose);

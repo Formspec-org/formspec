@@ -1,8 +1,7 @@
 /** @filedesc Properties panel section for group config: repeatable toggle and min/max repeat counts. */
 import { Section } from '../../../components/ui/Section';
 import { HelpTip } from '../../../components/ui/HelpTip';
-import { propertyHelp } from '../../../lib/field-helpers';
-import type { Project } from '@formspec-org/studio-core';
+import { propertyHelp, type Project } from '@formspec-org/studio-core';
 import type { FormItem } from '@formspec-org/types';
 
 function parseRepeatValue(value: string): number | null {

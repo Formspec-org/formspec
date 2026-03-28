@@ -33,7 +33,7 @@ export function FormStory({
     const [result, setResult] = useState<SubmitResult | null>(null);
 
     return (
-        <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <div>
             <FormspecForm
                 definition={definition}
                 themeDocument={theme}

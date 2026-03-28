@@ -1,9 +1,8 @@
 /** @filedesc Keyboard-driven command palette for searching and navigating items, variables, binds, and shapes. */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { normalizeBindEntries } from '../lib/field-helpers';
+import { normalizeBindEntries, flatItems } from '@formspec-org/studio-core';
 import { useDefinition } from '../state/useDefinition';
 import { useSelection } from '../state/useSelection';
-import { flatItems } from '../lib/field-helpers';
 
 interface CommandPaletteProps {
   open: boolean;

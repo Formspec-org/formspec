@@ -9,7 +9,7 @@ export const contactFormDef = {
         { key: "lastName", type: "field", dataType: "string", label: "Last Name", required: true },
         { key: "email", type: "field", dataType: "string", label: "Email" },
         { key: "phone", type: "field", dataType: "string", label: "Phone" },
-        { key: "newsletter", type: "field", dataType: "boolean", label: "Subscribe to newsletter", presentation: { widgetHint: "Checkbox" } },
+        { key: "newsletter", type: "field", dataType: "boolean", label: "Subscribe to newsletter", presentation: { widgetHint: "checkbox" } },
     ],
 };
 

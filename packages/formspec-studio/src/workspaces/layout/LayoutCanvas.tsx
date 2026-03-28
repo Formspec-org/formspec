@@ -1,11 +1,17 @@
 /** @filedesc Main Layout workspace canvas — renders the component tree with page sections, layout containers, and field/display blocks. */
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useComponent } from '../../state/useComponent';
 import { useProject } from '../../state/useProject';
 import { useSelection } from '../../state/useSelection';
 import { useLayoutPageStructure } from './useLayoutPageStructure';
-import { buildDefLookup, buildBindKeyMap } from '../../lib/field-helpers';
+import {
+  buildDefLookup,
+  buildBindKeyMap,
+  buildLayoutContextMenuItems,
+  executeLayoutAction,
+  type LayoutContextMenuState,
+} from '@formspec-org/studio-core';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { AddItemPalette, type FieldTypeOption } from '../../components/AddItemPalette';
 import { ModeSelector } from './ModeSelector';
@@ -13,11 +19,6 @@ import { LayoutStepNav } from './LayoutStepNav';
 import { renderLayoutTree } from './render-tree';
 import { UnassignedTray } from './UnassignedTray';
 import { LayoutContextMenu } from './LayoutContextMenu';
-import {
-  buildLayoutContextMenuItems,
-  executeLayoutAction,
-  type LayoutContextMenuState,
-} from './layout-context-operations';
 import { clampContextMenuPosition } from '../../components/ui/context-menu-utils';
 
 interface CompNode {
@@ -109,9 +110,25 @@ export function LayoutCanvas() {
     [pagedTreeChildren],
   );
 
+  // Track whether synthetic pages have already been materialized into real
+  // component-doc pages.  After the first materialization the synthetic list
+  // is empty, so subsequent calls are no-ops — the ref lets us skip the
+  // filter + loop entirely on every subsequent user interaction.
+  const materialized = useRef(false);
+
+  // Reset the flag when the page nav items change (e.g. new synthetic pages
+  // appear after a definition change).
+  useEffect(() => { materialized.current = false; }, [pageNavItems]);
+
   const materializePagedLayout = useCallback(() => {
-    const syntheticPages = pageNavItems.filter((page) => !page.pageId && page.groupPath);
     const pageIdMap = new Map<string, string>();
+    if (materialized.current) return pageIdMap;
+
+    const syntheticPages = pageNavItems.filter((page) => !page.pageId && page.groupPath);
+    if (syntheticPages.length === 0) {
+      materialized.current = true;
+      return pageIdMap;
+    }
 
     for (const page of syntheticPages) {
       const result = project.addPage(page.title, undefined, page.id, { standalone: true });
@@ -120,6 +137,7 @@ export function LayoutCanvas() {
       pageIdMap.set(page.id, createdPageId);
     }
 
+    materialized.current = true;
     return pageIdMap;
   }, [pageNavItems, project]);
 

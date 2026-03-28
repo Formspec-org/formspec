@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { type ColorScheme } from '../hooks/useColorScheme';
 import JSZip from 'jszip';
-import { createProject, type Project } from '@formspec-org/studio-core';
+import { createProject, handleKeyboardShortcut, buildDefLookup, type Project } from '@formspec-org/studio-core';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
@@ -18,14 +18,11 @@ import { MappingTab } from '../workspaces/mapping/MappingTab';
 import { PreviewTab } from '../workspaces/preview/PreviewTab';
 import { CommandPalette } from './CommandPalette';
 import { ImportDialog } from './ImportDialog';
-import { handleKeyboardShortcut } from '../lib/keyboard';
 import { ChatPanel } from './ChatPanel';
 import { AppSettingsDialog } from './AppSettingsDialog';
 import { CanvasTargetsProvider } from '../state/useCanvasTargets';
 import { useProject } from '../state/useProject';
 import { useSelection } from '../state/useSelection';
-import { buildDefLookup } from '../lib/field-helpers';
-
 import { ComponentTree } from './blueprint/ComponentTree';
 import { ScreenerSection } from './blueprint/ScreenerSection';
 import { VariablesList } from './blueprint/VariablesList';

@@ -1,12 +1,11 @@
 /** @filedesc Properties panel section for field-level config: initial value, decimal, and money flags. */
 import { Section } from '../../../components/ui/Section';
-import { propertyHelp } from '../../../lib/field-helpers';
+import { propertyHelp, type Project } from '@formspec-org/studio-core';
 import { PropInput } from './shared';
 import { AddBehaviorMenu } from '../../../components/ui/AddBehaviorMenu';
 import { BindCard } from '../../../components/ui/BindCard';
 import { InlineExpression } from '../../../components/ui/InlineExpression';
 import { PrePopulateCard } from '../../../components/ui/PrePopulateCard';
-import type { Project } from '@formspec-org/studio-core';
 import type { FormItem } from '@formspec-org/types';
 
 export function FieldConfigSection({

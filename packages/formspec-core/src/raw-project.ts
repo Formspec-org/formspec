@@ -232,6 +232,11 @@ export class RawProject implements IProjectCore {
     this._syncComponentTree(this._state);
   }
 
+  // PERF: This runs on every dispatch (via handler pipeline) and on
+  // restoreState/undo/redo.  reconcileComponentTree is idempotent, so
+  // repeated calls are correct but wasteful when the item tree hasn't
+  // changed.  Consider adding a dirty flag (set when items/component
+  // handlers fire) so reconciliation only runs when needed.
   private _syncComponentTree(state: ProjectState): void {
     if (typeof (state.component as Record<string, unknown>).$formspecComponent !== 'string') {
       (state.component as Record<string, unknown>).$formspecComponent = '1.0';

@@ -1,6 +1,7 @@
 /** @filedesc useScreener — React hook for the Formspec screener gate. */
 import { useState, useCallback } from 'react';
 import type { IFormEngine } from '@formspec-org/engine';
+import { evalFEL } from '@formspec-org/engine';
 import type { UseScreenerOptions, UseScreenerResult, ScreenerRoute, ScreenerRouteType } from './types';
 
 /**
@@ -23,13 +24,36 @@ function itemOptions(item: any): any[] {
  * Determine whether a screener item is required.
  * Checks the item's own `required` flag first, then falls back to
  * `screener.binds` (the canonical location in the definition schema).
+ * FEL expressions in the `required` bind are evaluated against the
+ * current answers using the engine's FEL evaluator.
  */
-function isItemRequired(item: any, screener: any): boolean {
+export function isItemRequired(
+    item: any,
+    screener: any,
+    engine: IFormEngine | null,
+    answers: Record<string, any>,
+): boolean {
     if (item.required === true) return true;
     const binds: any[] = screener?.binds ?? [];
-    return binds.some(
-        (b: any) => b.path === item.key && (b.required === 'true' || b.required === true),
-    );
+    const bind = binds.find((b: any) => b.path === item.key);
+    if (!bind || bind.required == null) return false;
+
+    // Literal boolean or string "true"
+    if (bind.required === true || bind.required === 'true') return true;
+    if (bind.required === false || bind.required === 'false') return false;
+
+    // FEL expression — evaluate with current answers as field context
+    if (typeof bind.required === 'string' && engine) {
+        try {
+            const result = evalFEL(bind.required, answers);
+            return result === true;
+        } catch {
+            // If evaluation fails, treat as not required (graceful degradation)
+            return false;
+        }
+    }
+
+    return false;
 }
 
 function buildSeedAnswers(items: any[], seed: Record<string, any> | undefined): Record<string, any> {
@@ -79,11 +103,11 @@ export function useScreener(
     const submit = useCallback(() => {
         // Validate required fields
         const newErrors: Record<string, string> = {};
-        const hasExplicitRequired = items.some(i => isItemRequired(i, screener));
+        const hasExplicitRequired = items.some(i => isItemRequired(i, screener, engine, answers));
 
         if (hasExplicitRequired) {
             for (const item of items) {
-                if (isItemRequired(item, screener)) {
+                if (isItemRequired(item, screener, engine, answers)) {
                     const val = answers[item.key];
                     if (val === undefined || val === null || val === '') {
                         newErrors[item.key] = `${item.label || item.key} is required`;
@@ -118,23 +142,23 @@ export function useScreener(
             return;
         }
 
-        // Determine route type from definition routes.
-        // The webcomponent checks whether the target matches the definition's own URL
-        // (internal) vs. an external URL. For the React adapter we inspect the routes
-        // array: a route whose target matches the definition URL is internal; otherwise
-        // we fall back to checking for an explicit `type` field or URL heuristics.
+        // Determine route type: prefer explicit `routeType` on the matched
+        // route definition, then fall back to URL-based heuristics.
+        const matchedRoute = routes.find(
+            (r: any) => r.target === result.target || r.label === result.target,
+        );
+
         let routeType: ScreenerRouteType = 'internal';
-        const defUrl = definition?.url;
-        if (defUrl && result.target === defUrl) {
-            routeType = 'internal';
+        if (matchedRoute?.routeType === 'internal' || matchedRoute?.routeType === 'external' || matchedRoute?.routeType === 'none') {
+            // Explicit routeType takes precedence over heuristics
+            routeType = matchedRoute.routeType;
         } else {
-            const matchedRoute = routes.find(
-                (r: any) => r.target === result.target || r.label === result.target,
-            );
-            if (matchedRoute?.type === 'external' || matchedRoute?.externalUrl) {
+            const defUrl = definition?.url;
+            if (defUrl && result.target === defUrl) {
+                routeType = 'internal';
+            } else if (matchedRoute?.type === 'external' || matchedRoute?.externalUrl) {
                 routeType = 'external';
             } else if (defUrl && result.target !== defUrl) {
-                // Different target than the definition's own URL — external
                 routeType = 'external';
             }
         }
@@ -166,4 +190,4 @@ export function useScreener(
 }
 
 // Re-export helpers for use outside the hook (e.g. FormspecScreener field rendering)
-export { itemDataType, itemOptions, isItemRequired };
+export { itemDataType, itemOptions };

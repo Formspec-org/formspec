@@ -512,7 +512,7 @@ Thrown by helpers when pre-validation fails
 
 ## `buildLayoutContextMenuItems(menu: LayoutContextMenuState | null): LayoutContextMenuItem[]`
 
-## `executeLayoutAction({ action, menu, project, deselect, closeMenu, }: ExecuteLayoutActionOptions): void`
+## `executeLayoutAction({ action, menu, project, deselect, select, closeMenu, }: ExecuteLayoutActionOptions): void`
 
 #### interface `LayoutContextMenuState`
 
@@ -537,9 +537,10 @@ Thrown by helpers when pre-validation fails
 - **menu**: `LayoutContextMenuState | null`
 - **project**: `Project`
 - **deselect**: `() => void`
+- **select**: `(key: string, type: 'field' | 'group' | 'display' | 'layout') => void`
 - **closeMenu**: `() => void`
 
-## `generateDefinitionSampleData(definition: FormDefinition, options?: MappingSampleOptions): Record<string, unknown>`
+## `generateDefinitionSampleData(definition: FormDefinition, options?: MappingSampleOptions): Promise<Record<string, unknown>>`
 
 #### interface `MappingSampleOptions`
 
@@ -564,6 +565,7 @@ Thrown by helpers when pre-validation fails
 - **quote?**: `string`
 - **header?**: `boolean`
 - **lineEnding?**: `'crlf' | 'lf'`
+- **encoding?**: `string`
 
 ## `resolveLayoutPageStructure(state: PageStructureViewInput): PageStructureView`
 
@@ -1054,6 +1056,28 @@ Unwrap a layout container, promoting its children.
 ##### `deleteLayoutNode(nodeId: string): HelperResult`
 
 Delete a layout node from the component tree.
+
+##### `wrapComponentNode(ref: {
+        bind: string;
+    } | {
+        nodeId: string;
+    }, component: string): HelperResult`
+
+Wrap a component node (by bind or nodeId ref) in any layout component.
+
+##### `reorderComponentNode(ref: {
+        bind?: string;
+        nodeId?: string;
+    }, direction: 'up' | 'down'): HelperResult`
+
+Reorder a component node (by bind or nodeId ref) up or down.
+
+##### `deleteComponentNode(ref: {
+        bind?: string;
+        nodeId?: string;
+    }): HelperResult`
+
+Delete a component node by bind or nodeId ref.
 
 ##### `updateOptionSet(name: string, property: string, value: unknown): HelperResult`
 

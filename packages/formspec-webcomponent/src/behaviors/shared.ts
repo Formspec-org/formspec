@@ -113,7 +113,9 @@ export function bindSharedFieldEffects(
             effectiveError = error || submitError;
         }
 
-        const showError = ctx.touchedFields.has(fieldPath) ? (effectiveError || '') : '';
+        const submitOccurred = ctx.latestSubmitDetailSignal?.value !== null;
+        const shouldShowError = ctx.touchedFields.has(fieldPath) || submitOccurred;
+        const showError = shouldShowError ? (effectiveError || '') : '';
         if (refs.error) refs.error.textContent = showError;
         actualInput.setAttribute('aria-invalid', String(!!showError));
         if (refs.onValidationChange) refs.onValidationChange(!!showError, showError);

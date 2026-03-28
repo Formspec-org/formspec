@@ -1,7 +1,7 @@
 /** @filedesc USWDS v3 adapter for FileUpload — usa-file-input with drag-drop target. */
 import type { FileUploadBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
 import { el } from '../helpers';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     behavior, parent, actx
@@ -70,7 +70,7 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     const dispose = behavior.bind({
         root, label, control: input, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
+            applyUSWDSValidationState(root, label, hasError);
         },
     });
     actx.onDispose(dispose);

@@ -1,5 +1,5 @@
 /** @filedesc Context menu for the Layout canvas — layout-tier actions only (no definition mutations). */
-import type { LayoutContextMenuItem } from './layout-context-operations';
+import type { LayoutContextMenuItem } from '@formspec-org/studio-core';
 
 interface LayoutContextMenuProps {
   items: LayoutContextMenuItem[];

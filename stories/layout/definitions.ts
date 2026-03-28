@@ -19,9 +19,9 @@ export const groupedFormDef = {
             type: "group",
             label: "Preferences",
             children: [
-                { key: "newsletter", type: "field", dataType: "boolean", label: "Subscribe to newsletter", presentation: { widgetHint: "Checkbox" } },
-                { key: "debug", type: "field", dataType: "boolean", label: "Enable debug mode", presentation: { widgetHint: "Checkbox" } },
-                { key: "timeout", type: "field", dataType: "integer", label: "Timeout (seconds)", presentation: { widgetHint: "NumberInput", min: 1, max: 300 } },
+                { key: "newsletter", type: "field", dataType: "boolean", label: "Subscribe to newsletter", presentation: { widgetHint: "checkbox" } },
+                { key: "debug", type: "field", dataType: "boolean", label: "Enable debug mode", presentation: { widgetHint: "checkbox" } },
+                { key: "timeout", type: "field", dataType: "integer", label: "Timeout (seconds)", presentation: { widgetHint: "numberInput", min: 1, max: 300 } },
             ],
         },
     ],
@@ -79,8 +79,8 @@ export const groupedFormComponentDoc = {
                 component: "Card",
                 title: "Preferences",
                 children: [
-                    { component: "Checkbox", bind: "preferences.newsletter" },
-                    { component: "Checkbox", bind: "preferences.debug" },
+                    { component: "Toggle", bind: "preferences.newsletter" },
+                    { component: "Toggle", bind: "preferences.debug" },
                     { component: "NumberInput", bind: "preferences.timeout", min: 1, max: 300, step: 1 },
                 ],
             },
@@ -179,7 +179,7 @@ export const accordionMultiComponentDoc = {
                 component: "Stack",
                 gap: "12px",
                 children: [
-                    { component: "Checkbox", bind: "newsletter" },
+                    { component: "Toggle", bind: "newsletter" },
                 ],
             },
         ],

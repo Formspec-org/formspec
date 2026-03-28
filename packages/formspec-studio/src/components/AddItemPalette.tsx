@@ -1,6 +1,6 @@
 /** @filedesc Searchable palette for adding new field, group, display, and layout items to the form. */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getFieldTypeCatalog, type FieldTypeCatalogEntry } from '../lib/field-helpers';
+import { getFieldTypeCatalog, type FieldTypeCatalogEntry } from '@formspec-org/studio-core';
 
 /** A user-visible field type option shown in the palette. */
 export type FieldTypeOption = FieldTypeCatalogEntry;

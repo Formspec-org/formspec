@@ -1,5 +1,5 @@
 /** @filedesc Recursive Layout canvas renderer for authored Page sections, layout containers, and bound nodes. */
-import type { DefLookupEntry } from '../../lib/field-helpers';
+import type { DefLookupEntry } from '@formspec-org/studio-core';
 import { LayoutPageSection } from './LayoutPageSection';
 import { LayoutContainer } from './LayoutContainer';
 import { FieldBlock } from './FieldBlock';

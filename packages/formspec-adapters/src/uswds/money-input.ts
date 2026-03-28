@@ -1,7 +1,7 @@
 /** @filedesc USWDS v3 adapter for MoneyInput — usa-input-group with currency prefix. */
 import type { MoneyInputBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
 import { el } from '../helpers';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderMoneyInput: AdapterRenderFn<MoneyInputBehavior> = (
     behavior, parent, actx
@@ -48,8 +48,7 @@ export const renderMoneyInput: AdapterRenderFn<MoneyInputBehavior> = (
     const dispose = behavior.bind({
         root, label, control: container, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
-            amountInput.classList.toggle('usa-input--error', hasError);
+            applyUSWDSValidationState(root, label, hasError, amountInput);
         },
     });
     actx.onDispose(dispose);

@@ -1,6 +1,6 @@
 /** @filedesc USWDS v3 adapter for Select — renders usa-select dropdown markup. */
 import type { SelectBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderSelect: AdapterRenderFn<SelectBehavior> = (
     behavior, parent, actx
@@ -41,8 +41,7 @@ export const renderSelect: AdapterRenderFn<SelectBehavior> = (
     const dispose = behavior.bind({
         root, label, control: select, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
-            select.classList.toggle('usa-select--error', hasError);
+            applyUSWDSValidationState(root, label, hasError, select);
         },
         rebuildOptions: (_container, newOptions) => {
             // Remove all options except the placeholder (first child)
