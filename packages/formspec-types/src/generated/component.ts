@@ -197,7 +197,7 @@ export interface TargetDefinition {
    */
   url: string;
   /**
-   * Semver range expression describing which Definition versions this document supports. When absent, compatible with any version.
+   * Semver range expression using node/npm-style range syntax describing which Definition versions this document supports. When absent, compatible with any version.
    */
   compatibleVersions?: string;
 }

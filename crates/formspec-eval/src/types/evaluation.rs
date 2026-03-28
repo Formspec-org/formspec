@@ -60,8 +60,8 @@ pub struct EvalContext {
     /// Paths that were non-relevant in the prior evaluation cycle.
     pub previous_non_relevant: Option<Vec<String>>,
     /// Authoritative repeat row counts by **group base path** (e.g. `items`), when the host
-    /// keeps counts outside flat `values` keys (browser signals). When `None`, cardinality uses
-    /// [`crate::rebuild::detect_repeat_count`] on `values` only.
+    /// keeps counts outside flat `values` keys (browser signals). When `None`, cardinality falls
+    /// back to repeat-count detection from `values` only.
     pub repeat_counts: Option<HashMap<String, u64>>,
 }
 
