@@ -8,6 +8,8 @@ import {
     numberInputDef,
     numberStepperDef,
     datePickerDef,
+    dateTimePickerDef,
+    timePickerDef,
     moneyInputDef,
     sliderDef,
     ratingDef,
@@ -50,6 +52,16 @@ export const NumberStepper: Story = {
 
 export const DatePicker: Story = {
     args: { definition: datePickerDef },
+};
+
+export const DateTimePicker: Story = {
+    name: 'DateTime Picker',
+    args: { definition: dateTimePickerDef },
+};
+
+export const TimePicker: Story = {
+    name: 'Time Picker',
+    args: { definition: timePickerDef },
 };
 
 export const MoneyInput: Story = {

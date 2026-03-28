@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { FormStory } from '../helpers/FormStory';
+import { WebComponentStory } from '../helpers/WebComponentStory';
 import {
     contactFormDef,
     contactFormComponentDoc,
@@ -7,13 +7,22 @@ import {
     groupedFormComponentDoc,
 } from '../helpers/definitions';
 
-const meta: Meta<typeof FormStory> = {
-    title: 'Layout/Containers',
-    component: FormStory,
+const meta: Meta<typeof WebComponentStory> = {
+    title: 'Layout/Web Component',
+    component: WebComponentStory,
+    args: { showSubmit: false },  // Layout demos — submission shown in Examples
+    parameters: {
+        docs: {
+            story: { inline: false },
+            description: {
+                component: 'Container layouts rendered via the **Web Component** (`<formspec-render>`). Uses the shared layout planner with the built-in DOM renderer.',
+            },
+        },
+    },
 };
 export default meta;
 
-type Story = StoryObj<typeof FormStory>;
+type Story = StoryObj<typeof WebComponentStory>;
 
 /** Flat fields — no groups, no component document. */
 export const ContactForm: Story = {

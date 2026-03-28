@@ -6,9 +6,7 @@ import {
     radioGroupDef,
     checkboxDef,
     contactFormDef,
-    contactFormComponentDoc,
     groupedFormDef,
-    groupedFormComponentDoc,
     numberInputDef,
     datePickerDef,
     toggleDef,
@@ -76,18 +74,8 @@ export const ContactForm: Story = {
     args: { definition: contactFormDef },
 };
 
-export const ContactFormGrid: Story = {
-    name: 'Contact Form (Grid + Card)',
-    args: { definition: contactFormDef, componentDocument: contactFormComponentDoc },
-};
-
 export const GroupedForm: Story = {
     args: { definition: groupedFormDef },
-};
-
-export const CardLayout: Story = {
-    name: 'Grouped Form (Card layout)',
-    args: { definition: groupedFormDef, componentDocument: groupedFormComponentDoc },
 };
 
 export const Display: Story = {

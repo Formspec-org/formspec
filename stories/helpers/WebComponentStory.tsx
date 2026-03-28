@@ -2,6 +2,10 @@
 import React, { useRef, useEffect } from 'react';
 import { FormspecRender, globalRegistry } from '@formspec-org/webcomponent';
 import type { RenderAdapter } from '@formspec-org/webcomponent';
+// Web component visual styling — loaded alongside the structural formspec-layout.css
+// that the package imports. Shares class names with formspec-react's formspec.css but
+// provides the visual treatment the web component adapter actually expects.
+import '@formspec-org/webcomponent/formspec-default.css';
 
 // Register the custom element once
 if (!customElements.get('formspec-render')) {
@@ -17,12 +21,14 @@ export interface WebComponentStoryProps {
     componentDocument?: any;
     /** Optional adapter to apply (e.g., uswdsAdapter). */
     adapter?: RenderAdapter;
+    /** Whether to show a submit button. Defaults to true. */
+    showSubmit?: boolean;
     /** Optional width constraint for the preview. */
     maxWidth?: number;
 }
 
 /** Mounts a <formspec-render> custom element inside a React story. */
-export function WebComponentStory({ definition, theme, componentDocument, adapter, maxWidth = 640 }: WebComponentStoryProps) {
+export function WebComponentStory({ definition, theme, componentDocument, adapter, showSubmit = true, maxWidth = 640 }: WebComponentStoryProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const elementRef = useRef<FormspecRender | null>(null);
 
@@ -48,6 +54,7 @@ export function WebComponentStory({ definition, theme, componentDocument, adapte
         // Set theme and component doc before definition — definition triggers engine creation
         if (theme) el.themeDocument = theme;
         if (componentDocument) el.componentDocument = componentDocument;
+        el.showSubmit = showSubmit;
         el.definition = definition;
 
         return () => {
@@ -57,7 +64,7 @@ export function WebComponentStory({ definition, theme, componentDocument, adapte
                 elementRef.current = null;
             }
         };
-    }, [definition, theme, componentDocument, adapter]);
+    }, [definition, theme, componentDocument, adapter, showSubmit]);
 
     return <div ref={containerRef} style={{ maxWidth, margin: '0 auto' }} />;
 }

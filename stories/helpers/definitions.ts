@@ -169,6 +169,36 @@ export const datePickerDef = {
     ],
 };
 
+/** DateTime picker. */
+export const dateTimePickerDef = {
+    "$formspec": "1.0",
+    title: "DateTime Picker",
+    items: [
+        {
+            key: "appointment",
+            type: "field",
+            dataType: "dateTime",
+            label: "Appointment Date & Time",
+            presentation: { widgetHint: "dateTimePicker" },
+        },
+    ],
+};
+
+/** Time picker. */
+export const timePickerDef = {
+    "$formspec": "1.0",
+    title: "Time Picker",
+    items: [
+        {
+            key: "startTime",
+            type: "field",
+            dataType: "time",
+            label: "Start Time",
+            presentation: { widgetHint: "timePicker" },
+        },
+    ],
+};
+
 /** Money input. */
 export const moneyInputDef = {
     "$formspec": "1.0",
@@ -269,6 +299,7 @@ export const contactFormDef = {
         { key: "lastName", type: "field", dataType: "string", label: "Last Name", required: true },
         { key: "email", type: "field", dataType: "string", label: "Email" },
         { key: "phone", type: "field", dataType: "string", label: "Phone" },
+        { key: "newsletter", type: "field", dataType: "boolean", label: "Subscribe to newsletter", presentation: { widgetHint: "Checkbox" } },
     ],
 };
 
@@ -410,6 +441,495 @@ export const groupedFormComponentDoc = {
                     { component: "Checkbox", bind: "preferences.newsletter" },
                     { component: "Checkbox", bind: "preferences.debug" },
                     { component: "NumberInput", bind: "preferences.timeout", min: 1, max: 300, step: 1 },
+                ],
+            },
+        ],
+    },
+};
+
+// ── Searchable select ───────────────────────────────────────────────
+
+/** Searchable select with autocomplete filtering. */
+export const searchableSelectDef = {
+    "$formspec": "1.0",
+    title: "Searchable Select",
+    items: [
+        {
+            key: "country",
+            type: "field",
+            dataType: "choice",
+            label: "Country",
+            hint: "Type to filter the list",
+            options: [
+                { value: "us", label: "United States" },
+                { value: "ca", label: "Canada" },
+                { value: "mx", label: "Mexico" },
+                { value: "gb", label: "United Kingdom" },
+                { value: "de", label: "Germany" },
+                { value: "fr", label: "France" },
+                { value: "jp", label: "Japan" },
+                { value: "au", label: "Australia" },
+                { value: "br", label: "Brazil" },
+                { value: "in", label: "India" },
+            ],
+            presentation: { widgetHint: "autocomplete" },
+        },
+    ],
+};
+
+// ── Display component definitions ───────────────────────────────────
+
+/** All display component types in one form. */
+export const allDisplayDef = {
+    "$formspec": "1.0",
+    title: "All Display Components",
+    items: [
+        { key: "h1", type: "display", label: "Primary Heading", presentation: { widgetHint: "heading" } },
+        { key: "text1", type: "display", label: "This is a **paragraph** with *markdown* support and a [link](https://example.com).", presentation: { widgetHint: "paragraph" } },
+        { key: "divider1", type: "display", label: "", presentation: { widgetHint: "divider" } },
+        { key: "infoAlert", type: "display", label: "This is an informational message.", presentation: { widgetHint: "banner" } },
+        { key: "name", type: "field", dataType: "string", label: "Your Name" },
+    ],
+};
+
+/** Alert severity variants — placed via component document. */
+export const alertVariantsComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "alert-variants",
+    title: "Alert Variants",
+    tree: {
+        component: "Stack",
+        gap: "12px",
+        children: [
+            { component: "Alert", text: "This is an informational message.", severity: "info" },
+            { component: "Alert", text: "Operation completed successfully.", severity: "success" },
+            { component: "Alert", text: "Please review before submitting.", severity: "warning" },
+            { component: "Alert", text: "An error occurred. Please try again.", severity: "error" },
+            { component: "Alert", text: "This alert can be dismissed.", severity: "info", dismissible: true },
+        ],
+    },
+};
+
+/** Heading hierarchy h1–h6 — placed via component document. */
+export const headingHierarchyComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "heading-hierarchy",
+    title: "Heading Hierarchy",
+    tree: {
+        component: "Stack",
+        gap: "8px",
+        children: [
+            { component: "Heading", text: "Heading Level 1", level: 1 },
+            { component: "Heading", text: "Heading Level 2", level: 2 },
+            { component: "Heading", text: "Heading Level 3", level: 3 },
+            { component: "Heading", text: "Heading Level 4", level: 4 },
+            { component: "Heading", text: "Heading Level 5", level: 5 },
+            { component: "Heading", text: "Heading Level 6", level: 6 },
+        ],
+    },
+};
+
+// ── Layout component documents ──────────────────────────────────────
+
+/** Collapsible component document. */
+export const collapsibleComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "collapsible-demo",
+    title: "Collapsible Demo",
+    tree: {
+        component: "Stack",
+        gap: "16px",
+        children: [
+            {
+                component: "Collapsible",
+                title: "Personal Details",
+                defaultOpen: true,
+                children: [
+                    { component: "TextInput", bind: "firstName" },
+                    { component: "TextInput", bind: "lastName" },
+                ],
+            },
+            {
+                component: "Collapsible",
+                title: "Contact Information",
+                children: [
+                    { component: "TextInput", bind: "email" },
+                    { component: "TextInput", bind: "phone" },
+                ],
+            },
+        ],
+    },
+};
+
+/** Accordion component document. */
+export const accordionComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "accordion-demo",
+    title: "Accordion Demo",
+    tree: {
+        component: "Accordion",
+        labels: ["Personal Details", "Contact Information"],
+        defaultOpen: 0,
+        children: [
+            {
+                component: "Stack",
+                gap: "12px",
+                children: [
+                    { component: "TextInput", bind: "firstName" },
+                    { component: "TextInput", bind: "lastName" },
+                ],
+            },
+            {
+                component: "Stack",
+                gap: "12px",
+                children: [
+                    { component: "TextInput", bind: "email" },
+                    { component: "TextInput", bind: "phone" },
+                ],
+            },
+        ],
+    },
+};
+
+/** Accordion with allowMultiple — multiple sections open at once. */
+export const accordionMultiComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "accordion-multi-demo",
+    title: "Accordion Multi Demo",
+    tree: {
+        component: "Accordion",
+        labels: ["Personal Details", "Contact Information", "Preferences"],
+        defaultOpen: 0,
+        allowMultiple: true,
+        children: [
+            {
+                component: "Stack",
+                gap: "12px",
+                children: [
+                    { component: "TextInput", bind: "firstName" },
+                    { component: "TextInput", bind: "lastName" },
+                ],
+            },
+            {
+                component: "Stack",
+                gap: "12px",
+                children: [
+                    { component: "TextInput", bind: "email" },
+                    { component: "TextInput", bind: "phone" },
+                ],
+            },
+            {
+                component: "Stack",
+                gap: "12px",
+                children: [
+                    { component: "Checkbox", bind: "newsletter" },
+                ],
+            },
+        ],
+    },
+};
+
+/** Panel component document — sidebar + main content. */
+export const panelComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "panel-demo",
+    title: "Panel Demo",
+    tree: {
+        component: "Stack",
+        direction: "horizontal",
+        gap: "24px",
+        children: [
+            {
+                component: "Panel",
+                title: "Help",
+                position: "left",
+                width: "200px",
+                children: [
+                    { component: "Text", text: "Fill in your contact details. All fields are optional unless marked required." },
+                ],
+            },
+            {
+                component: "Stack",
+                gap: "12px",
+                children: [
+                    { component: "TextInput", bind: "firstName" },
+                    { component: "TextInput", bind: "lastName" },
+                    { component: "TextInput", bind: "email" },
+                    { component: "TextInput", bind: "phone" },
+                ],
+            },
+        ],
+    },
+};
+
+/** Modal component document. */
+export const modalComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "modal-demo",
+    title: "Modal Demo",
+    tree: {
+        component: "Stack",
+        gap: "16px",
+        children: [
+            { component: "TextInput", bind: "firstName" },
+            { component: "TextInput", bind: "lastName" },
+            {
+                component: "Modal",
+                title: "Additional Details",
+                triggerLabel: "Add More Details",
+                children: [
+                    { component: "TextInput", bind: "email" },
+                    { component: "TextInput", bind: "phone" },
+                ],
+            },
+        ],
+    },
+};
+
+/** Popover component document. */
+export const popoverComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "popover-demo",
+    title: "Popover Demo",
+    tree: {
+        component: "Stack",
+        gap: "16px",
+        children: [
+            { component: "TextInput", bind: "firstName" },
+            { component: "TextInput", bind: "lastName" },
+            {
+                component: "Popover",
+                triggerLabel: "Need help?",
+                title: "Field guidance",
+                children: [
+                    { component: "Text", text: "Enter your legal first and last name as they appear on official documents." },
+                ],
+            },
+        ],
+    },
+};
+
+/** Wizard component document — multi-step form with navigation. */
+export const wizardComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "wizard-demo",
+    title: "Wizard Demo",
+    tree: {
+        component: "Wizard",
+        showProgress: true,
+        children: [
+            {
+                component: "Page",
+                title: "Personal Info",
+                children: [
+                    { component: "TextInput", bind: "firstName" },
+                    { component: "TextInput", bind: "lastName" },
+                ],
+            },
+            {
+                component: "Page",
+                title: "Contact",
+                children: [
+                    { component: "TextInput", bind: "email" },
+                    { component: "TextInput", bind: "phone" },
+                ],
+            },
+        ],
+    },
+};
+
+/** Tabs component document. */
+export const tabsComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "tabs-demo",
+    title: "Tabs Demo",
+    tree: {
+        component: "Tabs",
+        labels: ["Personal", "Contact"],
+        children: [
+            {
+                component: "Stack",
+                gap: "12px",
+                children: [
+                    { component: "TextInput", bind: "firstName" },
+                    { component: "TextInput", bind: "lastName" },
+                ],
+            },
+            {
+                component: "Stack",
+                gap: "12px",
+                children: [
+                    { component: "TextInput", bind: "email" },
+                    { component: "TextInput", bind: "phone" },
+                ],
+            },
+        ],
+    },
+};
+
+// ── Display-only component documents ────────────────────────────────
+// Badge, Spacer, ProgressBar, Summary, ValidationSummary, DataTable
+// are placed via component trees, not definition widgetHint.
+
+/** Badge + Spacer showcase with fields. */
+export const badgeSpacerComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "badge-spacer-demo",
+    title: "Badge & Spacer Demo",
+    tree: {
+        component: "Stack",
+        gap: "8px",
+        children: [
+            { component: "Heading", text: "Application Status" },
+            { component: "Badge", text: "In Progress", variant: "info" },
+            { component: "Spacer", size: "1.5rem" },
+            { component: "TextInput", bind: "firstName" },
+            { component: "TextInput", bind: "lastName" },
+            { component: "Spacer", size: "2rem" },
+            { component: "Badge", text: "Required", variant: "error" },
+            { component: "TextInput", bind: "email" },
+        ],
+    },
+};
+
+/** ProgressBar showcase — static value (no bind). */
+export const progressBarComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "progress-bar-demo",
+    title: "ProgressBar Demo",
+    tree: {
+        component: "Stack",
+        gap: "16px",
+        children: [
+            { component: "Heading", text: "Form Completion" },
+            { component: "ProgressBar", value: 65, max: 100, showPercent: true, label: "Completion" },
+            { component: "TextInput", bind: "firstName" },
+            { component: "TextInput", bind: "lastName" },
+        ],
+    },
+};
+
+/** Summary display — shows field values reactively. */
+export const summaryComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "summary-demo",
+    title: "Summary Demo",
+    tree: {
+        component: "Stack",
+        gap: "16px",
+        children: [
+            { component: "TextInput", bind: "firstName" },
+            { component: "TextInput", bind: "lastName" },
+            { component: "TextInput", bind: "email" },
+            { component: "Divider" },
+            {
+                component: "Summary",
+                items: [
+                    { label: "First Name", bind: "firstName" },
+                    { label: "Last Name", bind: "lastName" },
+                    { label: "Email", bind: "email" },
+                ],
+            },
+        ],
+    },
+};
+
+/** ValidationSummary — live validation error list. */
+export const validationSummaryComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "validation-summary-demo",
+    title: "ValidationSummary Demo",
+    tree: {
+        component: "Stack",
+        gap: "16px",
+        children: [
+            { component: "ValidationSummary" },
+            { component: "TextInput", bind: "username" },
+            { component: "TextInput", bind: "password" },
+        ],
+    },
+};
+
+/** Definition for the validation summary demo (needs required + constraints). */
+export const validationSummaryDef = {
+    "$formspec": "1.0",
+    title: "Validation Summary Demo",
+    items: [
+        { key: "username", type: "field", dataType: "string", label: "Username", required: true },
+        {
+            key: "password",
+            type: "field",
+            dataType: "string",
+            label: "Password",
+            required: true,
+            constraint: "length($password) >= 8",
+            constraintMessage: "Password must be at least 8 characters",
+        },
+    ],
+};
+
+/** DataTable definition — needs a repeatable group. */
+export const dataTableDef = {
+    "$formspec": "1.0",
+    title: "DataTable Demo",
+    items: [
+        {
+            key: "expenses",
+            type: "group",
+            label: "Expenses",
+            repeatable: true,
+            minRepeat: 1,
+            maxRepeat: 20,
+            children: [
+                { key: "description", type: "field", dataType: "string", label: "Description" },
+                { key: "amount", type: "field", dataType: "decimal", label: "Amount" },
+                {
+                    key: "category",
+                    type: "field",
+                    dataType: "choice",
+                    label: "Category",
+                    options: [
+                        { value: "travel", label: "Travel" },
+                        { value: "supplies", label: "Supplies" },
+                        { value: "equipment", label: "Equipment" },
+                        { value: "other", label: "Other" },
+                    ],
+                },
+            ],
+        },
+    ],
+};
+
+/** DataTable component document — tabular editing of the repeatable group. */
+export const dataTableComponentDoc = {
+    "$formspecComponent": "1.0",
+    name: "datatable-demo",
+    title: "DataTable Demo",
+    tree: {
+        component: "Stack",
+        gap: "16px",
+        children: [
+            { component: "Heading", text: "Expense Report" },
+            {
+                component: "DataTable",
+                bind: "expenses",
+                title: "Line Items",
+                allowAdd: true,
+                allowRemove: true,
+                columns: [
+                    { header: "Description", bind: "description", type: "text" },
+                    { header: "Amount ($)", bind: "amount", type: "number" },
+                    {
+                        header: "Category",
+                        bind: "category",
+                        type: "select",
+                        choices: [
+                            { value: "travel", label: "Travel" },
+                            { value: "supplies", label: "Supplies" },
+                            { value: "equipment", label: "Equipment" },
+                            { value: "other", label: "Other" },
+                        ],
+                    },
                 ],
             },
         ],

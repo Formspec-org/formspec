@@ -4,8 +4,15 @@ import definition from '../../examples/react-demo/src/definition.json';
 import theme from '../../examples/react-demo/src/theme.json';
 
 const meta: Meta<typeof FormStory> = {
-    title: 'Forms/Grant Application',
+    title: 'Examples/Grant Application (React)',
     component: FormStory,
+    parameters: {
+        docs: {
+            description: {
+                component: 'Community Impact Grant form rendered via the **React** renderer. Uses the definition and theme from `examples/react-demo/`.',
+            },
+        },
+    },
 };
 export default meta;
 

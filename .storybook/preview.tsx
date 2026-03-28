@@ -3,9 +3,10 @@ import { initFormspecEngine } from '@formspec-org/engine';
 
 // Default component styles (React stories)
 import '../packages/formspec-react/src/formspec.css';
-// Webcomponent CSS is NOT imported globally — formspec-layout.css conflicts
-// with formspec-react's formspec.css (same class names, different styles).
-// Webcomponent stories get their CSS via the package's own index.ts import.
+// Webcomponent CSS (formspec-default.css) is loaded from WebComponentStory.tsx
+// rather than globally. Both CSS files share .formspec-* class names;
+// the last-loaded wins for conflicting properties, but both provide
+// matching system font stacks and similar visual treatment.
 
 let engineReady = false;
 
