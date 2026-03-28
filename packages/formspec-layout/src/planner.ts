@@ -53,6 +53,31 @@ function classifyComponent(type: string): LayoutNode['category'] {
     return 'layout';
 }
 
+// ── Plan tree queries ─────────────────────────────────────────────────
+
+/** Returns true if any node in the tree has the given component type. */
+export function planContains(node: LayoutNode, component: string): boolean {
+    if (node.component === component) return true;
+    return node.children.some(child => planContains(child, component));
+}
+
+/** Append a SubmitButton node to a plan root if one doesn't already exist
+ *  and the plan isn't owned by a Wizard (which provides its own submit).
+ *  Also skips when the root has direct Page children — pageMode wizard/tabs
+ *  synthesizes its own submit via the wizard behavior's Next→Submit button. */
+export function ensureSubmitButton(root: LayoutNode): void {
+    if (planContains(root, 'Wizard') || planContains(root, 'SubmitButton')) return;
+    if (root.children.some(c => c.component === 'Page')) return;
+    root.children.push({
+        id: nextId('submit'),
+        component: 'SubmitButton',
+        category: 'interactive',
+        props: {},
+        cssClasses: [],
+        children: [],
+    });
+}
+
 // ── ID generation ────────────────────────────────────────────────────
 
 let nodeIdCounter = 0;
@@ -140,7 +165,10 @@ export function planComponentTree(
 ): LayoutNode {
     if (!customComponentStack) customComponentStack = new Set();
 
-    if (applyThemePages && !prefix && ctx.theme?.pages?.length) {
+    // Layer precedence is explicit: authored component Page nodes win over
+    // theme.pages. Theme pages only synthesize page structure when the
+    // component tree does not already own top-level pages.
+    if (applyThemePages && !prefix && ctx.theme?.pages?.length && !componentTreeOwnsPages(tree)) {
         const themed = planThemePagesFromComponentTree(tree, ctx, customComponentStack);
         if (themed) {
             return applyGeneratedPageMode(themed, themed.component, ctx);
@@ -226,6 +254,7 @@ export function planComponentTree(
             label: item.label ?? bindKey,
             hint: item.hint,
             dataType: item.dataType,
+            extensions: item.extensions,
         };
 
         // Resolve theme presentation for this field
@@ -300,6 +329,13 @@ export function planComponentTree(
     }
 
     return node;
+}
+
+function componentTreeOwnsPages(tree: any): boolean {
+    if (!tree || !Array.isArray(tree.children)) {
+        return false;
+    }
+    return tree.children.some((child: any) => child?.component === 'Page');
 }
 
 /**
@@ -423,6 +459,7 @@ function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNod
                 dataType: item.dataType,
                 options: item.options,
                 optionSet: item.optionSet,
+                extensions: item.extensions,
             },
             presentation,
             labelPosition: presentation.labelPosition ?? 'top',

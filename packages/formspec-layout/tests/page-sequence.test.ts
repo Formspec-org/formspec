@@ -101,6 +101,28 @@ describe('resolvePageSequence', () => {
         ]);
     });
 
+    it('still honors hand-authored theme pages when pageMode is single', () => {
+        const definition = {
+            ...makeDefinition(),
+            formPresentation: { pageMode: 'single' },
+        } as any;
+
+        const pages = resolvePageSequence(definition, {
+            theme: {
+                $formspecTheme: '1.0',
+                version: '1.0.0',
+                targetDefinition: { url: 'https://example.org/forms/grant' },
+                pages: [
+                    { id: 'theme-contact', title: 'Theme Contact', regions: [{ key: 'contactEmail' }] },
+                ],
+            } as any,
+        });
+
+        expect(pages).toEqual([
+            { id: 'theme-contact', title: 'Theme Contact', fields: ['contactEmail'] },
+        ]);
+    });
+
     it('falls back to definition page hints when no component or theme pages exist', () => {
         const pages = resolvePageSequence(makeDefinition());
         expect(pages).toEqual([
@@ -167,6 +189,39 @@ describe('resolvePageSequence', () => {
 
         expect(pages).toEqual([
             { id: 'theme-org', title: 'Theme Org', fields: ['organization.name'] },
+        ]);
+    });
+
+    it('ignores theme pages when explicit component Page nodes exist', () => {
+        const pages = resolvePageSequence(makeDefinition(), {
+            component: {
+                $formspecComponent: '1.0',
+                version: '1.0.0',
+                targetDefinition: { url: 'https://example.org/forms/grant' },
+                tree: {
+                    component: 'Stack',
+                    children: [
+                        {
+                            component: 'Page',
+                            id: 'component-only',
+                            title: 'Component Only',
+                            children: [{ component: 'TextInput', bind: 'contactEmail' }],
+                        },
+                    ],
+                },
+            } as any,
+            theme: {
+                $formspecTheme: '1.0',
+                version: '1.0.0',
+                targetDefinition: { url: 'https://example.org/forms/grant' },
+                pages: [
+                    { id: 'theme-contact', title: 'Theme Contact', regions: [{ key: 'contactEmail' }] },
+                ],
+            } as any,
+        });
+
+        expect(pages).toEqual([
+            { id: 'component-only', title: 'Component Only', fields: ['contactEmail'] },
         ]);
     });
 

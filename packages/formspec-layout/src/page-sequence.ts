@@ -159,6 +159,8 @@ export function resolvePageSequence(
     definition: FormDefinition,
     options: { component?: ComponentDocument; theme?: ThemeDocument } = {},
 ): PageSequenceEntry[] {
+    // Layer precedence is explicit:
+    // component Page nodes > theme.pages > definition-level page hints.
     if (options.component) {
         const componentPages = buildComponentSequence(definition, options.component);
         if (componentPages.length > 0) {

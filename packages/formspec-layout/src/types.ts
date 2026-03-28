@@ -45,6 +45,7 @@ export interface LayoutNode {
         dataType?: string;
         options?: Array<{ value: string; label: string }>;
         optionSet?: string;
+        extensions?: Record<string, boolean>;
     };
 
     /** Resolved presentation block from 5-level theme cascade. */

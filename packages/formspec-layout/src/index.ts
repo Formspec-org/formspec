@@ -51,7 +51,7 @@ export {
 } from './widget-vocabulary.js';
 
 // Layout planner
-export { planComponentTree, planDefinitionFallback, resetNodeIdCounter } from './planner.js';
+export { planComponentTree, planDefinitionFallback, resetNodeIdCounter, planContains, ensureSubmitButton } from './planner.js';
 export { resolvePageSequence } from './page-sequence.js';
 export type { PageSequenceEntry } from './page-sequence.js';
 
