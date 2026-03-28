@@ -12,6 +12,17 @@ export function resolveToken(host: StylingHost, val: any): any {
     );
 }
 
+/** Emit theme tokens as CSS custom properties on a target element (defaults to documentElement). */
+export function emitThemeTokens(
+    tokens: Record<string, string | number>,
+    target?: HTMLElement,
+): void {
+    const el = target ?? document.documentElement;
+    for (const [key, value] of Object.entries(tokens)) {
+        el.style.setProperty(`--formspec-${key.replace(/\./g, '-')}`, String(value));
+    }
+}
+
 export function emitTokenProperties(host: StylingHost, container: HTMLElement): void {
     const effectiveTheme = host.getEffectiveTheme();
     const tokens = {

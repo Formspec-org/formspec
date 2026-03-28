@@ -26,7 +26,7 @@ export function resolveItemPresentation(host: StylingHost, itemDesc: ItemDescrip
     return resolvePresentation(theme, itemDesc, tier1);
 }
 
-export { resolveToken, emitTokenProperties } from './tokens';
+export { resolveToken, emitThemeTokens, emitTokenProperties } from './tokens';
 export { applyCssClass, applyClassValue, resolveWidgetClassSlots } from './classes';
 export { applyStyle } from './style';
 export { applyAccessibility } from './accessibility';

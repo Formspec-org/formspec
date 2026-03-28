@@ -63,6 +63,10 @@
   gap: 1rem 0.75rem;
 }
 
+.formspec-grid > * {
+  min-width: 0;
+}
+
 .formspec-grid[data-columns="1"] {
   grid-template-columns: 1fr;
 }

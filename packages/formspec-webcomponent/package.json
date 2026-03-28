@@ -19,6 +19,7 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./default-theme": "./dist/default-theme.json",
     "./formspec-layout.css": "./dist/formspec-layout.css",
     "./formspec-default.css": "./dist/formspec-default.css"
   },

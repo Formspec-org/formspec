@@ -14,6 +14,8 @@ export default defineConfig({
                 'packages/formspec-engine/src/init-formspec-engine.ts',
             ),
             '@formspec-org/engine/render': path.resolve(repoRoot, 'packages/formspec-engine/src/engine-render-entry.ts'),
+            '@formspec-org/webcomponent/formspec-default.css': path.resolve(repoRoot, 'packages/formspec-webcomponent/src/formspec-default.css'),
+            '@formspec-org/webcomponent/formspec-layout.css': path.resolve(repoRoot, 'packages/formspec-webcomponent/src/formspec-layout.css'),
             '@formspec-org/webcomponent': path.resolve(repoRoot, 'packages/formspec-webcomponent/src/index.ts'),
         },
     },

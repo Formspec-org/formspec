@@ -15,6 +15,7 @@ import {
     ItemDescriptor,
     planComponentTree,
     planDefinitionFallback,
+    ensureSubmitButton,
     type PlanContext,
 } from '@formspec-org/layout';
 import defaultThemeJson from './default-theme.json';
@@ -120,6 +121,8 @@ export class FormspecRender extends HTMLElement {
      * Prefer this over separate engine hydration — consumed once when the engine is created.
      */
     private _initialData: Record<string, any> | null = null;
+    /** Whether to auto-inject a SubmitButton node into the layout plan. Defaults to true. */
+    private _showSubmit = true;
     /** Shared pending state for submit flows (e.g. async host submits). */
     private _submitPendingSignal = signal(false);
     /** Latest submit detail payload (`{ response, validationReport }`). */
@@ -338,6 +341,16 @@ export class FormspecRender extends HTMLElement {
     /** The currently loaded theme document, or `null` if none. */
     get themeDocument(): ThemeDocument | null {
         return this._themeDocument;
+    }
+
+    /** Whether to auto-inject a SubmitButton into the layout plan. Defaults to true. */
+    get showSubmit(): boolean {
+        return this._showSubmit;
+    }
+
+    set showSubmit(val: boolean) {
+        this._showSubmit = val;
+        this.scheduleRender();
     }
 
     /**
@@ -562,29 +575,21 @@ export class FormspecRender extends HTMLElement {
 
         if (this._componentDocument && this._componentDocument.tree) {
             const plan = planComponentTree(this._componentDocument.tree, planCtx);
+            if (this._showSubmit) ensureSubmitButton(plan);
             emitNodeFn(this as any, plan, container, '');
         } else {
             const plans = planDefinitionFallback(this._definition.items, planCtx);
-            const pageMode = this._definition.formPresentation?.pageMode;
-            const hasPages = (pageMode === 'wizard' || pageMode === 'tabs')
-                && plans.some(p => p.component === 'Page');
-
-            if (hasPages) {
-                // Wrap in a synthetic Stack so renderActualComponent detects pageMode
-                const wrapperNode: import('@formspec-org/layout').LayoutNode = {
-                    id: '_root-stack',
-                    component: 'Stack',
-                    category: 'layout',
-                    props: {},
-                    cssClasses: [],
-                    children: plans,
-                };
-                emitNodeFn(this as any, wrapperNode, container, '');
-            } else {
-                for (const plan of plans) {
-                    emitNodeFn(this as any, plan, container, '');
-                }
-            }
+            // Always wrap in a root Stack — needed for pageMode detection and submit button injection
+            const wrapperNode: import('@formspec-org/layout').LayoutNode = {
+                id: '_root-stack',
+                component: 'Stack',
+                category: 'layout',
+                props: {},
+                cssClasses: [],
+                children: plans,
+            };
+            if (this._showSubmit) ensureSubmitButton(wrapperNode);
+            emitNodeFn(this as any, wrapperNode, container, '');
         }
     }
 

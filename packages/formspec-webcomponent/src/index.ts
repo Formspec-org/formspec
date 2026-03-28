@@ -18,6 +18,7 @@ export { FormspecRender } from './element';
 export { ComponentRegistry, globalRegistry } from './registry';
 
 // Utilities
+export { emitThemeTokens } from './styling';
 export { formatMoney } from './format';
 export { applyResponseDataToEngine } from './hydrate-response-data';
 export {

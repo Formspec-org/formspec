@@ -120,6 +120,9 @@ export const GridPlugin: ComponentPlugin = {
         if (comp.columns != null) {
             if (typeof comp.columns === 'number') {
                 el.dataset.columns = String(comp.columns);
+                // Inline style ensures the grid works for any column count,
+                // not just the 1-6 range covered by formspec-layout.css rules.
+                el.style.gridTemplateColumns = `repeat(${comp.columns}, 1fr)`;
             } else {
                 el.style.gridTemplateColumns = comp.columns;
             }

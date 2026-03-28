@@ -1,7 +1,8 @@
 /* @filedesc Default adapter visual styling — loaded when no design-system adapter is active. */
 
-/* ── Container color ──────────────────────────────────────────── */
+/* ── Container ────────────────────────────────────────────────── */
 .formspec-container {
+  font-family: var(--formspec-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   color: #1f2937;
 }
 
@@ -105,7 +106,19 @@ h6 {
 
 .formspec-label {
   display: block;
-  white-space: nowrap;
+}
+
+/* ── Grid input alignment ─────────────────────────────────────── */
+/* When labels wrap to different heights across a grid row, grow
+ * the label area so inputs bottom-align across cells.  The field
+ * fills its grid cell (flex:1), and the label grows to absorb the
+ * height difference, pushing the control to the bottom. */
+.formspec-grid .formspec-field {
+  flex: 1;
+}
+
+.formspec-grid .formspec-field > .formspec-label {
+  flex: 1;
 }
 
 .formspec-description {
@@ -173,6 +186,7 @@ h3.formspec-heading {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .formspec-field--readonly .formspec-label::after {
@@ -246,7 +260,10 @@ h3.formspec-heading {
 .formspec-radio-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  padding: 0.5rem 0 0.5rem 0.25rem;
+  border-left: 3px solid var(--formspec-color-border, #cbd5e1);
+  margin-top: 0.25rem;
 }
 
 .formspec-radio-group label,
