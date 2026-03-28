@@ -103,7 +103,7 @@ function crossDocumentAudit(project: Project): {
   }
 
   // Check component tree field references
-  const component = project.effectiveComponent;
+  const component = project.component;
   const tree = (component as any)?.tree;
   if (tree) {
     const checkNode = (node: any) => {

@@ -1,4 +1,4 @@
-# formspec-mcp — API Reference
+# @formspec/mcp — API Reference
 
 *Auto-generated from TypeScript declarations — do not hand-edit.*
 
@@ -77,6 +77,34 @@ Includes: guide, create (inline), undo/redo (inline), all structure/behavior/flo
 style/data/screener/query/fel tools.
 
 Does NOT connect any transport or set up shutdown hooks.
+
+## `createToolDispatch(registry: ProjectRegistry, projectId: string): ToolDispatch`
+
+Creates an in-process tool dispatcher for the given project.
+Calls MCP tool handler functions directly — no transport, no serialization.
+
+#### interface `ToolCallResult`
+
+Result of a tool call.
+
+- **content**: `string`
+- **isError**: `boolean`
+
+#### interface `ToolDeclaration`
+
+Tool declaration for AI consumption.
+
+- **name**: `string`
+- **description**: `string`
+- **inputSchema**: `Record<string, unknown>`
+
+#### interface `ToolDispatch`
+
+- **declarations** (`ToolDeclaration[]`): Tool declarations for AI adapter tool lists.
+
+##### `call(name: string, args: Record<string, unknown>): ToolCallResult`
+
+Call a tool by name with arguments. Returns the MCP response as a string.
 
 ## `formatToolError(code: string, message: string, detail?: Record<string, unknown>): ToolError`
 
@@ -181,6 +209,69 @@ Call once at startup. Throws (fatal) if any schema file is missing.
 
 ## `main(): Promise<void>`
 
+## `handleAudit(registry: ProjectRegistry, projectId: string, params: AuditParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `ItemClassification`
+
+- **path**: `string`
+- **type**: `'field' | 'group' | 'display'`
+- **dataType?**: `string`
+- **hasBind**: `boolean`
+- **hasShape**: `boolean`
+- **hasExtension**: `boolean`
+
+#### interface `AuditParams`
+
+- **action**: `AuditAction`
+- **target?**: `string`
+
+#### type `AuditAction`
+
+```ts
+type AuditAction = 'classify_items' | 'bind_summary' | 'cross_document' | 'accessibility';
+```
+
+## `handleBehaviorExpanded(registry: ProjectRegistry, projectId: string, params: BehaviorExpandedParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `BehaviorExpandedParams`
+
+- **action**: `BehaviorExpandedAction`
+- **target**: `string`
+- **property?**: `string`
+- **value?**: `string | null`
+- **composition?**: `'and' | 'or' | 'not' | 'xone'`
+- **rules?**: `Array<{
+        constraint: string;
+        message: string;
+    }>`
+- **shapeId?**: `string`
+- **changes?**: `{
+        rule?: string;
+        message?: string;
+        timing?: 'continuous' | 'submit' | 'demand';
+        severity?: 'error' | 'warning' | 'info';
+        code?: string;
+        activeWhen?: string;
+    }`
+
+#### type `BehaviorExpandedAction`
+
+```ts
+type BehaviorExpandedAction = 'set_bind_property' | 'set_shape_composition' | 'update_validation';
+```
+
 ## `handleBehavior(registry: ProjectRegistry, projectId: string, params: BehaviorParams | {
     items: BatchItem[];
 }): {
@@ -233,6 +324,143 @@ Returns validation errors instead of transitioning if any exist.
 
 ```ts
 type ArtifactType = 'definition' | 'component' | 'theme';
+```
+
+## `handleChangelog(registry: ProjectRegistry, projectId: string, params: ChangelogParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `ChangelogParams`
+
+- **action**: `ChangelogAction`
+- **fromVersion?**: `string`
+
+#### type `ChangelogAction`
+
+```ts
+type ChangelogAction = 'list_changes' | 'diff_from_baseline';
+```
+
+## `handleChangesetOpen(registry: ProjectRegistry, projectId: string): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+Handle formspec_changeset_open: start a new changeset.
+
+## `handleChangesetClose(registry: ProjectRegistry, projectId: string, label: string): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+Handle formspec_changeset_close: seal the changeset and compute dependency groups.
+
+## `handleChangesetList(registry: ProjectRegistry, projectId: string): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+Handle formspec_changeset_list: list changesets with status and summaries.
+
+## `handleChangesetAccept(registry: ProjectRegistry, projectId: string, groupIndices?: number[]): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+Handle formspec_changeset_accept: accept a pending changeset.
+
+## `handleChangesetReject(registry: ProjectRegistry, projectId: string, groupIndices?: number[]): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+Handle formspec_changeset_reject: reject a pending changeset.
+
+## `withChangesetBracket(project: Project, toolName: string, fn: () => T): T`
+
+Wraps a mutation tool handler to auto-bracket with beginEntry/endEntry
+when a changeset is open. This ensures all MCP tool mutations are
+properly tracked in the changeset's AI entries.
+
+When no changeset is open, the handler executes directly.
+
+## `bracketMutation(registry: ProjectRegistry, projectId: string, toolName: string, fn: () => T): T`
+
+Convenience wrapper for MCP tool registrations.
+
+Resolves the project from the registry and wraps `fn` with changeset
+brackets. If the project cannot be resolved (wrong phase, not found),
+`fn` is called directly — its own error handling produces the
+appropriate MCP error response.
+
+## `handleComponent(registry: ProjectRegistry, projectId: string, params: ComponentParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `NodeRef`
+
+- **bind?**: `string`
+- **nodeId?**: `string`
+
+#### interface `ComponentParams`
+
+- **action**: `ComponentAction`
+- **parent?**: `NodeRef`
+- **component?**: `string`
+- **bind?**: `string`
+- **props?**: `Record<string, unknown>`
+- **node?**: `NodeRef`
+- **property?**: `string`
+- **value?**: `unknown`
+
+#### type `ComponentAction`
+
+```ts
+type ComponentAction = 'list_nodes' | 'set_node_property' | 'add_node' | 'remove_node';
+```
+
+## `handleComposition(registry: ProjectRegistry, projectId: string, params: CompositionParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `CompositionParams`
+
+- **action**: `CompositionAction`
+- **path?**: `string`
+- **ref?**: `string`
+- **keyPrefix?**: `string`
+
+#### type `CompositionAction`
+
+```ts
+type CompositionAction = 'add_ref' | 'remove_ref' | 'list_refs';
 ```
 
 ## `handleData(registry: ProjectRegistry, projectId: string, params: DataParams): {
@@ -292,7 +520,7 @@ type DataAction = 'add' | 'update' | 'remove' | 'rename';
 #### type `FelAction`
 
 ```ts
-type FelAction = 'context' | 'functions' | 'check';
+type FelAction = 'context' | 'functions' | 'check' | 'validate' | 'autocomplete' | 'humanize';
 ```
 
 ## `handleFlow(registry: ProjectRegistry, projectId: string, params: FlowParams): {
@@ -347,6 +575,101 @@ type FlowAction = 'set_mode' | 'branch';
 
 ## `handleRedo(registry: ProjectRegistry, projectId: string): ReturnType<typeof successResponse> | ReturnType<typeof errorResponse>`
 
+## `handleLocale(registry: ProjectRegistry, projectId: string, params: LocaleParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `LocaleParams`
+
+- **action**: `LocaleAction`
+- **locale_id?**: `string`
+- **key?**: `string`
+- **value?**: `string`
+- **property?**: `string`
+
+#### type `LocaleAction`
+
+```ts
+type LocaleAction = 'set_string' | 'remove_string' | 'list_strings' | 'set_form_string' | 'list_form_strings';
+```
+
+## `handleMappingExpanded(registry: ProjectRegistry, projectId: string, params: MappingParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `MappingParams`
+
+- **action**: `MappingAction`
+- **mappingId?**: `string`
+- **sourcePath?**: `string`
+- **targetPath?**: `string`
+- **transform?**: `string`
+- **insertIndex?**: `number`
+- **ruleIndex?**: `number`
+- **scopePath?**: `string`
+- **replace?**: `boolean`
+
+#### type `MappingAction`
+
+```ts
+type MappingAction = 'add_mapping' | 'remove_mapping' | 'list_mappings' | 'auto_map';
+```
+
+## `handleMigration(registry: ProjectRegistry, projectId: string, params: MigrationParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `MigrationParams`
+
+- **action**: `MigrationAction`
+- **fromVersion?**: `string`
+- **description?**: `string`
+- **source?**: `string`
+- **target?**: `string | null`
+- **transform?**: `string`
+- **expression?**: `string`
+- **insertIndex?**: `number`
+- **ruleIndex?**: `number`
+
+#### type `MigrationAction`
+
+```ts
+type MigrationAction = 'add_rule' | 'remove_rule' | 'list_rules';
+```
+
+## `handleOntology(registry: ProjectRegistry, projectId: string, params: OntologyParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `OntologyParams`
+
+- **action**: `OntologyAction`
+- **path?**: `string`
+- **concept?**: `string`
+- **vocabulary?**: `string`
+
+#### type `OntologyAction`
+
+```ts
+type OntologyAction = 'bind_concept' | 'remove_concept' | 'list_concepts' | 'set_vocabulary';
+```
+
 ## `handleLayout(registry: ProjectRegistry, projectId: string, targets: string | string[], arrangement: LayoutArrangement): {
     isError: true;
     content: {
@@ -396,6 +719,24 @@ type FlowAction = 'set_mode' | 'branch';
     }[];
 }`
 
+#### interface `PublishParams`
+
+- **action**: `PublishAction`
+- **version?**: `string`
+- **status?**: `LifecycleStatus`
+
+#### type `PublishAction`
+
+```ts
+type PublishAction = 'set_version' | 'set_status' | 'validate_transition' | 'get_version_info';
+```
+
+#### type `LifecycleStatus`
+
+```ts
+type LifecycleStatus = 'draft' | 'active' | 'retired';
+```
+
 ## `handleDescribe(registry: ProjectRegistry, projectId: string, mode: 'structure' | 'audit', target?: string): {
     structuredContent?: Record<string, unknown> | undefined;
     content: {
@@ -423,7 +764,7 @@ type FlowAction = 'set_mode' | 'branch';
     }[];
 }`
 
-## `handlePreview(registry: ProjectRegistry, projectId: string, mode: 'preview' | 'validate', params: {
+## `handlePreview(registry: ProjectRegistry, projectId: string, mode: 'preview' | 'validate' | 'sample_data' | 'normalize', params: {
     scenario?: Record<string, unknown>;
     response?: Record<string, unknown>;
 }): {
@@ -433,6 +774,53 @@ type FlowAction = 'set_mode' | 'branch';
         text: string;
     }[];
 }`
+
+## `handleReference(registry: ProjectRegistry, projectId: string, params: ReferenceParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `ReferenceParams`
+
+- **action**: `ReferenceAction`
+- **field_path?**: `string`
+- **uri?**: `string`
+- **type?**: `string`
+- **description?**: `string`
+
+#### type `ReferenceAction`
+
+```ts
+type ReferenceAction = 'add_reference' | 'remove_reference' | 'list_references';
+```
+
+## `handleResponse(registry: ProjectRegistry, projectId: string, params: ResponseParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+## `clearTestResponsesForProject(projectId: string): void`
+
+Clear test responses for a project (call on close). Exported for testing.
+
+#### interface `ResponseParams`
+
+- **action**: `ResponseAction`
+- **field?**: `string`
+- **value?**: `unknown`
+- **response?**: `Record<string, unknown>`
+
+#### type `ResponseAction`
+
+```ts
+type ResponseAction = 'set_test_response' | 'get_test_response' | 'clear_test_responses' | 'validate_response';
+```
 
 ## `handleScreener(registry: ProjectRegistry, projectId: string, params: ScreenerParams): {
     isError: true;
@@ -475,11 +863,32 @@ type FlowAction = 'set_mode' | 'branch';
 type ScreenerAction = 'enable' | 'add_field' | 'remove_field' | 'add_route' | 'update_route' | 'reorder_route' | 'remove_route';
 ```
 
+## `handleStructureBatch(registry: ProjectRegistry, projectId: string, params: {
+    action: string;
+    paths: string[];
+    groupPath?: string;
+    groupLabel?: string;
+}): {
+    isError: true;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+    structuredContent: Record<string, unknown>;
+} | {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
 ## `handleField(registry: ProjectRegistry, projectId: string, params: {
     path: string;
     label: string;
     type: string;
     props?: FieldProps;
+    parentPath?: string;
 }): ReturnType<typeof wrapHelperCall>`
 
 ## `handleContent(registry: ProjectRegistry, projectId: string, params: {
@@ -487,6 +896,7 @@ type ScreenerAction = 'enable' | 'add_field' | 'remove_field' | 'add_route' | 'u
     body: string;
     kind?: string;
     props?: ContentProps;
+    parentPath?: string;
 }): ReturnType<typeof wrapHelperCall>`
 
 ## `handleGroup(registry: ProjectRegistry, projectId: string, params: {
@@ -495,6 +905,7 @@ type ScreenerAction = 'enable' | 'add_field' | 'remove_field' | 'add_route' | 'u
     props?: GroupProps & {
         repeat?: RepeatProps;
     };
+    parentPath?: string;
 }): ReturnType<typeof wrapHelperCall>`
 
 ## `handleSubmitButton(registry: ProjectRegistry, projectId: string, label?: string, pageId?: string): {
@@ -570,11 +981,18 @@ Error response when action is missing in non-batch edit mode
 - **index?**: `number`
 - **new_key?**: `string`
 - **deep?**: `boolean`
+- **position?**: `MovePosition`
 
 #### type `EditAction`
 
 ```ts
 type EditAction = 'remove' | 'move' | 'rename' | 'copy';
+```
+
+#### type `MovePosition`
+
+```ts
+type MovePosition = 'inside' | 'after' | 'before';
 ```
 
 #### interface `StyleParams`
@@ -591,5 +1009,47 @@ type EditAction = 'remove' | 'move' | 'rename' | 'copy';
 
 ```ts
 type StyleAction = 'layout' | 'style' | 'style_all';
+```
+
+## `handleTheme(registry: ProjectRegistry, projectId: string, params: ThemeParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `ThemeParams`
+
+- **action**: `ThemeAction`
+- **key?**: `string`
+- **value?**: `unknown`
+- **property?**: `string`
+- **match?**: `unknown`
+- **apply?**: `unknown`
+
+#### type `ThemeAction`
+
+```ts
+type ThemeAction = 'set_token' | 'remove_token' | 'list_tokens' | 'set_default' | 'list_defaults' | 'add_selector' | 'list_selectors';
+```
+
+## `handleWidget(registry: ProjectRegistry, projectId: string, params: WidgetParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+#### interface `WidgetParams`
+
+- **action**: `WidgetAction`
+- **dataType?**: `string`
+
+#### type `WidgetAction`
+
+```ts
+type WidgetAction = 'list_widgets' | 'compatible' | 'field_types';
 ```
 

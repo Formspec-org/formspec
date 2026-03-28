@@ -1,4 +1,4 @@
-# formspec-webcomponent — API Reference
+# @formspec/webcomponent — API Reference
 
 *Auto-generated from TypeScript declarations — do not hand-edit.*
 
@@ -28,6 +28,7 @@
 
 Create the common field wrapper structure: root div, label, description, hint, error.
 Uses behavior.widgetClassSlots for x-classes support (from theme widgetConfig).
+When a FieldViewModel is available, reads current locale-resolved values from VM signals.
 Returns element references for adapter-specific control insertion.
 
 ## `finalizeFieldDOM(fieldDOM: FieldDOM, behavior: FieldBehavior, actx: AdapterContext): void`
@@ -171,10 +172,13 @@ Adapters receive concrete values only — no token resolution needed.
 
 Warn if the component type is incompatible with the item's dataType.
 
-## `bindSharedFieldEffects(ctx: BehaviorContext, fieldPath: string, labelText: string, refs: FieldRefs): Array<() => void>`
+## `bindSharedFieldEffects(ctx: BehaviorContext, fieldPath: string, labelTextOrVM: string | FieldViewModel, refs: FieldRefs): Array<() => void>`
 
 Wire the shared reactive effects that all field behaviors need:
 required indicator, validation display, readonly, relevance, touched tracking.
+
+Accepts either a FieldViewModel (reactive locale-resolved signals) or a
+legacy (fieldPath, labelText) pair for backwards compatibility.
 
 Returns an array of dispose functions.
 
@@ -227,6 +231,7 @@ Returned by every field behavior hook.
 
 #### interface `FieldBehavior`
 
+- **vm** (`FieldViewModel`): FieldViewModel for reactive locale-resolved state. When present, bind() uses VM signals.
 - **widgetClassSlots** (`{
         root?: unknown;
         label?: unknown;
@@ -317,9 +322,21 @@ Custom adapters can ignore this — they own their own styling.
 
 #### interface `FileUploadBehavior`
 
-- **accept?**: `string`
-- **multiple**: `boolean`
-- **dragDrop**: `boolean`
+##### `files(): ReadonlyArray<{
+        name: string;
+        size: number;
+        type: string;
+    }>`
+
+Reactive snapshot of currently selected files.
+
+##### `removeFile(index: number): void`
+
+Remove a file by index (multi-file mode accumulates).
+
+##### `clearFiles(): void`
+
+Clear all selected files.
 
 #### interface `SignatureBehavior`
 
@@ -388,30 +405,7 @@ Progress indicator refs for reactive class updates without DOM rebuilds.
 Context passed to behavior hooks. Subset of RenderContext
 focused on what behaviors actually need.
 
-- **engine**: `IFormEngine`
-- **definition**: `any`
-- **prefix**: `string`
-- **cleanupFns**: `Array<() => void>`
-- **touchedFields**: `Set<string>`
-- **touchedVersion**: `Signal<number>`
-- **latestSubmitDetailSignal**: `Signal<SubmitDetail | null>`
-- **resolveToken**: `(val: any) => any`
-- **resolveItemPresentation**: `(item: ItemDescriptor) => PresentationBlock`
-- **resolveWidgetClassSlots**: `(presentation: PresentationBlock) => {
-        root?: unknown;
-        label?: unknown;
-        control?: unknown;
-        hint?: unknown;
-        error?: unknown;
-    }`
-- **findItemByKey**: `(key: string) => any | null`
-- **renderComponent**: `(comp: any, parent: HTMLElement, prefix?: string) => void`
-- **submit**: `(options?: {
-        mode?: 'continuous' | 'submit';
-        emitEvent?: boolean;
-    }) => SubmitDetail | null`
-- **registryEntries**: `Map<string, any>`
-- **rerender**: `() => void`
+- **getFieldVM** (`(fieldPath: string) => FieldViewModel | undefined`): Resolve the FieldViewModel for a component's bound field. Returns undefined if no VM exists.
 
 ## `useWizard(ctx: BehaviorContext, comp: any): WizardBehavior`
 
@@ -465,8 +459,9 @@ Props:
 
 ## `registerDefaultComponents(): void`
 
-Registers all 37 built-in component plugins with the global registry.
-Includes layout (10), input (13), display (9), interactive (3), and special (2) plugins.
+Registers all 36 built-in component plugins with the global registry.
+Includes layout (10), input (13), display (9), interactive (2), and special (2) plugins.
+Wizard behavior is driven by formPresentation.pageMode, not a component plugin.
 
 ## `TextInputPlugin: ComponentPlugin`
 
@@ -523,10 +518,6 @@ Renders a money input via the behavior→adapter pipeline.
 ## `InputPlugins: ComponentPlugin[]`
 
 All 13 built-in input component plugins, exported as a single array for bulk registration.
-
-## `WizardPlugin: ComponentPlugin`
-
-Renders a multi-step wizard via the behavior-adapter pipeline.
 
 ## `TabsPlugin: ComponentPlugin`
 
@@ -641,6 +632,12 @@ Orchestrates the full rendering pipeline:
         error?: unknown;
     }`): @internal
 - **applyAccessibility** (`(el: HTMLElement, comp: any) => void`): @internal
+- **(set) screenerSeedAnswers** (`Record<string, any> | null | undefined`): Optional: only screener keys when you have no full `data` blob. Prefer {@link initialData}
+with the same shape as `response.data` so screener + main form hydrate in one step.
+- **(set) initialData** (`Record<string, any> | null | undefined`): Full Formspec response `data` (same object you would pass to engine hydration). Set **before**
+{@link definition} on a new element. On engine boot, screener fields are split out for the gate;
+the rest is applied to the engine so one assignment replaces manual `extractScreenerSeedFromData` +
+`applyResponseDataToEngine` calls.
 - **(set) definition** (`any`): Set the form definition. Creates a new {@link FormEngine} instance and
 schedules a re-render. Throws if engine initialization fails.
 - **(get) definition** (`any`): The currently loaded form definition object.
@@ -650,11 +647,24 @@ breakpoints). Schedules a re-render.
 - **(set) themeDocument** (`ThemeDocument | null`): Set the theme document. Loads/unloads referenced stylesheets via
 ref-counting and schedules a re-render.
 - **(get) themeDocument** (`ThemeDocument | null`): The currently loaded theme document, or `null` if none.
+- **(get) showSubmit** (`boolean`): Whether to auto-inject a SubmitButton into the layout plan. Defaults to true.
 - **(set) registryDocuments** (`any | any[]`): Set one or more extension registry documents. Builds an internal lookup
 map from extension name → registry entry so that field renderers can
 apply constraints and metadata (inputMode, autocomplete, pattern, etc.)
 generically instead of hardcoding per-extension behaviour.
 - **(get) registryEntries** (`Map<string, any>`): The current registry entry lookup (extension name → entry).
+- **(set) localeDocuments** (`LocaleDocument | LocaleDocument[]`): Load one or more locale documents into the engine. If the engine
+hasn't been created yet (no definition set), the documents are
+buffered and applied when the engine boots.
+
+Set **after** `definition` for immediate loading, or before if
+pre-loading locale bundles before the form definition arrives.
+- **(set) locale** (`string`): Set the active locale code. Updates the engine locale if available,
+and sets `lang` and `dir` attributes for accessibility and RTL support.
+
+If the engine hasn't been created yet, the locale code is buffered
+and applied when the engine boots.
+- **(get) locale** (`string`): The currently active locale code, or empty string if none set.
 - **findItemByKey** (`(key: string, items?: any[]) => any | null`): @internal
 
 ##### `classifyScreenerRoute(route: ScreenerRoute | null | undefined): ScreenerRouteType`
@@ -677,12 +687,12 @@ or advanced integrations.
 
 ##### `getDiagnosticsSnapshot(options?: {
         mode?: 'continuous' | 'submit';
-    }): import("formspec-engine/render").FormEngineDiagnosticsSnapshot | null`
+    }): import("@formspec-org/engine").FormEngineDiagnosticsSnapshot | null`
 
 Capture a diagnostics snapshot from the engine, including current signal
 values, validation state, and repeat counts.
 
-##### `applyReplayEvent(event: any): import("formspec-engine/render").EngineReplayApplyResult | {
+##### `applyReplayEvent(event: any): import("@formspec-org/engine").EngineReplayApplyResult | {
         ok: boolean;
         event: any;
         error: string;
@@ -692,7 +702,7 @@ Apply a single replay event (e.g. `setValue`, `addRepeat`) to the engine.
 
 ##### `replay(events: any[], options?: {
         stopOnError?: boolean;
-    }): import("formspec-engine/render").EngineReplayResult | {
+    }): import("@formspec-org/engine").EngineReplayResult | {
         applied: number;
         results: never[];
         errors: {
@@ -786,6 +796,11 @@ and removes the root container.
 
 Format a Formspec money value `{amount, currency}` as a localized currency string.
 Returns `''` when the amount is missing or not a finite number.
+
+## `applyResponseDataToEngine(engine: IFormEngine, data: Record<string, any>, prefix?: string): void`
+
+Apply a response `data` object to the engine after `definition` is loaded. Skips paths with no
+writable signal (e.g. top-level screener keys) and recurses into repeat groups and object groups.
 
 ## `findFieldElement(host: NavigationHost, path: string): HTMLElement | null`
 
@@ -933,11 +948,37 @@ Interface for what emitNode/renderActualComponent need from FormspecRender.
 
 ##### `render(): void`
 
+## `screenerAnswersSatisfyRequired(screener: any, answers: Record<string, any>): boolean`
+
+True when `answers` satisfies the same required / “at least one answer” rules as the Continue button.
+
+## `normalizeScreenerSeedForItem(item: any, raw: any, defaultCurrency: string): any`
+
+Coerce values from external systems (saved responses, REST/GraphQL, auth claims, etc.) into
+shapes the screener DOM and `evaluateScreener` expect.
+
+## `buildInitialScreenerAnswers(screener: any, seed: Record<string, any> | null, defaultCurrency: string): Record<string, any>`
+
+Build the in-memory answer map for the screener from optional seed data (same keys as screener items).
+
+## `extractScreenerSeedFromData(definition: any, data: Record<string, any> | null | undefined): Record<string, any> | null`
+
+From any plain object, select only entries whose keys match `definition.screener` item keys.
+Use when hydrating from saved response `data`, a REST/GraphQL payload, identity claims, CRM or
+eligibility service output, etc. Assign the return value to `screenerSeedAnswers` on
+`FormspecRender` before setting `definition` so the first paint can pre-fill or skip the gate.
+
+## `omitScreenerKeysFromData(definition: any, data: Record<string, any>): Record<string, any>`
+
+Shallow copy of `data` without top-level keys that belong to `definition.screener` items.
+
 ## `hasActiveScreener(definition: any): boolean`
 
 ## `renderScreener(host: ScreenerHost, container: HTMLElement): void`
 
 #### interface `ScreenerHost`
+
+- **screenerSeedAnswers** (`Record<string, any> | null`): Initial answers when the screener mounts — from {@link extractScreenerSeedFromData} / host integration.
 
 ##### `classifyScreenerRoute(route: ScreenerRoute | null | undefined): 'none' | 'internal' | 'external'`
 
@@ -988,6 +1029,10 @@ Module-level ref counts (was static on the class).
 Sorted unique utility tokens for Tailwind Play CDN `safelist`.
 
 ## `resolveToken(host: StylingHost, val: any): any`
+
+## `emitThemeTokens(tokens: Record<string, string | number>, target?: HTMLElement): void`
+
+Emit theme tokens as CSS custom properties on a target element (defaults to documentElement).
 
 ## `emitTokenProperties(host: StylingHost, container: HTMLElement): void`
 

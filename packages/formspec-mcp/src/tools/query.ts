@@ -53,7 +53,7 @@ export function handleDescribe(
     }
     // Include pages and component-tier nodes (submit buttons, etc.)
     const pages = project.listPages();
-    const componentTree = (project.effectiveComponent as any)?.tree;
+    const componentTree = (project.component as any)?.tree;
     const componentNodes: Array<{ component: string; id?: string; props?: Record<string, unknown> }> = [];
     if (componentTree?.children) {
       const walk = (node: any) => {

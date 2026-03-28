@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-27
 **Status:** Draft
-**Scope:** `packages/formspec-studio/` only — no external package changes
+**Scope:** `packages/formspec-studio/` UI plus the `formspec-studio-core` helpers and queries that must own the business logic behind the split
 
 ## Problem
 
@@ -10,14 +10,19 @@ The Studio Editor tab mixes Tier 1 (Definition) and Tier 3 (Component) concerns.
 
 The Layout tab (currently `PagesTab`) already manages page structure — mode selection, page cards, grid region editing, field assignment — but lacks the visual canvas and drag-and-drop that the Editor provides.
 
+There is also a package-boundary problem: too much authoring logic still lives in `formspec-studio`. If Studio becomes the thin UI shell we want, this split cannot stop at React components. The data shaping, catalogs, compatibility checks, page queries, DnD target computation, and page migration behavior need to live in `formspec-studio-core`.
+
 ## Design Principles
 
 The split follows the Formspec specification's three-tier architecture (Core S2.3):
 
 - **Editor tab = Tier 1 Definition** — Structure Layer (what data is collected) + Behavior Layer (how data behaves). Answers: "what items exist, what types are they, how do they validate?"
-- **Layout tab = Tier 2 Theme + Tier 3 Component** — Presentation Layer (how data is displayed). Answers: "where do items go, what do they look like, how is the form paginated?"
+- **Layout tab = Tier 3 Component** — Studio's sole layout authoring surface. Answers: "where do items go, what do they look like, how is the form paginated?"
+- **Theme tab = Tier 2 Theme** — styling tokens, selector cascade, defaults, and widget policy. Not page authoring.
 
 The spec mandates this separation as an "architectural invariant" (Core S2.3, line 627). Definition item array order is data-structural. Component tree children order is visual. Binding is by key, not position (Component S4.1). These are independent by design.
+
+For Studio, Tier 1 `presentation.layout.page` and Tier 2 `theme.pages` are compatibility inputs only. The active page-layout authority is the Component tree.
 
 ## The New Editor Tab — Definition Tree Editor
 
@@ -57,7 +62,7 @@ Definition and behavior properties only:
 | Group config | repeatable, minRepeat, maxRepeat |
 | Display content | label (body text), advisory `presentation.widgetHint` (read-only annotation showing current hint) |
 | Binds | required, calculate, relevant, readonly, constraint, constraintMessage, default, whitespace, excludedValue |
-| Advisory hints | `presentation.layout.page` (shown as annotation — "assigned to page X") |
+| Advisory hints | Imported `presentation.layout.page` value only (annotation such as "legacy page hint: X", never active authoring state) |
 
 Properties NOT shown (moved to Layout): widget override, style, CSS classes, grid span/start, responsive breakpoints, appearance/label-position overrides, component `when`.
 
@@ -95,10 +100,10 @@ The component tree rendered as a visual canvas:
 
 ### Unassigned Items Tray
 
-The tray shows definition items that exist but are not bound in the component tree. Per Component S4.5, required unbound items MUST be rendered at runtime; non-required MAY be omitted. The tray distinguishes between these:
+The tray shows definition items that exist but are not bound in the component tree. Studio treats this as an explicit authoring gap, not silent fallback composition. The tray distinguishes between these:
 
-- **Required unassigned** — highlighted, since the rendered form will auto-append them as fallback inputs
-- **Non-required unassigned** — dimmed, since they may not appear in the rendered form
+- **Required unassigned** — highlighted as blocking layout completion
+- **Non-required unassigned** — dimmed but still explicit, since they are not currently placed anywhere in the authored experience
 
 Dragging an item from the tray into the canvas creates a component node with `bind` set to the item's key.
 
@@ -108,6 +113,7 @@ Dragging an item from the tray into the canvas creates a component node with `bi
 - Drag from unassigned tray onto pages/containers
 - Right-click → wrap in Card/Grid/Panel/Stack/Collapsible, unwrap, move to page, delete from tree
 - Add Page button, page reordering, page deletion
+- Page deletion rehomes child nodes into the unassigned tray; it never deletes Definition items
 - Grid region editing (span/start within pages)
 
 ### Properties Panel (Right Sidebar)
@@ -128,6 +134,8 @@ Properties NOT shown (stay in Editor): key, label, dataType, options, binds, rep
 ### Cross-Tier Write: pageMode
 
 The Layout tab's mode selector writes `definition.formPresentation.pageMode` to the Definition document. This is a cross-tier write — a presentation control modifying a Tier 1 property. This is architecturally defensible because `pageMode` is explicitly advisory (Core S4.1.1) and exists solely to control pagination behavior. The Layout tab also writes `formPresentation.showProgress`, `allowSkip`, `defaultTab`, `tabPosition` — all mode-dependent behavioral settings that are only meaningful when `pageMode` is non-`single`.
+
+Studio does not expose `theme.pages` editing alongside this mode selector. If legacy `theme.pages` data exists, `formspec-studio-core` is responsible for normalizing or migrating it before the UI renders.
 
 ### Component `when` vs Bind `relevant`
 
@@ -170,6 +178,30 @@ When adding an item from the Layout tab's palette, the operation dispatches as a
 2. `pages.assignItem` — places the new item's component node in the target page/container
 
 Undoing reverts both operations. This requires no new handler — the existing batch dispatch API already supports this pattern.
+
+## Studio-Core Ownership
+
+This split only succeeds if the logic boundary moves with it.
+
+`formspec-studio-core` should own:
+
+- field/catalog metadata used by add-item palettes and property labels
+- widget compatibility and component/widget mapping rules
+- page discovery, page normalization, and page migration
+- unassigned-item queries and coverage checks
+- definition/component flattening and lookup helpers
+- DnD target computation and sequential move planning
+- page deletion rehoming behavior
+- preview/export normalization for layout-aware rendering
+
+`formspec-studio` should own:
+
+- React component composition
+- visual state, focus state, hover state, and local affordances
+- rendering core-provided data and dispatching core-owned commands
+- accessibility wiring for the UI shell itself
+
+If a helper can be consumed by another client without React, it belongs in `formspec-studio-core` or lower.
 
 ## Shell & Routing Changes
 
@@ -344,6 +376,12 @@ This minimizes E2E test breakage. Layout-specific test IDs (`layout-{nodeId}`, w
 ## Migration
 
 No data migration required. The definition and component documents are unchanged — only the UI surface that edits each part is relocated. Existing projects load identically.
+
+Load-time normalization still changes:
+
+- If a project already has Component `Page` nodes, Layout uses them directly.
+- If a project has legacy `theme.pages` but no Component-backed pages, `formspec-studio-core` may scaffold a real Component page tree once, then stop treating `theme.pages` as active state.
+- If a project only has Tier 1 `presentation.layout.page` hints, Layout may offer auto-generate, but those hints remain bootstrap input only.
 
 ## Spec References
 

@@ -22,6 +22,10 @@ Studio's page authoring has three problems:
 
 **Mode is presentation, not structure.** The component tree always uses `Stack > Page*` regardless of mode. `definition.formPresentation.pageMode` tells the renderer how to present page boundaries. The `Wizard` component type is deprecated.
 
+**Studio has one real layout authoring surface.** Studio writes page/layout state to the Component tree only. `theme.pages` and Tier 1 `presentation.layout.page` remain compatibility inputs, not active Studio authoring state.
+
+**`formspec-studio-core` owns the behavior.** `formspec-studio` is a UI library over `Project` helpers, queries, catalogs, page planning, and migration logic that live in `formspec-studio-core` or lower layers. No page-layout business rules should remain in the React package.
+
 ### The Model
 
 The component tree structure is the same for all three modes:
@@ -84,6 +88,40 @@ The normative validation gate ("MUST validate current Page's bound items before 
 
 **`theme.pages` is not deleted from the spec.** Non-Studio consumers (hand-authored forms, simpler tooling) can still use Theme pages for flat grid layout. The layout planner continues to consume `theme.pages` when no Component Document exists. Studio ignores `theme.pages` for layout purposes.
 
+### Studio Authoring Contract
+
+Studio treats page-related data sources as follows:
+
+| Source | Studio role |
+|--------|-------------|
+| Component tree `Stack > Page*` | Canonical authored page structure |
+| `definition.formPresentation.pageMode` + related mode props | Canonical navigation/render behavior |
+| `presentation.layout.page` on groups | Import/bootstrap hint only; shown as advisory metadata in Editor, not edited as active layout state |
+| `theme.pages` | Compatibility/import input only; not written by Studio page commands |
+
+The practical result is simple: Studio users author pages in one place, the Component tree. Other sources may seed or migrate that tree, but they do not compete with it after load.
+
+### Load-Time Normalization
+
+When Studio loads a project, it resolves page authority once:
+
+1. If an authored Component tree already contains `Page` nodes under the root `Stack`, that tree wins. `theme.pages` and Tier 1 page hints are ignored for page authoring purposes.
+2. If the Component tree has no pages but `theme.pages` exists, Studio may offer a one-time migration that materializes `theme.pages` into real `Page` nodes. After migration, Studio stops writing back to `theme.pages`.
+3. If neither exists but Tier 1 `presentation.layout.page` hints exist, `pages.autoGenerate` may scaffold `Page` nodes from those hints.
+4. Once a Component-backed page structure exists, Studio treats it as authoritative and does not attempt to keep `theme.pages` synchronized.
+
+This removes the current dual-source ambiguity where `theme.pages` and the Component tree can both look authoritative.
+
+### Coverage and Fallback
+
+Implicit hybrid fallback is not the Studio default.
+
+- Authored component documents are treated as **full coverage** by default.
+- Unplaced definition items are surfaced in the Layout workspace as explicit unassigned items that must be placed, deleted from the definition, or intentionally handled by a future fallback zone mechanism.
+- Studio must not silently append unbound items after the authored tree as normal behavior.
+
+The broader public spec may continue to define fallback rendering for non-Studio consumers, but Studio authoring should make coverage explicit rather than accidental.
+
 ### Spec Changes
 
 #### Component Spec (`specs/component/component-spec.md`)
@@ -119,6 +157,8 @@ tabPosition   enum      default: "top"   Tabs mode: tab bar position ("top", "bo
 New processing requirements (§4.1.2):
 
 > When a renderer supports page mode and `pageMode` is `"wizard"`, it MUST validate the current page's bound items before allowing forward navigation unless `allowSkip` is `true`. When `pageMode` is `"tabs"`, a supporting renderer MUST keep all pages mounted; switching tabs changes visibility, not lifecycle. Renderers that do not support the declared mode SHOULD fall back to `"single"`.
+
+This section should also make explicit that `formPresentation.pageMode` controls rendering behavior only. It MUST NOT require structural rewrites of the Component tree.
 
 #### Component Schema (`schemas/component.schema.json`)
 
@@ -222,6 +262,14 @@ Update `Project` helpers:
 - `_resolvePageGroup()`: find Page node, inspect first bound child.
 - Region helpers (`setItemWidth`, `setItemOffset`, etc.): read from component tree.
 - `evaluation-helpers.ts`: read page structure from component tree for per-page validation counts.
+- Move any remaining page/layout business logic out of `formspec-studio` into `formspec-studio-core`:
+  - page migration and normalization
+  - page lookup / list / assignment queries
+  - unassigned-item detection
+  - page delete rehoming policy
+  - mode-specific capability checks
+
+`formspec-studio` should remain a UI layer that renders core-provided state and dispatches core-owned commands.
 
 #### Phase 8: Studio UI — Visual Overhaul
 
@@ -315,6 +363,10 @@ PagesTab
 
 5. **Tabs stays as a layout component.** Within-page tabbed subsections are a useful pattern that `pageMode` cannot express. Only root-level tab navigation moves to `pageMode: "tabs"`.
 
+6. **Tier 1 page hints are compatibility-only in Studio.** `presentation.layout.page` may seed `pages.autoGenerate`, but once pages exist in the Component tree, Studio does not treat those hints as a competing authoring source.
+
+7. **Page deletion is presentation-only.** Deleting a page never deletes Definition items. Child components are rehomed into the unassigned tray in the same undoable operation, then the empty `Page` node is removed.
+
 ### Risks
 
 **Reconciler must preserve page structure.** After the refactor, definition item changes (addItem, removeItem) still trigger `rebuildComponentTree`. The reconciler must add/update/remove bound nodes without destroying Page boundaries. The `_layout: true` flag mechanism handles this, but needs testing for edge cases: what happens when a bound item inside a Page is deleted from the definition?
@@ -326,6 +378,8 @@ PagesTab
 **`pages.addPage` auto-promotion.** The current handler auto-promotes `pageMode` from `single` to `wizard` when the first page is created. The new `pages.addPage` handler must preserve this convenience by dispatching both a component tree change and a `definition.setFormPresentation` change as a side effect.
 
 **`group.presentation.page` definition property.** The definition schema supports a `page` property on group presentation (Tier 1 hint for page membership). This property is read by `pages.autoGenerate` to create initial page structure. After this refactor, auto-generate reads these hints and creates component tree Page nodes. Forms that declare pages via this definition property but have no Component Document still work through the layout planner's existing fallback path, which reads `formPresentation.pageMode` and group `page` hints.
+
+**Fallback contract needs an explicit Studio rule.** The current public specs still describe unbound-item fallback. Studio must not inherit that as silent authoring behavior or the “components are authoritative” model collapses back into an accidental hybrid.
 
 **`formPresentation` property precedence.** When a within-page `Tabs` component has its own `defaultTab` or `position` props, those component-level props take precedence over the form-level `formPresentation.defaultTab` / `formPresentation.tabPosition`. The form-level props apply only to page-level tab navigation controlled by `pageMode: "tabs"`.
 

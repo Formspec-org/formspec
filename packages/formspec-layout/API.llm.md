@@ -1,4 +1,4 @@
-# formspec-layout — API Reference
+# @formspec/layout — API Reference
 
 *Auto-generated from TypeScript declarations — do not hand-edit.*
 
@@ -19,6 +19,17 @@ Map a definition item to its default component type based on `dataType`.
 Used as a fallback when no component document is provided or when the
 theme's widget cascade doesn't resolve to an available component.
 
+## `resolvePageSequence(definition: FormDefinition, options?: {
+    component?: ComponentDocument;
+    theme?: ThemeDocument;
+}): PageSequenceEntry[]`
+
+#### interface `PageSequenceEntry`
+
+- **id**: `string`
+- **title?**: `string`
+- **fields**: `string[]`
+
 ## `interpolateParams(node: any, params: any): void`
 
 Replace `{param}` placeholders in a component tree node with values from
@@ -31,6 +42,17 @@ component document tree or a definition items array.
 
 The planner is pure: it reads from a PlanContext snapshot and emits
 LayoutNode trees with no side effects, signals, or DOM references.
+
+## `planContains(node: LayoutNode, component: string): boolean`
+
+Returns true if any node in the tree has the given component type.
+
+## `ensureSubmitButton(root: LayoutNode): void`
+
+Append a SubmitButton node to a plan root if one doesn't already exist
+and the plan isn't owned by a Wizard (which provides its own submit).
+Also skips when the root has direct Page children — pageMode wizard/tabs
+synthesizes its own submit via the wizard behavior's Next→Submit button.
 
 ## `resetNodeIdCounter(): void`
 
@@ -53,14 +75,17 @@ document is provided).
 Walks the definition items array, runs the theme cascade for each item,
 selects default widgets, and emits LayoutNode trees.
 
-## `resolveResponsiveProps(comp: any, activeBreakpoint: string | null): any`
+## `resolveResponsiveProps(comp: any, activeBreakpoint: string | null, breakpoints?: Record<string, number | string> | null): any`
 
 Merge responsive breakpoint overrides onto a component descriptor.
 
-If the component has a `responsive` map and the given breakpoint name
-appears as a key, shallow-merges those overrides onto a copy of the
-descriptor. Returns the original descriptor unchanged when no overrides
-apply.
+Without a breakpoints map, applies only the single active breakpoint's
+overrides (backwards-compatible behaviour).
+
+With a breakpoints map, performs a mobile-first cumulative cascade per
+Component Spec §9.3: all breakpoints whose minWidth ≤ the active
+breakpoint's minWidth are applied in ascending minWidth order, so later
+breakpoints win over earlier ones for conflicting keys.
 
 Theme cascade resolver.
 
@@ -83,7 +108,7 @@ Call this once at startup to enable `classStrategy: "tailwind-merge"`:
 
 ```ts
 import { twMerge } from 'tailwind-merge';
-import { setTailwindMerge } from 'formspec-layout';
+import { setTailwindMerge } from '@formspec-org/layout';
 setTailwindMerge(twMerge);
 ```
 
@@ -241,8 +266,8 @@ by renderers (webcomponent, React, PDF, SSR, etc.).
 All values are plain data — no functions, class instances, or signals.
 
 - **id** (`string`): Stable ID for diffing/keying (auto-generated during planning).
-- **component** (`string`): Resolved component type: "Stack", "TextInput", "Wizard", etc.
-- **category** (`'layout' | 'field' | 'display' | 'interactive' | 'special'`): Node classification for renderer dispatch.
+- **component** (`string`): Resolved component type: "Stack", "TextInput", "Page", etc.
+- **category** (`'layout' | 'container' | 'field' | 'display' | 'interactive' | 'special'`): Node classification for renderer dispatch.
 - **props** (`Record<string, unknown>`): All resolved component props (tokens resolved, responsive merged). JSON-serializable.
 - **style** (`Record<string, string | number>`): Resolved inline styles (tokens resolved).
 - **cssClasses** (`string[]`): Merged CSS class list from theme cascade + component doc.
@@ -263,6 +288,7 @@ All values are plain data — no functions, class instances, or signals.
             label: string;
         }>;
         optionSet?: string;
+        extensions?: Record<string, boolean>;
     }`): Snapshot of the definition item this field maps to.
 - **presentation** (`PresentationBlock`): Resolved presentation block from 5-level theme cascade.
 - **labelPosition** (`'top' | 'start' | 'hidden'`): Effective label position.
@@ -287,4 +313,17 @@ Contains no signals or reactive references — just data.
 - **activeBreakpoint** (`string | null`): Currently active breakpoint name, or null.
 - **findItem** (`(key: string) => any | null`): Lookup a definition item by key (supports dotted paths).
 - **isComponentAvailable** (`(type: string) => boolean`): Check if a component type is registered in the renderer.
+
+## `planThemePages(items: any[], ctx: PlanContext): LayoutNode[]`
+
+Plan layout using theme pages (SS6.1–6.3).
+
+Delegates to Rust `formspec_plan::plan_theme_pages` via WASM.
+
+## `planUnboundRequired(tree: LayoutNode, items: any[], ctx: PlanContext): LayoutNode[]`
+
+Identify unbound required items and produce fallback nodes (Component SS4.5).
+
+Takes a planned component tree, the definition items, and context.
+Returns LayoutNode[] for required items that are not bound in the tree.
 

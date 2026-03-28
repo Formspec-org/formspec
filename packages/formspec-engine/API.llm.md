@@ -1,4 +1,4 @@
-# formspec-engine — API Reference
+# @formspec/engine — API Reference
 
 *Auto-generated from TypeScript declarations — do not hand-edit.*
 
@@ -593,6 +593,18 @@ Find the mutable parent/index/item triple for a dotted tree path.
 
 ## `evaluateDefinition: typeof wasmEvaluateDefinition`
 
+## `isValidFELIdentifier: typeof wasmIsValidFelIdentifier`
+
+Check if a string is a valid FEL identifier (canonical Rust lexer rule).
+
+## `sanitizeFELIdentifier: typeof wasmSanitizeFelIdentifier`
+
+Sanitize a string into a valid FEL identifier (strips invalid chars, escapes keywords).
+
+## `computeDependencyGroups: typeof wasmComputeDependencyGroups`
+
+Compute dependency groups from recorded changeset entries (delegates to Rust/WASM).
+
 #### interface `TreeItemLike`
 
 Basic tree item shape used by path traversal helpers.
@@ -640,6 +652,79 @@ Rewrite FEL references using callback options (bridges to WASM rewrite).
 
 ## `printFEL: typeof wasmPrintFEL`
 
+## `createFieldViewModel(deps: FieldViewModelDeps): FieldViewModel`
+
+#### interface `FieldViewModel`
+
+##### `setValue(value: any): void`
+
+#### interface `ResolvedValidationResult`
+
+- **path**: `string`
+- **severity**: `string`
+- **constraintKind**: `string`
+- **code**: `string`
+- **message**: `string`
+
+#### interface `ResolvedOption`
+
+- **value**: `string`
+- **label**: `string`
+
+#### interface `FieldViewModelDeps`
+
+- **rx**: `EngineReactiveRuntime`
+- **localeStore**: `LocaleStore`
+- **templatePath**: `string`
+- **instancePath**: `string`
+- **id**: `string`
+- **itemKey**: `string`
+- **dataType**: `string`
+- **getItemLabel**: `() => string`
+- **getItemHint**: `() => string | null`
+- **getItemDescription**: `() => string | null`
+- **getItemLabels**: `() => Record<string, string> | undefined`
+- **getLabelContext**: `() => string | null`
+- **getFieldValue**: `() => EngineSignal<any>`
+- **getRequired**: `() => EngineSignal<boolean>`
+- **getVisible**: `() => EngineSignal<boolean>`
+- **getReadonly**: `() => EngineSignal<boolean>`
+- **getDisabledDisplay**: `() => 'hidden' | 'protected'`
+- **getErrors**: `() => EngineSignal<any[]>`
+- **getOptions**: `() => EngineSignal<Array<{
+        value: string;
+        label: string;
+    }>>`
+- **getOptionsState**: `() => EngineSignal<{
+        loading: boolean;
+        error: string | null;
+    }>`
+- **getOptionSetName**: `() => string | undefined`
+- **setFieldValue**: `(value: any) => void`
+- **evalFEL**: `(expr: string) => unknown`
+
+## `createFormViewModel(deps: FormViewModelDeps): FormViewModel`
+
+#### interface `FormViewModel`
+
+##### `pageTitle(pageId: string): ReadonlyEngineSignal<string>`
+
+##### `pageDescription(pageId: string): ReadonlyEngineSignal<string>`
+
+#### interface `FormViewModelDeps`
+
+- **getDefinitionTitle** (`() => string`): Returns definition.title
+- **getDefinitionDescription** (`() => string | undefined`): Returns definition.description
+- **getPageTitle** (`(pageId: string) => string | undefined`): Returns page title from theme pages array
+- **getPageDescription** (`(pageId: string) => string | undefined`): Returns page description from theme pages
+- **evalFEL** (`(expr: string) => unknown`): Evaluates a FEL expression in the form-level (global) context
+- **getValidationCounts** (`() => {
+        errors: number;
+        warnings: number;
+        infos: number;
+    }`): Returns total validation error/warning/info counts
+- **getIsValid** (`() => boolean`): Returns whether form is valid (no errors)
+
 ## `initFormspecEngine(): Promise<void>`
 
 Initialize the Formspec engine (loads and links the Rust/WASM module).
@@ -680,6 +765,7 @@ Whether the tools WASM module has completed initialization.
 
 - **valid**: `boolean`
 - **errors**: `FELAnalysisError[]`
+- **warnings**: `string[]`
 - **references**: `string[]`
 - **variables**: `string[]`
 - **functions**: `string[]`
@@ -716,6 +802,7 @@ Whether the tools WASM module has completed initialization.
 - **registry?**: `object`
 - **changelog?**: `object`
 - **fel_functions?**: `object`
+- **locale?**: `object`
 
 #### interface `SchemaValidator`
 
@@ -788,6 +875,7 @@ Whether the tools WASM module has completed initialization.
 - **locale?**: `string`
 - **timeZone?**: `string`
 - **seed?**: `string | number`
+- **meta?**: `Record<string, string | number | boolean>`
 
 #### interface `RegistryEntry`
 
@@ -813,6 +901,15 @@ Whether the tools WASM module has completed initialization.
 
 - **definitionUrl**: `string`
 - **definitionVersion**: `string`
+
+#### interface `FormProgress`
+
+- **total**: `number`
+- **filled**: `number`
+- **valid**: `number`
+- **required**: `number`
+- **requiredFilled**: `number`
+- **complete**: `boolean`
 
 #### interface `FormEngineDiagnosticsSnapshot`
 
@@ -896,6 +993,10 @@ Whether the tools WASM module has completed initialization.
 
 ##### `isPathRelevant(path: string): boolean`
 
+##### `getFieldPaths(): string[]`
+
+##### `getProgress(): FormProgress`
+
 ##### `getResponse(meta?: {
         id?: string;
         author?: {
@@ -924,6 +1025,24 @@ Whether the tools WASM module has completed initialization.
 ##### `setLabelContext(context: string | null): void`
 
 ##### `getLabel(item: FormItem): string`
+
+##### `loadLocale(doc: LocaleDocument): void`
+
+##### `setLocale(code: string): void`
+
+##### `getActiveLocale(): string`
+
+##### `getAvailableLocales(): string[]`
+
+##### `getLocaleDirection(): 'ltr' | 'rtl'`
+
+##### `getFieldVM(path: string): FieldViewModel | undefined`
+
+##### `getFormVM(): FormViewModel`
+
+##### `resolveLocaleString(key: string, fallback: string): string`
+
+Resolve a locale string key with fallback. For component-tier `$component.` keys.
 
 ##### `dispose(): void`
 
@@ -971,7 +1090,7 @@ Whether the tools WASM module has completed initialization.
 #### type `DocumentType`
 
 ```ts
-type DocumentType = 'definition' | 'theme' | 'component' | 'mapping' | 'response' | 'validation_report' | 'validation_result' | 'registry' | 'changelog' | 'fel_functions';
+type DocumentType = 'definition' | 'theme' | 'component' | 'mapping' | 'response' | 'validation_report' | 'validation_result' | 'registry' | 'changelog' | 'fel_functions' | 'locale';
 ```
 
 #### type `DefinitionResolver`
@@ -993,6 +1112,79 @@ type EngineNowInput = Date | string | number;
 ```ts
 type MappingDirection = 'forward' | 'reverse';
 ```
+
+## `interpolateMessage(template: string, evaluator: (expr: string) => unknown): InterpolateResult`
+
+Resolve `{{expr}}` sequences in a locale string.
+
+Rules (§3.3.1):
+1. `{{{{` → literal `{{` (escape before scanning)
+2. Failed parse/eval → preserve literal `{{expr}}` + warning (no crash)
+3. null/undefined → "", booleans → "true"/"false", numbers → default coercion
+5. Replacement text is NOT re-scanned for `{{`
+
+#### interface `InterpolationWarning`
+
+@filedesc Template string interpolator for locale {{expr}} sequences (spec §3.3.1).
+
+- **expression**: `string`
+- **error**: `string`
+
+#### interface `InterpolateResult`
+
+- **text**: `string`
+- **warnings**: `InterpolationWarning[]`
+
+#### interface `LocaleDocument`
+
+A loaded locale document providing translated strings for a target definition.
+
+- **$formspecLocale**: `string`
+- **locale**: `string`
+- **version**: `string`
+- **fallback?**: `string`
+- **targetDefinition**: `{
+        url: string;
+        compatibleVersions?: string;
+    }`
+- **strings**: `Record<string, string>`
+- **name?**: `string`
+- **title?**: `string`
+- **description?**: `string`
+- **url?**: `string`
+
+#### interface `LookupResult`
+
+Rich lookup result exposing which cascade level produced the value.
+
+- **value**: `string | null`
+- **source**: `'regional' | 'fallback' | 'implicit' | null`
+- **localeCode?**: `string`
+
+#### class `LocaleStore`
+
+Manages loaded locale documents, resolves string keys through the
+regional -> fallback -> implicit cascade, and exposes reactive signals
+for active locale and text direction.
+
+##### `constructor(rx: EngineReactiveRuntime, directionMode?: 'ltr' | 'rtl' | 'auto')`
+
+##### `setDirectionMode(mode: 'ltr' | 'rtl' | 'auto'): void`
+
+##### `loadLocale(doc: LocaleDocument): void`
+
+##### `setLocale(code: string): void`
+
+##### `getAvailableLocales(): string[]`
+
+##### `lookupKey(key: string): string | null`
+
+##### `lookupKeyWithMeta(key: string): LookupResult`
+
+##### `normalizeCode(code: string): string`
+
+Normalize BCP 47: lowercase language, title-case script (4 chars),
+uppercase region (2 chars), lowercase variants/extensions.
 
 #### class `RuntimeMappingEngine`
 
@@ -1029,13 +1221,54 @@ from `./interfaces.js` are not listed here; import those types directly when nee
 
 Writable reactive cell with a single `.value` — implemented by Preact signals or a custom runtime.
 
+#### interface `ReadonlyEngineSignal`
+
+Read-only reactive cell — the consumer can observe but not mutate.
+Returned by `computed()` and exposed on FieldViewModel properties.
+
 #### interface `EngineReactiveRuntime`
 
 Pluggable batching + signal factory so FormEngine does not import `@preact/signals-core` directly.
 
 ##### `signal(initial: T): EngineSignal<T>`
 
+##### `computed(fn: () => T): ReadonlyEngineSignal<T>`
+
+##### `effect(fn: () => void): () => void`
+
 ##### `batch(fn: () => T): T`
+
+## `isNumericType(dataType: string): boolean`
+
+True if `dataType` is a numeric type (integer, decimal).
+
+## `isDateType(dataType: string): boolean`
+
+True if `dataType` is a date/time type (date, time, dateTime).
+
+## `isChoiceType(dataType: string): boolean`
+
+True if `dataType` is a choice type (choice, multiChoice).
+
+## `isTextType(dataType: string): boolean`
+
+True if `dataType` is a text type (string, text).
+
+## `isBinaryType(dataType: string): boolean`
+
+True if `dataType` is the binary/attachment type.
+
+## `isBooleanType(dataType: string): boolean`
+
+True if `dataType` is boolean.
+
+## `isMoneyType(dataType: string): boolean`
+
+True if `dataType` is money ({amount, currency} object).
+
+## `isUriType(dataType: string): boolean`
+
+True if `dataType` is uri.
 
 ## `isWasmReady(): boolean`
 
@@ -1139,6 +1372,7 @@ Evaluate screener routes against an isolated answer payload.
 ## `wasmAnalyzeFEL(expression: string): {
     valid: boolean;
     errors: string[];
+    warnings: string[];
     references: string[];
     variables: string[];
     functions: string[];
@@ -1146,27 +1380,27 @@ Evaluate screener routes against an isolated answer payload.
 
 Analyze a FEL expression and return structural info.
 
+## `wasmIsValidFelIdentifier(s: string): boolean`
+
+Check if a string is a valid FEL identifier.
+
+## `wasmSanitizeFelIdentifier(s: string): string`
+
+Sanitize a string into a valid FEL identifier.
+
+## `wasmComputeDependencyGroups(entriesJson: string): Array<{
+    entries: number[];
+    reason: string;
+}>`
+
+Compute dependency groups from recorded changeset entries (JSON round-trip to Rust).
+
 #### interface `WasmFelContext`
 
 FEL evaluation context for the richer WASM evaluator.
 
-- **fields**: `Record<string, any>`
-- **variables?**: `Record<string, any>`
-- **mipStates?**: `Record<string, {
-        valid?: boolean;
-        relevant?: boolean;
-        readonly?: boolean;
-        required?: boolean;
-    }>`
-- **repeatContext?**: `{
-        current: any;
-        index: number;
-        count: number;
-        collection?: any[];
-        parent?: WasmFelContext['repeatContext'];
-    }`
-- **instances?**: `Record<string, any>`
-- **nowIso?**: `string`
+- **locale** (`string`): Active locale code (BCP 47) — backs `locale()` and default for `pluralCategory()`.
+- **meta** (`Record<string, string | number | boolean>`): Runtime metadata bag — backs `runtimeMeta(key)`.
 
 #### type `WasmModule`
 
@@ -1179,7 +1413,7 @@ type WasmModule = typeof import('../wasm-pkg-runtime/formspec_wasm_runtime.js');
 ## `resolveWasmAssetPathForNode(relativeToThisModule: string): Promise<string>`
 
 Resolve a sibling `.wasm` path for Node `readFileSync`.
-Vitest/vite-node can rewrite `import.meta.url` to a non-`file:` URL; fall back to the `formspec-engine` package root.
+Vitest/vite-node can rewrite `import.meta.url` to a non-`file:` URL; fall back to the `@formspec-org/engine` package root.
 
 ## `nodeFsModuleName`
 
