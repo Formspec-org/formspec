@@ -281,7 +281,7 @@ export function previewForm(
   }
 
   // Pages from component tree — with per-page validation counts
-  const comp = project.effectiveComponent as any;
+  const comp = project.component as any;
   const treeRoot = comp?.tree;
   const pageNodes: any[] = treeRoot?.children?.filter((n: any) => n.component === 'Page') ?? [];
   const visibleFieldSet = new Set(visibleFields);

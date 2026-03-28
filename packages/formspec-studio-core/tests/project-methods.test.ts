@@ -8,7 +8,7 @@ type AnyProject = ReturnType<typeof createProject>;
 
 /** Get Page nodes from the component tree (replaces theme.pages reads). */
 function getPageNodes(project: AnyProject): any[] {
-  const comp = project.effectiveComponent as any;
+  const comp = project.component as any;
   const root = comp?.tree;
   if (!root?.children) return [];
   return root.children.filter((n: any) => n.component === 'Page');
@@ -1369,7 +1369,7 @@ describe('addPage', () => {
     // Add a field into the group
     project.addField(`${groupKey}.name`, 'Name', 'text');
 
-    const comp = project.effectiveComponent as any;
+    const comp = project.component as any;
     const pageNodes = comp.tree?.children?.filter((n: any) => n.component === 'Page') ?? [];
     expect(pageNodes.length).toBeGreaterThanOrEqual(1);
     expect(pageNodes[0]?.component).toBe('Page');
@@ -1476,7 +1476,14 @@ describe('removePage', () => {
     // Manually add a page with no bound children
     project.setFlow('wizard');
     const pagesBefore = project.definition.items.length;
-    (project as any).core.dispatch({ type: 'pages.addPage', payload: { id: 'orphan-page', title: 'Orphan' } });
+    (project as any).core.dispatch({
+      type: 'component.addNode',
+      payload: {
+        parent: { nodeId: 'root' },
+        component: 'Page',
+        props: { nodeId: 'orphan-page', title: 'Orphan' },
+      },
+    });
     expect(project.definition.items.length).toBe(pagesBefore); // no new group
     project.removePage('orphan-page');
     // Original items unchanged
@@ -1594,7 +1601,7 @@ describe('setRegionKey', () => {
   });
 
   it('preserves region position when replacing key', () => {
-    // Seed definition, then use pages.setPages to populate component tree
+    // Seed definition, then author the component tree directly
     const p = createProject({
       seed: {
         definition: {
@@ -1608,19 +1615,28 @@ describe('setRegionKey', () => {
         } as any,
       },
     });
-    // Populate pages in component tree
     (p as any).core.dispatch({
-      type: 'pages.setPages',
+      type: 'component.setDocumentProperty',
       payload: {
-        pages: [{
-          id: 'the-page',
-          title: 'The Page',
-          regions: [
-            { key: 'g1', span: 4 },
-            { key: 'g2', span: 4 },
-            { key: 'g3', span: 4 },
+        property: 'tree',
+        value: {
+          component: 'Stack',
+          nodeId: 'root',
+          children: [
+            {
+              component: 'Page',
+              nodeId: 'the-page',
+              title: 'The Page',
+              _layout: true,
+              children: [
+                { component: 'Stack', bind: 'g1', span: 4, children: [] },
+                { component: 'Stack', bind: 'g2', span: 4, children: [] },
+                { component: 'Stack', bind: 'g3', span: 4, children: [] },
+              ],
+            },
+            { component: 'Stack', bind: 'x', children: [] },
           ],
-        }],
+        },
       },
     });
     // Replace the MIDDLE region (index 1, key 'g2') with 'x'
@@ -1640,7 +1656,29 @@ describe('updateRegion — responsive overrides', () => {
         definition: { items, formPresentation: { pageMode: 'wizard' } } as any,
       },
     });
-    (project as any).core.dispatch({ type: 'pages.setPages', payload: { pages } });
+    (project as any).core.dispatch({
+      type: 'component.setDocumentProperty',
+      payload: {
+        property: 'tree',
+        value: {
+          component: 'Stack',
+          nodeId: 'root',
+          children: pages.map((page) => ({
+            component: 'Page',
+            nodeId: page.id,
+            title: page.title,
+            _layout: true,
+            children: page.regions.map((region) => ({
+              component: 'Stack',
+              bind: region.key,
+              ...(region.span !== undefined ? { span: region.span } : {}),
+              ...(region.responsive !== undefined ? { responsive: region.responsive } : {}),
+              children: [],
+            })),
+          })),
+        },
+      },
+    });
     return project;
   }
 
@@ -2095,6 +2133,22 @@ describe('listPages', () => {
   });
 });
 
+describe('pageStructure', () => {
+  it('resolves page metadata through the Project seam', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'string');
+    const page = project.addPage('Step 1', undefined, 'step1');
+    project.placeOnPage('name', page.createdId!);
+
+    const structure = project.pageStructure();
+    expect(structure.mode).toBe('wizard');
+    expect(structure.pages).toHaveLength(1);
+    expect(structure.pages[0].id).toBe('step1');
+    expect(structure.itemPageMap.name).toBe('step1');
+    expect(structure.pages[0].items.some((item) => item.key === 'step1')).toBe(true);
+  });
+});
+
 describe('removeInstance DANGLING_REFERENCES', () => {
   it('warns about dangling references with FEL paths listed', () => {
     const project = createProject();
@@ -2222,7 +2276,7 @@ describe('reorderPage boundary', () => {
 });
 
 describe('addSubmitButton with pageId', () => {
-  it('dispatches both addNode and pages.assignItem using actual nodeId', () => {
+  it('adds the submit button to the target page using its actual nodeId', () => {
     const project = createProject();
     const { createdId: pageId } = project.addPage('Page 1');
     const result = project.addSubmitButton('Submit', pageId);
@@ -2283,7 +2337,7 @@ describe('updateItem widget change on boolean field', () => {
 });
 
 describe('updateItem widget with missing component node', () => {
-  it('sets widgetHint on definition even when component node absent, emits warning', () => {
+  it('reconciles the missing component node and updates both definition and component tree', () => {
     const project = createProject();
     // Add field, then reload with a component tree that does NOT include it
     project.addField('bare', 'Bare', 'text');
@@ -2294,14 +2348,13 @@ describe('updateItem widget with missing component node', () => {
         tree: { component: 'Form', children: [] }, // no node for 'bare'
       } as any,
     });
-    // This should NOT throw — should emit a warning for the component part
-    // but still set widgetHint on definition
+    // This should NOT throw. The authored component tree is reconciled on load,
+    // so the field node is restored and the widget update applies cleanly.
     const result = project.updateItem('bare', { widget: 'textarea' });
     const item = project.itemAt('bare');
     expect((item as any)?.presentation?.widgetHint).toBe('textarea');
-    expect(result.warnings).toBeDefined();
-    expect(result.warnings!.length).toBeGreaterThan(0);
-    expect(result.warnings![0].code).toBe('COMPONENT_NODE_NOT_FOUND');
+    expect(result.warnings).toBeUndefined();
+    expect(project.componentFor('bare')?.component).toBe('TextInput');
   });
 });
 
@@ -2460,7 +2513,7 @@ describe('updateItem routing exhaustiveness', () => {
     expect(bind?.relevant).toContain('name');
   });
 
-  it('routes page to pages.assignItem', () => {
+  it('routes page to component-tree placement', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
     const page = project.addPage('Page 1');
@@ -3307,5 +3360,40 @@ describe('behavioral page methods', () => {
         expect((e as HelperError).code).toBe('ROUTE_OUT_OF_BOUNDS');
       }
     });
+  });
+});
+
+describe('component-level layout helpers', () => {
+  it('sets a visual condition on a bound component node', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+
+    project.setComponentWhen('name', '$name != ""');
+
+    expect((project.componentFor('name') as any)?.when).toBe('$name != ""');
+  });
+
+  it('sets an accessibility override on a bound component node', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+
+    project.setComponentAccessibility('name', 'description', 'Applicant full name');
+
+    expect((project.componentFor('name') as any)?.accessibility?.description).toBe('Applicant full name');
+  });
+
+  it('adds a new field directly from the Layout workspace and places it on the active page', () => {
+    const project = createProject();
+    const pageId = project.addPage('Basics', undefined, 'basics').createdId!;
+
+    const result = project.addItemToLayout({
+      itemType: 'field',
+      label: 'Email',
+      dataType: 'string',
+    }, pageId);
+
+    expect(result.createdId).toBe('basics.email');
+    expect(project.itemAt('basics.email')?.type).toBe('field');
+    expect(project.componentFor('email')).toBeDefined();
   });
 });

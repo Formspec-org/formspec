@@ -30,7 +30,7 @@ import type { ProjectBundle } from '@formspec-org/core';
 /**
  * Read-only snapshot of the project's authored artifacts.
  * This is what `project.state` returns — the four editable artifacts
- * without internal bookkeeping (extensions, versioning, generated layout).
+ * without internal bookkeeping (extensions and versioning).
  */
 export interface ProjectSnapshot {
   definition: FormDefinition;

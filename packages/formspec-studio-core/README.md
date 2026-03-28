@@ -46,13 +46,24 @@ createProject(options?)
 
 There is no `.dispatch()`, `.applyCommands()`, or `.raw` getter on `Project`. All mutations go through the helper methods.
 
+## Layering
+
+Formspec remains layered:
+
+- `definition.json` is the required base artifact
+- `theme.json` is optional and still valid as a hand-authored mid-tier layer
+- `component.json` is optional and has highest precedence when present
+
+`formspec-studio-core` deliberately does not collapse those layers into one
+artifact. Its job is to give Studio a clean authoring API without pretending
+that Theme and Components are the same surface.
+
 ## Read-Only State
 
 ```ts
 project.state       // ProjectSnapshot — { definition, component, theme, mapping }
 project.definition  // FormDefinition
-project.component   // ComponentDocument (authored)
-project.effectiveComponent  // ComponentDocument (authored, or merged with generated)
+project.component   // ComponentDocument
 project.theme       // ThemeDocument
 project.mapping     // MappingDocument
 
@@ -152,14 +163,13 @@ All helpers return `HelperResult`. Helpers throw `HelperError` on pre-validation
 
 **Pages:**
 
-- `addPage(title, description?)` — creates definition group + theme page + wizard mode
-- `removePage(pageId)` — deletes theme page, definition group, and children atomically
+- `addPage(title, description?)` — creates definition group + component Page node + wizard mode
+- `removePage(pageId)` — removes the Page node and leaves definition items unassigned
 - `reorderPage(pageId, direction)`
 - `updatePage(pageId, changes)`
 - `renamePage(pageId, newId)`
 - `placeOnPage(target, pageId, options?)`
 - `unplaceFromPage(target, pageId)`
-- `autoGeneratePages()`
 
 **Theme:**
 
@@ -172,7 +182,7 @@ All helpers return `HelperResult`. Helpers throw `HelperError` on pre-validation
 - `reorderThemeSelector(index, direction)`
 - `setItemOverride(itemKey, property, value)`
 - `clearItemOverrides(itemKey)`
-- `addRegion` / `updateRegion` / `deleteRegion` / `reorderRegion` / `setRegionKey`
+- `setRegionKey` / `updateRegion`
 
 **Mapping:**
 

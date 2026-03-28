@@ -94,6 +94,17 @@ export interface PlacementOptions {
   span?: number;
 }
 
+/** Layout-side add-item request */
+export interface LayoutAddItemSpec {
+  itemType: 'field' | 'group' | 'display' | 'layout';
+  label: string;
+  key?: string;
+  dataType?: string;
+  component?: string;
+  repeatable?: boolean;
+  presentation?: Record<string, unknown>;
+}
+
 /** Flow configuration */
 export interface FlowProps {
   showProgress?: boolean;
