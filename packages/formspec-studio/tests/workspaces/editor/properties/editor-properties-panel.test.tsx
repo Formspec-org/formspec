@@ -11,7 +11,7 @@ function SelectAndRender({ selectKey, selectType }: { selectKey?: string; select
   return (
     <>
       {selectKey && (
-        <button onClick={() => select(selectKey, selectType || 'field')}>Select</button>
+        <button onClick={() => select(selectKey, selectType || 'field', { tab: 'editor' })}>Select</button>
       )}
       <EditorPropertiesPanel />
     </>
@@ -139,8 +139,8 @@ describe('EditorPropertiesPanel', () => {
       return (
         <>
           <button onClick={() => {
-            select('name', 'field');
-            toggleSelect('notes', 'display');
+            select('name', 'field', { tab: 'editor' });
+            toggleSelect('notes', 'display', { tab: 'editor' });
           }}>MultiSelect</button>
           <EditorPropertiesPanel />
         </>

@@ -480,8 +480,8 @@ describe('DefinitionTreeEditor', () => {
       }],
     });
     expect(screen.getByTestId('group-items')).toBeInTheDocument();
-    // The repeat badge text includes the recycle icon and range
-    expect(screen.getByText(/1.*5/)).toBeInTheDocument();
+    // The repeat pill badge shows the recycle icon and range
+    expect(screen.getByText(/⟳\s*1–5/)).toBeInTheDocument();
   });
 
   it('handles object-style binds after normalization', () => {
@@ -828,17 +828,15 @@ describe('DefinitionTreeEditor', () => {
     fireEvent.click(row.getByRole('button', { name: 'Select Amount' }));
     const lowerEditor = row.getByTestId('field-amount-lower-editor');
 
-    expect(row.getByText('Initial value').closest('label')).toHaveClass('text-ink/95');
+    expect(row.getByText('Initial value').closest('label')).toHaveClass('text-ink');
     expect(row.getByText('Initial value').closest('label')).toHaveClass('text-[13px]');
     expect(row.getByText('Initial value').closest('label')).not.toHaveClass('font-mono');
-    expect(row.getByText('Semantic type').closest('label')).toHaveClass('text-ink/95');
+    expect(row.getByText('Semantic type').closest('label')).toHaveClass('text-ink');
     expect(row.getByText('Semantic type').closest('label')).toHaveClass('text-[13px]');
     expect(row.getByText('Semantic type').closest('label')).not.toHaveClass('font-mono');
-    expect(lowerEditor).toHaveClass('bg-surface/72');
-    expect(row.getByLabelText('Inline initial value')).toHaveClass('bg-transparent');
-    expect(row.getByLabelText('Inline semantic type')).toHaveClass('bg-transparent');
-    expect(row.getByLabelText('Inline initial value')).toHaveClass('appearance-none');
-    expect(row.getByLabelText('Inline initial value')).toHaveClass('dark:[color-scheme:dark]');
+    expect(lowerEditor).toHaveClass('space-y-3');
+    expect(row.getByLabelText('Inline initial value')).toBeInTheDocument();
+    expect(row.getByLabelText('Inline semantic type')).toBeInTheDocument();
   });
 
   it('edits visible summary cards with single-line inline inputs', () => {

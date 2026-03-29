@@ -35,7 +35,7 @@ function renderSelectedProperties(definition: any, path: string, type: string) {
   function SelectOnMount() {
     const { select } = useSelection();
     useEffect(() => {
-      select(path, type);
+      select(path, type, { tab: 'editor' });
     }, [select]);
     return null;
   }

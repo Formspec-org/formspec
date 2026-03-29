@@ -9,9 +9,21 @@ function EditMark({ testId }: { testId?: string }) {
     <span
       aria-hidden="true"
       data-testid={testId}
-      className="ml-1 inline-flex items-center justify-center text-[11px] text-ink/34 transition-colors group-hover:text-ink/54"
+      className="ml-1 inline-flex shrink-0 items-center justify-center text-ink/30 transition-colors group-hover:text-accent/55"
     >
-      ·
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+      </svg>
     </span>
   );
 }
@@ -71,11 +83,43 @@ export function GroupNode({
   const [draftKey, setDraftKey] = useState(itemKey);
   const [draftLabel, setDraftLabel] = useState(label || itemKey);
   const [activeInlineSummary, setActiveInlineSummary] = useState<string | null>(null);
+  const contentSummaryMap = new Map(
+    summaries
+      .filter((entry) => entry.label === 'Description' || entry.label === 'Hint')
+      .map((entry) => [entry.label, entry.value]),
+  );
+  const allContentEntries = [
+    { label: 'Description', value: contentSummaryMap.get('Description') ?? '' },
+    { label: 'Hint', value: contentSummaryMap.get('Hint') ?? '' },
+  ];
+  const contentEntries = selected
+    ? allContentEntries
+    : allContentEntries.filter((entry) => entry.value.trim().length > 0);
+
+  const allBehaviorEntries = [
+    { label: 'Relevant', value: binds.relevant ?? '' },
+    { label: 'Required', value: binds.required ?? '' },
+  ];
+  const behaviorEntries = selected
+    ? allBehaviorEntries
+    : allBehaviorEntries.filter((entry) => entry.value.trim().length > 0);
+
+  const repeatableDisplayValue = repeatable
+    ? `Yes · ${minRepeat ?? 0}–${maxRepeat != null ? maxRepeat : '∞'}`
+    : '';
+  const repeatableEntry = { label: 'Repeatable', value: repeatableDisplayValue };
+  const repeatableEntries = selected || repeatableDisplayValue ? [repeatableEntry] : [];
+
   const hiddenSummaryLabels = new Set<string>([
-    ...(editingContent === 'both' ? ['Description', 'Hint'] : []),
-    ...(editingBehavior ? ['Calculate', 'Relevant', 'Readonly', 'Required', 'Constraint', 'Message'] : []),
+    ...(editingContent === 'both' && !activeInlineSummary ? ['Description', 'Hint'] : []),
+    ...(editingBehavior && !activeInlineSummary ? ['Relevant', 'Required'] : []),
+    ...(editingRepeats ? ['Repeatable'] : []),
   ]);
-  const supportingText = summaries.filter((entry) => entry.value.trim().length > 0 && !hiddenSummaryLabels.has(entry.label)).slice(0, 4);
+  const supportingText = [
+    ...contentEntries,
+    ...behaviorEntries,
+    ...repeatableEntries,
+  ].filter((entry) => !hiddenSummaryLabels.has(entry.label));
   const visibleMissingActions = selected ? missingActions : [];
   const showFooter = repeatable || statusPills.length > 0 || visibleMissingActions.length > 0 || selected;
   const resolvedLabel = label || itemKey;
@@ -111,6 +155,18 @@ export function GroupNode({
       setEditingContent(label === 'Description' ? 'description' : 'hint');
       setEditingBehavior(false);
       setEditingRepeats(false);
+      return;
+    }
+    if (label === 'Relevant' || label === 'Required') {
+      setActiveInlineSummary(label);
+      setEditingContent(null);
+      setEditingBehavior(false);
+      setEditingRepeats(false);
+      return;
+    }
+    if (label === 'Repeatable') {
+      setActiveInlineSummary(null);
+      closeOtherEditors('repeats');
       return;
     }
     closeOtherEditors('behavior');
@@ -221,14 +277,15 @@ export function GroupNode({
                     />
                   ) : (
                     <div
-                      className={`truncate text-[20px] font-semibold tracking-tight text-ink md:text-[22px] ${selected ? 'cursor-text' : ''}`}
+                      className={`inline-flex max-w-full items-center text-[20px] font-semibold tracking-tight text-ink md:text-[22px] ${selected ? 'group cursor-text' : ''}`}
                       onClick={(event) => {
                         if (!selected) return;
                         event.stopPropagation();
                         openIdentityField('label');
                       }}
                     >
-                      {resolvedLabel}
+                      <span className="truncate">{resolvedLabel}</span>
+                      {selected ? <EditMark testId={`group-${itemKey}-label-edit`} /> : null}
                     </div>
                   )}
                   <div className="mt-1 font-mono text-[12px] tracking-[0.1em] text-ink/68">
@@ -250,7 +307,7 @@ export function GroupNode({
                           Key
                         </span>
                         <span
-                          className={selected ? 'cursor-text' : undefined}
+                          className={selected ? 'group inline-flex items-center cursor-text' : undefined}
                           onClick={(event) => {
                             if (!selected) return;
                             event.stopPropagation();
@@ -258,6 +315,7 @@ export function GroupNode({
                           }}
                         >
                           {itemKey}
+                          {selected ? <EditMark testId={`group-${itemKey}-key-edit`} /> : null}
                         </span>
                       </span>
                     )}
@@ -288,33 +346,27 @@ export function GroupNode({
                 {supportingText.map((entry) => (
                   <div key={`${itemPath}-${entry.label}`} className="min-w-0 border-l border-border/65 pl-3">
                     <dt className="font-mono text-[11px] tracking-[0.14em] text-ink/62">{entry.label}</dt>
-                    {activeInlineSummary === 'Description' && editingContent === 'description' && entry.label === 'Description' ? (
+                    {activeInlineSummary === entry.label && entry.label !== 'Repeatable' ? (
                       <input
-                        aria-label="Inline group description"
+                        aria-label={`Inline group ${entry.label.toLowerCase()}`}
                         type="text"
                         autoFocus
                         className="mt-1 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] leading-5 text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
-                        value={typeof item?.description === 'string' ? item.description : ''}
+                        value={
+                          entry.label === 'Description' ? (typeof item?.description === 'string' ? item.description : '')
+                          : entry.label === 'Hint' ? (typeof item?.hint === 'string' ? item.hint : '')
+                          : entry.label === 'Relevant' ? (binds.relevant ?? '')
+                          : entry.label === 'Required' ? (binds.required ?? '')
+                          : ''
+                        }
                         onClick={(event) => event.stopPropagation()}
-                        onChange={(event) => onUpdateItem?.({ description: event.currentTarget.value || null })}
-                        onBlur={closeInlineSummary}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') closeInlineSummary();
-                          if (event.key === 'Escape') {
-                            event.preventDefault();
-                            closeInlineSummary();
-                          }
+                        onChange={(event) => {
+                          const val = event.currentTarget.value || null;
+                          if (entry.label === 'Description') onUpdateItem?.({ description: val });
+                          else if (entry.label === 'Hint') onUpdateItem?.({ hint: val });
+                          else if (entry.label === 'Relevant') onUpdateItem?.({ relevant: val });
+                          else if (entry.label === 'Required') onUpdateItem?.({ required: val });
                         }}
-                      />
-                    ) : activeInlineSummary === 'Hint' && editingContent === 'hint' && entry.label === 'Hint' ? (
-                      <input
-                        aria-label="Inline group hint"
-                        type="text"
-                        autoFocus
-                        className="mt-1 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] leading-5 text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
-                        value={typeof item?.hint === 'string' ? item.hint : ''}
-                        onClick={(event) => event.stopPropagation()}
-                        onChange={(event) => onUpdateItem?.({ hint: event.currentTarget.value || null })}
                         onBlur={closeInlineSummary}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter') closeInlineSummary();
@@ -326,14 +378,16 @@ export function GroupNode({
                       />
                     ) : (
                       <dd
-                        className={`group mt-1 inline-flex max-w-full items-center truncate text-[14px] font-medium leading-5 text-ink md:text-[15px] ${selected ? 'cursor-text' : ''}`}
+                        className={`group mt-1 inline-flex max-w-full items-center truncate text-[14px] font-medium leading-5 text-ink md:text-[15px] ${selected ? (entry.label === 'Repeatable' ? 'cursor-pointer' : 'cursor-text') : ''}`}
                         onClick={(event) => {
                           if (!selected) return;
                           event.stopPropagation();
                           openEditorForSummary(entry.label);
                         }}
                       >
-                        <span className="truncate">{entry.value}</span>
+                        <span className={`truncate ${entry.value ? '' : 'text-ink/56 italic'}`}>
+                          {entry.value || (selected ? `Click to add ${entry.label.toLowerCase()}` : '\u2014')}
+                        </span>
                         {selected ? <EditMark testId={`group-${itemKey}-summary-edit-${entry.label}`} /> : null}
                       </dd>
                     )}
@@ -371,7 +425,7 @@ export function GroupNode({
                   key={`${itemPath}-${action.key}`}
                   type="button"
                   aria-label={action.ariaLabel}
-                  className="inline-flex items-center rounded-full border border-dashed border-accent/25 px-2.5 py-1 text-[12px] font-medium text-accent/65 transition-colors hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                   onClick={(event) => {
                     event.stopPropagation();
                     if (action.key === 'behavior') closeOtherEditors('behavior');

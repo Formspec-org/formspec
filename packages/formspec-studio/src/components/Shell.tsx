@@ -8,10 +8,9 @@ import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
 import { StructureTree } from './blueprint/StructureTree';
 import { DefinitionTreeEditor } from '../workspaces/editor/DefinitionTreeEditor';
-import { EditorRowRedoDemo } from '../workspaces/editor/EditorRowRedoDemo';
-import { EditorPropertiesPanel } from '../workspaces/editor/properties/EditorPropertiesPanel';
 import { LayoutCanvas } from '../workspaces/layout/LayoutCanvas';
 import { ComponentProperties } from '../workspaces/layout/properties/ComponentProperties';
+import { EditorPropertiesPanel } from '../workspaces/editor/properties/EditorPropertiesPanel';
 import { LogicTab } from '../workspaces/logic/LogicTab';
 import { ThemeTab } from '../workspaces/theme/ThemeTab';
 import { MappingTab } from '../workspaces/mapping/MappingTab';
@@ -61,7 +60,7 @@ const SIDEBAR_COMPONENTS: Record<string, React.FC> = {
 };
 
 const BLUEPRINT_SECTIONS_BY_TAB: Record<string, string[]> = {
-  Editor: ['Structure', 'Screener', 'Variables', 'Data Sources', 'Option Sets', 'Mappings', 'Settings', 'Theme'],
+  Editor: ['Structure', 'Variables', 'Data Sources', 'Option Sets', 'Settings'],
   Logic: ['Structure', 'Variables', 'Screener', 'Settings'],
   Data: ['Structure', 'Data Sources', 'Option Sets', 'Settings'],
   Layout: ['Structure', 'Component Tree', 'Screener', 'Variables', 'Data Sources', 'Option Sets', 'Mappings', 'Settings', 'Theme'],
@@ -95,7 +94,9 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const propertiesBackRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusRef = useRef<HTMLElement | null>(null);
   const project = useProject();
-  const { selectedKey, deselect } = useSelection();
+  const { selectedKey, selectedKeyForTab, deselect } = useSelection();
+  const activeTabScope = activeTab.toLowerCase();
+  const scopedSelectedKey = selectedKeyForTab(activeTabScope);
   const definitionLookup = useMemo(() => buildDefLookup(project.definition.items ?? []), [project.definition.items]);
   const viewportWidth = typeof window !== 'undefined'
     ? Math.min(window.innerWidth, document.documentElement?.clientWidth || window.innerWidth)
@@ -104,10 +105,6 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const overlayOpen = compactLayout && (showBlueprintDrawer || showPropertiesModal);
   const activePanelId = `studio-panel-${activeTab.toLowerCase()}`;
   const activeTabId = `studio-tab-${activeTab.toLowerCase()}`;
-  const editorDemoMode = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('demo')
-    : null;
-  const showEditorRowRedoDemo = activeTab === 'Editor' && editorDemoMode === 'editor-row-redo';
   const visibleBlueprintSections = BLUEPRINT_SECTIONS_BY_TAB[activeTab] ?? Object.keys(SIDEBAR_COMPONENTS);
   const resolvedActiveSection = visibleBlueprintSections.includes(activeSection)
     ? activeSection
@@ -150,7 +147,6 @@ export function Shell({ colorScheme }: ShellProps = {}) {
           />
         );
       default: {
-        if (showEditorRowRedoDemo) return <EditorRowRedoDemo />;
         const WorkspaceComponent = WORKSPACES[activeTab];
         return WorkspaceComponent ? <WorkspaceComponent /> : activeTab;
       }
@@ -180,8 +176,8 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         undo: () => project.undo(),
         redo: () => project.redo(),
         delete: () => {
-          if (selectedKey) {
-            project.removeItem(selectedKey);
+          if (scopedSelectedKey) {
+            project.removeItem(scopedSelectedKey);
             deselect();
           }
         },
@@ -193,7 +189,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeTab, project, selectedKey, deselect]);
+  }, [activeTab, project, scopedSelectedKey, deselect]);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -404,15 +400,14 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </div>
             </div>
           </main>
-          {!showEditorRowRedoDemo && (activeTab === 'Editor' || activeTab === 'Layout') && (
+          {(activeTab === 'Editor' || activeTab === 'Layout') && (
             <aside
               className={`w-[320px] border-l border-border/80 bg-surface overflow-y-auto shrink-0 ${compactLayout || showChatPanel ? 'hidden' : ''}`}
               data-testid="properties-panel"
               data-responsive-hidden={compactLayout ? 'true' : 'false'}
               aria-label="Properties panel"
             >
-              {activeTab === 'Editor' && <EditorPropertiesPanel />}
-              {activeTab === 'Layout' && <ComponentProperties />}
+              {activeTab === 'Editor' ? <EditorPropertiesPanel /> : <ComponentProperties />}
             </aside>
           )}
           {showChatPanel && !compactLayout && (
@@ -462,7 +457,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         )}
 
         {/* Compact Properties Modal (Full Screen) */}
-        {compactLayout && activeTab !== 'Editor' && showPropertiesModal && selectedKey && (
+        {compactLayout && (activeTab === 'Editor' || activeTab === 'Layout') && showPropertiesModal && selectedKey && (
           <div
             role="dialog"
             aria-modal="true"
@@ -498,8 +493,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 pb-24">
-              {activeTab === 'Editor' && <EditorPropertiesPanel />}
-              {activeTab === 'Layout' && <ComponentProperties />}
+              {activeTab === 'Editor' ? <EditorPropertiesPanel showActions={false} /> : <ComponentProperties />}
             </div>
           </div>
         )}

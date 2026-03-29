@@ -27,9 +27,21 @@ function EditMark({ testId }: { testId?: string }) {
     <span
       aria-hidden="true"
       data-testid={testId}
-      className="ml-1 inline-flex items-center justify-center text-[11px] text-ink/34 transition-colors group-hover:text-ink/54"
+      className="ml-1 inline-flex shrink-0 items-center justify-center text-ink/30 transition-colors group-hover:text-accent/55"
     >
-      ·
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+      </svg>
     </span>
   );
 }
@@ -240,7 +252,7 @@ export function ItemRow({
   };
 
   const summaryInputClassName = 'mt-1 w-full rounded-[6px] border border-border/70 bg-bg-default/80 px-2.5 py-2 text-[14px] leading-5 text-ink outline-none transition-colors focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25';
-  const lowerEditorInputClassName = 'mt-1 w-full appearance-none border-0 border-b border-border/75 bg-transparent px-0 pb-2 pt-2 text-[14px] text-ink outline-none transition-colors placeholder:text-muted/55 [color-scheme:light] focus:border-accent focus-visible:ring-0 dark:[color-scheme:dark]';
+  const lowerEditorInputClassName = 'mt-1 w-full appearance-none border-0 border-b border-border/75 bg-transparent px-0 pb-2 pt-2 text-[14px] text-ink outline-none transition-colors placeholder:text-muted [color-scheme:light] focus:border-accent focus-visible:ring-0 dark:[color-scheme:dark]';
   const lowerEditorInputStyle =
     typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
       ? {
@@ -565,7 +577,7 @@ export function ItemRow({
       {((editingFieldConfig && !activeInlineSummary) || editingBehavior || editingOptions) && (
         <div className="mt-4 space-y-4 border-t border-border/70 pt-4">
           {editingFieldConfig && item?.type === 'field' && (
-            <section data-testid={`${testId}-lower-editor`} aria-label="Field details" className="space-y-3 bg-surface/72">
+            <section data-testid={`${testId}-lower-editor`} aria-label="Field details" className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">
                   Field details
@@ -577,7 +589,7 @@ export function ItemRow({
                 )}
               </div>
               <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Initial value
                 <input
                   aria-label="Inline initial value"
@@ -589,7 +601,7 @@ export function ItemRow({
                   onChange={(event) => onUpdateItem?.({ initialValue: event.currentTarget.value || null })}
                 />
               </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Prefix
                 <input
                   aria-label="Inline prefix"
@@ -600,7 +612,7 @@ export function ItemRow({
                   onChange={(event) => onUpdateItem?.({ prefix: event.currentTarget.value || null })}
                 />
               </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Suffix
                 <input
                   aria-label="Inline suffix"
@@ -611,7 +623,7 @@ export function ItemRow({
                   onChange={(event) => onUpdateItem?.({ suffix: event.currentTarget.value || null })}
                 />
               </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Semantic type
                 <input
                   aria-label="Inline semantic type"
@@ -623,7 +635,7 @@ export function ItemRow({
                 />
               </label>
               {isDecimalLike && (
-                <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                   Precision
                   <input
                     aria-label="Inline precision"
@@ -636,7 +648,7 @@ export function ItemRow({
                 </label>
               )}
               {String(item.dataType ?? '') === 'money' && (
-                <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                   Currency
                   <input
                     aria-label="Inline currency"
@@ -653,7 +665,7 @@ export function ItemRow({
 
               {prePopulateValue ? (
                 <div className="grid gap-x-6 gap-y-4 border-t border-border/65 pt-4 sm:grid-cols-2">
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                     Instance
                     <input
                       aria-label="Inline pre-populate instance"
@@ -669,7 +681,7 @@ export function ItemRow({
                       })}
                     />
                   </label>
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                     Path
                     <input
                       aria-label="Inline pre-populate path"
@@ -718,7 +730,7 @@ export function ItemRow({
                 <button
                   type="button"
                   aria-label={`Add pre-populate to ${itemLabel}`}
-                  className="inline-flex items-center rounded-full border border-dashed border-accent/25 px-2.5 py-1 text-[12px] font-medium text-accent/65 transition-colors hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                   onClick={(event) => {
                     event.stopPropagation();
                     onUpdateItem?.({
@@ -734,7 +746,7 @@ export function ItemRow({
                 <button
                   type="button"
                   aria-label={`Add behavior to ${itemLabel}`}
-                  className="inline-flex items-center rounded-full border border-dashed border-accent/25 px-2.5 py-1 text-[12px] font-medium text-accent/65 transition-colors hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                   onClick={(event) => {
                     event.stopPropagation();
                     closeOtherEditors('behavior');
@@ -762,7 +774,7 @@ export function ItemRow({
                 />
                 Required
               </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Relevant
                 <input
                   aria-label="Relevant behavior"
@@ -774,7 +786,7 @@ export function ItemRow({
                   onChange={(event) => onUpdateItem?.({ relevant: event.currentTarget.value || null })}
                 />
               </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Readonly
                 <input
                   aria-label="Readonly behavior"
@@ -786,7 +798,7 @@ export function ItemRow({
                   onChange={(event) => onUpdateItem?.({ readonly: event.currentTarget.value || null })}
                 />
               </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Calculate
                 <input
                   aria-label="Calculate behavior"
@@ -798,7 +810,7 @@ export function ItemRow({
                   onChange={(event) => onUpdateItem?.({ calculate: event.currentTarget.value || null })}
                 />
               </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Constraint
                 <input
                   aria-label="Constraint behavior"
@@ -810,7 +822,7 @@ export function ItemRow({
                   onChange={(event) => onUpdateItem?.({ constraint: event.currentTarget.value || null })}
                 />
               </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                 Constraint message
                 <input
                   aria-label="Constraint message behavior"
@@ -833,7 +845,7 @@ export function ItemRow({
               </h3>
               {choiceOptions.map((option, index) => (
                 <div key={`${option.value}-${index}`} className="grid gap-3 sm:grid-cols-[minmax(0,1fr),minmax(0,1fr),auto] sm:items-end">
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                     Option {index + 1} value
                     <input
                       aria-label={`Inline option ${index + 1} value`}
@@ -848,7 +860,7 @@ export function ItemRow({
                       }}
                     />
                   </label>
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
                     Option {index + 1} label
                     <input
                       aria-label={`Inline option ${index + 1} label`}
@@ -883,7 +895,7 @@ export function ItemRow({
               <button
                 type="button"
                 aria-label={`Add option to ${itemLabel}`}
-                className="inline-flex items-center rounded-full border border-dashed border-accent/25 px-2.5 py-1 text-[12px] font-medium text-accent/65 transition-colors hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                 onClick={(event) => {
                   event.stopPropagation();
                   onUpdateItem?.({ options: [...choiceOptions, { value: '', label: '' }] });

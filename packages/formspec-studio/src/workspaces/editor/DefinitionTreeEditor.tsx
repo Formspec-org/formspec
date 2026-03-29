@@ -159,7 +159,7 @@ export function DefinitionTreeEditor() {
   const definition = useDefinition();
   const project = useProject();
   const {
-    selectedKeys, selectedKeyForTab, select, selectAndFocusInspector, toggleSelect, rangeSelect,
+    selectedKeys, selectedKeyForTab, select, toggleSelect, rangeSelect,
     deselect, isSelected,
   } = useSelection();
   const [showPicker, setShowPicker] = useState(false);
@@ -239,7 +239,7 @@ export function DefinitionTreeEditor() {
       }
     }
     setContextMenu(null);
-  }, [contextMenu, project, deselect, items]);
+  }, [contextMenu, project, items]);
 
   // Escape to deselect (only when context menu is not open)
   useEffect(() => {
@@ -355,10 +355,10 @@ export function DefinitionTreeEditor() {
       project.addField(key, opt.label, opt.dataType ?? 'string', addParentPath ? { parentPath: addParentPath } : undefined);
     }
 
-    selectAndFocusInspector(insertedPath, insertedType, { tab: EDITOR_TAB });
+    select(insertedPath, insertedType, { tab: EDITOR_TAB });
     setShowPicker(false);
     setAddParentPath(null);
-  }, [addParentPath, project, selectAndFocusInspector]);
+  }, [addParentPath, project, select]);
 
   const tree = useMemo(
     () => renderItemTree(items, allBinds, 0, '', treeCtx, { value: 0 }),

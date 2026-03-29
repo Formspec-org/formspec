@@ -5,6 +5,8 @@ import { createContext, useContext, useState, useCallback, useMemo, useRef, type
 export interface SelectionOptions {
   /** Tab scope for this selection. When omitted, uses the default scope. */
   tab?: string;
+  /** When true, signals the inspector to focus its primary input (e.g. rename on double-click). */
+  focusInspector?: boolean;
 }
 
 /** Per-tab selection data. */
@@ -29,8 +31,6 @@ interface SelectionState {
   select: (key: string, type: string, opts?: SelectionOptions) => void;
   toggleSelect: (key: string, type: string, opts?: SelectionOptions) => void;
   rangeSelect: (key: string, type: string, flatOrder: string[], opts?: SelectionOptions) => void;
-  /** Like select(), but also signals the inspector panel to auto-focus its first input. */
-  selectAndFocusInspector: (key: string, type: string, opts?: SelectionOptions) => void;
   deselect: () => void;
   isSelected: (key: string) => boolean;
 
@@ -38,7 +38,7 @@ interface SelectionState {
   selectedKeyForTab: (tab: string) => string | null;
   selectedTypeForTab: (tab: string) => string | null;
 
-  /** True if the inspector should auto-focus its first input on next render. Consumed once. */
+  // Inspector focus (e.g. rename on double-click)
   shouldFocusInspector: boolean;
   consumeFocusInspector: () => void;
 }
@@ -56,8 +56,7 @@ function emptyTabSelection(): TabSelection {
 export function SelectionProvider({ children }: { children: ReactNode }) {
   const [tabSelections, setTabSelections] = useState<Map<string, TabSelection>>(EMPTY_MAP);
   const [activeTab, setActiveTab] = useState<string>(DEFAULT_TAB);
-  const [shouldFocusInspector, setShouldFocusInspector] = useState(false);
-
+  const [focusInspector, setFocusInspector] = useState(false);
   // Ref to avoid stale closure in isSelected — always points to current active tab's keys
   const activeKeysRef = useRef<Set<string>>(EMPTY_SET);
 
@@ -84,6 +83,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
       primaryKey: key,
       primaryType: type,
     }));
+    if (opts?.focusInspector) setFocusInspector(true);
   }, [updateTab]);
 
   const toggleSelect = useCallback((key: string, type: string, opts?: SelectionOptions) => {
@@ -130,24 +130,9 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     });
   }, [updateTab]);
 
-  const selectAndFocusInspector = useCallback((key: string, type: string, opts?: SelectionOptions) => {
-    const tab = resolveTab(opts);
-    updateTab(tab, () => ({
-      selectedKeys: new Set([key]),
-      primaryKey: key,
-      primaryType: type,
-    }));
-    setShouldFocusInspector(true);
-  }, [updateTab]);
-
-  const consumeFocusInspector = useCallback(() => {
-    setShouldFocusInspector(false);
-  }, []);
-
   const deselect = useCallback(() => {
     setTabSelections(EMPTY_MAP);
     setActiveTab(DEFAULT_TAB);
-    setShouldFocusInspector(false);
   }, []);
 
   // Derive active tab's state
@@ -166,6 +151,10 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     return getTabState(tab).primaryType;
   }, [getTabState]);
 
+  const consumeFocusInspector = useCallback(() => {
+    setFocusInspector(false);
+  }, []);
+
   const value = useMemo<SelectionState>(() => ({
     selectedKeys: active.selectedKeys,
     primaryKey: active.primaryKey,
@@ -178,19 +167,19 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     select,
     toggleSelect,
     rangeSelect,
-    selectAndFocusInspector,
     deselect,
     isSelected,
     // Per-tab queries
     selectedKeyForTab,
     selectedTypeForTab,
-    shouldFocusInspector,
+    // Inspector focus
+    shouldFocusInspector: focusInspector,
     consumeFocusInspector,
   }), [
     active.selectedKeys, active.primaryKey, active.primaryType,
-    select, toggleSelect, rangeSelect, selectAndFocusInspector,
+    select, toggleSelect, rangeSelect,
     deselect, isSelected, selectedKeyForTab, selectedTypeForTab,
-    shouldFocusInspector, consumeFocusInspector,
+    focusInspector, consumeFocusInspector,
   ]);
 
   return (

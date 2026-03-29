@@ -36,33 +36,6 @@ function renderShell(definition?: typeof seededDefinition, width = 1440) {
 }
 
 describe('Shell', () => {
-  it('renders the unwired editor row demo when ?demo=editor-row-redo is present', () => {
-    const originalUrl = window.location.href;
-    window.history.pushState({}, '', '/?demo=editor-row-redo');
-
-    try {
-      renderShell(seededDefinition, 1440);
-
-      expect(screen.getByTestId('editor-row-redo-demo')).toBeInTheDocument();
-      expect(screen.getByText(/row redesign study/i)).toBeInTheDocument();
-      expect(screen.getByText('Applicant Name')).toBeInTheDocument();
-      expect(screen.getByTestId('editor-row-redo-group-applicant')).toBeInTheDocument();
-      expect(screen.getByTestId('editor-row-redo-row-fullName')).toBeInTheDocument();
-      expect(screen.getByTestId('editor-row-redo-row-dob')).toBeInTheDocument();
-      expect(screen.getByTestId('editor-row-redo-row-maritalStatus')).toBeInTheDocument();
-      expect(screen.getAllByText('Group')).toHaveLength(2);
-      expect(screen.getByText('+ Add description')).toBeInTheDocument();
-      expect(screen.getAllByText('+ Add behavior').length).toBeGreaterThan(0);
-      expect(screen.getByText('Selected')).toBeInTheDocument();
-      expect(screen.getAllByText('Inline edit').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Add missing').length).toBeGreaterThan(0);
-      expect(screen.getByDisplayValue('Must be in the past')).toBeInTheDocument();
-      expect(screen.getAllByText('Behavior menu').length).toBeGreaterThan(0);
-    } finally {
-      window.history.pushState({}, '', originalUrl);
-    }
-  });
-
   it('renders header with app title', () => {
     renderShell();
     expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
@@ -205,6 +178,19 @@ describe('Shell', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Layout' }));
     expect(screen.getByTestId('blueprint-section-Component Tree')).toBeInTheDocument();
+  });
+
+  it('hides Theme, Screener, and Mappings blueprint sections while Editor is active', () => {
+    renderShell(seededDefinition, 1440);
+
+    expect(screen.queryByTestId('blueprint-section-Theme')).toBeNull();
+    expect(screen.queryByTestId('blueprint-section-Screener')).toBeNull();
+    expect(screen.queryByTestId('blueprint-section-Mappings')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Layout' }));
+    expect(screen.getByTestId('blueprint-section-Theme')).toBeInTheDocument();
+    expect(screen.getByTestId('blueprint-section-Screener')).toBeInTheDocument();
+    expect(screen.getByTestId('blueprint-section-Mappings')).toBeInTheDocument();
   });
 
   it('uses the same row-first editor surface on compact screens without a separate properties mode', async () => {

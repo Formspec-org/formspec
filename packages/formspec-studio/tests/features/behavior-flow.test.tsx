@@ -23,8 +23,8 @@ function SelectionProbe() {
   return (
     <>
       <div data-testid="selected-key">{selectedKey || ''}</div>
-      <button data-testid="select-age" onClick={() => select('age', 'field')}>Select Age</button>
-      <button data-testid="select-name" onClick={() => select('name', 'field')}>Select Name</button>
+      <button data-testid="select-age" onClick={() => select('age', 'field', { tab: 'editor' })}>Select Age</button>
+      <button data-testid="select-name" onClick={() => select('name', 'field', { tab: 'editor' })}>Select Name</button>
     </>
   );
 }
