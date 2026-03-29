@@ -1,4 +1,4 @@
-/** @filedesc USWDS v3 adapter for Toggle — USWDS has no toggle; uses usa-checkbox with label. */
+/** @filedesc USWDS v3 adapter for Toggle — pill-switch via usa-checkbox + usa-toggle__input CSS. */
 import type { ToggleBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
 import { applyUSWDSValidationState, createUSWDSError } from './shared';
@@ -15,7 +15,7 @@ export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     const wrapper = el('div', { class: 'usa-checkbox' });
 
     const input = document.createElement('input') as HTMLInputElement;
-    input.className = 'usa-checkbox__input';
+    input.className = 'usa-checkbox__input usa-toggle__input';
     input.id = behavior.id;
     input.type = 'checkbox';
     input.name = behavior.fieldPath;

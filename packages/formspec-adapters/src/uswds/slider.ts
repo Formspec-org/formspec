@@ -8,9 +8,6 @@ export const renderSlider: AdapterRenderFn<SliderBehavior> = (
 ) => {
     const { root, label, hint, error, describedBy: _describedBy } = createUSWDSFieldDOM(behavior);
 
-    // Container for range input + value display
-    const container = el('div', {});
-
     const input = document.createElement('input') as HTMLInputElement;
     input.className = 'usa-range';
     input.id = behavior.id;
@@ -32,27 +29,28 @@ export const renderSlider: AdapterRenderFn<SliderBehavior> = (
                 opt.value = String(v);
                 datalist.appendChild(opt);
             }
-            container.appendChild(datalist);
+            root.appendChild(datalist);
             input.setAttribute('list', listId);
         }
     }
 
-    container.appendChild(input);
-
-    // Value display
+    // Wrap range + optional value in an inline track container
     if (behavior.showValue) {
-        const valueDisplay = el('span', { class: 'formspec-slider-value' });
-        container.appendChild(valueDisplay);
+        const track = el('div', { class: 'formspec-slider-track' });
+        track.appendChild(input);
+        const valueDisplay = el('span', { class: 'formspec-slider-value', 'aria-live': 'polite' });
+        track.appendChild(valueDisplay);
+        root.appendChild(track);
+    } else {
+        root.appendChild(input);
     }
-
-    root.appendChild(container);
 
     root.appendChild(error);
 
     parent.appendChild(root);
 
     const dispose = behavior.bind({
-        root, label, control: container, hint, error,
+        root, label, control: input, hint, error,
         onValidationChange: (hasError) => {
             root.classList.toggle('usa-form-group--error', hasError);
             input.classList.toggle('usa-range--error', hasError);

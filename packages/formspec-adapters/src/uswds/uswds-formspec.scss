@@ -47,9 +47,42 @@
 // Formspec-specific overrides — no USWDS setting equivalent
 // ---------------------------------------------------------------------------
 
-// Formspec layout: grid gap handles inter-field spacing, not form-group margin
+// Required asterisks match USWDS's usa-label--required color
+.formspec-required {
+  color: #b50909;
+}
+
+// Single-column stories should keep the native USWDS control proportions rather
+// than stretching every control edge to edge. Grid/cell layouts opt back into
+// full-width controls below.
+.formspec-container > .usa-form-group,
+.formspec-stack > .usa-form-group,
+.formspec-container > .usa-fieldset,
+.formspec-stack > .usa-fieldset {
+  max-width: 30rem;
+}
+
+.formspec-container > .usa-form-group > .usa-input-group,
+.formspec-stack > .usa-form-group > .usa-input-group,
+.formspec-container > .usa-form-group > .usa-range,
+.formspec-stack > .usa-form-group > .usa-range,
+.formspec-container > .usa-form-group > .usa-file-input,
+.formspec-stack > .usa-form-group > .usa-file-input {
+  max-width: 30rem;
+}
+
 .formspec-grid .usa-form-group,
-.formspec-stack .usa-form-group { margin-top: 0; }
+.formspec-grid .usa-fieldset,
+.formspec-grid .usa-form-group > .usa-input-group,
+.formspec-grid .usa-form-group > .usa-range,
+.formspec-grid .usa-form-group > .usa-file-input {
+  max-width: none;
+}
+
+// Grid gap handles inter-field spacing — zero the margin
+.formspec-grid .usa-form-group { margin-top: 0; }
+// Stack gap is 0.75rem; add 0.75rem margin to reach USWDS's 1.5rem field spacing
+.formspec-stack .usa-form-group { margin-top: 0.75rem; }
 
 // Bottom-align inputs across grid rows when labels wrap to different heights
 .formspec-grid .usa-form-group { flex: 1; display: flex; flex-direction: column; }
@@ -65,16 +98,193 @@
   margin-left: 0;
 }
 
-// Visually group checkbox/radio options with a left border so they're
-// clearly separated from standalone boolean checkboxes below.
-.formspec-container .usa-fieldset:has(.usa-checkbox, .usa-radio) {
-  border-left: 3px solid var(--formspec-color-border, #a9aeb1);
-  padding-left: 0.75rem;
-  margin-top: 0.25rem;
-}
-
 .formspec-container .usa-label { margin-top: 0; }
 .formspec-container .usa-hint { margin-top: 0; }
+
+.formspec-container > .formspec-submit,
+.formspec-stack > .formspec-submit {
+  align-self: flex-start;
+  width: auto;
+  margin-top: 1rem;
+}
+
+.formspec-money-field {
+  display: flex;
+  align-items: stretch;
+  background-color: #fff;
+  border: 1px solid #565c65;
+  border-radius: 0;
+  max-width: 20rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+.formspec-money-field--error {
+  border-width: 0.25rem;
+  border-color: #b50909;
+}
+
+.formspec-money-prefix {
+  align-items: center;
+  background-color: #f0f0f0;
+  border-right: 1px solid #565c65;
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  line-height: 1.4;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+}
+
+.formspec-money-field > .usa-input {
+  border: 0;
+  flex: 1 1 auto;
+  margin-top: 0;
+  min-width: 0;
+  width: auto;
+}
+
+.formspec-money-currency-input {
+  border-right: 1px solid #565c65 !important;
+  flex: 0 0 4.5rem;
+  max-width: 4.5rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.formspec-slider-track {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+
+  .usa-range {
+    flex: 1;
+    margin-top: 0;
+  }
+}
+
+.formspec-slider-value {
+  display: inline;
+  min-width: 2ch;
+  font-size: 0.875rem;
+  color: #565c65;
+  text-align: right;
+}
+
+.formspec-repeat {
+  gap: 1rem;
+}
+
+.formspec-repeat-add {
+  border: 2px solid #005ea2;
+  border-radius: 0.25rem;
+  color: #005ea2;
+  font-weight: 700;
+  opacity: 1;
+  padding: 0.75rem 1.25rem;
+}
+
+.formspec-repeat-remove {
+  border: 0;
+  color: #005ea2;
+  opacity: 1;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.formspec-card {
+  border: 1px solid #dfe1e2;
+  border-radius: 0.25rem;
+  padding: 1rem;
+}
+
+.formspec-card-title {
+  margin: 0 0 0.75rem;
+}
+
+.formspec-alert {
+  background-color: #e7f6f8;
+  border-left: 0.25rem solid #00bde3;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 1rem 1.25rem 1rem 3rem;
+  position: relative;
+
+  &::before {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    font-size: 1.5rem;
+    line-height: 1;
+    text-align: center;
+  }
+
+  &--info {
+    // default background/border already set above
+    &::before {
+      content: '\2139'; // ℹ
+      color: #00bde3;
+      background-color: rgba(0, 189, 227, 0.15);
+      border-radius: 50%;
+      width: 1.5rem;
+      height: 1.5rem;
+      display: inline-block;
+    }
+  }
+
+  &--success {
+    background-color: #ecf3ec;
+    border-left-color: #00a91c;
+    &::before {
+      content: '\2713'; // ✓
+      color: #00a91c;
+      background-color: rgba(0, 169, 28, 0.15);
+      border-radius: 50%;
+      width: 1.5rem;
+      height: 1.5rem;
+      display: inline-block;
+    }
+  }
+
+  &--warning {
+    background-color: #faf3d1;
+    border-left-color: #ffbe2e;
+    &::before { content: '\26A0'; color: #ffbe2e; } // ⚠
+  }
+
+  &--error {
+    background-color: #f4e3db;
+    border-left-color: #d54309;
+    &::before { content: '\2715'; color: #d54309; } // ✕
+  }
+}
+
+.formspec-divider {
+  border: 0;
+  border-top: 1px solid #dfe1e2;
+  margin: 1.5rem 0;
+}
+
+.formspec-wizard-panel {
+  border: 1px solid #dfe1e2;
+  border-radius: 0.25rem;
+  max-width: 32rem;
+  padding: 1rem;
+}
+
+.formspec-wizard-nav {
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+// Tab content needs breathing room below the tab bar
+.formspec-tab-panels {
+  padding-top: 1rem;
+}
 
 // Standalone boolean checkboxes: text on left, native checkbox on right.
 // Bypasses USWDS's ::before/::after custom checkbox — uses the real input.
@@ -110,6 +320,206 @@
   margin-top: 0.15rem;
   cursor: pointer;
   accent-color: var(--formspec-color-primary, #005ea2);
+}
+
+// ---------------------------------------------------------------------------
+// Toggle — pill-switch via usa-checkbox + usa-toggle__input
+// USWDS v3 has no built-in toggle component; these rules recreate the
+// pill-switch pattern using the existing usa-checkbox structure.
+// ---------------------------------------------------------------------------
+
+.usa-toggle__input {
+  // Visually hidden but still focusable for accessibility
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Track (the oval background)
+.usa-toggle__input + .usa-checkbox__label::before {
+  content: '';
+  display: inline-block;
+  vertical-align: middle;
+  width: 2.5rem;
+  height: 1.25rem;
+  border-radius: 0.625rem;
+  background: #919191;
+  margin-right: 0.5rem;
+  transition: background 0.15s ease;
+  position: relative;
+  box-shadow: none;
+  border: 0;
+  top: 0;
+  left: 0;
+}
+
+// Thumb (the sliding circle)
+.usa-toggle__input + .usa-checkbox__label::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: #fff;
+  transform: translateY(-50%);
+  transition: left 0.15s ease;
+  box-shadow: none;
+  border: 0;
+}
+
+// Checked state — move thumb right and change track color
+.usa-toggle__input:checked + .usa-checkbox__label::before {
+  background: #005ea2;
+}
+
+.usa-toggle__input:checked + .usa-checkbox__label::after {
+  left: 1.375rem;
+}
+
+// Focus ring on the track when input is focused
+.usa-toggle__input:focus + .usa-checkbox__label::before {
+  outline: 2px solid #2491ff;
+  outline-offset: 2px;
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible / Accordion — override formspec defaults for USWDS appearance
+// Native <details>/<summary> with USWDS visual styling (no JS required).
+// ---------------------------------------------------------------------------
+
+.formspec-container .formspec-collapsible,
+.formspec-container .formspec-accordion-item {
+  border: 1px solid #dfe1e2;
+  border-radius: 0;
+  margin-bottom: -1px; // collapse borders between stacked items
+  overflow: hidden;
+
+  summary {
+    background: #f0f0f0;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 1rem 3.5rem 1rem 1.25rem;
+    position: relative;
+    list-style: none;
+    cursor: pointer;
+
+    // Remove default markers
+    &::-webkit-details-marker { display: none; }
+    &::marker { display: none; }
+    &::before { content: none; }
+
+    // USWDS-style plus/minus indicator on the right
+    &::after {
+      content: '+';
+      position: absolute;
+      right: 1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.25rem;
+      font-weight: 300;
+      line-height: 1;
+      color: #1b1b1b;
+    }
+
+    &:hover { background: #e6e6e6; }
+  }
+
+  &[open] > summary::after {
+    content: '\2212'; // − (minus sign)
+  }
+
+  &[open] > summary {
+    border-bottom: 1px solid #dfe1e2;
+  }
+}
+
+.formspec-container .formspec-collapsible-content,
+.formspec-container .formspec-accordion-content {
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+}
+
+// ---------------------------------------------------------------------------
+// Card — override formspec defaults for USWDS appearance
+// ---------------------------------------------------------------------------
+
+.formspec-container .formspec-card {
+  border: 1px solid #dfe1e2;
+  border-radius: 0.25rem;
+  box-shadow: none;
+
+  // Override elevation shadows — USWDS cards are flat
+  &[data-elevation] {
+    box-shadow: none;
+  }
+}
+
+.formspec-container .formspec-card-title {
+  border-bottom-color: #dfe1e2;
+}
+
+// ---------------------------------------------------------------------------
+// Modal trigger — solid USWDS button appearance
+// ---------------------------------------------------------------------------
+
+.formspec-container .formspec-modal-trigger {
+  background-color: #005ea2;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.75rem 1.25rem;
+  border: 0;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  text-decoration: none;
+  &:hover { background-color: #1a4480; }
+}
+
+// ---------------------------------------------------------------------------
+// Popover trigger — outline USWDS button appearance
+// ---------------------------------------------------------------------------
+
+.formspec-container .formspec-popover-trigger {
+  background: transparent;
+  color: #005ea2;
+  font-weight: 700;
+  padding: 0.75rem 1.25rem;
+  border: 2px solid #005ea2;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 1rem;
+  &:hover { background-color: #005ea2; color: #fff; }
+}
+
+// ---------------------------------------------------------------------------
+// Panel — USWDS card-like container
+// ---------------------------------------------------------------------------
+
+.formspec-container .formspec-panel {
+  border: 1px solid #dfe1e2;
+  border-radius: 0.25rem;
+  background: #fff;
+}
+
+.formspec-container .formspec-panel-header {
+  background: #f0f0f0;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #dfe1e2;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.formspec-container .formspec-panel-body {
+  padding: 1rem;
 }
 
 // Scale step indicator to formspec wizard proportions

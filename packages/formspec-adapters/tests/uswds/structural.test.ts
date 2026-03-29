@@ -106,6 +106,14 @@ describe('USWDS RadioGroup', () => {
         expect(radios.length).toBe(2);
     });
 
+    it('renders usa-radio items as direct children of the fieldset', () => {
+        const parent = makeParent();
+        renderRadioGroup(mockRadioGroup(), parent, mockAdapterContext());
+        const fieldset = parent.querySelector('.usa-fieldset')!;
+        const directRadios = fieldset.querySelectorAll(':scope > .usa-radio');
+        expect(directRadios.length).toBe(2);
+    });
+
     it('passes optionControls and rebuildOptions to bind()', () => {
         const parent = makeParent();
         const b = mockRadioGroup();
@@ -126,6 +134,14 @@ describe('USWDS CheckboxGroup', () => {
         expect(parent.querySelector('.usa-fieldset')).toBeTruthy();
         const checkboxes = parent.querySelectorAll('.usa-checkbox__input');
         expect(checkboxes.length).toBe(2);
+    });
+
+    it('renders usa-checkbox items as direct children of the fieldset', () => {
+        const parent = makeParent();
+        renderCheckboxGroup(mockCheckboxGroup(), parent, mockAdapterContext());
+        const fieldset = parent.querySelector('.usa-fieldset')!;
+        const directCheckboxes = fieldset.querySelectorAll(':scope > .usa-checkbox');
+        expect(directCheckboxes.length).toBe(2);
     });
 
     it('renders select-all checkbox when selectAll is true', () => {
@@ -177,38 +193,60 @@ describe('USWDS Checkbox', () => {
 // ── Toggle ─────────────────────────────────────────────────────────
 
 describe('USWDS Toggle', () => {
-    it('renders usa-checkbox (USWDS has no toggle)', () => {
+    it('renders usa-checkbox wrapper with usa-toggle__input class', () => {
         const parent = makeParent();
         renderToggle(mockToggle(), parent, mockAdapterContext());
         expect(parent.querySelector('.usa-checkbox')).toBeTruthy();
-        expect(parent.querySelector('.usa-checkbox__input')).toBeTruthy();
+        const input = parent.querySelector('.usa-checkbox__input') as HTMLInputElement;
+        expect(input).toBeTruthy();
+        expect(input.classList.contains('usa-toggle__input')).toBe(true);
     });
 });
 
 // ── MoneyInput ─────────────────────────────────────────────────────
 
 describe('USWDS MoneyInput', () => {
-    it('renders usa-input-group with currency prefix', () => {
+    it('renders composed money field with currency prefix', () => {
         const parent = makeParent();
         renderMoneyInput(mockMoneyInput(), parent, mockAdapterContext());
-        expect(parent.querySelector('.usa-input-group')).toBeTruthy();
-        expect(parent.querySelector('.usa-input-prefix')!.textContent).toBe('$');
+        expect(parent.querySelector('.formspec-money-field')).toBeTruthy();
+        expect(parent.querySelector('.formspec-money-prefix')!.textContent).toBe('$');
     });
 
-    it('renders currency input when no resolvedCurrency', () => {
+    it('renders editable currency inside the composed money field when unresolved', () => {
         const parent = makeParent();
         renderMoneyInput(mockMoneyInput({ resolvedCurrency: null }), parent, mockAdapterContext());
+        const group = parent.querySelector('.formspec-money-field')!;
         expect(parent.querySelector('.formspec-money-currency-input')).toBeTruthy();
+        expect(group.querySelector('.formspec-money-currency-input')).toBeTruthy();
     });
 });
 
 // ── Slider ─────────────────────────────────────────────────────────
 
 describe('USWDS Slider', () => {
-    it('renders usa-range input', () => {
+    it('renders usa-range input without an adapter-specific control wrapper', () => {
         const parent = makeParent();
         renderSlider(mockSlider(), parent, mockAdapterContext());
         expect(parent.querySelector('input.usa-range')).toBeTruthy();
+        expect(parent.querySelector('.formspec-slider-control')).toBeNull();
+    });
+
+    it('renders the optional value display as a live status outside the native range control', () => {
+        const parent = makeParent();
+        renderSlider(mockSlider({ showValue: true }), parent, mockAdapterContext());
+        const valueDisplay = parent.querySelector('.formspec-slider-value');
+        expect(valueDisplay).toBeTruthy();
+        expect(valueDisplay?.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('wraps range input and value display in an inline track container', () => {
+        const parent = makeParent();
+        renderSlider(mockSlider({ showValue: true }), parent, mockAdapterContext());
+        const track = parent.querySelector('.formspec-slider-track');
+        expect(track).toBeTruthy();
+        expect(track!.querySelector('.usa-range')).toBeTruthy();
+        expect(track!.querySelector('.formspec-slider-value')).toBeTruthy();
     });
 });
 
@@ -231,6 +269,36 @@ describe('USWDS FileUpload', () => {
         expect(parent.querySelector('.usa-file-input')).toBeTruthy();
         expect(parent.querySelector('.usa-file-input__target')).toBeTruthy();
         expect(parent.querySelector('.usa-file-input__input')).toBeTruthy();
+    });
+
+    it('renders accepted file types as usa-hint text when accept is set', () => {
+        const parent = makeParent();
+        renderFileUpload(mockFileUpload({ accept: '.pdf,.doc,.docx' }), parent, mockAdapterContext());
+        const hint = parent.querySelector('.usa-hint');
+        expect(hint).toBeTruthy();
+        expect(hint!.textContent).toContain('.pdf,.doc,.docx');
+    });
+
+    it('positions accepted-files hint BEFORE the drop-zone target (USWDS convention)', () => {
+        const parent = makeParent();
+        renderFileUpload(mockFileUpload({ accept: '.pdf,.doc' }), parent, mockAdapterContext());
+        const root = parent.querySelector('.usa-form-group')!;
+        const children = Array.from(root.children);
+        const hintIdx = children.findIndex(el =>
+            el.classList.contains('usa-hint') && el.textContent?.includes('Accepted'));
+        const fileInputIdx = children.findIndex(el => el.classList.contains('usa-file-input'));
+        expect(hintIdx).toBeGreaterThan(-1);
+        expect(fileInputIdx).toBeGreaterThan(-1);
+        expect(hintIdx).toBeLessThan(fileInputIdx);
+    });
+
+    it('does not render accept hint when accept is undefined', () => {
+        const parent = makeParent();
+        renderFileUpload(mockFileUpload({ accept: undefined }), parent, mockAdapterContext());
+        // The field-level usa-hint may exist (from createUSWDSFieldDOM), but no accept-specific hint
+        const hints = parent.querySelectorAll('.usa-hint');
+        const acceptHint = Array.from(hints).find(h => h.textContent?.includes('Accepted'));
+        expect(acceptHint).toBeFalsy();
     });
 });
 
@@ -265,6 +333,155 @@ describe('USWDS Tabs', () => {
         expect(parent.querySelector('.usa-button-group--segmented')).toBeTruthy();
         const buttons = parent.querySelectorAll('[role="tab"]');
         expect(buttons.length).toBe(2);
+    });
+});
+
+// ── Integration CSS ───────────────────────────────────────────────
+
+describe('Integration CSS', () => {
+    it('contains .formspec-required color rule for required asterisks', async () => {
+        const { integrationCSS } = await import('../../src/uswds/integration-css');
+        expect(integrationCSS).toContain('.formspec-required');
+        // Must set color (not just font-size from trailing-checkbox override)
+        expect(integrationCSS).toMatch(/\.formspec-required\{[^}]*color:#b50909/);
+    });
+});
+
+// ── Integration CSS — Alert icons ──────────────────────────────────
+
+describe('Integration CSS — Alert icons', () => {
+    let css: string;
+    beforeAll(async () => {
+        css = (await import('../../src/uswds/integration-css')).integrationCSS;
+    });
+
+    it('adds ::before pseudo-element content for info alerts', () => {
+        expect(css).toMatch(/\.formspec-alert--info::before/);
+    });
+
+    it('adds ::before pseudo-element content for success alerts', () => {
+        expect(css).toMatch(/\.formspec-alert--success::before/);
+    });
+
+    it('adds ::before pseudo-element content for warning alerts', () => {
+        expect(css).toMatch(/\.formspec-alert--warning::before/);
+    });
+
+    it('adds ::before pseudo-element content for error alerts', () => {
+        expect(css).toMatch(/\.formspec-alert--error::before/);
+    });
+
+    it('uses 1.5rem font-size for alert icons', () => {
+        expect(css).toMatch(/\.formspec-alert::before[^}]*font-size:1\.5rem/);
+    });
+
+    it('uses USWDS info color #00bde3 for info icon', () => {
+        expect(css).toMatch(/\.formspec-alert--info::before[^}]*color:#00bde3/);
+    });
+
+    it('uses USWDS success color #00a91c for success icon', () => {
+        expect(css).toMatch(/\.formspec-alert--success::before[^}]*color:#00a91c/);
+    });
+
+    it('uses USWDS error color #d54309 for error icon', () => {
+        expect(css).toMatch(/\.formspec-alert--error::before[^}]*color:#d54309/);
+    });
+
+    it('adds circular background to info and success icons', () => {
+        expect(css).toMatch(/\.formspec-alert--info::before[^}]*border-radius:50%/);
+        expect(css).toMatch(/\.formspec-alert--success::before[^}]*border-radius:50%/);
+    });
+});
+
+// ── Integration CSS — Slider track layout ─────────────────────────
+
+describe('Integration CSS — Slider track layout', () => {
+    let css: string;
+    beforeAll(async () => {
+        css = (await import('../../src/uswds/integration-css')).integrationCSS;
+    });
+
+    it('styles formspec-slider-track as flex row', () => {
+        expect(css).toMatch(/\.formspec-slider-track[^{]*\{[^}]*display:\s*flex/);
+    });
+});
+
+// ── USWDS Collapsible/Accordion CSS overrides ─────────────────────
+
+describe('Integration CSS — Collapsible/Accordion overrides', () => {
+    let css: string;
+    beforeAll(async () => {
+        css = (await import('../../src/uswds/integration-css')).integrationCSS;
+    });
+
+    it('overrides collapsible border-radius to 0', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-collapsible[^}]*border-radius:0/);
+    });
+
+    it('sets collapsible summary background to USWDS gray (#f0f0f0)', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-collapsible summary[^}]*background:#f0f0f0/);
+    });
+
+    it('sets collapsible summary font-weight to 700', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-collapsible summary[^}]*font-weight:700/);
+    });
+
+    it('sets accordion-item border-radius to 0', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-accordion-item[^}]*border-radius:0/);
+    });
+
+    it('sets accordion summary background to USWDS gray', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-accordion-item summary[^}]*background:#f0f0f0/);
+    });
+
+    it('uses USWDS plus/minus text indicator for expand/collapse', () => {
+        // Closed state: + sign
+        expect(css).toMatch(/\.formspec-container \.formspec-collapsible[^[{]*summary::after[^}]*content:"\+"/);
+        // Open state: minus sign
+        expect(css).toMatch(/\.formspec-container \.formspec-collapsible.*\[open\]>summary::after/);
+    });
+
+    it('provides USWDS-padded content area', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-collapsible-content[^}]*padding:1rem 1\.25rem/);
+        expect(css).toMatch(/\.formspec-container \.formspec-accordion-content[^}]*padding:1rem 1\.25rem/);
+    });
+});
+
+// ── USWDS Card CSS overrides ──────────────────────────────────────
+
+describe('Integration CSS — Card overrides', () => {
+    let css: string;
+    beforeAll(async () => {
+        css = (await import('../../src/uswds/integration-css')).integrationCSS;
+    });
+
+    it('overrides card border-radius to 0.25rem', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-card[^}]*border-radius:\.25rem/);
+    });
+
+    it('removes card box-shadow', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-card[^}]*box-shadow:none/);
+    });
+
+    it('sets card border to USWDS border color (#dfe1e2)', () => {
+        expect(css).toMatch(/\.formspec-container \.formspec-card[^}]*border:1px solid #dfe1e2/);
+    });
+});
+
+// ── USWDS Toggle CSS (pill switch) ──────────────────────────────────
+
+describe('Integration CSS — Toggle pill switch', () => {
+    let css: string;
+    beforeAll(async () => {
+        css = (await import('../../src/uswds/integration-css')).integrationCSS;
+    });
+
+    it('styles usa-toggle__input label::before as the track', () => {
+        expect(css).toMatch(/\.usa-toggle__input\+.*::before/);
+    });
+
+    it('styles usa-toggle__input label::after as the thumb', () => {
+        expect(css).toMatch(/\.usa-toggle__input\+.*::after/);
     });
 });
 

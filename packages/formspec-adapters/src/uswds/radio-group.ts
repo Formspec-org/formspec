@@ -3,12 +3,20 @@ import type { RadioGroupBehavior, AdapterRenderFn } from '@formspec-org/webcompo
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
 import { applyUSWDSValidationState, createUSWDSError } from './shared';
 
+/** Removes previously-rendered option elements (marked with data-radio-option). */
+function clearRadioOptions(fieldset: HTMLElement): void {
+    for (const old of Array.from(fieldset.querySelectorAll(':scope > [data-radio-option]'))) {
+        old.remove();
+    }
+}
+
 function buildRadioOptions(
     behavior: RadioGroupBehavior,
-    container: HTMLElement,
+    fieldset: HTMLElement,
+    insertBefore: HTMLElement,
     options: ReadonlyArray<{ value: string; label: string }>,
 ): Map<string, HTMLInputElement> {
-    container.innerHTML = '';
+    clearRadioOptions(fieldset);
     const controls = new Map<string, HTMLInputElement>();
 
     for (let i = 0; i < options.length; i++) {
@@ -16,6 +24,7 @@ function buildRadioOptions(
         const optId = `${behavior.id}-${i}`;
 
         const wrapper = el('div', { class: 'usa-radio' });
+        wrapper.setAttribute('data-radio-option', '');
 
         const input = document.createElement('input') as HTMLInputElement;
         input.className = 'usa-radio__input';
@@ -30,7 +39,7 @@ function buildRadioOptions(
 
         wrapper.appendChild(input);
         wrapper.appendChild(label);
-        container.appendChild(wrapper);
+        fieldset.insertBefore(wrapper, insertBefore);
     }
 
     return controls;
@@ -60,12 +69,10 @@ export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
         fieldset.appendChild(hint);
     }
 
-    const optionContainer = el('div', {});
-    const initialControls = buildRadioOptions(behavior, optionContainer, behavior.options());
-    fieldset.appendChild(optionContainer);
-
     const error = createUSWDSError(behavior.id);
     fieldset.appendChild(error);
+
+    const initialControls = buildRadioOptions(behavior, fieldset, error, behavior.options());
 
     parent.appendChild(fieldset);
 
@@ -77,7 +84,7 @@ export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
         error,
         optionControls: initialControls,
         rebuildOptions: (_container, newOptions) =>
-            buildRadioOptions(behavior, optionContainer, newOptions),
+            buildRadioOptions(behavior, fieldset, error, newOptions),
         onValidationChange: (hasError) => {
             applyUSWDSValidationState(fieldset, legend, hasError);
         },

@@ -61,8 +61,15 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     }
 
     fileInput.appendChild(target);
-    root.appendChild(fileInput);
 
+    // Show accepted file types as hint text between label and control (USWDS convention)
+    if (behavior.accept) {
+        const acceptHint = el('span', { class: 'usa-hint' });
+        acceptHint.textContent = `Accepted files: ${behavior.accept}`;
+        root.appendChild(acceptHint);
+    }
+
+    root.appendChild(fileInput);
     root.appendChild(error);
 
     parent.appendChild(root);

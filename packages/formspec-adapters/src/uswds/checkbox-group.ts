@@ -3,12 +3,20 @@ import type { CheckboxGroupBehavior, AdapterRenderFn } from '@formspec-org/webco
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
 import { applyUSWDSValidationState, createUSWDSError } from './shared';
 
+/** Removes previously-rendered option elements (marked with data-checkbox-option). */
+function clearCheckboxOptions(fieldset: HTMLElement): void {
+    for (const old of Array.from(fieldset.querySelectorAll(':scope > [data-checkbox-option]'))) {
+        old.remove();
+    }
+}
+
 function buildCheckboxOptions(
     behavior: CheckboxGroupBehavior,
-    container: HTMLElement,
+    fieldset: HTMLElement,
+    insertBefore: HTMLElement,
     options: ReadonlyArray<{ value: string; label: string }>,
 ): Map<string, HTMLInputElement> {
-    container.innerHTML = '';
+    clearCheckboxOptions(fieldset);
     const controls = new Map<string, HTMLInputElement>();
 
     for (let i = 0; i < options.length; i++) {
@@ -16,6 +24,7 @@ function buildCheckboxOptions(
         const optId = `${behavior.id}-${i}`;
 
         const wrapper = el('div', { class: 'usa-checkbox' });
+        wrapper.setAttribute('data-checkbox-option', '');
 
         const input = document.createElement('input') as HTMLInputElement;
         input.className = 'usa-checkbox__input';
@@ -30,7 +39,7 @@ function buildCheckboxOptions(
 
         wrapper.appendChild(input);
         wrapper.appendChild(label);
-        container.appendChild(wrapper);
+        fieldset.insertBefore(wrapper, insertBefore);
     }
 
     return controls;
@@ -84,12 +93,10 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
         fieldset.appendChild(selectAllWrapper);
     }
 
-    const optionContainer = el('div', {});
-    let optionControlsRef = buildCheckboxOptions(behavior, optionContainer, behavior.options());
-    fieldset.appendChild(optionContainer);
-
     const error = createUSWDSError(behavior.id);
     fieldset.appendChild(error);
+
+    let optionControlsRef = buildCheckboxOptions(behavior, fieldset, error, behavior.options());
 
     parent.appendChild(fieldset);
 
@@ -101,7 +108,7 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
         error,
         optionControls: optionControlsRef,
         rebuildOptions: (_container, newOptions) => {
-            optionControlsRef = buildCheckboxOptions(behavior, optionContainer, newOptions);
+            optionControlsRef = buildCheckboxOptions(behavior, fieldset, error, newOptions);
             return optionControlsRef;
         },
         onValidationChange: (hasError) => {

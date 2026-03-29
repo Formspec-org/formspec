@@ -11,6 +11,7 @@ export const renderSubmitButton: AdapterRenderFn<any> = (
     button.type = 'button';
     button.className = 'formspec-submit usa-button';
     button.textContent = behavior.defaultLabel || 'Submit';
+    button.style.alignSelf = 'flex-start';
 
     if (behavior.compOverrides?.cssClass) actx.applyCssClass(button, behavior.compOverrides);
     if (behavior.compOverrides?.accessibility) actx.applyAccessibility(button, behavior.compOverrides);
