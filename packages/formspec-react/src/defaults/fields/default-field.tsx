@@ -42,9 +42,26 @@ export function DefaultField({ field, node }: FieldComponentProps) {
 
     // Checkbox / Toggle: inline layout
     if (node.component === 'Checkbox' || node.component === 'Toggle') {
+        const isToggle = node.component === 'Toggle';
         const onLabel = node.props?.onLabel as string | undefined;
         const offLabel = node.props?.offLabel as string | undefined;
-        const hasToggleLabels = node.component === 'Toggle' && (onLabel || offLabel);
+        const hasToggleLabels = isToggle && (onLabel || offLabel);
+
+        const checkboxInput = (
+            <input
+                id={field.id}
+                type="checkbox"
+                // Item 17: Toggle gets role="switch", plain Checkbox does not
+                role={isToggle ? 'switch' : undefined}
+                checked={!!field.value}
+                onChange={isReadonly ? undefined : (e) => field.setValue(e.target.checked)}
+                onBlur={() => field.touch()}
+                disabled={isReadonly}
+                aria-invalid={showError}
+                aria-required={field.required || undefined}
+                aria-describedby={describedBy}
+            />
+        );
 
         return (
             <div
@@ -52,32 +69,26 @@ export function DefaultField({ field, node }: FieldComponentProps) {
                 style={node.style as React.CSSProperties | undefined}
                 data-name={field.path}
             >
-                {hasToggleLabels && (
-                    <span className="formspec-toggle-label formspec-toggle-off" aria-hidden="true">
-                        {offLabel}
-                    </span>
-                )}
-                <input
-                    id={field.id}
-                    type="checkbox"
-                    // Item 17: Toggle gets role="switch", plain Checkbox does not
-                    role={node.component === 'Toggle' ? 'switch' : undefined}
-                    checked={!!field.value}
-                    onChange={isReadonly ? undefined : (e) => field.setValue(e.target.checked)}
-                    onBlur={() => field.touch()}
-                    disabled={isReadonly}
-                    aria-invalid={showError}
-                    aria-required={field.required || undefined}
-                    aria-describedby={describedBy}
-                />
                 <label htmlFor={field.id}>
                     {field.label}
                     {field.required && <span className="formspec-required" aria-hidden="true"> *</span>}
                 </label>
-                {hasToggleLabels && (
-                    <span className="formspec-toggle-label formspec-toggle-on" aria-hidden="true">
-                        {onLabel}
-                    </span>
+                {isToggle ? (
+                    <div className="formspec-toggle">
+                        {hasToggleLabels && (
+                            <span className="formspec-toggle-label formspec-toggle-off" aria-hidden="true">
+                                {offLabel}
+                            </span>
+                        )}
+                        {checkboxInput}
+                        {hasToggleLabels && (
+                            <span className="formspec-toggle-label formspec-toggle-on" aria-hidden="true">
+                                {onLabel}
+                            </span>
+                        )}
+                    </div>
+                ) : (
+                    checkboxInput
                 )}
                 <p id={`${field.id}-error`} className="formspec-error" aria-live="polite">
                     {showError ? field.error : ''}
@@ -295,7 +306,7 @@ function renderControl(
             const minDate = node.props?.minDate as string | undefined;
             const maxDate = node.props?.maxDate as string | undefined;
             let inputType = 'date';
-            if (variant === 'dateTime' || dataType === 'datetime') inputType = 'datetime-local';
+            if (variant === 'dateTime' || dataType === 'dateTime') inputType = 'datetime-local';
             else if (variant === 'time' || dataType === 'time') inputType = 'time';
             return (
                 <input
@@ -548,8 +559,25 @@ function SearchableSelect({ field, common, isReadonly }: Omit<CommonInputProps, 
     );
 }
 
+/** Resolve ISO 4217 currency code (e.g. "USD") to its narrow symbol (e.g. "$"). */
+function toCurrencySymbol(code: string): string {
+    try {
+        const parts = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: code.toUpperCase(),
+            currencyDisplay: 'narrowSymbol',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).formatToParts(1);
+        return parts.find(p => p.type === 'currency')?.value ?? code;
+    } catch {
+        return code;
+    }
+}
+
 function MoneyInputControl({ field, node, common, isReadonly }: CommonInputProps) {
-    const currency = (node.props?.currency as string) || 'USD';
+    const currencyCode = (node.props?.currency as string) || 'USD';
+    const currency = toCurrencySymbol(currencyCode);
     const min = node.props?.min != null ? String(node.props.min) : undefined;
     const max = node.props?.max != null ? String(node.props.max) : undefined;
     const step = node.props?.step as string | undefined;
@@ -790,7 +818,7 @@ function SignatureControl({ field, node }: { field: FieldComponentProps['field']
                 role="img"
                 aria-label={`Signature pad for ${field.label}`}
                 tabIndex={0}
-                style={{ width: 400, height, border: '1px solid #ccc', touchAction: 'none', cursor: 'crosshair' }}
+                style={{ width: '100%', height, border: '1px solid #ccc', touchAction: 'none', cursor: 'crosshair', display: 'block' }}
             />
             <button
                 type="button"

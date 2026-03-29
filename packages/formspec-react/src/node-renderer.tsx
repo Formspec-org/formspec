@@ -427,14 +427,14 @@ function DismissibleAlert({ severity, alertRole, dismissible, text, cssClass, st
     return (
         <div
             role={alertRole}
-            className={`formspec-alert formspec-alert--${severity}${cssClass ? ' ' + cssClass : ''}`}
+            className={`formspec-alert formspec-alert--${severity}${dismissible ? ' formspec-alert--dismissible' : ''}${cssClass ? ' ' + cssClass : ''}`}
             style={style}
         >
             {text}
             {dismissible && (
                 <button
                     type="button"
-                    className="formspec-alert-dismiss"
+                    className="formspec-alert-close"
                     aria-label="Dismiss"
                     onClick={() => setDismissed(true)}
                 >
@@ -494,7 +494,7 @@ function DataTableCell({ signalPath, column }: { signalPath: string; column: { h
                     currency: column.currency || 'USD',
                 }).format(Number(rawValue));
             } catch { /* fall through to string */ }
-        } else if (column.type === 'choice' && column.choices) {
+        } else if ((column.type === 'choice' || column.type === 'select') && column.choices) {
             const match = column.choices.find(c => c.value === rawValue);
             if (match) displayValue = match.label;
         }
@@ -516,7 +516,7 @@ function DataTableCell({ signalPath, column }: { signalPath: string; column: { h
         );
     }
 
-    if (column.type === 'choice' && column.choices) {
+    if ((column.type === 'choice' || column.type === 'select') && column.choices) {
         return (
             <td>
                 <select
@@ -663,10 +663,20 @@ function DataTableDisplay({
     );
 }
 
-/** Renders a live ValidationSummary display node using the current engine state. */
+/** Renders a live ValidationSummary display node using the current engine state.
+ *  Gates display on touchedVersion > 0 — errors only appear after submit or
+ *  wizard navigation, matching the web component's gate behavior. */
 function ValidationSummaryDisplay() {
-    const { engine } = useFormspecContext();
+    const { engine, touchedVersion } = useFormspecContext();
+    const touched = useSignal(touchedVersion);
     const structureVersion = useSignal(engine.structureVersion);
+
+    // Gate: don't show validation results until fields have been touched
+    // (submit calls touchAllFields, wizard navigation touches fields)
+    if (touched === 0) {
+        return null;
+    }
+
     const report = engine.getValidationReport({ mode: 'continuous' });
     const results = report.results.map((r: any) => ({
         path: r.path || '',

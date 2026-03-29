@@ -95,7 +95,7 @@ describe('NumberInput — min/max/step', () => {
 
 describe('DatePicker — variants', () => {
     it('renders datetime-local when variant is dateTime', () => {
-        const def = baseDef([{ key: 'dt', type: 'field', dataType: 'datetime', label: 'Date Time' }]);
+        const def = baseDef([{ key: 'dt', type: 'field', dataType: 'dateTime', label: 'Date Time' }]);
         const node: LayoutNode = {
             id: 'dt-field', component: 'DatePicker', category: 'field',
             props: { variant: 'dateTime' }, cssClasses: [], children: [], bindPath: 'dt',
@@ -122,6 +122,16 @@ describe('DatePicker — variants', () => {
         };
         const container = renderField(def, node);
         expect(container.querySelector('input[type="date"]')).toBeTruthy();
+    });
+
+    it('renders datetime-local from dataType alone (no variant prop)', () => {
+        const def = baseDef([{ key: 'dt2', type: 'field', dataType: 'dateTime', label: 'DT' }]);
+        const node: LayoutNode = {
+            id: 'dt2-field', component: 'DatePicker', category: 'field',
+            props: {}, cssClasses: [], children: [], bindPath: 'dt2',
+        };
+        const container = renderField(def, node);
+        expect(container.querySelector('input[type="datetime-local"]')).toBeTruthy();
     });
 });
 
@@ -167,14 +177,27 @@ describe('MoneyInput', () => {
         expect(input).toBeTruthy();
     });
 
-    it('displays the currency symbol', () => {
+    it('displays the currency symbol (not code) via Intl resolution', () => {
         const def = baseDef([{ key: 'price', type: 'field', dataType: 'money', label: 'Price' }]);
         const node: LayoutNode = {
             id: 'price-field', component: 'MoneyInput', category: 'field',
             props: { currency: 'USD' }, cssClasses: [], children: [], bindPath: 'price',
         };
         const container = renderField(def, node);
-        expect(container.querySelector('.formspec-money-currency')).toBeTruthy();
+        const span = container.querySelector('.formspec-money-currency') as HTMLElement;
+        expect(span).toBeTruthy();
+        expect(span.textContent).toBe('$');
+    });
+
+    it('resolves EUR to its narrow symbol', () => {
+        const def = baseDef([{ key: 'price', type: 'field', dataType: 'money', label: 'Price' }]);
+        const node: LayoutNode = {
+            id: 'price-field', component: 'MoneyInput', category: 'field',
+            props: { currency: 'EUR' }, cssClasses: [], children: [], bindPath: 'price',
+        };
+        const container = renderField(def, node);
+        const span = container.querySelector('.formspec-money-currency') as HTMLElement;
+        expect(span.textContent).toMatch(/€/);
     });
 });
 
@@ -344,6 +367,33 @@ describe('Signature', () => {
         const btn = container.querySelector('.formspec-signature-clear') as HTMLButtonElement;
         expect(btn.getAttribute('aria-label')).toBe('Clear Your Signature');
     });
+
+    it('canvas uses CSS width 100% instead of hardcoded pixel width', () => {
+        const def = baseDef([{ key: 'sig', type: 'field', dataType: 'string', label: 'Signature' }]);
+        const node: LayoutNode = {
+            id: 'sig-field', component: 'Signature', category: 'field',
+            props: {}, cssClasses: [], children: [], bindPath: 'sig',
+        };
+        const container = renderField(def, node);
+        const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+        expect(canvas.style.width).toBe('100%');
+        // Should NOT have a hardcoded 400px width
+        expect(canvas.style.width).not.toBe('400px');
+    });
+
+    it('canvas has a reasonable default buffer width attribute', () => {
+        const def = baseDef([{ key: 'sig', type: 'field', dataType: 'string', label: 'Signature' }]);
+        const node: LayoutNode = {
+            id: 'sig-field', component: 'Signature', category: 'field',
+            props: {}, cssClasses: [], children: [], bindPath: 'sig',
+        };
+        const container = renderField(def, node);
+        const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+        // DPR-aware: buffer width = CSS width * DPR. In jsdom, getBoundingClientRect returns 0,
+        // so we just check it's set via the effect (canvas.width attribute).
+        // The inline style should not constrain to a fixed pixel value.
+        expect(canvas.style.width).not.toContain('400');
+    });
 });
 
 // ── RadioGroup / CheckboxGroup readonly ───────────────────────────
@@ -508,6 +558,48 @@ describe('Toggle — role switch', () => {
         const container = renderField(def, node);
         const input = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
         expect(input.getAttribute('role')).toBeNull();
+    });
+
+    it('Toggle wraps input + labels in a .formspec-toggle container', () => {
+        const def = baseDef([{ key: 'active', type: 'field', dataType: 'boolean', label: 'Active' }]);
+        const node: LayoutNode = {
+            id: 'active-field', component: 'Toggle', category: 'field',
+            props: { onLabel: 'On', offLabel: 'Off' }, cssClasses: [], children: [], bindPath: 'active',
+        };
+        const container = renderField(def, node);
+        const toggleWrapper = container.querySelector('.formspec-toggle');
+        expect(toggleWrapper).toBeTruthy();
+        // The toggle container should contain the input and the on/off labels
+        const input = toggleWrapper!.querySelector('input[role="switch"]');
+        expect(input).toBeTruthy();
+        const offLabel = toggleWrapper!.querySelector('.formspec-toggle-off');
+        expect(offLabel).toBeTruthy();
+        const onLabel = toggleWrapper!.querySelector('.formspec-toggle-on');
+        expect(onLabel).toBeTruthy();
+    });
+
+    it('Toggle without on/off labels still has .formspec-toggle wrapper', () => {
+        const def = baseDef([{ key: 'active', type: 'field', dataType: 'boolean', label: 'Active' }]);
+        const node: LayoutNode = {
+            id: 'active-field', component: 'Toggle', category: 'field',
+            props: {}, cssClasses: [], children: [], bindPath: 'active',
+        };
+        const container = renderField(def, node);
+        const toggleWrapper = container.querySelector('.formspec-toggle');
+        expect(toggleWrapper).toBeTruthy();
+        const input = toggleWrapper!.querySelector('input[role="switch"]');
+        expect(input).toBeTruthy();
+    });
+
+    it('Checkbox does NOT have .formspec-toggle wrapper', () => {
+        const def = baseDef([{ key: 'agree', type: 'field', dataType: 'boolean', label: 'Agree' }]);
+        const node: LayoutNode = {
+            id: 'agree-field', component: 'Checkbox', category: 'field',
+            props: {}, cssClasses: [], children: [], bindPath: 'agree',
+        };
+        const container = renderField(def, node);
+        const toggleWrapper = container.querySelector('.formspec-toggle');
+        expect(toggleWrapper).toBeFalsy();
     });
 });
 

@@ -95,6 +95,24 @@ describe('Stack layout', () => {
         expect(el.style.gap).toBe('2rem');
     });
 
+    it('renders titled group Stack as formspec-group, not formspec-card', () => {
+        const node: LayoutNode = {
+            ...stackNode({ title: 'Contact Info', bind: 'contact' }),
+            bindPath: 'contact',
+            scopeChange: true,
+        };
+        const container = renderNode(node);
+        // Should use group styling, not card styling
+        const group = container.querySelector('.formspec-group') as HTMLElement;
+        expect(group).toBeTruthy();
+        expect(group.tagName).toBe('SECTION');
+        expect(container.querySelector('.formspec-card')).toBeNull();
+        // Title rendered as heading
+        const heading = group.querySelector('.formspec-group-title');
+        expect(heading).toBeTruthy();
+        expect(heading!.textContent).toBe('Contact Info');
+    });
+
     it('props.gap takes priority over style.gap', () => {
         const node: LayoutNode = {
             ...stackNode({ gap: '1rem' }),

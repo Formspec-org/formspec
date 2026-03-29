@@ -1280,6 +1280,177 @@ describe('repeat group rendering', () => {
     });
 });
 
+// ── DataTable select column rendering ─────────────────────────────
+
+describe('DataTable select column rendering', () => {
+    const dataTableDef = {
+        $formspec: '1.0',
+        url: 'https://test.example/datatable',
+        version: '1.0.0',
+        status: 'active',
+        title: 'DataTable Test',
+        name: 'datatable-test',
+        items: [
+            {
+                key: 'expenses',
+                type: 'group',
+                label: 'Expenses',
+                repeatable: true,
+                minRepeat: 1,
+                children: [
+                    { key: 'description', type: 'field', dataType: 'string', label: 'Description' },
+                    {
+                        key: 'category',
+                        type: 'field',
+                        dataType: 'choice',
+                        label: 'Category',
+                        options: [
+                            { value: 'travel', label: 'Travel' },
+                            { value: 'supplies', label: 'Supplies' },
+                        ],
+                    },
+                ],
+            },
+        ],
+    };
+
+    it('renders a <select> for columns with type "select" and choices', () => {
+        const engine = createFormEngine(dataTableDef);
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'dt-sel', component: 'DataTable', category: 'interactive',
+                    props: {
+                        bind: 'expenses',
+                        allowAdd: true,
+                        columns: [
+                            { header: 'Description', bind: 'description', type: 'text' },
+                            {
+                                header: 'Category',
+                                bind: 'category',
+                                type: 'select',
+                                choices: [
+                                    { value: 'travel', label: 'Travel' },
+                                    { value: 'supplies', label: 'Supplies' },
+                                ],
+                            },
+                        ],
+                    },
+                    cssClasses: [], children: [],
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={plan} />
+                </FormspecProvider>
+            );
+        });
+
+        // Category column should render a <select>, not a text input
+        const select = container.querySelector('select.formspec-datatable-input');
+        expect(select).toBeTruthy();
+        const options = select!.querySelectorAll('option');
+        // placeholder "-" + 2 choices = 3
+        expect(options.length).toBe(3);
+        expect(options[1].textContent).toBe('Travel');
+    });
+
+    it('renders a <select> for columns with type "choice" and choices', () => {
+        const engine = createFormEngine(dataTableDef);
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'dt-choice', component: 'DataTable', category: 'interactive',
+                    props: {
+                        bind: 'expenses',
+                        allowAdd: true,
+                        columns: [
+                            {
+                                header: 'Category',
+                                bind: 'category',
+                                type: 'choice',
+                                choices: [
+                                    { value: 'travel', label: 'Travel' },
+                                    { value: 'supplies', label: 'Supplies' },
+                                ],
+                            },
+                        ],
+                    },
+                    cssClasses: [], children: [],
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={plan} />
+                </FormspecProvider>
+            );
+        });
+
+        const select = container.querySelector('select.formspec-datatable-input');
+        expect(select).toBeTruthy();
+    });
+});
+
+// ── ValidationSummary gate behavior ──────────────────────────────
+
+describe('ValidationSummaryDisplay gate behavior', () => {
+    it('does not show validation errors before submit', () => {
+        const validationDef = {
+            $formspec: '1.0',
+            url: 'https://test.example/vs-gate',
+            version: '1.0.0',
+            status: 'active',
+            title: 'VS Gate Test',
+            name: 'vs-gate',
+            items: [
+                { key: 'username', type: 'field', dataType: 'string', label: 'Username', required: true },
+            ],
+        };
+        const engine = createFormEngine(validationDef);
+        // username is required but empty — errors exist, but should not show yet
+
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'vs-gate', component: 'ValidationSummary', category: 'display',
+                    props: {}, cssClasses: [], children: [],
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={plan} />
+                </FormspecProvider>
+            );
+        });
+
+        // Before submit, the summary should be empty — no error messages visible
+        const summaryText = container.textContent || '';
+        expect(summaryText).not.toContain('error');
+        expect(summaryText).not.toContain('Username');
+    });
+});
+
 // ── simpleMarkdown URL sanitization ──────────────────────────────────
 
 describe('simpleMarkdown URL sanitization in Text nodes', () => {

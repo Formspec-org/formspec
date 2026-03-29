@@ -462,6 +462,37 @@ describe('Item 25: Alert role and severity', () => {
         const el = container.querySelector('[class*="formspec-alert--"]');
         expect(el).toBeTruthy();
     });
+
+    it('adds formspec-alert--dismissible class when dismissible', () => {
+        const node: LayoutNode = {
+            id: 'alert-d',
+            component: 'Alert',
+            category: 'display',
+            props: { text: 'Dismiss me', severity: 'info', dismissible: true },
+            cssClasses: [],
+            children: [],
+        };
+        const container = renderNode(node);
+        const el = container.querySelector('.formspec-alert--dismissible');
+        expect(el).toBeTruthy();
+    });
+
+    it('uses formspec-alert-close class on dismiss button (matching WC)', () => {
+        const node: LayoutNode = {
+            id: 'alert-close',
+            component: 'Alert',
+            category: 'display',
+            props: { text: 'Close me', severity: 'warning', dismissible: true },
+            cssClasses: [],
+            children: [],
+        };
+        const container = renderNode(node);
+        const btn = container.querySelector('.formspec-alert-close');
+        expect(btn).toBeTruthy();
+        // Old class name should NOT be present
+        const oldBtn = container.querySelector('.formspec-alert-dismiss');
+        expect(oldBtn).toBeFalsy();
+    });
 });
 
 // ── Item 6: Wizard submit mode ────────────────────────────────────────────

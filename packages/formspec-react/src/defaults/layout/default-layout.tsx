@@ -76,12 +76,13 @@ function StackLayout({ node, children, themeClass, style }: LayoutProps) {
         ...(gap ? { gap } : {}),
     };
 
-    // When title + bindPath: treat as a titled group section
+    // When title + bindPath: treat as a titled group section (not a card —
+    // the planner emits Stack for definition groups, Card for explicit cards)
     const title = props.title as string | undefined;
     if (title && node.bindPath) {
         return (
-            <section className={themeClass || 'formspec-card'} style={node.style as React.CSSProperties}>
-                <h3 className="formspec-card-title">{title}</h3>
+            <section className={themeClass || 'formspec-group'} style={node.style as React.CSSProperties}>
+                <h3 className="formspec-group-title">{title}</h3>
                 {children}
             </section>
         );
