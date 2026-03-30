@@ -288,3 +288,23 @@ Rejected because rendered UI preview and semantic runtime verification answer di
 8. Remove `Logic` and `Data` from the `TABS` array in Header and `WORKSPACES` map in Shell.
 9. Design compact/mobile layout for the Form Health panel (bottom drawer with health badge indicator).
 10. Consider surfacing migrations and extension declarations in the Manage view for forms that use them.
+
+### Testing Strategy
+
+Every implementation step above follows **red-green-refactor** at the unit/integration layer and updates E2E coverage for user-visible behavior changes.
+
+**Unit / integration tests** (`packages/formspec-studio/tests/`, `packages/formspec-studio-core/tests/`):
+
+- Each new component (inline expansion, Form Health panel, Manage view compositor) gets unit tests written BEFORE implementation. Write a failing test for the expected rendering or state behavior, then implement to make it pass, then expand edge cases.
+- Shell state changes (`activeEditorView`, Build/Manage persistence across workspace switches) must have unit tests covering: initial state, toggle behavior, persistence across `activeTab` changes, and reset on project change.
+- Blueprint auto-switch behavior (clicking a Manage-relevant section from Build view) must have a failing test before implementation — verify the view switches AND the segmented control state updates.
+- Form Health issue detection must have unit tests per issue type (missing labels, required-inside-conditional, dead-end routes, unreferenced option sets) written before the linter engine.
+- Removal of `EditorPropertiesPanel` from the Editor workspace must be verified by updating existing tests in `definition-tree-editor.test.tsx` that assert on the properties panel — these tests should break (RED) when the panel is removed, then be rewritten to assert on inline expansion behavior (GREEN).
+
+**E2E tests** (`packages/formspec-studio/tests/e2e/playwright/`):
+
+- Update `editor-authoring.spec.ts` and `blueprint-sidebar.spec.ts` to reflect the new Build/Manage toggle, inline field editing, and Blueprint auto-switch behavior.
+- Add E2E coverage for the Form Health panel: verify that adding a field without a label produces a visible issue in the health panel, and that clicking the issue navigates to the field.
+- Add E2E coverage for the Manage view: verify option set CRUD, variable CRUD, binds inventory filtering, and jump-to-owner navigation back into Build view.
+- Remove or update any E2E tests that navigate to the `Logic` or `Data` tabs — these tabs will no longer exist.
+- Verify compact/mobile layout: the Build/Manage toggle, Blueprint drawer, and Form Health bottom sheet must be exercised at mobile viewport sizes.
