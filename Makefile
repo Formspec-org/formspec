@@ -37,9 +37,11 @@ build-rust:
 build-js:
 	npm run build
 
-# Installs the maturin-built extension so `import formspec_rust` matches the tree (needs maturin: pip install maturin).
+# Builds the Rust extension and places the .so into the source tree for editable installs.
+# Uses maturin develop so the in-tree _native.so stays current (pip install writes to
+# site-packages, which is shadowed by the editable src/formspec/ on sys.path).
 build-python:
-	python3 -m pip install --no-build-isolation ./crates/formspec-py
+	maturin develop --release --manifest-path crates/formspec-py/Cargo.toml
 
 test-rust:
 	cargo test --workspace

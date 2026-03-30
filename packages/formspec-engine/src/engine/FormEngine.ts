@@ -806,8 +806,13 @@ export class FormEngine implements IFormEngine {
         }
     }
 
+    /** Returns true if the source string is fetchable (HTTP(S) or absolute path). */
+    private static isFetchableSource(source: string): boolean {
+        return /^https?:\/\//i.test(source) || source.startsWith('/');
+    }
+
     private initializeInstanceSource(name: string, instance: FormInstance): void {
-        if (!instance.source) {
+        if (!instance.source || !FormEngine.isFetchableSource(instance.source)) {
             return;
         }
 

@@ -1,7 +1,17 @@
 /** @filedesc Verifies canonical field spacing ownership and wrapper imports. */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+
+/** Read a CSS file and recursively inline its @import "./..." references. */
+function readCSSResolved(filePath: string): string {
+    const raw = readFileSync(filePath, 'utf-8');
+    const dir = dirname(filePath);
+    return raw.replace(/@import\s+"(\.[^"]+)";/g, (_match, rel) => {
+        try { return readCSSResolved(resolve(dir, rel)); }
+        catch { return _match; }
+    });
+}
 
 const reactCSS = readFileSync(
     resolve(__dirname, '../src/formspec.css'), 'utf-8'
@@ -12,11 +22,14 @@ const reactAddonCSS = readFileSync(
 const wcCSS = readFileSync(
     resolve(__dirname, '../../formspec-webcomponent/src/formspec-default.css'), 'utf-8'
 );
-const layoutCSS = readFileSync(
+const layoutCSSRaw = readFileSync(
     resolve(__dirname, '../../formspec-layout/src/formspec-default.css'), 'utf-8'
 );
-const layoutStructuralCSS = readFileSync(
-    resolve(__dirname, '../../formspec-layout/src/formspec-layout.css'), 'utf-8'
+const layoutCSS = readCSSResolved(
+    resolve(__dirname, '../../formspec-layout/src/formspec-default.css')
+);
+const layoutStructuralCSS = readCSSResolved(
+    resolve(__dirname, '../../formspec-layout/src/formspec-layout.css')
 );
 const layoutTheme = JSON.parse(readFileSync(
     resolve(__dirname, '../../formspec-layout/src/default-theme.json'), 'utf-8'
@@ -41,7 +54,7 @@ describe('Field spacing token ownership', () => {
     });
 
     it('bundles structural layout into the canonical default CSS', () => {
-        expect(layoutCSS).toContain('@import "./formspec-layout.css";');
+        expect(layoutCSSRaw).toContain('@import "./formspec-layout.css";');
         expect(extractRuleProp(layoutStructuralCSS, '.formspec-stack', 'gap')).toBe('var(--formspec-spacing-field, 0.75rem)');
     });
 

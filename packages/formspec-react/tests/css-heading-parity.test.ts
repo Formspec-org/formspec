@@ -1,10 +1,20 @@
 /** @filedesc Verifies heading scale in the canonical layout-owned default CSS. */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
 
-const layoutCSS = readFileSync(
-    resolve(__dirname, '../../formspec-layout/src/formspec-default.css'), 'utf-8'
+/** Read a CSS file and recursively inline its @import "./..." references. */
+function readCSSResolved(filePath: string): string {
+    const raw = readFileSync(filePath, 'utf-8');
+    const dir = dirname(filePath);
+    return raw.replace(/@import\s+"(\.[^"]+)";/g, (_match, rel) => {
+        try { return readCSSResolved(resolve(dir, rel)); }
+        catch { return _match; }
+    });
+}
+
+const layoutCSS = readCSSResolved(
+    resolve(__dirname, '../../formspec-layout/src/formspec-default.css')
 );
 
 /**
@@ -28,13 +38,14 @@ function extractHeadingProp(css: string, level: number, prop: string): string | 
 }
 
 describe('Canonical heading scale', () => {
+    // Values from formspec-layout/src/styles/default.base.css — the canonical source.
     const expectedScale: Record<number, { size: string; weight: string }> = {
-        1: { size: '1.375rem', weight: '700' },
-        2: { size: '1.125rem', weight: '700' },
-        3: { size: '0.9375rem', weight: '600' },
-        4: { size: '0.8125rem', weight: '600' },
-        5: { size: '0.75rem', weight: '600' },
-        6: { size: '0.75rem', weight: '600' },
+        1: { size: '1.5rem', weight: '700' },
+        2: { size: '1.25rem', weight: '700' },
+        3: { size: '1rem', weight: '600' },
+        4: { size: '0.9375rem', weight: '600' },
+        5: { size: '0.875rem', weight: '600' },
+        6: { size: '0.875rem', weight: '600' },
     };
 
     for (const level of [1, 2, 3, 4, 5, 6]) {

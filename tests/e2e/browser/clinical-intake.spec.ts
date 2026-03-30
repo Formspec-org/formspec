@@ -325,6 +325,65 @@ test.describe('Clinical Intake: Instance Pre-population', () => {
   });
 });
 
+// ── Instance Source Fetching ─────────────────────────────────────────────────
+
+test.describe('Clinical Intake: Instance Source Fetching', () => {
+  test('patient and drugDatabase instance sources load without errors', async ({ page }) => {
+    const consoleErrors: string[] = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+
+    await mountClinicalIntake(page);
+
+    // Wait for instance source fetches to settle
+    await page.evaluate(async () => {
+      const el: any = document.querySelector('formspec-render');
+      await el.engine.waitForInstanceSources();
+    });
+
+    const instanceErrors = consoleErrors.filter(t => t.includes('instance source'));
+    expect(instanceErrors).toEqual([]);
+  });
+
+  test('fetched patient instance data is accessible via getInstanceData', async ({ page }) => {
+    await mountClinicalIntake(page);
+
+    await page.evaluate(async () => {
+      const el: any = document.querySelector('formspec-render');
+      await el.engine.waitForInstanceSources();
+    });
+
+    const patientData = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      return el.engine.getInstanceData('patient');
+    });
+
+    expect(patientData).toBeTruthy();
+    expect(patientData.firstName).toBe('Jamie');
+    expect(patientData.lastName).toBe('Rivera');
+    expect(patientData.insuranceMemberId).toBe('ABC1234567');
+  });
+
+  test('fetched drugDatabase instance data is accessible via getInstanceData', async ({ page }) => {
+    await mountClinicalIntake(page);
+
+    await page.evaluate(async () => {
+      const el: any = document.querySelector('formspec-render');
+      await el.engine.waitForInstanceSources();
+    });
+
+    const drugs = await page.evaluate(() => {
+      const el: any = document.querySelector('formspec-render');
+      return el.engine.getInstanceData('drugDatabase');
+    });
+
+    expect(Array.isArray(drugs)).toBe(true);
+    expect(drugs.length).toBe(5);
+    expect(drugs[0].name).toBe('Lisinopril');
+  });
+});
+
 // ── Read-only Fields ──────────────────────────────────────────────────────────
 
 test.describe('Clinical Intake: Read-only Pre-populated Fields', () => {

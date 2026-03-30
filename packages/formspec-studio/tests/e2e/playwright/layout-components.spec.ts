@@ -109,12 +109,9 @@ test.describe('Layout Components', () => {
       await expect(display).toHaveCount(1);
     });
 
-    test('adds a Spacer display item', async ({ page }) => {
-      await addFromPalette(page, 'Spacer');
-
-      const display = editorDisplayRows(page);
-      await expect(display).toHaveCount(1);
-    });
+    // Spacer is itemType: 'layout' (Component Spec §5.5) — excluded from
+    // the editor palette which only shows inputs, groups, and display items.
+    // Spacer is added via the Layout workspace, not the Editor palette.
   });
 
   // ── Wrap via context menu ───────────────────────────────────────
