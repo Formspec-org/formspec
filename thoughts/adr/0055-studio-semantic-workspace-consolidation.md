@@ -72,9 +72,16 @@ The Editor workspace has three panels:
 
 The primary authoring surface. The definition tree with full inline field editing.
 
-Selecting a field expands it in-place to show all its properties — identity, type, field config, options, linked option sets, and behavior rules (required, relevant, calculate, constraint, readonly). No separate properties panel. The tree row becomes the detail surface.
+Selecting a field expands it in-place to show its properties. No separate properties panel. The tree row becomes the detail surface.
 
 This is where the form manager spends 95% of their time. The interaction model matches form builders users already know (Google Forms, Typeform): click a field, it opens up, edit everything right there, click another field.
+
+Editing follows a **inline-for-common, modal-for-complex** pattern to keep the tree scannable:
+
+- **Inline** (directly in the expanded row): label, hint, type, required/readonly toggles, simple relevance/constraint expressions, short inline option lists, presentation hints
+- **Modal/popover** (anchored to the row, opened on demand): option set table editor with many rows, long FEL expressions with autocomplete, data source configuration, multi-property editors
+
+The principle is one focal point — modals and popovers are still initiated from and anchored to the field row, not a persistent side panel. Complex sub-editors get the space they need without bloating the tree.
 
 Build view includes:
 
@@ -82,6 +89,7 @@ Build view includes:
 - add/reorder/group/wrap flows
 - inline editing for identity, content, type, options, behavior rules
 - item selection with in-place expansion
+- modal/popover sub-editors for complex controls (option tables, FEL editor, data source config)
 - Tier 1 presentation hints (`widgetHint`, `layout`, `styleHints`, `accessibility`) — visually distinguished as advisory, since the spec allows renderers to override them
 
 Behavior rules (binds) are co-located with their target items. This is semantically natural — the spec separates items from binds at the document level for layering reasons (Core spec S2.3 AD-02), but binds target items by path, creating a natural one-to-one relationship. The Manage view provides the complementary cross-cutting perspective.
@@ -161,7 +169,7 @@ Blueprint shows the same sections regardless of whether Build or Manage is activ
 
 Clicking a Blueprint section:
 
-- In **Build view**: scrolls the tree to the relevant area or filters the tree
+- In **Build view**: if the section is tree-relevant (Structure), scrolls the tree. If the section is a Manage concern (Option Sets, Variables, Data Sources, Screener), auto-switches to Manage view and scrolls to that section. The segmented control in the header updates visibly so the view switch is never hidden.
 - In **Manage view**: scrolls to the corresponding section anchor
 
 Blueprint owns:
