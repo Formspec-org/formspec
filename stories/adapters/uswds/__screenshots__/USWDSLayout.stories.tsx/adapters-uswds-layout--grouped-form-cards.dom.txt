@@ -1,0 +1,131 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×815
+  div  |  1200×815  d:grid  cols:584px 584px 0px  rows:815.375px  gap:32px
+    div  |  584×815
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "USWDS Adapter"
+      div  |  584×788
+        div  |  584×788
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×788
+              div  .isolated-story-root  |  584×788
+                form  .usa-form  |  584×788
+                  h2  .usa-sr-only  |  155×28  pos:absolute  m:20,0  |  font:24px/bold
+                    "Grouped Form"
+                  div  |  584×788
+                    formspec-render  |  584×788
+                      #shadow-root
+                      div  .formspec-container  |  584×788
+                        div  .formspec-stack.grid-row.grid-gap  |  616×788  d:flex  wrap:wrap  gap:24px  m:0,-16
+                          div  .grid-col-12  |  616×382  pos:relative  p:0,16
+                            div  .usa-card  |  584×350  m:0,0,32,0
+                              div  .usa-card__container  |  568×350  pos:relative  d:flex  dir:column  m:0,8  |  bg:rgb(255, 255, 255)  color:rgb(27, 27, 27)  border:2px solid rgb(223, 225, 226)  radius:8px  font:16.96px
+                                div  .usa-card__header  |  564×58  p:24,24,8,24
+                                  h3  .usa-card__heading  |  516×26  |  font:21.44px/bold
+                                    "Personal Information"
+                                div  .usa-card__body  |  564×288  p:8,24,24,24
+                                  div  .grid-row.grid-gap  |  548×256  d:flex  wrap:wrap  gap:16px  m:0,-16
+                                    div  .grid-col-12.tablet:grid-col-6  |  274×120  pos:relative  p:0,16
+                                      div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="personal.name"  |  242×96  d:flex  dir:column  m:24,0,0,0
+                                        label  .usa-label  for="field-personal-name"  |  242×22
+                                          "Name"
+                                          abbr  .formspec-required.usa-label--required  |  10×22  |  color:rgb(181, 9, 9)
+                                            "*"
+                                        span  #field-personal-name-error  .usa-error-message  |  242×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                                        input  #field-personal-name  .usa-input  type="text"  name="personal.name"  aria-required  aria-invalid="false"  |  260×58  m:8,0,0,0  p:8  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(86, 92, 101)
+                                    div  .grid-col-12.tablet:grid-col-6  |  274×120  pos:relative  p:0,16
+                                      div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="personal.email"  |  242×96  d:flex  dir:column  m:24,0,0,0
+                                        label  .usa-label  for="field-personal-email"  |  242×22
+                                          "Email"
+                                        span  #field-personal-email-error  .usa-error-message  |  242×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                                        input  #field-personal-email  .usa-input  type="text"  name="personal.email"  aria-required="false"  aria-invalid="false"  |  260×58  m:8,0,0,0  p:8  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(86, 92, 101)
+                          div  .grid-col-12  |  616×383  pos:relative  p:0,16
+                            div  .usa-card  |  584×351  m:0,0,32,0
+                              div  .usa-card__container  |  568×351  pos:relative  d:flex  dir:column  m:0,8  |  bg:rgb(255, 255, 255)  color:rgb(27, 27, 27)  border:2px solid rgb(223, 225, 226)  radius:8px  font:16.96px
+                                div  .usa-card__header  |  564×58  p:24,24,8,24
+                                  h3  .usa-card__heading  |  516×26  |  font:21.44px/bold
+                                    "Preferences"
+                                div  .usa-card__body  |  564×289  p:8,24,24,24
+                                  div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="preferences.newsletter"  |  516×44  m:24,0,0,0
+                                    span  #field-preferences-newsletter-error  .usa-error-message  |  516×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                                    div  .usa-checkbox  |  516×36  |  bg:rgb(255, 255, 255)
+                                      input  #field-preferences-newsletter  .usa-checkbox__input  type="checkbox"  name="preferences.newsletter"  aria-required="false"  aria-invalid="false"  |  13×13  pos:absolute  m:3,3,3,4  |  color:rgb(0, 0, 0)  font:13.3333px
+                                      label  .usa-checkbox__label  for="field-preferences-newsletter"  |  199×22  pos:relative  d:inline-block  m:12,0,0,0  p:0,0,0,32
+                                        "Subscribe to newsletter"
+                                  div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="preferences.debug"  |  516×44  m:24,0,0,0
+                                    span  #field-preferences-debug-error  .usa-error-message  |  516×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                                    div  .usa-checkbox  |  516×36  |  bg:rgb(255, 255, 255)
+                                      input  #field-preferences-debug  .usa-checkbox__input  type="checkbox"  name="preferences.debug"  aria-required="false"  aria-invalid="false"  |  13×13  pos:absolute  m:3,3,3,4  |  color:rgb(0, 0, 0)  font:13.3333px
+                                      label  .usa-checkbox__label  for="field-preferences-debug"  |  174×22  pos:relative  d:inline-block  m:12,0,0,0  p:0,0,0,32
+                                        "Enable debug mode"
+                                  div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="preferences.timeout"  |  516×96  m:24,0,0,0
+                                    label  .usa-label  for="field-preferences-timeout"  |  516×22
+                                      "Timeout (seconds)"
+                                    span  #field-preferences-timeout-error  .usa-error-message  |  516×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                                    input  #field-preferences-timeout  .usa-input  type="number"  min="1"  max="300"  step="1"  name="preferences.timeout"  aria-required="false"  aria-invalid="false"  |  534×58  m:8,0,0,0  p:8  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(86, 92, 101)
+    div  |  584×353
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Real USWDS"
+      div  |  584×303
+        div  |  584×303
+          #shadow-root
+            link [hidden]
+            div  .story-root  |  584×303  |  color:rgb(27, 27, 27)
+              div  |  584×303
+                form  .usa-form  |  584×303
+                  div  .grid-container.padding-x-0  |  584×303
+                    div  .grid-row.grid-gap  |  584×303
+                      div  .grid-col-12  |  584×303
+                        h2  .usa-sr-only  |  584×28  m:20,0  |  font:24px/bold
+                          "Grouped Form"
+                        ul  .usa-card-group  |  584×255  d:grid  cols:584px  rows:109.812px 128.812px  gap:16px  m:16,0
+                          li  .usa-card  |  584×110  d:list-item
+                            div  .usa-card__container  |  584×90
+                              div  .usa-card__header  |  584×28
+                                h2  .usa-card__heading  |  584×28  m:20,0  |  font:24px/bold
+                                  "Personal Information"
+                              div  .usa-card__body  |  584×42
+                                div  .grid-container.padding-x-0  |  584×42
+                                  div  .grid-row.grid-gap  |  584×42
+                                    div  .grid-col-12.tablet:grid-col-6  |  584×42
+                                      div  .usa-form-group  |  584×21
+                                        label  .usa-label  for="real-uswds-personal-name"  |  50×18
+                                          "Name"
+                                          abbr  .usa-label--required  |  12×18
+                                            "*"
+                                        span  #real-uswds-personal-name-error  .usa-error-message  |  0×18
+                                        input  #real-uswds-personal-name  .usa-input  type="text"  required  name="name"  aria-describedby="real-uswds-personal-name-error"  aria-invalid="false"  data-realUswdsPath="personal.name"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  color:rgb(0, 0, 0)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                                      div  .usa-form-group  |  584×21
+                                        label  .usa-label  for="real-uswds-personal-email"  |  38×18
+                                          "Email"
+                                        span  #real-uswds-personal-email-error  .usa-error-message  |  0×18
+                                        input  #real-uswds-personal-email  .usa-input  type="text"  name="email"  aria-describedby="real-uswds-personal-email-error"  aria-invalid="false"  data-realUswdsPath="personal.email"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  color:rgb(0, 0, 0)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          li  .usa-card  |  584×129  d:list-item
+                            div  .usa-card__container  |  584×109
+                              div  .usa-card__header  |  584×28
+                                h2  .usa-card__heading  |  584×28  m:20,0  |  font:24px/bold
+                                  "Preferences"
+                              div  .usa-card__body  |  584×61
+                                div  .grid-container.padding-x-0  |  584×61
+                                  div  .grid-row.grid-gap  |  584×61
+                                    div  .grid-col-12  |  584×61
+                                      div  .usa-form-group  |  584×20
+                                        div  .usa-checkbox  |  584×20
+                                          input  #real-uswds-preferences-newsletter  .usa-checkbox__input  type="checkbox"  name="newsletter"  value="true"  aria-describedby="real-uswds-preferences-newsletter-error"  aria-invalid="false"  data-realUswdsPath="preferences.newsletter"  |  13×13  d:inline-block  m:3,3,3,4  |  color:rgb(0, 0, 0)  font:13.3333px
+                                          label  .usa-checkbox__label  for="real-uswds-preferences-newsletter"  |  149×18
+                                            "Subscribe to newsletter"
+                                      div  .usa-form-group  |  584×20
+                                        div  .usa-checkbox  |  584×20
+                                          input  #real-uswds-preferences-debug  .usa-checkbox__input  type="checkbox"  name="debug"  value="true"  aria-describedby="real-uswds-preferences-debug-error"  aria-invalid="false"  data-realUswdsPath="preferences.debug"  |  13×13  d:inline-block  m:3,3,3,4  |  color:rgb(0, 0, 0)  font:13.3333px
+                                          label  .usa-checkbox__label  for="real-uswds-preferences-debug"  |  127×18
+                                            "Enable debug mode"
+                                      div  .usa-form-group  |  584×21
+                                        label  .usa-label  for="real-uswds-preferences-timeout"  |  119×18
+                                          "Timeout (seconds)"
+                                        span  #real-uswds-preferences-timeout-error  .usa-error-message  |  0×18
+                                        input  #real-uswds-preferences-timeout  .usa-input  type="number"  min="1"  max="300"  name="timeout"  aria-describedby="real-uswds-preferences-timeout-error"  aria-invalid="false"  data-realUswdsPath="preferences.timeout"  |  49×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  color:rgb(0, 0, 0)  border:2px inset rgb(118, 118, 118)  font:13.3333px

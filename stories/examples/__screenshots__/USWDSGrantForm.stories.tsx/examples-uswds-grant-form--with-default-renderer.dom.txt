@@ -1,0 +1,520 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×2397
+  div  |  800×2397  m:0,200
+    div  |  800×2397
+      #shadow-root
+        link [hidden]
+        link [hidden]
+        div  |  800×2397
+          div  .isolated-story-root  |  800×2397
+            formspec-render  |  800×2397
+              #shadow-root
+              div  .formspec-container  |  800×2397
+                div  .formspec-wizard  |  800×2397
+                  div  .formspec-wizard-steps  aria-hidden  |  800×72
+                    div  .formspec-wizard-step-wrapper  |  800×18
+                      span  .formspec-wizard-step.formspec-wizard-step--active  |  8×17
+                        "1"
+                      span  .formspec-wizard-step-label.formspec-wizard-step-label--active  |  144×17
+                        "Applicant Information"
+                    div  .formspec-wizard-step-wrapper  |  800×18
+                      span  .formspec-wizard-step  |  8×17
+                        "2"
+                      span  .formspec-wizard-step-label  |  95×17
+                        "Project Details"
+                    div  .formspec-wizard-step-wrapper  |  800×18
+                      span  .formspec-wizard-step  |  8×17
+                        "3"
+                      span  .formspec-wizard-step-label  |  46×17
+                        "Budget"
+                    div  .formspec-wizard-step-wrapper  |  800×18
+                      span  .formspec-wizard-step  |  8×17
+                        "4"
+                      span  .formspec-wizard-step-label  |  182×17
+                        "Attachments & Certification"
+                  div  .formspec-wizard-step-indicator  |  800×18
+                    "Step 1 of 4: Applicant Information"
+                  div  .formspec-wizard-panel  role="region"  aria-label="Applicant Information"  |  800×507
+                    section  #applicant-info  .formspec-page  |  800×507
+                      h2  |  800×27  m:20,0  |  font:24px/bold
+                        "Applicant Information"
+                      div  .formspec-grid  data-columns="12"  |  800×460
+                        div  .formspec-stack  |  800×57
+                          div  .formspec-field  data-name="applicant_section.org_name"  |  800×57
+                            label  .formspec-label  for="field-applicant_section-org_name"  |  194×18
+                              "Organization Legal Name"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            div  #field-applicant_section-org_name-desc  .formspec-description  |  800×18
+                              "Full legal name as it appears on your IRS determination letter."
+                            input  #field-applicant_section-org_name  .formspec-input  type="text"  name="applicant_section.org_name"  aria-describedby="field-applicant_section-org_name-desc"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-applicant_section-org_name-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×57
+                          div  .formspec-field  data-name="applicant_section.ein"  |  800×57
+                            label  .formspec-label  for="field-applicant_section-ein"  |  280×18
+                              "Employer Identification Number (EIN)"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            div  #field-applicant_section-ein-desc  .formspec-description  |  800×18
+                              "9-digit federal tax ID (XX-XXXXXXX format)."
+                            input  #field-applicant_section-ein  .formspec-input  type="text"  name="applicant_section.ein"  aria-describedby="field-applicant_section-ein-desc"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-applicant_section-ein-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×38
+                          div  .formspec-field  data-name="applicant_section.org_type"  |  800×38
+                            label  .formspec-label  for="field-applicant_section-org_type"  |  143×18
+                              "Organization Type"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            div  .formspec-select-wrapper  |  800×20
+                              select  #field-applicant_section-org_type  .formspec-input.formspec-select-native  name="applicant_section.org_type"  aria-required  aria-invalid="false"  |  182×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                                option [hidden]
+                                option  value="nonprofit"  |  0×0  p:0,2,1,2
+                                  "501(c)(3) Nonprofit"
+                                option  value="government"  |  0×0  p:0,2,1,2
+                                  "State or Local Government"
+                                option  value="tribal"  |  0×0  p:0,2,1,2
+                                  "Tribal Government"
+                                option  value="educational"  |  0×0  p:0,2,1,2
+                                  "Educational Institution"
+                                option  value="faith_based"  |  0×0  p:0,2,1,2
+                                  "Faith-Based Organization"
+                            p  #field-applicant_section-org_type-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="applicant_section.address.street"  |  800×21
+                            label  .formspec-label  for="field-applicant_section-address-street"  |  119×18
+                              "Street Address"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-applicant_section-address-street  .formspec-input  type="text"  name="applicant_section.address.street"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-applicant_section-address-street-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="applicant_section.address.city"  |  800×21
+                            label  .formspec-label  for="field-applicant_section-address-city"  |  40×18
+                              "City"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-applicant_section-address-city  .formspec-input  type="text"  name="applicant_section.address.city"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-applicant_section-address-city-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×38
+                          div  .formspec-field  data-name="applicant_section.address.state"  |  800×38
+                            label  .formspec-label  for="field-applicant_section-address-state"  |  50×18
+                              "State"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            div  .formspec-select-wrapper  |  800×20
+                              select  #field-applicant_section-address-state  .formspec-input.formspec-select-native  name="applicant_section.address.state"  aria-required  aria-invalid="false"  |  138×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                                option [hidden]
+                                option  value="AL"  |  0×0  p:0,2,1,2
+                                  "Alabama"
+                                option  value="AK"  |  0×0  p:0,2,1,2
+                                  "Alaska"
+                                option  value="AZ"  |  0×0  p:0,2,1,2
+                                  "Arizona"
+                                option  value="AR"  |  0×0  p:0,2,1,2
+                                  "Arkansas"
+                                option  value="CA"  |  0×0  p:0,2,1,2
+                                  "California"
+                                option  value="CO"  |  0×0  p:0,2,1,2
+                                  "Colorado"
+                                option  value="CT"  |  0×0  p:0,2,1,2
+                                  "Connecticut"
+                                option  value="DE"  |  0×0  p:0,2,1,2
+                                  "Delaware"
+                                option  value="DC"  |  0×0  p:0,2,1,2
+                                  "District of Columbia"
+                                option  value="FL"  |  0×0  p:0,2,1,2
+                                  "Florida"
+                                option  value="GA"  |  0×0  p:0,2,1,2
+                                  "Georgia"
+                                option  value="HI"  |  0×0  p:0,2,1,2
+                                  "Hawaii"
+                                option  value="ID"  |  0×0  p:0,2,1,2
+                                  "Idaho"
+                                option  value="IL"  |  0×0  p:0,2,1,2
+                                  "Illinois"
+                                option  value="IN"  |  0×0  p:0,2,1,2
+                                  "Indiana"
+                                option  value="IA"  |  0×0  p:0,2,1,2
+                                  "Iowa"
+                                option  value="KS"  |  0×0  p:0,2,1,2
+                                  "Kansas"
+                                option  value="KY"  |  0×0  p:0,2,1,2
+                                  "Kentucky"
+                                option  value="LA"  |  0×0  p:0,2,1,2
+                                  "Louisiana"
+                                option  value="ME"  |  0×0  p:0,2,1,2
+                                  "Maine"
+                                option  value="MD"  |  0×0  p:0,2,1,2
+                                  "Maryland"
+                                option  value="MA"  |  0×0  p:0,2,1,2
+                                  "Massachusetts"
+                                option  value="MI"  |  0×0  p:0,2,1,2
+                                  "Michigan"
+                                option  value="MN"  |  0×0  p:0,2,1,2
+                                  "Minnesota"
+                                option  value="MS"  |  0×0  p:0,2,1,2
+                                  "Mississippi"
+                                option  value="MO"  |  0×0  p:0,2,1,2
+                                  "Missouri"
+                                option  value="MT"  |  0×0  p:0,2,1,2
+                                  "Montana"
+                                option  value="NE"  |  0×0  p:0,2,1,2
+                                  "Nebraska"
+                                option  value="NV"  |  0×0  p:0,2,1,2
+                                  "Nevada"
+                                option  value="NH"  |  0×0  p:0,2,1,2
+                                  "New Hampshire"
+                                option  value="NJ"  |  0×0  p:0,2,1,2
+                                  "New Jersey"
+                                option  value="NM"  |  0×0  p:0,2,1,2
+                                  "New Mexico"
+                                option  value="NY"  |  0×0  p:0,2,1,2
+                                  "New York"
+                                option  value="NC"  |  0×0  p:0,2,1,2
+                                  "North Carolina"
+                                option  value="ND"  |  0×0  p:0,2,1,2
+                                  "North Dakota"
+                                option  value="OH"  |  0×0  p:0,2,1,2
+                                  "Ohio"
+                                option  value="OK"  |  0×0  p:0,2,1,2
+                                  "Oklahoma"
+                                option  value="OR"  |  0×0  p:0,2,1,2
+                                  "Oregon"
+                                option  value="PA"  |  0×0  p:0,2,1,2
+                                  "Pennsylvania"
+                                option  value="RI"  |  0×0  p:0,2,1,2
+                                  "Rhode Island"
+                                option  value="SC"  |  0×0  p:0,2,1,2
+                                  "South Carolina"
+                                option  value="SD"  |  0×0  p:0,2,1,2
+                                  "South Dakota"
+                                option  value="TN"  |  0×0  p:0,2,1,2
+                                  "Tennessee"
+                                option  value="TX"  |  0×0  p:0,2,1,2
+                                  "Texas"
+                                option  value="UT"  |  0×0  p:0,2,1,2
+                                  "Utah"
+                                option  value="VT"  |  0×0  p:0,2,1,2
+                                  "Vermont"
+                                option  value="VA"  |  0×0  p:0,2,1,2
+                                  "Virginia"
+                                option  value="WA"  |  0×0  p:0,2,1,2
+                                  "Washington"
+                                option  value="WV"  |  0×0  p:0,2,1,2
+                                  "West Virginia"
+                                option  value="WI"  |  0×0  p:0,2,1,2
+                                  "Wisconsin"
+                                option  value="WY"  |  0×0  p:0,2,1,2
+                                  "Wyoming"
+                            p  #field-applicant_section-address-state-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="applicant_section.address.zip"  |  800×21
+                            label  .formspec-label  for="field-applicant_section-address-zip"  |  78×18
+                              "ZIP Code"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-applicant_section-address-zip  .formspec-input  type="text"  name="applicant_section.address.zip"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-applicant_section-address-zip-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="applicant_section.contact_name"  |  800×21
+                            label  .formspec-label  for="field-applicant_section-contact_name"  |  176×18
+                              "Primary Contact Name"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-applicant_section-contact_name  .formspec-input  type="text"  name="applicant_section.contact_name"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-applicant_section-contact_name-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="applicant_section.contact_email"  |  800×21
+                            label  .formspec-label  for="field-applicant_section-contact_email"  |  112×18
+                              "Contact Email"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-applicant_section-contact_email  .formspec-input  type="text"  name="applicant_section.contact_email"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-applicant_section-contact_email-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="applicant_section.contact_phone"  |  800×21
+                            label  .formspec-label  for="field-applicant_section-contact_phone"  |  108×18
+                              "Contact Phone"
+                            input  #field-applicant_section-contact_phone  .formspec-input  type="text"  name="applicant_section.contact_phone"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-applicant_section-contact_phone-error  .formspec-error  |  800×0  m:16,0
+                  div  .formspec-wizard-panel.formspec-hidden  role="region"  aria-label="Project Details"  |  800×723
+                    section  #project-details  .formspec-page  |  800×723
+                      h2  |  800×27  m:20,0  |  font:24px/bold
+                        "Project Details"
+                      div  .formspec-grid  data-columns="12"  |  800×676
+                        div  .formspec-stack  |  800×57
+                          div  .formspec-field  data-name="project_section.project_title"  |  800×57
+                            label  .formspec-label  for="field-project_section-project_title"  |  98×18
+                              "Project Title"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            div  #field-project_section-project_title-desc  .formspec-description  |  800×18
+                              "A concise title describing the proposed project."
+                            input  #field-project_section-project_title  .formspec-input  type="text"  name="project_section.project_title"  aria-describedby="field-project_section-project_title-desc"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-project_section-project_title-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×108
+                          div  .formspec-field  data-name="project_section.project_abstract"  |  800×108
+                            label  .formspec-label  for="field-project_section-project_abstract"  |  129×18
+                              "Project Abstract"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            div  #field-project_section-project_abstract-desc  .formspec-description  |  800×36
+                              "Provide a brief summary of the proposed project, including objectives, target population, and expected outcomes (500 ..."
+                            textarea  #field-project_section-project_abstract  .formspec-input  name="project_section.project_abstract"  aria-describedby="field-project_section-project_abstract-desc"  aria-required  aria-invalid="false"  |  182×51  d:inline-block  p:2  overflow:auto  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                            p  #field-project_section-project_abstract-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×38
+                          div  .formspec-field  data-name="project_section.grant_type"  |  800×38
+                            label  .formspec-label  for="field-project_section-grant_type"  |  132×18
+                              "Application Type"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            div  .formspec-select-wrapper  |  800×20
+                              select  #field-project_section-grant_type  .formspec-input.formspec-select-native  name="project_section.grant_type"  aria-required  aria-invalid="false"  |  156×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                                option [hidden]
+                                option  value="new"  |  0×0  p:0,2,1,2
+                                  "New Application"
+                                option  value="continuation"  |  0×0  p:0,2,1,2
+                                  "Continuation"
+                                option  value="supplement"  |  0×0  p:0,2,1,2
+                                  "Supplemental Funding"
+                                option  value="renewal"  |  0×0  p:0,2,1,2
+                                  "Renewal"
+                            p  #field-project_section-grant_type-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="project_section.start_date"  |  800×21
+                            label  .formspec-label  for="field-project_section-start_date"  |  159×18
+                              "Proposed Start Date"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-project_section-start_date  .formspec-input  type="date"  name="project_section.start_date"  aria-required  aria-invalid="false"  |  125×21  d:inline-block  p:0,0,0,1  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-project_section-start_date-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="project_section.end_date"  |  800×21
+                            label  .formspec-label  for="field-project_section-end_date"  |  151×18
+                              "Proposed End Date"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-project_section-end_date  .formspec-input  type="date"  name="project_section.end_date"  aria-required  aria-invalid="false"  |  125×21  d:inline-block  p:0,0,0,1  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-project_section-end_date-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×108
+                          fieldset  .formspec-fieldset  data-name="project_section.target_population"  |  796×108  m:0,2  p:6,12,10,12  |  border:2px groove rgb(239, 239, 239)
+                            legend  #field-project_section-target_population-label  .formspec-legend  |  162×18  p:0,2
+                              "Target Population(s)"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            div  #field-project_section-target_population-desc  .formspec-description  |  768×18
+                              "Select all populations this project will serve."
+                            div  .formspec-checkbox-group  role="group"  aria-labelledby="field-project_section-target_population-label"  aria-describedby="field-project_section-target_population-hint field-project_section-target_population-error"  |  768×38
+                              label  |  204×18
+                                "Low-Income Households"
+                                input  type="checkbox"  name="project_section.target_population"  value="low_income"  aria-required  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                              label  |  118×18
+                                "Elderly (62+)"
+                                input  type="checkbox"  name="project_section.target_population"  value="elderly"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                              label  |  147×18
+                                "Youth (Under 18)"
+                                input  type="checkbox"  name="project_section.target_population"  value="youth"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                              label  |  199×18
+                                "Persons with Disabilities"
+                                input  type="checkbox"  name="project_section.target_population"  value="disabled"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                              label  |  765×37
+                                "Homeless Individuals"
+                                input  type="checkbox"  name="project_section.target_population"  value="homeless"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                              label  |  88×18
+                                "Veterans"
+                                input  type="checkbox"  name="project_section.target_population"  value="veterans"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                              label  |  161×18
+                                "Rural Communities"
+                                input  type="checkbox"  name="project_section.target_population"  value="rural"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                              label  |  163×18
+                                "Tribal Communities"
+                                input  type="checkbox"  name="project_section.target_population"  value="tribal"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                            p  #field-project_section-target_population-error  .formspec-error  |  768×0  m:16,0
+                        div  .formspec-stack  |  800×19
+                          div  .formspec-field.formspec-field--inline  data-name="project_section.has_subcontractors"  |  800×19
+                            label  .formspec-label  for="field-project_section-has_subcontractors"  |  288×18
+                              "Will this project involve subcontractors?"
+                            input  #field-project_section-has_subcontractors  .formspec-input  type="checkbox"  name="project_section.has_subcontractors"  aria-required="false"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                            p  #field-project_section-has_subcontractors-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×205
+                          div  .formspec-group.formspec-hidden  |  800×205
+                            h3  .formspec-group-title  |  800×22  m:19,0  |  font:18.72px/bold
+                              "Subcontractor Details"
+                            div  .formspec-field.formspec-hidden  aria-hidden  data-name="project_section.subcontractor_info.sub_org_name"  |  800×21
+                              label  .formspec-label  for="field-project_section-subcontractor_info-sub_org_name"  |  201×18
+                                "Subcontractor Organization"
+                              input  #field-project_section-subcontractor_info-sub_org_name  .formspec-input  type="text"  name="project_section.subcontractor_info.sub_org_name"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                              p  #field-project_section-subcontractor_info-sub_org_name-error  .formspec-error  |  800×0  m:16,0
+                            div  .formspec-field.formspec-hidden  aria-hidden  data-name="project_section.subcontractor_info.sub_scope"  |  800×54
+                              label  .formspec-label  for="field-project_section-subcontractor_info-sub_scope"  |  107×18
+                                "Scope of Work"
+                              textarea  #field-project_section-subcontractor_info-sub_scope  .formspec-input  name="project_section.subcontractor_info.sub_scope"  aria-required="false"  aria-invalid="false"  |  182×51  d:inline-block  p:2  overflow:auto  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                              p  #field-project_section-subcontractor_info-sub_scope-error  .formspec-error  |  800×0  m:16,0
+                            div  .formspec-field.formspec-hidden  aria-hidden  data-name="project_section.subcontractor_info.sub_amount"  |  800×57
+                              label  .formspec-label  for="field-project_section-subcontractor_info-sub_amount"  |  150×18
+                                "Subcontract Amount"
+                              div  #field-project_section-subcontractor_info-sub_amount-desc  .formspec-description  |  800×18
+                                "Total dollar amount of the subcontract."
+                              input  #field-project_section-subcontractor_info-sub_amount  .formspec-input  type="number"  name="project_section.subcontractor_info.sub_amount"  aria-describedby="field-project_section-subcontractor_info-sub_amount-desc"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                              p  #field-project_section-subcontractor_info-sub_amount-error  .formspec-error  |  800×0  m:16,0
+                  div  .formspec-wizard-panel.formspec-hidden  role="region"  aria-label="Budget"  |  800×545
+                    section  #budget  .formspec-page  |  800×545
+                      h2  |  800×27  m:20,0  |  font:24px/bold
+                        "Budget"
+                      div  .formspec-grid  data-columns="12"  |  800×498
+                        div  .formspec-stack  |  800×36
+                          p  .formspec-text  |  800×36  m:16,0
+                            "Itemize all projected costs by category. Each line item should include a brief description and dollar amount. The sys..."
+                        div  .formspec-stack  |  800×170
+                          div  .formspec-repeat  data-bind="budget_section.line_items"  |  800×170
+                            div  .formspec-repeat-list  |  800×149
+                              div  .formspec-repeat-instance  role="group"  aria-label="Budget Line Items 1 of 1"  |  800×149
+                                div  .formspec-field  data-name="budget_section.line_items[0].category"  |  800×38
+                                  label  .formspec-label  for="field-budget_section-line_items-0--category"  |  67×18
+                                    "Category"
+                                  div  .formspec-select-wrapper  |  800×20
+                                    select  #field-budget_section-line_items-0--category  .formspec-input.formspec-select-native  name="budget_section.line_items[0].category"  aria-required="false"  aria-invalid="false"  |  145×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                                      option [hidden]
+                                      option  value="personnel"  |  0×0  p:0,2,1,2
+                                        "Personnel / Salaries"
+                                      option  value="fringe"  |  0×0  p:0,2,1,2
+                                        "Fringe Benefits"
+                                      option  value="travel"  |  0×0  p:0,2,1,2
+                                        "Travel"
+                                      option  value="equipment"  |  0×0  p:0,2,1,2
+                                        "Equipment"
+                                      option  value="supplies"  |  0×0  p:0,2,1,2
+                                        "Supplies"
+                                      option  value="contractual"  |  0×0  p:0,2,1,2
+                                        "Contractual Services"
+                                      option  value="construction"  |  0×0  p:0,2,1,2
+                                        "Construction"
+                                      option  value="other"  |  0×0  p:0,2,1,2
+                                        "Other Direct Costs"
+                                  p  #field-budget_section-line_items-0--category-error  .formspec-error  |  800×0  m:16,0
+                                div  .formspec-field  data-name="budget_section.line_items[0].description"  |  800×21
+                                  label  .formspec-label  for="field-budget_section-line_items-0--description"  |  83×18
+                                    "Description"
+                                  input  #field-budget_section-line_items-0--description  .formspec-input  type="text"  name="budget_section.line_items[0].description"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                                  p  #field-budget_section-line_items-0--description-error  .formspec-error  |  800×0  m:16,0
+                                div  .formspec-field  data-name="budget_section.line_items[0].amount"  |  800×21
+                                  label  .formspec-label  for="field-budget_section-line_items-0--amount"  |  82×18
+                                    "Amount ($)"
+                                  input  #field-budget_section-line_items-0--amount  .formspec-input  type="number"  name="budget_section.line_items[0].amount"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                                  p  #field-budget_section-line_items-0--amount-error  .formspec-error  |  800×0  m:16,0
+                                button  .formspec-repeat-remove.formspec-focus-ring  type="button"  aria-label="Remove Budget Line Items 1"  |  177×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                                  "Remove Budget Line Items"
+                            button  .formspec-repeat-add.formspec-focus-ring  type="button"  |  151×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                              "Add Budget Line Items"
+                            div  .formspec-sr-only  aria-live="polite"  |  800×0
+                        div  .formspec-stack  |  800×57
+                          div  .formspec-field.formspec-field--readonly  data-name="budget_section.total_direct"  |  800×57
+                            label  .formspec-label  for="field-budget_section-total_direct"  |  129×18
+                              "Total Direct Costs"
+                            div  #field-budget_section-total_direct-desc  .formspec-description  |  800×18
+                              "Calculated sum of all line item amounts."
+                            input  #field-budget_section-total_direct  .formspec-input  type="number"  readonly  name="budget_section.total_direct"  aria-describedby="field-budget_section-total_direct-desc"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-budget_section-total_direct-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×57
+                          div  .formspec-field  data-name="budget_section.indirect_rate"  |  800×57
+                            label  .formspec-label  for="field-budget_section-indirect_rate"  |  160×18
+                              "Indirect Cost Rate (%)"
+                            div  #field-budget_section-indirect_rate-desc  .formspec-description  |  800×18
+                              "Enter your federally negotiated indirect cost rate. Enter 0 if not applicable."
+                            input  #field-budget_section-indirect_rate  .formspec-input  type="number"  name="budget_section.indirect_rate"  aria-describedby="field-budget_section-indirect_rate-desc"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-budget_section-indirect_rate-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×57
+                          div  .formspec-field.formspec-field--readonly  data-name="budget_section.indirect_costs"  |  800×57
+                            label  .formspec-label  for="field-budget_section-indirect_costs"  |  101×18
+                              "Indirect Costs"
+                            div  #field-budget_section-indirect_costs-desc  .formspec-description  |  800×18
+                              "Calculated from direct costs and indirect rate."
+                            input  #field-budget_section-indirect_costs  .formspec-input  type="number"  readonly  name="budget_section.indirect_costs"  aria-describedby="field-budget_section-indirect_costs-desc"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-budget_section-indirect_costs-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×57
+                          div  .formspec-field.formspec-field--readonly  data-name="budget_section.total_requested"  |  800×57
+                            label  .formspec-label  for="field-budget_section-total_requested"  |  178×18
+                              "Total Amount Requested"
+                            div  #field-budget_section-total_requested-desc  .formspec-description  |  800×18
+                              "Total direct costs plus indirect costs."
+                            input  #field-budget_section-total_requested  .formspec-input  type="number"  readonly  name="budget_section.total_requested"  aria-describedby="field-budget_section-total_requested-desc"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-budget_section-total_requested-error  .formspec-error  |  800×0  m:16,0
+                  div  .formspec-wizard-panel.formspec-hidden  role="region"  aria-label="Attachments & Certification"  |  800×398
+                    section  #review  .formspec-page  |  800×398
+                      h2  |  800×27  m:20,0  |  font:24px/bold
+                        "Attachments & Certification"
+                      div  .formspec-grid  data-columns="12"  |  800×351
+                        div  .formspec-stack  |  800×18
+                          p  .formspec-text  |  800×18  m:16,0
+                            "Upload the required supporting documents. Accepted formats: PDF, DOC, DOCX, XLS, XLSX (max 10 MB each)."
+                        div  .formspec-stack  |  800×79
+                          div  .formspec-field.formspec-file-upload  data-name="review_section.budget_narrative"  |  800×79
+                            label  .formspec-label  for="field-review_section-budget_narrative"  |  123×18
+                              "Budget Narrative"
+                            div  #field-review_section-budget_narrative-desc  .formspec-description  |  800×18
+                              "A detailed justification for each budget line item."
+                            div  .formspec-file-drop-zone.formspec-drop-zone.formspec-focus-ring  role="button"  aria-label="Drop files here or click to browse"  tabindex="0"  |  800×22
+                              div  .formspec-file-drop-content  |  800×22
+                                span  .formspec-file-drop-icon  aria-hidden  |  15×18
+                                  "⇵"
+                                span  .formspec-file-drop-label  |  163×18
+                                  "Drag & drop a file here"
+                                button  .formspec-file-browse-btn.formspec-focus-ring.formspec-button-secondary  type="button"  |  60×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                                  "Browse"
+                            input  #field-review_section-budget_narrative  .formspec-file-input-hidden  type="file"  name="review_section.budget_narrative"  aria-describedby="field-review_section-budget_narrative-desc"  aria-required="false"  aria-invalid="false"  |  253×21  d:inline-block  overflow:clip  |  font:13.3333px
+                            ul .formspec-file-list [hidden]
+                            p  #field-review_section-budget_narrative-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×79
+                          div  .formspec-field.formspec-file-upload  data-name="review_section.org_chart"  |  800×79
+                            label  .formspec-label  for="field-review_section-org_chart"  |  149×18
+                              "Organizational Chart"
+                            div  #field-review_section-org_chart-desc  .formspec-description  |  800×18
+                              "Current organizational chart showing project staff positions."
+                            div  .formspec-file-drop-zone.formspec-drop-zone.formspec-focus-ring  role="button"  aria-label="Drop files here or click to browse"  tabindex="0"  |  800×22
+                              div  .formspec-file-drop-content  |  800×22
+                                span  .formspec-file-drop-icon  aria-hidden  |  15×18
+                                  "⇵"
+                                span  .formspec-file-drop-label  |  163×18
+                                  "Drag & drop a file here"
+                                button  .formspec-file-browse-btn.formspec-focus-ring.formspec-button-secondary  type="button"  |  60×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                                  "Browse"
+                            input  #field-review_section-org_chart  .formspec-file-input-hidden  type="file"  name="review_section.org_chart"  aria-describedby="field-review_section-org_chart-desc"  aria-required="false"  aria-invalid="false"  |  253×21  d:inline-block  overflow:clip  |  font:13.3333px
+                            ul .formspec-file-list [hidden]
+                            p  #field-review_section-org_chart-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×18
+                          p  .formspec-text  |  800×18  m:16,0
+                            "Certification"
+                        div  .formspec-stack  |  800×19
+                          div  .formspec-field.formspec-field--inline  data-name="review_section.certify"  |  800×19
+                            label  .formspec-label  for="field-review_section-certify"  |  763×18
+                              "I certify that the information provided in this application is true and correct to the best of my knowledge."
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-review_section-certify  .formspec-input  type="checkbox"  name="review_section.certify"  aria-required  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                            p  #field-review_section-certify-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="review_section.certifier_name"  |  800×21
+                            label  .formspec-label  for="field-review_section-certifier_name"  |  250×18
+                              "Authorized Representative Name"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-review_section-certifier_name  .formspec-input  type="text"  name="review_section.certifier_name"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-review_section-certifier_name-error  .formspec-error  |  800×0  m:16,0
+                        div  .formspec-stack  |  800×21
+                          div  .formspec-field  data-name="review_section.certification_date"  |  800×21
+                            label  .formspec-label  for="field-review_section-certification_date"  |  100×18
+                              "Date Signed"
+                              abbr  .formspec-required.usa-label--required  |  11×18
+                                "*"
+                            input  #field-review_section-certification_date  .formspec-input  type="date"  name="review_section.certification_date"  aria-required  aria-invalid="false"  |  125×21  d:inline-block  p:0,0,0,1  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-review_section-certification_date-error  .formspec-error  |  800×0  m:16,0
+                  div  .formspec-wizard-nav  |  800×21
+                    button  .formspec-wizard-prev.formspec-button-secondary.formspec-focus-ring  type="button"  disabled  aria-label="Previous step"  aria-disabled  |  68×21  d:inline-block  p:1,6  |  bg:rgba(239, 239, 239, 0.3)  color:rgba(16, 16, 16, 0.3)  border:2px outset rgba(118, 118, 118, 0.3)  font:13.3333px
+                      "Previous"
+                    button  .formspec-wizard-next.formspec-button-primary.formspec-focus-ring  type="button"  aria-label="Next step"  |  43×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                      "Next"
+                  div  .formspec-sr-only  role="status"  aria-live="polite"  |  800×18
+                    "Applicant Information. Step 1 of 4."

@@ -1,0 +1,102 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×499
+  div  |  1200×499  d:grid  cols:584px 584px 0px  rows:499px  gap:32px
+    div  |  584×499
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "React"
+      div  |  584×472
+        #shadow-root
+          link [hidden]
+          div  |  584×472
+            div  |  584×472
+              div  .formspec-container  |  584×472  d:flex  dir:column  gap:16px  |  color:rgb(26, 31, 37)  font:15px
+                div  .formspec-stack  |  584×472  d:flex  dir:column  gap:24px
+                  section  .formspec-card  |  584×173  m:0,0,24,0  p:24  |  bg:rgb(255, 255, 255)  border:1px solid rgb(160, 164, 168)  radius:12px
+                    h3  .formspec-card-title  |  534×35  m:0,0,16,0  p:0,0,8,0  |  border:0px 0px 1px none none solid rgb(26, 31, 37) rgb(26, 31, 37) rgb(160, 164, 168)  font:20px/bold
+                      "Personal Information"
+                    div  .formspec-grid  |  534×72  d:grid  cols:259px 259px  rows:72px  gap:16px
+                      div  .formspec-field  data-name="personal.name"  |  259×72  d:flex  dir:column  gap:4px
+                        label  for="field-personal-name"  |  259×21  m:0,0,4,0  |  font:14px/600
+                          "Name"
+                          span  .formspec-required  aria-hidden  |  10×17  m:0,0,0,2  |  color:rgb(217, 48, 37)
+                            "*"
+                        input  #field-personal-name  type="text"  required  name="personal.name"  aria-required  aria-invalid="false"  |  259×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 122, 126)  radius:8px  font:14px
+                        p #field-personal-name-error .formspec-error [hidden]
+                      div  .formspec-field  data-name="personal.email"  |  259×72  d:flex  dir:column  gap:4px
+                        label  for="field-personal-email"  |  259×21  m:0,0,4,0  |  font:14px/600
+                          "Email"
+                        input  #field-personal-email  type="text"  name="personal.email"  aria-required="false"  aria-invalid="false"  |  259×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 122, 126)  radius:8px  font:14px
+                        p #field-personal-email-error .formspec-error [hidden]
+                  section  .formspec-card  |  584×227  m:0,0,24,0  p:24  |  bg:rgb(255, 255, 255)  border:1px solid rgb(160, 164, 168)  radius:12px
+                    h3  .formspec-card-title  |  534×35  m:0,0,16,0  p:0,0,8,0  |  border:0px 0px 1px none none solid rgb(26, 31, 37) rgb(26, 31, 37) rgb(160, 164, 168)  font:20px/bold
+                      "Preferences"
+                    div  .formspec-field.formspec-field--inline  data-name="preferences.newsletter"  |  534×27  d:flex  gap:8px  ai:center
+                      label  for="field-preferences-newsletter"  |  157×20  |  font:14px/500
+                        "Subscribe to newsletter"
+                      div  .formspec-toggle  |  51×27  d:flex  gap:8px  ai:center
+                        input  #field-preferences-newsletter  .formspec-input  type="checkbox"  role="switch"  aria-invalid="false"  |  44×24  pos:relative  m:0,3,3,4  |  bg:color(srgb 0.712627 0.718902 0.726431)  color:rgb(0, 0, 0)  border:1px solid rgba(0, 0, 0, 0)  radius:999px  font:13.3333px
+                      p #field-preferences-newsletter-error .formspec-error [hidden]
+                    div  .formspec-field.formspec-field--inline  data-name="preferences.debug"  |  534×27  d:flex  gap:8px  ai:center
+                      label  for="field-preferences-debug"  |  131×20  |  font:14px/500
+                        "Enable debug mode"
+                      div  .formspec-toggle  |  51×27  d:flex  gap:8px  ai:center
+                        input  #field-preferences-debug  .formspec-input  type="checkbox"  role="switch"  aria-invalid="false"  |  44×24  pos:relative  m:0,3,3,4  |  bg:color(srgb 0.712627 0.718902 0.726431)  color:rgb(0, 0, 0)  border:1px solid rgba(0, 0, 0, 0)  radius:999px  font:13.3333px
+                      p #field-preferences-debug-error .formspec-error [hidden]
+                    div  .formspec-field  data-name="preferences.timeout"  |  534×72  d:flex  dir:column  gap:4px
+                      label  for="field-preferences-timeout"  |  534×21  m:0,0,4,0  |  font:14px/600
+                        "Timeout (seconds)"
+                      input  #field-preferences-timeout  type="number"  min="1"  max="300"  step="1"  name="preferences.timeout"  aria-required="false"  aria-invalid="false"  |  534×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 122, 126)  radius:8px  font:14px
+                      p #field-preferences-timeout-error .formspec-error [hidden]
+    div  |  584×499
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Web Component"
+      div  |  584×472
+        div  |  584×472
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×472
+              div  .isolated-story-root  |  584×472
+                formspec-render  |  584×472
+                  #shadow-root
+                  div  .formspec-container  |  584×472  d:flex  dir:column  gap:16px  |  color:rgb(26, 31, 37)  font:15px
+                    div  .formspec-stack  |  584×472  d:flex  dir:column  gap:24px
+                      div  .formspec-card  |  584×173  m:0,0,24,0  p:24  |  bg:rgb(255, 255, 255)  border:1px solid rgb(160, 164, 168)  radius:12px
+                        h3  .formspec-card-title  |  534×35  m:0,0,16,0  p:0,0,8,0  |  border:0px 0px 1px none none solid rgb(26, 31, 37) rgb(26, 31, 37) rgb(160, 164, 168)  font:20px/bold
+                          "Personal Information"
+                        div  .formspec-grid  data-columns="2"  |  534×72  d:grid  cols:259px 259px  rows:72px  gap:16px
+                          div  .formspec-field.formspec-themed-field  aria-live="off"  data-name="personal.name"  |  259×72  d:flex  dir:column  gap:4px
+                            label  .formspec-label  for="field-personal-name"  |  259×21  m:0,0,4,0  |  font:14px/600
+                              "Name"
+                              abbr  .formspec-required.usa-label--required  |  10×17  m:0,0,0,2  |  color:rgb(217, 48, 37)
+                                "*"
+                            input  #field-personal-name  .formspec-input  type="text"  name="personal.name"  aria-required  aria-invalid="false"  |  259×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 122, 126)  radius:8px  font:14px
+                            p #field-personal-name-error .formspec-error [hidden]
+                          div  .formspec-field.formspec-themed-field  aria-live="off"  data-name="personal.email"  |  259×72  d:flex  dir:column  gap:4px
+                            label  .formspec-label  for="field-personal-email"  |  259×21  m:0,0,4,0  |  font:14px/600
+                              "Email"
+                            input  #field-personal-email  .formspec-input  type="text"  name="personal.email"  aria-required="false"  aria-invalid="false"  |  259×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 122, 126)  radius:8px  font:14px
+                            p #field-personal-email-error .formspec-error [hidden]
+                      div  .formspec-card  |  584×227  m:0,0,24,0  p:24  |  bg:rgb(255, 255, 255)  border:1px solid rgb(160, 164, 168)  radius:12px
+                        h3  .formspec-card-title  |  534×35  m:0,0,16,0  p:0,0,8,0  |  border:0px 0px 1px none none solid rgb(26, 31, 37) rgb(26, 31, 37) rgb(160, 164, 168)  font:20px/bold
+                          "Preferences"
+                        div  .formspec-field.formspec-field--inline.formspec-themed-field  aria-live="off"  data-name="preferences.newsletter"  |  534×27  d:flex  gap:8px  ai:center
+                          label  .formspec-label  for="field-preferences-newsletter"  |  157×20  |  font:14px/500
+                            "Subscribe to newsletter"
+                          div  .formspec-toggle  |  51×27  d:flex  gap:8px  ai:center
+                            input  #field-preferences-newsletter  .formspec-input  type="checkbox"  name="preferences.newsletter"  role="switch"  aria-required="false"  aria-invalid="false"  |  44×24  pos:relative  m:0,3,3,4  |  bg:color(srgb 0.712627 0.718902 0.726431)  color:rgb(0, 0, 0)  border:1px solid rgba(0, 0, 0, 0)  radius:999px  font:13.3333px
+                          p #field-preferences-newsletter-error .formspec-error [hidden]
+                        div  .formspec-field.formspec-field--inline.formspec-themed-field  aria-live="off"  data-name="preferences.debug"  |  534×27  d:flex  gap:8px  ai:center
+                          label  .formspec-label  for="field-preferences-debug"  |  131×20  |  font:14px/500
+                            "Enable debug mode"
+                          div  .formspec-toggle  |  51×27  d:flex  gap:8px  ai:center
+                            input  #field-preferences-debug  .formspec-input  type="checkbox"  name="preferences.debug"  role="switch"  aria-required="false"  aria-invalid="false"  |  44×24  pos:relative  m:0,3,3,4  |  bg:color(srgb 0.712627 0.718902 0.726431)  color:rgb(0, 0, 0)  border:1px solid rgba(0, 0, 0, 0)  radius:999px  font:13.3333px
+                          p #field-preferences-debug-error .formspec-error [hidden]
+                        div  .formspec-field.formspec-themed-field  aria-live="off"  data-name="preferences.timeout"  |  534×72  d:flex  dir:column  gap:4px
+                          label  .formspec-label  for="field-preferences-timeout"  |  534×21  m:0,0,4,0  |  font:14px/600
+                            "Timeout (seconds)"
+                          input  #field-preferences-timeout  .formspec-input  type="number"  min="1"  max="300"  step="1"  name="preferences.timeout"  aria-required="false"  aria-invalid="false"  |  534×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 122, 126)  radius:8px  font:14px
+                          p #field-preferences-timeout-error .formspec-error [hidden]

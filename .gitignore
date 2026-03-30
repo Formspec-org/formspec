@@ -3,6 +3,7 @@ dist/
 test-results/
 playwright-report/
 playwright-report-storybook/
+.vitest-attachments/
 blob-report/
 .venv/
 **/__pycache__/

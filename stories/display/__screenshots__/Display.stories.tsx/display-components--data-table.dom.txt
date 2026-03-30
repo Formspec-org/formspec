@@ -1,0 +1,106 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×199
+  div  |  1200×199  d:grid  cols:584px 584px 0px  rows:198.812px  gap:32px
+    div  |  584×199
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "React"
+      div  |  584×172
+        #shadow-root
+          link [hidden]
+          div  |  584×172
+            div  |  584×172
+              div  .formspec-container  |  584×172
+                div  .formspec-stack  |  584×172  d:flex  dir:column  gap:16px
+                  h2  .formspec-heading  |  584×28  m:20,0  |  font:24px/bold
+                    "Expense Report"
+                  div  .formspec-data-table-wrapper  |  584×88
+                    table  .formspec-data-table  |  476×67  d:table
+                      caption  |  476×18  d:table-caption
+                        "Line Items"
+                      thead  |  472×20  d:table-header-group
+                        tr  |  472×20  d:table-row
+                          th  |  155×20  d:table-cell  p:1  |  font-weight:bold
+                            "Description"
+                          th  |  155×20  d:table-cell  p:1  |  font-weight:bold
+                            "Amount ($)"
+                          th  |  88×20  d:table-cell  p:1  |  font-weight:bold
+                            "Category"
+                          th  |  68×20  d:table-cell  p:1  |  font-weight:bold
+                            span  .formspec-sr-only  |  52×18
+                              "Actions"
+                      tbody  |  472×23  d:table-row-group
+                        tr  |  472×23  d:table-row
+                          td  |  155×23  d:table-cell  p:1
+                            input  .formspec-datatable-input  type="text"  name="expenses[0].description"  aria-label="Description"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          td  |  155×23  d:table-cell  p:1
+                            input  .formspec-datatable-input  type="number"  step="any"  name="expenses[0].amount"  aria-label="Amount ($)"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          td  |  88×23  d:table-cell  p:1
+                            select  .formspec-datatable-input  name="expenses[0].category"  aria-label="Category"  |  86×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                              option  value="travel"  |  0×0  p:0,2,1,2
+                                "Travel"
+                              option  value="supplies"  |  0×0  p:0,2,1,2
+                                "Supplies"
+                              option  value="equipment"  |  0×0  p:0,2,1,2
+                                "Equipment"
+                              option  value="other"  |  0×0  p:0,2,1,2
+                                "Other"
+                          td  |  68×23  d:table-cell  p:1
+                            button  .formspec-datatable-remove.formspec-focus-ring  type="button"  aria-label="Remove row 1"  |  66×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                              "Remove"
+                    button  .formspec-datatable-add.formspec-focus-ring  type="button"  |  70×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                      "Add Row"
+    div  |  584×171
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Web Component"
+      div  |  584×136
+        div  |  584×136
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×136
+              div  .isolated-story-root  |  584×136
+                formspec-render  |  584×136
+                  #shadow-root
+                  div  .formspec-container  |  584×136
+                    div  .formspec-stack  |  584×136
+                      h2  .formspec-heading  |  584×28  m:20,0  |  font:24px/bold
+                        "Expense Report"
+                      div  .formspec-data-table-wrapper  |  584×88
+                        table  .formspec-data-table  |  476×67  d:table
+                          caption  |  476×18  d:table-caption
+                            "Line Items"
+                          thead  |  472×20  d:table-header-group
+                            tr  |  472×20  d:table-row
+                              th  #dt-col-0  |  155×20  d:table-cell  p:1  |  font-weight:bold
+                                "Description"
+                              th  #dt-col-1  |  155×20  d:table-cell  p:1  |  font-weight:bold
+                                "Amount ($)"
+                              th  #dt-col-2  |  88×20  d:table-cell  p:1  |  font-weight:bold
+                                "Category"
+                              th  |  68×20  d:table-cell  p:1  |  font-weight:bold
+                                span  .formspec-sr-only  |  52×18
+                                  "Actions"
+                          tbody  |  472×23  d:table-row-group
+                            tr  |  472×23  d:table-row
+                              td  |  155×23  d:table-cell  p:1
+                                input  .formspec-datatable-input  type="text"  name="expenses[0].description"  aria-label="Description, Row 1"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                              td  |  155×23  d:table-cell  p:1
+                                input  .formspec-datatable-input  type="number"  step="any"  name="expenses[0].amount"  aria-label="Amount ($), Row 1"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                              td  |  88×23  d:table-cell  p:1
+                                select  .formspec-datatable-input  name="expenses[0].category"  aria-label="Category, Row 1"  |  86×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                                  option  value="travel"  |  0×0  p:0,2,1,2
+                                    "Travel"
+                                  option  value="supplies"  |  0×0  p:0,2,1,2
+                                    "Supplies"
+                                  option  value="equipment"  |  0×0  p:0,2,1,2
+                                    "Equipment"
+                                  option  value="other"  |  0×0  p:0,2,1,2
+                                    "Other"
+                              td  |  68×23  d:table-cell  p:1
+                                button  .formspec-datatable-remove.formspec-focus-ring  type="button"  aria-label="Remove row 1"  |  66×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                                  "Remove"
+                        button  .formspec-datatable-add.formspec-focus-ring  type="button"  |  70×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                          "Add Row"
