@@ -303,7 +303,7 @@ export const propertyHelp: Record<string, string> = {
   repeatable: 'When true, this group represents a one-to-many collection. Users can add/remove instances.',
   minRepeat: 'Minimum number of repetitions. Processor pre-populates this many empty instances on creation.',
   maxRepeat: 'Maximum number of repetitions. Absent means unbounded.',
-  options: 'Valid values for choice or multiChoice fields.',
+  options: 'Valid values for choice or multiChoice fields. Each entry may include optional keywords (abbreviations) for searchable combobox type-ahead.',
   prePopulate: 'Loads a value from a secondary instance at Response creation. Takes precedence over initialValue when both are present.',
   instance: 'Name of the secondary instance to read from (must match a key in "instances").',
   path: 'Dot-notation path within the instance to read the value from.',

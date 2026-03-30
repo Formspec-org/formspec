@@ -885,21 +885,23 @@ export class Project {
 
   /**
    * Validate a FEL expression string, throwing INVALID_FEL if it fails to parse
-   * or contains unknown functions (semantic pre-validation).
+   * or contains unknown functions or references (semantic pre-validation).
+   *
+   * @param expression The FEL string to validate.
+   * @param contextPath Optional path to resolve relative references against.
    */
-  private _validateFEL(expression: string): void {
-    const result = this.core.parseFEL(expression);
+  private _validateFEL(expression: string, contextPath?: string): void {
+    const result = this.core.parseFEL(expression, contextPath ? { targetPath: contextPath } : undefined);
+
     if (!result.valid) {
-      throw new HelperError('INVALID_FEL', `Invalid FEL expression: ${expression}`, {
+      const error = result.errors[0];
+      throw new HelperError('INVALID_FEL', `Invalid FEL expression: ${error?.message || expression}`, {
         expression,
-        parseError: result.errors[0] ? {
-          message: result.errors[0].message,
-          code: result.errors[0].code,
-        } : undefined,
+        parseError: error ? { message: error.message, code: error.code } : undefined,
       });
     }
 
-    // Semantic pre-validation: reject unknown functions at authoring time
+    // Semantic arity/function checks (warnings promoted to errors for helpers)
     const unknownFn = result.warnings?.find(w => w.code === 'FEL_UNKNOWN_FUNCTION');
     if (unknownFn) {
       throw new HelperError('INVALID_FEL', `Invalid FEL expression: ${unknownFn.message}`, {
@@ -962,7 +964,7 @@ export class Project {
   /** Conditional visibility — dispatches definition.setBind { relevant: condition } */
   showWhen(target: string, condition: string): HelperResult {
     this._requireItemPath(target);
-    this._validateFEL(condition);
+    this._validateFEL(condition, target);
     this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { relevant: condition } },
@@ -977,7 +979,7 @@ export class Project {
   /** Readonly condition — dispatches definition.setBind { readonly: condition } */
   readonlyWhen(target: string, condition: string): HelperResult {
     this._requireItemPath(target);
-    this._validateFEL(condition);
+    this._validateFEL(condition, target);
     this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { readonly: condition } },
@@ -993,7 +995,7 @@ export class Project {
   require(target: string, condition?: string): HelperResult {
     this._requireItemPath(target);
     const expr = condition ?? 'true';
-    this._validateFEL(expr);
+    this._validateFEL(expr, target);
     this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { required: expr } },
@@ -1008,7 +1010,7 @@ export class Project {
   /** Calculated value — dispatches definition.setBind { calculate: expression } */
   calculate(target: string, expression: string): HelperResult {
     this._requireItemPath(target);
-    this._validateFEL(expression);
+    this._validateFEL(expression, target);
     this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { calculate: expression } },
@@ -1028,7 +1030,8 @@ export class Project {
       if (!condition) {
         throw new HelperError('INVALID_PROPS', 'Branch arm with mode "condition" requires a "condition" property', {});
       }
-      this._validateFEL(condition);
+      // Pass the 'on' path as context for reference validation (e.g. self-references)
+      this._validateFEL(condition, on);
       return condition;
     }
     if (mode === 'contains') {
@@ -1154,9 +1157,9 @@ export class Project {
       this._requireItemPath(target);
     }
 
-    this._validateFEL(rule);
+    this._validateFEL(rule, target);
     if (options?.activeWhen) {
-      this._validateFEL(options.activeWhen);
+      this._validateFEL(options.activeWhen, target);
     }
 
     const normalizedTarget = this._normalizeShapeTarget(target);
@@ -1262,8 +1265,11 @@ export class Project {
       activeWhen?: string;
     },
   ): HelperResult {
-    if (changes.rule) this._validateFEL(changes.rule);
-    if (changes.activeWhen) this._validateFEL(changes.activeWhen);
+    const shape = (this.core.state.definition.shapes ?? []).find((s: any) => s.id === shapeId);
+    const target = (shape as any)?.target;
+
+    if (changes.rule) this._validateFEL(changes.rule, target);
+    if (changes.activeWhen) this._validateFEL(changes.activeWhen, target);
 
     const commands: AnyCommand[] = [];
 
@@ -3573,11 +3579,13 @@ export class Project {
     // Scan for dangling references before deletion
     const warnings: HelperWarning[] = [];
     const allExprs = this.core.allExpressions();
-    const varRef = `$${name}`;
+    const varRefAt = `@${name}`;
+    const varRefDollar = `$${name}`;
     const danglingPaths: string[] = [];
 
     for (const exprLoc of allExprs) {
-      if (typeof exprLoc.expression === 'string' && exprLoc.expression.includes(varRef)) {
+      if (typeof exprLoc.expression === 'string' && 
+          (exprLoc.expression.includes(varRefAt) || exprLoc.expression.includes(varRefDollar))) {
         danglingPaths.push(exprLoc.location ?? 'unknown');
       }
     }
@@ -3585,7 +3593,7 @@ export class Project {
     if (danglingPaths.length > 0) {
       warnings.push({
         code: 'DANGLING_REFERENCES',
-        message: `${danglingPaths.length} expression(s) still reference $${name}`,
+        message: `${danglingPaths.length} expression(s) still reference @${name}`,
         detail: { referenceCount: danglingPaths.length, paths: danglingPaths },
       });
     }

@@ -1,5 +1,5 @@
 /** @filedesc Normalizes project documents into the shapes expected by preview/render hosts. */
-import defaultThemeJson from '@formspec-org/webcomponent/default-theme';
+import defaultThemeJson from '@formspec-org/layout/default-theme';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);

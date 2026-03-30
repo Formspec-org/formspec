@@ -1797,7 +1797,7 @@ describe('removeVariable', () => {
     const project = createProject();
     project.addVariable('x', '42');
     project.addField('f', 'F', 'integer');
-    project.calculate('f', '$x + 1');
+    project.calculate('f', '@x + 1');
     const result = project.removeVariable('x');
     expect(project.variableNames()).not.toContain('x');
     const w = result.warnings?.find(w => w.code === 'DANGLING_REFERENCES');
@@ -1805,7 +1805,7 @@ describe('removeVariable', () => {
     // Detail should list the specific bind paths that reference this variable
     expect(w?.detail?.referenceCount).toBeGreaterThan(0);
     expect(w?.detail?.paths).toEqual(
-      expect.arrayContaining([expect.stringContaining('f')])
+      expect.arrayContaining(['binds[f].calculate'])
     );
   });
 });
@@ -2599,8 +2599,8 @@ describe('removeItem recursive group cleanup', () => {
     project.addField('contact.phone', 'Phone', 'phone');
     project.addField('summary', 'Summary', 'text');
     // Make summary calculate from a descendant
-    project.calculate('summary', 'contact.email');
-    expect(project.bindFor('summary')?.calculate).toBe('contact.email');
+    project.calculate('summary', '$contact.email');
+    expect(project.bindFor('summary')?.calculate).toBe('$contact.email');
 
     // Delete the group — summary's calculate should be cleaned up
     project.removeItem('contact');
@@ -2964,7 +2964,7 @@ describe('bind helpers reject nonexistent target paths', () => {
     expect(() => project.readonlyWhen('name', 'true')).not.toThrow();
     expect(() => project.require('name')).not.toThrow();
     expect(() => project.calculate('total', '42')).not.toThrow();
-    expect(() => project.addValidation('name', 'string-length($name) > 0', 'Required')).not.toThrow();
+    expect(() => project.addValidation('name', 'length($name) > 0', 'Required')).not.toThrow();
   });
 });
 

@@ -23,6 +23,14 @@ export function summarizeExpression(expression: string): string {
   return humanized || expression;
 }
 
+/** Display prePopulate source in tree summaries (leading @; matches inline editor). */
+function formatPrePopulateRowDisplay(instance: string, path: string): string {
+  const i = instance.trim();
+  const p = path.trim();
+  if (!i && !p) return '';
+  return `@${i}${p ? `.${p}` : ''}`;
+}
+
 export function buildRowSummaries(item: FormItem, binds: Record<string, string>): RowSummaryEntry[] {
   const contentFacts: RowSummaryEntry[] = [];
   const configFacts: RowSummaryEntry[] = [];
@@ -67,7 +75,7 @@ export function buildRowSummaries(item: FormItem, binds: Record<string, string>)
     if (item.prePopulate && typeof item.prePopulate === 'object') {
       const instance = typeof item.prePopulate.instance === 'string' ? item.prePopulate.instance.trim() : '';
       const prePath = typeof item.prePopulate.path === 'string' ? item.prePopulate.path.trim() : '';
-      const target = [instance, prePath].filter(Boolean).join('.');
+      const target = formatPrePopulateRowDisplay(instance, prePath);
       optionsFacts.push({ label: 'Pre-fill', value: target || 'Configured' });
     }
   }

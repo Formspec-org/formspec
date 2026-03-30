@@ -14,7 +14,8 @@ export default defineConfig({
       '@formspec-org/engine/render': path.resolve(__dirname, '../formspec-engine/src/engine-render-entry.ts'),
       '@formspec-org/engine': path.resolve(__dirname, '../formspec-engine/src/index.ts'),
       '@formspec-org/core': path.resolve(__dirname, '../formspec-core/src/index.ts'),
-      '@formspec-org/webcomponent/default-theme': path.resolve(__dirname, '../formspec-webcomponent/src/default-theme.json'),
+      '@formspec-org/layout/default-theme': path.resolve(__dirname, '../formspec-layout/src/default-theme.json'),
+      '@formspec-org/layout': path.resolve(__dirname, '../formspec-layout/src/index.ts'),
     },
   },
   test: {

@@ -35,7 +35,7 @@ describe('editor-tree-helpers', () => {
     expect(summaries).toEqual([
       { label: 'Description', value: 'Monthly amount for review.' },
       { label: 'Hint', value: 'Use gross income before deductions.' },
-      { label: 'Pre-fill', value: 'profile.income.amount' },
+      { label: 'Pre-fill', value: '@profile.income.amount' },
       { label: 'Relevant', value: 'Enabled is Yes' },
     ]);
   });

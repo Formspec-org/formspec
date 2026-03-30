@@ -70,6 +70,11 @@ export type {
   FELSuggestion,
 } from './helper-types.js';
 
+export {
+  parseCommaSeparatedKeywords,
+  formatCommaSeparatedKeywords,
+} from './choice-option-keywords.js';
+
 // ── Field type aliases ──────────────────────────────────────────────
 export { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
 export type { ResolvedFieldType } from './field-type-aliases.js';
