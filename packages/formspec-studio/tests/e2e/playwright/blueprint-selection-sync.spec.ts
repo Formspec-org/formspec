@@ -74,8 +74,8 @@ test.describe('Blueprint Selection Sync', () => {
     const properties = propertiesPanel(page);
     await expect(properties.locator('input[type="text"]').first()).toHaveValue('firstName');
 
-    // Switch to Logic tab
-    await switchTab(page, 'Logic');
+    // Switch to Layout tab
+    await switchTab(page, 'Layout');
 
     // Switch back to Editor tab
     await switchTab(page, 'Editor');
@@ -97,9 +97,9 @@ test.describe('Blueprint Selection Sync', () => {
     // Use the workspace container and click at the very top (above field blocks)
     await page.click('[data-testid="workspace-Editor"]', { position: { x: 10, y: 5 } });
 
-    // Properties panel should fall back to form-level properties.
-    await expect(properties).toContainText('Form Properties');
-    await expect(properties).toContainText('Identity');
+    // When deselected, the right rail shows Form Health panel (not field properties).
+    await expect(properties).toContainText('Form Health');
+    await expect(properties).toContainText('Issues');
   });
 
   test('Clicking a structure item in another layout step activates that step and selects the field', async ({ page }) => {

@@ -10,8 +10,9 @@ import { StructureTree } from './blueprint/StructureTree';
 import { DefinitionTreeEditor } from '../workspaces/editor/DefinitionTreeEditor';
 import { LayoutCanvas } from '../workspaces/layout/LayoutCanvas';
 import { ComponentProperties } from '../workspaces/layout/properties/ComponentProperties';
-import { EditorPropertiesPanel } from '../workspaces/editor/properties/EditorPropertiesPanel';
-import { LogicTab } from '../workspaces/logic/LogicTab';
+import { ManageView } from '../workspaces/editor/ManageView';
+import { FormHealthPanel } from '../workspaces/editor/FormHealthPanel';
+import { BuildManageToggle, type EditorView } from '../workspaces/editor/BuildManageToggle';
 import { ThemeTab } from '../workspaces/theme/ThemeTab';
 import { MappingTab } from '../workspaces/mapping/MappingTab';
 import { PreviewTab } from '../workspaces/preview/PreviewTab';
@@ -32,15 +33,11 @@ import { MappingsList } from './blueprint/MappingsList';
 import { SettingsSection } from './blueprint/SettingsSection';
 import { SettingsDialog } from './SettingsDialog';
 import { ThemeOverview } from './blueprint/ThemeOverview';
-import { DataTab, type DataSectionFilter } from '../workspaces/data/DataTab';
 import { type MappingTabId } from '../workspaces/mapping/MappingTab';
 import { type Viewport } from '../workspaces/preview/ViewportSwitcher';
 import { type PreviewMode } from '../workspaces/preview/PreviewTab';
 
 const WORKSPACES: Record<string, React.FC> = {
-  Editor: DefinitionTreeEditor,
-  Logic: LogicTab,
-  Data: DataTab,
   Layout: LayoutCanvas,
   Theme: ThemeTab,
   Mapping: MappingTab,
@@ -60,9 +57,7 @@ const SIDEBAR_COMPONENTS: Record<string, React.FC> = {
 };
 
 const BLUEPRINT_SECTIONS_BY_TAB: Record<string, string[]> = {
-  Editor: ['Structure', 'Variables', 'Data Sources', 'Option Sets', 'Settings'],
-  Logic: ['Structure', 'Variables', 'Screener', 'Settings'],
-  Data: ['Structure', 'Data Sources', 'Option Sets', 'Settings'],
+  Editor: ['Structure', 'Variables', 'Data Sources', 'Option Sets', 'Screener', 'Settings'],
   Layout: ['Structure', 'Component Tree', 'Screener', 'Variables', 'Data Sources', 'Option Sets', 'Mappings', 'Settings', 'Theme'],
   Theme: ['Theme', 'Structure', 'Settings'],
   Mapping: ['Mappings', 'Structure', 'Data Sources', 'Option Sets', 'Settings'],
@@ -78,7 +73,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const [activeSection, setActiveSection] = useState<string>('Structure');
   const [showPalette, setShowPalette] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [activeDataFilter, setActiveDataFilter] = useState<DataSectionFilter>('all');
+  const [activeEditorView, setActiveEditorView] = useState<EditorView>('build');
   const [activeMappingTab, setActiveMappingTab] = useState<MappingTabId>('all');
   const [mappingConfigOpen, setMappingConfigOpen] = useState(true);
   const [previewViewport, setPreviewViewport] = useState<Viewport>('desktop');
@@ -88,6 +83,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const [showBlueprintDrawer, setShowBlueprintDrawer] = useState(false);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+  const [showHealthSheet, setShowHealthSheet] = useState(false);
   const [chatPrompt, setChatPrompt] = useState<string | null>(null);
   const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
   const blueprintCloseRef = useRef<HTMLButtonElement | null>(null);
@@ -98,6 +94,15 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const activeTabScope = activeTab.toLowerCase();
   const scopedSelectedKey = selectedKeyForTab(activeTabScope);
   const definitionLookup = useMemo(() => buildDefLookup(project.definition.items ?? []), [project.definition.items]);
+  const manageCount = useMemo(() => {
+    const def = project.definition;
+    return (def.binds?.length ?? 0) +
+      (Array.isArray(def.shapes) ? def.shapes.length : 0) +
+      (def.variables?.length ?? 0) +
+      Object.keys(def.optionSets ?? {}).length +
+      Object.keys(def.instances ?? {}).length +
+      (def.screener?.routes?.length ?? 0);
+  }, [project.definition]);
   const viewportWidth = typeof window !== 'undefined'
     ? Math.min(window.innerWidth, document.documentElement?.clientWidth || window.innerWidth)
     : Infinity;
@@ -120,14 +125,19 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   }, [activeSection, resolvedActiveSection]);
 
   const workspaceContent = (() => {
+    if (activeTab === 'Editor') {
+      return (
+        <div className="flex flex-col h-full">
+          <div className="sticky top-0 z-20 border-b border-border/70 bg-bg-default/80 backdrop-blur-md px-6 py-3">
+            <BuildManageToggle activeView={activeEditorView} onViewChange={setActiveEditorView} manageCount={manageCount} />
+          </div>
+          <div key={activeEditorView} className="flex-1 overflow-y-auto animate-in fade-in duration-150">
+            {activeEditorView === 'build' ? <DefinitionTreeEditor /> : <ManageView />}
+          </div>
+        </div>
+      );
+    }
     switch (activeTab) {
-      case 'Data':
-        return (
-          <DataTab
-            sectionFilter={activeDataFilter}
-            onSectionFilterChange={setActiveDataFilter}
-          />
-        );
       case 'Mapping':
         return (
           <MappingTab
@@ -157,6 +167,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     if (!compactLayout || activeTab !== 'Editor') return;
     setShowBlueprintDrawer(false);
     setShowPropertiesModal(false);
+    setShowHealthSheet(false);
   }, [compactLayout, activeTab]);
 
   // E2E: expose project.export() when ?e2e=1 so tests can validate exported bundle
@@ -203,11 +214,20 @@ export function Shell({ colorScheme }: ShellProps = {}) {
 
   useEffect(() => {
     const onNavigateWorkspace = (event: Event) => {
-      const { tab, subTab } = (event as CustomEvent<{ tab?: string; subTab?: string }>).detail ?? {};
-      if (tab && WORKSPACES[tab]) {
+      const detail = (event as CustomEvent<{ tab?: string; subTab?: string; view?: EditorView; section?: string }>).detail ?? {};
+      const { tab, subTab, view, section } = detail;
+      if (tab && (tab === 'Editor' || WORKSPACES[tab])) {
         setActiveTab(tab);
+        if (tab === 'Editor' && view) {
+          setActiveEditorView(view);
+        }
         if (subTab) {
           if (tab === 'Mapping') setActiveMappingTab(subTab as MappingTabId);
+        }
+        if (section) {
+          window.dispatchEvent(new CustomEvent('formspec:scroll-to-section', {
+            detail: { section },
+          }));
         }
       }
     };
@@ -276,7 +296,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     project.loadBundle(createProject().export());
     setActiveTab('Editor');
     setActiveSection('Structure');
-    setActiveDataFilter('all');
+    setActiveEditorView('build');
     setActiveMappingTab('config');
     setMappingConfigOpen(true);
     setPreviewViewport('desktop');
@@ -343,7 +363,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
             className={`w-[214px] border-r border-border/80 bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}
             aria-label="Blueprint sidebar"
           >
-            <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} />
+            <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} activeEditorView={activeEditorView} activeTab={activeTab} />
             <div className="flex-1 overflow-y-auto px-3 py-4">
               {SidebarComponent && <SidebarComponent />}
             </div>
@@ -356,18 +376,30 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               aria-labelledby={activeTabId}
               data-testid={`workspace-${activeTab}`}
               data-workspace={activeTab}
-              className={`h-full flex flex-col ${activeTab === 'Editor' ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(246,243,238,0.9)_100%)] dark:bg-none' : ''}`}
+              className={`h-full flex flex-col ${activeTab === 'Editor' && activeEditorView === 'build' ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(246,243,238,0.9)_100%)] dark:bg-none' : ''}`}
               onClick={(e) => {
                 if (e.target === e.currentTarget) deselect();
               }}
             >
               {compactLayout && activeTab === 'Editor' && (
                 <div className="sticky top-0 z-20 border-b border-border/70 bg-surface/95 px-3 py-3 backdrop-blur" data-testid="mobile-editor-chrome">
-                  <div data-testid="mobile-selection-context" className="mt-2 min-h-10 rounded-[14px] border border-border/60 bg-bg-default/75 px-3 py-2">
-                    <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted">Selected</div>
-                    <div className="truncate text-[13px] font-medium text-ink">
-                      {selectedItemLabel ?? 'Nothing selected'}
+                  <div className="flex items-center justify-between">
+                    <div data-testid="mobile-selection-context" className="min-h-10 flex-1 rounded-[14px] border border-border/60 bg-bg-default/75 px-3 py-2">
+                      <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted">Selected</div>
+                      <div className="truncate text-[13px] font-medium text-ink">
+                        {selectedItemLabel ?? 'Nothing selected'}
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      aria-label="Form health"
+                      className="ml-2 shrink-0 rounded-full border border-border/60 bg-bg-default/75 p-2.5 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      onClick={() => setShowHealthSheet(true)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               )}
@@ -385,7 +417,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                 {compactLayout && activeTab === 'Editor' ? (
                   <div data-testid="mobile-editor-structure" className="space-y-3">
                     <div className="rounded-[18px] border border-border/70 bg-surface px-3 py-3 shadow-sm">
-                      <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} />
+                      <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} activeEditorView={activeEditorView} activeTab={activeTab} />
                     </div>
                     <div className="rounded-[18px] border border-border/70 bg-surface px-3 py-3 shadow-sm">
                       {SidebarComponent && <SidebarComponent />}
@@ -400,14 +432,24 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </div>
             </div>
           </main>
-          {(activeTab === 'Editor' || activeTab === 'Layout') && (
+          {activeTab === 'Editor' && (
+            <aside
+              className={`w-[320px] border-l border-border/80 bg-surface overflow-y-auto shrink-0 ${compactLayout || showChatPanel ? 'hidden' : ''}`}
+              data-testid="properties-panel"
+              data-responsive-hidden={compactLayout ? 'true' : 'false'}
+              aria-label="Form health panel"
+            >
+              <FormHealthPanel />
+            </aside>
+          )}
+          {activeTab === 'Layout' && (
             <aside
               className={`w-[320px] border-l border-border/80 bg-surface overflow-y-auto shrink-0 ${compactLayout || showChatPanel ? 'hidden' : ''}`}
               data-testid="properties-panel"
               data-responsive-hidden={compactLayout ? 'true' : 'false'}
               aria-label="Properties panel"
             >
-              {activeTab === 'Editor' ? <EditorPropertiesPanel /> : <ComponentProperties />}
+              <ComponentProperties />
             </aside>
           )}
           {showChatPanel && !compactLayout && (
@@ -447,7 +489,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} />
+                <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} activeEditorView={activeEditorView} activeTab={activeTab} />
                 <div className="px-4 py-2">
                   {SidebarComponent && <SidebarComponent />}
                 </div>
@@ -456,8 +498,39 @@ export function Shell({ colorScheme }: ShellProps = {}) {
           </div>
         )}
 
+        {/* Compact Form Health Bottom Sheet */}
+        {compactLayout && activeTab === 'Editor' && showHealthSheet && (
+          <div
+            className="fixed inset-0 z-40 bg-black/40 transition-opacity"
+            onClick={() => setShowHealthSheet(false)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Form health"
+              className="absolute bottom-0 left-0 right-0 max-h-[70vh] bg-surface rounded-t-2xl shadow-xl flex flex-col animate-in slide-in-from-bottom duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+                <h2 className="text-[15px] font-semibold text-ink tracking-tight font-ui">Form Health</h2>
+                <button
+                  type="button"
+                  aria-label="Close health sheet"
+                  className="rounded p-1 hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  onClick={() => setShowHealthSheet(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <FormHealthPanel />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Compact Properties Modal (Full Screen) */}
-        {compactLayout && (activeTab === 'Editor' || activeTab === 'Layout') && showPropertiesModal && selectedKey && (
+        {compactLayout && activeTab === 'Layout' && showPropertiesModal && selectedKey && (
           <div
             role="dialog"
             aria-modal="true"
@@ -493,7 +566,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 pb-24">
-              {activeTab === 'Editor' ? <EditorPropertiesPanel showActions={false} /> : <ComponentProperties />}
+              <ComponentProperties />
             </div>
           </div>
         )}

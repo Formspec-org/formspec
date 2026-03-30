@@ -9,9 +9,9 @@ const readStudioFile = (relativePath: string) =>
 describe('Studio theme token usage', () => {
   it('keeps Data workspace chrome on the shared light-theme token system', () => {
     const dataTab = readStudioFile('src/workspaces/data/DataTab.tsx');
-    const responseSchema = readStudioFile('src/workspaces/data/ResponseSchema.tsx');
-    const dataSources = readStudioFile('src/workspaces/data/DataSources.tsx');
-    const optionSets = readStudioFile('src/workspaces/data/OptionSets.tsx');
+    const responseSchema = readStudioFile('src/workspaces/editor/ResponseSchema.tsx');
+    const dataSources = readStudioFile('src/workspaces/editor/DataSources.tsx');
+    const optionSets = readStudioFile('src/workspaces/editor/OptionSets.tsx');
 
     expect(dataTab).not.toMatch(/border-neutral-\d+/);
     expect(responseSchema).not.toMatch(/border-neutral-\d+/);
@@ -21,9 +21,9 @@ describe('Studio theme token usage', () => {
 
   it('defines every referenced text color token in the studio theme', () => {
     const indexCss = readStudioFile('src/index.css');
-    const itemRow = readStudioFile('src/workspaces/editor/ItemRow.tsx');
+    const itemRowContent = readStudioFile('src/workspaces/editor/ItemRowContent.tsx');
 
-    expect(itemRow).toContain('text-ink');
+    expect(itemRowContent).toContain('text-ink');
     expect(indexCss).toContain('--color-ink:');
   });
 });

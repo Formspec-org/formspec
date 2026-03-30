@@ -1,4 +1,4 @@
-/** @filedesc Blueprint section listing computed variables with their FEL expressions and a navigate-to-Logic link. */
+/** @filedesc Blueprint section listing computed variables with their FEL expressions and a navigate-to-Manage link. */
 import { useDefinition } from '../../state/useDefinition';
 
 export function VariablesList() {
@@ -7,8 +7,8 @@ export function VariablesList() {
 
   const displayExpression = (expression: string) => expression.replace(/@([A-Za-z_]\w*)/g, '$1');
 
-  const navigateToLogic = () => {
-    window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', { detail: { tab: 'Logic' } }));
+  const navigateToManage = () => {
+    window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', { detail: { tab: 'Editor', view: 'manage' } }));
   };
 
   if (variables.length === 0) {
@@ -21,12 +21,12 @@ export function VariablesList() {
         <button
           key={v.name}
           type="button"
-          onClick={navigateToLogic}
+          onClick={navigateToManage}
           className="w-full rounded-[4px] px-2 py-1 text-left transition-colors hover:bg-subtle group"
         >
           <div className="flex items-center justify-between">
             <div className="text-sm font-mono text-accent">@{v.name}</div>
-            <div className="text-[9px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">Go to Logic</div>
+            <div className="text-[9px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">Go to Manage</div>
           </div>
           <div className="text-xs font-mono text-muted truncate" title={v.expression}>
             {displayExpression(v.expression)}

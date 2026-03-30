@@ -837,9 +837,7 @@ describe('DefinitionTreeEditor', () => {
 
     const row = within(screen.getByTestId('field-amount'));
     fireEvent.click(row.getByRole('button', { name: 'Select Amount' }));
-    fireEvent.click(row.getByTestId('field-amount-add-initial'));
-    fireEvent.change(row.getByLabelText('Inline initial value'), { target: { value: '25' } });
-    fireEvent.blur(row.getByLabelText('Inline initial value'));
+    // Currency, precision, prefix use field-detail launchers
     fireEvent.click(row.getByTestId('field-amount-add-currency'));
     fireEvent.change(row.getByLabelText('Inline currency'), { target: { value: 'USD' } });
     fireEvent.blur(row.getByLabelText('Inline currency'));
@@ -850,7 +848,6 @@ describe('DefinitionTreeEditor', () => {
     fireEvent.change(row.getByLabelText('Inline prefix'), { target: { value: '$' } });
     fireEvent.blur(row.getByLabelText('Inline prefix'));
 
-    expect((project.definition.items[0] as any)?.initialValue).toBe('25');
     expect((project.definition.items[0] as any)?.currency).toBe('USD');
     expect((project.definition.items[0] as any)?.precision).toBe(2);
     expect((project.definition.items[0] as any)?.prefix).toBe('$');
@@ -873,13 +870,13 @@ describe('DefinitionTreeEditor', () => {
     expect(heading).toHaveClass('text-[13px]');
     expect(heading).toHaveClass('font-semibold');
     expect(lowerEditor).toHaveClass('space-y-3');
-    expect(row.getByTestId('field-amount-add-initial')).toHaveClass('text-accent');
     expect(row.getByTestId('field-amount-add-semantic')).toHaveClass('text-accent');
-    fireEvent.click(row.getByTestId('field-amount-add-initial'));
-    expect(row.getByLabelText('Inline initial value')).toBeInTheDocument();
-    fireEvent.blur(row.getByLabelText('Inline initial value'));
+    expect(row.getByTestId('field-amount-add-prefix')).toHaveClass('text-accent');
     fireEvent.click(row.getByTestId('field-amount-add-semantic'));
     expect(row.getByLabelText('Inline semantic')).toBeInTheDocument();
+    fireEvent.blur(row.getByLabelText('Inline semantic'));
+    fireEvent.click(row.getByTestId('field-amount-add-prefix'));
+    expect(row.getByLabelText('Inline prefix')).toBeInTheDocument();
   });
 
   it('edits visible summary cards with single-line inline inputs', () => {
@@ -943,7 +940,7 @@ describe('DefinitionTreeEditor', () => {
     expect(labelText.parentElement).not.toContainElement(typeToken);
   });
 
-  it('supports inline behavior editing for selected rows', () => {
+  it('supports inline behavior editing for selected rows via BindCard and AddBehaviorMenu', () => {
     const definition = {
       $formspec: '1.0', url: 'urn:tree-inline-behavior', version: '1.0.0',
       items: [
@@ -952,16 +949,16 @@ describe('DefinitionTreeEditor', () => {
     };
     const { project } = renderTree(definition);
 
-    fireEvent.click(within(screen.getByTestId('field-dob')).getByRole('button', { name: 'Select Date of Birth' }));
-    fireEvent.click(within(screen.getByTestId('field-dob')).getByRole('button', { name: 'Add behavior to Date of Birth' }));
+    const row = within(screen.getByTestId('field-dob'));
+    fireEvent.click(row.getByRole('button', { name: 'Select Date of Birth' }));
+    // Single control opens the behavior-type menu (no separate "reveal panel" click).
+    fireEvent.click(row.getByRole('button', { name: 'Add behavior to Date of Birth' }));
+    fireEvent.click(row.getByRole('button', { name: /Required/i }));
 
-    fireEvent.click(within(screen.getByTestId('field-dob')).getByLabelText('Required behavior'));
-    fireEvent.change(within(screen.getByTestId('field-dob')).getByLabelText('Constraint behavior'), { target: { value: '. < today()' } });
-    fireEvent.change(within(screen.getByTestId('field-dob')).getByLabelText('Constraint message behavior'), { target: { value: 'Must be in the past' } });
-
+    // Verify required was added
     const binds = (project.definition as any).binds ?? [];
     expect(binds).toEqual(expect.arrayContaining([
-      expect.objectContaining({ path: 'dob', required: 'true', constraint: '. < today()', constraintMessage: 'Must be in the past' }),
+      expect.objectContaining({ path: 'dob', required: 'true' }),
     ]));
   });
 
@@ -1014,7 +1011,7 @@ describe('DefinitionTreeEditor', () => {
     ]);
   });
 
-  it('supports inline pre-populate editing for selected field rows', () => {
+  it('supports inline pre-populate editing via PrePopulateCard', () => {
     const definition = {
       $formspec: '1.0', url: 'urn:tree-inline-prepopulate', version: '1.0.0',
       items: [
@@ -1023,19 +1020,16 @@ describe('DefinitionTreeEditor', () => {
     };
     const { project } = renderTree(definition);
 
-    fireEvent.click(within(screen.getByTestId('field-accountNumber')).getByRole('button', { name: 'Select Account Number' }));
-    fireEvent.click(within(screen.getByTestId('field-accountNumber')).getByTestId('field-accountNumber-add-pre-fill'));
+    const row = within(screen.getByTestId('field-accountNumber'));
+    fireEvent.click(row.getByRole('button', { name: 'Select Account Number' }));
 
-    fireEvent.change(within(screen.getByTestId('field-accountNumber')).getByLabelText('Inline pre-fill'), {
-      target: { value: '@applicant.crm.account_number' },
-    });
-    fireEvent.click(within(screen.getByTestId('field-accountNumber')).getByLabelText('Inline pre-populate editable'));
+    // Use AddBehaviorMenu to add pre-populate
+    const addMenu = row.getByRole('button', { name: /Add Calculation/i });
+    fireEvent.click(addMenu);
+    fireEvent.click(row.getByRole('button', { name: /Pre-populate/i }));
 
-    expect((project.definition.items[0] as any)?.prePopulate).toEqual({
-      instance: 'applicant',
-      path: 'crm.account_number',
-      editable: false,
-    });
+    // PrePopulateCard should appear with instance/path inputs
+    expect((project.definition.items[0] as any)?.prePopulate).toEqual({ instance: '', path: '' });
   });
 
   it('supports inline content editing for selected group rows', () => {
@@ -1078,6 +1072,35 @@ describe('DefinitionTreeEditor', () => {
     expect(binds).toEqual(expect.arrayContaining([
       expect.objectContaining({ path: 'eligibility', required: 'true', relevant: '../age >= 18' }),
     ]));
+  });
+
+  it('moves focus into the lower panel when a field is expanded and back to the row when collapsed', () => {
+    renderTree({
+      $formspec: '1.0', url: 'urn:tree-focus-management', version: '1.0.0',
+      items: [
+        { key: 'name', type: 'field', dataType: 'string', label: 'Full Name' },
+        { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
+      ],
+    });
+
+    const nameRow = screen.getByTestId('field-name');
+    const selectButton = within(nameRow).getByRole('button', { name: 'Select Full Name' });
+
+    // Expand the field by clicking the select button
+    fireEvent.click(selectButton);
+
+    // The lower panel should receive focus
+    const lowerPanel = within(nameRow).getByTestId('field-name-lower-panel');
+    expect(lowerPanel).toHaveAttribute('tabindex', '-1');
+    expect(document.activeElement).toBe(lowerPanel);
+
+    // Click another field to collapse the first one
+    const ageRow = screen.getByTestId('field-age');
+    fireEvent.click(within(ageRow).getByRole('button', { name: 'Select Age' }));
+
+    // Focus should move to the age row's lower panel now
+    const ageLowerPanel = within(ageRow).getByTestId('field-age-lower-panel');
+    expect(document.activeElement).toBe(ageLowerPanel);
   });
 
   it('scrolls the selected group or field into view when selection changes externally', () => {

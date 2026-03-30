@@ -106,11 +106,24 @@ describe('Header', () => {
     renderHeader();
 
     const editorTab = screen.getByRole('tab', { name: 'Editor' });
-    const logicTab = screen.getByRole('tab', { name: 'Logic' });
+    const layoutTab = screen.getByRole('tab', { name: 'Layout' });
 
     expect(editorTab).toHaveAttribute('id', 'studio-tab-editor');
     expect(editorTab).toHaveAttribute('aria-controls', 'studio-panel-editor');
     expect(editorTab).toHaveAttribute('tabindex', '0');
-    expect(logicTab).toHaveAttribute('tabindex', '-1');
+    expect(layoutTab).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('renders exactly 5 workspace tabs (Editor, Layout, Theme, Mapping, Preview)', () => {
+    renderHeader();
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(5);
+    expect(tabs.map(t => t.textContent)).toEqual(['Editor', 'Layout', 'Theme', 'Mapping', 'Preview']);
+  });
+
+  it('does not render Logic or Data tabs', () => {
+    renderHeader();
+    expect(screen.queryByRole('tab', { name: 'Logic' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Data' })).not.toBeInTheDocument();
   });
 });

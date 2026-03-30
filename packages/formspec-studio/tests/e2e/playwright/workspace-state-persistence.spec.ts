@@ -17,9 +17,9 @@ test.describe('Workspace state persistence', () => {
     await page.waitForSelector('[data-testid="field-name"]');
   });
 
-  test('Delete from the Data workspace does not remove the editor selection', async ({ page }) => {
+  test('Delete from the Layout workspace does not remove the editor selection', async ({ page }) => {
     await page.click('[data-testid="field-name"]');
-    await switchTab(page, 'Data');
+    await switchTab(page, 'Layout');
 
     await page.keyboard.press('Delete');
 
@@ -27,15 +27,18 @@ test.describe('Workspace state persistence', () => {
     await expect(page.locator('[data-testid="field-name"]')).toBeVisible();
   });
 
-  test('Data workspace keeps the active sub-tab after switching away and back', async ({ page }) => {
-    await switchTab(page, 'Data');
-    const dataWorkspace = page.locator('[data-testid="workspace-Data"]');
-    await dataWorkspace.getByRole('button', { name: 'Tables', exact: true }).click();
-    await expect(dataWorkspace).toContainText(/lookup tables|option set|no option sets/i);
+  test('Editor Manage view persists after switching away and back', async ({ page }) => {
+    // Switch to Manage view
+    await page.getByRole('radio', { name: 'Manage' }).click();
+    await expect(page.getByTestId('manage-section-variables')).toBeVisible();
 
-    await switchTab(page, 'Logic');
-    await switchTab(page, 'Data');
+    // Navigate away to Layout
+    await switchTab(page, 'Layout');
+    // Navigate back to Editor
+    await switchTab(page, 'Editor');
 
-    await expect(page.locator('[data-testid="workspace-Data"]').getByRole('button', { name: 'Tables', exact: true })).toHaveClass(/bg-ink|text-white/);
+    // Manage view should still be active
+    await expect(page.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('manage-section-variables')).toBeVisible();
   });
 });

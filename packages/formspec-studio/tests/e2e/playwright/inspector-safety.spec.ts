@@ -21,7 +21,7 @@ test.describe('Inspector Safety', () => {
     await expect(properties.getByRole('button', { name: 'Duplicate' })).toBeVisible();
     await expect(properties.getByRole('button', { name: 'Delete' })).toBeVisible();
 
-    await switchTab(page, 'Data');
+    await switchTab(page, 'Theme');
 
     await expect(propertiesPanel(page)).toBeHidden();
   });

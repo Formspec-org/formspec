@@ -1,9 +1,9 @@
 /** @filedesc Data workspace tab composing ResponseSchema, DataSources, OptionSets, and TestResponse panels. */
 import { useState } from 'react';
-import { ResponseSchema } from './ResponseSchema';
-import { DataSources } from './DataSources';
-import { OptionSets } from './OptionSets';
-import { TestResponse } from './TestResponse';
+import { ResponseSchema } from '../editor/ResponseSchema';
+import { DataSources } from '../editor/DataSources';
+import { OptionSets } from '../editor/OptionSets';
+import { TestResponse } from '../editor/TestResponse';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { HelpTip } from '../../components/ui/HelpTip';
 

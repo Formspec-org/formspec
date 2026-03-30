@@ -6,7 +6,7 @@ test.describe('Cross-Workspace Authoring', () => {
     await waitForApp(page);
   });
 
-  test('Editor → Data → Preview round-trip', async ({ page }) => {
+  test('Editor → Manage → Preview round-trip', async ({ page }) => {
     const definition = {
       $formspec: '1.0',
       items: [
@@ -23,11 +23,12 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(canvas.locator('[data-testid="field-lastName"]')).toBeVisible();
     await expect(canvas.locator('[data-testid="field-dob"]')).toBeVisible();
 
-    await switchTab(page, 'Data');
-    const dataWorkspace = page.locator('[data-testid="workspace-Data"]');
-    await expect(dataWorkspace).toContainText('firstName');
-    await expect(dataWorkspace).toContainText('lastName');
-    await expect(dataWorkspace).toContainText('dob');
+    // Switch to Manage view — verify fields appear in the Response Inspector
+    await page.getByText('Response Inspector').click();
+    const panel = page.locator('[data-testid="response-inspector-content"]');
+    await expect(panel).toContainText('firstName');
+    await expect(panel).toContainText('lastName');
+    await expect(panel).toContainText('dob');
 
     await switchTab(page, 'Preview');
     const previewWorkspace = page.locator('[data-testid="workspace-Preview"]');
@@ -36,7 +37,7 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(previewWorkspace.getByLabel('Date of Birth')).toBeVisible();
   });
 
-  test('Editor → Logic round-trip with required bind', async ({ page }) => {
+  test('Editor → Manage round-trip with required bind', async ({ page }) => {
     const definition = {
       $formspec: '1.0',
       items: [{ key: 'income', type: 'field', dataType: 'decimal', label: 'Income' }],
@@ -50,10 +51,12 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(incomeBlock).toBeVisible();
     await expect(incomeBlock.getByText('req')).toBeVisible();
 
-    await switchTab(page, 'Logic');
+    // Switch to Manage view and verify the bind
+    await page.getByRole('radio', { name: 'Manage' }).click();
     await expect(page.getByText(/required \(1\)/)).toBeVisible();
 
-    await switchTab(page, 'Editor');
+    // Switch back to Build view
+    await page.getByRole('radio', { name: 'Build' }).click();
     const incomeBlockAgain = page.locator('[data-testid="workspace-Editor"]').locator('[data-testid="field-income"]');
     await expect(incomeBlockAgain).toBeVisible();
     await expect(incomeBlockAgain.getByText('req')).toBeVisible();
@@ -101,22 +104,21 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(editorWorkspace.locator('[data-testid="field-age"]')).toBeVisible();
     await expect(editorWorkspace.locator('[data-testid="group-address"]')).toBeVisible();
 
-    await switchTab(page, 'Logic');
-    const logicWorkspace = page.locator('[data-testid="workspace-Logic"]');
+    // Switch to Manage view — verify logic content
+    await page.getByRole('radio', { name: 'Manage' }).click();
     await expect(page.getByText(/required \(1\)/)).toBeVisible();
-    await expect(logicWorkspace.getByText('ageCheck')).toBeVisible();
+    await expect(editorWorkspace.getByText('ageCheck')).toBeVisible();
 
-    await switchTab(page, 'Data');
-    const dataWorkspace = page.locator('[data-testid="workspace-Data"]');
-    await expect(dataWorkspace).toContainText('name');
-    await expect(dataWorkspace).toContainText('email');
+    // Verify data content in Manage view (Response Inspector is in Form Health panel)
+    await page.getByRole('radio', { name: 'Build' }).click();
+    await page.getByText('Response Inspector').click();
+    const responsePanel = page.locator('[data-testid="response-inspector-content"]');
+    await expect(responsePanel).toContainText('name');
+    await expect(responsePanel).toContainText('email');
 
     await switchTab(page, 'Theme');
     const themeWorkspace = page.locator('[data-testid="workspace-Theme"]');
-    // primaryColor token appears under the "other" group in AllTokens (no dot prefix).
-    // The suffix span renders the key name as text; the value is in an <input> element.
     await expect(themeWorkspace.getByText('primaryColor', { exact: true })).toBeVisible();
-    // The hex value renders as a color swatch (not as visible text — it lives inside an input).
     await expect(themeWorkspace.locator('[data-testid="swatch-primaryColor"]')).toBeVisible();
 
     await switchTab(page, 'Mapping');

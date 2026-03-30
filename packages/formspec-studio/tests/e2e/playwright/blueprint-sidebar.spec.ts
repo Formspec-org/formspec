@@ -123,10 +123,10 @@ test.describe('Bug #28 — Settings dialog Title input shows current title', () 
   });
 });
 
-// ─── Variables sidebar rows navigate to Logic workspace ──────────────────────
+// ─── Variables sidebar rows navigate to Manage view ──────────────────────
 
 test.describe('Variables sidebar rows are navigation buttons', () => {
-  test('clicking a variable navigates to the Logic workspace', async ({ page }) => {
+  test('clicking a variable navigates to the Editor Manage view', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, VARIABLES_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
@@ -134,15 +134,15 @@ test.describe('Variables sidebar rows are navigation buttons', () => {
     await openBlueprintSection(page, 'Variables');
     await page.waitForSelector('text=@taxRate', { timeout: 5000 });
 
-    // Confirm the Logic workspace is not yet active
-    await expect(page.locator('[data-testid="workspace-Logic"]')).not.toBeVisible();
+    // Confirm the Manage view is not yet active (Build is default)
+    await expect(page.getByRole('radio', { name: 'Build' })).toHaveAttribute('aria-checked', 'true');
 
     // VariablesList.tsx renders each variable as a <button> that dispatches
-    // formspec:navigate-workspace with { tab: 'Logic' } on click.
+    // formspec:navigate-workspace with { tab: 'Editor', view: 'manage' } on click.
     await page.getByRole('button', { name: /@taxRate/i }).click();
 
-    // After clicking, the Logic workspace should become visible.
-    await expect(page.locator('[data-testid="workspace-Logic"]')).toBeVisible({ timeout: 3000 });
+    // After clicking, the Manage view should become active.
+    await expect(page.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true', { timeout: 3000 });
   });
 
   test('each variable row is a button element', async ({ page }) => {

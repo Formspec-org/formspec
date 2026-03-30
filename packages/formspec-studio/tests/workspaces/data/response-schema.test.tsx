@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider } from '../../../src/state/useSelection';
-import { ResponseSchema } from '../../../src/workspaces/data/ResponseSchema';
+import { ResponseSchema } from '../../../src/workspaces/editor/ResponseSchema';
 
 const dataDef = {
   $formspec: '1.0', url: 'urn:test', version: '1.0.0',

@@ -2,7 +2,7 @@ import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
-import { TestResponse } from '../../../src/workspaces/data/TestResponse';
+import { TestResponse } from '../../../src/workspaces/editor/TestResponse';
 
 function renderTestResponse(def?: any) {
   const project = createProject({

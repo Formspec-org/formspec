@@ -70,6 +70,128 @@ describe('Blueprint', () => {
     expect(screen.getByTestId('blueprint-section-Component Tree')).toHaveTextContent(/[123]/);
   });
 
+  it('shows route count badge for Screener when screener has routes', () => {
+    const project = createProject({ seed: {
+      definition: {
+        $formspec: '1.0', url: 'urn:test', version: '1.0.0', title: 'Test',
+        items: [],
+        screener: {
+          enabled: true,
+          items: [{ key: 'age', type: 'field', dataType: 'integer', label: 'Age' }],
+          routes: [
+            { condition: '$age >= 18', destination: 'adult' },
+            { condition: 'true', destination: 'rejected' },
+          ],
+        },
+      } as any,
+    } });
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <Blueprint activeSection="Structure" onSectionChange={vi.fn()} />
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+    // Screener section should show route count of 2
+    expect(screen.getByTestId('blueprint-section-Screener')).toHaveTextContent('2');
+  });
+
+  it('auto-switches to Manage view when clicking a Manage concern section while in Build view', async () => {
+    const onSectionChange = vi.fn();
+    const spy = vi.fn();
+    window.addEventListener('formspec:navigate-workspace', spy);
+
+    const project = createProject();
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <Blueprint
+            activeSection="Structure"
+            onSectionChange={onSectionChange}
+            activeEditorView="build"
+            activeTab="Editor"
+          />
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    // Click "Variables" — a Manage concern — while in Build view
+    await act(async () => {
+      screen.getByText('Variables').click();
+    });
+
+    // Should still call onSectionChange
+    expect(onSectionChange).toHaveBeenCalledWith('Variables');
+    // Should dispatch navigate-workspace to switch to Manage view
+    expect(spy).toHaveBeenCalled();
+    const detail = (spy.mock.calls[0][0] as CustomEvent).detail;
+    expect(detail).toEqual(expect.objectContaining({ tab: 'Editor', view: 'manage' }));
+
+    window.removeEventListener('formspec:navigate-workspace', spy);
+  });
+
+  it('does NOT auto-switch when clicking Structure section (stays in Build)', async () => {
+    const onSectionChange = vi.fn();
+    const spy = vi.fn();
+    window.addEventListener('formspec:navigate-workspace', spy);
+
+    const project = createProject();
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <Blueprint
+            activeSection="Variables"
+            onSectionChange={onSectionChange}
+            activeEditorView="build"
+            activeTab="Editor"
+          />
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    // Click "Structure" — should NOT auto-switch
+    await act(async () => {
+      screen.getByText('Structure').click();
+    });
+
+    expect(onSectionChange).toHaveBeenCalledWith('Structure');
+    // Should NOT dispatch navigate-workspace
+    expect(spy).not.toHaveBeenCalled();
+
+    window.removeEventListener('formspec:navigate-workspace', spy);
+  });
+
+  it('does NOT auto-switch when already in Manage view', async () => {
+    const onSectionChange = vi.fn();
+    const spy = vi.fn();
+    window.addEventListener('formspec:navigate-workspace', spy);
+
+    const project = createProject();
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <Blueprint
+            activeSection="Structure"
+            onSectionChange={onSectionChange}
+            activeEditorView="manage"
+            activeTab="Editor"
+          />
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    // Click "Variables" while already in Manage view
+    await act(async () => {
+      screen.getByText('Variables').click();
+    });
+
+    expect(onSectionChange).toHaveBeenCalledWith('Variables');
+    // Should NOT dispatch navigate-workspace since already in manage
+    expect(spy).not.toHaveBeenCalled();
+
+    window.removeEventListener('formspec:navigate-workspace', spy);
+  });
+
   it('switches the collapse arrow glyph from collapsed to expanded when a sidebar section opens', async () => {
     render(<Section title="Settings" defaultOpen={false}><div>Section body</div></Section>);
 

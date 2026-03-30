@@ -7,13 +7,15 @@ interface BlueprintProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   sections?: readonly string[];
+  activeEditorView?: 'build' | 'manage';
+  activeTab?: string;
 }
 
 interface SectionDef {
   name: string;
   countFn: ((state: ReturnType<typeof useProjectState>) => number) | null;
   help: string;
-  link?: { tab: string; subTab?: string };
+  link?: { tab: string; subTab?: string; view?: string };
 }
 
 function countComponentNodes(node: unknown): number {
@@ -30,10 +32,10 @@ const SECTIONS: SectionDef[] = [
     help: 'UI component hierarchy generated from the item tree',
   },
   { name: 'Theme', countFn: (s) => Object.keys(s.theme.tokens ?? {}).length, help: 'Visual tokens, selectors, and presentation defaults', link: { tab: 'Theme', subTab: 'tokens' } },
-  { name: 'Screener', countFn: null, help: 'Pre-qualification gate before the main form' },
-  { name: 'Variables', countFn: (s) => s.definition.variables?.length ?? 0, help: 'Named computed values reusable across expressions', link: { tab: 'Logic' } },
-  { name: 'Data Sources', countFn: (s) => Object.keys(s.definition.instances ?? {}).length, help: 'Secondary data instances for lookups and reference data', link: { tab: 'Data', subTab: 'Data Sources' } },
-  { name: 'Option Sets', countFn: (s) => Object.keys(s.definition.optionSets ?? {}).length, help: 'Reusable option lists for choice and multiChoice fields', link: { tab: 'Data', subTab: 'Option Sets' } },
+  { name: 'Screener', countFn: (s) => (s.definition.screener as any)?.routes?.length ?? 0, help: 'Pre-qualification gate before the main form', link: { tab: 'Editor', view: 'manage' } },
+  { name: 'Variables', countFn: (s) => s.definition.variables?.length ?? 0, help: 'Named computed values reusable across expressions', link: { tab: 'Editor', view: 'manage' } },
+  { name: 'Data Sources', countFn: (s) => Object.keys(s.definition.instances ?? {}).length, help: 'Secondary data instances for lookups and reference data', link: { tab: 'Editor', view: 'manage' } },
+  { name: 'Option Sets', countFn: (s) => Object.keys(s.definition.optionSets ?? {}).length, help: 'Reusable option lists for choice and multiChoice fields', link: { tab: 'Editor', view: 'manage' } },
   { name: 'Mappings', countFn: (s) => Object.values(s.mappings ?? {}).reduce((sum, m) => sum + (m.rules?.length ?? 0), 0), help: 'Bidirectional data transforms for import/export', link: { tab: 'Mapping', subTab: 'rules' } },
   { name: 'Settings', countFn: null, help: 'Form identity, presentation, and behavioral defaults' },
 ];
@@ -42,7 +44,7 @@ const SECTIONS: SectionDef[] = [
  * Blueprint sidebar navigation.
  * Lists all functional areas of the project with entity counts.
  */
-export function Blueprint({ activeSection, onSectionChange, sections }: BlueprintProps) {
+export function Blueprint({ activeSection, onSectionChange, sections, activeEditorView, activeTab }: BlueprintProps) {
   const state = useProjectState();
   const project = useProject();
   const componentTreeCount = countComponentNodes((project.component as any)?.tree);
@@ -79,7 +81,13 @@ export function Blueprint({ activeSection, onSectionChange, sections }: Blueprin
                 <button
                   aria-current={isActive ? 'page' : undefined}
                   className="min-w-0 flex-1 truncate rounded-[6px] text-left cursor-pointer focus-visible:outline-none"
-                  onClick={() => onSectionChange(name)}
+                  onClick={() => {
+                    onSectionChange(name);
+                    // Auto-switch to Manage view when clicking a Manage concern while in Build view
+                    if (link?.view === 'manage' && activeEditorView === 'build' && activeTab === 'Editor') {
+                      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', { detail: link }));
+                    }
+                  }}
                 >
                   {name}
                 </button>
@@ -100,7 +108,7 @@ export function Blueprint({ activeSection, onSectionChange, sections }: Blueprin
                     </svg>
                   </button>
                 )}
-                {link && (
+                {link && !(activeTab === 'Editor' && link.tab === 'Editor' && link.view && activeEditorView === link.view) && (
                   <button
                     type="button"
                     aria-label={`Open ${name} tab`}
