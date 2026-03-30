@@ -2,12 +2,12 @@
 import type { SignatureBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
 import { createSignatureCanvas } from '@formspec-org/webcomponent';
 import { el } from '../helpers';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
     behavior, parent, actx
 ) => {
-    const { root, label, hint, error, describedBy } = createUSWDSFieldDOM(behavior, { labelFor: false });
+    const { root, label, hint, error } = createUSWDSFieldDOM(behavior, { labelFor: false });
 
     // Canvas — shared utility handles drawing, resize, touch, events
     const { canvas, clear, dispose: canvasDispose } = createSignatureCanvas({
@@ -20,7 +20,6 @@ export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
     canvas.setAttribute('tabindex', '0');
     canvas.setAttribute('role', 'img');
     canvas.setAttribute('aria-label', 'Signature canvas. Use the Clear button to reset.');
-    canvas.setAttribute('aria-describedby', describedBy);
 
     root.appendChild(canvas);
     actx.onDispose(canvasDispose);
@@ -33,14 +32,12 @@ export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
     clearBtn.addEventListener('click', clear);
     root.appendChild(clearBtn);
 
-    root.appendChild(error);
-
     parent.appendChild(root);
 
     const dispose = behavior.bind({
         root, label, control: canvas, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
+            applyUSWDSValidationState(root, label, hasError);
         },
     });
     actx.onDispose(dispose);

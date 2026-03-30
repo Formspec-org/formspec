@@ -33,7 +33,7 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
         panel.id = `${idBase}-panel-${i}`;
         panel.setAttribute('aria-labelledby', `${idBase}-tab-${i}`);
         panel.setAttribute('tabindex', '0');
-        if (i !== behavior.defaultTab) panel.style.display = 'none';
+        if (i !== behavior.defaultTab) panel.classList.add('formspec-hidden');
         behavior.renderTab(i, panel);
         panelContainer.appendChild(panel);
         panels.push(panel);
@@ -63,6 +63,15 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
         buttons.push(btn);
     }
 
+    // Sync USWDS button styling with active tab
+    const updateButtonStyles = (activeIdx: number) => {
+        for (let i = 0; i < buttons.length; i++) {
+            buttons[i].className = i === activeIdx
+                ? 'usa-button'
+                : 'usa-button usa-button--outline';
+        }
+    };
+
     // Position: bottom puts panels before bar
     if (behavior.position === 'bottom') {
         root.appendChild(panelContainer);
@@ -73,21 +82,9 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
     }
 
     // Bind behavior — bind() manages panel visibility and active tab state
-    const dispose = behavior.bind({ root, tabBar, panels, buttons });
+    const dispose = behavior.bind({
+        root, tabBar, panels, buttons,
+        onTabChange: (tabIndex) => updateButtonStyles(tabIndex),
+    });
     actx.onDispose(dispose);
-
-    // Sync USWDS button styling with active tab — observe button aria-selected changes
-    const updateButtonStyles = () => {
-        for (let i = 0; i < buttons.length; i++) {
-            const isActive = buttons[i].getAttribute('aria-selected') === 'true';
-            buttons[i].className = isActive
-                ? 'usa-button'
-                : 'usa-button usa-button--outline';
-        }
-    };
-    const observer = new MutationObserver(updateButtonStyles);
-    for (const btn of buttons) {
-        observer.observe(btn, { attributes: true, attributeFilter: ['aria-selected'] });
-    }
-    actx.onDispose(() => observer.disconnect());
 };

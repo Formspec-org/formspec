@@ -6,7 +6,7 @@ import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     behavior, parent, actx
 ) => {
-    const { root, label, hint, error, describedBy: _describedBy } = createUSWDSFieldDOM(behavior);
+    const { root, label, hint, error } = createUSWDSFieldDOM(behavior);
 
     // USWDS file input wrapper
     const fileInput = el('div', { class: 'usa-file-input' });
@@ -29,6 +29,9 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     instructions.appendChild(document.createTextNode('Drag file here or '));
     instructions.appendChild(chooseSpan);
     target.appendChild(instructions);
+    
+    const box = el('div', { class: 'usa-file-input__box' });
+    target.appendChild(box);
 
     const input = document.createElement('input') as HTMLInputElement;
     input.className = 'usa-file-input__input';
@@ -70,7 +73,6 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     }
 
     root.appendChild(fileInput);
-    root.appendChild(error);
 
     parent.appendChild(root);
 

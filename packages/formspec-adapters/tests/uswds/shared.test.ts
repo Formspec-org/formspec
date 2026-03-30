@@ -62,24 +62,11 @@ describe('createUSWDSFieldDOM', () => {
         expect(dom.root.contains(dom.hint!)).toBe(true);
     });
 
-    it('creates error element with correct id and role', () => {
+    it('creates error element with correct id and class', () => {
         const b = mockTextInput({ id: 'field-x' });
         const dom = createUSWDSFieldDOM(b);
         expect(dom.error.id).toBe('field-x-error');
-        expect(dom.error.getAttribute('role')).toBe('alert');
         expect(dom.error.classList.contains('usa-error-message')).toBe(true);
-    });
-
-    it('describedBy includes hint and error ids', () => {
-        const b = mockTextInput({ id: 'field-x', hint: 'A hint' });
-        const dom = createUSWDSFieldDOM(b);
-        expect(dom.describedBy).toBe('field-x-hint field-x-error');
-    });
-
-    it('describedBy only has error id when no hint', () => {
-        const b = mockTextInput({ id: 'field-x', hint: null });
-        const dom = createUSWDSFieldDOM(b);
-        expect(dom.describedBy).toBe('field-x-error');
     });
 
     it('applies cascade classes to root', () => {
@@ -110,9 +97,17 @@ describe('createUSWDSFieldDOM', () => {
         expect(labelIdx).toBeLessThan(hintIdx);
     });
 
-    it('error is NOT appended to root (adapters append after control)', () => {
-        const b = mockTextInput();
-        const dom = createUSWDSFieldDOM(b);
-        expect(dom.root.contains(dom.error)).toBe(false);
+    it('error is a child of root after label and optional hint (before adapter appends control)', () => {
+        const withHint = mockTextInput({ hint: 'Some hint' });
+        const domHint = createUSWDSFieldDOM(withHint);
+        expect(domHint.root.contains(domHint.error)).toBe(true);
+        const ch = Array.from(domHint.root.children);
+        expect(ch.indexOf(domHint.label)).toBeLessThan(ch.indexOf(domHint.hint!));
+        expect(ch.indexOf(domHint.hint!)).toBeLessThan(ch.indexOf(domHint.error));
+
+        const noHint = mockTextInput();
+        const domNo = createUSWDSFieldDOM(noHint);
+        const ch2 = Array.from(domNo.root.children);
+        expect(ch2.indexOf(domNo.label)).toBeLessThan(ch2.indexOf(domNo.error));
     });
 });

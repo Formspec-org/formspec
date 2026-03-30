@@ -1,73 +1,12 @@
 /** @filedesc USWDS v3 adapter for CheckboxGroup — renders usa-checkbox markup inside a fieldset. */
 import type { CheckboxGroupBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
-import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
-import { applyUSWDSValidationState, createUSWDSError } from './shared';
-
-/** Removes previously-rendered option elements (marked with data-checkbox-option). */
-function clearCheckboxOptions(fieldset: HTMLElement): void {
-    for (const old of Array.from(fieldset.querySelectorAll(':scope > [data-checkbox-option]'))) {
-        old.remove();
-    }
-}
-
-function buildCheckboxOptions(
-    behavior: CheckboxGroupBehavior,
-    fieldset: HTMLElement,
-    insertBefore: HTMLElement,
-    options: ReadonlyArray<{ value: string; label: string }>,
-): Map<string, HTMLInputElement> {
-    clearCheckboxOptions(fieldset);
-    const controls = new Map<string, HTMLInputElement>();
-
-    for (let i = 0; i < options.length; i++) {
-        const opt = options[i];
-        const optId = `${behavior.id}-${i}`;
-
-        const wrapper = el('div', { class: 'usa-checkbox' });
-        wrapper.setAttribute('data-checkbox-option', '');
-
-        const input = document.createElement('input') as HTMLInputElement;
-        input.className = 'usa-checkbox__input';
-        input.id = optId;
-        input.type = 'checkbox';
-        input.name = behavior.fieldPath;
-        input.value = opt.value;
-        controls.set(opt.value, input);
-
-        const label = el('label', { class: 'usa-checkbox__label', for: optId });
-        label.textContent = opt.label;
-
-        wrapper.appendChild(input);
-        wrapper.appendChild(label);
-        fieldset.insertBefore(wrapper, insertBefore);
-    }
-
-    return controls;
-}
+import { el } from '../helpers';
+import { applyUSWDSValidationState, createUSWDSFieldDOM, buildUSWDSOptions } from './shared';
 
 export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
     behavior, parent, actx
 ) => {
-    const p = behavior.presentation;
-
-    const fieldset = el('fieldset', { class: 'usa-fieldset' });
-    applyCascadeClasses(fieldset, p);
-    applyCascadeAccessibility(fieldset, p);
-
-    const legendClasses = p.labelPosition === 'hidden'
-        ? 'usa-legend usa-sr-only'
-        : 'usa-legend';
-    const legend = el('legend', { class: legendClasses });
-    legend.textContent = behavior.label;
-    fieldset.appendChild(legend);
-
-    let hint: HTMLElement | undefined;
-    if (behavior.hint) {
-        const hintId = `${behavior.id}-hint`;
-        hint = el('span', { class: 'usa-hint', id: hintId });
-        hint.textContent = behavior.hint;
-        fieldset.appendChild(hint);
-    }
+    const { root, label, hint, error } = createUSWDSFieldDOM(behavior, { asGroup: true });
 
     // Select All — USWDS doesn't have a built-in select-all, but we use
     // the same usa-checkbox markup for consistency
@@ -90,29 +29,28 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
         selectAllLabel.textContent = 'Select All';
         selectAllWrapper.appendChild(selectAllCb);
         selectAllWrapper.appendChild(selectAllLabel);
-        fieldset.appendChild(selectAllWrapper);
+        root.appendChild(selectAllWrapper);
     }
 
-    const error = createUSWDSError(behavior.id);
-    fieldset.appendChild(error);
+    root.appendChild(error);
 
-    let optionControlsRef = buildCheckboxOptions(behavior, fieldset, error, behavior.options());
+    let optionControlsRef = buildUSWDSOptions(behavior, root, behavior.options(), 'checkbox', behavior.fieldPath);
 
-    parent.appendChild(fieldset);
+    parent.appendChild(root);
 
     const dispose = behavior.bind({
-        root: fieldset,
-        label: legend,
-        control: fieldset,
+        root,
+        label,
+        control: root,
         hint,
         error,
         optionControls: optionControlsRef,
         rebuildOptions: (_container, newOptions) => {
-            optionControlsRef = buildCheckboxOptions(behavior, fieldset, error, newOptions);
+            optionControlsRef = buildUSWDSOptions(behavior, root, newOptions, 'checkbox', behavior.fieldPath);
             return optionControlsRef;
         },
         onValidationChange: (hasError) => {
-            applyUSWDSValidationState(fieldset, legend, hasError);
+            applyUSWDSValidationState(root, label, hasError);
         },
     });
     actx.onDispose(dispose);

@@ -93,21 +93,21 @@ export function createTailwindFieldDOM(
     // Error (not appended — adapter places it after control)
     const error = createTailwindError(behavior.id);
 
-    // describedBy
-    const describedBy = [
-        hint ? `${behavior.id}-hint` : '',
-        `${behavior.id}-error`,
-    ].filter(Boolean).join(' ');
+    const describedBy = hint ? `${behavior.id}-hint` : '';
 
     return { root, label, hint, error, describedBy };
+}
+
+export function setTwAriaDescribedBy(el: HTMLElement, describedBy: string): void {
+    const v = describedBy.trim();
+    if (v) el.setAttribute('aria-describedby', v);
+    else el.removeAttribute('aria-describedby');
 }
 
 export function createTailwindError(behaviorId: string): HTMLElement {
     return el('p', {
         class: TW.error,
         id: `${behaviorId}-error`,
-        role: 'alert',
-        'aria-live': 'polite',
     });
 }
 

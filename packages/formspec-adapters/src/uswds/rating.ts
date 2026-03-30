@@ -1,12 +1,12 @@
 /** @filedesc USWDS v3 adapter for Rating — star-rating with USWDS form-group wrapper and ARIA slider. */
 import type { RatingBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
 import { el } from '../helpers';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderRating: AdapterRenderFn<RatingBehavior> = (
     behavior, parent, actx
 ) => {
-    const { root, label, hint, error, describedBy } = createUSWDSFieldDOM(behavior, { labelFor: false });
+    const { root, label, hint, error } = createUSWDSFieldDOM(behavior, { labelFor: false });
 
     // Stars container — ARIA slider pattern (matches default adapter)
     const container = el('div', { class: 'formspec-rating-stars', role: 'slider' });
@@ -16,7 +16,6 @@ export const renderRating: AdapterRenderFn<RatingBehavior> = (
     container.setAttribute('aria-valuenow', '0');
     container.setAttribute('aria-valuetext', `0 of ${behavior.maxRating}`);
     container.setAttribute('aria-label', behavior.label);
-    container.setAttribute('aria-describedby', describedBy);
 
     const step = behavior.allowHalf ? 0.5 : 1;
     let currentValue = 0;
@@ -72,14 +71,12 @@ export const renderRating: AdapterRenderFn<RatingBehavior> = (
 
     root.appendChild(container);
 
-    root.appendChild(error);
-
     parent.appendChild(root);
 
     const dispose = behavior.bind({
         root, label, control: container, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
+            applyUSWDSValidationState(root, label, hasError);
         },
     });
     actx.onDispose(dispose);

@@ -7,7 +7,7 @@ export const renderNumberInput: AdapterRenderFn<NumberInputBehavior> = (
 ) => {
     const p = behavior.presentation;
 
-    const { root, label, hint, error, describedBy } = createUSWDSFieldDOM(behavior);
+    const { root, label, hint, error } = createUSWDSFieldDOM(behavior);
 
     if (p.labelPosition === 'start') root.style.display = 'flex';
 
@@ -20,10 +20,7 @@ export const renderNumberInput: AdapterRenderFn<NumberInputBehavior> = (
     if (behavior.min != null) input.min = String(behavior.min);
     if (behavior.max != null) input.max = String(behavior.max);
 
-    input.setAttribute('aria-describedby', describedBy);
     root.appendChild(input);
-
-    root.appendChild(error);
 
     parent.appendChild(root);
 

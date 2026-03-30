@@ -7,7 +7,7 @@ export const renderSelect: AdapterRenderFn<SelectBehavior> = (
 ) => {
     const p = behavior.presentation;
 
-    const { root, label, hint, error, describedBy } = createUSWDSFieldDOM(behavior);
+    const { root, label, hint, error } = createUSWDSFieldDOM(behavior);
 
     if (p.labelPosition === 'start') root.style.display = 'flex';
 
@@ -31,10 +31,7 @@ export const renderSelect: AdapterRenderFn<SelectBehavior> = (
         select.appendChild(option);
     }
 
-    select.setAttribute('aria-describedby', describedBy);
     root.appendChild(select);
-
-    root.appendChild(error);
 
     parent.appendChild(root);
 

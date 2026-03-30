@@ -119,40 +119,40 @@ describe('Error-class toggling (onValidationChange)', () => {
 // ════════════════════════════════════════════════════════════════════
 
 describe('aria-describedby gaps', () => {
-    it('Checkbox sets aria-describedby on input', () => {
+    it('Checkbox passes hint and error to bind()', () => {
         const parent = makeParent();
         const b = mockFieldBehavior({ hint: 'Must agree to terms' });
         renderCheckbox(b, parent, mockAdapterContext());
-        const input = parent.querySelector('.usa-checkbox__input') as HTMLInputElement;
-        const describedBy = input.getAttribute('aria-describedby') || '';
-        expect(describedBy).toContain(`${b.id}-error`);
+        const refs = captureBindRefs(b);
+        expect(refs.hint).toBeTruthy();
+        expect(refs.error).toBeTruthy();
     });
 
-    it('Toggle sets aria-describedby on input', () => {
+    it('Toggle passes hint and error to bind()', () => {
         const parent = makeParent();
         const b = mockToggle({ hint: 'Enable notifications' });
         renderToggle(b, parent, mockAdapterContext());
-        const input = parent.querySelector('.usa-checkbox__input') as HTMLInputElement;
-        const describedBy = input.getAttribute('aria-describedby') || '';
-        expect(describedBy).toContain(`${b.id}-error`);
+        const refs = captureBindRefs(b);
+        expect(refs.hint).toBeTruthy();
+        expect(refs.error).toBeTruthy();
     });
 
-    it('Rating sets aria-describedby on container', () => {
+    it('Rating passes hint and error to bind()', () => {
         const parent = makeParent();
         const b = mockRating({ hint: 'Rate from 1 to 5' });
         renderRating(b, parent, mockAdapterContext());
-        const container = parent.querySelector('.formspec-rating-stars')!;
-        const describedBy = container.getAttribute('aria-describedby') || '';
-        expect(describedBy).toContain(`${b.id}-error`);
+        const refs = captureBindRefs(b);
+        expect(refs.hint).toBeTruthy();
+        expect(refs.error).toBeTruthy();
     });
 
-    it('Signature sets aria-describedby on canvas', () => {
+    it('Signature passes hint and error to bind()', () => {
         const parent = makeParent();
         const b = mockSignature({ hint: 'Draw your signature' });
         renderSignature(b, parent, mockAdapterContext());
-        const canvas = parent.querySelector('canvas')!;
-        const describedBy = canvas.getAttribute('aria-describedby') || '';
-        expect(describedBy).toContain(`${b.id}-error`);
+        const refs = captureBindRefs(b);
+        expect(refs.hint).toBeTruthy();
+        expect(refs.error).toBeTruthy();
     });
 });
 
