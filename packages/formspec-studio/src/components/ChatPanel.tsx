@@ -130,7 +130,7 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
     if (sessionRef.current || !hasApiKey) return;
     const config = getSavedProviderConfig();
     if (!config?.apiKey) return;
-    const adapter = new GeminiAdapter({ apiKey: config.apiKey });
+    const adapter = new GeminiAdapter(config.apiKey, config.model ?? 'gemini-3-flash-preview', '');
     const session = new ChatSession({ adapter });
     session.setToolContext(toolContext);
     sessionRef.current = session;

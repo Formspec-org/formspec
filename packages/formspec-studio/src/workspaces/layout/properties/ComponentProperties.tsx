@@ -79,7 +79,10 @@ export function ComponentProperties() {
 
   if (isLayoutId(selectedKey)) {
     const nodeId = nodeIdFromLayoutId(selectedKey);
-    const layoutNode = findComponentNodeById(project.component.tree as Record<string, unknown> | undefined, nodeId);
+    const layoutNode = findComponentNodeById(
+      project.component.tree as unknown as Record<string, unknown> | undefined,
+      nodeId,
+    );
 
     if (!layoutNode) {
       return (

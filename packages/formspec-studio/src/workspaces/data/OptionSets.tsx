@@ -1,6 +1,11 @@
 /** @filedesc Panel for creating and editing named option sets (static choices or data-sourced) on a form. */
 import { useState } from 'react';
-import { sanitizeIdentifier, flatItems } from '@formspec-org/studio-core';
+import {
+  flatItems,
+  formatCommaSeparatedKeywords,
+  parseCommaSeparatedKeywords,
+  sanitizeIdentifier,
+} from '@formspec-org/studio-core';
 import { useDefinition } from '../../state/useDefinition';
 import { useProject } from '../../state/useProject';
 import { InlineExpression } from '../../components/ui/InlineExpression';
@@ -8,6 +13,7 @@ import { InlineExpression } from '../../components/ui/InlineExpression';
 interface OptionEntry {
   value: string;
   label: string;
+  keywords?: string[];
 }
 
 interface OptionSetDef {
@@ -178,7 +184,7 @@ export function OptionSets() {
                         className="block w-full text-[13px] bg-subtle border border-border rounded-lg px-3 py-2.5 hover:border-accent/50 hover:bg-subtle/70 underline decoration-accent/30 decoration-dotted underline-offset-4"
                       />
                       <p className="text-[10px] text-muted/60 italic">
-                        Must return a JSON array of objects with value/label fields.
+                        Must return a JSON array of objects with value and label; optional keywords array for combobox search.
                       </p>
                     </div>
                   ) : (
@@ -200,6 +206,7 @@ export function OptionSets() {
                             <tr>
                               <th className="py-2 px-4">Value</th>
                               <th className="py-2 px-4">Label</th>
+                              <th className="py-2 px-4 min-w-[140px]">Keywords</th>
                               <th className="py-2 px-4 w-10"></th>
                             </tr>
                           </thead>
@@ -233,6 +240,23 @@ export function OptionSets() {
                                     placeholder="Display Text"
                                   />
                                 </td>
+                                <td className="p-1 px-4">
+                                  <input
+                                    className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-mono"
+                                    value={formatCommaSeparatedKeywords(opt.keywords)}
+                                    onChange={(e) => {
+                                      const keywords = parseCommaSeparatedKeywords(e.target.value);
+                                      const next = [...(os.options || [])];
+                                      const row: OptionEntry = { ...next[i], value: next[i].value, label: next[i].label };
+                                      if (keywords) row.keywords = keywords;
+                                      else delete row.keywords;
+                                      next[i] = row;
+                                      handleSetProperty(name, 'options', next);
+                                    }}
+                                    placeholder="CA, Calif"
+                                    title="Comma-separated combobox type-ahead"
+                                  />
+                                </td>
                                 <td className="p-1 px-4 text-center">
                                   <button
                                     type="button"
@@ -249,7 +273,7 @@ export function OptionSets() {
                         )}
                       </div>
                       <p className="text-[10px] text-muted/60 italic mt-1.5">
-                        Value is stored in the response. Label is what the user sees.
+                        Value is stored in the response. Label is what the user sees. Keywords are optional aliases for searchable Select / combobox.
                       </p>
                     </section>
                   )}

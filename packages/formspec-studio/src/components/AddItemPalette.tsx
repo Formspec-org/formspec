@@ -55,7 +55,10 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
   }, [activeTab, scope]);
 
   const scopedCatalog = FIELD_TYPE_CATALOG.filter((opt) => {
-    if (scope === 'editor') return opt.itemType !== 'layout';
+    if (scope === 'editor') {
+      // Editor scope: inputs, groups, and display blocks only — not layout containers (Card, Spacer, etc.).
+      if (opt.itemType === 'layout') return false;
+    }
     return true;
   });
 

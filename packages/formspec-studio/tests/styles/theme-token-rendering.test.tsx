@@ -25,6 +25,7 @@ describe('Studio theme tokens', () => {
     render(
       <ItemRow
         itemKey="notice"
+        itemPath="notice"
         itemType="display"
         label="Important Notice"
         binds={{}}

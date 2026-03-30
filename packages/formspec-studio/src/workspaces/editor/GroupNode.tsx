@@ -81,7 +81,7 @@ export function GroupNode({
   const [editingBehavior, setEditingBehavior] = useState(false);
   const [editingRepeats, setEditingRepeats] = useState(false);
   const [draftKey, setDraftKey] = useState(itemKey);
-  const [draftLabel, setDraftLabel] = useState(label || itemKey);
+  const [draftLabel, setDraftLabel] = useState(() => (label?.trim() ? label.trim() : ''));
   const [activeInlineSummary, setActiveInlineSummary] = useState<string | null>(null);
   const contentSummaryMap = new Map(
     summaries
@@ -123,6 +123,8 @@ export function GroupNode({
   const visibleMissingActions = selected ? missingActions : [];
   const showFooter = repeatable || statusPills.length > 0 || visibleMissingActions.length > 0 || selected;
   const resolvedLabel = label || itemKey;
+  const labelForDescription =
+    label?.trim() && label.trim() !== itemKey ? label.trim() : null;
   const closeOtherEditors = (kind: 'content' | 'behavior' | 'repeats') => {
     setActiveIdentityField(null);
     setEditingContent(kind === 'content' ? 'both' : null);
@@ -134,7 +136,7 @@ export function GroupNode({
   useEffect(() => {
     if (!activeIdentityField) {
       setDraftKey(itemKey);
-      setDraftLabel(label || itemKey);
+      setDraftLabel(label?.trim() ? label.trim() : '');
     }
   }, [activeIdentityField, itemKey, label]);
 
@@ -182,6 +184,8 @@ export function GroupNode({
 
   const openIdentityField = (field: 'label' | 'key') => {
     resetEditors();
+    if (field === 'key') setDraftKey(itemKey);
+    if (field === 'label') setDraftLabel(label?.trim() ? label.trim() : '');
     setActiveIdentityField(field);
   };
 
@@ -198,7 +202,7 @@ export function GroupNode({
 
   const cancelIdentityField = () => {
     setDraftKey(itemKey);
-    setDraftLabel(resolvedLabel);
+    setDraftLabel(label?.trim() ? label.trim() : '');
     setActiveIdentityField(null);
   };
 
@@ -212,6 +216,9 @@ export function GroupNode({
       cancelIdentityField();
     }
   };
+
+  const editingGroupSummaryContent =
+    activeInlineSummary === 'Description' || activeInlineSummary === 'Hint';
 
   const closeInlineSummary = () => {
     setActiveInlineSummary(null);
@@ -253,75 +260,73 @@ export function GroupNode({
             <button
               type="button"
               aria-label={`Select group ${resolvedLabel}`}
-              className="flex min-w-0 flex-1 items-start gap-4 rounded-[10px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+              className="flex min-w-0 flex-1 items-start rounded-[10px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
             >
-              <>
-                <div className="pt-1">
-                  <div className="h-14 w-1.5 rounded-full bg-ink/75" />
-                  <div className="mt-3 font-mono text-[11px] tracking-[0.14em] text-ink/68">
-                    Group
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  {activeIdentityField === 'label' ? (
-                    <input
-                      aria-label="Inline label"
-                      type="text"
-                      autoFocus
-                      value={draftLabel}
-                      className="w-full rounded-[6px] border border-accent/30 bg-surface px-2 py-1.5 text-[20px] font-semibold tracking-tight text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[22px]"
-                      onChange={(event) => setDraftLabel(event.currentTarget.value)}
-                      onClick={(event) => event.stopPropagation()}
-                      onBlur={() => commitIdentityField('label')}
-                      onKeyDown={handleIdentityKeyDown('label')}
-                    />
-                  ) : (
+              <div className="min-w-0 flex-1">
+                {activeIdentityField === 'key' ? (
+                  <input
+                    aria-label="Inline key"
+                    type="text"
+                    autoFocus
+                    value={draftKey}
+                    className="w-full rounded-[6px] border border-accent/30 bg-surface px-2 py-1.5 text-[20px] font-semibold font-mono tracking-tight text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[22px]"
+                    onChange={(event) => setDraftKey(event.currentTarget.value)}
+                    onClick={(event) => event.stopPropagation()}
+                    onBlur={() => commitIdentityField('key')}
+                    onKeyDown={handleIdentityKeyDown('key')}
+                  />
+                ) : (
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[20px] font-semibold leading-none tracking-tight md:text-[22px]">
                     <div
-                      className={`inline-flex max-w-full items-center text-[20px] font-semibold tracking-tight text-ink md:text-[22px] ${selected ? 'group cursor-text' : ''}`}
+                      role="heading"
+                      aria-level={2}
+                      className={`inline-flex max-w-full items-center font-mono text-ink ${selected ? 'group cursor-text' : ''}`}
                       onClick={(event) => {
                         if (!selected) return;
                         event.stopPropagation();
-                        openIdentityField('label');
+                        openIdentityField('key');
                       }}
                     >
-                      <span className="truncate">{resolvedLabel}</span>
-                      {selected ? <EditMark testId={`group-${itemKey}-label-edit`} /> : null}
+                      <span className="truncate">{itemKey}</span>
+                      {selected ? <EditMark testId={`group-${itemKey}-key-edit`} /> : null}
                     </div>
-                  )}
-                  <div className="mt-1 font-mono text-[12px] tracking-[0.1em] text-ink/68">
-                    {activeIdentityField === 'key' ? (
+                    <span className="font-mono text-[12px] font-normal tracking-[0.08em] text-accent">
+                      group
+                    </span>
+                  </div>
+                )}
+                {(labelForDescription || selected) && (
+                  <div className="mt-1 max-w-full">
+                    {activeIdentityField === 'label' ? (
                       <input
-                        aria-label="Inline key"
+                        aria-label="Inline label"
                         type="text"
                         autoFocus
-                        value={draftKey}
-                        className="w-full max-w-[16rem] rounded-[6px] border border-border/80 bg-surface px-2 py-1.5 text-[12px] font-mono tracking-[0.1em] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
-                        onChange={(event) => setDraftKey(event.currentTarget.value)}
+                        value={draftLabel}
+                        className="w-full rounded-[6px] border border-border/80 bg-surface px-2 py-1.5 text-[14px] font-normal leading-snug tracking-normal text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[15px]"
+                        onChange={(event) => setDraftLabel(event.currentTarget.value)}
                         onClick={(event) => event.stopPropagation()}
-                        onBlur={() => commitIdentityField('key')}
-                        onKeyDown={handleIdentityKeyDown('key')}
+                        onBlur={() => commitIdentityField('label')}
+                        onKeyDown={handleIdentityKeyDown('label')}
                       />
                     ) : (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="font-mono text-[11px] tracking-[0.12em] text-ink/60">
-                          Key
+                      <div
+                        className={`text-[14px] font-normal leading-snug tracking-normal text-ink/72 md:text-[15px] ${selected ? 'group inline-flex cursor-text flex-wrap items-center gap-x-1' : ''}`}
+                        onClick={(event) => {
+                          if (!selected) return;
+                          event.stopPropagation();
+                          openIdentityField('label');
+                        }}
+                      >
+                        <span className={labelForDescription ? '' : 'italic text-ink/50'}>
+                          {labelForDescription ?? 'Add a display label…'}
                         </span>
-                        <span
-                          className={selected ? 'group inline-flex items-center cursor-text' : undefined}
-                          onClick={(event) => {
-                            if (!selected) return;
-                            event.stopPropagation();
-                            openIdentityField('key');
-                          }}
-                        >
-                          {itemKey}
-                          {selected ? <EditMark testId={`group-${itemKey}-key-edit`} /> : null}
-                        </span>
-                      </span>
+                        {selected ? <EditMark testId={`group-${itemKey}-label-edit`} /> : null}
+                      </div>
                     )}
                   </div>
-                </div>
-              </>
+                )}
+              </div>
             </button>
           </div>
 
@@ -436,8 +441,16 @@ export function GroupNode({
                 </button>
               ))}
             </div>
-            {(((editingContent === 'both') && !activeInlineSummary) || editingBehavior) && (
+            {(((editingContent === 'both') && !activeInlineSummary) || editingBehavior || editingGroupSummaryContent) && (
               <div className="mt-4 space-y-4 border-t border-border/65 pt-4">
+                {editingGroupSummaryContent && (
+                  <section aria-label="Group content" className="space-y-3">
+                    <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">Group details</h3>
+                    <p className="mt-1 text-[11px] leading-snug text-ink/50">
+                      Edit description and hint in the summary row above.
+                    </p>
+                  </section>
+                )}
                 {editingContent === 'both' && (
                   <section aria-label="Group details" className="space-y-3">
                     <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">

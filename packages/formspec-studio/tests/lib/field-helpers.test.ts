@@ -149,8 +149,8 @@ describe('compatibleWidgets', () => {
     expect(compatibleWidgets('field', 'choice')).toEqual(['Select', 'RadioGroup', 'TextInput']);
   });
 
-  it('returns CheckboxGroup for multiChoice fields', () => {
-    expect(compatibleWidgets('field', 'multiChoice')).toEqual(['CheckboxGroup']);
+  it('returns CheckboxGroup and Select for multiChoice fields', () => {
+    expect(compatibleWidgets('field', 'multiChoice')).toEqual(['CheckboxGroup', 'Select']);
   });
 
   it('returns MoneyInput, NumberInput, TextInput for money fields', () => {

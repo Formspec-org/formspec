@@ -159,4 +159,39 @@ test.describe('Editor Authoring', () => {
     await expect(editorGroupRows(page)).toHaveCount(1);
     await expect(editorFieldRows(page)).toHaveCount(1);
   });
+
+  test('field details: Pre-fill launcher, combined source, and editable toggle', async ({ page }) => {
+    await importDefinition(page, {
+      $formspec: '1.0',
+      url: 'urn:e2e-tree-pre-fill',
+      version: '1.0.0',
+      items: [
+        { key: 'accountNumber', type: 'field', dataType: 'string', label: 'Account Number' },
+      ],
+    });
+
+    const row = page.locator('[data-testid="field-accountNumber"]');
+    await row.locator('[data-testid="field-accountNumber-select"]').click();
+
+    await row.getByTestId('field-accountNumber-add-pre-fill').click();
+
+    const preFillInput = row.getByLabel('Inline pre-fill');
+    await expect(preFillInput).toBeVisible();
+    await preFillInput.fill('@applicant.crm.account_number');
+
+    await expect(row.getByTestId('field-accountNumber-pre-populate-extras')).toBeVisible();
+
+    const editable = row.getByLabel('Inline pre-populate editable');
+    await expect(editable).toBeChecked();
+    await editable.focus();
+    await expect(editable).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(editable).not.toBeChecked();
+
+    // Orphan editor may dismiss when focus moves; edit source again from the summary row.
+    await row.getByTestId('field-accountNumber-summary-edit-Pre-fill').click();
+    const preFillSummaryInput = row.getByLabel('Inline pre-fill');
+    await preFillSummaryInput.fill('$other.source.path');
+    await expect(preFillSummaryInput).toHaveValue('$other.source.path');
+  });
 });

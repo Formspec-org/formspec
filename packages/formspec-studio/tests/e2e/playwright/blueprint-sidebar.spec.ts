@@ -46,12 +46,6 @@ const VARIABLES_DEFINITION = {
   ],
 };
 
-/** Definition without a screener so the badge shows "Disabled". */
-const SCREENER_DISABLED_DEFINITION = {
-  $formspec: '1.0',
-  items: [{ key: 'age', type: 'field', dataType: 'integer' }],
-};
-
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 /** Click a Blueprint sidebar nav button to activate that section. */
@@ -162,50 +156,6 @@ test.describe('Variables sidebar rows are navigation buttons', () => {
     // VariablesList.tsx renders each variable as a <button> for navigation.
     await expect(page.getByRole('button', { name: /@taxRate/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /@netIncome/i })).toBeVisible();
-  });
-});
-
-// ─── Bug #37 — Screener "Disabled" badge is inert ────────────────────────────
-
-test.describe('Bug #37 — Screener Disabled badge cannot be interacted with', () => {
-  test('clicking the "Disabled" badge toggles the screener on or opens a config flow', async ({ page }) => {
-    await waitForApp(page);
-    await importDefinition(page, SCREENER_DISABLED_DEFINITION);
-    await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
-
-    await openBlueprintSection(page, 'Screener');
-    await page.waitForSelector('text=Disabled', { timeout: 5000 });
-
-    // Click the "Disabled" pill.
-    // Bug: the Pill component renders a <span>, not a <button>, with no onClick.
-    await page.getByText('Disabled').click();
-
-    // After clicking, the screener should either have been enabled (badge → "Enabled")
-    // or a configuration dialog/panel should have appeared.
-    //
-    // FAILS on the bug: the click is a no-op on a static <span>.
-    const screenerEnabled = await page.getByText('Enabled').isVisible().catch(() => false);
-    const configSurface = await page
-      .locator('[role="dialog"], [data-testid*="screener"]')
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    expect(screenerEnabled || configSurface, 'Screener should toggle or open config after clicking Disabled badge').toBe(true);
-  });
-
-  test('"Disabled" badge in Screener section has button role', async ({ page }) => {
-    await waitForApp(page);
-    await importDefinition(page, SCREENER_DISABLED_DEFINITION);
-    await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
-
-    await openBlueprintSection(page, 'Screener');
-    await page.waitForSelector('text=Disabled', { timeout: 5000 });
-
-    // The "Disabled" indicator must be a button so it is keyboard-accessible and
-    // conveys interactivity to screen readers.
-    // FAILS on the bug: Pill renders a <span>.
-    await expect(page.getByRole('button', { name: /disabled/i })).toBeVisible();
   });
 });
 

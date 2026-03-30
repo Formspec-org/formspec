@@ -1,10 +1,21 @@
 /** @filedesc Compact tree row for field and display items in the definition tree editor. */
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FocusEventHandler, type KeyboardEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { Pill } from '../../components/ui/Pill';
 import { FieldIcon } from '../../components/ui/FieldIcon';
 import { DragHandle } from '../../components/ui/DragHandle';
-import { dataTypeInfo } from '@formspec-org/studio-core';
+import {
+  dataTypeInfo,
+  formatCommaSeparatedKeywords,
+  parseCommaSeparatedKeywords,
+} from '@formspec-org/studio-core';
 import type { FormItem } from '@formspec-org/types';
+import {
+  buildFieldDetailLaunchers,
+  computeOrphanFieldDetailLabel,
+  fieldDetailOrphanHeading,
+} from './item-row-field-detail';
+import { formatPrePopulateCombined, parsePrePopulateCombined } from './pre-populate-combined';
 
 interface SummaryEntry {
   label: string;
@@ -20,6 +31,20 @@ interface MissingAction {
   key: string;
   label: string;
   ariaLabel: string;
+}
+
+/** Dashed outline for “add” actions in the expanded editor (field-detail launchers, behavior, options). */
+const EDITOR_DASH_BUTTON =
+  'inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35';
+
+function PreFillSourceHint() {
+  return (
+    <p className="mt-1 text-[11px] leading-snug text-ink/50">
+      <span className="font-mono text-ink/65">$</span> = form fields; <span className="font-mono text-ink/65">@</span> = context (e.g.{' '}
+      <span className="font-mono text-ink/65">@instance(&apos;name&apos;).field</span>). Shorthand:{' '}
+      <span className="font-mono text-ink/65">@name.field</span> — leading <span className="font-mono text-ink/65">$</span> is fine too.
+    </p>
+  );
 }
 
 function EditMark({ testId }: { testId?: string }) {
@@ -99,13 +124,22 @@ export function ItemRow({
   const [editingBehavior, setEditingBehavior] = useState(false);
   const [editingOptions, setEditingOptions] = useState(false);
   const [draftKey, setDraftKey] = useState(itemKey);
-  const [draftLabel, setDraftLabel] = useState(label || itemKey);
+  const [draftLabel, setDraftLabel] = useState(() => (label?.trim() ? label.trim() : ''));
   const [activeInlineSummary, setActiveInlineSummary] = useState<string | null>(null);
+  /** Keeps literal `@` / `$` while editing; definition only stores instance + path. */
+  const [preFillSourceDraft, setPreFillSourceDraft] = useState<string | null>(null);
+  const wasEditingPreFillRef = useRef(false);
+  /**
+   * When true, Pre-fill is being added from the field-detail launcher only (lower panel).
+   * We intentionally do not set activeInlineSummary to 'Pre-fill' so the summary strip does not
+   * mount a second input with autoFocus (which steals focus on the first keystroke).
+   */
+  const [preFillLowerSession, setPreFillLowerSession] = useState(false);
 
   useEffect(() => {
     if (!activeIdentityField) {
       setDraftKey(itemKey);
-      setDraftLabel(label || itemKey);
+      setDraftLabel(label?.trim() ? label.trim() : '');
     }
   }, [itemKey, label, activeIdentityField]);
 
@@ -116,19 +150,25 @@ export function ItemRow({
       setEditingFieldConfig(false);
       setEditingBehavior(false);
       setEditingOptions(false);
+      setPreFillLowerSession(false);
       setActiveInlineSummary(null);
       return;
     }
     if (isField) {
       setEditingFieldConfig(true);
+    } else {
+      setEditingFieldConfig(false);
     }
-  }, [selected]);
+  }, [selected, isField]);
 
   const itemLabel = label || itemKey;
+  const labelForDescription =
+    isField && label?.trim() && label.trim() !== itemKey ? label.trim() : null;
   const isChoiceField = item?.type === 'field' && ['choice', 'multiChoice', 'select', 'select1'].includes(String(item.dataType ?? ''));
   const isDecimalLike = item?.type === 'field' && ['decimal', 'money'].includes(String(item.dataType ?? ''));
+  type ChoiceOptionRow = { value: string; label: string; keywords?: string[] };
   const choiceOptions = Array.isArray(item?.options ?? item?.choices)
-    ? ((item?.options ?? item?.choices) as Array<{ value: string; label: string }>)
+    ? ((item?.options ?? item?.choices) as ChoiceOptionRow[])
     : [];
 
   const moveCardFocus = (direction: 1 | -1, currentButton: HTMLButtonElement) => {
@@ -171,29 +211,36 @@ export function ItemRow({
     setEditingFieldConfig(false);
     setEditingBehavior(false);
     setEditingOptions(false);
+    setPreFillSourceDraft(null);
+    setPreFillLowerSession(false);
     setActiveInlineSummary(null);
   };
 
   const openIdentityField = (field: 'label' | 'key') => {
     resetEditors();
+    if (field === 'key') setDraftKey(itemKey);
+    if (field === 'label') setDraftLabel(label?.trim() ? label.trim() : '');
     setActiveIdentityField(field);
   };
 
-  const openEditorForSummary = (label: string) => {
+  const openEditorForSummary = (label: string, opts?: { preFillFromLauncher?: boolean }) => {
     setActiveIdentityField(null);
     if (label === 'Description' || label === 'Hint') {
+      setPreFillLowerSession(false);
       setActiveInlineSummary(label);
       setEditingContent(label === 'Description' ? 'description' : 'hint');
-      setEditingFieldConfig(false);
+      setEditingFieldConfig(isField);
       setEditingBehavior(false);
       setEditingOptions(false);
       return;
     }
     if (label === 'Options') {
+      setPreFillLowerSession(false);
       closeOtherEditors('options');
       return;
     }
     if (label === 'Calculate' || label === 'Relevant' || label === 'Readonly' || label === 'Required' || label === 'Constraint' || label === 'Message') {
+      setPreFillLowerSession(false);
       setActiveInlineSummary(label);
       setEditingContent(null);
       setEditingFieldConfig(false);
@@ -201,6 +248,19 @@ export function ItemRow({
       setEditingOptions(false);
       return;
     }
+    if (label === 'Pre-fill' && opts?.preFillFromLauncher) {
+      setPreFillLowerSession(true);
+      setActiveInlineSummary(null);
+      setEditingFieldConfig(true);
+      return;
+    }
+    if (label === 'Pre-fill') {
+      setPreFillLowerSession(false);
+      setActiveInlineSummary('Pre-fill');
+      setEditingFieldConfig(true);
+      return;
+    }
+    setPreFillLowerSession(false);
     setActiveInlineSummary(label);
     setEditingFieldConfig(true);
   };
@@ -212,6 +272,7 @@ export function ItemRow({
     setEditingBehavior(kind === 'behavior');
     setEditingOptions(kind === 'options');
     if (kind !== 'content' && kind !== 'config') {
+      setPreFillLowerSession(false);
       setActiveInlineSummary(null);
     }
   };
@@ -229,7 +290,7 @@ export function ItemRow({
 
   const cancelIdentityField = () => {
     setDraftKey(itemKey);
-    setDraftLabel(itemLabel);
+    setDraftLabel(label?.trim() ? label.trim() : '');
     setActiveIdentityField(null);
   };
 
@@ -245,11 +306,24 @@ export function ItemRow({
   };
 
   const closeInlineSummary = () => {
+    setPreFillSourceDraft(null);
+    setPreFillLowerSession(false);
     setActiveInlineSummary(null);
     setEditingContent(null);
     setEditingFieldConfig(Boolean(selected && isField));
     setEditingBehavior(false);
   };
+
+  const editingDisplayContent =
+    itemType === 'display' &&
+    (activeInlineSummary === 'Description' || activeInlineSummary === 'Hint');
+
+  const showLowerPanel =
+    (editingFieldConfig && item?.type === 'field') ||
+    editingBehavior ||
+    editingOptions ||
+    editingDisplayContent ||
+    preFillLowerSession;
 
   const summaryInputClassName = 'mt-1 w-full rounded-[6px] border border-border/70 bg-bg-default/80 px-2.5 py-2 text-[14px] leading-5 text-ink outline-none transition-colors focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25';
   const lowerEditorInputClassName = 'mt-1 w-full appearance-none border-0 border-b border-border/75 bg-transparent px-0 pb-2 pt-2 text-[14px] text-ink outline-none transition-colors placeholder:text-muted [color-scheme:light] focus:border-accent focus-visible:ring-0 dark:[color-scheme:dark]';
@@ -300,11 +374,8 @@ export function ItemRow({
       case 'Prefix': return typeof item?.prefix === 'string' ? item.prefix : '';
       case 'Suffix': return typeof item?.suffix === 'string' ? item.suffix : '';
       case 'Semantic': return typeof item?.semanticType === 'string' ? item.semanticType : '';
-      case 'Pre-fill': {
-        const instance = typeof prePopulateValue?.instance === 'string' ? prePopulateValue.instance.trim() : '';
-        const path = typeof prePopulateValue?.path === 'string' ? prePopulateValue.path.trim() : '';
-        return [instance, path].filter(Boolean).join('.');
-      }
+      case 'Pre-fill':
+        return formatPrePopulateCombined(prePopulateValue?.instance, prePopulateValue?.path);
       case 'Calculate': return binds.calculate ?? '';
       case 'Relevant': return binds.relevant ?? '';
       case 'Readonly': return binds.readonly ?? '';
@@ -342,17 +413,17 @@ export function ItemRow({
         onUpdateItem?.({ semanticType: rawValue || null });
         return;
       case 'Pre-fill': {
-        const trimmed = rawValue.trim();
-        if (!trimmed) {
+        const parsed = parsePrePopulateCombined(rawValue);
+        if (!parsed.instance.trim() && !parsed.path.trim()) {
           onUpdateItem?.({ prePopulate: null });
           return;
         }
-        const [instance, ...pathParts] = trimmed.split('.');
         onUpdateItem?.({
           prePopulate: {
             ...(prePopulateValue ?? {}),
-            instance: instance ?? '',
-            path: pathParts.join('.'),
+            instance: parsed.instance,
+            path: parsed.path,
+            editable: prePopulateValue?.editable !== false,
           },
         });
         return;
@@ -378,6 +449,77 @@ export function ItemRow({
     }
   };
 
+  const fieldDetailLaunchers = buildFieldDetailLaunchers({
+    item,
+    testIdPrefix: testId,
+    activeInlineSummary,
+    isDecimalLike,
+  });
+
+  const orphanFieldDetailLabel = computeOrphanFieldDetailLabel(activeInlineSummary, supportingText);
+  const orphanUiLabel = orphanFieldDetailLabel ?? (preFillLowerSession ? 'Pre-fill' : null);
+  const editingPreFill =
+    activeInlineSummary === 'Pre-fill' || orphanFieldDetailLabel === 'Pre-fill' || preFillLowerSession;
+
+  useEffect(() => {
+    const entered = editingPreFill && !wasEditingPreFillRef.current;
+    if (entered) {
+      setPreFillSourceDraft(formatPrePopulateCombined(prePopulateValue?.instance, prePopulateValue?.path));
+    }
+    if (!editingPreFill) {
+      setPreFillSourceDraft(null);
+    }
+    wasEditingPreFillRef.current = editingPreFill;
+  }, [editingPreFill, prePopulateValue]);
+
+  const preFillSourceInputValue =
+    preFillSourceDraft ?? formatPrePopulateCombined(prePopulateValue?.instance, prePopulateValue?.path);
+
+  /**
+   * Dismiss orphan field-detail input only when focus truly leaves the lower editor
+   * (not when switching launchers). Deferred one tick so launcher clicks can update state first.
+   */
+  const handleOrphanFieldDetailBlur: FocusEventHandler<HTMLInputElement> = (event) => {
+    const next = event.relatedTarget;
+    const shell = event.currentTarget.closest(`[data-testid="${testId}-lower-editor"]`);
+    if (next instanceof Node && shell?.contains(next)) {
+      return;
+    }
+    const blurredLabel = orphanFieldDetailLabel ?? (preFillLowerSession ? 'Pre-fill' : null);
+    if (!blurredLabel) return;
+
+    queueMicrotask(() => {
+      const tryDismiss = () => {
+        const ae = document.activeElement;
+        if (ae instanceof Node && shell?.contains(ae)) {
+          return;
+        }
+        const hadPreFillLower = Boolean(preFillLowerSession && blurredLabel === 'Pre-fill');
+        let clearedMatchingSummary = false;
+        flushSync(() => {
+          setPreFillLowerSession((s) => (blurredLabel === 'Pre-fill' ? false : s));
+          setActiveInlineSummary((current) => {
+            if (blurredLabel && current === blurredLabel) {
+              clearedMatchingSummary = true;
+              return null;
+            }
+            return current;
+          });
+        });
+        if (hadPreFillLower || clearedMatchingSummary) {
+          if (blurredLabel === 'Pre-fill') {
+            setPreFillSourceDraft(null);
+          }
+          setEditingContent(null);
+          setEditingFieldConfig(Boolean(selected && isField));
+          setEditingBehavior(false);
+        }
+      };
+      // Blur may report no relatedTarget; focus moves on the next task (e.g. checkbox in field details).
+      setTimeout(tryDismiss, 0);
+    });
+  };
+
   const content = (
     <div className="grid gap-4 md:grid-cols-[minmax(0,21rem),minmax(0,1fr)] md:items-start">
       <div className="flex min-w-0 gap-3">
@@ -395,75 +537,142 @@ export function ItemRow({
         )}
 
         <div className="min-w-0">
-          {activeIdentityField === 'label' ? (
-            <input
-              aria-label="Inline label"
-              type="text"
-              autoFocus
-              value={draftLabel}
-              className="w-full rounded-[6px] border border-accent/30 bg-surface px-2 py-1.5 text-[17px] font-semibold leading-6 text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[18px]"
-              onClick={(event) => event.stopPropagation()}
-              onChange={(event) => setDraftLabel(event.currentTarget.value)}
-              onBlur={() => commitIdentityField('label')}
-              onKeyDown={handleIdentityKeyDown('label')}
-            />
-          ) : (
+          {isField ? (
             <>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[17px] font-semibold leading-6 text-ink md:text-[18px]">
-                <span
-                  className={selected ? 'group inline-flex max-w-full items-center cursor-text text-ink' : 'inline-flex max-w-full items-center text-ink'}
-                  onClick={(event) => {
-                    if (!selected) return;
-                    event.stopPropagation();
-                    openIdentityField('label');
-                  }}
-                >
-                  <span className="truncate text-ink">{itemLabel}</span>
-                  {selected ? <EditMark testId={`${testId}-label-edit`} /> : null}
-                </span>
-                {isField && dataType && (
-                  <span className={`font-mono text-[12px] tracking-[0.08em] ${dt?.color ?? 'text-muted'}`}>
-                    {dataType}
-                  </span>
-                )}
-                {!isField && widgetHint && (
-                  <span className="font-mono text-[12px] tracking-[0.08em] text-accent/80">
-                    {widgetHint}
-                  </span>
-                )}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                {activeIdentityField === 'key' ? (
-                  <input
-                    aria-label="Inline key"
-                    type="text"
-                    autoFocus
-                    value={draftKey}
-                    className="w-full max-w-[16rem] rounded-[6px] border border-border/80 bg-surface px-2 py-1.5 font-mono text-[12px] tracking-[0.08em] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
-                    onClick={(event) => event.stopPropagation()}
-                    onChange={(event) => setDraftKey(event.currentTarget.value)}
-                    onBlur={() => commitIdentityField('key')}
-                    onKeyDown={handleIdentityKeyDown('key')}
-                  />
-                ) : (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="font-mono text-[11px] tracking-[0.12em] text-ink/60">
-                      Key
+              {activeIdentityField === 'key' ? (
+                <input
+                  aria-label="Inline key"
+                  type="text"
+                  autoFocus
+                  value={draftKey}
+                  className="w-full rounded-[6px] border border-accent/30 bg-surface px-2 py-1.5 text-[17px] font-semibold font-mono leading-6 text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[18px]"
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => setDraftKey(event.currentTarget.value)}
+                  onBlur={() => commitIdentityField('key')}
+                  onKeyDown={handleIdentityKeyDown('key')}
+                />
+              ) : (
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[17px] font-semibold leading-6 md:text-[18px]">
+                  <div
+                    role="heading"
+                    aria-level={2}
+                    className={`inline-flex max-w-full items-center font-mono text-ink ${selected ? 'group cursor-text' : ''}`}
+                    onClick={(event) => {
+                      if (!selected) return;
+                      event.stopPropagation();
+                      openIdentityField('key');
+                    }}
+                  >
+                    <span className="truncate">{itemKey}</span>
+                    {selected ? <EditMark testId={`${testId}-key-edit`} /> : null}
+                  </div>
+                  {dataType && (
+                    <span className={`font-mono text-[12px] font-normal tracking-[0.08em] ${dt?.color ?? 'text-muted'}`}>
+                      {dataType}
                     </span>
-                    <span
-                      className={`group inline-flex items-center font-mono text-[12px] tracking-[0.08em] text-ink/68 ${selected ? 'cursor-text' : ''}`}
+                  )}
+                </div>
+              )}
+              {(labelForDescription || selected) && (
+                <div className="mt-1 max-w-full">
+                  {activeIdentityField === 'label' ? (
+                    <input
+                      aria-label="Inline label"
+                      type="text"
+                      autoFocus
+                      value={draftLabel}
+                      className="w-full rounded-[6px] border border-border/80 bg-surface px-2 py-1.5 text-[14px] font-normal leading-snug tracking-normal text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[15px]"
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => setDraftLabel(event.currentTarget.value)}
+                      onBlur={() => commitIdentityField('label')}
+                      onKeyDown={handleIdentityKeyDown('label')}
+                    />
+                  ) : (
+                    <div
+                      className={`text-[14px] font-normal leading-snug tracking-normal text-ink/72 md:text-[15px] ${selected ? 'group inline-flex cursor-text flex-wrap items-center gap-x-1' : ''}`}
                       onClick={(event) => {
                         if (!selected) return;
                         event.stopPropagation();
-                        openIdentityField('key');
+                        openIdentityField('label');
                       }}
                     >
-                      {itemKey}
-                      {selected ? <EditMark testId={`${testId}-key-edit`} /> : null}
+                      <span className={labelForDescription ? '' : 'italic text-ink/50'}>
+                        {labelForDescription ?? 'Add a display label…'}
+                      </span>
+                      {selected ? <EditMark testId={`${testId}-label-edit`} /> : null}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {activeIdentityField === 'label' ? (
+                <input
+                  aria-label="Inline label"
+                  type="text"
+                  autoFocus
+                  value={draftLabel}
+                  className="w-full rounded-[6px] border border-accent/30 bg-surface px-2 py-1.5 text-[17px] font-semibold leading-6 text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[18px]"
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => setDraftLabel(event.currentTarget.value)}
+                  onBlur={() => commitIdentityField('label')}
+                  onKeyDown={handleIdentityKeyDown('label')}
+                />
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[17px] font-semibold leading-6 text-ink md:text-[18px]">
+                    <span
+                      className={selected ? 'group inline-flex max-w-full items-center cursor-text text-ink' : 'inline-flex max-w-full items-center text-ink'}
+                      onClick={(event) => {
+                        if (!selected) return;
+                        event.stopPropagation();
+                        openIdentityField('label');
+                      }}
+                    >
+                      <span className="truncate text-ink">{itemLabel}</span>
+                      {selected ? <EditMark testId={`${testId}-label-edit`} /> : null}
                     </span>
-                  </span>
-                )}
-              </div>
+                    {widgetHint && (
+                      <span className="font-mono text-[12px] tracking-[0.08em] text-accent/80">
+                        {widgetHint}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {activeIdentityField === 'key' ? (
+                      <input
+                        aria-label="Inline key"
+                        type="text"
+                        autoFocus
+                        value={draftKey}
+                        className="w-full max-w-[16rem] rounded-[6px] border border-border/80 bg-surface px-2 py-1.5 font-mono text-[12px] tracking-[0.08em] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => setDraftKey(event.currentTarget.value)}
+                        onBlur={() => commitIdentityField('key')}
+                        onKeyDown={handleIdentityKeyDown('key')}
+                      />
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="font-mono text-[11px] tracking-[0.12em] text-ink/60">
+                          Key
+                        </span>
+                        <span
+                          className={`group inline-flex items-center font-mono text-[12px] tracking-[0.08em] text-ink/68 ${selected ? 'cursor-text' : ''}`}
+                          onClick={(event) => {
+                            if (!selected) return;
+                            event.stopPropagation();
+                            openIdentityField('key');
+                          }}
+                        >
+                          {itemKey}
+                          {selected ? <EditMark testId={`${testId}-key-edit`} /> : null}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -477,23 +686,51 @@ export function ItemRow({
           <div key={entry.label} className="min-w-0 border-l border-border/65 pl-3">
             <dt className="font-mono text-[11px] tracking-[0.14em] text-ink/62">{entry.label}</dt>
             {activeInlineSummary === entry.label && entry.label !== 'Options' ? (
-              <input
-                aria-label={summaryInputLabel(entry.label)}
-                type={summaryInputType(entry.label)}
-                autoFocus
-                className={summaryInputClassName}
-                value={summaryInputValue(entry.label)}
-                onClick={(event) => event.stopPropagation()}
-                onChange={(event) => updateSummaryValue(entry.label, event.currentTarget.value)}
-                onBlur={closeInlineSummary}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') closeInlineSummary();
-                  if (event.key === 'Escape') {
-                    event.preventDefault();
-                    closeInlineSummary();
-                  }
-                }}
-              />
+              entry.label === 'Pre-fill' ? (
+                <>
+                  <PreFillSourceHint />
+                  <input
+                    aria-label={summaryInputLabel(entry.label)}
+                    type={summaryInputType(entry.label)}
+                    autoFocus
+                    className={`${summaryInputClassName} font-mono`}
+                    value={preFillSourceInputValue}
+                    placeholder="@priorYear.totalIncome"
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => {
+                      const v = event.currentTarget.value;
+                      setPreFillSourceDraft(v);
+                      updateSummaryValue(entry.label, v);
+                    }}
+                    onBlur={closeInlineSummary}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') closeInlineSummary();
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        closeInlineSummary();
+                      }
+                    }}
+                  />
+                </>
+              ) : (
+                <input
+                  aria-label={summaryInputLabel(entry.label)}
+                  type={summaryInputType(entry.label)}
+                  autoFocus
+                  className={summaryInputClassName}
+                  value={summaryInputValue(entry.label)}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => updateSummaryValue(entry.label, event.currentTarget.value)}
+                  onBlur={closeInlineSummary}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') closeInlineSummary();
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      closeInlineSummary();
+                    }
+                  }}
+                />
+              )
             ) : editingOptions && entry.label === 'Options' ? (
               <button
                 type="button"
@@ -574,129 +811,125 @@ export function ItemRow({
         </div>
       )}
 
-      {((editingFieldConfig && !activeInlineSummary) || editingBehavior || editingOptions) && (
-        <div className="mt-4 space-y-4 border-t border-border/70 pt-4">
+      {showLowerPanel && (
+        <div
+          className="mt-4 space-y-4 border-t border-border/70 pt-4"
+          onClick={(e) => e.stopPropagation()}
+        >
           {editingFieldConfig && item?.type === 'field' && (
             <section data-testid={`${testId}-lower-editor`} aria-label="Field details" className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">
-                  Field details
-                </h3>
+                <div className="min-w-0">
+                  <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">
+                    Field details
+                  </h3>
+                  <p className="mt-1 text-[11px] leading-snug text-ink/50">
+                    Add a setting to open an editor here, or edit existing values in the summary row above.
+                  </p>
+                </div>
                 {statusPills.length > 0 && (
                   <span className="font-mono text-[11px] tracking-[0.14em] text-ink/60">
                     Inline configuration
                   </span>
                 )}
               </div>
-              <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                Initial value
-                <input
-                  aria-label="Inline initial value"
-                  type="text"
-                  className={lowerEditorInputClassName}
-                  style={lowerEditorInputStyle}
-                  value={item.initialValue != null ? String(item.initialValue) : ''}
-                  placeholder="= for FEL"
-                  onChange={(event) => onUpdateItem?.({ initialValue: event.currentTarget.value || null })}
-                />
-              </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                Prefix
-                <input
-                  aria-label="Inline prefix"
-                  type="text"
-                  className={lowerEditorInputClassName}
-                  style={lowerEditorInputStyle}
-                  value={typeof item.prefix === 'string' ? item.prefix : ''}
-                  onChange={(event) => onUpdateItem?.({ prefix: event.currentTarget.value || null })}
-                />
-              </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                Suffix
-                <input
-                  aria-label="Inline suffix"
-                  type="text"
-                  className={lowerEditorInputClassName}
-                  style={lowerEditorInputStyle}
-                  value={typeof item.suffix === 'string' ? item.suffix : ''}
-                  onChange={(event) => onUpdateItem?.({ suffix: event.currentTarget.value || null })}
-                />
-              </label>
-              <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                Semantic type
-                <input
-                  aria-label="Inline semantic type"
-                  type="text"
-                  className={lowerEditorInputClassName}
-                  style={lowerEditorInputStyle}
-                  value={typeof item.semanticType === 'string' ? item.semanticType : ''}
-                  onChange={(event) => onUpdateItem?.({ semanticType: event.currentTarget.value || null })}
-                />
-              </label>
-              {isDecimalLike && (
-                <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                  Precision
-                  <input
-                    aria-label="Inline precision"
-                    type="number"
-                    className={lowerEditorInputClassName}
-                    style={lowerEditorInputStyle}
-                    value={typeof item.precision === 'number' ? item.precision : ''}
-                    onChange={(event) => onUpdateItem?.({ precision: event.currentTarget.value === '' ? null : Number(event.currentTarget.value) })}
-                  />
-                </label>
-              )}
-              {String(item.dataType ?? '') === 'money' && (
-                <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                  Currency
-                  <input
-                    aria-label="Inline currency"
-                    type="text"
-                    className={lowerEditorInputClassName}
-                    style={lowerEditorInputStyle}
-                    value={typeof item.currency === 'string' ? item.currency : ''}
-                    maxLength={3}
-                    onChange={(event) => onUpdateItem?.({ currency: event.currentTarget.value.toUpperCase().replace(/[^A-Z]/g, '') || null })}
-                  />
-                </label>
-              )}
-              </div>
+
+              {orphanUiLabel ? (
+                <div
+                  data-testid={`${testId}-orphan-field-detail`}
+                  className="rounded-[10px] border border-border/70 bg-bg-default/55 px-3 py-3"
+                >
+                  <div className="text-[12px] font-semibold tracking-[0.02em] text-ink/88">
+                    {fieldDetailOrphanHeading(orphanUiLabel)}
+                  </div>
+                  {orphanUiLabel === 'Pre-fill' ? (
+                    <>
+                      <PreFillSourceHint />
+                      <input
+                        aria-label={summaryInputLabel('Pre-fill')}
+                        type="text"
+                        autoFocus
+                        className={`${summaryInputClassName} font-mono`}
+                        value={preFillSourceInputValue}
+                        placeholder="@priorYear.totalIncome"
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => {
+                          const v = event.currentTarget.value;
+                          setPreFillSourceDraft(v);
+                          updateSummaryValue('Pre-fill', v);
+                        }}
+                        onBlur={handleOrphanFieldDetailBlur}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') closeInlineSummary();
+                          if (event.key === 'Escape') {
+                            event.preventDefault();
+                            closeInlineSummary();
+                          }
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <input
+                      aria-label={summaryInputLabel(orphanUiLabel)}
+                      type={summaryInputType(orphanUiLabel)}
+                      autoFocus
+                      className={summaryInputClassName}
+                      value={summaryInputValue(orphanUiLabel)}
+                      placeholder={orphanUiLabel === 'Initial' ? 'Literal value; prefix with = for FEL' : undefined}
+                      maxLength={orphanUiLabel === 'Currency' ? 3 : undefined}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => {
+                        const v = event.currentTarget.value;
+                        const raw = orphanUiLabel === 'Currency'
+                          ? v.toUpperCase().replace(/[^A-Z]/g, '')
+                          : v;
+                        updateSummaryValue(orphanUiLabel, raw);
+                      }}
+                      onBlur={handleOrphanFieldDetailBlur}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') closeInlineSummary();
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          closeInlineSummary();
+                        }
+                      }}
+                    />
+                  )}
+                </div>
+              ) : null}
+
+              {fieldDetailLaunchers.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {fieldDetailLaunchers.map((launch) => (
+                    <button
+                      key={launch.label}
+                      type="button"
+                      data-testid={launch.testId}
+                      aria-label={`Add ${launch.addLabel} to ${itemLabel}`}
+                      className={EDITOR_DASH_BUTTON}
+                      onMouseDown={(event) => {
+                        event.stopPropagation();
+                        if (orphanFieldDetailLabel || preFillLowerSession) event.preventDefault();
+                      }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openEditorForSummary(
+                          launch.label,
+                          launch.label === 'Pre-fill' ? { preFillFromLauncher: true } : undefined,
+                        );
+                      }}
+                    >
+                      + {launch.addLabel}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
               {prePopulateValue ? (
-                <div className="grid gap-x-6 gap-y-4 border-t border-border/65 pt-4 sm:grid-cols-2">
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                    Instance
-                    <input
-                      aria-label="Inline pre-populate instance"
-                      type="text"
-                      className={`${lowerEditorInputClassName} font-mono`}
-                      style={lowerEditorInputStyle}
-                      value={typeof prePopulateValue.instance === 'string' ? prePopulateValue.instance : ''}
-                      onChange={(event) => onUpdateItem?.({
-                        prePopulate: {
-                          ...prePopulateValue,
-                          instance: event.currentTarget.value,
-                        },
-                      })}
-                    />
-                  </label>
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                    Path
-                    <input
-                      aria-label="Inline pre-populate path"
-                      type="text"
-                      className={`${lowerEditorInputClassName} font-mono`}
-                      style={lowerEditorInputStyle}
-                      value={typeof prePopulateValue.path === 'string' ? prePopulateValue.path : ''}
-                      onChange={(event) => onUpdateItem?.({
-                        prePopulate: {
-                          ...prePopulateValue,
-                          path: event.currentTarget.value,
-                        },
-                      })}
-                    />
-                  </label>
+                <div
+                  data-testid={`${testId}-pre-populate-extras`}
+                  className="flex flex-wrap items-center justify-between gap-3 border-t border-border/65 pt-4"
+                >
                   <label className="flex items-center gap-2 text-[13px] font-medium text-ink">
                     <input
                       aria-label="Inline pre-populate editable"
@@ -712,41 +945,25 @@ export function ItemRow({
                     />
                     Editable by user
                   </label>
-                  <div className="flex items-center justify-end">
-                    <button
-                      type="button"
-                      aria-label={`Remove pre-populate from ${itemLabel}`}
-                      className="inline-flex items-center rounded-full border border-border/90 px-2.5 py-1 text-[12px] font-medium text-ink/75 transition-colors hover:border-error/40 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onUpdateItem?.({ prePopulate: null });
-                      }}
-                    >
-                      Remove pre-populate
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Remove pre-populate from ${itemLabel}`}
+                    className="inline-flex items-center rounded-full border border-border/90 px-2.5 py-1 text-[12px] font-medium text-ink/75 transition-colors hover:border-error/40 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onUpdateItem?.({ prePopulate: null });
+                    }}
+                  >
+                    Remove pre-populate
+                  </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  aria-label={`Add pre-populate to ${itemLabel}`}
-                  className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onUpdateItem?.({
-                      prePopulate: { instance: '', path: '', editable: true },
-                    });
-                  }}
-                >
-                  + Add pre-populate
-                </button>
-              )}
+              ) : null}
 
               {!editingBehavior && visibleMissingActions.some((action) => action.key === 'behavior') && (
                 <button
                   type="button"
                   aria-label={`Add behavior to ${itemLabel}`}
-                  className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  className={EDITOR_DASH_BUTTON}
                   onClick={(event) => {
                     event.stopPropagation();
                     closeOtherEditors('behavior');
@@ -755,6 +972,15 @@ export function ItemRow({
                   + Add behavior
                 </button>
               )}
+            </section>
+          )}
+
+          {editingDisplayContent && (
+            <section aria-label="Content" className="space-y-3">
+              <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">Content</h3>
+              <p className="mt-1 text-[11px] leading-snug text-ink/50">
+                Edit description and hint in the summary row above.
+              </p>
             </section>
           )}
 
@@ -844,58 +1070,87 @@ export function ItemRow({
                 Options
               </h3>
               {choiceOptions.map((option, index) => (
-                <div key={`${option.value}-${index}`} className="grid gap-3 sm:grid-cols-[minmax(0,1fr),minmax(0,1fr),auto] sm:items-end">
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                    Option {index + 1} value
-                    <input
-                      aria-label={`Inline option ${index + 1} value`}
-                      type="text"
-                      className={lowerEditorInputClassName}
-                      style={lowerEditorInputStyle}
-                      value={option.value}
-                      onClick={(event) => event.stopPropagation()}
-                      onChange={(event) => {
-                        const next = choiceOptions.map((entry, optionIndex) => optionIndex === index ? { ...entry, value: event.currentTarget.value } : entry);
-                        onUpdateItem?.({ options: next });
-                      }}
-                    />
-                  </label>
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
-                    Option {index + 1} label
-                    <input
-                      aria-label={`Inline option ${index + 1} label`}
-                      type="text"
-                      className={lowerEditorInputClassName}
-                      style={lowerEditorInputStyle}
-                      value={option.label}
-                      onClick={(event) => event.stopPropagation()}
-                      onChange={(event) => {
-                        const next = choiceOptions.map((entry, optionIndex) => optionIndex === index ? { ...entry, label: event.currentTarget.value } : entry);
-                        onUpdateItem?.({ options: next });
-                      }}
-                    />
-                  </label>
-                  <div className="flex items-center justify-end sm:pb-1">
-                    <button
-                      type="button"
-                      aria-label={`Remove option ${index + 1} from ${itemLabel}`}
-                      className="inline-flex items-center rounded-full border border-border/90 px-2.5 py-1 text-[12px] font-medium text-ink/75 transition-colors hover:border-error/40 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onUpdateItem?.({
-                          options: choiceOptions.filter((_, optionIndex) => optionIndex !== index),
-                        });
-                      }}
-                    >
-                      Remove
-                    </button>
+                <div key={`inline-opt-${itemPath}-${index}`} className="space-y-2">
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr),minmax(0,1fr),auto] sm:items-end">
+                    <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
+                      Option {index + 1} value
+                      <input
+                        aria-label={`Inline option ${index + 1} value`}
+                        type="text"
+                        className={lowerEditorInputClassName}
+                        style={lowerEditorInputStyle}
+                        value={option.value}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => {
+                          const next = choiceOptions.map((entry, optionIndex) =>
+                            optionIndex === index ? { ...entry, value: event.currentTarget.value } : entry,
+                          );
+                          onUpdateItem?.({ options: next });
+                        }}
+                      />
+                    </label>
+                    <label className="text-[13px] font-semibold tracking-[0.01em] text-ink">
+                      Option {index + 1} label
+                      <input
+                        aria-label={`Inline option ${index + 1} label`}
+                        type="text"
+                        className={lowerEditorInputClassName}
+                        style={lowerEditorInputStyle}
+                        value={option.label}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => {
+                          const next = choiceOptions.map((entry, optionIndex) =>
+                            optionIndex === index ? { ...entry, label: event.currentTarget.value } : entry,
+                          );
+                          onUpdateItem?.({ options: next });
+                        }}
+                      />
+                    </label>
+                    <div className="flex items-center justify-end sm:pb-1">
+                      <button
+                        type="button"
+                        aria-label={`Remove option ${index + 1} from ${itemLabel}`}
+                        className="inline-flex items-center rounded-full border border-border/90 px-2.5 py-1 text-[12px] font-medium text-ink/75 transition-colors hover:border-error/40 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onUpdateItem?.({
+                            options: choiceOptions.filter((_, optionIndex) => optionIndex !== index),
+                          });
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
+                  <label className="block text-[13px] font-semibold tracking-[0.01em] text-ink">
+                    Option {index + 1} keywords (optional)
+                    <input
+                      aria-label={`Inline option ${index + 1} search keywords`}
+                      type="text"
+                      className={lowerEditorInputClassName}
+                      style={lowerEditorInputStyle}
+                      placeholder="Comma-separated type-ahead"
+                      value={formatCommaSeparatedKeywords(option.keywords)}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => {
+                        const keywords = parseCommaSeparatedKeywords(event.currentTarget.value);
+                        const next = choiceOptions.map((entry, optionIndex) => {
+                          if (optionIndex !== index) return entry;
+                          const row: ChoiceOptionRow = { ...entry, value: entry.value, label: entry.label };
+                          if (keywords) row.keywords = keywords;
+                          else delete row.keywords;
+                          return row;
+                        });
+                        onUpdateItem?.({ options: next });
+                      }}
+                    />
+                  </label>
                 </div>
               ))}
               <button
                 type="button"
                 aria-label={`Add option to ${itemLabel}`}
-                className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                className={EDITOR_DASH_BUTTON}
                 onClick={(event) => {
                   event.stopPropagation();
                   onUpdateItem?.({ options: [...choiceOptions, { value: '', label: '' }] });

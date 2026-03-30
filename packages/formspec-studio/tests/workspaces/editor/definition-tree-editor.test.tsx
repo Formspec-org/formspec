@@ -795,6 +795,37 @@ describe('DefinitionTreeEditor', () => {
     expect(row.getByLabelText('Inline hint')).toBeInTheDocument();
   });
 
+  it('keeps the field lower panel open while editing description or hint in the summary', () => {
+    renderTree({
+      $formspec: '1.0', url: 'urn:tree-lower-panel-desc-hint', version: '1.0.0',
+      items: [
+        {
+          key: 'name',
+          type: 'field',
+          dataType: 'string',
+          label: 'Full Name',
+          description: 'Primary legal name.',
+          hint: 'Enter first and last name.',
+        },
+      ],
+    });
+
+    const row = within(screen.getByTestId('field-name'));
+    fireEvent.click(row.getByRole('button', { name: 'Select Full Name' }));
+    expect(row.getByTestId('field-name-lower-editor')).toBeInTheDocument();
+
+    fireEvent.click(row.getByText('Primary legal name.'));
+    expect(row.getByLabelText('Inline description')).toBeInTheDocument();
+    expect(row.getByTestId('field-name-lower-editor')).toBeInTheDocument();
+
+    fireEvent.blur(row.getByLabelText('Inline description'));
+    expect(row.getByTestId('field-name-lower-editor')).toBeInTheDocument();
+
+    fireEvent.click(row.getByText('Enter first and last name.'));
+    expect(row.getByLabelText('Inline hint')).toBeInTheDocument();
+    expect(row.getByTestId('field-name-lower-editor')).toBeInTheDocument();
+  });
+
   it('supports inline field config editing for selected field rows', () => {
     const definition = {
       $formspec: '1.0', url: 'urn:tree-inline-config', version: '1.0.0',
@@ -804,11 +835,20 @@ describe('DefinitionTreeEditor', () => {
     };
     const { project } = renderTree(definition);
 
-    fireEvent.click(within(screen.getByTestId('field-amount')).getByRole('button', { name: 'Select Amount' }));
-    fireEvent.change(within(screen.getByTestId('field-amount')).getByLabelText('Inline initial value'), { target: { value: '25' } });
-    fireEvent.change(within(screen.getByTestId('field-amount')).getByLabelText('Inline currency'), { target: { value: 'USD' } });
-    fireEvent.change(within(screen.getByTestId('field-amount')).getByLabelText('Inline precision'), { target: { value: '2' } });
-    fireEvent.change(within(screen.getByTestId('field-amount')).getByLabelText('Inline prefix'), { target: { value: '$' } });
+    const row = within(screen.getByTestId('field-amount'));
+    fireEvent.click(row.getByRole('button', { name: 'Select Amount' }));
+    fireEvent.click(row.getByTestId('field-amount-add-initial'));
+    fireEvent.change(row.getByLabelText('Inline initial value'), { target: { value: '25' } });
+    fireEvent.blur(row.getByLabelText('Inline initial value'));
+    fireEvent.click(row.getByTestId('field-amount-add-currency'));
+    fireEvent.change(row.getByLabelText('Inline currency'), { target: { value: 'USD' } });
+    fireEvent.blur(row.getByLabelText('Inline currency'));
+    fireEvent.click(row.getByTestId('field-amount-add-precision'));
+    fireEvent.change(row.getByLabelText('Inline precision'), { target: { value: '2' } });
+    fireEvent.blur(row.getByLabelText('Inline precision'));
+    fireEvent.click(row.getByTestId('field-amount-add-prefix'));
+    fireEvent.change(row.getByLabelText('Inline prefix'), { target: { value: '$' } });
+    fireEvent.blur(row.getByLabelText('Inline prefix'));
 
     expect((project.definition.items[0] as any)?.initialValue).toBe('25');
     expect((project.definition.items[0] as any)?.currency).toBe('USD');
@@ -828,15 +868,18 @@ describe('DefinitionTreeEditor', () => {
     fireEvent.click(row.getByRole('button', { name: 'Select Amount' }));
     const lowerEditor = row.getByTestId('field-amount-lower-editor');
 
-    expect(row.getByText('Initial value').closest('label')).toHaveClass('text-ink');
-    expect(row.getByText('Initial value').closest('label')).toHaveClass('text-[13px]');
-    expect(row.getByText('Initial value').closest('label')).not.toHaveClass('font-mono');
-    expect(row.getByText('Semantic type').closest('label')).toHaveClass('text-ink');
-    expect(row.getByText('Semantic type').closest('label')).toHaveClass('text-[13px]');
-    expect(row.getByText('Semantic type').closest('label')).not.toHaveClass('font-mono');
+    const heading = lowerEditor.querySelector('h3');
+    expect(heading).toBeTruthy();
+    expect(heading).toHaveClass('text-[13px]');
+    expect(heading).toHaveClass('font-semibold');
     expect(lowerEditor).toHaveClass('space-y-3');
+    expect(row.getByTestId('field-amount-add-initial')).toHaveClass('text-accent');
+    expect(row.getByTestId('field-amount-add-semantic')).toHaveClass('text-accent');
+    fireEvent.click(row.getByTestId('field-amount-add-initial'));
     expect(row.getByLabelText('Inline initial value')).toBeInTheDocument();
-    expect(row.getByLabelText('Inline semantic type')).toBeInTheDocument();
+    fireEvent.blur(row.getByLabelText('Inline initial value'));
+    fireEvent.click(row.getByTestId('field-amount-add-semantic'));
+    expect(row.getByLabelText('Inline semantic')).toBeInTheDocument();
   });
 
   it('edits visible summary cards with single-line inline inputs', () => {
@@ -858,7 +901,7 @@ describe('DefinitionTreeEditor', () => {
     const row = within(screen.getByTestId('field-ssn'));
     fireEvent.click(row.getByRole('button', { name: 'Select SSN' }));
 
-    expect(row.getByText('Key')).toBeInTheDocument();
+    expect(row.getByRole('heading', { name: 'ssn' })).toBeInTheDocument();
     expect(row.getByTestId('field-ssn-label-edit')).toBeInTheDocument();
     expect(row.getByTestId('field-ssn-key-edit')).toBeInTheDocument();
     expect(row.getByTestId('field-ssn-summary-edit-Hint')).toBeInTheDocument();
@@ -882,7 +925,7 @@ describe('DefinitionTreeEditor', () => {
     expect((project.definition.items[0] as any)?.semanticType).toBe('us-gov:tin');
   });
 
-  it('keeps the field type token in the title band instead of the key line', () => {
+  it('keeps the field type token on the primary row with the field key', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-title-type-band', version: '1.0.0',
       items: [
@@ -891,13 +934,13 @@ describe('DefinitionTreeEditor', () => {
     });
 
     const row = within(screen.getByTestId('field-birthDate'));
-    const titleText = row.getByText('Birth Date');
+    const labelText = row.getByText('Birth Date');
     const typeToken = row.getByText('date');
     const keyText = row.getByText('birthDate');
-    const titleBand = titleText.parentElement?.parentElement;
+    const keyRow = keyText.parentElement?.parentElement;
 
-    expect(titleBand).toContainElement(typeToken);
-    expect(keyText.parentElement).not.toContainElement(typeToken);
+    expect(keyRow).toContainElement(typeToken);
+    expect(labelText.parentElement).not.toContainElement(typeToken);
   });
 
   it('supports inline behavior editing for selected rows', () => {
@@ -981,10 +1024,11 @@ describe('DefinitionTreeEditor', () => {
     const { project } = renderTree(definition);
 
     fireEvent.click(within(screen.getByTestId('field-accountNumber')).getByRole('button', { name: 'Select Account Number' }));
-    fireEvent.click(within(screen.getByTestId('field-accountNumber')).getByRole('button', { name: 'Add pre-populate to Account Number' }));
+    fireEvent.click(within(screen.getByTestId('field-accountNumber')).getByTestId('field-accountNumber-add-pre-fill'));
 
-    fireEvent.change(within(screen.getByTestId('field-accountNumber')).getByLabelText('Inline pre-populate instance'), { target: { value: 'applicant' } });
-    fireEvent.change(within(screen.getByTestId('field-accountNumber')).getByLabelText('Inline pre-populate path'), { target: { value: 'crm.account_number' } });
+    fireEvent.change(within(screen.getByTestId('field-accountNumber')).getByLabelText('Inline pre-fill'), {
+      target: { value: '@applicant.crm.account_number' },
+    });
     fireEvent.click(within(screen.getByTestId('field-accountNumber')).getByLabelText('Inline pre-populate editable'));
 
     expect((project.definition.items[0] as any)?.prePopulate).toEqual({
@@ -1038,11 +1082,14 @@ describe('DefinitionTreeEditor', () => {
 
   it('scrolls the selected group or field into view when selection changes externally', () => {
     const definition = {
-      $formspec: '1.0', url: 'urn:tree-scroll-test', version: '1.0.0',
+      $formspec: '1.0' as const,
+      url: 'urn:tree-scroll-test',
+      version: '1.0.0',
+      title: 'Tree scroll test',
       items: [{
-        key: 'contact', type: 'group', label: 'Contact',
+        key: 'contact', type: 'group' as const, label: 'Contact',
         children: [
-          { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
+          { key: 'email', type: 'field' as const, dataType: 'string' as const, label: 'Email' },
         ],
       }],
     };
@@ -1064,7 +1111,11 @@ describe('DefinitionTreeEditor', () => {
     function SelectButton({ path, type }: { path: string; type: string }) {
       const { select } = useSelection();
       return (
-        <button type="button" data-testid={`select-${path}`} onClick={() => select(path, type)}>
+        <button
+          type="button"
+          data-testid={`select-${path}`}
+          onClick={() => select(path, type, { tab: 'editor' })}
+        >
           Select
         </button>
       );

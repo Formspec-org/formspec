@@ -13,6 +13,8 @@ vi.mock('../src/workspaces/preview/formspec-base-css-url', () => ({
 await initFormspecEngine();
 await initFormspecEngineTools();
 
+window.confirm = vi.fn();
+
 afterEach(() => {
   cleanup();
 });

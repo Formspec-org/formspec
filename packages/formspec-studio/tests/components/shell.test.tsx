@@ -2,6 +2,7 @@ import { render, screen, act, fireEvent, within, waitFor } from '@testing-librar
 import { describe, it, expect, vi } from 'vitest';
 import JSZip from 'jszip';
 import { createProject } from '@formspec-org/studio-core';
+import type { FormDefinition } from '@formspec-org/types';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
 import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
@@ -17,7 +18,7 @@ const seededDefinition = {
   ],
 };
 
-function renderShell(definition?: typeof seededDefinition, width = 1440) {
+function renderShell(definition?: FormDefinition, width = 1440) {
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
   Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: width });
   const project = definition ? createProject({ seed: { definition } }) : createProject();

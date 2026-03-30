@@ -37,6 +37,7 @@ export function MappingPreview() {
           : {};
         const serialized = serializeMappedData(result.output, {
           format,
+          pretty: true,
           rootElement: targetSchema.rootElement as string,
           namespaces: targetSchema.namespaces as Record<string, string>,
           ...adapterConfig,

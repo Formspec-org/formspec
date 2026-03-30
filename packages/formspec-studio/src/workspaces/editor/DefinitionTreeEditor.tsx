@@ -343,11 +343,11 @@ export function DefinitionTreeEditor() {
   const handleAddItem = useCallback((opt: FieldTypeOption) => {
     const key = uniqueKey(opt.dataType ?? opt.itemType);
     const insertedPath = addParentPath ? `${addParentPath}.${key}` : key;
-    const insertedType = opt.itemType === 'display' ? 'display' : opt.itemType === 'group' ? 'group' : 'field';
+    const insertedType = opt.itemType === 'display' || opt.itemType === 'layout' ? 'display' : opt.itemType === 'group' ? 'group' : 'field';
 
     if (opt.itemType === 'group') {
       project.addGroup(insertedPath, opt.label);
-    } else if (opt.itemType === 'display') {
+    } else if (opt.itemType === 'display' || opt.itemType === 'layout') {
       const widgetHint = (opt.extra?.presentation as Record<string, unknown> | undefined)?.widgetHint as string | undefined;
       const kind = widgetHint ? WIDGET_HINT_TO_KIND[widgetHint] : undefined;
       project.addContent(insertedPath, opt.label, kind);
@@ -355,7 +355,7 @@ export function DefinitionTreeEditor() {
       project.addField(key, opt.label, opt.dataType ?? 'string', addParentPath ? { parentPath: addParentPath } : undefined);
     }
 
-    select(insertedPath, insertedType, { tab: EDITOR_TAB });
+    select(insertedPath, insertedType, { tab: EDITOR_TAB, focusInspector: true });
     setShowPicker(false);
     setAddParentPath(null);
   }, [addParentPath, project, select]);
