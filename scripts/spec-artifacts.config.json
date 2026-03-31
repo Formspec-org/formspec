@@ -1,4 +1,6 @@
 {
+  "title": "Spec Artifacts Configuration",
+  "description": "Declares spec-schema pairings and behavior/conformance essentials for LLM artifact generation.",
   "specs": [
     {
       "spec": "specs/theme/theme-spec.md",

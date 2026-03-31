@@ -1,6 +1,8 @@
 {
   "$formspecRegistry": "1.0",
   "$schema": "https://formspec.org/schemas/registry/v1.0/registry.json",
+  "title": "Formspec Common Extension Registry",
+  "description": "Official Formspec Project registry of common built-in extensions: data types, validators, and functions.",
   "publisher": {
     "name": "Formspec Project",
     "url": "https://formspec.org",
