@@ -287,8 +287,8 @@ export const exampleDefinition = {
       whitespace: 'remove',
     },
     { path: 'hhSize', required: 'true', constraint: '$>=1 and $<=15' },
-    { path: 'members[*].mName', required: 'true', whitespace: 'trim' },
-    { path: 'members[*].mInc', required: 'true', constraint: 'moneyAmount($)>=0' },
+    { path: 'hh.members[*].mName', required: 'true', whitespace: 'trim' },
+    { path: 'hh.members[*].mInc', required: 'true', constraint: 'moneyAmount($)>=0' },
     { path: 'annInc', required: 'true', constraint: 'moneyAmount($)>=0' },
     {
       path: 'adjInc',

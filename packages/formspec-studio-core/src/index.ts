@@ -120,6 +120,8 @@ export type { ShortcutHandlers } from './keyboard.js';
 
 // ── Editor tree helpers ────────────────────────────────────────────
 export {
+  buildAdvisories,
+  buildDefinitionAdvisoryIssues,
   buildCategorySummaries,
   buildExpressionDiagnostics,
   buildMissingPropertyActions,
@@ -128,7 +130,12 @@ export {
   summarizeExpression,
 } from './editor-tree-helpers.js';
 export type {
+  Advisory,
+  AdvisoryAction,
+  AdvisoryActionKey,
+  BuildStatusPillsOptions,
   CategorySummaries,
+  DefinitionAdvisoryIssue,
   ExpressionDiagnostic,
   MissingPropertyAction,
   RowStatusPill,

@@ -15,7 +15,10 @@ function initialValues(items: any[], prefix = ''): ValueMap {
     if (item.type === 'display') continue;
     const path = prefix ? `${prefix}.${item.key}` : item.key;
     if (item.type === 'group') {
-      if (item.children) Object.assign(map, initialValues(item.children, path));
+      if (item.children) {
+        const childPrefix = item.repeatable ? `${path}[0]` : path;
+        Object.assign(map, initialValues(item.children, childPrefix));
+      }
     } else {
       const val = sampleFieldValue(item.key, item.dataType, {
         firstOptionValue: item.options?.[0]?.value,
@@ -27,9 +30,38 @@ function initialValues(items: any[], prefix = ''): ValueMap {
   return map;
 }
 
+function addRepeatInstances(engine: ReturnType<typeof createFormEngine>, items: any[], prefix = '') {
+  for (const item of items) {
+    if (item.type === 'display') continue;
+    const path = prefix ? `${prefix}.${item.key}` : item.key;
+    if (item.type === 'group' && item.repeatable) {
+      engine.addRepeatInstance(path);
+      if (item.children) addRepeatInstances(engine, item.children, `${path}[0]`);
+    } else if (item.type === 'group' && item.children) {
+      addRepeatInstances(engine, item.children, path);
+    }
+  }
+}
+
+/**
+ * `getValidationReport()` paths use 1-based repeat indices (FEL convention via `toFelIndexedPath`).
+ * Value map keys and `setValue` use 0-based indices — remap so inline errors match editable field paths.
+ */
+function validationReportPathToDataPath(reportPath: string): string {
+  return reportPath.replace(/\[(\d+)\]/g, (_m, n) => `[${Number(n) - 1}]`);
+}
+
+/** Report paths may omit ancestor groups (e.g. `members[0].mName` vs value key `hh.members[0].mName`). */
+function valueKeysMatchingReportPath(valueKeys: string[], normalizedReportPath: string): string[] {
+  return valueKeys.filter(
+    (vk) => vk === normalizedReportPath || vk.endsWith(`.${normalizedReportPath}`),
+  );
+}
+
 function runValidation(definition: any, values: ValueMap): { map: ValidationMap; results: VResult[] } {
   try {
     const engine = createFormEngine({ ...definition });
+    addRepeatInstances(engine, definition.items ?? []);
     for (const [path, raw] of Object.entries(values)) {
       let parsed: unknown = raw;
       if (raw === 'true') parsed = true;
@@ -40,9 +72,22 @@ function runValidation(definition: any, values: ValueMap): { map: ValidationMap;
     const report = engine.getValidationReport();
     const map: ValidationMap = {};
     const results: VResult[] = [];
+    const valueKeys = Object.keys(values);
     for (const r of report.results ?? []) {
-      const v: VResult = { path: r.path, severity: r.severity, message: r.message, constraintKind: r.constraintKind, code: r.code };
-      (map[r.path] ??= []).push(v);
+      const normalized = validationReportPathToDataPath(r.path);
+      const keysForMap = valueKeysMatchingReportPath(valueKeys, normalized);
+      const storeUnder = keysForMap.length > 0 ? keysForMap : [normalized];
+      const primaryPath = keysForMap[0] ?? normalized;
+      const v: VResult = {
+        path: primaryPath,
+        severity: r.severity,
+        message: r.message,
+        constraintKind: r.constraintKind,
+        code: r.code,
+      };
+      for (const path of storeUnder) {
+        (map[path] ??= []).push(v);
+      }
       results.push(v);
     }
     return { map, results };
@@ -96,15 +141,24 @@ interface DataNodeProps {
   values: ValueMap;
   validations: ValidationMap;
   onValueChange: (path: string, value: string) => void;
+  readonlyBindPaths: Set<string>;
 }
 
-function DataNode({ item, path, isSelected, onSelect, isLast, values, validations, onValueChange }: DataNodeProps) {
+function isFieldReadonly(fullPath: string, bindPaths: Set<string>): boolean {
+  for (const bp of bindPaths) {
+    if (fullPath === bp || fullPath.endsWith(`.${bp}`)) return true;
+  }
+  return false;
+}
+
+function DataNode({ item, path, isSelected, onSelect, isLast, values, validations, onValueChange, readonlyBindPaths }: DataNodeProps) {
   const isGroup = item.type === 'group';
   if (item.type === 'display') return null;
 
   const fieldValidations = validations[path];
   const hasError = fieldValidations?.some((v) => v.severity === 'error');
   const tag = typeTag(item);
+  const isReadonly = isFieldReadonly(path, readonlyBindPaths);
 
   return (
     <div className="font-mono text-[11px] leading-[1.7]">
@@ -116,6 +170,16 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
         <span className="text-muted shrink-0">:</span>
         {isGroup ? (
           <span className="text-muted shrink-0">{item.repeatable ? ' [{' : ' {'}</span>
+        ) : isReadonly ? (
+          <>
+            <input
+              type="text"
+              disabled
+              value={values[path] ?? ''}
+              className={`min-w-0 flex-1 bg-transparent text-blue-600 dark:text-blue-400 outline-none opacity-60 px-0.5 ${hasError ? 'text-error' : ''}`}
+            />
+            <Comma show={!isLast} />
+          </>
         ) : (
           <>
             <input
@@ -128,7 +192,10 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
             <Comma show={!isLast} />
           </>
         )}
-        <span className="ml-auto shrink-0 text-[9px] font-bold tracking-tight text-muted/50 uppercase">{tag}</span>
+        <span className="ml-auto inline-flex items-center gap-1.5 shrink-0">
+          <span className="inline-flex items-center px-1.5 rounded bg-subtle text-[9px] font-bold uppercase tracking-tight text-muted/80 border border-border/50">{tag}</span>
+          {item.required && <span className="text-[9px] font-bold text-error/70 uppercase tracking-tighter">*req</span>}
+        </span>
       </div>
 
       {fieldValidations?.map((v, i) => (
@@ -140,19 +207,23 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
       {isGroup && item.children && (
         <>
           <div className="ml-3 pl-2 border-l border-border/40 space-y-0">
-            {item.children.filter((c: any) => c.type !== 'display').map((child: any, i: number, arr: any[]) => (
-              <DataNode
-                key={child.key}
-                item={child}
-                path={`${path}.${child.key}`}
-                isSelected={false}
-                onSelect={onSelect}
-                isLast={i === arr.length - 1}
-                values={values}
-                validations={validations}
-                onValueChange={onValueChange}
-              />
-            ))}
+            {item.children.filter((c: any) => c.type !== 'display').map((child: any, i: number, arr: any[]) => {
+              const childPrefix = item.repeatable ? `${path}[0]` : path;
+              return (
+                <DataNode
+                  key={child.key}
+                  item={child}
+                  path={`${childPrefix}.${child.key}`}
+                  isSelected={false}
+                  onSelect={onSelect}
+                  isLast={i === arr.length - 1}
+                  values={values}
+                  validations={validations}
+                  onValueChange={onValueChange}
+                  readonlyBindPaths={readonlyBindPaths}
+                />
+              );
+            })}
           </div>
           <div className="px-1">
             <span className="text-muted">{item.repeatable ? '}]' : '}'}</span>
@@ -206,6 +277,16 @@ export function OutputBlueprint() {
     [definition?.items],
   );
   const [values, setValues] = useState<ValueMap>(() => initialValues(definition?.items ?? []));
+
+  const readonlyBindPaths = useMemo(() => {
+    const paths = new Set<string>();
+    for (const bind of definition?.binds ?? []) {
+      if (bind.calculate || bind.readonly === 'true') {
+        paths.add(bind.path);
+      }
+    }
+    return paths;
+  }, [definition?.binds]);
 
   const { map: validations, results: validationResults } = useMemo(
     () => runValidation(definition, values),
@@ -277,6 +358,7 @@ export function OutputBlueprint() {
                     values={values}
                     validations={validations}
                     onValueChange={onValueChange}
+                    readonlyBindPaths={readonlyBindPaths}
                   />
                 ))
               )}

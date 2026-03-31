@@ -182,8 +182,7 @@ test.describe('Editor Authoring', () => {
     const row = page.locator('[data-testid="field-accountNumber"]');
     await row.locator('[data-testid="field-accountNumber-select"]').click();
 
-    // Open the Value accordion section
-    await row.getByRole('button', { name: /Expand Value/i }).click();
+    await row.getByTestId('field-accountNumber-category-Value').click();
 
     // Click "Add Calculation / Pre-population" menu and select Pre-populate
     await row.getByRole('button', { name: /Add Calculation/i }).click();

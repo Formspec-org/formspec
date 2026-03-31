@@ -3480,6 +3480,50 @@ fn expression_default_applied_on_relevance_transition() {
 }
 
 #[test]
+fn money_literal_default_coerces_string_amount_on_relevance_transition() {
+    let def = json!({
+        "$formspec": "1.0",
+        "url": "http://example.org/money-defaults",
+        "version": "1.0.0",
+        "title": "Money Defaults",
+        "formPresentation": { "defaultCurrency": "USD" },
+        "items": [
+            { "key": "show", "type": "field", "dataType": "boolean", "label": "Show", "initialValue": false },
+            { "key": "amount", "type": "field", "dataType": "money", "label": "Amount" },
+        ],
+        "binds": [
+            { "path": "amount", "relevant": "show == true", "default": { "amount": "0", "currency": "USD" } },
+        ],
+    });
+    let mut data = HashMap::new();
+    data.insert("show".into(), json!(false));
+    let result1 = evaluate_definition(&def, &data);
+    assert!(
+        result1.non_relevant.contains(&"amount".to_string()),
+        "amount non-relevant when show=false"
+    );
+
+    data.insert("show".into(), json!(true));
+    let result2 = evaluate_definition_with_context(
+        &def,
+        &data,
+        &EvalContext {
+            now_iso: None,
+            previous_validations: None,
+            previous_non_relevant: Some(result1.non_relevant.clone()),
+            ..EvalContext::default()
+        },
+    );
+    let amount = result2.values.get("amount").expect("amount default");
+    assert_eq!(
+        amount.get("amount"),
+        Some(&json!(0)),
+        "money bind default amount string should coerce to JSON number"
+    );
+    assert_eq!(amount.get("currency"), Some(&json!("USD")));
+}
+
+#[test]
 fn expression_default_does_not_overwrite_user_value() {
     let def = json!({
         "$formspec": "1.0", "url": "test", "version": "1.0.0", "title": "T",

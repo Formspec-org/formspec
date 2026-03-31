@@ -86,7 +86,9 @@ function renderItemTree(
     const itemBinds = bindsFor(allBinds, path);
     const summaries = buildRowSummaries(item, itemBinds);
     const categorySummaries = buildCategorySummaries(item, itemBinds);
-    const statusPills = buildStatusPills(itemBinds, item);
+    const statusPills = buildStatusPills(itemBinds, item, {
+      categorySummaries,
+    });
     const resolvedLabel = typeof item.label === 'string' && item.label.trim() ? item.label : item.key;
     const missingActions = buildMissingPropertyActions(item, itemBinds, resolvedLabel);
     const sortIndex = indexCounter.value++;
@@ -132,7 +134,6 @@ function renderItemTree(
           dataType={item.dataType}
           widgetHint={item.presentation?.widgetHint}
           statusPills={statusPills}
-          missingActions={missingActions}
           depth={depth}
           selected={ctx.isSelected(path)}
           item={item}

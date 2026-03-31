@@ -105,15 +105,11 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
       },
     });
 
-    // Select the field that has binds
     await page.click('[data-testid="field-income"]');
 
     const row = page.locator('[data-testid="field-income"]');
-    // Lower panel should appear with accordion sections
+    await row.getByTestId('field-income-category-Validation').click();
     await expect(row.locator('[data-testid="field-income-lower-panel"]')).toBeVisible();
-
-    // Open the Validation section to see required and constraint binds
-    await row.getByRole('button', { name: /Expand Validation/i }).click();
 
     // The bind cards in the lower editor should show verb-intent labels
     const lowerEditor = row.locator('[data-testid="field-income-lower-editor"]');
@@ -141,8 +137,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
     await page.click('[data-testid="field-age"]');
 
     const row = page.locator('[data-testid="field-age"]');
-    // Open the Validation accordion section which contains the AddBehaviorMenu
-    await row.getByRole('button', { name: /Expand Validation/i }).click();
+    await row.getByTestId('field-age-category-Validation').click();
 
     // The AddBehaviorMenu renders "+ Add validation rule" in the Validation section
     await row.getByRole('button', { name: /add validation rule/i }).click();

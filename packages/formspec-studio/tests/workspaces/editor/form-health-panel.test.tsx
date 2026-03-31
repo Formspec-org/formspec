@@ -17,72 +17,89 @@ function Providers({ project, children }: { project: Project; children: React.Re
 describe('FormHealthPanel', () => {
   it('renders Issues section by default', () => {
     const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
+    render(
+      <Providers project={project}>
+        <FormHealthPanel />
+      </Providers>,
+    );
     expect(screen.getByText('Issues')).toBeInTheDocument();
-  });
-
-  it('renders Response Inspector section (collapsed)', () => {
-    const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
-    expect(screen.getByRole('button', { name: /response inspector/i })).toBeInTheDocument();
-  });
-
-  it('renders Simulation section (collapsed)', () => {
-    const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
-    expect(screen.getByRole('button', { name: /simulation/i })).toBeInTheDocument();
   });
 
   it('shows "No issues found" when form is valid', () => {
     const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
+    render(
+      <Providers project={project}>
+        <FormHealthPanel />
+      </Providers>,
+    );
     expect(screen.getByText(/no issues/i)).toBeInTheDocument();
   });
 
   it('has aria-live="polite" on the issues list for screen readers', () => {
     const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
+    render(
+      <Providers project={project}>
+        <FormHealthPanel />
+      </Providers>,
+    );
     expect(screen.getByTestId('issues-list')).toHaveAttribute('aria-live', 'polite');
   });
 
-  it('expands Response Inspector when clicked', () => {
+  it('renders the Output Blueprint section', () => {
     const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
-    fireEvent.click(screen.getByRole('button', { name: /response inspector/i }));
-    expect(screen.getByTestId('response-inspector-content')).toBeVisible();
+    render(
+      <Providers project={project}>
+        <FormHealthPanel />
+      </Providers>,
+    );
+    expect(screen.getByText('Response Document')).toBeInTheDocument();
   });
 
-  it('expands Simulation when clicked', () => {
-    const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
-    fireEvent.click(screen.getByRole('button', { name: /simulation/i }));
-    expect(screen.getByTestId('simulation-content')).toBeVisible();
+  it('lists bind consistency advisories from the definition', () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:health-advisories',
+          version: '1.0.0',
+          items: [
+            { key: 'risky', type: 'field', dataType: 'string', label: 'Risky field' },
+          ],
+          binds: [{ path: 'risky', required: 'true', readonly: 'true' }],
+        },
+      },
+    });
+    render(
+      <Providers project={project}>
+        <FormHealthPanel />
+      </Providers>,
+    );
+    expect(screen.queryByText(/no issues found/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/locked with no value source/i)).toBeInTheDocument();
+    expect(screen.getByText('Risky field')).toBeInTheDocument();
   });
 
-  it('collapses Response Inspector on second click', () => {
-    const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
-    const trigger = screen.getByRole('button', { name: /response inspector/i });
-
-    // Expand
-    fireEvent.click(trigger);
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByTestId('response-inspector-content')).toBeVisible();
-
-    // Collapse
-    fireEvent.click(trigger);
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByTestId('response-inspector-content')).not.toBeVisible();
-  });
-
-  it('sets aria-expanded correctly on collapsible sections', () => {
-    const project = createProject();
-    render(<Providers project={project}><FormHealthPanel /></Providers>);
-
-    // Initially collapsed
-    const responseTrigger = screen.getByRole('button', { name: /response inspector/i });
-    const simulationTrigger = screen.getByRole('button', { name: /simulation/i });
-    expect(responseTrigger).toHaveAttribute('aria-expanded', 'false');
-    expect(simulationTrigger).toHaveAttribute('aria-expanded', 'false');
+  it('exposes issue rows that select the field in the editor', () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:health-select',
+          version: '1.0.0',
+          items: [
+            { key: 'risky', type: 'field', dataType: 'string', label: 'Risky' },
+          ],
+          binds: [{ path: 'risky', required: 'true', readonly: 'true' }],
+        },
+      },
+    });
+    render(
+      <Providers project={project}>
+        <FormHealthPanel />
+      </Providers>,
+    );
+    const row = screen.getByTestId('form-health-issue-0');
+    expect(row).toBeInTheDocument();
+    fireEvent.click(row);
   });
 });

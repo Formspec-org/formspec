@@ -70,7 +70,7 @@ describe('DefinitionTreeEditor', () => {
     expect(screen.getByText('We never share your address.')).toBeInTheDocument();
   });
 
-  it('shows empty description and hint slots in the row and moves behavior entry to the lower editor', () => {
+  it('shows empty description and hint slots and adds rules from summary categories', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-row-add-missing', version: '1.0.0',
       items: [
@@ -84,16 +84,16 @@ describe('DefinitionTreeEditor', () => {
     });
 
     const row = within(screen.getByTestId('field-email'));
-    expect(row.queryByRole('button', { name: 'Add behavior to Email' })).toBeNull();
-
     fireEvent.click(row.getByRole('button', { name: 'Select Email' }));
 
     expect(row.getByText('Description')).toBeInTheDocument();
     expect(row.getByText('Hint')).toBeInTheDocument();
     expect(row.getByText('Click to add description')).toBeInTheDocument();
     expect(row.getByText('Click to add hint')).toBeInTheDocument();
+    expect(row.getByTestId('field-email-category-Visibility')).toBeInTheDocument();
+    fireEvent.click(row.getByTestId('field-email-category-Visibility'));
     expect(row.getByRole('region', { name: 'Field details' })).toBeInTheDocument();
-    expect(row.getByRole('button', { name: 'Add behavior to Email' })).toBeInTheDocument();
+    expect(row.getByRole('button', { name: /Add visibility condition/i })).toBeInTheDocument();
   });
 
   it('hides empty description and hint rows when unselected', () => {
@@ -152,7 +152,7 @@ describe('DefinitionTreeEditor', () => {
     expect(row.getByText('Click to add hint')).toBeInTheDocument();
   });
 
-  it('shows populated description and hint slots and hides behavior entry once a field already has them', () => {
+  it('shows populated description and hint slots when the field already has validation binds', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-row-add-hidden', version: '1.0.0',
       items: [
@@ -173,7 +173,7 @@ describe('DefinitionTreeEditor', () => {
     const row = within(screen.getByTestId('field-email'));
     expect(row.getByText('Used for account updates.')).toBeInTheDocument();
     expect(row.getByText('We never share your address.')).toBeInTheDocument();
-    expect(row.queryByRole('button', { name: 'Add behavior to Email' })).toBeNull();
+    expect(row.getByText('1 rule')).toBeInTheDocument();
   });
 
   it('surfaces field config and behavior details in the row summary', () => {
@@ -224,20 +224,21 @@ describe('DefinitionTreeEditor', () => {
     expect(amountSummary.getByText('Validation')).toBeInTheDocument();
     expect(amountSummary.getByText('2 rules')).toBeInTheDocument();
     expect(amountSummary.getByText('Value')).toBeInTheDocument();
+    expect(amountSummary.getByText(/25 · locked/)).toBeInTheDocument();
     expect(amountSummary.getByText('Format')).toBeInTheDocument();
     expect(amountSummary.getByText('USD 2dp')).toBeInTheDocument();
 
-    // Status pills still show behavioral indicators
+    // Pills omit duplicate Value cues (locked); other bind cues stay as pills
     expect(amountRow.getByText('must fill')).toBeInTheDocument();
     expect(amountRow.getByText('shows if')).toBeInTheDocument();
     expect(amountRow.getByText('validates')).toBeInTheDocument();
-    expect(amountRow.getByText('locked')).toBeInTheDocument();
+    expect(amountRow.queryByTitle('readonly')).not.toBeInTheDocument();
 
     const statusSummary = within(statusRow.getByTestId('field-status-summary'));
     expect(statusSummary.getByText('Visibility')).toBeInTheDocument();
     expect(statusSummary.getByText('Value')).toBeInTheDocument();
     expect(statusSummary.getByText('formula')).toBeInTheDocument();
-    // Status pills still show
+    expect(statusRow.queryByTitle('calculate')).not.toBeInTheDocument();
     expect(statusRow.getByText('linked')).toBeInTheDocument();
   });
 
@@ -348,15 +349,14 @@ describe('DefinitionTreeEditor', () => {
     expect(group.getByRole('button', { name: 'Add behavior to Contact' })).toBeInTheDocument();
   });
 
-  it('renders display items with widgetHint badge', () => {
+  it('omits display items from the structure tree (content lives in layout workspace)', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-test', version: '1.0.0',
       items: [
         { key: 'intro', type: 'display', label: 'Welcome', presentation: { widgetHint: 'heading' } },
       ],
     });
-    expect(screen.getByTestId('display-intro')).toBeInTheDocument();
-    expect(screen.getByText('Welcome')).toBeInTheDocument();
+    expect(screen.queryByTestId('display-intro')).toBeNull();
   });
 
   it('shows the full item tree regardless of pageMode', () => {
@@ -471,7 +471,7 @@ describe('DefinitionTreeEditor', () => {
     expect(screen.getByTestId('field-unlabeled')).toBeInTheDocument();
   });
 
-  it('shows calculate and readonly pills', () => {
+  it('shows formula and locked in Value summary without duplicate pills', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-test', version: '1.0.0',
       items: [
@@ -483,10 +483,13 @@ describe('DefinitionTreeEditor', () => {
         { path: 'locked', readonly: 'true' },
       ],
     });
-    const totalStatus = within(screen.getByTestId('field-total-status'));
-    expect(totalStatus.getByText('formula')).toBeInTheDocument();
-    const lockedStatus = screen.getByTestId('field-locked-status');
-    expect(lockedStatus.querySelector('[title="readonly"]')).toBeInTheDocument();
+    const totalSummary = within(screen.getByTestId('field-total-summary'));
+    expect(totalSummary.getByText('formula')).toBeInTheDocument();
+    expect(screen.queryByTestId('field-total-status')).not.toBeInTheDocument();
+
+    const lockedSummary = within(screen.getByTestId('field-locked-summary'));
+    expect(lockedSummary.getByText('locked')).toBeInTheDocument();
+    expect(screen.queryByTestId('field-locked-status')).not.toBeInTheDocument();
   });
 
   it('shows repeatable badge on groups', () => {
@@ -816,7 +819,7 @@ describe('DefinitionTreeEditor', () => {
     expect(row.getByLabelText('Inline hint')).toBeInTheDocument();
   });
 
-  it('keeps the field lower panel open while editing description or hint in the summary', () => {
+  it('keeps the expanded category editor open while editing description or hint in the summary', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-lower-panel-desc-hint', version: '1.0.0',
       items: [
@@ -833,6 +836,7 @@ describe('DefinitionTreeEditor', () => {
 
     const row = within(screen.getByTestId('field-name'));
     fireEvent.click(row.getByRole('button', { name: 'Select Full Name' }));
+    fireEvent.click(row.getByTestId('field-name-category-Visibility'));
     expect(row.getByTestId('field-name-lower-editor')).toBeInTheDocument();
 
     fireEvent.click(row.getByText('Primary legal name.'));
@@ -858,8 +862,7 @@ describe('DefinitionTreeEditor', () => {
 
     const row = within(screen.getByTestId('field-amount'));
     fireEvent.click(row.getByRole('button', { name: 'Select Amount' }));
-    // Open "Data format" accordion section to access field-detail launchers
-    fireEvent.click(row.getByRole('button', { name: 'Expand Data format' }));
+    fireEvent.click(row.getByTestId('field-amount-category-Format'));
     // Currency, precision, prefix use field-detail launchers
     fireEvent.click(row.getByTestId('field-amount-add-currency'));
     fireEvent.change(row.getByLabelText('Inline currency'), { target: { value: 'USD' } });
@@ -886,6 +889,7 @@ describe('DefinitionTreeEditor', () => {
 
     const row = within(screen.getByTestId('field-amount'));
     fireEvent.click(row.getByRole('button', { name: 'Select Amount' }));
+    fireEvent.click(row.getByTestId('field-amount-category-Visibility'));
     const lowerEditor = row.getByTestId('field-amount-lower-editor');
 
     const heading = lowerEditor.querySelector('h3');
@@ -893,8 +897,7 @@ describe('DefinitionTreeEditor', () => {
     expect(heading).toHaveClass('text-[13px]');
     expect(heading).toHaveClass('font-semibold');
     expect(lowerEditor).toHaveClass('space-y-3');
-    // Open "Data format" accordion section to access field-detail launchers
-    fireEvent.click(row.getByRole('button', { name: 'Expand Data format' }));
+    fireEvent.click(row.getByTestId('field-amount-category-Format'));
     expect(row.getByTestId('field-amount-add-semantic')).toHaveClass('text-accent');
     expect(row.getByTestId('field-amount-add-prefix')).toHaveClass('text-accent');
     fireEvent.click(row.getByTestId('field-amount-add-semantic'));
@@ -902,6 +905,42 @@ describe('DefinitionTreeEditor', () => {
     fireEvent.blur(row.getByLabelText('Inline semantic'));
     fireEvent.click(row.getByTestId('field-amount-add-prefix'));
     expect(row.getByLabelText('Inline prefix')).toBeInTheDocument();
+  });
+
+  it('shows bind consistency advisories in the expanded category panel', () => {
+    const { project } = renderTree({
+      $formspec: '1.0', url: 'urn:tree-advisories', version: '1.0.0',
+      items: [
+        { key: 'total', type: 'field', dataType: 'decimal', label: 'Total' },
+      ],
+      binds: [
+        {
+          path: 'total',
+          required: 'true',
+          readonly: 'true',
+          calculate: '$a + $b',
+        },
+      ],
+    });
+
+    const row = within(screen.getByTestId('field-total'));
+    fireEvent.click(row.getByRole('button', { name: 'Select Total' }));
+    fireEvent.click(row.getByTestId('field-total-category-Validation'));
+    const advisoriesRegion = row.getByTestId('field-total-advisories');
+    expect(advisoriesRegion).toBeInTheDocument();
+    expect(within(advisoriesRegion).getByRole('status')).toHaveTextContent(
+      /mandatory rule is redundant/,
+    );
+    expect(
+      within(advisoriesRegion).getByRole('button', { name: 'Review formula' }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      within(advisoriesRegion).getByRole('button', { name: 'Remove mandatory rule' }),
+    );
+    const totalBind = (project.definition.binds as { path: string; required?: string }[]).find(
+      (b) => b.path === 'total',
+    );
+    expect(totalBind?.required).toBeFalsy();
   });
 
   it('edits visible content rows (Hint) with single-line inline inputs', () => {
@@ -968,8 +1007,8 @@ describe('DefinitionTreeEditor', () => {
 
     const row = within(screen.getByTestId('field-dob'));
     fireEvent.click(row.getByRole('button', { name: 'Select Date of Birth' }));
-    // Single control opens the behavior-type menu (no separate "reveal panel" click).
-    fireEvent.click(row.getByRole('button', { name: 'Add behavior to Date of Birth' }));
+    fireEvent.click(row.getByTestId('field-dob-category-Validation'));
+    fireEvent.click(row.getByRole('button', { name: /Add validation rule/i }));
     fireEvent.click(row.getByRole('button', { name: /Required/i }));
 
     // Verify required was added
@@ -1045,8 +1084,7 @@ describe('DefinitionTreeEditor', () => {
     const row = within(screen.getByTestId('field-accountNumber'));
     fireEvent.click(row.getByRole('button', { name: 'Select Account Number' }));
 
-    // Open "Value" accordion section to access the Add Calculation / Pre-population menu
-    fireEvent.click(row.getByRole('button', { name: 'Expand Value' }));
+    fireEvent.click(row.getByTestId('field-accountNumber-category-Value'));
 
     // Use AddBehaviorMenu to add pre-populate
     const addMenu = row.getByRole('button', { name: /Add Calculation/i });
@@ -1111,10 +1149,9 @@ describe('DefinitionTreeEditor', () => {
     const nameRow = screen.getByTestId('field-name');
     const selectButton = within(nameRow).getByRole('button', { name: 'Select Full Name' });
 
-    // Expand the field by clicking the select button
     fireEvent.click(selectButton);
+    fireEvent.click(within(nameRow).getByTestId('field-name-category-Visibility'));
 
-    // The lower panel should receive focus
     const lowerPanel = within(nameRow).getByTestId('field-name-lower-panel');
     expect(lowerPanel).toHaveAttribute('tabindex', '-1');
     expect(document.activeElement).toBe(lowerPanel);
@@ -1122,8 +1159,8 @@ describe('DefinitionTreeEditor', () => {
     // Click another field to collapse the first one
     const ageRow = screen.getByTestId('field-age');
     fireEvent.click(within(ageRow).getByRole('button', { name: 'Select Age' }));
+    fireEvent.click(within(ageRow).getByTestId('field-age-category-Visibility'));
 
-    // Focus should move to the age row's lower panel now
     const ageLowerPanel = within(ageRow).getByTestId('field-age-lower-panel');
     expect(document.activeElement).toBe(ageLowerPanel);
   });
@@ -1158,30 +1195,6 @@ describe('DefinitionTreeEditor', () => {
     expect(summary.getByText(/Enabled is Yes/)).toBeInTheDocument();
     expect(summary.getByText('2 rules')).toBeInTheDocument();
     expect(summary.getByText('USD 2dp')).toBeInTheDocument();
-  });
-
-  it('shows fixed category slots (Visibility, Description) for display item summary grid', () => {
-    renderTree({
-      $formspec: '1.0', url: 'urn:tree-category-grid-display', version: '1.0.0',
-      items: [
-        {
-          key: 'header',
-          type: 'display',
-          label: 'Welcome',
-          description: 'About you',
-          presentation: { widgetHint: 'heading' },
-        },
-      ],
-      binds: [
-        { path: 'header', relevant: '$page = 2' },
-      ],
-    });
-
-    const summary = within(screen.getByTestId('display-header-summary'));
-    const terms = summary.getAllByRole('term');
-    expect(terms).toHaveLength(2);
-    expect(terms[0]).toHaveTextContent('Visibility');
-    expect(terms[1]).toHaveTextContent('Description');
   });
 
   it('renders category slots as read-only indicators without inline editing', () => {

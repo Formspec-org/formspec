@@ -1,14 +1,13 @@
 /** @filedesc Field-detail launcher and orphan-editor helpers for ItemRow (parity with buildRowSummaries). */
 import type { FormItem } from '@formspec-org/types';
 
+/** Labels edited in the Format category orphan input (not Value-panel Initial / Pre-fill). */
 export const FIELD_DETAIL_SUMMARY_LABELS = new Set([
-  'Initial',
   'Prefix',
   'Suffix',
   'Semantic',
   'Precision',
   'Currency',
-  'Pre-fill',
 ]);
 
 export interface SummaryEntryLike {

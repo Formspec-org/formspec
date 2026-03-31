@@ -10,6 +10,8 @@ export interface StatusPill {
   color: 'accent' | 'logic' | 'error' | 'green' | 'amber' | 'muted';
   /** Spec-normative term for tooltip discoverability. */
   specTerm: string;
+  /** Matches `buildStatusPills` when expression diagnostics warn. */
+  warn?: boolean;
 }
 
 export interface MissingAction {

@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildAdvisories,
+  buildDefinitionAdvisoryIssues,
   buildCategorySummaries,
   buildExpressionDiagnostics,
   buildMissingPropertyActions,
@@ -9,7 +10,7 @@ import {
   buildStatusPills,
   summarizeExpression,
 } from '../src/editor-tree-helpers';
-import type { Advisory, ExpressionDiagnostic } from '../src/editor-tree-helpers';
+import type { Advisory, DefinitionAdvisoryIssue, ExpressionDiagnostic } from '../src/editor-tree-helpers';
 
 describe('editor-tree-helpers', () => {
   it('humanizes simple FEL expressions for row summaries', () => {
@@ -64,6 +65,25 @@ describe('editor-tree-helpers', () => {
       { text: 'validates', color: 'error', specTerm: 'constraint' },
       { text: 'locked', color: 'muted', specTerm: 'readonly' },
     ]);
+  });
+
+  it('buildStatusPills omits calculate/readonly pills when category Value already shows formula/locked', () => {
+    const item = { key: 'x', type: 'field' } as any;
+    const binds = { calculate: '$a', readonly: 'true' } as any;
+    const summaries = buildCategorySummaries(item, binds);
+    expect(summaries.Value).toContain('formula');
+    expect(summaries.Value).toContain('locked');
+    const pills = buildStatusPills(binds, item, { categorySummaries: summaries });
+    expect(pills.find((p) => p.specTerm === 'calculate')).toBeUndefined();
+    expect(pills.find((p) => p.specTerm === 'readonly')).toBeUndefined();
+  });
+
+  it('buildStatusPills with categorySummaries omits readonly pill when Value is only locked', () => {
+    const item = { key: 'x', type: 'field' } as any;
+    const binds = { readonly: 'true' } as any;
+    const summaries = buildCategorySummaries(item, binds);
+    expect(summaries.Value).toBe('locked');
+    expect(buildStatusPills(binds, item, { categorySummaries: summaries })).toEqual([]);
   });
 
   it('suggests missing group description and hint before behavior', () => {
@@ -224,6 +244,47 @@ describe('editor-tree-helpers', () => {
       );
       expect(result.Value).toBe('locked');
     });
+
+    it('shows formula and locked when calculate and readonly binds both exist', () => {
+      const result = buildCategorySummaries(
+        { key: 'total', type: 'field', dataType: 'decimal', label: 'Total' } as any,
+        { calculate: '$a + $b', readonly: 'true' },
+      );
+      expect(result.Value).toBe('formula \u00b7 locked');
+    });
+
+    it('appends locked when initial value and explicit readonly bind both exist', () => {
+      const result = buildCategorySummaries(
+        { key: 'code', type: 'field', dataType: 'string', label: 'Code', initialValue: 'ABC' } as any,
+        { readonly: '$admin = false' },
+      );
+      expect(result.Value).toBe('ABC \u00b7 locked');
+    });
+  });
+
+  describe('buildDefinitionAdvisoryIssues', () => {
+    it('returns issues with path and label for fields with advisories', () => {
+      const issues: DefinitionAdvisoryIssue[] = buildDefinitionAdvisoryIssues(
+        [
+          { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
+        ] as any,
+        [{ path: 'name', required: 'true', readonly: 'true' }] as any,
+      );
+      expect(issues).toHaveLength(1);
+      expect(issues[0].path).toBe('name');
+      expect(issues[0].label).toBe('Name');
+      expect(issues[0].message).toContain('locked with no value source');
+    });
+
+    it('returns empty when no field advisories', () => {
+      expect(buildDefinitionAdvisoryIssues([], [])).toEqual([]);
+      expect(
+        buildDefinitionAdvisoryIssues(
+          [{ key: 'x', type: 'field', dataType: 'string', label: 'X' }] as any,
+          [],
+        ),
+      ).toEqual([]);
+    });
   });
 
   describe('buildAdvisories', () => {
@@ -236,9 +297,9 @@ describe('editor-tree-helpers', () => {
       expect(advisories).toHaveLength(1);
       expect(advisories[0].message).toContain('locked with no value source');
       expect(advisories[0].actions).toEqual([
-        { label: 'Add formula' },
-        { label: 'Add initial value' },
-        { label: 'Add pre-fill' },
+        { key: 'add_formula', label: 'Add formula' },
+        { key: 'add_initial_value', label: 'Add initial value' },
+        { key: 'add_pre_fill', label: 'Add pre-fill' },
       ]);
     });
 
@@ -254,8 +315,8 @@ describe('editor-tree-helpers', () => {
       expect(advisories).toHaveLength(1);
       expect(advisories[0].message).toContain('replaces the starting value from pre-fill');
       expect(advisories[0].actions).toEqual([
-        { label: 'Remove pre-fill' },
-        { label: 'Remove formula' },
+        { key: 'remove_pre_populate', label: 'Remove pre-fill' },
+        { key: 'remove_formula', label: 'Remove formula' },
       ]);
     });
 
@@ -268,7 +329,8 @@ describe('editor-tree-helpers', () => {
       expect(advisories).toHaveLength(1);
       expect(advisories[0].message).toContain('mandatory rule is redundant');
       expect(advisories[0].actions).toEqual([
-        { label: 'Remove mandatory rule' },
+        { key: 'remove_required', label: 'Remove mandatory rule' },
+        { key: 'review_formula', label: 'Review formula' },
       ]);
     });
 
@@ -473,11 +535,9 @@ describe('editor-tree-helpers', () => {
         relevant: { message: 'Undefined reference: badRef', suggestions: [] },
         required: null,
       };
-      const pills = buildStatusPills(
-        binds,
-        { key: 'f', type: 'field' } as any,
+      const pills = buildStatusPills(binds, { key: 'f', type: 'field' } as any, {
         diagnostics,
-      );
+      });
       const relevantPill = pills.find(p => p.specTerm === 'relevant');
       const requiredPill = pills.find(p => p.specTerm === 'required');
       expect(relevantPill?.warn).toBe(true);

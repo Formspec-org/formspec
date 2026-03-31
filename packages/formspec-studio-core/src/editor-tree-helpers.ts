@@ -1,6 +1,6 @@
 /** @filedesc Definition-tree row summary and status derivation for the Editor workspace. */
-import type { FormItem } from '@formspec-org/types';
-import { humanizeFEL } from './authoring-helpers.js';
+import type { FormBind, FormItem } from '@formspec-org/types';
+import { humanizeFEL, bindsFor, buildDefLookup } from './authoring-helpers.js';
 
 export interface RowSummaryEntry {
   label: string;
@@ -144,7 +144,7 @@ export function buildCategorySummaries(item: FormItem, binds: Record<string, str
     ? '\u2014'
     : `${validationCount} ${validationCount === 1 ? 'rule' : 'rules'}`;
 
-  // Value: pick the most relevant source
+  // Value: primary source, plus explicit readonly when it stacks (e.g. formula · locked).
   let value = '\u2014';
   if (binds.calculate?.trim()) {
     value = 'formula';
@@ -156,6 +156,15 @@ export function buildCategorySummaries(item: FormItem, binds: Record<string, str
     value = 'locked';
   } else if (binds.default?.trim()) {
     value = summarizeExpression(binds.default);
+  }
+
+  const hasExplicitReadonly = Boolean(binds.readonly?.trim());
+  if (
+    hasExplicitReadonly &&
+    value !== '\u2014' &&
+    value !== 'locked'
+  ) {
+    value = `${value} \u00b7 locked`;
   }
 
   // Format: currency + precision
@@ -227,28 +236,57 @@ export function buildExpressionDiagnostics(
   return result;
 }
 
+export interface BuildStatusPillsOptions {
+  diagnostics?: Record<string, ExpressionDiagnostic | null>;
+  /**
+   * When provided, `calculate` / `readonly` pills are omitted if the Value category
+   * cell already conveys them (`formula`, `locked`, or stacked text like `25 · locked`).
+   */
+  categorySummaries?: CategorySummaries;
+}
+
 export function buildStatusPills(
   binds: Record<string, string>,
   item: FormItem,
-  diagnostics?: Record<string, ExpressionDiagnostic | null>,
+  options?: BuildStatusPillsOptions,
 ): RowStatusPill[] {
+  const diagnostics = options?.diagnostics;
+  const valueSummary = options?.categorySummaries?.Value ?? '';
+  const showFormulaPill = Boolean(binds.calculate) && !valueSummary.includes('formula');
+  const showLockedPill = Boolean(binds.readonly) && !valueSummary.includes('locked');
+
   const pills: RowStatusPill[] = [];
   const w = (specTerm: string): boolean | undefined =>
     diagnostics?.[specTerm] ? true : undefined;
 
   if (binds.required) pills.push({ text: 'must fill', color: 'accent', specTerm: 'required', ...(w('required') && { warn: true }) });
   if (binds.relevant) pills.push({ text: 'shows if', color: 'logic', specTerm: 'relevant', ...(w('relevant') && { warn: true }) });
-  if (binds.calculate) pills.push({ text: 'formula', color: 'green', specTerm: 'calculate', ...(w('calculate') && { warn: true }) });
+  if (showFormulaPill) pills.push({ text: 'formula', color: 'green', specTerm: 'calculate', ...(w('calculate') && { warn: true }) });
   if (binds.default) pills.push({ text: 'resets to', color: 'green', specTerm: 'default', ...(w('default') && { warn: true }) });
   if (item.prePopulate) pills.push({ text: 'linked', color: 'amber', specTerm: 'prePopulate' });
   if (binds.constraint) pills.push({ text: 'validates', color: 'error', specTerm: 'constraint', ...(w('constraint') && { warn: true }) });
-  if (binds.readonly) pills.push({ text: 'locked', color: 'muted', specTerm: 'readonly', ...(w('readonly') && { warn: true }) });
+  if (showLockedPill) pills.push({ text: 'locked', color: 'muted', specTerm: 'readonly', ...(w('readonly') && { warn: true }) });
   return pills;
+}
+
+/** Stable keys for advisory action buttons (studio UI maps these to handlers). */
+export type AdvisoryActionKey =
+  | 'remove_required'
+  | 'add_formula'
+  | 'add_initial_value'
+  | 'add_pre_fill'
+  | 'remove_pre_populate'
+  | 'remove_formula'
+  | 'review_formula';
+
+export interface AdvisoryAction {
+  key: AdvisoryActionKey;
+  label: string;
 }
 
 export interface Advisory {
   message: string;
-  actions: Array<{ label: string }>;
+  actions: AdvisoryAction[];
 }
 
 export function buildAdvisories(binds: Record<string, string>, item: FormItem): Advisory[] {
@@ -263,8 +301,12 @@ export function buildAdvisories(binds: Record<string, string>, item: FormItem): 
   // Pattern 3: required + readonly + calculate — redundant mandatory rule
   if (hasRequired && hasReadonly && hasCalculate) {
     advisories.push({
-      message: 'This field has a formula that auto-locks it. The mandatory rule is redundant.',
-      actions: [{ label: 'Remove mandatory rule' }],
+      message:
+        'This field is required and locked. The formula supplies the value, so the mandatory rule is redundant.',
+      actions: [
+        { key: 'remove_required', label: 'Remove mandatory rule' },
+        { key: 'review_formula', label: 'Review formula' },
+      ],
     });
   }
 
@@ -273,9 +315,9 @@ export function buildAdvisories(binds: Record<string, string>, item: FormItem): 
     advisories.push({
       message: 'This field must be filled but is locked with no value source. Add a formula, initial value, or pre-fill to resolve.',
       actions: [
-        { label: 'Add formula' },
-        { label: 'Add initial value' },
-        { label: 'Add pre-fill' },
+        { key: 'add_formula', label: 'Add formula' },
+        { key: 'add_initial_value', label: 'Add initial value' },
+        { key: 'add_pre_fill', label: 'Add pre-fill' },
       ],
     });
   }
@@ -285,13 +327,42 @@ export function buildAdvisories(binds: Record<string, string>, item: FormItem): 
     advisories.push({
       message: 'The formula runs immediately and replaces the starting value from pre-fill.',
       actions: [
-        { label: 'Remove pre-fill' },
-        { label: 'Remove formula' },
+        { key: 'remove_pre_populate', label: 'Remove pre-fill' },
+        { key: 'remove_formula', label: 'Remove formula' },
       ],
     });
   }
 
   return advisories;
+}
+
+/** Flat list of advisory messages for Form Health and similar surfaces. */
+export interface DefinitionAdvisoryIssue {
+  path: string;
+  label: string;
+  message: string;
+}
+
+/**
+ * Collects `buildAdvisories` results for every field in the definition (for sidebar / health UI).
+ */
+export function buildDefinitionAdvisoryIssues(
+  items: FormItem[],
+  allBinds: FormBind[] | undefined | null,
+): DefinitionAdvisoryIssue[] {
+  const lookup = buildDefLookup(items);
+  const out: DefinitionAdvisoryIssue[] = [];
+  for (const [path, entry] of lookup.entries()) {
+    const item = entry.item;
+    if (item.type !== 'field') continue;
+    const binds = bindsFor(allBinds, path);
+    const label =
+      typeof item.label === 'string' && item.label.trim() ? item.label : item.key;
+    for (const advisory of buildAdvisories(binds, item)) {
+      out.push({ path, label, message: advisory.message });
+    }
+  }
+  return out;
 }
 
 export function buildMissingPropertyActions(
