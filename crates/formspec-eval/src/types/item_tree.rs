@@ -69,12 +69,6 @@ pub struct ItemInfo {
     pub pre_populate_instance: Option<String>,
     /// Pre-populate path within the instance (e.g. "contactEmail").
     pub pre_populate_path: Option<String>,
-    /// Instance name for dynamic option resolution via `choicesFrom`.
-    pub choices_from_instance: Option<String>,
-    /// Dotted path within the instance for `choicesFrom` (optional; when absent, the instance root is used).
-    pub choices_from_path: Option<String>,
-    /// Field name within each element to extract as option value for `choicesFrom` (default: "value").
-    pub choices_from_value_field: Option<String>,
     /// Child items.
     pub children: Vec<ItemInfo>,
 }

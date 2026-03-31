@@ -141,9 +141,6 @@ mod tests {
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
-            choices_from_instance: None,
-            choices_from_path: None,
-            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -201,9 +198,6 @@ mod tests {
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
-            choices_from_instance: None,
-            choices_from_path: None,
-            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -261,9 +255,6 @@ mod tests {
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
-            choices_from_instance: None,
-            choices_from_path: None,
-            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -339,9 +330,6 @@ mod tests {
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
-            choices_from_instance: None,
-            choices_from_path: None,
-            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -405,9 +393,6 @@ mod tests {
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
-            choices_from_instance: None,
-            choices_from_path: None,
-            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -469,9 +454,6 @@ mod tests {
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
-            choices_from_instance: None,
-            choices_from_path: None,
-            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -536,9 +518,6 @@ mod tests {
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
-            choices_from_instance: None,
-            choices_from_path: None,
-            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -603,9 +582,6 @@ mod tests {
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
-            choices_from_instance: None,
-            choices_from_path: None,
-            choices_from_value_field: None,
             children: vec![],
         }];
 

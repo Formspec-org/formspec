@@ -32,36 +32,6 @@ use serde_json::Value;
 
 use crate::types::{ItemInfo, VariableDef};
 
-/// Extract the instance name from a `choicesFrom` property.
-///
-/// Supports two forms:
-/// - String: `"choicesFrom": "instanceName"` (instance name only)
-/// - Object: `"choicesFrom": { "instance": "instanceName", "path": "items", "valueField": "code" }`
-fn parse_choices_from_instance(item: &Value) -> Option<String> {
-    let cf = item.get("choicesFrom")?;
-    match cf {
-        Value::String(s) => Some(s.clone()),
-        Value::Object(obj) => obj.get("instance").and_then(|v| v.as_str()).map(String::from),
-        _ => None,
-    }
-}
-
-/// Extract the optional path within an instance for `choicesFrom`.
-fn parse_choices_from_path(item: &Value) -> Option<String> {
-    item.get("choicesFrom")
-        .and_then(|cf| cf.get("path"))
-        .and_then(|v| v.as_str())
-        .map(String::from)
-}
-
-/// Extract the optional value field name for `choicesFrom` (default: "value").
-fn parse_choices_from_value_field(item: &Value) -> Option<String> {
-    item.get("choicesFrom")
-        .and_then(|cf| cf.get("valueField"))
-        .and_then(|v| v.as_str())
-        .map(String::from)
-}
-
 pub(super) fn bool_or_string_expr(value: &Value) -> Option<String> {
     match value {
         Value::String(text) => Some(text.clone()),
@@ -331,9 +301,6 @@ fn build_item_info_from_ctx(
             .and_then(|pp| pp.get("path"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
-        choices_from_instance: parse_choices_from_instance(item),
-        choices_from_path: parse_choices_from_path(item),
-        choices_from_value_field: parse_choices_from_value_field(item),
         children,
     }
 }
