@@ -50,7 +50,7 @@ When creating a new agent, you don't guess at what Formspec concepts it should k
 
 ### Phase 1: Read the Target Agent
 
-Read the agent's prompt and extract:
+Start with `filemap.json` at the project root for codebase orientation — it maps every source file to a one-line description. Then read the agent's prompt and extract:
 - **Claimed domain**: What Formspec concepts does it mention?
 - **Claimed expertise**: What does it say it can reason about?
 - **Methodology**: How does it structure its analysis?
