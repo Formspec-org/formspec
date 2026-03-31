@@ -2,6 +2,7 @@
 import { useDefinition } from '../../state/useDefinition';
 import { ScreenerToggle } from './screener/ScreenerToggle';
 import { ScreenerQuestions } from './screener/ScreenerQuestions';
+import { ScreenerRoutes } from './screener/ScreenerRoutes';
 
 interface ScreenerItem {
   key: string;
@@ -42,14 +43,7 @@ export function ScreenerAuthoring() {
         <div className="space-y-6 mt-2">
           <ScreenerQuestions />
 
-          <div>
-            <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider mb-3">
-              Routing Rules
-            </h4>
-            <div className="py-4 border-2 border-dashed border-border/50 rounded-xl flex items-center justify-center">
-              <p className="text-[12px] text-muted/60 italic">Route editor — coming soon</p>
-            </div>
-          </div>
+          <ScreenerRoutes />
         </div>
       )}
     </div>

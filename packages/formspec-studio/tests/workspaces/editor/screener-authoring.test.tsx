@@ -176,6 +176,58 @@ describe('ScreenerAuthoring', () => {
     });
   });
 
+  describe('routes', () => {
+    const withRoutes = {
+      $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [],
+      screener: {
+        items: [{ key: 'screen_age', type: 'field', dataType: 'boolean', label: 'Are you 18+?' }],
+        routes: [
+          { condition: '$screen_age = true', target: 'urn:adult-form', label: 'Adults' },
+          { condition: 'true', target: 'urn:default', label: 'Everyone else' },
+        ],
+      },
+    };
+
+    it('shows the info bar about first-match-wins', () => {
+      renderScreener(withRoutes);
+      expect(screen.getByText(/first matching rule wins/i)).toBeInTheDocument();
+    });
+
+    it('renders route cards with labels', () => {
+      renderScreener(withRoutes);
+      expect(screen.getByText('Adults')).toBeInTheDocument();
+    });
+
+    it('renders the fallback route distinctly', () => {
+      renderScreener(withRoutes);
+      const fallback = screen.getByTestId('fallback-route');
+      expect(fallback).toBeInTheDocument();
+      expect(within(fallback).getByText(/everyone else/i)).toBeInTheDocument();
+    });
+
+    it('shows add rule button', () => {
+      renderScreener(withRoutes);
+      expect(screen.getByRole('button', { name: /add rule/i })).toBeInTheDocument();
+    });
+
+    it('adds a new route above the fallback', async () => {
+      const { project } = renderScreener(withRoutes);
+      await act(async () => {
+        screen.getByRole('button', { name: /add rule/i }).click();
+      });
+      const routes = project.state.definition.screener?.routes ?? [];
+      expect(routes.length).toBe(3);
+      // Fallback should still be last
+      expect(routes[routes.length - 1].condition).toBe('true');
+    });
+
+    it('does not show delete on fallback route', () => {
+      renderScreener(withRoutes);
+      const fallback = screen.getByTestId('fallback-route');
+      expect(within(fallback).queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+    });
+  });
+
   describe('ephemeral notice', () => {
     it('shows ephemeral data notice when screener is not active', () => {
       renderScreener();
