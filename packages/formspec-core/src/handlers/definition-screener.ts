@@ -31,6 +31,9 @@ function getEnabledScreener(state: { definition: FormDefinition }) {
   return screener;
 }
 
+const SCREENER_ITEM_ALLOWED_PROPS = new Set(['label', 'helpText', 'dataType', 'options', 'presentation']);
+const ROUTE_ALLOWED_PROPS = new Set(['condition', 'target', 'label', 'message']);
+
 export const definitionScreenerHandlers: Record<string, CommandHandler> = {
 
   'definition.setScreener': (state, payload) => {
@@ -121,6 +124,7 @@ export const definitionScreenerHandlers: Record<string, CommandHandler> = {
 
   'definition.setRouteProperty': (state, payload) => {
     const { index, property, value } = payload as { index: number; property: string; value: unknown };
+    if (!ROUTE_ALLOWED_PROPS.has(property)) throw new Error(`Cannot set route property: ${property}`);
     const screener = getEnabledScreener(state);
 
     const route = screener.routes[index];
@@ -143,9 +147,8 @@ export const definitionScreenerHandlers: Record<string, CommandHandler> = {
   },
 
   'definition.setScreenerItemProperty': (state, payload) => {
-    const ALLOWED = new Set(['label', 'helpText', 'dataType', 'options', 'presentation']);
     const { key, property, value } = payload as { key: string; property: string; value: unknown };
-    if (!ALLOWED.has(property)) throw new Error(`Cannot set screener item property: ${property}`);
+    if (!SCREENER_ITEM_ALLOWED_PROPS.has(property)) throw new Error(`Cannot set screener item property: ${property}`);
     const screener = getEnabledScreener(state);
     const item = screener.items.find(it => it.key === key);
     if (!item) throw new Error(`Screener item not found: ${key}`);

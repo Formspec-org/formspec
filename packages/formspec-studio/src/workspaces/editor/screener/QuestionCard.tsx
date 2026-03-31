@@ -1,5 +1,5 @@
 /** @filedesc Expand/collapse card for a single screening question with inline editing. */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProject } from '../../../state/useProject';
 import { FieldIcon } from '../../../components/ui/FieldIcon';
 
@@ -26,6 +26,8 @@ export function QuestionCard({ item, index, isExpanded, onToggle, isFirst, isLas
   const project = useProject();
   const [editLabel, setEditLabel] = useState(item.label ?? '');
   const [editHelpText, setEditHelpText] = useState(item.helpText ?? '');
+  useEffect(() => { setEditLabel(item.label ?? ''); }, [item.label]);
+  useEffect(() => { setEditHelpText(item.helpText ?? ''); }, [item.helpText]);
 
   const displayLabel = item.label || item.key;
   const typeBadge = TYPE_LABELS[item.dataType ?? ''] ?? item.dataType ?? 'field';

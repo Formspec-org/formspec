@@ -88,7 +88,7 @@ export function ScreenerRoutes() {
       {/* Non-fallback route cards */}
       {nonFallbackRoutes.map((route, i) => (
         <RouteCard
-          key={`route-${i}`}
+          key={`${route.condition}-${route.target}-${i}`}
           route={route}
           index={i}
           isExpanded={expandedIndex === i}

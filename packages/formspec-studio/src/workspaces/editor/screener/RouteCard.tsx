@@ -1,5 +1,5 @@
 /** @filedesc Expand/collapse card for a single screener routing rule with inline editing. */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProject } from '../../../state/useProject';
 import { InlineExpression } from '../../../components/ui/InlineExpression';
 
@@ -18,6 +18,9 @@ export function RouteCard({ route, index, isExpanded, onToggle, isFirst, isLast,
   const [editLabel, setEditLabel] = useState(route.label ?? '');
   const [editTarget, setEditTarget] = useState(route.target);
   const [editMessage, setEditMessage] = useState(route.message ?? '');
+  useEffect(() => { setEditLabel(route.label ?? ''); }, [route.label]);
+  useEffect(() => { setEditTarget(route.target); }, [route.target]);
+  useEffect(() => { setEditMessage(route.message ?? ''); }, [route.message]);
 
   const displayLabel = route.label || undefined;
 

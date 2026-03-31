@@ -1,5 +1,5 @@
 /** @filedesc Visually distinct card for the catch-all fallback routing rule. */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProject } from '../../../state/useProject';
 
 interface FallbackRouteProps {
@@ -11,6 +11,8 @@ export function FallbackRoute({ route, routeIndex }: FallbackRouteProps) {
   const project = useProject();
   const [editTarget, setEditTarget] = useState(route.target);
   const [editMessage, setEditMessage] = useState(route.message ?? '');
+  useEffect(() => { setEditTarget(route.target); }, [route.target]);
+  useEffect(() => { setEditMessage(route.message ?? ''); }, [route.message]);
 
   const displayLabel = route.label || 'Everyone else';
 
