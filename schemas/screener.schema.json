@@ -1,0 +1,482 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/screener/1.0",
+  "title": "Formspec Screener Document",
+  "description": "A standalone Formspec Screener document for respondent classification and routing. A Screener is a freestanding routing instrument — it does not bind to a target Definition. Its relationship to Definitions is expressed entirely through route targets. A Screener declares screening items, binds evaluated in an isolated scope, and an ordered evaluation pipeline with pluggable strategies (first-match, fan-out, score-threshold, or extensions). Evaluation produces a Determination Record capturing matched routes, eliminated routes, scores, inputs with answer states, and evaluation metadata. Lifecycle primitives: availability windows, result validity durations, and evaluation version binding.",
+  "type": "object",
+  "required": [
+    "$formspecScreener",
+    "url",
+    "version",
+    "title",
+    "items",
+    "evaluation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$formspecScreener": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Screener specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for screener document compatibility. Processors MUST reject screeners with an unrecognized version."
+      }
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical, stable URI identifying this screener. MUST be globally unique. The pair (url, version) uniquely identifies a specific screener revision. Does not need to be a resolvable HTTP URL; URN syntax is acceptable.",
+      "examples": [
+        "urn:example:grants-eligibility-screener",
+        "https://agency.gov/screeners/benefit-eligibility"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Stable identifier of the screener across versions."
+      }
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semantic version of this Screener Document, following semver 2.0.0. Independent of any Definition version.",
+      "examples": ["1.0.0", "2.1.0-beta.1"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Screener revision identifier. Enables auditing which screener version produced a given Determination Record."
+      }
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable name for the screener.",
+      "examples": [
+        "Federal Grants Eligibility Screener",
+        "Benefits Eligibility Navigator"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Display name shown to respondents and in authoring tools."
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Purpose description for the screener.",
+      "examples": [
+        "Determines applicant eligibility and routes to the appropriate grant form.",
+        "Evaluates household eligibility across all assistance programs."
+      ]
+    },
+    "availability": {
+      "$ref": "#/$defs/Availability",
+      "description": "Calendar window during which the screener accepts new respondents. When omitted, the screener is always available."
+    },
+    "resultValidity": {
+      "type": "string",
+      "pattern": "^P(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?:\\d+H)?(?:\\d+M)?(?:\\d+S)?)?$",
+      "description": "ISO 8601 duration declaring how long a completed Determination Record remains valid before re-screening is required. When omitted, the Determination Record has no expiration.",
+      "examples": ["P14D", "P90D", "P1Y"]
+    },
+    "evaluationBinding": {
+      "type": "string",
+      "enum": ["submission", "completion"],
+      "default": "submission",
+      "description": "Determines which version of the screener's evaluation logic governs when the screener is updated between session start and completion. 'submission': rules at session start govern (default). 'completion': rules at completion govern."
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "https://formspec.org/schemas/definition/1.0#/$defs/Item"
+      },
+      "description": "Screening items. Uses the standard Formspec Item schema (core §4.2). Screener items are NOT part of any form's instance data — they exist only for routing classification. Item keys MUST be unique within the Screener Document.",
+      "x-lm": {
+        "critical": true,
+        "intent": "The data collection elements of the screener. Same schema as Definition items but evaluated in an isolated scope."
+      }
+    },
+    "binds": {
+      "type": "array",
+      "items": {
+        "$ref": "https://formspec.org/schemas/definition/1.0#/$defs/Bind"
+      },
+      "description": "Bind declarations scoped to screener items. Uses the standard Formspec Bind schema (core §4.3). Paths reference screener item keys. These binds are evaluated in the screener's own scope — they do NOT interact with any Definition's binds."
+    },
+    "evaluation": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Phase"
+      },
+      "description": "Ordered evaluation pipeline. Phases execute in declaration order. Override routes are hoisted and evaluated before all phases.",
+      "x-lm": {
+        "critical": true,
+        "intent": "The routing logic of the screener. Each phase declares a strategy and a set of routes."
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x-"
+      },
+      "description": "Extension declarations. Uses the same extension mechanism as Definition (core §4.6)."
+    }
+  },
+  "$defs": {
+    "Availability": {
+      "type": "object",
+      "description": "Calendar window during which the screener accepts new respondents. Either or both properties may be omitted for open-ended windows.",
+      "properties": {
+        "from": {
+          "type": "string",
+          "format": "date",
+          "description": "Earliest date (inclusive) on which the screener accepts respondents. If omitted, no start constraint.",
+          "examples": ["2026-10-01"]
+        },
+        "until": {
+          "type": "string",
+          "format": "date",
+          "description": "Latest date (inclusive) on which the screener accepts respondents. If omitted, no end constraint.",
+          "examples": ["2026-12-31"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Phase": {
+      "type": "object",
+      "description": "A single stage in the evaluation pipeline. Each phase declares a strategy that determines how its routes are evaluated. Phases execute in declaration order and produce independent results aggregated into the Determination Record.",
+      "required": ["id", "strategy", "routes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+          "description": "Unique identifier for this phase within the Screener.",
+          "examples": ["eligibility", "form-selection", "program-matching"]
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable name for this phase.",
+          "examples": ["Eligibility Check", "Level of Care Determination"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of this phase's purpose."
+        },
+        "strategy": {
+          "type": "string",
+          "description": "Evaluation strategy. Normative values: 'first-match', 'fan-out', 'score-threshold'. Extension strategies MUST use the 'x-' prefix.",
+          "examples": ["first-match", "fan-out", "score-threshold", "x-constraint-satisfaction"],
+          "x-lm": {
+            "critical": true,
+            "intent": "Determines how routes in this phase are evaluated. Core conformance requires 'first-match'. Complete conformance requires all three normative strategies."
+          }
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Route"
+          },
+          "description": "Routes to evaluate using this phase's strategy."
+        },
+        "activeWhen": {
+          "$ref": "https://formspec.org/schemas/definition/1.0#/$defs/FELExpression",
+          "description": "When present, the phase is evaluated only when this expression evaluates to true. When absent, the phase always evaluates."
+        },
+        "config": {
+          "type": "object",
+          "description": "Strategy-specific configuration. Normative strategies define their own config schemas. Extension strategies define their own.",
+          "properties": {
+            "minMatches": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Fan-out: minimum routes that must match for success."
+            },
+            "maxMatches": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Fan-out: maximum matched routes to include."
+            },
+            "topN": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Score-threshold: return only the top N scoring routes."
+            },
+            "normalize": {
+              "type": "boolean",
+              "default": false,
+              "description": "Score-threshold: when true, normalize scores to 0.0-1.0 range before threshold comparison."
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "Route": {
+      "type": "object",
+      "description": "A single routing rule within an evaluation phase. Routes combine a condition or score expression with a target destination. Override routes are hoisted out of their phase and evaluated before all phases.",
+      "required": ["target"],
+      "properties": {
+        "condition": {
+          "$ref": "https://formspec.org/schemas/definition/1.0#/$defs/FELExpression",
+          "description": "Boolean FEL expression evaluated against screener item values. Required for 'first-match' and 'fan-out' strategies.",
+          "examples": [
+            "moneyAmount($award_amount) < 250000",
+            "$org_type = 'nonprofit'",
+            "true"
+          ]
+        },
+        "score": {
+          "$ref": "https://formspec.org/schemas/definition/1.0#/$defs/FELExpression",
+          "description": "Numeric FEL expression evaluated against screener item values. Required for 'score-threshold' strategy.",
+          "examples": [
+            "$locus_score",
+            "if($neutrophil_count >= 2.5, 3, 0) + if($ecog_status <= 1, 3, 0)"
+          ]
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Minimum score required for this route to match (score >= threshold). Required for 'score-threshold' strategy."
+        },
+        "target": {
+          "type": "string",
+          "description": "Route destination URI. May be a Formspec Definition reference (url|version), an external URI, or a named outcome (outcome:name).",
+          "examples": [
+            "https://grants.gov/forms/sf-425-short|1.0.0",
+            "https://agency.gov/applications-closed",
+            "outcome:ineligible",
+            "outcome:review"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Where the respondent is directed when this route matches. Three categories: Definition references, external URIs, and named outcomes."
+          }
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable route description.",
+          "examples": ["SF-425 Short Form", "Nonprofit Track"]
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable message to display to the respondent when this route matches. MAY contain {{expression}} interpolation sequences.",
+          "examples": [
+            "Your household likely qualifies for SNAP benefits.",
+            "Based on your responses, you do not meet the eligibility criteria."
+          ]
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Arbitrary key-value metadata attached to the route. Preserved in the Determination Record without interpretation by the processor.",
+          "additionalProperties": true
+        },
+        "override": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, this route is an override route. Override routes are hoisted out of their phase and evaluated before all phases."
+        },
+        "terminal": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true and the override matches, the entire evaluation pipeline halts. Ignored when 'override' is false."
+        }
+      },
+      "additionalProperties": false
+    },
+    "DeterminationRecord": {
+      "type": "object",
+      "description": "The structured output artifact produced by evaluating a Screener Document. Captures matched routes, eliminated routes, scores, inputs with answer states, and evaluation metadata.",
+      "required": [
+        "$formspecDetermination",
+        "screener",
+        "timestamp",
+        "evaluationVersion",
+        "status",
+        "overrides",
+        "phases",
+        "inputs"
+      ],
+      "properties": {
+        "$formspecDetermination": {
+          "type": "string",
+          "const": "1.0",
+          "description": "Determination Record marker. MUST be '1.0'."
+        },
+        "screener": {
+          "type": "object",
+          "description": "Reference to the screener that produced this record.",
+          "required": ["url", "version"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the evaluation completed."
+        },
+        "evaluationVersion": {
+          "type": "string",
+          "description": "The version of the Screener Document's evaluation logic that was applied."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["completed", "partial", "expired", "unavailable"],
+          "description": "'completed': all items answered and evaluation finished. 'partial': not all items answered. 'expired': result validity exceeded post-evaluation. 'unavailable': screener was outside its availability window, no evaluation performed."
+        },
+        "overrides": {
+          "type": "object",
+          "required": ["matched", "halted"],
+          "properties": {
+            "matched": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RouteResult"
+              },
+              "description": "Override routes that fired."
+            },
+            "halted": {
+              "type": "boolean",
+              "description": "true if a terminal override halted the pipeline."
+            }
+          },
+          "additionalProperties": false
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PhaseResult"
+          },
+          "description": "Per-phase evaluation results. Empty array if overrides halted the pipeline."
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/InputEntry"
+          },
+          "description": "Map of item key to { value, state } for every screener item."
+        },
+        "validity": {
+          "type": "object",
+          "properties": {
+            "validUntil": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When this Determination Record expires."
+            },
+            "resultValidity": {
+              "type": "string",
+              "description": "The original ISO 8601 duration from the Screener."
+            }
+          },
+          "additionalProperties": false
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          },
+          "description": "Extension data on the Determination Record."
+        }
+      },
+      "additionalProperties": false
+    },
+    "PhaseResult": {
+      "type": "object",
+      "description": "Evaluation result for a single phase.",
+      "required": ["id", "status", "strategy", "matched", "eliminated"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Phase identifier."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["evaluated", "skipped", "unsupported-strategy"],
+          "description": "'evaluated': phase ran normally. 'skipped': activeWhen was false. 'unsupported-strategy': processor does not support this strategy."
+        },
+        "strategy": {
+          "type": "string",
+          "description": "The strategy used."
+        },
+        "matched": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RouteResult"
+          },
+          "description": "Routes that matched."
+        },
+        "eliminated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RouteResult"
+          },
+          "description": "Routes that did not match."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Phase-level warnings (e.g., 'below-minimum' when fan-out matches fewer than config.minMatches)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "RouteResult": {
+      "type": "object",
+      "description": "A route's evaluation result in the Determination Record.",
+      "required": ["target"],
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The route's target URI."
+        },
+        "label": {
+          "type": "string",
+          "description": "The route's label."
+        },
+        "message": {
+          "type": "string",
+          "description": "The route's respondent-facing message. Preserved so consuming applications can display it without re-reading the Screener Document."
+        },
+        "score": {
+          "type": "number",
+          "description": "The computed score (for score-threshold routes)."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the route was eliminated: 'condition-false', 'below-threshold', 'max-exceeded'."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "The route's metadata.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "InputEntry": {
+      "type": "object",
+      "description": "A single screener item's value and answer state in the Determination Record.",
+      "required": ["state"],
+      "properties": {
+        "value": {
+          "description": "The item's value. May be any JSON type. null when state is 'declined' or 'not-presented'."
+        },
+        "state": {
+          "type": "string",
+          "enum": ["answered", "declined", "not-presented"],
+          "description": "'answered': respondent provided a value. 'declined': item was presented and respondent explicitly declined. 'not-presented': item was not shown (e.g., relevance was false)."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
