@@ -273,6 +273,53 @@ describe('definition.deleteRoute', () => {
   });
 });
 
+describe('definition.setScreenerItemProperty', () => {
+  it('updates a property on a screener item', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({ type: 'definition.addScreenerItem', payload: { type: 'field', key: 'age', label: 'Age' } });
+    project.dispatch({ type: 'definition.setScreenerItemProperty', payload: { key: 'age', property: 'label', value: 'Your age' } });
+    expect(project.definition.screener!.items[0].label).toBe('Your age');
+  });
+
+  it('throws for unknown key', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    expect(() => {
+      project.dispatch({ type: 'definition.setScreenerItemProperty', payload: { key: 'nope', property: 'label', value: 'x' } });
+    }).toThrow(/not found/i);
+  });
+
+  it('rejects non-whitelisted properties', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({ type: 'definition.addScreenerItem', payload: { type: 'field', key: 'age', label: 'Age' } });
+    expect(() => {
+      project.dispatch({ type: 'definition.setScreenerItemProperty', payload: { key: 'age', property: 'key', value: 'newkey' } });
+    }).toThrow(/cannot set/i);
+  });
+});
+
+describe('definition.reorderScreenerItem', () => {
+  it('swaps items by direction', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({ type: 'definition.addScreenerItem', payload: { type: 'field', key: 'a', label: 'A' } });
+    project.dispatch({ type: 'definition.addScreenerItem', payload: { type: 'field', key: 'b', label: 'B' } });
+    project.dispatch({ type: 'definition.reorderScreenerItem', payload: { index: 0, direction: 'down' } });
+    expect(project.definition.screener!.items[0].key).toBe('b');
+    expect(project.definition.screener!.items[1].key).toBe('a');
+  });
+
+  it('is a no-op at boundaries', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({ type: 'definition.addScreenerItem', payload: { type: 'field', key: 'a', label: 'A' } });
+    project.dispatch({ type: 'definition.reorderScreenerItem', payload: { index: 0, direction: 'up' } });
+    expect(project.definition.screener!.items[0].key).toBe('a');
+  });
+});
+
 describe('definition.reorderRoute', () => {
   it('swaps routes by direction', () => {
     const project = createRawProject();

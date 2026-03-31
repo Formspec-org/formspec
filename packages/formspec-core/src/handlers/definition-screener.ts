@@ -142,6 +142,26 @@ export const definitionScreenerHandlers: Record<string, CommandHandler> = {
     return { rebuildComponentTree: false };
   },
 
+  'definition.setScreenerItemProperty': (state, payload) => {
+    const ALLOWED = new Set(['label', 'helpText', 'dataType', 'options', 'presentation']);
+    const { key, property, value } = payload as { key: string; property: string; value: unknown };
+    if (!ALLOWED.has(property)) throw new Error(`Cannot set screener item property: ${property}`);
+    const screener = getEnabledScreener(state);
+    const item = screener.items.find(it => it.key === key);
+    if (!item) throw new Error(`Screener item not found: ${key}`);
+    (item as any)[property] = value;
+    return { rebuildComponentTree: false };
+  },
+
+  'definition.reorderScreenerItem': (state, payload) => {
+    const { index, direction } = payload as { index: number; direction: 'up' | 'down' };
+    const screener = getEnabledScreener(state);
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= screener.items.length) return { rebuildComponentTree: false };
+    [screener.items[index], screener.items[targetIdx]] = [screener.items[targetIdx], screener.items[index]];
+    return { rebuildComponentTree: false };
+  },
+
   'definition.reorderRoute': (state, payload) => {
     const { index, direction } = payload as { index: number; direction: 'up' | 'down' };
     const screener = getEnabledScreener(state);
