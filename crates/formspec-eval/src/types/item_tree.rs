@@ -59,12 +59,22 @@ pub struct ItemInfo {
     pub repeat_min: Option<u64>,
     /// Maximum repeat count (for repeatable groups).
     pub repeat_max: Option<u64>,
+    /// Valid option values for choice/multiChoice fields.
+    pub option_values: Vec<String>,
+    /// Accepted MIME types for attachment fields (e.g. ["image/*", "application/pdf"]).
+    pub accept_types: Vec<String>,
     /// Extension names declared on this item (only enabled ones, value=true).
     pub extensions: Vec<String>,
     /// Pre-populate instance name (e.g. "userProfile").
     pub pre_populate_instance: Option<String>,
     /// Pre-populate path within the instance (e.g. "contactEmail").
     pub pre_populate_path: Option<String>,
+    /// Instance name for dynamic option resolution via `choicesFrom`.
+    pub choices_from_instance: Option<String>,
+    /// Dotted path within the instance for `choicesFrom` (optional; when absent, the instance root is used).
+    pub choices_from_path: Option<String>,
+    /// Field name within each element to extract as option value for `choicesFrom` (default: "value").
+    pub choices_from_value_field: Option<String>,
     /// Child items.
     pub children: Vec<ItemInfo>,
 }

@@ -3,9 +3,11 @@
 
 use std::collections::HashMap;
 
+use chrono::NaiveDate;
 use fancy_regex::Regex;
 use formspec_core::registry_client::version_satisfies;
 use serde_json::Value;
+use url::Url;
 
 use fel_core::{FormspecEnvironment, evaluate, parse};
 
@@ -54,14 +56,18 @@ pub(super) fn validate_items(
             });
         }
 
-        // Type mismatch check (only for scalar values, not arrays/objects)
-        if !val.is_null()
-            && !val.is_array()
-            && !val.is_object()
-            && let Some(ref dt) = item.data_type
-        {
+        // Type mismatch check — covers all 13 spec dataTypes
+        if !val.is_null() && let Some(ref dt) = item.data_type {
             let mismatch = match dt.as_str() {
-                "string" => !val.is_string(),
+                // String-family: must be a JSON string
+                "string" | "text" => !val.is_string(),
+                "choice" => {
+                    !val.as_str().map_or(false, |s| {
+                        item.option_values.is_empty() || item.option_values.iter().any(|o| o == s)
+                    })
+                }
+
+                // Numeric: integer must be whole, decimal any number
                 "integer" => {
                     !(val.is_i64()
                         || val.is_u64()
@@ -71,7 +77,82 @@ pub(super) fn validate_items(
                         })
                 }
                 "number" | "decimal" => !val.is_number(),
+
                 "boolean" => !val.is_boolean(),
+
+                // Date: string in YYYY-MM-DD format with valid ranges
+                "date" => !val.as_str().map_or(false, is_valid_date),
+
+                // DateTime: string in ISO 8601 date-time format
+                "dateTime" => !val.as_str().map_or(false, is_valid_datetime),
+
+                // Time: string in HH:MM:SS format
+                "time" => !val.as_str().map_or(false, is_valid_time),
+
+                // URI: string with a scheme component
+                "uri" => !val.as_str().map_or(false, is_valid_uri),
+
+                // multiChoice: array where every element is a string (and in options if defined)
+                "multiChoice" => {
+                    !val.as_array().map_or(false, |arr| {
+                        arr.iter().all(|v| {
+                            v.as_str().map_or(false, |s| {
+                                item.option_values.is_empty()
+                                    || item.option_values.iter().any(|o| o == s)
+                            })
+                        })
+                    })
+                }
+
+                // money: object with amount (string or number) + currency (string, 3 uppercase letters)
+                // Spec requires string amounts in responses, but we accept numeric for Postel's Law.
+                "money" => {
+                    !val.as_object().map_or(false, |obj| {
+                        let amount_ok = obj.get("amount").map_or(false, |a| {
+                            // Accept string decimal
+                            a.as_str().map_or(false, |s| {
+                                !s.is_empty()
+                                    && s.bytes()
+                                        .all(|b| b.is_ascii_digit() || b == b'.' || b == b'-')
+                                    && s.parse::<f64>().is_ok()
+                            })
+                            // Also accept numeric (Postel's Law — inbound values may use numbers)
+                            || a.is_number()
+                        });
+                        let currency_ok = obj
+                            .get("currency")
+                            .and_then(Value::as_str)
+                            .map_or(false, |s| {
+                                s.len() == 3 && s.bytes().all(|b| b.is_ascii_uppercase())
+                            });
+                        amount_ok && currency_ok
+                    })
+                }
+
+                // attachment: object with contentType (string).
+                // url/data completeness is a submission-level check, not a type check.
+                // If the item declares accepted MIME types, contentType must match one.
+                "attachment" => {
+                    !val.as_object().map_or(false, |obj| {
+                        let ct = obj.get("contentType").and_then(Value::as_str);
+                        ct.map_or(false, |s| {
+                            if item.accept_types.is_empty() {
+                                !s.is_empty()
+                            } else {
+                                item.accept_types.iter().any(|accepted| {
+                                    // Support wildcard like "image/*"
+                                    if let Some(prefix) = accepted.strip_suffix("/*") {
+                                        s.starts_with(prefix)
+                                            && s.as_bytes().get(prefix.len()) == Some(&b'/')
+                                    } else {
+                                        s == accepted
+                                    }
+                                })
+                            }
+                        })
+                    })
+                }
+
                 _ => false,
             };
             if mismatch {
@@ -199,6 +280,35 @@ pub(super) fn validate_items(
             results,
         );
     }
+}
+
+// ── Format validators for date/time/uri types ─────────────────────
+
+/// YYYY-MM-DD — parsed and validated by chrono.
+fn is_valid_date(s: &str) -> bool {
+    // Require exactly YYYY-MM-DD format (10 chars) to reject looser chrono parses.
+    s.len() == 10 && NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok()
+}
+
+/// ISO 8601 date-time — must have T separator, valid date, valid time, optional timezone.
+fn is_valid_datetime(s: &str) -> bool {
+    // Try RFC 3339 (strict ISO 8601 profile with timezone)
+    if chrono::DateTime::parse_from_rfc3339(s).is_ok() {
+        return true;
+    }
+    // Also accept without timezone: YYYY-MM-DDThh:mm:ss
+    chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S").is_ok()
+}
+
+/// HH:MM or HH:MM:SS with valid ranges — parsed by chrono.
+fn is_valid_time(s: &str) -> bool {
+    (s.len() == 5 && chrono::NaiveTime::parse_from_str(s, "%H:%M").is_ok())
+        || (s.len() == 8 && chrono::NaiveTime::parse_from_str(s, "%H:%M:%S").is_ok())
+}
+
+/// RFC 3986 URI — parsed by the `url` crate.
+fn is_valid_uri(s: &str) -> bool {
+    !s.is_empty() && Url::parse(s).is_ok()
 }
 
 /// Check extension constraints (pattern, maxLength, min/max, status, compatibility) for a field.

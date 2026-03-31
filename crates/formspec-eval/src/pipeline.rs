@@ -4,7 +4,9 @@ use crate::nrb::apply_nrb;
 use crate::rebuild;
 use crate::recalculate::recalculate;
 use crate::revalidate::revalidate;
-use crate::runtime_seed::{apply_previous_non_relevant, seed_prepopulate_tree};
+use crate::runtime_seed::{
+    apply_previous_non_relevant, resolve_choices_from_instances, seed_prepopulate_tree,
+};
 use crate::types::{
     self, EvalContext, EvalTrigger, EvaluationResult, ExtensionConstraint, ValidationResult,
 };
@@ -113,6 +115,7 @@ pub fn evaluate_definition_full_with_instances_and_context(
 
     let mut seeded_data = flat_data;
     seed_prepopulate_tree(&items, &mut seeded_data, instances);
+    resolve_choices_from_instances(&mut items, instances);
 
     rebuild::seed_initial_values(&items, &mut seeded_data, context.now_iso.as_deref());
 

@@ -32,6 +32,36 @@ use serde_json::Value;
 
 use crate::types::{ItemInfo, VariableDef};
 
+/// Extract the instance name from a `choicesFrom` property.
+///
+/// Supports two forms:
+/// - String: `"choicesFrom": "instanceName"` (instance name only)
+/// - Object: `"choicesFrom": { "instance": "instanceName", "path": "items", "valueField": "code" }`
+fn parse_choices_from_instance(item: &Value) -> Option<String> {
+    let cf = item.get("choicesFrom")?;
+    match cf {
+        Value::String(s) => Some(s.clone()),
+        Value::Object(obj) => obj.get("instance").and_then(|v| v.as_str()).map(String::from),
+        _ => None,
+    }
+}
+
+/// Extract the optional path within an instance for `choicesFrom`.
+fn parse_choices_from_path(item: &Value) -> Option<String> {
+    item.get("choicesFrom")
+        .and_then(|cf| cf.get("path"))
+        .and_then(|v| v.as_str())
+        .map(String::from)
+}
+
+/// Extract the optional value field name for `choicesFrom` (default: "value").
+fn parse_choices_from_value_field(item: &Value) -> Option<String> {
+    item.get("choicesFrom")
+        .and_then(|cf| cf.get("valueField"))
+        .and_then(|v| v.as_str())
+        .map(String::from)
+}
+
 pub(super) fn bool_or_string_expr(value: &Value) -> Option<String> {
     match value {
         Value::String(text) => Some(text.clone()),
@@ -263,6 +293,24 @@ fn build_item_info_from_ctx(
             .unwrap_or(false),
         repeat_min: item.get("minRepeat").and_then(|v| v.as_u64()),
         repeat_max: item.get("maxRepeat").and_then(|v| v.as_u64()),
+        option_values: item
+            .get("options")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|opt| opt.get("value").and_then(Value::as_str).map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default(),
+        accept_types: item
+            .get("accept")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default(),
         extensions: item
             .get("extensions")
             .and_then(|v| v.as_object())
@@ -283,6 +331,9 @@ fn build_item_info_from_ctx(
             .and_then(|pp| pp.get("path"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
+        choices_from_instance: parse_choices_from_instance(item),
+        choices_from_path: parse_choices_from_path(item),
+        choices_from_value_field: parse_choices_from_value_field(item),
         children,
     }
 }

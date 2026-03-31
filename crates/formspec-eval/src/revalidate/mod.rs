@@ -136,9 +136,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
+            choices_from_instance: None,
+            choices_from_path: None,
+            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -191,9 +196,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
+            choices_from_instance: None,
+            choices_from_path: None,
+            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -246,9 +256,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
+            choices_from_instance: None,
+            choices_from_path: None,
+            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -319,9 +334,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
+            choices_from_instance: None,
+            choices_from_path: None,
+            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -380,9 +400,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
+            choices_from_instance: None,
+            choices_from_path: None,
+            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -439,9 +464,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
+            choices_from_instance: None,
+            choices_from_path: None,
+            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -501,9 +531,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
+            choices_from_instance: None,
+            choices_from_path: None,
+            choices_from_value_field: None,
             children: vec![],
         }];
 
@@ -563,9 +598,14 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,
+            choices_from_instance: None,
+            choices_from_path: None,
+            choices_from_value_field: None,
             children: vec![],
         }];
 
