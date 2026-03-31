@@ -99,14 +99,12 @@ export type FormItem = Item & {
 // ─── Augmented Screener type ──────────────────────────────────────────
 // The generated Screener requires routes as a non-empty tuple [Route, ...Route[]]
 // per the schema's minItems: 1 constraint. During authoring, a screener starts
-// with empty routes. The `enabled` flag is an authoring-layer soft-delete
-// not present in the schema.
+// with empty routes before the first route is added.
 
 export type FormScreener = Omit<GeneratedScreener, 'items' | 'routes'> & {
   items: FormItem[];
   routes: Route[];
   binds?: FormBind[];
-  enabled?: boolean;
 };
 
 // ─── Augmented FormDefinition type ────────────────────────────────────
