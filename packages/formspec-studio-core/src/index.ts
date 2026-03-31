@@ -101,7 +101,7 @@ export { previewForm, validateResponse } from './evaluation-helpers.js';
 // ── Mapping preview serialization ──────────────────────────────────
 export { serializeMappedData } from './mapping-serialization.js';
 export type { AdapterOptions } from './mapping-serialization.js';
-export { generateDefinitionSampleData } from './mapping-sample-data.js';
+export { generateDefinitionSampleData, sampleFieldValue } from './mapping-sample-data.js';
 export type { MappingSampleOptions } from './mapping-sample-data.js';
 
 // ── Layout context operations ──────────────────────────────────────

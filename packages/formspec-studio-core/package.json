@@ -21,7 +21,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@faker-js/faker": "^9.8.0",
     "@formspec-org/core": "*",
     "@formspec-org/engine": "*",
     "@formspec-org/layout": "*",
