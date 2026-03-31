@@ -118,6 +118,18 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
   2. Run `npm run docs:generate`.
   3. Run `npm run docs:check`.
 
+## Keeping `context.md` Current
+
+`context.md` is the project's living source of truth for features, reasoning, vision, and roadmap. It must stay current. Update it when any of the following happen:
+
+- **New spec added or existing spec materially changed** — update the relevant section (Core Architecture, Companion Documents, Key Differentiators) to reflect the new capability or changed semantics.
+- **New blog post or public content published** — if it introduces concepts, positioning, or messaging not already captured, update "How We Talk About This" or add to the appropriate section.
+- **Major feature developed** — when a feature lands that changes what Formspec *is* or *can do* (new runtime, new sidecar document type, new AI integration, new platform support), update the relevant sections. Bug fixes and internal refactors don't qualify.
+- **Audience or positioning shift** — if the target audience expands, narrows, or the competitive framing changes, update "Who It's For" and "Key Differentiators."
+- **Roadmap milestone reached** — when something moves from planned to shipped (e.g., Android runtime, UniFFI), update the status in the relevant table or section.
+
+**What NOT to update:** Implementation details, file paths, internal architecture that changes frequently — those belong in `CLAUDE.md`, not `context.md`. The context doc is about *what* and *why*, not *how*.
+
 ## Build & Development Commands
 
 ```bash
