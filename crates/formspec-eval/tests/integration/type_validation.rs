@@ -8,7 +8,7 @@
 //! - Invalid values that MUST produce TYPE_MISMATCH
 //! - Edge cases at type boundaries
 
-use formspec_eval::{evaluate_definition, evaluate_definition_full_with_instances, EvalTrigger};
+use formspec_eval::{evaluate_definition, evaluate_definition_full, EvalTrigger, ExtensionConstraint};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -273,7 +273,9 @@ fn uri_rejects_non_strings() {
 fn uri_rejects_invalid_uris() {
     assert_invalid("uri", json!("not a uri"));
     assert_invalid("uri", json!("://missing-scheme"));
-    assert_invalid("uri", json!("")); // empty string
+    // Empty string skips type validation (same as null — no value provided).
+    // Required check handles emptiness; type check handles format.
+    assert_valid("uri", json!(""));
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -577,278 +579,279 @@ fn cross_type_wrong_family_detection() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// choicesFrom — dynamic options from instance data
+// optionSet — inline options validated via optionSet resolution
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 #[test]
-fn choice_choices_from_validates_against_instance_options() {
+fn choice_with_option_set_validates_against_resolved_options() {
+    // After optionSet resolution (done upstream), options are inlined on the field.
+    // The evaluator validates against those inline options.
     let def = json!({
         "$formspec": "1.0",
-        "url": "test://choices-from",
+        "url": "test://option-set",
         "version": "1.0.0",
-        "title": "ChoicesFrom Test",
+        "title": "OptionSet Test",
         "items": [{
             "key": "country",
             "type": "field",
             "dataType": "choice",
             "label": "Country",
-            "choicesFrom": { "instance": "countryCodes" }
-        }],
-        "instances": {
-            "countryCodes": {
-                "data": [
-                    { "value": "us", "label": "United States" },
-                    { "value": "gb", "label": "United Kingdom" },
-                    { "value": "ca", "label": "Canada" }
-                ]
-            }
-        }
+            "options": [
+                { "value": "us", "label": "United States" },
+                { "value": "gb", "label": "United Kingdom" },
+                { "value": "ca", "label": "Canada" }
+            ]
+        }]
     });
 
-    let mut instances = HashMap::new();
-    instances.insert("countryCodes".to_string(), json!([
-        { "value": "us", "label": "United States" },
-        { "value": "gb", "label": "United Kingdom" },
-        { "value": "ca", "label": "Canada" }
-    ]));
-
-    // Valid: value in instance options
+    // Valid: value in options
     let mut data = HashMap::new();
     data.insert("country".to_string(), json!("us"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
+    let result = evaluate_definition(&def, &data);
     let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
     assert!(mismatches.is_empty(), "valid option 'us' should not produce TYPE_MISMATCH");
 
-    // Invalid: value not in instance options
+    // Invalid: value not in options
     data.insert("country".to_string(), json!("de"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
+    let result = evaluate_definition(&def, &data);
     let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
     assert!(!mismatches.is_empty(), "invalid option 'de' should produce TYPE_MISMATCH");
 }
 
 #[test]
-fn choice_choices_from_missing_instance_falls_back_to_string_validation() {
-    let def = json!({
-        "$formspec": "1.0",
-        "url": "test://choices-from-missing",
-        "version": "1.0.0",
-        "title": "ChoicesFrom Missing Instance Test",
-        "items": [{
-            "key": "country",
-            "type": "field",
-            "dataType": "choice",
-            "label": "Country",
-            "choicesFrom": { "instance": "countryCodes" }
-        }]
-    });
-
-    // No instances provided — should accept any string (graceful degradation)
-    let instances = HashMap::new();
+fn choice_without_options_accepts_any_string() {
+    // No options defined — accept any string (graceful degradation for unresolved optionSets)
+    let def = def_with_field("country", "choice");
     let mut data = HashMap::new();
     data.insert("country".to_string(), json!("anything_goes"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
+    let result = evaluate_definition(&def, &data);
     let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "missing instance should fall back to string-only validation");
+    assert!(mismatches.is_empty(), "no options = accept any string");
 }
 
 #[test]
-fn multichoice_choices_from_validates_array_elements() {
+fn multichoice_with_options_validates_array_elements() {
     let def = json!({
         "$formspec": "1.0",
-        "url": "test://multichoice-choices-from",
+        "url": "test://multichoice-options",
         "version": "1.0.0",
-        "title": "MultiChoice ChoicesFrom Test",
+        "title": "MultiChoice Options Test",
         "items": [{
             "key": "countries",
             "type": "field",
             "dataType": "multiChoice",
             "label": "Countries",
-            "choicesFrom": { "instance": "countryCodes" }
+            "options": [
+                { "value": "us", "label": "United States" },
+                { "value": "gb", "label": "United Kingdom" }
+            ]
         }]
     });
 
-    let mut instances = HashMap::new();
-    instances.insert("countryCodes".to_string(), json!([
-        { "value": "us", "label": "United States" },
-        { "value": "gb", "label": "United Kingdom" }
-    ]));
-
-    // Valid: all values in instance options
+    // Valid: all values in options
     let mut data = HashMap::new();
     data.insert("countries".to_string(), json!(["us", "gb"]));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
+    let result = evaluate_definition(&def, &data);
     let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
     assert!(mismatches.is_empty(), "valid multiChoice should not produce TYPE_MISMATCH");
 
-    // Invalid: one value not in instance options
+    // Invalid: one value not in options
     data.insert("countries".to_string(), json!(["us", "de"]));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
+    let result = evaluate_definition(&def, &data);
     let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
     assert!(!mismatches.is_empty(), "multiChoice with invalid option 'de' should produce TYPE_MISMATCH");
 }
 
 #[test]
-fn choice_choices_from_string_form() {
-    // choicesFrom as a plain string (instance name only)
+fn choice_null_value_skips_validation() {
     let def = json!({
         "$formspec": "1.0",
-        "url": "test://choices-from-string",
+        "url": "test://choice-null",
         "version": "1.0.0",
-        "title": "ChoicesFrom String Test",
+        "title": "Choice Null Test",
         "items": [{
             "key": "color",
             "type": "field",
             "dataType": "choice",
             "label": "Color",
-            "choicesFrom": "palette"
+            "options": [{ "value": "red", "label": "Red" }]
         }]
     });
-
-    let mut instances = HashMap::new();
-    instances.insert("palette".to_string(), json!([
-        { "value": "red", "label": "Red" },
-        { "value": "blue", "label": "Blue" }
-    ]));
-
-    let mut data = HashMap::new();
-    data.insert("color".to_string(), json!("red"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "'red' should be valid");
-
-    data.insert("color".to_string(), json!("green"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "'green' not in palette instance");
-}
-
-#[test]
-fn choice_choices_from_with_custom_value_field() {
-    // Instance data uses "code" instead of "value"
-    let def = json!({
-        "$formspec": "1.0",
-        "url": "test://choices-from-value-field",
-        "version": "1.0.0",
-        "title": "ChoicesFrom ValueField Test",
-        "items": [{
-            "key": "state",
-            "type": "field",
-            "dataType": "choice",
-            "label": "State",
-            "choicesFrom": { "instance": "states", "valueField": "code" }
-        }]
-    });
-
-    let mut instances = HashMap::new();
-    instances.insert("states".to_string(), json!([
-        { "code": "CA", "name": "California" },
-        { "code": "NY", "name": "New York" }
-    ]));
-
-    let mut data = HashMap::new();
-    data.insert("state".to_string(), json!("CA"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "'CA' should match code field");
-
-    data.insert("state".to_string(), json!("TX"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "'TX' not in states instance");
-}
-
-#[test]
-fn choice_choices_from_with_nested_path() {
-    // Instance data has options nested under a path
-    let def = json!({
-        "$formspec": "1.0",
-        "url": "test://choices-from-path",
-        "version": "1.0.0",
-        "title": "ChoicesFrom Path Test",
-        "items": [{
-            "key": "dept",
-            "type": "field",
-            "dataType": "choice",
-            "label": "Department",
-            "choicesFrom": { "instance": "org", "path": "departments" }
-        }]
-    });
-
-    let mut instances = HashMap::new();
-    instances.insert("org".to_string(), json!({
-        "name": "Acme Corp",
-        "departments": [
-            { "value": "eng", "label": "Engineering" },
-            { "value": "sales", "label": "Sales" }
-        ]
-    }));
-
-    let mut data = HashMap::new();
-    data.insert("dept".to_string(), json!("eng"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "'eng' should be valid via nested path");
-
-    data.insert("dept".to_string(), json!("hr"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "'hr' not in departments");
-}
-
-#[test]
-fn choice_choices_from_null_value_skips_validation() {
-    // Null values should not produce TYPE_MISMATCH regardless of choicesFrom
-    let def = json!({
-        "$formspec": "1.0",
-        "url": "test://choices-from-null",
-        "version": "1.0.0",
-        "title": "ChoicesFrom Null Test",
-        "items": [{
-            "key": "color",
-            "type": "field",
-            "dataType": "choice",
-            "label": "Color",
-            "choicesFrom": { "instance": "colors" }
-        }]
-    });
-
-    let mut instances = HashMap::new();
-    instances.insert("colors".to_string(), json!([
-        { "value": "red", "label": "Red" }
-    ]));
 
     let data = HashMap::new(); // no value = null
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
+    let result = evaluate_definition(&def, &data);
     let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
     assert!(mismatches.is_empty(), "null should never produce TYPE_MISMATCH");
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Bug fix tests — these should FAIL before fixes, PASS after
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Fix #2: dateTime must accept fractional seconds without timezone
 #[test]
-fn choice_choices_from_instance_not_array_falls_back() {
-    // Instance data at the resolved path is not an array — graceful degradation
+fn datetime_accepts_fractional_seconds_without_timezone() {
+    assert_valid("dateTime", json!("2025-01-15T10:30:00.123"));
+    assert_valid("dateTime", json!("2025-03-31T09:00:00.999999"));
+}
+
+// Fix #4: empty string on optional choice should NOT produce TYPE_MISMATCH
+#[test]
+fn choice_empty_string_skips_type_validation() {
+    // An optional choice field with "" should not trigger TYPE_MISMATCH.
+    // Empty string means "no selection" — same as null for type checking purposes.
     let def = json!({
         "$formspec": "1.0",
-        "url": "test://choices-from-not-array",
+        "url": "test://choice-empty",
         "version": "1.0.0",
-        "title": "ChoicesFrom Non-Array Test",
+        "title": "Choice Empty String Test",
         "items": [{
-            "key": "color",
+            "key": "status",
             "type": "field",
             "dataType": "choice",
-            "label": "Color",
-            "choicesFrom": { "instance": "config" }
+            "label": "Status",
+            "options": [
+                { "value": "active", "label": "Active" },
+                { "value": "inactive", "label": "Inactive" }
+            ]
         }]
     });
 
-    let mut instances = HashMap::new();
-    instances.insert("config".to_string(), json!({
-        "theme": "dark",
-        "version": 2
-    }));
+    let mut data = HashMap::new();
+    data.insert("status".to_string(), json!(""));
+    let result = evaluate_definition(&def, &data);
+    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
+    assert!(mismatches.is_empty(), "empty string on optional choice should not produce TYPE_MISMATCH");
+}
+
+#[test]
+fn multichoice_empty_array_skips_type_validation() {
+    // Empty array = no selections — should not produce TYPE_MISMATCH
+    let def = json!({
+        "$formspec": "1.0",
+        "url": "test://multichoice-empty",
+        "version": "1.0.0",
+        "title": "MultiChoice Empty Array Test",
+        "items": [{
+            "key": "tags",
+            "type": "field",
+            "dataType": "multiChoice",
+            "label": "Tags",
+            "options": [
+                { "value": "a", "label": "A" },
+                { "value": "b", "label": "B" }
+            ]
+        }]
+    });
 
     let mut data = HashMap::new();
-    data.insert("color".to_string(), json!("anything"));
-    let result = evaluate_definition_full_with_instances(&def, &data, EvalTrigger::Continuous, &[], &instances);
+    data.insert("tags".to_string(), json!([]));
+    let result = evaluate_definition(&def, &data);
     let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "non-array instance should fall back to string-only validation");
+    assert!(mismatches.is_empty(), "empty array on multiChoice should not produce TYPE_MISMATCH");
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Fix #1: maxLength must count characters, not bytes
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#[test]
+fn extension_max_length_counts_characters_not_bytes() {
+    // "你好世界" is 4 characters but 12 bytes in UTF-8.
+    // maxLength: 10 should accept it (4 chars < 10).
+    let def = json!({
+        "$formspec": "1.0",
+        "url": "test://maxlength-unicode",
+        "version": "1.0.0",
+        "title": "MaxLength Unicode Test",
+        "items": [{
+            "key": "name",
+            "type": "field",
+            "dataType": "string",
+            "label": "Name",
+            "extensions": { "x-test-maxlen": true }
+        }]
+    });
+
+    let ext = vec![ExtensionConstraint {
+        name: "x-test-maxlen".to_string(),
+        display_name: Some("Name".to_string()),
+        status: "stable".to_string(),
+        pattern: None,
+        max_length: Some(10),
+        minimum: None,
+        maximum: None,
+        base_type: None,
+        compatibility_version: None,
+        deprecation_notice: None,
+    }];
+
+    let mut data = HashMap::new();
+    data.insert("name".to_string(), json!("你好世界")); // 4 chars, 12 bytes
+    let result = evaluate_definition_full(&def, &data, EvalTrigger::Continuous, &ext);
+    let max_len_errors: Vec<_> = result.validations.iter()
+        .filter(|r| r.code == "MAX_LENGTH_EXCEEDED")
+        .collect();
+    assert!(
+        max_len_errors.is_empty(),
+        "4-character CJK string should pass maxLength: 10 (currently counts bytes: 12 > 10)"
+    );
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Fix #3: extension validation results must use spec-valid enum values
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#[test]
+fn extension_results_use_spec_valid_constraint_kind_and_source() {
+    // Extension constraint results must use constraintKind from the spec enum
+    // (required|type|cardinality|constraint|shape|external) and source from
+    // (bind|shape|external). NOT "extension" for either.
+    let def = json!({
+        "$formspec": "1.0",
+        "url": "test://ext-enum",
+        "version": "1.0.0",
+        "title": "Extension Enum Test",
+        "items": [{
+            "key": "email",
+            "type": "field",
+            "dataType": "string",
+            "label": "Email",
+            "extensions": { "x-test-pattern": true }
+        }]
+    });
+
+    let ext = vec![ExtensionConstraint {
+        name: "x-test-pattern".to_string(),
+        display_name: Some("Email".to_string()),
+        status: "stable".to_string(),
+        pattern: Some(r"^[^@]+@[^@]+$".to_string()),
+        max_length: None,
+        minimum: None,
+        maximum: None,
+        base_type: None,
+        compatibility_version: None,
+        deprecation_notice: None,
+    }];
+
+    let mut data = HashMap::new();
+    data.insert("email".to_string(), json!("not-an-email"));
+    let result = evaluate_definition_full(&def, &data, EvalTrigger::Continuous, &ext);
+    let ext_results: Vec<_> = result.validations.iter()
+        .filter(|r| r.code == "PATTERN_MISMATCH")
+        .collect();
+    assert!(!ext_results.is_empty(), "should produce PATTERN_MISMATCH");
+
+    for r in &ext_results {
+        assert_ne!(
+            r.constraint_kind, "extension",
+            "constraintKind must NOT be 'extension' — use a spec-valid enum value"
+        );
+        assert_ne!(
+            r.source, "extension",
+            "source must NOT be 'extension' — use a spec-valid enum value"
+        );
+        assert_eq!(r.constraint_kind, "constraint", "extension field constraints should use constraintKind 'constraint'");
+        assert_eq!(r.source, "external", "extension constraints should use source 'external'");
+    }
 }

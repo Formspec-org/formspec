@@ -1191,6 +1191,8 @@ fn required_with_empty_array_fails() {
 
 #[test]
 fn required_with_empty_object_passes() {
+    // Empty object is not in the spec's 'empty' list — required should NOT fire.
+    // (TYPE_MISMATCH may still fire since {} is not a string, but that's a separate concern.)
     let def = json!({
         "items": [{ "key": "meta", "dataType": "string" }],
         "binds": { "meta": { "required": "true" } }
@@ -1199,14 +1201,19 @@ fn required_with_empty_object_passes() {
     data.insert("meta".to_string(), json!({}));
 
     let result = evaluate_definition(&def, &data);
+    let required_errors: Vec<_> = result.validations.iter()
+        .filter(|r| r.code == "REQUIRED")
+        .collect();
     assert!(
-        result.validations.is_empty(),
+        required_errors.is_empty(),
         "empty object is not in the spec's 'empty' list — required should pass"
     );
 }
 
 #[test]
 fn required_with_non_empty_array_passes() {
+    // Non-empty array passes required. TYPE_MISMATCH may fire (array is not a string),
+    // but required should NOT.
     let def = json!({
         "items": [{ "key": "tags", "dataType": "string" }],
         "binds": { "tags": { "required": "true" } }
@@ -1215,8 +1222,11 @@ fn required_with_non_empty_array_passes() {
     data.insert("tags".to_string(), json!(["a"]));
 
     let result = evaluate_definition(&def, &data);
+    let required_errors: Vec<_> = result.validations.iter()
+        .filter(|r| r.code == "REQUIRED")
+        .collect();
     assert!(
-        result.validations.is_empty(),
+        required_errors.is_empty(),
         "non-empty array passes required"
     );
 }
