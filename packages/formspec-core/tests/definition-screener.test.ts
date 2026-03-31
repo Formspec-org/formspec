@@ -15,7 +15,7 @@ describe('definition.setScreener', () => {
     expect(project.definition.screener!.routes).toEqual([]);
   });
 
-  it('preserves screener data when disabled', () => {
+  it('deletes the screener object when disabled', () => {
     const project = createRawProject();
 
     project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
@@ -23,19 +23,12 @@ describe('definition.setScreener', () => {
       type: 'definition.addScreenerItem',
       payload: { type: 'field', key: 'age', dataType: 'integer' },
     });
-    project.dispatch({
-      type: 'definition.addRoute',
-      payload: { condition: '$age >= 18', target: 'urn:formspec:adult-form' },
-    });
     project.dispatch({ type: 'definition.setScreener', payload: { enabled: false } });
 
-    expect(project.definition.screener).toBeDefined();
-    expect(project.definition.screener!.items).toHaveLength(1);
-    expect(project.definition.screener!.routes).toHaveLength(1);
-    expect(project.definition.screener!.enabled).toBe(false);
+    expect(project.definition.screener).toBeUndefined();
   });
 
-  it('re-enables an existing disabled screener without losing data', () => {
+  it('re-enabling after disable creates a fresh empty screener', () => {
     const project = createRawProject();
 
     project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
@@ -47,8 +40,20 @@ describe('definition.setScreener', () => {
     project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
 
     expect(project.definition.screener).toBeDefined();
+    expect(project.definition.screener!.items).toEqual([]);
+  });
+
+  it('is a no-op when enabling an already active screener', () => {
+    const project = createRawProject();
+
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({
+      type: 'definition.addScreenerItem',
+      payload: { type: 'field', key: 'age', dataType: 'integer' },
+    });
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+
     expect(project.definition.screener!.items).toHaveLength(1);
-    expect(project.definition.screener!.enabled).toBeUndefined();
   });
 });
 
@@ -67,10 +72,8 @@ describe('definition.addScreenerItem', () => {
     expect(project.definition.screener!.items[0].label).toBe('Age');
   });
 
-  it('rejects mutations while the screener is disabled', () => {
+  it('rejects mutations when no screener exists', () => {
     const project = createRawProject();
-    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
-    project.dispatch({ type: 'definition.setScreener', payload: { enabled: false } });
 
     expect(() => {
       project.dispatch({

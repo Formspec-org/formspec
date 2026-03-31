@@ -25,7 +25,7 @@ import type { FormDefinition, FormItem } from '@formspec-org/types';
 
 function getEnabledScreener(state: { definition: FormDefinition }) {
   const screener = state.definition.screener;
-  if (!screener || screener.enabled === false) {
+  if (!screener) {
     throw new Error('Screener is not enabled');
   }
   return screener;
@@ -40,11 +40,8 @@ export const definitionScreenerHandlers: Record<string, CommandHandler> = {
       if (!state.definition.screener) {
         state.definition.screener = { items: [], routes: [] };
       }
-      delete state.definition.screener.enabled;
     } else {
-      if (state.definition.screener) {
-        state.definition.screener.enabled = false;
-      }
+      delete state.definition.screener;
     }
 
     return { rebuildComponentTree: false };
