@@ -545,7 +545,7 @@ describe('Shell', () => {
         { path: 'name', required: 'true' },
       ],
       shapes: [
-        { id: 's1', path: 'name', constraint: '$name != null', message: 'Required' },
+        { id: 's1', target: 'name', constraint: '$name != null', message: 'Required' },
       ],
       variables: [
         { name: 'v1', expression: '1 + 1' },

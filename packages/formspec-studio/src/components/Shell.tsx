@@ -1,5 +1,5 @@
 /** @filedesc Main studio shell; composes the header, blueprint sidebar, workspace tabs, and status bar. */
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { type ColorScheme } from '../hooks/useColorScheme';
 import JSZip from 'jszip';
 import { createProject, handleKeyboardShortcut, buildDefLookup, type Project } from '@formspec-org/studio-core';
@@ -20,6 +20,7 @@ import { CommandPalette } from './CommandPalette';
 import { ImportDialog } from './ImportDialog';
 import { ChatPanel } from './ChatPanel';
 import { AppSettingsDialog } from './AppSettingsDialog';
+import { ResizeHandle } from './ui/ResizeHandle';
 import { CanvasTargetsProvider } from '../state/useCanvasTargets';
 import { useProject } from '../state/useProject';
 import { useSelection } from '../state/useSelection';
@@ -84,8 +85,17 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [showHealthSheet, setShowHealthSheet] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(true);
   const [chatPrompt, setChatPrompt] = useState<string | null>(null);
   const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
+  const [leftWidth, setLeftWidth] = useState(214);
+  const [rightWidth, setRightWidth] = useState(320);
+  const onResizeLeft = useCallback((delta: number) => {
+    setLeftWidth((w) => Math.min(Math.max(w + delta, 160), 400));
+  }, []);
+  const onResizeRight = useCallback((delta: number) => {
+    setRightWidth((w) => Math.min(Math.max(w + delta, 220), 500));
+  }, []);
   const blueprintCloseRef = useRef<HTMLButtonElement | null>(null);
   const propertiesBackRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusRef = useRef<HTMLElement | null>(null);
@@ -339,7 +349,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   };
 
   return (
-    <div data-testid="shell" className="relative h-screen flex flex-col overflow-x-hidden bg-bg-default text-ink font-ui">
+    <div data-testid="shell" className="relative h-screen flex flex-col overflow-hidden bg-bg-default text-ink font-ui">
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -360,7 +370,8 @@ export function Shell({ colorScheme }: ShellProps = {}) {
           {/* Desktop Left Sidebar */}
           <aside
             data-testid="blueprint-sidebar"
-            className={`w-[214px] border-r border-border/80 bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}
+            className={`border-r border-border/80 bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}
+            style={{ width: `clamp(140px, ${leftWidth}px, calc(50vw - 340px))` }}
             aria-label="Blueprint sidebar"
           >
             <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} activeEditorView={activeEditorView} activeTab={activeTab} />
@@ -368,8 +379,9 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               {SidebarComponent && <SidebarComponent />}
             </div>
           </aside>
+          {!compactLayout && <ResizeHandle side="left" onResize={onResizeLeft} />}
 
-          <main className="flex-1 overflow-y-auto min-w-0 bg-bg-default">
+          <main className="flex-1 overflow-y-auto bg-bg-default min-w-0 shrink-0">
             <div
               id={activePanelId}
               role="tabpanel"
@@ -432,25 +444,77 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </div>
             </div>
           </main>
-          {activeTab === 'Editor' && (
-            <aside
-              className={`w-[320px] border-l border-border/80 bg-surface overflow-y-auto shrink-0 ${compactLayout || showChatPanel ? 'hidden' : ''}`}
-              data-testid="properties-panel"
-              data-responsive-hidden={compactLayout ? 'true' : 'false'}
-              aria-label="Form health panel"
-            >
-              <FormHealthPanel />
-            </aside>
+          {activeTab === 'Editor' && !compactLayout && !showChatPanel && (
+            showRightPanel ? (
+              <>
+                <ResizeHandle side="right" onResize={onResizeRight} />
+                <aside
+                  className="flex flex-col border-l border-border/80 bg-surface overflow-hidden shrink-0"
+                  style={{ width: `clamp(200px, ${rightWidth}px, calc(50vw - 340px))` }}
+                  data-testid="properties-panel"
+                  aria-label="Form health panel"
+                >
+                  <div className="flex items-center justify-end px-3 pt-2 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Hide panel"
+                      className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      onClick={() => setShowRightPanel(false)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <FormHealthPanel />
+                  </div>
+                </aside>
+              </>
+            ) : (
+              <button
+                type="button"
+                aria-label="Show form health panel"
+                className="shrink-0 border-l border-border/80 bg-surface px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                onClick={() => setShowRightPanel(true)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+            )
           )}
-          {activeTab === 'Layout' && (
-            <aside
-              className={`w-[320px] border-l border-border/80 bg-surface overflow-y-auto shrink-0 ${compactLayout || showChatPanel ? 'hidden' : ''}`}
-              data-testid="properties-panel"
-              data-responsive-hidden={compactLayout ? 'true' : 'false'}
-              aria-label="Properties panel"
-            >
-              <ComponentProperties />
-            </aside>
+          {activeTab === 'Layout' && !compactLayout && !showChatPanel && (
+            showRightPanel ? (
+              <>
+                <ResizeHandle side="right" onResize={onResizeRight} />
+                <aside
+                  className="flex flex-col border-l border-border/80 bg-surface overflow-hidden shrink-0"
+                  style={{ width: `clamp(200px, ${rightWidth}px, calc(50vw - 340px))` }}
+                  data-testid="properties-panel"
+                  aria-label="Properties panel"
+                >
+                  <div className="flex items-center justify-end px-3 pt-2 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Hide panel"
+                      className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      onClick={() => setShowRightPanel(false)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <ComponentProperties />
+                  </div>
+                </aside>
+              </>
+            ) : (
+              <button
+                type="button"
+                aria-label="Show properties panel"
+                className="shrink-0 border-l border-border/80 bg-surface px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                onClick={() => setShowRightPanel(true)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+            )
           )}
           {showChatPanel && !compactLayout && (
             <aside className="w-[360px] shrink-0" data-testid="chat-panel-container">
