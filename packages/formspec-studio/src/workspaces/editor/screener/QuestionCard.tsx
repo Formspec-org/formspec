@@ -36,35 +36,23 @@ export function QuestionCard({ item, index, isExpanded, onToggle, isFirst, isLas
   const handleLabelBlur = () => {
     const trimmed = editLabel.trim();
     if (trimmed && trimmed !== item.label) {
-      project.core.dispatch({
-        type: 'definition.setScreenerItemProperty',
-        payload: { key: item.key, property: 'label', value: trimmed },
-      });
+      project.updateScreenField(item.key, { label: trimmed });
     }
   };
 
   const handleHelpTextBlur = () => {
     const val = editHelpText.trim();
     if (val !== (item.helpText ?? '')) {
-      project.core.dispatch({
-        type: 'definition.setScreenerItemProperty',
-        payload: { key: item.key, property: 'helpText', value: val || undefined },
-      });
+      project.updateScreenField(item.key, { helpText: val || undefined });
     }
   };
 
   const handleRequiredToggle = () => {
-    project.core.dispatch({
-      type: 'definition.setScreenerBind',
-      payload: { path: item.key, properties: { required: isRequired ? null : 'true' } },
-    });
+    project.updateScreenField(item.key, { required: !isRequired });
   };
 
   const handleReorder = (direction: 'up' | 'down') => {
-    project.core.dispatch({
-      type: 'definition.reorderScreenerItem',
-      payload: { index, direction },
-    });
+    project.reorderScreenField(item.key, direction);
   };
 
   const handleDelete = () => {

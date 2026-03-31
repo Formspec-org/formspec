@@ -27,22 +27,13 @@ export function ScreenerRoutes() {
   const handleAddRule = () => {
     if (routes.length === 0) {
       // No routes at all — create a conditional + fallback
-      project.core.dispatch({
-        type: 'definition.addRoute',
-        payload: { condition: 'false', target: '' },
-      });
-      project.core.dispatch({
-        type: 'definition.addRoute',
-        payload: { condition: 'true', target: '' },
-      });
+      project.addScreenRoute('false', '');
+      project.addScreenRoute('true', '');
       setExpandedIndex(0);
     } else {
       // Insert above fallback
       const insertIndex = hasFallback ? routes.length - 1 : routes.length;
-      project.core.dispatch({
-        type: 'definition.addRoute',
-        payload: { condition: 'false', target: '', insertIndex },
-      });
+      project.addScreenRoute('false', '', undefined, undefined, insertIndex);
       setExpandedIndex(insertIndex);
     }
   };

@@ -24,10 +24,7 @@ export function RouteCard({ route, index, isExpanded, onToggle, isFirst, isLast,
   useEffect(() => { setEditMessage(route.message ?? ''); }, [route.message]);
 
   const setRouteProperty = (property: string, value: string | undefined) => {
-    project.core.dispatch({
-      type: 'definition.setRouteProperty',
-      payload: { index, property, value },
-    });
+    project.updateScreenRoute(index, { [property]: value });
   };
 
   const handleLabelBlur = () => {

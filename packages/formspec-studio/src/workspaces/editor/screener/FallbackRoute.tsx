@@ -18,10 +18,7 @@ export function FallbackRoute({ route, routeIndex }: FallbackRouteProps) {
   const displayLabel = route.label || 'Everyone else';
 
   const setRouteProperty = (property: string, value: string | undefined) => {
-    project.core.dispatch({
-      type: 'definition.setRouteProperty',
-      payload: { index: routeIndex, property, value },
-    });
+    project.updateScreenRoute(routeIndex, { [property]: value });
   };
 
   const handleTargetBlur = () => {
