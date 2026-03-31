@@ -4,18 +4,12 @@ import { useDefinition } from '../../../state/useDefinition';
 import { useProject } from '../../../state/useProject';
 import { RouteCard } from './RouteCard';
 import { FallbackRoute } from './FallbackRoute';
-
-interface Route {
-  condition: string;
-  target: string;
-  label?: string;
-  message?: string;
-}
+import type { ScreenerRoute } from './types';
 
 export function ScreenerRoutes() {
   const definition = useDefinition();
   const project = useProject();
-  const screener = definition?.screener as { routes?: Route[] } | undefined;
+  const screener = definition?.screener as { routes?: ScreenerRoute[] } | undefined;
   const routes = screener?.routes ?? [];
 
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
@@ -88,7 +82,7 @@ export function ScreenerRoutes() {
       {/* Non-fallback route cards */}
       {nonFallbackRoutes.map((route, i) => (
         <RouteCard
-          key={`${route.condition}-${route.target}-${i}`}
+          key={i}
           route={route}
           index={i}
           isExpanded={expandedIndex === i}

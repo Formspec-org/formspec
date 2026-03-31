@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useProject } from '../../../state/useProject';
 import { FieldIcon } from '../../../components/ui/FieldIcon';
+import type { ScreenerQuestion } from './types';
 
 interface QuestionCardProps {
-  item: { key: string; type: string; dataType?: string; label?: string; helpText?: string };
+  item: ScreenerQuestion;
   index: number;
   isExpanded: boolean;
   onToggle: () => void;

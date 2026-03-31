@@ -1,25 +1,4 @@
-/**
- * Screener command handlers for the Formspec Studio Core.
- *
- * The screener is a pre-form eligibility check mechanism -- a self-contained
- * routing subsystem with its own items, binds, and conditional routes. It
- * operates in its own scope, entirely separate from the main form's instance
- * data. The purpose of the screener is to collect a small set of answers
- * (screening questions) and then evaluate routing rules to determine which
- * form definition (or variant) the respondent should be directed to.
- *
- * A screener consists of:
- * - **Items**: form fields presented to the respondent (same shape as main form
- *   items, but scoped to the screener).
- * - **Binds**: FEL-based bind expressions (calculate, relevant, required, etc.)
- *   that target screener item keys.
- * - **Routes**: an ordered list of condition/target pairs. Each route has a FEL
- *   `condition` expression evaluated against screener item values and a `target`
- *   URI pointing to the destination definition. Routes are evaluated in order;
- *   first match wins.
- *
- * @module definition-screener
- */
+/** @filedesc Command handlers for screener presence, items, binds, and routing rules. */
 import type { CommandHandler } from '../types.js';
 import type { FormDefinition, FormItem } from '@formspec-org/types';
 
@@ -130,7 +109,11 @@ export const definitionScreenerHandlers: Record<string, CommandHandler> = {
     const route = screener.routes[index];
     if (!route) throw new Error(`Route not found at index: ${index}`);
 
-    (route as any)[property] = value;
+    if (value === undefined || value === null) {
+      delete (route as any)[property];
+    } else {
+      (route as any)[property] = value;
+    }
     return { rebuildComponentTree: false };
   },
 
@@ -152,7 +135,11 @@ export const definitionScreenerHandlers: Record<string, CommandHandler> = {
     const screener = getEnabledScreener(state);
     const item = screener.items.find(it => it.key === key);
     if (!item) throw new Error(`Screener item not found: ${key}`);
-    (item as any)[property] = value;
+    if (value === undefined || value === null) {
+      delete (item as any)[property];
+    } else {
+      (item as any)[property] = value;
+    }
     return { rebuildComponentTree: false };
   },
 

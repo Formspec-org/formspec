@@ -247,6 +247,26 @@ describe('definition.setRouteProperty', () => {
 
     expect(project.definition.screener!.routes[0].message).toBe('Updated rejection message');
   });
+
+  it('deletes the property when value is undefined', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({ type: 'definition.addRoute', payload: { condition: '$x', target: 'urn:x', label: 'My Rule' } });
+
+    project.dispatch({ type: 'definition.setRouteProperty', payload: { index: 0, property: 'label', value: undefined } });
+
+    expect('label' in project.definition.screener!.routes[0]).toBe(false);
+  });
+
+  it('deletes the property when value is null', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({ type: 'definition.addRoute', payload: { condition: '$x', target: 'urn:x', message: 'Hello' } });
+
+    project.dispatch({ type: 'definition.setRouteProperty', payload: { index: 0, property: 'message', value: null } });
+
+    expect('message' in project.definition.screener!.routes[0]).toBe(false);
+  });
 });
 
 describe('definition.deleteRoute', () => {
@@ -280,6 +300,14 @@ describe('definition.setScreenerItemProperty', () => {
     project.dispatch({ type: 'definition.addScreenerItem', payload: { type: 'field', key: 'age', label: 'Age' } });
     project.dispatch({ type: 'definition.setScreenerItemProperty', payload: { key: 'age', property: 'label', value: 'Your age' } });
     expect(project.definition.screener!.items[0].label).toBe('Your age');
+  });
+
+  it('deletes the property when value is undefined', () => {
+    const project = createRawProject();
+    project.dispatch({ type: 'definition.setScreener', payload: { enabled: true } });
+    project.dispatch({ type: 'definition.addScreenerItem', payload: { type: 'field', key: 'age', label: 'Age', helpText: 'Enter your age' } });
+    project.dispatch({ type: 'definition.setScreenerItemProperty', payload: { key: 'age', property: 'helpText', value: undefined } });
+    expect('helpText' in project.definition.screener!.items[0]).toBe(false);
   });
 
   it('throws for unknown key', () => {

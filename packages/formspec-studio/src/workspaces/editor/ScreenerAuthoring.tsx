@@ -3,21 +3,11 @@ import { useDefinition } from '../../state/useDefinition';
 import { ScreenerToggle } from './screener/ScreenerToggle';
 import { ScreenerQuestions } from './screener/ScreenerQuestions';
 import { ScreenerRoutes } from './screener/ScreenerRoutes';
-
-interface ScreenerItem {
-  key: string;
-  type: string;
-  [k: string]: unknown;
-}
-
-interface Route {
-  condition: string;
-  target: string;
-}
+import type { ScreenerQuestion, ScreenerRoute } from './screener/types';
 
 interface Screener {
-  items?: ScreenerItem[];
-  routes?: Route[];
+  items?: ScreenerQuestion[];
+  routes?: ScreenerRoute[];
 }
 
 export function ScreenerAuthoring() {

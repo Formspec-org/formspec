@@ -1,9 +1,10 @@
 /** @filedesc Visually distinct card for the catch-all fallback routing rule. */
 import { useState, useEffect } from 'react';
 import { useProject } from '../../../state/useProject';
+import type { ScreenerRoute } from './types';
 
 interface FallbackRouteProps {
-  route: { condition: string; target: string; label?: string; message?: string };
+  route: ScreenerRoute;
   routeIndex: number;
 }
 

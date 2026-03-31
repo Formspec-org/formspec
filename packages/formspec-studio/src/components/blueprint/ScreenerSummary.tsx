@@ -2,9 +2,14 @@
 import { useDefinition } from '../../state/useDefinition';
 import { Pill } from '../ui/Pill';
 
+interface Screener {
+  items?: unknown[];
+  routes?: unknown[];
+}
+
 export function ScreenerSummary() {
   const definition = useDefinition();
-  const screener = definition?.screener;
+  const screener = definition?.screener as Screener | undefined;
 
   if (!screener) {
     return (
@@ -14,8 +19,8 @@ export function ScreenerSummary() {
     );
   }
 
-  const qCount = (screener as any).items?.length ?? 0;
-  const rCount = (screener as any).routes?.length ?? 0;
+  const qCount = screener.items?.length ?? 0;
+  const rCount = screener.routes?.length ?? 0;
 
   return (
     <div className="flex flex-col gap-1 px-2 py-1">

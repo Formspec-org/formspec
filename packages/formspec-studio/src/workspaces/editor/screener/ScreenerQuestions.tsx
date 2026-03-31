@@ -4,6 +4,7 @@ import { sanitizeIdentifier } from '@formspec-org/studio-core';
 import { useDefinition } from '../../../state/useDefinition';
 import { useProject } from '../../../state/useProject';
 import { QuestionCard } from './QuestionCard';
+import type { ScreenerQuestion } from './types';
 
 const TYPE_OPTIONS = [
   { value: 'boolean', label: 'Yes / No' },
@@ -17,7 +18,7 @@ const TYPE_OPTIONS = [
 export function ScreenerQuestions() {
   const definition = useDefinition();
   const project = useProject();
-  const screener = definition?.screener as { items?: any[]; binds?: any[] } | undefined;
+  const screener = definition?.screener as { items?: ScreenerQuestion[]; binds?: { path: string; required?: string }[] } | undefined;
   const items = screener?.items ?? [];
   const binds = screener?.binds ?? [];
 
@@ -27,7 +28,7 @@ export function ScreenerQuestions() {
   const [newType, setNewType] = useState('boolean');
 
   const isRequiredForKey = (key: string): boolean => {
-    const bind = binds.find((b: any) => b.path === key);
+    const bind = binds.find(b => b.path === key);
     return bind?.required === 'true';
   };
 
@@ -116,7 +117,7 @@ export function ScreenerQuestions() {
       )}
 
       {/* Question cards */}
-      {items.map((item: any, i: number) => (
+      {items.map((item, i) => (
         <QuestionCard
           key={item.key}
           item={item}

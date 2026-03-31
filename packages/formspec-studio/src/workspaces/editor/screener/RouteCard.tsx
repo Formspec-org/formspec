@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useProject } from '../../../state/useProject';
 import { InlineExpression } from '../../../components/ui/InlineExpression';
+import type { ScreenerRoute } from './types';
 
 interface RouteCardProps {
-  route: { condition: string; target: string; label?: string; message?: string };
+  route: ScreenerRoute;
   index: number;
   isExpanded: boolean;
   onToggle: () => void;
@@ -21,8 +22,6 @@ export function RouteCard({ route, index, isExpanded, onToggle, isFirst, isLast,
   useEffect(() => { setEditLabel(route.label ?? ''); }, [route.label]);
   useEffect(() => { setEditTarget(route.target); }, [route.target]);
   useEffect(() => { setEditMessage(route.message ?? ''); }, [route.message]);
-
-  const displayLabel = route.label || undefined;
 
   const setRouteProperty = (property: string, value: string | undefined) => {
     project.core.dispatch({
@@ -81,8 +80,8 @@ export function RouteCard({ route, index, isExpanded, onToggle, isFirst, isLast,
               {index + 1}
             </span>
             <span className="text-[10px] font-bold text-amber uppercase tracking-wider">IF</span>
-            {displayLabel ? (
-              <span className="text-[13px] font-bold text-ink truncate">{displayLabel}</span>
+            {route.label ? (
+              <span className="text-[13px] font-bold text-ink truncate">{route.label}</span>
             ) : (
               <code className="text-[11px] font-mono text-muted truncate">{route.condition}</code>
             )}
@@ -154,26 +153,24 @@ export function RouteCard({ route, index, isExpanded, onToggle, isFirst, isLast,
             {/* Actions: reorder + delete */}
             <div className="pt-4 border-t border-border flex items-center justify-between">
               <div className="flex items-center gap-1">
-                {!isFirst && (
-                  <button
-                    type="button"
-                    aria-label="Move up"
-                    onClick={() => handleReorder('up')}
-                    className="text-[14px] px-2 py-1 text-muted hover:text-ink transition-colors"
-                  >
-                    &#9650;
-                  </button>
-                )}
-                {!isLast && (
-                  <button
-                    type="button"
-                    aria-label="Move down"
-                    onClick={() => handleReorder('down')}
-                    className="text-[14px] px-2 py-1 text-muted hover:text-ink transition-colors"
-                  >
-                    &#9660;
-                  </button>
-                )}
+                <button
+                  type="button"
+                  aria-label="Move up"
+                  disabled={isFirst}
+                  onClick={() => handleReorder('up')}
+                  className="text-[14px] px-2 py-1 text-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  &#9650;
+                </button>
+                <button
+                  type="button"
+                  aria-label="Move down"
+                  disabled={isLast}
+                  onClick={() => handleReorder('down')}
+                  className="text-[14px] px-2 py-1 text-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  &#9660;
+                </button>
               </div>
               {canDelete && (
                 <button
