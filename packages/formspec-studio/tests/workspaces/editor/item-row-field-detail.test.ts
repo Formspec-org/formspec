@@ -46,12 +46,12 @@ describe('item-row-field-detail', () => {
 
   it('computeOrphanFieldDetailLabel requires summary row absent', () => {
     expect(
-      computeOrphanFieldDetailLabel('Semantic', [{ label: 'Hint', value: '' }]),
+      computeOrphanFieldDetailLabel('Semantic', [{ label: 'Hint' }]),
     ).toBe('Semantic');
     expect(
-      computeOrphanFieldDetailLabel('Semantic', [{ label: 'Semantic', value: 'x' }]),
+      computeOrphanFieldDetailLabel('Semantic', [{ label: 'Semantic' }]),
     ).toBeNull();
-    expect(computeOrphanFieldDetailLabel('Hint', [{ label: 'Hint', value: '' }])).toBeNull();
+    expect(computeOrphanFieldDetailLabel('Hint', [{ label: 'Hint' }])).toBeNull();
   });
 
   it('fieldDetailOrphanHeading maps spec ids to display titles', () => {

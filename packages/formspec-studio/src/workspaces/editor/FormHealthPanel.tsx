@@ -1,7 +1,5 @@
-/** @filedesc Form Health panel — Issues, Response Inspector, and Simulation in the Editor right rail. */
-import { ResponseSchema } from './ResponseSchema';
-import { TestResponse } from './TestResponse';
-import { CollapsibleSection } from '../../components/ui/CollapsibleSection';
+/** @filedesc Form Health panel — Issues and Output Blueprint in the Editor right rail. */
+import { OutputBlueprint } from '../../components/blueprint/OutputBlueprint';
 
 export function FormHealthPanel() {
   return (
@@ -29,15 +27,10 @@ export function FormHealthPanel() {
           </div>
         </div>
 
-        {/* Response Inspector — collapsible */}
-        <CollapsibleSection title="Response Inspector" testId="response-inspector-content">
-          <ResponseSchema />
-        </CollapsibleSection>
-
-        {/* Simulation — collapsible */}
-        <CollapsibleSection title="Simulation" testId="simulation-content">
-          <TestResponse />
-        </CollapsibleSection>
+        {/* Output Blueprint — always expanded */}
+        <div className="px-5 py-4">
+          <OutputBlueprint />
+        </div>
       </div>
     </div>
   );

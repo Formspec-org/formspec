@@ -76,8 +76,12 @@ function renderItemTree(
   parentPath: string,
   ctx: TreeRenderContext,
   indexCounter: { value: number },
+  insideRepeatableGroup = false,
 ): React.ReactNode[] {
   return items.map((item) => {
+    // Display items (content) belong in the layout workspace, not the definition tree.
+    if (item.type === 'display') return null;
+
     const path = parentPath ? `${parentPath}.${item.key}` : item.key;
     const itemBinds = bindsFor(allBinds, path);
     const summaries = buildRowSummaries(item, itemBinds);
@@ -111,21 +115,19 @@ function renderItemTree(
             onClick={(e) => ctx.onItemClick(e, path, 'group')}
             onContextMenu={(e) => ctx.onItemContextMenu(e, path, 'group')}
           >
-            {item.children ? renderItemTree(item.children, allBinds, depth + 1, path, ctx, indexCounter) : null}
+            {item.children ? renderItemTree(item.children, allBinds, depth + 1, path, ctx, indexCounter, insideRepeatableGroup || item.repeatable === true) : null}
           </GroupNode>
         </SortableItemWrapper>
       );
     }
 
-    const itemType = item.type === 'display' ? 'display' : 'field';
     return (
       <SortableItemWrapper key={path} id={path} index={sortIndex} group="def-tree">
         <ItemRow
           itemKey={item.key}
           itemPath={path}
-          itemType={itemType}
+          itemType="field"
           label={item.label}
-          summaries={summaries}
           categorySummaries={categorySummaries}
           dataType={item.dataType}
           widgetHint={item.presentation?.widgetHint}
@@ -136,19 +138,21 @@ function renderItemTree(
           item={item}
           binds={itemBinds}
           onUpdateItem={(changes) => ctx.onUpdateItem(path, changes)}
+          insideRepeatableGroup={insideRepeatableGroup}
           onRenameIdentity={(nextKey, nextLabel) => ctx.onRenameIdentity(path, nextKey, nextLabel)}
-          onClick={(e) => ctx.onItemClick(e, path, itemType)}
-          onContextMenu={(e) => ctx.onItemContextMenu(e, path, itemType)}
+          onClick={(e) => ctx.onItemClick(e, path, 'field')}
+          onContextMenu={(e) => ctx.onItemContextMenu(e, path, 'field')}
         />
       </SortableItemWrapper>
     );
   });
 }
 
-/** Collect all item paths in definition order for range-select. */
+/** Collect all item paths in definition order for range-select (excludes display items). */
 function collectFlatOrder(items: FormItem[], parentPath: string): string[] {
   const result: string[] = [];
   for (const item of items) {
+    if (item.type === 'display') continue;
     const path = parentPath ? `${parentPath}.${item.key}` : item.key;
     result.push(path);
     if (item.type === 'group' && item.children) {

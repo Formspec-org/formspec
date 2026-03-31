@@ -20,6 +20,8 @@ export interface ItemRowIdentity {
   widgetHint: string | undefined;
   dt: { color: string } | null;
   labelForDescription: string | null;
+  /** Dot-delimited group path prefix (e.g. "demographics.") shown greyed before the key. */
+  groupPrefix: string | null;
 }
 
 /** Current inline-editing state for the item row. */
@@ -28,7 +30,6 @@ export interface ItemRowEditState {
   draftKey: string;
   draftLabel: string;
   activeInlineSummary: string | null;
-  editingOptions: boolean;
   supportingText: SummaryEntry[];
   categorySummaries: Record<string, string>;
   preFillSourceInputValue: string;
@@ -61,7 +62,7 @@ export function ItemRowContent({
 }: ItemRowContentProps) {
   const {
     testId, itemKey, itemLabel, isField, selected,
-    dataType, widgetHint, dt, labelForDescription,
+    dataType, widgetHint, dt, labelForDescription, groupPrefix,
   } = identity;
   const {
     activeIdentityField, draftKey, draftLabel,
@@ -128,6 +129,7 @@ export function ItemRowContent({
                       onOpenIdentityField('key');
                     }}
                   >
+                    {groupPrefix && <span className="text-ink/35">{groupPrefix}</span>}
                     <span className="truncate">{itemKey}</span>
                     {selected ? <EditMark testId={`${testId}-key-edit`} /> : null}
                   </div>
@@ -230,6 +232,7 @@ export function ItemRowContent({
                             onOpenIdentityField('key');
                           }}
                         >
+                          {groupPrefix && <span className="text-ink/35">{groupPrefix}</span>}
                           {itemKey}
                           {selected ? <EditMark testId={`${testId}-key-edit`} /> : null}
                         </span>

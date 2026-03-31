@@ -56,8 +56,8 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
 
   const scopedCatalog = FIELD_TYPE_CATALOG.filter((opt) => {
     if (scope === 'editor') {
-      // Editor scope: inputs, groups, and display blocks only — not layout containers (Card, Spacer, etc.).
-      if (opt.itemType === 'layout') return false;
+      // Editor scope: fields and groups only — no layout containers or display/content items.
+      if (opt.itemType === 'layout' || opt.itemType === 'display') return false;
     }
     return true;
   });
@@ -125,10 +125,14 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
   const showGrouped = query.trim() === '';
   const searchPlaceholder = scope === 'editor' ? 'Search inputs and groups...' : 'Search types...';
   const grouped = showGrouped
-    ? CATEGORIES.map((cat) => ({
-        cat,
-        items: filtered.filter((f) => f.category === cat),
-      })).filter((g) => g.items.length > 0)
+    ? CATEGORIES
+        .slice()
+        .sort((a, b) => (a === 'Structure' ? -1 : b === 'Structure' ? 1 : 0))
+        .map((cat) => ({
+          cat,
+          items: filtered.filter((f) => f.category === cat),
+        }))
+        .filter((g) => g.items.length > 0)
     : [{ cat: 'Results', items: filtered }];
 
   return (
@@ -206,8 +210,12 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
           {filtered.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted">No field types match &ldquo;{query}&rdquo;</div>
           ) : (
-            grouped.map(({ cat, items }) => (
+            grouped.map(({ cat, items }, groupIdx) => (
               <div key={cat} className="mb-4 last:mb-0">
+                {/* Divider after Structure */}
+                {groupIdx > 0 && grouped[groupIdx - 1]?.cat === 'Structure' && (
+                  <hr className="mb-4 -mt-1 border-border/50" />
+                )}
                 {(showGrouped || grouped.length > 1) && (
                   <div className="px-2 mb-1.5 font-mono text-[9px] font-bold tracking-[0.15em] uppercase text-muted/70">
                     {cat}

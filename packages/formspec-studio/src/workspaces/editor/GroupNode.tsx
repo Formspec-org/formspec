@@ -3,6 +3,7 @@ import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Pill } from '../../components/ui/Pill';
 import { DragHandle } from '../../components/ui/DragHandle';
 import type { FormItem } from '@formspec-org/types';
+import type { StatusPill } from './item-row-shared';
 
 function EditMark({ testId }: { testId?: string }) {
   return (
@@ -36,7 +37,7 @@ interface GroupNodeProps {
   repeatable?: boolean;
   minRepeat?: number;
   maxRepeat?: number;
-  statusPills?: Array<{ text: string; color: 'accent' | 'logic' | 'error' | 'green' | 'amber' | 'muted' }>;
+  statusPills?: StatusPill[];
   missingActions?: Array<{ key: string; label: string; ariaLabel: string }>;
   depth: number;
   children: ReactNode;

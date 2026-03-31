@@ -40,7 +40,7 @@ export interface ItemRowLowerPanelProps {
   preFillLowerSession: boolean;
   orphanUiLabel: string | null;
   orphanFieldDetailLabel: string | null;
-  prePopulateValue: Record<string, unknown> | null;
+  prePopulateValue: { instance: string; path: string; editable?: boolean } | null;
   statusPills: { text: string; color: string; specTerm: string }[];
   visibleMissingActions: { key: string; label: string; ariaLabel: string }[];
   fieldDetailLaunchers: FieldDetailLauncher[];

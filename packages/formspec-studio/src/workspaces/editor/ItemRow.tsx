@@ -27,13 +27,13 @@ interface ItemRowProps {
   itemPath: string;
   itemType: 'field' | 'display';
   label?: string;
-  summaries?: SummaryEntry[];
   categorySummaries?: Record<string, string>;
   dataType?: string;
   widgetHint?: string;
   statusPills?: StatusPill[];
   missingActions?: MissingAction[];
   depth: number;
+  insideRepeatableGroup?: boolean;
   selected?: boolean;
   dragHandleRef?: (element: Element | null) => void;
   item?: FormItem;
@@ -49,13 +49,13 @@ export function ItemRow({
   itemPath,
   itemType,
   label,
-  summaries = [],
   categorySummaries,
   dataType,
   widgetHint,
   statusPills = [],
   missingActions = [],
   depth,
+  insideRepeatableGroup,
   selected,
   dragHandleRef,
   item,
@@ -68,6 +68,11 @@ export function ItemRow({
   const isField = itemType === 'field';
   const isDisplayItem = itemType === 'display';
   const testId = isField ? `field-${itemKey}` : `display-${itemKey}`;
+  const rawPrefix = itemPath.endsWith(`.${itemKey}`) ? itemPath.slice(0, -itemKey.length) : null;
+  // For repeatable groups, insert [] before the trailing dot: "group[]."
+  const groupPrefix = rawPrefix && insideRepeatableGroup
+    ? rawPrefix.replace(/\.$/, '[].')
+    : rawPrefix;
 
   const dt = dataType ? dataTypeInfo(dataType) : null;
   const visibleMissingActions = selected ? missingActions : [];
@@ -127,6 +132,7 @@ export function ItemRow({
     const nextButton = selectors[currentIndex + direction];
     nextButton?.focus();
   };
+
   const prePopulateValue = item?.type === 'field' && item.prePopulate && typeof item.prePopulate === 'object'
     ? item.prePopulate
     : null;
@@ -134,21 +140,20 @@ export function ItemRow({
   const choiceOptions = Array.isArray(item?.options ?? (item as Record<string, unknown>)?.choices)
     ? ((item?.options ?? (item as Record<string, unknown>)?.choices) as Array<{ value: string; label: string; keywords?: string[] }>)
     : [];
-  const contentSummaryMap = new Map(
-    summaries
-      .filter((entry) => entry.label === 'Description' || entry.label === 'Hint')
-      .map((entry) => [entry.label, entry.value]),
-  );
+
+  // Description and Hint are derived directly from the item — no summaries prop needed.
+  const descriptionValue = typeof item?.description === 'string' ? item.description : '';
+  const hintValue = typeof item?.hint === 'string' ? item.hint : '';
+
   const allContentEntries: SummaryEntry[] = [
-    { label: 'Description', value: contentSummaryMap.get('Description') ?? '' },
-    { label: 'Hint', value: contentSummaryMap.get('Hint') ?? '' },
+    { label: 'Description', value: descriptionValue },
+    { label: 'Hint', value: hintValue },
   ];
   // When unselected, hide empty Description/Hint rows to reduce visual noise
-  const contentEntries = selected
+  const supportingText = selected
     ? allContentEntries
     : allContentEntries.filter((entry) => entry.value.trim().length > 0);
-  // Content rows: only Description and Hint (everything else is in the category grid now)
-  const supportingText = contentEntries;
+
   const resetEditors = () => {
     setActiveIdentityField(null);
     setOpenSection(null);
@@ -250,8 +255,8 @@ export function ItemRow({
 
   const summaryInputValue = (label: string): string => {
     switch (label) {
-      case 'Description': return typeof item?.description === 'string' ? item.description : '';
-      case 'Hint': return typeof item?.hint === 'string' ? item.hint : '';
+      case 'Description': return descriptionValue;
+      case 'Hint': return hintValue;
       case 'Initial': return item?.initialValue != null ? String(item.initialValue) : '';
       case 'Currency': return typeof item?.currency === 'string' ? item.currency : '';
       case 'Precision': return typeof item?.precision === 'number' ? String(item.precision) : '';
@@ -414,13 +419,13 @@ export function ItemRow({
         widgetHint,
         dt,
         labelForDescription,
+        groupPrefix,
       }}
       editState={{
         activeIdentityField,
         draftKey,
         draftLabel,
         activeInlineSummary,
-        editingOptions: false,
         supportingText,
         categorySummaries: categorySummaries ?? {},
         preFillSourceInputValue,
