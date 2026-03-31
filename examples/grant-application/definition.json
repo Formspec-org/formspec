@@ -303,6 +303,7 @@
           "label": "Organization Type",
           "dataType": "choice",
           "optionSet": "orgTypes",
+          "initialValue": "nonprofit",
           "children": [
             {
               "type": "field",
@@ -869,7 +870,7 @@
     {
       "path": "applicantInfo.orgType",
       "required": "true",
-      "default": "'nonprofit'"
+      "default": "nonprofit"
     },
     {
       "path": "applicantInfo.contactName",
