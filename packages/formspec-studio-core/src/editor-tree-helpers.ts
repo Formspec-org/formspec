@@ -285,6 +285,7 @@ export interface AdvisoryAction {
 }
 
 export interface Advisory {
+  code: string;
   message: string;
   actions: AdvisoryAction[];
 }
@@ -298,11 +299,12 @@ export function buildAdvisories(binds: Record<string, string>, item: FormItem): 
   const hasInitialValue = item.initialValue != null && String(item.initialValue).trim() !== '';
   const hasPrePopulate = Boolean(item.prePopulate);
 
-  // Pattern 3: required + readonly + calculate — redundant mandatory rule
+  // Pattern 3: required + readonly + calculate — usually redundant mandatory rule
   if (hasRequired && hasReadonly && hasCalculate) {
     advisories.push({
+      code: 'W902',
       message:
-        'This field is required and locked. The formula supplies the value, so the mandatory rule is redundant.',
+        'This field is required and locked with a formula. The mandatory rule is usually redundant unless the formula can return empty.',
       actions: [
         { key: 'remove_required', label: 'Remove mandatory rule' },
         { key: 'review_formula', label: 'Review formula' },
@@ -313,6 +315,7 @@ export function buildAdvisories(binds: Record<string, string>, item: FormItem): 
   // Pattern 1: required + readonly WITHOUT any value source (calculate, initialValue, prePopulate)
   if (hasRequired && hasReadonly && !hasCalculate && !hasInitialValue && !hasPrePopulate) {
     advisories.push({
+      code: 'W900',
       message: 'This field must be filled but is locked with no value source. Add a formula, initial value, or pre-fill to resolve.',
       actions: [
         { key: 'add_formula', label: 'Add formula' },
@@ -325,6 +328,7 @@ export function buildAdvisories(binds: Record<string, string>, item: FormItem): 
   // Pattern 2: prePopulate + calculate — formula replaces pre-fill
   if (hasPrePopulate && hasCalculate) {
     advisories.push({
+      code: 'W901',
       message: 'The formula runs immediately and replaces the starting value from pre-fill.',
       actions: [
         { key: 'remove_pre_populate', label: 'Remove pre-fill' },
@@ -340,6 +344,7 @@ export function buildAdvisories(binds: Record<string, string>, item: FormItem): 
 export interface DefinitionAdvisoryIssue {
   path: string;
   label: string;
+  code: string;
   message: string;
 }
 
@@ -359,7 +364,7 @@ export function buildDefinitionAdvisoryIssues(
     const label =
       typeof item.label === 'string' && item.label.trim() ? item.label : item.key;
     for (const advisory of buildAdvisories(binds, item)) {
-      out.push({ path, label, message: advisory.message });
+      out.push({ path, label, code: advisory.code, message: advisory.message });
     }
   }
   return out;

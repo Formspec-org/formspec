@@ -263,7 +263,7 @@ describe('editor-tree-helpers', () => {
   });
 
   describe('buildDefinitionAdvisoryIssues', () => {
-    it('returns issues with path and label for fields with advisories', () => {
+    it('returns issues with path, label, and code for fields with advisories', () => {
       const issues: DefinitionAdvisoryIssue[] = buildDefinitionAdvisoryIssues(
         [
           { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
@@ -273,6 +273,28 @@ describe('editor-tree-helpers', () => {
       expect(issues).toHaveLength(1);
       expect(issues[0].path).toBe('name');
       expect(issues[0].label).toBe('Name');
+      expect(issues[0].code).toBe('W900');
+      expect(issues[0].message).toContain('locked with no value source');
+    });
+
+    it('produces advisories for nested items inside groups', () => {
+      const issues: DefinitionAdvisoryIssue[] = buildDefinitionAdvisoryIssues(
+        [
+          {
+            key: 'contact',
+            type: 'group',
+            label: 'Contact',
+            children: [
+              { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
+            ],
+          },
+        ] as any,
+        [{ path: 'contact.email', required: 'true', readonly: 'true' }] as any,
+      );
+      expect(issues).toHaveLength(1);
+      expect(issues[0].path).toBe('contact.email');
+      expect(issues[0].label).toBe('Email');
+      expect(issues[0].code).toBe('W900');
       expect(issues[0].message).toContain('locked with no value source');
     });
 
@@ -295,6 +317,7 @@ describe('editor-tree-helpers', () => {
         { key: 'locked', type: 'field', dataType: 'string', label: 'Locked' } as any,
       );
       expect(advisories).toHaveLength(1);
+      expect(advisories[0].code).toBe('W900');
       expect(advisories[0].message).toContain('locked with no value source');
       expect(advisories[0].actions).toEqual([
         { key: 'add_formula', label: 'Add formula' },
@@ -313,6 +336,7 @@ describe('editor-tree-helpers', () => {
         } as any,
       );
       expect(advisories).toHaveLength(1);
+      expect(advisories[0].code).toBe('W901');
       expect(advisories[0].message).toContain('replaces the starting value from pre-fill');
       expect(advisories[0].actions).toEqual([
         { key: 'remove_pre_populate', label: 'Remove pre-fill' },
@@ -321,13 +345,14 @@ describe('editor-tree-helpers', () => {
     });
 
     // Advisory pattern 3: required + readonly + calculate
-    it('warns when required + readonly + calculate makes required redundant', () => {
+    it('warns when required + readonly + calculate makes required usually redundant', () => {
       const advisories = buildAdvisories(
         { required: 'true', readonly: 'true', calculate: '$x * 2' },
         { key: 'computed', type: 'field', dataType: 'decimal', label: 'Computed' } as any,
       );
       expect(advisories).toHaveLength(1);
-      expect(advisories[0].message).toContain('mandatory rule is redundant');
+      expect(advisories[0].code).toBe('W902');
+      expect(advisories[0].message).toContain('usually redundant unless the formula can return empty');
       expect(advisories[0].actions).toEqual([
         { key: 'remove_required', label: 'Remove mandatory rule' },
         { key: 'review_formula', label: 'Review formula' },
@@ -406,7 +431,7 @@ describe('editor-tree-helpers', () => {
         { key: 'f', type: 'field', dataType: 'string', label: 'F' } as any,
       );
       expect(advisories).toHaveLength(1);
-      expect(advisories[0].message).toContain('redundant');
+      expect(advisories[0].message).toContain('usually redundant');
     });
 
     // Edge case: required + readonly + calculate + prePopulate triggers pattern 3 AND pattern 2
@@ -416,7 +441,7 @@ describe('editor-tree-helpers', () => {
         { key: 'f', type: 'field', dataType: 'string', label: 'F', prePopulate: { instance: 's', path: 'p' } } as any,
       );
       expect(advisories).toHaveLength(2);
-      expect(advisories[0].message).toContain('redundant');
+      expect(advisories[0].message).toContain('usually redundant');
       expect(advisories[1].message).toContain('replaces the starting value');
     });
 
