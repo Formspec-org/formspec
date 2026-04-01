@@ -19,50 +19,6 @@
     "labelPosition": "top",
     "density": "comfortable"
   },
-  "screener": {
-    "items": [
-      {
-        "key": "sChiefComplaint",
-        "type": "field",
-        "dataType": "choice",
-        "label": "What is the primary reason for your visit?",
-        "options": [
-          { "value": "acute", "label": "Acute illness or injury" },
-          { "value": "chronic", "label": "Chronic condition management" },
-          { "value": "preventive", "label": "Preventive care / checkup" },
-          { "value": "emergency", "label": "Emergency symptoms" }
-        ]
-      },
-      {
-        "key": "sPainLevel",
-        "type": "field",
-        "dataType": "integer",
-        "label": "Current pain level (0-10)",
-        "hint": "0 = no pain, 10 = worst possible pain"
-      }
-    ],
-    "binds": [
-      { "path": "sChiefComplaint", "required": "true" },
-      { "path": "sPainLevel", "constraint": "$ >= 0 and $ <= 10" }
-    ],
-    "routes": [
-      {
-        "condition": "$sChiefComplaint = 'emergency' or $sPainLevel >= 8",
-        "target": "https://formspec.org/examples/emergency-intake",
-        "label": "Route to Emergency Intake"
-      },
-      {
-        "condition": "$sChiefComplaint = 'acute' and $sPainLevel >= 5",
-        "target": "https://formspec.org/examples/urgent-intake",
-        "label": "Route to Urgent Care Intake"
-      },
-      {
-        "condition": "true",
-        "target": "https://formspec.org/examples/clinical-intake",
-        "label": "Continue to Standard Intake"
-      }
-    ]
-  },
   "instances": {
     "patient": {
       "description": "Pre-populated patient demographics from EHR",
@@ -94,21 +50,74 @@
       "static": true,
       "readonly": true,
       "data": [
-        { "name": "Lisinopril", "class": "ACE Inhibitor", "commonDosages": ["5mg", "10mg", "20mg", "40mg"] },
-        { "name": "Metformin", "class": "Biguanide", "commonDosages": ["500mg", "850mg", "1000mg"] },
-        { "name": "Atorvastatin", "class": "Statin", "commonDosages": ["10mg", "20mg", "40mg", "80mg"] },
-        { "name": "Omeprazole", "class": "PPI", "commonDosages": ["20mg", "40mg"] },
-        { "name": "Amlodipine", "class": "CCB", "commonDosages": ["2.5mg", "5mg", "10mg"] }
+        {
+          "name": "Lisinopril",
+          "class": "ACE Inhibitor",
+          "commonDosages": [
+            "5mg",
+            "10mg",
+            "20mg",
+            "40mg"
+          ]
+        },
+        {
+          "name": "Metformin",
+          "class": "Biguanide",
+          "commonDosages": [
+            "500mg",
+            "850mg",
+            "1000mg"
+          ]
+        },
+        {
+          "name": "Atorvastatin",
+          "class": "Statin",
+          "commonDosages": [
+            "10mg",
+            "20mg",
+            "40mg",
+            "80mg"
+          ]
+        },
+        {
+          "name": "Omeprazole",
+          "class": "PPI",
+          "commonDosages": [
+            "20mg",
+            "40mg"
+          ]
+        },
+        {
+          "name": "Amlodipine",
+          "class": "CCB",
+          "commonDosages": [
+            "2.5mg",
+            "5mg",
+            "10mg"
+          ]
+        }
       ]
     }
   },
   "optionSets": {
     "severityLevels": {
       "options": [
-        { "value": "mild", "label": "Mild" },
-        { "value": "moderate", "label": "Moderate" },
-        { "value": "severe", "label": "Severe" },
-        { "value": "critical", "label": "Critical" }
+        {
+          "value": "mild",
+          "label": "Mild"
+        },
+        {
+          "value": "moderate",
+          "label": "Moderate"
+        },
+        {
+          "value": "severe",
+          "label": "Severe"
+        },
+        {
+          "value": "critical",
+          "label": "Critical"
+        }
       ]
     }
   },
@@ -137,21 +146,33 @@
           "type": "field",
           "dataType": "string",
           "label": "First Name",
-          "prePopulate": { "instance": "patient", "path": "firstName", "editable": false }
+          "prePopulate": {
+            "instance": "patient",
+            "path": "firstName",
+            "editable": false
+          }
         },
         {
           "key": "lastName",
           "type": "field",
           "dataType": "string",
           "label": "Last Name",
-          "prePopulate": { "instance": "patient", "path": "lastName", "editable": false }
+          "prePopulate": {
+            "instance": "patient",
+            "path": "lastName",
+            "editable": false
+          }
         },
         {
           "key": "dob",
           "type": "field",
           "dataType": "date",
           "label": "Date of Birth",
-          "prePopulate": { "instance": "patient", "path": "dob", "editable": false }
+          "prePopulate": {
+            "instance": "patient",
+            "path": "dob",
+            "editable": false
+          }
         },
         {
           "key": "age",
@@ -165,34 +186,63 @@
           "dataType": "choice",
           "label": "Sex",
           "options": [
-            { "value": "male", "label": "Male" },
-            { "value": "female", "label": "Female" },
-            { "value": "other", "label": "Other" }
+            {
+              "value": "male",
+              "label": "Male"
+            },
+            {
+              "value": "female",
+              "label": "Female"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
           ],
-          "prePopulate": { "instance": "patient", "path": "sex", "editable": false }
+          "prePopulate": {
+            "instance": "patient",
+            "path": "sex",
+            "editable": false
+          }
         },
         {
           "key": "phone",
           "type": "field",
           "dataType": "string",
           "label": "Phone",
-          "extensions": { "x-formspec-phone-nanp": true },
-          "prePopulate": { "instance": "patient", "path": "phone", "editable": true }
+          "extensions": {
+            "x-formspec-phone-nanp": true
+          },
+          "prePopulate": {
+            "instance": "patient",
+            "path": "phone",
+            "editable": true
+          }
         },
         {
           "key": "email",
           "type": "field",
           "dataType": "string",
           "label": "Email",
-          "extensions": { "x-formspec-email": true },
-          "prePopulate": { "instance": "patient", "path": "email", "editable": true }
+          "extensions": {
+            "x-formspec-email": true
+          },
+          "prePopulate": {
+            "instance": "patient",
+            "path": "email",
+            "editable": true
+          }
         },
         {
           "key": "insuranceMemberId",
           "type": "field",
           "dataType": "string",
           "label": "Insurance Member ID",
-          "prePopulate": { "instance": "patient", "path": "insuranceMemberId", "editable": false }
+          "prePopulate": {
+            "instance": "patient",
+            "path": "insuranceMemberId",
+            "editable": false
+          }
         },
         {
           "key": "insuranceCard",
@@ -214,14 +264,38 @@
           "dataType": "multiChoice",
           "label": "Current Symptoms",
           "options": [
-            { "value": "fever", "label": "Fever" },
-            { "value": "cough", "label": "Cough" },
-            { "value": "headache", "label": "Headache" },
-            { "value": "fatigue", "label": "Fatigue" },
-            { "value": "pain", "label": "Pain" },
-            { "value": "nausea", "label": "Nausea" },
-            { "value": "dizziness", "label": "Dizziness" },
-            { "value": "other", "label": "Other" }
+            {
+              "value": "fever",
+              "label": "Fever"
+            },
+            {
+              "value": "cough",
+              "label": "Cough"
+            },
+            {
+              "value": "headache",
+              "label": "Headache"
+            },
+            {
+              "value": "fatigue",
+              "label": "Fatigue"
+            },
+            {
+              "value": "pain",
+              "label": "Pain"
+            },
+            {
+              "value": "nausea",
+              "label": "Nausea"
+            },
+            {
+              "value": "dizziness",
+              "label": "Dizziness"
+            },
+            {
+              "value": "other",
+              "label": "Other"
+            }
           ]
         },
         {
@@ -255,11 +329,26 @@
           "label": "Preferred clinic",
           "hint": "Optional. Choose a clinic type.",
           "options": [
-            { "value": "any", "label": "Any available provider" },
-            { "value": "family", "label": "Family Medicine" },
-            { "value": "internal", "label": "Internal Medicine" },
-            { "value": "pediatrics", "label": "Pediatrics" },
-            { "value": "obgyn", "label": "OB/GYN" }
+            {
+              "value": "any",
+              "label": "Any available provider"
+            },
+            {
+              "value": "family",
+              "label": "Family Medicine"
+            },
+            {
+              "value": "internal",
+              "label": "Internal Medicine"
+            },
+            {
+              "value": "pediatrics",
+              "label": "Pediatrics"
+            },
+            {
+              "value": "obgyn",
+              "label": "OB/GYN"
+            }
           ]
         }
       ]
@@ -346,12 +435,30 @@
                   "dataType": "choice",
                   "label": "Frequency",
                   "options": [
-                    { "value": "daily", "label": "Once daily" },
-                    { "value": "bid", "label": "Twice daily" },
-                    { "value": "tid", "label": "Three times daily" },
-                    { "value": "qid", "label": "Four times daily" },
-                    { "value": "prn", "label": "As needed" },
-                    { "value": "weekly", "label": "Weekly" }
+                    {
+                      "value": "daily",
+                      "label": "Once daily"
+                    },
+                    {
+                      "value": "bid",
+                      "label": "Twice daily"
+                    },
+                    {
+                      "value": "tid",
+                      "label": "Three times daily"
+                    },
+                    {
+                      "value": "qid",
+                      "label": "Four times daily"
+                    },
+                    {
+                      "value": "prn",
+                      "label": "As needed"
+                    },
+                    {
+                      "value": "weekly",
+                      "label": "Weekly"
+                    }
                   ]
                 },
                 {
@@ -410,36 +517,126 @@
     }
   ],
   "binds": [
-    { "path": "patient.firstName", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "patient.lastName", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "patient.dob", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "patient.sex", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "patient.insuranceMemberId", "readonly": "true", "disabledDisplay": "protected" },
-
-    { "path": "currentVisit.otherSymptoms", "relevant": "selected($currentVisit.symptoms, 'other')" },
-    { "path": "medicalHistory.allergies", "relevant": "$medicalHistory.hasAllergies = true" },
-
-    { "path": "patient.age", "calculate": "@patientAgeYears", "readonly": "true", "disabledDisplay": "protected" },
-
-    { "path": "medicalHistory.conditions[*].condMedCount", "calculate": "count($medications[*].medDrugName)", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "medicalHistory.conditions[*].condWorsening", "calculate": "let p = prev() in if isNull(p) then null else ($severity != p.severity)", "readonly": "true", "disabledDisplay": "protected" },
-
-    { "path": "assessment.totalConditions", "calculate": "count($medicalHistory.conditions[*].conditionName)", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "assessment.severeConditionCount", "calculate": "countWhere($medicalHistory.conditions[*].severity, $ = 'severe' or $ = 'critical')", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "assessment.totalMedications", "calculate": "sum($medicalHistory.conditions[*].condMedCount)", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "assessment.symptomDuration", "calculate": "if present($currentVisit.onsetDate) then dateDiff(today(), date($currentVisit.onsetDate), 'days') else null", "readonly": "true", "disabledDisplay": "protected" },
-    { "path": "assessment.maskedInsuranceId", "calculate": "let id = string($patient.insuranceMemberId) in if empty(id) then null else if length(id) <= 4 then id else ('****' & substring(id, length(id) - 3, 4))", "readonly": "true", "disabledDisplay": "protected" },
-
-    { "path": "patient.firstName", "required": "true" },
-    { "path": "patient.lastName", "required": "true" },
-    { "path": "currentVisit.symptoms", "required": "true" },
-    { "path": "currentVisit.onsetDate", "required": "true" },
-    { "path": "medicalHistory.conditions[*].conditionName", "required": "true" },
-    { "path": "medicalHistory.conditions[*].severity", "required": "true" },
-
-    { "path": "currentVisit.onsetDate", "constraint": "date($) <= today()", "constraintMessage": "Onset date cannot be in the future" },
-    { "path": "medicalHistory.conditions[*].diagnosedDate", "constraint": "date($) <= today()", "constraintMessage": "Diagnosis date cannot be in the future" },
-    { "path": "medicalHistory.conditions[*].medications[*].medStartDate", "constraint": "date($) <= today()", "constraintMessage": "Medication start date cannot be in the future" }
+    {
+      "path": "patient.firstName",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "patient.lastName",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "patient.dob",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "patient.sex",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "patient.insuranceMemberId",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "currentVisit.otherSymptoms",
+      "relevant": "selected($currentVisit.symptoms, 'other')"
+    },
+    {
+      "path": "medicalHistory.allergies",
+      "relevant": "$medicalHistory.hasAllergies = true"
+    },
+    {
+      "path": "patient.age",
+      "calculate": "@patientAgeYears",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "medicalHistory.conditions[*].condMedCount",
+      "calculate": "count($medications[*].medDrugName)",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "medicalHistory.conditions[*].condWorsening",
+      "calculate": "let p = prev() in if isNull(p) then null else ($severity != p.severity)",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "assessment.totalConditions",
+      "calculate": "count($medicalHistory.conditions[*].conditionName)",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "assessment.severeConditionCount",
+      "calculate": "countWhere($medicalHistory.conditions[*].severity, $ = 'severe' or $ = 'critical')",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "assessment.totalMedications",
+      "calculate": "sum($medicalHistory.conditions[*].condMedCount)",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "assessment.symptomDuration",
+      "calculate": "if present($currentVisit.onsetDate) then dateDiff(today(), date($currentVisit.onsetDate), 'days') else null",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "assessment.maskedInsuranceId",
+      "calculate": "let id = string($patient.insuranceMemberId) in if empty(id) then null else if length(id) <= 4 then id else ('****' & substring(id, length(id) - 3, 4))",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "patient.firstName",
+      "required": "true"
+    },
+    {
+      "path": "patient.lastName",
+      "required": "true"
+    },
+    {
+      "path": "currentVisit.symptoms",
+      "required": "true"
+    },
+    {
+      "path": "currentVisit.onsetDate",
+      "required": "true"
+    },
+    {
+      "path": "medicalHistory.conditions[*].conditionName",
+      "required": "true"
+    },
+    {
+      "path": "medicalHistory.conditions[*].severity",
+      "required": "true"
+    },
+    {
+      "path": "currentVisit.onsetDate",
+      "constraint": "date($) <= today()",
+      "constraintMessage": "Onset date cannot be in the future"
+    },
+    {
+      "path": "medicalHistory.conditions[*].diagnosedDate",
+      "constraint": "date($) <= today()",
+      "constraintMessage": "Diagnosis date cannot be in the future"
+    },
+    {
+      "path": "medicalHistory.conditions[*].medications[*].medStartDate",
+      "constraint": "date($) <= today()",
+      "constraintMessage": "Medication start date cannot be in the future"
+    }
   ],
   "shapes": [
     {
@@ -475,7 +672,7 @@
       "severity": "warning",
       "timing": "submit",
       "constraint": "isNull($assessment.severeConditionCount) or isNull($assessment.totalMedications) or not( (@isSenior and $assessment.severeConditionCount > 0) or ($assessment.totalMedications >= 5) )",
-      "message": "Patient may be high-risk — review before scheduling",
+      "message": "Patient may be high-risk \u2014 review before scheduling",
       "code": "HIGH_RISK"
     },
     {

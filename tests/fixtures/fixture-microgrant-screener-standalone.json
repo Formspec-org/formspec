@@ -1,0 +1,77 @@
+{
+  "$formspecScreener": "1.0",
+  "url": "urn:test:microgrant/screener",
+  "version": "1.0.0",
+  "title": "Microgrant Screener and Application Fixture \u2014 Screener",
+  "items": [
+    {
+      "key": "screenOrgType",
+      "type": "field",
+      "dataType": "choice",
+      "label": "Organization type",
+      "options": [
+        {
+          "value": "school",
+          "label": "School or district"
+        },
+        {
+          "value": "nonprofit",
+          "label": "Nonprofit"
+        },
+        {
+          "value": "municipal",
+          "label": "Municipal government"
+        },
+        {
+          "value": "other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "key": "screenReturningApplicant",
+      "type": "field",
+      "dataType": "boolean",
+      "label": "Returning applicant"
+    },
+    {
+      "key": "screenEstimatedRequest",
+      "type": "field",
+      "dataType": "money",
+      "label": "Estimated request"
+    }
+  ],
+  "binds": [
+    {
+      "path": "screenOrgType",
+      "required": "true"
+    },
+    {
+      "path": "screenEstimatedRequest",
+      "required": "true"
+    }
+  ],
+  "evaluation": [
+    {
+      "id": "routing",
+      "strategy": "first-match",
+      "routes": [
+        {
+          "condition": "$screenReturningApplicant = true and moneyAmount($screenEstimatedRequest) <= 25000",
+          "target": "https://example.org/forms/microgrant-short/1.0.0",
+          "label": "Short renewal"
+        },
+        {
+          "condition": "$screenOrgType = 'municipal'",
+          "target": "https://example.org/forms/microgrant-government/1.0.0",
+          "label": "Municipal variant"
+        },
+        {
+          "condition": "true",
+          "target": "https://example.org/tests/fixtures/microgrant-screener/1.0.0",
+          "label": "Standard application"
+        }
+      ]
+    }
+  ]
+}
