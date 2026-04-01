@@ -1,5 +1,5 @@
 /** @filedesc Rich FEL expression editor with syntax highlighting, field/function autocomplete, and validation. */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   useFloating,
   autoUpdate,
@@ -56,10 +56,10 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
     setDraft(value);
   }, [value]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (autoFocus && textareaRef.current) {
-      textareaRef.current.focus();
       autoResize(textareaRef.current);
+      textareaRef.current.focus();
     }
   }, [autoFocus]);
 
@@ -306,7 +306,7 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
         <div className="relative">
           {/* Highlighting Overlay */}
           <div 
-            className="absolute inset-0 pointer-events-none font-mono text-[11px] px-2 py-1.5 whitespace-pre-wrap break-all select-none overflow-hidden leading-relaxed"
+            className="absolute inset-0 z-20 pointer-events-none font-mono text-[11px] px-2 py-1.5 whitespace-pre-wrap break-all select-none overflow-hidden leading-relaxed"
             aria-hidden="true"
           >
             {highlightTokens.length === 0 && placeholder && (
@@ -350,10 +350,26 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
               }, 150);
             }}
             style={{ caretColor: 'var(--studio-color-ink)' }}
-            className="w-full font-mono text-[11px] text-transparent bg-subtle/30 border border-border/80 rounded-[4px] px-2 py-1.5 resize-none overflow-hidden outline-none focus:border-accent/40 focus:bg-surface transition-all leading-relaxed relative z-10 block min-h-[28px]"
+            className={`w-full font-mono text-[11px] text-transparent border rounded-[4px] px-2 py-1.5 resize-none overflow-hidden outline-none transition-all leading-relaxed relative z-10 block min-h-[28px] ${
+              syntaxError
+                ? 'border-error bg-error/5'
+                : 'bg-transparent border-border/80 focus:border-accent/40 focus:bg-surface/50'
+            }`}
             rows={1}
           />
         </div>
+
+        {syntaxError && (
+          <div className="text-[10px] text-error leading-tight mt-0.5 px-1 truncate" title={syntaxError}>
+            {syntaxError}
+          </div>
+        )}
+
+        {!syntaxError && (
+          <div className="text-[10px] text-muted/40 mt-0.5 px-1 select-none">
+            <kbd className="font-mono">&#8984;&#9166;</kbd> save &middot; <kbd className="font-mono">Esc</kbd> cancel
+          </div>
+        )}
 
         {/* Floating Autocomplete Menu */}
         {autocomplete && autocompleteOptions.length > 0 && (
@@ -395,10 +411,15 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
                         <span className={`w-4 text-center ${isSelected ? 'text-white' : iconColor} opacity-80 shrink-0 font-bold`}>
                           {icon}
                         </span>
-                        <div className="flex-1 min-w-0 flex flex-col">
+                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                           <span className="font-bold truncate">
                             {opt.kind === 'path' ? `$${opt.path}` : opt.kind === 'function' ? opt.name : opt.name}
                           </span>
+                          {opt.kind === 'path' && opt.label !== opt.path && (
+                            <span className={`text-[10px] truncate ${isSelected ? 'text-white/70' : 'text-muted/80'}`}>
+                              {opt.label}
+                            </span>
+                          )}
                         </div>
                       </li>
                     );
