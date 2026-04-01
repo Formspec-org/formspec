@@ -299,14 +299,6 @@ def gen_route(draw):
 
 
 @st.composite
-def gen_screener(draw):
-    return {
-        "items": draw(st.lists(gen_field_item(), min_size=1, max_size=2)),
-        "routes": draw(st.lists(gen_route(), min_size=1, max_size=3)),
-    }
-
-
-@st.composite
 def gen_definition(draw):
     defn = {
         "$formspec": "1.0",

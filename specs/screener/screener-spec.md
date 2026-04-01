@@ -1506,3 +1506,535 @@ is deprecated in favor of standalone Screener Documents.
 The Screener is the only sidecar document that does not bind to a host
 Definition. This reflects its fundamentally different architectural role:
 it is a gateway, not a projection.
+
+## Appendix C: Implementation Migration Inventory
+
+This appendix catalogs every file, type, handler, test, schema, and code path
+in the Formspec repository that references or implements the embedded
+`definition.screener` mechanism (Core §4.7). Each entry specifies the file,
+what it currently does, and what must change to support the standalone Screener
+Document model defined by this specification.
+
+### C.1 Schema Changes
+
+**C.1.1 `schemas/definition.schema.json` — Remove embedded screener**
+
+Three `$defs` must be removed or deprecated, and one root property deleted:
+
+| Location | What exists | Action |
+|----------|-------------|--------|
+| Root `properties.screener` | `"$ref": "#/$defs/Screener"` property on the Definition root | **Remove** the `screener` property entirely. |
+| `$defs/Screener` | Object type with `items`, `routes`, `binds`, `extensions`. Required: `items`, `routes`. | **Remove** this `$def`. |
+| `$defs/Route` | Object type with `condition`, `target`, `label`, `message`. Required: `condition`, `target`. | **Remove** this `$def`. Superseded by the Route definition in `schemas/screener.schema.json` which adds `score`, `threshold`, `override`, `terminal`, and `metadata`. |
+
+After removal, run `npm run docs:generate` and `npm run docs:check` to
+cascade the schema change through BLUF injections, `*.llm.md` files, and
+cross-spec contract checks.
+
+**C.1.2 `crates/formspec-lint/schemas/definition.schema.json` — Synced copy**
+
+The linter crate embeds a copy of the definition schema. This MUST be updated
+in lockstep with the canonical schema.
+
+**C.1.3 New schemas (already created)**
+
+- `schemas/screener.schema.json` — Screener Document input schema (`$formspecScreener`).
+- `schemas/determination.schema.json` — Determination Record output schema (`$formspecDetermination`).
+
+These need to be:
+1. Copied into `crates/formspec-lint/schemas/` for Rust-side validation.
+2. Registered in `crates/formspec-lint/src/schema_validation.rs` for document type
+   detection (`DocumentType` enum, `MARKER_FIELDS` constant).
+3. Registered in `crates/formspec-core/src/schema_validator.rs` for the WASM
+   document validator (`DocumentType` enum needs `Screener` and `Determination`
+   variants).
+4. Added to `formspec-types` codegen for screener and determination TypeScript
+   interfaces.
+5. `CROSS_REF_SCHEMAS` in `schema_validation.rs` must include
+   `definition.schema.json` because `screener.schema.json` uses absolute URI
+   `$ref` to borrow `Item`, `Bind`, and `FELExpression` from the definition
+   schema.
+
+**C.1.4 `schemas/core-commands.schema.json` — Screener command shapes**
+
+Defines command schemas for `definition.addRoute`, `definition.setRouteProperty`,
+`definition.deleteRoute`, `definition.reorderRoute`, and other screener
+handlers. These command definitions must be updated or replaced with new
+`screener.*` command schemas.
+
+**C.1.5 `packages/formspec-types/src/generated/index.ts` — Barrel re-export**
+
+Line 10 explicitly re-exports `Screener` and `Route` by name from
+`./definition.js`. Must be updated when those types are removed from the
+generated definition types.
+
+---
+
+### C.2 Core Spec Changes
+
+**`specs/core/spec.md` — §4.7**
+
+Replace normative content with a deprecation forward-reference:
+
+> **§4.7 Screener (Deprecated)**
+>
+> The `screener` property on a Definition is deprecated. New implementations
+> SHOULD use the standalone Screener Document defined in the Formspec Screener
+> Specification (companion document). The embedded `screener` property was a
+> single-strategy (first-match) routing mechanism scoped to a single
+> Definition. The Screener Specification generalizes it into a standalone
+> document with multiple evaluation strategies, lifecycle management, override
+> routes, and structured Determination Records as output.
+>
+> Conforming processors MAY continue to accept Definitions containing a
+> `screener` property for backwards compatibility. When encountered, the
+> embedded screener SHOULD be treated as equivalent to a standalone Screener
+> Document with a single `first-match` evaluation phase. See Screener
+> Specification Appendix A for the mechanical migration.
+
+---
+
+### C.3 TypeScript Engine Changes
+
+**C.3.1 `packages/formspec-engine/src/interfaces.ts`**
+
+`IFormEngine.evaluateScreener(answers)` evaluates the embedded
+`definition.screener.routes` using first-match semantics and returns
+`{ target, label, extensions } | null`.
+
+Action: Deprecate. Add a new method or standalone function for evaluating a
+Screener Document that returns a `DeterminationRecord`.
+
+**C.3.2 `packages/formspec-engine/src/engine/FormEngine.ts`**
+
+`evaluateScreener()` calls `wasmEvaluateScreener(this.definition, answers)`.
+
+Action: Deprecate. A standalone screener does not belong to any single engine
+instance. Note: the `IFormEngine` return type is missing `message?: string`
+that `wasmEvaluateScreener` actually returns — a pre-existing type gap to fix
+during migration.
+
+**C.3.3 `packages/formspec-engine/src/wasm-bridge-runtime.ts`**
+
+`wasmEvaluateScreener(definition, answers)` serializes definition + answers,
+calls WASM `evaluateScreener`, deserializes the route result.
+
+Action: Add `wasmEvaluateScreenerDocument(screenerDoc, answers)` returning a
+full `DeterminationRecord`. Keep existing function for backwards compatibility.
+
+**C.3.4 `packages/formspec-types/src/generated/definition.ts`**
+
+Auto-generated types: `FormDefinition.screener?: Screener`, `interface Screener`,
+`interface Route`.
+
+Action: Re-run codegen after schema changes. These types will be removed. New
+types for `ScreenerDocument`, `EvaluationPhase`, `ScreenerRoute`, and
+`DeterminationRecord` will be generated from the new schemas.
+
+**C.3.5 `packages/formspec-types/src/index.ts`**
+
+Hand-written augmentations: `FormScreener` (relaxes route tuples for authoring),
+`FormDefinition` override with `screener: FormScreener`.
+
+Action: Remove `FormScreener` and `screener` from `FormDefinition` augmentation.
+Add `FormScreenerDocument` with authoring-friendly relaxations.
+
+---
+
+### C.4 TypeScript Core/Handler Changes
+
+**C.4.1 `packages/formspec-core/src/handlers/definition-screener.ts` (entire file)**
+
+Contains 10 command handlers for the embedded screener: `definition.setScreener`,
+`definition.addScreenerItem`, `definition.deleteScreenerItem`,
+`definition.setScreenerBind`, `definition.addRoute`,
+`definition.setRouteProperty`, `definition.deleteRoute`,
+`definition.setScreenerItemProperty`, `definition.reorderScreenerItem`,
+`definition.reorderRoute`.
+
+Action: All 10 handlers need new equivalents operating on a standalone Screener
+Document in project state. Command prefix changes from `definition.*` to
+`screener.*`. New handlers needed for: phase CRUD, phase strategy configuration,
+override/terminal management, route score/threshold/metadata, lifecycle
+properties, and document-level properties.
+
+**C.4.2 `packages/formspec-core/src/handlers/index.ts`**
+
+Imports and spreads `definitionScreenerHandlers` into the handler registry.
+
+Action: Replace with new `screenerHandlers` import from a new `screener.ts`
+handler file.
+
+**C.4.3 `packages/formspec-core/src/queries/statistics.ts`**
+
+Reads `def.screener` to compute `screenerFieldCount` and `screenerRouteCount`.
+
+Action: Read from the project's standalone screener document (`state.screener`).
+Extend statistics to include phase count, override route count, and strategy types.
+
+**C.4.4 `packages/formspec-core/src/queries/dependency-graph.ts`**
+
+`fieldDependents` scans `def.screener?.routes` for FEL references and populates
+`result.screenerRoutes` with indices.
+
+Action: Scan standalone screener document evaluation phases. Return type changes
+to `Array<{ phaseId: string; routeIndex: number }>` since routes are now nested
+inside phases.
+
+**C.4.5 `packages/formspec-core/src/handlers/definition-items.ts`**
+
+`rewriteAllPathReferences` rewrites FEL references in `state.definition.screener?.routes`
+when an item path changes.
+
+Action: Since the screener is a separate document with its own item scope, this
+coupling should be removed. Screener route conditions reference screener item
+paths, not definition field paths.
+
+**C.4.6 `packages/formspec-core/src/handlers/definition-instances.ts`**
+
+Similar path rewriting for screener routes during instance rename.
+
+Action: Remove this coupling for the same reason as C.4.5.
+
+**C.4.7 `packages/formspec-core/src/types.ts`**
+
+- `ProjectStatistics`: `screenerFieldCount`, `screenerRouteCount`
+- `FieldDependents`: `screenerRoutes: number[]`
+- `Change.target`: includes `'screener'`
+
+Action: Retain but source from standalone screener. Add `screenerPhaseCount`.
+Update `FieldDependents.screenerRoutes` type. `Change.target: 'screener'`
+remains valid.
+
+---
+
+### C.5 TypeScript Studio-Core Changes
+
+**C.5.1 `packages/formspec-studio-core/src/project.ts` — Screener helpers**
+
+The `Project` class contains 9 public screener helpers and 2 private validators:
+`setScreener`, `addScreenField`, `removeScreenField`, `updateScreenField`,
+`reorderScreenField`, `addScreenRoute`, `updateScreenRoute`,
+`reorderScreenRoute`, `removeScreenRoute`, `_validateScreenerItemKey`,
+`_validateRouteIndex`.
+
+Action: Rewrite all helpers to dispatch to new `screener.*` handlers. Additional
+helpers needed: `createScreenerDocument` / `deleteScreenerDocument`,
+`addEvaluationPhase` / `removeEvaluationPhase` / `reorderPhase`,
+`setPhaseStrategy`, `addPhaseRoute` / `removePhaseRoute`, `setRouteOverride`,
+`setScreenerLifecycle`.
+
+**C.5.2 `packages/formspec-studio-core/src/project.ts` — removeItem cleanup**
+
+`removeItem` deletes screener routes referencing a removed field via
+`depSet.screenerRoutes`.
+
+Action: Remove this cleanup block. Definition fields and screener items are
+separate scopes — definition field deletion should NOT cascade to screener
+route deletion.
+
+---
+
+### C.6 TypeScript Studio UI Changes
+
+**C.6.1 Screener authoring components (`packages/formspec-studio/src/workspaces/editor/screener/`)**
+
+| File | Action |
+|------|--------|
+| `types.ts` | Rewrite: Route gains `score`, `threshold`, `override`, `terminal`, `metadata`. Add `EvaluationPhase` type. |
+| `ScreenerRoutes.tsx` | Major rewrite: routes nested inside phases. Phase-level organizer with per-phase route lists. Fallback relevant only for first-match. |
+| `RouteCard.tsx` | Extend: add `score`, `threshold`, `override`, `terminal`, `metadata` fields. |
+| `QuestionCard.tsx` | Minor: reads from standalone screener state. |
+| `FallbackRoute.tsx` | Scope to first-match phases only. |
+| `ScreenerQuestions.tsx` | Moderate rewrite: reads from standalone screener state. |
+| `ScreenerToggle.tsx` | Rewrite: creates/destroys standalone screener document instead of toggling `definition.screener`. |
+
+**C.6.2 Orchestrator and host components**
+
+- `ScreenerAuthoring.tsx` — rewrite to read from standalone screener document.
+  Add phase management section.
+- `ManageView.tsx` — update import. Consider whether screener belongs in definition
+  editor or a separate workspace.
+- `ScreenerSummary.tsx` — read from standalone screener. Show phase count and strategies.
+- `Shell.tsx` — update sidebar badge count to read from standalone screener.
+- `Blueprint.tsx` — `SECTIONS` array (line 35) counts `definition.screener`
+  items + routes. Update to read from standalone screener document.
+- `FormPreviewV2.tsx` (chat-v2 component) — reads `def.screener` directly
+  (lines 172–187), iterates items and routes. Update to standalone document.
+
+**C.6.3 Preview**
+
+`FormspecPreviewHost.tsx` — listens to `formspec-screener-route` and
+`formspec-screener-state-change` custom events (observer-only, no authoring
+logic). Needs to understand standalone screener documents. May need a separate
+screener preview mode that shows the Determination Record.
+
+---
+
+### C.7 Rust Crate Changes
+
+**C.7.1 `crates/formspec-eval/src/screener.rs` (entire file)**
+
+Contains `ScreenerRouteResult` struct and `evaluate_screener(definition, answers)`
+which reads `definition["screener"]["routes"]` and evaluates first-match.
+
+Action: **Major rewrite.** New types: `ScreenerDocument`, `EvaluationPhase`,
+`ScreenerRoute`, `DeterminationRecord`, `PhaseResult`, `RouteResult`. New
+evaluation function: `evaluate_screener_document(doc, answers)` implementing
+the full pipeline (override hoisting → override evaluation → per-phase strategy
+dispatch). Strategy implementations: `evaluate_first_match`, `evaluate_fan_out`,
+`evaluate_score_threshold`. Keep existing function for backwards compatibility.
+
+**C.7.2 `crates/formspec-eval/src/eval_json.rs`**
+
+`screener_route_to_json_value` serializes a single route match.
+
+Action: Add `determination_record_to_json_value` for the full record.
+
+**C.7.3 `crates/formspec-wasm/src/evaluate.rs`**
+
+WASM binding: `evaluateScreener(definition_json, answers_json)`.
+
+Action: Add `evaluateScreenerDocument(screener_json, answers_json)` returning
+DeterminationRecord JSON.
+
+**C.7.4 `crates/formspec-py/src/document.rs`**
+
+Python binding: `evaluate_screener_py(definition, answers)`.
+
+Action: Add `evaluate_screener_document_py(screener_doc, answers)`. Deprecate
+existing function.
+
+**C.7.6 `crates/formspec-lint/src/expressions.rs`**
+
+`walk_screener` (private fn) parses FEL expressions in
+`document["screener"]["routes"][].condition` and `document["screener"]["binds"]`.
+Four screener-specific test functions at lines 470, 494, 732, and 807.
+
+Action: Add `walk_screener_document` for standalone format. Expression paths
+change from `$.screener.routes[N].condition` to
+`$.evaluation[N].routes[M].condition` plus phase-level `activeWhen` and
+route `score` expressions.
+
+**C.7.6a `crates/formspec-lint/src/lib.rs`**
+
+Two integration-level lint tests: `screener_integration_spans_passes` and
+`extension_resolution_cross_pass_integration` (uses screener fixture data).
+Must be updated for standalone screener document format.
+
+**C.7.6b `crates/formspec-core/src/changelog.rs`**
+
+`ChangeTarget::Screener` variant and `diff_screener` function.
+
+Action: Handle two cases: (1) embedded `screener` removal as a breaking
+Definition change, (2) new `diff_screener_document` for standalone documents.
+
+**C.7.7 `crates/formspec-core/src/json_artifacts.rs`**
+
+`change_target_str` match arm serializes `ChangeTarget::Screener => "screener"`.
+Must be updated if the target is renamed or restructured.
+
+**C.7.8 `crates/formspec-core/tests/changelog_test.rs`**
+
+Three integration tests: `screener_add_is_compatible`, `screener_remove_is_breaking`,
+`screener_modified_is_compatible`. Must be updated to test standalone document
+changelog diffing.
+
+**C.7.9 `crates/formspec-wasm/src/wasm_tests.rs`**
+
+Native WASM test validates `"screener"` as a valid changelog target string.
+Must be updated if `ChangeTarget::Screener` is renamed.
+
+---
+
+### C.8 Python Changes
+
+**C.8.1 `src/formspec/_rust.py`**
+
+Wraps `evaluate_screener_py` as `evaluate_screener(definition, answers)`.
+
+Action: Add `evaluate_screener_document(screener_doc, answers)`. Deprecate
+existing function.
+
+**C.8.2 `tests/unit/test_screener_routing.py`**
+
+2 tests for embedded screener evaluation through the Python bridge
+(`test_evaluate_screener_returns_first_matching_route_in_declaration_order`,
+`test_screener_answers_are_not_written_into_main_form_data`).
+
+Action: Retain as backwards-compatibility tests. Add new test file
+`tests/unit/test_screener_document.py` covering: single first-match phase,
+multi-phase evaluation, score-threshold, override routes, activeWhen,
+DeterminationRecord structure, answer states.
+
+**C.8.3 `tests/conformance/`**
+
+- `test_cross_spec_contracts.py` — class `TestDefinitionScreener` (line 473):
+  remove `'screener'` from Definition optional fields and expected property
+  keys. Add standalone screener schema validation tests.
+- `test_definition_schema.py` — class `TestScreener` (line 420, not
+  `TestDefinitionScreener`): remove. Add `TestScreenerDocumentSchema`.
+
+**C.8.4 Additional Python test files with screener references**
+
+| File | What it does | Action |
+|------|-------------|--------|
+| `tests/unit/test_changelog.py` | `TestScreenerMigration` class with `test_screener_added` and `test_screener_removed_is_breaking` | Update for standalone document changelog |
+| `tests/unit/test_rust_bridge.py` | Asserts `evaluate_screener_py` in Rust bridge symbol list | Add new symbol; retain old |
+| `tests/integration/fixtures/test_core_fixtures.py` | `"screener"` in allowed definition property list | Remove from list |
+| `tests/e2e/headless/test_edge_case_payloads.py` | Loads `fixture-microgrant-screener.json` | Update fixture to standalone |
+| `tests/conformance/fuzzing/test_property_based.py` | `gen_screener` Hypothesis strategy | Remove screener from definition generators |
+
+---
+
+### C.9 Webcomponent and React Changes
+
+**C.9.1 `packages/formspec-webcomponent/src/rendering/screener.ts` (entire file)**
+
+Contains `renderScreener`, `hasActiveScreener`, `extractScreenerSeedFromData`,
+`omitScreenerKeysFromData`, and helpers. All read from `definition.screener`.
+
+Action: Accept standalone Screener Document. Consider whether a separate
+`<formspec-screener>` custom element is more appropriate given the gateway
+architecture. At minimum, `renderScreener` reads items, binds, and evaluation
+config from the standalone document and calls `evaluateScreenerDocument`.
+
+**C.9.2 `packages/formspec-webcomponent/src/element.ts`**
+
+Deep screener integration: `_screenerCompleted`, `_screenerRoute`,
+`classifyScreenerRoute`, `getScreenerState`, `skipScreener`, `restartScreener`,
+render logic switching between screener UI and main form.
+
+Action: Support a `screenerDocument` property. Render flow: if standalone
+screener is set and not completed, render screener UI. DeterminationRecord
+replaces the simple `{ target, label }` result.
+
+**C.9.3 `packages/formspec-webcomponent/src/hydrate-response-data.ts`**
+
+Screener-aware skip logic: silently skips paths with no writable signal (i.e.,
+screener field keys in response data). Comment at line 6 documents this
+behavior. May become unnecessary if screener data no longer mixes with
+definition response data.
+
+**C.9.4 `packages/formspec-webcomponent/src/index.ts`**
+
+Public API barrel re-exports 5 screener utility functions
+(`screenerAnswersSatisfyRequired`, `buildInitialScreenerAnswers`,
+`extractScreenerSeedFromData`, `omitScreenerKeysFromData`,
+`normalizeScreenerSeedForItem`) and the `ScreenerStateSnapshot` type. This is
+the public API surface that external consumers depend on.
+
+**C.9.5 `packages/formspec-react/src/screener/` (4 files)**
+
+`useScreener` hook, `FormspecScreener` component, types, barrel index.
+
+Action: Rewrite hook to accept standalone screener document and return
+DeterminationRecord. Rewrite component for standalone document.
+
+Note: React `ScreenerStateSnapshot` has an `answers` field and nullable
+`routeType` — structurally divergent from the webcomponent version.
+
+**C.9.6 `packages/formspec-react/src/renderer.tsx`**
+
+`FormspecForm` component checks `hasActiveScreenerDef()` and renders a
+`ScreenerGate` subcomponent that wraps `FormspecScreener`. This is the React
+equivalent of the webcomponent's screener gate rendering.
+
+Action: Update to check for standalone screener document instead of
+`definition.screener`.
+
+---
+
+### C.10 MCP Tool Changes
+
+**`packages/formspec-mcp/src/tools/screener.ts`**
+
+7 actions: `enable`, `add_field`, `remove_field`, `add_route`, `update_route`,
+`reorder_route`, `remove_route`.
+
+Action: Rewrite for standalone documents. New actions: `create_document`,
+`delete_document`, `add_item`, `remove_item`, `update_item`, `add_phase`,
+`remove_phase`, `set_phase_strategy`, `add_route` (phase-scoped),
+`remove_route`, `update_route`, `set_override`, `set_lifecycle`.
+
+---
+
+### C.11 Test Migration
+
+**~40 test files across all layers require changes:**
+
+| Layer | Key test files | Action |
+|-------|---------------|--------|
+| Core handlers | `formspec-core/tests/definition-screener.test.ts` | Rewrite for `screener.*` handlers |
+| Core queries | `formspec-core/tests/queries.test.ts` (5 screener stats tests) | Update to read from standalone |
+| Studio-core | `formspec-studio-core/tests/project-methods.test.ts` | Rewrite screener helper tests; remove `removeItem` screener cleanup test |
+| MCP | `formspec-mcp/tests/screener.test.ts` | Rewrite for new actions |
+| Studio UI | `formspec-studio/tests/workspaces/editor/screener-authoring.test.tsx` | Rewrite for standalone UI |
+| Studio UI | `formspec-studio/tests/components/blueprint/screener-summary.test.tsx` | Update to standalone |
+| Engine | `formspec-engine/tests/screener-routing.test.mjs` (8 tests) | Rewrite for standalone evaluation |
+| Engine | `formspec-engine/tests/extended-engine-features.test.mjs` (2 screener tests) | Update |
+| Engine | `formspec-engine/tests/kitchen-sink-runtime-rehomed.test.mjs` | Update `evaluateScreener` call |
+| Engine | `formspec-engine/tests/edge-case-fixtures-conformance.test.mjs` | Update fixture loading |
+| Engine | `formspec-engine/tests/shared-suite.test.mjs` | Update `skipScreener` handling |
+| Engine | `formspec-engine/tests/definition-schema-acceptance.test.mjs` | Update fixture list |
+| Webcomponent | `formspec-webcomponent/tests/screener-seed.test.ts` | Rewrite for standalone document |
+| React | `formspec-react/tests/use-screener.test.tsx` | Rewrite hook tests |
+| React | `formspec-react/tests/field-spacing-parity.test.ts` | Update `.formspec-screener` CSS assertions |
+| Rust (eval) | `crates/formspec-eval/src/screener.rs` inline tests | Add standalone tests, retain embedded |
+| Rust (eval) | `crates/formspec-eval/tests/integration/evaluate_pipeline.rs` | Add standalone integration test |
+| Rust (lint) | `crates/formspec-lint/src/expressions.rs` inline tests (4 functions) | Add standalone linting tests |
+| Rust (lint) | `crates/formspec-lint/src/lib.rs` inline tests (2 functions) | Update for standalone format |
+| Rust (changelog) | `crates/formspec-core/tests/changelog_test.rs` (3 screener tests) | Update for standalone diffs |
+| Rust (WASM) | `crates/formspec-wasm/src/wasm_tests.rs` | Update changelog target validation |
+| Python | `tests/unit/test_screener_routing.py` | Retain; add new standalone test file |
+| Python | `tests/unit/test_changelog.py` (`TestScreenerMigration`) | Update for standalone |
+| Python | `tests/unit/test_rust_bridge.py` | Add new symbol check |
+| Python | `tests/conformance/fuzzing/test_property_based.py` | Remove `gen_screener` from definition generators |
+| Python conformance | `tests/conformance/schemas/test_definition_schema.py` (`TestScreener`) | Remove; add standalone |
+| Python conformance | `tests/conformance/spec/test_cross_spec_contracts.py` | Remove `'screener'` from Definition properties |
+| E2E | `tests/e2e/browser/screener/screener-routing.spec.ts` | Major rewrite for standalone |
+| E2E | `tests/e2e/headless/test_edge_case_payloads.py` | Update fixture loading |
+| Conformance suite | `tests/conformance/suite/clinical-intake-submit-valid.json` | Update `payloadPath` |
+| Fixtures | See C.11.1 below | Extract embedded screeners |
+
+**C.11.1 Fixture and example files with embedded screener**
+
+| File | Action |
+|------|--------|
+| `examples/grant-application/definition.json` | Extract screener to `examples/grant-application/screener.json` |
+| `examples/clinical-intake/intake.definition.json` | Extract screener to `examples/clinical-intake/screener.json` |
+| `examples/clinical-intake/fixtures/screener-emergency.response.json` | Retain as response fixture for standalone screener |
+| `examples/clinical-intake/fixtures/screener-routine.response.json` | Retain as response fixture for standalone screener |
+| `tests/fixtures/fixture-microgrant-screener.json` | Convert to standalone screener document format |
+| `tests/e2e/fixtures/kitchen-sink-holistic/definition.v1.json` | Remove embedded screener; create standalone screener fixture |
+| `tests/e2e/fixtures/kitchen-sink-holistic/definition.v2.json` | Same |
+| `packages/formspec-engine/tests/fixtures/grant-app-definition.json` | Extract embedded screener to standalone fixture |
+
+---
+
+### C.12 Migration Phasing
+
+The migration MUST proceed bottom-up. Each phase produces a working system
+with backwards compatibility.
+
+| Phase | Scope | Prerequisite |
+|-------|-------|-------------|
+| **0** | Schemas, codegen, Core §4.7 deprecation | None |
+| **1** | Rust evaluator: new types, three strategies, override logic, DeterminationRecord | Phase 0 |
+| **2** | WASM + Python bindings, TS bridge functions | Phase 1 |
+| **3** | TypeScript core handlers (`screener.*`), queries, project state | Phase 0 (types), Phase 2 (eval) |
+| **4** | Studio-core helpers, MCP tools | Phase 3 |
+| **5** | Studio UI, webcomponent, React screener | Phase 4 |
+| **6** | Fixtures, examples, E2E tests | Phase 5 |
+| **7** | Cleanup: remove deprecated embedded-screener code paths | All above |
+
+**Estimated file impact: ~95 files across 14 packages and 5 crates.**
+
+---
+
+### C.13 Existing Plans
+
+`thoughts/studio/2026-03-30-screener-authoring-plan.md` was written for the
+embedded screener model and is now outdated. A new implementation plan should
+be written that accounts for the standalone document model, phase-based UI,
+and the gateway architecture.
