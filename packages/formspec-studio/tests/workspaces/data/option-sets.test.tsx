@@ -164,7 +164,7 @@ describe('OptionSets', () => {
       fireEvent.click(within(card).getByText('countries'));
     });
 
-    fireEvent.click(screen.getByText('https://api.example.com/countries'));
+    fireEvent.click(screen.getByTitle('https://api.example.com/countries'));
     const textarea = screen.getByRole('textbox');
     fireEvent.change(textarea, { target: { value: 'https://new-api.com/countries' } });
     fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });

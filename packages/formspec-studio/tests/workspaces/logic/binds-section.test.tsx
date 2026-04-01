@@ -47,20 +47,20 @@ describe('BindsSection', () => {
     expect(allMustFill.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows expression text', () => {
+  it('shows expression text with syntax highlighting', () => {
     renderBinds();
-    expect(screen.getByText('$age >= 18')).toBeInTheDocument();
+    expect(screen.getByTitle('$age >= 18')).toBeInTheDocument();
   });
 
   it('bind expression is editable via InlineExpression', () => {
     renderBinds();
-    fireEvent.click(screen.getByText('$age >= 18'));
+    fireEvent.click(screen.getByTitle('$age >= 18'));
     expect(screen.getByRole('textbox')).toHaveValue('$age >= 18');
   });
 
   it('saving calls project.updateItem with correct path and property', () => {
     const { updateItemSpy } = renderBinds();
-    fireEvent.click(screen.getByText('$age >= 18'));
+    fireEvent.click(screen.getByTitle('$age >= 18'));
     const textarea = screen.getByRole('textbox');
     fireEvent.change(textarea, { target: { value: '$age >= 21' } });
     fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
@@ -69,7 +69,7 @@ describe('BindsSection', () => {
 
   it('saving empty calls updateItem with empty string', () => {
     const { updateItemSpy } = renderBinds();
-    fireEvent.click(screen.getByText('$age >= 18'));
+    fireEvent.click(screen.getByTitle('$age >= 18'));
     const textarea = screen.getByRole('textbox');
     fireEvent.change(textarea, { target: { value: '' } });
     fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });

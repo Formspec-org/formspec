@@ -21,7 +21,7 @@ const baseDef = {
 };
 
 describe('DataTab', () => {
-  it('renders all four pillars when filter is "all"', () => {
+  it('renders all three pillars when filter is "all"', () => {
     renderData({
       ...baseDef,
       items: [{ key: 'name', type: 'field', dataType: 'string' }],
@@ -32,8 +32,6 @@ describe('DataTab', () => {
     expect(screen.getByText('Submission Structure')).toBeInTheDocument();
     expect(screen.getByText('Lookup Tables')).toBeInTheDocument();
     expect(screen.getByText('External Sources')).toBeInTheDocument();
-    // "Simulation" appears both as a filter button and pillar title
-    expect(screen.getByRole('heading', { name: 'Simulation' })).toBeInTheDocument();
   });
 
   it('section filter buttons work — clicking Sources hides other pillars', () => {
@@ -45,8 +43,6 @@ describe('DataTab', () => {
     expect(screen.getByText('External Sources')).toBeInTheDocument();
     expect(screen.queryByText('Submission Structure')).not.toBeInTheDocument();
     expect(screen.queryByText('Lookup Tables')).not.toBeInTheDocument();
-    // Only the filter button "Simulation" should remain, not the pillar heading
-    expect(screen.queryByRole('heading', { name: 'Simulation' })).not.toBeInTheDocument();
   });
 
   it('renders response schema item keys from definition', () => {
@@ -57,7 +53,7 @@ describe('DataTab', () => {
         { key: 'age', type: 'field', dataType: 'integer' },
       ],
     });
-    // ResponseSchema renders keys with quotes: "name"
+    // OutputBlueprint renders keys with quotes: "name"
     expect(screen.getByText('"name"')).toBeInTheDocument();
     expect(screen.getByText('"age"')).toBeInTheDocument();
   });

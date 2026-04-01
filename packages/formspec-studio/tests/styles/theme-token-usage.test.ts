@@ -9,12 +9,10 @@ const readStudioFile = (relativePath: string) =>
 describe('Studio theme token usage', () => {
   it('keeps Data workspace chrome on the shared light-theme token system', () => {
     const dataTab = readStudioFile('src/workspaces/data/DataTab.tsx');
-    const responseSchema = readStudioFile('src/workspaces/editor/ResponseSchema.tsx');
     const dataSources = readStudioFile('src/workspaces/editor/DataSources.tsx');
     const optionSets = readStudioFile('src/workspaces/editor/OptionSets.tsx');
 
     expect(dataTab).not.toMatch(/border-neutral-\d+/);
-    expect(responseSchema).not.toMatch(/border-neutral-\d+/);
     expect(dataSources).not.toMatch(/border-neutral-\d+/);
     expect(optionSets).not.toMatch(/border-neutral-\d+|bg-neutral-\d+/);
   });

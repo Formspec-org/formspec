@@ -48,10 +48,12 @@ describe('ShapesSection', () => {
     expect(screen.getByText(/warning/i)).toBeInTheDocument();
   });
 
-  it('shows constraint expressions', () => {
+  it('shows constraint expressions with syntax highlighting in shape cards', () => {
     renderShapes();
-    expect(screen.getByText('$age >= 0')).toBeInTheDocument();
-    expect(screen.getByText('$score < 100')).toBeInTheDocument();
+    const constraintEls = screen.getAllByTestId('shape-constraint');
+    const texts = constraintEls.map(el => el.textContent);
+    expect(texts).toContain('$age >= 0');
+    expect(texts).toContain('$score < 100');
   });
 
   it('shows full detail for every shape card, including code and message text', () => {
@@ -95,13 +97,10 @@ describe('ShapesSection', () => {
   it('editing constraint calls project.updateValidation with rule', () => {
     const { updateValidationSpy } = renderShapes();
     fireEvent.click(screen.getByText('ageCheck'));
-    // The expanded form has a Constraint label followed by InlineExpression showing '$age >= 0'
-    // There are two '$age >= 0' texts: one in ShapeCard (read-only) and one in InlineExpression (editable)
-    // Click the one with cursor-pointer class (InlineExpression)
-    const allMatches = screen.getAllByText('$age >= 0');
-    const editableMatch = allMatches.find(el => el.classList.contains('cursor-pointer'));
-    expect(editableMatch).toBeTruthy();
-    fireEvent.click(editableMatch!);
+    // The expanded form has InlineExpression with title='$age >= 0'
+    const editableChip = screen.getByTitle('$age >= 0');
+    expect(editableChip).toBeTruthy();
+    fireEvent.click(editableChip);
     // Now only one textarea should be active (InlineExpression edit mode)
     const textareas = screen.getAllByRole('textbox');
     const textarea = textareas.find(el => el.tagName === 'TEXTAREA')!;

@@ -56,13 +56,13 @@ describe('VariablesSection inline editing', () => {
 
   it('click expression enters InlineExpression edit mode', () => {
     renderVariables();
-    fireEvent.click(screen.getByText('$age >= 18'));
+    fireEvent.click(screen.getByTitle('$age >= 18'));
     expect(screen.getByRole('textbox')).toHaveValue('$age >= 18');
   });
 
   it('edit expression calls project.updateVariable with name and new expression', () => {
     const { updateVariableSpy } = renderVariables();
-    fireEvent.click(screen.getByText('$age >= 18'));
+    fireEvent.click(screen.getByTitle('$age >= 18'));
     const textarea = screen.getByRole('textbox');
     fireEvent.change(textarea, { target: { value: '$age >= 21' } });
     fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });

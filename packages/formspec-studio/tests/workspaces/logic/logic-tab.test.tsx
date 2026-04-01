@@ -54,8 +54,8 @@ describe('LogicTab', () => {
   it('renders variables section', () => {
     renderLogic();
     expect(screen.getByText('@isAdult')).toBeInTheDocument();
-    // $age >= 18 appears in both variables and binds sections
-    const ageExprs = screen.getAllByText('$age >= 18');
+    // $age >= 18 appears in both variables and binds sections (highlighted, found by title)
+    const ageExprs = screen.getAllByTitle('$age >= 18');
     expect(ageExprs.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -97,7 +97,7 @@ describe('LogicTab', () => {
     });
 
     await act(async () => {
-      screen.getByText('sum($members[*].mInc)').click();
+      screen.getByTitle('sum($members[*].mInc)').click();
     });
 
     // InlineExpression should now show a textarea with the value

@@ -1,9 +1,8 @@
-/** @filedesc Data workspace tab composing ResponseSchema, DataSources, OptionSets, and TestResponse panels. */
+/** @filedesc Data workspace tab composing OutputBlueprint, DataSources, and OptionSets panels. */
 import { useState } from 'react';
-import { ResponseSchema } from '../editor/ResponseSchema';
+import { OutputBlueprint } from '../../components/blueprint/OutputBlueprint';
 import { DataSources } from '../editor/DataSources';
 import { OptionSets } from '../editor/OptionSets';
-import { TestResponse } from '../editor/TestResponse';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { HelpTip } from '../../components/ui/HelpTip';
 
@@ -50,7 +49,6 @@ const sectionTabs = [
   { id: 'structure', label: 'Structure' },
   { id: 'tables', label: 'Tables' },
   { id: 'sources', label: 'Sources' },
-  { id: 'simulation', label: 'Simulation' },
 ] as const;
 
 export type DataSectionFilter = typeof sectionTabs[number]['id'];
@@ -71,7 +69,6 @@ export function DataTab({ sectionFilter: controlledFilter, onSectionFilterChange
   const showStructure = sectionFilter === 'all' || sectionFilter === 'structure';
   const showTables = sectionFilter === 'all' || sectionFilter === 'tables';
   const showSources = sectionFilter === 'all' || sectionFilter === 'sources';
-  const showSimulation = sectionFilter === 'all' || sectionFilter === 'simulation';
 
   return (
     <WorkspacePage className="overflow-y-auto">
@@ -102,7 +99,7 @@ export function DataTab({ sectionFilter: controlledFilter, onSectionFilterChange
             helpText="This is the JSON document structure that will be generated and submitted when the form is completed."
             accentColor="bg-accent"
           >
-            <ResponseSchema />
+            <OutputBlueprint />
           </DataPillar>
         )}
 
@@ -128,16 +125,6 @@ export function DataTab({ sectionFilter: controlledFilter, onSectionFilterChange
           </DataPillar>
         )}
 
-        {showSimulation && (
-          <DataPillar
-            title="Simulation"
-            subtitle="Preview current response document"
-            helpText="Run the form engine against the current definition to see what the resulting data would look like."
-            accentColor="bg-amber"
-          >
-            <TestResponse />
-          </DataPillar>
-        )}
       </WorkspacePageSection>
     </WorkspacePage>
   );
