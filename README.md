@@ -2,7 +2,7 @@
 
 **A declarative form specification where structure, behavior, and presentation are independent, composable JSON documents.**
 
-Built by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/), [TealWolf Consulting](https://tealwolf.consulting/) & [Focus Consulting](https://focusconsulting.io/). Free and open source under the [AGPL-3.0 License](LICENSE).
+Built by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/), [TealWolf Consulting](https://tealwolf.consulting/) with [Focus Consulting](https://focusconsulting.io/) as a strategic partner. Free and open source under the [AGPL-3.0 License](LICENSE).
 
 [Website](https://formspec.org) · [Features](https://formspec.org/features/) · [Architecture](https://formspec.org/architecture/) · [Blog](https://formspec.org/blog/) · [About](https://formspec.org/about/)
 
