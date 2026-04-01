@@ -10,7 +10,37 @@ A 4-phase orchestration that produces a vetted visual design proposal through as
 
 **Target**: `$ARGUMENTS` — the URL, component, page, or area to review. If empty, ask the user what to review before proceeding.
 
-Save all artifacts to `thoughts/studio/visual-reviews/YYYY-MM-DD-{slug}/`. Create the directory at the start.
+Create the review directory at the start: `thoughts/studio/visual-reviews/YYYY-MM-DD-{slug}/`
+
+Create these subdirectories immediately:
+- `screenshots/` — all `.png` screenshots and `.txt` DOM snapshots
+- `proposals/` — Phase 2 design proposals
+- `reviews/` — Phase 4 cross-functional reviews
+
+Phase 1 and Phase 3 outputs (`handoff-brief.md`, `adjudication.md`) and the final
+`README.md` and `final-report.md` stay at the root level.
+
+```
+YYYY-MM-DD-slug/
+  README.md
+  handoff-brief.md
+  adjudication.md
+  final-report.md
+  screenshots/
+    pass1-01-initial.png
+    pass1-02-field-selected.png
+    ...
+    verify-01-landing.png
+  proposals/
+    conservative.md
+    evolutionary.md
+    density.md
+  reviews/
+    service-designer.md
+    scout.md
+```
+
+Use `{review_dir}` to refer to the root. Screenshots always go in `{review_dir}/screenshots/`.
 
 ---
 
@@ -26,10 +56,10 @@ You are conducting a visual design assessment of: {$ARGUMENTS}
 Run the full Visual Domino Method:
 
 ### Pass 1: Screenshot
-Take a screenshot of the target. Study it. Write down your raw visual impressions BEFORE inspecting anything else — what draws the eye, what feels off, what works, what doesn't. Be honest and specific.
+Take a screenshot of the target and save to `{review_dir}/screenshots/pass1-01-initial.png` (number sequentially for additional captures). Study it. Write down your raw visual impressions BEFORE inspecting anything else — what draws the eye, what feels off, what works, what doesn't. Be honest and specific.
 
 ### Pass 2: DOM Inspection
-Take a DOM snapshot. Trace the causal chains from every visual issue you noted in Pass 1. Document: element → class/style → computed value → why it's wrong.
+Take a DOM snapshot and save to `{review_dir}/screenshots/dom-01-initial.txt`. Trace the causal chains from every visual issue you noted in Pass 1. Document: element → class/style → computed value → why it's wrong.
 
 ### Pass 3: Code
 Read the source files (CSS, components, tokens, theme). Follow each domino chain to the first domino. Classify every issue: token tweak, CSS fix, component restructure, design system revision, or redesign.
@@ -39,7 +69,7 @@ State your overall verdict (one of the five levels). Be definitive.
 
 ### Produce the Handoff Brief
 After your assessment, write a handoff brief and save it to:
-`{artifact_dir}/handoff-brief.md`
+`{review_dir}/handoff-brief.md`
 
 The handoff brief MUST contain:
 
@@ -105,7 +135,7 @@ You are producing a visual design proposal for a Formspec component/page.
    - **Component changes** — Any structural markup changes needed
    - **Implementation sketch** — Key code snippets (CSS, JSX/TSX) showing the critical changes. Not a full implementation — just enough to evaluate the visual approach.
 4. Verify your proposal against every Success Criterion in the brief
-5. Save your proposal to: `{artifact_dir}/proposal-{direction_slug}.md`
+5. Save your proposal to: `{review_dir}/proposals/{direction_slug}.md`
 
 ## Rules
 - You MUST address every problem in the handoff brief. Don't cherry-pick.
@@ -129,10 +159,10 @@ Once all proposals are saved, re-launch the `formspec-specs:formspec-visual-desi
 You are adjudicating visual design proposals for: {$ARGUMENTS}
 
 ## Your Handoff Brief
-Read: {artifact_dir}/handoff-brief.md
+Read: {review_dir}/handoff-brief.md
 
 ## Proposals to Review
-Read all proposal files in: {artifact_dir}/proposal-*.md
+Read all proposal files in: {review_dir}/proposals/*.md
 
 ## Your Task
 
@@ -160,7 +190,7 @@ Select ONE winning proposal. You may also recommend specific elements from losin
 3. **Remaining concerns**: anything the winner still gets wrong
 4. **Implementation priority**: ordered list of changes, most impactful first
 
-Save to: `{artifact_dir}/adjudication.md`
+Save to: `{review_dir}/adjudication.md`
 ```
 
 Print a one-line status: winner name and verdict. Then proceed immediately to Phase 4.
@@ -180,9 +210,9 @@ You are reviewing a visual design proposal from the user experience perspective.
 The visual-designer agent assessed {$ARGUMENTS}, generated a handoff brief, solicited proposals, and selected a winner.
 
 Read these files:
-- Handoff brief: {artifact_dir}/handoff-brief.md
-- Winning proposal: {artifact_dir}/proposal-{winner_slug}.md
-- Adjudication: {artifact_dir}/adjudication.md
+- Handoff brief: {review_dir}/handoff-brief.md
+- Winning proposal: {review_dir}/proposals/{winner_slug}.md
+- Adjudication: {review_dir}/adjudication.md
 
 ## Your Task
 
@@ -199,7 +229,7 @@ Produce:
 - **Interaction concerns** — Specific issues that would harm usability
 - **Suggested modifications** — Changes that would improve UX without undermining the visual direction
 
-Save to: `{artifact_dir}/review-service-designer.md`
+Save to: `{review_dir}/reviews/service-designer.md`
 ```
 
 ### Scout Review
@@ -211,9 +241,9 @@ You are reviewing a visual design proposal from a code quality and architecture 
 The visual-designer agent assessed {$ARGUMENTS}, generated a handoff brief, solicited proposals, and selected a winner.
 
 Read these files:
-- Handoff brief: {artifact_dir}/handoff-brief.md
-- Winning proposal: {artifact_dir}/proposal-{winner_slug}.md
-- Adjudication: {artifact_dir}/adjudication.md
+- Handoff brief: {review_dir}/handoff-brief.md
+- Winning proposal: {review_dir}/proposals/{winner_slug}.md
+- Adjudication: {review_dir}/adjudication.md
 
 ## Your Task
 
@@ -231,7 +261,7 @@ Produce:
 - **Suggested modifications** — Changes that would improve implementation without undermining the visual direction
 - **Estimated blast radius** — Files and components affected, risk of unintended side effects
 
-Save to: `{artifact_dir}/review-scout.md`
+Save to: `{review_dir}/reviews/scout.md`
 ```
 
 Launch both agents in a **single message** so they run concurrently.
@@ -251,7 +281,7 @@ Produce a summary containing:
 5. **Implementation Plan** — Ordered list of changes to make, incorporating all reviewer feedback
 6. **Files to Modify** — Concrete list of files with what changes each needs
 
-Save to `{artifact_dir}/final-report.md` and present the executive summary to the user.
+Save to `{review_dir}/final-report.md` and present the executive summary to the user.
 
 Present the implementation plan and ask the user if they'd like to proceed with implementation. If the user confirms, dispatch the `frontend-artisan` agent to implement the winning proposal per the final report, then proceed to Phase 6. If the user declines or wants to implement themselves, tell them to run Phase 6 manually after implementation.
 
@@ -270,16 +300,16 @@ This target was previously assessed, redesigned, and implemented. Your job is to
 
 ## Reference Artifacts
 Read these files:
-- Original handoff brief: {artifact_dir}/handoff-brief.md
-- Winning proposal: {artifact_dir}/proposal-{winner_slug}.md
-- Final report: {artifact_dir}/final-report.md
+- Original handoff brief: {review_dir}/handoff-brief.md
+- Winning proposal: {review_dir}/proposals/{winner_slug}.md
+- Final report: {review_dir}/final-report.md
 
 ## Your Task
 
 Run the full Visual Domino Method again — fresh eyes, no assumptions:
 
 ### Pass 1: Screenshot
-Take a new screenshot of the target. Study it WITHOUT re-reading the handoff brief first. Write down your raw visual impressions. What draws the eye? What feels off? What works?
+Take a new screenshot and save to `{review_dir}/screenshots/verify-01-post-impl.png` (number sequentially). Study it WITHOUT re-reading the handoff brief first. Write down your raw visual impressions. What draws the eye? What feels off? What works?
 
 ### Pass 2: Compare Against Success Criteria
 Now read the handoff brief. For each Success Criterion, evaluate pass/fail against what you see in the new screenshot. Be honest — if a criterion technically passes but barely, say so.
@@ -292,7 +322,7 @@ Compare the new screenshot against the original problems list. For each problem:
 - **Regressed** — The fix made this worse or introduced a new problem
 
 ### Pass 4: New Issues Scan
-Take a DOM snapshot. Look for problems that did NOT exist in the original assessment. For each new issue, classify it:
+Take a DOM snapshot (save to `{review_dir}/screenshots/dom-verify-01.txt`). Look for problems that did NOT exist in the original assessment. For each new issue, classify it:
 - **Regression** — Caused by the implementation. Was not present before, is present now.
 - **Pre-existing** — Was present before the redesign but was missed by the original assessment. NOT caused by the implementation — it was already broken.
 
@@ -326,7 +356,7 @@ Produce a QA report:
 |---|---|---|
 | (issues that predate the redesign) | Critical / Minor | What's wrong, visible symptom, suspected layer |
 
-Save to: `{artifact_dir}/qa-validation.md`
+Save to: `{review_dir}/qa-validation.md`
 ```
 
 Print the QA verdict to the user. If FAIL, recommend next steps (which problems to address and which agent to dispatch).
@@ -338,8 +368,8 @@ Print the QA verdict to the user. If FAIL, recommend next steps (which problems 
 ```
 The visual QA validation of {$ARGUMENTS} found pre-existing errors — visual bugs that existed BEFORE the redesign and were missed by the original assessment. These are NOT regressions from the implementation.
 
-Read the QA report: {artifact_dir}/qa-validation.md
-Read the original handoff brief for context: {artifact_dir}/handoff-brief.md
+Read the QA report: {review_dir}/qa-validation.md
+Read the original handoff brief for context: {review_dir}/handoff-brief.md
 
 For each pre-existing error in the "Pre-Existing Errors" table:
 
@@ -348,7 +378,7 @@ For each pre-existing error in the "Pre-Existing Errors" table:
 3. **Classify the root cause** — Is this a token gap, a CSS specificity issue, a missing component state, a spec gap, a theme cascade failure, or a design system inconsistency?
 4. **Assess blast radius** — Does this same root cause affect other components or pages?
 
-Produce a diagnosis for each pre-existing error and save to: {artifact_dir}/scout-preexisting-diagnosis.md
+Produce a diagnosis for each pre-existing error and save to: {review_dir}/reviews/scout-preexisting-diagnosis.md
 
 Format each finding as:
 - **Symptom**: (what the QA saw)

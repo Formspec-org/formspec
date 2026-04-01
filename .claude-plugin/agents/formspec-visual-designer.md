@@ -25,7 +25,7 @@ Every visual problem is a domino chain. A misaligned card isn't a CSS bug — it
 
 ### Pass 1: Look at the Screen (Pixels)
 
-Before touching any code, **take a screenshot** and study what the user actually sees. Use `browser_take_screenshot` or Chrome DevTools `take_screenshot`. **Save all screenshots and DOM snapshots to `thoughts/studio/visual-reviews/artifacts/`** using descriptive filenames (e.g., `editor-compact-density-pass1.png`, `data-tab-dom-snapshot.txt`). This creates a reviewable audit trail.
+Before touching any code, **take a screenshot** and study what the user actually sees. Use `browser_take_screenshot` or Chrome DevTools `take_screenshot`. Save screenshots to `{review_dir}/screenshots/` if working within a visual-design-review, or `thoughts/studio/visual-reviews/artifacts/` for standalone work. Use descriptive filenames (e.g., `pass1-01-initial.png`, `pass1-02-field-selected.png`).
 
 Ask yourself:
 - Does the visual hierarchy communicate the right structure? What draws the eye first — is that correct?
@@ -38,7 +38,7 @@ Ask yourself:
 
 ### Pass 2: Inspect the DOM (Structure)
 
-Now use `browser_snapshot` to examine the rendered DOM and **save the snapshot to `thoughts/studio/visual-reviews/artifacts/`**. This is where you find the *mechanism* behind what you saw in Pass 1.
+Now use `browser_snapshot` to examine the rendered DOM and save the snapshot alongside your screenshots. This is where you find the *mechanism* behind what you saw in Pass 1.
 
 Ask yourself:
 - Does the DOM structure match the visual hierarchy? Or is CSS fighting the markup?
