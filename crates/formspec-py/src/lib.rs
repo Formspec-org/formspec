@@ -46,6 +46,7 @@ fn formspec_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(document::resolve_option_sets_on_definition, m)?)?;
     m.add_function(wrap_pyfunction!(document::apply_migrations_to_response_data, m)?)?;
     m.add_function(wrap_pyfunction!(document::evaluate_screener_py, m)?)?;
+    m.add_function(wrap_pyfunction!(document::evaluate_screener_document_py, m)?)?;
     m.add_function(wrap_pyfunction!(registry::parse_registry, m)?)?;
     m.add_function(wrap_pyfunction!(registry::find_registry_entry, m)?)?;
     m.add_function(wrap_pyfunction!(registry::validate_lifecycle, m)?)?;

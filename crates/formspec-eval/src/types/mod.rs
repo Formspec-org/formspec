@@ -1,6 +1,7 @@
 //! Core types for the Formspec evaluator.
 
 mod definition;
+pub mod determination;
 mod evaluation;
 mod extensions;
 mod item_tree;
@@ -8,6 +9,10 @@ mod modes;
 mod paths;
 
 pub use definition::VariableDef;
+pub use determination::{
+    AnswerInput, AnswerState, DeterminationRecord, InputEntry, OverrideBlock, PhaseResult,
+    RouteResult, ScreenerRef, ValidityBlock,
+};
 pub use evaluation::{EvalContext, EvalTrigger, EvaluationResult, ValidationResult};
 pub use extensions::ExtensionConstraint;
 pub use item_tree::ItemInfo;

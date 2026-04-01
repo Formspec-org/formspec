@@ -4,8 +4,9 @@ use std::collections::HashMap;
 
 use formspec_core::json_object_to_string_map;
 use formspec_eval::{
-    EvalContext, EvalTrigger, eval_host_context_from_json_map, evaluate_definition_full_with_instances_and_context,
-    evaluate_screener, evaluation_result_to_json_value, screener_route_to_json_value,
+    AnswerInput, AnswerState, EvalContext, EvalTrigger, eval_host_context_from_json_map,
+    evaluate_definition_full_with_instances_and_context, evaluate_screener,
+    evaluate_screener_document, evaluation_result_to_json_value, screener_route_to_json_value,
 };
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
@@ -85,4 +86,89 @@ pub fn evaluate_screener_wasm(
     let route = evaluate_screener(&definition, &answers);
     let json = screener_route_to_json_value(route.as_ref());
     to_json_string(&json).map_err(|e| JsError::new(&e))
+}
+
+// ── Standalone Screener Document Evaluation ────────────────────
+
+/// Evaluate a standalone Screener Document against respondent inputs.
+///
+/// Returns a Determination Record JSON string (always non-null).
+///
+/// `context_json` is an optional JSON object with:
+/// - `answerStates`: `Record<string, "answered"|"declined"|"not-presented">` — per-item states
+/// - `nowIso`: ISO 8601 datetime string for availability/validity checks
+#[wasm_bindgen(js_name = "evaluateScreenerDocument")]
+pub fn evaluate_screener_document_wasm(
+    screener_json: &str,
+    answers_json: &str,
+    context_json: Option<String>,
+) -> Result<String, JsError> {
+    evaluate_screener_document_inner(screener_json, answers_json, context_json)
+        .map_err(|e| JsError::new(&e))
+}
+
+fn evaluate_screener_document_inner(
+    screener_json: &str,
+    answers_json: &str,
+    context_json: Option<String>,
+) -> Result<String, String> {
+    let screener: Value = parse_value_str(screener_json, "screener JSON")?;
+    let answers_val: Value = parse_value_str(answers_json, "answers JSON")?;
+
+    let raw_answers = json_object_to_string_map(&answers_val);
+
+    // Parse context for answerStates and nowIso
+    let (answer_states, now_iso) = match &context_json {
+        Some(ctx_str) => {
+            let ctx: Value = parse_value_str(ctx_str, "context JSON")?;
+            let states = ctx.get("answerStates").and_then(Value::as_object).cloned();
+            let now = ctx
+                .get("nowIso")
+                .and_then(Value::as_str)
+                .map(String::from);
+            (states, now)
+        }
+        None => (None, None),
+    };
+
+    // Build HashMap<String, AnswerInput> from flat answers + optional states
+    let mut answers: HashMap<String, AnswerInput> = raw_answers
+        .into_iter()
+        .map(|(key, value)| {
+            let state = answer_states
+                .as_ref()
+                .and_then(|s| s.get(&key))
+                .and_then(Value::as_str)
+                .map(parse_answer_state)
+                .unwrap_or(AnswerState::Answered);
+            (key, AnswerInput { value, state })
+        })
+        .collect();
+
+    // SC-01: Add declined/not-presented items that weren't in raw_answers
+    if let Some(ref states) = answer_states {
+        for (key, state_val) in states {
+            if !answers.contains_key(key) {
+                let state = state_val.as_str().map(parse_answer_state).unwrap_or(AnswerState::Answered);
+                answers.insert(key.clone(), AnswerInput { value: Value::Null, state });
+            }
+        }
+    }
+
+    let record = evaluate_screener_document(
+        &screener,
+        &answers,
+        now_iso.as_deref(),
+    );
+
+    serde_json::to_string(&record).map_err(|e| format!("serialization error: {e}"))
+}
+
+/// Parse an answer state string into the enum.
+fn parse_answer_state(s: &str) -> AnswerState {
+    match s {
+        "declined" => AnswerState::Declined,
+        "not-presented" => AnswerState::NotPresented,
+        _ => AnswerState::Answered,
+    }
 }

@@ -38,6 +38,7 @@ _REQUIRED_EXPORTS = (
     "lint_document",
     "evaluate_def",
     "evaluate_screener_py",
+    "evaluate_screener_document_py",
     "execute_mapping_doc",
     "generate_changelog",
     "apply_migrations_to_response_data",
@@ -430,6 +431,23 @@ def evaluate_definition(
 def evaluate_screener(definition: dict, answers: dict) -> dict | None:
     """Evaluate screener routes and return first matching route."""
     return formspec_rust.evaluate_screener_py(definition, answers)
+
+
+def evaluate_screener_document(
+    screener_doc: dict,
+    answers: dict,
+    context: dict | None = None,
+) -> dict:
+    """Evaluate a standalone Screener Document against respondent inputs.
+
+    Returns a Determination Record dict (always non-None).
+
+    Args:
+        screener_doc: The Screener Document (dict with $formspecScreener marker).
+        answers: Flat dict of item key → value.
+        context: Optional dict with ``answerStates`` and ``nowIso``.
+    """
+    return formspec_rust.evaluate_screener_document_py(screener_doc, answers, context)
 
 
 # ── Mapping ──────────────────────────────────────────────────────

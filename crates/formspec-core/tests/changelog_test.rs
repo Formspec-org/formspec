@@ -958,3 +958,188 @@ fn nested_child_added_shows_as_parent_modification() {
     assert_eq!(modified.len(), 1);
     assert_eq!(modified[0].key.as_deref(), Some("address"));
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Standalone Screener Document changelog
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn screener_phase_added() {
+    let old = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.0.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": []
+    });
+    let new_doc = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.1.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": [{
+            "id": "eligibility",
+            "strategy": "first-match",
+            "routes": []
+        }]
+    });
+    let cl = generate_screener_changelog(&old, &new_doc, "urn:test:screener");
+    let phase_changes: Vec<_> = cl
+        .changes
+        .iter()
+        .filter(|c| c.path.starts_with("evaluation."))
+        .collect();
+    assert_eq!(phase_changes.len(), 1);
+    assert_eq!(phase_changes[0].change_type, ChangeType::Added);
+    assert_eq!(phase_changes[0].impact, ChangeImpact::Compatible);
+}
+
+#[test]
+fn screener_phase_removed_is_breaking() {
+    let old = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.0.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": [{
+            "id": "eligibility",
+            "strategy": "first-match",
+            "routes": []
+        }]
+    });
+    let new_doc = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "2.0.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": []
+    });
+    let cl = generate_screener_changelog(&old, &new_doc, "urn:test:screener");
+    let removed: Vec<_> = cl
+        .changes
+        .iter()
+        .filter(|c| c.path == "evaluation.eligibility")
+        .collect();
+    assert_eq!(removed.len(), 1);
+    assert_eq!(removed[0].change_type, ChangeType::Removed);
+    assert_eq!(removed[0].impact, ChangeImpact::Breaking);
+    assert_eq!(cl.semver_impact, SemverImpact::Major);
+}
+
+#[test]
+fn screener_strategy_change_is_breaking() {
+    let old = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.0.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": [{
+            "id": "p1",
+            "strategy": "first-match",
+            "routes": [{ "condition": "true", "target": "urn:t" }]
+        }]
+    });
+    let new_doc = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "2.0.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": [{
+            "id": "p1",
+            "strategy": "fan-out",
+            "routes": [{ "condition": "true", "target": "urn:t" }]
+        }]
+    });
+    let cl = generate_screener_changelog(&old, &new_doc, "urn:test:screener");
+    let modified: Vec<_> = cl
+        .changes
+        .iter()
+        .filter(|c| c.path == "evaluation.p1")
+        .collect();
+    assert_eq!(modified.len(), 1);
+    assert_eq!(modified[0].impact, ChangeImpact::Breaking);
+}
+
+#[test]
+fn screener_availability_change_is_compatible() {
+    let old = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.0.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": []
+    });
+    let new_doc = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.1.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": [],
+        "availability": { "from": "2026-01-01", "until": "2026-12-31" }
+    });
+    let cl = generate_screener_changelog(&old, &new_doc, "urn:test:screener");
+    let avail: Vec<_> = cl
+        .changes
+        .iter()
+        .filter(|c| c.path == "availability")
+        .collect();
+    assert_eq!(avail.len(), 1);
+    assert_eq!(avail[0].change_type, ChangeType::Added);
+    assert_eq!(avail[0].impact, ChangeImpact::Compatible);
+}
+
+#[test]
+fn screener_item_changes_tracked() {
+    let old = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.0.0",
+        "title": "Test",
+        "items": [
+            { "key": "q1", "type": "field", "dataType": "string", "label": "Q1" }
+        ],
+        "evaluation": []
+    });
+    let new_doc = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.1.0",
+        "title": "Test",
+        "items": [
+            { "key": "q1", "type": "field", "dataType": "string", "label": "Question 1" },
+            { "key": "q2", "type": "field", "dataType": "integer", "label": "Q2" }
+        ],
+        "evaluation": []
+    });
+    let cl = generate_screener_changelog(&old, &new_doc, "urn:test:screener");
+    let item_changes: Vec<_> = cl
+        .changes
+        .iter()
+        .filter(|c| c.target == ChangeTarget::Item)
+        .collect();
+    // q1 modified (label changed), q2 added
+    assert_eq!(item_changes.len(), 2);
+}
+
+#[test]
+fn screener_no_changes_produces_empty_changelog() {
+    let doc = json!({
+        "$formspecScreener": "1.0",
+        "url": "urn:test:screener",
+        "version": "1.0.0",
+        "title": "Test",
+        "items": [],
+        "evaluation": []
+    });
+    let cl = generate_screener_changelog(&doc, &doc, "urn:test:screener");
+    assert!(cl.changes.is_empty());
+    assert_eq!(cl.semver_impact, SemverImpact::Patch);
+}
