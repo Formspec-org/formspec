@@ -30,40 +30,23 @@ export function patchValueSignalsFromWasm(options: {
         const basePath = toBasePath(path);
         const item = options.fieldItems.get(basePath);
         const normalizedValue = normalizeWasmValue(value);
-        const moneyAmount = (normalizedValue as { amount?: unknown } | null)?.amount;
-        const parsedMoneyAmount = typeof moneyAmount === 'string' && moneyAmount !== ''
-            ? Number(moneyAmount)
-            : moneyAmount === ''
-                ? null
-                : moneyAmount;
-        const coercedValue = item?.dataType === 'money'
-            && normalizedValue
-            && typeof normalizedValue === 'object'
-            && typeof moneyAmount === 'string'
-            ? {
-                ...(normalizedValue as Record<string, unknown>),
-                amount: parsedMoneyAmount !== null && Number.isNaN(parsedMoneyAmount)
-                    ? moneyAmount
-                    : parsedMoneyAmount,
-            }
-            : normalizedValue;
         const hasExpressionInitial = typeof item?.initialValue === 'string' && item.initialValue.startsWith('=');
         if (!options.calculatedFields.has(basePath)
             && hasExpressionInitial
             && !(path in options.data)) {
-            options.data[path] = cloneValue(coercedValue);
+            options.data[path] = cloneValue(normalizedValue);
         } else if (!options.calculatedFields.has(basePath)
             && options.bindConfigs[basePath]?.default !== undefined
             && path in options.data
             && isEmptyValue(options.data[path])
-            && !deepEqual(options.data[path], coercedValue)) {
-            options.data[path] = cloneValue(coercedValue);
+            && !deepEqual(options.data[path], normalizedValue)) {
+            options.data[path] = cloneValue(normalizedValue);
         }
         let rawValue: any;
         if (!options.calculatedFields.has(basePath) && path in options.data) {
             rawValue = options.data[path];
         } else {
-            rawValue = coercedValue;
+            rawValue = normalizedValue;
         }
         sig.value = normalizeWasmValue(rawValue);
     }

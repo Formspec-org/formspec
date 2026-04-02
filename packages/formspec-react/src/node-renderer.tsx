@@ -5,6 +5,7 @@ import type { LayoutNode } from '@formspec-org/layout';
 import { useFormspecContext } from './context';
 import { useSignal } from './use-signal';
 import { useField } from './use-field';
+import { useForm } from './use-form';
 import { useWhen } from './use-when';
 import { useRepeatCount } from './use-repeat-count';
 import type { FieldComponentProps, LayoutComponentProps } from './component-map';
@@ -79,8 +80,14 @@ export function FormspecNode({ node }: { node: LayoutNode }) {
         return <RepeatGroup node={node} />;
     }
 
-    // Conditional rendering: evaluate `when` FEL expression
-    if (node.when) {
+    if (node.component === 'Accordion' && typeof node.props?.bind === 'string') {
+        return <RepeatAccordion node={node} />;
+    }
+
+    // Conditional rendering: evaluate `when` FEL expression.
+    // Modal with trigger:auto owns `when` for open state (matches web component).
+    const modalAutoSkipsWhenGuard = node.component === 'Modal' && node.props?.trigger === 'auto';
+    if (node.when && !modalAutoSkipsWhenGuard) {
         return <WhenGuard node={node} />;
     }
 
@@ -92,8 +99,40 @@ export function FormspecNode({ node }: { node: LayoutNode }) {
         return <DisplayNode node={node} />;
     }
 
+    // DataTable is classified as 'interactive' by the planner but renders
+    // through DisplayNode which contains the editable table implementation.
+    if (node.component === 'DataTable') {
+        return <DisplayNode node={node} />;
+    }
+
+    if (node.component === 'SubmitButton') {
+        return <SubmitButtonNode node={node} />;
+    }
+
     // container, interactive, special, and layout all route through LayoutNodeRenderer
     return <LayoutNodeRenderer node={node} />;
+}
+
+/** Renders a SubmitButton plan node — dispatches onSubmit from context. */
+function SubmitButtonNode({ node }: { node: LayoutNode }) {
+    const { onSubmit } = useFormspecContext();
+    const form = useForm();
+    const label = (node.props?.label as string) || 'Submit';
+
+    const handleClick = useCallback(() => {
+        if (!onSubmit) return;
+        onSubmit(form.submit({ mode: 'submit' }));
+    }, [form, onSubmit]);
+
+    return (
+        <button
+            type="submit"
+            className={node.cssClasses?.join(' ') || 'formspec-submit'}
+            onClick={handleClick}
+        >
+            {label}
+        </button>
+    );
 }
 
 /** Evaluates a `when` FEL expression and conditionally renders the node. */
@@ -164,35 +203,183 @@ function RepeatGroup({ node }: { node: LayoutNode }) {
 
     return (
         <div className="formspec-repeat" data-bind={node.repeatGroup} ref={containerRef}>
-            {instances.map((children, idx) => (
-                <div key={idx} className="formspec-repeat-instance"
-                     role="group"
-                     aria-label={`${title} ${idx + 1} of ${count}`}>
-                    {children.map((child) => (
-                        <FormspecNode key={child.id} node={child} />
-                    ))}
-                    <button
-                        type="button"
-                        className="formspec-repeat-remove"
-                        onClick={() => handleRemove(idx)}
-                        aria-label={`Remove ${title} ${idx + 1}`}
-                    >
-                        Remove {title}
-                    </button>
-                </div>
-            ))}
+            <div className="formspec-repeat-list">
+                {instances.map((children, idx) => (
+                    <div key={idx} className="formspec-repeat-instance"
+                         role="group"
+                         aria-label={`${title} ${idx + 1} of ${count}`}>
+                        {children.map((child) => (
+                            <FormspecNode key={child.id} node={child} />
+                        ))}
+                        <button
+                            type="button"
+                            className="formspec-repeat-remove formspec-focus-ring"
+                            aria-label={`Remove ${title} ${idx + 1}`}
+                            onClick={() => handleRemove(idx)}
+                        >
+                            {`Remove ${title}`}
+                        </button>
+                    </div>
+                ))}
+            </div>
             <button
                 type="button"
-                className="formspec-repeat-add"
+                className="formspec-repeat-add formspec-focus-ring"
                 onClick={handleAdd}
                 ref={addBtnRef}
             >
-                Add {title}
+                {`Add ${title}`}
             </button>
             {/* Live region for add/remove announcements */}
             <div aria-live="polite" className="formspec-sr-only">{announcement}</div>
         </div>
     );
+}
+
+function RepeatAccordion({ node }: { node: LayoutNode }) {
+    const { engine } = useFormspecContext();
+    const bindKey = node.props?.bind as string;
+    const count = useRepeatCount(bindKey);
+    const labels = (node.props?.labels as string[] | undefined) ?? [];
+    const allowMultiple = node.props?.allowMultiple === true;
+    const defaultOpen = node.props?.defaultOpen as number | undefined;
+    const groupTitle = node.fieldItem?.label || findItemLabel(engine.getDefinition().items ?? [], bindKey) || bindKey;
+    const [openIndex, setOpenIndex] = useState<number | null>(
+        typeof defaultOpen === 'number' ? defaultOpen : count > 0 ? count - 1 : null,
+    );
+    const [openIndices, setOpenIndices] = useState<Set<number>>(() => {
+        const initial = new Set<number>();
+        if (typeof defaultOpen === 'number') initial.add(defaultOpen);
+        else if (count > 0) initial.add(count - 1);
+        return initial;
+    });
+    const previousCountRef = useRef(count);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const addBtnRef = useRef<HTMLButtonElement>(null);
+    const [announcement, setAnnouncement] = useState('');
+
+    React.useEffect(() => {
+        const previousCount = previousCountRef.current;
+        if (count > previousCount && count > 0) {
+            const lastIndex = count - 1;
+            if (allowMultiple) {
+                setOpenIndices(prev => {
+                    const next = new Set(prev);
+                    next.add(lastIndex);
+                    return next;
+                });
+            } else {
+                setOpenIndex(lastIndex);
+            }
+        }
+        previousCountRef.current = count;
+    }, [allowMultiple, count]);
+
+    const handleToggle = useCallback((idx: number, open: boolean) => {
+        if (allowMultiple) {
+            setOpenIndices(prev => {
+                const next = new Set(prev);
+                if (open) next.add(idx);
+                else next.delete(idx);
+                return next;
+            });
+            return;
+        }
+        setOpenIndex(open ? idx : null);
+    }, [allowMultiple]);
+
+    const handleAdd = useCallback(() => {
+        engine.addRepeatInstance(bindKey);
+        const newCount = count + 1;
+        setAnnouncement(`${groupTitle} ${newCount} added. ${newCount} total.`);
+        setTimeout(() => {
+            const items = containerRef.current?.querySelectorAll<HTMLDetailsElement>('.formspec-accordion-item');
+            const last = items?.[items.length - 1];
+            last?.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+        }, 0);
+    }, [bindKey, count, engine, groupTitle]);
+
+    const handleRemove = useCallback((idx: number) => {
+        engine.removeRepeatInstance(bindKey, idx);
+        const newCount = count - 1;
+        setAnnouncement(`${groupTitle} ${idx + 1} removed. ${newCount} remaining.`);
+        setTimeout(() => {
+            if (newCount <= 0) {
+                addBtnRef.current?.focus();
+                return;
+            }
+            const items = containerRef.current?.querySelectorAll<HTMLDetailsElement>('.formspec-accordion-item');
+            const target = items?.[Math.min(idx, newCount - 1)];
+            target?.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+        }, 0);
+    }, [bindKey, count, engine, groupTitle]);
+
+    return (
+        <div className="formspec-repeat formspec-repeat--accordion" data-bind={bindKey} ref={containerRef}>
+            <div className="formspec-accordion formspec-accordion--repeat">
+                {Array.from({ length: count }, (_, i) => {
+                    const isOpen = allowMultiple ? openIndices.has(i) : openIndex === i;
+                    return (
+                        <details key={i} className="formspec-accordion-item" open={isOpen}>
+                            <summary
+                                className="formspec-focus-ring"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    handleToggle(i, !isOpen);
+                                }}
+                            >
+                                {labels[i] || `Section ${i + 1}`}
+                            </summary>
+                            <div className="formspec-accordion-content formspec-accordion-content--repeat">
+                                {node.children.map((child) => (
+                                    <FormspecNode key={`${child.id}-${i}`} node={rewriteBindPaths(child, bindKey, i)} />
+                                ))}
+                                <button
+                                    type="button"
+                                    className="formspec-repeat-remove formspec-focus-ring"
+                                    aria-label={`Remove ${groupTitle} ${i + 1}`}
+                                    onClick={() => handleRemove(i)}
+                                >
+                                    {`Remove ${groupTitle}`}
+                                </button>
+                            </div>
+                        </details>
+                    );
+                })}
+            </div>
+            <button
+                type="button"
+                className="formspec-repeat-add formspec-focus-ring"
+                onClick={handleAdd}
+                ref={addBtnRef}
+            >
+                {`Add ${groupTitle}`}
+            </button>
+            <div aria-live="polite" className="formspec-sr-only">{announcement}</div>
+        </div>
+    );
+}
+
+function findItemLabel(items: Array<any>, key: string): string | undefined {
+    for (const item of items) {
+        if (item?.key === key) return item.label;
+        if (Array.isArray(item?.children)) {
+            const nested = findItemLabel(item.children, key);
+            if (nested) return nested;
+        }
+    }
+    return undefined;
+}
+
+function findItemByKey(items: Array<any>, key: string): any | undefined {
+    for (const item of items) {
+        if (item?.key === key) return item;
+        if (Array.isArray(item?.children)) {
+            const nested = findItemByKey(item.children, key);
+            if (nested) return nested;
+        }
+    }
+    return undefined;
 }
 
 /** Renders a display node — checks for user override before built-in rendering. */
@@ -213,6 +400,7 @@ function DisplayNode({ node }: { node: LayoutNode }) {
         case 'Heading': {
             const level = (node.props?.level as number) || 2;
             const Tag = `h${Math.min(6, Math.max(1, level))}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+            // Spec: Heading MUST NOT accept a bind property — purely presentational
             return <Tag className={cssClass || 'formspec-heading'} style={style}>{text}</Tag>;
         }
 
@@ -221,20 +409,25 @@ function DisplayNode({ node }: { node: LayoutNode }) {
 
         case 'Alert': {
             const severity = (node.props?.severity as string) || 'info';
-            const alertRole = severity === 'error' ? 'alert' : 'status';
+            // Spec: role="alert" for error AND warning, role="status" for info/success
+            const alertRole = severity === 'error' || severity === 'warning' ? 'alert' : 'status';
+            const dismissible = node.props?.dismissible === true;
+            // Spec: Alert MUST NOT accept a bind property
             return (
-                <div
-                    role={alertRole}
-                    className={`formspec-alert formspec-alert--${severity}${cssClass ? ' ' + cssClass : ''}`}
+                <DismissibleAlert
+                    severity={severity}
+                    alertRole={alertRole}
+                    dismissible={dismissible}
+                    text={text}
+                    cssClass={cssClass}
                     style={style}
-                >
-                    {text}
-                </div>
+                />
             );
         }
 
         case 'Badge': {
             const variant = (node.props?.variant as string) || 'default';
+            // Spec: Badge MUST NOT accept a bind property
             return (
                 <span
                     className={`formspec-badge formspec-badge--${variant}${cssClass ? ' ' + cssClass : ''}`}
@@ -256,11 +449,24 @@ function DisplayNode({ node }: { node: LayoutNode }) {
         }
 
         case 'ProgressBar': {
-            const value = (node.props?.value as number) ?? 0;
+            const bindPath = node.props?.bind as string | undefined;
             const max = (node.props?.max as number) ?? 100;
             const showPercent = node.props?.showPercent === true;
-            const pct = Math.round((value / max) * 100);
             const progressLabel = (node.props?.label as string) || 'Progress';
+            if (bindPath) {
+                return (
+                    <BoundProgressBar
+                        bind={bindPath}
+                        max={max}
+                        showPercent={showPercent}
+                        progressLabel={progressLabel}
+                        cssClass={cssClass}
+                        style={style}
+                    />
+                );
+            }
+            const value = (node.props?.value as number) ?? 0;
+            const pct = Math.round((value / max) * 100);
             return (
                 <div className={`formspec-progress-bar${cssClass ? ' ' + cssClass : ''}`} style={style}>
                     <progress value={value} max={max} aria-label={progressLabel} />
@@ -287,7 +493,8 @@ function DisplayNode({ node }: { node: LayoutNode }) {
         case 'Text':
         default: {
             const format = node.props?.format as string | undefined;
-            if (format === 'markdown') {
+            const bindPath = node.props?.bind as string | undefined;
+            if (format === 'markdown' && !bindPath) {
                 return (
                     <p
                         className={cssClass}
@@ -296,7 +503,11 @@ function DisplayNode({ node }: { node: LayoutNode }) {
                     />
                 );
             }
-            return <p className={cssClass} style={style}>{text}</p>;
+            return (
+                <p className={cssClass} style={style}>
+                    {bindPath ? <BoundText bind={bindPath} /> : text}
+                </p>
+            );
         }
     }
 }
@@ -324,11 +535,93 @@ function SummaryDisplay({
 
 const NO_VALUE = createSignal(null);
 
+/** Subscribes to a bind signal for reactive display node text. */
+function BoundText({ bind }: { bind: string }) {
+    const { engine } = useFormspecContext();
+    const sig = engine.signals[bind] ?? NO_VALUE;
+    const rawValue = useSignal(sig);
+    return <>{rawValue != null ? String(rawValue) : ''}</>;
+}
+
+/** ProgressBar that subscribes to a bind signal for reactive value updates. */
+function BoundProgressBar({ bind, max, showPercent, progressLabel, cssClass, style }: {
+    bind: string;
+    max: number;
+    showPercent: boolean;
+    progressLabel: string;
+    cssClass?: string;
+    style?: React.CSSProperties;
+}) {
+    const { engine } = useFormspecContext();
+    const sig = engine.signals[bind] ?? NO_VALUE;
+    const rawValue = useSignal(sig);
+    const value = typeof rawValue === 'number' ? rawValue : 0;
+    const pct = Math.round((value / max) * 100);
+    return (
+        <div className={`formspec-progress-bar${cssClass ? ' ' + cssClass : ''}`} style={style}>
+            <progress value={value} max={max} aria-label={progressLabel} />
+            {showPercent && (
+                <span className="formspec-progress-percent">{pct}%</span>
+            )}
+        </div>
+    );
+}
+
+/** Dismissible alert component — needs useState for dismissed state. */
+function DismissibleAlert({ severity, alertRole, dismissible, text, cssClass, style }: {
+    severity: string;
+    alertRole: string;
+    dismissible: boolean;
+    text: string;
+    cssClass?: string;
+    style?: React.CSSProperties;
+}) {
+    const [dismissed, setDismissed] = useState(false);
+    if (dismissed) return null;
+    return (
+        <div
+            role={alertRole}
+            className={`formspec-alert formspec-alert--${severity}${dismissible ? ' formspec-alert--dismissible' : ''}${cssClass ? ' ' + cssClass : ''}`}
+            style={style}
+        >
+            {text}
+            {dismissible && (
+                <button
+                    type="button"
+                    className="formspec-alert-close"
+                    aria-label="Dismiss"
+                    onClick={() => setDismissed(true)}
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            )}
+        </div>
+    );
+}
+
+/** Format a money value ({ amount, currency }) using Intl.NumberFormat. */
+function formatMoney(value: any, locale = 'en-US'): string {
+    if (value == null) return '\u2014';
+    if (typeof value === 'object' && 'amount' in value) {
+        try {
+            return new Intl.NumberFormat(locale, {
+                style: 'currency',
+                currency: value.currency || 'USD',
+            }).format(Number(value.amount));
+        } catch { return String(value.amount); }
+    }
+    return String(value);
+}
+
 /** A single summary row — subscribes to its own field signal for targeted re-renders. */
 function SummaryItem({ label, bind }: { label: string; bind?: string }) {
     const { engine } = useFormspecContext();
     const rawValue = useSignal(bind ? (engine.signals[bind] ?? NO_VALUE) : NO_VALUE);
-    const displayValue = rawValue != null ? String(rawValue) : '\u2014';
+    const displayValue = rawValue != null
+        ? (typeof rawValue === 'object' && rawValue !== null && 'amount' in (rawValue as object)
+            ? formatMoney(rawValue)
+            : String(rawValue))
+        : '\u2014';
 
     return (
         <>
@@ -338,12 +631,165 @@ function SummaryItem({ label, bind }: { label: string; bind?: string }) {
     );
 }
 
-/** A single DataTable cell — subscribes to its own signal for targeted re-renders. */
-function DataTableCell({ signalPath }: { signalPath: string }) {
+const NO_READONLY = createSignal(false);
+
+/** An editable DataTable cell — renders input or select based on column config. */
+function DataTableCell({
+    signalPath,
+    column,
+    fieldDef,
+    defaultCurrency,
+}: {
+    signalPath: string;
+    column: { header: string; bind: string; type?: string; choices?: Array<{ value: string; label: string }>; editable?: boolean; currency?: string; min?: number; max?: number; step?: number };
+    fieldDef?: any;
+    defaultCurrency: string;
+}) {
     const { engine } = useFormspecContext();
     const rawValue = useSignal(engine.signals[signalPath] ?? NO_VALUE);
-    const displayValue = rawValue != null ? String(rawValue) : '';
-    return <td>{displayValue}</td>;
+    const readonly = useSignal(engine.readonlySignals[signalPath] ?? NO_READONLY);
+
+    const isEditable = column.editable !== false;
+    const dataType = fieldDef?.dataType || column.type;
+    const choices = column.choices
+        || (fieldDef?.optionSet
+            ? (((engine.getDefinition()?.optionSets?.[fieldDef.optionSet] as any)?.options)
+                ?? engine.getDefinition()?.optionSets?.[fieldDef.optionSet]
+                ?? [])
+            : fieldDef?.options ?? []);
+    const prefix = fieldDef?.prefix;
+    const suffix = fieldDef?.suffix;
+
+    const wrapControl = (control: React.ReactNode) => {
+        if (!prefix && !suffix) return control;
+        return (
+            <div className="formspec-datatable-cell-wrapper">
+                {prefix ? <span className="formspec-datatable-prefix">{prefix}</span> : null}
+                {control}
+                {suffix ? <span className="formspec-datatable-prefix">{suffix}</span> : null}
+            </div>
+        );
+    };
+
+    if (!isEditable) {
+        // Read-only display with money formatting
+        let displayValue = rawValue != null ? String(rawValue) : '';
+        if (dataType === 'money' && rawValue != null) {
+            try {
+                displayValue = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: rawValue?.currency || fieldDef?.currency || column.currency || defaultCurrency,
+                }).format(Number(rawValue?.amount ?? rawValue));
+            } catch { /* fall through to string */ }
+        } else if ((dataType === 'choice' || dataType === 'select') && choices.length > 0) {
+            const match = choices.find((c: any) => c.value === rawValue);
+            if (match) displayValue = match.label;
+        }
+        return <td>{displayValue}</td>;
+    }
+
+    // Editable cells — all get aria-label from column header
+    if (dataType === 'boolean') {
+        return (
+            <td>
+                <input
+                    className="formspec-datatable-input"
+                    type="checkbox"
+                    checked={!!rawValue}
+                    aria-label={column.header}
+                    disabled={readonly}
+                    onChange={(e) => engine.setValue(signalPath, e.target.checked)}
+                />
+            </td>
+        );
+    }
+
+    if ((dataType === 'choice' || dataType === 'select') && choices.length > 0) {
+        return (
+            <td>{wrapControl(
+                <select
+                    className="formspec-datatable-input"
+                    name={signalPath}
+                    value={rawValue ?? ''}
+                    aria-label={column.header}
+                    disabled={readonly}
+                    onChange={(e) => engine.setValue(signalPath, e.target.value || null)}
+                >
+                    <option value=""></option>
+                    {choices.map((c: any) => (
+                        <option key={c.value} value={c.value}>{c.label ?? c.value}</option>
+                    ))}
+                </select>,
+            )}</td>
+        );
+    }
+
+    if (dataType === 'number' || dataType === 'integer' || dataType === 'decimal' || dataType === 'money') {
+        return (
+            <td>{wrapControl(
+                <input
+                    className="formspec-datatable-input"
+                    name={signalPath}
+                    type="number"
+                    step={column.step != null ? String(column.step) : (dataType === 'integer' ? '1' : 'any')}
+                    min={column.min != null ? String(column.min) : undefined}
+                    max={column.max != null ? String(column.max) : undefined}
+                    value={rawValue?.amount ?? rawValue ?? ''}
+                    aria-label={column.header}
+                    disabled={readonly}
+                    onChange={(e) => {
+                        const value = e.target.value.trim();
+                        if (!value) {
+                            engine.setValue(signalPath, null);
+                            return;
+                        }
+                        const parsed = dataType === 'integer' ? Number.parseInt(value, 10) : Number.parseFloat(value);
+                        let next = Number.isFinite(parsed) ? parsed : null;
+                        if (typeof next === 'number') {
+                            if (column.min != null && next < column.min) next = column.min;
+                            if (column.max != null && next > column.max) next = column.max;
+                        }
+                        if (dataType === 'money' && next != null) {
+                            engine.setValue(signalPath, { amount: next, currency: fieldDef?.currency || column.currency || defaultCurrency });
+                        } else {
+                            engine.setValue(signalPath, next);
+                        }
+                    }}
+                />,
+            )}</td>
+        );
+    }
+
+    if (dataType === 'date') {
+        return (
+            <td>{wrapControl(
+                <input
+                    className="formspec-datatable-input"
+                    name={signalPath}
+                    type="date"
+                    value={rawValue ?? ''}
+                    aria-label={column.header}
+                    disabled={readonly}
+                    onChange={(e) => engine.setValue(signalPath, e.target.value)}
+                />,
+            )}</td>
+        );
+    }
+
+    // Default: text input
+    return (
+        <td>{wrapControl(
+            <input
+                className="formspec-datatable-input"
+                name={signalPath}
+                type="text"
+                value={rawValue ?? ''}
+                aria-label={column.header}
+                disabled={readonly}
+                onChange={(e) => engine.setValue(signalPath, e.target.value)}
+            />,
+        )}</td>
+    );
 }
 
 /** Renders a DataTable display node as an HTML table. */
@@ -358,9 +804,18 @@ function DataTableDisplay({
 }) {
     const { engine } = useFormspecContext();
     const bindKey = node.props?.bind as string | undefined;
-    const columns = (node.props?.columns as Array<{ header: string; bind: string }>) || [];
+    const columns = (node.props?.columns as Array<{ header: string; bind: string; type?: string; choices?: Array<{ value: string; label: string }>; editable?: boolean; currency?: string; min?: number; max?: number; step?: number }>) || [];
     const allowAdd = node.props?.allowAdd === true;
     const allowRemove = node.props?.allowRemove === true;
+    const showRowNumbers = node.props?.showRowNumbers === true;
+    const groupItem = bindKey ? findItemByKey(engine.getDefinition().items ?? [], bindKey) : null;
+    const fieldByKey = new Map<string, any>();
+    if (groupItem?.type === 'group' && Array.isArray(groupItem.children)) {
+        for (const child of groupItem.children) {
+            if (child?.type === 'field' && child.key) fieldByKey.set(child.key, child);
+        }
+    }
+    const defaultCurrency = engine.getDefinition()?.formPresentation?.defaultCurrency || 'USD';
 
     const repeatPath = bindKey || '';
     const count = useRepeatCount(repeatPath);
@@ -389,6 +844,7 @@ function DataTableDisplay({
                 )}
                 <thead>
                     <tr>
+                        {showRowNumbers && <th scope="col">#</th>}
                         {columns.map((col, ci) => (
                             <th key={ci} scope="col">{col.header}</th>
                         ))}
@@ -400,14 +856,21 @@ function DataTableDisplay({
                 <tbody>
                     {Array.from({ length: count }, (_, i) => (
                         <tr key={i}>
+                            {showRowNumbers && <td className="formspec-row-number">{i + 1}</td>}
                             {columns.map((col, ci) => (
-                                <DataTableCell key={ci} signalPath={`${bindKey}[${i}].${col.bind}`} />
+                                <DataTableCell
+                                    key={ci}
+                                    signalPath={`${bindKey}[${i}].${col.bind}`}
+                                    column={col}
+                                    fieldDef={fieldByKey.get(col.bind)}
+                                    defaultCurrency={defaultCurrency}
+                                />
                             ))}
                             {allowRemove && (
                                 <td>
                                     <button
                                         type="button"
-                                        className="formspec-datatable-remove"
+                                        className="formspec-datatable-remove formspec-focus-ring"
                                         aria-label={`Remove row ${i + 1}`}
                                         onClick={() => handleRemove(i)}
                                     >
@@ -422,7 +885,7 @@ function DataTableDisplay({
             {allowAdd && (
                 <button
                     type="button"
-                    className="formspec-datatable-add"
+                    className="formspec-datatable-add formspec-focus-ring"
                     onClick={handleAdd}
                 >
                     Add Row
@@ -432,10 +895,20 @@ function DataTableDisplay({
     );
 }
 
-/** Renders a live ValidationSummary display node using the current engine state. */
+/** Renders a live ValidationSummary display node using the current engine state.
+ *  Gates display on touchedVersion > 0 — errors only appear after submit or
+ *  wizard navigation, matching the web component's gate behavior. */
 function ValidationSummaryDisplay() {
-    const { engine } = useFormspecContext();
+    const { engine, touchedVersion } = useFormspecContext();
+    const touched = useSignal(touchedVersion);
     const structureVersion = useSignal(engine.structureVersion);
+
+    // Gate: don't show validation results until fields have been touched
+    // (submit calls touchAllFields, wizard navigation touches fields)
+    if (touched === 0) {
+        return null;
+    }
+
     const report = engine.getValidationReport({ mode: 'continuous' });
     const results = report.results.map((r: any) => ({
         path: r.path || '',
@@ -485,7 +958,73 @@ function RelevanceGatedLayout({ node }: { node: LayoutNode }) {
 
 /** Renders a layout node via the component map or default, recurses into children. */
 function LayoutNodeInner({ node }: { node: LayoutNode }) {
-    const { components } = useFormspecContext();
+    const { components, formPresentation } = useFormspecContext();
+
+    // Match web component: Stack + Page children + pageMode → Wizard / Tabs (not plain Stack).
+    if (node.component === 'Stack' && node.children.length > 0) {
+        const pageMode = formPresentation?.pageMode as string | undefined;
+        const hasPages = node.children.some((c) => c.component === 'Page');
+        if (hasPages && (pageMode === 'wizard' || pageMode === 'tabs')) {
+            const orphans = node.children.filter((c) => c.component !== 'Page');
+            const pages = node.children.filter((c) => c.component === 'Page');
+            const fp = formPresentation ?? {};
+
+            if (pageMode === 'wizard' && pages.length > 0) {
+                const wizardNode: LayoutNode = {
+                    id: `${node.id}-page-mode-wizard`,
+                    component: 'Wizard',
+                    category: 'layout',
+                    props: {
+                        showProgress: fp.showProgress !== false,
+                        allowSkip: !!fp.allowSkip,
+                        sidenav: fp.sidenav,
+                    },
+                    cssClasses: node.cssClasses ?? [],
+                    style: node.style,
+                    accessibility: node.accessibility,
+                    children: pages,
+                };
+                return (
+                    <>
+                        {orphans.map((child) => (
+                            <FormspecNode key={child.id} node={child} />
+                        ))}
+                        <LayoutNodeInner node={wizardNode} />
+                    </>
+                );
+            }
+
+            if (pageMode === 'tabs' && pages.length > 0) {
+                const tabsNode: LayoutNode = {
+                    id: `${node.id}-page-mode-tabs`,
+                    component: 'Tabs',
+                    category: 'layout',
+                    props: {
+                        tabLabels: pages.map(
+                            (p) =>
+                                (p.props?.title as string | undefined)
+                                || (p.props?.label as string | undefined)
+                                || (p.fieldItem?.label as string | undefined),
+                        ),
+                        position: (fp.tabPosition as string | undefined) || 'top',
+                        defaultTab: (fp.defaultTab as number | undefined) ?? 0,
+                    },
+                    cssClasses: node.cssClasses ?? [],
+                    style: node.style,
+                    accessibility: node.accessibility,
+                    children: pages,
+                };
+                return (
+                    <>
+                        {orphans.map((child) => (
+                            <FormspecNode key={child.id} node={child} />
+                        ))}
+                        <LayoutNodeInner node={tabsNode} />
+                    </>
+                );
+            }
+        }
+    }
 
     // Resolve component: user override → built-in → fallback substitution → DefaultLayout
     const componentName = node.component;

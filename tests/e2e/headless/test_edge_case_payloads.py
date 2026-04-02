@@ -57,12 +57,20 @@ def test_edge_case_definition_fixtures_lint(
         assert errors == [], f"Lint errors: {errors}"
 
 
+MICROGRANT_SCREENER_STANDALONE = (
+    ROOT_DIR / "tests" / "fixtures" / "fixture-microgrant-screener-standalone.json"
+)
+
+
 def test_microgrant_fixture_exercises_screener_instances_and_submit_shapes(
     fixtures: dict[str, dict],
 ) -> None:
     definition = fixtures["microgrant"]
+    screener = _load_json(MICROGRANT_SCREENER_STANDALONE)
 
-    assert "screener" in definition
+    assert screener.get("$formspecScreener") == "1.0"
+    assert screener.get("evaluation")
+    assert any(item.get("key") == "screenOrgType" for item in screener.get("items", []))
     assert {"orgProfile", "grantRules"}.issubset(definition["instances"])
     assert definition["formPresentation"]["defaultCurrency"] == "USD"
 

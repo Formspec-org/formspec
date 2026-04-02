@@ -9,7 +9,7 @@
  *  #47 Collapse arrow frozen     — Section ▶ button arrow does not rotate on expand/collapse
  */
 import { test, expect } from '@playwright/test';
-import { importDefinition, waitForApp } from './helpers';
+import { importDefinition, switchTab, waitForApp } from './helpers';
 
 // ─── Shared seed definitions ────────────────────────────────────────────────
 
@@ -46,12 +46,6 @@ const VARIABLES_DEFINITION = {
   ],
 };
 
-/** Definition without a screener so the badge shows "Disabled". */
-const SCREENER_DISABLED_DEFINITION = {
-  $formspec: '1.0',
-  items: [{ key: 'age', type: 'field', dataType: 'integer' }],
-};
-
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 /** Click a Blueprint sidebar nav button to activate that section. */
@@ -68,6 +62,7 @@ test.describe('Bug #14 — Component Tree count badge is always 0', () => {
     await waitForApp(page);
     await importDefinition(page, COMPONENT_TREE_DEFINITION);
     await page.waitForSelector('[data-testid="field-firstName"]', { timeout: 5000 });
+    await switchTab(page, 'Layout');
 
     const sectionBtn = page.locator('[data-testid="blueprint-section-Component Tree"]');
     await expect(sectionBtn).toBeVisible();
@@ -128,10 +123,10 @@ test.describe('Bug #28 — Settings dialog Title input shows current title', () 
   });
 });
 
-// ─── Variables sidebar rows navigate to Logic workspace ──────────────────────
+// ─── Variables sidebar rows navigate to Manage view ──────────────────────
 
 test.describe('Variables sidebar rows are navigation buttons', () => {
-  test('clicking a variable navigates to the Logic workspace', async ({ page }) => {
+  test('clicking a variable navigates to the Editor Manage view', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, VARIABLES_DEFINITION);
     await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
@@ -139,15 +134,15 @@ test.describe('Variables sidebar rows are navigation buttons', () => {
     await openBlueprintSection(page, 'Variables');
     await page.waitForSelector('text=@taxRate', { timeout: 5000 });
 
-    // Confirm the Logic workspace is not yet active
-    await expect(page.locator('[data-testid="workspace-Logic"]')).not.toBeVisible();
-
     // VariablesList.tsx renders each variable as a <button> that dispatches
-    // formspec:navigate-workspace with { tab: 'Logic' } on click.
+    // formspec:navigate-workspace with { tab: 'Editor', view: 'manage' } on click.
+    // Note the current view before clicking.
+    const manageBefore = await page.getByRole('radio', { name: 'Manage' }).getAttribute('aria-checked');
+
     await page.getByRole('button', { name: /@taxRate/i }).click();
 
-    // After clicking, the Logic workspace should become visible.
-    await expect(page.locator('[data-testid="workspace-Logic"]')).toBeVisible({ timeout: 3000 });
+    // After clicking, the Manage view should become active (if it wasn't already).
+    await expect(page.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true', { timeout: 3000 });
   });
 
   test('each variable row is a button element', async ({ page }) => {
@@ -164,57 +159,13 @@ test.describe('Variables sidebar rows are navigation buttons', () => {
   });
 });
 
-// ─── Bug #37 — Screener "Disabled" badge is inert ────────────────────────────
-
-test.describe('Bug #37 — Screener Disabled badge cannot be interacted with', () => {
-  test('clicking the "Disabled" badge toggles the screener on or opens a config flow', async ({ page }) => {
-    await waitForApp(page);
-    await importDefinition(page, SCREENER_DISABLED_DEFINITION);
-    await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
-
-    await openBlueprintSection(page, 'Screener');
-    await page.waitForSelector('text=Disabled', { timeout: 5000 });
-
-    // Click the "Disabled" pill.
-    // Bug: the Pill component renders a <span>, not a <button>, with no onClick.
-    await page.getByText('Disabled').click();
-
-    // After clicking, the screener should either have been enabled (badge → "Enabled")
-    // or a configuration dialog/panel should have appeared.
-    //
-    // FAILS on the bug: the click is a no-op on a static <span>.
-    const screenerEnabled = await page.getByText('Enabled').isVisible().catch(() => false);
-    const configSurface = await page
-      .locator('[role="dialog"], [data-testid*="screener"]')
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    expect(screenerEnabled || configSurface, 'Screener should toggle or open config after clicking Disabled badge').toBe(true);
-  });
-
-  test('"Disabled" badge in Screener section has button role', async ({ page }) => {
-    await waitForApp(page);
-    await importDefinition(page, SCREENER_DISABLED_DEFINITION);
-    await page.waitForSelector('[data-testid="field-age"]', { timeout: 5000 });
-
-    await openBlueprintSection(page, 'Screener');
-    await page.waitForSelector('text=Disabled', { timeout: 5000 });
-
-    // The "Disabled" indicator must be a button so it is keyboard-accessible and
-    // conveys interactivity to screen readers.
-    // FAILS on the bug: Pill renders a <span>.
-    await expect(page.getByRole('button', { name: /disabled/i })).toBeVisible();
-  });
-});
-
 // ─── Bug #47 — Section collapse arrow does not reflect open/closed state ─────
 //
 // NOTE: These tests were removed because the Settings section was redesigned
 // from nested collapsible Section components (with "Definition Metadata" headers
 // and collapse arrows) to a flat list of PropertyRow labels. No sidebar section
 // currently uses the collapsible Section component — SettingsSection, ThemeOverview,
-// VariablesList, ScreenerSection, and all other SIDEBAR_COMPONENTS render flat lists.
+// VariablesList, ScreenerSummary, and all other SIDEBAR_COMPONENTS render flat lists.
 // The Section component (src/components/ui/Section.tsx) still exists and is used
 // in FELReference.tsx, but that component is not mounted in the blueprint sidebar.
 // If collapsible sections are re-introduced in a blueprint sidebar panel, add

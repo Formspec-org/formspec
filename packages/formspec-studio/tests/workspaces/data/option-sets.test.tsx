@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider } from '../../../src/state/useSelection';
-import { OptionSets } from '../../../src/workspaces/data/OptionSets';
+import { OptionSets } from '../../../src/workspaces/editor/OptionSets';
 
 const dataDef = {
   $formspec: '1.0', url: 'urn:test', version: '1.0.0',
@@ -164,7 +164,7 @@ describe('OptionSets', () => {
       fireEvent.click(within(card).getByText('countries'));
     });
 
-    fireEvent.click(screen.getByText('https://api.example.com/countries'));
+    fireEvent.click(screen.getByTitle('https://api.example.com/countries'));
     const textarea = screen.getByRole('textbox');
     fireEvent.change(textarea, { target: { value: 'https://new-api.com/countries' } });
     fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });

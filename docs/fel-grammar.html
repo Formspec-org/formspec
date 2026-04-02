@@ -348,6 +348,7 @@ Multiplication ← Unary ((_ &#39;*&#39; / _ &#39;/&#39; / _ &#39;%&#39;) _ Unar
 
 # --- Unary prefix (precedence 10, right-associative) ---
 Unary          ← &#39;not&#39; !IdContinue _ Unary
+               / &#39;!&#39; _ Unary
                / &#39;-&#39; _ Unary
                / Postfix
 
@@ -502,10 +503,11 @@ table is normative and matches the structural encoding in §4.</p>
 </tr>
 <tr>
 <td style="text-align: center;">10</td>
-<td><code>not</code> (prefix), <code>-</code> (negate)</td>
+<td><code>not</code> / <code>!</code> (prefix), <code>-</code>
+(negate)</td>
 <td>Unary</td>
 <td style="text-align: center;">Right</td>
-<td><code>not $flag</code>, <code>-$x</code></td>
+<td><code>not $flag</code>, <code>!$flag</code>, <code>-$x</code></td>
 </tr>
 </tbody>
 </table>

@@ -15,7 +15,6 @@ export const renderDatePicker: AdapterRenderFn<DatePickerBehavior> = (
     input.id = behavior.id;
     if (behavior.minDate) input.min = behavior.minDate;
     if (behavior.maxDate) input.max = behavior.maxDate;
-    input.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
 
     fieldDOM.root.appendChild(input);
     applyControlSlotClass(input, behavior, actx);

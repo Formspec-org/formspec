@@ -271,6 +271,49 @@ fn walk_screener(
     walk_binds(screener.get("binds"), "$.screener", compiled, diagnostics);
 }
 
+// ── Standalone Screener Document ────────────────────────────────
+
+/// Walk all FEL expression slots in a standalone Screener Document.
+/// Paths: $.evaluation[N].routes[M].condition, $.evaluation[N].routes[M].score,
+/// $.evaluation[N].activeWhen, $.binds (screener-scoped).
+pub fn compile_screener_expressions(document: &Value) -> ExpressionCompilationResult {
+    let mut compiled = Vec::new();
+    let mut diagnostics = Vec::new();
+
+    // Screener-scoped binds
+    walk_binds(document.get("binds"), "$", &mut compiled, &mut diagnostics);
+
+    // Evaluation pipeline
+    if let Some(phases) = document.get("evaluation").and_then(Value::as_array) {
+        for (i, phase) in phases.iter().enumerate() {
+            // Phase activeWhen
+            if let Some(expr_str) = phase.get("activeWhen").and_then(Value::as_str) {
+                let path = format!("$.evaluation[{i}].activeWhen");
+                try_parse(expr_str, path, None, &mut compiled, &mut diagnostics);
+            }
+
+            // Routes: condition and score expressions
+            if let Some(routes) = phase.get("routes").and_then(Value::as_array) {
+                for (j, route) in routes.iter().enumerate() {
+                    if let Some(expr_str) = route.get("condition").and_then(Value::as_str) {
+                        let path = format!("$.evaluation[{i}].routes[{j}].condition");
+                        try_parse(expr_str, path, None, &mut compiled, &mut diagnostics);
+                    }
+                    if let Some(expr_str) = route.get("score").and_then(Value::as_str) {
+                        let path = format!("$.evaluation[{i}].routes[{j}].score");
+                        try_parse(expr_str, path, None, &mut compiled, &mut diagnostics);
+                    }
+                }
+            }
+        }
+    }
+
+    ExpressionCompilationResult {
+        compiled,
+        diagnostics,
+    }
+}
+
 // ── Parse helper ────────────────────────────────────────────────
 
 fn try_parse(
@@ -818,5 +861,137 @@ mod tests {
         assert_eq!(result.compiled.len(), 1);
         assert_eq!(result.diagnostics.len(), 1);
         assert_eq!(result.diagnostics[0].path, "$.screener.routes[1].condition");
+    }
+
+    // ── Standalone Screener Document walker ────────────────────────
+
+    #[test]
+    fn screener_document_route_conditions_parsed() {
+        let doc = json!({
+            "$formspecScreener": "1.0",
+            "evaluation": [{
+                "id": "p1",
+                "strategy": "first-match",
+                "routes": [
+                    { "condition": "$orgType = 'nonprofit'", "target": "urn:a" },
+                    { "condition": "true", "target": "urn:b" }
+                ]
+            }]
+        });
+        let result = compile_screener_expressions(&doc);
+
+        assert!(result.diagnostics.is_empty());
+        assert_eq!(result.compiled.len(), 2);
+        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        assert!(paths.contains(&"$.evaluation[0].routes[0].condition"));
+        assert!(paths.contains(&"$.evaluation[0].routes[1].condition"));
+    }
+
+    #[test]
+    fn screener_document_score_expressions_parsed() {
+        let doc = json!({
+            "$formspecScreener": "1.0",
+            "evaluation": [{
+                "id": "scoring",
+                "strategy": "score-threshold",
+                "routes": [
+                    { "score": "$risk_factor * 10", "threshold": 50, "target": "urn:high" },
+                    { "score": "$risk_factor * 5", "threshold": 25, "target": "urn:low" }
+                ]
+            }]
+        });
+        let result = compile_screener_expressions(&doc);
+
+        assert!(result.diagnostics.is_empty());
+        assert_eq!(result.compiled.len(), 2);
+        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        assert!(paths.contains(&"$.evaluation[0].routes[0].score"));
+        assert!(paths.contains(&"$.evaluation[0].routes[1].score"));
+    }
+
+    #[test]
+    fn screener_document_active_when_parsed() {
+        let doc = json!({
+            "$formspecScreener": "1.0",
+            "evaluation": [{
+                "id": "conditional",
+                "strategy": "first-match",
+                "activeWhen": "$has_prior_grants",
+                "routes": []
+            }]
+        });
+        let result = compile_screener_expressions(&doc);
+
+        assert!(result.diagnostics.is_empty());
+        assert_eq!(result.compiled.len(), 1);
+        assert_eq!(result.compiled[0].expression_path, "$.evaluation[0].activeWhen");
+    }
+
+    #[test]
+    fn screener_document_binds_parsed() {
+        let doc = json!({
+            "$formspecScreener": "1.0",
+            "binds": [
+                { "path": "income", "required": "true", "constraint": "$income >= 0" }
+            ],
+            "evaluation": []
+        });
+        let result = compile_screener_expressions(&doc);
+
+        assert!(result.diagnostics.is_empty());
+        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        assert!(paths.contains(&"$.binds[0].required"));
+        assert!(paths.contains(&"$.binds[0].constraint"));
+    }
+
+    #[test]
+    fn screener_document_invalid_condition_emits_e400() {
+        let doc = json!({
+            "$formspecScreener": "1.0",
+            "evaluation": [{
+                "id": "p1",
+                "strategy": "first-match",
+                "routes": [
+                    { "condition": "bad ++", "target": "urn:fail" }
+                ]
+            }]
+        });
+        let result = compile_screener_expressions(&doc);
+
+        assert_eq!(result.compiled.len(), 0);
+        assert_eq!(result.diagnostics.len(), 1);
+        assert_eq!(result.diagnostics[0].code, "E400");
+        assert_eq!(result.diagnostics[0].path, "$.evaluation[0].routes[0].condition");
+    }
+
+    #[test]
+    fn screener_document_multi_phase_all_expressions_walked() {
+        let doc = json!({
+            "$formspecScreener": "1.0",
+            "evaluation": [
+                {
+                    "id": "p1",
+                    "strategy": "fan-out",
+                    "activeWhen": "$eligible",
+                    "routes": [
+                        { "condition": "$a", "target": "urn:a" }
+                    ]
+                },
+                {
+                    "id": "p2",
+                    "strategy": "score-threshold",
+                    "routes": [
+                        { "score": "$score1", "threshold": 50, "target": "urn:b" },
+                        { "condition": "true", "score": "$score2", "threshold": 0, "target": "urn:c" }
+                    ]
+                }
+            ]
+        });
+        let result = compile_screener_expressions(&doc);
+
+        assert!(result.diagnostics.is_empty());
+        // p1: activeWhen + 1 condition = 2
+        // p2: 2 scores + 1 condition = 3
+        assert_eq!(result.compiled.len(), 5);
     }
 }

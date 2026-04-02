@@ -3,16 +3,13 @@ import { describe, it, expect } from 'vitest';
 import { createProject, type Project } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
-import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
-import { EditorCanvas } from '../../src/workspaces/editor/EditorCanvas';
+import { DefinitionTreeEditor } from '../../src/workspaces/editor/DefinitionTreeEditor';
 
 function renderEditor(project: Project) {
   return render(
     <ProjectProvider project={project}>
       <SelectionProvider>
-        <ActiveGroupProvider>
-          <EditorCanvas />
-        </ActiveGroupProvider>
+        <DefinitionTreeEditor />
       </SelectionProvider>
     </ProjectProvider>
   );

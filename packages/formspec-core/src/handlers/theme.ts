@@ -9,7 +9,7 @@
  *   - **Cascade Level 3 (Per-Item Overrides)** -- Highest-specificity level.
  *
  * Also manages design tokens, breakpoints, and stylesheets.
- * Page layout is handled by the `pages.*` handlers.
+ * Page layout lives in the component tree; theme handlers no longer own page authoring.
  *
  * All handlers return `{ rebuildComponentTree: false }` because theme mutations
  * do not alter the definition item tree structure.

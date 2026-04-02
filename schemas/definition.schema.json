@@ -301,10 +301,6 @@
         }
       ]
     },
-    "screener": {
-      "$ref": "#/$defs/Screener",
-      "description": "Routing mechanism that classifies respondents via screening questions and directs them to the appropriate target Definition. Routes are evaluated in declaration order; first match wins. Screener items are NOT part of the form's instance data."
-    },
     "migrations": {
       "$ref": "#/$defs/Migrations",
       "description": "Declares how to transform Responses from prior versions into this version's structure. Migration produces a new Response pinned to the target version; the original is preserved. Fields not in fieldMap are carried forward by path matching or dropped."
@@ -395,6 +391,11 @@
           "type": "boolean",
           "default": false,
           "description": "Wizard mode: allow navigating forward without validating the current page."
+        },
+        "sidenav": {
+          "type": "boolean",
+          "default": false,
+          "description": "Wizard mode: render a vertical side navigation listing all steps instead of the default horizontal progress bar."
         },
         "defaultTab": {
           "type": "integer",
@@ -1328,95 +1329,11 @@
             "United States"
           ]
         },
-        "extensions": {
-          "type": "object",
-          "propertyNames": {
-            "pattern": "^x-"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "Screener": {
-      "type": "object",
-      "description": "A routing mechanism that classifies respondents via screening questions and directs them to the appropriate target Definition. Screener items are NOT part of the form's instance data — they exist only for routing. Routes are evaluated in declaration order; the first route whose condition evaluates to true wins. A route with condition 'true' acts as a default/fallback.",
-      "required": [
-        "items",
-        "routes"
-      ],
-      "properties": {
-        "items": {
+        "keywords": {
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/Item"
-          },
-          "description": "Screening fields used for routing classification. Values are available to route conditions via standard FEL $field references."
-        },
-        "routes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Route"
-          },
-          "minItems": 1,
-          "description": "Ordered routing rules. Evaluated in declaration order; first match wins."
-        },
-        "binds": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Bind"
-          },
-          "description": "Bind declarations scoped to screener items. Paths reference screener item keys. Supports required, relevant, constraint, and calculate expressions. These binds are evaluated in the screener's own scope — they do NOT interact with the main form's binds."
-        },
-        "extensions": {
-          "type": "object",
-          "propertyNames": {
-            "pattern": "^x-"
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "Route": {
-      "type": "object",
-      "description": "A single routing rule within a Screener. Maps a FEL boolean condition to a target Definition.",
-      "required": [
-        "condition",
-        "target"
-      ],
-      "properties": {
-        "condition": {
-          "$ref": "#/$defs/FELExpression",
-          "description": "FEL expression returning boolean, evaluated against screener item values. Use 'true' for a default/fallback route.",
-          "examples": [
-            "moneyAmount($awardAmount) < 250000",
-            "$awardType = 'grant' and $totalValue >= 500000",
-            "true"
-          ]
-        },
-        "target": {
-          "type": "string",
-          "format": "uri",
-          "description": "Canonical reference URI to the target FormDefinition the user should be directed to.",
-          "examples": [
-            "https://grants.gov/forms/sf-425-short/1.0.0",
-            "https://grants.gov/forms/sf-425/2.1.0"
-          ]
-        },
-        "label": {
-          "type": "string",
-          "description": "Human-readable description of this route, displayed to users or used in authoring tools.",
-          "examples": [
-            "SF-425 Short Form",
-            "Full Progress Report"
-          ]
-        },
-        "message": {
-          "type": "string",
-          "description": "Message displayed to the respondent when this route is selected and the target is a disqualification or rejection. Used to provide respectful, informative feedback to screened-out participants.",
-          "examples": [
-            "Thank you for your interest. This study requires participants aged 18 or older.",
-            "Based on your responses, a different version of this form is more appropriate."
-          ]
+          "items": { "type": "string" },
+          "description": "Extra type-ahead strings for combobox/searchable Select filtering (abbreviations, codes, alternate names). Matched case-insensitively in addition to label and value.",
+          "examples": [["US", "USA"], ["UK", "GB", "Britain"]]
         },
         "extensions": {
           "type": "object",

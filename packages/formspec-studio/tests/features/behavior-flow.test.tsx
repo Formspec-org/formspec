@@ -4,7 +4,7 @@ import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider, useSelection } from '../../src/state/useSelection';
 import { LogicTab } from '../../src/workspaces/logic/LogicTab';
-import { ItemProperties } from '../../src/workspaces/editor/ItemProperties';
+import { EditorPropertiesPanel } from '../../src/workspaces/editor/properties/EditorPropertiesPanel';
 
 const testDef = {
   $formspec: '1.0', url: 'urn:test', version: '1.0.0',
@@ -23,8 +23,8 @@ function SelectionProbe() {
   return (
     <>
       <div data-testid="selected-key">{selectedKey || ''}</div>
-      <button data-testid="select-age" onClick={() => select('age', 'field')}>Select Age</button>
-      <button data-testid="select-name" onClick={() => select('name', 'field')}>Select Name</button>
+      <button data-testid="select-age" onClick={() => select('age', 'field', { tab: 'editor' })}>Select Age</button>
+      <button data-testid="select-name" onClick={() => select('name', 'field', { tab: 'editor' })}>Select Name</button>
     </>
   );
 }
@@ -125,7 +125,7 @@ describe('Behavior Flow Integration', () => {
 
   describe('Properties Panel - Behavior Rules', () => {
     it('shows "Add behavior rule" button and allows adding rules', async () => {
-      renderApp(<ItemProperties />);
+      renderApp(<EditorPropertiesPanel />);
       
       await act(async () => {
         screen.getByTestId('select-age').click();
@@ -154,16 +154,16 @@ describe('Behavior Flow Integration', () => {
     });
 
     it('allows removing a behavior rule', async () => {
-      renderApp(<ItemProperties />);
+      renderApp(<EditorPropertiesPanel />);
       
       await act(async () => {
         screen.getByTestId('select-name').click();
       });
 
-      const behaviorSection = screen.getByText(/Behavior Rules/i).closest('div.space-y-1') as HTMLElement;
+      const behaviorSection = screen.getByRole('button', { name: /Behavior Rules/i }).closest('div[class*="rounded-"]') as HTMLElement;
       
-      // DOM Check: 'required' bind card
-      const requiredCard = within(behaviorSection).getByText(/required/i).closest('div[class*="border-l-accent"]') as HTMLElement;
+      // DOM Check: 'required' bind card (verb-intent label: MUST FILL, title: required)
+      const requiredCard = within(behaviorSection).getByText(/must fill/i).closest('div[class*="border-l-accent"]') as HTMLElement;
       expect(requiredCard).toBeInTheDocument();
       
       const removeBtn = within(requiredCard).getByTitle(/Remove required/i);
@@ -183,7 +183,7 @@ describe('Behavior Flow Integration', () => {
 
   describe('Pre-population Flow', () => {
     it('allows adding pre-population from the behaviors menu', async () => {
-      renderApp(<ItemProperties />);
+      renderApp(<EditorPropertiesPanel />);
       
       await act(async () => {
         screen.getByTestId('select-age').click();
@@ -216,7 +216,7 @@ describe('Behavior Flow Integration', () => {
       } as any } });
       updateItemSpy = vi.spyOn(project, 'updateItem');
       
-      renderApp(<ItemProperties />);
+      renderApp(<EditorPropertiesPanel />);
       
       await act(async () => {
         screen.getByTestId('select-age').click();

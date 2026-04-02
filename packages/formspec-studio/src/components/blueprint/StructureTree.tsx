@@ -1,8 +1,7 @@
-/** @filedesc Blueprint section rendering the interactive item tree with inline add-item palette support. */
-import { useState, useCallback, useEffect } from 'react';
+/** @filedesc Blueprint section rendering the definition item tree with inline add-item palette support. */
+import { useState, useCallback } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
-import { useActiveGroup } from '../../state/useActiveGroup';
 import { useProject } from '../../state/useProject';
 import { useCanvasTargets } from '../../state/useCanvasTargets';
 import { FieldIcon } from '../ui/FieldIcon';
@@ -22,23 +21,45 @@ function uniqueKey(prefix: string): string {
   return `${prefix}${nextItemId++}`;
 }
 
-// ── Tree node (recursive item row) ──────────────────────────────────────
+function collectSiblingKeys(items: ItemNode[], targetParentPath?: string): Set<string> {
+  if (!targetParentPath) {
+    return new Set(items.map((item) => item.key));
+  }
+
+  const parts = targetParentPath.split('.');
+  let currentItems = items;
+  let currentNode: ItemNode | undefined;
+
+  for (const part of parts) {
+    currentNode = currentItems.find((item) => item.key === part);
+    currentItems = currentNode?.children ?? [];
+  }
+
+  return new Set((currentNode?.children ?? []).map((item) => item.key));
+}
+
+function uniqueSiblingKey(items: ItemNode[], parentPath: string | undefined, prefix: string): string {
+  const siblingKeys = collectSiblingKeys(items, parentPath);
+  let candidate = uniqueKey(prefix);
+  while (siblingKeys.has(candidate)) {
+    candidate = uniqueKey(prefix);
+  }
+  return candidate;
+}
 
 function TreeNode({
   item,
   depth,
   pathPrefix,
-  onActivatePath,
 }: {
   item: ItemNode;
   depth: number;
   pathPrefix: string;
-  onActivatePath?: (path: string) => void;
 }) {
-  const { selectedKey, select } = useSelection();
+  const { selectedKeyForTab, select } = useSelection();
   const { scrollToTarget } = useCanvasTargets();
   const fullPath = pathPrefix ? `${pathPrefix}.${item.key}` : item.key;
-  const isSelected = selectedKey === fullPath;
+  const isSelected = selectedKeyForTab('editor') === fullPath;
 
   const icon = item.type === 'field' ? (
     <FieldIcon dataType={item.dataType || 'string'} className="text-[10px]" />
@@ -49,8 +70,7 @@ function TreeNode({
   );
 
   const handleClick = () => {
-    onActivatePath?.(fullPath);
-    select(fullPath, item.type);
+    select(fullPath, item.type, { tab: 'editor' });
     requestAnimationFrame(() => {
       scrollToTarget(fullPath);
     });
@@ -61,10 +81,11 @@ function TreeNode({
       <button
         type="button"
         data-testid={`tree-item-${fullPath}`}
-        className={`w-full flex items-center gap-1.5 px-2 py-1 text-[13px] text-left transition-all rounded-[3px] cursor-pointer ${
+        aria-current={isSelected ? 'true' : undefined}
+        className={`w-full flex items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-left transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${
           isSelected
-            ? 'bg-accent/10 text-accent font-medium border-l-2 border-accent'
-            : 'text-ink hover:bg-subtle border-l-2 border-transparent'
+            ? 'bg-accent/[0.08] text-accent font-medium border-l-2 border-accent'
+            : 'text-ink/88 hover:bg-bg-default/45 border-l-2 border-transparent'
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
         onClick={handleClick}
@@ -72,7 +93,7 @@ function TreeNode({
         <span className="shrink-0 w-4 flex justify-center">{icon}</span>
         <span className="truncate flex-1">{item.label || item.key}</span>
         {item.type === 'group' && item.children && (
-          <span className="text-[9px] text-muted ml-auto font-mono">
+          <span className="text-[11px] text-muted/80 ml-auto font-mono">
             {item.children.length}
           </span>
         )}
@@ -83,14 +104,11 @@ function TreeNode({
           item={child}
           depth={depth + 1}
           pathPrefix={fullPath}
-          onActivatePath={onActivatePath}
         />
       ))}
     </div>
   );
 }
-
-// ── Small inline "+" button ──────────────────────────────────────────
 
 function AddButton({ onClick, title }: { onClick: () => void; title: string }) {
   return (
@@ -98,105 +116,45 @@ function AddButton({ onClick, title }: { onClick: () => void; title: string }) {
       type="button"
       title={title}
       onClick={onClick}
-      className="w-4 h-4 flex items-center justify-center rounded-[3px] text-muted hover:text-ink hover:bg-subtle transition-colors cursor-pointer text-[13px] leading-none"
+      className="h-5 w-5 flex items-center justify-center rounded-[4px] text-muted/85 hover:text-ink hover:bg-subtle transition-colors cursor-pointer leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
     >
       +
     </button>
   );
 }
 
-// ── StructureTree ────────────────────────────────────────────────────
+function parentPathForInsertion(project: ReturnType<typeof useProject>, selectedKey: string | null): string | undefined {
+  if (!selectedKey) return undefined;
+  const selected = project.itemAt(selectedKey);
+  if (selected?.type === 'group') return selectedKey;
+  if (!selectedKey.includes('.')) return undefined;
+  return selectedKey.split('.').slice(0, -1).join('.') || undefined;
+}
 
-/**
- * Navigable structure sidebar.
- *
- * Two modes:
- * - **Paged form** (top-level groups exist): Wizard Pages nav selects the
- *   active page; Items shows only that page's children. One page is always
- *   active. Adding items goes inside the active page via `parentPath`.
- * - **Flat form** (no top-level groups): Items shows all root-level items.
- *   Adding items goes to the root.
- */
 export function StructureTree() {
   const definition = useDefinition();
   const project = useProject();
-  const { select } = useSelection();
-  const { scrollToTarget } = useCanvasTargets();
-  const { activeGroupKey, setActiveGroupKey } = useActiveGroup();
+  const { selectedKeyForTab, select } = useSelection();
   const items = (definition.items ?? []) as ItemNode[];
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const selectedKey = selectedKeyForTab('editor');
 
-  const presentation = definition.formPresentation ?? {};
-  const isPaged = presentation.pageMode === 'wizard' || presentation.pageMode === 'tabs';
-
-  // Pages = top-level groups (only if pageMode is enabled)
-  const pages = isPaged ? items.filter((i) => i.type === 'group') : [];
-  const hasPages = pages.length > 0;
-
-  // Auto-select first page when pages appear / on first render
-  useEffect(() => {
-    if (hasPages) {
-      // Keep current selection if it's still valid
-      if (activeGroupKey && pages.some((p) => p.key === activeGroupKey)) return;
-      setActiveGroupKey(pages[0].key);
-    } else {
-      setActiveGroupKey(null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasPages, pages.map((p) => p.key).join(',')]);
-
-  const activeGroup = pages.find((p) => p.key === activeGroupKey) ?? null;
-  const visibleItems = hasPages
-    ? (activeGroup?.children ?? []) as ItemNode[]
-    : items;
-
-  // Selecting a wizard page: set local active page AND sync editor selection
-  const handleSelectPage = useCallback(
-    (key: string) => {
-      setActiveGroupKey(key);
-      select(key, 'group');
-      requestAnimationFrame(() => {
-        scrollToTarget(key);
-      });
-    },
-    [scrollToTarget, select, setActiveGroupKey],
-  );
-
-  const handleActivatePath = useCallback((path: string) => {
-    if (!hasPages) return;
-    const [pageKey] = path.split('.');
-    if (pageKey && pageKey !== activeGroupKey) {
-      setActiveGroupKey(pageKey);
-    }
-  }, [activeGroupKey, hasPages, setActiveGroupKey]);
-
-  // Adding a wizard page
-  const handleAddPage = useCallback(() => {
-    const result = project.addPage('New Page');
-    const insertedPageKey = result.affectedPaths[0] ?? 'new_page';
-    // Switch to the new page once it exists
-    requestAnimationFrame(() => {
-      setActiveGroupKey(insertedPageKey);
-      select(insertedPageKey, 'group');
-    });
-  }, [project, select, setActiveGroupKey]);
-
-  // Adding an item from the palette
   const handleAddFromPalette = useCallback(
     (opt: FieldTypeOption) => {
-      const key = uniqueKey(opt.dataType ?? opt.itemType);
-      const parentPath = hasPages && activeGroupKey ? activeGroupKey : undefined;
-      const fullPath = parentPath ? `${parentPath}.${key}` : key;
-      let insertedPath = fullPath;
+      const parentPath = parentPathForInsertion(project, selectedKey);
+      const key = uniqueSiblingKey(items, parentPath, opt.dataType ?? opt.itemType);
+      let insertedPath = parentPath ? `${parentPath}.${key}` : key;
 
       if (opt.itemType === 'field') {
-        project.addField(key, opt.label, opt.dataType ?? 'string', {
+        const result = project.addField(key, opt.label, opt.dataType ?? 'string', {
           ...(parentPath ? { parentPath } : {}),
           ...(opt.extra as object | undefined),
         });
+        insertedPath = result.affectedPaths[0] ?? insertedPath;
       } else if (opt.itemType === 'group') {
-        project.addGroup(fullPath, opt.label);
-      } else if (opt.itemType === 'display') {
+        const result = project.addGroup(insertedPath, opt.label);
+        insertedPath = result.affectedPaths[0] ?? insertedPath;
+      } else {
         const widgetHint = (opt.extra?.presentation as Record<string, unknown> | undefined)?.widgetHint as string | undefined;
         const kindMap: Record<string, 'heading' | 'paragraph' | 'banner' | 'divider'> = {
           Heading: 'heading',
@@ -204,109 +162,52 @@ export function StructureTree() {
           Banner: 'banner',
         };
         const kind = widgetHint ? kindMap[widgetHint] ?? 'paragraph' : 'paragraph';
-        project.addContent(fullPath, opt.label, kind);
-      } else {
-        // layout items (Card, Columns, etc.) — add as component tree node
-        project.addLayoutNode('root', opt.itemType);
+        const result = project.addContent(key, opt.label, kind, parentPath ? { parentPath } : undefined);
+        insertedPath = result.affectedPaths[0] ?? insertedPath;
       }
 
-      select(insertedPath, opt.itemType);
+      select(insertedPath, opt.itemType, { tab: 'editor' });
     },
-    [project, hasPages, activeGroupKey, select],
+    [items, project, select, selectedKey],
   );
-
-  // Items section label
-  const itemsSectionLabel = hasPages && activeGroup
-    ? `${activeGroup.label || activeGroup.key}`
-    : 'Items';
 
   return (
     <>
       <AddItemPalette
         open={paletteOpen}
+        scope="all"
         onClose={() => setPaletteOpen(false)}
         onAdd={handleAddFromPalette}
       />
 
-      <div className="flex flex-col flex-1 overflow-y-auto space-y-4">
-        {/* ── Pages ── */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-mono text-[10px] font-bold tracking-[0.15em] uppercase text-muted">
-              Pages
-            </h3>
-            <AddButton onClick={handleAddPage} title="Add page" />
+      <div className="flex flex-col flex-1 overflow-y-auto space-y-3">
+        <section aria-label="Items" className="space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="font-mono text-[11px] font-bold tracking-[0.15em] uppercase text-muted/85">
+                Items
+              </h3>
+            </div>
+            <AddButton onClick={() => setPaletteOpen(true)} title="Add item" />
           </div>
 
-          <div className="space-y-0.5">
-            {pages.length === 0 ? (
-              <div className="px-2 py-1 text-[12px] text-muted italic">No pages defined</div>
-            ) : (
-              pages.map((p, i) => {
-                const isActive = activeGroupKey === p.key;
-                return (
-                  <button
-                    key={p.key}
-                    onClick={() => handleSelectPage(p.key)}
-                    className={`w-full flex items-center gap-2 px-2 py-1 text-[13px] rounded-[3px] cursor-pointer text-left transition-all ${
-                      isActive
-                        ? 'bg-accent/10 text-accent font-medium'
-                        : 'text-muted hover:text-ink hover:bg-subtle'
-                    }`}
-                  >
-                    <span className={`font-mono text-[11px] w-4 text-center shrink-0 ${
-                      isActive ? 'text-accent' : 'opacity-60'
-                    }`}>
-                      {i + 1}
-                    </span>
-                    <span className="truncate">{p.label || p.key}</span>
-                    {isActive && (
-                      <span className="ml-auto text-[9px] text-accent/60 font-mono shrink-0">
-                        active
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className="h-px bg-border/50" />
-
-        {/* ── Items (scoped to active page when paged) ── */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3
-              className="font-mono text-[10px] font-bold tracking-[0.15em] uppercase text-muted truncate max-w-[75%]"
-              title={itemsSectionLabel}
-            >
-              {itemsSectionLabel}
-            </h3>
-            <AddButton
-              onClick={() => setPaletteOpen(true)}
-              title={hasPages ? `Add item to ${activeGroup?.label || activeGroup?.key}` : 'Add item'}
-            />
-          </div>
-
-          <div className="flex flex-col gap-px">
-            {visibleItems.length === 0 ? (
+          <div className="flex flex-col gap-1 border-l border-border/55 pl-2">
+            {items.length === 0 ? (
               <div className="px-2 py-1 text-[12px] text-muted italic">
-                {hasPages ? 'No items on this page' : 'No items defined'}
+                No items defined
               </div>
             ) : (
-              visibleItems.map((item) => (
+              items.map((item) => (
                 <TreeNode
                   key={item.key}
                   item={item}
                   depth={0}
-                  pathPrefix={hasPages && activeGroupKey ? activeGroupKey : ''}
-                  onActivatePath={handleActivatePath}
+                  pathPrefix=""
                 />
               ))
             )}
           </div>
-        </div>
+        </section>
       </div>
     </>
   );

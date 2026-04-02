@@ -1,9 +1,8 @@
 /** @filedesc Properties panel section for editing item label, description, and hint text. */
 import { useState } from 'react';
 import { Section } from '../../../components/ui/Section';
-import { propertyHelp } from '../../../lib/field-helpers';
+import { propertyHelp, type Project } from '@formspec-org/studio-core';
 import { AddPlaceholder, PropInput } from './shared';
-import type { Project } from '@formspec-org/studio-core';
 import type { FormItem } from '@formspec-org/types';
 
 export function ContentSection({
@@ -40,6 +39,7 @@ export function ContentSection({
               value={(item.description as string) ?? ''}
               project={project}
               help={propertyHelp.description}
+              onCleared={() => setShowDescription(false)}
             />
           )}
           {hintPlaceholder ? (
@@ -52,6 +52,7 @@ export function ContentSection({
               value={(item.hint as string) ?? ''}
               project={project}
               help={propertyHelp.hint}
+              onCleared={() => setShowHint(false)}
             />
           )}
         </>

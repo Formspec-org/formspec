@@ -28,6 +28,9 @@ pub enum Token {
     And,
     Or,
     Not,
+    /// `!` prefix (not followed by `=`). Semantically identical to `Not`
+    /// but tracked separately for round-trip printer fidelity.
+    Bang,
 
     // Operators
     Plus,
@@ -244,10 +247,7 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     Ok(Token::NotEq)
                 } else {
-                    Err(format!(
-                        "unexpected character '!' at position {}",
-                        self.pos - 1
-                    ))
+                    Ok(Token::Bang)
                 }
             }
             '<' => {

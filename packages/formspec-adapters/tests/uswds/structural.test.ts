@@ -106,6 +106,16 @@ describe('USWDS RadioGroup', () => {
         expect(radios.length).toBe(2);
     });
 
+    it('renders usa-radio items as direct children of the fieldset', () => {
+        const parent = makeParent();
+        renderRadioGroup(mockRadioGroup(), parent, mockAdapterContext());
+        const fieldset = parent.querySelector('.usa-fieldset')!;
+        const directRadios = Array.from(fieldset.children).filter(
+            (el) => el.classList.contains('usa-radio')
+        );
+        expect(directRadios.length).toBe(2);
+    });
+
     it('passes optionControls and rebuildOptions to bind()', () => {
         const parent = makeParent();
         const b = mockRadioGroup();
@@ -126,6 +136,16 @@ describe('USWDS CheckboxGroup', () => {
         expect(parent.querySelector('.usa-fieldset')).toBeTruthy();
         const checkboxes = parent.querySelectorAll('.usa-checkbox__input');
         expect(checkboxes.length).toBe(2);
+    });
+
+    it('renders usa-checkbox items as direct children of the fieldset', () => {
+        const parent = makeParent();
+        renderCheckboxGroup(mockCheckboxGroup(), parent, mockAdapterContext());
+        const fieldset = parent.querySelector('.usa-fieldset')!;
+        const directCheckboxes = Array.from(fieldset.children).filter(
+            (el) => el.classList.contains('usa-checkbox')
+        );
+        expect(directCheckboxes.length).toBe(2);
     });
 
     it('renders select-all checkbox when selectAll is true', () => {
@@ -153,12 +173,15 @@ describe('USWDS Select', () => {
 // ── DatePicker ─────────────────────────────────────────────────────
 
 describe('USWDS DatePicker', () => {
-    it('renders usa-input with type=date', () => {
+    it('renders usa-date-picker shell with text input and default format hint', () => {
         const parent = makeParent();
         renderDatePicker(mockDatePicker(), parent, mockAdapterContext());
+        expect(parent.querySelector('.usa-date-picker')).toBeTruthy();
         const input = parent.querySelector('input.usa-input') as HTMLInputElement;
         expect(input).toBeTruthy();
-        expect(input.type).toBe('date');
+        expect(input.type).toBe('text');
+        const hint = parent.querySelector('.usa-hint');
+        expect(hint?.textContent).toContain('MM/DD/YYYY');
     });
 });
 
@@ -177,38 +200,64 @@ describe('USWDS Checkbox', () => {
 // ── Toggle ─────────────────────────────────────────────────────────
 
 describe('USWDS Toggle', () => {
-    it('renders usa-checkbox (USWDS has no toggle)', () => {
+    it('renders standard usa-checkbox markup like boolean fields (no pill-only class)', () => {
         const parent = makeParent();
         renderToggle(mockToggle(), parent, mockAdapterContext());
         expect(parent.querySelector('.usa-checkbox')).toBeTruthy();
-        expect(parent.querySelector('.usa-checkbox__input')).toBeTruthy();
+        const input = parent.querySelector('.usa-checkbox__input') as HTMLInputElement;
+        expect(input).toBeTruthy();
+        expect(input.className).toBe('usa-checkbox__input');
     });
 });
 
 // ── MoneyInput ─────────────────────────────────────────────────────
 
 describe('USWDS MoneyInput', () => {
-    it('renders usa-input-group with currency prefix', () => {
+    it('renders usa-input-group with currency prefix and amount field', () => {
         const parent = makeParent();
         renderMoneyInput(mockMoneyInput(), parent, mockAdapterContext());
-        expect(parent.querySelector('.usa-input-group')).toBeTruthy();
-        expect(parent.querySelector('.usa-input-prefix')!.textContent).toBe('$');
+        const group = parent.querySelector('.usa-input-group');
+        expect(group).toBeTruthy();
+        expect(group?.querySelector('.usa-input-prefix')?.textContent).toBe('$');
+        expect(group?.querySelector('input.formspec-money-amount')).toBeTruthy();
     });
 
-    it('renders currency input when no resolvedCurrency', () => {
+    it('renders editable currency and amount in a grid row when currency is unresolved', () => {
         const parent = makeParent();
         renderMoneyInput(mockMoneyInput({ resolvedCurrency: null }), parent, mockAdapterContext());
+        const row = parent.querySelector('.grid-row');
+        expect(row).toBeTruthy();
         expect(parent.querySelector('.formspec-money-currency-input')).toBeTruthy();
+        expect(row?.querySelector('.formspec-money-currency-input')).toBeTruthy();
+        expect(row?.querySelector('input.formspec-money-amount')).toBeTruthy();
     });
 });
 
 // ── Slider ─────────────────────────────────────────────────────────
 
 describe('USWDS Slider', () => {
-    it('renders usa-range input', () => {
+    it('renders usa-range input without an adapter-specific control wrapper', () => {
         const parent = makeParent();
         renderSlider(mockSlider(), parent, mockAdapterContext());
         expect(parent.querySelector('input.usa-range')).toBeTruthy();
+        expect(parent.querySelector('.formspec-slider-control')).toBeNull();
+    });
+
+    it('renders the optional value display as a live status outside the native range control', () => {
+        const parent = makeParent();
+        renderSlider(mockSlider({ showValue: true }), parent, mockAdapterContext());
+        const valueDisplay = parent.querySelector('.formspec-slider-value');
+        expect(valueDisplay).toBeTruthy();
+        expect(valueDisplay?.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('wraps range input and value display in a USWDS grid row', () => {
+        const parent = makeParent();
+        renderSlider(mockSlider({ showValue: true }), parent, mockAdapterContext());
+        const track = parent.querySelector('.grid-row');
+        expect(track).toBeTruthy();
+        expect(track!.querySelector('.usa-range')).toBeTruthy();
+        expect(track!.querySelector('.formspec-slider-value')).toBeTruthy();
     });
 });
 
@@ -232,6 +281,36 @@ describe('USWDS FileUpload', () => {
         expect(parent.querySelector('.usa-file-input__target')).toBeTruthy();
         expect(parent.querySelector('.usa-file-input__input')).toBeTruthy();
     });
+
+    it('renders accepted file types as usa-hint text when accept is set', () => {
+        const parent = makeParent();
+        renderFileUpload(mockFileUpload({ accept: '.pdf,.doc,.docx' }), parent, mockAdapterContext());
+        const hint = parent.querySelector('.usa-hint');
+        expect(hint).toBeTruthy();
+        expect(hint!.textContent).toContain('.pdf,.doc,.docx');
+    });
+
+    it('positions accepted-files hint BEFORE the drop-zone target (USWDS convention)', () => {
+        const parent = makeParent();
+        renderFileUpload(mockFileUpload({ accept: '.pdf,.doc' }), parent, mockAdapterContext());
+        const root = parent.querySelector('.usa-form-group')!;
+        const children = Array.from(root.children);
+        const hintIdx = children.findIndex(el =>
+            el.classList.contains('usa-hint') && el.textContent?.includes('Accepted'));
+        const fileInputIdx = children.findIndex(el => el.classList.contains('usa-file-input'));
+        expect(hintIdx).toBeGreaterThan(-1);
+        expect(fileInputIdx).toBeGreaterThan(-1);
+        expect(hintIdx).toBeLessThan(fileInputIdx);
+    });
+
+    it('does not render accept hint when accept is undefined', () => {
+        const parent = makeParent();
+        renderFileUpload(mockFileUpload({ accept: undefined }), parent, mockAdapterContext());
+        // The field-level usa-hint may exist (from createUSWDSFieldDOM), but no accept-specific hint
+        const hints = parent.querySelectorAll('.usa-hint');
+        const acceptHint = Array.from(hints).find(h => h.textContent?.includes('Accepted'));
+        expect(acceptHint).toBeFalsy();
+    });
 });
 
 // ── Signature ──────────────────────────────────────────────────────
@@ -252,7 +331,13 @@ describe('USWDS Wizard', () => {
         const parent = makeParent();
         renderWizard(mockWizard(), parent, mockAdapterContext());
         expect(parent.querySelector('.usa-step-indicator')).toBeTruthy();
+        expect(parent.querySelector('nav.usa-step-indicator')?.getAttribute('aria-label')).toBe('Form progress');
         expect(parent.querySelectorAll('.usa-step-indicator__segment').length).toBe(2);
+        expect(parent.querySelector('.formspec-uswds-wizard__content')).toBeTruthy();
+        expect(parent.querySelector('.formspec-uswds-wizard__panel-heading')).toBeTruthy();
+        expect(parent.querySelector('.formspec-wizard-prev')?.classList.contains('usa-button--outline')).toBe(true);
+        expect(parent.querySelector('.formspec-wizard-next')?.classList.contains('usa-button')).toBe(true);
+        expect(parent.querySelector('[role="status"]')).toBeTruthy();
     });
 });
 
@@ -265,6 +350,28 @@ describe('USWDS Tabs', () => {
         expect(parent.querySelector('.usa-button-group--segmented')).toBeTruthy();
         const buttons = parent.querySelectorAll('[role="tab"]');
         expect(buttons.length).toBe(2);
+    });
+});
+
+// ── Integration CSS ───────────────────────────────────────────────
+
+describe('Integration CSS', () => {
+    it('contains .formspec-required using USWDS error token', async () => {
+        const { integrationCSS } = await import('../../src/uswds/integration-css');
+        expect(integrationCSS).toContain('.formspec-required');
+        expect(integrationCSS).toMatch(/\.formspec-required\{[^}]*color:#b50909/);
+    });
+
+    it('contains wizard layout selectors', async () => {
+        const { integrationCSS } = await import('../../src/uswds/integration-css');
+        expect(integrationCSS).toContain('.formspec-uswds-wizard__content');
+        expect(integrationCSS).toContain('.formspec-wizard-nav.usa-button-group');
+    });
+
+    it('ships usa-alert styles from forwarded package (no custom formspec-alert skin)', async () => {
+        const { integrationCSS } = await import('../../src/uswds/integration-css');
+        expect(integrationCSS).toContain('.usa-alert');
+        expect(integrationCSS).not.toContain('.formspec-alert');
     });
 });
 

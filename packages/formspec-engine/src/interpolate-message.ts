@@ -1,5 +1,7 @@
 /** @filedesc Template string interpolator for locale {{expr}} sequences (spec §3.3.1). */
 
+import { isWasmReady, wasmConsumeLastEvalErrorDiagnostics, wasmFelExprIsInterpolationStaticLiteral } from './wasm-bridge-runtime.js';
+
 export interface InterpolationWarning {
   expression: string;
   error: string;
@@ -15,8 +17,9 @@ export interface InterpolateResult {
  *
  * Rules (§3.3.1):
  * 1. `{{{{` → literal `{{` (escape before scanning)
- * 2. Failed parse/eval → preserve literal `{{expr}}` + warning (no crash)
- * 3. null/undefined → "", booleans → "true"/"false", numbers → default coercion
+ * 2. Failed parse/eval → preserve literal `{{expr}}` + warning.
+ *    Includes any eval where WASM records error-severity diagnostics (side-channel check).
+ * 3–4. Coerce values; `null` → "" except rule 3a (no `$`/`@` and not a static literal → preserve)
  * 5. Replacement text is NOT re-scanned for `{{`
  *
  * @param template - String potentially containing `{{expr}}` placeholders
@@ -51,10 +54,26 @@ export function interpolateMessage(
 
     const expr = match[1];
 
-    // Rule 2: error recovery — catch evaluator failures
+    // Rule 2 / 3a: error recovery and null-without-binding preservation
     try {
       const raw = evaluator(expr);
-      segments.push(coerce(raw));
+      // Rule 2: error-severity diagnostics → preserve literal.
+      // The WASM evaluator records diagnostics in a side-channel flag;
+      // consumeLastEvalErrorDiagnostics reads and resets it atomically.
+      if (isWasmReady() && wasmConsumeLastEvalErrorDiagnostics()) {
+        segments.push(match[0]);
+        warnings.push({
+          expression: expr,
+          error: 'Error-severity diagnostics during evaluation',
+        });
+      } else if (
+        (raw === null || raw === undefined) &&
+        shouldPreserveLiteralForNullInterpolation(expr)
+      ) {
+        segments.push(match[0]);
+      } else {
+        segments.push(coerce(raw));
+      }
     } catch (err: unknown) {
       // Preserve the literal {{expr}} in output
       segments.push(match[0]);
@@ -75,6 +94,18 @@ export function interpolateMessage(
   const text = joined.replace(new RegExp(SENTINEL_OPEN, 'g'), '{{');
 
   return { text, warnings };
+}
+
+/** Locale §3.3.1 rule 3a — requires runtime WASM for the static-literal predicate. */
+function shouldPreserveLiteralForNullInterpolation(expr: string): boolean {
+  const t = expr.trim();
+  if (t.includes('$') || t.includes('@')) return false;
+  if (!isWasmReady()) return false;
+  try {
+    return !wasmFelExprIsInterpolationStaticLiteral(expr);
+  } catch {
+    return false;
+  }
 }
 
 /** Rule 3: coerce evaluation result to string. */

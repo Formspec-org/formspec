@@ -169,32 +169,36 @@ export function FormPreviewV2() {
 
             {diff && <DiffSummary diff={diff} />}
 
-            {/* Screener section */}
-            {def.screener && (
+            {/* Screener section — reads from chat state's screener if available */}
+            {(state as any).screener && (
               <div className="space-y-4 pt-2 pb-6 border-b v2-border">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-5 v2-accent-bar rounded-full" />
                   <h3 className="v2-section-label text-xs font-bold uppercase tracking-[0.15em]">Screener</h3>
                 </div>
                 <div className="space-y-2.5">
-                  {def.screener.items.map((item: ItemLike) => (
+                  {((state as any).screener.items ?? []).map((item: ItemLike) => (
                     <ItemPreview key={item.key} item={item} tracesByPath={tracesByPath} diffKeys={diffKeys} />
                   ))}
                 </div>
-                <div className="v2-routes-box rounded-lg p-3.5">
-                  <div className="v2-text-tertiary text-[10px] font-bold uppercase tracking-wider mb-2">Routes</div>
-                  <div className="space-y-2">
-                    {def.screener.routes.map((route: any, i: number) => (
-                      <div key={i} className="flex items-start gap-2 text-xs">
-                        <span className="v2-text-accent mt-0.5">&#8594;</span>
-                        <div>
-                          <div className="font-medium v2-text-primary">{route.label || 'Unnamed Route'}</div>
-                          <div className="font-mono text-[10px] v2-text-tertiary mt-0.5">{route.condition}</div>
+                {((state as any).screener.evaluation ?? []).map((phase: any) => (
+                  <div key={phase.id} className="v2-routes-box rounded-lg p-3.5">
+                    <div className="v2-text-tertiary text-[10px] font-bold uppercase tracking-wider mb-2">
+                      {phase.label || phase.id} ({phase.strategy})
+                    </div>
+                    <div className="space-y-2">
+                      {(phase.routes ?? []).map((route: any, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs">
+                          <span className="v2-text-accent mt-0.5">&#8594;</span>
+                          <div>
+                            <div className="font-medium v2-text-primary">{route.label || 'Unnamed Route'}</div>
+                            <div className="font-mono text-[10px] v2-text-tertiary mt-0.5">{route.condition || route.score || ''}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             )}
 

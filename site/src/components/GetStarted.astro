@@ -5,6 +5,22 @@ const cloneCmd = 'git clone https://github.com/Formspec-org/formspec.git && cd f
 ---
 
 <section class="getstarted" aria-label="Getting started">
+  <div class="gs-demo-row">
+    <a href="/react" class="gs-demo-link" data-track="click_react_demo" data-track-section="getstarted">
+      <span class="gs-demo-badge">Live demo</span>
+      <span class="gs-demo-text">See a working form built with <strong>formspec-react</strong> — zero component overrides, default rendering</span>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M2.5 7H11.5M7.5 3L11.5 7L7.5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <a href="/uswds-grant" class="gs-demo-link" data-track="click_uswds_demo" data-track-section="getstarted">
+      <span class="gs-demo-badge">Live demo</span>
+      <span class="gs-demo-text">Federal grant application rendered with the <strong>USWDS design system adapter</strong></span>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M2.5 7H11.5M7.5 3L11.5 7L7.5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
   <div class="getstarted-inner">
 
     <a href="/studio/" class="gs-card" data-track="click_try_studio" data-track-section="getstarted">
@@ -92,6 +108,58 @@ const cloneCmd = 'git clone https://github.com/Formspec-org/formspec.git && cd f
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface);
     padding: 2.5rem 0;
+  }
+
+  .gs-demo-row {
+    max-width: 72rem;
+    margin: 0 auto 1rem;
+    padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+  }
+
+  .gs-demo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 1rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .gs-demo-link:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 1px 4px rgb(61 82 213 / 0.1);
+  }
+
+  .gs-demo-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+    background: var(--color-accent);
+    padding: 0.15rem 0.5rem;
+    border-radius: 100px;
+    flex-shrink: 0;
+  }
+
+  .gs-demo-text {
+    font-size: 0.8125rem;
+    color: var(--color-ink-secondary);
+    flex: 1;
+  }
+
+  .gs-demo-link svg {
+    color: var(--color-ink-tertiary);
+    flex-shrink: 0;
+    transition: transform 0.15s;
+  }
+
+  .gs-demo-link:hover svg {
+    transform: translateX(2px);
+    color: var(--color-accent);
   }
 
   .getstarted-inner {

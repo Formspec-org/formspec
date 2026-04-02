@@ -18,7 +18,6 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
         textarea.rows = behavior.maxLines;
         if (behavior.placeholder) textarea.placeholder = behavior.placeholder;
         textarea.id = behavior.id;
-        textarea.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
         control = textarea;
     } else if (behavior.prefix || behavior.suffix) {
         // Prefix/suffix wrapper variant
@@ -44,7 +43,6 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
             else if (attr === 'maxLength') input.maxLength = Number(val);
             else input.setAttribute(attr, val);
         }
-        input.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
         wrapper.appendChild(input);
 
         if (behavior.suffix) {
@@ -69,7 +67,6 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
             else if (attr === 'maxLength') input.maxLength = Number(val);
             else input.setAttribute(attr, val);
         }
-        input.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
         control = input;
     }
 

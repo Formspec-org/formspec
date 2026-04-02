@@ -55,7 +55,7 @@ export const renderRating: AdapterRenderFn<RatingBehavior> = (
     for (let i = 1; i <= behavior.maxRating; i++) {
         const star = document.createElement('span');
         star.className = 'formspec-rating-star';
-        star.textContent = behavior.icon;
+        star.textContent = behavior.unselectedIcon;
         star.dataset.value = String(i);
         star.addEventListener('click', (event: MouseEvent) => {
             let value = i;

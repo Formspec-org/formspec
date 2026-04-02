@@ -4,7 +4,7 @@ import { createFormEngine, type FormspecItem } from '@formspec-org/engine';
 import type { IFormEngine } from '@formspec-org/engine';
 import type { FormDefinition } from '@formspec-org/types';
 import { useProjectState } from '../../state/useProjectState';
-import { normalizeDefinitionDoc } from '../../workspaces/preview/preview-documents';
+import { normalizeDefinitionDoc } from '@formspec-org/studio-core';
 import { FormspecPreviewHost } from '../../workspaces/preview/FormspecPreviewHost';
 import type { Viewport } from '../../workspaces/preview/ViewportSwitcher';
 

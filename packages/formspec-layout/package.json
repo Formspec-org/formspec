@@ -18,18 +18,20 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./default-theme": "./dist/default-theme.json",
+    "./formspec-layout.css": "./dist/formspec-layout.css",
+    "./formspec-default.css": "./dist/formspec-default.css"
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && sh ../../scripts/copy-layout-css-assets.sh src dist",
     "test": "vitest run"
   },
   "dependencies": {
     "@formspec-org/types": "*"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "vitest": "^3.2.4"
+    "typescript": "^5.0.0"
   }
 }

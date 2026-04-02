@@ -1012,7 +1012,7 @@
         "min": { "type": "number", "description": "Minimum allowed amount." },
         "max": { "type": "number", "description": "Maximum allowed amount." },
         "showStepper": { "type": "boolean", "description": "Whether to show increment/decrement buttons (amount input)." },
-        "currency": { "type": "string", "description": "ISO 4217 currency code (e.g. 'USD', 'EUR', 'GBP')." },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO 4217 currency code (e.g. 'USD', 'EUR', 'GBP')." },
         "showCurrency": { "type": "boolean", "description": "Whether to display the currency symbol." },
         "locale": { "type": "string", "description": "Locale for number/currency formatting (e.g. 'en-US')." }
       },

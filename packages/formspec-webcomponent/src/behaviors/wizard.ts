@@ -24,7 +24,8 @@ export function useWizard(ctx: BehaviorContext, comp: any): WizardBehavior {
         style: comp.style,
         accessibility: comp.accessibility,
     };
-    const showSideNav = comp.sidenav !== false;
+    /** Opt-in: set `sidenav: true` on the Wizard node or `formPresentation.sidenav` on the component doc. */
+    const showSideNav = !!comp.sidenav;
     const showProgress = comp.showProgress !== false;
     const allowSkip = !!comp.allowSkip;
 
@@ -95,14 +96,17 @@ export function useWizard(ctx: BehaviorContext, comp: any): WizardBehavior {
                     p.classList.toggle('formspec-hidden', idx !== step);
                 });
 
-                // Nav button state
+                // Nav button state (match React: Previous stays visible, disabled on first step)
                 if (refs.prevButton) {
                     refs.prevButton.disabled = step === 0;
-                    refs.prevButton.classList.toggle('formspec-hidden', step === 0);
+                    refs.prevButton.setAttribute('aria-disabled', step === 0 ? 'true' : 'false');
                 }
                 if (refs.nextButton) {
                     refs.nextButton.disabled = total === 0;
-                    refs.nextButton.textContent = step === total - 1 ? 'Submit' : 'Next';
+                    const last = step === total - 1;
+                    refs.nextButton.textContent = last ? 'Submit' : 'Next';
+                    refs.nextButton.setAttribute('aria-label', last ? 'Submit form' : 'Next step');
+                    refs.nextButton.classList.toggle('formspec-wizard-submit', last);
                 }
 
                 // Skip button: hidden on last step
@@ -131,6 +135,25 @@ export function useWizard(ctx: BehaviorContext, comp: any): WizardBehavior {
                             pi.label.classList.toggle('formspec-wizard-step-label--active', i === step);
                         }
                     }
+                }
+
+                const stepTitle =
+                    (children[step] as any)?.props?.title || `Step ${step + 1}`;
+
+                if (refs.stepIndicator) {
+                    refs.stepIndicator.textContent =
+                        `Step ${step + 1} of ${total}: ${stepTitle}` +
+                        (step === total - 1 ? ' — final step' : '');
+                }
+                if (refs.announcer) {
+                    refs.announcer.textContent =
+                        step === total - 1
+                            ? `${stepTitle}. Next will submit the form.`
+                            : `${stepTitle}. Step ${step + 1} of ${total}.`;
+                }
+
+                if (refs.onStepChange) {
+                    refs.onStepChange(step, total);
                 }
 
                 // Dispatch page-change event

@@ -25,7 +25,7 @@ export const renderSignature: AdapterRenderFn<SignatureBehavior> = (
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.textContent = 'Clear';
-    clearBtn.className = 'formspec-signature-clear';
+    clearBtn.className = 'formspec-signature-clear formspec-focus-ring';
     clearBtn.addEventListener('click', clear);
     fieldDOM.root.appendChild(clearBtn);
 

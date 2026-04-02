@@ -1,0 +1,106 @@
+/** @filedesc USWDS Modal — native `<dialog>` with `usa-modal` inner structure (CSS-only; no USWDS modal JS). */
+import { effect } from '@preact/signals-core';
+import type { AdapterContext, ModalLayoutBehavior } from '@formspec-org/webcomponent';
+import { focusFirstIn, positionOverlayNearTrigger, type PopupPlacement } from './overlay';
+
+export function renderUSWDSModal(behavior: ModalLayoutBehavior, parent: HTMLElement, actx: AdapterContext): void {
+    const { comp, host, titleText, triggerLabelText } = behavior;
+    const placement: PopupPlacement = comp.placement || 'bottom';
+
+    const dialog = document.createElement('dialog');
+    if (comp.id) dialog.id = comp.id;
+    dialog.className = 'usa-modal formspec-modal';
+    if (comp.size) dialog.dataset.size = comp.size;
+    if (comp.size === 'lg') dialog.classList.add('usa-modal--lg');
+
+    const contentWrap = document.createElement('div');
+    contentWrap.className = 'usa-modal__content';
+
+    const main = document.createElement('div');
+    main.className = 'usa-modal__main';
+
+    if (titleText) {
+        const titleId = `${comp.id || 'modal'}-title`;
+        const titleEl = document.createElement('h2');
+        titleEl.className = 'usa-modal__heading';
+        titleEl.id = titleId;
+        titleEl.textContent = titleText;
+        main.appendChild(titleEl);
+        dialog.setAttribute('aria-labelledby', titleId);
+    } else if (comp.triggerLabel) {
+        dialog.setAttribute('aria-label', triggerLabelText);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'usa-prose formspec-modal-content';
+    for (const child of comp.children || []) {
+        host.renderComponent(child, body, host.prefix);
+    }
+    main.appendChild(body);
+    contentWrap.appendChild(main);
+
+    if (comp.closable !== false) {
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'usa-button usa-modal__close formspec-focus-ring';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.innerHTML = '<span aria-hidden="true">\u00d7</span>';
+        closeBtn.addEventListener('click', () => dialog.close());
+        contentWrap.appendChild(closeBtn);
+    }
+
+    dialog.appendChild(contentWrap);
+    actx.applyCssClass(dialog, comp);
+    actx.applyAccessibility(dialog, comp);
+    actx.applyStyle(dialog, comp.style);
+    parent.appendChild(dialog);
+
+    const triggerMode = comp.trigger || 'button';
+    if (triggerMode === 'auto') {
+        if (comp.when) {
+            const exprFn = host.engine.compileExpression(comp.when, host.prefix);
+            host.cleanupFns.push(
+                effect(() => {
+                    const shouldOpen = !!exprFn();
+                    if (shouldOpen && !dialog.open) {
+                        dialog.showModal();
+                        queueMicrotask(() => focusFirstIn(dialog));
+                    } else if (!shouldOpen && dialog.open) {
+                        dialog.close();
+                    }
+                })
+            );
+        } else {
+            queueMicrotask(() => {
+                if (!dialog.open) dialog.showModal();
+                focusFirstIn(dialog);
+            });
+        }
+        return;
+    }
+
+    const triggerBtn = document.createElement('button');
+    triggerBtn.type = 'button';
+    triggerBtn.className = 'usa-button formspec-focus-ring';
+    triggerBtn.textContent = triggerLabelText;
+
+    const repositionDialog = () => {
+        if (dialog.open) positionOverlayNearTrigger(triggerBtn, dialog, placement);
+    };
+
+    triggerBtn.addEventListener('click', () => {
+        if (!dialog.open) dialog.showModal();
+        queueMicrotask(() => {
+            repositionDialog();
+            focusFirstIn(dialog);
+        });
+    });
+    window.addEventListener('resize', repositionDialog);
+    window.addEventListener('scroll', repositionDialog, true);
+    actx.onDispose(() => {
+        window.removeEventListener('resize', repositionDialog);
+        window.removeEventListener('scroll', repositionDialog, true);
+    });
+    dialog.addEventListener('close', () => triggerBtn.focus());
+    parent.appendChild(triggerBtn);
+}

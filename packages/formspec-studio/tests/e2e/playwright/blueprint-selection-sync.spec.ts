@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, importDefinition, switchTab } from './helpers';
+import { waitForApp, importDefinition, propertiesPanel, switchTab } from './helpers';
 
 const SEED_DEFINITION = {
   $formspec: '1.0',
@@ -42,16 +42,12 @@ test.describe('Blueprint Selection Sync', () => {
     await page.waitForSelector('[data-testid="field-firstName"]', { timeout: 5000 });
   });
 
-  test('Structure Tree click populates the Properties panel', async ({ page }) => {
+  test('Structure Tree click selects the field in the editor', async ({ page }) => {
     // Click on "firstName" in the Structure Tree
     await page.click('[data-testid="tree-item-firstName"]');
 
-    // Properties panel should show "firstName" in the key input
-    const properties = page.locator('[data-testid="properties"]');
-    await expect(properties.locator('input[type="text"]').first()).toHaveValue('firstName');
-
-    // Properties panel should show data type info (String)
-    await expect(properties).toContainText('String');
+    // The field row in the editor should show selected styling
+    await expect(page.locator('[data-testid="field-firstName"]')).toHaveClass(/border-accent/);
   });
 
   test('Editor canvas click highlights the tree item', async ({ page }) => {
@@ -71,60 +67,53 @@ test.describe('Blueprint Selection Sync', () => {
     await page.click('[data-testid="field-firstName"]');
 
     // Verify it is selected before switching
-    const properties = page.locator('[data-testid="properties"]');
-    await expect(properties.locator('input[type="text"]').first()).toHaveValue('firstName');
+    await expect(page.locator('[data-testid="field-firstName"]')).toHaveClass(/border-accent/);
 
-    // Switch to Logic tab
-    await switchTab(page, 'Logic');
+    // Switch to Layout tab
+    await switchTab(page, 'Layout');
 
     // Switch back to Editor tab
     await switchTab(page, 'Editor');
 
     // Field block should still have selected styling (border-accent)
     await expect(page.locator('[data-testid="field-firstName"]')).toHaveClass(/border-accent/);
-
-    // Properties panel should still show "firstName"
-    await expect(properties.locator('input[type="text"]').first()).toHaveValue('firstName');
   });
 
   test('Clicking canvas background deselects the item', async ({ page }) => {
     // Select firstName first
     await page.click('[data-testid="field-firstName"]');
-    const properties = page.locator('[data-testid="properties"]');
-    await expect(properties.locator('input[type="text"]').first()).toHaveValue('firstName');
+    await expect(page.locator('[data-testid="field-firstName"]')).toHaveClass(/border-accent/);
 
     // Click on the canvas container background (outside any field block)
     // Use the workspace container and click at the very top (above field blocks)
     await page.click('[data-testid="workspace-Editor"]', { position: { x: 10, y: 5 } });
 
-    // Properties panel should fall back to form-level properties.
-    await expect(properties).toContainText('Form Properties');
-    await expect(properties).toContainText('Identity');
+    // When deselected, the field should lose its selected styling
+    await expect(page.locator('[data-testid="field-firstName"]')).not.toHaveClass(/border-accent/);
+
+    // The right rail shows Form Health panel
+    const properties = propertiesPanel(page);
+    await expect(properties).toContainText('Form Health');
+    await expect(properties).toContainText('Issues');
   });
 
-  test('Clicking a structure item on another page scrolls that canvas field into view after switching pages', async ({ page }) => {
+  test('Clicking a structure item in another layout step activates that step and selects the field', async ({ page }) => {
+    // Editor/Layout split: the Editor tree is flat, but the StructureTree
+    // sidebar still scopes authored Page content by the active layout step.
+    // Switch to the second step in the sidebar to reveal its children.
     await importDefinition(page, PAGED_BLUEPRINT_DEFINITION);
-    await page.waitForSelector('[role="tablist"]');
 
-    await page.evaluate(() => {
-      (window as any).__lastScrolledTestId = null;
-      const original = HTMLElement.prototype.scrollIntoView;
-      (window as any).__originalScrollIntoView = original;
-      HTMLElement.prototype.scrollIntoView = function scrollIntoViewSpy() {
-        (window as any).__lastScrolledTestId = this.getAttribute('data-testid');
-        return original.apply(this, arguments as any);
-      };
-    });
+    // Wait for the sidebar page buttons to appear
+    await page.waitForSelector('[data-testid="tree-item-pageOne.firstName"]', { timeout: 5000 });
 
-    await page.getByRole('button', { name: /page two/i }).click();
-    await page.evaluate(() => {
-      (window as any).__lastScrolledTestId = null;
-    });
+    // Switch to Page Two in the StructureTree sidebar (scope to sidebar)
+    const sidebar = page.locator('aside').first();
+    await sidebar.getByRole('button', { name: /page two/i }).click();
 
+    // Now the tree item for email should be visible
     await page.click('[data-testid="tree-item-pageTwo.email"]');
 
-    await expect(page.getByRole('tab', { name: 'Page Two' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('[data-testid="properties"] input[type="text"]').first()).toHaveValue('email');
-    await expect.poll(async () => page.evaluate(() => (window as any).__lastScrolledTestId)).toBe('field-email');
+    // The email field should be selected in the editor (border-accent styling)
+    await expect(page.locator('[data-testid="field-email"]')).toHaveClass(/border-accent/);
   });
 });

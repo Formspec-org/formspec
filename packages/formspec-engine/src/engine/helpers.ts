@@ -38,10 +38,17 @@ export function normalizeRemoteOptions(payload: any): OptionEntry[] {
     }
     return options
         .filter((option: any) => option && typeof option === 'object' && option.value !== undefined && option.label !== undefined)
-        .map((option: any) => ({
-            value: String(option.value),
-            label: String(option.label),
-        }));
+        .map((option: any) => {
+            const base: OptionEntry = {
+                value: String(option.value),
+                label: String(option.label),
+            };
+            if (Array.isArray(option.keywords) && option.keywords.length > 0) {
+                const keywords = option.keywords.map((k: unknown) => String(k)).filter((s: string) => s.length > 0);
+                if (keywords.length > 0) return { ...base, keywords };
+            }
+            return base;
+        });
 }
 
 export function makeValidationResult(
@@ -92,6 +99,9 @@ export function emptyValueForItem(item: FormItem): any {
         case 'date':
         case 'dateTime':
         case 'time':
+        case 'attachment':
+        case 'uri':
+        case 'choice':
             return null;
         case 'boolean':
             return false;

@@ -1,5 +1,5 @@
 /** @filedesc Properties panel shown when multiple items are selected; provides batch delete and duplicate. */
-import { pruneDescendants, sortForBatchDelete } from '../../../lib/field-helpers';
+import { pruneDescendants, sortForBatchDelete } from '@formspec-org/studio-core';
 
 export function MultiSelectSummary({
   selectionCount,

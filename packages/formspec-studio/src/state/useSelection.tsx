@@ -1,8 +1,23 @@
-/** @filedesc Context and hooks managing single and multi-item selection state in the editor. */
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
+/** @filedesc Context and hooks managing single and multi-item selection state, with per-tab scoping. */
+import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from 'react';
+
+/** Options bag for selection actions. */
+export interface SelectionOptions {
+  /** Tab scope for this selection. When omitted, uses the default scope. */
+  tab?: string;
+  /** When true, signals the inspector to focus its primary input (e.g. rename on double-click). */
+  focusInspector?: boolean;
+}
+
+/** Per-tab selection data. */
+interface TabSelection {
+  selectedKeys: Set<string>;
+  primaryKey: string | null;
+  primaryType: string | null;
+}
 
 interface SelectionState {
-  // Multi-select state
+  // Multi-select state (reflects active tab)
   selectedKeys: Set<string>;
   primaryKey: string | null;
   primaryType: string | null;
@@ -13,122 +28,158 @@ interface SelectionState {
   selectedType: string | null;
 
   // Actions
-  select: (key: string, type: string) => void;
-  toggleSelect: (key: string, type: string) => void;
-  rangeSelect: (key: string, type: string, flatOrder: string[]) => void;
-  /** Like select(), but also signals the inspector panel to auto-focus its first input. */
-  selectAndFocusInspector: (key: string, type: string) => void;
+  select: (key: string, type: string, opts?: SelectionOptions) => void;
+  toggleSelect: (key: string, type: string, opts?: SelectionOptions) => void;
+  rangeSelect: (key: string, type: string, flatOrder: string[], opts?: SelectionOptions) => void;
   deselect: () => void;
   isSelected: (key: string) => boolean;
 
-  /** True if the inspector should auto-focus its first input on next render. Consumed once. */
+  // Per-tab queries
+  selectedKeyForTab: (tab: string) => string | null;
+  selectedTypeForTab: (tab: string) => string | null;
+
+  // Inspector focus (e.g. rename on double-click)
   shouldFocusInspector: boolean;
   consumeFocusInspector: () => void;
 }
 
 export const SelectionContext = createContext<SelectionState | null>(null);
 
+const DEFAULT_TAB = '_default';
 const EMPTY_SET = new Set<string>();
+const EMPTY_MAP = new Map<string, TabSelection>();
+
+function emptyTabSelection(): TabSelection {
+  return { selectedKeys: EMPTY_SET, primaryKey: null, primaryType: null };
+}
 
 export function SelectionProvider({ children }: { children: ReactNode }) {
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(EMPTY_SET);
-  const [primaryKey, setPrimaryKey] = useState<string | null>(null);
-  const [primaryType, setPrimaryType] = useState<string | null>(null);
-  const [shouldFocusInspector, setShouldFocusInspector] = useState(false);
+  const [tabSelections, setTabSelections] = useState<Map<string, TabSelection>>(EMPTY_MAP);
+  const [activeTab, setActiveTab] = useState<string>(DEFAULT_TAB);
+  const [focusInspector, setFocusInspector] = useState(false);
+  // Ref to avoid stale closure in isSelected — always points to current active tab's keys
+  const activeKeysRef = useRef<Set<string>>(EMPTY_SET);
 
-  const select = useCallback((key: string, type: string) => {
-    setSelectedKeys(new Set([key]));
-    setPrimaryKey(key);
-    setPrimaryType(type);
+  const resolveTab = (opts?: SelectionOptions) => opts?.tab ?? DEFAULT_TAB;
+
+  const getTabState = useCallback((tab: string): TabSelection => {
+    return tabSelections.get(tab) ?? emptyTabSelection();
+  }, [tabSelections]);
+
+  const updateTab = useCallback((tab: string, updater: (prev: TabSelection) => TabSelection) => {
+    setTabSelections(prev => {
+      const next = new Map(prev);
+      const current = prev.get(tab) ?? emptyTabSelection();
+      next.set(tab, updater(current));
+      return next;
+    });
+    setActiveTab(tab);
   }, []);
 
-  const toggleSelect = useCallback((key: string, type: string) => {
-    setSelectedKeys(prev => {
-      const next = new Set(prev);
+  const select = useCallback((key: string, type: string, opts?: SelectionOptions) => {
+    const tab = resolveTab(opts);
+    updateTab(tab, () => ({
+      selectedKeys: new Set([key]),
+      primaryKey: key,
+      primaryType: type,
+    }));
+    if (opts?.focusInspector) setFocusInspector(true);
+  }, [updateTab]);
+
+  const toggleSelect = useCallback((key: string, type: string, opts?: SelectionOptions) => {
+    const tab = resolveTab(opts);
+    updateTab(tab, prev => {
+      const next = new Set(prev.selectedKeys);
       const wasSelected = next.has(key);
       if (wasSelected) {
         next.delete(key);
-        // If we toggled off the primary, clear it
-        setPrimaryKey(p => p === key ? null : p);
-        if (next.size === 0) setPrimaryType(null);
+        return {
+          selectedKeys: next,
+          primaryKey: prev.primaryKey === key ? null : prev.primaryKey,
+          primaryType: next.size === 0 ? null : prev.primaryType,
+        };
       } else {
         next.add(key);
-        // If there's no primary, make this the new primary
-        setPrimaryKey(p => p ?? key);
-        setPrimaryType(p => p ?? type);
+        return {
+          selectedKeys: next,
+          primaryKey: prev.primaryKey ?? key,
+          primaryType: prev.primaryType ?? type,
+        };
       }
-      return next;
     });
-  }, []);
+  }, [updateTab]);
 
-  const rangeSelect = useCallback((key: string, type: string, flatOrder: string[]) => {
-    setPrimaryKey(prevPrimary => {
-      if (!prevPrimary) {
-        // No anchor — just single-select the target
-        setSelectedKeys(new Set([key]));
-        setPrimaryType(type);
-        return key;
+  const rangeSelect = useCallback((key: string, type: string, flatOrder: string[], opts?: SelectionOptions) => {
+    const tab = resolveTab(opts);
+    updateTab(tab, prev => {
+      if (!prev.primaryKey) {
+        return { selectedKeys: new Set([key]), primaryKey: key, primaryType: type };
       }
-      const anchorIdx = flatOrder.indexOf(prevPrimary);
+      const anchorIdx = flatOrder.indexOf(prev.primaryKey);
       const targetIdx = flatOrder.indexOf(key);
       if (anchorIdx === -1 || targetIdx === -1) {
-        // Can't find either in the flat order — fallback to single select
-        setSelectedKeys(new Set([key]));
-        setPrimaryType(type);
-        return key;
+        return { selectedKeys: new Set([key]), primaryKey: key, primaryType: type };
       }
       const start = Math.min(anchorIdx, targetIdx);
       const end = Math.max(anchorIdx, targetIdx);
-      const range = new Set(flatOrder.slice(start, end + 1));
-      setSelectedKeys(range);
-      // Primary (anchor) stays the same — don't change it
-      return prevPrimary;
+      return {
+        selectedKeys: new Set(flatOrder.slice(start, end + 1)),
+        primaryKey: prev.primaryKey,
+        primaryType: prev.primaryType,
+      };
     });
-  }, []);
-
-  const selectAndFocusInspector = useCallback((key: string, type: string) => {
-    setSelectedKeys(new Set([key]));
-    setPrimaryKey(key);
-    setPrimaryType(type);
-    setShouldFocusInspector(true);
-  }, []);
-
-  const consumeFocusInspector = useCallback(() => {
-    setShouldFocusInspector(false);
-  }, []);
+  }, [updateTab]);
 
   const deselect = useCallback(() => {
-    setSelectedKeys(EMPTY_SET);
-    setPrimaryKey(null);
-    setPrimaryType(null);
-    setShouldFocusInspector(false);
+    setTabSelections(EMPTY_MAP);
+    setActiveTab(DEFAULT_TAB);
   }, []);
 
+  // Derive active tab's state
+  const active = getTabState(activeTab);
+  activeKeysRef.current = active.selectedKeys;
+
   const isSelected = useCallback((key: string) => {
-    return selectedKeys.has(key);
-  }, [selectedKeys]);
+    return activeKeysRef.current.has(key);
+  }, []);
+
+  const selectedKeyForTab = useCallback((tab: string): string | null => {
+    return getTabState(tab).primaryKey;
+  }, [getTabState]);
+
+  const selectedTypeForTab = useCallback((tab: string): string | null => {
+    return getTabState(tab).primaryType;
+  }, [getTabState]);
+
+  const consumeFocusInspector = useCallback(() => {
+    setFocusInspector(false);
+  }, []);
 
   const value = useMemo<SelectionState>(() => ({
-    selectedKeys,
-    primaryKey,
-    primaryType,
-    selectionCount: selectedKeys.size,
+    selectedKeys: active.selectedKeys,
+    primaryKey: active.primaryKey,
+    primaryType: active.primaryType,
+    selectionCount: active.selectedKeys.size,
     // Backwards-compat
-    selectedKey: primaryKey,
-    selectedType: primaryType,
+    selectedKey: active.primaryKey,
+    selectedType: active.primaryType,
     // Actions
     select,
     toggleSelect,
     rangeSelect,
-    selectAndFocusInspector,
     deselect,
     isSelected,
-    shouldFocusInspector,
+    // Per-tab queries
+    selectedKeyForTab,
+    selectedTypeForTab,
+    // Inspector focus
+    shouldFocusInspector: focusInspector,
     consumeFocusInspector,
   }), [
-    selectedKeys, primaryKey, primaryType,
-    select, toggleSelect, rangeSelect, selectAndFocusInspector,
-    deselect, isSelected, shouldFocusInspector, consumeFocusInspector,
+    active.selectedKeys, active.primaryKey, active.primaryType,
+    select, toggleSelect, rangeSelect,
+    deselect, isSelected, selectedKeyForTab, selectedTypeForTab,
+    focusInspector, consumeFocusInspector,
   ]);
 
   return (

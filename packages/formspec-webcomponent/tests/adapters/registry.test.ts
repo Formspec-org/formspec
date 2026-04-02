@@ -30,6 +30,40 @@ describe('ComponentRegistry adapter support', () => {
         expect(reg.resolveAdapterFn('TextInput')).toBe(defaultAdapter.components.TextInput);
     });
 
+    it('falls back to default layout adapter when active adapter omits layout components', () => {
+        const reg = new ComponentRegistry();
+        const renderGrid = () => {};
+        const defaultAdapter: RenderAdapter = {
+            name: 'default',
+            components: { Grid: renderGrid, TextInput: () => {} },
+        };
+        const ds: RenderAdapter = {
+            name: 'ds',
+            components: { TextInput: () => {} },
+        };
+        reg.registerAdapter(defaultAdapter);
+        reg.registerAdapter(ds);
+        reg.setAdapter('ds');
+        expect(reg.resolveAdapterFn('Grid')).toBe(renderGrid);
+    });
+
+    it('falls back to default display adapter when active adapter omits Heading', () => {
+        const reg = new ComponentRegistry();
+        const renderHeading = () => {};
+        const defaultAdapter: RenderAdapter = {
+            name: 'default',
+            components: { Heading: renderHeading, TextInput: () => {} },
+        };
+        const ds: RenderAdapter = {
+            name: 'ds',
+            components: { TextInput: () => {} },
+        };
+        reg.registerAdapter(defaultAdapter);
+        reg.registerAdapter(ds);
+        reg.setAdapter('ds');
+        expect(reg.resolveAdapterFn('Heading')).toBe(renderHeading);
+    });
+
     it('returns undefined when no adapter has the component', () => {
         const reg = new ComponentRegistry();
         const adapter: RenderAdapter = { name: 'default', components: {} };

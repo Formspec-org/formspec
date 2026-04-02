@@ -3,8 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
-import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
-import { EditorCanvas } from '../../src/workspaces/editor/EditorCanvas';
+import { DefinitionTreeEditor } from '../../src/workspaces/editor/DefinitionTreeEditor';
 
 describe('Import/Export', () => {
   it('import definition → renders in editor', () => {
@@ -33,9 +32,7 @@ describe('Import/Export', () => {
     render(
       <ProjectProvider project={project}>
         <SelectionProvider>
-          <ActiveGroupProvider>
-            <EditorCanvas />
-          </ActiveGroupProvider>
+          <DefinitionTreeEditor />
         </SelectionProvider>
       </ProjectProvider>
     );
@@ -46,7 +43,8 @@ describe('Import/Export', () => {
     expect(screen.getByText('Last Name')).toBeInTheDocument();
     expect(screen.getByText('Date of Birth')).toBeInTheDocument();
     expect(screen.getByText('Annual Income')).toBeInTheDocument();
-    expect(screen.getByText('Terms and Conditions')).toBeInTheDocument();
+    // Display-tier items are edited in Layout, not listed in the definition tree canvas.
+    expect(project.definition.items.some((i: { key: string }) => i.key === 'disclaimer')).toBe(true);
   });
 
   it('export matches import', () => {

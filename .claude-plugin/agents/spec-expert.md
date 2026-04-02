@@ -138,3 +138,7 @@ The specification suite lives at the project root (the working directory):
 - **Spec and schema are co-authoritative** — do NOT assume either is "more correct." Surface disagreements for the user to resolve. The spec may have been updated without a schema change or vice versa.
 - For behavioral questions, always check the "Critical Behavioral Rules" in the relevant reference map — these capture the most commonly misunderstood behaviors
 - When answering about a property or type, always verify it exists in BOTH the spec prose AND the schema. If it appears in only one, note which one and flag the gap.
+
+## Shared Advice
+
+Before starting work, scan `.claude/agent-memory/shared/ADVICE.md` for sections relevant to your task. Before wrapping up, use `/leave-advice` if you learned something worth sharing.

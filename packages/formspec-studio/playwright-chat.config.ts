@@ -5,7 +5,7 @@ import path from 'path';
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './tests/e2e/playwright',
   testMatch: 'chat-e2e.spec.ts',
   fullyParallel: false, // Run serially — these are real API calls
   retries: 0,

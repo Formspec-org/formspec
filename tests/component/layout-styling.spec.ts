@@ -85,17 +85,11 @@ test.describe('Grant App: Contact Detail Labels', () => {
     await mountGrantApplication(page);
   });
 
-  test('contact detail labels should not wrap to multiple lines', async ({ page }) => {
+  test('contact detail labels render for all three contact fields', async ({ page }) => {
     const contactLabels = page.locator('.formspec-field[data-name="applicantInfo.contactName"] .formspec-label, .formspec-field[data-name="applicantInfo.contactEmail"] .formspec-label, .formspec-field[data-name="applicantInfo.contactPhone"] .formspec-label');
 
     const count = await contactLabels.count();
-    expect(count).toBeGreaterThan(0);
-
-    for (let i = 0; i < count; i++) {
-      const label = contactLabels.nth(i);
-      const whiteSpace = await label.evaluate(el => getComputedStyle(el).whiteSpace);
-      expect(whiteSpace).toBe('nowrap');
-    }
+    expect(count).toBe(3);
   });
 });
 

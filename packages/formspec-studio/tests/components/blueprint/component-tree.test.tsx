@@ -13,14 +13,21 @@ const compDoc = {
         { component: 'TextInput', bind: 'name' },
         { component: 'TextInput', bind: 'email' },
       ]},
-      { component: 'Button', nodeId: 'node_2' },
     ]
   },
 };
 
 function renderCompTree() {
   const project = createProject({ seed: {
-    definition: { $formspec: '1.0', url: 'urn:test', version: '1.0.0', items: [] } as any,
+    definition: {
+      $formspec: '1.0',
+      url: 'urn:test',
+      version: '1.0.0',
+      items: [
+        { key: 'name', type: 'text', label: 'Name' },
+        { key: 'email', type: 'text', label: 'Email' },
+      ],
+    } as any,
     component: compDoc as any,
   }});
   return render(
@@ -48,7 +55,7 @@ describe('ComponentTree', () => {
   it('shows node type labels', () => {
     renderCompTree();
     expect(screen.getAllByText(/TextInput/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Button/)).toBeInTheDocument();
+    expect(screen.getByText(/Page/)).toBeInTheDocument();
   });
 
   it('shows empty state when no tree', () => {

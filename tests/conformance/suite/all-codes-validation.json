@@ -43,11 +43,11 @@
       {
         "$formspecValidationResult": "1.0",
         "code": "EXTENSION_COMPATIBILITY_MISMATCH",
-        "constraintKind": "extension",
+        "constraintKind": "constraint",
         "message": "Extension 'x-test-compat' requires formspec version >=99.0.0",
         "path": "compat_field",
         "severity": "warning",
-        "source": "extension"
+        "source": "external"
       },
       {
         "$formspecValidationResult": "1.0",
@@ -62,11 +62,11 @@
       {
         "$formspecValidationResult": "1.0",
         "code": "EXTENSION_DEPRECATED",
-        "constraintKind": "extension",
+        "constraintKind": "constraint",
         "message": "Extension 'x-test-deprecated' is deprecated",
         "path": "deprecated_field",
         "severity": "info",
-        "source": "extension"
+        "source": "external"
       },
       {
         "$formspecValidationResult": "1.0",
@@ -79,11 +79,11 @@
       {
         "$formspecValidationResult": "1.0",
         "code": "MAX_LENGTH_EXCEEDED",
-        "constraintKind": "extension",
+        "constraintKind": "constraint",
         "message": "Short Code must be at most 5 characters",
         "path": "maxlen_field",
         "severity": "error",
-        "source": "extension"
+        "source": "external"
       },
       {
         "$formspecValidationResult": "1.0",
@@ -96,29 +96,29 @@
       {
         "$formspecValidationResult": "1.0",
         "code": "PATTERN_MISMATCH",
-        "constraintKind": "extension",
+        "constraintKind": "constraint",
         "message": "Must be a valid Test Pattern",
         "path": "patterned_field",
         "severity": "error",
-        "source": "extension"
+        "source": "external"
       },
       {
         "$formspecValidationResult": "1.0",
         "code": "RANGE_OVERFLOW",
-        "constraintKind": "extension",
+        "constraintKind": "constraint",
         "message": "Ranged Value must be at most 100",
         "path": "range_high_field",
         "severity": "error",
-        "source": "extension"
+        "source": "external"
       },
       {
         "$formspecValidationResult": "1.0",
         "code": "RANGE_UNDERFLOW",
-        "constraintKind": "extension",
+        "constraintKind": "constraint",
         "message": "Ranged Value must be at least 10",
         "path": "range_low_field",
         "severity": "error",
-        "source": "extension"
+        "source": "external"
       },
       {
         "$formspecValidationResult": "1.0",
@@ -132,11 +132,11 @@
       {
         "$formspecValidationResult": "1.0",
         "code": "EXTENSION_RETIRED",
-        "constraintKind": "extension",
+        "constraintKind": "constraint",
         "message": "Extension 'x-test-retired' is retired",
         "path": "retired_field",
         "severity": "warning",
-        "source": "extension"
+        "source": "external"
       },
       {
         "$formspecValidationResult": "1.0",
@@ -161,11 +161,11 @@
       {
         "$formspecValidationResult": "1.0",
         "code": "UNRESOLVED_EXTENSION",
-        "constraintKind": "extension",
+        "constraintKind": "constraint",
         "message": "Unresolved extension 'x-nonexistent': no matching registry entry loaded",
         "path": "unresolved_ext_field",
         "severity": "error",
-        "source": "extension"
+        "source": "external"
       }
     ]
   },

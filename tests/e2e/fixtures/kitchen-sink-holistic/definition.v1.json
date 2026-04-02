@@ -18,9 +18,18 @@
   "optionSets": {
     "communicationModes": {
       "options": [
-        { "value": "email", "label": "Email" },
-        { "value": "sms", "label": "SMS" },
-        { "value": "push", "label": "Push" }
+        {
+          "value": "email",
+          "label": "Email"
+        },
+        {
+          "value": "sms",
+          "label": "SMS"
+        },
+        {
+          "value": "push",
+          "label": "Push"
+        }
       ]
     }
   },
@@ -30,8 +39,14 @@
       "readonly": true,
       "data": {
         "countries": [
-          { "code": "US", "name": "United States" },
-          { "code": "CA", "name": "Canada" }
+          {
+            "code": "US",
+            "name": "United States"
+          },
+          {
+            "code": "CA",
+            "name": "Canada"
+          }
         ]
       }
     },
@@ -42,8 +57,14 @@
     }
   },
   "variables": [
-    { "name": "taxRate", "expression": "0.1" },
-    { "name": "projectedTotal", "expression": "grandTotal * (1 + @taxRate)" }
+    {
+      "name": "taxRate",
+      "expression": "0.1"
+    },
+    {
+      "name": "projectedTotal",
+      "expression": "grandTotal * (1 + @taxRate)"
+    }
   ],
   "items": [
     {
@@ -83,8 +104,14 @@
       "key": "profileMode",
       "label": "Profile Mode",
       "options": [
-        { "value": "basic", "label": "Basic" },
-        { "value": "advanced", "label": "Advanced" }
+        {
+          "value": "basic",
+          "label": "Basic"
+        },
+        {
+          "value": "advanced",
+          "label": "Advanced"
+        }
       ]
     },
     {
@@ -100,9 +127,18 @@
       "key": "tags",
       "label": "Tags",
       "options": [
-        { "value": "new", "label": "New" },
-        { "value": "priority", "label": "Priority" },
-        { "value": "followup", "label": "Follow-up" }
+        {
+          "value": "new",
+          "label": "New"
+        },
+        {
+          "value": "priority",
+          "label": "Priority"
+        },
+        {
+          "value": "followup",
+          "label": "Follow-up"
+        }
       ]
     },
     {
@@ -317,30 +353,5 @@
         "endDate >= startDate"
       ]
     }
-  ],
-  "screener": {
-    "items": [
-      {
-        "type": "field",
-        "dataType": "integer",
-        "key": "triageScore",
-        "label": "Triage Score"
-      }
-    ],
-    "binds": [
-      { "path": "triageScore", "required": "true" }
-    ],
-    "routes": [
-      {
-        "condition": "$triageScore >= 50",
-        "target": "https://example.org/forms/high-risk",
-        "label": "High Risk"
-      },
-      {
-        "condition": "true",
-        "target": "https://example.org/forms/standard",
-        "label": "Standard"
-      }
-    ]
-  }
+  ]
 }

@@ -237,13 +237,13 @@ describe('RadioGroup accessibility', () => {
         expect(labelledBy).toBeTruthy();
         const labelEl = el.querySelector(`#${labelledBy}`);
         expect(labelEl).not.toBeNull();
-        expect(labelEl!.tagName).toBe('LABEL');
+        expect(labelEl!.tagName).toBe('LEGEND');
     });
 
-    it('container has aria-describedby (not individual radio)', () => {
+    it('container has aria-describedby pointing to hint', () => {
         const el = renderRadioGroup();
         const container = el.querySelector('[role="radiogroup"]');
-        expect(container!.getAttribute('aria-describedby')).toBeTruthy();
+        expect(container!.getAttribute('aria-describedby')).toContain('field-color-hint');
         // Individual radios should NOT have aria-describedby
         const radios = el.querySelectorAll('input[type="radio"]');
         for (const radio of radios) {
@@ -298,13 +298,13 @@ describe('CheckboxGroup accessibility', () => {
         expect(labelledBy).toBeTruthy();
         const labelEl = el.querySelector(`#${labelledBy}`);
         expect(labelEl).not.toBeNull();
-        expect(labelEl!.tagName).toBe('LABEL');
+        expect(labelEl!.tagName).toBe('LEGEND');
     });
 
-    it('container has aria-describedby (not individual checkbox)', () => {
+    it('container has aria-describedby pointing to hint', () => {
         const el = renderCheckboxGroup();
         const container = el.querySelector('[role="group"]');
-        expect(container!.getAttribute('aria-describedby')).toBeTruthy();
+        expect(container!.getAttribute('aria-describedby')).toContain('field-colors-hint');
         // Individual checkboxes should NOT have aria-describedby
         const checkboxes = el.querySelectorAll('input[type="checkbox"]');
         for (const cb of checkboxes) {

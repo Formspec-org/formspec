@@ -62,7 +62,7 @@ describe('Tailwind TextInput', () => {
         hasClasses(input, 'block', 'w-full', 'rounded-xl');
 
         // Error element
-        const error = root.querySelector('[role="alert"]')!;
+        const error = root.querySelector('#field-name-error')!;
         expect(error).toBeTruthy();
         hasClasses(error, 'text-sm');
         expect(error.className).toContain('var(--formspec-tw-danger)');

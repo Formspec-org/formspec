@@ -1,0 +1,72 @@
+/* @filedesc Shared utility classes for reusable default-skin interaction patterns. */
+
+.formspec-focus-ring:focus-visible {
+  outline: 2px solid var(--formspec-default-focus);
+  outline-offset: 2px;
+}
+
+.formspec-container :where(
+  button,
+  [role="button"],
+  summary,
+  a[href],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"]
+):focus-visible {
+  outline: 2px solid var(--formspec-default-focus);
+  outline-offset: 2px;
+}
+
+/** Filled primary CTA — matches wizard Next/Submit, repeat add, etc. */
+.formspec-button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: var(--formspec-default-radius-sm);
+  background: var(--formspec-default-primary);
+  color: var(--formspec-default-text-inverse);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-button-primary:hover:not(:disabled) {
+  background: var(--formspec-default-primary-strong);
+}
+
+.formspec-button-primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/** Outlined neutral — matches file browse, modal cancel-style actions. */
+.formspec-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid var(--formspec-default-border-control);
+  border-radius: var(--formspec-default-radius-sm);
+  background: var(--formspec-default-surface);
+  color: var(--formspec-default-text);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-button-secondary:hover:not(:disabled) {
+  border-color: var(--formspec-default-border-strong);
+  background: var(--formspec-default-surface-soft);
+}
+
+.formspec-button-secondary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

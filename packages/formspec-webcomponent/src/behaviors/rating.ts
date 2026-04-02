@@ -3,15 +3,15 @@ import { effect } from '@preact/signals-core';
 import type { RatingBehavior, FieldRefs, BehaviorContext } from './types';
 import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 
-const RATING_ICON_MAP: Record<string, string> = {
-    star: '\u2605',
-    heart: '\u2665',
-    circle: '\u25cf',
+const RATING_ICON_MAP: Record<string, [string, string]> = {
+    star: ['\u2605', '\u2606'],    // ★ filled, ☆ outline
+    heart: ['\u2665', '\u2661'],   // ♥ filled, ♡ outline
+    circle: ['\u25cf', '\u25cb'],  // ● filled, ○ outline
 };
 
-function resolveRatingIcon(icon?: string): string {
+function resolveRatingIcons(icon?: string): [string, string] {
     if (!icon) return RATING_ICON_MAP.star;
-    return RATING_ICON_MAP[icon] || icon;
+    return RATING_ICON_MAP[icon] || [icon, icon];
 }
 
 export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
@@ -26,10 +26,10 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
 
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
     const vm = ctx.getFieldVM(fieldPath);
-    const maxRating = comp.max || 5;
+    const maxRating = comp.max ?? comp.maxRating ?? 5;
     const isInteger = item?.dataType === 'integer';
     const allowHalf = comp.allowHalf === true;
-    const icon = resolveRatingIcon(comp.icon);
+    const [selectedIcon, unselectedIcon] = resolveRatingIcons(comp.icon);
 
     return {
         fieldPath,
@@ -48,7 +48,8 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
         remoteOptionsState: { loading: false, error: null },
         options: () => [],
         maxRating,
-        icon,
+        icon: selectedIcon,
+        unselectedIcon,
         allowHalf,
         isInteger,
 
@@ -60,7 +61,7 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
         bind(refs: FieldRefs): () => void {
             const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
-            // Sync star selection classes from engine value
+            // Sync star selection classes and glyphs from engine value
             const stars = refs.control.querySelectorAll('.formspec-rating-star');
             disposers.push(effect(() => {
                 const sig = ctx.engine.signals[fieldPath];
@@ -72,6 +73,7 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
                     const isHalfSelected = allowHalf && !isSelected && halfValue <= val;
                     star.classList.toggle('formspec-rating-star--selected', isSelected);
                     star.classList.toggle('formspec-rating-star--half', isHalfSelected);
+                    star.textContent = (isSelected || isHalfSelected) ? selectedIcon : unselectedIcon;
                 });
             }));
 

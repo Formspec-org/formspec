@@ -18,7 +18,7 @@ export function WorkspacePage({
 }: WorkspacePageProps) {
   return (
     <div 
-      className={`flex flex-col min-h-full ${maxWidth} mx-auto ${className}`}
+      className={`flex flex-col min-h-full w-full ${maxWidth} mx-auto ${className}`}
       {...props}
     >
       {children}
@@ -41,7 +41,7 @@ export function WorkspacePageSection({
   padding = "px-7" 
 }: WorkspacePageSectionProps) {
   return (
-    <div className={`${padding} ${className}`}>
+    <div className={`w-full ${padding} ${className}`}>
       {children}
     </div>
   );

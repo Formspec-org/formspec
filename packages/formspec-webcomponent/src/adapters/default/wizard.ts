@@ -31,7 +31,7 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
         // Collapse/expand toggle — pure local UI state, no signals needed
         const toggleBtn = document.createElement('button');
         toggleBtn.type = 'button';
-        toggleBtn.className = 'formspec-wizard-sidenav-toggle';
+        toggleBtn.className = 'formspec-wizard-sidenav-toggle formspec-focus-ring';
         toggleBtn.setAttribute('aria-label', 'Collapse navigation');
         toggleBtn.title = 'Collapse';
         toggleBtn.innerHTML = '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>';
@@ -61,7 +61,7 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
 
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'formspec-wizard-sidenav-btn';
+            btn.className = 'formspec-wizard-sidenav-btn formspec-focus-ring';
             btn.setAttribute('aria-current', i === 0 ? 'step' : 'false');
 
             const circle = document.createElement('span');
@@ -89,11 +89,12 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
         container = content;
     }
 
-    // Progress bar — built once, bind() toggles classes
+    // Progress bar — built once, bind() toggles classes (hidden for single-step, like React)
     let progressItems: WizardProgressItemRefs[] | undefined;
-    if (behavior.showProgress) {
+    if (behavior.showProgress && behavior.totalSteps() > 1) {
         const progress = document.createElement('div');
         progress.className = 'formspec-wizard-steps';
+        progress.setAttribute('aria-hidden', 'true');
         progress.classList.toggle('formspec-hidden', showSideNav);
         container.appendChild(progress);
 
@@ -123,6 +124,10 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
         }
     }
 
+    const stepIndicator = document.createElement('div');
+    stepIndicator.className = 'formspec-wizard-step-indicator';
+    container.appendChild(stepIndicator);
+
     // Step panels
     const panels: HTMLElement[] = [];
     for (let i = 0; i < behavior.totalSteps(); i++) {
@@ -142,16 +147,20 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
 
     const prevBtn = document.createElement('button');
     prevBtn.type = 'button';
-    prevBtn.className = 'formspec-wizard-prev';
+    prevBtn.className = 'formspec-wizard-prev formspec-button-secondary formspec-focus-ring';
     prevBtn.textContent = 'Previous';
+    prevBtn.setAttribute('aria-label', 'Previous step');
+    prevBtn.disabled = true;
+    prevBtn.setAttribute('aria-disabled', 'true');
     nav.appendChild(prevBtn);
 
     let skipBtn: HTMLButtonElement | undefined;
     if (behavior.allowSkip) {
         skipBtn = document.createElement('button');
         skipBtn.type = 'button';
-        skipBtn.className = 'formspec-wizard-skip';
+        skipBtn.className = 'formspec-wizard-skip formspec-button-secondary formspec-focus-ring';
         skipBtn.textContent = 'Skip';
+        skipBtn.setAttribute('aria-label', 'Skip this step');
         skipBtn.addEventListener('click', () => {
             if (behavior.canGoNext()) behavior.goToStep(behavior.activeStep() + 1);
         });
@@ -160,8 +169,9 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
 
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
-    nextBtn.className = 'formspec-wizard-next';
+    nextBtn.className = 'formspec-wizard-next formspec-button-primary formspec-focus-ring';
     nextBtn.textContent = 'Next';
+    nextBtn.setAttribute('aria-label', 'Next step');
     nav.appendChild(nextBtn);
     container.appendChild(nav);
 
@@ -175,6 +185,8 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
     const dispose = behavior.bind({
         root: el,
         panels,
+        stepIndicator,
+        announcer,
         prevButton: prevBtn,
         nextButton: nextBtn,
         stepContent: container,
@@ -183,12 +195,4 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
         progressItems,
     });
     actx.onDispose(dispose);
-
-    el.addEventListener('formspec-page-change', ((e: CustomEvent) => {
-        const { index, total, title } = e.detail;
-        const stepLabel = title || `Step ${index + 1}`;
-        announcer.textContent = index === total - 1
-            ? `${stepLabel}. Next will submit the form.`
-            : `${stepLabel}. Step ${index + 1} of ${total}.`;
-    }) as EventListener);
 };

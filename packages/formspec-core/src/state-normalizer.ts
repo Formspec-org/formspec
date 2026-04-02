@@ -9,12 +9,9 @@ import type { ProjectState } from './types.js';
 export function normalizeState(state: ProjectState): void {
   const url = state.definition.url;
 
-  // Sync targetDefinition.url on component, generated layout, and theme
+  // Sync targetDefinition.url on component and theme
   if (state.component.targetDefinition) {
     state.component.targetDefinition.url = url;
-  }
-  if (state.generatedComponent.targetDefinition) {
-    state.generatedComponent.targetDefinition.url = url;
   }
   if (state.theme.targetDefinition) {
     state.theme.targetDefinition.url = url;

@@ -27,3 +27,23 @@ export function resolveToken(
     }
     return val;
 }
+
+/**
+ * Emit merged theme + component tokens as `--formspec-*` CSS custom properties on `target`.
+ * Component tokens override theme tokens (same merge order as `emitTokenProperties` in the web component).
+ */
+export function emitMergedThemeCssVars(
+    target: HTMLElement,
+    options: {
+        themeTokens?: Record<string, string | number> | null;
+        componentTokens?: Record<string, string | number> | null;
+    },
+): void {
+    const merged = {
+        ...(options.themeTokens || {}),
+        ...(options.componentTokens || {}),
+    };
+    for (const [key, value] of Object.entries(merged)) {
+        target.style.setProperty(`--formspec-${key.replace(/\./g, '-')}`, String(value));
+    }
+}

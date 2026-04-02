@@ -1,8 +1,8 @@
 /** @filedesc Logic workspace tab composing Variables, Binds, and Shapes sections with a FilterBar. */
 import { useState, useMemo } from 'react';
+import { normalizeBindsView, buildDefLookup } from '@formspec-org/studio-core';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
-import { buildDefLookup } from '../../lib/field-helpers';
 import { FilterBar } from './FilterBar';
 import { HelpTip } from '../../components/ui/HelpTip';
 import { VariablesSection } from './VariablesSection';
@@ -49,36 +49,12 @@ function LogicPillar({
   );
 }
 
-function normalizeBinds(binds: unknown, items: any[] = []): Record<string, Record<string, any>> {
-  const result: Record<string, Record<string, any>> = {};
-
-  // 1. Process items for prePopulate
-  const lookup = buildDefLookup(items);
-  for (const [path, entry] of lookup.entries()) {
-    const item = entry.item;
-    if (item.prePopulate) {
-      result[path] = { ...result[path], 'pre-populate': item.prePopulate };
-    }
-  }
-
-  // 2. Process binds (always array form)
-  if (!Array.isArray(binds)) return result;
-  for (const bind of binds) {
-    if (bind && typeof bind === 'object' && bind.path) {
-      const { path, ...rest } = bind;
-      result[path] = { ...result[path], ...rest };
-    }
-  }
-
-  return result;
-}
-
 export function LogicTab() {
   const definition = useDefinition();
   const { select } = useSelection();
   const [activeFilter, setActiveFilter] = useState<'required' | 'relevant' | 'calculate' | 'constraint' | 'readonly' | 'pre-populate' | null>(null);
 
-  const binds = normalizeBinds(definition?.binds, definition?.items);
+  const binds = normalizeBindsView(definition?.binds, definition?.items ?? []);
   const shapes = Array.isArray(definition?.shapes) ? definition.shapes.map((s: any) => ({ name: s.id, ...s })) : [];
   const variables = Array.isArray(definition?.variables) ? definition.variables : [];
 
@@ -146,7 +122,7 @@ export function LogicTab() {
               binds={binds}
               activeFilter={activeFilter}
               allPaths={memoizedFieldPaths}
-              onSelectPath={(path) => select(path, 'field')}
+              onSelectPath={(path) => select(path, 'field', { tab: 'editor' })}
             />
           </LogicPillar>
         )}

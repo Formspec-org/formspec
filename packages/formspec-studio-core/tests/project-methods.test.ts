@@ -8,7 +8,7 @@ type AnyProject = ReturnType<typeof createProject>;
 
 /** Get Page nodes from the component tree (replaces theme.pages reads). */
 function getPageNodes(project: AnyProject): any[] {
-  const comp = project.effectiveComponent as any;
+  const comp = project.component as any;
   const root = comp?.tree;
   if (!root?.children) return [];
   return root.children.filter((n: any) => n.component === 'Page');
@@ -886,20 +886,21 @@ describe('removeItem', () => {
   it('cleans up screener routes referencing deleted field', () => {
     const project = createProject();
     project.addField('age', 'Age', 'integer');
-    // Enable screener and add routes — one referencing 'age', one not
-    project.setScreener(true);
+    // Create screener and add routes — one referencing 'age', one not
+    project.createScreenerDocument();
     project.addScreenField('screen_age', 'Screen Age', 'integer');
-    project.addScreenRoute('age > 18', '/adult-form', 'Adult route');
-    project.addScreenRoute('1 = 1', '/fallback', 'Fallback');
+    project.addScreenRoute('default', { condition: 'age > 18', target: '/adult-form', label: 'Adult route' });
+    project.addScreenRoute('default', { condition: '1 = 1', target: '/fallback', label: 'Fallback' });
     // Verify routes exist
-    const routesBefore = project.definition.screener?.routes ?? [];
+    const screener = (project.core.state as any).screener;
+    const routesBefore = screener.evaluation[0].routes;
     expect(routesBefore.length).toBe(2);
-    expect((routesBefore[0] as any).condition).toBe('age > 18');
+    expect(routesBefore[0].condition).toBe('age > 18');
     // Delete the field — route referencing 'age' should be removed
     project.removeItem('age');
-    const routesAfter = project.definition.screener?.routes ?? [];
+    const routesAfter = (project.core.state as any).screener.evaluation[0].routes;
     expect(routesAfter.length).toBe(1);
-    expect((routesAfter[0] as any).condition).toBe('1 = 1');
+    expect(routesAfter[0].condition).toBe('1 = 1');
   });
 
   it('cleans up mapping rules referencing deleted field', () => {
@@ -1369,7 +1370,7 @@ describe('addPage', () => {
     // Add a field into the group
     project.addField(`${groupKey}.name`, 'Name', 'text');
 
-    const comp = project.effectiveComponent as any;
+    const comp = project.component as any;
     const pageNodes = comp.tree?.children?.filter((n: any) => n.component === 'Page') ?? [];
     expect(pageNodes.length).toBeGreaterThanOrEqual(1);
     expect(pageNodes[0]?.component).toBe('Page');
@@ -1476,7 +1477,14 @@ describe('removePage', () => {
     // Manually add a page with no bound children
     project.setFlow('wizard');
     const pagesBefore = project.definition.items.length;
-    (project as any).core.dispatch({ type: 'pages.addPage', payload: { id: 'orphan-page', title: 'Orphan' } });
+    (project as any).core.dispatch({
+      type: 'component.addNode',
+      payload: {
+        parent: { nodeId: 'root' },
+        component: 'Page',
+        props: { nodeId: 'orphan-page', title: 'Orphan' },
+      },
+    });
     expect(project.definition.items.length).toBe(pagesBefore); // no new group
     project.removePage('orphan-page');
     // Original items unchanged
@@ -1594,7 +1602,7 @@ describe('setRegionKey', () => {
   });
 
   it('preserves region position when replacing key', () => {
-    // Seed definition, then use pages.setPages to populate component tree
+    // Seed definition, then author the component tree directly
     const p = createProject({
       seed: {
         definition: {
@@ -1608,19 +1616,28 @@ describe('setRegionKey', () => {
         } as any,
       },
     });
-    // Populate pages in component tree
     (p as any).core.dispatch({
-      type: 'pages.setPages',
+      type: 'component.setDocumentProperty',
       payload: {
-        pages: [{
-          id: 'the-page',
-          title: 'The Page',
-          regions: [
-            { key: 'g1', span: 4 },
-            { key: 'g2', span: 4 },
-            { key: 'g3', span: 4 },
+        property: 'tree',
+        value: {
+          component: 'Stack',
+          nodeId: 'root',
+          children: [
+            {
+              component: 'Page',
+              nodeId: 'the-page',
+              title: 'The Page',
+              _layout: true,
+              children: [
+                { component: 'Stack', bind: 'g1', span: 4, children: [] },
+                { component: 'Stack', bind: 'g2', span: 4, children: [] },
+                { component: 'Stack', bind: 'g3', span: 4, children: [] },
+              ],
+            },
+            { component: 'Stack', bind: 'x', children: [] },
           ],
-        }],
+        },
       },
     });
     // Replace the MIDDLE region (index 1, key 'g2') with 'x'
@@ -1640,7 +1657,29 @@ describe('updateRegion — responsive overrides', () => {
         definition: { items, formPresentation: { pageMode: 'wizard' } } as any,
       },
     });
-    (project as any).core.dispatch({ type: 'pages.setPages', payload: { pages } });
+    (project as any).core.dispatch({
+      type: 'component.setDocumentProperty',
+      payload: {
+        property: 'tree',
+        value: {
+          component: 'Stack',
+          nodeId: 'root',
+          children: pages.map((page) => ({
+            component: 'Page',
+            nodeId: page.id,
+            title: page.title,
+            _layout: true,
+            children: page.regions.map((region) => ({
+              component: 'Stack',
+              bind: region.key,
+              ...(region.span !== undefined ? { span: region.span } : {}),
+              ...(region.responsive !== undefined ? { responsive: region.responsive } : {}),
+              children: [],
+            })),
+          })),
+        },
+      },
+    });
     return project;
   }
 
@@ -1759,7 +1798,7 @@ describe('removeVariable', () => {
     const project = createProject();
     project.addVariable('x', '42');
     project.addField('f', 'F', 'integer');
-    project.calculate('f', '$x + 1');
+    project.calculate('f', '@x + 1');
     const result = project.removeVariable('x');
     expect(project.variableNames()).not.toContain('x');
     const w = result.warnings?.find(w => w.code === 'DANGLING_REFERENCES');
@@ -1767,7 +1806,7 @@ describe('removeVariable', () => {
     // Detail should list the specific bind paths that reference this variable
     expect(w?.detail?.referenceCount).toBeGreaterThan(0);
     expect(w?.detail?.paths).toEqual(
-      expect.arrayContaining([expect.stringContaining('f')])
+      expect.arrayContaining(['binds[f].calculate'])
     );
   });
 });
@@ -1811,20 +1850,31 @@ describe('removeInstance', () => {
   });
 });
 
-// ── Screener Helpers ──
+// ── Screener Document Helpers ──
 
-describe('setScreener', () => {
-  it('enables the screener', () => {
+describe('createScreenerDocument / deleteScreenerDocument', () => {
+  it('creates a screener document with default phase', () => {
     const project = createProject();
-    project.setScreener(true);
-    expect(project.definition.screener).toBeDefined();
+    project.createScreenerDocument();
+    const screener = (project.core.state as any).screener;
+    expect(screener).toBeDefined();
+    expect(screener.$formspecScreener).toBe('1.0');
+    expect(screener.evaluation).toHaveLength(1);
+    expect(screener.evaluation[0].strategy).toBe('first-match');
+  });
+
+  it('removes the screener document', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.deleteScreenerDocument();
+    expect((project.core.state as any).screener).toBeNull();
   });
 });
 
 describe('addScreenField', () => {
   it('adds a screener question', () => {
     const project = createProject();
-    project.setScreener(true);
+    project.createScreenerDocument();
     const result = project.addScreenField('age', 'How old?', 'integer');
     expect(result.affectedPaths[0]).toBe('age');
   });
@@ -1833,7 +1883,7 @@ describe('addScreenField', () => {
 describe('removeScreenField', () => {
   it('removes a screener question', () => {
     const project = createProject();
-    project.setScreener(true);
+    project.createScreenerDocument();
     project.addScreenField('age', 'How old?', 'integer');
     const result = project.removeScreenField('age');
     expect(result.summary).toContain('age');
@@ -1842,20 +1892,20 @@ describe('removeScreenField', () => {
 });
 
 describe('addScreenRoute', () => {
-  it('adds a routing rule', () => {
+  it('adds a routing rule to the default phase', () => {
     const project = createProject();
-    project.setScreener(true);
+    project.createScreenerDocument();
     project.addScreenField('age', 'How old?', 'integer');
-    const result = project.addScreenRoute('age >= 18', 'https://form.example.com', 'Adults');
+    const result = project.addScreenRoute('default', { condition: 'age >= 18', target: 'https://form.example.com', label: 'Adults' });
     expect(result.summary).toContain('route');
   });
 
   it('stores a rejection message on the route', () => {
     const project = createProject();
-    project.setScreener(true);
+    project.createScreenerDocument();
     project.addScreenField('age', 'How old?', 'integer');
-    project.addScreenRoute('age < 18', 'https://reject.example.com', 'Minors', 'You must be 18 or older to participate.');
-    const route = project.definition.screener.routes[0];
+    project.addScreenRoute('default', { condition: 'age < 18', target: 'https://reject.example.com', label: 'Minors', message: 'You must be 18 or older to participate.' });
+    const route = (project.core.state as any).screener.evaluation[0].routes[0];
     expect(route.message).toBe('You must be 18 or older to participate.');
     expect(route.label).toBe('Minors');
   });
@@ -1864,48 +1914,165 @@ describe('addScreenRoute', () => {
 describe('updateScreenRoute', () => {
   it('updates a route condition', () => {
     const project = createProject();
-    project.setScreener(true);
+    project.createScreenerDocument();
     project.addScreenField('age', 'How old?', 'integer');
-    project.addScreenRoute('age >= 18', 'https://example.com');
-    project.updateScreenRoute(0, { condition: 'age >= 21' });
-    // Route should still exist
-    expect(project.definition.screener.routes).toHaveLength(1);
+    project.addScreenRoute('default', { condition: 'age >= 18', target: 'https://example.com' });
+    project.updateScreenRoute('default', 0, { condition: 'age >= 21' });
+    const routes = (project.core.state as any).screener.evaluation[0].routes;
+    expect(routes).toHaveLength(1);
   });
 
   it('updates a route message', () => {
     const project = createProject();
-    project.setScreener(true);
+    project.createScreenerDocument();
     project.addScreenField('age', 'How old?', 'integer');
-    project.addScreenRoute('age >= 18', 'https://example.com');
-    project.updateScreenRoute(0, { message: 'Sorry, you do not qualify.' });
-    const route = project.definition.screener.routes[0];
+    project.addScreenRoute('default', { condition: 'age >= 18', target: 'https://example.com' });
+    project.updateScreenRoute('default', 0, { message: 'Sorry, you do not qualify.' });
+    const route = (project.core.state as any).screener.evaluation[0].routes[0];
     expect(route.message).toBe('Sorry, you do not qualify.');
   });
 });
 
 describe('reorderScreenRoute', () => {
-  it('reorders routes', () => {
+  it('reorders routes within a phase', () => {
     const project = createProject();
-    project.setScreener(true);
+    project.createScreenerDocument();
     project.addScreenField('age', 'How old?', 'integer');
-    project.addScreenRoute('age >= 18', 'https://a.com');
-    project.addScreenRoute('age >= 21', 'https://b.com');
-    project.reorderScreenRoute(1, 'up');
-    const routes = project.definition.screener.routes;
+    project.addScreenRoute('default', { condition: 'age >= 18', target: 'https://a.com' });
+    project.addScreenRoute('default', { condition: 'age >= 21', target: 'https://b.com' });
+    project.reorderScreenRoute('default', 1, 'up');
+    const routes = (project.core.state as any).screener.evaluation[0].routes;
     expect(routes[0].condition).toBe('age >= 21');
   });
 });
 
 describe('removeScreenRoute', () => {
-  it('removes a route', () => {
+  it('removes a route from a phase', () => {
     const project = createProject();
-    project.setScreener(true);
+    project.createScreenerDocument();
     project.addScreenField('age', 'How old?', 'integer');
-    project.addScreenRoute('age >= 18', 'https://a.com');
-    project.addScreenRoute('age >= 21', 'https://b.com');
-    project.removeScreenRoute(0);
-    const routes = project.definition.screener.routes;
+    project.addScreenRoute('default', { condition: 'age >= 18', target: 'https://a.com' });
+    project.addScreenRoute('default', { condition: 'age >= 21', target: 'https://b.com' });
+    project.removeScreenRoute('default', 0);
+    const routes = (project.core.state as any).screener.evaluation[0].routes;
     expect(routes).toHaveLength(1);
+  });
+});
+
+// ── updateScreenField ───────────────────────────────────────────────
+
+describe('updateScreenField', () => {
+  it('updates a screener question label', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'How old?', 'integer');
+    const result = project.updateScreenField('age', { label: 'Your Age' });
+    expect((project.core.state as any).screener.items[0].label).toBe('Your Age');
+    expect(result.action.helper).toBe('updateScreenField');
+    expect(result.affectedPaths).toContain('age');
+  });
+
+  it('updates helpText', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    project.updateScreenField('age', { helpText: 'Enter your age in years' });
+    expect((project.core.state as any).screener.items[0].helpText).toBe('Enter your age in years');
+  });
+
+  it('clears helpText when set to undefined', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    project.updateScreenField('age', { helpText: 'some text' });
+    project.updateScreenField('age', { helpText: undefined });
+    expect((project.core.state as any).screener.items[0].helpText).toBeUndefined();
+  });
+
+  it('sets required bind via boolean true', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    project.updateScreenField('age', { required: true });
+    const bind = (project.core.state as any).screener.binds?.find((b: any) => b.path === 'age');
+    expect(bind?.required).toBe('true');
+  });
+
+  it('clears required bind via boolean false', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    project.updateScreenField('age', { required: true });
+    project.updateScreenField('age', { required: false });
+    const bind = (project.core.state as any).screener.binds?.find((b: any) => b.path === 'age');
+    expect(bind?.required).toBeUndefined();
+  });
+
+  it('updates multiple properties at once', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    project.updateScreenField('age', { label: 'Your Age', helpText: 'In years', required: true });
+    const item = (project.core.state as any).screener.items[0];
+    expect(item.label).toBe('Your Age');
+    expect(item.helpText).toBe('In years');
+    const bind = (project.core.state as any).screener.binds?.find((b: any) => b.path === 'age');
+    expect(bind?.required).toBe('true');
+  });
+
+  it('throws SCREENER_ITEM_NOT_FOUND for nonexistent key', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    expect(() => project.updateScreenField('bogus', { label: 'Nope' })).toThrow(HelperError);
+  });
+});
+
+// ── reorderScreenField ──────────────────────────────────────────────
+
+describe('reorderScreenField', () => {
+  it('moves a screener question up by key', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    project.addScreenField('income', 'Income', 'money');
+    const result = project.reorderScreenField('income', 'up');
+    expect((project.core.state as any).screener.items[0].key).toBe('income');
+    expect((project.core.state as any).screener.items[1].key).toBe('age');
+    expect(result.action.helper).toBe('reorderScreenField');
+  });
+
+  it('moves a screener question down by key', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    project.addScreenField('income', 'Income', 'money');
+    project.reorderScreenField('age', 'down');
+    expect((project.core.state as any).screener.items[0].key).toBe('income');
+  });
+
+  it('throws SCREENER_ITEM_NOT_FOUND for nonexistent key', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    expect(() => project.reorderScreenField('bogus', 'up')).toThrow(HelperError);
+  });
+});
+
+// ── addScreenRoute with insertIndex ─────────────────────────────────
+
+describe('addScreenRoute with insertIndex', () => {
+  it('inserts a route at a specific index', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    project.addScreenField('age', 'Age', 'integer');
+    project.addScreenRoute('default', { condition: 'age >= 18', target: 'https://a.com' });
+    project.addScreenRoute('default', { condition: '1 = 1', target: 'https://fallback.com' });
+    // Insert between route 0 and fallback
+    project.addScreenRoute('default', { condition: 'age >= 21', target: 'https://b.com' }, 1);
+    const routes = (project.core.state as any).screener.evaluation[0].routes;
+    expect(routes).toHaveLength(3);
+    expect(routes[1].condition).toBe('age >= 21');
   });
 });
 
@@ -2095,6 +2262,22 @@ describe('listPages', () => {
   });
 });
 
+describe('pageStructure', () => {
+  it('resolves page metadata through the Project seam', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'string');
+    const page = project.addPage('Step 1', undefined, 'step1');
+    project.placeOnPage('name', page.createdId!);
+
+    const structure = project.pageStructure();
+    expect(structure.mode).toBe('wizard');
+    expect(structure.pages).toHaveLength(1);
+    expect(structure.pages[0].id).toBe('step1');
+    expect(structure.itemPageMap.name).toBe('step1');
+    expect(structure.pages[0].items.some((item) => item.key === 'step1')).toBe(true);
+  });
+});
+
 describe('removeInstance DANGLING_REFERENCES', () => {
   it('warns about dangling references with FEL paths listed', () => {
     const project = createProject();
@@ -2222,7 +2405,7 @@ describe('reorderPage boundary', () => {
 });
 
 describe('addSubmitButton with pageId', () => {
-  it('dispatches both addNode and pages.assignItem using actual nodeId', () => {
+  it('adds the submit button to the target page using its actual nodeId', () => {
     const project = createProject();
     const { createdId: pageId } = project.addPage('Page 1');
     const result = project.addSubmitButton('Submit', pageId);
@@ -2283,7 +2466,7 @@ describe('updateItem widget change on boolean field', () => {
 });
 
 describe('updateItem widget with missing component node', () => {
-  it('sets widgetHint on definition even when component node absent, emits warning', () => {
+  it('reconciles the missing component node and updates both definition and component tree', () => {
     const project = createProject();
     // Add field, then reload with a component tree that does NOT include it
     project.addField('bare', 'Bare', 'text');
@@ -2294,14 +2477,13 @@ describe('updateItem widget with missing component node', () => {
         tree: { component: 'Form', children: [] }, // no node for 'bare'
       } as any,
     });
-    // This should NOT throw — should emit a warning for the component part
-    // but still set widgetHint on definition
+    // This should NOT throw. The authored component tree is reconciled on load,
+    // so the field node is restored and the widget update applies cleanly.
     const result = project.updateItem('bare', { widget: 'textarea' });
     const item = project.itemAt('bare');
     expect((item as any)?.presentation?.widgetHint).toBe('textarea');
-    expect(result.warnings).toBeDefined();
-    expect(result.warnings!.length).toBeGreaterThan(0);
-    expect(result.warnings![0].code).toBe('COMPONENT_NODE_NOT_FOUND');
+    expect(result.warnings).toBeUndefined();
+    expect(project.componentFor('bare')?.component).toBe('TextInput');
   });
 });
 
@@ -2460,7 +2642,7 @@ describe('updateItem routing exhaustiveness', () => {
     expect(bind?.relevant).toContain('name');
   });
 
-  it('routes page to pages.assignItem', () => {
+  it('routes page to component-tree placement', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
     const page = project.addPage('Page 1');
@@ -2546,8 +2728,8 @@ describe('removeItem recursive group cleanup', () => {
     project.addField('contact.phone', 'Phone', 'phone');
     project.addField('summary', 'Summary', 'text');
     // Make summary calculate from a descendant
-    project.calculate('summary', 'contact.email');
-    expect(project.bindFor('summary')?.calculate).toBe('contact.email');
+    project.calculate('summary', '$contact.email');
+    expect(project.bindFor('summary')?.calculate).toBe('$contact.email');
 
     // Delete the group — summary's calculate should be cleaned up
     project.removeItem('contact');
@@ -2801,10 +2983,10 @@ describe('INSTANCE_NOT_FOUND pre-validation', () => {
 describe('ROUTE_OUT_OF_BOUNDS pre-validation', () => {
   it('updateScreenRoute throws for out-of-bounds index', () => {
     const project = createProject();
-    project.setScreener(true);
-    project.addScreenRoute('1 = 1', 'pass');
+    project.createScreenerDocument();
+    project.addScreenRoute('default', { condition: '1 = 1', target: 'pass' });
     try {
-      project.updateScreenRoute(99, { condition: '1 = 2' });
+      project.updateScreenRoute('default', 99, { condition: '1 = 2' });
       expect.unreachable('should throw');
     } catch (e) {
       expect(e).toBeInstanceOf(HelperError);
@@ -2814,10 +2996,10 @@ describe('ROUTE_OUT_OF_BOUNDS pre-validation', () => {
 
   it('reorderScreenRoute throws for out-of-bounds index', () => {
     const project = createProject();
-    project.setScreener(true);
-    project.addScreenRoute('1 = 1', 'pass');
+    project.createScreenerDocument();
+    project.addScreenRoute('default', { condition: '1 = 1', target: 'pass' });
     try {
-      project.reorderScreenRoute(99, 'up');
+      project.reorderScreenRoute('default', 99, 'up');
       expect.unreachable('should throw');
     } catch (e) {
       expect(e).toBeInstanceOf(HelperError);
@@ -2875,7 +3057,7 @@ describe('bind helpers reject nonexistent target paths', () => {
   it('addValidation throws PATH_NOT_FOUND for screener-only field', () => {
     const project = createProject();
     project.addField('name', 'Name', 'text');
-    project.setScreener(true);
+    project.createScreenerDocument();
     project.addScreenField('age', 'Age', 'integer');
     // 'age' exists only in the screener — not in the main form tree
     expect(() => project.addValidation('age', '$age > 0', 'Must be positive')).toThrow(HelperError);
@@ -2911,23 +3093,18 @@ describe('bind helpers reject nonexistent target paths', () => {
     expect(() => project.readonlyWhen('name', 'true')).not.toThrow();
     expect(() => project.require('name')).not.toThrow();
     expect(() => project.calculate('total', '42')).not.toThrow();
-    expect(() => project.addValidation('name', 'string-length($name) > 0', 'Required')).not.toThrow();
+    expect(() => project.addValidation('name', 'length($name) > 0', 'Required')).not.toThrow();
   });
 });
 
-describe('ROUTE_MIN_COUNT pre-validation', () => {
-  it('removeScreenRoute throws when trying to delete the last route', () => {
+describe('removeScreenRoute allows deleting last route', () => {
+  it('allows deleting the last route in a phase', () => {
     const project = createProject();
-    project.setScreener(true);
-    project.addScreenRoute('1 = 1', 'pass');
-    try {
-      project.removeScreenRoute(0);
-      expect.unreachable('should throw');
-    } catch (e) {
-      expect(e).toBeInstanceOf(HelperError);
-      expect((e as HelperError).code).toBe('ROUTE_MIN_COUNT');
-      expect((e as HelperError).detail?.currentRouteCount).toBe(1);
-    }
+    project.createScreenerDocument();
+    project.addScreenRoute('default', { condition: '1 = 1', target: 'pass' });
+    project.removeScreenRoute('default', 0);
+    const routes = (project.core.state as any).screener.evaluation[0].routes;
+    expect(routes).toHaveLength(0);
   });
 });
 
@@ -3307,5 +3484,40 @@ describe('behavioral page methods', () => {
         expect((e as HelperError).code).toBe('ROUTE_OUT_OF_BOUNDS');
       }
     });
+  });
+});
+
+describe('component-level layout helpers', () => {
+  it('sets a visual condition on a bound component node', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+
+    project.setComponentWhen('name', '$name != ""');
+
+    expect((project.componentFor('name') as any)?.when).toBe('$name != ""');
+  });
+
+  it('sets an accessibility override on a bound component node', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+
+    project.setComponentAccessibility('name', 'description', 'Applicant full name');
+
+    expect((project.componentFor('name') as any)?.accessibility?.description).toBe('Applicant full name');
+  });
+
+  it('adds a new field directly from the Layout workspace and places it on the active page', () => {
+    const project = createProject();
+    const pageId = project.addPage('Basics', undefined, 'basics').createdId!;
+
+    const result = project.addItemToLayout({
+      itemType: 'field',
+      label: 'Email',
+      dataType: 'string',
+    }, pageId);
+
+    expect(result.createdId).toBe('basics.email');
+    expect(project.itemAt('basics.email')?.type).toBe('field');
+    expect(project.componentFor('email')).toBeDefined();
   });
 });

@@ -1,0 +1,178 @@
+rm - generic [ref=e3]:
+
+- banner [ref=e4]:
+  - button "The Stack home" [ref=e5]:
+    - img [ref=e7]
+    - generic [ref=e11]:
+      - generic [ref=e12]: The Stack
+      - generic [ref=e13]: FORMSPEC 1.0 · draft
+  - tablist "Studio workspaces" [ref=e14]:
+    - tab "Editor" [selected] [ref=e15] [cursor=pointer]
+    - tab "Layout" [ref=e16] [cursor=pointer]
+    - tab "Theme" [ref=e17] [cursor=pointer]
+    - tab "Mapping" [ref=e18] [cursor=pointer]
+    - tab "Preview" [ref=e19] [cursor=pointer]
+  - generic [ref=e20]:
+    - button "🔍 Search… ⌘K" [ref=e21]:
+      - generic [ref=e22]: 🔍
+      - generic [ref=e23]: Search…
+      - generic [ref=e24]: ⌘K
+    - button "FORMSPEC 1.0 metadata" [ref=e25]: Metadata
+    - button "Undo" [disabled] [ref=e26]:
+      - img [ref=e27]
+    - button "Redo" [disabled] [ref=e30]:
+      - img [ref=e31]
+    - button "Toggle AI chat" [ref=e34]:
+      - img [ref=e35]
+    - button "Switch to light theme" [ref=e37]:
+      - img [ref=e38]
+    - button "Account menu" [ref=e42]
+- generic [ref=e43]:
+  - complementary "Blueprint sidebar" [ref=e44]:
+    - generic [ref=e46]:
+      - heading "Blueprint" [level=2] [ref=e47]
+      - navigation "Blueprint sections" [ref=e48]:
+        - generic "Item tree defining fields, groups, and display elements" [ref=e49]:
+          - button "Structure" [ref=e50] [cursor=pointer]
+          - generic [ref=e51]: "5"
+        - generic "Pre-qualification gate before the main form" [ref=e52]:
+          - button "Screener" [ref=e53] [cursor=pointer]
+        - generic "Named computed values reusable across expressions" [ref=e58]:
+          - button "Variables" [ref=e59] [cursor=pointer]
+          - generic [ref=e64]: "3"
+        - generic "Secondary data instances for lookups and reference data" [ref=e65]:
+          - button "Data Sources" [ref=e66] [cursor=pointer]
+        - generic "Reusable option lists for choice and multiChoice fields" [ref=e71]:
+          - button "Option Sets" [ref=e72] [cursor=pointer]
+          - generic [ref=e77]: "2"
+        - generic "Form identity, presentation, and behavioral defaults" [ref=e78]:
+          - button "Settings" [ref=e79] [cursor=pointer]
+          - button "Edit settings" [ref=e80]:
+            - img [ref=e81]
+    - generic [ref=e3755]: Not configured
+  - separator
+  - main [ref=e260]:
+    - tabpanel "Editor" [ref=e261]:
+      - generic [ref=e263]:
+        - radiogroup "Editor view" [ref=e265]:
+          - radio "Build" [ref=e266] [cursor=pointer]
+          - radio "Manage" [checked] [ref=e267] [cursor=pointer]: Manage23
+        - generic [ref=e3758]:
+          - navigation "Manage sections" [ref=e3760]:
+            - button "Options" [ref=e3761]
+            - button "Values" [ref=e3762]
+            - button "Data" [ref=e3763]
+            - button "Screener" [ref=e3764]
+            - button "Behaviors" [ref=e3765]
+            - button "Rules" [ref=e3766]
+          - generic [ref=e3767]:
+            - generic [ref=e3768]:
+              - button "Option Sets" [expanded] [ref=e3769] [cursor=pointer]
+              - generic [ref=e3775]
+            - generic [ref=e3779]:
+              - generic [ref=e3780]
+              - generic [ref=e3784] [cursor=pointer]
+              - generic [ref=e3792] [cursor=pointer]
+          - generic [ref=e3799]:
+            - generic [ref=e3800]:
+              - button "Calculated Values" [expanded] [ref=e3801] [cursor=pointer]
+              - generic [ref=e3807]
+            - generic [ref=e3811]:
+              - generic [ref=e3812]
+              - generic [ref=e3815]
+              - generic [ref=e3824]
+              - generic [ref=e3833]
+          - generic [ref=e3842]:
+            - generic [ref=e3843]:
+              - button "Data Sources" [expanded] [ref=e3844] [cursor=pointer]
+              - generic [ref=e3850]
+            - generic [ref=e3854]:
+              - generic [ref=e3855]
+              - generic [ref=e3858]
+          - generic [ref=e3862]:
+            - generic [ref=e3863]:
+              - button "Screener & Routes" [expanded] [ref=e3864] [cursor=pointer]
+              - generic [ref=e3870]
+            - generic [ref=e3874]:
+              - paragraph [ref=e3875]: Answers are used for routing only and are not saved in the form response.
+              - generic [ref=e3876]
+          - generic [ref=e3880]:
+            - generic [ref=e3881]:
+              - button "Field Behaviors" [expanded] [ref=e3882] [cursor=pointer]
+              - generic [ref=e3888]
+            - generic [ref=e3891]:
+              - generic [ref=e3893]
+              - generic [ref=e3906]
+          - generic [ref=e4325]:
+            - generic [ref=e4326]:
+              - button "Validation Rules" [expanded] [ref=e4327] [cursor=pointer]
+              - generic [ref=e4333]
+            - generic [ref=e4337]:
+              - generic [ref=e4338]
+              - generic [ref=e4343] [cursor=pointer]
+              - generic [ref=e4353] [cursor=pointer]
+              - generic [ref=e4363] [cursor=pointer]
+  - separator
+  - complementary "Form health panel" [ref=e1433]:
+    - button "Hide panel" [ref=e1435]:
+      - img [ref=e1436]
+    - generic [ref=e1439]:
+      - generic [ref=e1440]:
+        - heading "Form Health" [level=2] [ref=e1441]
+        - paragraph [ref=e1442]: Is your form ready to publish?
+      - generic [ref=e1443]:
+        - generic [ref=e1444]:
+          - heading "Issues" [level=3] [ref=e1445]
+          - generic [ref=e1446]:
+            - img [ref=e1447]
+            - generic [ref=e1449]: No issues found
+        - generic [ref=e1451]:
+          - generic [ref=e1452]:
+            - generic [ref=e1453]: Response Document
+            - generic [ref=e1454]: 6 errors
+          - generic [ref=e1455]:
+            - generic [ref=e1456]: "{"
+            - generic [ref=e1457]:
+              - generic [ref=e1458]
+              - generic [ref=e1461]
+              - generic [ref=e1464]
+              - generic [ref=e1467]
+              - generic [ref=e1470]
+              - generic [ref=e1707]
+              - generic [ref=e1710]
+            - generic [ref=e1870]: "}"
+- contentinfo [ref=e1871]:
+  - generic [ref=e1873]:
+    - 'generic "Specification version and lifecycle status: draft" [ref=e1874]':
+      - generic [ref=e1877]:
+        - generic [ref=e1878]: FORMSPEC 1.0
+        - generic [ref=e1879]: draft
+    - generic "Page mode, default currency, and density" [ref=e1880]:
+      - generic [ref=e1882]:
+        - generic [ref=e1883]: Mode · Currency
+        - generic [ref=e1884]: wizard · USD
+      - generic [ref=e1886]:
+        - generic [ref=e1887]: Density
+        - generic [ref=e1888]: comfortable
+    - generic "Entity counts across the definition" [ref=e1889]:
+      - generic [ref=e1891]:
+        - generic [ref=e1892]:
+          - generic [ref=e4374]: ▦
+          - generic [ref=e1895]:
+            - generic [ref=e1896]: Fields
+            - generic [ref=e1897]: 24 fields
+        - generic [ref=e1898]:
+          - generic [ref=e4375]: ⇄
+          - generic [ref=e1901]:
+            - generic [ref=e1902]: Binds
+            - generic [ref=e1903]: 15 binds
+        - generic [ref=e1904]:
+          - generic [ref=e4376]: ◯
+          - generic [ref=e1907]:
+            - generic [ref=e1908]: Shapes
+            - generic [ref=e1909]: 3 shapes
+  - generic [ref=e1912]:
+    - link "<https://agency.gov/forms/s8-intake>" [ref=e1913] [cursor=pointer]:
+      - /url: <https://agency.gov/forms/s8-intake>
+    - button "⎘" [ref=e1914]:
+      - generic [ref=e1915]: ⎘

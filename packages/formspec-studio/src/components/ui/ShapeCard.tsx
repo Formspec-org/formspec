@@ -1,4 +1,5 @@
 /** @filedesc Severity-colored card displaying a validation shape rule with name, constraint, and message. */
+import { HighlightedExpression } from './InlineExpression';
 import { Pill } from './Pill';
 
 const severityColors: Record<string, string> = {
@@ -45,8 +46,8 @@ export function ShapeCard({ name, severity, constraint, message, code }: ShapeCa
       )}
       
       {constraint && (
-        <div className="font-mono text-[10px] text-muted bg-subtle px-1.5 py-1 rounded-[2px] break-all">
-          {constraint}
+        <div data-testid="shape-constraint" className="font-mono text-[11px] bg-subtle border border-border/60 px-1.5 py-1 rounded-[2px] break-all">
+          <HighlightedExpression expression={constraint} />
         </div>
       )}
     </div>

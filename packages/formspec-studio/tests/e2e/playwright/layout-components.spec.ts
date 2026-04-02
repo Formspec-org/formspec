@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addFromPalette, importDefinition, waitForApp } from './helpers';
+import { addFromLayoutPalette, addFromPalette, importDefinition, propertiesPanel, switchTab, waitForApp } from './helpers';
 
 const SEED_DEF = {
   $formspec: '1.0',
@@ -12,15 +12,24 @@ const SEED_DEF = {
   ],
 };
 
-/**
- * Right-click the layout container's pill (the component type label area),
- * NOT the children area where child field blocks intercept the event.
+/*
+ * Editor/Layout workspace split:
+ *
+ * The Editor tab is now a pure definition-tree editor (no layout containers,
+ * no wrap-in-Card/Stack/Collapsible context menu, no page tabs).
+ *
+ * Layout containers live in the Layout tab, which renders the component tree.
+ * The Layout canvas uses different test IDs:
+ *   - layout-field-{key} (not field-{key})
+ *   - layout-container-{nodeId} (not [data-item-type="layout"])
+ *   - layout-context-menu / layout-ctx-{action} (not context-menu / ctx-{action})
+ *
+ * The Layout canvas context menu offers: Wrap in Card, Wrap in Stack, Wrap in
+ * Grid, Wrap in Panel, Unwrap, Remove from Tree — but only on existing nodes.
+ *
+ * Layout containers are now added from the Layout workspace chrome via
+ * `layout-add-*` buttons, not the Editor palette.
  */
-async function rightClickLayoutPill(page: import('@playwright/test').Page) {
-  // The pill span is nested inside a flex row div within [data-item-type="layout"]
-  const pill = page.locator('[data-item-type="layout"] span').first();
-  await pill.click({ button: 'right' });
-}
 
 test.describe('Layout Components', () => {
   test.beforeEach(async ({ page }) => {
@@ -29,313 +38,289 @@ test.describe('Layout Components', () => {
     await page.waitForSelector('[data-testid="field-name"]', { timeout: 5000 });
   });
 
-  // ── Adding layout containers from the palette ───────────────────
+  // ── Adding layout containers from the Layout workspace chrome ───────────
 
   test.describe('Add from palette', () => {
     test('adds a Card layout container to the canvas', async ({ page }) => {
-      await addFromPalette(page, 'Card');
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-card"]');
 
-      // Palette closes
-      await expect(page.locator('[data-testid="add-item-palette"]')).not.toBeVisible();
-
-      // A layout block appears on the canvas
-      const layoutBlock = page.locator('[data-item-type="layout"]');
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
       await expect(layoutBlock).toHaveCount(1);
-      await expect(layoutBlock.locator('text=CARD')).toBeVisible();
     });
 
     test('adds a Stack layout container to the canvas', async ({ page }) => {
-      await addFromPalette(page, 'Stack');
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-stack"]');
 
-      const layoutBlock = page.locator('[data-item-type="layout"]');
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Stack' });
       await expect(layoutBlock).toHaveCount(1);
-      await expect(layoutBlock.locator('text=STACK')).toBeVisible();
     });
 
-    test('adds a Columns layout container to the canvas', async ({ page }) => {
-      await addFromPalette(page, 'Columns');
+    test('adds a Grid layout container to the canvas', async ({ page }) => {
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-grid"]');
 
-      const layoutBlock = page.locator('[data-item-type="layout"]');
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Grid' });
       await expect(layoutBlock).toHaveCount(1);
-      await expect(layoutBlock.locator('text=COLUMNS')).toBeVisible();
     });
 
-    test('adds a Collapsible layout container to the canvas', async ({ page }) => {
-      await addFromPalette(page, 'Collapsible');
+    test('adds a Panel layout container to the canvas', async ({ page }) => {
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-panel"]');
 
-      const layoutBlock = page.locator('[data-item-type="layout"]');
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Panel' });
       await expect(layoutBlock).toHaveCount(1);
-      await expect(layoutBlock.locator('text=COLLAPSIBLE')).toBeVisible();
     });
 
     test('auto-selects the new layout container after adding', async ({ page }) => {
-      await addFromPalette(page, 'Card');
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-card"]');
 
-      // Properties panel should show layout properties
-      const properties = page.locator('[data-testid="properties"]');
-      await expect(properties.locator('text=Layout')).toBeVisible();
-      await expect(properties.locator('text=Card')).toBeVisible();
+      const properties = propertiesPanel(page);
+      await expect(properties.getByRole('heading', { name: 'Component' })).toBeVisible();
+      await expect(properties).toContainText('Card');
     });
 
     test('can add multiple layout containers', async ({ page }) => {
-      await addFromPalette(page, 'Card');
-      await expect(page.locator('[data-item-type="layout"]')).toHaveCount(1);
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-card"]');
+      await page.click('[data-testid="layout-add-stack"]');
 
-      await addFromPalette(page, 'Stack');
-      await expect(page.locator('[data-item-type="layout"]')).toHaveCount(2);
+      await expect(page.locator('[data-testid^="layout-container-"]')).toHaveCount(2);
     });
   });
 
   // ── Adding content sub-types from the palette ───────────────────
+  // These are definition-level items and are added via the Editor tab palette.
 
   test.describe('Content sub-types', () => {
     test('adds a Heading display item', async ({ page }) => {
-      await addFromPalette(page, 'Heading');
+      await addFromLayoutPalette(page, 'Heading');
 
-      const display = page.locator('[data-item-type="display"]');
-      await expect(display).toHaveCount(1);
-      await expect(display.locator('text=Heading')).toBeVisible();
+      await expect(page.locator('[data-testid^="layout-display-"]')).toHaveCount(1);
     });
 
     test('adds a Divider display item', async ({ page }) => {
-      await addFromPalette(page, 'Divider');
+      await addFromLayoutPalette(page, 'Divider');
 
-      const display = page.locator('[data-item-type="display"]');
-      await expect(display).toHaveCount(1);
-      await expect(display.locator('text=Divider')).toBeVisible();
+      await expect(page.locator('[data-testid^="layout-display-"]')).toHaveCount(1);
     });
 
-    test('adds a Spacer display item', async ({ page }) => {
-      await addFromPalette(page, 'Spacer');
-
-      const display = page.locator('[data-item-type="display"]');
-      await expect(display).toHaveCount(1);
-      await expect(display.locator('text=Spacer')).toBeVisible();
-    });
+    // Spacer is itemType: 'layout' (Component Spec §5.5) — excluded from
+    // the editor palette which only shows inputs, groups, and display items.
+    // Spacer is added via the Layout workspace, not the Editor palette.
   });
 
   // ── Wrap via context menu ───────────────────────────────────────
+  // SKIPPED: Wrap-in-layout context menu actions (Card, Stack, Collapsible) are
+  // now on the Layout tab's context menu (layout-ctx-wrapInCard, etc.), not the
+  // Editor tab. The Editor context menu only offers Wrap in Group.
+  // These tests need rewriting to navigate to Layout and use layout-ctx-* IDs.
 
   test.describe('Wrap in layout container', () => {
-    test('context menu offers wrap options on a field', async ({ page }) => {
+    test('Editor context menu offers Wrap in Group (not layout wrap options)', async ({ page }) => {
       await page.click('[data-testid="field-name"]', { button: 'right' });
       await expect(page.locator('[data-testid="context-menu"]')).toBeVisible();
 
-      await expect(page.locator('[data-testid="ctx-wrapInCard"]')).toBeVisible();
-      await expect(page.locator('[data-testid="ctx-wrapInStack"]')).toBeVisible();
-      await expect(page.locator('[data-testid="ctx-wrapInCollapsible"]')).toBeVisible();
+      // Editor only has definition-level actions
+      await expect(page.locator('[data-testid="ctx-wrapInGroup"]')).toBeVisible();
+      // Layout wrap actions no longer in Editor
+      await expect(page.locator('[data-testid="ctx-wrapInCard"]')).not.toBeVisible();
+      await expect(page.locator('[data-testid="ctx-wrapInStack"]')).not.toBeVisible();
+    });
+
+    test('Layout context menu offers wrap options on a field', async ({ page }) => {
+      await switchTab(page, 'Layout');
+
+      // Right-click a field in the layout canvas
+      const layoutField = page.locator('[data-testid="layout-field-name"]');
+      await expect(layoutField).toBeVisible({ timeout: 5000 });
+      await layoutField.click({ button: 'right' });
+      await expect(page.locator('[data-testid="layout-context-menu"]')).toBeVisible();
+
+      await expect(page.locator('[data-testid="layout-ctx-wrapInCard"]')).toBeVisible();
+      await expect(page.locator('[data-testid="layout-ctx-wrapInStack"]')).toBeVisible();
     });
 
     test('wrapping a field in a Card creates a layout container around it', async ({ page }) => {
-      await page.click('[data-testid="field-name"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInCard"]');
+      await switchTab(page, 'Layout');
+      const layoutField = page.locator('[data-testid="layout-field-name"]');
+      await layoutField.click({ button: 'right' });
+      await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-      const layoutBlock = page.locator('[data-item-type="layout"]');
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
       await expect(layoutBlock).toHaveCount(1);
-      await expect(layoutBlock.locator('text=CARD')).toBeVisible();
-
-      // The field should still be visible (now inside the Card)
-      await expect(page.locator('[data-testid="field-name"]')).toBeVisible();
+      await expect(layoutBlock.locator('[data-testid="layout-field-name"]')).toBeVisible();
     });
 
     test('wrapping a field in a Stack creates a layout container around it', async ({ page }) => {
-      await page.click('[data-testid="field-email"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInStack"]');
+      await switchTab(page, 'Layout');
+      const layoutField = page.locator('[data-testid="layout-field-name"]');
+      await layoutField.click({ button: 'right' });
+      await page.click('[data-testid="layout-ctx-wrapInStack"]');
 
-      const layoutBlock = page.locator('[data-item-type="layout"]');
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Stack' });
       await expect(layoutBlock).toHaveCount(1);
-      await expect(layoutBlock.locator('text=STACK')).toBeVisible();
-      await expect(page.locator('[data-testid="field-email"]')).toBeVisible();
-    });
-
-    test('wrapping a field in a Collapsible creates a layout container around it', async ({ page }) => {
-      await page.click('[data-testid="field-age"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInCollapsible"]');
-
-      const layoutBlock = page.locator('[data-item-type="layout"]');
-      await expect(layoutBlock).toHaveCount(1);
-      await expect(layoutBlock.locator('text=COLLAPSIBLE')).toBeVisible();
-      await expect(page.locator('[data-testid="field-age"]')).toBeVisible();
+      await expect(layoutBlock.locator('[data-testid="layout-field-name"]')).toBeVisible();
     });
 
     test('the wrapper is auto-selected after wrapping and shows layout properties', async ({ page }) => {
-      await page.click('[data-testid="field-name"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInCard"]');
+      await switchTab(page, 'Layout');
+      const layoutField = page.locator('[data-testid="layout-field-name"]');
+      await layoutField.click({ button: 'right' });
+      await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-      const properties = page.locator('[data-testid="properties"]');
-      await expect(properties.locator('text=Layout')).toBeVisible();
-      await expect(properties.locator('text=Card')).toBeVisible();
-      await expect(properties.locator('text=Unwrap')).toBeVisible();
-      await expect(properties.locator('text=Delete')).toBeVisible();
+      const properties = propertiesPanel(page);
+      await expect(properties.getByRole('heading', { name: 'Component' })).toBeVisible();
+      await expect(properties).toContainText('Card');
     });
   });
 
   // ── Unwrap via context menu ─────────────────────────────────────
+  // SKIPPED: Unwrap is a Layout-tier operation. These tests depended on the old
+  // combined EditorCanvas with layout-aware context menus and properties panel.
 
   test.describe('Unwrap layout container', () => {
-    test('right-clicking a layout container pill shows Unwrap and Delete', async ({ page }) => {
-      // Wrap a field in a Card
-      await page.click('[data-testid="field-name"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInCard"]');
+    test('right-clicking a layout container shows Unwrap and Remove from Tree', async ({ page }) => {
+      await switchTab(page, 'Layout');
+      const layoutField = page.locator('[data-testid="layout-field-name"]');
+      await layoutField.click({ button: 'right' });
+      await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-      // Right-click the layout container's pill (not the child area)
-      await rightClickLayoutPill(page);
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
+      await layoutBlock.getByRole('button', { name: /card/i }).click({ button: 'right' });
 
-      await expect(page.locator('[data-testid="context-menu"]')).toBeVisible();
-      await expect(page.locator('[data-testid="ctx-unwrap"]')).toBeVisible();
-      await expect(page.locator('[data-testid="ctx-deleteLayout"]')).toBeVisible();
+      await expect(page.locator('[data-testid="layout-ctx-unwrap"]')).toBeVisible();
+      await expect(page.locator('[data-testid="layout-ctx-removeFromTree"]')).toBeVisible();
     });
 
     test('unwrapping removes the container and keeps the child', async ({ page }) => {
-      // Wrap a field
-      await page.click('[data-testid="field-name"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInCard"]');
-      await expect(page.locator('[data-item-type="layout"]')).toHaveCount(1);
+      await switchTab(page, 'Layout');
+      const layoutField = page.locator('[data-testid="layout-field-name"]');
+      await layoutField.click({ button: 'right' });
+      await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-      // Use the properties panel Unwrap button (more reliable than context menu)
-      const properties = page.locator('[data-testid="properties"]');
-      await properties.locator('button:has-text("Unwrap")').click();
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
+      await layoutBlock.getByRole('button', { name: /card/i }).click({ button: 'right' });
+      await page.click('[data-testid="layout-ctx-unwrap"]');
 
-      // Layout container is gone
-      await expect(page.locator('[data-item-type="layout"]')).toHaveCount(0);
-
-      // Field is still on the canvas
-      await expect(page.locator('[data-testid="field-name"]')).toBeVisible();
+      await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' })).toHaveCount(0);
+      await expect(page.locator('[data-testid="layout-field-name"]')).toBeVisible();
     });
   });
 
   // ── Layout properties panel ─────────────────────────────────────
+  // SKIPPED: Layout properties panel (ComponentProperties) is only shown when
+  // the Layout tab is active. These tests relied on the old combined workspace.
 
   test.describe('Layout properties panel', () => {
     test('clicking a layout block shows layout properties in the inspector', async ({ page }) => {
-      await addFromPalette(page, 'Card');
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-card"]');
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
+      await layoutBlock.getByRole('button', { name: /card/i }).click();
 
-      // Click it to select (empty Card, so clicking it is unambiguous)
-      const layoutBlock = page.locator('[data-item-type="layout"]');
-      await layoutBlock.click();
-
-      const properties = page.locator('[data-testid="properties"]');
-      await expect(properties.locator('h2:has-text("Layout")')).toBeVisible();
-      await expect(properties.locator('text=Card')).toBeVisible();
-      await expect(properties.locator('text=Node ID')).toBeVisible();
+      const properties = propertiesPanel(page);
+      await expect(properties.getByRole('heading', { name: 'Component' })).toBeVisible();
+      await expect(properties).toContainText('Card');
     });
 
     test('unwrap button in properties panel removes the layout container', async ({ page }) => {
-      // Wrap a field in a Card
-      await page.click('[data-testid="field-email"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInCard"]');
-      await expect(page.locator('[data-item-type="layout"]')).toHaveCount(1);
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-field-name"]', { button: 'right' });
+      await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-      // The wrapper should be auto-selected; click Unwrap in properties
-      const properties = page.locator('[data-testid="properties"]');
-      await properties.locator('button:has-text("Unwrap")').click();
+      await expect(propertiesPanel(page)).toContainText('Card');
+      await page.click('[data-testid="layout-properties-unwrap"]');
 
-      // Layout gone, field preserved
-      await expect(page.locator('[data-item-type="layout"]')).toHaveCount(0);
-      await expect(page.locator('[data-testid="field-email"]')).toBeVisible();
+      await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' })).toHaveCount(0);
+      await expect(page.locator('[data-testid="layout-field-name"]')).toBeVisible();
     });
 
     test('delete button in properties panel removes the layout container', async ({ page }) => {
-      await addFromPalette(page, 'Card');
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-card"]');
+      await expect(propertiesPanel(page)).toContainText('Card');
 
-      // Click the Delete button in properties
-      const properties = page.locator('[data-testid="properties"]');
-      await properties.locator('button:has-text("Delete")').click();
+      await page.click('[data-testid="layout-properties-delete"]');
 
-      await expect(page.locator('[data-item-type="layout"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' })).toHaveCount(0);
     });
 
     test('switching between field and layout selection updates properties panel', async ({ page }) => {
-      await addFromPalette(page, 'Card');
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-add-card"]');
 
-      const properties = page.locator('[data-testid="properties"]');
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
+      await layoutBlock.getByRole('button', { name: /card/i }).click();
+      await expect(propertiesPanel(page)).toContainText('Card');
 
-      // Properties show Layout for the Card
-      await expect(properties.locator('h2:has-text("Layout")')).toBeVisible();
-
-      // Click the name field
-      await page.click('[data-testid="field-name"]');
-
-      // Properties should now show field properties
-      await expect(properties.locator('h2:has-text("Layout")')).not.toBeVisible();
-      await expect(properties.locator('input[value="name"]')).toBeVisible();
-
-      // Click back to layout (empty Card, unambiguous)
-      await page.locator('[data-item-type="layout"]').click();
-      await expect(properties.locator('h2:has-text("Layout")')).toBeVisible();
+      await page.click('[data-testid="layout-field-name"]');
+      await expect(propertiesPanel(page)).toContainText('Full Name');
     });
   });
 
   // ── Palette search ──────────────────────────────────────────────
+  // The editor-scoped palette intentionally filters out layout items.
+  // Search should only surface definition-level items there.
 
   test.describe('Palette search for layout items', () => {
-    test('searching "card" in palette filters to the Card option', async ({ page }) => {
+    test('searching "card" in the editor palette does not surface layout-only options', async ({ page }) => {
       await page.click('[data-testid="add-item"]');
       const palette = page.locator('[data-testid="add-item-palette"]');
       await palette.locator('input').fill('card');
 
-      const grid = palette.locator('[data-testid="add-item-grid"]');
-      const buttons = grid.locator('button');
-      await expect(buttons).toHaveCount(1);
-      await expect(buttons.first()).toContainText('Card');
+      await expect(palette).toContainText('No field types match');
+      await expect(palette.locator('[data-testid="add-item-grid"]')).toHaveCount(0);
     });
 
-    test('searching "heading" in palette filters to the Heading option', async ({ page }) => {
+    test('searching "heading" in the editor palette does not surface display items', async ({ page }) => {
       await page.click('[data-testid="add-item"]');
       const palette = page.locator('[data-testid="add-item-palette"]');
       await palette.locator('input').fill('heading');
 
-      const grid = palette.locator('[data-testid="add-item-grid"]');
-      const buttons = grid.locator('button');
-      await expect(buttons).toHaveCount(1);
-      await expect(buttons.first()).toContainText('Heading');
+      await expect(palette).toContainText('No field types match');
+      await expect(palette.locator('[data-testid="add-item-grid"]')).toHaveCount(0);
     });
   });
 
   // ── Definition items survive layout operations ──────────────────
+  // SKIPPED: These relied on layout operations (add Card, wrap/unwrap) in the
+  // Editor tab. Layout operations are now in the Layout tab with different
+  // selectors. The definition-tree Editor always shows all fields.
 
   test.describe('Definition integrity', () => {
-    test('all definition fields remain on canvas after adding a Card', async ({ page }) => {
-      await addFromPalette(page, 'Card');
-
+    test('all definition fields are visible in the Editor tree', async ({ page }) => {
+      // In the new Editor, all fields are always visible regardless of layout
       await expect(page.locator('[data-testid="field-name"]')).toBeVisible();
       await expect(page.locator('[data-testid="field-email"]')).toBeVisible();
       await expect(page.locator('[data-testid="field-age"]')).toBeVisible();
     });
 
     test('wrapping and unwrapping preserves the field', async ({ page }) => {
-      // Wrap
-      await page.click('[data-testid="field-name"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInCard"]');
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-field-name"]', { button: 'right' });
+      await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-      // Verify field is inside Card
-      const layoutBlock = page.locator('[data-item-type="layout"]');
-      await expect(layoutBlock.locator('[data-testid="field-name"]')).toBeVisible();
+      const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
+      await layoutBlock.getByRole('button', { name: /card/i }).click({ button: 'right' });
+      await page.click('[data-testid="layout-ctx-unwrap"]');
 
-      // Unwrap via properties panel (wrapper is auto-selected)
-      const properties = page.locator('[data-testid="properties"]');
-      await properties.locator('button:has-text("Unwrap")').click();
-
-      // Field still on canvas, no layout containers
+      await switchTab(page, 'Editor');
       await expect(page.locator('[data-testid="field-name"]')).toBeVisible();
-      await expect(page.locator('[data-item-type="layout"]')).toHaveCount(0);
     });
 
     test('adding a new field after wrapping does not break the wrapper', async ({ page }) => {
-      // Wrap name field
-      await page.click('[data-testid="field-name"]', { button: 'right' });
-      await page.click('[data-testid="ctx-wrapInCard"]');
+      await switchTab(page, 'Layout');
+      await page.click('[data-testid="layout-field-name"]', { button: 'right' });
+      await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-      // Add a new Integer field via palette
-      await addFromPalette(page, 'Integer');
+      await switchTab(page, 'Editor');
+      await addFromPalette(page, 'Text');
 
-      // The Card should still exist with the wrapped field inside
-      const layoutBlock = page.locator('[data-item-type="layout"]');
-      await expect(layoutBlock).toHaveCount(1);
-      await expect(layoutBlock.locator('[data-testid="field-name"]')).toBeVisible();
-
-      // The new field should be at the root (not inside the Card)
-      await expect(page.locator('[data-testid^="field-"]')).toHaveCount(4); // name, email, age, + new
+      await switchTab(page, 'Layout');
+      await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' })).toHaveCount(1);
     });
   });
 });

@@ -19,6 +19,46 @@ function renderFormspec() {
     return { element: el, engine: el.getEngine() };
 }
 
+describe('repeat instance accessibility and styling parity', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('each repeat instance has role="group" and aria-label with index', () => {
+        const { element, engine } = renderFormspec();
+
+        engine.addRepeatInstance('items');
+        engine.addRepeatInstance('items');
+
+        const instances = element.querySelectorAll('.formspec-repeat-instance');
+        expect(instances).toHaveLength(3);
+
+        // Each instance should have role="group" for accessibility
+        expect(instances[0].getAttribute('role')).toBe('group');
+        expect(instances[1].getAttribute('role')).toBe('group');
+        expect(instances[2].getAttribute('role')).toBe('group');
+
+        // Each instance should have an aria-label like "Items 1 of 3"
+        expect(instances[0].getAttribute('aria-label')).toBe('Items 1 of 3');
+        expect(instances[1].getAttribute('aria-label')).toBe('Items 2 of 3');
+        expect(instances[2].getAttribute('aria-label')).toBe('Items 3 of 3');
+
+        const repeatContainer = element.querySelector('.formspec-repeat') as HTMLElement;
+        expect(repeatContainer).toBeTruthy();
+        expect(repeatContainer.querySelector('.formspec-repeat-list')).toBeTruthy();
+        expect(repeatContainer.querySelector('.formspec-repeat-add')).toBeTruthy();
+        expect(repeatContainer.querySelector('.formspec-sr-only[aria-live="polite"]')).toBeTruthy();
+    });
+
+    it('repeat instance is not display:contents (has box model)', () => {
+        const { element } = renderFormspec();
+        const instance = element.querySelector('.formspec-repeat-instance') as HTMLElement;
+        expect(instance).toBeTruthy();
+        // display:contents removes the box — should NOT be used
+        expect(getComputedStyle(instance).display).not.toBe('contents');
+    });
+});
+
 describe('repeat DOM re-keying after non-tail deletion', () => {
     afterEach(() => {
         document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
@@ -47,5 +87,12 @@ describe('repeat DOM re-keying after non-tail deletion', () => {
         expect(inputsAfter[1].getAttribute('name')).toContain('items[1].name');
         expect(inputsAfter[0].value).toBe('Alice');
         expect(inputsAfter[1].value).toBe('Charlie');
+    });
+
+    it('adds accessible labels to remove buttons', () => {
+        const { element } = renderFormspec();
+        const removeButton = element.querySelector('.formspec-repeat-remove') as HTMLButtonElement;
+        expect(removeButton).toBeTruthy();
+        expect(removeButton.getAttribute('aria-label')).toBe('Remove Items 1');
     });
 });

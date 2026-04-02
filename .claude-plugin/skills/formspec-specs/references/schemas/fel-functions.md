@@ -1,6 +1,6 @@
 # FEL Functions Schema Reference Map
 
-> schemas/fel-functions.schema.json -- 983 lines -- FEL standard library function catalog
+> schemas/fel-functions.schema.json -- 994 lines -- FEL standard library function catalog
 
 ## Overview
 
@@ -10,15 +10,17 @@ This schema defines the normative catalog of all built-in functions in FEL (Form
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `version` | `const "1.0"` | No (implicit) | Fixed version identifier for this catalog edition. |
+| `$formspecFelFunctions` | `string`, const `"1.0"` | **Yes** | FEL function catalog specification version. MUST be `"1.0"`. Has `x-lm.critical: true`. |
+| `version` | `const "1.0"` | No | Fixed version identifier for this catalog edition. |
 | `functions` | `array` of `FunctionEntry` | No | Ordered list of all built-in FEL functions with full metadata. |
 
 - **`$schema`**: `https://json-schema.org/draft/2020-12/schema`
 - **`$id`**: `https://formspec.org/specs/fel/functions/1.0`
 - **`title`**: "FEL Function Catalog"
 - **`type`**: `object`
+- **`required`**: `["$formspecFelFunctions"]`
 
-Note: The document itself instantiates `version` and `functions` at the top level (lines 105-982), making it both a schema and a data document.
+Note: The document itself instantiates `version` and `functions` at the top level (lines 116-993), making it both a schema and a data document.
 
 ## Function Catalog
 
@@ -186,6 +188,10 @@ These functions operate within repeatable group contexts. They access sibling fi
 | `result` | `any` | Yes | Expected result value. |
 | `note` | `string` | No | Additional explanation. |
 
+## Required Fields
+
+- `$formspecFelFunctions` (top-level) -- must be the string `"1.0"`
+
 ## Enumerations
 
 ### FELType enum
@@ -218,10 +224,12 @@ The schema itself does not define an explicit extension mechanism for custom fun
 - **`sinceVersion`** (default `"1.0"`) provides a versioning mechanism for introducing new functions in future catalog versions.
 - **`category` is a closed enum**: adding a new function category requires updating the enum in the schema. Current categories: `aggregate`, `string`, `numeric`, `date`, `logical`, `type`, `money`, `mip`, `repeat`.
 - **Custom functions are not specified here**: the FEL runtime supports function registration at the implementation level (see `FormEngine` in the TS engine), but this schema strictly catalogs the built-in standard library. Custom/extension functions are defined through the extension registry system (`schemas/registry.schema.json`), not through this catalog.
+- **`x-lm` annotations**: The `$formspecFelFunctions` property carries `x-lm.critical: true` and `x-lm.intent`, used by LLM-facing tooling to flag critical version pins.
 
 ## Validation Constraints
 
 ### Structural constraints
+- Top-level object requires `$formspecFelFunctions` (the version pin, const `"1.0"`).
 - `FunctionEntry` requires all of: `name`, `category`, `parameters`, `returns`, `description`.
 - `Parameter` requires: `name`, `type`.
 - Both `FunctionEntry` and `Parameter` set `additionalProperties: false` -- no extra properties allowed.

@@ -115,6 +115,20 @@ export function wasmEvalFELWithContext(expression: string, context: WasmFelConte
     return JSON.parse(resultJson);
 }
 
+/** Locale §3.3.1 — true if the expression AST is only literals and unary `not` / `!` / `-`. */
+export function wasmFelExprIsInterpolationStaticLiteral(expression: string): boolean {
+    return wasm().felExprIsInterpolationStaticLiteral(expression);
+}
+
+/**
+ * Locale §3.3.1 rule 2 — read and reset the error-diagnostics flag.
+ * Returns `true` if the most recent WASM FEL eval recorded error-severity
+ * diagnostics. The flag is reset to `false` after reading.
+ */
+export function wasmConsumeLastEvalErrorDiagnostics(): boolean {
+    return wasm().consumeLastEvalErrorDiagnostics();
+}
+
 /** Normalize FEL source before evaluation (bare `$`, repeat qualifiers, repeat aliases). */
 export function wasmPrepareFelExpression(optionsJson: string): string {
     return wasm().prepareFelExpression(optionsJson);
@@ -220,6 +234,21 @@ export function wasmEvaluateScreener(
     const resultJson = wasm().evaluateScreener(
         JSON.stringify(definition),
         JSON.stringify(answers),
+    );
+    return JSON.parse(resultJson);
+}
+
+/** Evaluate a standalone Screener Document against respondent inputs.
+ *  Returns a Determination Record (always non-null). */
+export function wasmEvaluateScreenerDocument(
+    screener: unknown,
+    answers: Record<string, unknown>,
+    context?: Record<string, unknown>,
+): import('@formspec-org/types').DeterminationRecord {
+    const resultJson = wasm().evaluateScreenerDocument(
+        JSON.stringify(screener),
+        JSON.stringify(answers),
+        context ? JSON.stringify(context) : undefined,
     );
     return JSON.parse(resultJson);
 }

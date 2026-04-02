@@ -192,6 +192,27 @@ describe('bindSharedFieldEffects with FieldViewModel', () => {
         disposers.forEach(d => d());
     });
 
+    it('shows validation error from VM firstError after submit even when untouched', () => {
+        const ctx = makeMinimalBehaviorContext();
+        const { vm, setFirstError } = mockFieldVM();
+        const refs = makeFieldRefs();
+
+        const disposers = bindSharedFieldEffects(ctx, 'test', vm, refs);
+
+        setFirstError('Required field');
+        expect(refs.error.textContent).toBe('');
+
+        ctx.latestSubmitDetailSignal.value = {
+            validationReport: {
+                results: [{ severity: 'error', path: 'test', message: 'Required field' }],
+            },
+        };
+        expect(refs.error.textContent).toBe('Required field');
+        expect(refs.control.getAttribute('aria-invalid')).toBe('true');
+
+        disposers.forEach(d => d());
+    });
+
     it('returns dispose functions that clean up effects', () => {
         const ctx = makeMinimalBehaviorContext();
         const { vm, setLabel } = mockFieldVM({ label: 'A' });

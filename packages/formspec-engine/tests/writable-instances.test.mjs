@@ -179,6 +179,122 @@ test('calculate bind targeting readonly instance throws at init', () => {
   assert.throws(() => new FormEngine(def), /readonly/);
 });
 
+test('non-fetchable source (formspec-fn:) does not call fetch or log errors', async () => {
+  const errors = [];
+  const origError = console.error;
+  console.error = (...args) => errors.push(args);
+
+  const origFetch = globalThis.fetch;
+  let fetchCalled = false;
+  globalThis.fetch = async () => { fetchCalled = true; return { ok: false, status: 404, json: async () => ({}) }; };
+
+  try {
+    const def = {
+      $formspec: '1.0',
+      url: 'https://test.example/form',
+      version: '1.0.0',
+      status: 'active',
+      title: 'Test',
+      name: 'test',
+      instances: {
+        rates: {
+          source: 'formspec-fn:lookupRates',
+          readonly: true,
+          data: { usd: 1.0 },
+        },
+      },
+      items: [],
+      binds: [],
+    };
+
+    const engine = new FormEngine(def);
+    await engine.waitForInstanceSources();
+
+    // Host-provided source: fetch must NOT be called
+    assert.equal(fetchCalled, false, 'fetch should not be called for formspec-fn: sources');
+    // No console.error from the engine
+    const instanceErrors = errors.filter(a => typeof a[0] === 'string' && a[0].includes('instance source'));
+    assert.equal(instanceErrors.length, 0, 'no instance source errors should be logged');
+    // Fallback data from definition is still available
+    assert.equal(engine.getInstanceData('rates', 'usd'), 1.0);
+  } finally {
+    globalThis.fetch = origFetch;
+    console.error = origError;
+  }
+});
+
+test('absolute-path source (/) triggers fetch', async () => {
+  const origFetch = globalThis.fetch;
+  let fetchedUrl = null;
+  globalThis.fetch = async (url) => {
+    fetchedUrl = url;
+    return { ok: true, json: async () => ({ val: 42 }) };
+  };
+
+  try {
+    const def = {
+      $formspec: '1.0',
+      url: 'https://test.example/form',
+      version: '1.0.0',
+      status: 'active',
+      title: 'Test',
+      name: 'test',
+      instances: {
+        data: {
+          source: '/examples/data.json',
+          readonly: true,
+        },
+      },
+      items: [],
+      binds: [],
+    };
+
+    const engine = new FormEngine(def);
+    await engine.waitForInstanceSources();
+
+    assert.equal(fetchedUrl, '/examples/data.json');
+    assert.equal(engine.getInstanceData('data', 'val'), 42);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
+test('https source triggers fetch', async () => {
+  const origFetch = globalThis.fetch;
+  let fetchedUrl = null;
+  globalThis.fetch = async (url) => {
+    fetchedUrl = url;
+    return { ok: true, json: async () => ({ val: 99 }) };
+  };
+
+  try {
+    const def = {
+      $formspec: '1.0',
+      url: 'https://test.example/form',
+      version: '1.0.0',
+      status: 'active',
+      title: 'Test',
+      name: 'test',
+      instances: {
+        remote: {
+          source: 'https://api.example.com/data',
+          readonly: true,
+        },
+      },
+      items: [],
+      binds: [],
+    };
+
+    const engine = new FormEngine(def);
+    await engine.waitForInstanceSources();
+
+    assert.equal(fetchedUrl, 'https://api.example.com/data');
+    assert.equal(engine.getInstanceData('remote', 'val'), 99);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
 test('writable instance calculate bind updates on field change', async () => {
   const def = {
     $formspec: '1.0',

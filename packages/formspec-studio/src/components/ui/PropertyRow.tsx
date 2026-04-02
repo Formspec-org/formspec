@@ -15,13 +15,13 @@ interface PropertyRowProps {
  */
 export function PropertyRow({ label, children, color, help }: PropertyRowProps) {
   const labelContent = (
-    <span className="font-mono text-[11px] text-muted shrink-0 uppercase tracking-tight">
+    <span className="text-[12px] font-medium text-muted shrink-0">
       {label}
     </span>
   );
 
   return (
-    <div className="flex justify-between items-baseline gap-4 py-0.5 border-b border-border/50 last:border-0 transition-colors hover:bg-subtle/30">
+    <div className="flex items-start justify-between gap-4 rounded-[10px] px-2 py-2 transition-colors hover:bg-surface/80">
       {help ? (
         <HelpTip text={help}>{labelContent}</HelpTip>
       ) : (

@@ -46,6 +46,9 @@ pub enum Expr {
     UnaryOp {
         op: UnaryOp,
         operand: Box<Expr>,
+        /// `true` when the source used `!` instead of keyword `not`.
+        /// Only meaningful when `op` is `Not`; always `false` for `Neg`.
+        bang: bool,
     },
     BinaryOp {
         op: BinaryOp,

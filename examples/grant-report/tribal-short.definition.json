@@ -273,63 +273,63 @@
         {
             "path": "expenditures.employment",
             "relevant": "selected($expenditures.applicableTopics, 'employment')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },
         {
             "path": "expenditures.childcare",
             "relevant": "selected($expenditures.applicableTopics, 'childcare')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },
         {
             "path": "expenditures.assetBuilding",
             "relevant": "selected($expenditures.applicableTopics, 'assetBuilding')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },
         {
             "path": "expenditures.housing",
             "relevant": "selected($expenditures.applicableTopics, 'housing')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },
         {
             "path": "expenditures.health",
             "relevant": "selected($expenditures.applicableTopics, 'health')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },
         {
             "path": "expenditures.civic",
             "relevant": "selected($expenditures.applicableTopics, 'civic')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },
         {
             "path": "expenditures.transportation",
             "relevant": "selected($expenditures.applicableTopics, 'transportation')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },
         {
             "path": "expenditures.partnerships",
             "relevant": "selected($expenditures.applicableTopics, 'partnerships')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },
         {
             "path": "expenditures.other",
             "relevant": "selected($expenditures.applicableTopics, 'other')",
-            "default": { "amount": "0", "currency": "USD" },
+            "default": { "amount": 0, "currency": "USD" },
             "constraint": "moneyAmount($) >= 0",
             "constraintMessage": "Expenditure amount cannot be negative"
         },

@@ -56,6 +56,10 @@ export function useTabs(ctx: BehaviorContext, comp: any): TabsBehavior {
                     b.setAttribute('aria-selected', String(isActive));
                     b.setAttribute('tabindex', isActive ? '0' : '-1');
                 });
+
+                if (refs.onTabChange) {
+                    refs.onTabChange(active);
+                }
             }));
 
             // Wire button clicks

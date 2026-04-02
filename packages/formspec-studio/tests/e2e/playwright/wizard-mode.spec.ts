@@ -5,7 +5,7 @@ const WIZARD_DEF = {
   $formspec: '1.0',
   url: 'urn:wizard-preview',
   version: '1.0.0',
-  presentation: { pageMode: 'wizard' },
+  formPresentation: { pageMode: 'wizard' },
   items: [
     {
       key: 'page1',
@@ -81,59 +81,40 @@ const PAGED_DEF = {
 };
 
 // BUG #10 — Inactive tabs hide labels
-// GroupTabs renders a label span only when `isActive`. Inactive tabs show
-// nothing but a numbered circle; clicking them is difficult and the labels
-// are completely hidden from the user.
+// RESOLVED by Editor/Layout split: The Editor no longer has page tabs.
+// Wizard step navigation is now in the Layout tab (LayoutStepNav component).
+// The old GroupTabs component that had this bug has been removed.
 test.describe('Bug #10 — inactive page tabs show label text', () => {
-  test.beforeEach(async ({ page }) => {
+  test('every page tab shows its label text, not just the active one [BUG-010]', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, PAGED_DEF);
-    await page.waitForSelector('[role="tablist"]', { timeout: 5000 });
-  });
+    await switchTab(page, 'Layout');
 
-  test('every page tab shows its label text, not just the active one [BUG-010]', async ({ page }) => {
-    const canvas = page.locator('[data-testid="workspace-Editor"]');
-    const tablist = canvas.locator('[role="tablist"]');
-
-    // There should be 3 tabs
-    const tabs = tablist.locator('[role="tab"]');
-    await expect(tabs).toHaveCount(3);
-
-    // All three labels should be visible inside their tab buttons.
-    // BUG: only the active tab (tab 0) renders a label span — tabs 1 and 2 are
-    // just numbered circles with no text.
-    await expect(tablist).toContainText('Applicant Info');
-    await expect(tablist).toContainText('Household Details');
-    await expect(tablist).toContainText('Review');
+    const nav = page.locator('[data-testid="page-nav"]');
+    await expect(nav.getByRole('button', { name: /Applicant Info/i })).toBeVisible();
+    await expect(nav.getByRole('button', { name: /Household Details/i })).toBeVisible();
+    await expect(nav.getByRole('button', { name: /Review/i })).toBeVisible();
   });
 
   test('inactive tab label is visible before clicking it [BUG-010]', async ({ page }) => {
-    const canvas = page.locator('[data-testid="workspace-Editor"]');
-    const tablist = canvas.locator('[role="tablist"]');
-    const tabs = tablist.locator('[role="tab"]');
+    await waitForApp(page);
+    await importDefinition(page, PAGED_DEF);
+    await switchTab(page, 'Layout');
 
-    // The second tab (index 1) starts as inactive.
-    const secondTab = tabs.nth(1);
-    await expect(secondTab).not.toHaveAttribute('aria-selected', 'true');
-
-    // BUG: the label span is wrapped in `{isActive && <span>…</span>}`, so it
-    // is absent from the DOM for inactive tabs.
-    await expect(secondTab).toContainText('Household Details');
+    const inactiveTab = page.locator('[data-testid="page-nav"]').getByRole('button', { name: /Household Details/i });
+    await expect(inactiveTab).toBeVisible();
+    await expect(inactiveTab).not.toHaveAttribute('aria-current', 'page');
   });
 });
 
-// BUG #11 — Page mode hides root-level non-group items
-// EditorCanvas computes `displayItems = hasPaged ? [topLevelGroups[activePageIndex]] : items`.
-// Any root-level non-group items (type field or display) in a paged definition are
-// silently omitted from `topLevelGroups` and therefore never appear in the canvas.
+// BUG #11 — Editor definition tree omits display-tier rows (they are authored in Layout).
 test.describe('Bug #11 — root-level non-group items visible in paged editor', () => {
-  test('root-level field outside groups is visible in paged editor canvas [BUG-011]', async ({ page }) => {
+  test('root-level field and group visible in Editor; display rows are layout-only [BUG-011]', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, {
       $formspec: '1.0',
       formPresentation: { pageMode: 'wizard' },
       items: [
-        // A root-level field that is NOT inside any group
         { key: 'introText', type: 'display', label: 'Introduction' },
         {
           key: 'pageOne',
@@ -144,54 +125,40 @@ test.describe('Bug #11 — root-level non-group items visible in paged editor', 
       ],
     });
 
-    // The display item at the root should be rendered in the editor canvas.
-    // BUG: topLevelGroups = items.filter(i => i.type === 'group') excludes it,
-    // so displayItems never includes the root-level display block.
-    const canvas = page.locator('[data-testid="workspace-Editor"]');
-    await expect(canvas.locator('[data-testid="display-introText"]')).toBeVisible({ timeout: 5000 });
+    const editor = page.locator('[data-testid="workspace-Editor"]');
+    await expect(editor.locator('[data-testid="group-pageOne"]')).toBeVisible();
+    await expect(editor.locator('[data-testid="field-myField"]')).toBeVisible();
+    await expect(editor.locator('[data-testid="display-introText"]')).toHaveCount(0);
   });
 });
 
 // BUG #44 — Page tabs cannot be renamed via double-click
-// GroupTabs renders simple <button> elements with no double-click handler.
-// Double-clicking a tab should put the label into an inline edit mode, but
-// the current implementation has no such affordance.
+// RESOLVED by Editor/Layout split: The Editor no longer has page tabs.
+// Page renaming is now done in the Layout tab via the page card title editor.
 test.describe('Bug #44 — double-click page tab opens inline label editor', () => {
-  test.beforeEach(async ({ page }) => {
+  test('double-clicking active tab label opens an inline text input [BUG-044]', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, PAGED_DEF);
-    await page.waitForSelector('[role="tablist"]', { timeout: 5000 });
-  });
+    await switchTab(page, 'Layout');
 
-  test('double-clicking active tab label opens an inline text input [BUG-044]', async ({ page }) => {
-    const canvas = page.locator('[data-testid="workspace-Editor"]');
-    const tablist = canvas.locator('[role="tablist"]');
-    const firstTab = tablist.locator('[role="tab"]').first();
-
-    // Double-click the active tab to enter rename mode.
-    // BUG: GroupTabs has no onDoubleClick handler — the tab stays as a plain button.
-    await firstTab.dblclick();
-
-    // After double-click, an <input> element should appear inside or near the tab.
-    await expect(tablist.locator('input')).toBeVisible({ timeout: 2000 });
+    await page.locator('[data-testid="page-nav"]').getByRole('button', { name: /Applicant Info/i }).dblclick();
+    await expect(page.locator('[data-testid="page-nav-rename-input"]')).toBeVisible();
   });
 
   test('editing the label in the inline input renames the page group [BUG-044]', async ({ page }) => {
-    const canvas = page.locator('[data-testid="workspace-Editor"]');
-    const tablist = canvas.locator('[role="tablist"]');
-    const firstTab = tablist.locator('[role="tab"]').first();
+    await waitForApp(page);
+    await importDefinition(page, PAGED_DEF);
+    await switchTab(page, 'Layout');
 
-    await firstTab.dblclick();
+    await page.locator('[data-testid="page-nav"]').getByRole('button', { name: /Applicant Info/i }).dblclick();
+    const renameInput = page.locator('[data-testid="page-nav-rename-input"]');
+    await renameInput.fill('Applicant Basics');
+    await renameInput.press('Enter');
 
-    const labelInput = tablist.locator('input').first();
-    await expect(labelInput).toBeVisible({ timeout: 2000 });
+    await expect(page.locator('[data-testid="page-nav"]').getByRole('button', { name: /Applicant Basics/i })).toBeVisible();
 
-    // Clear and type a new label
-    await labelInput.fill('Personal Details');
-    await labelInput.press('Enter');
-
-    // The tab should now display the new label
-    await expect(firstTab).toContainText('Personal Details');
+    await switchTab(page, 'Editor');
+    await expect(page.locator('[data-testid="group-page1"]')).toContainText('Applicant Basics');
   });
 });
 
@@ -215,7 +182,7 @@ test.describe('Bug #73 — adding first item to empty paged definition does not 
     await page.waitForSelector('[data-testid="add-item"]', { timeout: 5000 });
     await page.click('[data-testid="add-item"]');
 
-    const searchInput = page.locator('input[placeholder="Search types..."]');
+    const searchInput = page.locator('input[placeholder="Search inputs and groups..."]');
     await searchInput.fill('text');
 
     // BUG: clicking "Text" dispatches definition.addItem with no parentPath
@@ -230,84 +197,62 @@ test.describe('Bug #73 — adding first item to empty paged definition does not 
 });
 
 // BUG #74 — Added page selects wrong activeGroupKey after key collision rename
-// StructureTree.handleAddPage generates key = `page${n}` (e.g. "page1"), then
-// dispatches definition.addItem. When "page1" already exists, the handler
-// renames it to "page1_1". But handleAddPage schedules
-// `setActiveGroupKey("page1")` via requestAnimationFrame — pointing to the
-// ORIGINAL (colliding) key that was renamed, not the actual inserted key.
+// RESOLVED by Editor/Layout split: The Editor no longer has page tabs or
+// activeGroupKey. Page management is handled in the Layout tab.
 test.describe('Bug #74 — new page tab is selected after key collision rename', () => {
-  test('activeGroupKey follows the actual inserted key when a collision rename occurs [BUG-074]', async ({ page }) => {
+  test('new Layout page becomes active even when its generated group key collides [BUG-074]', async ({ page }) => {
     await waitForApp(page);
-    // Seed a definition that already has "page1" so the next "Add Page" click
-    // will produce a collision and the handler will rename it to "page1_1".
     await importDefinition(page, {
       $formspec: '1.0',
       formPresentation: { pageMode: 'wizard' },
       items: [
         {
-          key: 'page1',
+          key: 'page_1',
           type: 'group',
-          label: 'Existing Page',
-          children: [],
+          label: 'Page 1',
+          children: [{ key: 'first', type: 'field', dataType: 'string', label: 'First' }],
+        },
+        {
+          key: 'page_3',
+          type: 'group',
+          label: 'Page 3',
+          children: [{ key: 'third', type: 'field', dataType: 'string', label: 'Third' }],
         },
       ],
     });
+    await switchTab(page, 'Layout');
 
-    await page.waitForSelector('[role="tablist"]', { timeout: 5000 });
+    await page.click('[data-testid="layout-add-page"]');
 
-    // Click the "Add wizard page" button in the Structure Tree sidebar
-    const sidebar = page.locator('aside').first();
-    await sidebar.getByTitle('Add page').click();
+    const pageTabs = page.locator('[data-testid^="page-nav-tab-"]');
+    await expect(pageTabs).toHaveCount(3);
+    await expect(pageTabs.nth(2)).toHaveAttribute('aria-current', 'page');
 
-    // After insertion, the newly added page should be the active one.
-    // BUG: setActiveGroupKey is called with "page1" (the pre-rename key), but
-    // the actual inserted key is "page1_1", so activeGroupKey stays at the OLD
-    // page rather than jumping to the new one.
+    await page.click('[data-testid="layout-add-item"]');
+    await page.getByRole('button', { name: 'Text Short text — names,' }).click();
+    await expect(page.locator('[data-testid="layout-field-text"]')).toBeVisible();
 
-    // Wait for the new tab to appear
-    const canvas = page.locator('[data-testid="workspace-Editor"]');
-    const tablist = canvas.locator('[role="tablist"]');
-    await expect(tablist.locator('[role="tab"]')).toHaveCount(2, { timeout: 3000 });
-
-    // The newly inserted page tab should be selected (aria-selected="true")
-    const lastTab = tablist.locator('[role="tab"]').last();
-    await expect(lastTab).toHaveAttribute('aria-selected', 'true');
+    await pageTabs.nth(0).click();
+    await expect(page.locator('[data-testid="layout-field-text"]')).toHaveCount(0);
   });
 });
 
 // BUG #75 — Active-page normalization requires StructureTree to be mounted
-// The auto-select-first-page logic lives in a useEffect inside StructureTree.
-// When the user is on a blueprint sidebar section other than "Structure" (e.g.
-// "Settings"), StructureTree is not mounted, so its useEffect never fires.
-// Loading a paged definition with the Settings sidebar open leaves
-// activeGroupKey as null, causing the editor to show no page content.
+// RESOLVED by Editor/Layout split: The Editor no longer has page tabs or
+// activeGroupKey. It shows ALL items in a flat tree regardless of page mode.
+// Page management is handled in the Layout tab.
 test.describe('Bug #75 — first page tab auto-selected even when StructureTree not mounted', () => {
-  test('first page is active when a paged definition is loaded with Settings sidebar open [BUG-075]', async ({ page }) => {
+  test('Editor shows all paged items regardless of sidebar section [BUG-075]', async ({ page }) => {
     await waitForApp(page);
 
     // Switch the sidebar to "Settings" so StructureTree is NOT rendered
     await page.click('[data-testid="blueprint-section-Settings"]');
-    await page.waitForSelector('[data-testid="blueprint-section-Settings"].active, [data-testid="blueprint-section-Settings"][aria-selected="true"], [data-testid="blueprint-section-Settings"][data-active="true"]', {
-      timeout: 3000,
-    }).catch(() => {
-      // Selector may not use those exact attributes; continue — the click is enough
-    });
 
-    // Now load a paged definition while Settings is active (StructureTree not mounted)
+    // Load a paged definition while Settings is active
     await importDefinition(page, PAGED_DEF);
 
-    // The editor canvas should show a tablist
+    // The Editor tree shows ALL items flat — no page filtering
     const canvas = page.locator('[data-testid="workspace-Editor"]');
-    await expect(canvas.locator('[role="tablist"]')).toBeVisible({ timeout: 5000 });
-
-    // The first page tab should be auto-selected
-    // BUG: activeGroupKey is null because StructureTree's useEffect never ran.
-    // The tablist shows, but no tab has aria-selected="true", and the canvas
-    // shows no items for the "current" page.
-    const firstTab = canvas.locator('[role="tab"]').first();
-    await expect(firstTab).toHaveAttribute('aria-selected', 'true');
-
-    // At least one item from the first page should be visible in the canvas
-    await expect(canvas.locator('[data-testid="field-name"]')).toBeVisible({ timeout: 3000 });
+    await expect(canvas.locator('[data-testid="field-name"]')).toBeVisible({ timeout: 5000 });
   });
 });

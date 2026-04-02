@@ -183,7 +183,7 @@ H2s are benefit-first: "Everything complex forms require — nothing bolted on."
 
 ## Writing Process
 
-1. **Read the source material.** Before writing about any feature, read the relevant spec files, implementation code, ADRs, and existing blog posts. Use Grep and Glob to find related content. Ground every claim in the actual codebase.
+1. **Read the source material.** Start with `filemap.json` at the project root to orient yourself — it maps every source file to a one-line description. Then read the relevant spec files, implementation code, ADRs, and existing blog posts. Use Grep and Glob to find related content. Ground every claim in the actual codebase.
 
 2. **Identify the audience.** Who is this content for? Adjust depth and terminology accordingly — but never dumb down.
 
@@ -222,3 +222,7 @@ Blog posts live in `site/src/content/blog/` as markdown files with frontmatter. 
 - `ontology-layer` — Semantic concept bindings for AI data engineering
 - `references-plus-ontology` — Dual context layer, field-level documentation + AI grounding
 - `locale-sidecar` — Translation without breaking form logic, fallback cascade
+
+## Shared Advice
+
+Before starting work, scan `.claude/agent-memory/shared/ADVICE.md` for sections relevant to your task. Before wrapping up, use `/leave-advice` if you learned something worth sharing.

@@ -1,4 +1,4 @@
-/** @filedesc Shared DOM construction for USWDS field adapters — root, label, hint, error, describedBy. */
+/** @filedesc Shared DOM construction for USWDS field adapters — root, label, hint, error. */
 import type { FieldBehavior } from '@formspec-org/webcomponent';
 import { el, applyCascadeClasses, applyCascadeAccessibility } from '../helpers';
 
@@ -7,21 +7,22 @@ export interface USWDSFieldDOM {
     label: HTMLElement;
     hint: HTMLElement | undefined;
     error: HTMLElement;
-    /** Space-separated id string for aria-describedby (hint + error). */
-    describedBy: string;
+    /** Initial space-separated ID string for aria-describedby. */
+    initialDescribedBy: string;
 }
 
 export interface USWDSFieldOptions {
     /** Set false for components where label doesn't target a specific input (e.g. rating, signature). Default true. */
     labelFor?: boolean;
+    /** When true, use <fieldset class="usa-fieldset"> for root and <legend class="usa-legend"> for label. */
+    asGroup?: boolean;
 }
 
 /**
- * Create the common USWDS field wrapper: usa-form-group root, usa-label,
- * usa-hint (if present), usa-error-message, and describedBy string.
+ * Create the common USWDS field wrapper: usa-form-group (or usa-fieldset) root,
+ * usa-label (or usa-legend), optional description, usa-hint (if present), then usa-error-message.
  *
- * The error element is NOT appended to root — adapters insert it after
- * their control element.
+ * Order in `root` is label → description (optional) → hint (optional) → error; adapters append the control after.
  */
 export function createUSWDSFieldDOM(
     behavior: FieldBehavior,
@@ -29,39 +30,157 @@ export function createUSWDSFieldDOM(
 ): USWDSFieldDOM {
     const p = behavior.presentation;
     const labelFor = options?.labelFor ?? true;
+    const asGroup = options?.asGroup === true;
+    const fieldId = behavior.id;
 
-    const root = el('div', { class: 'usa-form-group', 'data-name': behavior.fieldPath });
+    const root = el(asGroup ? 'fieldset' : 'div', {
+        class: asGroup ? 'usa-fieldset' : 'usa-form-group',
+        'data-name': behavior.fieldPath
+    });
     applyCascadeClasses(root, p);
     applyCascadeAccessibility(root, p);
 
     // Label
-    const labelAttrs: Record<string, string> = {
-        class: p.labelPosition === 'hidden' ? 'usa-label usa-sr-only' : 'usa-label',
-    };
-    if (labelFor) labelAttrs.for = behavior.id;
-    const label = el('label', labelAttrs);
+    const labelCls = asGroup
+        ? (p.labelPosition === 'hidden' ? 'usa-legend usa-sr-only' : 'usa-legend')
+        : (p.labelPosition === 'hidden' ? 'usa-label usa-sr-only' : 'usa-label');
+
+    const labelAttrs: Record<string, string> = { class: labelCls };
+    if (asGroup) {
+        labelAttrs.id = `${fieldId}-label`;
+    } else if (labelFor) {
+        labelAttrs.for = fieldId;
+    }
+
+    const label = el(asGroup ? 'legend' : 'label', labelAttrs);
     label.textContent = behavior.label;
     root.appendChild(label);
 
-    // Hint
+    const describedByIds: string[] = [];
+
+    // Description (from item definition)
+    if (behavior.description) {
+        const descId = `${fieldId}-desc`;
+        const desc = el('div', { class: 'usa-hint', id: descId });
+        desc.textContent = behavior.description;
+        root.appendChild(desc);
+        describedByIds.push(descId);
+    }
+
+    // Hint (from component props override)
     let hint: HTMLElement | undefined;
     if (behavior.hint) {
-        const hintId = `${behavior.id}-hint`;
+        const hintId = `${fieldId}-hint`;
         hint = el('span', { class: 'usa-hint', id: hintId });
         hint.textContent = behavior.hint;
         root.appendChild(hint);
+        describedByIds.push(hintId);
     }
 
-    // Error (not appended — adapter places it after control)
-    const error = createUSWDSError(behavior.id);
+    // Error
+    const error = createUSWDSError(fieldId);
+    root.appendChild(error);
+    describedByIds.push(error.id);
 
-    // describedBy
-    const describedBy = [
-        hint ? `${behavior.id}-hint` : '',
-        `${behavior.id}-error`,
-    ].filter(Boolean).join(' ');
+    const initialDescribedBy = describedByIds.join(' ');
 
-    return { root, label, hint, error, describedBy };
+    return { root, label, hint, error, initialDescribedBy };
+}
+
+/**
+ * Removes previously-rendered option elements (marked with data-option-wrapper).
+ */
+export function clearUSWDSOptions(container: HTMLElement): void {
+    for (const old of Array.from(container.querySelectorAll(':scope > [data-option-wrapper]'))) {
+        old.remove();
+    }
+}
+
+/**
+ * Build radio or checkbox options for USWDS group adapters.
+ */
+export function buildUSWDSOptions(
+    behavior: { fieldPath: string; id: string },
+    container: HTMLElement,
+    options: ReadonlyArray<{ value: string; label: string }>,
+    type: 'radio' | 'checkbox',
+    inputName: string
+): Map<string, HTMLInputElement> {
+    clearUSWDSOptions(container);
+    const controls = new Map<string, HTMLInputElement>();
+
+    for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        const optId = `${behavior.id}-${i}`;
+
+        const wrapper = el('div', { class: `usa-${type}` });
+        wrapper.setAttribute('data-option-wrapper', '');
+
+        const input = document.createElement('input') as HTMLInputElement;
+        input.className = `usa-${type}__input`;
+        input.id = optId;
+        input.type = type;
+        input.name = inputName;
+        input.value = opt.value;
+        controls.set(opt.value, input);
+
+        const label = el('label', { class: `usa-${type}__label`, for: optId });
+        label.textContent = opt.label;
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(label);
+        container.appendChild(wrapper);
+    }
+
+    return controls;
+}
+
+/**
+ * Shared renderer for single boolean controls (Checkbox, Toggle).
+ */
+export function renderUSWDSBooleanControl(
+    behavior: any,
+    parent: HTMLElement,
+    actx: any,
+    options: {
+        labelText: string;
+        isToggle?: boolean;
+    }
+): void {
+    const { root, label, hint, error } = createUSWDSFieldDOM(behavior);
+
+    const wrapper = el('div', { class: 'usa-checkbox' });
+
+    const input = document.createElement('input') as HTMLInputElement;
+    input.className = 'usa-checkbox__input';
+    input.id = behavior.id;
+    input.type = 'checkbox';
+    input.name = behavior.fieldPath;
+
+    const checkboxLabel = el('label', { class: 'usa-checkbox__label', for: behavior.id });
+    checkboxLabel.textContent = options.labelText;
+    if (behavior.presentation.labelPosition === 'hidden') checkboxLabel.classList.add('usa-sr-only');
+
+    // Remove the original label from root — usa-checkbox uses its own label
+    label.remove();
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(checkboxLabel);
+    root.appendChild(wrapper);
+
+    parent.appendChild(root);
+
+    const dispose = behavior.bind({
+        root,
+        label: checkboxLabel,
+        control: input,
+        hint,
+        error,
+        onValidationChange: (hasError: boolean) => {
+            applyUSWDSValidationState(root, checkboxLabel, hasError);
+        },
+    });
+    actx.onDispose(dispose);
 }
 
 /** Create a USWDS error message element with correct ARIA live-region attributes. */
@@ -69,7 +188,17 @@ export function createUSWDSError(behaviorId: string): HTMLElement {
     return el('span', {
         class: 'usa-error-message',
         id: `${behaviorId}-error`,
-        role: 'alert',
-        'aria-live': 'polite',
     });
+}
+
+/** Apply native USWDS error classes to the wrapper, label/legend, and optional control. */
+export function applyUSWDSValidationState(
+    root: HTMLElement,
+    label: HTMLElement,
+    hasError: boolean,
+    control?: HTMLElement | null,
+): void {
+    root.classList.toggle('usa-form-group--error', hasError);
+    label.classList.toggle('usa-label--error', hasError);
+    if (control) control.classList.toggle('usa-input--error', hasError);
 }

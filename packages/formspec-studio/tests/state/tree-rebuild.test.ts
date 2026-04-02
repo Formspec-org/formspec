@@ -17,7 +17,7 @@ type TreeNode = {
 
 /** Helper: get the component tree root from a project. */
 function getTree(project: any): TreeNode {
-  return (project.effectiveComponent as any).tree as TreeNode;
+  return (project.component as any).tree as TreeNode;
 }
 
 /** Helper: find a node by nodeId (BFS). */

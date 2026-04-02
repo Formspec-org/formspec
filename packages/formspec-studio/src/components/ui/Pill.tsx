@@ -12,14 +12,19 @@ interface PillProps {
   text: string;
   color?: keyof typeof colorMap;
   size?: 'sm' | 'md';
+  /** Spec-normative term rendered as HTML title for tooltip discoverability. */
+  title?: string;
+  /** When true, appends a warning indicator and applies a warning border. */
+  warn?: boolean;
 }
 
-export function Pill({ text, color = 'muted', size = 'md' }: PillProps) {
+export function Pill({ text, color = 'muted', size = 'md', title, warn }: PillProps) {
   const colorClasses = colorMap[color] || colorMap.muted;
   const sizeClasses = size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-sm px-2 py-0.5';
+  const warnClasses = warn ? ' border-amber/40' : '';
   return (
-    <span className={`inline-flex items-center rounded-sm border font-ui ${colorClasses} ${sizeClasses}`}>
-      {text}
+    <span className={`inline-flex items-center rounded-sm border font-ui ${colorClasses} ${sizeClasses}${warnClasses}`} title={title}>
+      {text}{warn ? ' \u26A0' : ''}
     </span>
   );
 }

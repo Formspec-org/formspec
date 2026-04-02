@@ -1,4 +1,4 @@
 - This document defines the Locale Document — a sidecar JSON artifact for internationalizing Formspec Definitions.
 - A valid locale requires `$formspecLocale`, `version`, `locale`, `targetDefinition`, and a `strings` object.
-- String resolution uses a fallback cascade (regional → base → inline defaults) with FEL interpolation via `{{expression}}` syntax.
+- String resolution uses a fallback cascade (regional → base → inline defaults) with FEL interpolation via `{{expression}}` syntax; `null` without `$`/`@` and without a static-literal expression preserves the `{{…}}` text (§3.3.1 rule 3a).
 - This BLUF is governed by `schemas/locale.schema.json`; generated schema references are the canonical structural contract.

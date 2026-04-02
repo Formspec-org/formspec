@@ -1,6 +1,40 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { singleFieldDef, minimalComponentDoc, multiFieldDef } from './helpers/engine-fixtures';
 
+/** Standalone Screener Document (spec Appendix A: `routes` → first-match `evaluation`). */
+function standaloneGate(opts: {
+    items: any[];
+    routes: Array<{ condition: string; target: string; label?: string }>;
+    binds?: any[];
+    title?: string;
+}) {
+    return {
+        $formspecScreener: '1.0',
+        url: 'urn:test:gate',
+        version: '1.0.0',
+        title: opts.title ?? 'Screening',
+        items: opts.items,
+        ...(opts.binds?.length ? { binds: opts.binds } : {}),
+        evaluation: [
+            {
+                id: 'form-selection',
+                strategy: 'first-match',
+                routes: opts.routes,
+            },
+        ],
+    };
+}
+
+function screenedDefinition() {
+    return {
+        $formspec: '1.0',
+        url: 'urn:test:screened',
+        version: '1.0.0',
+        title: 'Screened Test',
+        items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
+    };
+}
+
 let FormspecRender: any;
 
 beforeAll(async () => {
@@ -98,31 +132,25 @@ describe('render lifecycle', () => {
     });
 
     it('screener route event includes internal/external classification', async () => {
-        el.definition = {
-            $formspec: '1.0',
-            url: 'urn:test:screened',
-            version: '1.0.0',
-            title: 'Screened Test',
-            items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
-            screener: {
-                items: [
-                    {
-                        key: 'kind',
-                        type: 'field',
-                        dataType: 'choice',
-                        label: 'Kind',
-                        options: [
-                            { value: 'internal', label: 'Internal' },
-                            { value: 'external', label: 'External' },
-                        ],
-                    },
-                ],
-                routes: [
-                    { condition: "$kind = 'internal'", target: 'urn:test:screened' },
-                    { condition: "$kind = 'external'", target: 'https://example.org/forms/external' },
-                ],
-            },
-        };
+        el.screenerDocument = standaloneGate({
+            items: [
+                {
+                    key: 'kind',
+                    type: 'field',
+                    dataType: 'choice',
+                    label: 'Kind',
+                    options: [
+                        { value: 'internal', label: 'Internal' },
+                        { value: 'external', label: 'External' },
+                    ],
+                },
+            ],
+            routes: [
+                { condition: "$kind = 'internal'", target: 'urn:test:screened' },
+                { condition: "$kind = 'external'", target: 'https://example.org/forms/external' },
+            ],
+        });
+        el.definition = screenedDefinition();
         el.render();
 
         const routeEvent = new Promise<any>((resolve) => {
@@ -142,26 +170,20 @@ describe('render lifecycle', () => {
 
     it('initialData before definition hydrates main form and auto-skips internal screener', () => {
         el.initialData = { kind: 'internal', name: 'Hydrated' };
-        el.definition = {
-            $formspec: '1.0',
-            url: 'urn:test:screened',
-            version: '1.0.0',
-            title: 'Screened Test',
-            items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
-            screener: {
-                items: [
-                    {
-                        key: 'kind',
-                        type: 'field',
-                        dataType: 'choice',
-                        label: 'Kind',
-                        options: [{ value: 'internal', label: 'Internal' }],
-                    },
-                ],
-                binds: [{ path: 'kind', required: 'true' }],
-                routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
-            },
-        };
+        el.screenerDocument = standaloneGate({
+            items: [
+                {
+                    key: 'kind',
+                    type: 'field',
+                    dataType: 'choice',
+                    label: 'Kind',
+                    options: [{ value: 'internal', label: 'Internal' }],
+                },
+            ],
+            binds: [{ path: 'kind', required: 'true' }],
+            routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
+        });
+        el.definition = screenedDefinition();
         el.render();
         expect(el.querySelector('.formspec-screener')).toBeNull();
         expect(el.getEngine()?.signals.name?.value).toBe('Hydrated');
@@ -169,26 +191,20 @@ describe('render lifecycle', () => {
 
     it('screenerSeedAnswers before definition auto-skips when route is internal', () => {
         el.screenerSeedAnswers = { kind: 'internal' };
-        el.definition = {
-            $formspec: '1.0',
-            url: 'urn:test:screened',
-            version: '1.0.0',
-            title: 'Screened Test',
-            items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
-            screener: {
-                items: [
-                    {
-                        key: 'kind',
-                        type: 'field',
-                        dataType: 'choice',
-                        label: 'Kind',
-                        options: [{ value: 'internal', label: 'Internal' }],
-                    },
-                ],
-                binds: [{ path: 'kind', required: 'true' }],
-                routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
-            },
-        };
+        el.screenerDocument = standaloneGate({
+            items: [
+                {
+                    key: 'kind',
+                    type: 'field',
+                    dataType: 'choice',
+                    label: 'Kind',
+                    options: [{ value: 'internal', label: 'Internal' }],
+                },
+            ],
+            binds: [{ path: 'kind', required: 'true' }],
+            routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
+        });
+        el.definition = screenedDefinition();
         el.render();
         expect(el.querySelector('.formspec-screener')).toBeNull();
         expect(el.getScreenerState()).toMatchObject({
@@ -205,25 +221,19 @@ describe('render lifecycle', () => {
             stateEvents.push(event.detail);
         });
 
-        el.definition = {
-            $formspec: '1.0',
-            url: 'urn:test:screened',
-            version: '1.0.0',
-            title: 'Screened Test',
-            items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
-            screener: {
-                items: [
-                    {
-                        key: 'kind',
-                        type: 'field',
-                        dataType: 'choice',
-                        label: 'Kind',
-                        options: [{ value: 'internal', label: 'Internal' }],
-                    },
-                ],
-                routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
-            },
-        };
+        el.screenerDocument = standaloneGate({
+            items: [
+                {
+                    key: 'kind',
+                    type: 'field',
+                    dataType: 'choice',
+                    label: 'Kind',
+                    options: [{ value: 'internal', label: 'Internal' }],
+                },
+            ],
+            routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
+        });
+        el.definition = screenedDefinition();
         el.render();
 
         const select = el.querySelector('.formspec-screener select') as HTMLSelectElement;
@@ -260,27 +270,8 @@ describe('render lifecycle', () => {
         expect(stateEvents.map((event) => event.reason)).toContain('skip');
     });
 
-    it('treats a disabled screener as inactive even when screener items are present', () => {
-        el.definition = {
-            $formspec: '1.0',
-            url: 'urn:test:screened',
-            version: '1.0.0',
-            title: 'Screened Test',
-            items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
-            screener: {
-                enabled: false,
-                items: [
-                    {
-                        key: 'kind',
-                        type: 'field',
-                        dataType: 'choice',
-                        label: 'Kind',
-                        options: [{ value: 'internal', label: 'Internal' }],
-                    },
-                ],
-                routes: [{ condition: "$kind = 'internal'", target: 'urn:test:screened' }],
-            },
-        };
+    it('treats missing screenerDocument as no gate (definition has no embedded screener)', () => {
+        el.definition = screenedDefinition();
         el.render();
 
         expect(el.getScreenerState()).toMatchObject({
@@ -293,7 +284,8 @@ describe('render lifecycle', () => {
         expect(el.querySelector('.formspec-field')).not.toBeNull();
     });
 
-    it('does not auto-append a submit button', () => {
+    it('does not append a submit button when showSubmit is false', () => {
+        el.showSubmit = false;
         el.definition = singleFieldDef();
         el.render();
         expect(el.querySelector('.formspec-submit')).toBeNull();

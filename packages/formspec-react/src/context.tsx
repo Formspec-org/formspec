@@ -5,7 +5,12 @@ import type { ReadonlyEngineSignal } from '@formspec-org/engine';
 import type { IFormEngine } from '@formspec-org/engine';
 import { createFormEngine } from '@formspec-org/engine';
 import type { LayoutNode, PlanContext } from '@formspec-org/layout';
-import { planDefinitionFallback, planComponentTree } from '@formspec-org/layout';
+import {
+    planDefinitionFallback,
+    planComponentTree,
+    ensureSubmitButton,
+    mergeFormPresentationForPlanning,
+} from '@formspec-org/layout';
 import type { ComponentMap } from './component-map';
 
 export interface SubmitResult {
@@ -17,6 +22,10 @@ export interface FormspecContextValue {
     engine: IFormEngine;
     layoutPlan: LayoutNode | null;
     components: ComponentMap;
+    /** Theme document from the provider (used for container token emission). */
+    themeDocument?: any;
+    /** Component document from the provider (used for container token emission). */
+    componentDocument?: any;
     /** Callback invoked on form submission. Absent means no built-in submit button. */
     onSubmit?: (result: SubmitResult) => void;
     /** Mark a field as touched (e.g., on blur). */
@@ -27,6 +36,10 @@ export interface FormspecContextValue {
     touchedVersion: ReadonlyEngineSignal<number>;
     /** Check if a field has been touched. Read touchedVersion.value first for reactivity. */
     isTouched: (path: string) => boolean;
+    /** Registry entries for extension resolution. */
+    registryEntries: Map<string, any>;
+    /** Effective formPresentation (definition merged with component document). */
+    formPresentation?: Record<string, unknown>;
 }
 
 const FormspecContext = createContext<FormspecContextValue | null>(null);
@@ -75,12 +88,24 @@ export function FormspecProvider({
         if (!definition) throw new Error('FormspecProvider requires either engine or definition');
         const eng = createFormEngine(definition, runtimeContext, registryEntries);
         if (initialData) {
-            for (const [key, value] of Object.entries(initialData)) {
-                eng.setValue(key, value);
-            }
+            applyInitialData(eng, initialData);
         }
         return eng;
     }, [externalEngine, definition, registryEntries, runtimeContext, initialData]);
+
+    // Build registry entry map for extension resolution
+    const registryMap = useMemo(() => {
+        const map = new Map<string, any>();
+        if (registryEntries) {
+            for (const doc of (Array.isArray(registryEntries) ? registryEntries : [registryEntries])) {
+                if (!doc?.entries) continue;
+                for (const entry of doc.entries) {
+                    if (entry.name) map.set(entry.name, entry);
+                }
+            }
+        }
+        return map;
+    }, [registryEntries]);
 
     // Responsive breakpoint detection — match component document breakpoints via matchMedia
     const [activeBreakpoint, setActiveBreakpoint] = useState<string | null>(() => {
@@ -110,6 +135,17 @@ export function FormspecProvider({
         return () => { for (const { mql } of queries) mql.removeEventListener('change', update); };
     }, [componentDocument]);
 
+    const mergedFormPresentation = useMemo(
+        () =>
+            engine
+                ? mergeFormPresentationForPlanning(
+                      engine.getDefinition().formPresentation,
+                      componentDocument?.formPresentation,
+                  )
+                : undefined,
+        [engine, componentDocument],
+    );
+
     const layoutPlan = useMemo(() => {
         if (!engine) return null;
         const def = engine.getDefinition();
@@ -117,27 +153,32 @@ export function FormspecProvider({
 
         const planCtx: PlanContext = {
             items,
-            formPresentation: def.formPresentation,
+            formPresentation: mergedFormPresentation,
             componentDocument,
             theme: themeDocument,
             activeBreakpoint,
             findItem: (key: string) => findItemByKey(items, key),
         };
 
-        if (componentDocument?.pages || componentDocument?.tree) {
-            return planComponentTree(componentDocument, planCtx);
+        let root: LayoutNode;
+        if (componentDocument?.tree) {
+            root = planComponentTree(componentDocument.tree, planCtx);
+        } else {
+            // planDefinitionFallback returns an array — wrap in a root Stack node
+            const nodes = planDefinitionFallback(items, planCtx);
+            root = {
+                id: 'root',
+                component: 'Stack',
+                category: 'layout' as const,
+                props: {},
+                cssClasses: [],
+                children: nodes,
+            };
         }
-        // planDefinitionFallback returns an array — wrap in a root Stack node
-        const nodes = planDefinitionFallback(items, planCtx);
-        return {
-            id: 'root',
-            component: 'Stack',
-            category: 'layout' as const,
-            props: {},
-            cssClasses: ['formspec-container'],
-            children: nodes,
-        };
-    }, [engine, componentDocument, themeDocument, activeBreakpoint]);
+
+        if (onSubmit) ensureSubmitButton(root);
+        return root;
+    }, [engine, componentDocument, themeDocument, activeBreakpoint, onSubmit, mergedFormPresentation]);
 
     // Touched tracking — stable across re-renders
     const touchedFieldsRef = useRef(new Set<string>());
@@ -180,8 +221,21 @@ export function FormspecProvider({
     }, [engine, externalEngine]);
 
     const value = useMemo<FormspecContextValue>(
-        () => ({ engine, layoutPlan, components, onSubmit, touchField, touchAllFields, touchedVersion: touchedVersionSignal, isTouched }),
-        [engine, layoutPlan, components, onSubmit, touchField, touchAllFields, touchedVersionSignal, isTouched],
+        () => ({
+            engine,
+            layoutPlan,
+            components,
+            themeDocument,
+            componentDocument,
+            onSubmit,
+            touchField,
+            touchAllFields,
+            touchedVersion: touchedVersionSignal,
+            isTouched,
+            registryEntries: registryMap,
+            formPresentation: mergedFormPresentation,
+        }),
+        [engine, layoutPlan, components, themeDocument, componentDocument, onSubmit, touchField, touchAllFields, touchedVersionSignal, isTouched, registryMap, mergedFormPresentation],
     );
 
     return (
@@ -231,6 +285,29 @@ export function emitThemeTokens(
     const el = target ?? document.documentElement;
     for (const [key, value] of Object.entries(tokens)) {
         el.style.setProperty(`--formspec-${key.replace(/\./g, '-')}`, String(value));
+    }
+}
+
+/** Walk nested initial data and set leaf values on the engine with dotted paths. */
+function applyInitialData(engine: IFormEngine, data: Record<string, any>, prefix = ''): void {
+    for (const [key, value] of Object.entries(data)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        if (Array.isArray(value)) {
+            // Repeat group: ensure instances exist, then recurse into each
+            const currentCount = engine.repeats[path]?.value ?? 0;
+            for (let i = currentCount; i < value.length; i++) {
+                engine.addRepeatInstance(path);
+            }
+            for (let i = 0; i < value.length; i++) {
+                if (value[i] != null && typeof value[i] === 'object') {
+                    applyInitialData(engine, value[i], `${path}[${i}]`);
+                }
+            }
+        } else if (value !== null && typeof value === 'object') {
+            applyInitialData(engine, value, path);
+        } else {
+            engine.setValue(path, value);
+        }
     }
 }
 

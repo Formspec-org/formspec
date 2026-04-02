@@ -79,9 +79,8 @@ test.describe('Command Palette', () => {
     // Palette should close
     await expect(page.locator('[data-testid="command-palette"]')).not.toBeVisible();
 
-    // Properties panel should show "firstName" (item is selected)
-    const properties = page.locator('[data-testid="properties"]');
-    await expect(properties.locator('input[type="text"]').first()).toHaveValue('firstName');
+    // The field should be selected in the editor (border-accent styling)
+    await expect(page.locator('[data-testid="field-firstName"]')).toHaveClass(/border-accent/);
   });
 
   test('keyboard navigation selects the highlighted result', async ({ page }) => {
@@ -93,9 +92,9 @@ test.describe('Command Palette', () => {
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
 
-    const properties = page.locator('[data-testid="properties"]');
     await expect(page.locator('[data-testid="command-palette"]')).not.toBeVisible();
-    await expect(properties.locator('input[type="text"]').first()).toHaveValue('lastName');
+    // The second "name" result (lastName) should be selected in the editor
+    await expect(page.locator('[data-testid="field-lastName"]')).toHaveClass(/border-accent/);
   });
 
   test('reopening the palette resets the previous search', async ({ page }) => {

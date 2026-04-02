@@ -1,7 +1,7 @@
 /** @filedesc USWDS v3 adapter for TextInput — renders usa-input or usa-textarea markup. */
 import type { TextInputBehavior, AdapterRenderFn } from '@formspec-org/webcomponent';
 import { el } from '../helpers';
-import { createUSWDSFieldDOM } from './shared';
+import { applyUSWDSValidationState, createUSWDSFieldDOM } from './shared';
 
 export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
     behavior, parent, actx
@@ -9,7 +9,7 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
     const p = behavior.presentation;
     const isTextarea = behavior.maxLines != null && behavior.maxLines > 1;
 
-    const { root, label, hint, error, describedBy } = createUSWDSFieldDOM(behavior);
+    const { root, label, hint, error } = createUSWDSFieldDOM(behavior);
 
     if (p.labelPosition === 'start') root.style.display = 'flex';
 
@@ -23,7 +23,6 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
         textarea.name = behavior.fieldPath;
         textarea.rows = behavior.maxLines!;
         if (behavior.placeholder) textarea.placeholder = behavior.placeholder;
-        textarea.setAttribute('aria-describedby', describedBy);
         control = textarea;
     } else {
         const input = document.createElement('input') as HTMLInputElement;
@@ -38,7 +37,6 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
             else if (attr === 'maxLength') input.maxLength = Number(val);
             else input.setAttribute(attr, val);
         }
-        input.setAttribute('aria-describedby', describedBy);
 
         // Prefix/suffix: USWDS uses usa-input-prefix/usa-input-suffix
         if (behavior.prefix || behavior.suffix) {
@@ -64,8 +62,6 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
 
     if (!control.parentElement) root.appendChild(control);
 
-    root.appendChild(error);
-
     parent.appendChild(root);
 
     // Find the actual input element for error-class toggling
@@ -74,11 +70,7 @@ export const renderTextInput: AdapterRenderFn<TextInputBehavior> = (
     const dispose = behavior.bind({
         root, label, control, hint, error,
         onValidationChange: (hasError) => {
-            root.classList.toggle('usa-form-group--error', hasError);
-            actualInput.classList.toggle(
-                actualInput.classList.contains('usa-textarea') ? 'usa-textarea--error' : 'usa-input--error',
-                hasError,
-            );
+            applyUSWDSValidationState(root, label, hasError, actualInput as HTMLElement);
         },
     });
     actx.onDispose(dispose);

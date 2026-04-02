@@ -30,6 +30,8 @@ const VALIDATION_REPORT_SCHEMA: &str =
     include_str!("../schemas/validationReport.schema.json");
 const VALIDATION_RESULT_SCHEMA: &str =
     include_str!("../schemas/validationResult.schema.json");
+const SCREENER_SCHEMA: &str = include_str!("../schemas/screener.schema.json");
+const DETERMINATION_SCHEMA: &str = include_str!("../schemas/determination.schema.json");
 
 // ── Schema text + $id pairs for cross-file $ref resolution ───────
 
@@ -43,6 +45,10 @@ const CROSS_REF_SCHEMAS: &[(&str, &str)] = &[
     (
         COMPONENT_SCHEMA,
         "https://formspec.org/schemas/component/1.0",
+    ),
+    (
+        DEFINITION_SCHEMA,
+        "https://formspec.org/schemas/definition/1.0",
     ),
 ];
 
@@ -58,6 +64,8 @@ struct SchemaSet {
     registry: Validator,
     validation_report: Validator,
     validation_result: Validator,
+    screener: Validator,
+    determination: Validator,
 }
 
 fn schema_set() -> &'static SchemaSet {
@@ -72,6 +80,8 @@ fn schema_set() -> &'static SchemaSet {
         registry: build_validator(REGISTRY_SCHEMA),
         validation_report: build_validator(VALIDATION_REPORT_SCHEMA),
         validation_result: build_validator(VALIDATION_RESULT_SCHEMA),
+        screener: build_validator(SCREENER_SCHEMA),
+        determination: build_validator(DETERMINATION_SCHEMA),
     })
 }
 
@@ -191,6 +201,8 @@ pub fn validate_schema(doc: &Value, doc_type: DocumentType) -> Vec<LintDiagnosti
         DocumentType::Registry => &set.registry,
         DocumentType::ValidationReport => &set.validation_report,
         DocumentType::ValidationResult => &set.validation_result,
+        DocumentType::Screener => &set.screener,
+        DocumentType::Determination => &set.determination,
         DocumentType::FelFunctions => return Vec::new(),
     };
 

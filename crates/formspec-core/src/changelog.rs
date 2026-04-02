@@ -741,5 +741,205 @@ fn diff_metadata(old_def: &Value, new_def: &Value, changes: &mut Vec<Change>) {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// Standalone Screener Document diffing
+// ═══════════════════════════════════════════════════════════════════
+
+/// Screener metadata keys.
+const SCREENER_METADATA_KEYS: &[&str] = &[
+    "title",
+    "url",
+    "version",
+    "$formspecScreener",
+    "description",
+    "evaluationBinding",
+    "resultValidity",
+];
+
+/// Diff two standalone Screener Documents and produce a changelog.
+///
+/// Walks items, binds, evaluation phases, routes, availability, and metadata.
+pub fn generate_screener_changelog(
+    old_doc: &Value,
+    new_doc: &Value,
+    screener_url: &str,
+) -> Changelog {
+    let from_version = str_field(old_doc, "version").to_string();
+    let to_version = str_field(new_doc, "version").to_string();
+
+    let mut changes = Vec::new();
+
+    // Items (keyed by "key")
+    diff_keyed_array(
+        old_doc,
+        new_doc,
+        "items",
+        "key",
+        ChangeTarget::Item,
+        &mut changes,
+    );
+
+    // Binds
+    diff_binds(old_doc, new_doc, &mut changes);
+
+    // Evaluation phases (keyed by "id")
+    diff_screener_evaluation(old_doc, new_doc, &mut changes);
+
+    // Availability window
+    diff_availability(old_doc, new_doc, &mut changes);
+
+    // Metadata
+    for &key in SCREENER_METADATA_KEYS {
+        let old_val = old_doc.get(key);
+        let new_val = new_doc.get(key);
+        if old_val != new_val {
+            changes.push(Change {
+                change_type: match (old_val, new_val) {
+                    (None, Some(_)) => ChangeType::Added,
+                    (Some(_), None) => ChangeType::Removed,
+                    _ => ChangeType::Modified,
+                },
+                target: ChangeTarget::Metadata,
+                path: key.to_string(),
+                impact: ChangeImpact::Cosmetic,
+                key: None,
+                description: None,
+                before: old_val.cloned(),
+                after: new_val.cloned(),
+                migration_hint: None,
+            });
+        }
+    }
+
+    let max_impact = changes
+        .iter()
+        .map(|c| c.impact)
+        .max()
+        .unwrap_or(ChangeImpact::Cosmetic);
+    let semver_impact = match max_impact {
+        ChangeImpact::Breaking => SemverImpact::Major,
+        ChangeImpact::Compatible => SemverImpact::Minor,
+        ChangeImpact::Cosmetic => SemverImpact::Patch,
+    };
+
+    Changelog {
+        definition_url: screener_url.to_string(),
+        from_version,
+        to_version,
+        semver_impact,
+        changes,
+    }
+}
+
+/// Diff the evaluation pipeline (phases keyed by `id`, routes by index within phase).
+fn diff_screener_evaluation(old_doc: &Value, new_doc: &Value, changes: &mut Vec<Change>) {
+    let empty = vec![];
+    let old_phases = old_doc
+        .get("evaluation")
+        .and_then(Value::as_array)
+        .unwrap_or(&empty);
+    let new_phases = new_doc
+        .get("evaluation")
+        .and_then(Value::as_array)
+        .unwrap_or(&empty);
+
+    let old_map: HashMap<&str, &Value> = old_phases
+        .iter()
+        .filter_map(|p| p.get("id").and_then(Value::as_str).map(|id| (id, p)))
+        .collect();
+    let new_map: HashMap<&str, &Value> = new_phases
+        .iter()
+        .filter_map(|p| p.get("id").and_then(Value::as_str).map(|id| (id, p)))
+        .collect();
+
+    // Added phases
+    for (&id, &val) in &new_map {
+        if !old_map.contains_key(id) {
+            changes.push(Change {
+                change_type: ChangeType::Added,
+                target: ChangeTarget::Screener,
+                path: format!("evaluation.{id}"),
+                impact: ChangeImpact::Compatible,
+                key: Some(id.to_string()),
+                description: None,
+                before: None,
+                after: Some(val.clone()),
+                migration_hint: None,
+            });
+        }
+    }
+
+    // Removed phases
+    for (&id, &val) in &old_map {
+        if !new_map.contains_key(id) {
+            changes.push(Change {
+                change_type: ChangeType::Removed,
+                target: ChangeTarget::Screener,
+                path: format!("evaluation.{id}"),
+                impact: ChangeImpact::Breaking,
+                key: Some(id.to_string()),
+                description: None,
+                before: Some(val.clone()),
+                after: None,
+                migration_hint: None,
+            });
+        }
+    }
+
+    // Modified phases
+    for (&id, &old_val) in &old_map {
+        if let Some(&new_val) = new_map.get(id) {
+            if old_val != new_val {
+                // Strategy change is breaking
+                let old_strategy = old_val.get("strategy").and_then(Value::as_str);
+                let new_strategy = new_val.get("strategy").and_then(Value::as_str);
+                let impact = if old_strategy != new_strategy {
+                    ChangeImpact::Breaking
+                } else {
+                    ChangeImpact::Compatible
+                };
+
+                changes.push(Change {
+                    change_type: ChangeType::Modified,
+                    target: ChangeTarget::Screener,
+                    path: format!("evaluation.{id}"),
+                    impact,
+                    key: Some(id.to_string()),
+                    description: None,
+                    before: Some(old_val.clone()),
+                    after: Some(new_val.clone()),
+                    migration_hint: None,
+                });
+            }
+        }
+    }
+}
+
+/// Diff the availability window.
+fn diff_availability(old_doc: &Value, new_doc: &Value, changes: &mut Vec<Change>) {
+    let old_val = old_doc.get("availability");
+    let new_val = new_doc.get("availability");
+
+    if old_val == new_val {
+        return;
+    }
+
+    changes.push(Change {
+        change_type: match (old_val, new_val) {
+            (None, Some(_)) => ChangeType::Added,
+            (Some(_), None) => ChangeType::Removed,
+            _ => ChangeType::Modified,
+        },
+        target: ChangeTarget::Screener,
+        path: "availability".to_string(),
+        impact: ChangeImpact::Compatible,
+        key: None,
+        description: None,
+        before: old_val.cloned(),
+        after: new_val.cloned(),
+        migration_hint: None,
+    });
+}
+
 // Tests live in crates/formspec-core/tests/changelog_test.rs (integration test)
 // to avoid compilation issues with sibling module test blocks.

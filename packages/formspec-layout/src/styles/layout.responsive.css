@@ -1,0 +1,8 @@
+/* @filedesc Responsive structural adjustments for the canonical Formspec layout CSS. */
+
+@media (max-width: 575px) {
+  .formspec-grid,
+  .formspec-columns {
+    grid-template-columns: 1fr !important;
+  }
+}

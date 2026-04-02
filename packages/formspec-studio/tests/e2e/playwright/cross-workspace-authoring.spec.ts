@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { addFromPalette, importDefinition, importProject, switchTab, waitForApp } from './helpers';
+import { addFromPalette, editorFieldRows, importDefinition, importProject, switchTab, waitForApp } from './helpers';
 
 test.describe('Cross-Workspace Authoring', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
   });
 
-  test('Editor → Data → Preview round-trip', async ({ page }) => {
+  test('Editor → Manage → Preview round-trip', async ({ page }) => {
     const definition = {
       $formspec: '1.0',
       items: [
@@ -23,11 +23,10 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(canvas.locator('[data-testid="field-lastName"]')).toBeVisible();
     await expect(canvas.locator('[data-testid="field-dob"]')).toBeVisible();
 
-    await switchTab(page, 'Data');
-    const dataWorkspace = page.locator('[data-testid="workspace-Data"]');
-    await expect(dataWorkspace).toContainText('firstName');
-    await expect(dataWorkspace).toContainText('lastName');
-    await expect(dataWorkspace).toContainText('dob');
+    const outputBlueprint = page.locator('[data-testid="output-blueprint"]');
+    await expect(outputBlueprint).toContainText('firstName');
+    await expect(outputBlueprint).toContainText('lastName');
+    await expect(outputBlueprint).toContainText('dob');
 
     await switchTab(page, 'Preview');
     const previewWorkspace = page.locator('[data-testid="workspace-Preview"]');
@@ -36,7 +35,7 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(previewWorkspace.getByLabel('Date of Birth')).toBeVisible();
   });
 
-  test('Editor → Logic round-trip with required bind', async ({ page }) => {
+  test('Editor → Manage round-trip with required bind', async ({ page }) => {
     const definition = {
       $formspec: '1.0',
       items: [{ key: 'income', type: 'field', dataType: 'decimal', label: 'Income' }],
@@ -48,15 +47,17 @@ test.describe('Cross-Workspace Authoring', () => {
     const canvas = page.locator('[data-testid="workspace-Editor"]');
     const incomeBlock = canvas.locator('[data-testid="field-income"]');
     await expect(incomeBlock).toBeVisible();
-    await expect(incomeBlock.getByText('req')).toBeVisible();
+    await expect(incomeBlock.getByText('must fill')).toBeVisible();
 
-    await switchTab(page, 'Logic');
+    // Switch to Manage view and verify the bind
+    await page.getByRole('radio', { name: 'Manage' }).click();
     await expect(page.getByText(/required \(1\)/)).toBeVisible();
 
-    await switchTab(page, 'Editor');
+    // Switch back to Build view
+    await page.getByRole('radio', { name: 'Build' }).click();
     const incomeBlockAgain = page.locator('[data-testid="workspace-Editor"]').locator('[data-testid="field-income"]');
     await expect(incomeBlockAgain).toBeVisible();
-    await expect(incomeBlockAgain.getByText('req')).toBeVisible();
+    await expect(incomeBlockAgain.getByText('must fill')).toBeVisible();
   });
 
   test('Full authoring cycle — all workspaces show seeded content', async ({ page }) => {
@@ -101,22 +102,20 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(editorWorkspace.locator('[data-testid="field-age"]')).toBeVisible();
     await expect(editorWorkspace.locator('[data-testid="group-address"]')).toBeVisible();
 
-    await switchTab(page, 'Logic');
-    const logicWorkspace = page.locator('[data-testid="workspace-Logic"]');
+    // Switch to Manage view — verify logic content
+    await page.getByRole('radio', { name: 'Manage' }).click();
     await expect(page.getByText(/required \(1\)/)).toBeVisible();
-    await expect(logicWorkspace.getByText('ageCheck')).toBeVisible();
+    await expect(editorWorkspace.getByText('ageCheck')).toBeVisible();
 
-    await switchTab(page, 'Data');
-    const dataWorkspace = page.locator('[data-testid="workspace-Data"]');
-    await expect(dataWorkspace).toContainText('name');
-    await expect(dataWorkspace).toContainText('email');
+    // Verify data content in Manage view (Response Inspector is in Form Health panel)
+    await page.getByRole('radio', { name: 'Build' }).click();
+    const responsePanel = page.locator('[data-testid="output-blueprint"]');
+    await expect(responsePanel).toContainText('name');
+    await expect(responsePanel).toContainText('email');
 
     await switchTab(page, 'Theme');
     const themeWorkspace = page.locator('[data-testid="workspace-Theme"]');
-    // primaryColor token appears under the "other" group in AllTokens (no dot prefix).
-    // The suffix span renders the key name as text; the value is in an <input> element.
     await expect(themeWorkspace.getByText('primaryColor', { exact: true })).toBeVisible();
-    // The hex value renders as a color swatch (not as visible text — it lives inside an input).
     await expect(themeWorkspace.locator('[data-testid="swatch-primaryColor"]')).toBeVisible();
 
     await switchTab(page, 'Mapping');
@@ -129,7 +128,7 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(previewWorkspace.getByLabel('Email')).toBeVisible();
 
     await switchTab(page, 'Editor');
-    const fields = page.locator('[data-testid="workspace-Editor"] [data-testid^="field-"]');
+    const fields = editorFieldRows(page);
     const fieldCountBefore = await fields.count();
 
     await addFromPalette(page, 'Text');

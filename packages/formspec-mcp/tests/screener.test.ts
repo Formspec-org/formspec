@@ -6,25 +6,24 @@ function parseResult(result: { content: Array<{ text: string }> }) {
   return JSON.parse(result.content[0].text);
 }
 
-// ── enable/disable ───────────────────────────────────────────────
+// ── create/delete document ──────────────────────────────────────
 
-describe('handleScreener — enable', () => {
-  it('enables the screener', () => {
+describe('handleScreener — create/delete document', () => {
+  it('creates a screener document', () => {
     const { registry, projectId } = registryWithProject();
     const result = handleScreener(registry, projectId, {
-      action: 'enable',
-      enabled: true,
+      action: 'create_document',
+      title: 'Test Screener',
     });
     expect(result.isError).toBeUndefined();
   });
 
-  it('disables the screener', () => {
+  it('deletes the screener document', () => {
     const { registry, projectId } = registryWithProject();
-    handleScreener(registry, projectId, { action: 'enable', enabled: true });
+    handleScreener(registry, projectId, { action: 'create_document' });
 
     const result = handleScreener(registry, projectId, {
-      action: 'enable',
-      enabled: false,
+      action: 'delete_document',
     });
     expect(result.isError).toBeUndefined();
   });
@@ -32,8 +31,7 @@ describe('handleScreener — enable', () => {
   it('returns WRONG_PHASE during bootstrap', () => {
     const { registry, projectId } = registryInBootstrap();
     const result = handleScreener(registry, projectId, {
-      action: 'enable',
-      enabled: true,
+      action: 'create_document',
     });
     const data = parseResult(result);
 
@@ -47,7 +45,7 @@ describe('handleScreener — enable', () => {
 describe('handleScreener — fields', () => {
   it('adds a screen field', () => {
     const { registry, projectId } = registryWithProject();
-    handleScreener(registry, projectId, { action: 'enable', enabled: true });
+    handleScreener(registry, projectId, { action: 'create_document' });
 
     const result = handleScreener(registry, projectId, {
       action: 'add_field',
@@ -63,7 +61,7 @@ describe('handleScreener — fields', () => {
 
   it('removes a screen field', () => {
     const { registry, projectId } = registryWithProject();
-    handleScreener(registry, projectId, { action: 'enable', enabled: true });
+    handleScreener(registry, projectId, { action: 'create_document' });
     handleScreener(registry, projectId, {
       action: 'add_field', key: 'age', label: 'Age', type: 'integer',
     });
@@ -79,30 +77,32 @@ describe('handleScreener — fields', () => {
   });
 });
 
-// ── routes ───────────────────────────────────────────────────────
+// ── routes (phase-scoped) ───────────────────────────────────────
 
 describe('handleScreener — routes', () => {
   function setupScreenerWithRoute(registry: any, projectId: string) {
-    handleScreener(registry, projectId, { action: 'enable', enabled: true });
+    handleScreener(registry, projectId, { action: 'create_document' });
     handleScreener(registry, projectId, {
       action: 'add_field', key: 'eligible', label: 'Eligible?', type: 'boolean',
     });
     handleScreener(registry, projectId, {
       action: 'add_route',
+      phase_id: 'default',
       condition: '$eligible = true',
       target: 'main_form',
     });
   }
 
-  it('adds a screener route', () => {
+  it('adds a screener route to a phase', () => {
     const { registry, projectId } = registryWithProject();
-    handleScreener(registry, projectId, { action: 'enable', enabled: true });
+    handleScreener(registry, projectId, { action: 'create_document' });
     handleScreener(registry, projectId, {
       action: 'add_field', key: 'eligible', label: 'Eligible?', type: 'boolean',
     });
 
     const result = handleScreener(registry, projectId, {
       action: 'add_route',
+      phase_id: 'default',
       condition: '$eligible = true',
       target: 'main_form',
     });
@@ -118,6 +118,7 @@ describe('handleScreener — routes', () => {
 
     const result = handleScreener(registry, projectId, {
       action: 'update_route',
+      phase_id: 'default',
       route_index: 0,
       changes: { target: 'alternate_form' },
     });
@@ -130,15 +131,17 @@ describe('handleScreener — routes', () => {
   it('removes a screener route', () => {
     const { registry, projectId } = registryWithProject();
     setupScreenerWithRoute(registry, projectId);
-    // Add a second route so removal is allowed (can't delete last)
+    // Add a second route
     handleScreener(registry, projectId, {
       action: 'add_route',
+      phase_id: 'default',
       condition: '$eligible = false',
       target: 'rejected',
     });
 
     const result = handleScreener(registry, projectId, {
       action: 'remove_route',
+      phase_id: 'default',
       route_index: 0,
     });
     const data = parseResult(result);

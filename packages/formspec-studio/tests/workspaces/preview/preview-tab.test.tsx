@@ -60,6 +60,7 @@ describe('PreviewTab', () => {
 
   it('syncs definition to formspec-render after debounce and renders form content', async () => {
     vi.useFakeTimers();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     renderPreview();
     await act(() => {
       vi.advanceTimersByTime(600);
@@ -71,6 +72,8 @@ describe('PreviewTab', () => {
     expect(text).toContain('Full Name');
     expect(text).toContain('Email');
     expect(text).toContain('Biography');
+    expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining('Unsupported Component Document version'));
+    errorSpy.mockRestore();
     vi.useRealTimers();
   });
 

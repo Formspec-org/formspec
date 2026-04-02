@@ -1,3 +1,4 @@
+/** @filedesc Public library entry point for embedding Formspec Studio in host applications. */
 // Library entry point for embedding Studio in host apps
 import './index.css';
 

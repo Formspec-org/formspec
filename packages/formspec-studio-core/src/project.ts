@@ -1,9 +1,18 @@
-/** @filedesc Project class: high-level form authoring facade over formspec-core. */
+/** @filedesc Project class: high-level form authoring facade over formspec-core.
+ *
+ * TECH-DEBT: ~25 `as any` casts remain in this file.  Most exist at the
+ * IProjectCore delegation boundary where studio-core's public types
+ * (FormItem, FormDefinition, etc.) don't align 1:1 with core's internal
+ * types.  Resolution path: refine IProjectCore's generic signatures so
+ * the delegation layer can type-check without casts.  Track progress by
+ * periodically running `grep -c 'as any' project.ts` — target is zero.
+ */
 import { createRawProject, createChangesetMiddleware } from '@formspec-org/core';
 import type { ChangesetRecorderControl } from '@formspec-org/core';
 // Internal-only core types — never appear in public method signatures
 import type { IProjectCore, AnyCommand, CommandResult, FELParseContext, FELParseResult, FELReferenceSet, FELFunctionEntry, FieldDependents, ItemFilter, ItemSearchResult, Change, FormspecChangelog, LocaleState } from '@formspec-org/core';
 import { ProposalManager } from './proposal-manager.js';
+import { resolveLayoutPageStructure, type PageStructureView } from './page-structure.js';
 // Studio-core's own type vocabulary for the public API
 import type {
   FormItem, FormDefinition, ComponentDocument, ThemeDocument, MappingDocument,
@@ -22,6 +31,7 @@ import {
   type RepeatProps,
   type ChoiceOption,
   type FlowProps,
+  type LayoutAddItemSpec,
   type PlacementOptions,
   type LayoutArrangement,
   type InstanceProps,
@@ -33,9 +43,12 @@ import {
   type FELSuggestion,
 } from './helper-types.js';
 import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget, _FIELD_TYPE_MAP } from './field-type-aliases.js';
+import { humanizeFEL, isLayoutId, nodeIdFromLayoutId, sanitizeIdentifier } from './authoring-helpers.js';
 import { COMPATIBILITY_MATRIX, COMPONENT_TO_HINT } from '@formspec-org/types';
 import { analyzeFEL } from '@formspec-org/engine/fel-runtime';
 import { rewriteFELReferences } from '@formspec-org/engine/fel-tools';
+
+type ComponentNode = Record<string, unknown>;
 
 /**
  * Behavior-driven authoring API for Formspec.
@@ -87,6 +100,7 @@ export class Project {
         theme: s.theme as unknown as ThemeDocument,
         mappings: s.mappings as unknown as Record<string, MappingDocument>,
         selectedMappingId: s.selectedMappingId,
+        screener: s.screener ?? null,
       };
     }
     return this._snapshot!;
@@ -99,15 +113,6 @@ export class Project {
   get locales(): Readonly<Record<string, LocaleState>> { return this.core.locales; }
   localeAt(code: string): LocaleState | undefined { return this.core.localeAt(code); }
   activeLocaleCode(): string | undefined { return this.core.activeLocaleCode(); }
-
-  /** Returns the effective component document — authored if it has a tree, otherwise merged with generated. */
-  get effectiveComponent(): Readonly<ComponentDocument> {
-    const authored = this.core.component;
-    const isAuthored = !!authored && typeof (authored as any).$formspecComponent === 'string' && !!(authored as any).tree;
-    if (isAuthored) return authored;
-    const generated = this.core.generatedComponent;
-    return { ...authored, ...generated, tree: (generated as any).tree, 'x-studio-generated': true } as Readonly<ComponentDocument>;
-  }
 
   // ── Queries ────────────────────────────────────────────────
 
@@ -122,6 +127,7 @@ export class Project {
   export(): ProjectBundle { return this.core.export() as unknown as ProjectBundle; }
   diagnose(): Diagnostics { return this.core.diagnose(); }
   componentFor(fieldKey: string): Record<string, unknown> | undefined { return this.core.componentFor(fieldKey); }
+  pageStructure(): PageStructureView { return resolveLayoutPageStructure(this.state); }
   searchItems(filter: ItemFilter): ItemSearchResult[] { return this.core.searchItems(filter); }
   parseFEL(expression: string, context?: FELParseContext): FELParseResult { return this.core.parseFEL(expression, context); }
   felFunctionCatalog(): FELFunctionEntry[] { return this.core.felFunctionCatalog(); }
@@ -460,27 +466,70 @@ export class Project {
     }
   }
 
+  /** Get the root component tree children from the effective component tree. */
+  private _getRootChildren(): ComponentNode[] {
+    const tree = (this.component as any).tree;
+    return Array.isArray(tree?.children) ? (tree.children as ComponentNode[]) : [];
+  }
+
   /** Get all Page nodes from the effective component tree. */
-  private _getPageNodes(): Array<Record<string, unknown>> {
-    const tree = (this.effectiveComponent as any).tree;
-    if (!tree?.children) return [];
-    return (tree.children as Array<Record<string, unknown>>).filter(
+  private _getPageNodes(): ComponentNode[] {
+    return this._getRootChildren().filter(
       (n: any) => n.component === 'Page',
     );
   }
 
   /** Find a Page node by nodeId. Throws PAGE_NOT_FOUND if absent. */
-  private _findPageNode(pageId: string): Record<string, unknown> {
+  private _findPageNode(pageId: string): ComponentNode {
     const page = this._getPageNodes().find((n: any) => n.nodeId === pageId);
     if (!page) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${pageId}`);
     return page;
   }
 
+  /** Return a NodeRef for a tree node. */
+  private _nodeRefFor(node: ComponentNode): { bind: string } | { nodeId: string } {
+    if (typeof node.bind === 'string') return { bind: node.bind };
+    if (typeof node.nodeId === 'string') return { nodeId: node.nodeId };
+    throw new HelperError('NODE_NOT_FOUND', 'Component node is missing both bind and nodeId');
+  }
+
+  /** Get all direct children of a Page node. */
+  private _pageChildren(page: ComponentNode): ComponentNode[] {
+    return Array.isArray(page.children) ? (page.children as ComponentNode[]) : [];
+  }
+
   /** Get the bound children of a Page node (equivalent of regions). */
-  private _pageBoundChildren(page: Record<string, unknown>): Array<Record<string, unknown>> {
-    return ((page.children ?? []) as Array<Record<string, unknown>>).filter(
+  private _pageBoundChildren(page: ComponentNode): ComponentNode[] {
+    return this._pageChildren(page).filter(
       (n: any) => n.bind,
     );
+  }
+
+  /** Resolve a page-relative index to a raw root-child index for component.moveNode. */
+  private _pageInsertIndex(targetIndex: number, movingPageId: string): number {
+    const children = this._getRootChildren();
+    const fromIndex = children.findIndex((n: any) => n.component === 'Page' && n.nodeId === movingPageId);
+    if (fromIndex === -1) throw new HelperError('PAGE_NOT_FOUND', `Page not found: ${movingPageId}`);
+
+    const pageIndices = children
+      .map((child, index) => (child.component === 'Page' ? index : -1))
+      .filter(index => index !== -1);
+
+    const currentPagePos = pageIndices.indexOf(fromIndex);
+    const clampedPagePos = Math.max(0, Math.min(targetIndex, pageIndices.length - 1));
+    if (currentPagePos === clampedPagePos) return fromIndex;
+
+    const updatedPageIndices = pageIndices
+      .filter(index => index !== fromIndex)
+      .map(index => (index > fromIndex ? index - 1 : index));
+
+    if (clampedPagePos >= updatedPageIndices.length) {
+      return updatedPageIndices.length > 0
+        ? updatedPageIndices[updatedPageIndices.length - 1] + 1
+        : Math.max(0, children.length - 1);
+    }
+
+    return updatedPageIndices[clampedPagePos];
   }
 
   /** Resolve a page ID to its primary definition group path (from component tree). */
@@ -493,6 +542,27 @@ export class Project {
     if (!groupKey) return undefined;
     const item = this.core.itemAt(groupKey);
     return item?.type === 'group' ? groupKey : undefined;
+  }
+
+  /** Resolve a layout selection target or path to a component node ref. */
+  private _componentTargetRef(target: string): { bind: string } | { nodeId: string } {
+    if (isLayoutId(target)) {
+      return { nodeId: nodeIdFromLayoutId(target) };
+    }
+    const leafKey = target.split('.').pop()!;
+    return { bind: leafKey };
+  }
+
+  /** Build a unique item key relative to the requested parent. */
+  private _uniqueLayoutItemKey(label: string, parentPath?: string, explicitKey?: string): string {
+    const base = sanitizeIdentifier((explicitKey ?? label).toLowerCase()) || 'item';
+    let candidate = base;
+    let suffix = 2;
+    const fullPath = (key: string) => (parentPath ? `${parentPath}.${key}` : key);
+    while (this.core.itemAt(fullPath(candidate))) {
+      candidate = `${base}_${suffix++}`;
+    }
+    return candidate;
   }
 
   /**
@@ -659,8 +729,11 @@ export class Project {
     // Page assignment
     if (props?.page) {
       phase2.push({
-        type: 'pages.assignItem',
-        payload: { pageId: props.page, key },
+        type: 'component.moveNode',
+        payload: {
+          source: { bind: key },
+          targetParent: { nodeId: props.page },
+        },
       });
     }
 
@@ -731,7 +804,7 @@ export class Project {
     if (props?.insertIndex !== undefined) addItemPayload.insertIndex = props.insertIndex;
 
     // addGroup creates only the definition group (response structure).
-    // Page assignment is a separate action via the Pages tab.
+    // Page placement is a separate layout action on the component tree.
     if (props?.display) {
       // Two-phase: addItem triggers rebuild, then setGroupDisplayMode on rebuilt tree
       this.core.batchWithRebuild(
@@ -800,20 +873,7 @@ export class Project {
     if (parentPath) payload.parentPath = parentPath;
     if (props?.insertIndex !== undefined) payload.insertIndex = props.insertIndex;
 
-    const commands: AnyCommand[] = [{ type: 'definition.addItem', payload }];
-
-    if (props?.page) {
-      commands.push({
-        type: 'pages.assignItem',
-        payload: { pageId: props.page, key },
-      });
-    }
-
-    if (commands.length > 1) {
-      this.core.batchWithRebuild([commands[0]], commands.slice(1));
-    } else {
-      this.core.dispatch(commands[0]);
-    }
+    this.core.dispatch({ type: 'definition.addItem', payload });
 
     return {
       summary: `Added ${kind ?? 'paragraph'} content at path "${fullPath}"`,
@@ -826,21 +886,23 @@ export class Project {
 
   /**
    * Validate a FEL expression string, throwing INVALID_FEL if it fails to parse
-   * or contains unknown functions (semantic pre-validation).
+   * or contains unknown functions or references (semantic pre-validation).
+   *
+   * @param expression The FEL string to validate.
+   * @param contextPath Optional path to resolve relative references against.
    */
-  private _validateFEL(expression: string): void {
-    const result = this.core.parseFEL(expression);
+  private _validateFEL(expression: string, contextPath?: string): void {
+    const result = this.core.parseFEL(expression, contextPath ? { targetPath: contextPath } : undefined);
+
     if (!result.valid) {
-      throw new HelperError('INVALID_FEL', `Invalid FEL expression: ${expression}`, {
+      const error = result.errors[0];
+      throw new HelperError('INVALID_FEL', `Invalid FEL expression: ${error?.message || expression}`, {
         expression,
-        parseError: result.errors[0] ? {
-          message: result.errors[0].message,
-          code: result.errors[0].code,
-        } : undefined,
+        parseError: error ? { message: error.message, code: error.code } : undefined,
       });
     }
 
-    // Semantic pre-validation: reject unknown functions at authoring time
+    // Semantic arity/function checks (warnings promoted to errors for helpers)
     const unknownFn = result.warnings?.find(w => w.code === 'FEL_UNKNOWN_FUNCTION');
     if (unknownFn) {
       throw new HelperError('INVALID_FEL', `Invalid FEL expression: ${unknownFn.message}`, {
@@ -903,7 +965,7 @@ export class Project {
   /** Conditional visibility — dispatches definition.setBind { relevant: condition } */
   showWhen(target: string, condition: string): HelperResult {
     this._requireItemPath(target);
-    this._validateFEL(condition);
+    this._validateFEL(condition, target);
     this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { relevant: condition } },
@@ -918,7 +980,7 @@ export class Project {
   /** Readonly condition — dispatches definition.setBind { readonly: condition } */
   readonlyWhen(target: string, condition: string): HelperResult {
     this._requireItemPath(target);
-    this._validateFEL(condition);
+    this._validateFEL(condition, target);
     this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { readonly: condition } },
@@ -934,7 +996,7 @@ export class Project {
   require(target: string, condition?: string): HelperResult {
     this._requireItemPath(target);
     const expr = condition ?? 'true';
-    this._validateFEL(expr);
+    this._validateFEL(expr, target);
     this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { required: expr } },
@@ -949,7 +1011,7 @@ export class Project {
   /** Calculated value — dispatches definition.setBind { calculate: expression } */
   calculate(target: string, expression: string): HelperResult {
     this._requireItemPath(target);
-    this._validateFEL(expression);
+    this._validateFEL(expression, target);
     this.core.dispatch({
       type: 'definition.setBind',
       payload: { path: target, properties: { calculate: expression } },
@@ -969,7 +1031,8 @@ export class Project {
       if (!condition) {
         throw new HelperError('INVALID_PROPS', 'Branch arm with mode "condition" requires a "condition" property', {});
       }
-      this._validateFEL(condition);
+      // Pass the 'on' path as context for reference validation (e.g. self-references)
+      this._validateFEL(condition, on);
       return condition;
     }
     if (mode === 'contains') {
@@ -1095,9 +1158,9 @@ export class Project {
       this._requireItemPath(target);
     }
 
-    this._validateFEL(rule);
+    this._validateFEL(rule, target);
     if (options?.activeWhen) {
-      this._validateFEL(options.activeWhen);
+      this._validateFEL(options.activeWhen, target);
     }
 
     const normalizedTarget = this._normalizeShapeTarget(target);
@@ -1203,8 +1266,11 @@ export class Project {
       activeWhen?: string;
     },
   ): HelperResult {
-    if (changes.rule) this._validateFEL(changes.rule);
-    if (changes.activeWhen) this._validateFEL(changes.activeWhen);
+    const shape = (this.core.state.definition.shapes ?? []).find((s: any) => s.id === shapeId);
+    const target = (shape as any)?.target;
+
+    if (changes.rule) this._validateFEL(changes.rule, target);
+    if (changes.activeWhen) this._validateFEL(changes.activeWhen, target);
 
     const commands: AnyCommand[] = [];
 
@@ -1345,13 +1411,15 @@ export class Project {
         }
       }
 
-      // Clean up screener routes (delete in descending index order)
+      // Clean up screener routes (delete in descending index order within each phase)
       if (depSet.screenerRoutes?.length) {
-        const sortedIndices = [...depSet.screenerRoutes].sort((a, b) => b - a);
-        for (const idx of sortedIndices) {
+        const sorted = [...depSet.screenerRoutes].sort((a, b) =>
+          a.phaseId === b.phaseId ? b.routeIndex - a.routeIndex : a.phaseId.localeCompare(b.phaseId)
+        );
+        for (const { phaseId, routeIndex } of sorted) {
           commands.push({
-            type: 'definition.deleteRoute',
-            payload: { index: idx },
+            type: 'screener.deleteRoute',
+            payload: { phaseId, index: routeIndex },
           });
         }
       }
@@ -1523,8 +1591,11 @@ export class Project {
       // page routing
       if (key === 'page') {
         commands.push({
-          type: 'pages.assignItem',
-          payload: { pageId: value, key: leafKey },
+          type: 'component.moveNode',
+          payload: {
+            source: { bind: leafKey },
+            targetParent: { nodeId: value as string },
+          },
         });
         continue;
       }
@@ -2141,11 +2212,15 @@ export class Project {
     if (pageId) {
       const addResult = this.core.dispatch(addNodeCmd);
       const nodeId = (addResult as any)?.nodeRef?.nodeId;
-      const regionKey = nodeId ?? 'submit';
-      this.core.dispatch({
-        type: 'pages.assignItem',
-        payload: { pageId, key: regionKey },
-      });
+      if (nodeId) {
+        this.core.dispatch({
+          type: 'component.moveNode',
+          payload: {
+            source: { nodeId },
+            targetParent: { nodeId: pageId },
+          },
+        } as AnyCommand);
+      }
       return {
         summary: `Added submit button`,
         action: { helper: 'addSubmitButton', params: { label, pageId } },
@@ -2168,8 +2243,8 @@ export class Project {
   // ── Page Helpers ──
 
   /**
-   * Add a page. By default creates a paired definition group + theme page + region (the 80% case).
-   * With `opts.standalone`, creates only the theme page with no paired group.
+   * Add a page. By default creates a paired definition group and places it on the new page.
+   * With `opts.standalone`, creates only the page with no paired group.
    */
   addPage(title: string, description?: string, id?: string, opts?: { standalone?: boolean }): HelperResult {
     // Validate custom ID format
@@ -2187,12 +2262,32 @@ export class Project {
     // Pre-generate page ID
     const pageId = id ?? `page-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    const pagePayload: Record<string, unknown> = { id: pageId, title };
-    if (description) pagePayload.description = description;
+    const pageProps: Record<string, unknown> = { nodeId: pageId, title };
+    if (description) pageProps.description = description;
+
+    const pageModeCommand: AnyCommand | null =
+      !this.definition.formPresentation?.pageMode || this.definition.formPresentation.pageMode === 'single'
+        ? {
+            type: 'definition.setFormPresentation',
+            payload: { property: 'pageMode', value: 'wizard' },
+          }
+        : null;
+
+    const addPageCommand: AnyCommand = {
+      type: 'component.addNode',
+      payload: {
+        parent: { nodeId: 'root' },
+        component: 'Page',
+        props: pageProps,
+      },
+    };
 
     if (opts?.standalone) {
-      // Standalone: only a theme page, no paired group
-      this.core.dispatch({ type: 'pages.addPage', payload: pagePayload } as AnyCommand);
+      if (pageModeCommand) {
+        this.core.dispatch([pageModeCommand, addPageCommand]);
+      } else {
+        this.core.dispatch(addPageCommand);
+      }
 
       return {
         summary: `Added page '${title}'`,
@@ -2213,12 +2308,21 @@ export class Project {
       finalKey = `${key}_${counter++}`;
     }
 
-    // All three commands in one dispatch = one undo step
-    this.core.dispatch([
+    const phase1: AnyCommand[] = [
       { type: 'definition.addItem', payload: { type: 'group', key: finalKey, label: title } },
-      { type: 'pages.addPage', payload: pagePayload },
-      { type: 'pages.assignItem', payload: { pageId, key: finalKey } },
-    ] as AnyCommand[]);
+      ...(pageModeCommand ? [pageModeCommand] : []),
+    ];
+    const phase2: AnyCommand[] = [
+      addPageCommand,
+      {
+        type: 'component.moveNode',
+        payload: {
+          source: { bind: finalKey },
+          targetParent: { nodeId: pageId },
+        },
+      },
+    ];
+    this.core.batchWithRebuild(phase1, phase2);
 
     return {
       summary: `Added page '${title}'`,
@@ -2229,9 +2333,21 @@ export class Project {
     };
   }
 
-  /** Remove a page — deletes only the theme page and its regions. Groups and fields remain intact as unassigned items. */
+  /** Remove a page — deletes only the page surface. Groups and fields remain intact as unassigned items. */
   removePage(pageId: string): HelperResult {
-    this.core.dispatch({ type: 'pages.deletePage', payload: { id: pageId } });
+    const page = this._findPageNode(pageId);
+    const commands: AnyCommand[] = this._pageChildren(page).map((child) => ({
+      type: 'component.moveNode',
+      payload: {
+        source: this._nodeRefFor(child),
+        targetParent: { nodeId: 'root' },
+      },
+    }));
+    commands.push({
+      type: 'component.deleteNode',
+      payload: { node: { nodeId: pageId } },
+    });
+    this.core.batch(commands);
 
     return {
       summary: `Removed page '${pageId}'`,
@@ -2242,7 +2358,10 @@ export class Project {
 
   /** Reorder a page. */
   reorderPage(pageId: string, direction: 'up' | 'down'): HelperResult {
-    this.core.dispatch({ type: 'pages.reorderPages', payload: { id: pageId, direction } });
+    this.core.dispatch({
+      type: 'component.reorderNode',
+      payload: { node: { nodeId: pageId }, direction },
+    });
     return {
       summary: `Reordered page '${pageId}' ${direction}`,
       action: { helper: 'reorderPage', params: { pageId, direction } },
@@ -2252,7 +2371,15 @@ export class Project {
 
   /** Move a page to an arbitrary zero-based index in one atomic undo step. */
   movePageToIndex(pageId: string, targetIndex: number): HelperResult {
-    this.core.dispatch({ type: 'pages.movePageToIndex', payload: { id: pageId, targetIndex } });
+    const insertIndex = this._pageInsertIndex(targetIndex, pageId);
+    this.core.dispatch({
+      type: 'component.moveNode',
+      payload: {
+        source: { nodeId: pageId },
+        targetParent: { nodeId: 'root' },
+        targetIndex: insertIndex,
+      },
+    });
     return {
       summary: `Moved page '${pageId}' to index ${targetIndex}`,
       action: { helper: 'movePageToIndex', params: { pageId, targetIndex } },
@@ -2280,8 +2407,8 @@ export class Project {
     for (const [prop, val] of Object.entries(changes)) {
       if (val !== undefined) {
         commands.push({
-          type: 'pages.setPageProperty',
-          payload: { id: pageId, property: prop, value: val },
+          type: 'component.setNodeProperty',
+          payload: { node: { nodeId: pageId }, property: prop, value: val },
         });
       }
     }
@@ -2297,10 +2424,21 @@ export class Project {
   /** Assign an item to a page. */
   placeOnPage(target: string, pageId: string, options?: PlacementOptions): HelperResult {
     const leafKey = target.split('.').pop()!;
-    const payload: Record<string, unknown> = { pageId, key: leafKey };
-    if (options?.span) payload.span = options.span;
+    const commands: AnyCommand[] = [{
+      type: 'component.moveNode',
+      payload: {
+        source: { bind: leafKey },
+        targetParent: { nodeId: pageId },
+      },
+    }];
+    if (options?.span !== undefined) {
+      commands.push({
+        type: 'component.setNodeProperty',
+        payload: { node: { bind: leafKey }, property: 'span', value: options.span },
+      });
+    }
 
-    this.core.dispatch({ type: 'pages.assignItem', payload });
+    this.core.dispatch(commands);
 
     return {
       summary: `Placed '${target}' on page '${pageId}'`,
@@ -2312,7 +2450,13 @@ export class Project {
   /** Remove item from page assignment. */
   unplaceFromPage(target: string, pageId: string): HelperResult {
     const leafKey = target.split('.').pop()!;
-    this.core.dispatch({ type: 'pages.unassignItem', payload: { pageId, key: leafKey } });
+    this.core.dispatch({
+      type: 'component.moveNode',
+      payload: {
+        source: { bind: leafKey },
+        targetParent: { nodeId: 'root' },
+      },
+    });
 
     return {
       summary: `Removed '${target}' from page '${pageId}'`,
@@ -2324,7 +2468,7 @@ export class Project {
   /** Set flow mode. */
   setFlow(mode: 'single' | 'wizard' | 'tabs', props?: FlowProps): HelperResult {
     const commands: AnyCommand[] = [
-      { type: 'pages.setMode', payload: { mode } },
+      { type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: mode } },
     ];
 
     if (props?.showProgress !== undefined) {
@@ -2346,6 +2490,143 @@ export class Project {
       summary: `Set flow mode to '${mode}'`,
       action: { helper: 'setFlow', params: { mode, ...props } },
       affectedPaths: [],
+    };
+  }
+
+  /** Set a component-level visual condition (`when`) on a bound item or layout node. */
+  setComponentWhen(target: string, when: string | null): HelperResult {
+    this.core.dispatch({
+      type: 'component.setNodeProperty',
+      payload: {
+        node: this._componentTargetRef(target),
+        property: 'when',
+        value: when && when.trim() ? when.trim() : null,
+      },
+    });
+
+    return {
+      summary: when && when.trim()
+        ? `Set visual condition on '${target}'`
+        : `Cleared visual condition on '${target}'`,
+      action: { helper: 'setComponentWhen', params: { target, when } },
+      affectedPaths: [target],
+    };
+  }
+
+  /** Set a component accessibility override on a bound item or layout node. */
+  setComponentAccessibility(target: string, property: string, value: unknown): HelperResult {
+    this.core.dispatch({
+      type: 'component.setNodeAccessibility',
+      payload: {
+        node: this._componentTargetRef(target),
+        property,
+        value: value === '' ? null : value,
+      },
+    });
+
+    return {
+      summary: value === '' || value === null
+        ? `Cleared accessibility '${property}' on '${target}'`
+        : `Set accessibility '${property}' on '${target}'`,
+      action: { helper: 'setComponentAccessibility', params: { target, property, value } },
+      affectedPaths: [target],
+    };
+  }
+
+  /** Add a new item from the Layout workspace, placing it directly into the component tree. */
+  addItemToLayout(spec: LayoutAddItemSpec, pageId?: string): HelperResult {
+    if (spec.itemType === 'layout') {
+      const parentNodeId = pageId ?? 'root';
+      return this.addLayoutNode(parentNodeId, spec.component ?? 'Card');
+    }
+
+    const pageGroupPath = pageId ? this._resolvePageGroup(pageId) : undefined;
+    const parentPath = pageGroupPath;
+    const key = this._uniqueLayoutItemKey(spec.label, parentPath, spec.key);
+    const fullPath = parentPath ? `${parentPath}.${key}` : key;
+
+    if (spec.itemType === 'field') {
+      const dataType = spec.dataType ?? 'string';
+      const addItemPayload: Record<string, unknown> = {
+        type: 'field',
+        key,
+        label: spec.label,
+        dataType,
+      };
+      if (parentPath) addItemPayload.parentPath = parentPath;
+
+      const phase1: AnyCommand[] = [
+        { type: 'definition.addItem', payload: addItemPayload },
+      ];
+      const phase2: AnyCommand[] = pageId
+        ? [{
+            type: 'component.moveNode',
+            payload: {
+              source: { bind: key },
+              targetParent: { nodeId: pageId },
+            },
+          }]
+        : [];
+
+      if (phase2.length > 0) this.core.batchWithRebuild(phase1, phase2);
+      else this.core.dispatch(phase1[0]);
+
+      return {
+        summary: `Added field '${spec.label}' to layout`,
+        action: { helper: 'addItemToLayout', params: { spec, pageId } },
+        affectedPaths: [fullPath],
+        createdId: fullPath,
+      };
+    }
+
+    if (spec.itemType === 'group') {
+      const phase1: AnyCommand[] = [
+        {
+          type: 'definition.addItem',
+          payload: {
+            type: 'group',
+            key,
+            label: spec.label,
+            ...(parentPath ? { parentPath } : {}),
+            ...(spec.repeatable ? { repeatable: true } : {}),
+          },
+        },
+      ];
+      const phase2: AnyCommand[] = pageId
+        ? [{
+            type: 'component.moveNode',
+            payload: {
+              source: { bind: key },
+              targetParent: { nodeId: pageId },
+            },
+          }]
+        : [];
+
+      if (phase2.length > 0) this.core.batchWithRebuild(phase1, phase2);
+      else this.core.dispatch(phase1[0]);
+
+      return {
+        summary: `Added group '${spec.label}' to layout`,
+        action: { helper: 'addItemToLayout', params: { spec, pageId } },
+        affectedPaths: [fullPath],
+        createdId: fullPath,
+      };
+    }
+
+    const payload: Record<string, unknown> = {
+      type: 'display',
+      key,
+      label: spec.label,
+    };
+    if (parentPath) payload.parentPath = parentPath;
+    if (spec.presentation) payload.presentation = spec.presentation;
+    this.core.dispatch({ type: 'definition.addItem', payload });
+
+    return {
+      summary: `Added display item '${spec.label}' to layout`,
+      action: { helper: 'addItemToLayout', params: { spec, pageId } },
+      affectedPaths: [fullPath],
+      createdId: fullPath,
     };
   }
 
@@ -2631,11 +2912,16 @@ export class Project {
 
   /** Add an empty region to a page. */
   addRegion(pageId: string, span?: number): HelperResult {
-    // pages.assignItem requires a key — generate a placeholder
     const key = `region_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const payload: Record<string, unknown> = { pageId, key };
-    if (span !== undefined) payload.span = span;
-    this.core.dispatch({ type: 'pages.assignItem', payload });
+    this.core.dispatch({
+      type: 'component.addNode',
+      payload: {
+        parent: { nodeId: pageId },
+        component: 'BoundItem',
+        bind: key,
+        props: span !== undefined ? { span } : undefined,
+      },
+    } as AnyCommand);
     return {
       summary: `Added region to page '${pageId}'`,
       action: { helper: 'addRegion', params: { pageId, span } },
@@ -2645,10 +2931,12 @@ export class Project {
 
   /** Update a region property by index. */
   updateRegion(pageId: string, regionIndex: number, property: string, value: unknown): HelperResult {
-    const key = this._regionKeyAt(pageId, regionIndex);
+    const page = this._findPageNode(pageId);
+    const child = this._pageBoundChildren(page)[regionIndex];
+    if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
     this.core.dispatch({
-      type: 'pages.setRegionProperty',
-      payload: { pageId, key, property, value },
+      type: 'component.setNodeProperty',
+      payload: { node: this._nodeRefFor(child), property, value: value ?? null },
     });
     return {
       summary: `Updated region ${regionIndex} on page '${pageId}' property '${property}'`,
@@ -2659,8 +2947,16 @@ export class Project {
 
   /** Delete a region from a page by index. */
   deleteRegion(pageId: string, regionIndex: number): HelperResult {
-    const key = this._regionKeyAt(pageId, regionIndex);
-    this.core.dispatch({ type: 'pages.unassignItem', payload: { pageId, key } });
+    const page = this._findPageNode(pageId);
+    const child = this._pageBoundChildren(page)[regionIndex];
+    if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
+    this.core.dispatch({
+      type: 'component.moveNode',
+      payload: {
+        source: this._nodeRefFor(child),
+        targetParent: { nodeId: 'root' },
+      },
+    });
     return {
       summary: `Deleted region ${regionIndex} from page '${pageId}'`,
       action: { helper: 'deleteRegion', params: { pageId, regionIndex } },
@@ -2670,11 +2966,17 @@ export class Project {
 
   /** Reorder a region within a page by index. */
   reorderRegion(pageId: string, regionIndex: number, direction: 'up' | 'down'): HelperResult {
-    const key = this._regionKeyAt(pageId, regionIndex);
-    const targetIndex = direction === 'up' ? regionIndex - 1 : regionIndex + 1;
+    const page = this._findPageNode(pageId);
+    const child = this._pageBoundChildren(page)[regionIndex];
+    if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
+    const targetIndex = Math.max(0, direction === 'up' ? regionIndex - 1 : regionIndex + 1);
     this.core.dispatch({
-      type: 'pages.reorderRegion',
-      payload: { pageId, key, targetIndex },
+      type: 'component.moveNode',
+      payload: {
+        source: this._nodeRefFor(child),
+        targetParent: { nodeId: pageId },
+        targetIndex,
+      },
     });
     return {
       summary: `Reordered region ${regionIndex} on page '${pageId}' ${direction}`,
@@ -2689,14 +2991,29 @@ export class Project {
     const boundChildren = this._pageBoundChildren(page);
     const child = boundChildren[regionIndex];
     if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
-    const oldKey = child.bind as string;
-    const oldSpan = child.span as number | undefined;
-
-    // assignItem appends to the end — follow with reorderRegion to restore position
+    const oldNodeRef = this._nodeRefFor(child);
+    const newNodeRef = { bind: newKey };
     const commands: AnyCommand[] = [
-      { type: 'pages.unassignItem', payload: { pageId, key: oldKey } },
-      { type: 'pages.assignItem', payload: { pageId, key: newKey, span: oldSpan } },
-      { type: 'pages.reorderRegion', payload: { pageId, key: newKey, targetIndex: regionIndex } },
+      {
+        type: 'component.moveNode',
+        payload: { source: oldNodeRef, targetParent: { nodeId: 'root' } },
+      },
+      {
+        type: 'component.moveNode',
+        payload: { source: newNodeRef, targetParent: { nodeId: pageId }, targetIndex: regionIndex },
+      },
+      {
+        type: 'component.setNodeProperty',
+        payload: { node: newNodeRef, property: 'span', value: child.span ?? null },
+      },
+      {
+        type: 'component.setNodeProperty',
+        payload: { node: newNodeRef, property: 'start', value: child.start ?? null },
+      },
+      {
+        type: 'component.setNodeProperty',
+        payload: { node: newNodeRef, property: 'responsive', value: child.responsive ?? null },
+      },
     ];
     this.core.dispatch(commands);
     return {
@@ -2708,21 +3025,15 @@ export class Project {
 
   /** Rename a page's title. */
   renamePage(pageId: string, newTitle: string): HelperResult {
-    this.core.dispatch({ type: 'pages.renamePage', payload: { id: pageId, newId: newTitle } });
+    this.core.dispatch({
+      type: 'component.setNodeProperty',
+      payload: { node: { nodeId: pageId }, property: 'title', value: newTitle },
+    });
     return {
       summary: `Renamed page '${pageId}' to '${newTitle}'`,
       action: { helper: 'renamePage', params: { pageId, newTitle } },
       affectedPaths: [pageId],
     };
-  }
-
-  /** Look up a bound child's key by its index on a page. */
-  private _regionKeyAt(pageId: string, regionIndex: number): string {
-    const page = this._findPageNode(pageId);
-    const boundChildren = this._pageBoundChildren(page);
-    const child = boundChildren[regionIndex];
-    if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
-    return child.bind as string;
   }
 
   /** Find a bound child's index by item key on a page. Throws if page or item not found. */
@@ -2738,10 +3049,12 @@ export class Project {
 
   /** Set the width (grid span) of an item on a page. */
   setItemWidth(pageId: string, itemKey: string, width: number): HelperResult {
-    this._regionIndexOf(pageId, itemKey); // validates existence
+    const page = this._findPageNode(pageId);
+    const node = this._pageBoundChildren(page).find((n: any) => n.bind === itemKey);
+    if (!node) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
     this.core.dispatch({
-      type: 'pages.setRegionProperty',
-      payload: { pageId, key: itemKey, property: 'span', value: width },
+      type: 'component.setNodeProperty',
+      payload: { node: this._nodeRefFor(node), property: 'span', value: width },
     });
     return {
       summary: `Set width of '${itemKey}' on page '${pageId}' to ${width}`,
@@ -2752,10 +3065,12 @@ export class Project {
 
   /** Set the offset (grid start) of an item on a page. */
   setItemOffset(pageId: string, itemKey: string, offset: number | undefined): HelperResult {
-    this._regionIndexOf(pageId, itemKey);
+    const page = this._findPageNode(pageId);
+    const node = this._pageBoundChildren(page).find((n: any) => n.bind === itemKey);
+    if (!node) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
     this.core.dispatch({
-      type: 'pages.setRegionProperty',
-      payload: { pageId, key: itemKey, property: 'start', value: offset },
+      type: 'component.setNodeProperty',
+      payload: { node: this._nodeRefFor(node), property: 'start', value: offset ?? null },
     });
     return {
       summary: `Set offset of '${itemKey}' on page '${pageId}' to ${offset ?? 'auto'}`,
@@ -2791,8 +3106,12 @@ export class Project {
     }
 
     this.core.dispatch({
-      type: 'pages.setRegionProperty',
-      payload: { pageId, key: itemKey, property: 'responsive', value: responsive },
+      type: 'component.setNodeProperty',
+      payload: {
+        node: this._nodeRefFor(node),
+        property: 'responsive',
+        value: Object.keys(responsive).length > 0 ? responsive : null,
+      },
     });
     return {
       summary: `Set responsive '${breakpoint}' for '${itemKey}' on page '${pageId}'`,
@@ -2804,7 +3123,13 @@ export class Project {
   /** Remove an item from a page. */
   removeItemFromPage(pageId: string, itemKey: string): HelperResult {
     this._regionIndexOf(pageId, itemKey);
-    this.core.dispatch({ type: 'pages.unassignItem', payload: { pageId, key: itemKey } });
+    this.core.dispatch({
+      type: 'component.moveNode',
+      payload: {
+        source: { bind: itemKey },
+        targetParent: { nodeId: 'root' },
+      },
+    });
     return {
       summary: `Removed '${itemKey}' from page '${pageId}'`,
       action: { helper: 'removeItemFromPage', params: { pageId, itemKey } },
@@ -2819,12 +3144,20 @@ export class Project {
   moveItemToPage(sourcePageId: string, itemKey: string, targetPageId: string, opts?: PlacementOptions): HelperResult {
     this._regionIndexOf(sourcePageId, itemKey);
     const leafKey = itemKey.split('.').pop()!;
-    const assignPayload: Record<string, unknown> = { pageId: targetPageId, key: leafKey };
-    if (opts?.span) assignPayload.span = opts.span;
-    this.core.batch([
-      { type: 'pages.unassignItem', payload: { pageId: sourcePageId, key: leafKey } },
-      { type: 'pages.assignItem', payload: assignPayload },
-    ] as AnyCommand[]);
+    const commands: AnyCommand[] = [{
+      type: 'component.moveNode',
+      payload: {
+        source: { bind: leafKey },
+        targetParent: { nodeId: targetPageId },
+      },
+    }];
+    if (opts?.span !== undefined) {
+      commands.push({
+        type: 'component.setNodeProperty',
+        payload: { node: { bind: leafKey }, property: 'span', value: opts.span },
+      });
+    }
+    this.core.batch(commands);
     return {
       summary: `Moved '${itemKey}' from page '${sourcePageId}' to page '${targetPageId}'`,
       action: { helper: 'moveItemToPage', params: { sourcePageId, itemKey, targetPageId } },
@@ -2837,8 +3170,12 @@ export class Project {
     const currentIndex = this._regionIndexOf(pageId, itemKey);
     const targetIndex = Math.max(0, direction === 'up' ? currentIndex - 1 : currentIndex + 1);
     this.core.dispatch({
-      type: 'pages.reorderRegion',
-      payload: { pageId, key: itemKey, targetIndex },
+      type: 'component.moveNode',
+      payload: {
+        source: { bind: itemKey },
+        targetParent: { nodeId: pageId },
+        targetIndex,
+      },
     });
     return {
       summary: `Reordered '${itemKey}' ${direction} on page '${pageId}'`,
@@ -2854,8 +3191,12 @@ export class Project {
     }
     this._regionIndexOf(pageId, itemKey); // validates page and item existence
     this.core.dispatch({
-      type: 'pages.reorderRegion',
-      payload: { pageId, key: itemKey, targetIndex },
+      type: 'component.moveNode',
+      payload: {
+        source: { bind: itemKey },
+        targetParent: { nodeId: pageId },
+        targetIndex,
+      },
     });
     return {
       summary: `Moved '${itemKey}' to index ${targetIndex} on page '${pageId}'`,
@@ -2904,6 +3245,48 @@ export class Project {
       summary: `Deleted layout node '${nodeId}'`,
       action: { helper: 'deleteLayoutNode', params: { nodeId } },
       affectedPaths: [nodeId],
+    };
+  }
+
+  /** Wrap a component node (by bind or nodeId ref) in any layout component. */
+  wrapComponentNode(ref: { bind: string } | { nodeId: string }, component: string): HelperResult {
+    const result = this.core.dispatch({
+      type: 'component.wrapNode',
+      payload: { node: ref, wrapper: { component } },
+    } as AnyCommand);
+    const nodeId = (result as any)?.nodeRef?.nodeId;
+    return {
+      summary: `Wrapped node in ${component}`,
+      action: { helper: 'wrapComponentNode', params: { ref, component } },
+      affectedPaths: nodeId ? [nodeId] : [],
+      createdId: nodeId,
+    };
+  }
+
+  /** Reorder a component node (by bind or nodeId ref) up or down. */
+  reorderComponentNode(ref: { bind?: string; nodeId?: string }, direction: 'up' | 'down'): HelperResult {
+    this.core.dispatch({
+      type: 'component.reorderNode',
+      payload: { node: ref, direction },
+    } as AnyCommand);
+    return {
+      summary: `Reordered node ${direction}`,
+      action: { helper: 'reorderComponentNode', params: { ref, direction } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Delete a component node by bind or nodeId ref. */
+  deleteComponentNode(ref: { bind?: string; nodeId?: string }): HelperResult {
+    this.core.dispatch({
+      type: 'component.deleteNode',
+      payload: { node: ref },
+    } as AnyCommand);
+    const id = 'bind' in ref && ref.bind ? ref.bind : (ref as any).nodeId;
+    return {
+      summary: `Deleted component node '${id}'`,
+      action: { helper: 'deleteComponentNode', params: { ref } },
+      affectedPaths: id ? [id] : [],
     };
   }
 
@@ -3148,18 +3531,6 @@ export class Project {
     };
   }
 
-  // ── Page Auto-generate Helper ──
-
-  /** Auto-generate pages from definition groups. */
-  autoGeneratePages(): HelperResult {
-    this.core.dispatch({ type: 'pages.autoGenerate', payload: {} } as AnyCommand);
-    return {
-      summary: `Auto-generated pages from definition groups`,
-      action: { helper: 'autoGeneratePages', params: {} },
-      affectedPaths: [],
-    };
-  }
-
   // ── Variable Helpers ──
 
   /** Add a named FEL variable. */
@@ -3211,11 +3582,13 @@ export class Project {
     // Scan for dangling references before deletion
     const warnings: HelperWarning[] = [];
     const allExprs = this.core.allExpressions();
-    const varRef = `$${name}`;
+    const varRefAt = `@${name}`;
+    const varRefDollar = `$${name}`;
     const danglingPaths: string[] = [];
 
     for (const exprLoc of allExprs) {
-      if (typeof exprLoc.expression === 'string' && exprLoc.expression.includes(varRef)) {
+      if (typeof exprLoc.expression === 'string' && 
+          (exprLoc.expression.includes(varRefAt) || exprLoc.expression.includes(varRefDollar))) {
         danglingPaths.push(exprLoc.location ?? 'unknown');
       }
     }
@@ -3223,7 +3596,7 @@ export class Project {
     if (danglingPaths.length > 0) {
       warnings.push({
         code: 'DANGLING_REFERENCES',
-        message: `${danglingPaths.length} expression(s) still reference $${name}`,
+        message: `${danglingPaths.length} expression(s) still reference @${name}`,
         detail: { referenceCount: danglingPaths.length, paths: danglingPaths },
       });
     }
@@ -3341,27 +3714,71 @@ export class Project {
     };
   }
 
-  // ── Screener Helpers ──
+  // ── Screener Document Helpers ──
 
-  /** Enable/disable screener. */
-  setScreener(enabled: boolean): HelperResult {
-    this.core.dispatch({ type: 'definition.setScreener', payload: { enabled } });
+  /** Get the active screener document or throw. */
+  private _getScreener() {
+    const screener = this.core.state.screener;
+    if (!screener) throw new HelperError('SCREENER_NOT_FOUND', 'No screener document loaded', {});
+    return screener;
+  }
 
+  /** Validate a screener item key exists, returning its index. */
+  private _validateScreenerItemKey(key: string): number {
+    const items = this._getScreener().items;
+    const idx = items.findIndex((it: any) => it.key === key);
+    if (idx === -1) throw new HelperError('SCREENER_ITEM_NOT_FOUND', `Screener item not found: ${key}`, { key });
+    return idx;
+  }
+
+  /** Validate a phase exists and a route index is in bounds. */
+  private _validatePhaseRoute(phaseId: string, routeIndex: number) {
+    const screener = this._getScreener();
+    const phase = screener.evaluation.find((p: any) => p.id === phaseId);
+    if (!phase) throw new HelperError('PHASE_NOT_FOUND', `Phase not found: ${phaseId}`, { phaseId });
+    if (routeIndex < 0 || routeIndex >= phase.routes.length) {
+      throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Route index ${routeIndex} out of bounds in phase ${phaseId}`, {
+        phaseId, routeIndex, routeCount: phase.routes.length,
+      });
+    }
+  }
+
+  /** Create a new screener document with a default first-match phase. */
+  createScreenerDocument(options?: { url?: string; title?: string }): HelperResult {
+    const doc = {
+      $formspecScreener: '1.0' as const,
+      url: options?.url ?? '',
+      version: '1.0.0',
+      title: options?.title ?? 'Screener',
+      items: [],
+      evaluation: [{ id: 'default', strategy: 'first-match', routes: [] }],
+    };
+    this.core.dispatch({ type: 'screener.setDocument', payload: doc });
     return {
-      summary: `Screener ${enabled ? 'enabled' : 'disabled'}`,
-      action: { helper: 'setScreener', params: { enabled } },
+      summary: 'Created screener document',
+      action: { helper: 'createScreenerDocument', params: options ?? {} },
+      affectedPaths: [],
+    };
+  }
+
+  /** Remove the screener document. */
+  deleteScreenerDocument(): HelperResult {
+    this.core.dispatch({ type: 'screener.remove', payload: {} });
+    return {
+      summary: 'Removed screener document',
+      action: { helper: 'deleteScreenerDocument', params: {} },
       affectedPaths: [],
     };
   }
 
   /** Add a screener question. */
   addScreenField(key: string, label: string, type: string, props?: FieldProps): HelperResult {
+    this._getScreener();
     const resolved = resolveFieldType(type);
     this.core.dispatch({
-      type: 'definition.addScreenerItem',
+      type: 'screener.addItem',
       payload: { type: 'field', key, label, dataType: resolved.dataType },
     });
-
     return {
       summary: `Added screener field '${key}'`,
       action: { helper: 'addScreenField', params: { key, label, type } },
@@ -3371,8 +3788,7 @@ export class Project {
 
   /** Remove a screener question. */
   removeScreenField(key: string): HelperResult {
-    this.core.dispatch({ type: 'definition.deleteScreenerItem', payload: { key } });
-
+    this.core.dispatch({ type: 'screener.deleteItem', payload: { key } });
     return {
       summary: `Removed screener field '${key}'`,
       action: { helper: 'removeScreenField', params: { key } },
@@ -3380,88 +3796,184 @@ export class Project {
     };
   }
 
-  /** Add a screener routing rule. */
-  addScreenRoute(condition: string, target: string, label?: string, message?: string): HelperResult {
-    this._validateFEL(condition);
-    const payload: Record<string, unknown> = { condition, target };
-    if (label) payload.label = label;
-    if (message) payload.message = message;
+  /** Update properties on a screener question. */
+  updateScreenField(key: string, changes: { label?: string; helpText?: string; required?: boolean | string }): HelperResult {
+    this._validateScreenerItemKey(key);
+    const commands: AnyCommand[] = [];
 
-    this.core.dispatch({ type: 'definition.addRoute', payload });
+    for (const prop of ['label', 'helpText'] as const) {
+      if (prop in changes) {
+        commands.push({
+          type: 'screener.setItemProperty',
+          payload: { key, property: prop, value: (changes as any)[prop] },
+        });
+      }
+    }
 
+    if ('required' in changes) {
+      const val = changes.required;
+      let bindValue: unknown;
+      if (val === true) bindValue = 'true';
+      else if (val === false) bindValue = null;
+      else bindValue = val;
+      commands.push({
+        type: 'screener.setBind',
+        payload: { path: key, properties: { required: bindValue } },
+      });
+    }
+
+    if (commands.length > 0) this.core.dispatch(commands);
     return {
-      summary: `Added screen route to '${target}'`,
-      action: { helper: 'addScreenRoute', params: { condition, target, label, message } },
+      summary: `Updated screener field '${key}'`,
+      action: { helper: 'updateScreenField', params: { key, ...changes } },
+      affectedPaths: [key],
+    };
+  }
+
+  /** Reorder a screener question by key. */
+  reorderScreenField(key: string, direction: 'up' | 'down'): HelperResult {
+    const index = this._validateScreenerItemKey(key);
+    this.core.dispatch({ type: 'screener.reorderItem', payload: { index, direction } });
+    return {
+      summary: `Reordered screener field '${key}' ${direction}`,
+      action: { helper: 'reorderScreenField', params: { key, direction } },
+      affectedPaths: [key],
+    };
+  }
+
+  // ── Phase Management ──
+
+  /** Add an evaluation phase. */
+  addEvaluationPhase(id: string, strategy: string, label?: string): HelperResult {
+    this._getScreener();
+    this.core.dispatch({ type: 'screener.addPhase', payload: { id, strategy, label } });
+    return {
+      summary: `Added evaluation phase '${id}' (${strategy})`,
+      action: { helper: 'addEvaluationPhase', params: { id, strategy, label } },
       affectedPaths: [],
     };
   }
 
-  private _validateRouteIndex(routeIndex: number): void {
-    const routes = (this.core.state.definition as any).screener?.routes ?? [];
-    if (routeIndex < 0 || routeIndex >= routes.length) {
-      throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Route index ${routeIndex} is out of bounds`, {
-        routeIndex,
-        routeCount: routes.length,
-      });
-    }
+  /** Remove an evaluation phase. */
+  removeEvaluationPhase(phaseId: string): HelperResult {
+    this.core.dispatch({ type: 'screener.removePhase', payload: { phaseId } });
+    return {
+      summary: `Removed evaluation phase '${phaseId}'`,
+      action: { helper: 'removeEvaluationPhase', params: { phaseId } },
+      affectedPaths: [],
+    };
   }
 
-  /** Update a screener route. */
+  /** Reorder an evaluation phase. */
+  reorderPhase(phaseId: string, direction: 'up' | 'down'): HelperResult {
+    this.core.dispatch({ type: 'screener.reorderPhase', payload: { phaseId, direction } });
+    return {
+      summary: `Reordered phase '${phaseId}' ${direction}`,
+      action: { helper: 'reorderPhase', params: { phaseId, direction } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Set strategy and config on a phase. */
+  setPhaseStrategy(phaseId: string, strategy: string, config?: Record<string, unknown>): HelperResult {
+    const commands: AnyCommand[] = [
+      { type: 'screener.setPhaseProperty', payload: { phaseId, property: 'strategy', value: strategy } },
+    ];
+    if (config !== undefined) {
+      commands.push({ type: 'screener.setPhaseProperty', payload: { phaseId, property: 'config', value: config } });
+    }
+    this.core.dispatch(commands);
+    return {
+      summary: `Set phase '${phaseId}' strategy to '${strategy}'`,
+      action: { helper: 'setPhaseStrategy', params: { phaseId, strategy, config } },
+      affectedPaths: [],
+    };
+  }
+
+  // ── Phase-Scoped Route Management ──
+
+  /** Add a route to a phase. */
+  addScreenRoute(phaseId: string, route: { condition?: string; target: string; label?: string; message?: string; score?: string; threshold?: number }, insertIndex?: number): HelperResult {
+    this._getScreener();
+    if (route.condition) this._validateFEL(route.condition);
+    if (route.score) this._validateFEL(route.score);
+    this.core.dispatch({ type: 'screener.addRoute', payload: { phaseId, route, insertIndex } });
+    return {
+      summary: `Added route to '${route.target}' in phase '${phaseId}'`,
+      action: { helper: 'addScreenRoute', params: { phaseId, ...route } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Update properties on a route. */
   updateScreenRoute(
+    phaseId: string,
     routeIndex: number,
-    changes: { condition?: string; target?: string; label?: string; message?: string },
+    changes: { condition?: string; target?: string; label?: string; message?: string; score?: string; threshold?: number; override?: boolean; terminal?: boolean },
   ): HelperResult {
-    this._validateRouteIndex(routeIndex);
+    this._validatePhaseRoute(phaseId, routeIndex);
     if (changes.condition) this._validateFEL(changes.condition);
+    if (changes.score) this._validateFEL(changes.score);
 
     const commands: AnyCommand[] = [];
     for (const [prop, val] of Object.entries(changes)) {
       if (val !== undefined) {
         commands.push({
-          type: 'definition.setRouteProperty',
-          payload: { index: routeIndex, property: prop, value: val },
+          type: 'screener.setRouteProperty',
+          payload: { phaseId, index: routeIndex, property: prop, value: val },
         });
       }
     }
     if (commands.length > 0) this.core.dispatch(commands);
-
     return {
-      summary: `Updated screen route ${routeIndex}`,
-      action: { helper: 'updateScreenRoute', params: { routeIndex, ...changes } },
+      summary: `Updated route ${routeIndex} in phase '${phaseId}'`,
+      action: { helper: 'updateScreenRoute', params: { phaseId, routeIndex, ...changes } },
       affectedPaths: [],
     };
   }
 
-  /** Reorder a screener route. */
-  reorderScreenRoute(routeIndex: number, direction: 'up' | 'down'): HelperResult {
-    this._validateRouteIndex(routeIndex);
-    this.core.dispatch({
-      type: 'definition.reorderRoute',
-      payload: { index: routeIndex, direction },
-    });
-
+  /** Reorder a route within a phase. */
+  reorderScreenRoute(phaseId: string, routeIndex: number, direction: 'up' | 'down'): HelperResult {
+    this._validatePhaseRoute(phaseId, routeIndex);
+    this.core.dispatch({ type: 'screener.reorderRoute', payload: { phaseId, index: routeIndex, direction } });
     return {
-      summary: `Reordered screen route ${routeIndex} ${direction}`,
-      action: { helper: 'reorderScreenRoute', params: { routeIndex, direction } },
+      summary: `Reordered route ${routeIndex} in phase '${phaseId}' ${direction}`,
+      action: { helper: 'reorderScreenRoute', params: { phaseId, routeIndex, direction } },
       affectedPaths: [],
     };
   }
 
-  /** Remove a screener route. */
-  removeScreenRoute(routeIndex: number): HelperResult {
-    this._validateRouteIndex(routeIndex);
-    const routes = (this.core.state.definition as any).screener?.routes ?? [];
-    if (routes.length <= 1) {
-      throw new HelperError('ROUTE_MIN_COUNT', 'Cannot delete the last remaining screener route', {
-        currentRouteCount: routes.length,
-        routes,
-      });
-    }
-    this.core.dispatch({ type: 'definition.deleteRoute', payload: { index: routeIndex } });
-
+  /** Remove a route from a phase. */
+  removeScreenRoute(phaseId: string, routeIndex: number): HelperResult {
+    this._validatePhaseRoute(phaseId, routeIndex);
+    this.core.dispatch({ type: 'screener.deleteRoute', payload: { phaseId, index: routeIndex } });
     return {
-      summary: `Removed screen route ${routeIndex}`,
-      action: { helper: 'removeScreenRoute', params: { routeIndex } },
+      summary: `Removed route ${routeIndex} from phase '${phaseId}'`,
+      action: { helper: 'removeScreenRoute', params: { phaseId, routeIndex } },
+      affectedPaths: [],
+    };
+  }
+
+  // ── Screener Lifecycle ──
+
+  /** Set screener availability window. Pass null to clear. */
+  setScreenerAvailability(from?: string | null, until?: string | null): HelperResult {
+    this._getScreener();
+    this.core.dispatch({ type: 'screener.setAvailability', payload: { from, until } });
+    return {
+      summary: 'Updated screener availability',
+      action: { helper: 'setScreenerAvailability', params: { from, until } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Set screener result validity duration. Pass null to clear. */
+  setScreenerResultValidity(duration: string | null): HelperResult {
+    this._getScreener();
+    this.core.dispatch({ type: 'screener.setResultValidity', payload: { duration } });
+    return {
+      summary: duration ? `Set result validity to ${duration}` : 'Cleared result validity',
+      action: { helper: 'setScreenerResultValidity', params: { duration } },
       affectedPaths: [],
     };
   }
@@ -3589,7 +4101,7 @@ export function createProject(options?: CreateProjectOptions): Project {
  */
 export function buildBundleFromDefinition(definition: FormDefinition): ProjectBundle {
   try {
-    const project = createRawProject({ seed: { definition } });
+    const project = createProject({ seed: { definition }, enableChangesets: false });
     const exported = project.export();
     return {
       ...exported,
@@ -3598,49 +4110,15 @@ export function buildBundleFromDefinition(definition: FormDefinition): ProjectBu
   } catch {
     return {
       definition,
-      component: { tree: null as any, customComponents: [] } as unknown as ComponentDocument,
+      component: {
+        $formspecComponent: '1.0',
+        version: '0.1.0',
+        targetDefinition: definition.url ? { url: definition.url } : undefined,
+        tree: null as any,
+        customComponents: [],
+      } as unknown as ComponentDocument,
       theme: null as unknown as ThemeDocument,
       mappings: {},
     };
   }
-}
-
-// ── humanizeFEL (string-level FEL→English transform) ──────────────
-
-const OP_MAP: Record<string, string> = {
-  '=': 'is',
-  '!=': 'is not',
-  '>': 'is greater than',
-  '>=': 'is at least',
-  '<': 'is less than',
-  '<=': 'is at most',
-};
-
-function humanizeRef(ref: string): string {
-  const name = ref.replace(/^\$/, '');
-  return name
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, c => c.toUpperCase())
-    .trim();
-}
-
-function humanizeValue(val: string): string {
-  if (val === 'true') return 'Yes';
-  if (val === 'false') return 'No';
-  return val;
-}
-
-/**
- * Attempt to convert a FEL expression to a human-readable string.
- * Only handles simple `$ref op value` patterns. Returns the raw expression
- * for anything more complex.
- */
-function humanizeFEL(expression: string): string {
-  const trimmed = expression.trim();
-  const match = trimmed.match(/^(\$\w+)\s*(!=|>=|<=|=|>|<)\s*(.+)$/);
-  if (!match) return trimmed;
-  const [, ref, op, value] = match;
-  const humanOp = OP_MAP[op];
-  if (!humanOp) return trimmed;
-  return `${humanizeRef(ref)} ${humanOp} ${humanizeValue(value.trim())}`;
 }

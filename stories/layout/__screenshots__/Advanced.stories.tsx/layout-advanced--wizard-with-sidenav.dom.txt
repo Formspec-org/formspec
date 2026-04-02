@@ -1,0 +1,121 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×394
+  div  |  1200×394  d:grid  cols:584px 584px 0px  rows:393.594px  gap:32px
+    div  |  584×394
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "React"
+      div  |  584×367
+        #shadow-root
+          link [hidden]
+          div  |  584×367
+            div  |  584×367
+              div  .formspec-container  |  584×367  d:flex  dir:column  gap:16px  |  color:rgb(26, 31, 37)  font:15px
+                div  .formspec-wizard.formspec-wizard--with-sidenav  role="group"  aria-label="Wizard: Step 1 of 2"  |  584×367  d:flex  overflow:hidden  |  bg:rgb(255, 255, 255)  border:1px solid rgb(160, 164, 168)  radius:12px
+                  nav  .formspec-wizard-sidenav  aria-label="Form steps"  |  217×365  d:flex  dir:column  overflow:hidden  |  bg:rgb(252, 252, 251)  border:0px 1px 0px 0px none solid none none rgb(26, 31, 37) rgb(160, 164, 168) rgb(26, 31, 37) rgb(26, 31, 37)
+                    button  .formspec-wizard-sidenav-toggle.formspec-focus-ring  type="button"  aria-label="Collapse navigation"  |  216×35  d:flex  jc:flex-end  ai:center  p:10,14  |  bg:rgb(239, 239, 239)  color:rgb(0, 0, 0)  border:0px 0px 1px none none solid rgb(0, 0, 0)  font:14px
+                      svg  aria-hidden  |  14×14  overflow:hidden
+                        polyline  |  4×7
+                    ol  .formspec-wizard-sidenav-list  |  216×108  p:8,0  overflow:hidden
+                      li  .formspec-wizard-sidenav-item.formspec-wizard-sidenav-item--active  |  216×46  d:flex  gap:10px  ai:center  |  border:0px 0px 0px 3px none none none solid rgb(26, 31, 37)
+                        button  .formspec-wizard-sidenav-btn.formspec-focus-ring  type="button"  |  213×46  d:flex  gap:10px  ai:center  p:9,12  |  bg:rgb(239, 239, 239)  color:rgb(0, 0, 0)
+                          span  .formspec-wizard-sidenav-step  |  28×28  d:flex  jc:center  ai:center  |  border:2px solid rgb(0, 0, 0)  radius:50%  font:11px/bold
+                            "1"
+                          span  .formspec-wizard-sidenav-label  |  88×21  overflow:hidden  |  color:rgb(36, 87, 102)  font:14px/600
+                            "Personal Info"
+                      li  .formspec-wizard-sidenav-item  |  216×46  d:flex  gap:10px  ai:center  |  border:0px 0px 0px 3px none none none solid rgb(26, 31, 37)
+                        button  .formspec-wizard-sidenav-btn.formspec-focus-ring  type="button"  |  213×46  d:flex  gap:10px  ai:center  p:9,12  |  bg:rgb(239, 239, 239)  color:rgb(0, 0, 0)
+                          span  .formspec-wizard-sidenav-step  |  28×28  d:flex  jc:center  ai:center  |  border:2px solid rgb(0, 0, 0)  radius:50%  font:11px/bold
+                            "2"
+                          span  .formspec-wizard-sidenav-label  |  52×21  overflow:hidden  |  color:rgb(55, 65, 81)  font:14px/500
+                            "Contact"
+                  div  .formspec-wizard-content  |  365×365  d:flex  dir:column  p:24
+                    div .formspec-wizard-steps.formspec-hidden [hidden]
+                    div  .formspec-wizard-step-indicator  |  317×23  m:0,0,12,0  |  color:rgb(99, 105, 112)  font-weight:600
+                      "Step 1 of 2: Personal Info"
+                    div  .formspec-wizard-panel  role="region"  aria-label="Personal Info"  |  317×222
+                      section  .formspec-page  |  317×222  d:flex  dir:column  gap:12px
+                        h2  |  317×33  m:17,0,4,0  p:0,0,8,0  |  border:0px 0px 1px none none solid rgb(26, 31, 37) rgb(26, 31, 37) rgb(160, 164, 168)  font:20px/bold
+                          "Personal Info"
+                        div  .formspec-field  data-name="firstName"  |  317×72  d:flex  dir:column  gap:4px
+                          label  for="field-firstName"  |  317×21  m:0,0,4,0  |  font:14px/600
+                            "First Name"
+                            span  .formspec-required  aria-hidden  |  10×17  m:0,0,0,2  |  color:rgb(217, 48, 37)
+                              "*"
+                          input  #field-firstName  type="text"  required  name="firstName"  aria-required  aria-invalid="false"  |  317×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  color:rgb(0, 0, 0)  border:1px solid rgb(118, 118, 118)  radius:8px  shadow:oklab(0 0 0 / 0) 0px 0px 0px 0px  font:14px
+                          p #field-firstName-error .formspec-error [hidden]
+                        div  .formspec-field  data-name="lastName"  |  317×72  d:flex  dir:column  gap:4px
+                          label  for="field-lastName"  |  317×21  m:0,0,4,0  |  font:14px/600
+                            "Last Name"
+                            span  .formspec-required  aria-hidden  |  10×17  m:0,0,0,2  |  color:rgb(217, 48, 37)
+                              "*"
+                          input  #field-lastName  type="text"  required  name="lastName"  aria-required  aria-invalid="false"  |  317×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  color:rgb(0, 0, 0)  border:1px solid rgb(118, 118, 118)  radius:8px  font:14px
+                          p #field-lastName-error .formspec-error [hidden]
+                    div  .formspec-wizard-nav  |  317×45  d:flex  gap:8px  jc:flex-end  m:16,0,0,0
+                      button  .formspec-wizard-prev.formspec-button-secondary.formspec-focus-ring  type="button"  disabled  aria-label="Previous step"  aria-disabled  |  104×45  d:flex  jc:center  ai:center  p:10,20  |  bg:rgba(239, 239, 239, 0.3)  color:rgba(16, 16, 16, 0.3)  border:1px solid rgba(118, 118, 118, 0.3)  radius:8px  opacity:0.45  font-weight:600
+                        "Previous"
+                      button  .formspec-wizard-next.formspec-button-primary.formspec-focus-ring  type="button"  aria-label="Next step"  |  73×45  d:flex  jc:center  ai:center  p:10,20  |  bg:rgb(239, 239, 239)  color:rgb(0, 0, 0)  radius:8px  font-weight:600
+                        "Next"
+    div  |  584×394
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Web Component"
+      div  |  584×367
+        div  |  584×367
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×367
+              div  .isolated-story-root  |  584×367
+                formspec-render  |  584×367
+                  #shadow-root
+                  div  .formspec-container  |  584×367  d:flex  dir:column  gap:16px  |  color:rgb(26, 31, 37)  font:15px
+                    div  .formspec-wizard.formspec-wizard--with-sidenav  |  584×367  d:flex  overflow:hidden  |  bg:rgb(255, 255, 255)  border:1px solid rgb(160, 164, 168)  radius:12px
+                      nav  .formspec-wizard-sidenav  aria-label="Form steps"  |  217×365  d:flex  dir:column  overflow:hidden  |  bg:rgb(252, 252, 251)  border:0px 1px 0px 0px none solid none none rgb(26, 31, 37) rgb(160, 164, 168) rgb(26, 31, 37) rgb(26, 31, 37)
+                        button  .formspec-wizard-sidenav-toggle.formspec-focus-ring  type="button"  aria-label="Collapse navigation"  |  216×35  d:flex  jc:flex-end  ai:center  p:10,14  |  color:rgb(107, 114, 128)  border:0px 0px 1px none none solid rgb(107, 114, 128) rgb(107, 114, 128) rgb(160, 164, 168)  font:14px
+                          svg  aria-hidden  |  14×14  overflow:hidden
+                            polyline  |  4×7
+                        ol  .formspec-wizard-sidenav-list  |  216×108  p:8,0  overflow:hidden
+                          li  .formspec-wizard-sidenav-item.formspec-wizard-sidenav-item--active  |  216×46  d:flex  gap:10px  ai:center  |  border:0px 0px 0px 3px none none none solid rgb(26, 31, 37) rgb(26, 31, 37) rgb(26, 31, 37) rgb(45, 106, 122)
+                            button  .formspec-wizard-sidenav-btn.formspec-focus-ring  type="button"  |  213×46  d:flex  gap:10px  ai:center  p:9,12  |  bg:rgb(237, 245, 247)
+                              span  .formspec-wizard-sidenav-step  |  28×28  d:flex  jc:center  ai:center  |  bg:rgb(45, 106, 122)  color:rgb(255, 255, 255)  border:2px solid rgb(45, 106, 122)  radius:50%  font:11px/bold
+                                "1"
+                              span  .formspec-wizard-sidenav-label  |  88×21  overflow:hidden  |  color:rgb(36, 87, 102)  font:14px/600
+                                "Personal Info"
+                          li  .formspec-wizard-sidenav-item  |  216×46  d:flex  gap:10px  ai:center  |  border:0px 0px 0px 3px none none none solid rgb(26, 31, 37) rgb(26, 31, 37) rgb(26, 31, 37) rgba(0, 0, 0, 0)
+                            button  .formspec-wizard-sidenav-btn.formspec-focus-ring  type="button"  |  213×46  d:flex  gap:10px  ai:center  p:9,12
+                              span  .formspec-wizard-sidenav-step  |  28×28  d:flex  jc:center  ai:center  |  bg:rgb(226, 232, 240)  color:rgb(71, 85, 105)  border:2px solid rgba(0, 0, 0, 0)  radius:50%  font:11px/bold
+                                "2"
+                              span  .formspec-wizard-sidenav-label  |  52×21  overflow:hidden  |  color:rgb(55, 65, 81)  font:14px/500
+                                "Contact"
+                      div  .formspec-wizard-content  |  365×365  d:flex  dir:column  p:24
+                        div .formspec-wizard-steps.formspec-hidden [hidden]
+                        div  .formspec-wizard-step-indicator  |  317×23  m:0,0,12,0  |  color:rgb(99, 105, 112)  font-weight:600
+                          "Step 1 of 2: Personal Info"
+                        div  .formspec-wizard-panel  role="region"  aria-label="Personal Info"  |  317×222
+                          section  .formspec-page  |  317×222  d:flex  dir:column  gap:12px
+                            h2  |  317×33  m:17,0,4,0  p:0,0,8,0  |  border:0px 0px 1px none none solid rgb(26, 31, 37) rgb(26, 31, 37) rgb(160, 164, 168)  font:20px/bold
+                              "Personal Info"
+                            div  .formspec-field.formspec-themed-field  aria-live="off"  data-name="firstName"  |  317×72  d:flex  dir:column  gap:4px
+                              label  .formspec-label  for="field-firstName"  |  317×21  m:0,0,4,0  |  font:14px/600
+                                "First Name"
+                                abbr  .formspec-required.usa-label--required  |  10×17  m:0,0,0,2  |  color:rgb(217, 48, 37)
+                                  "*"
+                              input  #field-firstName  .formspec-input  type="text"  name="firstName"  aria-required  aria-invalid="false"  |  317×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 122, 126)  radius:8px  font:14px
+                              p #field-firstName-error .formspec-error [hidden]
+                            div  .formspec-field.formspec-themed-field  aria-live="off"  data-name="lastName"  |  317×72  d:flex  dir:column  gap:4px
+                              label  .formspec-label  for="field-lastName"  |  317×21  m:0,0,4,0  |  font:14px/600
+                                "Last Name"
+                                abbr  .formspec-required.usa-label--required  |  10×17  m:0,0,0,2  |  color:rgb(217, 48, 37)
+                                  "*"
+                              input  #field-lastName  .formspec-input  type="text"  name="lastName"  aria-required  aria-invalid="false"  |  317×43  p:10,14  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 122, 126)  radius:8px  font:14px
+                              p #field-lastName-error .formspec-error [hidden]
+                        div .formspec-wizard-panel.formspec-hidden [hidden]
+                        div  .formspec-wizard-nav  |  317×45  d:flex  gap:8px  jc:flex-end  m:16,0,0,0
+                          button  .formspec-wizard-prev.formspec-button-secondary.formspec-focus-ring  type="button"  disabled  aria-label="Previous step"  aria-disabled  |  104×45  d:flex  jc:center  ai:center  p:10,20  |  bg:rgb(255, 255, 255)  border:1px solid rgb(204, 204, 204)  radius:8px  opacity:0.45  font-weight:600
+                            "Previous"
+                          button  .formspec-wizard-next.formspec-button-primary.formspec-focus-ring  type="button"  aria-label="Next step"  |  73×45  d:flex  jc:center  ai:center  p:10,20  |  bg:rgb(45, 106, 122)  color:rgb(255, 255, 255)  radius:8px  font-weight:600
+                            "Next"
+                        div  .formspec-sr-only  role="status"  aria-live="polite"  |  1×1  pos:absolute  m:-1  overflow:hidden
+                          "Personal Info. Step 1 of 2."

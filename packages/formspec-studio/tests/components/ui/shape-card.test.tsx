@@ -13,9 +13,11 @@ describe('ShapeCard', () => {
     expect(screen.getByText(/error/i)).toBeInTheDocument();
   });
 
-  it('shows constraint expression', () => {
+  it('shows constraint expression with syntax highlighting', () => {
     render(<ShapeCard name="ageCheck" severity="error" constraint="$age >= 18" />);
-    expect(screen.getByText('$age >= 18')).toBeInTheDocument();
+    const constraintEl = screen.getByTestId('shape-constraint');
+    expect(constraintEl).toBeInTheDocument();
+    expect(constraintEl.textContent).toBe('$age >= 18');
   });
 
   it('shows warning severity', () => {

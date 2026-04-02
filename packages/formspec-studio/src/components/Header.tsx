@@ -1,16 +1,13 @@
 /** @filedesc Top navigation header with workspace tab bar and actions (new, import, export, search). */
-
 import { useState, useRef, useEffect } from 'react';
 import { useProject } from '../state/useProject';
 import { useProjectState } from '../state/useProjectState';
 import { type ColorScheme, type ThemePreference } from '../hooks/useColorScheme';
 
 const TABS: { name: string; help: string }[] = [
-  { name: 'Editor', help: 'Visual form builder canvas for adding and arranging items' },
-  { name: 'Logic', help: 'Binds, shapes, and variables — all form logic lives here' },
-  { name: 'Data', help: 'Response schema, data sources, option sets, and test data' },
-  { name: 'Layout', help: 'Multi-page form structure — wizard, tabs, and page grid layouts' },
-  { name: 'Theme', help: 'Visual tokens, defaults, selectors, and page layouts' },
+  { name: 'Editor', help: 'Build your form structure and manage shared resources' },
+  { name: 'Layout', help: 'Visual form builder — pages, layout containers, and widget selection' },
+  { name: 'Theme', help: 'Visual tokens, defaults, selectors, and widget policy' },
   { name: 'Mapping', help: 'Bidirectional data transforms for import/export formats' },
   { name: 'Preview', help: 'Live form preview and JSON document view' },
 ];
@@ -29,6 +26,14 @@ interface HeaderProps {
   onToggleChat?: () => void;
   isCompact?: boolean;
   colorScheme?: ColorScheme;
+}
+
+function tabId(name: string): string {
+  return `studio-tab-${name.toLowerCase()}`;
+}
+
+function panelId(name: string): string {
+  return `studio-panel-${name.toLowerCase()}`;
 }
 
 /** Cycle order: system → light → dark → system */
@@ -93,6 +98,7 @@ export function Header({
   const { definition } = state;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -106,19 +112,42 @@ export function Header({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [menuOpen]);
 
-  const tabButtons = TABS.map(({ name, help }) => (
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+
+    const lastIndex = TABS.length - 1;
+    let nextIndex = index;
+    if (event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
+    if (event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = lastIndex;
+
+    const nextTab = TABS[nextIndex];
+    onTabChange(nextTab.name);
+    tabRefs.current[nextIndex]?.focus();
+  };
+
+  const tabButtons = TABS.map(({ name, help }, index) => (
     <button
       key={name}
+      id={tabId(name)}
       role="tab"
       aria-selected={activeTab === name}
+      aria-controls={panelId(name)}
+      tabIndex={activeTab === name ? 0 : -1}
       data-testid={`tab-${name}`}
       title={help}
+      ref={(node) => {
+        tabRefs.current[index] = node;
+      }}
       className={`px-3 sm:px-3.5 h-full text-[13px] transition-colors border-b-2 cursor-pointer whitespace-nowrap shrink-0 ${
         activeTab === name
           ? 'border-accent text-accent font-semibold'
           : 'border-transparent text-muted hover:text-ink'
       }`}
       onClick={() => onTabChange(name)}
+      onKeyDown={(event) => handleTabKeyDown(event, index)}
     >
       {name}
     </button>
@@ -182,6 +211,16 @@ export function Header({
           >
             App Settings
           </button>
+          <div className="border-t border-border my-1" />
+          <a
+            href="/chat.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors"
+            onClick={() => setMenuOpen(false)}
+          >
+            AI Chat Studio
+          </a>
         </div>
       )}
     </div>
@@ -309,7 +348,7 @@ export function Header({
             </div>
             <div className="">
               <div className="font-bold text-[14px] tracking-tight leading-none whitespace-nowrap">The Stack</div>
-              <div className="font-mono text-[9px] text-muted tracking-wide uppercase whitespace-nowrap">
+              <div className="font-mono text-[11px] text-muted/85 tracking-wide uppercase whitespace-nowrap">
                 FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}
               </div>
             </div>
@@ -319,7 +358,7 @@ export function Header({
         </div>
 
         {/* Row 2: Scrollable tab strip */}
-        <nav className="flex h-[36px] overflow-x-auto scrollbar-none px-3" role="tablist">
+        <nav className="flex h-[36px] overflow-x-auto scrollbar-none px-3" role="tablist" aria-label="Studio workspaces">
           {tabButtons}
         </nav>
       </div>
@@ -355,7 +394,7 @@ export function Header({
       </button>
 
       {/* Tabs */}
-      <nav className="flex h-full" role="tablist">
+      <nav className="flex h-full" role="tablist" aria-label="Studio workspaces">
         {tabButtons}
       </nav>
 

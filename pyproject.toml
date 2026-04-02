@@ -34,6 +34,9 @@ test = [
     "hypothesis>=6.0",
     "referencing>=0.30",
 ]
+docs = [
+    "pdoc>=15.0",
+]
 
 [tool.maturin]
 manifest-path = "crates/formspec-py/Cargo.toml"

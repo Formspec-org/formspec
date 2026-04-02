@@ -38,7 +38,7 @@ test('shape constraint: null comparison result should pass (not fire)', () => {
   assert.equal(shapeErr, undefined, 'Shape should not fire when constraint evaluates to null');
 });
 
-test('shape constraint: not($amount > 25) when amount is null should pass', () => {
+test('shape constraint: !($amount > 25) when amount is null should pass', () => {
   const engine = new FormEngine({
     $formspec: '1.0',
     url: 'http://example.org/test',

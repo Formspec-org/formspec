@@ -2,11 +2,14 @@
 import { effect } from '@preact/signals-core';
 import type { SelectBehavior, FieldRefs, BehaviorContext } from './types';
 import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
+import { bindSelectCombobox } from './select-combobox-bind';
 
 export function useSelect(ctx: BehaviorContext, comp: any): SelectBehavior {
     const fieldPath = resolveFieldPath(comp.bind, ctx.prefix);
     const id = comp.id || toFieldId(fieldPath);
     const item = ctx.findItemByKey(comp.bind);
+    const multiple = !!comp.multiple;
+    const searchable = !!comp.searchable;
     warnIfIncompatible('Select', item?.dataType || 'string');
     const itemDesc = { key: item?.key || comp.bind, type: 'field' as const, dataType: item?.dataType || 'choice' };
     const rawPresentation = ctx.resolveItemPresentation(itemDesc);
@@ -53,8 +56,30 @@ export function useSelect(ctx: BehaviorContext, comp: any): SelectBehavior {
         placeholder: comp.placeholder,
         clearable: comp.clearable,
         dataType,
+        searchable,
+        multiple,
 
         bind(refs: FieldRefs): () => void {
+            if (searchable || multiple) {
+                const placeholderText = comp.placeholder || 'Select\u2026';
+                return bindSelectCombobox(
+                    ctx,
+                    {
+                        fieldPath,
+                        dataType,
+                        multiple,
+                        searchable,
+                        clearable: !!comp.clearable,
+                        placeholder: placeholderText,
+                        vm,
+                        labelText,
+                        getOptions: () =>
+                            ctx.engine.getOptions?.(fieldPath) || item?.options || [],
+                    },
+                    refs,
+                );
+            }
+
             const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             const selectEl = refs.control.querySelector('select') || refs.control;

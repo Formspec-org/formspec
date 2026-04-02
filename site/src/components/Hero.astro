@@ -2,6 +2,7 @@
 // Hero section — the value proposition above the fold.
 // Light, clean, confident. Typography does the heavy lifting.
 import '@formspec-org/webcomponent/formspec-default.css';
+import Newsletter from "./Newsletter.astro";
 ---
 
 <section class="hero" aria-label="Introduction">
@@ -49,6 +50,32 @@ import '@formspec-org/webcomponent/formspec-default.css';
       <a href="/docs/" class="btn-ghost">
         Docs
       </a>
+    </div>
+
+    <div class="hero-pills" role="list" aria-label="Technologies">
+      <span role="listitem" class="hero-pill">Rust</span>
+      <span role="listitem" class="hero-pill">TypeScript</span>
+      <span role="listitem" class="hero-pill">React</span>
+      <span role="listitem" class="hero-pill">Swift</span>
+      <span role="listitem" class="hero-pill">Kotlin</span>
+      <span role="listitem" class="hero-pill">Python</span>
+      <span role="listitem" class="hero-pill">WASM</span>
+      <span role="listitem" class="hero-pill">Web Components</span>
+      <span role="listitem" class="hero-pill">Tailwind</span>
+      <span role="listitem" class="hero-pill">USWDS</span>
+      <span role="listitem" class="hero-pill">JSON Schema</span>
+      <span role="listitem" class="hero-pill">MCP Server</span>
+      <span role="listitem" class="hero-pill">FHIR</span>
+      <span role="listitem" class="hero-pill">schema.org</span>
+      <span role="listitem" class="hero-pill">ICD-10</span>
+      <span role="listitem" class="hero-pill">Field-level guidance</span>
+      <span role="listitem" class="hero-pill">i18n</span>
+      <span role="listitem" class="hero-pill">AI-native</span>
+      <span role="listitem" class="hero-pill">AGPL-3.0</span>
+    </div>
+
+    <div class="hero-newsletter">
+      <Newsletter variant="inline" />
     </div>
 
   </div>
@@ -208,6 +235,27 @@ import '@formspec-org/webcomponent/formspec-default.css';
   .btn-ghost:hover {
     border-color: var(--color-accent);
     color: var(--color-accent);
+  }
+
+  .hero-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 1.25rem;
+  }
+
+  .hero-pill {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.2rem 0.5rem;
+    border-radius: 100px;
+    border: 1px solid var(--color-border);
+    color: var(--color-ink-tertiary);
+    background: var(--color-surface);
+  }
+
+  .hero-newsletter {
+    margin-top: 1.25rem;
   }
 
   .hero-code {

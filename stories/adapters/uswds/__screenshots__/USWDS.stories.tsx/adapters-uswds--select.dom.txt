@@ -1,0 +1,74 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×129
+  div  |  1200×129  d:grid  cols:584px 584px 0px  rows:129.031px  gap:32px
+    div  |  584×129
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "USWDS Adapter"
+      div  |  584×102
+        div  |  584×102
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×102
+              div  .isolated-story-root  |  584×102
+                form  .usa-form  |  584×102
+                  h2  .usa-sr-only  |  60×28  pos:absolute  m:20,0  |  font:24px/bold
+                    "Select"
+                  div  |  584×102
+                    formspec-render  |  584×102
+                      #shadow-root
+                      div  .formspec-container  |  584×102
+                        div  .formspec-stack.grid-row.grid-gap  |  616×102  d:flex  wrap:wrap  m:0,-16
+                          div  .grid-col-12  |  616×102  pos:relative  p:0,16
+                            div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="color"  |  480×78  d:flex  dir:column  m:24,0,0,0
+                              label  .usa-label  for="field-color"  |  480×22  |  font:16.96px
+                                "Favorite Color"
+                                abbr  .formspec-required.usa-label--required  |  10×22  |  color:rgb(181, 9, 9)
+                                  "*"
+                              span  #field-color-error  .usa-error-message  |  480×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                              select  #field-color  .usa-select  name="color"  aria-required  aria-invalid="false"  |  480×40  m:8,0,0,0  p:8,32,8,8  |  bg:rgb(255, 255, 255)  color:rgb(27, 27, 27)  border:1px solid rgb(86, 92, 101)  font:16.96px
+                                option  disabled  |  0×0  p:0,2,1,2  overflow:hidden
+                                  "- Select -"
+                                option  value="red"  |  0×0  p:0,2,1,2  overflow:hidden
+                                  "Red"
+                                option  value="green"  |  0×0  p:0,2,1,2  overflow:hidden
+                                  "Green"
+                                option  value="blue"  |  0×0  p:0,2,1,2  overflow:hidden
+                                  "Blue"
+                                option  value="yellow"  |  0×0  p:0,2,1,2  overflow:hidden
+                                  "Yellow"
+    div  |  584×102
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Real USWDS"
+      div  |  584×67
+        div  |  584×67
+          #shadow-root
+            link [hidden]
+            div  .story-root  |  584×67  |  color:rgb(27, 27, 27)
+              div  |  584×67
+                form  .usa-form  |  584×67
+                  div  .grid-container.padding-x-0  |  584×67
+                    div  .grid-row.grid-gap  |  584×67
+                      div  .grid-col-12  |  584×67
+                        h2  .usa-sr-only  |  584×28  m:20,0  |  font:24px/bold
+                          "Select"
+                        div  .usa-form-group  |  584×19
+                          label  .usa-label  for="real-uswds-color"  |  106×18
+                            "Favorite Color"
+                            abbr  .usa-label--required  |  12×18
+                              "*"
+                          span  #real-uswds-color-error  .usa-error-message  |  0×18
+                          select  #real-uswds-color  .usa-select  required  name="color"  aria-describedby="real-uswds-color-error"  aria-invalid="false"  data-realUswdsPath="color"  |  76×19  d:inline-block  |  bg:rgb(255, 255, 255)  color:rgb(0, 0, 0)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                            option  disabled  selected  |  0×0  p:0,2,1,2
+                              "- Select -"
+                            option  value="red"  |  0×0  p:0,2,1,2
+                              "Red"
+                            option  value="green"  |  0×0  p:0,2,1,2
+                              "Green"
+                            option  value="blue"  |  0×0  p:0,2,1,2
+                              "Blue"
+                            option  value="yellow"  |  0×0  p:0,2,1,2
+                              "Yellow"

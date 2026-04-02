@@ -3,7 +3,7 @@ import {
   pruneDescendants,
   sortForBatchDelete,
   buildBatchMoveCommands,
-} from '../../src/lib/field-helpers';
+} from '@formspec-org/studio-core';
 
 describe('pruneDescendants', () => {
   it('removes a child when its parent is also selected', () => {

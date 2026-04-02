@@ -66,3 +66,4 @@ fn get_by_dotted_path(val: &Value, path: &str) -> Value {
     }
     current.clone()
 }
+

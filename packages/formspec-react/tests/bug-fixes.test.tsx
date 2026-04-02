@@ -7,7 +7,8 @@ import { initFormspecEngine, createFormEngine } from '@formspec-org/engine';
 import type { LayoutNode } from '@formspec-org/layout';
 import { FormspecNode } from '../src/node-renderer';
 import { FormspecProvider, useFormspecContext } from '../src/context';
-import { FormspecForm, planContainsWizard } from '../src/renderer';
+import { FormspecForm } from '../src/renderer';
+import { planContains } from '@formspec-org/layout';
 import type { DisplayComponentProps, ComponentMap } from '../src/component-map';
 
 /** Local copy of planContainsWizard for test isolation — mirrors what renderer.tsx exports. */
@@ -461,6 +462,37 @@ describe('Item 25: Alert role and severity', () => {
         const el = container.querySelector('[class*="formspec-alert--"]');
         expect(el).toBeTruthy();
     });
+
+    it('adds formspec-alert--dismissible class when dismissible', () => {
+        const node: LayoutNode = {
+            id: 'alert-d',
+            component: 'Alert',
+            category: 'display',
+            props: { text: 'Dismiss me', severity: 'info', dismissible: true },
+            cssClasses: [],
+            children: [],
+        };
+        const container = renderNode(node);
+        const el = container.querySelector('.formspec-alert--dismissible');
+        expect(el).toBeTruthy();
+    });
+
+    it('uses formspec-alert-close class on dismiss button (matching WC)', () => {
+        const node: LayoutNode = {
+            id: 'alert-close',
+            component: 'Alert',
+            category: 'display',
+            props: { text: 'Close me', severity: 'warning', dismissible: true },
+            cssClasses: [],
+            children: [],
+        };
+        const container = renderNode(node);
+        const btn = container.querySelector('.formspec-alert-close');
+        expect(btn).toBeTruthy();
+        // Old class name should NOT be present
+        const oldBtn = container.querySelector('.formspec-alert-dismiss');
+        expect(oldBtn).toBeFalsy();
+    });
 });
 
 // ── Item 6: Wizard submit mode ────────────────────────────────────────────
@@ -608,11 +640,11 @@ describe('Item 31: FormspecForm does not render second submit when Wizard presen
         expect(container.querySelector('.formspec-submit')).toBeTruthy();
     });
 
-    it('planContainsWizard detects Wizard in tree', () => {
-        expect(planContainsWizard(wizardLayoutNode)).toBe(true);
+    it('planContains detects Wizard in tree', () => {
+        expect(planContains(wizardLayoutNode, 'Wizard')).toBe(true);
     });
 
-    it('planContainsWizard returns false for tree without Wizard', () => {
+    it('planContains returns false for tree without Wizard', () => {
         const plainNode: LayoutNode = {
             id: 'r', component: 'Stack', category: 'layout' as const,
             props: {}, cssClasses: [],
@@ -620,7 +652,7 @@ describe('Item 31: FormspecForm does not render second submit when Wizard presen
                 { id: 'c', component: 'Page', category: 'layout' as const, props: {}, cssClasses: [], children: [] },
             ],
         };
-        expect(planContainsWizard(plainNode)).toBe(false);
+        expect(planContains(plainNode, 'Wizard')).toBe(false);
     });
 
     it('FormspecFormInner does not render .formspec-submit when Wizard is in the layout', () => {

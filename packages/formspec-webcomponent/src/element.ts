@@ -15,9 +15,11 @@ import {
     ItemDescriptor,
     planComponentTree,
     planDefinitionFallback,
+    ensureSubmitButton,
+    mergeFormPresentationForPlanning,
     type PlanContext,
 } from '@formspec-org/layout';
-import defaultThemeJson from './default-theme.json';
+import defaultThemeJson from '@formspec-org/layout/default-theme';
 
 // Extracted modules
 import {
@@ -27,6 +29,7 @@ import {
     screenerAnswersSatisfyRequired,
     extractScreenerSeedFromData,
     omitScreenerKeysFromData,
+    evaluateScreenerDocumentForRoute,
     type ScreenerHost,
 } from './rendering/screener';
 import { applyResponseDataToEngine } from './hydrate-response-data';
@@ -113,6 +116,8 @@ export class FormspecRender extends HTMLElement {
     /** @internal */ _screenerCompleted = false;
     /** The route selected by the screener, if any. */
     /** @internal */ _screenerRoute: ScreenerRoute | null = null;
+    /** Standalone Screener Document. */
+    /** @internal */ _screenerDocument: any | null = null;
     /** Backing store for the `screenerSeedAnswers` property. */
     private _screenerSeedAnswers: Record<string, any> | null = null;
     /**
@@ -120,6 +125,8 @@ export class FormspecRender extends HTMLElement {
      * Prefer this over separate engine hydration — consumed once when the engine is created.
      */
     private _initialData: Record<string, any> | null = null;
+    /** Whether to auto-inject a SubmitButton node into the layout plan. Defaults to true. */
+    private _showSubmit = true;
     /** Shared pending state for submit flows (e.g. async host submits). */
     private _submitPendingSignal = signal(false);
     /** Latest submit detail payload (`{ response, validationReport }`). */
@@ -161,7 +168,7 @@ export class FormspecRender extends HTMLElement {
 
     /** Returns the current screener completion + routing state. */
     getScreenerState(): ScreenerStateSnapshot {
-        const hasScreener = hasActiveScreener(this._definition);
+        const hasScreener = hasActiveScreener(this._screenerDocument);
         return {
             hasScreener,
             completed: hasScreener ? this._screenerCompleted : true,
@@ -199,10 +206,10 @@ export class FormspecRender extends HTMLElement {
     }
 
     /**
-     * Full Formspec response `data` (same object you would pass to engine hydration). Set **before**
-     * {@link definition} on a new element. On engine boot, screener fields are split out for the gate;
-     * the rest is applied to the engine so one assignment replaces manual `extractScreenerSeedFromData` +
-     * `applyResponseDataToEngine` calls.
+     * Full Formspec response `data` (same object you would pass to engine hydration). Set
+     * {@link screenerDocument} first when the payload includes screener keys. Set **before**
+     * {@link definition} on a new element. Set {@link screenerDocument} first so screener keys in
+     * `data` are split out for the gate; the rest is applied to the engine.
      */
     set initialData(val: Record<string, any> | null | undefined) {
         if (val != null && typeof val === 'object' && !Array.isArray(val)) {
@@ -217,17 +224,17 @@ export class FormspecRender extends HTMLElement {
     }
 
     private tryAutoCompleteScreenerFromSeed(): void {
-        if (!this.engine || !this._screenerSeedAnswers) return;
-        const screener = this._definition?.screener;
+        if (!this.engine || !this._screenerSeedAnswers || !this._screenerDocument) return;
+        const screener = this._screenerDocument;
         if (!screener?.items?.length) return;
 
-        const defaultCurrency = this._definition.formPresentation?.defaultCurrency || 'USD';
+        const defaultCurrency = this._definition?.formPresentation?.defaultCurrency || 'USD';
         const answers = buildInitialScreenerAnswers(screener, this._screenerSeedAnswers, defaultCurrency);
         if (!screenerAnswersSatisfyRequired(screener, answers)) return;
 
         let route: ScreenerRoute | null;
         try {
-            route = this.engine.evaluateScreener(answers);
+            route = evaluateScreenerDocumentForRoute(this._screenerDocument, answers);
         } catch {
             return;
         }
@@ -275,11 +282,11 @@ export class FormspecRender extends HTMLElement {
             }
 
             if (this._initialData) {
-                const seed = extractScreenerSeedFromData(val, this._initialData);
+                const seed = extractScreenerSeedFromData(this._screenerDocument, this._initialData);
                 if (seed) {
                     this._screenerSeedAnswers = seed;
                 }
-                const rest = omitScreenerKeysFromData(val, this._initialData);
+                const rest = omitScreenerKeysFromData(this._screenerDocument, this._initialData);
                 applyResponseDataToEngine(this.engine, rest);
                 this._initialData = null;
             }
@@ -340,12 +347,34 @@ export class FormspecRender extends HTMLElement {
         return this._themeDocument;
     }
 
+    /** Whether to auto-inject a SubmitButton into the layout plan. Defaults to true. */
+    get showSubmit(): boolean {
+        return this._showSubmit;
+    }
+
+    set showSubmit(val: boolean) {
+        this._showSubmit = val;
+        this.scheduleRender();
+    }
+
     /**
      * Set one or more extension registry documents. Builds an internal lookup
      * map from extension name → registry entry so that field renderers can
      * apply constraints and metadata (inputMode, autocomplete, pattern, etc.)
      * generically instead of hardcoding per-extension behaviour.
      */
+    /** Set the standalone Screener Document. */
+    set screenerDocument(doc: any | null) {
+        this._screenerDocument = doc ?? null;
+        this._screenerCompleted = false;
+        this._screenerRoute = null;
+        this.scheduleRender();
+    }
+
+    get screenerDocument(): any | null {
+        return this._screenerDocument;
+    }
+
     set registryDocuments(docs: any | any[]) {
         this._registryEntries.clear();
         const docList = Array.isArray(docs) ? docs : docs ? [docs] : [];
@@ -541,18 +570,21 @@ export class FormspecRender extends HTMLElement {
 
         emitTokenPropertiesFn(this._stylingHost, container);
 
-        if (hasActiveScreener(this._definition) && !this._screenerCompleted) {
+        if (hasActiveScreener(this._screenerDocument) && !this._screenerCompleted) {
             this.tryAutoCompleteScreenerFromSeed();
         }
 
-        if (hasActiveScreener(this._definition) && !this._screenerCompleted) {
+        if (hasActiveScreener(this._screenerDocument) && !this._screenerCompleted) {
             renderScreener(this as any as ScreenerHost, container);
             return;
         }
 
         const planCtx: PlanContext = {
             items: this._definition.items,
-            formPresentation: this._definition.formPresentation,
+            formPresentation: mergeFormPresentationForPlanning(
+                this._definition.formPresentation,
+                this._componentDocument?.formPresentation,
+            ),
             componentDocument: this._componentDocument,
             theme: this._themeDocument || this.getEffectiveTheme(),
             activeBreakpoint: this.activeBreakpoint,
@@ -562,29 +594,21 @@ export class FormspecRender extends HTMLElement {
 
         if (this._componentDocument && this._componentDocument.tree) {
             const plan = planComponentTree(this._componentDocument.tree, planCtx);
+            if (this._showSubmit) ensureSubmitButton(plan);
             emitNodeFn(this as any, plan, container, '');
         } else {
             const plans = planDefinitionFallback(this._definition.items, planCtx);
-            const pageMode = this._definition.formPresentation?.pageMode;
-            const hasPages = (pageMode === 'wizard' || pageMode === 'tabs')
-                && plans.some(p => p.component === 'Page');
-
-            if (hasPages) {
-                // Wrap in a synthetic Stack so renderActualComponent detects pageMode
-                const wrapperNode: import('@formspec-org/layout').LayoutNode = {
-                    id: '_root-stack',
-                    component: 'Stack',
-                    category: 'layout',
-                    props: {},
-                    cssClasses: [],
-                    children: plans,
-                };
-                emitNodeFn(this as any, wrapperNode, container, '');
-            } else {
-                for (const plan of plans) {
-                    emitNodeFn(this as any, plan, container, '');
-                }
-            }
+            // Always wrap in a root Stack — needed for pageMode detection and submit button injection
+            const wrapperNode: import('@formspec-org/layout').LayoutNode = {
+                id: '_root-stack',
+                component: 'Stack',
+                category: 'layout',
+                props: {},
+                cssClasses: [],
+                children: plans,
+            };
+            if (this._showSubmit) ensureSubmitButton(wrapperNode);
+            emitNodeFn(this as any, wrapperNode, container, '');
         }
     }
 

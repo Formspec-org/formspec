@@ -2,6 +2,7 @@
 import type { FileUploadBehavior } from '../../behaviors/types';
 import type { AdapterRenderFn } from '../types';
 import { createFieldDOM, finalizeFieldDOM } from './shared';
+import { formatBytes } from '../../format';
 
 export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     behavior, parent, actx
@@ -20,8 +21,8 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     // Browse button (replaces raw input display)
     const browseBtn = document.createElement('button');
     browseBtn.type = 'button';
-    browseBtn.className = 'formspec-file-browse-btn';
-    browseBtn.textContent = behavior.multiple ? 'Choose files' : 'Choose file';
+    browseBtn.className = 'formspec-file-browse-btn formspec-focus-ring formspec-button-secondary';
+    browseBtn.textContent = 'Browse';
     browseBtn.addEventListener('click', () => input.click());
 
     // File list container — rebuilt by the behavior on each change
@@ -32,7 +33,13 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     const rebuildFileList = () => {
         fileListEl.innerHTML = '';
         const files = behavior.files();
-        if (files.length === 0) return;
+        // React omits the list until files exist; keep the ul out of layout when empty
+        // so margin-top on .formspec-file-list does not add space above Submit.
+        if (files.length === 0) {
+            fileListEl.hidden = true;
+            return;
+        }
+        fileListEl.hidden = false;
 
         for (let i = 0; i < files.length; i++) {
             const f = files[i];
@@ -51,7 +58,7 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
 
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
-            removeBtn.className = 'formspec-file-list-remove';
+            removeBtn.className = 'formspec-file-list-remove formspec-focus-ring';
             removeBtn.setAttribute('aria-label', `Remove ${f.name}`);
             removeBtn.innerHTML = '<span aria-hidden="true">\u00d7</span>';
             const idx = i;
@@ -66,7 +73,7 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
             actionsLi.className = 'formspec-file-list-actions';
             const clearBtn = document.createElement('button');
             clearBtn.type = 'button';
-            clearBtn.className = 'formspec-file-list-clear';
+            clearBtn.className = 'formspec-file-list-clear formspec-focus-ring';
             clearBtn.textContent = 'Clear all';
             clearBtn.addEventListener('click', () => behavior.clearFiles());
             actionsLi.appendChild(clearBtn);
@@ -77,7 +84,7 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     if (behavior.dragDrop) {
         const dropZone = document.createElement('div');
         // Keep legacy class for compatibility with existing tests/consumers.
-        dropZone.className = 'formspec-file-drop-zone formspec-drop-zone';
+        dropZone.className = 'formspec-file-drop-zone formspec-drop-zone formspec-focus-ring';
 
         const content = document.createElement('div');
         content.className = 'formspec-file-drop-content';
@@ -85,11 +92,11 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
         const icon = document.createElement('span');
         icon.className = 'formspec-file-drop-icon';
         icon.setAttribute('aria-hidden', 'true');
-        icon.textContent = '\u21D5';
+        icon.textContent = '\u21F5';
 
         const label = document.createElement('span');
         label.className = 'formspec-file-drop-label';
-        label.textContent = 'Drop files here';
+        label.textContent = behavior.multiple ? 'Drag & drop files here' : 'Drag & drop a file here';
 
         content.appendChild(icon);
         content.appendChild(label);
@@ -146,12 +153,5 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
     };
     const dispose = behavior.bind(refs);
     actx.onDispose(dispose);
+    rebuildFileList();
 };
-
-function formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-    const val = bytes / Math.pow(1024, i);
-    return `${val < 10 ? val.toFixed(1) : Math.round(val)} ${units[i]}`;
-}

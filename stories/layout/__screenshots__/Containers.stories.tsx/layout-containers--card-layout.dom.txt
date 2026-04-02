@@ -1,0 +1,102 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×352
+  div  |  1200×352  d:grid  cols:584px 584px 0px  rows:351.875px  gap:32px
+    div  |  584×352
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "React"
+      div  |  584×325
+        #shadow-root
+          link [hidden]
+          div  |  584×325
+            div  |  584×325
+              div  .formspec-container  |  584×325
+                div  .formspec-stack  |  584×325  d:flex  dir:column  gap:24px
+                  section  .formspec-card  |  584×96
+                    h3  .formspec-card-title  |  584×22  m:19,0  |  font:18.72px/bold
+                      "Personal Information"
+                    div  .formspec-grid  |  584×37  d:grid  cols:284px 284px  rows:37px  gap:16px
+                      div  .formspec-field  data-name="personal.name"  |  284×37
+                        label  for="field-personal-name"  |  50×18
+                          "Name"
+                          span  .formspec-required  aria-hidden  |  12×18
+                            "*"
+                        input  #field-personal-name  type="text"  required  name="personal.name"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                        p  #field-personal-name-error  .formspec-error  aria-live="polite"  |  284×0  m:16,0
+                      div  .formspec-field  data-name="personal.email"  |  284×37
+                        label  for="field-personal-email"  |  38×18
+                          "Email"
+                        input  #field-personal-email  type="text"  name="personal.email"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                        p  #field-personal-email-error  .formspec-error  aria-live="polite"  |  284×0  m:16,0
+                  section  .formspec-card  |  584×204
+                    h3  .formspec-card-title  |  584×22  m:19,0  |  font:18.72px/bold
+                      "Preferences"
+                    div  .formspec-field.formspec-field--inline  data-name="preferences.newsletter"  |  584×38
+                      label  for="field-preferences-newsletter"  |  149×18
+                        "Subscribe to newsletter"
+                      div  .formspec-toggle  |  584×20
+                        input  #field-preferences-newsletter  .formspec-input  type="checkbox"  role="switch"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                      p  #field-preferences-newsletter-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field.formspec-field--inline  data-name="preferences.debug"  |  584×38
+                      label  for="field-preferences-debug"  |  127×18
+                        "Enable debug mode"
+                      div  .formspec-toggle  |  584×20
+                        input  #field-preferences-debug  .formspec-input  type="checkbox"  role="switch"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                      p  #field-preferences-debug-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="preferences.timeout"  |  584×21
+                      label  for="field-preferences-timeout"  |  119×18
+                        "Timeout (seconds)"
+                      input  #field-preferences-timeout  type="number"  min="1"  max="300"  step="1"  name="preferences.timeout"  aria-required="false"  aria-invalid="false"  |  49×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-preferences-timeout-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+    div  |  584×337
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Web Component"
+      div  |  584×287
+        div  |  584×287
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×287
+              div  .isolated-story-root  |  584×287
+                formspec-render  |  584×287
+                  #shadow-root
+                  div  .formspec-container  |  584×287
+                    div  .formspec-stack  |  584×287
+                      div  .formspec-card  |  584×99
+                        h3  .formspec-card-title  |  584×22  m:19,0  |  font:18.72px/bold
+                          "Personal Information"
+                        div  .formspec-grid  data-columns="2"  |  584×58
+                          div  .formspec-field.formspec-themed-field  aria-live="off"  data-name="personal.name"  |  584×21
+                            label  .formspec-label  for="field-personal-name"  |  50×18
+                              "Name"
+                              abbr  .formspec-required.usa-label--required  |  12×18
+                                "*"
+                            input  #field-personal-name  .formspec-input  type="text"  name="personal.name"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-personal-name-error  .formspec-error  |  584×0  m:16,0
+                          div  .formspec-field.formspec-themed-field  aria-live="off"  data-name="personal.email"  |  584×21
+                            label  .formspec-label  for="field-personal-email"  |  38×18
+                              "Email"
+                            input  #field-personal-email  .formspec-input  type="text"  name="personal.email"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                            p  #field-personal-email-error  .formspec-error  |  584×0  m:16,0
+                      div  .formspec-card  |  584×170
+                        h3  .formspec-card-title  |  584×22  m:19,0  |  font:18.72px/bold
+                          "Preferences"
+                        div  .formspec-field.formspec-field--inline.formspec-themed-field  aria-live="off"  data-name="preferences.newsletter"  |  584×38
+                          label  .formspec-label  for="field-preferences-newsletter"  |  149×18
+                            "Subscribe to newsletter"
+                          div  .formspec-toggle  |  584×20
+                            input  #field-preferences-newsletter  .formspec-input  type="checkbox"  name="preferences.newsletter"  role="switch"  aria-required="false"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                          p  #field-preferences-newsletter-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field.formspec-field--inline.formspec-themed-field  aria-live="off"  data-name="preferences.debug"  |  584×38
+                          label  .formspec-label  for="field-preferences-debug"  |  127×18
+                            "Enable debug mode"
+                          div  .formspec-toggle  |  584×20
+                            input  #field-preferences-debug  .formspec-input  type="checkbox"  name="preferences.debug"  role="switch"  aria-required="false"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                          p  #field-preferences-debug-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field.formspec-themed-field  aria-live="off"  data-name="preferences.timeout"  |  584×21
+                          label  .formspec-label  for="field-preferences-timeout"  |  119×18
+                            "Timeout (seconds)"
+                          input  #field-preferences-timeout  .formspec-input  type="number"  min="1"  max="300"  step="1"  name="preferences.timeout"  aria-required="false"  aria-invalid="false"  |  49×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-preferences-timeout-error  .formspec-error  |  584×0  m:16,0

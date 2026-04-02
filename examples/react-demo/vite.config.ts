@@ -6,7 +6,10 @@ import path from 'path';
 const repoRoot = path.resolve(__dirname, '../..');
 const pkg = (name: string) => path.resolve(repoRoot, 'packages', name, 'src');
 
+const basePath = process.env.FORMSPEC_BASE_PATH || '/';
+
 export default defineConfig({
+    base: basePath,
     plugins: [react(), tailwindcss()],
     resolve: {
         alias: [
@@ -16,7 +19,7 @@ export default defineConfig({
             { find: '@formspec-org/engine/fel-runtime', replacement: `${pkg('formspec-engine')}/fel/fel-api-runtime.ts` },
             { find: '@formspec-org/engine/fel-tools', replacement: `${pkg('formspec-engine')}/fel/fel-api-tools.ts` },
             { find: '@formspec-org/engine', replacement: `${pkg('formspec-engine')}/index.ts` },
-            // @formspec-org/layout
+            { find: '@formspec-org/layout/default-theme', replacement: `${pkg('formspec-layout')}/default-theme.json` },
             { find: '@formspec-org/layout', replacement: `${pkg('formspec-layout')}/index.ts` },
             // @formspec-org/react
             { find: '@formspec-org/react/hooks', replacement: `${pkg('formspec-react')}/hooks.ts` },

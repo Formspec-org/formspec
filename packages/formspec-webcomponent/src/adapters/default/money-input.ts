@@ -12,24 +12,27 @@ export const renderMoneyInput: AdapterRenderFn<MoneyInputBehavior> = (
     container.className = 'formspec-money';
 
     const amountInput = document.createElement('input');
-    amountInput.type = 'number';
-    amountInput.className = 'formspec-input';
+    amountInput.type = 'text';
+    amountInput.inputMode = 'decimal';
+    amountInput.pattern = '[0-9]*\\.?[0-9]*';
+    amountInput.className = 'formspec-input formspec-money-amount';
     amountInput.placeholder = behavior.placeholder || 'Amount';
     amountInput.name = `${behavior.fieldPath}__amount`;
     amountInput.id = behavior.id;
     if (behavior.step != null) amountInput.step = String(behavior.step);
     if (behavior.min != null) amountInput.min = String(behavior.min);
     if (behavior.max != null) amountInput.max = String(behavior.max);
-    amountInput.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
-
-    container.appendChild(amountInput);
 
     if (behavior.resolvedCurrency) {
+        const currencyId = `${behavior.id}-currency`;
         const badge = document.createElement('span');
         badge.className = 'formspec-money-currency';
+        badge.id = currencyId;
         badge.textContent = behavior.resolvedCurrency;
         badge.setAttribute('aria-label', `Currency: ${behavior.resolvedCurrency}`);
         container.appendChild(badge);
+        // Link currency badge to amount input via data-describedby-base for bind() to pick up
+        amountInput.setAttribute('data-describedby-base', currencyId);
     } else {
         const currencyInput = document.createElement('input');
         currencyInput.type = 'text';
@@ -39,6 +42,8 @@ export const renderMoneyInput: AdapterRenderFn<MoneyInputBehavior> = (
         currencyInput.setAttribute('aria-label', 'Currency code');
         container.appendChild(currencyInput);
     }
+
+    container.appendChild(amountInput);
 
     fieldDOM.root.appendChild(container);
     applyControlSlotClass(container, behavior, actx);

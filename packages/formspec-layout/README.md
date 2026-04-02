@@ -1,6 +1,6 @@
 # formspec-layout
 
-Pure layout planning for Formspec. Transforms definition items and component document trees into renderer-agnostic `LayoutNode` trees — no DOM, no signals, no side effects.
+Layout planning and canonical baseline CSS for Formspec. Transforms definition items and component document trees into renderer-agnostic `LayoutNode` trees, and ships shared `formspec-layout.css` / `formspec-default.css` assets for renderer packages to consume.
 
 Any renderer (web component, React, PDF, SSR) can consume the output.
 
@@ -9,6 +9,15 @@ Any renderer (web component, React, PDF, SSR) can consume the output.
 ```bash
 npm install formspec-layout
 ```
+
+## CSS assets
+
+The package also exports two canonical CSS files:
+
+- `@formspec-org/layout/formspec-layout.css` — structural layout primitives only
+- `@formspec-org/layout/formspec-default.css` — default visual skin for the built-in DOM contract
+
+Renderer packages can re-export these for compatibility, but `formspec-layout` is the source of truth.
 
 ## What it does
 

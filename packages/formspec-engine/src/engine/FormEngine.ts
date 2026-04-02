@@ -74,6 +74,7 @@ import {
     getAncestorBasePaths,
     getNestedValue,
     getScopeAncestors,
+    isEmptyValue,
     makeValidationResult,
     normalizeRemoteOptions,
     parseInstanceTarget,
@@ -454,6 +455,50 @@ export class FormEngine implements IFormEngine {
         return true;
     }
 
+    public getFieldPaths(): string[] {
+        return Object.keys(this._fieldViewModels).sort();
+    }
+
+    public getProgress(): import('../interfaces.js').FormProgress {
+        let total = 0;
+        let filled = 0;
+        let valid = 0;
+        let required = 0;
+        let requiredFilled = 0;
+
+        for (const path of this.getFieldPaths()) {
+            if (!this.isPathRelevant(path)) {
+                continue;
+            }
+            total += 1;
+            const fieldFilled = !isEmptyValue(this.signals[path]?.value);
+            const fieldValid = !(this.validationResults[path]?.value ?? []).some(
+                (result) => result.severity === 'error',
+            );
+            if (fieldFilled) {
+                filled += 1;
+            }
+            if (fieldValid) {
+                valid += 1;
+            }
+            if (this.requiredSignals[path]?.value) {
+                required += 1;
+                if (fieldFilled) {
+                    requiredFilled += 1;
+                }
+            }
+        }
+
+        return {
+            total,
+            filled,
+            valid,
+            required,
+            requiredFilled,
+            complete: required === requiredFilled && this.getValidationReport().valid,
+        };
+    }
+
     public getResponse(meta?: {
         id?: string;
         author?: { id: string; name?: string };
@@ -720,10 +765,19 @@ export class FormEngine implements IFormEngine {
                 const path = prefix ? `${prefix}.${item.key}` : item.key;
                 if (item.type === 'field') {
                     const options = Array.isArray(item.options)
-                        ? item.options.map((option) => ({
-                            value: String(option.value),
-                            label: String(option.label),
-                        }))
+                        ? item.options.map((option) => {
+                              const base: OptionEntry = {
+                                  value: String(option.value),
+                                  label: String(option.label),
+                              };
+                              if (Array.isArray(option.keywords) && option.keywords.length > 0) {
+                                  const keywords = option.keywords
+                                      .map((k) => String(k))
+                                      .filter((s) => s.length > 0);
+                                  if (keywords.length > 0) return { ...base, keywords };
+                              }
+                              return base;
+                          })
                         : [];
                     this.optionSignals[path] = this._rx.signal(options);
                     this.optionStateSignals[path] = this._rx.signal({ loading: false, error: null });
@@ -752,8 +806,13 @@ export class FormEngine implements IFormEngine {
         }
     }
 
+    /** Returns true if the source string is fetchable (HTTP(S) or absolute path). */
+    private static isFetchableSource(source: string): boolean {
+        return /^https?:\/\//i.test(source) || source.startsWith('/');
+    }
+
     private initializeInstanceSource(name: string, instance: FormInstance): void {
-        if (!instance.source) {
+        if (!instance.source || !FormEngine.isFetchableSource(instance.source)) {
             return;
         }
 
@@ -991,6 +1050,7 @@ export class FormEngine implements IFormEngine {
                     this.optionSignals[path] = this.optionSignals[path] ?? this._rx.signal([]);
                     this.optionSignals[path].value = options;
                     state.value = { loading: false, error: null };
+                    this._evaluate();
                 })
                 .catch((error) => {
                     state.value = {
@@ -1276,4 +1336,3 @@ export class FormEngine implements IFormEngine {
         });
     }
 }
-

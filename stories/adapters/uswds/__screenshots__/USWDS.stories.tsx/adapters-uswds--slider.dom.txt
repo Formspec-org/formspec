@@ -1,0 +1,50 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×129
+  div  |  1200×129  d:grid  cols:584px 584px 0px  rows:129.031px  gap:32px
+    div  |  584×129
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "USWDS Adapter"
+      div  |  584×102
+        div  |  584×102
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×102
+              div  .isolated-story-root  |  584×102
+                form  .usa-form  |  320×102  |  font:16.96px
+                  h2  .usa-sr-only  |  66×33  pos:absolute  m:21,0  |  font:25.44px/bold
+                    "Slider"
+                  div  |  320×102
+                    formspec-render  |  320×102
+                      #shadow-root
+                      div  .formspec-container  |  320×102  d:flex  dir:column  gap:16px
+                        div  .formspec-stack.grid-row.grid-gap  |  352×102  d:flex  dir:column  wrap:wrap  gap:12px  m:0,-16
+                          div  .grid-col-12  |  352×102  pos:relative  p:0,16
+                            div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="satisfaction"  |  320×78  d:flex  dir:column  m:24,0,0,0
+                              label  .usa-label  for="field-satisfaction"  |  320×22
+                                "Satisfaction"
+                              span  #field-satisfaction-error  .usa-error-message  |  320×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                              input  #field-satisfaction  .usa-range  type="range"  min="0"  max="10"  step="1"  name="satisfaction"  aria-required="false"  aria-invalid="false"  |  320×40  m:8,0,0,0  p:8,1  |  bg:rgb(255, 255, 255)  color:rgb(27, 27, 27)
+    div  |  584×129
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Real USWDS"
+      div  |  584×102
+        div  |  584×102
+          #shadow-root
+            link [hidden]
+            div  .story-root  |  584×102  |  color:rgb(27, 27, 27)
+              div  |  584×102
+                form  .usa-form  |  320×102  |  font:16.96px
+                  div  .grid-container.padding-x-0  |  320×102
+                    div  .grid-row.grid-gap  |  352×102  d:flex  wrap:wrap  m:0,-16
+                      div  .grid-col-12  |  352×102  pos:relative  p:0,16
+                        h2  .usa-sr-only  |  66×33  pos:absolute  m:21,0  |  font:25.44px/bold
+                          "Slider"
+                        div  .usa-form-group  |  320×78  m:24,0,0,0
+                          label  .usa-label  for="real-uswds-satisfaction"  |  320×22
+                            "Satisfaction"
+                          span  #real-uswds-satisfaction-error  .usa-error-message  |  320×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                          input  #real-uswds-satisfaction  .usa-range  type="range"  min="0"  max="10"  step="1"  value="0"  aria-describedby="real-uswds-satisfaction-error"  aria-invalid="false"  data-realUswdsPath="satisfaction"  |  320×40  m:8,0,0,0  p:8,1  |  bg:rgb(255, 255, 255)

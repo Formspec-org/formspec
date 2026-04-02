@@ -1,0 +1,60 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×168
+  div  |  1200×168  d:grid  cols:584px 584px 0px  rows:168px  gap:32px
+    div  |  584×168
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "React"
+      div  |  584×141
+        #shadow-root
+          link [hidden]
+          div  |  584×141
+            div  |  584×141
+              div  .formspec-container  |  584×141
+                div  .formspec-stack  |  584×141  d:flex  dir:column  gap:12px
+                  div  .formspec-alert.formspec-alert--info  role="status"  |  584×18
+                    "This is an informational message."
+                  div  .formspec-alert.formspec-alert--success  role="status"  |  584×18
+                    "Operation completed successfully."
+                  div  .formspec-alert.formspec-alert--warning  role="alert"  |  584×18
+                    "Please review before submitting."
+                  div  .formspec-alert.formspec-alert--error  role="alert"  |  584×18
+                    "An error occurred. Please try again."
+                  div  .formspec-alert.formspec-alert--info.formspec-alert--dismissible  role="status"  |  584×21
+                    "This alert can be dismissed."
+                    button  .formspec-alert-close  type="button"  aria-label="Dismiss"  |  24×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                      span  aria-hidden  |  8×15
+                        "×"
+    div  |  584×120
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Web Component"
+      div  |  584×93
+        div  |  584×93
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×93
+              div  .isolated-story-root  |  584×93
+                formspec-render  |  584×93
+                  #shadow-root
+                  div  .formspec-container  |  584×93
+                    div  .formspec-stack  |  584×93
+                      div  .formspec-alert.formspec-alert--info  role="status"  |  584×18
+                        span  |  216×18
+                          "This is an informational message."
+                      div  .formspec-alert.formspec-alert--success  role="status"  |  584×18
+                        span  |  220×18
+                          "Operation completed successfully."
+                      div  .formspec-alert.formspec-alert--warning  role="alert"  |  584×18
+                        span  |  210×18
+                          "Please review before submitting."
+                      div  .formspec-alert.formspec-alert--error  role="alert"  |  584×18
+                        span  |  228×18
+                          "An error occurred. Please try again."
+                      div  .formspec-alert.formspec-alert--info.formspec-alert--dismissible  role="status"  |  584×21
+                        button  .formspec-alert-close.formspec-focus-ring  type="button"  aria-label="Dismiss"  |  24×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                          "×"
+                        span  |  177×18
+                          "This alert can be dismissed."

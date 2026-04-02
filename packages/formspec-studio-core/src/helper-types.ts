@@ -30,10 +30,12 @@ export class HelperError extends Error {
   }
 }
 
-/** Choice option for inline options or defineChoices */
+/** Choice option for inline options or defineChoices (matches definition OptionEntry). */
 export interface ChoiceOption {
   value: string;
   label: string;
+  /** Optional combobox type-ahead strings (abbreviations, codes). */
+  keywords?: string[];
 }
 
 /** Field properties for addField / addScreenField */
@@ -92,6 +94,17 @@ export type LayoutArrangement = 'columns-2' | 'columns-3' | 'columns-4' | 'card'
 /** Placement options for placeOnPage */
 export interface PlacementOptions {
   span?: number;
+}
+
+/** Layout-side add-item request */
+export interface LayoutAddItemSpec {
+  itemType: 'field' | 'group' | 'display' | 'layout';
+  label: string;
+  key?: string;
+  dataType?: string;
+  component?: string;
+  repeatable?: boolean;
+  presentation?: Record<string, unknown>;
 }
 
 /** Flow configuration */

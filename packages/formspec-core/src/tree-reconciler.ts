@@ -19,6 +19,10 @@ interface WrapperSnapshot {
   wasLast: boolean;
 }
 
+function isLayoutWrapper(node: TreeNode): boolean {
+  return !!node._layout || node.component === 'Page';
+}
+
 /** Component types that allow `children` per the component schema. */
 const CONTAINER_COMPONENTS = new Set([
   'Accordion', 'Card', 'Collapsible', 'Columns', 'ConditionalGroup',
@@ -79,7 +83,7 @@ export function reconcileComponentTree(
     const children = parent.children ?? [];
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
-      if (child._layout) {
+      if (isLayoutWrapper(child)) {
         wrapperSnapshots.push({
           wrapper: structuredClone(child),
           parentRef: parent.bind ? { bind: parent.bind } : { nodeId: parent.nodeId! },
@@ -99,7 +103,7 @@ export function reconcileComponentTree(
 
   const collectExisting = (node: TreeNode, parentPath = '') => {
     for (const child of node.children ?? []) {
-      if (child._layout) {
+      if (isLayoutWrapper(child)) {
         const collectDeep = (n: TreeNode, path: string) => {
           for (const c of n.children ?? []) {
             if (c.bind) {
@@ -109,7 +113,7 @@ export function reconcileComponentTree(
             } else if (c.nodeId && !c._layout) {
               const cPath = path ? `${path}.${c.nodeId}` : c.nodeId;
               existingDisplay.set(cPath, c);
-            } else if (c._layout) {
+            } else if (isLayoutWrapper(c)) {
               collectDeep(c, path);
             }
           }
@@ -224,7 +228,7 @@ export function reconcileComponentTree(
     if (!wrapperNode.children) return;
     const updatedChildren: TreeNode[] = [];
     for (const child of wrapperNode.children) {
-      if (child._layout) {
+      if (isLayoutWrapper(child)) {
         updateWrapperChildren(child);
         updatedChildren.push(child);
       } else if (child.bind) {

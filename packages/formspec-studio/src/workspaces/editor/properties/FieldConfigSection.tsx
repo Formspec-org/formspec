@@ -1,11 +1,11 @@
 /** @filedesc Properties panel section for field-level config: initial value, decimal, and money flags. */
 import { Section } from '../../../components/ui/Section';
-import { propertyHelp } from '../../../lib/field-helpers';
+import { propertyHelp, type Project } from '@formspec-org/studio-core';
 import { PropInput } from './shared';
 import { AddBehaviorMenu } from '../../../components/ui/AddBehaviorMenu';
 import { BindCard } from '../../../components/ui/BindCard';
+import { InlineExpression } from '../../../components/ui/InlineExpression';
 import { PrePopulateCard } from '../../../components/ui/PrePopulateCard';
-import type { Project } from '@formspec-org/studio-core';
 import type { FormItem } from '@formspec-org/types';
 
 export function FieldConfigSection({
@@ -29,15 +29,12 @@ export function FieldConfigSection({
     <Section title="Field Config">
       <div className="space-y-1 mt-1 mb-4">
         <BindCard bindType="Initial Value" expression={item.initialValue != null ? String(item.initialValue) : ''}>
-          <input
-            id={`${path}-initialValue`}
-            aria-label="Initial Value"
-            className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
-            defaultValue={item.initialValue != null ? String(item.initialValue) : ''}
-            onBlur={(e) => {
-              project.updateItem(path, { initialValue: e.currentTarget.value || null });
+          <InlineExpression
+            value={item.initialValue != null ? String(item.initialValue) : ''}
+            onSave={(value) => {
+              project.updateItem(path, { initialValue: value || null });
             }}
-            placeholder="No default value"
+            placeholder="Click to add initial value (prefix = for FEL)"
           />
         </BindCard>
 
@@ -50,6 +47,7 @@ export function FieldConfigSection({
             onRemove={() => {
               project.updateItem(path, { prePopulate: null });
             }}
+            itemKey={path.split('.').pop()}
           />
         )}
 
@@ -61,9 +59,13 @@ export function FieldConfigSection({
               project.updateItem(path, { calculate: null });
             }}
           >
-            <div className="px-2 py-1 text-[13px] font-mono bg-subtle/50 rounded border border-border/50 text-ink/80">
-              {binds.calculate || <span className="text-muted italic">No expression</span>}
-            </div>
+            <InlineExpression
+              value={binds.calculate}
+              onSave={(value) => {
+                project.updateItem(path, { calculate: value || null });
+              }}
+              placeholder="Click to add expression"
+            />
           </BindCard>
         )}
 

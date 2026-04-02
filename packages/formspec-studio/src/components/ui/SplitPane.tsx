@@ -1,3 +1,4 @@
+/** @filedesc Resizable horizontal split-pane layout component with a draggable divider. */
 import { useState, useRef, useEffect, ReactNode } from 'react';
 
 interface SplitPaneProps {

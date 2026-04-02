@@ -23,6 +23,8 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
 - **KISS always** — prefer the simplest solution that works. If the problem is genuinely complex, handle that complexity cleanly — but don't invent complexity that isn't there. Fewer lines = fewer bugs = faster iteration.
 - **DRY when natural** — extract shared code when the abstraction is obvious and makes things clearer. Don't force it. Three similar lines are better than one confusing helper.
 - **Extensibility where the spec demands it** — Formspec has extension points by design. Build clean seams where the spec calls for them, but nowhere else.
+- **The spec is the source of truth** — do not implement features that aren't in the spec. If a capability exists in the spec (like OptionSet), use it; do not invent a parallel mechanism (like `choicesFrom`) that does the same thing outside the spec. Non-spec code paths add fields to core structs, require `None` initializers in every test, and create maintenance burden — all for behavior the spec already covers. When you encounter a non-spec feature: if the spec already covers the use case, delete the non-spec code and use the spec mechanism. If the spec does NOT cover it and it's a genuinely new capability, consult the `formspec-specs:spec-expert` agent to determine whether it should be added to the spec — don't just implement it in code and leave the spec behind.
+- **No "defer" on greenfield** — when an audit finds something wrong, fix it. Do not tag issues as "fix later" or "not urgent." There are no users to break, no releases to stabilize, no backwards compatibility to preserve. The cost of fixing now is lower than it will ever be again. Every deferred fix becomes a landmine for the next person (or agent) working in that code.
 
 ## Monorepo Structure
 
@@ -58,7 +60,7 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
   - `packages/formspec-mcp/API.llm.md` — TypeScript MCP server API reference (tool declarations, server setup).
   - `packages/formspec-studio-core/API.llm.md` — TypeScript studio-core API reference (Project, helpers, evaluation).
 - **`thoughts/`** — All plans, ADRs, research, and design artifacts. **Never put plans in `docs/`.** See `thoughts/README.md` for full index.
-  - `thoughts/adr/` — Architecture decision records (decisions with Status). `NNNN-short-name.md`. Next: **0053**.
+  - `thoughts/adr/` — Architecture decision records (decisions with Status). `NNNN-short-name.md`. Next: **0057**.
   - `thoughts/plans/` — Implementation and execution plans. `YYYY-MM-DD-short-name.md`.
   - `thoughts/specs/` — Design specifications and PRDs. `YYYY-MM-DD-short-name.md`.
   - `thoughts/reviews/` — Code reviews, audits, post-mortems. `YYYY-MM-DD-short-name.md`.
@@ -115,6 +117,18 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
   1. Edit schema, canonical spec prose, and/or BLUF files as needed.
   2. Run `npm run docs:generate`.
   3. Run `npm run docs:check`.
+
+## Keeping `context.md` Current
+
+`context.md` is the project's living source of truth for features, reasoning, vision, and roadmap. It must stay current. Update it when any of the following happen:
+
+- **New spec added or existing spec materially changed** — update the relevant section (Core Architecture, Companion Documents, Key Differentiators) to reflect the new capability or changed semantics.
+- **New blog post or public content published** — if it introduces concepts, positioning, or messaging not already captured, update "How We Talk About This" or add to the appropriate section.
+- **Major feature developed** — when a feature lands that changes what Formspec *is* or *can do* (new runtime, new sidecar document type, new AI integration, new platform support), update the relevant sections. Bug fixes and internal refactors don't qualify.
+- **Audience or positioning shift** — if the target audience expands, narrows, or the competitive framing changes, update "Who It's For" and "Key Differentiators."
+- **Roadmap milestone reached** — when something moves from planned to shipped (e.g., Android runtime, UniFFI), update the status in the relevant table or section.
+
+**What NOT to update:** Implementation details, file paths, internal architecture that changes frequently — those belong in `CLAUDE.md`, not `context.md`. The context doc is about *what* and *why*, not *how*.
 
 ## Build & Development Commands
 

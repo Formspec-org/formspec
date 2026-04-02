@@ -23,3 +23,4 @@ export { useFileUpload } from './file-upload';
 export { useSignature } from './signature';
 export { useWizard } from './wizard';
 export { useTabs } from './tabs';
+export { useDataTable } from './data-table';

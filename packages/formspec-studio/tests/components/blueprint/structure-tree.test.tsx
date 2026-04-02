@@ -1,5 +1,5 @@
 import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider, useSelection } from '../../../src/state/useSelection';
@@ -13,16 +13,15 @@ const treeDef = {
     { key: 'name', type: 'field', dataType: 'string', label: 'Full Name' },
     {
       key: 'contact', type: 'group', label: 'Contact', children: [
-        { key: 'email', type: 'field', dataType: 'string' },
-        { key: 'phone', type: 'field', dataType: 'string' },
+        { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
+        { key: 'phone', type: 'field', dataType: 'string', label: 'Phone' },
       ]
     },
     { key: 'notice', type: 'display', label: 'Notice' },
   ],
 };
 
-function renderTree() {
-  const project = createProject({ seed: { definition: treeDef as any } });
+function renderTree(project = createProject({ seed: { definition: treeDef as any } })) {
   return render(
     <ProjectProvider project={project}>
       <SelectionProvider>
@@ -49,26 +48,30 @@ function CanvasTarget({ path }: { path: string }) {
 }
 
 describe('StructureTree', () => {
-  it('renders items as indented tree', () => {
-    renderTree();
-    // Check by test-id instead of text, as text might be label instead of key
+  it('renders the full definition tree regardless of page mode', () => {
+    renderTree(createProject({
+      seed: {
+        definition: {
+          ...treeDef,
+          formPresentation: { pageMode: 'wizard' },
+        } as any,
+      },
+    }));
+
+    expect(screen.getByRole('region', { name: 'Items' })).toBeInTheDocument();
     expect(screen.getByTestId('tree-item-name')).toBeInTheDocument();
+    expect(screen.getByTestId('tree-item-contact')).toBeInTheDocument();
     expect(screen.getByTestId('tree-item-contact.email')).toBeInTheDocument();
     expect(screen.getByTestId('tree-item-contact.phone')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Groups' })).not.toBeInTheDocument();
   });
 
-  it('shows type icons', () => {
+  it('shows type icons and labels', () => {
     renderTree();
-    // Multiple string fields produce multiple Aa icons
-    const icons = screen.getAllByText('Aa');
-    expect(icons.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('shows labels', () => {
-    renderTree();
-    // Group label "Contact" appears twice (Pages and Items), use getAllByText
-    expect(screen.getAllByText('Contact').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Aa').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Contact')).toBeInTheDocument();
     expect(screen.getByText('Full Name')).toBeInTheDocument();
+    expect(screen.getByText('Notice')).toBeInTheDocument();
   });
 
   it('selecting a node updates selection', async () => {
@@ -77,7 +80,6 @@ describe('StructureTree', () => {
     await act(async () => {
       node.click();
     });
-    // Node should have selected styling (bg-accent/10 text-accent)
     expect(node.className).toContain('text-accent');
   });
 
@@ -118,152 +120,12 @@ describe('StructureTree', () => {
     }
   });
 
-  it('selects the inserted collision-safe page key after adding a page with a colliding generated key', async () => {
+  it('adds a new field at the root from the palette and selects it', async () => {
     const project = createProject({
       seed: {
         definition: {
           $formspec: '1.0',
-          url: 'urn:test',
-          version: '1.0.0',
-          formPresentation: { pageMode: 'wizard' },
-          items: [{ key: 'page1', type: 'group', label: 'Existing Page', children: [] }],
-        } as any,
-      },
-    });
-    const requestAnimationFrameSpy = vi
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation((callback: FrameRequestCallback) => {
-        callback(0);
-        return 1;
-      });
-
-    try {
-      render(
-        <ProjectProvider project={project}>
-          <SelectionProvider>
-            <ActiveGroupProvider>
-              <CanvasTargetsProvider>
-                <StructureTree />
-              </CanvasTargetsProvider>
-            </ActiveGroupProvider>
-          </SelectionProvider>
-        </ProjectProvider>
-      );
-
-      await act(async () => {
-        screen.getByTitle('Add page').click();
-      });
-
-      // addPage generates the group key from the label slug ('New Page' -> 'new_page'),
-      // which does not collide with the existing 'page1' key.
-      const insertedPage = project.definition.items.find((item: any) => item.label === 'New Page');
-      expect(insertedPage?.key).toBe('new_page');
-
-      const insertedButton = screen.getByRole('button', { name: /new page/i });
-      expect(insertedButton.className).toContain('text-accent');
-      expect(screen.getByRole('button', { name: /existing page/i }).className).not.toContain('text-accent');
-    } finally {
-      requestAnimationFrameSpy.mockRestore();
-    }
-  });
-
-  it('selects the canonical inserted path after adding a colliding item from the palette', async () => {
-    const project = createProject({
-      seed: {
-        definition: {
-          $formspec: '1.0',
-          url: 'urn:tree-collision-selection',
-          version: '1.0.0',
-          formPresentation: { pageMode: 'wizard' },
-          items: [
-            {
-              key: 'page1',
-              type: 'group',
-              label: 'Page 1',
-              children: [
-                { key: 'string1', type: 'field', dataType: 'string', label: 'Existing String' },
-              ],
-            },
-          ],
-        } as any,
-      },
-    });
-
-    let capturedSelectedKey: string | null = null;
-    function SelectionCapture() {
-      const { selectedKey } = useSelection();
-      capturedSelectedKey = selectedKey;
-      return null;
-    }
-
-    render(
-      <ProjectProvider project={project}>
-        <SelectionProvider>
-          <ActiveGroupProvider>
-            <CanvasTargetsProvider>
-              <StructureTree />
-              <SelectionCapture />
-            </CanvasTargetsProvider>
-          </ActiveGroupProvider>
-        </SelectionProvider>
-      </ProjectProvider>
-    );
-
-    await act(async () => {
-      screen.getByTitle(/add item to/i).click();
-    });
-
-    await act(async () => {
-      screen.getByRole('button', { name: /^Text Block\b/i }).click();
-    });
-
-    const page = project.definition.items[0] as any;
-    const insertedField = page.children.find((item: any) => item.label === 'Text Block');
-
-    expect(insertedField).toBeTruthy();
-    expect(insertedField.key).not.toBe('string1');
-    expect(capturedSelectedKey).toBe(`page1.${insertedField.key}`);
-    expect(screen.getByTestId(`tree-item-page1.${insertedField.key}`)).toHaveClass('text-accent');
-  });
-
-  it('labels the pages section as "Pages" not "Wizard Pages"', () => {
-    const project = createProject({
-      seed: {
-        definition: {
-          $formspec: '1.0',
-          url: 'urn:test-pages-label',
-          version: '1.0.0',
-          formPresentation: { pageMode: 'wizard' },
-          items: [{ key: 'page1', type: 'group', label: 'Page 1', children: [] }],
-        } as any,
-      },
-    });
-
-    render(
-      <ProjectProvider project={project}>
-        <SelectionProvider>
-          <ActiveGroupProvider>
-            <CanvasTargetsProvider>
-              <StructureTree />
-            </CanvasTargetsProvider>
-          </ActiveGroupProvider>
-        </SelectionProvider>
-      </ProjectProvider>
-    );
-
-    // Should say "Pages", not "Wizard Pages"
-    expect(screen.getByText('Pages')).toBeInTheDocument();
-
-    // Add button title should be "Add page", not "Add wizard page"
-    expect(screen.getByTitle('Add page')).toBeInTheDocument();
-  });
-
-  it('uses the locally constructed path for selection when adding from the palette', async () => {
-    const project = createProject({
-      seed: {
-        definition: {
-          $formspec: '1.0',
-          url: 'urn:structure-inserted-path-override',
+          url: 'urn:structure-root-add',
           version: '1.0.0',
           items: [],
         } as any,
@@ -295,14 +157,73 @@ describe('StructureTree', () => {
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /^Text Block\b/i }).click();
+      screen.getByRole('button', { name: /^Text Short text\b/i }).click();
     });
 
-    // The component constructs the selection path locally from the generated key,
-    // rather than reading insertedPath from dispatch results.
-    const insertedItem = project.definition.items.find((item: any) => item.label === 'Text Block');
+    const insertedItem = project.definition.items.find((item: any) => item.label === 'Text');
     expect(insertedItem).toBeTruthy();
     expect(capturedSelectedKey).toBe(insertedItem!.key);
+    expect(screen.getByTestId(`tree-item-${insertedItem!.key}`)).toHaveClass('text-accent');
   });
 
+  it('adds a new field inside the selected group', async () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:structure-group-add',
+          version: '1.0.0',
+          items: [
+            {
+              key: 'contact',
+              type: 'group',
+              label: 'Contact',
+              children: [
+                { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
+              ],
+            },
+          ],
+        } as any,
+      },
+    });
+
+    render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActiveGroupProvider>
+            <CanvasTargetsProvider>
+              <StructureTree />
+            </CanvasTargetsProvider>
+          </ActiveGroupProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    await act(async () => {
+      screen.getByTestId('tree-item-contact').click();
+    });
+
+    await act(async () => {
+      screen.getByTitle('Add item').click();
+    });
+
+    await act(async () => {
+      screen.getByRole('button', { name: /^Text Short text\b/i }).click();
+    });
+
+    const group = project.definition.items[0] as any;
+    const insertedField = group.children.find((item: any) => item.label === 'Text');
+    expect(insertedField).toBeTruthy();
+    expect(screen.getByTestId(`tree-item-contact.${insertedField.key}`)).toBeInTheDocument();
+  });
+
+  it('shows display items in the editor add palette', async () => {
+    renderTree();
+
+    await act(async () => {
+      screen.getByTitle('Add item').click();
+    });
+
+    expect(screen.getByRole('button', { name: /^Heading Section heading or title/i })).toBeInTheDocument();
+  });
 });

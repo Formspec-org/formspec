@@ -32,10 +32,9 @@ describe('component tree sync', () => {
       payload: { type: 'field', key: 'name', dataType: 'string' },
     });
 
-    expect((project.artifactComponent as any).$formspecComponent).toBe('1.0');
-    expect((project.artifactComponent as any).version).toBe('1.0.0');
-    expect((project.artifactComponent.tree as any).component).toBe('Stack');
-    expect((project.generatedComponent as any).tree).toBeUndefined();
+    expect((project.component as any).$formspecComponent).toBe('1.0');
+    expect((project.component as any).version).toBe('1.0.0');
+    expect((project.component.tree as any).component).toBe('Stack');
   });
 
   it('removes component node when item is deleted', () => {

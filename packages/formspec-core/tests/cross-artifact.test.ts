@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createRawProject } from '../src/index.js';
 
-/** Get Page nodes from the generated component tree. */
+/** Get Page nodes from the component tree. */
 function getPageNodes(project: ReturnType<typeof createRawProject>): any[] {
-  const tree = project.generatedComponent.tree;
+  const tree = project.component.tree;
   return (tree?.children ?? []).filter((c: any) => c.component === 'Page');
 }
 
@@ -12,6 +12,40 @@ function getPageId(project: ReturnType<typeof createRawProject>, index = 0): str
   const pages = getPageNodes(project);
   if (!pages[index]) throw new Error(`No page at index ${index}`);
   return pages[index].nodeId;
+}
+
+function addPage(project: ReturnType<typeof createRawProject>, title: string, id?: string): string {
+  project.dispatch({
+    type: 'definition.setFormPresentation',
+    payload: { property: 'pageMode', value: 'wizard' },
+  });
+  const result = project.dispatch({
+    type: 'component.addNode',
+    payload: {
+      parent: { nodeId: 'root' },
+      component: 'Page',
+      props: { ...(id ? { nodeId: id } : {}), title },
+    },
+  }) as any;
+  return id ?? result.nodeRef.nodeId;
+}
+
+function placeOnPage(
+  project: ReturnType<typeof createRawProject>,
+  pageId: string,
+  bind: string,
+  props?: Record<string, unknown>,
+) {
+  project.dispatch({
+    type: 'component.moveNode',
+    payload: { source: { bind }, targetParent: { nodeId: pageId } },
+  });
+  for (const [property, value] of Object.entries(props ?? {})) {
+    project.dispatch({
+      type: 'component.setNodeProperty',
+      payload: { node: { bind }, property, value },
+    });
+  }
 }
 
 // ── Post-dispatch normalization ─────────────────────────────────
@@ -118,11 +152,10 @@ describe('renameItem — cross-artifact rewriting', () => {
   it('rewrites page child bind keys when item is renamed', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'phone' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'P1' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'P2' } });
-    const page1Id = getPageId(project, 0);
+    const page1Id = addPage(project, 'P1');
+    addPage(project, 'P2');
     // Assign 'phone' to page 1
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId: page1Id, key: 'phone', span: 6 } });
+    placeOnPage(project, page1Id, 'phone', { span: 6 });
 
     project.dispatch({ type: 'definition.renameItem', payload: { path: 'phone', newKey: 'mobile' } });
 
@@ -163,10 +196,9 @@ describe('deleteItem — cross-artifact cleanup', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'addr' } });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'city' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'P1' } });
-    const pageId = getPageId(project);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'addr', span: 6 } });
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'city', span: 6 } });
+    const pageId = addPage(project, 'P1');
+    placeOnPage(project, pageId, 'addr', { span: 6 });
+    placeOnPage(project, pageId, 'city', { span: 6 });
 
     project.dispatch({ type: 'definition.deleteItem', payload: { path: 'addr' } });
 

@@ -51,12 +51,13 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
 
             // Value sync: engine → DOM + value display update
             const valueDisplay = refs.root.querySelector('.formspec-slider-value') as HTMLElement | null;
+            const minFallback = String(comp.min ?? 0);
             disposers.push(effect(() => {
                 const sig = ctx.engine.signals[fieldPath];
                 if (!sig) return;
                 const val = sig.value;
                 if (document.activeElement !== rangeInput) {
-                    (rangeInput as HTMLInputElement).value = val ?? '';
+                    (rangeInput as HTMLInputElement).value = val != null ? String(val) : minFallback;
                 }
                 if (valueDisplay) {
                     valueDisplay.textContent = val != null ? String(val) : (rangeInput as HTMLInputElement).value;

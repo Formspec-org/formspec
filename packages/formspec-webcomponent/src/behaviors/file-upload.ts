@@ -1,6 +1,7 @@
 /** @filedesc FileUpload behavior hook — extracts reactive state for file input fields. */
 import type { FileUploadBehavior, FieldRefs, BehaviorContext } from './types';
 import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
+import { formatBytes } from '../format';
 
 type FileMeta = { name: string; size: number; type: string };
 
@@ -64,7 +65,7 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
         options: () => [],
         accept: comp.accept,
         multiple,
-        dragDrop: comp.dragDrop === true,
+        dragDrop: comp.dragDrop !== false,
         maxSize,
         files: () => accumulated,
 
@@ -110,12 +111,4 @@ export function useFileUpload(ctx: BehaviorContext, comp: any): FileUploadBehavi
             return () => disposers.forEach(d => d());
         }
     };
-}
-
-function formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-    const val = bytes / Math.pow(1024, i);
-    return `${val < 10 ? val.toFixed(1) : Math.round(val)} ${units[i]}`;
 }

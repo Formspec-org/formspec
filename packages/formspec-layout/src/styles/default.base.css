@@ -1,0 +1,288 @@
+/* @filedesc Base elements, fields, and shared chrome for the default Formspec skin. */
+
+.formspec-container :where(input:not([type="radio"]):not([type="checkbox"]):not([type="range"]):not([hidden]):not(.formspec-combobox-input)),
+.formspec-container :where(textarea),
+.formspec-container :where(select) {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--formspec-default-border-input);
+  border-radius: var(--formspec-default-radius-sm);
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--formspec-default-text);
+  background: var(--formspec-default-surface);
+  outline: none;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-container
+  :where(
+    input:not([type='radio']):not([type='checkbox']):not([type='range']):not([hidden]):not(.formspec-combobox-input)
+  ):focus,
+.formspec-container :where(textarea):focus,
+.formspec-container :where(select:not(.formspec-select-native)):focus {
+  outline: 2px solid var(--formspec-default-focus);
+  outline-offset: 1px;
+  border-color: var(--formspec-default-focus);
+  box-shadow: var(--formspec-default-focus-shadow);
+}
+
+.formspec-container :where(input[type="radio"]),
+.formspec-container :where(input[type="checkbox"]),
+.formspec-slider-track input[type="range"] {
+  accent-color: var(--formspec-default-primary);
+}
+
+.formspec-field :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--formspec-default-danger);
+}
+
+.formspec-container :where(label) {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--formspec-default-text);
+}
+
+.formspec-container :where(button) {
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.formspec-container :where(h1) {
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.formspec-container :where(h2) {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.formspec-container :where(h3) {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.formspec-container :where(h4) {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.formspec-container :where(h5),
+.formspec-container :where(h6) {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.formspec-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--formspec-spacing-xs, 0.25rem);
+  margin-bottom: 0;
+}
+
+.formspec-field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.formspec-field--inline > label {
+  margin-bottom: 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.formspec-label {
+  display: block;
+}
+
+/* When labels wrap to different heights across a grid row, let the label grow
+ * so controls align against the bottom edge of the row. */
+.formspec-grid .formspec-field {
+  flex: 1;
+}
+
+.formspec-grid .formspec-field > .formspec-label {
+  flex: 1;
+}
+
+.formspec-description {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--formspec-description-color, #64748b);
+}
+
+.formspec-hint {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--formspec-default-text-muted);
+}
+
+.formspec-heading {
+  color: var(--formspec-default-text);
+}
+
+h1.formspec-heading {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+h2.formspec-heading {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+h3.formspec-heading {
+  margin: 1rem 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+h4.formspec-heading {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+h5.formspec-heading,
+h6.formspec-heading {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.formspec-error {
+  min-height: 1.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--formspec-default-danger);
+}
+
+.formspec-error:empty {
+  display: none;
+}
+
+.formspec-required {
+  margin-left: 0.125rem;
+  color: var(--formspec-default-danger);
+}
+
+.formspec-input {
+  display: block;
+  margin-top: auto;
+}
+
+.formspec-input[hidden] {
+  display: none;
+}
+
+.formspec-input-wrapper,
+.formspec-input-adornment {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--formspec-default-border-input);
+  border-radius: var(--formspec-default-radius-sm);
+  overflow: hidden;
+  background: var(--formspec-default-surface);
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-input-wrapper:focus-within,
+.formspec-input-adornment:focus-within {
+  border-color: var(--formspec-default-focus);
+  box-shadow: var(--formspec-default-focus-shadow);
+}
+
+.formspec-prefix,
+.formspec-suffix,
+.formspec-input-prefix,
+.formspec-input-suffix {
+  display: flex;
+  align-items: center;
+  padding: 0 0.625rem;
+  font-size: 0.875rem;
+  color: var(--formspec-default-text-subtle);
+  background: var(--formspec-default-surface-muted);
+}
+
+.formspec-prefix,
+.formspec-input-prefix {
+  border-right: 1px solid var(--formspec-default-border-strong);
+}
+
+.formspec-suffix,
+.formspec-input-suffix {
+  border-left: 1px solid var(--formspec-default-border-strong);
+}
+
+.formspec-input-wrapper .formspec-input,
+.formspec-input-adornment input {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+}
+
+.formspec-field--readonly {
+  padding: 0.625rem;
+  border: 1px solid var(--formspec-default-readonly-field-border);
+  border-left: 4px solid var(--formspec-default-readonly-field-accent);
+  border-radius: var(--formspec-default-radius-sm);
+  background: var(--formspec-default-readonly-field-bg);
+}
+
+.formspec-field--readonly .formspec-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.formspec-field--readonly .formspec-label::after {
+  content: 'Read only';
+  display: inline-block;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--formspec-default-readonly-badge-border);
+  border-radius: var(--formspec-default-radius-pill);
+  background: var(--formspec-default-readonly-badge-bg);
+  color: var(--formspec-default-readonly-badge-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.formspec-field--readonly :is(.formspec-input, input, textarea, select),
+.formspec-field [aria-readonly="true"] {
+  color: var(--formspec-default-readonly-input-text);
+  background: var(--formspec-default-readonly-input-bg);
+  border-color: var(--formspec-default-readonly-input-border);
+  cursor: default;
+}
+
+.formspec-protected {
+  opacity: 0.7;
+}
+
+.formspec-protected :is(input, select, textarea) {
+  background: var(--formspec-default-surface-muted);
+  cursor: default;
+}

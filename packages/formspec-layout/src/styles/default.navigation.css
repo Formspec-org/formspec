@@ -1,0 +1,495 @@
+/* @filedesc Navigation, overlay, and workflow components for the default Formspec skin. */
+
+.formspec-modal-trigger,
+.formspec-popover-trigger,
+.formspec-repeat-add,
+.formspec-repeat-remove,
+.formspec-screener-continue,
+.formspec-submit,
+.formspec-datatable-add,
+.formspec-datatable-remove {
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-repeat-add,
+.formspec-repeat-remove {
+  padding: 0.625rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--formspec-default-radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.formspec-repeat-add {
+  border: 1px solid currentColor;
+}
+
+.formspec-repeat-add,
+.formspec-submit,
+.formspec-screener-continue {
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary);
+  border-color: var(--formspec-default-primary);
+}
+
+.formspec-repeat-add:hover {
+  filter: brightness(0.9);
+}
+
+.formspec-repeat-remove {
+  color: var(--formspec-default-danger);
+  border-color: var(--formspec-default-danger);
+  opacity: 0.85;
+}
+
+.formspec-repeat-remove:hover {
+  background: color-mix(in srgb, var(--formspec-default-danger) 8%, transparent);
+}
+
+.formspec-submit {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: var(--formspec-default-radius-sm);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.formspec-submit:hover {
+  background: var(--formspec-default-primary-strong);
+}
+
+.formspec-modal,
+.formspec-popover-content {
+  border-radius: 12px;
+  background: var(--formspec-default-bg);
+  box-shadow: var(--formspec-default-shadow-md);
+}
+
+.formspec-modal {
+  position: relative;
+  width: auto;
+  min-width: 320px;
+  max-width: min(560px, 90vw);
+  padding: 0;
+  border: none;
+  overflow: hidden;
+}
+
+.formspec-modal[data-size="sm"] {
+  max-width: 400px;
+}
+
+.formspec-modal[data-size="md"] {
+  max-width: 600px;
+}
+
+.formspec-modal[data-size="lg"] {
+  max-width: 800px;
+}
+
+.formspec-modal[data-size="xl"] {
+  max-width: 1000px;
+}
+
+.formspec-modal[data-size="full"] {
+  max-width: none;
+}
+
+.formspec-modal::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.formspec-modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--formspec-default-radius-sm);
+  background: transparent;
+  color: var(--formspec-default-text-muted);
+  font-size: 18px;
+  line-height: 1;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-modal-close:hover {
+  color: var(--formspec-default-text-strong);
+  background: var(--formspec-default-surface-soft);
+}
+
+.formspec-modal-title {
+  margin: 0;
+  padding: 1.25rem 3rem 1rem 1.5rem;
+  border-bottom: 1px solid var(--formspec-default-border-subtle);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.formspec-modal-content {
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.formspec-modal-trigger,
+.formspec-popover-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--formspec-default-primary);
+  border-radius: var(--formspec-default-radius-sm);
+  background: transparent;
+  color: var(--formspec-default-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.formspec-modal-trigger:hover,
+.formspec-popover-trigger:hover {
+  color: #fff;
+  background: var(--formspec-default-primary);
+}
+
+.formspec-popover {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.formspec-popover-content {
+  z-index: 100;
+  min-width: 200px;
+  max-width: 28rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--formspec-default-border-subtle);
+}
+
+.formspec-popover-content[data-placement="top"] {
+  margin-bottom: 0.5rem;
+}
+
+.formspec-popover-content[data-placement="right"] {
+  margin-left: 0.5rem;
+}
+
+.formspec-popover-content[data-placement="left"] {
+  margin-right: 0.5rem;
+}
+
+.formspec-popover-content[data-placement="bottom"] {
+  margin-top: 0.5rem;
+}
+
+.formspec-tab-bar {
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--formspec-default-border-muted);
+}
+
+.formspec-tab {
+  margin-bottom: -1px;
+  padding: 0.625rem 0.875rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--formspec-default-radius-sm) var(--formspec-default-radius-sm) 0 0;
+  background: none;
+  color: var(--formspec-default-text-muted);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.formspec-tab--active {
+  border-bottom-color: var(--formspec-default-primary);
+  color: var(--formspec-default-primary);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--formspec-default-primary) 7%, white);
+}
+
+.formspec-tabs:not([data-position]) .formspec-tab-panels,
+.formspec-tabs[data-position="top"] .formspec-tab-panels {
+  padding-top: 0.75rem;
+}
+
+.formspec-page h2 {
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--formspec-default-border-subtle);
+}
+
+.formspec-page-description {
+  margin-bottom: 0.5rem;
+  color: var(--formspec-default-text-subtle);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.formspec-screener {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  border: 1px solid var(--formspec-default-border-subtle);
+  border-radius: var(--formspec-default-radius-md);
+  background: var(--formspec-default-surface-quiet);
+}
+
+.formspec-screener-heading {
+  margin: 0;
+  font-size: 1.625rem;
+  line-height: 1.15;
+}
+
+.formspec-screener-intro,
+.formspec-screener-routed-target {
+  margin: 0;
+  color: var(--formspec-default-text-subtle);
+  line-height: 1.45;
+}
+
+.formspec-screener-intro {
+  max-width: 65ch;
+}
+
+.formspec-screener-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.formspec-screener-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 12px;
+  border: 1px solid var(--formspec-default-border-subtle);
+  border-radius: var(--formspec-default-radius-sm);
+  background: var(--formspec-default-surface);
+}
+
+.formspec-screener-continue {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+  padding: 10px 28px;
+  border: none;
+  border-radius: var(--formspec-default-radius-sm);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.formspec-screener-continue:hover {
+  background: var(--formspec-default-primary-strong);
+}
+
+.formspec-screener-routed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--formspec-spacing-md, 1rem);
+  padding: var(--formspec-spacing-lg, 1.5rem);
+  border: 1px solid var(--formspec-default-border-subtle);
+  border-radius: var(--formspec-default-radius-md);
+  background: var(--formspec-default-surface);
+}
+
+.formspec-wizard--with-sidenav {
+  border: 1px solid var(--formspec-default-border-subtle);
+  border-radius: var(--formspec-default-radius-md);
+  background: var(--formspec-default-surface);
+}
+
+.formspec-wizard-sidenav {
+  width: 216px;
+  background: var(--formspec-default-surface-quiet);
+  border-right: 1px solid var(--formspec-default-border-subtle);
+  transition: width 0.22s ease;
+}
+
+.formspec-wizard-sidenav--collapsed {
+  width: 48px;
+}
+
+.formspec-wizard-sidenav-toggle {
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 1px solid var(--formspec-default-border-subtle);
+  background: none;
+  color: var(--formspec-default-text-subtle);
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-wizard-sidenav--collapsed .formspec-wizard-sidenav-toggle {
+  padding: 10px;
+}
+
+.formspec-wizard-sidenav-toggle:hover,
+.formspec-wizard-sidenav-btn:hover {
+  color: var(--formspec-default-text-strong);
+  background: var(--formspec-default-surface-soft);
+}
+
+.formspec-wizard-sidenav-item {
+  border-left: 3px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.formspec-wizard-sidenav-item--active {
+  border-left-color: var(--formspec-default-primary);
+}
+
+.formspec-wizard-sidenav-item--completed {
+  opacity: 0.72;
+}
+
+.formspec-wizard-sidenav-item--completed:hover {
+  opacity: 1;
+}
+
+.formspec-wizard-sidenav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: var(--formspec-default-transition-fast);
+  white-space: nowrap;
+  outline: none;
+}
+
+.formspec-wizard-sidenav-btn:focus-visible,
+.formspec-wizard-sidenav-item--active .formspec-wizard-sidenav-btn {
+  background: var(--formspec-default-primary-soft);
+}
+
+.formspec-wizard-sidenav-step,
+.formspec-wizard-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 600;
+  border: 2px solid transparent;
+}
+
+.formspec-wizard-sidenav-step {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-wizard-sidenav-item--active .formspec-wizard-sidenav-step {
+  color: #fff;
+  background: var(--formspec-default-primary);
+  border-color: var(--formspec-default-primary);
+}
+
+.formspec-wizard-sidenav-item--completed .formspec-wizard-sidenav-step {
+  color: #fff;
+  background: var(--formspec-default-success);
+  border-color: var(--formspec-default-success);
+}
+
+.formspec-wizard-sidenav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 1;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: opacity 0.15s ease;
+}
+
+.formspec-wizard-sidenav--collapsed .formspec-wizard-sidenav-label {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.formspec-wizard-sidenav-item--active .formspec-wizard-sidenav-label {
+  color: var(--formspec-default-primary-strong);
+  font-weight: 600;
+}
+
+.formspec-wizard-content {
+  padding: 24px;
+}
+
+.formspec-wizard-steps {
+  margin-bottom: 20px;
+}
+
+.formspec-wizard-step-indicator {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--formspec-default-text-muted);
+}
+
+.formspec-wizard-step {
+  width: 28px;
+  height: 28px;
+  background: #ddd;
+  color: #555;
+  font-size: 12px;
+}
+
+.formspec-wizard-step--active {
+  color: #fff;
+  background: var(--formspec-default-primary);
+  border-color: var(--formspec-default-primary);
+}
+
+.formspec-wizard-step--completed {
+  color: #fff;
+  background: var(--formspec-default-success);
+  border-color: var(--formspec-default-success);
+  font-size: 0;
+}
+
+.formspec-wizard-step--completed::after {
+  content: '\2713';
+  font-size: 0.85rem;
+}
+
+.formspec-wizard-step-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 0.25rem;
+  color: var(--formspec-default-text-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.formspec-wizard-step-label--active {
+  color: var(--formspec-default-primary);
+  font-weight: 600;
+}
+
+.formspec-spacer {
+  height: 1rem;
+}

@@ -1,0 +1,69 @@
+{
+  "$formspecTheme": "1.0",
+  "version": "1.0.0",
+  "name": "formspec-default",
+  "title": "Formspec Default Theme",
+  "description": "Shared default theme and token set for the canonical Formspec baseline styles.",
+  "targetDefinition": {
+    "url": "urn:formspec:any",
+    "compatibleVersions": ">=1.0.0"
+  },
+  "tokens": {
+    "color.primary": "#2d6a7a",
+    "color.primaryForeground": "#ffffff",
+    "color.foreground": "#1a1f25",
+    "color.border": "#a0a4a8",
+    "color.card": "#ffffff",
+    "color.muted": "#636970",
+    "color.mutedForeground": "#6b7280",
+    "color.error": "#d93025",
+    "color.warning": "#e6a700",
+    "color.ring": "#2d6a7a",
+    "color.input": "#767a7e",
+    "color.surface": "#f8f9fa",
+    "spacing.xs": "0.25rem",
+    "spacing.sm": "0.5rem",
+    "spacing.md": "1rem",
+    "spacing.lg": "1.5rem",
+    "spacing.xl": "2rem",
+    "spacing.field": "0.75rem",
+    "radius.sm": "0.5rem",
+    "radius.md": "0.75rem",
+    "font.family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  },
+  "defaults": {
+    "labelPosition": "top",
+    "accessibility": {
+      "liveRegion": "off"
+    }
+  },
+  "selectors": [
+    {
+      "match": { "type": "group" },
+      "apply": {
+        "cssClass": "formspec-themed-group",
+        "accessibility": {
+          "role": "group"
+        }
+      }
+    },
+    {
+      "match": { "type": "display" },
+      "apply": {
+        "cssClass": "formspec-themed-display"
+      }
+    },
+    {
+      "match": { "type": "field" },
+      "apply": {
+        "cssClass": "formspec-themed-field"
+      }
+    },
+    {
+      "match": { "dataType": "boolean" },
+      "apply": {
+        "labelPosition": "start"
+      }
+    }
+  ]
+}

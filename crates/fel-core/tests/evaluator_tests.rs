@@ -180,6 +180,15 @@ fn test_null_propagation_logical() {
     assert_eq!(eval("not null"), FelValue::Null);
 }
 
+#[test]
+fn test_bang_prefix_not_null_propagation() {
+    assert_eq!(eval("!(null > 25)"), FelValue::Null);
+    assert_eq!(
+        eval_fields("!($amount > 25)", vec![("amount", FelValue::Null)]),
+        FelValue::Null
+    );
+}
+
 // ── String concatenation ────────────────────────────────────────
 
 #[test]

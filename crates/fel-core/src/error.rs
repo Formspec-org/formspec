@@ -86,6 +86,11 @@ pub fn undefined_function_names_from_diagnostics(diagnostics: &[Diagnostic]) -> 
         .collect()
 }
 
+/// Returns `true` if any diagnostic has error severity.
+pub fn has_error_diagnostics(diagnostics: &[Diagnostic]) -> bool {
+    diagnostics.iter().any(|d| d.severity == Severity::Error)
+}
+
 /// Returns `Err` when any undefined-function diagnostic is present (WASM / strict hosts).
 pub fn reject_undefined_functions(diagnostics: &[Diagnostic]) -> Result<(), String> {
     let names = undefined_function_names_from_diagnostics(diagnostics);

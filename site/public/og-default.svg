@@ -1,0 +1,19 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#F6F4EE"/>
+  <rect x="60" y="60" width="1080" height="510" rx="28" fill="#FCFBF8" stroke="#D8D4C8" stroke-width="2"/>
+  <rect x="120" y="124" width="84" height="84" rx="20" fill="#1F4B9A"/>
+  <path d="M145 152H179M145 170H170M145 188H175" stroke="#FCFBF8" stroke-width="7" stroke-linecap="round"/>
+  <text x="236" y="181" fill="#1D2433" font-family="Inter, Arial, sans-serif" font-size="52" font-weight="700">formspec</text>
+  <text x="120" y="292" fill="#1D2433" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="700">
+    Declarative forms for
+  </text>
+  <text x="120" y="370" fill="#1F4B9A" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="700">
+    high-stakes workflows
+  </text>
+  <text x="120" y="450" fill="#4E5A70" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="400">
+    Open-source specification for grant applications, compliance reporting,
+  </text>
+  <text x="120" y="492" fill="#4E5A70" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="400">
+    intake workflows, field inspections, and AI-ready form systems.
+  </text>
+</svg>

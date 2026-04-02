@@ -3,6 +3,7 @@ import {
     planComponentTree,
     planDefinitionFallback,
     resetNodeIdCounter,
+    ensureSubmitButton,
     type PlanContext,
     type LayoutNode,
 } from '../src/index';
@@ -265,6 +266,76 @@ describe('planComponentTree', () => {
         const node = planComponentTree(tree, ctx);
         expect(node.bindPath).toBe('outer');
         expect(node.children[0].bindPath).toBe('outer.inner');
+    });
+
+    it('keeps explicit component Page nodes ahead of theme.pages', () => {
+        const items = [
+            { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
+            { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
+        ];
+        const tree = {
+            component: 'Stack',
+            children: [
+                {
+                    component: 'Page',
+                    title: 'Component Page',
+                    children: [{ component: 'TextInput', bind: 'name' }],
+                },
+            ],
+        };
+        const ctx = makeCtx({
+            items,
+            findItem: (k) => findItems(items, k),
+            theme: {
+                pages: [
+                    { id: 'theme-page', title: 'Theme Page', regions: [{ key: 'email' }] },
+                ],
+            },
+        });
+
+        const node = planComponentTree(tree, ctx);
+        expect(node.children).toHaveLength(1);
+        expect(node.children[0]?.component).toBe('Page');
+        expect(node.children[0]?.props.title).toBe('Component Page');
+        expect(node.children[0]?.children[0]?.bindPath).toBe('name');
+    });
+
+    it('uses theme.pages when the component tree has no explicit Page nodes', () => {
+        const items = [
+            {
+                key: 'organization',
+                type: 'group',
+                label: 'Organization',
+                children: [
+                    { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
+                ],
+            },
+            { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
+        ];
+        const tree = {
+            component: 'Stack',
+            children: [
+                {
+                    component: 'Stack',
+                    bind: 'organization',
+                    children: [{ component: 'TextInput', bind: 'name' }],
+                },
+            ],
+        };
+        const ctx = makeCtx({
+            items,
+            findItem: (k) => findItemByPath(items, k),
+            theme: {
+                pages: [
+                    { id: 'theme-org', title: 'Theme Organization', regions: [{ key: 'organization' }] },
+                ],
+            },
+        });
+
+        const node = planComponentTree(tree, ctx);
+        expect(node.children[0]?.component).toBe('Page');
+        expect(node.children[0]?.props.id).toBe('theme-org');
+        expect(node.children[1]?.bindPath).toBe('email');
     });
 
     it('resolves scoped items by full path, not leaf key', () => {
@@ -1215,5 +1286,57 @@ describe('grant-application integration', () => {
         expect(node.children[0].children[0].children[0].style).toEqual({ gridColumn: 'span 7' });
         expect(node.children[0].children[0].children[0].children[0].component).toBe('TextInput');
         expect(node.children[0].children[0].children[1].children[0].component).toBe('MoneyInput');
+    });
+});
+
+// ── ensureSubmitButton ────────────────────────────────────────────────
+
+function makeNode(component: string, children: LayoutNode[] = []): LayoutNode {
+    return {
+        id: component,
+        component,
+        category: 'layout',
+        props: {},
+        cssClasses: [],
+        children,
+    };
+}
+
+describe('ensureSubmitButton', () => {
+    it('adds a SubmitButton to a plain Stack with no submit', () => {
+        const root = makeNode('Stack', [makeNode('TextInput')]);
+        ensureSubmitButton(root);
+        expect(root.children.at(-1)?.component).toBe('SubmitButton');
+    });
+
+    it('does not add a SubmitButton when one already exists', () => {
+        const root = makeNode('Stack', [makeNode('SubmitButton')]);
+        ensureSubmitButton(root);
+        expect(root.children.filter(c => c.component === 'SubmitButton')).toHaveLength(1);
+    });
+
+    it('does not add a SubmitButton when the tree contains a Wizard', () => {
+        const root = makeNode('Stack', [makeNode('Wizard', [makeNode('Page')])]);
+        ensureSubmitButton(root);
+        expect(root.children.some(c => c.component === 'SubmitButton')).toBe(false);
+    });
+
+    it('does not add a SubmitButton when the root Stack has Page children (pageMode wizard/tabs)', () => {
+        const root = makeNode('Stack', [
+            makeNode('Page', [makeNode('TextInput')]),
+            makeNode('Page', [makeNode('Select')]),
+        ]);
+        ensureSubmitButton(root);
+        expect(root.children.some(c => c.component === 'SubmitButton')).toBe(false);
+    });
+
+    it('wraps a root Accordion in Stack so SubmitButton is not an accordion section', () => {
+        const root = makeNode('Accordion', [makeNode('Text'), makeNode('Text'), makeNode('Text')]);
+        ensureSubmitButton(root);
+        expect(root.component).toBe('Stack');
+        expect(root.children).toHaveLength(2);
+        expect(root.children[0].component).toBe('Accordion');
+        expect(root.children[0].children).toHaveLength(3);
+        expect(root.children[1].component).toBe('SubmitButton');
     });
 });

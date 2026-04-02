@@ -6,16 +6,13 @@ import { createFieldDOM, finalizeFieldDOM, applyControlSlotClass } from './share
 export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
     behavior, parent, actx
 ) => {
-    const fieldDOM = createFieldDOM(behavior, actx, { labelFor: false });
-
-    const labelId = `${behavior.id}-label`;
-    fieldDOM.label.id = labelId;
+    const fieldDOM = createFieldDOM(behavior, actx, { asGroup: true });
 
     const container = document.createElement('div');
     container.className = 'formspec-radio-group';
     container.setAttribute('role', 'radiogroup');
-    container.setAttribute('aria-labelledby', labelId);
-    container.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
+    container.setAttribute('aria-labelledby', fieldDOM.label.id);
+    container.setAttribute('aria-describedby', fieldDOM.initialDescribedBy);
     if (behavior.orientation) container.dataset.orientation = behavior.orientation;
 
     const optionControls = new Map<string, HTMLInputElement>();
@@ -44,6 +41,7 @@ export const renderRadioGroup: AdapterRenderFn<RadioGroupBehavior> = (
         hint: fieldDOM.hint,
         error: fieldDOM.error,
         optionControls,
+        skipAriaDescribedBy: true,
     });
     actx.onDispose(dispose);
 };

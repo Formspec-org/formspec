@@ -24,7 +24,7 @@ describe('project.import', () => {
     expect(project.canUndo).toBe(true);
   });
 
-  it('keeps valid pages when only some have stale regions', () => {
+  it('preserves imported theme pages on definition-only import', () => {
     const project = createRawProject();
     project.dispatch({
       type: 'project.import',
@@ -58,11 +58,11 @@ describe('project.import', () => {
       },
     });
     const pages = (project.state.theme as any).pages;
-    expect(pages).toHaveLength(1);
+    expect(pages).toHaveLength(2);
     expect(pages[0].title).toBe('Valid');
   });
 
-  it('drops all pages when all have stale regions', () => {
+  it('does not strip legacy theme pages during import', () => {
     const project = createRawProject();
     project.dispatch({
       type: 'project.import',
@@ -86,7 +86,7 @@ describe('project.import', () => {
       },
     });
     const pages = (project.state.theme as any).pages;
-    expect(pages).toHaveLength(0);
+    expect(pages).toHaveLength(1);
   });
 
   it('normalizes imported locale keys to canonical BCP 47 codes', () => {

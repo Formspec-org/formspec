@@ -1,6 +1,4 @@
 /** @filedesc Package entry point: registers components and re-exports public API. */
-// Structural layout CSS only. Import `formspec-webcomponent/formspec-default.css` in the host when using built-in field styling.
-import './formspec-layout.css';
 import { initFormspecEngine } from '@formspec-org/engine/init-formspec-engine';
 import { registerDefaultComponents } from './components';
 
@@ -18,7 +16,8 @@ export { FormspecRender } from './element';
 export { ComponentRegistry, globalRegistry } from './registry';
 
 // Utilities
-export { formatMoney } from './format';
+export { emitThemeTokens } from './styling';
+export { formatMoney, formatBytes } from './format';
 export { applyResponseDataToEngine } from './hydrate-response-data';
 export {
     extractScreenerSeedFromData,
@@ -36,11 +35,53 @@ export type { ThemeDocument, PresentationBlock, ItemDescriptor, AccessibilityBlo
 export type { RenderContext, ComponentPlugin, ValidationTargetMetadata, ScreenerRoute, ScreenerRouteType, ScreenerStateSnapshot } from './types';
 
 // Default theme
-import defaultThemeJson from './default-theme.json';
+import defaultThemeJson from '@formspec-org/layout/default-theme';
 export { defaultThemeJson as defaultTheme };
 
 // Headless adapter public API
 export type { RenderAdapter, AdapterRenderFn, AdapterContext } from './adapters/types';
+export type { LayoutHostSlice } from './adapters/layout-host';
+export type {
+    PageLayoutBehavior,
+    StackLayoutBehavior,
+    GridLayoutBehavior,
+    DividerLayoutBehavior,
+    CollapsibleLayoutBehavior,
+    ColumnsLayoutBehavior,
+    PanelLayoutBehavior,
+    AccordionLayoutBehavior,
+    ModalLayoutBehavior,
+    PopoverLayoutBehavior,
+} from './adapters/layout-behaviors';
+export type { DisplayHostSlice } from './adapters/display-host';
+export type { DisplayComponentBehavior } from './adapters/display-behaviors';
+export { renderMarkdown } from './adapters/display-markdown';
+export {
+    renderDefaultHeading,
+    renderDefaultText,
+    renderDefaultCard,
+    renderDefaultSpacer,
+    renderDefaultAlert,
+    renderDefaultBadge,
+    renderDefaultProgressBar,
+    renderDefaultSummary,
+    renderDefaultValidationSummary,
+} from './adapters/default/display-components';
+export { renderDefaultConditionalGroup, renderDefaultDataTable } from './adapters/default/special-adapters';
+
+/** Default layout DOM builders — call from design-system adapters when falling back to canonical markup. */
+export {
+    renderPage as renderDefaultLayoutPage,
+    renderStack as renderDefaultLayoutStack,
+    renderGrid as renderDefaultLayoutGrid,
+    renderDivider as renderDefaultLayoutDivider,
+    renderCollapsible as renderDefaultLayoutCollapsible,
+    renderColumns as renderDefaultLayoutColumns,
+    renderPanel as renderDefaultLayoutPanel,
+    renderAccordion as renderDefaultLayoutAccordion,
+    renderModal as renderDefaultLayoutModal,
+    renderPopover as renderDefaultLayoutPopover,
+} from './adapters/default/layout';
 export { createSignatureCanvas } from './adapters/signature-canvas';
 export type { SignatureCanvasConfig, SignatureCanvasResult } from './adapters/signature-canvas';
 export type {
@@ -51,4 +92,5 @@ export type {
     RatingBehavior, FileUploadBehavior, SignatureBehavior,
     WizardBehavior, WizardRefs, WizardSidenavItemRefs, WizardProgressItemRefs,
     TabsBehavior, TabsRefs,
+    DataTableBehavior, DataTableRefs,
 } from './behaviors/types';

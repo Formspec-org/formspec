@@ -158,10 +158,6 @@ function hydrateTheme(project: any, themeJson: any) {
     }
   }
 
-  if (themeJson.pages) {
-    actions.push({ type: 'pages.setPages', payload: { pages: themeJson.pages } });
-  }
-  
   if (themeJson.items) {
     for (const [itemKey, override] of Object.entries(themeJson.items)) {
       for (const [ok, ov] of Object.entries(override as any)) {
@@ -334,11 +330,12 @@ describe('Formspec Studio E2E Examples Rehydration', () => {
         progress(`${ex} / ${prefix}: writing artifacts...`);
         const outDir = path.join(tmpDir, `${ex}-${prefix}`);
         fs.mkdirSync(outDir, { recursive: true });
+        const exported = project.export();
 
-        fs.writeFileSync(path.join(outDir, 'definition.json'), JSON.stringify(project.definition, null, 2));
-        fs.writeFileSync(path.join(outDir, 'theme.json'), JSON.stringify(project.theme, null, 2));
-        fs.writeFileSync(path.join(outDir, 'component.json'), JSON.stringify(project.component, null, 2));
-        fs.writeFileSync(path.join(outDir, 'mapping.json'), JSON.stringify(project.mapping, null, 2));
+        fs.writeFileSync(path.join(outDir, 'definition.json'), JSON.stringify(exported.definition, null, 2));
+        fs.writeFileSync(path.join(outDir, 'theme.json'), JSON.stringify(exported.theme, null, 2));
+        fs.writeFileSync(path.join(outDir, 'component.json'), JSON.stringify(exported.component, null, 2));
+        fs.writeFileSync(path.join(outDir, 'mapping.json'), JSON.stringify(exported.mappings?.default ?? project.mapping, null, 2));
 
         // TS engine validator (in-memory)
         progress(`${ex} / ${prefix}: diagnose...`);

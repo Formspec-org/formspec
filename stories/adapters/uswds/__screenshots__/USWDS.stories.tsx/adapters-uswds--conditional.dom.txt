@@ -1,0 +1,63 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×207
+  div  |  1200×207  d:grid  cols:584px 584px 0px  rows:207.062px  gap:32px
+    div  |  584×207
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "USWDS Adapter"
+      div  |  584×180
+        div  |  584×180
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×180
+              div  .isolated-story-root  |  584×180
+                form  .usa-form  |  320×180  |  font:16.96px
+                  h2  .usa-sr-only  |  203×33  pos:absolute  m:21,0  |  font:25.44px/bold
+                    "Conditional Fields"
+                  div  |  320×180
+                    formspec-render  |  320×180
+                      #shadow-root
+                      div  .formspec-container  |  320×180  d:flex  dir:column  gap:16px
+                        div  .formspec-stack.grid-row.grid-gap  |  352×180  d:flex  dir:column  wrap:wrap  gap:12px  m:0,-16
+                          div  .grid-col-12  |  352×66  pos:relative  p:0,16
+                            div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="hasOther"  |  320×42  d:flex  dir:column  m:24,0,0,0
+                              span  #field-hasOther-error  .usa-error-message  |  320×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                              div  .usa-checkbox  |  320×34  |  bg:rgb(255, 255, 255)
+                                input  #field-hasOther  .usa-checkbox__input  type="checkbox"  name="hasOther"  aria-required="false"  aria-invalid="false"  |  13×13  pos:absolute
+                                label  .usa-checkbox__label  for="field-hasOther"  |  136×22  pos:relative  d:inline-block  m:12,0,0,0  p:0,0,0,32  |  color:rgb(27, 27, 27)
+                                  "Other (specify)"
+                          div  .grid-col-12  |  352×102  pos:relative  p:0,16
+                            div  .usa-form-group.formspec-themed-field  aria-live="off"  data-name="otherDetail"  |  320×78  d:flex  dir:column  m:24,0,0,0
+                              label  .usa-label  for="field-otherDetail"  |  320×22
+                                "Please specify"
+                              span  #field-otherDetail-error  .usa-error-message  |  320×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                              input  #field-otherDetail  .usa-input  type="text"  name="otherDetail"  aria-required="false"  aria-invalid="false"  |  320×40  m:8,0,0,0  p:8  overflow:clip  |  bg:rgb(255, 255, 255)  color:rgb(27, 27, 27)  border:1px solid rgb(86, 92, 101)
+    div  |  584×195
+      div  |  584×15  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Real USWDS"
+      div  |  584×168
+        div  |  584×168
+          #shadow-root
+            link [hidden]
+            div  .story-root  |  584×168  |  color:rgb(27, 27, 27)
+              div  |  584×168
+                form  .usa-form  |  320×168  |  font:16.96px
+                  div  .grid-container.padding-x-0  |  320×168
+                    div  .grid-row.grid-gap  |  352×168  d:flex  wrap:wrap  m:0,-16
+                      div  .grid-col-12  |  352×168  pos:relative  p:0,16
+                        h2  .usa-sr-only  |  203×33  pos:absolute  m:21,0  |  font:25.44px/bold
+                          "Conditional Fields"
+                        div  .usa-form-group  |  320×42  m:24,0,0,0
+                          span  #real-uswds-hasOther-error  .usa-error-message  |  320×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                          div  .usa-checkbox  |  320×34  |  bg:rgb(255, 255, 255)
+                            input  #real-uswds-hasOther  .usa-checkbox__input  type="checkbox"  checked  name="hasOther"  value="true"  aria-describedby="real-uswds-hasOther-error"  aria-invalid="false"  data-realUswdsPath="hasOther"  |  13×13  pos:absolute  |  color:rgb(0, 0, 0)
+                            label  .usa-checkbox__label  for="real-uswds-hasOther"  |  136×22  pos:relative  d:inline-block  m:12,0,0,0  p:0,0,0,32
+                              "Other (specify)"
+                        div  .usa-form-group  |  320×78  m:24,0,0,0
+                          label  .usa-label  for="real-uswds-otherDetail"  |  320×22
+                            "Please specify"
+                          span  #real-uswds-otherDetail-error  .usa-error-message  |  320×8  p:4,0  |  color:rgb(181, 9, 9)  font-weight:bold
+                          input  #real-uswds-otherDetail  .usa-input  type="text"  name="otherDetail"  aria-describedby="real-uswds-otherDetail-error"  aria-invalid="false"  data-realUswdsPath="otherDetail"  |  320×40  m:8,0,0,0  p:8  overflow:clip  |  bg:rgb(255, 255, 255)  border:1px solid rgb(86, 92, 101)

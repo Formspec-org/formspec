@@ -6,59 +6,52 @@ test.describe('Workspace Navigation — Tab Switching', () => {
     await waitForApp(page);
   });
 
-  test('Logic tab renders logic workspace', async ({ page }) => {
-    await switchTab(page, 'Logic');
-    const workspace = page.locator('[data-testid="workspace-Logic"]');
-    // LogicTab renders a FilterBar with section pills: "All Logic", "Values", "Behaviors", "Rules"
-    await expect(workspace.getByRole('button', { name: 'All Logic' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Values' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Behaviors' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Rules' })).toBeVisible();
+  test('Editor tab renders Build/Manage toggle', async ({ page }) => {
+    // Editor is the default tab
+    const workspace = page.locator('[data-testid="workspace-Editor"]');
+    await expect(workspace.getByRole('radiogroup', { name: /editor view/i })).toBeVisible();
+    await expect(workspace.getByRole('radio', { name: 'Build' })).toBeVisible();
+    await expect(workspace.getByRole('radio', { name: 'Manage' })).toBeVisible();
   });
 
-  test('Data tab renders data workspace', async ({ page }) => {
-    await switchTab(page, 'Data');
-    const workspace = page.locator('[data-testid="workspace-Data"]');
-    // DataTab uses DataPillar section filter buttons: "All Data", "Structure", "Tables", "Sources", "Simulation"
-    await expect(workspace.getByRole('button', { name: 'All Data' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Structure' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Sources', exact: true })).toBeVisible();
+  test('Editor Manage view renders manage sections', async ({ page }) => {
+    await page.getByRole('radio', { name: 'Manage' }).click();
+    await expect(page.getByTestId('manage-section-option-sets')).toBeVisible();
+    await expect(page.getByTestId('manage-section-variables')).toBeVisible();
+    await expect(page.getByTestId('manage-section-data-sources')).toBeVisible();
   });
 
   test('Theme tab renders theme workspace', async ({ page }) => {
     await switchTab(page, 'Theme');
     const workspace = page.locator('[data-testid="workspace-Theme"]');
-    // ThemeTab has zone filter buttons: "All Theme", "Brand & Colors", "Field Presentation", "Layout"
     await expect(workspace.getByRole('button', { name: 'All Theme' })).toBeVisible();
     await expect(workspace.getByRole('button', { name: 'Brand & Colors' })).toBeVisible();
   });
 
-  test('Pages tab renders pages workspace', async ({ page }) => {
+  test('Layout tab renders layout workspace', async ({ page }) => {
     await switchTab(page, 'Layout');
     const workspace = page.locator('[data-testid="workspace-Layout"]');
-    await expect(workspace.getByRole('button', { name: 'Tabs' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Single' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Wizard' })).toBeVisible();
+    await expect(workspace.getByRole('tab', { name: 'Single' })).toBeVisible();
+    await expect(workspace.getByRole('tab', { name: 'Wizard' })).toBeVisible();
+    await expect(workspace.getByRole('tab', { name: 'Tabs' })).toBeVisible();
   });
 
   test('Mapping tab renders mapping workspace', async ({ page }) => {
     await switchTab(page, 'Mapping');
     const workspace = page.locator('[data-testid="workspace-Mapping"]');
-    // MappingTab has sub-tabs: "Blueprint", "Rules", "Adapter", "Preview"
     await expect(workspace.getByRole('button', { name: 'Blueprint', exact: true })).toBeVisible();
     await expect(workspace.getByRole('button', { name: 'Rules', exact: true })).toBeVisible();
   });
 
   test('Preview tab renders preview workspace', async ({ page }) => {
     await switchTab(page, 'Preview');
-    // PreviewTab has viewport switcher with "Desktop", "Tablet", "Mobile" buttons
     await expect(page.getByText('Desktop')).toBeVisible();
     await expect(page.getByText('Tablet')).toBeVisible();
     await expect(page.getByText('Mobile')).toBeVisible();
   });
 
   test('can navigate back to Editor tab', async ({ page }) => {
-    await switchTab(page, 'Logic');
+    await switchTab(page, 'Layout');
     await switchTab(page, 'Editor');
     await expect(page.locator('[data-testid="tab-Editor"]')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('[data-testid="workspace-Editor"]')).toBeVisible();

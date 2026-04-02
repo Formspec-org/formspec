@@ -2,7 +2,7 @@
 
 **A declarative form specification where structure, behavior, and presentation are independent, composable JSON documents.**
 
-Built by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/), [TealWolf Consulting](https://tealwolf.consulting/) & [Focus Consulting](https://focusconsulting.io/). Free and open source under the [AGPL-3.0 License](LICENSE).
+Built by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/), [TealWolf Consulting](https://tealwolf.consulting/) with [Focus Consulting](https://focusconsulting.io/) as a strategic partner. Free and open source under the [AGPL-3.0 License](LICENSE).
 
 [Website](https://formspec.org) · [Features](https://formspec.org/features/) · [Architecture](https://formspec.org/architecture/) · [Blog](https://formspec.org/blog/) · [About](https://formspec.org/about/)
 
@@ -27,15 +27,15 @@ Formspec inverts the usual dependency between frontend and backend. Neither impl
                              │          │
               ┌──────────────┘          └──────────────┐
               ▼                                        ▼
-   ┌─────────────────────┐    ┌──────────────────────────────────┐
-   │  TypeScript Engine   │    │  Rust Shared Kernel (in progress) │
-   │                      │◄───│                                   │
-   │  Reactive signals    │WASM│  FEL runtime (rust_decimal)       │
-   │  4-phase processing  │    │  Assembler, path utils            │
-   │  Live state mgmt     │    │  Definition evaluator             │
-   │                      │    │  7-pass static linter             │
-   └──────┬───────┬───────┘    │  Mapping engine, registry,       │
-          │       │            │  changelog                        │
+   ┌─────────────────────┐    ┌────────────────────────────────────┐
+   │  TypeScript Engine   │    │  Rust Shared Kernel                 │
+   │                      │◄───│                                     │
+   │  Reactive signals    │WASM│  FEL runtime (rust_decimal)         │
+   │  4-phase processing  │    │  Assembler, path utils              │
+   │  Live state mgmt     │    │  Definition evaluator               │
+   │                      │    │  8-pass static linter               │
+   └──────┬───────┬───────┘    │  Mapping engine, registry,         │
+          │       │            │  changelog, changeset analysis     │
           │       │            └──────────┬────────────────────────┘
           │       │                       │ PyO3
           │       │            ┌──────────▼───────────────┐
@@ -51,7 +51,7 @@ Formspec inverts the usual dependency between frontend and backend. Neither impl
    │  Web Component    │    │  Studio Core         │
    │                   │    │                      │
    │  <formspec-render>│    │  Command model       │
-   │  33 plugin types  │    │  Queries & diagnostics│
+   │  35 plugin types  │    │  Queries & diagnostics│
    │  Theme resolver   │    │  Undo/redo, replay   │
    └──────────────────┘    └──────────┬────────────┘
                                       │
@@ -60,13 +60,13 @@ Formspec inverts the usual dependency between frontend and backend. Neither impl
                       MCP   Chat   CLI tool  Studio  LLM
 ```
 
-The specification — schemas, normative prose, and FEL grammar — is the stable abstraction that all implementations conform to. A Rust shared kernel (in progress) is replacing the duplicated pure logic in both the TypeScript and Python implementations. The TypeScript engine keeps Preact Signals for reactive UI state; everything else — FEL evaluation, assembly, linting, mapping, registry, changelog — moves to Rust, exposed via WASM to TypeScript and PyO3 to Python. One implementation, every platform.
+The specification — 19 JSON Schemas, normative prose, and FEL grammar — is the stable abstraction that all implementations conform to. A Rust shared kernel (7 crates, ~47,000 lines, 1,462 tests) owns all spec business logic: FEL evaluation, assembly, linting, mapping, registry, changelog, and definition evaluation. The TypeScript engine keeps Preact Signals for reactive UI state and calls Rust via WASM. Python calls Rust via PyO3. One implementation, every platform.
 
 This inversion runs deeper than just client/server. The TypeScript side itself has two dependency boundaries below the engine:
 
-The **web component** is a presentation adapter — it reads engine signals and dispatches to a plugin registry. Each input component uses a headless behavior/adapter split: behavior hooks own reactive state and ARIA management, render adapters own DOM structure. The default adapter reproduces standard Formspec markup; design-system adapters in `formspec-adapters` provide alternative DOM without touching behavior. The engine drives any rendering surface: a React component tree, a native mobile form, a PDF generator, or a server-rendered page. Build a new presentation layer by subscribing to engine signals; the behavioral core stays constant.
+The **web component** is a presentation adapter — it reads engine signals and dispatches to a plugin registry. Each input component uses a headless behavior/adapter split: behavior hooks own reactive state and ARIA management, render adapters own DOM structure. The default adapter reproduces standard Formspec markup; design-system adapters in `formspec-adapters` provide alternative DOM without touching behavior. The engine drives any rendering surface: a React component tree (via `formspec-react`), a SwiftUI form (via `formspec-swift`), a PDF generator, or a server-rendered page. Build a new presentation layer by subscribing to engine signals; the behavioral core stays constant.
 
-**Studio Core** is an authoring adapter — it uses the engine's FEL compiler, dependency analysis, and schema validation to power a command-based editing model for creating Formspec artifacts. Every edit is a serializable command with undo/redo, replay, and cross-artifact diagnostics. Studio Core produces the definition, theme, component, and mapping documents that the engine and web component consume at runtime. It has no UI of its own — CLI tools, LLM agents, and visual editors like the Form Builder all drive it through the same command API.
+**Studio Core** is an authoring adapter — it uses the engine's FEL compiler, dependency analysis, and schema validation to power a command-based editing model for creating Formspec artifacts. Every edit is a serializable command with undo/redo, replay, and cross-artifact diagnostics. Studio Core produces the definition, theme, component, and mapping documents that the engine and web component consume at runtime. It has no UI of its own — CLI tools, LLM agents, and visual editors like Studio all drive it through the same command API.
 
 ### Document Layers
 
@@ -86,10 +86,11 @@ The specification uses composable document layers. Each layer adds a concern wit
 ╠══════════════════════════════════════════════════════════════════╣
 ║  COMPONENT SIDECAR (Interaction)                                 ║
 ║  Explicit component tree, slot binding, responsive breakpoints   ║
-║  33 built-in components + custom templates                       ║
+║  35 built-in components (18 Core + 17 Progressive)               ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║  COMPANION SPECS                                                 ║
-║  Mapping DSL · Extension Registry · Changelog Format · FEL Grammar║
+║  Mapping DSL · Extension Registry · Changelog · FEL Grammar      ║
+║  Locale · Ontology · References · Screener · Assist · Ledger     ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -97,31 +98,29 @@ Presentation layers (Theme, Components) never affect data collection, validation
 
 ### FEL (Formspec Expression Language)
 
-A small, deterministic expression language embedded in bind and shape declarations. FEL handles calculated fields, conditional visibility, cross-field constraints, and aggregation — no custom code required. Defined once as a PEG grammar with 40+ stdlib functions, implemented identically in both runtimes.
+A small, deterministic expression language embedded in bind and shape declarations. FEL handles calculated fields, conditional visibility, cross-field constraints, and aggregation — no custom code required. Defined once as a PEG grammar with 40+ stdlib functions, implemented in Rust with identical semantics across WASM (browser) and PyO3 (server). Base-10 decimal arithmetic: `$0.10 + $0.20` always equals `$0.30`.
 
 ### Runtime Architectures
 
-**Client (TypeScript)** — The engine compiles FEL expressions, builds a reactive dependency graph using Preact Signals, and maintains live state for every field (value, relevance, required, readonly, validation). User input flows through `setValue()` → signals recompute → the web component's effects update the DOM. On submit, `getResponse()` + `getValidationReport()` produce schema-valid JSON documents ready for server-side re-verification.
+**Client (TypeScript + WASM)** — The engine compiles FEL expressions via the Rust/WASM kernel, builds a reactive dependency graph using Preact Signals, and maintains live state for every field (value, relevance, required, readonly, validation). User input flows through `setValue()` → signals recompute → the web component's effects update the DOM. On submit, `getResponse()` + `getValidationReport()` produce schema-valid JSON documents ready for server-side re-verification.
 
-**Server (Python)** — A CLI and library toolkit for offline and server-side use. The Python package is a plain library — import it into any backend framework:
+**Server (Python + PyO3)** — A CLI and library toolkit for offline and server-side use. Core logic (FEL, linting, evaluation, mapping, registry, changelog) runs through Rust via PyO3. Format adapters and the artifact orchestrator remain Python:
 
 ```python
 # FastAPI example
-from formspec.evaluator import DefinitionEvaluator
-from formspec.validator import lint
+from formspec._rust import evaluate_definition, lint
 
 @app.post("/submit")
 def submit(definition: dict, data: dict):
-    # Re-verify submitted data server-side (same rules the client enforced live)
-    evaluator = DefinitionEvaluator(definition)
-    result = evaluator.process(data)
+    # Re-verify submitted data server-side (same Rust kernel the client uses)
+    result = evaluate_definition(definition, data)
     if not result.valid:
         return {"errors": result.results}
     return {"data": result.data}
 
 @app.post("/lint")
 def lint_definition(definition: dict):
-    # Static analysis — schema, references, FEL, dependency cycles
+    # Static analysis — 8-pass linter with 23+ diagnostic codes
     diagnostics = lint(definition, mode="strict")
     return {"diagnostics": diagnostics}
 ```
@@ -139,11 +138,16 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 | Components | [Component Spec](specs/component/component-spec.md) | [`component`](schemas/component.schema.json) |
 | Mapping | [Mapping DSL](specs/mapping/mapping-spec.md) | [`mapping`](schemas/mapping.schema.json) |
 | Extensions | [Extension Registry](specs/registry/extension-registry.md) · [Changelog](specs/registry/changelog-spec.md) | [`registry`](schemas/registry.schema.json) · [`changelog`](schemas/changelog.schema.json) |
+| Locale | [Locale Spec](specs/locale/locale-spec.md) | [`locale`](schemas/locale.schema.json) |
+| Ontology | [Ontology Spec](specs/ontology/ontology-spec.md) | [`ontology`](schemas/ontology.schema.json) · [`references`](schemas/references.schema.json) |
+| Screener | [Screener Spec](specs/screener/screener-spec.md) | [`screener`](schemas/screener.schema.json) · [`determination`](schemas/determination.schema.json) |
+| Assist | [Assist Spec](specs/assist/assist-spec.md) | — |
+| Audit | [Respondent Ledger](specs/audit/respondent-ledger-spec.md) | [`respondent-ledger`](schemas/respondent-ledger.schema.json) · [`respondent-ledger-event`](schemas/respondent-ledger-event.schema.json) |
 | Catalogs | — | [`FEL functions`](schemas/fel-functions.schema.json) · [`Core commands`](schemas/core-commands.schema.json) · [`Conformance suite`](schemas/conformance-suite.schema.json) |
 
 ## Repository Structure
 
-`schemas/` — JSON Schema files (the structural source of truth):
+`schemas/` — 19 JSON Schema files (the structural source of truth):
 [`definition`](schemas/definition.schema.json) ·
 [`response`](schemas/response.schema.json) ·
 [`validationReport`](schemas/validationReport.schema.json) ·
@@ -153,6 +157,13 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 [`mapping`](schemas/mapping.schema.json) ·
 [`registry`](schemas/registry.schema.json) ·
 [`changelog`](schemas/changelog.schema.json) ·
+[`locale`](schemas/locale.schema.json) ·
+[`ontology`](schemas/ontology.schema.json) ·
+[`references`](schemas/references.schema.json) ·
+[`screener`](schemas/screener.schema.json) ·
+[`determination`](schemas/determination.schema.json) ·
+[`respondent-ledger`](schemas/respondent-ledger.schema.json) ·
+[`respondent-ledger-event`](schemas/respondent-ledger-event.schema.json) ·
 [`fel-functions`](schemas/fel-functions.schema.json) ·
 [`core-commands`](schemas/core-commands.schema.json) ·
 [`conformance-suite`](schemas/conformance-suite.schema.json)
@@ -162,42 +173,47 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 
 ### TypeScript Packages
 
-| Package | Description |
-|---|---|
-| [`formspec-types`](packages/formspec-types/README.md) | Types auto-generated from JSON Schemas — zero-runtime, shared across all packages |
-| [`formspec-engine`](packages/formspec-engine/README.md) | FormEngine, FEL pipeline, assembler, reactive signals |
-| [`formspec-webcomponent`](packages/formspec-webcomponent/README.md) | `<formspec-render>` — component registry, theme resolver, 33 plugins, headless adapter architecture |
-| [`formspec-adapters`](packages/formspec-adapters/README.md) | Render adapter library — design-system-specific DOM for `<formspec-render>` components |
-| [`formspec-layout`](packages/formspec-layout/README.md) | Theme cascade resolution, responsive design, grid layout |
-| [`formspec-core`](packages/formspec-core/README.md) | Project core — 17 handlers, normalization, page resolution, theme cascade |
-| [`formspec-studio-core`](packages/formspec-studio-core/README.md) | Authoring core — command model, undo/redo, queries, diagnostics |
-| [`formspec-studio`](packages/formspec-studio/README.md) | Visual form editor (React 19) — desktop-first authoring, inspector, logic builders |
-| [`formspec-mcp`](packages/formspec-mcp/README.md) | MCP server — 28 consolidated tools for LLM-driven form authoring (stdio transport) |
-| [`formspec-chat`](packages/formspec-chat/README.md) | Chat core — conversational form builder logic, AI adapter interface, issue queue |
+| Package | Layer | Description |
+|---|---|---|
+| [`formspec-types`](packages/formspec-types/README.md) | 0 | Types auto-generated from JSON Schemas — zero-runtime, shared across all packages |
+| [`formspec-engine`](packages/formspec-engine/README.md) | 1 | FormEngine, FEL pipeline (via WASM), assembler, reactive signals |
+| [`formspec-layout`](packages/formspec-layout/README.md) | 1 | Theme cascade resolution, responsive design, grid layout |
+| [`formspec-assist`](packages/formspec-assist/README.md) | 2 | Reference implementation of the Formspec Assist interoperability specification |
+| [`formspec-webcomponent`](packages/formspec-webcomponent/README.md) | 2 | `<formspec-render>` — component registry, theme resolver, 35 plugins, headless adapter architecture |
+| [`formspec-core`](packages/formspec-core/README.md) | 2 | Project core — 17 handlers, normalization, page resolution, theme cascade |
+| [`formspec-react`](packages/formspec-react/README.md) | 2 | React hooks and auto-renderer — use any component library with FormEngine |
+| [`formspec-adapters`](packages/formspec-adapters/README.md) | 3 | Render adapter library — design-system-specific DOM for `<formspec-render>` components |
+| [`formspec-studio-core`](packages/formspec-studio-core/README.md) | 3 | Authoring core — command model, undo/redo, queries, diagnostics |
+| [`formspec-mcp`](packages/formspec-mcp/README.md) | 4 | MCP server — 48 typed tools for LLM-driven form authoring (stdio transport) |
+| [`formspec-chat`](packages/formspec-chat/README.md) | 5 | Chat core — conversational form builder logic, AI adapter interface, issue queue |
+| [`formspec-studio`](packages/formspec-studio/README.md) | 6 | Visual form editor (React 19) — desktop-first authoring, inspector, logic builders |
 
-### Rust Crates — `crates/` *(in progress)*
+`formspec-swift` — Swift package (iOS 17+, macOS 14+, visionOS) — bridges FormEngine via a WKWebView host.
+
+### Rust Crates — `crates/`
 
 | Crate | Description |
 |---|---|
 | `fel-core` | FEL lexer, parser, evaluator (rust_decimal), environment, extensions, dependency extraction, AST printer |
 | `formspec-core` | FEL analysis, path utils, schema validator, extension analysis, runtime mapping, assembler, registry client, changelog |
 | `formspec-eval` | Definition Evaluator — 4-phase batch processor with topo sort, inheritance, NRB, wildcards |
-| `formspec-lint` | 7-pass static linter — 35 diagnostic codes, pass gating, authoring/runtime modes |
+| `formspec-lint` | 8-pass static linter — 23+ diagnostic codes, pass gating, authoring/runtime modes |
+| `formspec-changeset` | Changeset dependency analysis — key extraction and connected-component grouping |
 | `formspec-wasm` | WASM bindings (wasm-bindgen) — exposes all capabilities to TypeScript |
 | `formspec-py` | PyO3 bindings — exposes all capabilities to Python |
 
+~47,000 lines of Rust. 1,462 tests.
+
 ### Python — [`src/formspec/`](src/formspec/README.md)
 
-| Module | Description | Status |
-|---|---|---|
-| `fel/` | FEL parser, AST, evaluator, dependency extractor | → Rust (`fel-core`) |
-| `validator/` | Multi-pass static linter | → Rust (`formspec-lint`) |
-| `mapping/` | Bidirectional rule engine | → Rust (`formspec-core`) |
-| `adapters/` | JSON, XML, CSV serializers | Stays Python |
-| `evaluator.py` | 4-phase form processor (rebuild → recalculate → revalidate → apply NRB) | → Rust (`formspec-eval`) |
-| `registry.py` | Extension registry client, semver matching, lifecycle validation | → Rust (`formspec-core`) |
-| `changelog.py` | Definition version diffing, change classification | → Rust (`formspec-core`) |
-| `validate.py` | Directory-level artifact validator (10-pass, auto-discovery) | Stays Python (calls Rust via PyO3) |
+Most spec logic has migrated to Rust and is called via PyO3 (`formspec._native`). The Python package is now a thin bridge plus format adapters:
+
+| Module | Description |
+|---|---|
+| `_rust.py` | Typed wrappers over PyO3 — FEL evaluation, linting, definition evaluation, mapping, registry, changelog |
+| `fel/` | FEL type definitions, error types, and value conversion (shared with `_rust.py`) |
+| `adapters/` | JSON, XML, CSV format serializers |
+| `validate.py` | Directory-level artifact orchestrator (10-pass, auto-discovery) — calls Rust for heavy lifting |
 
 ### [Examples](examples/README.md)
 
@@ -205,13 +221,16 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 |---|---|
 | [`invoice`](examples/invoice/README.md) | Line-item invoice with repeat groups and calculated totals |
 | [`clinical-intake`](examples/clinical-intake/README.md) | Healthcare intake form with screener routing and nested repeats |
-| `grant-report` | Grant reporting variants (tribal-long, tribal-short) |
-| [`grant-application`](examples/grant-application/README.md) | 6-page federal grant form — all tiers exercised |
+| `grant-report` | Grant reporting variants (tribal-long, tribal-short) with definition derivation |
+| [`grant-application`](examples/grant-application/README.md) | 6-page federal grant form — all tiers exercised, FastAPI backend, dev tools |
+| [`uswds-grant`](examples/uswds-grant/) | Community development grant rendered with the USWDS adapter |
+| [`react-demo`](examples/react-demo/) | React integration using `formspec-react` hooks |
 | `refrences` | Cross-reference dashboard — fields, binds, FEL, shapes |
 
 ### Other
 
 ```
+site/                           Formspec.org (Astro 5.0, Tailwind CSS v4)
 docs/                           Generated HTML specs and API reference (Pandoc, pdoc, TypeDoc)
 thoughts/                       ADRs, research, and design artifacts
 
@@ -220,11 +239,12 @@ tests/
   integration/                  Integration tests (CLI, pipelines)
   conformance/                  Schema validation, spec examples, parity verification, fuzzing
   component/                    Component-level Playwright tests
+  storybook/                    Visual regression tests
   fixtures/                     Shared JSON test fixtures
   e2e/
-    api/                        Server API tests (Python)
     browser/                    Browser E2E tests (Playwright)
     headless/                   Headless evaluation tests (Python)
+    kitchen_sink/               Full-stack scenario tests
 ```
 
 ## Quick Start
@@ -285,10 +305,9 @@ The 10 passes: definition linting, sidecar linting (mapping/changelog), theme li
 ### Server-Side Evaluation (Python)
 
 ```python
-from formspec.evaluator import DefinitionEvaluator
+from formspec._rust import evaluate_definition
 
-evaluator = DefinitionEvaluator(definition)
-result = evaluator.process(submitted_data)
+result = evaluate_definition(definition, submitted_data)
 # result.valid, result.data, result.results
 ```
 
@@ -300,29 +319,32 @@ Every Formspec artifact has a JSON Schema. Pass the schema as a structured-outpu
 2. **Fill responses** — constrain output to `response.schema.json`
 3. **Interpret validation** — feed `validationReport` documents back for natural-language error explanations
 
-Compact `*.llm.md` spec variants under `specs/` fit LLM context windows.
+The MCP server exposes 48 typed tools for AI-driven form authoring — structure, behavior, presentation, mapping, locale, ontology, screener, and lifecycle management. Compact `*.llm.md` spec variants under `specs/` fit LLM context windows.
 
 ## Development
 
 ```bash
-npm run build              # Build TypeScript packages
-npm run docs:generate      # Regenerate spec artifacts
+npm run build              # Build TypeScript packages (includes WASM compilation)
+make build                 # Full compile: Rust workspace + npm + PyO3
+npm run docs:generate      # Regenerate spec artifacts + filemap
 npm run docs:check         # Enforce doc/schema freshness gates
 make api-docs              # Generate Python + TypeScript API reference
 make docs                  # Full doc build (specs + API + HTML)
 
+cargo test --workspace     # Rust test suite (1,462 tests)
 python3 -m pytest tests/   # Python conformance suite
-npm run test:unit          # TypeScript unit tests (engine, layout, core, studio-core)
+npm run test:unit          # TypeScript unit tests (all packages)
 npm test                   # Playwright E2E (auto-starts dev server)
-npm run test:all           # Everything
+npm run test:all           # Everything (unit + E2E + Studio E2E)
 ```
 
 ## Roadmap
 
-- [x] **Rust shared kernel** — FEL runtime, assembler, path utils, schema validator, definition evaluator, and 7-pass linter implemented in Rust (6 crates, 10,931 lines, 239 tests). WASM and PyO3 bindings cover all capabilities.
-- [ ] **Wire WASM into TypeScript** — Connect `formspec-wasm` to the TypeScript engine, replacing ~3,900 lines of duplicated TS logic. Delete old FEL pipeline, assembler, and utility files.
-- [ ] **Wire PyO3 into Python** — Connect `formspec-py` to the Python backend, replacing FEL, mapping engine, registry, and changelog. Only format adapters stay Python.
-- [ ] **Variable name shadowing validation** — FEL uses `@name` for both reserved context references (`@current`, `@index`, `@count`, `@instance`) and user-defined variable references. Variable names that collide with reserved context names silently shadow them. Add a validation rule (linter + schema `not enum`) that rejects variable names matching the reserved set.
+- [x] **Rust shared kernel** — FEL runtime, assembler, path utils, schema validator, definition evaluator, 8-pass linter, changeset analysis (7 crates, ~47,000 lines, 1,462 tests)
+- [x] **WASM wired into TypeScript** — `formspec-wasm` connected to the TypeScript engine via `wasm-bridge-runtime`. FEL evaluation, dependency extraction, analysis, and assembly run through Rust/WASM.
+- [x] **PyO3 wired into Python** — `formspec-py` connected to the Python package. FEL, linting, evaluation, mapping, registry, and changelog all run through Rust. Format adapters stay Python.
+- [x] **Companion specs** — Locale, Ontology, References, Screener, Assist, and Respondent Ledger specifications drafted with corresponding JSON Schemas.
+- [ ] **Conformance test suite** — Formalize the cross-runtime parity tests into a spec-defined conformance suite format.
 
 ## Status
 
@@ -336,4 +358,4 @@ Created by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/) at [TealWol
 
 ## License
 
-[MIT](LICENSE)
+[AGPL-3.0](LICENSE)

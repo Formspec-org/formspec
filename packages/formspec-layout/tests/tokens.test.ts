@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveToken } from '../src/index';
+import { resolveToken, emitMergedThemeCssVars } from '../src/index';
 
 describe('resolveToken', () => {
     it('resolves a component token', () => {
@@ -28,5 +28,27 @@ describe('resolveToken', () => {
         console.warn = warn;
         expect(result).toBe('$token.missing');
         expect(warned).toBe(true);
+    });
+});
+
+describe('emitMergedThemeCssVars', () => {
+    it('merges component tokens over theme tokens on the target element', () => {
+        const props: Record<string, string> = {};
+        const el = {
+            style: {
+                setProperty(name: string, value: string) {
+                    props[name] = value;
+                },
+                getPropertyValue(name: string) {
+                    return props[name] ?? '';
+                },
+            },
+        } as unknown as HTMLElement;
+        emitMergedThemeCssVars(el, {
+            themeTokens: { 'color.border': '#111111', 'color.primary': '#222222' },
+            componentTokens: { 'color.border': '#999999' },
+        });
+        expect(el.style.getPropertyValue('--formspec-color-border')).toBe('#999999');
+        expect(el.style.getPropertyValue('--formspec-color-primary')).toBe('#222222');
     });
 });

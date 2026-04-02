@@ -1001,14 +1001,20 @@ fn malformed_fel_in_constraint_degrades_gracefully() {
     data.insert("x".to_string(), json!(5));
 
     let result = evaluate_definition(&def, &data);
-    let constraint_errors: Vec<_> = result
+    assert_eq!(
+        result.values.get("x"),
+        Some(&json!(5)),
+        "field value should still be present when bind constraint FEL is malformed"
+    );
+    let parse_errors: Vec<_> = result
         .validations
         .iter()
-        .filter(|v| v.message.contains("Constraint"))
+        .filter(|v| v.code == "CONSTRAINT_PARSE_ERROR")
         .collect();
-    assert!(
-        constraint_errors.is_empty(),
-        "malformed constraint expression should not produce a validation error"
+    assert_eq!(
+        parse_errors.len(),
+        1,
+        "malformed constraint FEL must surface CONSTRAINT_PARSE_ERROR (must not silently pass)"
     );
 }
 
@@ -1186,6 +1192,8 @@ fn required_with_empty_array_fails() {
 
 #[test]
 fn required_with_empty_object_passes() {
+    // Empty object is not in the spec's 'empty' list — required should NOT fire.
+    // (TYPE_MISMATCH may still fire since {} is not a string, but that's a separate concern.)
     let def = json!({
         "items": [{ "key": "meta", "dataType": "string" }],
         "binds": { "meta": { "required": "true" } }
@@ -1194,14 +1202,19 @@ fn required_with_empty_object_passes() {
     data.insert("meta".to_string(), json!({}));
 
     let result = evaluate_definition(&def, &data);
+    let required_errors: Vec<_> = result.validations.iter()
+        .filter(|r| r.code == "REQUIRED")
+        .collect();
     assert!(
-        result.validations.is_empty(),
+        required_errors.is_empty(),
         "empty object is not in the spec's 'empty' list — required should pass"
     );
 }
 
 #[test]
 fn required_with_non_empty_array_passes() {
+    // Non-empty array passes required. TYPE_MISMATCH may fire (array is not a string),
+    // but required should NOT.
     let def = json!({
         "items": [{ "key": "tags", "dataType": "string" }],
         "binds": { "tags": { "required": "true" } }
@@ -1210,8 +1223,11 @@ fn required_with_non_empty_array_passes() {
     data.insert("tags".to_string(), json!(["a"]));
 
     let result = evaluate_definition(&def, &data);
+    let required_errors: Vec<_> = result.validations.iter()
+        .filter(|r| r.code == "REQUIRED")
+        .collect();
     assert!(
-        result.validations.is_empty(),
+        required_errors.is_empty(),
         "non-empty array passes required"
     );
 }
@@ -3461,6 +3477,50 @@ fn expression_default_applied_on_relevance_transition() {
         Some(&json!("hello world")),
         "expression default should fire on non-relevant → relevant transition"
     );
+}
+
+#[test]
+fn money_literal_default_coerces_string_amount_on_relevance_transition() {
+    let def = json!({
+        "$formspec": "1.0",
+        "url": "http://example.org/money-defaults",
+        "version": "1.0.0",
+        "title": "Money Defaults",
+        "formPresentation": { "defaultCurrency": "USD" },
+        "items": [
+            { "key": "show", "type": "field", "dataType": "boolean", "label": "Show", "initialValue": false },
+            { "key": "amount", "type": "field", "dataType": "money", "label": "Amount" },
+        ],
+        "binds": [
+            { "path": "amount", "relevant": "show == true", "default": { "amount": "0", "currency": "USD" } },
+        ],
+    });
+    let mut data = HashMap::new();
+    data.insert("show".into(), json!(false));
+    let result1 = evaluate_definition(&def, &data);
+    assert!(
+        result1.non_relevant.contains(&"amount".to_string()),
+        "amount non-relevant when show=false"
+    );
+
+    data.insert("show".into(), json!(true));
+    let result2 = evaluate_definition_with_context(
+        &def,
+        &data,
+        &EvalContext {
+            now_iso: None,
+            previous_validations: None,
+            previous_non_relevant: Some(result1.non_relevant.clone()),
+            ..EvalContext::default()
+        },
+    );
+    let amount = result2.values.get("amount").expect("amount default");
+    assert_eq!(
+        amount.get("amount"),
+        Some(&json!(0)),
+        "money bind default amount string should coerce to JSON number"
+    );
+    assert_eq!(amount.get("currency"), Some(&json!("USD")));
 }
 
 #[test]

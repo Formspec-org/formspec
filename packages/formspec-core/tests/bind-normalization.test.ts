@@ -14,8 +14,8 @@ function makeState(overrides: {
     } as any,
     theme: {} as any,
     component: {} as any,
-    generatedComponent: { 'x-studio-generated': true } as any,
-    mapping: {} as any,
+    mappings: {},
+    selectedMappingId: 'default',
     extensions: { registries: [] },
     versioning: { baseline: {} as any, releases: [] },
   };

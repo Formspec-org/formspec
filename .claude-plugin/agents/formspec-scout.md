@@ -235,3 +235,7 @@ For every analysis, provide:
    - **No action needed** — current behavior is actually correct/good enough
 
 Keep traces focused. Don't dump entire files — cite specific lines and functions. Use the `file_path:line_number` convention for easy navigation.
+
+## Shared Advice
+
+Before starting work, scan `.claude/agent-memory/shared/ADVICE.md` for sections relevant to your task. Before wrapping up, use `/leave-advice` if you learned something worth sharing.

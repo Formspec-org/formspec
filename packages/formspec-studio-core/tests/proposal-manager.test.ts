@@ -720,6 +720,8 @@ describe('ProposalManager', () => {
       pm.openChangeset();
 
       pm.beginEntry('formspec_field');
+      project.addField('price', 'Price', 'number');
+      project.addField('quantity', 'Quantity', 'number');
       project.addField('amount', 'Amount', 'number');
       project.require('amount');
       project.calculate('amount', '$price * $quantity');

@@ -24,19 +24,23 @@ export const renderToggle: AdapterRenderFn<ToggleBehavior> = (
     checkbox.name = behavior.fieldPath;
     checkbox.id = behavior.id;
     checkbox.setAttribute('role', 'switch');
-    checkbox.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
     toggleContainer.appendChild(checkbox);
 
     if (behavior.onLabel || behavior.offLabel) {
-        const toggleLabel = document.createElement('span');
-        toggleLabel.className = 'formspec-toggle-label';
-        toggleLabel.id = `${behavior.id}-toggle-label`;
-        toggleLabel.textContent = behavior.offLabel || '';
-        toggleContainer.appendChild(toggleLabel);
+        // OFF label before the switch
+        const offSpan = document.createElement('span');
+        offSpan.className = 'formspec-toggle-label formspec-toggle-off';
+        offSpan.setAttribute('aria-hidden', 'true');
+        offSpan.textContent = behavior.offLabel || '';
+        toggleContainer.insertBefore(offSpan, checkbox);
 
-        // Add toggle label to aria-describedby so screen readers announce on/off text
-        const existing = checkbox.getAttribute('aria-describedby') || '';
-        checkbox.setAttribute('aria-describedby', `${existing} ${toggleLabel.id}`.trim());
+        // ON label after the switch
+        const onSpan = document.createElement('span');
+        onSpan.className = 'formspec-toggle-label formspec-toggle-on';
+        onSpan.id = `${behavior.id}-toggle-label`;
+        onSpan.setAttribute('aria-hidden', 'true');
+        onSpan.textContent = behavior.onLabel || '';
+        toggleContainer.appendChild(onSpan);
     }
 
     fieldDOM.root.appendChild(toggleContainer);

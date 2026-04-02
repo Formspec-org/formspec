@@ -67,7 +67,6 @@
             "definition-variables",
             "definition-optionsets",
             "definition-instances",
-            "definition-screener",
             "definition-migrations",
             "theme",
             "mapping",
@@ -427,73 +426,6 @@
       "description": "Remove an instance by name.",
       "payload": [
         { "name": "name", "type": "string", "required": true }
-      ]
-    },
-
-
-    { "type": "definition.setScreener", "area": "definition-screener",
-      "description": "Enable or disable the pre-form screener.",
-      "payload": [
-        { "name": "enabled", "type": "boolean", "required": true }
-      ]
-    },
-
-    { "type": "definition.addScreenerItem", "area": "definition-screener",
-      "description": "Add an item to the screener.",
-      "payload": [
-        { "name": "type", "type": "string", "required": true },
-        { "name": "key", "type": "string", "required": true },
-        { "name": "label", "type": "string" },
-        { "name": "dataType", "type": "string" }
-      ]
-    },
-
-    { "type": "definition.deleteScreenerItem", "area": "definition-screener",
-      "description": "Remove a screener item by key.",
-      "payload": [
-        { "name": "key", "type": "string", "required": true }
-      ]
-    },
-
-    { "type": "definition.setScreenerBind", "area": "definition-screener",
-      "description": "Set bind properties for a screener field.",
-      "payload": [
-        { "name": "path", "type": "string", "required": true },
-        { "name": "properties", "type": "object", "required": true }
-      ]
-    },
-
-    { "type": "definition.addRoute", "area": "definition-screener",
-      "description": "Add a screener routing rule.",
-      "payload": [
-        { "name": "condition", "type": "string", "required": true, "description": "FEL expression." },
-        { "name": "target", "type": "string", "required": true, "description": "Target page or action." },
-        { "name": "label", "type": "string" },
-        { "name": "insertIndex", "type": "number" }
-      ]
-    },
-
-    { "type": "definition.setRouteProperty", "area": "definition-screener",
-      "description": "Update a property on an existing route.",
-      "payload": [
-        { "name": "index", "type": "number", "required": true },
-        { "name": "property", "type": "string", "required": true },
-        { "name": "value", "type": "any", "required": true }
-      ]
-    },
-
-    { "type": "definition.deleteRoute", "area": "definition-screener",
-      "description": "Remove a route by index.",
-      "payload": [
-        { "name": "index", "type": "number", "required": true }
-      ]
-    },
-
-    { "type": "definition.reorderRoute", "area": "definition-screener",
-      "description": "Move a route one position up or down.",
-      "payload": [
-        { "name": "index", "type": "number", "required": true },
-        { "name": "direction", "type": "string", "required": true, "enum": ["up", "down"] }
       ]
     },
 

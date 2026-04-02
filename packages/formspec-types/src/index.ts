@@ -34,9 +34,11 @@ export type { OptionEntry as FormOption } from './generated/definition.js';
 // widens it to `unknown` so consumers don't need casts.
 
 import type {
-  Item, Presentation, Route, Bind,
+  Item,
+  OptionEntry,
+  Presentation,
+  Bind,
   FormDefinition as GeneratedFormDefinition,
-  Screener as GeneratedScreener,
 } from './generated/definition.js';
 
 export type FormBind = Omit<Bind, 'default'> & {
@@ -71,7 +73,7 @@ export type FormItem = Item & {
   precision?: number;
   prefix?: string;
   suffix?: string;
-  options?: { value: string; label: string }[];
+  options?: OptionEntry[];
   optionSet?: string;
   initialValue?: unknown;
   semanticType?: string;
@@ -92,34 +94,19 @@ export type FormItem = Item & {
   message?: string;
 };
 
-// ─── Augmented Screener type ──────────────────────────────────────────
-// The generated Screener requires routes as a non-empty tuple [Route, ...Route[]]
-// per the schema's minItems: 1 constraint. During authoring, a screener starts
-// with empty routes. The `enabled` flag is an authoring-layer soft-delete
-// not present in the schema.
-
-export type FormScreener = Omit<GeneratedScreener, 'items' | 'routes'> & {
-  items: FormItem[];
-  routes: Route[];
-  binds?: FormBind[];
-  enabled?: boolean;
-};
-
 // ─── Augmented FormDefinition type ────────────────────────────────────
 // The generated FormDefinition is schema-strict. This augmentation:
 // - Uses FormItem[] for items (explicit conditional properties)
 // - Makes status optional (omitted during draft creation)
-// - Uses FormScreener (authoring-friendly)
 // - Adds index signature to formPresentation (dynamic property access)
 
 export type FormDefinition = Omit<
   GeneratedFormDefinition,
-  'items' | 'status' | 'screener' | 'formPresentation' | 'binds'
+  'items' | 'status' | 'formPresentation' | 'binds'
 > & {
   items: FormItem[];
   status?: GeneratedFormDefinition['status'];
   binds?: FormBind[];
-  screener?: FormScreener;
   formPresentation?: GeneratedFormDefinition['formPresentation'] & {
     [k: string]: unknown;
   };

@@ -1,6 +1,6 @@
 /** @filedesc Entry point for the references example: registers formspec-render and loads forms. */
 import '@formspec-org/webcomponent/formspec-layout.css';
-import '@formspec-org/webcomponent/formspec-default.css';
+import formspecDefaultCssUrl from '@formspec-org/webcomponent/formspec-default.css?url';
 import { FormspecRender, globalRegistry } from '@formspec-org/webcomponent';
 import { uswdsAdapter } from '@formspec-org/adapters';
 import { initFormspecEngine } from '@formspec-org/engine';
@@ -108,6 +108,14 @@ const emptyState = document.getElementById('empty-state');
 
 let activeExampleId = null;
 let activeBridgeLink = null;
+let activeDefaultSkinLink = null;
+
+function removeDefaultSkinLink() {
+  if (activeDefaultSkinLink) {
+    activeDefaultSkinLink.remove();
+    activeDefaultSkinLink = null;
+  }
+}
 
 // ── Build sidebar ──
 for (const ex of EXAMPLES) {
@@ -159,6 +167,7 @@ async function loadExample(ex, fixture = null) {
     activeBridgeLink.remove();
     activeBridgeLink = null;
   }
+  removeDefaultSkinLink();
 
   try {
     // Load artifacts (+ fixture in parallel if restoring saved state)
@@ -466,6 +475,15 @@ async function loadExample(ex, fixture = null) {
 
     if (registryDoc) {
       formEl.registryDocuments = registryDoc;
+    }
+
+    // Default Formspec skin (tokens, inputs, etc.) only for the built-in renderer — not USWDS.
+    if (ex.adapter !== 'uswds') {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = formspecDefaultCssUrl;
+      document.head.appendChild(link);
+      activeDefaultSkinLink = link;
     }
 
     // Switch adapter if specified

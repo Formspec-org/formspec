@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USWDS Grant Application — Formspec Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--formspec-typography-family);
+      font-size: 16px;
+      color: var(--formspec-color-text);
+      background: var(--formspec-color-background);
+      min-height: 100vh;
+    }
+
+    .demo-header {
+      background: var(--formspec-color-primary);
+      color: #fff;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .demo-header h1 { font-size: 18px; font-weight: 600; }
+    .demo-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.6);
+      padding: 3px 8px;
+      border-radius: 2px;
+      color: #fff;
+      text-decoration: none;
+    }
+    .demo-badge:hover { background: rgba(255,255,255,0.15); }
+    .demo-note {
+      margin-left: auto;
+      font-size: 13px;
+      opacity: 0.85;
+    }
+
+    .demo-header-source {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.625rem;
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 2px;
+      background: none;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .demo-header-source:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.7);
+    }
+
+    .source-modal {
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0;
+      width: min(56rem, 90vw);
+      max-height: 85vh;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .source-modal::backdrop { background: rgba(0,0,0,0.5); }
+
+    .source-modal-inner {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-height: 85vh;
+    }
+    .source-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--formspec-border-color);
+    }
+    .source-modal-title { font-size: 1rem; font-weight: 700; margin: 0; }
+    .source-modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      color: #565c65;
+    }
+    .source-modal-close:hover { background: #f0f0f0; color: #1b1b1b; }
+
+    .source-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--formspec-border-color);
+      background: #f0f0f0;
+      padding: 0 1.25rem;
+    }
+    .source-tab {
+      font-family: ui-monospace, 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.625rem 1rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #565c65;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .source-tab:hover { color: #1b1b1b; }
+    .source-tab--active {
+      color: #1b1b1b;
+      border-bottom-color: var(--formspec-color-primary);
+    }
+
+    .source-pre {
+      flex: 1;
+      overflow: auto;
+      margin: 0;
+      padding: 1.25rem;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      background: #1e1e2e;
+      color: #c9d1d9;
+      white-space: pre;
+    }
+
+    .form-container {
+      max-width: 52rem;
+      margin: 24px auto;
+      padding: 32px;
+      background: #fff;
+      border: 1px solid var(--formspec-border-color);
+      border-radius: var(--formspec-border-radius, 0);
+    }
+    formspec-render { display: block; }
+
+    .demo-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 24px;
+      background: #fef3c7;
+      border-bottom: 1px solid #f59e0b;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: #92400e;
+    }
+
+    .demo-banner-label {
+      flex-shrink: 0;
+      padding: 0.125rem 0.5rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: #f59e0b;
+      color: #fff;
+      border-radius: 2px;
+    }
+
+    .demo-banner-text strong {
+      font-weight: 700;
+      color: #78350f;
+    }
+
+    @media (max-width: 768px) {
+      .demo-header { padding: 10px 16px; }
+      .demo-header h1 { font-size: 15px; }
+      .demo-note { display: none; }
+      .form-container { margin: 12px; padding: 16px; }
+    }
+  </style>
+  <script type="module" crossorigin src="/uswds-grant/assets/index-CLcZjv3m.js"></script>
+  <link rel="stylesheet" crossorigin href="/uswds-grant/assets/index-Dmib9eyt.css">
+</head>
+<body>
+
+<header class="demo-header">
+  <a href="/" class="demo-badge">Formspec</a>
+  <h1>USWDS Grant Application</h1>
+  <span class="demo-note">Live demo — USWDS design system adapter</span>
+  <button class="demo-header-source" id="source-btn">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    View Source JSON
+  </button>
+</header>
+
+<dialog class="source-modal" id="source-modal">
+  <div class="source-modal-inner">
+    <div class="source-modal-header">
+      <h2 class="source-modal-title">Source JSON</h2>
+      <button class="source-modal-close" id="source-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="source-tabs" role="tablist" id="source-tabs"></div>
+    <pre class="source-pre" id="source-pre"></pre>
+  </div>
+</dialog>
+
+<div class="demo-banner" role="status">
+  <span class="demo-banner-label">Demo</span>
+  <span class="demo-banner-text">
+    This is a live demo of the <strong>USWDS design system adapter</strong> rendering a federal grant application — all styling comes from the built-in adapter.
+  </span>
+</div>
+
+<main class="form-container">
+  <formspec-render></formspec-render>
+</main>
+
+</body>
+</html>

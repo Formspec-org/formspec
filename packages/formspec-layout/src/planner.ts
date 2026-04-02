@@ -19,9 +19,13 @@ import { widgetTokenToComponent } from './widget-vocabulary.js';
 
 // ── Component category classification ────────────────────────────────
 
+// Component category sets — aligned with Component Spec §4 categories.
 const LAYOUT_COMPONENTS = new Set([
-    'Page', 'Stack', 'Grid', 'Divider', 'Collapsible', 'Columns',
-    'Panel', 'Accordion', 'Modal', 'Popover',
+    'Page', 'Stack', 'Grid', 'Columns', 'Tabs', 'Accordion',
+]);
+
+const CONTAINER_COMPONENTS = new Set([
+    'Card', 'Collapsible', 'ConditionalGroup', 'Panel', 'Modal', 'Popover',
 ]);
 
 const INPUT_COMPONENTS = new Set([
@@ -31,26 +35,78 @@ const INPUT_COMPONENTS = new Set([
 ]);
 
 const DISPLAY_COMPONENTS = new Set([
-    'Heading', 'Text', 'Card', 'Spacer', 'Alert', 'Badge',
+    'Heading', 'Text', 'Divider', 'Spacer', 'Alert', 'Badge',
     'ProgressBar', 'Summary', 'ValidationSummary',
 ]);
 
 const INTERACTIVE_COMPONENTS = new Set([
-    'Tabs', 'SubmitButton',
-]);
-
-const SPECIAL_COMPONENTS = new Set([
-    'ConditionalGroup', 'DataTable',
+    'SubmitButton', 'DataTable',
 ]);
 
 function classifyComponent(type: string): LayoutNode['category'] {
     if (LAYOUT_COMPONENTS.has(type)) return 'layout';
+    if (CONTAINER_COMPONENTS.has(type)) return 'container';
     if (INPUT_COMPONENTS.has(type)) return 'field';
     if (DISPLAY_COMPONENTS.has(type)) return 'display';
     if (INTERACTIVE_COMPONENTS.has(type)) return 'interactive';
-    if (SPECIAL_COMPONENTS.has(type)) return 'special';
     // Unknown components default to layout (custom components are usually structural)
     return 'layout';
+}
+
+// ── Plan tree queries ─────────────────────────────────────────────────
+
+/** Returns true if any node in the tree has the given component type. */
+export function planContains(node: LayoutNode, component: string): boolean {
+    if (node.component === component) return true;
+    return node.children.some(child => planContains(child, component));
+}
+
+/** Root components whose `children` are intrinsic sections/panels, not arbitrary layout siblings. */
+const SUBMIT_MUST_BE_SIBLING_ROOTS = new Set(['Accordion']);
+
+/** Append a SubmitButton node to a plan root if one doesn't already exist
+ *  and the plan isn't owned by a Wizard (which provides its own submit).
+ *  Also skips when the root has direct Page children — pageMode wizard/tabs
+ *  synthesizes its own submit via the wizard behavior's Next→Submit button.
+ *  For Accordion (and similar), children are sections — wrap in Stack so submit is not a section. */
+export function ensureSubmitButton(root: LayoutNode): void {
+    if (planContains(root, 'Wizard') || planContains(root, 'SubmitButton')) return;
+    if (root.children.some(c => c.component === 'Page')) return;
+
+    const submitNode: LayoutNode = {
+        id: nextId('submit'),
+        component: 'SubmitButton',
+        category: 'interactive',
+        props: {},
+        cssClasses: [],
+        children: [],
+    };
+
+    if (SUBMIT_MUST_BE_SIBLING_ROOTS.has(root.component)) {
+        const inner: LayoutNode = { ...root };
+        root.id = nextId('root-stack');
+        root.component = 'Stack';
+        root.category = 'layout';
+        root.props = {};
+        root.cssClasses = [];
+        root.children = [inner, submitNode];
+        delete root.style;
+        delete root.accessibility;
+        delete root.bindPath;
+        delete root.fieldItem;
+        delete root.presentation;
+        delete root.labelPosition;
+        delete root.when;
+        delete root.whenPrefix;
+        delete root.fallback;
+        delete root.repeatGroup;
+        delete root.repeatPath;
+        delete root.isRepeatTemplate;
+        delete root.scopeChange;
+        return;
+    }
+
+    root.children.push(submitNode);
 }
 
 // ── ID generation ────────────────────────────────────────────────────
@@ -140,7 +196,10 @@ export function planComponentTree(
 ): LayoutNode {
     if (!customComponentStack) customComponentStack = new Set();
 
-    if (applyThemePages && !prefix && ctx.theme?.pages?.length) {
+    // Layer precedence is explicit: authored component Page nodes win over
+    // theme.pages. Theme pages only synthesize page structure when the
+    // component tree does not already own top-level pages.
+    if (applyThemePages && !prefix && ctx.theme?.pages?.length && !componentTreeOwnsPages(tree)) {
         const themed = planThemePagesFromComponentTree(tree, ctx, customComponentStack);
         if (themed) {
             return applyGeneratedPageMode(themed, themed.component, ctx);
@@ -226,6 +285,7 @@ export function planComponentTree(
             label: item.label ?? bindKey,
             hint: item.hint,
             dataType: item.dataType,
+            extensions: item.extensions,
         };
 
         // Resolve theme presentation for this field
@@ -300,6 +360,13 @@ export function planComponentTree(
     }
 
     return node;
+}
+
+function componentTreeOwnsPages(tree: any): boolean {
+    if (!tree || !Array.isArray(tree.children)) {
+        return false;
+    }
+    return tree.children.some((child: any) => child?.component === 'Page');
 }
 
 /**
@@ -399,9 +466,12 @@ function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNod
         const tier1Widget = widgetTokenToComponent(item.presentation?.widgetHint);
         const widget = themeWidget || tier1Widget || getDefaultComponent(item);
 
+        // Forward definition-level presentation props (min, max, showStepper, currency, etc.)
+        // into node.props so renderers can read them uniformly.
+        const { widgetHint: _, cssClass: _c, labelPosition: _l, ...presentationProps } = item.presentation ?? {};
+        const fieldProps: Record<string, unknown> = { bind: key, ...presentationProps };
         // Default maxLines for text dataType fields rendered as TextInput
-        const fieldProps: Record<string, unknown> = { bind: key };
-        if (widget === 'TextInput' && item.dataType === 'text') {
+        if (widget === 'TextInput' && item.dataType === 'text' && !fieldProps.maxLines) {
             fieldProps.maxLines = 3;
         }
 
@@ -420,6 +490,7 @@ function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNod
                 dataType: item.dataType,
                 options: item.options,
                 optionSet: item.optionSet,
+                extensions: item.extensions,
             },
             presentation,
             labelPosition: presentation.labelPosition ?? 'top',
@@ -427,11 +498,12 @@ function planDefinitionItem(item: any, ctx: PlanContext, prefix = ''): LayoutNod
     }
 
     const displayWidget = widgetTokenToComponent(item.presentation?.widgetHint) ?? 'Text';
+    const { widgetHint: _wh, cssClass: _dc, labelPosition: _dl, ...displayPresentationProps } = item.presentation ?? {};
     const displayNode: LayoutNode = {
         id: nextId('display'),
         component: displayWidget,
         category: 'display',
-        props: { text: item.label || '' },
+        props: { text: item.label || '', ...displayPresentationProps },
         cssClasses: normalizeCssClass(presentation.cssClass),
         children: [],
     };
@@ -465,6 +537,7 @@ function planThemePagesFromDefinitionItems(items: any[], ctx: PlanContext): Layo
     const pageMode = ctx.formPresentation?.pageMode;
     if ((pageMode === 'wizard' || pageMode === 'tabs') && pageNodes.length > 0) {
         const pages = pageNodes.map((pn) => ({
+            id: typeof pn.props?.id === 'string' ? pn.props.id : undefined,
             title: String(pn.props?.title || ''),
             children: pn.children,
         }));
@@ -598,6 +671,7 @@ function wrapRegionNode(
 }
 
 type PlannedPage = {
+    id?: string;
     title: string;
     children: LayoutNode[];
 };
@@ -619,7 +693,10 @@ function emitPageModePages(
         id: nextId('page'),
         component: 'Page',
         category: 'layout' as const,
-        props: { title: page.title || `Page ${index + 1}` },
+        props: {
+            ...(page.id ? { id: page.id } : {}),
+            title: page.title || `Page ${index + 1}`,
+        },
         cssClasses: [],
         children: page.children,
     }));
@@ -708,6 +785,12 @@ function applyGeneratedPageMode(
     };
 }
 
+/**
+ * Returns true when the component document was auto-generated by Studio (or is
+ * absent/empty).  The standalone planner also relies on this: when there is no
+ * pre-existing component document, the planner treats the layout as fully
+ * generated and applies page-mode materialization freely.
+ */
 function isStudioGeneratedComponentDoc(doc: any): boolean {
     if (!doc || typeof doc !== 'object') return false;
     return doc['x-studio-generated'] === true || doc.$formspecComponent == null;

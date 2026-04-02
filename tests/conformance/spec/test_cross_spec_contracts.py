@@ -188,7 +188,7 @@ class TestDefinitionTopLevel:
     def test_s4_1__optional_fields_not_required(self):
         optional = {"name", "description", "date", "derivedFrom", "versionAlgorithm",
                     "nonRelevantBehavior", "binds", "shapes", "instances",
-                    "variables", "optionSets", "screener", "migrations", "extensions"}
+                    "variables", "optionSets", "migrations", "extensions"}
         for field in optional:
             assert field not in DEF_S["required"], f"{field} should not be required"
 
@@ -197,7 +197,7 @@ class TestDefinitionTopLevel:
             "$formspec", "url", "version", "versionAlgorithm", "status",
             "derivedFrom", "name", "title", "description", "date",
             "items", "binds", "shapes", "instances", "variables",
-            "nonRelevantBehavior", "optionSets", "screener", "migrations",
+            "nonRelevantBehavior", "optionSets", "migrations",
             "extensions", "formPresentation",
         }
         assert _prop_keys(DEF_S) == expected
@@ -463,30 +463,6 @@ class TestDefinitionOptionSet:
 
     def test_s4_6__option_entry_additional_properties_false(self):
         assert self.OE["additionalProperties"] is False
-
-
-# ===========================================================================
-# Definition Schema — Screener / Route (§4.7)
-# ===========================================================================
-
-
-class TestDefinitionScreener:
-    """spec.md §4.7 — Screener Routing."""
-
-    SCR = _def(DEF_S, "Screener")
-    ROUTE = _def(DEF_S, "Route")
-
-    def test_s4_7__screener_required(self):
-        assert set(self.SCR["required"]) == {"items", "routes"}
-
-    def test_s4_7__routes_min_items(self):
-        assert self.SCR["properties"]["routes"]["minItems"] == 1
-
-    def test_s4_7__route_required(self):
-        assert set(self.ROUTE["required"]) == {"condition", "target"}
-
-    def test_s4_7__route_target_format_uri(self):
-        assert self.ROUTE["properties"]["target"]["format"] == "uri"
 
 
 # ===========================================================================

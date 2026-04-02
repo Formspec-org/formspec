@@ -12,23 +12,23 @@ export function DefinitionProperties({
 }) {
   return (
     <div className="h-full flex flex-col bg-surface overflow-hidden">
-      <div className="px-3.5 py-2.5 border-b border-border bg-surface shrink-0">
-        <h2 className="text-[15px] font-bold text-ink tracking-tight font-ui">Form Properties</h2>
-        <div className="font-mono text-[12px] text-muted truncate">
+      <div className="border-b border-border/80 bg-surface px-5 py-4 shrink-0">
+        <h2 className="text-[17px] font-semibold text-ink tracking-tight font-ui">Form Properties</h2>
+        <div className="text-[13px] text-muted truncate">
           {definition.url || 'Untitled'}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-3.5 py-2 space-y-1">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5 md:px-5">
         <Section title="Identity">
-          <div className="space-y-1.5 mb-2">
-            <label className="font-mono text-[10px] text-muted uppercase tracking-wider block" htmlFor="def-title">
+          <div className="mb-3 space-y-2">
+            <label className="block text-[12px] font-medium text-muted" htmlFor="def-title">
               Title
             </label>
             <input
               id="def-title"
               type="text"
               aria-label="Title"
-              className="w-full px-2 py-1 text-[13px] border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+              className="w-full rounded-[12px] border border-border/80 bg-surface px-3 py-2 text-[13px] outline-none transition-colors focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
               defaultValue={definition.title ?? ''}
               onBlur={(event) => {
                 project.setMetadata({ title: event.currentTarget.value || null });

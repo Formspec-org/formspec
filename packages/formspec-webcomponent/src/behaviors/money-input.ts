@@ -3,11 +3,35 @@ import { effect } from '@preact/signals-core';
 import type { MoneyInputBehavior, FieldRefs, BehaviorContext } from './types';
 import { resolveFieldPath, toFieldId, resolveAndStripTokens, bindSharedFieldEffects, warnIfIncompatible } from './shared';
 
+function toCurrencyDisplay(raw: unknown): string | null {
+    if (typeof raw !== 'string') return null;
+    const value = raw.trim();
+    if (!value) return null;
+
+    if (value.length === 3 && /^[A-Z]{3}$/i.test(value)) {
+        try {
+            const parts = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: value.toUpperCase(),
+                currencyDisplay: 'narrowSymbol',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).formatToParts(1);
+            const symbol = parts.find((part) => part.type === 'currency')?.value;
+            if (symbol) return symbol;
+        } catch {
+            return value.toUpperCase();
+        }
+        return value.toUpperCase();
+    }
+
+    return value;
+}
+
 export function useMoneyInput(ctx: BehaviorContext, comp: any): MoneyInputBehavior {
     const fieldPath = resolveFieldPath(comp.bind, ctx.prefix);
     const id = comp.id || toFieldId(fieldPath);
     const item = ctx.findItemByKey(comp.bind);
-    warnIfIncompatible('MoneyInput', item?.dataType || 'string');
     const itemDesc = { key: item?.key || comp.bind, type: 'field' as const, dataType: item?.dataType || 'money' };
     const rawPresentation = ctx.resolveItemPresentation(itemDesc);
     const presentation = resolveAndStripTokens(rawPresentation, ctx.resolveToken, comp);
@@ -15,8 +39,17 @@ export function useMoneyInput(ctx: BehaviorContext, comp: any): MoneyInputBehavi
     const labelText = comp.labelOverride || item?.label || item?.key || comp.bind;
     const vm = ctx.getFieldVM(fieldPath);
 
-    // Resolve currency: fixed from item or definition default, or null for editable
-    const resolvedCurrency = item?.currency || ctx.definition?.formPresentation?.defaultCurrency || null;
+    if (item?.dataType && !['money', 'decimal'].includes(item.dataType)) {
+        warnIfIncompatible('MoneyInput', item.dataType);
+    }
+
+    // Resolve currency from the field definition, presentation override, or form default.
+    const rawResolvedCurrency = item?.currency
+        || item?.presentation?.currency
+        || (presentation as Record<string, any>).currency
+        || ctx.definition?.formPresentation?.defaultCurrency
+        || null;
+    const resolvedCurrency = toCurrencyDisplay(rawResolvedCurrency);
 
     return {
         fieldPath,
@@ -44,8 +77,8 @@ export function useMoneyInput(ctx: BehaviorContext, comp: any): MoneyInputBehavi
             const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
 
             // Find amount and currency inputs by class name convention
-            const amountInput = refs.control.querySelector('input[type="number"]') as HTMLInputElement | null;
-            const currencyInput = refs.control.querySelector('.formspec-money-currency-input') as HTMLInputElement | null;
+            const amountInput = refs.control.querySelector('input.formspec-money-amount') as HTMLInputElement | null;
+            const currencyInput = refs.root.querySelector('.formspec-money-currency-input') as HTMLInputElement | null;
             const getCurrency = (): string => {
                 if (resolvedCurrency) return resolvedCurrency;
                 return currencyInput?.value || '';

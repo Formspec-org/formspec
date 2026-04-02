@@ -58,6 +58,7 @@ export type {
   BranchPath,
   LayoutArrangement,
   PlacementOptions,
+  LayoutAddItemSpec,
   FlowProps,
   ValidationOptions,
   InstanceProps,
@@ -65,10 +66,14 @@ export type {
   ItemChanges,
   MetadataChanges,
   WidgetInfo,
-  FieldTypeCatalogEntry,
   FELValidationResult,
   FELSuggestion,
 } from './helper-types.js';
+
+export {
+  parseCommaSeparatedKeywords,
+  formatCommaSeparatedKeywords,
+} from './choice-option-keywords.js';
 
 // ── Field type aliases ──────────────────────────────────────────────
 export { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
@@ -84,13 +89,120 @@ export type {
 export { resolveThemeCascade } from '@formspec-org/core';
 export type { ResolvedProperty } from '@formspec-org/core';
 
-// ── Page resolution utilities (re-exported from formspec-core) ───────
+// ── Page resolution utilities ───────────────────────────────────────
 export { resolvePageStructure } from '@formspec-org/core';
 export type { ResolvedPageStructure, ResolvedPage, ResolvedRegion, PageDiagnostic } from '@formspec-org/core';
-
-// ── Behavioral page view (re-exported from formspec-core) ────────────
-export { resolvePageView } from '@formspec-org/core';
-export type { PageView, PageItemView, PlaceableItem, PageStructureView } from '@formspec-org/core';
+export { resolveLayoutPageStructure } from './page-structure.js';
+export type { PageView, PageItemView, PlaceableItem, PageStructureView, PageStructureViewInput } from './page-structure.js';
 
 // ── Evaluation helpers ──────────────────────────────────────────────
 export { previewForm, validateResponse } from './evaluation-helpers.js';
+
+// ── Mapping preview serialization ──────────────────────────────────
+export { serializeMappedData } from './mapping-serialization.js';
+export type { AdapterOptions } from './mapping-serialization.js';
+export { generateDefinitionSampleData, sampleFieldValue } from './mapping-sample-data.js';
+export type { MappingSampleOptions } from './mapping-sample-data.js';
+
+// ── Layout context operations ──────────────────────────────────────
+export {
+  buildLayoutContextMenuItems,
+  executeLayoutAction,
+} from './layout-context-operations.js';
+export type {
+  LayoutContextMenuItem,
+  LayoutContextMenuState,
+} from './layout-context-operations.js';
+
+// ── Keyboard shortcut policy ───────────────────────────────────────
+export { handleKeyboardShortcut } from './keyboard.js';
+export type { ShortcutHandlers } from './keyboard.js';
+
+// ── Editor tree helpers ────────────────────────────────────────────
+export {
+  buildAdvisories,
+  buildDefinitionAdvisoryIssues,
+  buildCategorySummaries,
+  buildExpressionDiagnostics,
+  buildMissingPropertyActions,
+  buildRowSummaries,
+  buildStatusPills,
+  summarizeExpression,
+} from './editor-tree-helpers.js';
+export type {
+  Advisory,
+  AdvisoryAction,
+  AdvisoryActionKey,
+  AdvisorySeverity,
+  BuildStatusPillsOptions,
+  CategorySummaries,
+  DefinitionAdvisoryIssue,
+  ExpressionDiagnostic,
+  MissingPropertyAction,
+  RowStatusPill,
+  RowSummaryEntry,
+} from './editor-tree-helpers.js';
+
+// ── FEL editor helpers ─────────────────────────────────────────────
+export {
+  buildFELHighlightTokens,
+  filterFELFieldOptions,
+  filterFELFunctionOptions,
+  getFELAutocompleteTrigger,
+  getFELFunctionAutocompleteTrigger,
+  getFELInstanceNameAutocompleteTrigger,
+  getInstanceFieldOptions,
+  getInstanceNameOptions,
+  validateFEL,
+} from './fel-editor-utils.js';
+export type {
+  FELAutocompleteTrigger,
+  FELEditorFieldOption,
+  FELEditorFunctionOption,
+  FELHighlightToken,
+} from './fel-editor-utils.js';
+
+// ── Shared authoring helpers ───────────────────────────────────────
+export {
+  bindsFor,
+  flatItems,
+  buildBindKeyMap,
+  buildDefLookup,
+  compatibleWidgets,
+  computeUnassignedItems,
+  componentForWidgetHint,
+  countDefinitionFields,
+  dataTypeInfo,
+  findComponentNodeById,
+  flattenComponentTree,
+  getFieldTypeCatalog,
+  humanizeFEL,
+  isLayoutId,
+  nodeIdFromLayoutId,
+  nodeRefFor,
+  normalizeBindEntries,
+  normalizeBindsView,
+  pruneDescendants,
+  propertyHelp,
+  sanitizeIdentifier,
+  shapesFor,
+  sortForBatchDelete,
+  buildBatchMoveCommands,
+  widgetHintForComponent,
+} from './authoring-helpers.js';
+export type {
+  DataTypeDisplay,
+  DefLookupEntry,
+  FlatEntry,
+  FieldTypeCatalogEntry,
+  FlatItem,
+  NormalizedBindEntry,
+  UnassignedItem,
+} from './authoring-helpers.js';
+
+// ── Preview document normalization ─────────────────────────────────
+export {
+  normalizeComponentDoc,
+  normalizeDefinitionDoc,
+  normalizeThemeDoc,
+} from './preview-documents.js';

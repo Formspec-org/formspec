@@ -203,8 +203,10 @@ for internationalizing Formspec Definitions.</li>
 <code>version</code>, <code>locale</code>,
 <code>targetDefinition</code>, and a <code>strings</code> object.</li>
 <li>String resolution uses a fallback cascade (regional → base → inline
-defaults) with FEL interpolation via <code>{{expression}}</code>
-syntax.</li>
+defaults) with FEL interpolation via <code>{{expression}}</code> syntax;
+<code>null</code> without <code>$</code>/<code>@</code> and without a
+static-literal expression preserves the <code>{{…}}</code> text (§3.3.1
+rule 3a).</li>
 <li>This BLUF is governed by <code>schemas/locale.schema.json</code>;
 generated schema references are the canonical structural contract.
 <!-- bluf:end --></li>
@@ -1116,25 +1118,47 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb23-1"><a href=
 <h4 id="interpolation-processing">3.3.1 Interpolation Processing</h4>
 <p>Processors MUST apply the following rules:</p>
 <ol type="1">
-<li>To include a literal <code>{{</code> in a string value without
+<li><p>To include a literal <code>{{</code> in a string value without
 triggering interpolation, authors MUST double the opening braces:
 <code>{{{{</code>. Processors MUST treat <code>{{{{</code> as a literal
 <code>{{</code> in the output. (In JSON source, this is simply
-<code>"{{{{"</code>.)</li>
-<li>An expression that fails to parse or evaluate MUST NOT cause the
+<code>"{{{{"</code>.)</p></li>
+<li><p>An expression that fails to parse or evaluate MUST NOT cause the
 entire string resolution to fail. Processors MUST replace the failed
 expression with the literal text
-<code>{{&lt;original expression&gt;}}</code> and SHOULD emit a
-warning.</li>
-<li>Expression results are coerced to strings. <code>null</code> becomes
+<code>{{&lt;original expression&gt;}}</code> and SHOULD emit a warning.
+For this purpose, <strong>evaluate</strong> includes any outcome where
+the FEL runtime records <strong>error</strong>-severity diagnostics for
+the expression, even if the coerced value is <code>null</code>.</p></li>
+<li><p>Expression results are coerced to strings. <code>null</code>
+becomes the empty string <code>""</code> <strong>unless</strong> rule 3a
+applies. 3a. If the expression result is <code>null</code>
+<strong>and</strong> the trimmed source contains neither a
+<code>$</code> field reference sigil nor an <code>@</code> context
+reference sigil <strong>and</strong> the parsed expression is not an
+<strong>interpolation static literal</strong> (see below), processors
+MUST treat the interpolation as failed and MUST preserve the literal
+text <code>{{&lt;original expression&gt;}}</code> (same as rule 2). This
+distinguishes intentional empty output for missing <code>$field</code>
+values from expressions that do not reference instance data (e.g. author
+typos or invalid operator sequences) that happen to evaluate to
+<code>null</code>.</p>
+<p>An <strong>interpolation static literal</strong> is any of: the
+<code>null</code>, boolean, numeric, string, date, or datetime literals;
+an array or object literal whose elements or property values are
+themselves interpolation static literals; or a unary <code>not</code> /
+<code>!</code> or unary <code>-</code> whose operand is an interpolation
+static literal.</p></li>
+<li><p>Expression results are coerced to strings (when not preserved by
+rules 2 or 3a). After rule 3a, remaining <code>null</code> values become
 the empty string <code>""</code>. Booleans become <code>"true"</code> or
 <code>"false"</code>. Numbers use their default string
-representation.</li>
-<li>Expressions MUST NOT have side effects. They are evaluated in the
-same read-only context as <code>calculate</code> expressions.</li>
-<li>Interpolation is <strong>not recursive</strong> — the result of
+representation.</p></li>
+<li><p>Expressions MUST NOT have side effects. They are evaluated in the
+same read-only context as <code>calculate</code> expressions.</p></li>
+<li><p>Interpolation is <strong>not recursive</strong> — the result of
 evaluating an expression is not scanned for further <code>{{...}}</code>
-sequences.</li>
+sequences.</p></li>
 </ol>
 <h4 id="interpolation-binding-context">3.3.2 Interpolation Binding
 Context</h4>

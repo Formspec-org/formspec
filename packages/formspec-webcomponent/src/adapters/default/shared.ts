@@ -5,6 +5,8 @@ import type { AdapterContext } from '../types';
 export interface FieldDOMOptions {
     /** Set false for group controls where the label shouldn't target a single input. Default true. */
     labelFor?: boolean;
+    /** When true, use <fieldset> for root and <legend> for label. */
+    asGroup?: boolean;
 }
 
 export interface FieldDOM {
@@ -12,11 +14,14 @@ export interface FieldDOM {
     label: HTMLElement;
     hint: HTMLElement | undefined;
     error: HTMLElement;
-    describedBy: string[];
+    /** Initial space-separated ID string for aria-describedby. */
+    initialDescribedBy: string;
 }
 
 /**
- * Create the common field wrapper structure: root div, label, description, hint, error.
+ * Create the common field wrapper structure: root div (or fieldset), label (or legend),
+ * description, hint, error.
+ *
  * Uses behavior.widgetClassSlots for x-classes support (from theme widgetConfig).
  * When a FieldViewModel is available, reads current locale-resolved values from VM signals.
  * Returns element references for adapter-specific control insertion.
@@ -31,7 +36,7 @@ export function createFieldDOM(
     const fieldId = behavior.id;
     const hintId = `${fieldId}-hint`;
     const errorId = `${fieldId}-error`;
-    const describedBy: string[] = [];
+    const asGroup = options?.asGroup === true;
 
     // Read from VM signals when available; fall back to static behavior properties.
     const vm = behavior.vm;
@@ -39,24 +44,26 @@ export function createFieldDOM(
     const hintText = vm ? vm.hint.value : behavior.hint;
     const descText = vm ? vm.description.value : behavior.description;
 
-    const root = document.createElement('div');
-    root.className = 'formspec-field';
+    const root = document.createElement(asGroup ? 'fieldset' : 'div');
+    root.className = asGroup ? 'formspec-fieldset' : 'formspec-field';
     root.dataset.name = behavior.fieldPath;
     if (slots.root) actx.applyClassValue(root, slots.root);
 
     const effectiveLabelPosition = p.labelPosition || 'top';
 
-    const label = document.createElement('label');
-    label.className = 'formspec-label';
+    const label = document.createElement(asGroup ? 'legend' : 'label');
+    label.className = asGroup ? 'formspec-legend' : 'formspec-label';
     label.textContent = labelText;
-    if (options?.labelFor !== false) {
-        label.htmlFor = fieldId;
+    if (asGroup) {
+        label.id = `${fieldId}-label`;
+    } else if (options?.labelFor !== false) {
+        (label as HTMLLabelElement).htmlFor = fieldId;
     }
     if (slots.label) actx.applyClassValue(label, slots.label);
 
     if (effectiveLabelPosition === 'hidden') {
         label.classList.add('formspec-sr-only');
-    } else if (effectiveLabelPosition === 'start') {
+    } else if (!asGroup && effectiveLabelPosition === 'start') {
         root.classList.add('formspec-field--inline');
     }
 
@@ -69,29 +76,26 @@ export function createFieldDOM(
         desc.id = descId;
         desc.textContent = descText;
         root.appendChild(desc);
-        describedBy.push(descId);
     }
 
     let hint: HTMLElement | undefined;
     if (hintText) {
-        hint = document.createElement('div');
+        hint = document.createElement('p');
         hint.className = 'formspec-hint';
         hint.id = hintId;
         hint.textContent = hintText;
         if (slots.hint) actx.applyClassValue(hint, slots.hint);
         root.appendChild(hint);
-        describedBy.push(hintId);
     }
 
-    const error = document.createElement('div');
+    const error = document.createElement('p');
     error.className = 'formspec-error';
     error.id = errorId;
-    error.setAttribute('role', 'alert');
-    error.setAttribute('aria-live', 'polite');
     if (slots.error) actx.applyClassValue(error, slots.error);
-    describedBy.push(errorId);
 
-    return { root, label, hint, error, describedBy };
+    const initialDescribedBy = [hintId, errorId].join(' ');
+
+    return { root, label, hint, error, initialDescribedBy };
 }
 
 /**
@@ -103,6 +107,15 @@ export function finalizeFieldDOM(
     behavior: FieldBehavior,
     actx: AdapterContext,
 ): void {
+    const isRequired = behavior.vm ? behavior.vm.required.value : false;
+    if (isRequired && !fieldDOM.label.querySelector('.formspec-required')) {
+        const marker = document.createElement('abbr');
+        marker.className = 'formspec-required usa-label--required';
+        marker.setAttribute('title', 'required');
+        marker.textContent = ' *';
+        fieldDOM.label.appendChild(marker);
+    }
+
     // Remote options loading/error status
     const ros = behavior.remoteOptionsState;
     if (ros.loading || ros.error) {

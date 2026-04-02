@@ -10,10 +10,37 @@ const SCHEMAS_DIR = path.resolve(__dirname, '../../../schemas');
 
 /** Get the nodeId of a Page node from the component tree. */
 function getPageId(project: ReturnType<typeof createRawProject>, index = 0): string {
-  const tree = project.generatedComponent.tree;
+  const tree = project.component.tree;
   const pages = (tree?.children ?? []).filter((c: any) => c.component === 'Page');
   if (!pages[index]) throw new Error(`No page at index ${index}`);
   return pages[index].nodeId;
+}
+
+function addPage(project: ReturnType<typeof createRawProject>, title: string, id?: string): string {
+  project.dispatch({
+    type: 'definition.setFormPresentation',
+    payload: { property: 'pageMode', value: 'wizard' },
+  });
+  const result = project.dispatch({
+    type: 'component.addNode',
+    payload: {
+      parent: { nodeId: 'root' },
+      component: 'Page',
+      props: { ...(id ? { nodeId: id } : {}), title },
+    },
+  }) as any;
+  return id ?? result.nodeRef.nodeId;
+}
+
+function moveNodeToPage(
+  project: ReturnType<typeof createRawProject>,
+  pageId: string,
+  node: { bind?: string; nodeId?: string },
+) {
+  project.dispatch({
+    type: 'component.moveNode',
+    payload: { source: node, targetParent: { nodeId: pageId } },
+  });
 }
 
 describe('diagnose', () => {
@@ -254,10 +281,9 @@ describe('diagnose', () => {
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'email' } });
     // Create a page and place both items on it
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Contact Info' } });
-    const pageId = getPageId(project);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'email' } });
+    const pageId = addPage(project, 'Contact Info');
+    moveNodeToPage(project, pageId, { bind: 'name' });
+    moveNodeToPage(project, pageId, { bind: 'email' });
 
     const diag = project.diagnose();
     const pagedWarnings = diag.consistency.filter(d => d.code === 'PAGED_ROOT_NON_GROUP');
@@ -269,9 +295,8 @@ describe('diagnose', () => {
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'placed_field' } });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'orphan_field' } });
     // Create a page and place only one item
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
-    const pageId = getPageId(project);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'placed_field' } });
+    const pageId = addPage(project, 'Page 1');
+    moveNodeToPage(project, pageId, { bind: 'placed_field' });
 
     const diag = project.diagnose();
     const pagedWarnings = diag.consistency.filter(d => d.code === 'PAGED_ROOT_NON_GROUP');
@@ -299,12 +324,8 @@ describe('diagnose', () => {
       type: 'definition.addItem',
       payload: { type: 'group', key: 'page1', label: 'Page 1' },
     });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
-    const pageId = getPageId(project);
-    project.dispatch({
-      type: 'pages.assignItem',
-      payload: { pageId, key: 'page1' },
-    });
+    const pageId = addPage(project, 'Page 1');
+    moveNodeToPage(project, pageId, { bind: 'page1' });
 
     // Add a submit button component node and assign its nodeId to the page
     const result = project.dispatch({
@@ -317,10 +338,7 @@ describe('diagnose', () => {
     });
     const nodeId = (result as any)?.nodeRef?.nodeId;
     expect(nodeId).toBeDefined();
-    project.dispatch({
-      type: 'pages.assignItem',
-      payload: { pageId, key: nodeId },
-    });
+    moveNodeToPage(project, pageId, { nodeId });
 
     const diag = project.diagnose();
     const stale = diag.consistency.filter(
@@ -335,12 +353,15 @@ describe('diagnose', () => {
       type: 'definition.addItem',
       payload: { type: 'field', key: 'real_item' },
     });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
-    const pageId = getPageId(project);
+    const pageId = addPage(project, 'Page 1');
     // Assign a key that doesn't exist in the definition — creates a BoundItem placeholder
     project.dispatch({
-      type: 'pages.assignItem',
-      payload: { pageId, key: 'deleted_item' },
+      type: 'component.addNode',
+      payload: {
+        parent: { nodeId: pageId },
+        component: 'TextInput',
+        bind: 'deleted_item',
+      },
     });
 
     // The BoundItem placeholder should trigger an ORPHAN_COMPONENT_BIND diagnostic
@@ -386,8 +407,7 @@ describe('diagnose', () => {
 
   it('recognizes component node IDs as valid region keys', () => {
     const project = createRawProject();
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Page 1' } });
-    const pageId = getPageId(project);
+    const pageId = addPage(project, 'Page 1');
 
     // Add two component-only nodes
     project.dispatch({
@@ -407,18 +427,15 @@ describe('diagnose', () => {
     });
 
     // Get the nodeIds from the generated component tree
-    const genTree = (project.state as any).generatedComponent?.tree;
+    const genTree = project.component.tree as any;
     const nodeIds = (genTree?.children ?? [])
-      .filter((c: any) => c.nodeId && c.nodeId !== 'root')
+      .filter((c: any) => c.nodeId && c.nodeId !== 'root' && c.nodeId !== pageId)
       .map((c: any) => c.nodeId);
     expect(nodeIds.length).toBeGreaterThan(0); // sanity: we actually found nodes
 
     // Assign them to the page
     for (const nid of nodeIds) {
-      project.dispatch({
-        type: 'pages.assignItem',
-        payload: { pageId, key: nid },
-      });
+      moveNodeToPage(project, pageId, { nodeId: nid });
     }
 
     const diag = project.diagnose();

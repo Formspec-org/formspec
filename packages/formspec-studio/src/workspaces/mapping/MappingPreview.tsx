@@ -1,9 +1,8 @@
+/** @filedesc Live mapping preview panel for testing forward and reverse mapping transforms. */
 import { useEffect, useState } from 'react';
-import { faker } from '@faker-js/faker';
-import { createFormEngine } from '@formspec-org/engine';
+import { generateDefinitionSampleData, serializeMappedData } from '@formspec-org/studio-core';
 import { useProject } from '../../state/useProject';
 import { useMapping } from '../../state/useMapping';
-import { serializeMappedData } from './adapters';
 import { SplitPane } from '../../components/ui/SplitPane';
 
 export function MappingPreview() {
@@ -16,72 +15,9 @@ export function MappingPreview() {
   const [showRaw, setShowRaw] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const generateSchemaSample = () => {
-    const definition = project.definition;
-    
-    // Create a temporary engine instance to handle value generation and serialization
-    const engine = createFormEngine({...definition});
-    
-    // Helper to walk items and set values in the engine
-    const walk = (items: any[], prefix = '') => {
-      for (const item of items) {
-        const path = prefix ? `${prefix}.${item.key}` : item.key;
-        
-        if (item.type === 'field') {
-          const dataType = item.dataType;
-          const keyLower = item.key.toLowerCase();
-          let val: any = "sample";
-
-          if (dataType === 'integer' || dataType === 'decimal' || dataType === 'number') {
-            if (keyLower.includes('year')) val = faker.date.past().getFullYear();
-            else if (keyLower.includes('price') || keyLower.includes('amount')) val = Number(faker.commerce.price());
-            else if (keyLower.includes('age')) val = faker.number.int({ min: 18, max: 90 });
-            else val = dataType === 'integer' ? faker.number.int({ min: 1, max: 1000 }) : faker.number.float({ min: 1, max: 1000, fractionDigits: 2 });
-          } else if (dataType === 'boolean') {
-            val = faker.datatype.boolean();
-          } else if (dataType === 'date') {
-            val = faker.date.past().toISOString().split('T')[0];
-          } else if (dataType === 'money') {
-            val = { amount: Number(faker.commerce.price()), currency: faker.finance.currencyCode() };
-          } else {
-            // String / other
-            if (keyLower.includes('first')) val = faker.person.firstName();
-            else if (keyLower.includes('last')) val = faker.person.lastName();
-            else if (keyLower.includes('full') && keyLower.includes('name')) val = faker.person.fullName();
-            else if (keyLower.includes('name')) val = faker.person.fullName();
-            else if (keyLower.includes('email')) val = faker.internet.email();
-            else if (keyLower.includes('phone')) val = faker.phone.number();
-            else if (keyLower.includes('street')) val = faker.location.streetAddress();
-            else if (keyLower.includes('city')) val = faker.location.city();
-            else if (keyLower.includes('zip') || keyLower.includes('postal')) val = faker.location.zipCode();
-            else if (keyLower.includes('company')) val = faker.company.name();
-            else if (keyLower.includes('description') || keyLower.includes('bio')) val = faker.lorem.paragraph();
-            else val = faker.lorem.words(3);
-          }
-          
-          engine.setValue(path, val);
-        }
-
-        if (item.type === 'group') {
-          if (item.repeatable) {
-            // Add 1-2 instances for repeatable groups to make it interesting
-            const count = faker.number.int({ min: 1, max: 2 });
-            for (let i = 0; i < count; i++) {
-              engine.addRepeatInstance(path);
-              if (item.children) walk(item.children, `${path}[${i}]`);
-            }
-          } else if (item.children) {
-            walk(item.children, path);
-          }
-        }
-      }
-    };
-
-    walk(definition.items);
-    
-    // Get the serialized response data from the engine
-    const response = engine.getResponse();
-    setSampleInput(JSON.stringify(response.data, null, 2));
+  const generateSchemaSample = async () => {
+    const sample = await generateDefinitionSampleData(project.definition);
+    setSampleInput(JSON.stringify(sample, null, 2));
   };
 
   useEffect(() => {
@@ -102,6 +38,7 @@ export function MappingPreview() {
           : {};
         const serialized = serializeMappedData(result.output, {
           format,
+          pretty: true,
           rootElement: targetSchema.rootElement as string,
           namespaces: targetSchema.namespaces as Record<string, string>,
           ...adapterConfig,

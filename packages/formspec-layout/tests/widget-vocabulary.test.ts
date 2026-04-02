@@ -50,8 +50,8 @@ describe('COMPONENT_TO_HINT — reverse map from component to canonical hint', (
   });
 
   it('every KNOWN_COMPONENT_TYPES field/input component has a hint entry', () => {
-    // Layout-only components (Tabs, Page) don't need hints
-    const layoutOnly = new Set(['Tabs', 'Page']);
+    // Layout-only components (Tabs, Page, Collapsible) don't need hints
+    const layoutOnly = new Set(['Tabs', 'Page', 'Collapsible']);
     for (const comp of KNOWN_COMPONENT_TYPES) {
       if (layoutOnly.has(comp)) continue;
       expect(COMPONENT_TO_HINT[comp], `${comp} should have a hint`).toBeDefined();

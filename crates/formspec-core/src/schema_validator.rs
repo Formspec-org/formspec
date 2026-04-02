@@ -23,6 +23,8 @@ pub enum DocumentType {
     Registry,
     Changelog,
     FelFunctions,
+    Screener,
+    Determination,
 }
 
 impl DocumentType {
@@ -39,6 +41,8 @@ impl DocumentType {
             DocumentType::Registry => "registry",
             DocumentType::Changelog => "changelog",
             DocumentType::FelFunctions => "fel_functions",
+            DocumentType::Screener => "screener",
+            DocumentType::Determination => "determination",
         }
     }
 
@@ -55,6 +59,8 @@ impl DocumentType {
             "registry" => Some(DocumentType::Registry),
             "changelog" => Some(DocumentType::Changelog),
             "fel_functions" | "fel-functions" => Some(DocumentType::FelFunctions),
+            "screener" => Some(DocumentType::Screener),
+            "determination" => Some(DocumentType::Determination),
             _ => None,
         }
     }
@@ -133,6 +139,8 @@ const MARKER_FIELDS: &[(&str, DocumentType)] = &[
     ("$formspecValidationResult", DocumentType::ValidationResult),
     ("$formspecChangelog", DocumentType::Changelog),
     ("$formspecFelFunctions", DocumentType::FelFunctions),
+    ("$formspecScreener", DocumentType::Screener),
+    ("$formspecDetermination", DocumentType::Determination),
 ];
 
 /// Detect the document type from a JSON value by examining marker fields.

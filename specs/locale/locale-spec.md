@@ -39,7 +39,7 @@ document unless explicitly redefined.
 <!-- bluf:start file=locale-spec.bluf.md -->
 - This document defines the Locale Document — a sidecar JSON artifact for internationalizing Formspec Definitions.
 - A valid locale requires `$formspecLocale`, `version`, `locale`, `targetDefinition`, and a `strings` object.
-- String resolution uses a fallback cascade (regional → base → inline defaults) with FEL interpolation via `{{expression}}` syntax.
+- String resolution uses a fallback cascade (regional → base → inline defaults) with FEL interpolation via `{{expression}}` syntax; `null` without `$`/`@` and without a static-literal expression preserves the `{{…}}` text (§3.3.1 rule 3a).
 - This BLUF is governed by `schemas/locale.schema.json`; generated schema references are the canonical structural contract.
 <!-- bluf:end -->
 
@@ -668,13 +668,33 @@ Processors MUST apply the following rules:
 2. An expression that fails to parse or evaluate MUST NOT cause the
    entire string resolution to fail. Processors MUST replace the
    failed expression with the literal text `{{<original expression>}}`
-   and SHOULD emit a warning.
+   and SHOULD emit a warning. For this purpose, **evaluate** includes
+   any outcome where the FEL runtime records **error**-severity
+   diagnostics for the expression, even if the coerced value is `null`.
 3. Expression results are coerced to strings. `null` becomes the
+   empty string `""` **unless** rule 3a applies.
+3a. If the expression result is `null` **and** the trimmed source
+   contains neither a `$` field reference sigil nor an `@` context
+   reference sigil **and** the parsed expression is not an
+   **interpolation static literal** (see below), processors MUST treat
+   the interpolation as failed and MUST preserve the literal text
+   `{{<original expression>}}` (same as rule 2). This distinguishes
+   intentional empty output for missing `$field` values from expressions
+   that do not reference instance data (e.g. author typos or invalid
+   operator sequences) that happen to evaluate to `null`.
+
+   An **interpolation static literal** is any of: the `null`, boolean,
+   numeric, string, date, or datetime literals; an array or object
+   literal whose elements or property values are themselves
+   interpolation static literals; or a unary `not` / `!` or unary `-`
+   whose operand is an interpolation static literal.
+4. Expression results are coerced to strings (when not preserved by
+   rules 2 or 3a). After rule 3a, remaining `null` values become the
    empty string `""`. Booleans become `"true"` or `"false"`. Numbers
    use their default string representation.
-4. Expressions MUST NOT have side effects. They are evaluated in the
+5. Expressions MUST NOT have side effects. They are evaluated in the
    same read-only context as `calculate` expressions.
-5. Interpolation is **not recursive** — the result of evaluating an
+6. Interpolation is **not recursive** — the result of evaluating an
    expression is not scanned for further `{{...}}` sequences.
 
 #### 3.3.2 Interpolation Binding Context
@@ -745,6 +765,7 @@ MUST return the empty string `""`.
 Given these documents:
 
 **Definition** (inline defaults):
+
 ```json
 {
   "items": [
@@ -754,6 +775,7 @@ Given these documents:
 ```
 
 **Locale Document (`fr`)**:
+
 ```json
 {
   "locale": "fr",
@@ -765,6 +787,7 @@ Given these documents:
 ```
 
 **Locale Document (`fr-CA`)**:
+
 ```json
 {
   "locale": "fr-CA",

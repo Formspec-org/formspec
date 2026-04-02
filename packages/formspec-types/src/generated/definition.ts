@@ -315,7 +315,6 @@ export interface FormDefinition {
   optionSets?: {
     [k: string]: OptionSet;
   };
-  screener?: Screener;
   migrations?: Migrations;
   /**
    * Domain-specific extension data. All keys MUST be prefixed with 'x-'. Processors MUST ignore unrecognized extensions without error. Extensions MUST NOT alter core semantics (required, relevant, readonly, calculate, validation). Preserved on round-trip.
@@ -353,6 +352,10 @@ export interface FormDefinition {
      * Wizard mode: allow navigating forward without validating the current page.
      */
     allowSkip?: boolean;
+    /**
+     * Wizard mode: render a vertical side navigation listing all steps instead of the default horizontal progress bar.
+     */
+    sidenav?: boolean;
     /**
      * Tabs mode: zero-based index of the initially selected tab.
      */
@@ -484,71 +487,10 @@ export interface OptionEntry {
    * Human-readable text displayed to the user for this option.
    */
   label: string;
-  extensions?: {};
-}
-/**
- * Routing mechanism that classifies respondents via screening questions and directs them to the appropriate target Definition. Routes are evaluated in declaration order; first match wins. Screener items are NOT part of the form's instance data.
- */
-export interface Screener {
   /**
-   * Screening fields used for routing classification. Values are available to route conditions via standard FEL $field references.
+   * Extra type-ahead strings for combobox/searchable Select filtering (abbreviations, codes, alternate names). Matched case-insensitively in addition to label and value.
    */
-  items: Item[];
-  /**
-   * Ordered routing rules. Evaluated in declaration order; first match wins.
-   *
-   * @minItems 1
-   */
-  routes: [Route, ...Route[]];
-  /**
-   * Bind declarations scoped to screener items. Paths reference screener item keys. Supports required, relevant, constraint, and calculate expressions. These binds are evaluated in the screener's own scope — they do NOT interact with the main form's binds.
-   */
-  binds?: Bind[];
-  extensions?: {};
-}
-/**
- * A single routing rule within a Screener. Maps a FEL boolean condition to a target Definition.
- *
- * This interface was referenced by `FormDefinition`'s JSON-Schema
- * via the `definition` "Route".
- */
-export interface Route {
-  /**
-   * A Formspec Expression Language (FEL) v1.0 expression. FEL is a small, deterministic, side-effect-free language for form logic — no statements, loops, variable assignment, or I/O. Strictly typed: no truthy/falsy coercion.
-   *
-   * FIELD REFERENCES: '$' = current node value (used in constraint binds); '$field' = field value from nearest scope; '$group.field' = nested path; '$repeat[n].field' = 1-based index into repeat; '$repeat[*].field' = array of all values across repeat instances.
-   *
-   * CONTEXT REFERENCES: '@index' = 1-based repeat position; '@count' = repeat instance count; '@current' = current repeat instance object; '@instance("name")' = secondary data source by name; '@varName' = variable from definition's variables array.
-   *
-   * OPERATORS (lowest to highest precedence): (0) let x = e in e, if e then e else e; (1) ? : ternary; (2) or; (3) and; (4) = != equality; (5) < > <= >= comparison; (6) in, not in (right operand must be array); (7) ?? null-coalescing; (8) + - arithmetic, & string concatenation; (9) * / % multiply/divide/modulo; (10) not, - (unary prefix). Postfix .field and [index] bind tightest.
-   *
-   * KEY RULES: Arithmetic requires number operands. String concatenation uses '&' (not '+'). Logical operators require boolean operands. null = null is true. Division by zero produces null + diagnostic. Cross-type comparison is a type error.
-   *
-   * LITERALS: Strings in single or double quotes with backslash escapes for backslash, quotes, newline, return, tab, and unicode (4 hex digits). Numbers with decimal semantics (0.1 + 0.2 = 0.3), no leading/trailing dot. Booleans: true, false. null. Dates: @2025-01-15. DateTimes: @2025-01-15T09:30:00Z. Arrays: [1, 2, 3]. Objects: {key: expr}.
-   *
-   * BUILT-IN FUNCTIONS (~40+): Aggregates — sum, count, countWhere, avg, min, max (operate on arrays, skip nulls). String — length, contains, startsWith, endsWith, substring (1-based), replace (literal), upper, lower, trim, matches (regex), format (positional {0} {1}). Numeric — round (banker's rounding), floor, ceil, abs, power. Date — today, now, year, month, day, dateDiff (unit: 'years'/'months'/'days'), dateAdd, hours, minutes, seconds, time, timeDiff. Logical — if(cond, then, else) with short-circuit evaluation, coalesce (first non-null), empty (null/empty-string/empty-array), present (inverse), selected (multiChoice contains value). Type-checking — isNumber, isString, isDate, isNull, typeOf. Money — money(amount, currency), moneyAmount, moneyCurrency, moneyAdd (same currency required), moneySum. MIP queries — valid($path), relevant($path), readonly($path), required($path). Repeat navigation — prev(), next() return adjacent rows or null, parent() returns enclosing context.
-   *
-   * NULL PROPAGATION: null propagates through most operations (null + 5 is null, null < 5 is null). Bind-context defaults: relevant null treated as true (show), required null as false (not required), readonly null as false (editable), constraint null as true (passes). Special null handling: coalesce/empty/present/isNull/typeOf accept null; aggregates skip nulls; ?? returns right operand when left is null; string(null) yields empty string; boolean(null) yields false; length(null) yields 0.
-   *
-   * ARRAY OPS: Equal-length arrays with binary operator produce element-wise result. Scalar + array broadcasts scalar. Different-length arrays produce error. Example: sum($items[*].qty * $items[*].price).
-   *
-   * TYPES: Primitives: string, number (decimal, min 18 significant digits), boolean, date, money ({amount: string, currency: string}), null. Compound: array (homogeneous). No implicit coercion — use explicit casts: number(), string(), boolean(), date(). Empty string and null are distinct values.
-   *
-   * RESERVED WORDS (cannot be used as function names): true, false, null, and, or, not, in, if, then, else, let.
-   */
-  condition: string;
-  /**
-   * Canonical reference URI to the target FormDefinition the user should be directed to.
-   */
-  target: string;
-  /**
-   * Human-readable description of this route, displayed to users or used in authoring tools.
-   */
-  label?: string;
-  /**
-   * Message displayed to the respondent when this route is selected and the target is a disqualification or rejection. Used to provide respectful, informative feedback to screened-out participants.
-   */
-  message?: string;
+  keywords?: string[];
   extensions?: {};
 }
 /**

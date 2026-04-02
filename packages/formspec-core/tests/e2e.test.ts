@@ -12,6 +12,17 @@ const __dirname = path.dirname(__filename);
 
 const PYTHON = resolvePython();
 
+function pageNode(title: string, id: string) {
+  return {
+    type: 'component.addNode',
+    payload: {
+      parent: { nodeId: 'root' },
+      component: 'Page',
+      props: { nodeId: id, title },
+    },
+  };
+}
+
 describe('Formspec Studio Core E2E Validation', { timeout: 60_000 }, () => {
   let tmpDir: string;
   let project: ReturnType<typeof createRawProject>;
@@ -153,8 +164,9 @@ describe('Formspec Studio Core E2E Validation', { timeout: 60_000 }, () => {
     // 3. Theme styling / Pages
     project.batch([
       { type: 'theme.setToken', payload: { key: 'color.primary', value: '#123456' } },
-      { type: 'pages.addPage', payload: { id: 'p1', title: 'Applicant Details' } },
-      { type: 'pages.addPage', payload: { id: 'p2', title: 'Preferences' } },
+      { type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'wizard' } },
+      pageNode('Applicant Details', 'p1'),
+      pageNode('Preferences', 'p2'),
       { type: 'theme.setItemOverride', payload: { itemKey: 'page2.hasPet', property: 'widget', value: 'Switch' } }
     ]);
     validateProject('1-greenfield-theme');
@@ -240,20 +252,18 @@ describe('Formspec Studio Core E2E Validation', { timeout: 60_000 }, () => {
   it('5. Designer tweaks themes and component structure', () => {
     project.batch([
       { type: 'theme.setTargetCompatibility', payload: { compatibleVersions: '>=1.0.0' } },
-      // Use short key 'hasPet' — component tree nodes use item keys, not dot-paths
-      { type: 'pages.assignItem', payload: { pageId: 'p2', key: 'hasPet' } },
+      { type: 'component.moveNode', payload: { source: { bind: 'hasPet' }, targetParent: { nodeId: 'p2' } } },
     ]);
     validateProject('5-designer-theme-setup');
 
     project.batch([
-      // renamePage sets title, nodeId stays 'p2'
-      { type: 'pages.renamePage', payload: { id: 'p2', newId: 'User Preferences' } },
-      { type: 'pages.setPageProperty', payload: { id: 'p2', property: 'description', value: 'Your preferences' } },
+      { type: 'component.setNodeProperty', payload: { node: { nodeId: 'p2' }, property: 'title', value: 'User Preferences' } },
+      { type: 'component.setNodeProperty', payload: { node: { nodeId: 'p2' }, property: 'description', value: 'Your preferences' } },
     ]);
     validateProject('5-designer-page-rename');
 
     project.batch([
-      { type: 'pages.unassignItem', payload: { pageId: 'p2', key: 'hasPet' } },
+      { type: 'component.moveNode', payload: { source: { bind: 'hasPet' }, targetParent: { nodeId: 'root' } } },
       { type: 'theme.setExtension', payload: { key: 'x-theme-mode', value: 'dark' } },
     ]);
     validateProject('5-designer-end');

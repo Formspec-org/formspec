@@ -1,0 +1,190 @@
+/* @filedesc Data display and validation affordances for the default Formspec skin. */
+
+.formspec-data-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.formspec-data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.formspec-data-table :is(th, td) {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--formspec-default-border-muted);
+  text-align: left;
+}
+
+.formspec-data-table th {
+  background: var(--formspec-default-surface-quiet);
+  color: var(--formspec-default-text-strong);
+  font-weight: 600;
+}
+
+.formspec-datatable-input {
+  width: 100%;
+  min-width: 4rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--formspec-default-border-control);
+  border-radius: var(--formspec-default-radius-sm);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.formspec-datatable-input:disabled {
+  color: var(--formspec-default-readonly-input-text);
+  background: var(--formspec-default-readonly-input-bg);
+  border-color: var(--formspec-default-readonly-input-border);
+}
+
+.formspec-datatable-cell-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.formspec-datatable-prefix {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--formspec-default-border);
+  border-radius: var(--formspec-default-radius-sm) 0 0 var(--formspec-default-radius-sm);
+  background: var(--formspec-default-surface-soft);
+  color: #6b7280;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.formspec-datatable-cell-wrapper .formspec-datatable-prefix + .formspec-datatable-input {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.formspec-datatable-add,
+.formspec-datatable-remove {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: var(--formspec-default-radius-sm);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-datatable-add {
+  margin-top: 0.625rem;
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary);
+  border-color: var(--formspec-default-primary);
+}
+
+.formspec-datatable-add:hover {
+  background: var(--formspec-default-primary-strong);
+  border-color: var(--formspec-default-primary-strong);
+}
+
+.formspec-datatable-remove {
+  display: block;
+  margin: 0 auto;
+  color: var(--formspec-default-danger);
+  border-color: color-mix(in srgb, var(--formspec-default-danger) 40%, transparent);
+  background: color-mix(in srgb, var(--formspec-default-danger) 6%, white);
+}
+
+.formspec-datatable-remove:hover {
+  border-color: var(--formspec-default-danger);
+  background: color-mix(in srgb, var(--formspec-default-danger) 10%, white);
+}
+
+.formspec-row-number {
+  width: 2rem;
+  color: var(--formspec-default-text-faint);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.formspec-validation-summary {
+  display: none;
+  flex-direction: column;
+}
+
+.formspec-validation-summary--visible {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #fca5a5;
+  border-radius: var(--formspec-default-radius-sm);
+  background: #fff;
+}
+
+.formspec-validation-summary-header,
+.formspec-validation-summary-title {
+  margin: 0;
+  padding: 0.875rem 1rem 0.75rem;
+  border-bottom: 1px solid #fca5a5;
+  background: var(--formspec-default-danger-surface-soft);
+  color: #7f1d1d;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.formspec-shape-error,
+.formspec-shape-warning,
+.formspec-shape-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.formspec-shape-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.formspec-shape-error {
+  color: #82071e;
+  background: #ffebe9;
+  border-left-color: var(--formspec-default-danger-strong);
+}
+
+.formspec-shape-warning {
+  color: #7d4e00;
+  background: var(--formspec-default-warning-surface);
+  border-left-color: var(--formspec-default-warning);
+}
+
+.formspec-shape-info {
+  color: #0550ae;
+  background: var(--formspec-default-info-surface);
+  border-left-color: var(--formspec-default-info);
+}
+
+.formspec-validation-summary-link {
+  appearance: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  text-decoration: underline;
+}

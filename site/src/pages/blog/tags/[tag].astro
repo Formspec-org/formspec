@@ -26,6 +26,7 @@ const { tag, posts } = Astro.props;
 <Page
   title={`Posts tagged "${tag}"`}
   description={`Blog posts tagged with "${tag}" on Formspec.`}
+  noIndex={true}
 >
   <div class="tag-page">
     <header class="tag-header">

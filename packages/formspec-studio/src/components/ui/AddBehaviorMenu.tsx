@@ -16,19 +16,38 @@ interface AddBehaviorMenuProps {
   className?: string;
   label?: string;
   allowedTypes?: readonly string[];
+  /** When 'display', only 'relevant' is offered. When 'field' or omitted, existing behavior. */
+  itemType?: 'field' | 'display';
+  /** When set, used for the trigger button styles instead of the default muted text link. */
+  triggerClassName?: string;
+  /** Accessible name for the trigger (e.g. "Add behavior to {field}"). Overrides visible label for assistive tech. */
+  triggerAriaLabel?: string;
 }
 
-export function AddBehaviorMenu({ existingTypes, onAdd, className, label = 'Add behavior rule', allowedTypes }: AddBehaviorMenuProps) {
+export function AddBehaviorMenu({
+  existingTypes,
+  onAdd,
+  className,
+  label = 'Add behavior rule',
+  allowedTypes,
+  itemType,
+  triggerClassName,
+  triggerAriaLabel,
+}: AddBehaviorMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const available = BIND_TYPES.filter(t => 
-    !existingTypes.includes(t.id) && 
-    (!allowedTypes || (allowedTypes as string[]).includes(t.id))
+  const effectiveAllowed = itemType === 'display' ? ['relevant'] : allowedTypes;
+
+  const available = BIND_TYPES.filter(t =>
+    !existingTypes.includes(t.id) &&
+    (!effectiveAllowed || (effectiveAllowed as string[]).includes(t.id))
   );
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      // SM-3: Guard against detached DOM nodes during unmount.
+      if (!menuRef.current?.isConnected) return;
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
@@ -41,12 +60,18 @@ export function AddBehaviorMenu({ existingTypes, onAdd, className, label = 'Add 
 
   if (available.length === 0) return null;
 
+  const defaultTriggerClass =
+    'text-[11px] text-muted hover:text-accent font-mono cursor-pointer transition-colors flex items-center gap-1 py-1';
+
   return (
     <div className={`relative ${className ?? ''}`} ref={menuRef}>
       <button
         type="button"
+        aria-label={triggerAriaLabel}
+        aria-expanded={open}
+        aria-haspopup="menu"
         onClick={() => setOpen(!open)}
-        className="text-[11px] text-muted hover:text-accent font-mono cursor-pointer transition-colors flex items-center gap-1 py-1"
+        className={triggerClassName ?? defaultTriggerClass}
       >
         <span className="text-[14px] leading-none">+</span> {label}
       </button>

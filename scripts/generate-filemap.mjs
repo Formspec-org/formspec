@@ -41,17 +41,24 @@ const EXCLUDE_DIRS = new Set([
   'archived',           // Dead code (superseded by formspec-studio)
   'target',             // Rust build artifacts
   'reconstructed-examples', // Generated example reconstructions
+  'public',             // Built/deployed site output
+  'storybook-static',   // Storybook build output
 ]);
 
 const EXCLUDE_PATTERNS = [
   /\.d\.ts$/,           // Declaration files (covered by API docs)
   /\.spec\.ts$/,        // Test files
   /\.test\.ts$/,        // Test files
+  /\.test\.mjs$/,       // Test files (ESM)
   /\.spec\.tsx$/,       // Test files
   /\.test\.tsx$/,       // Test files
+  /\.stories\.tsx$/,    // Storybook stories
   /test_.*\.py$/,       // Python test files
   /crates\/.*\/tests\//, // Rust test files
+  /crates\/.*\/tests\.rs$/, // Rust inline test modules
+  /crates\/.*\/native_tests\.rs$/, // Rust native test modules
   /conftest\.py$/,      // Pytest fixtures
+  /packages\/.*\/tests\/(helpers|setup|python)\.ts$/, // Test infrastructure
   /package-lock\.json$/, // Lock files
   /tsconfig.*\.json$/,  // TS config
   /\.eslintrc/,         // Lint config
@@ -72,6 +79,21 @@ const EXCLUDE_PATTERNS = [
   /examples\/.*\/mapping.*\.json$/,     // Example mapping configs
   /examples\/.*\/changelog\.json$/,     // Example changelogs
   /thoughts\/research\/prompt\.md$/,    // Scratch prompt files
+  /thoughts\/private\//,               // Private notes
+  /storybook-manifest\.json$/,         // Storybook build artifact
+  /typedoc\.json$/,                    // TypeDoc config
+  /docs\/api\/.*\/assets\//,            // TypeDoc generated CSS/JS assets
+  /docs\/api\/rust\/trait\.impl\//,     // Rustdoc trait impl JS
+  /docs\/api\/rust\/search\.desc\//,    // Rustdoc search description JS
+  /docs\/api\/rust\/static\.files\//,   // Rustdoc static assets
+  /docs\/api\/rust\/.*\/sidebar-items\.js$/, // Rustdoc sidebar JS
+  /docs\/api\/rust\/(crates|search-index|src-files)\.js$/, // Rustdoc index JS
+  /docs\/api\/rust\/type\.impl\//,     // Rustdoc type impl JS
+  /docs\/api\/formspec\/(index\.html|search\.js)$/, // pdoc generated output
+  /packages\/formspec-swift\/.*\/(Resources|Fixtures)\//,  // Swift embedded resources and test fixtures
+  /packages\/formspec-swift\/bridge\//, // Swift WebView bridge templates
+  /packages\/.*\/tests\/fixtures\//,   // Test fixture directories
+  /wasm-pkg.*\/(formspec_wasm.*\.js|wasm-runtime\.mjs)$/, // Generated WASM glue
 ];
 
 // ---------------------------------------------------------------------------

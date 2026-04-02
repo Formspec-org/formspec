@@ -25,7 +25,6 @@
     "@formspec-org/types": "*"
   },
   "devDependencies": {
-    "vitest": "^3.2.4",
     "typescript": "^5.0.0"
   }
 }

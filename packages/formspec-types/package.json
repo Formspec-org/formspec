@@ -26,7 +26,6 @@
     "ajv-formats": "^3.0.1",
     "json-schema-faker": "^0.6.0",
     "json-schema-to-typescript": "^15.0.4",
-    "typescript": "^5.0.0",
-    "vitest": "^3.2.4"
+    "typescript": "^5.0.0"
   }
 }

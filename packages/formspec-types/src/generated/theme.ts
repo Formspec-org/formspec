@@ -6,6 +6,7 @@
  */
 
 /* eslint-disable */
+import type { TargetDefinition, Tokens, AccessibilityBlock, Breakpoints } from './component.js';
 /**
  * Criteria for which items this selector applies to. MUST contain at least one of 'type' or 'dataType'. When both are present, an item must satisfy both (AND semantics).
  */
@@ -94,25 +95,6 @@ export interface ThemeDocument {
   stylesheets?: string[];
 }
 /**
- * Binding to the target Formspec Definition and compatible version range. The theme will only be applied to Definitions matching this target. If compatibleVersions is present and the Definition version falls outside the range, the processor SHOULD warn and MAY fall back to Tier 1 hints only (null theme). The processor MUST NOT fail on a version mismatch.
- */
-export interface TargetDefinition {
-  /**
-   * Canonical URL of the target Definition (its url property).
-   */
-  url: string;
-  /**
-   * Semver range expression describing which Definition versions this document supports. When absent, compatible with any version.
-   */
-  compatibleVersions?: string;
-}
-/**
- * Design tokens — named values (colors, spacing, typography, borders) that promote visual consistency. Defined once here, referenced throughout the theme via '$token.<key>' syntax in style and widgetConfig string values. Token keys use dot-delimited category prefixes (e.g., 'color.primary', 'spacing.md'). Values MUST be strings or numbers. Token references MUST NOT be recursive.
- */
-export interface Tokens {
-  [k: string]: string | number;
-}
-/**
  * Cascade level 1 (lowest theme specificity): baseline PresentationBlock applied to every item before selectors or per-item overrides. Sets the form-wide visual baseline. Overrides Tier 1 inline presentation hints (level 0) and formPresentation globals (level -1). Overridden by selectors (level 2) and items (level 3). Merge is shallow per-property — nested objects (widgetConfig, style, accessibility) are replaced as a whole, not deep-merged. Exception: cssClass uses union semantics across all levels.
  */
 export interface PresentationBlock {
@@ -145,23 +127,6 @@ export interface PresentationBlock {
    * CSS class name(s) applied to matching items. UNIQUE CASCADE BEHAVIOR: unlike all other PresentationBlock properties, cssClass uses union semantics — classes accumulate across cascade levels (defaults + selectors + item overrides) with duplicates removed. Order preserved: defaults first, then selectors in document order, then item overrides. This ensures adding a class at one level does not remove classes from other levels.
    */
   cssClass?: string | string[];
-}
-/**
- * Accessibility metadata for the item. Replaced as a whole during cascade merge — not deep-merged with lower levels.
- */
-export interface AccessibilityBlock {
-  /**
-   * ARIA role override (e.g. 'region', 'group', 'status'). Replaces renderer-default role.
-   */
-  role?: string;
-  /**
-   * Accessible description text. Renderers SHOULD wire to aria-describedby.
-   */
-  description?: string;
-  /**
-   * Sets aria-live on root element. Renderers MUST NOT apply live-region semantics unless explicitly set.
-   */
-  liveRegion?: 'off' | 'polite' | 'assertive';
 }
 /**
  * A cascade level 2 rule: matches items by type and/or dataType and applies a PresentationBlock. Selectors are evaluated in document order. All matching selectors apply — later matches override earlier ones per-property (shallow merge). This enables layered styling: a broad type selector can set a baseline, and a narrower dataType selector can refine it.
@@ -235,10 +200,4 @@ export interface Region {
       hidden?: boolean;
     };
   };
-}
-/**
- * Named responsive breakpoints as min-width pixel values. Referenced by regions' 'responsive' objects to override span, start, or visibility at different viewport sizes. Processors that do not support responsive layouts SHOULD use the base span and start values.
- */
-export interface Breakpoints {
-  [k: string]: number;
 }

@@ -1,0 +1,20 @@
+{
+  "name": "formspec-emails",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "email dev --dir . --port 3001",
+    "preview": "email dev --dir . --port 3001"
+  },
+  "dependencies": {
+    "@react-email/components": "^0.0.36",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "resend": "^4.0.0"
+  },
+  "devDependencies": {
+    "react-email": "^4.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.0"
+  }
+}

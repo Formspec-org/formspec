@@ -1,29 +1,31 @@
 /** @filedesc Main studio shell; composes the header, blueprint sidebar, workspace tabs, and status bar. */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { type ColorScheme } from '../hooks/useColorScheme';
 import JSZip from 'jszip';
-import { createProject, type Project } from '@formspec-org/studio-core';
+import { createProject, handleKeyboardShortcut, buildDefLookup, type Project } from '@formspec-org/studio-core';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
 import { StructureTree } from './blueprint/StructureTree';
-import { EditorCanvas } from '../workspaces/editor/EditorCanvas';
-import { ItemProperties } from '../workspaces/editor/ItemProperties';
-import { LogicTab } from '../workspaces/logic/LogicTab';
+import { DefinitionTreeEditor } from '../workspaces/editor/DefinitionTreeEditor';
+import { LayoutCanvas } from '../workspaces/layout/LayoutCanvas';
+import { ComponentProperties } from '../workspaces/layout/properties/ComponentProperties';
+import { ManageView } from '../workspaces/editor/ManageView';
+import { FormHealthPanel } from '../workspaces/editor/FormHealthPanel';
+import { BuildManageToggle, type EditorView } from '../workspaces/editor/BuildManageToggle';
 import { ThemeTab } from '../workspaces/theme/ThemeTab';
 import { MappingTab } from '../workspaces/mapping/MappingTab';
 import { PreviewTab } from '../workspaces/preview/PreviewTab';
 import { CommandPalette } from './CommandPalette';
 import { ImportDialog } from './ImportDialog';
-import { handleKeyboardShortcut } from '../lib/keyboard';
 import { ChatPanel } from './ChatPanel';
 import { AppSettingsDialog } from './AppSettingsDialog';
+import { ResizeHandle } from './ui/ResizeHandle';
 import { CanvasTargetsProvider } from '../state/useCanvasTargets';
 import { useProject } from '../state/useProject';
 import { useSelection } from '../state/useSelection';
-
 import { ComponentTree } from './blueprint/ComponentTree';
-import { ScreenerSection } from './blueprint/ScreenerSection';
+import { ScreenerSummary } from './blueprint/ScreenerSummary';
 import { VariablesList } from './blueprint/VariablesList';
 import { DataSourcesList } from './blueprint/DataSourcesList';
 import { OptionSetsList } from './blueprint/OptionSetsList';
@@ -32,17 +34,12 @@ import { MappingsList } from './blueprint/MappingsList';
 import { SettingsSection } from './blueprint/SettingsSection';
 import { SettingsDialog } from './SettingsDialog';
 import { ThemeOverview } from './blueprint/ThemeOverview';
-import { DataTab, type DataSectionFilter } from '../workspaces/data/DataTab';
-import { PagesTab } from '../workspaces/pages/PagesTab';
 import { type MappingTabId } from '../workspaces/mapping/MappingTab';
 import { type Viewport } from '../workspaces/preview/ViewportSwitcher';
 import { type PreviewMode } from '../workspaces/preview/PreviewTab';
 
 const WORKSPACES: Record<string, React.FC> = {
-  Editor: EditorCanvas,
-  Logic: LogicTab,
-  Data: DataTab,
-  Layout: PagesTab,
+  Layout: LayoutCanvas,
   Theme: ThemeTab,
   Mapping: MappingTab,
   Preview: PreviewTab,
@@ -51,13 +48,21 @@ const WORKSPACES: Record<string, React.FC> = {
 const SIDEBAR_COMPONENTS: Record<string, React.FC> = {
   'Structure': StructureTree,
   'Component Tree': ComponentTree,
-  'Screener': ScreenerSection,
+  'Screener': ScreenerSummary,
   'Variables': VariablesList,
   'Data Sources': DataSourcesList,
   'Option Sets': OptionSetsList,
   'Mappings': MappingsList,
   'Settings': SettingsSection,
   'Theme': ThemeOverview,
+};
+
+const BLUEPRINT_SECTIONS_BY_TAB: Record<string, string[]> = {
+  Editor: ['Structure', 'Variables', 'Data Sources', 'Option Sets', 'Screener', 'Settings'],
+  Layout: ['Structure', 'Component Tree', 'Screener', 'Variables', 'Data Sources', 'Option Sets', 'Mappings', 'Settings', 'Theme'],
+  Theme: ['Theme', 'Structure', 'Settings'],
+  Mapping: ['Mappings', 'Structure', 'Data Sources', 'Option Sets', 'Settings'],
+  Preview: ['Structure', 'Component Tree', 'Theme', 'Settings'],
 };
 
 interface ShellProps {
@@ -69,7 +74,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const [activeSection, setActiveSection] = useState<string>('Structure');
   const [showPalette, setShowPalette] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [activeDataFilter, setActiveDataFilter] = useState<DataSectionFilter>('all');
+  const [activeEditorView, setActiveEditorView] = useState<EditorView>('build');
   const [activeMappingTab, setActiveMappingTab] = useState<MappingTabId>('all');
   const [mappingConfigOpen, setMappingConfigOpen] = useState(true);
   const [previewViewport, setPreviewViewport] = useState<Viewport>('desktop');
@@ -79,25 +84,75 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const [showBlueprintDrawer, setShowBlueprintDrawer] = useState(false);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+  const [showHealthSheet, setShowHealthSheet] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(true);
   const [chatPrompt, setChatPrompt] = useState<string | null>(null);
   const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
-  const SidebarComponent = SIDEBAR_COMPONENTS[activeSection];
+  const [leftWidth, setLeftWidth] = useState(214);
+  const [rightWidth, setRightWidth] = useState(320);
+  const onResizeLeft = useCallback((delta: number) => {
+    setLeftWidth((w) => Math.min(Math.max(w + delta, 160), 400));
+  }, []);
+  const onResizeRight = useCallback((delta: number) => {
+    setRightWidth((w) => Math.min(Math.max(w + delta, 220), 500));
+  }, []);
+  const blueprintCloseRef = useRef<HTMLButtonElement | null>(null);
+  const propertiesBackRef = useRef<HTMLButtonElement | null>(null);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
   const project = useProject();
-  const { selectedKey, deselect } = useSelection();
+  const { selectedKey, selectedKeyForTab, deselect } = useSelection();
+  const activeTabScope = activeTab.toLowerCase();
+  const scopedSelectedKey = selectedKeyForTab(activeTabScope);
+  const definitionLookup = useMemo(() => buildDefLookup(project.definition.items ?? []), [project.definition.items]);
+  const manageCount = useMemo(() => {
+    const def = project.definition;
+    const screenerRoutes = project.state.screener
+      ? project.state.screener.evaluation?.reduce((sum: number, p: any) => sum + (p.routes?.length ?? 0), 0) ?? 0
+      : 0;
+    return (def.binds?.length ?? 0) +
+      (Array.isArray(def.shapes) ? def.shapes.length : 0) +
+      (def.variables?.length ?? 0) +
+      Object.keys(def.optionSets ?? {}).length +
+      Object.keys(def.instances ?? {}).length +
+      screenerRoutes;
+  }, [project.definition, project.state.screener]);
   const viewportWidth = typeof window !== 'undefined'
     ? Math.min(window.innerWidth, document.documentElement?.clientWidth || window.innerWidth)
     : Infinity;
   const compactLayout = isTabletLayout || viewportWidth <= 1024;
+  const overlayOpen = compactLayout && (showBlueprintDrawer || showPropertiesModal);
+  const activePanelId = `studio-panel-${activeTab.toLowerCase()}`;
+  const activeTabId = `studio-tab-${activeTab.toLowerCase()}`;
+  const visibleBlueprintSections = BLUEPRINT_SECTIONS_BY_TAB[activeTab] ?? Object.keys(SIDEBAR_COMPONENTS);
+  const resolvedActiveSection = visibleBlueprintSections.includes(activeSection)
+    ? activeSection
+    : (visibleBlueprintSections[0] ?? 'Structure');
+  const SidebarComponent = SIDEBAR_COMPONENTS[resolvedActiveSection];
+  const selectedItemLabel = selectedKey
+    ? ((definitionLookup.get(selectedKey)?.item?.label as string | undefined) || selectedKey.split('.').pop() || selectedKey)
+    : null;
+
+  useEffect(() => {
+    if (resolvedActiveSection === activeSection) return;
+    setActiveSection(resolvedActiveSection);
+  }, [activeSection, resolvedActiveSection]);
 
   const workspaceContent = (() => {
+    if (activeTab === 'Editor') {
+      return (
+        <div className="flex-1 overflow-y-auto flex flex-col">
+          <div className="px-3 pt-3 md:px-6 md:pt-4 xl:px-8">
+            <BuildManageToggle activeView={activeEditorView} onViewChange={setActiveEditorView} manageCount={manageCount} />
+          </div>
+          <div key={activeEditorView} className="flex-1 animate-in fade-in duration-150">
+            {activeEditorView === 'build'
+              ? <DefinitionTreeEditor />
+              : <ManageView />}
+          </div>
+        </div>
+      );
+    }
     switch (activeTab) {
-      case 'Data':
-        return (
-          <DataTab
-            sectionFilter={activeDataFilter}
-            onSectionFilterChange={setActiveDataFilter}
-          />
-        );
       case 'Mapping':
         return (
           <MappingTab
@@ -123,15 +178,12 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     }
   })();
 
-  // Sync mobile drawer/modal states with selection
   useEffect(() => {
-    if (compactLayout && selectedKey) {
-      setShowPropertiesModal(true);
-      setShowBlueprintDrawer(false);
-    } else if (!selectedKey) {
-      setShowPropertiesModal(false);
-    }
-  }, [selectedKey, compactLayout]);
+    if (!compactLayout || activeTab !== 'Editor') return;
+    setShowBlueprintDrawer(false);
+    setShowPropertiesModal(false);
+    setShowHealthSheet(false);
+  }, [compactLayout, activeTab]);
 
   // E2E: expose project.export() when ?e2e=1 so tests can validate exported bundle
   useEffect(() => {
@@ -150,8 +202,8 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         undo: () => project.undo(),
         redo: () => project.redo(),
         delete: () => {
-          if (selectedKey) {
-            project.removeItem(selectedKey);
+          if (scopedSelectedKey) {
+            project.removeItem(scopedSelectedKey);
             deselect();
           }
         },
@@ -163,7 +215,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeTab, project, selectedKey, deselect]);
+  }, [activeTab, project, scopedSelectedKey, deselect]);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -177,11 +229,20 @@ export function Shell({ colorScheme }: ShellProps = {}) {
 
   useEffect(() => {
     const onNavigateWorkspace = (event: Event) => {
-      const { tab, subTab } = (event as CustomEvent<{ tab?: string; subTab?: string }>).detail ?? {};
-      if (tab && WORKSPACES[tab]) {
+      const detail = (event as CustomEvent<{ tab?: string; subTab?: string; view?: EditorView; section?: string }>).detail ?? {};
+      const { tab, subTab, view, section } = detail;
+      if (tab && (tab === 'Editor' || WORKSPACES[tab])) {
         setActiveTab(tab);
+        if (tab === 'Editor' && view) {
+          setActiveEditorView(view);
+        }
         if (subTab) {
           if (tab === 'Mapping') setActiveMappingTab(subTab as MappingTabId);
+        }
+        if (section) {
+          window.dispatchEvent(new CustomEvent('formspec:scroll-to-section', {
+            detail: { section },
+          }));
         }
       }
     };
@@ -201,6 +262,40 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   }, []);
 
   useEffect(() => {
+    if (!compactLayout || !showBlueprintDrawer) return;
+    lastFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    blueprintCloseRef.current?.focus();
+    return () => {
+      lastFocusRef.current?.focus();
+    };
+  }, [compactLayout, showBlueprintDrawer]);
+
+  useEffect(() => {
+    if (!compactLayout || !showPropertiesModal || !selectedKey) return;
+    lastFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    propertiesBackRef.current?.focus();
+    return () => {
+      lastFocusRef.current?.focus();
+    };
+  }, [compactLayout, showPropertiesModal, selectedKey]);
+
+  useEffect(() => {
+    if (!overlayOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (showPropertiesModal) {
+        deselect();
+        return;
+      }
+      if (showBlueprintDrawer) {
+        setShowBlueprintDrawer(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [overlayOpen, showBlueprintDrawer, showPropertiesModal, deselect]);
+
+  useEffect(() => {
     const onAIAction = (event: Event) => {
       const { prompt } = (event as CustomEvent<{ prompt: string }>).detail ?? {};
       if (prompt) {
@@ -216,7 +311,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     project.loadBundle(createProject().export());
     setActiveTab('Editor');
     setActiveSection('Structure');
-    setActiveDataFilter('all');
+    setActiveEditorView('build');
     setActiveMappingTab('config');
     setMappingConfigOpen(true);
     setPreviewViewport('desktop');
@@ -259,7 +354,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   };
 
   return (
-    <div data-testid="shell" className="relative h-screen flex flex-col overflow-x-hidden bg-bg-default text-ink font-ui">
+    <div data-testid="shell" className="relative h-screen flex flex-col overflow-hidden bg-bg-default text-ink font-ui">
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -276,77 +371,26 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         colorScheme={colorScheme}
       />
       <CanvasTargetsProvider>
-        <div className="flex flex-1 overflow-hidden">
+        <div className={`flex flex-1 overflow-hidden bg-bg-default ${activeTab === 'Editor' ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(246,243,238,0.9)_100%)] dark:bg-none' : ''}`} aria-hidden={overlayOpen ? true : undefined}>
           {/* Desktop Left Sidebar */}
-          <aside className={`w-[230px] border-r border-border bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}>
-            <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
-            <div className="flex-1 overflow-y-auto px-4 py-2">
+          <aside
+            data-testid="blueprint-sidebar"
+            className={`border-r border-border/80 bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}
+            style={{ width: `clamp(140px, ${leftWidth}px, calc(50vw - 340px))` }}
+            aria-label="Blueprint sidebar"
+          >
+            <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} activeEditorView={activeEditorView} activeTab={activeTab} />
+            <div className="flex-1 overflow-y-auto px-3 py-4">
               {SidebarComponent && <SidebarComponent />}
             </div>
           </aside>
+          {!compactLayout && <ResizeHandle side="left" onResize={onResizeLeft} />}
 
-          {/* Compact Blueprint Drawer */}
-          {compactLayout && showBlueprintDrawer && (
+          <main className="flex-1 overflow-y-auto bg-bg-default min-w-0 shrink-0">
             <div
-              className="fixed inset-0 z-40 bg-black/40 transition-opacity"
-              onClick={() => setShowBlueprintDrawer(false)}
-            >
-              <aside
-                className="w-[280px] h-full bg-surface shadow-xl flex flex-col animate-in slide-in-from-left duration-200"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between p-4 border-b border-border">
-                  <span className="font-bold text-sm">Blueprint</span>
-                  <button
-                    type="button"
-                    className="p-1 rounded hover:bg-subtle"
-                    onClick={() => setShowBlueprintDrawer(false)}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  <Blueprint activeSection={activeSection} onSectionChange={setActiveSection} />
-                  <div className="px-4 py-2">
-                    {SidebarComponent && <SidebarComponent />}
-                  </div>
-                </div>
-              </aside>
-            </div>
-          )}
-
-          {/* Compact Properties Modal (Full Screen) */}
-          {compactLayout && showPropertiesModal && selectedKey && (
-            <div className="fixed inset-0 z-50 bg-surface flex flex-col animate-in slide-in-from-bottom duration-300">
-              <div className="flex items-center justify-between p-4 border-b border-border bg-surface shrink-0">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="p-1 -ml-1 rounded hover:bg-subtle"
-                    onClick={() => deselect()}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m15 18-6-6 6-6"/>
-                    </svg>
-                  </button>
-                  <span className="font-bold text-sm truncate max-w-[200px]">{selectedKey}</span>
-                </div>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 bg-accent text-white text-[13px] font-bold rounded hover:bg-accent/90 transition-colors"
-                  onClick={() => setShowPropertiesModal(false)}
-                >
-                  Done
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 pb-24">
-                <ItemProperties showActions={activeTab === 'Editor'} />
-              </div>
-            </div>
-          )}
-
-          <main className="flex-1 overflow-y-auto bg-bg-default min-w-0">
-            <div
+              id={activePanelId}
+              role="tabpanel"
+              aria-labelledby={activeTabId}
               data-testid={`workspace-${activeTab}`}
               data-workspace={activeTab}
               className="h-full flex flex-col"
@@ -354,16 +398,129 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                 if (e.target === e.currentTarget) deselect();
               }}
             >
-              {workspaceContent}
+              {compactLayout && activeTab === 'Editor' && (
+                <div className="sticky top-0 z-20 border-b border-border/70 bg-surface/95 px-3 py-3 backdrop-blur" data-testid="mobile-editor-chrome">
+                  <div className="flex items-center justify-between">
+                    <div data-testid="mobile-selection-context" className="min-h-10 flex-1 rounded-[14px] border border-border/60 bg-bg-default/75 px-3 py-2">
+                      <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted">Selected</div>
+                      <div className="truncate text-[13px] font-medium text-ink">
+                        {selectedItemLabel ?? 'Nothing selected'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Form health"
+                      className="ml-2 shrink-0 rounded-full border border-border/60 bg-bg-default/75 p-2.5 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      onClick={() => setShowHealthSheet(true)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div
+                data-testid={activeTab === 'Editor' ? 'editor-canvas-shell' : undefined}
+                className={activeTab === 'Editor'
+                  ? 'flex-1 px-3 py-3 md:px-6 md:py-4 xl:px-8'
+                  : 'flex-1'}
+                onClick={activeTab === 'Editor'
+                  ? (event) => {
+                      if (event.target === event.currentTarget) deselect();
+                    }
+                  : undefined}
+              >
+                {compactLayout && activeTab === 'Editor' ? (
+                  <div data-testid="mobile-editor-structure" className="space-y-3">
+                    <div className="rounded-[18px] border border-border/70 bg-surface px-3 py-3 shadow-sm">
+                      <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} activeEditorView={activeEditorView} activeTab={activeTab} />
+                    </div>
+                    <div className="rounded-[18px] border border-border/70 bg-surface px-3 py-3 shadow-sm">
+                      {SidebarComponent && <SidebarComponent />}
+                    </div>
+                    <div className="rounded-[18px] border border-border/70 bg-surface px-2 py-2 shadow-sm">
+                      {workspaceContent}
+                    </div>
+                  </div>
+                ) : (
+                  workspaceContent
+                )}
+              </div>
             </div>
           </main>
-          <aside
-            className={`w-[270px] border-l border-border bg-surface overflow-y-auto shrink-0 ${compactLayout || showChatPanel ? 'hidden' : ''}`}
-            data-testid="properties"
-            data-responsive-hidden={compactLayout ? 'true' : 'false'}
-          >
-            <ItemProperties showActions={activeTab === 'Editor'} />
-          </aside>
+          {activeTab === 'Editor' && !compactLayout && !showChatPanel && (
+            showRightPanel ? (
+              <>
+                <ResizeHandle side="right" onResize={onResizeRight} />
+                <aside
+                  className="flex flex-col border-l border-border/80 bg-surface overflow-hidden shrink-0"
+                  style={{ width: `clamp(200px, ${rightWidth}px, calc(50vw - 340px))` }}
+                  data-testid="properties-panel"
+                  aria-label="Form health panel"
+                >
+                  <div className="flex items-center justify-end px-3 pt-2 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Hide panel"
+                      className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      onClick={() => setShowRightPanel(false)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <FormHealthPanel />
+                  </div>
+                </aside>
+              </>
+            ) : (
+              <button
+                type="button"
+                aria-label="Show form health panel"
+                className="shrink-0 border-l border-border/80 bg-surface px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                onClick={() => setShowRightPanel(true)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+            )
+          )}
+          {activeTab === 'Layout' && !compactLayout && !showChatPanel && (
+            showRightPanel ? (
+              <>
+                <ResizeHandle side="right" onResize={onResizeRight} />
+                <aside
+                  className="flex flex-col border-l border-border/80 bg-surface overflow-hidden shrink-0"
+                  style={{ width: `clamp(200px, ${rightWidth}px, calc(50vw - 340px))` }}
+                  data-testid="properties-panel"
+                  aria-label="Properties panel"
+                >
+                  <div className="flex items-center justify-end px-3 pt-2 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Hide panel"
+                      className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      onClick={() => setShowRightPanel(false)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                  </div>
+                  <div className="flex-1 min-h-0">
+                    <ComponentProperties />
+                  </div>
+                </aside>
+              </>
+            ) : (
+              <button
+                type="button"
+                aria-label="Show properties panel"
+                className="shrink-0 border-l border-border/80 bg-surface px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                onClick={() => setShowRightPanel(true)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+            )
+          )}
           {showChatPanel && !compactLayout && (
             <aside className="w-[360px] shrink-0" data-testid="chat-panel-container">
               <ChatPanel
@@ -374,6 +531,114 @@ export function Shell({ colorScheme }: ShellProps = {}) {
             </aside>
           )}
         </div>
+
+        {/* Compact Blueprint Drawer */}
+        {compactLayout && showBlueprintDrawer && (
+          <div
+            className="fixed inset-0 z-40 bg-black/40 transition-opacity"
+            onClick={() => setShowBlueprintDrawer(false)}
+          >
+            <aside
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="blueprint-drawer-title"
+              className="w-[280px] h-full bg-surface shadow-xl flex flex-col animate-in slide-in-from-left duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 id="blueprint-drawer-title" className="font-bold text-sm">Blueprint</h2>
+                <button
+                  ref={blueprintCloseRef}
+                  type="button"
+                  aria-label="Close blueprint drawer"
+                  className="rounded p-1 hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  onClick={() => setShowBlueprintDrawer(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} activeEditorView={activeEditorView} activeTab={activeTab} />
+                <div className="px-4 py-2">
+                  {SidebarComponent && <SidebarComponent />}
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {/* Compact Form Health Bottom Sheet */}
+        {compactLayout && activeTab === 'Editor' && showHealthSheet && (
+          <div
+            className="fixed inset-0 z-40 bg-black/40 transition-opacity"
+            onClick={() => setShowHealthSheet(false)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Form health"
+              className="absolute bottom-0 left-0 right-0 max-h-[70vh] bg-surface rounded-t-2xl shadow-xl flex flex-col animate-in slide-in-from-bottom duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+                <h2 className="text-[15px] font-semibold text-ink tracking-tight font-ui">Form Health</h2>
+                <button
+                  type="button"
+                  aria-label="Close health sheet"
+                  className="rounded p-1 hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  onClick={() => setShowHealthSheet(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <FormHealthPanel />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Compact Properties Modal (Full Screen) */}
+        {compactLayout && activeTab === 'Layout' && showPropertiesModal && selectedKey && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="properties-modal-title properties-modal-item-label"
+            className="fixed inset-0 z-50 bg-surface flex flex-col animate-in slide-in-from-bottom duration-300"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-border bg-surface shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  ref={propertiesBackRef}
+                  type="button"
+                  aria-label="Close properties panel"
+                  className="rounded p-1 -ml-1 hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  onClick={() => deselect()}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                  </svg>
+                </button>
+                <div className="min-w-0">
+                  <h2 id="properties-modal-title" className="font-bold text-[13px] truncate max-w-[200px]">Properties</h2>
+                  <div id="properties-modal-item-label" data-testid="compact-properties-item-label" className="font-mono text-[11px] text-muted truncate max-w-[200px]">
+                    {selectedItemLabel}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="rounded bg-accent px-3 py-1.5 text-[13px] font-bold text-white transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                onClick={() => setShowPropertiesModal(false)}
+              >
+                Done
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 pb-24">
+              <ComponentProperties />
+            </div>
+          </div>
+        )}
       </CanvasTargetsProvider>
       <StatusBar />
       <CommandPalette open={showPalette} onClose={() => setShowPalette(false)} />

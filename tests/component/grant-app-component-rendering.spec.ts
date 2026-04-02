@@ -24,9 +24,9 @@ test.describe('Components: Grant App Component Rendering', () => {
     const stars = page.locator('.formspec-rating-star');
     await expect(stars).toHaveCount(5);
 
-    // Grant fixture configures icon: "heart", which should render as a glyph.
+    // Grant fixture configures icon: "heart" — unselected stars render as outline ♡.
     const firstStarText = await stars.first().textContent();
-    expect(firstStarText).toBe('♥');
+    expect(firstStarText).toBe('♡');
 
     // selfAssessment is dataType: "integer", so setting 3 should select first 3 stars.
     await engineSetValue(page, 'projectNarrative.selfAssessment', 3);

@@ -11,9 +11,10 @@ const REGISTRIES_DIR = path.join(ROOT, 'registries');
 export function loadGrantArtifacts() {
   return {
     definition: JSON.parse(fs.readFileSync(path.join(GRANT_DIR, 'definition.json'), 'utf8')),
-    component:  JSON.parse(fs.readFileSync(path.join(GRANT_DIR, 'component.json'),  'utf8')),
-    theme:      JSON.parse(fs.readFileSync(path.join(GRANT_DIR, 'theme.json'),       'utf8')),
-    registry:   JSON.parse(fs.readFileSync(path.join(REGISTRIES_DIR, 'formspec-common.registry.json'), 'utf8')),
+    screener: JSON.parse(fs.readFileSync(path.join(GRANT_DIR, 'screener.json'), 'utf8')),
+    component: JSON.parse(fs.readFileSync(path.join(GRANT_DIR, 'component.json'), 'utf8')),
+    theme: JSON.parse(fs.readFileSync(path.join(GRANT_DIR, 'theme.json'), 'utf8')),
+    registry: JSON.parse(fs.readFileSync(path.join(REGISTRIES_DIR, 'formspec-common.registry.json'), 'utf8')),
   };
 }
 

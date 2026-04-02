@@ -263,6 +263,24 @@ fn build_item_info_from_ctx(
             .unwrap_or(false),
         repeat_min: item.get("minRepeat").and_then(|v| v.as_u64()),
         repeat_max: item.get("maxRepeat").and_then(|v| v.as_u64()),
+        option_values: item
+            .get("options")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|opt| opt.get("value").and_then(Value::as_str).map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default(),
+        accept_types: item
+            .get("accept")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default(),
         extensions: item
             .get("extensions")
             .and_then(|v| v.as_object())

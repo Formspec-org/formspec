@@ -1,6 +1,7 @@
 /** @filedesc Token resolution and CSS custom property emission for theme/component tokens. */
 import {
     resolveToken as resolveTokenBase,
+    emitMergedThemeCssVars,
 } from '@formspec-org/layout';
 import type { StylingHost } from './index';
 
@@ -12,16 +13,21 @@ export function resolveToken(host: StylingHost, val: any): any {
     );
 }
 
+/** Emit theme tokens as CSS custom properties on a target element (defaults to documentElement). */
+export function emitThemeTokens(
+    tokens: Record<string, string | number>,
+    target?: HTMLElement,
+): void {
+    const el = target ?? document.documentElement;
+    for (const [key, value] of Object.entries(tokens)) {
+        el.style.setProperty(`--formspec-${key.replace(/\./g, '-')}`, String(value));
+    }
+}
+
 export function emitTokenProperties(host: StylingHost, container: HTMLElement): void {
     const effectiveTheme = host.getEffectiveTheme();
-    const tokens = {
-        ...(effectiveTheme.tokens || {}),
-        ...(host._componentDocument?.tokens || {}),
-    };
-    for (const [key, value] of Object.entries(tokens)) {
-        container.style.setProperty(
-            `--formspec-${key.replace(/\./g, '-')}`,
-            String(value)
-        );
-    }
+    emitMergedThemeCssVars(container, {
+        themeTokens: effectiveTheme.tokens || {},
+        componentTokens: host._componentDocument?.tokens,
+    });
 }

@@ -17,11 +17,13 @@ export default defineConfig({
       '@formspec-org/engine/fel-runtime': path.resolve(repoRoot, 'packages/formspec-engine/src/fel/fel-api-runtime.ts'),
       '@formspec-org/engine/fel-tools': path.resolve(repoRoot, 'packages/formspec-engine/src/fel/fel-api-tools.ts'),
       '@formspec-org/engine': path.resolve(repoRoot, 'packages/formspec-engine/src/index.ts'),
-      '@formspec-org/webcomponent': path.resolve(repoRoot, 'packages/formspec-webcomponent/dist/index.js'),
+      // Subpaths must precede the package root alias
+      '@formspec-org/webcomponent/default-theme': path.resolve(repoRoot, 'packages/formspec-layout/src/default-theme.json'),
       '@formspec-org/webcomponent/formspec-layout.css': path.resolve(repoRoot, 'packages/formspec-webcomponent/src/formspec-layout.css'),
       '@formspec-org/webcomponent/formspec-layout.css?url': path.resolve(repoRoot, 'packages/formspec-webcomponent/src/formspec-layout.css'),
       '@formspec-org/webcomponent/formspec-default.css': path.resolve(repoRoot, 'packages/formspec-webcomponent/src/formspec-default.css'),
-      '@formspec-org/webcomponent/formspec-default.css?url': path.resolve(repoRoot, 'packages/formspec-webcomponent/src/formspec-default.css')
+      '@formspec-org/webcomponent/formspec-default.css?url': path.resolve(repoRoot, 'packages/formspec-webcomponent/src/formspec-default.css'),
+      '@formspec-org/webcomponent': path.resolve(repoRoot, 'packages/formspec-webcomponent/dist/index.js')
     }
   },
   test: {

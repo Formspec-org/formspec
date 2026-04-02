@@ -47,10 +47,10 @@ def test_unknown_extensions_do_not_interfere_with_core_results() -> None:
     extended_present = evaluate_definition(_definition_with_extensions(), {"name": "Al"})
 
     def _core(results: list[dict]) -> list[dict]:
-        return [r for r in results if r.get("constraintKind") != "extension"]
+        return [r for r in results if r.get("code") != "UNRESOLVED_EXTENSION"]
 
     def _extension(results: list[dict]) -> list[dict]:
-        return [r for r in results if r.get("constraintKind") == "extension"]
+        return [r for r in results if r.get("code") == "UNRESOLVED_EXTENSION"]
 
     assert _core(extended_missing.results) == plain_missing.results
     assert _core(extended_present.results) == plain_present.results

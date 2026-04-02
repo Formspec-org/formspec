@@ -14,12 +14,13 @@ import type { LayoutComponentProps } from '../../component-map';
  * the HTML `hidden` attribute to preserve component state across tab switches.
  */
 export function Tabs({ node, children }: LayoutComponentProps) {
-    const [activeTab, setActiveTabRaw] = useState(0);
+    const defaultTab = (node.props?.defaultTab as number) ?? 0;
+    const [activeTab, setActiveTabRaw] = useState(defaultTab);
     const tabCount = node.children.length;
     const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
     const id = node.id || 'tabs';
-    const position: 'top' | 'bottom' = (node.props?.position as 'top' | 'bottom') || 'top';
+    const position: 'top' | 'bottom' | 'left' | 'right' = (node.props?.position as 'top' | 'bottom' | 'left' | 'right') || 'top';
     const ariaLabel = (node.props?.['aria-label'] as string)
         || node.fieldItem?.label
         || 'Tabs';
@@ -55,9 +56,11 @@ export function Tabs({ node, children }: LayoutComponentProps) {
         }
     }, [activeTab, tabCount, setActiveTab]);
 
-    // Derive per-tab labels from the LayoutNode children metadata
+    // Spec: tabLabels prop takes precedence, then derive from child metadata
+    const explicitLabels = node.props?.tabLabels as string[] | undefined;
     const tabLabels: string[] = node.children.map((child, idx) =>
-        (child.fieldItem?.label as string)
+        explicitLabels?.[idx]
+        || (child.fieldItem?.label as string)
         || (child.props?.title as string)
         || (child.props?.label as string)
         || `Tab ${idx + 1}`,
@@ -69,6 +72,7 @@ export function Tabs({ node, children }: LayoutComponentProps) {
         <div
             role="tablist"
             aria-label={ariaLabel}
+            aria-orientation={position === 'left' || position === 'right' ? 'vertical' : undefined}
             className="formspec-tab-bar"
             onKeyDown={handleKeyDown}
         >
@@ -77,14 +81,14 @@ export function Tabs({ node, children }: LayoutComponentProps) {
                 return (
                     <button
                         key={idx}
-                        ref={(el) => { buttonRefs.current[idx] = el; }}
                         type="button"
+                        className={isActive ? 'formspec-tab formspec-tab--active' : 'formspec-tab'}
+                        ref={(el: HTMLButtonElement | null) => { buttonRefs.current[idx] = el; }}
                         role="tab"
                         id={`tab-${id}-${idx}`}
                         aria-selected={isActive}
                         aria-controls={`panel-${id}-${idx}`}
                         tabIndex={isActive ? 0 : -1}
-                        className={isActive ? 'formspec-tab formspec-tab--active' : 'formspec-tab'}
                         onClick={() => setActiveTab(idx)}
                     >
                         {label}
@@ -121,10 +125,13 @@ export function Tabs({ node, children }: LayoutComponentProps) {
     return (
         <div
             className={cssClass}
-            style={style}
+            style={{
+                ...style,
+                ...(position === 'left' || position === 'right' ? { display: 'flex', flexDirection: 'row' } : {}),
+            }}
             data-position={position !== 'top' ? position : undefined}
         >
-            {position === 'bottom' ? (
+            {position === 'bottom' || position === 'right' ? (
                 <>
                     {panels}
                     {tabBar}

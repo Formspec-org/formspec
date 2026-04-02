@@ -1,24 +1,99 @@
-/** @filedesc Default adapter for Select — renders a dropdown select element. */
+/** @filedesc Default adapter for Select — native dropdown or combobox (searchable / multiple). */
 import type { SelectBehavior } from '../../behaviors/types';
-import type { AdapterRenderFn } from '../types';
+import type { AdapterContext, AdapterRenderFn } from '../types';
+import type { FieldDOM } from './shared';
 import { createFieldDOM, finalizeFieldDOM, applyControlSlotClass } from './shared';
+
+function mountCombobox(fieldDOM: FieldDOM, behavior: SelectBehavior, actx: AdapterContext): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'formspec-combobox formspec-select-searchable';
+    if (behavior.multiple) wrap.setAttribute('data-multiple', 'true');
+
+    const chips = document.createElement('div');
+    chips.className = 'formspec-combobox-chips';
+    chips.setAttribute('aria-label', 'Selected values');
+
+    const popover = document.createElement('div');
+    popover.className = 'formspec-combobox-popover';
+
+    const row = document.createElement('div');
+    row.className = 'formspec-combobox-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'formspec-input formspec-combobox-input';
+    input.id = behavior.id;
+    input.name = behavior.fieldPath;
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', behavior.searchable ? 'list' : 'none');
+    const listboxId = `${behavior.id}-listbox`;
+    input.setAttribute('aria-controls', listboxId);
+    input.setAttribute('aria-expanded', 'false');
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'formspec-combobox-clear';
+    clearBtn.setAttribute('aria-label', 'Clear selection');
+    clearBtn.innerHTML = '<span aria-hidden="true">\u00d7</span>';
+
+    const chevron = document.createElement('span');
+    chevron.className = 'formspec-combobox-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.textContent = '\u25be';
+
+    row.append(input, clearBtn, chevron);
+
+    const list = document.createElement('ul');
+    list.id = listboxId;
+    list.setAttribute('role', 'listbox');
+    list.className = 'formspec-combobox-list';
+    list.style.display = 'none';
+    if (behavior.multiple) list.setAttribute('aria-multiselectable', 'true');
+
+    popover.append(row, list);
+    wrap.append(chips, popover);
+
+    fieldDOM.root.appendChild(wrap);
+    applyControlSlotClass(wrap, behavior, actx);
+    return wrap;
+}
 
 export const renderSelect: AdapterRenderFn<SelectBehavior> = (
     behavior, parent, actx
 ) => {
     const fieldDOM = createFieldDOM(behavior, actx);
+    const combobox = !!(behavior.searchable || behavior.multiple);
+
+    if (combobox) {
+        const wrap = mountCombobox(fieldDOM, behavior, actx);
+        finalizeFieldDOM(fieldDOM, behavior, actx);
+        parent.appendChild(fieldDOM.root);
+        const dispose = behavior.bind({
+            root: fieldDOM.root,
+            label: fieldDOM.label,
+            control: wrap,
+            hint: fieldDOM.hint,
+            error: fieldDOM.error,
+        });
+        actx.onDispose(dispose);
+        return;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'formspec-select-wrapper';
 
     const select = document.createElement('select');
-    select.className = 'formspec-input';
+    select.className = 'formspec-input formspec-select-native';
     select.name = behavior.fieldPath;
     select.id = behavior.id;
 
-    if (behavior.placeholder) {
+    {
         const placeholderOpt = document.createElement('option');
         placeholderOpt.value = '';
-        placeholderOpt.textContent = behavior.placeholder;
+        placeholderOpt.textContent = behavior.placeholder || 'Select\u2026';
         placeholderOpt.disabled = true;
         placeholderOpt.selected = true;
+        placeholderOpt.hidden = true;
         select.appendChild(placeholderOpt);
     }
 
@@ -37,9 +112,8 @@ export const renderSelect: AdapterRenderFn<SelectBehavior> = (
         select.appendChild(option);
     }
 
-    select.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
-
-    fieldDOM.root.appendChild(select);
+    wrapper.appendChild(select);
+    fieldDOM.root.appendChild(wrapper);
     applyControlSlotClass(select, behavior, actx);
     finalizeFieldDOM(fieldDOM, behavior, actx);
     parent.appendChild(fieldDOM.root);
@@ -51,8 +125,7 @@ export const renderSelect: AdapterRenderFn<SelectBehavior> = (
         hint: fieldDOM.hint,
         error: fieldDOM.error,
         rebuildOptions: (_container, newOptions) => {
-            // Keep placeholder/clear options, remove the rest
-            const keepCount = (behavior.placeholder ? 1 : 0) + (behavior.clearable ? 1 : 0);
+            const keepCount = 1 + (behavior.clearable ? 1 : 0);
             while (select.options.length > keepCount) select.remove(select.options.length - 1);
             const controls = new Map<string, HTMLInputElement>();
             for (const opt of newOptions) {

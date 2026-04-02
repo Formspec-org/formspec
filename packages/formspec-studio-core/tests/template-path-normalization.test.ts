@@ -9,7 +9,7 @@ describe('addValidation template path normalization', () => {
     project.addField('expenses.receipt_available', 'Receipt Available', 'boolean');
     project.makeRepeatable('expenses');
 
-    project.addValidation('expenses.receipt_available', '$receipt_available = true', 'Receipt required');
+    project.addValidation('expenses.receipt_available', '$expenses.receipt_available = true', 'Receipt required');
 
     const shapes = project.definition.shapes ?? [];
     const shape = shapes[shapes.length - 1];
@@ -21,7 +21,7 @@ describe('addValidation template path normalization', () => {
     project.addGroup('contact', 'Contact');
     project.addField('contact.email', 'Email', 'email');
 
-    project.addValidation('contact.email', '$email != ""', 'Required');
+    project.addValidation('contact.email', '$contact.email != ""', 'Required');
 
     const shapes = project.definition.shapes ?? [];
     const shape = shapes[shapes.length - 1];
@@ -45,7 +45,7 @@ describe('addValidation template path normalization', () => {
     project.addField('items.qty', 'Qty', 'integer');
     project.makeRepeatable('items');
 
-    project.addValidation('items[*].qty', '$qty > 0', 'Must be positive');
+    project.addValidation('items[*].qty', '$items[*].qty > 0', 'Must be positive');
 
     const shapes = project.definition.shapes ?? [];
     const shape = shapes[shapes.length - 1];
@@ -60,7 +60,7 @@ describe('addValidation template path normalization', () => {
     project.makeRepeatable('sections');
     project.makeRepeatable('sections.items');
 
-    project.addValidation('sections.items.amount', '$amount > 0', 'Positive');
+    project.addValidation('sections.items.amount', '$sections.items.amount > 0', 'Positive');
 
     const shapes = project.definition.shapes ?? [];
     const shape = shapes[shapes.length - 1];
@@ -96,7 +96,7 @@ describe('addValidation template path normalization', () => {
     project.makeRepeatable('expenses', { min: 1 });
 
     // Rule that should only fire when receipt is false
-    project.addValidation('expenses.receipt', '$receipt = true', 'Receipt required');
+    project.addValidation('expenses.receipt', '$expenses.receipt = true', 'Receipt required');
 
     // Preview with no data -- repeatable group has 0 instances by default
     // so the shape should evaluate to zero results (no instances to check),
@@ -113,7 +113,7 @@ describe('addValidation template path normalization', () => {
     project.addGroup('outer.inner', 'Inner'); // not repeatable
     project.addField('outer.inner.val', 'Val', 'integer');
 
-    project.addValidation('outer.inner.val', '$val > 0', 'Positive');
+    project.addValidation('outer.inner.val', '$outer.inner.val > 0', 'Positive');
 
     const shapes = project.definition.shapes ?? [];
     const shape = shapes[shapes.length - 1];

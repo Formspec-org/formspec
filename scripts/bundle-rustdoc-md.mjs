@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /**
+ * @filedesc Bundles cargo-doc-md Rust documentation output into a single Markdown file.
+ *
  * Concatenate cargo-doc-md output into one Markdown file (supports nested modules).
  *
  * Usage (from repo root):

@@ -84,13 +84,19 @@ export function fieldDependents(state: ProjectState, fieldPath: string): FieldDe
     }
   }
 
-  // Check screener routes
-  const screenerRoutes = def.screener?.routes;
-  if (screenerRoutes) {
-    for (let i = 0; i < screenerRoutes.length; i++) {
-      const route = screenerRoutes[i] as any;
-      if (typeof route.condition === 'string' && expressionReferencesField(route.condition)) {
-        result.screenerRoutes.push(i);
+  // Check screener evaluation routes (condition + score expressions)
+  if (state.screener) {
+    for (const phase of state.screener.evaluation) {
+      for (let i = 0; i < phase.routes.length; i++) {
+        const route = phase.routes[i];
+        const condition = (route as any).condition;
+        const score = (route as any).score;
+        if (
+          (typeof condition === 'string' && expressionReferencesField(condition)) ||
+          (typeof score === 'string' && expressionReferencesField(score))
+        ) {
+          result.screenerRoutes.push({ phaseId: phase.id, routeIndex: i });
+        }
       }
     }
   }

@@ -413,62 +413,8 @@ class TestOptionSet:
         with pytest.raises(ValidationError):
             _validate(doc, schema)
 
-# ===================================================================
-# TestScreener
-# ===================================================================
-
-class TestScreener:
-    """Screener object validation."""
-
-    def test_valid_screener(self, schema):
-        doc = _base_doc(screener={
-            "items": [_minimal_field(key="sq1")],
-            "routes": [{
-                "condition": "sq1 = 'yes'",
-                "target": "https://example.com/form/eligible",
-            }],
-        })
-        _validate(doc, schema)
-
-    def test_missing_items(self, schema):
-        doc = _base_doc(screener={
-            "routes": [{"condition": "true",
-                        "target": "https://example.com/x"}],
-        })
-        with pytest.raises(ValidationError):
-            _validate(doc, schema)
-
-    def test_missing_routes(self, schema):
-        doc = _base_doc(screener={
-            "items": [_minimal_field(key="sq1")],
-        })
-        with pytest.raises(ValidationError):
-            _validate(doc, schema)
-
-    def test_route_missing_condition(self, schema):
-        doc = _base_doc(screener={
-            "items": [_minimal_field(key="sq1")],
-            "routes": [{"target": "https://example.com/x"}],
-        })
-        with pytest.raises(ValidationError):
-            _validate(doc, schema)
-
-    def test_route_missing_target(self, schema):
-        doc = _base_doc(screener={
-            "items": [_minimal_field(key="sq1")],
-            "routes": [{"condition": "true"}],
-        })
-        with pytest.raises(ValidationError):
-            _validate(doc, schema)
-
-    def test_routes_min_items(self, schema):
-        doc = _base_doc(screener={
-            "items": [_minimal_field(key="sq1")],
-            "routes": [],
-        })
-        with pytest.raises(ValidationError):
-            _validate(doc, schema)
-
+# TestScreener — removed: screener is now a standalone document type,
+# not a property of Definition. See schemas/screener.schema.json.
 
 # ===================================================================
 # TestMigrations

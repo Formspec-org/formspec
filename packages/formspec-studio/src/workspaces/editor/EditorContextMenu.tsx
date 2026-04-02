@@ -1,5 +1,5 @@
 /** @filedesc Right-click context menu for canvas items with duplicate, delete, move, wrap, and AI actions. */
-import type { ContextMenuItem } from './canvas-operations';
+import type { ContextMenuItem } from '../../components/ui/context-menu-utils';
 
 interface EditorContextMenuProps {
   itemPath?: string;
@@ -43,6 +43,9 @@ export function EditorContextMenu({
       data-testid={testId}
       className="bg-surface border border-border rounded shadow-lg py-1 min-w-[160px]"
       role="menu"
+      onMouseDown={(event) => {
+        event.stopPropagation();
+      }}
     >
       {items.map(({ label, action, separator }) => (
         <div key={action}>

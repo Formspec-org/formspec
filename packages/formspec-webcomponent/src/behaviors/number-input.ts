@@ -34,6 +34,7 @@ export function useNumberInput(ctx: BehaviorContext, comp: any): NumberInputBeha
         min: comp.min,
         max: comp.max,
         step: comp.step,
+        showStepper: !!comp.showStepper,
         dataType: item?.dataType || 'decimal',
 
         bind(refs: FieldRefs): () => void {
@@ -50,6 +51,20 @@ export function useNumberInput(ctx: BehaviorContext, comp: any): NumberInputBeha
                     (bindableInput as HTMLInputElement).value = val ?? '';
                 }
             }));
+
+            // Stepper button disabled state: reactive based on value + readonly
+            const decBtn = refs.control.querySelector('.formspec-stepper-decrement') as HTMLButtonElement | null;
+            const incBtn = refs.control.querySelector('.formspec-stepper-increment') as HTMLButtonElement | null;
+            if (decBtn && incBtn) {
+                const stepVal = comp.step ?? 1;
+                disposers.push(effect(() => {
+                    const sig = ctx.engine.signals[fieldPath];
+                    const val = Number(sig?.value ?? 0);
+                    const isReadonly = ctx.engine.readonlySignals[fieldPath]?.value ?? false;
+                    decBtn.disabled = isReadonly || (comp.min != null && val - stepVal < comp.min);
+                    incBtn.disabled = isReadonly || (comp.max != null && val + stepVal > comp.max);
+                }));
+            }
 
             // Value sync: DOM → engine
             bindableInput.addEventListener('input', (e) => {

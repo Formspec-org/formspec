@@ -88,6 +88,7 @@ export function BindsSection({ binds, activeFilter = null, allPaths = [], onSele
                     value={expression}
                     onChange={(val) => handleSave(path, type, val)}
                     onRemove={() => handleSave(path, type, null)}
+                    itemKey={path.split('.').pop()}
                   />
                 );
               }

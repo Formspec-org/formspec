@@ -1,5 +1,6 @@
 /** @filedesc FieldViewModel — per-field reactive state with locale resolution and FEL interpolation. */
 
+import type { OptionEntry } from '@formspec-org/types';
 import type { EngineReactiveRuntime, EngineSignal, ReadonlyEngineSignal } from './reactivity/types.js';
 import type { LocaleStore } from './locale.js';
 import { interpolateMessage } from './interpolate-message.js';
@@ -49,6 +50,8 @@ export interface ResolvedValidationResult {
 export interface ResolvedOption {
     value: string;
     label: string;
+    /** Abbreviations / alternate names for combobox type-ahead (from definition option.keywords). */
+    keywords?: string[];
 }
 
 // ── Factory dependencies ────────────────────────────────────────────
@@ -72,7 +75,7 @@ export interface FieldViewModelDeps {
     getReadonly: () => EngineSignal<boolean>;
     getDisabledDisplay: () => 'hidden' | 'protected';
     getErrors: () => EngineSignal<any[]>;
-    getOptions: () => EngineSignal<Array<{ value: string; label: string }>>;
+    getOptions: () => EngineSignal<OptionEntry[]>;
     getOptionsState: () => EngineSignal<{ loading: boolean; error: string | null }>;
     getOptionSetName: () => string | undefined;
     setFieldValue: (value: any) => void;
@@ -197,10 +200,16 @@ export function createFieldViewModel(deps: FieldViewModelDeps): FieldViewModel {
         const rawOptions = deps.getOptions().value;
         const optionSetName = deps.getOptionSetName();
 
-        return rawOptions.map(opt => ({
-            value: opt.value,
-            label: resolveOptionLabel(opt, optionSetName),
-        }));
+        return rawOptions.map((opt) => {
+            const resolved: ResolvedOption = {
+                value: opt.value,
+                label: resolveOptionLabel(opt, optionSetName),
+            };
+            if (opt.keywords && opt.keywords.length > 0) {
+                resolved.keywords = [...opt.keywords];
+            }
+            return resolved;
+        });
     });
 
     const optionsState = rx.computed(() => deps.getOptionsState().value);

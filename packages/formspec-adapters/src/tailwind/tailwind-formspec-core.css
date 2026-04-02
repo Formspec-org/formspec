@@ -112,13 +112,15 @@
     border-radius: 0.75rem;
   }
 
-  .formspec-validation-summary-header {
+  .formspec-validation-summary-header,
+  .formspec-validation-summary-title {
     margin: 0;
     padding: 0.625rem 0.875rem;
     border-bottom: 1px solid var(--formspec-tw-danger-border);
     background: var(--formspec-tw-danger-bg);
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1.35;
     color: var(--formspec-tw-danger-text);
   }
 

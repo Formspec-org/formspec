@@ -174,8 +174,46 @@ describe('layout components — Accordion repeats', () => {
 
         const items = el.querySelectorAll('.formspec-accordion-item') as NodeListOf<HTMLDetailsElement>;
         expect(items.length).toBeGreaterThan(0);
+        const repeatWrapper = el.querySelector('.formspec-repeat.formspec-repeat--accordion') as HTMLElement;
+        expect(repeatWrapper).not.toBeNull();
+        expect(el.querySelector('.formspec-accordion--repeat')).not.toBeNull();
+        expect(el.querySelectorAll('.formspec-accordion-content--repeat').length).toBe(items.length);
+        expect(repeatWrapper.querySelector('.formspec-repeat-add')).not.toBeNull();
+        expect(repeatWrapper.querySelector('.formspec-sr-only[aria-live="polite"]')).not.toBeNull();
         expect(items[items.length - 1].open).toBe(true);
         expect(items[items.length - 1].textContent).toContain('Remove Members');
+        expect(items[items.length - 1].querySelector('.formspec-repeat-remove')).not.toBeNull();
+    });
+});
+
+describe('layout components — Toggle', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('keeps off/on labels on fixed spans and toggles formspec-toggle--on', async () => {
+        const el = renderWith(
+            [{ key: 't', type: 'field', dataType: 'boolean', label: 'T' }],
+            {
+                component: 'Stack',
+                children: [
+                    { component: 'Toggle', bind: 't', onLabel: 'On', offLabel: 'Off' },
+                ],
+            },
+        );
+        const wrap = el.querySelector('.formspec-toggle') as HTMLElement;
+        const off = wrap.querySelector('.formspec-toggle-off') as HTMLElement;
+        const on = wrap.querySelector('.formspec-toggle-on') as HTMLElement;
+        expect(off.textContent).toBe('Off');
+        expect(on.textContent).toBe('On');
+        expect(wrap.classList.contains('formspec-toggle--on')).toBe(false);
+
+        const input = wrap.querySelector('input[type="checkbox"]') as HTMLInputElement;
+        input.click();
+        await Promise.resolve();
+        expect(wrap.classList.contains('formspec-toggle--on')).toBe(true);
+        expect(off.textContent).toBe('Off');
+        expect(on.textContent).toBe('On');
     });
 });
 
@@ -194,9 +232,62 @@ describe('layout components — FileUpload', () => {
         );
         const dropZone = el.querySelector('.formspec-drop-zone') as HTMLElement;
         expect(dropZone).not.toBeNull();
-        expect(dropZone.textContent).toContain('Drop files here');
+        expect(dropZone.textContent).toContain('Drag & drop a file here');
+        expect(dropZone.getAttribute('aria-label')).toContain('Drop files here');
         const fileInput = el.querySelector('.formspec-file-upload input[type="file"]') as HTMLInputElement;
         expect(fileInput.getAttribute('accept')).toBe('.pdf,.doc');
+        const list = el.querySelector('.formspec-file-upload .formspec-file-list') as HTMLUListElement;
+        expect(list).not.toBeNull();
+        expect(list.hidden).toBe(true);
+    });
+});
+
+describe('layout components — DataTable parity', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('uses the shared datatable chrome contract', () => {
+        const el = renderWith(
+            [
+                {
+                    key: 'expenses',
+                    type: 'group',
+                    label: 'Expenses',
+                    repeatable: true,
+                    minRepeat: 1,
+                    children: [
+                        { key: 'description', type: 'field', dataType: 'string', label: 'Description' },
+                    ],
+                },
+            ],
+            {
+                component: 'Stack',
+                children: [
+                    {
+                        component: 'DataTable',
+                        bind: 'expenses',
+                        title: 'Expenses',
+                        allowAdd: true,
+                        allowRemove: true,
+                        columns: [{ header: 'Description', bind: 'description' }],
+                    },
+                ],
+            },
+        );
+
+        const wrapper = el.querySelector('.formspec-data-table-wrapper') as HTMLElement;
+        expect(wrapper).not.toBeNull();
+        expect(wrapper.querySelector('table.formspec-data-table')).not.toBeNull();
+        expect(wrapper.querySelector('caption')?.textContent).toBe('Expenses');
+        expect(wrapper.querySelector('.formspec-datatable-add')).not.toBeNull();
+        const actionHeader = wrapper.querySelector('th:last-child .formspec-sr-only');
+        expect(actionHeader?.textContent).toBe('Actions');
+        const removeButton = wrapper.querySelector('.formspec-datatable-remove') as HTMLButtonElement;
+        expect(removeButton).not.toBeNull();
+        expect(removeButton.className).toBe('formspec-datatable-remove formspec-focus-ring');
+        const addButton = wrapper.querySelector('.formspec-datatable-add') as HTMLButtonElement;
+        expect(addButton.className).toBe('formspec-datatable-add formspec-focus-ring');
     });
 });
 

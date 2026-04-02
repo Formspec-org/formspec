@@ -1,0 +1,859 @@
+div .sb-preparing-story.sb-wrapper [hidden]
+div .sb-preparing-docs.sb-wrapper [hidden]
+div .sb-nopreview.sb-wrapper [hidden]
+div .sb-errordisplay.sb-wrapper [hidden]
+div  |  1200×3366
+  div  |  1200×3366  d:grid  cols:584px 584px 0px  rows:3366.38px  gap:32px
+    div  |  584×3341
+      div  |  584×16  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "React"
+      div  |  584×3313
+        #shadow-root
+          link [hidden]
+          div  |  584×3313
+            div  |  584×3313
+              div  .formspec-container  |  584×3313
+                div  .formspec-stack  |  584×3313  d:flex  dir:column
+                  div  .formspec-alert.formspec-alert--info  role="status"  |  584×18
+                    "Applications for the 2026 funding cycle are now open. Deadline: June 30, 2026."
+                  h2  .formspec-heading  |  584×27  m:20,0  |  font:24px/bold
+                    "Part 1: Applicant Information"
+                  p  |  584×36  m:16,0
+                    "Provide details about your organization and primary contact. All organizations must be registered entities with a val..."
+                  section  .formspec-group  |  584×569
+                    h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                      "Organization Information"
+                    div  .formspec-field  data-name="organization.orgName"  |  584×89
+                      label  for="field-organization-orgName"  |  137×17
+                        "Organization Name"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      p  #field-organization-orgName-hint  .formspec-hint  |  584×18  m:16,0
+                        "Legal name as registered with your state."
+                      input  #field-organization-orgName  type="text"  required  name="organization.orgName"  aria-describedby="field-organization-orgName-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-organization-orgName-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="organization.orgType"  |  584×37
+                      label  for="field-organization-orgType"  |  131×17
+                        "Organization Type"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      div  .formspec-select-wrapper  |  584×19
+                        select  #field-organization-orgType  .formspec-input.formspec-select-native  required  name="organization.orgType"  aria-required  aria-invalid="false"  |  165×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                          option [hidden]
+                          option  value="nonprofit"  |  0×0  p:0,2,1,2
+                            "501(c)(3) Nonprofit"
+                          option  value="school"  |  0×0  p:0,2,1,2
+                            "Public School / District"
+                          option  value="tribal"  |  0×0  p:0,2,1,2
+                            "Tribal Organization"
+                          option  value="municipal"  |  0×0  p:0,2,1,2
+                            "Municipal Government"
+                          option  value="cooperative"  |  0×0  p:0,2,1,2
+                            "Community Cooperative"
+                      p  #field-organization-orgType-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="organization.ein"  |  584×89
+                      label  for="field-organization-ein"  |  95×17
+                        "EIN / Tax ID"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      p  #field-organization-ein-hint  .formspec-hint  |  584×18  m:16,0
+                        "Federal Employer Identification Number (XX-XXXXXXX)."
+                      input  #field-organization-ein  type="text"  required  name="organization.ein"  aria-describedby="field-organization-ein-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-organization-ein-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="organization.yearFounded"  |  584×21
+                      label  for="field-organization-yearFounded"  |  101×17
+                        "Year Founded"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      input  #field-organization-yearFounded  type="number"  required  name="organization.yearFounded"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-organization-yearFounded-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="organization.website"  |  584×89
+                      label  for="field-organization-website"  |  51×17
+                        "Website"
+                      p  #field-organization-website-hint  .formspec-hint  |  584×18  m:16,0
+                        "Optional — your organization's public website."
+                      input  #field-organization-website  type="text"  name="organization.website"  aria-describedby="field-organization-website-hint"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-organization-website-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="organization.annualBudget"  |  584×89
+                      label  for="field-organization-annualBudget"  |  165×17
+                        "Annual Operating Budget"
+                      p  #field-organization-annualBudget-hint  .formspec-hint  |  584×18  m:16,0
+                        "Approximate total annual budget in USD."
+                      input  #field-organization-annualBudget  type="number"  name="organization.annualBudget"  aria-describedby="field-organization-annualBudget-hint"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-organization-annualBudget-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                  section  .formspec-group  |  584×328
+                    h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                      "Primary Contact"
+                    div  .formspec-field  data-name="contact.contactName"  |  584×21
+                      label  for="field-contact-contactName"  |  80×17
+                        "Full Name"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      input  #field-contact-contactName  type="text"  required  name="contact.contactName"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-contact-contactName-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="contact.contactTitle"  |  584×21
+                      label  for="field-contact-contactTitle"  |  95×17
+                        "Title / Position"
+                      input  #field-contact-contactTitle  type="text"  name="contact.contactTitle"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-contact-contactTitle-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="contact.contactEmail"  |  584×21
+                      label  for="field-contact-contactEmail"  |  106×17
+                        "Email Address"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      input  #field-contact-contactEmail  type="text"  required  name="contact.contactEmail"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-contact-contactEmail-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="contact.contactPhone"  |  584×89
+                      label  for="field-contact-contactPhone"  |  108×17
+                        "Phone Number"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      p  #field-contact-contactPhone-hint  .formspec-hint  |  584×18  m:16,0
+                        "Format: (555) 123-4567"
+                      input  #field-contact-contactPhone  type="text"  required  name="contact.contactPhone"  aria-describedby="field-contact-contactPhone-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-contact-contactPhone-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="contact.state"  |  584×37
+                      label  for="field-contact-state"  |  44×17
+                        "State"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      div  .formspec-select-wrapper  |  584×19
+                        select  #field-contact-state  .formspec-input.formspec-select-native  required  name="contact.state"  aria-required  aria-invalid="false"  |  138×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                          option [hidden]
+                          option  value="AL"  |  0×0  p:0,2,1,2
+                            "Alabama"
+                          option  value="AK"  |  0×0  p:0,2,1,2
+                            "Alaska"
+                          option  value="AZ"  |  0×0  p:0,2,1,2
+                            "Arizona"
+                          option  value="CA"  |  0×0  p:0,2,1,2
+                            "California"
+                          option  value="CO"  |  0×0  p:0,2,1,2
+                            "Colorado"
+                          option  value="CT"  |  0×0  p:0,2,1,2
+                            "Connecticut"
+                          option  value="DC"  |  0×0  p:0,2,1,2
+                            "District of Columbia"
+                          option  value="FL"  |  0×0  p:0,2,1,2
+                            "Florida"
+                          option  value="GA"  |  0×0  p:0,2,1,2
+                            "Georgia"
+                          option  value="IL"  |  0×0  p:0,2,1,2
+                            "Illinois"
+                          option  value="MA"  |  0×0  p:0,2,1,2
+                            "Massachusetts"
+                          option  value="MD"  |  0×0  p:0,2,1,2
+                            "Maryland"
+                          option  value="MI"  |  0×0  p:0,2,1,2
+                            "Michigan"
+                          option  value="MN"  |  0×0  p:0,2,1,2
+                            "Minnesota"
+                          option  value="NY"  |  0×0  p:0,2,1,2
+                            "New York"
+                          option  value="OH"  |  0×0  p:0,2,1,2
+                            "Ohio"
+                          option  value="OR"  |  0×0  p:0,2,1,2
+                            "Oregon"
+                          option  value="PA"  |  0×0  p:0,2,1,2
+                            "Pennsylvania"
+                          option  value="TX"  |  0×0  p:0,2,1,2
+                            "Texas"
+                          option  value="VA"  |  0×0  p:0,2,1,2
+                            "Virginia"
+                          option  value="WA"  |  0×0  p:0,2,1,2
+                            "Washington"
+                      p  #field-contact-state-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                  hr  .formspec-divider  |  2×2  m:8,291  overflow:hidden  |  color:rgb(128, 128, 128)  border:1px inset rgb(128, 128, 128)
+                  h2  .formspec-heading  |  584×27  m:20,0  |  font:24px/bold
+                    "Part 2: Project & Budget"
+                  section  .formspec-group  |  584×856
+                    h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                      "Project Details"
+                    div  .formspec-field  data-name="project.projectTitle"  |  584×89
+                      label  for="field-project-projectTitle"  |  91×17
+                        "Project Title"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      p  #field-project-projectTitle-hint  .formspec-hint  |  584×18  m:16,0
+                        "A concise, descriptive title for your proposed project."
+                      input  #field-project-projectTitle  type="text"  required  name="project.projectTitle"  aria-describedby="field-project-projectTitle-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-project-projectTitle-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="project.priorityLevel"  |  584×108
+                      label  #field-project-priorityLevel-label  .formspec-label  |  106×17
+                        "Funding Priority"
+                      p  #field-project-priorityLevel-hint  .formspec-hint  |  584×18  m:16,0
+                        "How urgently does this project need funding?"
+                      div  .formspec-radio-group  role="radiogroup"  aria-labelledby="field-project-priorityLevel-label"  aria-describedby="field-project-priorityLevel-hint field-project-priorityLevel-error"  |  584×40
+                        label  |  286×17
+                          "Urgent — community need is immediate"
+                          input  type="radio"  name="project.priorityLevel"  value="urgent"  |  13×13  d:inline-block  m:3,3,0,5  |  font:13.3333px
+                        label  |  539×37
+                          "High — significant impact within 6 months"
+                          input  type="radio"  name="project.priorityLevel"  value="high"  |  13×13  d:inline-block  m:3,3,0,5  |  font:13.3333px
+                        label  |  359×17
+                          "Standard — planned initiative with flexible timeline"
+                          input  type="radio"  name="project.priorityLevel"  value="standard"  |  13×13  d:inline-block  m:3,3,0,5  |  font:13.3333px
+                      p  #field-project-priorityLevel-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="project.focusArea"  |  584×37
+                      label  for="field-project-focusArea"  |  140×17
+                        "Primary Focus Area"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      div  .formspec-select-wrapper  |  584×19
+                        select  #field-project-focusArea  .formspec-input.formspec-select-native  required  name="project.focusArea"  aria-required  aria-invalid="false"  |  192×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                          option [hidden]
+                          option  value="education"  |  0×0  p:0,2,1,2
+                            "Education & Literacy"
+                          option  value="health"  |  0×0  p:0,2,1,2
+                            "Public Health"
+                          option  value="environment"  |  0×0  p:0,2,1,2
+                            "Environment & Sustainability"
+                          option  value="arts"  |  0×0  p:0,2,1,2
+                            "Arts & Culture"
+                          option  value="housing"  |  0×0  p:0,2,1,2
+                            "Housing & Infrastructure"
+                          option  value="youth"  |  0×0  p:0,2,1,2
+                            "Youth Development"
+                      p  #field-project-focusArea-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="project.additionalAreas"  |  584×108
+                      label  #field-project-additionalAreas-label  .formspec-label  |  151×17
+                        "Additional Focus Areas"
+                      p  #field-project-additionalAreas-hint  .formspec-hint  |  584×18  m:16,0
+                        "Select any secondary areas your project touches."
+                      div  .formspec-checkbox-group  role="group"  aria-labelledby="field-project-additionalAreas-label"  aria-describedby="field-project-additionalAreas-hint field-project-additionalAreas-error"  |  584×40
+                        label  |  163×17
+                          "Education & Literacy"
+                          input  type="checkbox"  name="project.additionalAreas"  value="education"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                        label  |  112×17
+                          "Public Health"
+                          input  type="checkbox"  name="project.additionalAreas"  value="health"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                        label  |  216×17
+                          "Environment & Sustainability"
+                          input  type="checkbox"  name="project.additionalAreas"  value="environment"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                        label  |  557×37
+                          "Arts & Culture"
+                          input  type="checkbox"  name="project.additionalAreas"  value="arts"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                        label  |  186×17
+                          "Housing & Infrastructure"
+                          input  type="checkbox"  name="project.additionalAreas"  value="housing"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                        label  |  152×17
+                          "Youth Development"
+                          input  type="checkbox"  name="project.additionalAreas"  value="youth"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                      p  #field-project-additionalAreas-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="project.summary"  |  584×141
+                      label  for="field-project-summary"  |  124×17
+                        "Project Summary"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      p  #field-project-summary-hint  .formspec-hint  |  584×36  m:16,0
+                        "Describe the project in 2-3 paragraphs. Include the problem, your approach, and expected outcomes."
+                      textarea  #field-project-summary  required  name="project.summary"  aria-describedby="field-project-summary-hint"  aria-required  aria-invalid="false"  |  182×51  d:inline-block  p:2  overflow:auto  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                      p  #field-project-summary-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="project.startDate"  |  584×21
+                      label  for="field-project-startDate"  |  140×17
+                        "Proposed Start Date"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      input  #field-project-startDate  type="date"  required  name="project.startDate"  aria-required  aria-invalid="false"  |  125×21  d:inline-block  p:0,0,0,1  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-project-startDate-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="project.endDate"  |  584×21
+                      label  for="field-project-endDate"  |  136×17
+                        "Proposed End Date"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      input  #field-project-endDate  type="date"  required  name="project.endDate"  aria-required  aria-invalid="false"  |  125×21  d:inline-block  p:0,0,0,1  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-project-endDate-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="project.beneficiaries"  |  584×89
+                      label  for="field-project-beneficiaries"  |  238×17
+                        "Estimated Number of Beneficiaries"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      p  #field-project-beneficiaries-hint  .formspec-hint  |  584×18  m:16,0
+                        "How many people will directly benefit from this project?"
+                      input  #field-project-beneficiaries  type="number"  required  name="project.beneficiaries"  aria-describedby="field-project-beneficiaries-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-project-beneficiaries-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field.formspec-field--inline  data-name="project.isRenewal"  |  584×38
+                      label  for="field-project-isRenewal"  |  306×17
+                        "This is a renewal of a previously funded project"
+                      div  .formspec-toggle  |  584×20
+                        input  #field-project-isRenewal  .formspec-input  type="checkbox"  role="switch"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                      p  #field-project-isRenewal-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                  div  .formspec-repeat  data-bind="personnel"  |  584×169
+                    div  .formspec-repeat-list  |  584×148
+                      div  .formspec-repeat-instance  role="group"  aria-label="Key Personnel 1 of 1"  |  584×148
+                        div  .formspec-field  data-name="personnel[0].personName"  |  584×21
+                          label  for="field-personnel-0--personName"  |  68×17
+                            "Full Name"
+                          input  #field-personnel-0--personName  type="text"  name="personnel[0].personName"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-personnel-0--personName-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                        div  .formspec-field  data-name="personnel[0].personRole"  |  584×37
+                          label  for="field-personnel-0--personRole"  |  30×17
+                            "Role"
+                          div  .formspec-select-wrapper  |  584×19
+                            select  #field-personnel-0--personRole  .formspec-input.formspec-select-native  name="personnel[0].personRole"  aria-required="false"  aria-invalid="false"  |  146×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                              option [hidden]
+                              option  value="pi"  |  0×0  p:0,2,1,2
+                                "Principal Investigator"
+                              option  value="copi"  |  0×0  p:0,2,1,2
+                                "Co-PI"
+                              option  value="coordinator"  |  0×0  p:0,2,1,2
+                                "Project Coordinator"
+                              option  value="evaluator"  |  0×0  p:0,2,1,2
+                                "Evaluator"
+                              option  value="other"  |  0×0  p:0,2,1,2
+                                "Other"
+                          p  #field-personnel-0--personRole-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                        div  .formspec-field  data-name="personnel[0].personEmail"  |  584×21
+                          label  for="field-personnel-0--personEmail"  |  94×17
+                            "Email Address"
+                          input  #field-personnel-0--personEmail  type="text"  name="personnel[0].personEmail"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-personnel-0--personEmail-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                        button  .formspec-repeat-remove.formspec-focus-ring  type="button"  aria-label="Remove Key Personnel 1"  |  156×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                          "Remove Key Personnel"
+                    button  .formspec-repeat-add.formspec-focus-ring  type="button"  |  130×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                      "Add Key Personnel"
+                    div  .formspec-sr-only  aria-live="polite"  |  584×0
+                  section  .formspec-group  |  584×445
+                    h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                      "Budget"
+                    div  .formspec-field  data-name="budget.requestedAmount"  |  584×89
+                      label  for="field-budget-requestedAmount"  |  134×17
+                        "Requested Amount"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      p  #field-budget-requestedAmount-hint  .formspec-hint  |  584×18  m:16,0
+                        "Maximum award is $100,000."
+                      input  #field-budget-requestedAmount  type="number"  required  name="budget.requestedAmount"  aria-describedby="field-budget-requestedAmount-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-budget-requestedAmount-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="budget.matchingFunds"  |  584×89
+                      label  for="field-budget-matchingFunds"  |  104×17
+                        "Matching Funds"
+                      p  #field-budget-matchingFunds-hint  .formspec-hint  |  584×18  m:16,0
+                        "Amount of matching or in-kind contributions."
+                      input  #field-budget-matchingFunds  type="number"  name="budget.matchingFunds"  aria-describedby="field-budget-matchingFunds-hint"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-budget-matchingFunds-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="budget.totalProjectCost"  |  584×21
+                      label  for="field-budget-totalProjectCost"  |  127×17
+                        "Total Project Cost"
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      input  #field-budget-totalProjectCost  type="number"  required  name="budget.totalProjectCost"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                      p  #field-budget-totalProjectCost-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field  data-name="budget.budgetNarrative"  |  584×123
+                      label  for="field-budget-budgetNarrative"  |  111×17
+                        "Budget Narrative"
+                      p  #field-budget-budgetNarrative-hint  .formspec-hint  |  584×18  m:16,0
+                        "Explain how the requested funds will be allocated across major categories."
+                      textarea  #field-budget-budgetNarrative  name="budget.budgetNarrative"  aria-describedby="field-budget-budgetNarrative-hint"  aria-required="false"  aria-invalid="false"  |  182×51  d:inline-block  p:2  overflow:auto  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                      p  #field-budget-budgetNarrative-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                  section  .formspec-group  |  584×446
+                    h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                      "Supporting Documents"
+                    div  .formspec-field.formspec-file-upload  data-name="attachments.projectPlan"  |  584×113
+                      label  for="field-attachments-projectPlan"  |  136×17
+                        "Detailed Project Plan"
+                      p  #field-attachments-projectPlan-hint  .formspec-hint  |  584×18  m:16,0
+                        "Upload a PDF with your full project plan, timeline, and milestones."
+                      div  .formspec-file-drop-zone.formspec-drop-zone.formspec-focus-ring  role="button"  aria-label="Drop files here or click to browse"  tabindex="0"  |  584×24
+                        div  .formspec-file-drop-content  |  584×24
+                          span  .formspec-file-drop-icon  aria-hidden  |  16×17
+                            "⇵"
+                          span  .formspec-file-drop-label  |  150×17
+                            "Drag & drop a file here"
+                          button  .formspec-file-browse-btn.formspec-focus-ring.formspec-button-secondary  type="button"  |  60×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                            "Browse"
+                      input  #field-attachments-projectPlan  .formspec-file-input-hidden  type="file"  name="attachments.projectPlan"  aria-describedby="field-attachments-projectPlan-hint"  aria-required="false"  aria-invalid="false"  |  253×21  d:inline-block  overflow:clip  |  font:13.3333px
+                      p  #field-attachments-projectPlan-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field.formspec-file-upload  data-name="attachments.financials"  |  584×113
+                      label  for="field-attachments-financials"  |  134×17
+                        "Financial Statements"
+                      p  #field-attachments-financials-hint  .formspec-hint  |  584×18  m:16,0
+                        "Most recent audited financial statements or Form 990."
+                      div  .formspec-file-drop-zone.formspec-drop-zone.formspec-focus-ring  role="button"  aria-label="Drop files here or click to browse"  tabindex="0"  |  584×24
+                        div  .formspec-file-drop-content  |  584×24
+                          span  .formspec-file-drop-icon  aria-hidden  |  16×17
+                            "⇵"
+                          span  .formspec-file-drop-label  |  150×17
+                            "Drag & drop a file here"
+                          button  .formspec-file-browse-btn.formspec-focus-ring.formspec-button-secondary  type="button"  |  60×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                            "Browse"
+                      input  #field-attachments-financials  .formspec-file-input-hidden  type="file"  name="attachments.financials"  aria-describedby="field-attachments-financials-hint"  aria-required="false"  aria-invalid="false"  |  253×21  d:inline-block  overflow:clip  |  font:13.3333px
+                      p  #field-attachments-financials-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field.formspec-file-upload  data-name="attachments.letters"  |  584×113
+                      label  for="field-attachments-letters"  |  116×17
+                        "Letters of Support"
+                      p  #field-attachments-letters-hint  .formspec-hint  |  584×18  m:16,0
+                        "Optional — letters from partner organizations or community stakeholders."
+                      div  .formspec-file-drop-zone.formspec-drop-zone.formspec-focus-ring  role="button"  aria-label="Drop files here or click to browse"  tabindex="0"  |  584×24
+                        div  .formspec-file-drop-content  |  584×24
+                          span  .formspec-file-drop-icon  aria-hidden  |  16×17
+                            "⇵"
+                          span  .formspec-file-drop-label  |  150×17
+                            "Drag & drop a file here"
+                          button  .formspec-file-browse-btn.formspec-focus-ring.formspec-button-secondary  type="button"  |  60×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                            "Browse"
+                      input  #field-attachments-letters  .formspec-file-input-hidden  type="file"  name="attachments.letters"  aria-describedby="field-attachments-letters-hint"  aria-required="false"  aria-invalid="false"  |  253×21  d:inline-block  overflow:clip  |  font:13.3333px
+                      p  #field-attachments-letters-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                  section  .formspec-group  |  584×239
+                    h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                      "Certification"
+                    div  .formspec-field.formspec-field--inline  data-name="certification.certifyAccurate"  |  584×56
+                      label  for="field-certification-certifyAccurate"  |  573×35
+                        "I certify that all information provided in this application is true and accurate to the best of my knowledge."
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      div  .formspec-toggle  |  584×20
+                        input  #field-certification-certifyAccurate  .formspec-input  type="checkbox"  role="switch"  aria-required  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                      p  #field-certification-certifyAccurate-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field.formspec-field--inline  data-name="certification.certifyAuthorized"  |  584×38
+                      label  for="field-certification-certifyAuthorized"  |  560×17
+                        "I am authorized to submit this application on behalf of the organization named above."
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      div  .formspec-toggle  |  584×20
+                        input  #field-certification-certifyAuthorized  .formspec-input  type="checkbox"  role="switch"  aria-required  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                      p  #field-certification-certifyAuthorized-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                    div  .formspec-field.formspec-field--inline  data-name="certification.agreeTerms"  |  584×38
+                      label  for="field-certification-agreeTerms"  |  425×17
+                        "I have read and agree to the grant program terms and conditions."
+                        span  .formspec-required  aria-hidden  |  12×17
+                          "*"
+                      div  .formspec-toggle  |  584×20
+                        input  #field-certification-agreeTerms  .formspec-input  type="checkbox"  role="switch"  aria-required  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                      p  #field-certification-agreeTerms-error  .formspec-error  aria-live="polite"  |  584×0  m:16,0
+                  button  .formspec-submit  type="submit"  |  584×21  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                    "Submit"
+    div  |  584×3366
+      div  |  584×16  m:0,0,12,0  |  color:rgb(136, 136, 136)  font:13px/600
+        "Web Component"
+      div  |  584×3338
+        div  |  584×3338
+          #shadow-root
+            link [hidden]
+            link [hidden]
+            div  |  584×3338
+              div  .isolated-story-root  |  584×3338
+                formspec-render  |  584×3338
+                  #shadow-root
+                  div  .formspec-container  |  584×3338
+                    div  .formspec-stack  |  584×3338
+                      div  .formspec-alert.formspec-alert--info  role="status"  |  584×18
+                        span  |  513×17
+                          "Applications for the 2026 funding cycle are now open. Deadline: June 30, 2026."
+                      h2  .formspec-heading  |  584×27  m:20,0  |  font:24px/bold
+                        "Part 1: Applicant Information"
+                      p  .formspec-text  |  584×36  m:16,0
+                        "Provide details about your organization and primary contact. All organizations must be registered entities with a val..."
+                      div  .formspec-group  |  584×535
+                        h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                          "Organization Information"
+                        div  .formspec-field  data-name="organization.orgName"  |  584×89
+                          label  .formspec-label  for="field-organization-orgName"  |  137×17
+                            "Organization Name"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          p  #field-organization-orgName-hint  .formspec-hint  |  584×18  m:16,0
+                            "Legal name as registered with your state."
+                          input  #field-organization-orgName  .formspec-input  type="text"  name="organization.orgName"  aria-describedby="field-organization-orgName-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-organization-orgName-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="organization.orgType"  |  584×37
+                          label  .formspec-label  for="field-organization-orgType"  |  131×17
+                            "Organization Type"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          div  .formspec-select-wrapper  |  584×19
+                            select  #field-organization-orgType  .formspec-input.formspec-select-native  name="organization.orgType"  aria-required  aria-invalid="false"  |  165×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                              option [hidden]
+                              option  value="nonprofit"  |  0×0  p:0,2,1,2
+                                "501(c)(3) Nonprofit"
+                              option  value="school"  |  0×0  p:0,2,1,2
+                                "Public School / District"
+                              option  value="tribal"  |  0×0  p:0,2,1,2
+                                "Tribal Organization"
+                              option  value="municipal"  |  0×0  p:0,2,1,2
+                                "Municipal Government"
+                              option  value="cooperative"  |  0×0  p:0,2,1,2
+                                "Community Cooperative"
+                          p  #field-organization-orgType-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="organization.ein"  |  584×89
+                          label  .formspec-label  for="field-organization-ein"  |  95×17
+                            "EIN / Tax ID"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          p  #field-organization-ein-hint  .formspec-hint  |  584×18  m:16,0
+                            "Federal Employer Identification Number (XX-XXXXXXX)."
+                          input  #field-organization-ein  .formspec-input  type="text"  name="organization.ein"  aria-describedby="field-organization-ein-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-organization-ein-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="organization.yearFounded"  |  584×21
+                          label  .formspec-label  for="field-organization-yearFounded"  |  101×17
+                            "Year Founded"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          input  #field-organization-yearFounded  .formspec-input  type="number"  name="organization.yearFounded"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-organization-yearFounded-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="organization.website"  |  584×89
+                          label  .formspec-label  for="field-organization-website"  |  51×17
+                            "Website"
+                          p  #field-organization-website-hint  .formspec-hint  |  584×18  m:16,0
+                            "Optional — your organization's public website."
+                          input  #field-organization-website  .formspec-input  type="text"  name="organization.website"  aria-describedby="field-organization-website-hint"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-organization-website-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="organization.annualBudget"  |  584×89
+                          label  .formspec-label  for="field-organization-annualBudget"  |  165×17
+                            "Annual Operating Budget"
+                          p  #field-organization-annualBudget-hint  .formspec-hint  |  584×18  m:16,0
+                            "Approximate total annual budget in USD."
+                          input  #field-organization-annualBudget  .formspec-input  type="number"  name="organization.annualBudget"  aria-describedby="field-organization-annualBudget-hint"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-organization-annualBudget-error  .formspec-error  |  584×0  m:16,0
+                      div  .formspec-group  |  584×294
+                        h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                          "Primary Contact"
+                        div  .formspec-field  data-name="contact.contactName"  |  584×21
+                          label  .formspec-label  for="field-contact-contactName"  |  80×17
+                            "Full Name"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          input  #field-contact-contactName  .formspec-input  type="text"  name="contact.contactName"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-contact-contactName-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="contact.contactTitle"  |  584×21
+                          label  .formspec-label  for="field-contact-contactTitle"  |  95×17
+                            "Title / Position"
+                          input  #field-contact-contactTitle  .formspec-input  type="text"  name="contact.contactTitle"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-contact-contactTitle-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="contact.contactEmail"  |  584×21
+                          label  .formspec-label  for="field-contact-contactEmail"  |  106×17
+                            "Email Address"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          input  #field-contact-contactEmail  .formspec-input  type="text"  name="contact.contactEmail"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-contact-contactEmail-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="contact.contactPhone"  |  584×89
+                          label  .formspec-label  for="field-contact-contactPhone"  |  108×17
+                            "Phone Number"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          p  #field-contact-contactPhone-hint  .formspec-hint  |  584×18  m:16,0
+                            "Format: (555) 123-4567"
+                          input  #field-contact-contactPhone  .formspec-input  type="text"  name="contact.contactPhone"  aria-describedby="field-contact-contactPhone-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-contact-contactPhone-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="contact.state"  |  584×37
+                          label  .formspec-label  for="field-contact-state"  |  44×17
+                            "State"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          div  .formspec-select-wrapper  |  584×19
+                            select  #field-contact-state  .formspec-input.formspec-select-native  name="contact.state"  aria-required  aria-invalid="false"  |  138×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                              option [hidden]
+                              option  value="AL"  |  0×0  p:0,2,1,2
+                                "Alabama"
+                              option  value="AK"  |  0×0  p:0,2,1,2
+                                "Alaska"
+                              option  value="AZ"  |  0×0  p:0,2,1,2
+                                "Arizona"
+                              option  value="CA"  |  0×0  p:0,2,1,2
+                                "California"
+                              option  value="CO"  |  0×0  p:0,2,1,2
+                                "Colorado"
+                              option  value="CT"  |  0×0  p:0,2,1,2
+                                "Connecticut"
+                              option  value="DC"  |  0×0  p:0,2,1,2
+                                "District of Columbia"
+                              option  value="FL"  |  0×0  p:0,2,1,2
+                                "Florida"
+                              option  value="GA"  |  0×0  p:0,2,1,2
+                                "Georgia"
+                              option  value="IL"  |  0×0  p:0,2,1,2
+                                "Illinois"
+                              option  value="MA"  |  0×0  p:0,2,1,2
+                                "Massachusetts"
+                              option  value="MD"  |  0×0  p:0,2,1,2
+                                "Maryland"
+                              option  value="MI"  |  0×0  p:0,2,1,2
+                                "Michigan"
+                              option  value="MN"  |  0×0  p:0,2,1,2
+                                "Minnesota"
+                              option  value="NY"  |  0×0  p:0,2,1,2
+                                "New York"
+                              option  value="OH"  |  0×0  p:0,2,1,2
+                                "Ohio"
+                              option  value="OR"  |  0×0  p:0,2,1,2
+                                "Oregon"
+                              option  value="PA"  |  0×0  p:0,2,1,2
+                                "Pennsylvania"
+                              option  value="TX"  |  0×0  p:0,2,1,2
+                                "Texas"
+                              option  value="VA"  |  0×0  p:0,2,1,2
+                                "Virginia"
+                              option  value="WA"  |  0×0  p:0,2,1,2
+                                "Washington"
+                          p  #field-contact-state-error  .formspec-error  |  584×0  m:16,0
+                      hr  .formspec-divider  |  584×2  m:8,0  overflow:hidden  |  color:rgb(128, 128, 128)  border:1px inset rgb(128, 128, 128)
+                      h2  .formspec-heading  |  584×27  m:20,0  |  font:24px/bold
+                        "Part 2: Project & Budget"
+                      div  .formspec-group  |  584×962
+                        h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                          "Project Details"
+                        div  .formspec-field  data-name="project.projectTitle"  |  584×89
+                          label  .formspec-label  for="field-project-projectTitle"  |  91×17
+                            "Project Title"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          p  #field-project-projectTitle-hint  .formspec-hint  |  584×18  m:16,0
+                            "A concise, descriptive title for your proposed project."
+                          input  #field-project-projectTitle  .formspec-input  type="text"  name="project.projectTitle"  aria-describedby="field-project-projectTitle-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-project-projectTitle-error  .formspec-error  |  584×0  m:16,0
+                        fieldset  .formspec-fieldset  data-name="project.priorityLevel"  |  580×142  m:0,2  p:6,12,10,12  |  border:2px groove rgb(239, 239, 239)
+                          legend  #field-project-priorityLevel-label  .formspec-legend  |  110×18  p:0,2
+                            "Funding Priority"
+                          p  #field-project-priorityLevel-hint  .formspec-hint  |  552×18  m:16,0
+                            "How urgently does this project need funding?"
+                          div  .formspec-radio-group  role="radiogroup"  aria-labelledby="field-project-priorityLevel-label"  aria-describedby="field-project-priorityLevel-hint field-project-priorityLevel-error"  |  552×40
+                            label  |  286×17
+                              "Urgent — community need is immediate"
+                              input  type="radio"  name="project.priorityLevel"  value="urgent"  aria-required="false"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,0,5  |  font:13.3333px
+                            label  |  539×37
+                              "High — significant impact within 6 months"
+                              input  type="radio"  name="project.priorityLevel"  value="high"  |  13×13  d:inline-block  m:3,3,0,5  |  font:13.3333px
+                            label  |  359×17
+                              "Standard — planned initiative with flexible timeline"
+                              input  type="radio"  name="project.priorityLevel"  value="standard"  |  13×13  d:inline-block  m:3,3,0,5  |  font:13.3333px
+                          p  #field-project-priorityLevel-error  .formspec-error  |  552×0  m:16,0
+                        div  .formspec-field  data-name="project.focusArea"  |  584×37
+                          label  .formspec-label  for="field-project-focusArea"  |  140×17
+                            "Primary Focus Area"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          div  .formspec-select-wrapper  |  584×19
+                            select  #field-project-focusArea  .formspec-input.formspec-select-native  name="project.focusArea"  aria-required  aria-invalid="false"  |  192×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                              option [hidden]
+                              option  value="education"  |  0×0  p:0,2,1,2
+                                "Education & Literacy"
+                              option  value="health"  |  0×0  p:0,2,1,2
+                                "Public Health"
+                              option  value="environment"  |  0×0  p:0,2,1,2
+                                "Environment & Sustainability"
+                              option  value="arts"  |  0×0  p:0,2,1,2
+                                "Arts & Culture"
+                              option  value="housing"  |  0×0  p:0,2,1,2
+                                "Housing & Infrastructure"
+                              option  value="youth"  |  0×0  p:0,2,1,2
+                                "Youth Development"
+                          p  #field-project-focusArea-error  .formspec-error  |  584×0  m:16,0
+                        fieldset  .formspec-fieldset  data-name="project.additionalAreas"  |  580×142  m:0,2  p:6,12,10,12  |  border:2px groove rgb(239, 239, 239)
+                          legend  #field-project-additionalAreas-label  .formspec-legend  |  155×18  p:0,2
+                            "Additional Focus Areas"
+                          p  #field-project-additionalAreas-hint  .formspec-hint  |  552×18  m:16,0
+                            "Select any secondary areas your project touches."
+                          div  .formspec-checkbox-group  role="group"  aria-labelledby="field-project-additionalAreas-label"  aria-describedby="field-project-additionalAreas-hint field-project-additionalAreas-error"  |  552×40
+                            label  |  163×17
+                              "Education & Literacy"
+                              input  type="checkbox"  name="project.additionalAreas"  value="education"  aria-required="false"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                            label  |  112×17
+                              "Public Health"
+                              input  type="checkbox"  name="project.additionalAreas"  value="health"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                            label  |  216×17
+                              "Environment & Sustainability"
+                              input  type="checkbox"  name="project.additionalAreas"  value="environment"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                            label  |  541×37
+                              "Arts & Culture"
+                              input  type="checkbox"  name="project.additionalAreas"  value="arts"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                            label  |  186×17
+                              "Housing & Infrastructure"
+                              input  type="checkbox"  name="project.additionalAreas"  value="housing"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                            label  |  152×17
+                              "Youth Development"
+                              input  type="checkbox"  name="project.additionalAreas"  value="youth"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                          p  #field-project-additionalAreas-error  .formspec-error  |  552×0  m:16,0
+                        div  .formspec-field  data-name="project.summary"  |  584×141
+                          label  .formspec-label  for="field-project-summary"  |  124×17
+                            "Project Summary"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          p  #field-project-summary-hint  .formspec-hint  |  584×36  m:16,0
+                            "Describe the project in 2-3 paragraphs. Include the problem, your approach, and expected outcomes."
+                          textarea  #field-project-summary  .formspec-input  name="project.summary"  aria-describedby="field-project-summary-hint"  aria-required  aria-invalid="false"  |  182×51  d:inline-block  p:2  overflow:auto  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                          p  #field-project-summary-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="project.startDate"  |  584×21
+                          label  .formspec-label  for="field-project-startDate"  |  140×17
+                            "Proposed Start Date"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          input  #field-project-startDate  .formspec-input  type="date"  name="project.startDate"  aria-required  aria-invalid="false"  |  125×21  d:inline-block  p:0,0,0,1  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-project-startDate-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="project.endDate"  |  584×21
+                          label  .formspec-label  for="field-project-endDate"  |  136×17
+                            "Proposed End Date"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          input  #field-project-endDate  .formspec-input  type="date"  name="project.endDate"  aria-required  aria-invalid="false"  |  125×21  d:inline-block  p:0,0,0,1  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-project-endDate-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="project.beneficiaries"  |  584×89
+                          label  .formspec-label  for="field-project-beneficiaries"  |  238×17
+                            "Estimated Number of Beneficiaries"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          p  #field-project-beneficiaries-hint  .formspec-hint  |  584×18  m:16,0
+                            "How many people will directly benefit from this project?"
+                          input  #field-project-beneficiaries  .formspec-input  type="number"  name="project.beneficiaries"  aria-describedby="field-project-beneficiaries-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-project-beneficiaries-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field.formspec-field--inline  data-name="project.isRenewal"  |  584×38
+                          label  .formspec-label  for="field-project-isRenewal"  |  306×17
+                            "This is a renewal of a previously funded project"
+                          div  .formspec-toggle  |  584×20
+                            input  #field-project-isRenewal  .formspec-input  type="checkbox"  name="project.isRenewal"  role="switch"  aria-required="false"  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                          p  #field-project-isRenewal-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field.formspec-hidden  aria-hidden  data-name="project.priorGrantId"  |  584×89
+                          label  .formspec-label  for="field-project-priorGrantId"  |  93×17
+                            "Prior Grant ID"
+                          p  #field-project-priorGrantId-hint  .formspec-hint  |  584×18  m:16,0
+                            "Enter the grant ID from your previous award."
+                          input  #field-project-priorGrantId  .formspec-input  type="text"  name="project.priorGrantId"  aria-describedby="field-project-priorGrantId-hint"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-project-priorGrantId-error  .formspec-error  |  584×0  m:16,0
+                      div  .formspec-repeat  data-bind="personnel"  |  584×169
+                        div  .formspec-repeat-list  |  584×148
+                          div  .formspec-repeat-instance  role="group"  aria-label="Key Personnel 1 of 1"  |  584×148
+                            div  .formspec-field  data-name="personnel[0].personName"  |  584×21
+                              label  .formspec-label  for="field-personnel-0--personName"  |  68×17
+                                "Full Name"
+                              input  #field-personnel-0--personName  .formspec-input  type="text"  name="personnel[0].personName"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                              p  #field-personnel-0--personName-error  .formspec-error  |  584×0  m:16,0
+                            div  .formspec-field  data-name="personnel[0].personRole"  |  584×37
+                              label  .formspec-label  for="field-personnel-0--personRole"  |  30×17
+                                "Role"
+                              div  .formspec-select-wrapper  |  584×19
+                                select  #field-personnel-0--personRole  .formspec-input.formspec-select-native  name="personnel[0].personRole"  aria-required="false"  aria-invalid="false"  |  146×19  d:inline-block  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                                  option [hidden]
+                                  option  value="pi"  |  0×0  p:0,2,1,2
+                                    "Principal Investigator"
+                                  option  value="copi"  |  0×0  p:0,2,1,2
+                                    "Co-PI"
+                                  option  value="coordinator"  |  0×0  p:0,2,1,2
+                                    "Project Coordinator"
+                                  option  value="evaluator"  |  0×0  p:0,2,1,2
+                                    "Evaluator"
+                                  option  value="other"  |  0×0  p:0,2,1,2
+                                    "Other"
+                              p  #field-personnel-0--personRole-error  .formspec-error  |  584×0  m:16,0
+                            div  .formspec-field  data-name="personnel[0].personEmail"  |  584×21
+                              label  .formspec-label  for="field-personnel-0--personEmail"  |  94×17
+                                "Email Address"
+                              input  #field-personnel-0--personEmail  .formspec-input  type="text"  name="personnel[0].personEmail"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                              p  #field-personnel-0--personEmail-error  .formspec-error  |  584×0  m:16,0
+                            button  .formspec-repeat-remove.formspec-focus-ring  type="button"  aria-label="Remove Key Personnel 1"  |  156×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                              "Remove Key Personnel"
+                        button  .formspec-repeat-add.formspec-focus-ring  type="button"  |  130×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                          "Add Key Personnel"
+                        div  .formspec-sr-only  aria-live="polite"  |  584×0
+                      div  .formspec-group  |  584×411
+                        h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                          "Budget"
+                        div  .formspec-field  data-name="budget.requestedAmount"  |  584×89
+                          label  .formspec-label  for="field-budget-requestedAmount"  |  134×17
+                            "Requested Amount"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          p  #field-budget-requestedAmount-hint  .formspec-hint  |  584×18  m:16,0
+                            "Maximum award is $100,000."
+                          input  #field-budget-requestedAmount  .formspec-input  type="number"  name="budget.requestedAmount"  aria-describedby="field-budget-requestedAmount-hint"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-budget-requestedAmount-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="budget.matchingFunds"  |  584×89
+                          label  .formspec-label  for="field-budget-matchingFunds"  |  104×17
+                            "Matching Funds"
+                          p  #field-budget-matchingFunds-hint  .formspec-hint  |  584×18  m:16,0
+                            "Amount of matching or in-kind contributions."
+                          input  #field-budget-matchingFunds  .formspec-input  type="number"  name="budget.matchingFunds"  aria-describedby="field-budget-matchingFunds-hint"  aria-required="false"  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-budget-matchingFunds-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="budget.totalProjectCost"  |  584×21
+                          label  .formspec-label  for="field-budget-totalProjectCost"  |  127×17
+                            "Total Project Cost"
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          input  #field-budget-totalProjectCost  .formspec-input  type="number"  name="budget.totalProjectCost"  aria-required  aria-invalid="false"  |  153×21  d:inline-block  p:1,2  overflow:clip  |  bg:rgb(255, 255, 255)  border:2px inset rgb(118, 118, 118)  font:13.3333px
+                          p  #field-budget-totalProjectCost-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field  data-name="budget.budgetNarrative"  |  584×123
+                          label  .formspec-label  for="field-budget-budgetNarrative"  |  111×17
+                            "Budget Narrative"
+                          p  #field-budget-budgetNarrative-hint  .formspec-hint  |  584×18  m:16,0
+                            "Explain how the requested funds will be allocated across major categories."
+                          textarea  #field-budget-budgetNarrative  .formspec-input  name="budget.budgetNarrative"  aria-describedby="field-budget-budgetNarrative-hint"  aria-required="false"  aria-invalid="false"  |  182×51  d:inline-block  p:2  overflow:auto  |  bg:rgb(255, 255, 255)  border:1px solid rgb(118, 118, 118)  font:13.3333px
+                          p  #field-budget-budgetNarrative-error  .formspec-error  |  584×0  m:16,0
+                      div  .formspec-group  |  584×412
+                        h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                          "Supporting Documents"
+                        div  .formspec-field.formspec-file-upload  data-name="attachments.projectPlan"  |  584×113
+                          label  .formspec-label  for="field-attachments-projectPlan"  |  136×17
+                            "Detailed Project Plan"
+                          p  #field-attachments-projectPlan-hint  .formspec-hint  |  584×18  m:16,0
+                            "Upload a PDF with your full project plan, timeline, and milestones."
+                          div  .formspec-file-drop-zone.formspec-drop-zone.formspec-focus-ring  role="button"  aria-label="Drop files here or click to browse"  tabindex="0"  |  584×24
+                            div  .formspec-file-drop-content  |  584×24
+                              span  .formspec-file-drop-icon  aria-hidden  |  16×17
+                                "⇵"
+                              span  .formspec-file-drop-label  |  150×17
+                                "Drag & drop a file here"
+                              button  .formspec-file-browse-btn.formspec-focus-ring.formspec-button-secondary  type="button"  |  60×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                                "Browse"
+                          input  #field-attachments-projectPlan  .formspec-file-input-hidden  type="file"  name="attachments.projectPlan"  aria-describedby="field-attachments-projectPlan-hint"  aria-required="false"  aria-invalid="false"  |  253×21  d:inline-block  overflow:clip  |  font:13.3333px
+                          ul .formspec-file-list [hidden]
+                          p  #field-attachments-projectPlan-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field.formspec-file-upload  data-name="attachments.financials"  |  584×113
+                          label  .formspec-label  for="field-attachments-financials"  |  134×17
+                            "Financial Statements"
+                          p  #field-attachments-financials-hint  .formspec-hint  |  584×18  m:16,0
+                            "Most recent audited financial statements or Form 990."
+                          div  .formspec-file-drop-zone.formspec-drop-zone.formspec-focus-ring  role="button"  aria-label="Drop files here or click to browse"  tabindex="0"  |  584×24
+                            div  .formspec-file-drop-content  |  584×24
+                              span  .formspec-file-drop-icon  aria-hidden  |  16×17
+                                "⇵"
+                              span  .formspec-file-drop-label  |  150×17
+                                "Drag & drop a file here"
+                              button  .formspec-file-browse-btn.formspec-focus-ring.formspec-button-secondary  type="button"  |  60×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                                "Browse"
+                          input  #field-attachments-financials  .formspec-file-input-hidden  type="file"  name="attachments.financials"  aria-describedby="field-attachments-financials-hint"  aria-required="false"  aria-invalid="false"  |  253×21  d:inline-block  overflow:clip  |  font:13.3333px
+                          ul .formspec-file-list [hidden]
+                          p  #field-attachments-financials-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field.formspec-file-upload  data-name="attachments.letters"  |  584×113
+                          label  .formspec-label  for="field-attachments-letters"  |  116×17
+                            "Letters of Support"
+                          p  #field-attachments-letters-hint  .formspec-hint  |  584×18  m:16,0
+                            "Optional — letters from partner organizations or community stakeholders."
+                          div  .formspec-file-drop-zone.formspec-drop-zone.formspec-focus-ring  role="button"  aria-label="Drop files here or click to browse"  tabindex="0"  |  584×24
+                            div  .formspec-file-drop-content  |  584×24
+                              span  .formspec-file-drop-icon  aria-hidden  |  16×17
+                                "⇵"
+                              span  .formspec-file-drop-label  |  150×17
+                                "Drag & drop a file here"
+                              button  .formspec-file-browse-btn.formspec-focus-ring.formspec-button-secondary  type="button"  |  60×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                                "Browse"
+                          input  #field-attachments-letters  .formspec-file-input-hidden  type="file"  name="attachments.letters"  aria-describedby="field-attachments-letters-hint"  aria-required="false"  aria-invalid="false"  |  253×21  d:inline-block  overflow:clip  |  font:13.3333px
+                          ul .formspec-file-list [hidden]
+                          p  #field-attachments-letters-error  .formspec-error  |  584×0  m:16,0
+                      div  .formspec-group  |  584×205
+                        h3  .formspec-group-title  |  584×22  m:19,0  |  font:18.72px/bold
+                          "Certification"
+                        div  .formspec-field.formspec-field--inline  data-name="certification.certifyAccurate"  |  584×56
+                          label  .formspec-label  for="field-certification-certifyAccurate"  |  573×35
+                            "I certify that all information provided in this application is true and accurate to the best of my knowledge."
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          div  .formspec-toggle  |  584×20
+                            input  #field-certification-certifyAccurate  .formspec-input  type="checkbox"  name="certification.certifyAccurate"  role="switch"  aria-required  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                          p  #field-certification-certifyAccurate-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field.formspec-field--inline  data-name="certification.certifyAuthorized"  |  584×38
+                          label  .formspec-label  for="field-certification-certifyAuthorized"  |  560×17
+                            "I am authorized to submit this application on behalf of the organization named above."
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          div  .formspec-toggle  |  584×20
+                            input  #field-certification-certifyAuthorized  .formspec-input  type="checkbox"  name="certification.certifyAuthorized"  role="switch"  aria-required  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                          p  #field-certification-certifyAuthorized-error  .formspec-error  |  584×0  m:16,0
+                        div  .formspec-field.formspec-field--inline  data-name="certification.agreeTerms"  |  584×38
+                          label  .formspec-label  for="field-certification-agreeTerms"  |  425×17
+                            "I have read and agree to the grant program terms and conditions."
+                            abbr  .formspec-required.usa-label--required  |  12×17
+                              "*"
+                          div  .formspec-toggle  |  584×20
+                            input  #field-certification-agreeTerms  .formspec-input  type="checkbox"  name="certification.agreeTerms"  role="switch"  aria-required  aria-invalid="false"  |  13×13  d:inline-block  m:3,3,3,4  |  font:13.3333px
+                          p  #field-certification-agreeTerms-error  .formspec-error  |  584×0  m:16,0
+                      button  .formspec-submit.formspec-focus-ring  type="button"  |  58×21  d:inline-block  p:1,6  |  bg:rgb(239, 239, 239)  border:2px outset rgb(0, 0, 0)  font:13.3333px
+                        "Submit"

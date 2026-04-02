@@ -6,9 +6,9 @@ function minimalState(): ProjectState {
   return {
     definition: { $formspec: '1.0', url: '', version: '', status: 'draft', title: '', items: [] } as any,
     component: {},
-    generatedComponent: { 'x-studio-generated': true as const },
     theme: {},
-    mapping: {},
+    mappings: {},
+    selectedMappingId: 'default',
     extensions: { registries: [] },
     versioning: { baseline: {} as any, releases: [] },
   } as ProjectState;

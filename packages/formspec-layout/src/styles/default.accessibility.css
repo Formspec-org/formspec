@@ -1,0 +1,16 @@
+/* @filedesc Motion and responsive accessibility adjustments for the default Formspec skin. */
+
+@media (prefers-reduced-motion: reduce) {
+  .formspec-container *,
+  .formspec-container *::before,
+  .formspec-container *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 575px) {
+  .formspec-screener-fields {
+    grid-template-columns: 1fr;
+  }
+}

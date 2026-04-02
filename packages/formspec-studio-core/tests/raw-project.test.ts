@@ -216,4 +216,47 @@ describe('Project', () => {
     expect(project.statistics()).toBeDefined();
     expect(project.commandHistory().length).toBeGreaterThan(0);
   });
+
+  it('bootstraps an authored component document for definition-only Studio projects', () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:test:bootstrap',
+          version: '1.0.0',
+          title: 'Bootstrap',
+          items: [{ key: 'name', type: 'field', dataType: 'string', label: 'Name' }],
+        } as any,
+      },
+    });
+
+    const component = project.component as any;
+    expect(component.$formspecComponent).toBe('1.0');
+    expect(component.version).toBe('0.1.0');
+    expect(component['x-studio-generated']).toBeUndefined();
+    expect(component.targetDefinition?.url).toBe('urn:test:bootstrap');
+    expect(component.tree?.component).toBe('Stack');
+    expect(component.tree?.children?.some((node: any) => node.bind === 'name')).toBe(true);
+  });
+
+  it('re-bootstrap authored component state after a definition-only bundle import', () => {
+    const project = createProject();
+
+    project.loadBundle({
+      definition: {
+        $formspec: '1.0',
+        url: 'urn:test:imported',
+        version: '1.0.0',
+        title: 'Imported',
+        items: [{ key: 'email', type: 'field', dataType: 'string', label: 'Email' }],
+      } as any,
+    });
+
+    const component = project.component as any;
+    expect(component.$formspecComponent).toBe('1.0');
+    expect(component.version).toBe('0.1.0');
+    expect(component['x-studio-generated']).toBeUndefined();
+    expect(component.targetDefinition?.url).toBe('urn:test:imported');
+    expect(component.tree?.children?.some((node: any) => node.bind === 'email')).toBe(true);
+  });
 });

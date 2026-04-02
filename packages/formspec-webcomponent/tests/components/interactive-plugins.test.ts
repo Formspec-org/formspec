@@ -96,13 +96,14 @@ describe('pageMode wizard (Stack + Pages + formPresentation)', () => {
         expect(panels[1].classList.contains('formspec-hidden')).toBe(true);
     });
 
-    it('Previous hidden at step 0', () => {
+    it('Previous disabled at step 0 (visible, matches React)', () => {
         const el = renderPageModeWizard([
             { title: 'Step 1', children: [{ component: 'Text', text: 'Step 1' }] },
             { title: 'Step 2', children: [{ component: 'Text', text: 'Step 2' }] },
         ]);
         const prevBtn = el.querySelector('.formspec-wizard-prev') as HTMLButtonElement;
-        expect(prevBtn.classList.contains('formspec-hidden')).toBe(true);
+        expect(prevBtn.disabled).toBe(true);
+        expect(prevBtn.classList.contains('formspec-hidden')).toBe(false);
     });
 
     it('keeps the last-step submit button enabled', () => {
@@ -758,7 +759,7 @@ describe('ValidationSummary plugin', () => {
             component: 'Stack',
             children: [
                 { component: 'TextInput', bind: 'name' },
-                { component: 'ValidationSummary', source: 'submit', dedupe: true, jumpLinks: true },
+                { component: 'ValidationSummary', source: 'submit', dedupe: true, jumpLinks: true, showFieldErrors: false },
             ],
         });
         el.render();

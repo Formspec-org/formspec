@@ -305,7 +305,7 @@ test.describe('Components: Progressive Component Rendering', () => {
 
         const stars = page.locator('.formspec-rating-star');
         await expect(stars).toHaveCount(5);
-        await expect(stars.first()).toHaveText('♥');
+        await expect(stars.first()).toHaveText('♡');
 
         await stars.first().click({ position: { x: 2, y: 8 } });
 

@@ -10,7 +10,6 @@
 import type { ComponentState, ProjectState } from '../types.js';
 import {
   getEditableComponentDocument,
-  hasAuthoredComponentTree,
 } from '../component-documents.js';
 
 /**
@@ -39,29 +38,15 @@ export type TreeNode = {
 };
 
 /**
- * Mark a component document as Studio-generated internal state.
- *
- * Studio-generated documents are not spec-valid serialized component documents;
- * they are internal authoring state used by the editor.
- */
-export function markStudioGeneratedComponent(component: ComponentState): void {
-  component['x-studio-generated'] = true;
-}
-
-/**
  * Ensure the component document has a root tree node.
  *
- * Initializes `component.tree` with a synthetic Stack root if absent and marks
- * the document as Studio-generated if it doesn't have an authored tree.
+ * Initializes `component.tree` with a synthetic Stack root if absent.
  *
  * @param state - The project state.
  * @returns The root tree node.
  */
 export function ensureTree(state: ProjectState): TreeNode {
   const component = getEditableComponentDocument(state) as ComponentState;
-  if (!hasAuthoredComponentTree(state.component)) {
-    markStudioGeneratedComponent(component);
-  }
   if (!component.tree) {
     component.tree = { component: 'Stack', nodeId: 'root', children: [] };
   }

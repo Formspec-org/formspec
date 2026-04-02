@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Formspec specification and schema navigator with spec-expert research agent.",
-    "version": "1.3.0"
+    "version": "1.7.1"
   },
   "plugins": [
     {
       "name": "formspec-specs",
       "description": "Formspec specification and schema navigator with spec-expert research agent. Provides structured reference maps for 625K+ of spec content and 8K lines of JSON schemas.",
       "source": "./.claude-plugin",
-      "version": "1.3.0",
+      "version": "1.7.1",
       "category": "developer-tools",
       "keywords": [
         "formspec",
@@ -25,16 +25,24 @@
       "agents": [
         "./agents/spec-expert.md",
         "./agents/formspec-scout.md",
+        "./agents/agent-refiner.md",
         "./agents/formspec-craftsman.md",
         "./agents/formspec-pm.md",
-        "./agents/content-writer.md"
+        "./agents/content-writer.md",
+        "./agents/formspec-service-designer.md",
+        "./agents/formspec-visual-designer.md",
+        "./agents/formspec-test.md",  
+        "./agents/skill-updater.md",  
+        "./agents/schema-reference-writer.md",
+        "./agents/spec-reference-writer.md"
       ],
       "commands": [
         "./commands"
       ],
       "skills": [
         "./skills/formspec-specs",
-        "./skills/github-projects"
+        "./skills/github-projects",
+        "./skills/leave-advice"
       ]
     }
   ]

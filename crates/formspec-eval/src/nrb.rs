@@ -123,6 +123,8 @@ mod tests {
             repeatable: false,
             repeat_min: None,
             repeat_max: None,
+            option_values: vec![],
+            accept_types: vec![],
             extensions: vec![],
             pre_populate_instance: None,
             pre_populate_path: None,

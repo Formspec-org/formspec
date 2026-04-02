@@ -40,20 +40,7 @@ function getHandoffBundle(): any | null {
 export function createStudioProject(seed?: Parameters<typeof createProject>[0]): Project {
   const handoffBundle = !seed ? getHandoffBundle() : null;
   const finalSeed = seed ?? (handoffBundle ? { seed: handoffBundle } : { seed: { definition: exampleDefinition as FormDefinition } });
-
-  const project = createProject(finalSeed);
-
-  // Auto-generate pages from definition groups if the seed didn't provide page nodes
-  const existingPages = project.listPages();
-  if (existingPages.length === 0) {
-    const items = project.definition.items ?? [];
-    const hasGroups = items.some((item: any) => item.type === 'group');
-    if (hasGroups) {
-      project.autoGeneratePages();
-    }
-  }
-
-  return project;
+  return createProject(finalSeed);
 }
 
 interface StudioAppProps {

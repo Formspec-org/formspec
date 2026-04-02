@@ -169,7 +169,7 @@ not implement, rather than silently ignoring the call.
 A conformant **Extended** processor MUST support Formspec Core plus:
 
 1. Extension properties (§8).
-2. Screener routing (§4.7).
+2. Screener routing (see [Screener Specification](../screener/screener-spec.md)).
 3. Modular composition and assembly (§6.6).
 4. Version migration maps (§6.7).
 5. Pre-population declarations (§4.2.3, `prePopulate`).
@@ -772,6 +772,9 @@ recalculation guarantee, borrowed from XForms.
 1. For each relevant field that is in the affected subgraph or whose
    `required` / `relevant` state changed in Phase 2:
    a. If the field has a `constraint` Bind, evaluate the constraint expression.
+      If the expression fails to parse, record a ValidationResult with severity
+      `"error"`, code `CONSTRAINT_PARSE_ERROR`, and a processor-generated
+      message describing the parse failure.
       If the result is `false`, record a ValidationResult with severity
       `"error"` and the Bind’s `constraintMessage`.
    b. If the field has a `required` Bind that evaluated to `true`, and the
@@ -865,6 +868,7 @@ codes override the generic defaults.
 | `MIN_REPEAT` | `cardinality` | Fewer repeat instances than `minRepeat`. |
 | `MAX_REPEAT` | `cardinality` | More repeat instances than `maxRepeat`. |
 | `CONSTRAINT_FAILED` | `constraint` | Bind `constraint` returned `false`. |
+| `CONSTRAINT_PARSE_ERROR` | `constraint` | Bind `constraint` expression failed to parse. |
 | `SHAPE_FAILED` | `shape` | Shape's constraint returned `false`. |
 | `EXTERNAL_FAILED` | `external` | External validation source reported a failure. |
 
@@ -1047,7 +1051,7 @@ noted.
 | 7 | `??` | Null-coalescing | Left |
 | 8 | `+`, `-`, `&` | Addition / concatenation | Left |
 | 9 | `*`, `/`, `%` | Multiplication | Left |
-| 10 (highest) | `not` (prefix), `-` (negate) | Unary | Right |
+| 10 (highest) | `not` / `!` (prefix), `-` (negate) | Unary | Right |
 
 #### Operator Semantics
 
@@ -1075,7 +1079,7 @@ noted.
 - `null = <any non-null value>` evaluates to `false`.
 - Cross-type equality (e.g., `number = string`) MUST signal a type error.
 
-**Logical operators** (`and`, `or`, `not`):
+**Logical operators** (`and`, `or`, `not` / `!`):
 
 - Operands MUST be of type `boolean`. Non-boolean operands MUST signal a type
   error (no truthy/falsy coercion).
@@ -1872,7 +1876,6 @@ generated from `schemas/definition.schema.json`:
 | `#/properties/name` | `name` | <code>string</code> | no | pattern: <code>^[a-zA-Z][a-zA-Z0-9\-]*&#36;</code> | Machine-readable short name for the definition. Must start with a letter, may contain letters, digits, and hyphens. Unlike 'url', this is a local identifier for tooling convenience, not a globally unique reference. |
 | `#/properties/nonRelevantBehavior` | `nonRelevantBehavior` | <code>string</code> | no | enum: <code>"remove"</code>, <code>"empty"</code>, <code>"keep"</code>; default: <code>"remove"</code> | Form-wide default for how non-relevant fields are treated in submitted Response data. 'remove' (DEFAULT): non-relevant nodes and descendants excluded from Response. 'empty': retained but values set to null. 'keep': retained with current values. Per-Bind overrides via Bind.nonRelevantBehavior take precedence. Regardless of this setting, non-relevant fields are always exempt from validation. |
 | `#/properties/optionSets` | `optionSets` | <code>object</code> | no | — | Named, reusable option lists for choice and multiChoice fields. The property name is the set identifier, referenced by Field items via the 'optionSet' property. Avoids duplicating the same options across multiple fields. |
-| `#/properties/screener` | `screener` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Screener</code> | Routing mechanism that classifies respondents via screening questions and directs them to the appropriate target Definition. Routes are evaluated in declaration order; first match wins. Screener items are NOT part of the form's instance data. |
 | `#/properties/shapes` | `shapes` | <code>array</code> | no | — | Named, composable validation rule sets (inspired by W3C SHACL). Shapes provide cross-field and form-level validation beyond per-field Bind constraints. Each Shape targets a data path, evaluates a FEL constraint expression, and produces structured ValidationResult entries with severity, message, and code on failure. Shapes compose via 'and', 'or', 'not', 'xone' operators. Only error-severity results block submission; warnings and info are advisory. |
 | `#/properties/status` | `status` | <code>string</code> | yes | enum: <code>"draft"</code>, <code>"active"</code>, <code>"retired"</code>; critical | Definition lifecycle state. Transitions: draft → active → retired. Backward transitions are forbidden for the same version. 'draft': under development, not for production. 'active': in production, content is immutable. 'retired': no longer used for new data collection, but existing Responses remain valid. |
 | `#/properties/title` | `title` | <code>string</code> | yes | critical | Human-readable definition title. Displayed by authoring tools and form renderers. |
@@ -2536,61 +2539,17 @@ An OptionSet is defined by one of:
 A `choice` or `multiChoice` field references a named option set via the
 `optionSet` property on the Field item (§4.2.3).
 
-### 4.7 Screener Routing
+### 4.7 Screener Routing *(Deprecated)*
 
-A **Screener** is a routing mechanism that classifies respondents and directs
-them to the appropriate target Definition. Screeners are declared in the
-optional `screener` property of a Definition.
-
-```json
-{
-  "screener": {
-    "items": [
-      {
-        "key": "award_amount",
-        "type": "field",
-        "dataType": "money",
-        "label": "Total federal award amount"
-      }
-    ],
-    "binds": [
-      { "path": "award_amount", "required": "true" }
-    ],
-    "routes": [
-      {
-        "condition": "moneyAmount($award_amount) < 250000",
-        "target": "https://grants.gov/forms/sf-425-short|1.0.0",
-        "label": "SF-425 Short Form"
-      },
-      {
-        "condition": "true",
-        "target": "https://grants.gov/forms/sf-425|2.1.0",
-        "label": "SF-425 Full Form"
-      }
-    ]
-  }
-}
-```
-
-#### 4.7.1 Screener Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `screener.items` | array of Item | Fields for routing classification. These use the standard Item schema (§4.2) and their values are available to route conditions. |
-| `screener.binds` | array of Bind | Bind declarations scoped to screener items. Paths reference screener item keys. Supports `required`, `relevant`, `constraint`, and `calculate`. These binds are evaluated in the screener's own scope — they do NOT interact with the main form's binds. |
-| `screener.routes` | array of Route | Ordered routing rules. |
-| `screener.routes[].condition` | string (FEL → boolean) | Expression evaluated against screener item values. |
-| `screener.routes[].target` | string (URI) | Canonical reference (`url\|version`) to the target FormDefinition. |
-| `screener.routes[].label` | string (OPTIONAL) | Human-readable route description. |
-
-Routes are evaluated in declaration order. The first route whose `condition`
-evaluates to `true` wins. A route with `"condition": "true"` acts as a
-default/fallback.
-
-Screener items are NOT part of the form's instance data — they exist only for
-routing purposes. A Definition with a `screener` section MAY also contain
-regular `items` and `binds`; in this case the screener acts as a gating step
-before the main form.
+> **Deprecated.** Screener routing has been extracted from the Definition
+> document into its own companion document type. See the
+> [Screener Specification](../screener/screener-spec.md) for the normative
+> definition of screener documents, evaluation strategies, override routing,
+> and Determination Records.
+>
+> The `screener` property is no longer part of the Definition schema as of
+> v1.0. Implementations MUST use standalone Screener Documents
+> (`$formspecScreener`) instead of embedded screeners.
 
 ***
 
@@ -2756,6 +2715,7 @@ condition types:
 1. **Type mismatch** — the value does not conform to the Field's `dataType`.
 2. **Required violation** — a required node has an empty value.
 3. **Bind constraint failure** — a Bind's `constraint` evaluates to `false`.
+3a. **Bind constraint parse error** — a Bind's `constraint` expression fails to parse. Processors MUST surface this as a validation error rather than silently passing.
 4. **Shape constraint failure** — a Shape's `constraint` or composition evaluates to invalid.
 5. **Repeat cardinality violation** — a repeatable Group has fewer than `minRepeat` or more than `maxRepeat` repetitions.
 
@@ -3965,125 +3925,11 @@ though the year-over-year warning persists.
 
 ***
 
-### 7.5 Screener Routing to Form Variants
+### 7.5 Screener Routing to Form Variants *(Deprecated)*
 
-This example demonstrates the `screener` property (§4.7) routing users to
-one of two form variants based on classification questions. Screener items
-have their own binds for validation and conditional relevance. Routes are
-evaluated in declaration order; the first match wins.
-
-**Demonstrated features:**
-
-- `screener` property with `items`, `binds`, and `routes`
-- Screener-scoped binds (`required`, `constraint`, `relevant`)
-- Ordered route conditions with a default fallback
-- `derivedFrom` relationships between screener and variant forms
-
-#### 7.5.1 Screener Definition
-
-```json
-{
-  "url": "https://grants.example.gov/forms/progress-screener",
-  "version": "2025-06-01",
-  "status": "active",
-  "title": "Progress Report — Screener",
-
-  "screener": {
-    "items": [
-      {
-        "key": "award_type",
-        "type": "field",
-        "dataType": "string",
-        "label": "What type of award is this?",
-        "options": [
-          { "value": "grant",                "label": "Grant" },
-          { "value": "cooperative_agreement", "label": "Cooperative Agreement" },
-          { "value": "contract",             "label": "Contract" }
-        ]
-      },
-      {
-        "key": "reporting_period_type",
-        "type": "field",
-        "dataType": "string",
-        "label": "Is this an interim or final report?",
-        "options": [
-          { "value": "interim", "label": "Interim (Quarterly / Semi-annual)" },
-          { "value": "final",   "label": "Final" }
-        ]
-      },
-      {
-        "key": "total_award_value",
-        "type": "field",
-        "dataType": "decimal",
-        "label": "Total award value ($)"
-      },
-      {
-        "key": "has_subawards",
-        "type": "field",
-        "dataType": "boolean",
-        "label": "Does this award include any subawards?"
-      }
-    ],
-
-    "binds": [
-      { "path": "award_type",           "required": "true" },
-      { "path": "reporting_period_type", "required": "true" },
-      { "path": "total_award_value",     "required": "true", "constraint": "$ > 0" },
-      { "path": "has_subawards",         "required": "true" }
-    ],
-
-    "routes": [
-      {
-        "condition": "$reporting_period_type = 'final' or $total_award_value >= 500000 or $has_subawards = true",
-        "target": "https://grants.example.gov/forms/full-progress-report|2025-06-01",
-        "label": "Full Progress Report"
-      },
-      {
-        "condition": "true",
-        "target": "https://grants.example.gov/forms/abbreviated-progress-report|2025-06-01",
-        "label": "Abbreviated Progress Report"
-      }
-    ]
-  }
-}
-```
-
-**Routing logic:** The user is routed to the **full report** if ANY of
-the following are true:
-
-1. The reporting period is "final".
-2. The total award value is $500,000 or more.
-3. The award includes subawards.
-
-Otherwise, the default route sends the user to the **abbreviated report**.
-
-#### 7.5.2 Variant Definitions (Headers Only)
-
-The full and abbreviated reports declare their lineage via `derivedFrom`:
-
-```json
-{
-  "url": "https://grants.example.gov/forms/full-progress-report",
-  "version": "2025-06-01",
-  "status": "active",
-  "title": "Full Progress Report",
-  "derivedFrom": "https://grants.example.gov/forms/progress-screener|2025-06-01"
-}
-```
-
-```json
-{
-  "url": "https://grants.example.gov/forms/abbreviated-progress-report",
-  "version": "2025-06-01",
-  "status": "active",
-  "title": "Abbreviated Progress Report",
-  "derivedFrom": "https://grants.example.gov/forms/progress-screener|2025-06-01"
-}
-```
-
-The `derivedFrom` property is informational. Processors SHOULD use it to
-assist in traceability and auditing. Processors MUST NOT require
-`derivedFrom` to be resolvable at runtime.
+> **Deprecated.** Screener routing is now defined in the standalone
+> [Screener Specification](../screener/screener-spec.md). See that document
+> for screener examples, evaluation strategies, and Determination Records.
 
 ***
 
@@ -4670,7 +4516,7 @@ that address them. This appendix is informative.
 | FL-02 | Non-relevant data exclusion | §5.6 Non-Relevant Field Handling; §2.5.4 |
 | FL-03 | Repeatable sections | §4.2.2 Group Items with `repeatable`, `minRepeat`, `maxRepeat` |
 | FL-04 | Cross-form field dependencies | §4.4 Named instances with cross-instance references; §3.2.3 `@instance()` |
-| FL-05 | Screener/routing logic | §4.7 Screener Routing; §7.5 example |
+| FL-05 | Screener/routing logic | See [Screener Specification](../screener/screener-spec.md) |
 
 ### Validation
 

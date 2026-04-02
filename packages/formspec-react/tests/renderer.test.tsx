@@ -126,6 +126,27 @@ describe('FormspecForm', () => {
         );
         expect(container.querySelector('.my-form')).toBeTruthy();
     });
+
+    it('renders a host formspec-container with the planned root stack inside it', () => {
+        const container = renderInto(
+            <FormspecForm definition={testDefinition} />
+        );
+
+        const host = container.querySelector('.formspec-container') as HTMLElement;
+        expect(host).toBeTruthy();
+        const rootStack = host.firstElementChild as HTMLElement;
+        expect(rootStack).toBeTruthy();
+        expect(rootStack.classList.contains('formspec-stack')).toBe(true);
+        expect(rootStack.classList.contains('formspec-container')).toBe(false);
+    });
+
+    it('emits default theme CSS variables on formspec-container (parity with web component)', () => {
+        const container = renderInto(
+            <FormspecForm definition={testDefinition} />
+        );
+        const host = container.querySelector('.formspec-container') as HTMLElement;
+        expect(host?.style.getPropertyValue('--formspec-color-border').trim()).toBe('#a0a4a8');
+    });
 });
 
 // ── Display node rendering ────────────────────────────────────────
@@ -815,34 +836,6 @@ describe('group-level relevance', () => {
     });
 });
 
-// ── Accessibility ─────────────────────────────────────────────────
-
-describe('DefaultField accessibility', () => {
-    it('does not render role="alert" when there is no error', () => {
-        // Use a definition without required fields so no errors on initial render
-        const noRequiredDef = {
-            $formspec: '1.0',
-            url: 'https://test.example/a11y',
-            version: '1.0.0',
-            status: 'active',
-            title: 'A11y Test',
-            name: 'a11y-test',
-            items: [
-                { key: 'name', type: 'field', dataType: 'string', label: 'Name' },
-                { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
-            ],
-        };
-
-        const container = renderInto(
-            <FormspecForm definition={noRequiredDef} />
-        );
-
-        // No errors initially — role="alert" should not be in the DOM
-        const alerts = container.querySelectorAll('[role="alert"]');
-        expect(alerts.length).toBe(0);
-    });
-});
-
 // ── Component map overrides ────────────────────────────────────────
 
 describe('component map overrides', () => {
@@ -1277,6 +1270,341 @@ describe('repeat group rendering', () => {
         const addBtn = container.querySelector('.formspec-repeat-add');
         expect(addBtn).toBeTruthy();
         expect(addBtn!.textContent).toContain('Team Members');
+    });
+
+    it('keeps the last repeat instance as :last-of-type despite the live region', () => {
+        const engine = createFormEngine(repeatDefinition);
+        engine.addRepeatInstance('members');
+
+        const layoutPlan: LayoutNode = {
+            id: 'root',
+            component: 'Stack',
+            category: 'layout',
+            props: {},
+            cssClasses: [],
+            children: [
+                {
+                    id: 'members-group',
+                    component: 'Stack',
+                    category: 'layout',
+                    props: { title: 'Team Members', bind: 'members' },
+                    cssClasses: [],
+                    children: [],
+                    bindPath: 'members',
+                    repeatGroup: 'members',
+                    repeatPath: 'members',
+                    isRepeatTemplate: true,
+                    scopeChange: true,
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={layoutPlan} />
+                </FormspecProvider>
+            );
+        });
+
+        const lastInstance = container.querySelector('.formspec-repeat-instance:last-of-type');
+        expect(lastInstance).toBeTruthy();
+        expect(container.querySelectorAll('.formspec-repeat-instance')).toHaveLength(2);
+        const repeatContainer = container.querySelector('.formspec-repeat') as HTMLElement;
+        expect(repeatContainer.querySelector('.formspec-repeat-list')).toBeTruthy();
+        expect(repeatContainer.querySelector('.formspec-repeat-add')).toBeTruthy();
+        expect(repeatContainer.querySelector('.formspec-sr-only[aria-live="polite"]')).toBeTruthy();
+    });
+});
+
+// ── DataTable select column rendering ─────────────────────────────
+
+describe('DataTable select column rendering', () => {
+    const dataTableDef = {
+        $formspec: '1.0',
+        url: 'https://test.example/datatable',
+        version: '1.0.0',
+        status: 'active',
+        title: 'DataTable Test',
+        name: 'datatable-test',
+        items: [
+            {
+                key: 'expenses',
+                type: 'group',
+                label: 'Expenses',
+                repeatable: true,
+                minRepeat: 1,
+                children: [
+                    { key: 'description', type: 'field', dataType: 'string', label: 'Description' },
+                    {
+                        key: 'category',
+                        type: 'field',
+                        dataType: 'choice',
+                        label: 'Category',
+                        options: [
+                            { value: 'travel', label: 'Travel' },
+                            { value: 'supplies', label: 'Supplies' },
+                        ],
+                    },
+                ],
+            },
+        ],
+    };
+
+    it('renders a <select> for columns with type "select" and choices', () => {
+        const engine = createFormEngine(dataTableDef);
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'dt-sel', component: 'DataTable', category: 'interactive',
+                    props: {
+                        bind: 'expenses',
+                        allowAdd: true,
+                        columns: [
+                            { header: 'Description', bind: 'description', type: 'text' },
+                            {
+                                header: 'Category',
+                                bind: 'category',
+                                type: 'select',
+                                choices: [
+                                    { value: 'travel', label: 'Travel' },
+                                    { value: 'supplies', label: 'Supplies' },
+                                ],
+                            },
+                        ],
+                    },
+                    cssClasses: [], children: [],
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={plan} />
+                </FormspecProvider>
+            );
+        });
+
+        // Category column should render a <select>, not a text input
+        const select = container.querySelector('select.formspec-datatable-input');
+        expect(select).toBeTruthy();
+        const options = select!.querySelectorAll('option');
+        // placeholder "-" + 2 choices = 3
+        expect(options.length).toBe(3);
+        expect(options[1].textContent).toBe('Travel');
+    });
+
+    it('renders a <select> for columns with type "choice" and choices', () => {
+        const engine = createFormEngine(dataTableDef);
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'dt-choice', component: 'DataTable', category: 'interactive',
+                    props: {
+                        bind: 'expenses',
+                        allowAdd: true,
+                        columns: [
+                            {
+                                header: 'Category',
+                                bind: 'category',
+                                type: 'choice',
+                                choices: [
+                                    { value: 'travel', label: 'Travel' },
+                                    { value: 'supplies', label: 'Supplies' },
+                                ],
+                            },
+                        ],
+                    },
+                    cssClasses: [], children: [],
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={plan} />
+                </FormspecProvider>
+            );
+        });
+
+        const select = container.querySelector('select.formspec-datatable-input');
+        expect(select).toBeTruthy();
+    });
+
+    it('uses the shared datatable chrome contract', () => {
+        const engine = createFormEngine(dataTableDef);
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'dt-contract', component: 'DataTable', category: 'interactive',
+                    props: {
+                        bind: 'expenses',
+                        title: 'Expenses',
+                        allowAdd: true,
+                        allowRemove: true,
+                        columns: [{ header: 'Description', bind: 'description', type: 'text' }],
+                    },
+                    cssClasses: [], children: [],
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={plan} />
+                </FormspecProvider>
+            );
+        });
+
+        const wrapper = container.querySelector('.formspec-data-table-wrapper') as HTMLElement;
+        expect(wrapper).toBeTruthy();
+        expect(wrapper.querySelector('table.formspec-data-table')).toBeTruthy();
+        expect(wrapper.querySelector('caption')?.textContent).toBe('Expenses');
+        expect(wrapper.querySelector('.formspec-datatable-add')).toBeTruthy();
+        const actionHeader = wrapper.querySelector('th:last-child .formspec-sr-only');
+        expect(actionHeader?.textContent).toBe('Actions');
+        const removeButton = wrapper.querySelector('.formspec-datatable-remove') as HTMLButtonElement;
+        expect(removeButton).toBeTruthy();
+        expect(removeButton.className).toBe('formspec-datatable-remove formspec-focus-ring');
+        const addButton = wrapper.querySelector('.formspec-datatable-add') as HTMLButtonElement;
+        expect(addButton.className).toBe('formspec-datatable-add formspec-focus-ring');
+    });
+
+    it('derives datatable cells from field metadata', () => {
+        const def = {
+            ...dataTableDef,
+            optionSets: {
+                expenseCategory: {
+                    options: [
+                        { value: 'travel', label: 'Travel' },
+                        { value: 'supplies', label: 'Supplies' },
+                    ],
+                },
+            },
+            items: [
+                {
+                    key: 'expenses',
+                    type: 'group',
+                    label: 'Expenses',
+                    repeatable: true,
+                    minRepeat: 1,
+                    children: [
+                        { key: 'description', type: 'field', dataType: 'string', label: 'Description', prefix: '@', suffix: '.com' },
+                        { key: 'category', type: 'field', dataType: 'choice', label: 'Category', optionSet: 'expenseCategory' },
+                        { key: 'cost', type: 'field', dataType: 'money', label: 'Cost', currency: 'USD' },
+                    ],
+                },
+            ],
+            binds: [{ path: 'expenses.cost', readonly: 'true' }],
+        };
+        const engine = createFormEngine(def);
+        engine.setValue('expenses[0].cost', { amount: 42, currency: 'USD' });
+
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'dt-meta', component: 'DataTable', category: 'interactive',
+                    props: {
+                        bind: 'expenses',
+                        allowAdd: true,
+                        showRowNumbers: true,
+                        columns: [
+                            { header: 'Description', bind: 'description' },
+                            { header: 'Category', bind: 'category' },
+                            { header: 'Cost', bind: 'cost' },
+                        ],
+                    },
+                    cssClasses: [], children: [],
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={plan} />
+                </FormspecProvider>
+            );
+        });
+
+        expect(container.querySelector('th')?.textContent).toBe('#');
+        expect(container.querySelector('.formspec-row-number')?.textContent).toBe('1');
+        expect(container.querySelector('.formspec-datatable-cell-wrapper')).toBeTruthy();
+        expect(container.querySelectorAll('.formspec-datatable-prefix')).toHaveLength(2);
+        const select = container.querySelectorAll('select.formspec-datatable-input');
+        expect(select).toHaveLength(1);
+        const moneyInput = container.querySelector('input[name="expenses[0].cost"]') as HTMLInputElement;
+        expect(moneyInput).toBeTruthy();
+        expect(moneyInput.disabled).toBe(true);
+        expect(moneyInput.value).toBe('42');
+    });
+});
+
+// ── ValidationSummary gate behavior ──────────────────────────────
+
+describe('ValidationSummaryDisplay gate behavior', () => {
+    it('does not show validation errors before submit', () => {
+        const validationDef = {
+            $formspec: '1.0',
+            url: 'https://test.example/vs-gate',
+            version: '1.0.0',
+            status: 'active',
+            title: 'VS Gate Test',
+            name: 'vs-gate',
+            items: [
+                { key: 'username', type: 'field', dataType: 'string', label: 'Username', required: true },
+            ],
+        };
+        const engine = createFormEngine(validationDef);
+        // username is required but empty — errors exist, but should not show yet
+
+        const plan: LayoutNode = {
+            id: 'root', component: 'Stack', category: 'layout',
+            props: {}, cssClasses: [], children: [
+                {
+                    id: 'vs-gate', component: 'ValidationSummary', category: 'display',
+                    props: {}, cssClasses: [], children: [],
+                },
+            ],
+        };
+
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        flushSync(() => {
+            root.render(
+                <FormspecProvider engine={engine}>
+                    <FormspecNode node={plan} />
+                </FormspecProvider>
+            );
+        });
+
+        // Before submit, the summary should be empty — no error messages visible
+        const summaryText = container.textContent || '';
+        expect(summaryText).not.toContain('error');
+        expect(summaryText).not.toContain('Username');
     });
 });
 

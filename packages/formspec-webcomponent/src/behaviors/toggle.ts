@@ -54,16 +54,13 @@ export function useToggle(ctx: BehaviorContext, comp: any): ToggleBehavior {
                 }
             }));
 
-            // Toggle label text swap
-            if (comp.onLabel || comp.offLabel) {
-                const toggleLabel = refs.control.querySelector('.formspec-toggle-label');
-                if (toggleLabel) {
-                    disposers.push(effect(() => {
-                        const sig = ctx.engine.signals[fieldPath];
-                        toggleLabel.textContent = sig?.value ? (comp.onLabel || '') : (comp.offLabel || '');
-                    }));
-                }
-            }
+            // Static off/on text lives on .formspec-toggle-off / .formspec-toggle-on (adapter).
+            // Emphasize the active side via .formspec-toggle--on on the container (shared CSS with React).
+            disposers.push(effect(() => {
+                const sig = ctx.engine.signals[fieldPath];
+                const on = !!sig?.value;
+                (refs.control as HTMLElement).classList.toggle('formspec-toggle--on', on);
+            }));
 
             // Value sync: DOM → engine
             checkbox.addEventListener('input', (e) => {

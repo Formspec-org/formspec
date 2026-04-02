@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, importDefinition, selectField } from './helpers';
+import { waitForApp, switchTab, importDefinition } from './helpers';
 
 const CHOICE_DEF = {
   $formspec: '1.0',
@@ -33,9 +33,10 @@ test.describe('widgetHint affects preview rendering', () => {
   });
 
   test('widgetHint dropdown shows all renderable widgets for choice fields', async ({ page }) => {
-    await selectField(page, 'maritalStatus');
+    await switchTab(page, 'Layout');
+    await page.click('[data-testid="layout-field-maritalStatus"]');
 
-    const widgetSelect = page.getByLabel('Widget');
+    const widgetSelect = page.getByLabel('Component Type');
     await expect(widgetSelect).toBeVisible();
 
     // Must match the webcomponent renderer's compatibility matrix
@@ -48,11 +49,10 @@ test.describe('widgetHint affects preview rendering', () => {
   });
 
   test('changing widget dropdown via mouse updates preview rendering', async ({ page }) => {
-    // Select the field via mouse click in the editor
-    await selectField(page, 'maritalStatus');
+    await switchTab(page, 'Layout');
+    await page.click('[data-testid="layout-field-maritalStatus"]');
 
-    // Change widget dropdown via UI — no programmatic dispatch
-    const widgetSelect = page.getByLabel('Widget');
+    const widgetSelect = page.getByLabel('Component Type');
     await expect(widgetSelect).toBeVisible();
     await widgetSelect.selectOption('RadioGroup');
 
@@ -67,9 +67,9 @@ test.describe('widgetHint affects preview rendering', () => {
   });
 
   test('switching widget back to Select re-renders as dropdown', async ({ page }) => {
-    // Select field and change to RadioGroup
-    await selectField(page, 'maritalStatus');
-    const widgetSelect = page.getByLabel('Widget');
+    await switchTab(page, 'Layout');
+    await page.click('[data-testid="layout-field-maritalStatus"]');
+    const widgetSelect = page.getByLabel('Component Type');
     await widgetSelect.selectOption('RadioGroup');
 
     // Switch back to Select
@@ -117,11 +117,11 @@ test.describe('widget change works in wizard mode', () => {
     await expect(workspace.getByRole('combobox', { name: /priority/i }))
       .toBeVisible({ timeout: 5000 });
 
-    // Go back to editor, select the field via mouse, change widget
-    await switchTab(page, 'Editor');
-    await selectField(page, 'priority');
+    // Switch to Layout, select the field, then change its component type.
+    await switchTab(page, 'Layout');
+    await page.click('[data-testid="layout-field-priority"]');
 
-    const widgetSelect = page.getByLabel('Widget');
+    const widgetSelect = page.getByLabel('Component Type');
     await expect(widgetSelect).toBeVisible();
     await widgetSelect.selectOption('RadioGroup');
 

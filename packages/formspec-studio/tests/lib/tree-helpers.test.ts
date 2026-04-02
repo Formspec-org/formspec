@@ -6,7 +6,7 @@ import {
   nodeIdFromLayoutId,
   nodeRefFor,
   type FlatEntry,
-} from '../../src/lib/field-helpers';
+} from '@formspec-org/studio-core';
 
 // ── Helpers ────────────────────────────────────────────────────────
 

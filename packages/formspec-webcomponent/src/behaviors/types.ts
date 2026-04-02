@@ -31,6 +31,10 @@ export interface FieldRefs {
     ) => Map<string, HTMLInputElement>;
     /** Called by bind() when validation state changes. Adapters use this to toggle error classes. */
     onValidationChange?: (hasError: boolean, message: string) => void;
+    /** When true, {@link bindSharedFieldEffects} does not set `readOnly` on the control (combobox manages it). */
+    skipSharedReadonlyControl?: boolean;
+    /** When true, {@link bindSharedFieldEffects} does not set `aria-describedby` on the control (groups manage it on container). */
+    skipAriaDescribedBy?: boolean;
 }
 
 /** Returned by every field behavior hook. */
@@ -70,7 +74,7 @@ export interface FieldBehavior {
         accessibility?: any;
     };
     remoteOptionsState: { loading: boolean; error: string | null };
-    options(): ReadonlyArray<{ value: string; label: string }>;
+    options(): ReadonlyArray<{ value: string; label: string; keywords?: string[] }>;
     bind(refs: FieldRefs): () => void;
 }
 
@@ -91,6 +95,10 @@ export interface SelectBehavior extends FieldBehavior {
     placeholder?: string;
     clearable?: boolean;
     dataType: string;
+    /** Combobox with optional filter (native &lt;select&gt; when false and not multiple). */
+    searchable?: boolean;
+    /** Multi-value combobox; use with multiChoice fields. */
+    multiple?: boolean;
 }
 
 export interface ToggleBehavior extends FieldBehavior {
@@ -112,6 +120,7 @@ export interface NumberInputBehavior extends FieldBehavior {
     min?: number;
     max?: number;
     step?: number;
+    showStepper: boolean;
     dataType: string;
 }
 
@@ -140,6 +149,7 @@ export interface SliderBehavior extends FieldBehavior {
 export interface RatingBehavior extends FieldBehavior {
     maxRating: number;
     icon: string;
+    unselectedIcon: string;
     allowHalf: boolean;
     isInteger: boolean;
     setValue(value: number): void;
@@ -163,6 +173,30 @@ export interface SignatureBehavior extends FieldBehavior {
     strokeColor: string;
 }
 
+export interface DataTableRefs {
+    root: HTMLElement;
+    table: HTMLTableElement;
+    tbody: HTMLElement;
+}
+
+export interface DataTableBehavior {
+    comp: any;
+    host: import('../adapters/display-host').DisplayHostSlice;
+    id?: string;
+    compOverrides: { cssClass?: any; style?: any; accessibility?: any };
+    bindKey: string;
+    fullName: string;
+    columns: ReadonlyArray<{ header: string; bind: string; min?: number; max?: number; step?: number }>;
+    showRowNumbers: boolean;
+    allowAdd: boolean;
+    allowRemove: boolean;
+    groupLabel: string;
+    repeatCount: Signal<number>;
+    addInstance(): void;
+    removeInstance(index: number): void;
+    bind(refs: DataTableRefs): () => void;
+}
+
 /** Sidenav item refs for reactive class/text updates without DOM rebuilds. */
 export interface WizardSidenavItemRefs {
     item: HTMLElement;
@@ -179,6 +213,10 @@ export interface WizardProgressItemRefs {
 export interface WizardRefs {
     root: HTMLElement;
     panels: HTMLElement[];
+    /** Visible “Step N of M” line (matches React Wizard). */
+    stepIndicator?: HTMLElement;
+    /** Polite live region for step changes. */
+    announcer?: HTMLElement;
     stepIndicators?: HTMLElement[];
     stepContent: HTMLElement;
     prevButton?: HTMLButtonElement;
@@ -188,6 +226,8 @@ export interface WizardRefs {
     sidenavItems?: WizardSidenavItemRefs[];
     /** Progress indicators built once by the adapter; bind() toggles classes. */
     progressItems?: WizardProgressItemRefs[];
+    /** Callback invoked whenever the active step changes. */
+    onStepChange?: (stepIndex: number, totalSteps: number) => void;
 }
 
 export interface WizardBehavior {
@@ -213,6 +253,8 @@ export interface TabsRefs {
     tabBar: HTMLElement;
     panels: HTMLElement[];
     buttons: HTMLButtonElement[];
+    /** Callback invoked whenever the active tab changes. */
+    onTabChange?: (tabIndex: number) => void;
 }
 
 export interface TabsBehavior {

@@ -24,12 +24,49 @@ describe('AddItemPalette', () => {
     expect(screen.getByRole('button', { name: /^Stack\b/i })).toBeInTheDocument();
   });
 
-  it('shows Content sub-types: Heading, Divider, Spacer', () => {
+  it('hides only layout components in editor scope', () => {
+    render(
+      <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} scope="editor" />
+    );
+
+    expect(screen.queryByRole('button', { name: /^Card\b/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Columns\b/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Collapsible\b/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Stack\b/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Group\b/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Text Short text\b/i })).toBeInTheDocument();
+    // Editor scope excludes display and layout catalog entries (Layout workspace adds those).
+    expect(screen.queryByRole('button', { name: /^Heading\b/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Divider\b/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Text Block\b/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Spacer\b/i })).not.toBeInTheDocument();
+  });
+
+  it('uses a scoped search prompt in editor scope', () => {
+    render(
+      <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} scope="editor" />
+    );
+
+    expect(screen.getByPlaceholderText('Search inputs and groups...')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Search types...')).not.toBeInTheDocument();
+  });
+
+  it('uses a plain search row without wrapper focus effects', () => {
+    render(
+      <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} scope="editor" />
+    );
+
+    expect(screen.getByTestId('add-item-search')).not.toHaveClass('focus-within:ring-4');
+    expect(screen.getByTestId('add-item-search')).not.toHaveClass('focus-within:border-accent/70');
+  });
+
+  it('shows Content sub-types: Heading, Divider; Spacer is now in Layout (not a display widgetHint)', () => {
     render(
       <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} />
     );
     expect(screen.getByRole('button', { name: /^Heading\b/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Divider\b/i })).toBeInTheDocument();
+    // Spacer is in the Layout category now (component-tier, no widgetHint)
     expect(screen.getByRole('button', { name: /^Spacer\b/i })).toBeInTheDocument();
   });
 
@@ -43,11 +80,11 @@ describe('AddItemPalette', () => {
     expect(labels).toContain('Stack');
   });
 
-  it('Heading item has display itemType with widgetHint in extra', () => {
+  it('Heading item has display itemType with spec-lowercase widgetHint in extra (CoreSpec S4.2.5.1)', () => {
     const heading = FIELD_TYPE_CATALOG.find(f => f.label === 'Heading');
     expect(heading).toBeDefined();
     expect(heading!.itemType).toBe('display');
-    expect((heading!.extra as any)?.presentation?.widgetHint).toBe('Heading');
+    expect((heading!.extra as any)?.presentation?.widgetHint).toBe('heading');
   });
 
   describe('canonical dataType values for choice fields', () => {
@@ -91,6 +128,17 @@ describe('AddItemPalette', () => {
       expect(screen.getByRole('button', { name: /^Inputs$/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^Layout$/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^Display$/ })).toBeInTheDocument();
+    });
+
+    it('omits the tab bar entirely in editor scope', () => {
+      render(
+        <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} scope="editor" />
+      );
+
+      expect(screen.queryByRole('button', { name: /^All$/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Inputs$/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Layout$/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Display$/ })).not.toBeInTheDocument();
     });
 
     it('filters items when clicking Layout tab', () => {

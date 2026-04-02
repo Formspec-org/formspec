@@ -9,6 +9,7 @@ const { currentPath = "/" } = Astro.props;
 function normalizeNavPath(pathname: string): string {
   let p = pathname.replace(/\/$/, "") || "/";
   if (p === "/references/index.html") p = "/references";
+
   return p;
 }
 

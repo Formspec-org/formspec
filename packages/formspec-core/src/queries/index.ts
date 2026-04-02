@@ -56,17 +56,6 @@ export {
   previewMapping,
 } from './mapping-queries.js';
 
-export {
-  resolvePageView,
-} from './page-view-resolution.js';
-export type {
-  PageView,
-  PageItemView,
-  PlaceableItem,
-  PageStructureView,
-  PageViewInput,
-} from './page-view-resolution.js';
-
 export { flattenDefinitionTree } from './tree-flattening.js';
 export type { FlatTreeItem } from './tree-flattening.js';
 

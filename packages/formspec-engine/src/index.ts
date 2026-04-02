@@ -29,6 +29,7 @@ export type {
     FELBuiltinFunctionCatalogEntry,
     FELRewriteOptions,
     FormEngineDiagnosticsSnapshot,
+    FormProgress,
     FormEngineRuntimeContext,
     IFormEngine,
     IRuntimeMappingEngine,
@@ -103,6 +104,9 @@ export { wasmEvalFEL as evalFEL } from './wasm-bridge-runtime.js';
 /** Lint with extension registries (WASM). */
 export { wasmLintDocumentWithRegistries as lintDocumentWithRegistries } from './wasm-bridge-tools.js';
 
+/** Evaluate a standalone Screener Document (WASM); returns a DeterminationRecord. */
+export { wasmEvaluateScreenerDocument } from './wasm-bridge-runtime.js';
+
 export { buildValidationReportEnvelope } from './engine/response-assembly.js';
 export { toValidationResults } from './engine/helpers.js';
 export type { EvalValidation } from './diff.js';
@@ -122,6 +126,9 @@ export type { LocaleDocument, LookupResult } from './locale.js';
 
 export { createFieldViewModel } from './field-view-model.js';
 export type { FieldViewModel, FieldViewModelDeps, ResolvedValidationResult, ResolvedOption } from './field-view-model.js';
+
+export { optionMatchesComboboxQuery } from './combobox-option-filter.js';
+export type { ComboboxOptionSearchShape } from './combobox-option-filter.js';
 
 export { createFormViewModel } from './form-view-model.js';
 export type { FormViewModel, FormViewModelDeps } from './form-view-model.js';

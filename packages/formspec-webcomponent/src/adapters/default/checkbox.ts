@@ -20,9 +20,9 @@ export const renderCheckbox: AdapterRenderFn<FieldBehavior> = (
     checkbox.className = 'formspec-input';
     checkbox.name = behavior.fieldPath;
     checkbox.id = behavior.id;
-    checkbox.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
 
-    fieldDOM.root.appendChild(checkbox);
+    // Insert checkbox after the label, matching React's label-then-control order
+    fieldDOM.label.insertAdjacentElement('afterend', checkbox);
     applyControlSlotClass(checkbox, behavior, actx);
     finalizeFieldDOM(fieldDOM, behavior, actx);
     parent.appendChild(fieldDOM.root);

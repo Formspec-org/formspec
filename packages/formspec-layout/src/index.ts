@@ -30,7 +30,7 @@ export type {
 } from './theme-resolver.js';
 
 // Token resolution
-export { resolveToken } from './tokens.js';
+export { resolveToken, emitMergedThemeCssVars } from './tokens.js';
 
 // Responsive breakpoint merging
 export { resolveResponsiveProps } from './responsive.js';
@@ -50,8 +50,23 @@ export {
     COMPATIBILITY_MATRIX,
 } from './widget-vocabulary.js';
 
+// Form presentation merge (definition + component document)
+export { mergeFormPresentationForPlanning } from './form-presentation.js';
+
 // Layout planner
-export { planComponentTree, planDefinitionFallback, resetNodeIdCounter } from './planner.js';
+export { planComponentTree, planDefinitionFallback, resetNodeIdCounter, planContains, ensureSubmitButton } from './planner.js';
+export { resolvePageSequence } from './page-sequence.js';
+export type { PageSequenceEntry } from './page-sequence.js';
+
+// Anchored overlays (Modal / Popover positioning)
+export {
+    positionPopupNearTrigger,
+    clearPopupFixedPosition,
+    POPUP_EDGE_PADDING,
+    POPUP_TRIGGER_GAP,
+    MODAL_FIRST_FOCUSABLE_SELECTOR,
+} from './popup-position.js';
+export type { PopupPlacement } from './popup-position.js';
 
 // Types
 export type { LayoutNode, PlanContext } from './types.js';

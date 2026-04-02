@@ -197,7 +197,7 @@ export interface TargetDefinition {
    */
   url: string;
   /**
-   * Semver range expression describing which Definition versions this document supports. When absent, compatible with any version.
+   * Semver range expression using node/npm-style range syntax describing which Definition versions this document supports. When absent, compatible with any version.
    */
   compatibleVersions?: string;
 }
@@ -392,9 +392,13 @@ export interface Select {
    */
   bind: string;
   /**
-   * Enable type-ahead search/filtering of options.
+   * Use a combobox (text input + listbox) with optional type-ahead filtering. When false and multiple is false, a native <select> is used.
    */
   searchable?: boolean;
+  /**
+   * Allow multiple values (array). Bind to a multiChoice field. Implies a combobox list with checkboxes; combine with searchable for filtering.
+   */
+  multiple?: boolean;
   /**
    * Placeholder text when no option is selected.
    */
@@ -968,6 +972,14 @@ export interface Modal {
    * Whether the modal can be dismissed by the user.
    */
   closable?: boolean;
+  /**
+   * Heading level for the modal title (default 2).
+   */
+  headingLevel?: number;
+  /**
+   * When set, anchors the opened dialog near the trigger with fixed positioning; omit for native centered modal.
+   */
+  placement?: 'top' | 'right' | 'bottom' | 'left';
   children?: ChildrenArray;
 }
 /**

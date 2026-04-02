@@ -127,6 +127,13 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
         }
     }
 
+    // ── Screener passes ────────────────────────────────────────
+    if doc_type == DocumentType::Screener && !options.no_fel {
+        let compilation = expressions::compile_screener_expressions(doc);
+        diagnostics.extend(compilation.diagnostics);
+        diagnostics.extend(dependencies::analyze_dependencies(&compilation.compiled));
+    }
+
     // ── Theme pass (6) ──────────────────────────────────────────
     if doc_type == DocumentType::Theme {
         diagnostics.extend(pass_theme::lint_theme(

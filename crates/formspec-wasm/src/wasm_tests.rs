@@ -903,7 +903,7 @@ mod tests {
             .iter()
             .filter(|v| {
                 v["code"].as_str() == Some("PATTERN_MISMATCH")
-                    && v["source"].as_str() == Some("extension")
+                    && v["source"].as_str() == Some("external")
             })
             .collect();
         assert!(

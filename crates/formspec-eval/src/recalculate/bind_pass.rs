@@ -80,13 +80,15 @@ pub(crate) fn evaluate_single_item(
                 let normalized_expr = normalize_expr(expr);
                 if let Ok(parsed) = parse(&normalized_expr) {
                     let result = evaluate(&parsed, env);
-                    let json_val = fel_to_json(&result.value);
+                    let json_val = coerce_calculated_json(item, fel_to_json(&result.value));
                     values.insert(item.path.clone(), json_val.clone());
-                    env.set_field(&item.path, result.value);
+                    env.set_field(&item.path, json_to_runtime_fel(&json_val));
                 }
             } else if let Some(ref default_val) = item.default_value {
-                values.insert(item.path.clone(), default_val.clone());
-                env.set_field(&item.path, json_to_runtime_fel(default_val));
+                let fel = json_to_runtime_fel(default_val);
+                let json_val = coerce_calculated_json(item, fel_to_json(&fel));
+                values.insert(item.path.clone(), json_val.clone());
+                env.set_field(&item.path, json_to_runtime_fel(&json_val));
             }
         }
     }

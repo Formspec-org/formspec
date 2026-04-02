@@ -3,21 +3,13 @@ import { createStudioProject } from '../../src/studio-app/StudioApp';
 import { exampleDefinition } from '../../src/fixtures/example-definition';
 
 describe('createStudioProject bootstrap', () => {
-  it('seeds pages from definition groups when no pages exist', () => {
+  it('does not synthesize component pages from definition groups', () => {
     const project = createStudioProject();
     const pages = project.listPages();
 
     expect(pages).toBeDefined();
     expect(Array.isArray(pages)).toBe(true);
-    expect(pages.length).toBeGreaterThan(0);
-
-    // Each top-level group with a page hint should produce a page
-    const pageTitles = pages.map((p: any) => p.title);
-    expect(pageTitles).toContain('Applicant Information');
-    expect(pageTitles).toContain('Household');
-    expect(pageTitles).toContain('Income & Assets');
-    expect(pageTitles).toContain('Housing');
-    expect(pageTitles).toContain('Review & Submit');
+    expect(pages).toHaveLength(0);
   });
 
   it('sets pageMode to wizard when groups exist', () => {
@@ -46,7 +38,7 @@ describe('createStudioProject bootstrap', () => {
     expect(pages[0].title).toBe('My Custom Page');
   });
 
-  it('seeds pages for a minimal definition with groups', () => {
+  it('does not auto-generate pages for a minimal definition with groups', () => {
     const minimalDef = {
       $formspec: '1.0',
       name: 'test',
@@ -79,9 +71,7 @@ describe('createStudioProject bootstrap', () => {
     });
 
     const pages = project.listPages();
-    expect(pages.length).toBe(2);
-    expect(pages[0].title).toBe('Basic Info');
-    expect(pages[1].title).toBe('Review');
+    expect(pages).toHaveLength(0);
   });
 
   it('does NOT auto-generate pages when definition has no groups', () => {

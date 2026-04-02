@@ -37,9 +37,11 @@ build-rust:
 build-js:
 	npm run build
 
-# Installs the maturin-built extension so `import formspec_rust` matches the tree (needs maturin: pip install maturin).
+# Builds the Rust extension and places the .so into the source tree for editable installs.
+# Uses maturin develop so the in-tree _native.so stays current (pip install writes to
+# site-packages, which is shadowed by the editable src/formspec/ on sys.path).
 build-python:
-	python3 -m pip install --no-build-isolation ./crates/formspec-py
+	maturin develop --release --manifest-path crates/formspec-py/Cargo.toml
 
 test-rust:
 	cargo test --workspace
@@ -49,13 +51,14 @@ test: test-unit test-python test-rust test-e2e test-studio-e2e
 check: docs-check test
 
 api-docs:
+	PYTHONPATH=src python3 -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('pdoc') else 1)" || python3 -m pip install -e '.[docs]'
 	PYTHONPATH=src python3 -m pdoc formspec --output-directory $(DOCS_DIR)/api/formspec
 	npx typedoc --entryPoints packages/formspec-engine/src/index.ts --tsconfig packages/formspec-engine/tsconfig.json --out $(DOCS_DIR)/api/formspec-engine
 	npx typedoc --entryPoints packages/formspec-webcomponent/src/index.ts --tsconfig packages/formspec-webcomponent/tsconfig.json --out $(DOCS_DIR)/api/formspec-webcomponent
 	npx typedoc --entryPoints packages/formspec-core/src/index.ts --tsconfig packages/formspec-core/tsconfig.json --out $(DOCS_DIR)/api/formspec-core
 	npx typedoc --entryPoints packages/formspec-chat/src/index.ts --tsconfig packages/formspec-chat/tsconfig.json --out $(DOCS_DIR)/api/formspec-chat
 	npx typedoc --entryPoints packages/formspec-mcp/src/index.ts --tsconfig packages/formspec-mcp/tsconfig.json --out $(DOCS_DIR)/api/formspec-mcp
-	npm run --workspace=@formspec/studio-core build || true
+	npm run --workspace=@formspec-org/studio-core build
 	cargo doc --workspace --no-deps
 	rm -rf $(DOCS_DIR)/api/rust && cp -r target/doc $(DOCS_DIR)/api/rust
 	PYTHONPATH=src python3 scripts/generate-api-markdown.py src/formspec/API.llm.md

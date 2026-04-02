@@ -1,0 +1,4 @@
+/* @filedesc Structural layout primitives — always loaded, zero visual opinions. */
+
+@import "./styles/layout.primitives.css";
+@import "./styles/layout.responsive.css";

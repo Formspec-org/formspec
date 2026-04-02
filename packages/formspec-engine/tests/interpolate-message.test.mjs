@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { interpolateMessage } from '../dist/interpolate-message.js';
+import { wasmEvalFELWithContext } from '../dist/wasm-bridge-runtime.js';
 
 // --- Basic interpolation ---
 
@@ -52,14 +53,24 @@ test('escape: standalone {{{{ without closing', () => {
 
 // --- Coercion (Rule 3) ---
 
-test('coercion: null → empty string', () => {
-  const { text } = interpolateMessage('val={{x}}', () => null);
+test('coercion: null → empty string when expression binds $ or @', () => {
+  const { text } = interpolateMessage('val={{$x}}', () => null);
   assert.equal(text, 'val=');
 });
 
-test('coercion: undefined → empty string', () => {
-  const { text } = interpolateMessage('val={{x}}', () => undefined);
+test('coercion: undefined → empty string when expression binds $', () => {
+  const { text } = interpolateMessage('val={{$x}}', () => undefined);
   assert.equal(text, 'val=');
+});
+
+test('locale §3.3.1 rule 3a: null without $/@ preserves non-static literal', () => {
+  const { text } = interpolateMessage('x {{!!!bad}} y', () => null);
+  assert.equal(text, 'x {{!!!bad}} y');
+});
+
+test('locale §3.3.1: null for static literal still becomes empty', () => {
+  const { text } = interpolateMessage('v={{null}}', () => null);
+  assert.equal(text, 'v=');
 });
 
 test('coercion: true → "true"', () => {
@@ -156,4 +167,29 @@ test('single } inside expression: {{a}b}} extracts correctly', () => {
   });
   assert.equal(captured, 'a}b');
   assert.equal(text, 'R');
+});
+
+// --- Rule 2: error-severity diagnostics via WASM side-channel ---
+
+test('rule 2: WASM error diagnostics preserve literal even with $ sigil', () => {
+  // $amount + "text" → type error diagnostic (number + string), result is null
+  // Because there are error diagnostics, rule 2 should preserve the literal
+  // even though the expression contains $
+  const { text, warnings } = interpolateMessage(
+    'Total: {{$amount + "text"}}',
+    (expr) => wasmEvalFELWithContext(expr, { fields: { amount: 42 } }),
+  );
+  assert.equal(text, 'Total: {{$amount + "text"}}');
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0].error, /diagnostics/i);
+});
+
+test('rule 2: WASM eval without diagnostics proceeds normally', () => {
+  // Normal evaluation: no diagnostics, value is 42
+  const { text, warnings } = interpolateMessage(
+    'Total: {{$amount}}',
+    (expr) => wasmEvalFELWithContext(expr, { fields: { amount: 42 } }),
+  );
+  assert.equal(text, 'Total: 42');
+  assert.equal(warnings.length, 0);
 });

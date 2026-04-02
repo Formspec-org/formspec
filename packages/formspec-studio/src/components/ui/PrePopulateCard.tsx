@@ -1,14 +1,18 @@
 /** @filedesc Card editor for a pre-populate bind rule specifying the external instance and field path. */
 import { HelpTip } from './HelpTip';
-import { propertyHelp } from '../../lib/field-helpers';
+import { propertyHelp } from '@formspec-org/studio-core';
 
 interface PrePopulateCardProps {
   value: { instance: string; path: string; editable?: boolean };
   onChange: (value: any) => void;
   onRemove: () => void;
+  /** DI-5: Unique prefix for DOM IDs (prevents collisions when multiple cards exist). */
+  itemKey?: string;
 }
 
-export function PrePopulateCard({ value, onChange, onRemove }: PrePopulateCardProps) {
+export function PrePopulateCard({ value, onChange, onRemove, itemKey = '' }: PrePopulateCardProps) {
+  // DI-5: Use item-specific IDs to avoid duplicate DOM IDs.
+  const idPrefix = itemKey ? `pre-pop-${itemKey}` : 'pre-pop';
   return (
     <div className="border border-border border-l-[3px] border-l-blue-500 rounded-[4px] bg-surface p-2 mb-1 group/card transition-colors hover:border-border/80">
       <div className="flex items-center justify-between mb-2">
@@ -30,11 +34,11 @@ export function PrePopulateCard({ value, onChange, onRemove }: PrePopulateCardPr
 
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
-          <label htmlFor="pre-pop-instance" className="font-mono text-[8px] text-muted uppercase tracking-wider block">
+          <label htmlFor={`${idPrefix}-instance`} className="font-mono text-[8px] text-muted uppercase tracking-wider block">
             Instance
           </label>
           <input
-            id="pre-pop-instance"
+            id={`${idPrefix}-instance`}
             type="text"
             className="w-full px-1.5 py-0.5 text-[11px] font-mono border border-border rounded-[3px] bg-subtle outline-none focus:border-accent transition-colors"
             value={value.instance || ''}
@@ -43,11 +47,11 @@ export function PrePopulateCard({ value, onChange, onRemove }: PrePopulateCardPr
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="pre-pop-path" className="font-mono text-[8px] text-muted uppercase tracking-wider block">
+          <label htmlFor={`${idPrefix}-path`} className="font-mono text-[8px] text-muted uppercase tracking-wider block">
             Path
           </label>
           <input
-            id="pre-pop-path"
+            id={`${idPrefix}-path`}
             type="text"
             className="w-full px-1.5 py-0.5 text-[11px] font-mono border border-border rounded-[3px] bg-subtle outline-none focus:border-accent transition-colors"
             value={value.path || ''}
@@ -59,13 +63,13 @@ export function PrePopulateCard({ value, onChange, onRemove }: PrePopulateCardPr
 
       <div className="mt-2 flex items-center gap-1.5">
         <input
-          id="pre-pop-editable"
+          id={`${idPrefix}-editable`}
           type="checkbox"
           checked={value.editable !== false}
           onChange={(e) => onChange({ ...value, editable: e.target.checked })}
           className="w-3 h-3 accent-accent"
         />
-        <label htmlFor="pre-pop-editable" className="text-[10px] text-muted font-mono uppercase tracking-tight cursor-pointer">
+        <label htmlFor={`${idPrefix}-editable`} className="text-[10px] text-muted font-mono uppercase tracking-tight cursor-pointer">
           Editable by user
         </label>
       </div>

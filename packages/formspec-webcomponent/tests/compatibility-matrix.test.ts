@@ -54,7 +54,7 @@ describe('core input compatibility matrix', () => {
             time: ['DatePicker', 'TextInput'],
             uri: ['TextInput'],
             choice: ['Select', 'TextInput'],
-            multiChoice: ['CheckboxGroup'],
+            multiChoice: ['CheckboxGroup', 'Select'],
             attachment: ['FileUpload'],
             money: ['NumberInput', 'TextInput'],
         };

@@ -317,12 +317,16 @@ function rewriteAllPathReferences(
   };
   rewriteItemExpressions(state.definition.items);
 
-  // 5. Rewrite screener routes
-  const screenerRoutes = state.definition.screener?.routes;
-  if (Array.isArray(screenerRoutes)) {
-    for (const route of screenerRoutes) {
-      if (typeof route.condition === 'string') {
-        route.condition = rewriteFieldRef(route.condition, oldPath, newPath);
+  // 5. Rewrite screener evaluation routes (condition + score expressions)
+  if (state.screener) {
+    for (const phase of state.screener.evaluation) {
+      for (const route of phase.routes) {
+        if (typeof (route as any).condition === 'string') {
+          (route as any).condition = rewriteFieldRef((route as any).condition, oldPath, newPath);
+        }
+        if (typeof (route as any).score === 'string') {
+          (route as any).score = rewriteFieldRef((route as any).score, oldPath, newPath);
+        }
       }
     }
   }

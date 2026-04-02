@@ -6,9 +6,9 @@ function makeState(overrides: any = {}): ProjectState {
   return {
     definition: { url: 'urn:formspec:test', $formspec: '1.0', version: '0.1.0', title: '', items: [], ...overrides.definition },
     component: { targetDefinition: { url: '' }, ...overrides.component },
-    generatedComponent: { 'x-studio-generated': true, targetDefinition: { url: '' }, ...overrides.generatedComponent },
     theme: { targetDefinition: { url: '' }, ...overrides.theme },
-    mapping: {},
+    mappings: {},
+    selectedMappingId: 'default',
     extensions: { registries: [] },
     versioning: { baseline: { $formspec: '1.0', url: '', version: '0.1.0', title: '', items: [] } as any, releases: [] },
   } as any;
@@ -19,7 +19,6 @@ describe('normalizeState', () => {
     const state = makeState();
     normalizeState(state);
     expect(state.component.targetDefinition!.url).toBe('urn:formspec:test');
-    expect(state.generatedComponent.targetDefinition!.url).toBe('urn:formspec:test');
     expect((state.theme as any).targetDefinition.url).toBe('urn:formspec:test');
   });
 
@@ -53,7 +52,6 @@ describe('normalizeState', () => {
   it('handles missing targetDefinition gracefully', () => {
     const state = makeState({
       component: {},
-      generatedComponent: { 'x-studio-generated': true },
       theme: {},
     });
     // Should not throw

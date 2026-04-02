@@ -11,6 +11,15 @@ It manages four editable artifacts:
 - `theme` — presentation tokens and cascade rules
 - `mapping` — bidirectional data transforms
 
+These artifacts are layered, not mutually exclusive:
+
+- `definition` is always sufficient on its own
+- `theme` is optional and remains a valid hand-authored presentation layer
+- `component` is optional and has highest precedence when present
+
+`formspec-core` preserves that model. It does not assume Studio-style authoring,
+and it does not require every project to have a component document.
+
 ## Install
 
 ```bash
@@ -72,8 +81,8 @@ RawProject (facade)
 | `state-normalizer.ts` | `normalizeState()`: pure function enforcing cross-artifact invariants (URL sync, breakpoint sort, breakpoint inheritance) |
 | `normalization.ts` | `normalizeDefinition()`: converts legacy serialization shapes to canonical forms (instances array → object, binds object → array); idempotent |
 | `theme-cascade.ts` | `resolveThemeCascade()`: resolves effective presentation properties for an item across defaults → selectors → item-overrides |
-| `page-resolution.ts` | `resolvePageStructure()`: resolves `theme.pages` into enriched `ResolvedPageStructure` with region existence checks and diagnostics |
-| `component-documents.ts` | Helpers for splitting authored vs. generated component state, creating artifact envelopes |
+| `page-resolution.ts` | `resolvePageStructure()`: resolves component-tree pages into enriched `ResolvedPageStructure` with diagnostics |
+| `component-documents.ts` | Helpers for component document detection, normalization, and artifact envelopes |
 | `handlers/index.ts` | Aggregates 17 handler modules into a frozen `builtinHandlers` table. Each module exports a `Record<string, CommandHandler>` |
 | `queries/*.ts` | 7 modules of pure query functions: `(ProjectState, ...) => result`. Field queries, expression index, dependency graph, statistics, diagnostics, versioning, registry queries |
 
@@ -92,7 +101,7 @@ RawProject (facade)
 `dispatch(command)`, `batch(commands)`, `batchWithRebuild(phase1, phase2)`
 
 **State getters:**
-`state`, `definition`, `component`, `theme`, `mapping`, `artifactComponent`, `generatedComponent`
+`state`, `definition`, `component`, `theme`, `mapping`
 
 **History:**
 `undo()`, `redo()`, `canUndo`, `canRedo`, `log`, `resetHistory()`
@@ -125,15 +134,14 @@ Every `dispatch()` follows the same pipeline via `_execute(phases)`:
 
 ## Command Catalog
 
-130 commands across 17 handler modules:
+Core commands across 16 handler modules:
 
 | Area | Commands | Description |
 |------|----------|-------------|
-| `definition.*` | 46 | Items, binds, shapes, variables, option sets, instances, pages, screener, migrations, metadata |
+| `definition.*` | 46 | Items, binds, shapes, variables, option sets, instances, form presentation, screener, migrations, metadata |
 | `component.*` | 25 | Component tree structure, node properties, custom components, responsive overrides |
-| `theme.*` | 28 | Tokens, defaults, selectors, item overrides, pages, grid regions, breakpoints, stylesheets |
+| `theme.*` | 28 | Tokens, defaults, selectors, item overrides, breakpoints, stylesheets |
 | `mapping.*` | 16 | Rules, inner rules, adapter config, preview, extensions |
-| `pages.*` | 10 | Page add/delete/reorder, mode, item assignment, region management |
 | `project.*` | 5 | Import, subform import, registry loading, publishing |
 
 ## Extensibility
@@ -186,7 +194,7 @@ These functions are exported for use outside `RawProject`:
 |--------|-------------|
 | `normalizeDefinition(def)` | Converts legacy `instances[]` → object and `binds{}` → array. Idempotent. |
 | `resolveThemeCascade(theme, key, type, dataType?)` | Resolves effective presentation properties for one item via the three-level cascade. |
-| `resolvePageStructure(state, itemKeys)` | Resolves page structure from `theme.pages` with region existence checks. |
+| `resolvePageStructure(state, itemKeys)` | Resolves page structure from the component tree with region existence checks. |
 | `resolveItemLocation(state, path)` | Resolves a dot-path to the item and its parent in the definition tree. |
 
 ## Development

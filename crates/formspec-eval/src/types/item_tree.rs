@@ -59,6 +59,10 @@ pub struct ItemInfo {
     pub repeat_min: Option<u64>,
     /// Maximum repeat count (for repeatable groups).
     pub repeat_max: Option<u64>,
+    /// Valid option values for choice/multiChoice fields.
+    pub option_values: Vec<String>,
+    /// Accepted MIME types for attachment fields (e.g. ["image/*", "application/pdf"]).
+    pub accept_types: Vec<String>,
     /// Extension names declared on this item (only enabled ones, value=true).
     pub extensions: Vec<String>,
     /// Pre-populate instance name (e.g. "userProfile").

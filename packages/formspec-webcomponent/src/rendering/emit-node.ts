@@ -11,6 +11,7 @@ import type { AdapterContext } from '../adapters/types';
 import {
     PresentationBlock,
     ItemDescriptor,
+    mergeFormPresentationForPlanning,
     type LayoutNode,
 } from '@formspec-org/layout';
 import { useWizard } from '../behaviors/wizard';
@@ -60,7 +61,10 @@ export interface RenderHost {
 export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement, prefix: string, headingLevel = 3): void {
     let target = parent;
 
-    if (node.when) {
+    const modalAutoSkipsWhenWrapper =
+        node.component === 'Modal' && node.props?.trigger === 'auto';
+
+    if (node.when && !modalAutoSkipsWhenWrapper) {
         const wrapper = document.createElement('div');
         wrapper.className = 'formspec-when';
         target.appendChild(wrapper);
@@ -87,7 +91,18 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         container.className = 'formspec-repeat';
         container.dataset.bind = bindKey;
         target.appendChild(container);
+        const list = document.createElement('div');
+        list.className = 'formspec-repeat-list';
+        container.appendChild(list);
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'formspec-repeat-add formspec-focus-ring';
         const item = host.findItemByKey(bindKey);
+        const groupLabel = item?.label || bindKey;
+        addBtn.textContent = `Add ${groupLabel}`;
+        const liveRegion = document.createElement('div');
+        liveRegion.className = 'formspec-sr-only';
+        liveRegion.setAttribute('aria-live', 'polite');
         let innerCleanupFns: Array<() => void> = [];
 
         const disposeInner = () => {
@@ -99,15 +114,16 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         host.cleanupFns.push(effect(() => {
             const count = host.engine.repeats[fullRepeatPath]?.value || 0;
             disposeInner();
-            container.replaceChildren();
+            list.replaceChildren();
 
             const nextInnerCleanupFns: Array<() => void> = [];
             const repeatHost = { ...host, cleanupFns: nextInnerCleanupFns };
-
             for (let idx = 0; idx < count; idx++) {
                 const instanceWrapper = document.createElement('div');
                 instanceWrapper.className = 'formspec-repeat-instance';
-                container.appendChild(instanceWrapper);
+                instanceWrapper.setAttribute('role', 'group');
+                instanceWrapper.setAttribute('aria-label', `${groupLabel} ${idx + 1} of ${count}`);
+                list.appendChild(instanceWrapper);
 
                 const instancePrefix = `${fullRepeatPath}[${idx}]`;
                 for (const child of node.children) {
@@ -116,11 +132,23 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
 
                 const removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
-                removeBtn.className = 'formspec-repeat-add';
+                removeBtn.className = 'formspec-repeat-remove formspec-focus-ring';
                 removeBtn.textContent = `Remove ${item?.label || bindKey}`;
+                removeBtn.setAttribute('aria-label', `Remove ${groupLabel} ${idx + 1}`);
                 const removeIdx = idx;
                 removeBtn.addEventListener('click', () => {
                     host.engine.removeRepeatInstance(fullRepeatPath, removeIdx);
+                    const newCount = Math.max(0, count - 1);
+                    liveRegion.textContent = `${groupLabel} ${removeIdx + 1} removed. ${newCount} remaining.`;
+                    queueMicrotask(() => {
+                        if (newCount === 0) {
+                            addBtn.focus();
+                            return;
+                        }
+                        const instances = container.querySelectorAll<HTMLElement>('.formspec-repeat-instance');
+                        const targetInstance = instances[Math.min(removeIdx, newCount - 1)];
+                        targetInstance?.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+                    });
                 });
                 instanceWrapper.appendChild(removeBtn);
             }
@@ -130,14 +158,18 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         host.cleanupFns.push(() => {
             disposeInner();
         });
-        const addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        addBtn.className = 'formspec-repeat-add';
-        addBtn.textContent = `Add ${item?.label || bindKey}`;
         addBtn.addEventListener('click', () => {
             host.engine.addRepeatInstance(fullRepeatPath);
+            const newCount = (host.engine.repeats[fullRepeatPath]?.value || 0);
+            liveRegion.textContent = `${groupLabel} ${newCount} added. ${newCount} total.`;
+            queueMicrotask(() => {
+                const instances = container.querySelectorAll<HTMLElement>('.formspec-repeat-instance');
+                const last = instances[instances.length - 1];
+                last?.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+            });
         });
-        target.appendChild(addBtn);
+        container.appendChild(addBtn);
+        container.appendChild(liveRegion);
         return;
     }
 
@@ -148,6 +180,7 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         el.className = 'formspec-group';
         if (node.props.title) {
             const heading = document.createElement(`h${Math.min(headingLevel, 6)}`);
+            heading.className = 'formspec-group-title';
             heading.textContent = node.props.title as string;
             el.appendChild(heading);
         }
@@ -170,6 +203,10 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
         component: node.component,
         ...node.props,
     };
+    if (node.when) {
+        comp.when = node.when;
+        if (node.whenPrefix !== undefined) comp.whenPrefix = node.whenPrefix;
+    }
     if (node.style) comp.style = node.style;
     if (node.cssClasses.length > 0) comp.cssClass = node.cssClasses;
     if (node.accessibility) comp.accessibility = node.accessibility;
@@ -249,11 +286,11 @@ export function renderActualComponent(host: RenderHost, comp: any, parent: HTMLE
     // pageMode-driven rendering: a Stack root with Page children triggers the
     // wizard or tabs behavior/adapter pipeline instead of plain Stack rendering.
     if (componentType === 'Stack' && isPageModeWizard(host, comp)) {
-        renderPageModeWizard(comp, parent, ctx);
+        renderPageModeWizard(host, comp, parent, ctx);
         return;
     }
     if (componentType === 'Stack' && isPageModeTabs(host, comp)) {
-        renderPageModeTabs(comp, parent, ctx);
+        renderPageModeTabs(host, comp, parent, ctx);
         return;
     }
 
@@ -264,12 +301,22 @@ export function renderActualComponent(host: RenderHost, comp: any, parent: HTMLE
     }
 }
 
+/** Merged definition + component document formPresentation (pageMode, showProgress, …). */
+function effectiveFormPresentation(host: RenderHost): Record<string, unknown> {
+    return (
+        mergeFormPresentationForPlanning(
+            host._definition?.formPresentation,
+            host._componentDocument?.formPresentation,
+        ) ?? {}
+    );
+}
+
 /**
  * Detect whether a Stack comp should render as a wizard based on pageMode.
  * True when children are Pages and formPresentation.pageMode === 'wizard'.
  */
 function isPageModeWizard(host: RenderHost, comp: any): boolean {
-    const pageMode = host._definition?.formPresentation?.pageMode;
+    const pageMode = effectiveFormPresentation(host).pageMode;
     if (pageMode !== 'wizard') return false;
     const children: any[] = comp.children;
     if (!Array.isArray(children) || children.length === 0) return false;
@@ -281,7 +328,7 @@ function isPageModeWizard(host: RenderHost, comp: any): boolean {
  * True when children are Pages and formPresentation.pageMode === 'tabs'.
  */
 function isPageModeTabs(host: RenderHost, comp: any): boolean {
-    const pageMode = host._definition?.formPresentation?.pageMode;
+    const pageMode = effectiveFormPresentation(host).pageMode;
     if (pageMode !== 'tabs') return false;
     const children: any[] = comp.children;
     if (!Array.isArray(children) || children.length === 0) return false;
@@ -293,7 +340,7 @@ function isPageModeTabs(host: RenderHost, comp: any): boolean {
  * Renders orphan (non-Page) children normally, then synthesizes a wizard-like
  * comp from the Page children and routes through the wizard behavior/adapter.
  */
-function renderPageModeWizard(comp: any, parent: HTMLElement, ctx: RenderContext): void {
+function renderPageModeWizard(host: RenderHost, comp: any, parent: HTMLElement, ctx: RenderContext): void {
     const allChildren: any[] = comp.children || [];
     const orphans = allChildren.filter((c: any) => c.component !== 'Page');
     const pageChildren = allChildren.filter((c: any) => c.component === 'Page');
@@ -303,7 +350,7 @@ function renderPageModeWizard(comp: any, parent: HTMLElement, ctx: RenderContext
         ctx.renderComponent(orphan, parent, ctx.prefix);
     }
 
-    const formPres = ctx.behaviorContext.definition?.formPresentation || {};
+    const formPres = effectiveFormPresentation(host);
     const wizardComp = {
         component: 'Wizard',
         children: pageChildren,
@@ -326,7 +373,7 @@ function renderPageModeWizard(comp: any, parent: HTMLElement, ctx: RenderContext
  * Renders orphan (non-Page) children normally, then synthesizes a tabs-like
  * comp from the Page children and routes through the tabs behavior/adapter.
  */
-function renderPageModeTabs(comp: any, parent: HTMLElement, ctx: RenderContext): void {
+function renderPageModeTabs(host: RenderHost, comp: any, parent: HTMLElement, ctx: RenderContext): void {
     const allChildren: any[] = comp.children || [];
     const orphans = allChildren.filter((c: any) => c.component !== 'Page');
     const pageChildren = allChildren.filter((c: any) => c.component === 'Page');
@@ -336,7 +383,7 @@ function renderPageModeTabs(comp: any, parent: HTMLElement, ctx: RenderContext):
         ctx.renderComponent(orphan, parent, ctx.prefix);
     }
 
-    const formPres = ctx.behaviorContext.definition?.formPresentation || {};
+    const formPres = effectiveFormPresentation(host);
     const tabsComp = {
         component: 'Tabs',
         children: pageChildren,

@@ -2,6 +2,7 @@ import { render, screen, act, fireEvent, within, waitFor } from '@testing-librar
 import { describe, it, expect, vi } from 'vitest';
 import JSZip from 'jszip';
 import { createProject } from '@formspec-org/studio-core';
+import type { FormDefinition } from '@formspec-org/types';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
 import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
@@ -17,10 +18,17 @@ const seededDefinition = {
   ],
 };
 
-function renderShell(definition?: typeof seededDefinition, width = 1440) {
+function renderShell(definition?: FormDefinition, width = 1440, screener?: unknown) {
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
   Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: width });
-  const project = definition ? createProject({ seed: { definition } }) : createProject();
+  const project = definition
+    ? createProject({
+        seed: {
+          definition,
+          ...(screener !== undefined ? { screener: screener as any } : {}),
+        },
+      })
+    : createProject();
   return {
     ...render(
       <ProjectProvider project={project}>
@@ -41,9 +49,9 @@ describe('Shell', () => {
     expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
   });
 
-  it('shows 7 workspace tabs', () => {
+  it('shows 5 workspace tabs', () => {
     renderShell();
-    for (const tab of ['Editor', 'Logic', 'Data', 'Layout', 'Theme', 'Mapping', 'Preview']) {
+    for (const tab of ['Editor', 'Layout', 'Theme', 'Mapping', 'Preview']) {
       expect(screen.getByRole('tab', { name: tab })).toBeInTheDocument();
     }
   });
@@ -53,12 +61,21 @@ describe('Shell', () => {
     expect(screen.getByTestId('workspace-Editor')).toHaveAttribute('data-workspace', 'Editor');
   });
 
+  it('exposes the active workspace as a tabpanel linked to the selected tab', () => {
+    renderShell();
+    const workspace = screen.getByTestId('workspace-Editor');
+
+    expect(workspace).toHaveAttribute('role', 'tabpanel');
+    expect(workspace).toHaveAttribute('id', 'studio-panel-editor');
+    expect(workspace).toHaveAttribute('aria-labelledby', 'studio-tab-editor');
+  });
+
   it('clicking a tab switches workspace', async () => {
     renderShell();
     await act(async () => {
-      screen.getByRole('tab', { name: 'Logic' }).click();
+      screen.getByRole('tab', { name: 'Layout' }).click();
     });
-    expect(screen.getByTestId('workspace-Logic')).toHaveAttribute('data-workspace', 'Logic');
+    expect(screen.getByTestId('workspace-Layout')).toHaveAttribute('data-workspace', 'Layout');
   });
 
   it('renders the app logo as a clickable home action', () => {
@@ -133,7 +150,7 @@ describe('Shell', () => {
     });
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Data' }).click();
+      screen.getByRole('tab', { name: 'Layout' }).click();
     });
 
     await act(async () => {
@@ -147,21 +164,66 @@ describe('Shell', () => {
     expect(screen.getByTestId('field-name')).toBeInTheDocument();
   });
 
-  // DataTab uses internal section filter state (useState). When the user
-  // navigates away and back, React unmounts/remounts the component, resetting
-  // the filter to "All Data". This is expected — the Data workspace is now
-  // self-contained (like LogicTab), so sub-tab state is local.
-  it('renders DataTab workspace with section filter buttons', async () => {
-    renderShell();
+  it('always shows Form Health in the right rail regardless of selection', async () => {
+    renderShell(seededDefinition, 1440);
 
+    expect(screen.getByTestId('blueprint-sidebar')).toBeInTheDocument();
+    expect(screen.getByTestId('editor-canvas-shell')).toBeInTheDocument();
+    expect(screen.getByTestId('properties-panel')).toBeInTheDocument();
+    // No field selected — shows Form Health
+    expect(screen.getByText('Form Health')).toBeInTheDocument();
+
+    // Select a field — right rail still shows Form Health (inline editing handles properties)
     await act(async () => {
-      screen.getByRole('tab', { name: 'Data' }).click();
+      screen.getByTestId('field-name').click();
     });
+    expect(screen.getByText('Form Health')).toBeInTheDocument();
+  });
 
-    const workspace = screen.getByTestId('workspace-Data');
-    // Verify the filter buttons exist
-    expect(within(workspace).getByRole('button', { name: /all data/i })).toBeInTheDocument();
-    expect(within(workspace).getByRole('button', { name: /sources/i })).toBeInTheDocument();
+  it('hides the Component Tree blueprint section while Editor is active', () => {
+    renderShell(seededDefinition, 1440);
+
+    expect(screen.queryByTestId('blueprint-section-Component Tree')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Layout' }));
+    expect(screen.getByTestId('blueprint-section-Component Tree')).toBeInTheDocument();
+  });
+
+  it('hides Theme and Mappings blueprint sections while Editor is active', () => {
+    renderShell(seededDefinition, 1440);
+
+    expect(screen.queryByTestId('blueprint-section-Theme')).toBeNull();
+    expect(screen.queryByTestId('blueprint-section-Mappings')).toBeNull();
+    // Screener is now visible in Editor
+    expect(screen.getByTestId('blueprint-section-Screener')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Layout' }));
+    expect(screen.getByTestId('blueprint-section-Theme')).toBeInTheDocument();
+    expect(screen.getByTestId('blueprint-section-Mappings')).toBeInTheDocument();
+  });
+
+  it('uses the same row-first editor surface on compact screens without a separate properties mode', async () => {
+    renderShell({
+      ...seededDefinition,
+      items: [
+        { key: 'app', type: 'group' as const, label: 'Applicant Information', children: [
+          { key: 'name', type: 'field' as const, dataType: 'string' as const, label: 'Full Legal Name' },
+        ] },
+      ],
+    }, 390);
+    fireEvent(window, new Event('resize'));
+
+    expect(screen.queryByTestId('mobile-editor-switcher')).toBeNull();
+    expect(screen.getByTestId('mobile-editor-structure')).toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-editor-properties')).toBeNull();
+    expect(screen.getByTestId('mobile-selection-context')).toBeInTheDocument();
+  });
+
+  it('renders Build/Manage toggle in Editor workspace', () => {
+    renderShell();
+    expect(screen.getByRole('radiogroup', { name: /editor view/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Build' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Manage' })).toBeInTheDocument();
   });
 
   it('renders the Theme workspace with zone filter buttons', async () => {
@@ -193,7 +255,7 @@ describe('Shell', () => {
     expect(within(mappingWorkspace).getByTestId('preview-source-header')).toBeInTheDocument();
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Logic' }).click();
+      screen.getByRole('tab', { name: 'Layout' }).click();
     });
 
     await act(async () => {
@@ -228,7 +290,7 @@ describe('Shell', () => {
     });
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Logic' }).click();
+      screen.getByRole('tab', { name: 'Layout' }).click();
     });
 
     await act(async () => {
@@ -264,7 +326,7 @@ describe('Shell', () => {
     // The concrete failure signal: both sidebars are always visible at full
     // width (230px + 270px = 500px) without any responsive hiding mechanism.
     const leftSidebar = shell.querySelector('aside:first-of-type');
-    const rightSidebar = shell.querySelector('aside[data-testid="properties"]');
+    const rightSidebar = shell.querySelector('aside[data-testid="properties-panel"]');
 
     // At tablet width at least one sidebar should be hidden or collapsed to
     // prevent the total rendered width from exceeding the viewport.
@@ -318,5 +380,270 @@ describe('Shell', () => {
     // diagnostic text. The class must be replaced with at least text-[11px].
     expect(statusBar.className).not.toMatch(/text-\[9px\]/);
     expect(statusBar.className).not.toMatch(/text-\[10px\]/);
+  });
+
+  it('renders the compact blueprint overlay as a modal dialog with a labelled close action', async () => {
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
+
+    await act(async () => {
+      screen.getByRole('button', { name: /toggle blueprint menu/i }).click();
+    });
+
+    expect(screen.getByRole('dialog', { name: /blueprint/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /close blueprint drawer/i })).toBeInTheDocument();
+  });
+
+  it('shows the selected item label in compact editor context without a separate properties mode', async () => {
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
+
+    await act(async () => {
+      within(screen.getByTestId('field-name')).getByRole('button', { name: 'Select Full Name' }).click();
+    });
+
+    expect(screen.getByTestId('mobile-selection-context')).toHaveTextContent('Full Name');
+    expect(screen.getByTestId('mobile-selection-context')).not.toHaveTextContent('app.name');
+    expect(screen.getByTestId('mobile-editor-structure')).toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-editor-properties')).toBeNull();
+    expect(screen.queryByText('app.name')).toBeNull();
+  });
+
+  it('keeps compact editor selection context while staying on the single structure surface', async () => {
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
+
+    await act(async () => {
+      within(screen.getByTestId('field-name')).getByRole('button', { name: 'Select Full Name' }).click();
+    });
+
+    expect(screen.getByTestId('mobile-editor-structure')).toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-editor-properties')).toBeNull();
+    expect(screen.getByTestId('mobile-selection-context')).toHaveTextContent('Full Name');
+  });
+
+  // Right rail always shows FormHealthPanel regardless of view or selection
+  it('shows Form Health panel in both Build and Manage views', async () => {
+    renderShell(seededDefinition, 1440);
+
+    // Select a field in Build view — right rail still shows Form Health
+    await act(async () => {
+      screen.getByTestId('field-name').click();
+    });
+    expect(screen.getByText('Form Health')).toBeInTheDocument();
+
+    // Switch to Manage view — still Form Health
+    await act(async () => {
+      screen.getByRole('radio', { name: 'Manage' }).click();
+    });
+    expect(screen.getByText('Form Health')).toBeInTheDocument();
+  });
+
+  // A7: Navigate-workspace event with `view` parameter
+  it('responds to formspec:navigate-workspace event with view parameter', async () => {
+    renderShell(seededDefinition, 1440);
+
+    // Initially in Build view
+    expect(screen.getByRole('radio', { name: 'Build' })).toHaveAttribute('aria-checked', 'true');
+
+    // Dispatch navigate event with view
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
+        detail: { tab: 'Editor', view: 'manage' },
+      }));
+    });
+
+    // Should switch to Manage view
+    expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  // A8: Toggle resets to 'build' on New Form
+  it('resets to Build view when creating a new form', async () => {
+    renderShell(seededDefinition, 1440);
+
+    // Switch to Manage view
+    await act(async () => {
+      screen.getByRole('radio', { name: 'Manage' }).click();
+    });
+    expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
+
+    // Create new form
+    await act(async () => {
+      screen.getByRole('button', { name: /account menu/i }).click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: /new form/i }).click();
+    });
+
+    // Should be back in Build view
+    expect(screen.getByRole('radio', { name: 'Build' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  // Task #5: activeEditorView persists across tab switches
+  it('preserves activeEditorView when switching tabs and returning to Editor', async () => {
+    renderShell(seededDefinition, 1440);
+
+    // Switch to Manage view
+    await act(async () => {
+      screen.getByRole('radio', { name: 'Manage' }).click();
+    });
+    expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
+
+    // Switch to Layout tab
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Layout' }).click();
+    });
+
+    // Switch back to Editor tab
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Editor' }).click();
+    });
+
+    // Manage view should still be active
+    expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  // Task #9: Navigate-workspace event with section parameter
+  it('responds to formspec:navigate-workspace event with section parameter', async () => {
+    renderShell(seededDefinition, 1440);
+
+    const scrollHandler = vi.fn();
+    window.addEventListener('formspec:scroll-to-section', scrollHandler);
+
+    // Dispatch navigate event with view and section
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
+        detail: { tab: 'Editor', view: 'manage', section: 'shapes' },
+      }));
+    });
+
+    // Should switch to Manage view
+    expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
+
+    // Should have dispatched a scroll-to-section event
+    expect(scrollHandler).toHaveBeenCalledTimes(1);
+    const scrollEvent = scrollHandler.mock.calls[0][0] as CustomEvent<{ section: string }>;
+    expect(scrollEvent.detail.section).toBe('shapes');
+
+    window.removeEventListener('formspec:scroll-to-section', scrollHandler);
+  });
+
+  it('does not dispatch scroll-to-section when section is not provided', async () => {
+    renderShell(seededDefinition, 1440);
+
+    const scrollHandler = vi.fn();
+    window.addEventListener('formspec:scroll-to-section', scrollHandler);
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
+        detail: { tab: 'Editor', view: 'manage' },
+      }));
+    });
+
+    expect(scrollHandler).not.toHaveBeenCalled();
+    window.removeEventListener('formspec:scroll-to-section', scrollHandler);
+  });
+
+  // Task #12: manageCount covers all 6 Manage sections
+  it('manageCount includes optionSets, instances, and screener routes in addition to binds, shapes, and variables', () => {
+    const definition: FormDefinition = {
+      ...seededDefinition,
+      binds: [
+        { path: 'name', required: 'true' },
+      ],
+      shapes: [
+        { id: 's1', target: 'name', constraint: '$name != null', message: 'Required' },
+      ],
+      variables: [
+        { name: 'v1', expression: '1 + 1' },
+      ],
+      optionSets: {
+        colors: { options: [{ value: 'red', label: 'Red' }] },
+        sizes: { options: [{ value: 'sm', label: 'Small' }] },
+      },
+      instances: {
+        lookup1: { data: { rows: [] } },
+      },
+    };
+
+    const screenerDoc = {
+      $formspecScreener: '1.0',
+      url: 'urn:shell:screener',
+      version: '1.0.0',
+      title: 'Gate',
+      items: [],
+      evaluation: [
+        {
+          id: 'main',
+          strategy: 'first-match',
+          routes: [
+            { condition: 'true', target: 'urn:a' },
+            { condition: 'true', target: 'urn:b' },
+          ],
+        },
+      ],
+    };
+
+    renderShell(definition, 1440, screenerDoc);
+
+    // Total should be: 1 bind + 1 shape + 1 variable + 2 optionSets + 1 instance + 2 routes = 8
+    // The Manage radio button label includes the count in parentheses
+    const manageRadio = screen.getByRole('radio', { name: /Manage/i });
+    // The count badge is rendered near the Manage label
+    const manageLabel = manageRadio.closest('label') ?? manageRadio.parentElement;
+    expect(manageLabel?.textContent).toContain('8');
+  });
+
+  // Task #10: Compact/mobile Form Health layout
+  it('shows a health badge button in compact Editor that opens a bottom sheet', async () => {
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
+
+    // The right rail Form Health panel should be hidden in compact mode
+    const rightRail = screen.queryByTestId('properties-panel');
+    expect(
+      !rightRail ||
+      rightRail.classList.contains('hidden') ||
+      rightRail.getAttribute('data-responsive-hidden') === 'true'
+    ).toBe(true);
+
+    // A persistent health badge button should be visible in compact Editor
+    const healthBadge = screen.getByRole('button', { name: /form health/i });
+    expect(healthBadge).toBeInTheDocument();
+
+    // Clicking it opens a bottom sheet dialog
+    await act(async () => {
+      healthBadge.click();
+    });
+
+    const healthSheet = screen.getByRole('dialog', { name: /form health/i });
+    expect(healthSheet).toBeInTheDocument();
+    expect(healthSheet.className).toMatch(/slide-in-from-bottom|bottom/);
+
+    // The sheet contains the Form Health content
+    expect(within(healthSheet).getAllByText('Form Health').length).toBeGreaterThanOrEqual(1);
+    expect(within(healthSheet).getByText('Issues')).toBeInTheDocument();
+  });
+
+  it('closes the compact health sheet via its close button', async () => {
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
+
+    // Open the health sheet
+    await act(async () => {
+      screen.getByRole('button', { name: /form health/i }).click();
+    });
+    expect(screen.getByRole('dialog', { name: /form health/i })).toBeInTheDocument();
+
+    // Close it
+    await act(async () => {
+      screen.getByRole('button', { name: /close.*health/i }).click();
+    });
+    expect(screen.queryByRole('dialog', { name: /form health/i })).not.toBeInTheDocument();
+  });
+
+  it('does not show health badge button on wide screens', () => {
+    renderShell(seededDefinition, 1440);
+    expect(screen.queryByRole('button', { name: /form health/i })).not.toBeInTheDocument();
   });
 });

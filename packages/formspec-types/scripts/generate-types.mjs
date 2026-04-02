@@ -26,7 +26,8 @@ const OUT_DIR = resolve(__dirname, '../src/generated');
  */
 const URI_TO_LOCAL = {};
 for (const f of ['definition', 'component', 'theme', 'mapping', 'registry',
-  'response', 'validationReport', 'validationResult', 'fel-functions']) {
+  'response', 'validationReport', 'validationResult', 'fel-functions',
+  'screener', 'determination']) {
   const filePath = resolve(SCHEMAS_DIR, `${f}.schema.json`);
   if (existsSync(filePath)) {
     const s = JSON.parse(readFileSync(filePath, 'utf-8'));
@@ -64,6 +65,8 @@ const SCHEMA_SOURCES = [
   { file: 'response.schema.json', title: 'FormResponse' },
   { file: 'validationReport.schema.json', title: 'ValidationReport' },
   { file: 'fel-functions.schema.json', title: 'FELFunctionCatalog' },
+  { file: 'screener.schema.json', title: 'ScreenerDocument' },
+  { file: 'determination.schema.json', title: 'DeterminationRecord' },
 ];
 
 const FILE_BANNER = `/**
@@ -277,7 +280,7 @@ function buildCrossFileRefGraph(schemasDir, schemaSources, uriToLocal) {
         const ref = obj.$ref;
         if (ref.includes('#/$defs/')) {
           const [filePart, fragment] = ref.split('#');
-          const sourceSchema = basename(filePart, '.schema.json');
+          const sourceSchema = uriToModule[filePart] || basename(filePart, '.schema.json');
           const defName = fragment.split('/').pop();
           const key = `${sourceSchema}:${defName}`;
           if (!seen.has(key)) { seen.add(key); refs.push({ sourceSchema, defName }); }

@@ -1,25 +1,13 @@
-// @filedesc Trimmed USWDS Sass entry point — only the components the adapter uses.
+// @filedesc USWDS Sass entry — @forward component packages + minimal Formspec-only glue (no duplicate USWDS patterns).
 //
-// Compiled by `npm run build:css` into dist/uswds-formspec.css, then
-// injected into integration-css.ts by `npm run build:integration-css`.
-//
-// See ADR 0048 for rationale and component inventory.
+// Compiled by `npm run build:css` into dist/uswds-formspec.css, then embedded in integration-css.ts.
 
 // ---------------------------------------------------------------------------
 // USWDS core (settings, functions, mixins, tokens) — no output CSS
 // ---------------------------------------------------------------------------
+// Use USWDS default type roles (Source Sans Pro Web, Merriweather, Roboto Mono) — matches dist `uswds.css` / federal defaults.
 @forward 'uswds-core' with (
-  // Suppress compile-time notification banner
   $theme-show-notifications: false,
-
-  // Use system font stack for all roles — eliminates @font-face declarations.
-  // The theme's typography tokens provide the actual font-family
-  // ('Public Sans', -apple-system, ...) at render time.
-  $theme-font-type-sans: 'system',
-  $theme-font-type-serif: 'system',
-  $theme-font-type-mono: 'system',
-
-  // Formspec layout integration: inputs fill their grid cells
   $theme-input-max-width: none,
 );
 
@@ -29,6 +17,7 @@
 @forward 'usa-form-group';
 @forward 'usa-label';
 @forward 'usa-input';
+@forward 'usa-input-prefix-suffix';
 @forward 'usa-textarea';
 @forward 'usa-select';
 @forward 'usa-checkbox';
@@ -42,27 +31,286 @@
 @forward 'usa-button';
 @forward 'usa-button-group';
 @forward 'usa-step-indicator';
+@forward 'usa-layout-grid';
+@forward 'usa-section';
+@forward 'usa-prose';
+@forward 'usa-accordion';
+@forward 'usa-card';
+@forward 'usa-modal';
+@forward 'usa-alert';
+@forward 'usa-tag';
+@forward 'usa-list';
 
 // ---------------------------------------------------------------------------
-// Formspec-specific overrides — no USWDS setting equivalent
+// Formspec-only (classes / markup USWDS does not ship)
 // ---------------------------------------------------------------------------
+@use 'uswds-core' as *;
 
-// Formspec layout: grid gap handles inter-field spacing, not form-group margin
-.formspec-grid .usa-form-group,
-.formspec-stack .usa-form-group { margin-top: 0; }
+// -- Configuration variables (overridable via theme) --
+$fs-field-max-width: units('mobile-lg') !default;
+$fs-wizard-circle-size: units(4) !default;
+$fs-wizard-circle-font-size: 0.875rem !default;
+$fs-wizard-panel-max-width: 32rem !default;
+$fs-wizard-panel-radius: radius('md') !default;
+$fs-divider-margin: units(4) 0 !default;
+$fs-trailing-checkbox-size: 1.25rem !default;
 
-// Reset fieldset/label/hint margins that USWDS applies
-.formspec-container .usa-fieldset { border: 0; padding: 0; margin: 0; }
-.formspec-container .usa-label { margin-top: 0; }
-.formspec-container .usa-hint { margin-top: 0; }
-
-// Scale step indicator to formspec wizard proportions
-.formspec-wizard .usa-step-indicator__heading { font-size: 1rem; }
-.formspec-wizard .usa-step-indicator__current-step {
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  font-size: 0.875rem;
-  line-height: 2rem;
+// Let .usa-form typography (prose / system stack) win over Formspec layout tokens on the render root.
+.usa-form .formspec-container {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  overflow: visible;
 }
-.formspec-wizard .usa-step-indicator__heading-text { font-weight: 600; }
+
+// Injected by webcomponent shared behavior (required asterisk span).
+.formspec-required {
+  color: color('error-dark');
+}
+
+// ---------------------------------------------------------------------------
+// Layout: Formspec container/stack + USWDS grid-row (no formspec-uswds-grid bridge class)
+// ---------------------------------------------------------------------------
+
+// Direct children of the render root / plain stacks (no grid cell wrapper).
+.formspec-container > .usa-form-group,
+.formspec-stack > .usa-form-group,
+.formspec-container > .usa-fieldset,
+.formspec-stack > .usa-fieldset {
+  max-width: $fs-field-max-width;
+}
+
+.formspec-container > .usa-form-group > .usa-input-group,
+.formspec-stack > .usa-form-group > .usa-input-group,
+.formspec-container > .usa-form-group > .usa-range,
+.formspec-stack > .usa-form-group > .usa-range,
+.formspec-container > .usa-form-group > .usa-file-input,
+.formspec-stack > .usa-form-group > .usa-file-input {
+  max-width: $fs-field-max-width;
+}
+
+// Inside USWDS flex rows: cells are full width; stack rows keep readable field max-width.
+.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group,
+.grid-row.grid-gap > [class*='grid-col'] > .usa-fieldset,
+.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-input-group,
+.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-range,
+.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-file-input {
+  max-width: none;
+}
+
+.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group,
+.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-fieldset,
+.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-input-group,
+.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-range,
+.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-file-input {
+  max-width: $fs-field-max-width;
+}
+
+.formspec-grid .usa-form-group,
+.formspec-grid .usa-fieldset,
+.formspec-grid .usa-form-group > .usa-input-group,
+.formspec-grid .usa-form-group > .usa-range,
+.formspec-grid .usa-form-group > .usa-file-input {
+  max-width: none;
+}
+
+// Grid/columns rows: collapse extra top margin between cells (stack rows keep rhythm below).
+.grid-row.grid-gap .usa-form-group {
+  margin-top: 0;
+}
+
+.formspec-stack.grid-row.grid-gap .usa-form-group {
+  margin-top: units(3);
+}
+
+.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-label {
+  flex: 1;
+}
+
+.formspec-container .usa-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.grid-row.grid-gap .usa-form-group--error,
+.formspec-grid .usa-form-group--error {
+  margin-left: 0;
+}
+
+.formspec-container .usa-label,
+.formspec-container .usa-hint {
+  margin-top: 0;
+}
+
+.formspec-container > .formspec-submit,
+.formspec-stack > .formspec-submit {
+  align-self: flex-start;
+  width: auto;
+  margin-top: units(2);
+}
+
+// Repeat controls from emit-node use only formspec-* classes. Default Formspec skin
+// styles them in default.navigation.css; USWDS stories load layout + integration CSS only.
+.formspec-repeat-add {
+  @extend .usa-button;
+  @extend .usa-button--outline;
+  align-self: flex-start;
+  margin-top: units(2);
+  width: auto;
+}
+
+.formspec-repeat-remove {
+  @extend .usa-button;
+  @extend .usa-button--unstyled;
+}
+
+.formspec-repeat-instance {
+  border-bottom-color: color('base-lighter');
+}
+
+// Standalone boolean: native checkbox + label (not usa-checkbox faux control).
+.formspec-trailing-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: units(2);
+}
+
+.formspec-trailing-checkbox-label {
+  flex: 1;
+  cursor: pointer;
+  line-height: 1.4;
+  font: inherit;
+}
+
+.formspec-trailing-checkbox-label > .formspec-required {
+  font-size: 0;
+}
+
+.formspec-trailing-checkbox-label > .formspec-required::before {
+  content: '\00a0*';
+  font-size: 1rem;
+  color: color('error-dark');
+}
+
+.formspec-trailing-checkbox > input[type='checkbox'] {
+  flex-shrink: 0;
+  width: $fs-trailing-checkbox-size;
+  height: $fs-trailing-checkbox-size;
+  margin-top: 0.15rem;
+  cursor: pointer;
+  accent-color: color('primary');
+}
+
+// Validation summary: spacing comes from inner .usa-alert.margin-bottom-2 (Real USWDS pane parity).
+
+// Native <dialog> host for usa-modal inner markup (CSS-only; no USWDS modal JS).
+dialog.usa-modal {
+  background: transparent;
+  border: none;
+  margin: auto;
+  max-width: none;
+  overflow: visible;
+  padding: 0;
+}
+
+dialog.usa-modal::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+// Divider with optional label (not usa-hr — needs flex + label slot).
+.formspec-uswds-divider {
+  border: 0;
+  border-top: units(1px) solid color('base-lighter');
+  margin: $fs-divider-margin;
+  width: 100%;
+}
+
+.formspec-uswds-divider--labeled {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: units(2);
+  margin: $fs-divider-margin;
+}
+
+.formspec-uswds-divider__line {
+  border: 0;
+  border-top: units(1px) solid color('base-lighter');
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+}
+
+// usa-tag has no semantic variants — map Formspec badge variants to USWDS palette.
+.usa-tag.formspec-uswds-tag--primary {
+  background-color: color('primary');
+}
+
+.usa-tag.formspec-uswds-tag--success {
+  background-color: color('green-cool-50v');
+}
+
+.usa-tag.formspec-uswds-tag--warning {
+  background-color: color('yellow-20v');
+  color: color('ink');
+}
+
+.usa-tag.formspec-uswds-tag--error {
+  background-color: color('error-dark');
+}
+
+.formspec-uswds-progress progress {
+  width: 100%;
+  accent-color: color('primary');
+}
+
+.formspec-tab-panels {
+  padding-top: units(2);
+}
+
+.formspec-wizard .usa-step-indicator__heading {
+  font-size: 1rem;
+}
+
+.formspec-wizard .usa-step-indicator__current-step {
+  width: $fs-wizard-circle-size;
+  height: $fs-wizard-circle-size;
+  padding: 0;
+  font-size: $fs-wizard-circle-font-size;
+  line-height: $fs-wizard-circle-size;
+}
+
+.formspec-wizard .usa-step-indicator__heading-text {
+  font-weight: 700;
+}
+
+.formspec-uswds-wizard__content {
+  display: flex;
+  flex-direction: column;
+  gap: units(2);
+}
+
+.formspec-uswds-wizard__panel-heading {
+  margin-top: 0;
+  margin-bottom: units(2);
+}
+
+.formspec-wizard-panel {
+  border: units(1px) solid color('base-lighter');
+  border-radius: $fs-wizard-panel-radius;
+  max-width: $fs-wizard-panel-max-width;
+  padding: units(2);
+}
+
+.formspec-wizard-nav.usa-button-group {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}

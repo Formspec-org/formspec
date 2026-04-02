@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, importDefinition } from './helpers';
+import { editorFieldRows, editorGroupRows, importDefinition, waitForApp } from './helpers';
 
 const SEED_DEFINITION = {
   $formspec: '1.0',
@@ -43,9 +43,7 @@ test.describe('Interaction Patterns', () => {
       await expect(page.locator('[data-testid="context-menu"]')).not.toBeVisible();
 
       // There should now be 2 field blocks in the canvas
-      const canvas = page.locator('[data-testid="workspace-Editor"]');
-      const fieldBlocks = canvas.locator('[data-testid^="field-"]');
-      await expect(fieldBlocks).toHaveCount(2);
+      await expect(editorFieldRows(page)).toHaveCount(2);
     });
 
     test('pressing Escape closes the context menu', async ({ page }) => {
@@ -65,8 +63,11 @@ test.describe('Interaction Patterns', () => {
       await expect(page.locator('[data-testid="context-menu"]')).toBeVisible();
 
       await page.click('[data-testid="ctx-wrapInGroup"]');
+      await page.getByLabel('Group Key').fill('wrappedGroup');
+      await page.getByLabel('Group Label').fill('Wrapped Group');
+      await page.getByRole('button', { name: 'Create Group' }).click();
 
-      await expect(page.locator('[data-testid^="group-"]')).toHaveCount(1);
+      await expect(editorGroupRows(page)).toHaveCount(1);
       await expect(page.locator('[data-testid="field-myField"]')).toBeVisible();
     });
 
@@ -84,7 +85,7 @@ test.describe('Interaction Patterns', () => {
       await page.click('[data-testid="field-firstField"]', { button: 'right' });
       await page.click('[data-testid="ctx-moveDown"]');
 
-      const canvas = page.locator('[data-testid="workspace-Editor"] [data-testid^="field-"]');
+      const canvas = editorFieldRows(page);
       await expect(canvas.nth(0)).toHaveAttribute('data-testid', 'field-secondField');
       await expect(canvas.nth(1)).toHaveAttribute('data-testid', 'field-firstField');
     });
@@ -201,7 +202,7 @@ test.describe('Interaction Patterns', () => {
       await expect(page.locator('[data-testid="command-palette"]')).not.toBeVisible();
     });
 
-    test('Tab moves focus to the next field card instead of jumping into the inspector', async ({ page }) => {
+    test('Tab from the select button moves focus to the next field card', async ({ page }) => {
       await importDefinition(page, {
         $formspec: '1.0',
         items: [
@@ -212,10 +213,11 @@ test.describe('Interaction Patterns', () => {
       await page.waitForSelector('[data-testid="field-firstField"]');
       await page.waitForSelector('[data-testid="field-secondField"]');
 
-      await page.click('[data-testid="field-firstField"]');
+      // Focus the select button directly (the ItemRow select button handles Tab via onKeyDown)
+      await page.locator('[data-testid="field-firstField-select"]').focus();
       await page.keyboard.press('Tab');
 
-      await expect(page.locator('[data-testid="field-secondField"]')).toBeFocused();
+      await expect(page.locator('[data-testid="field-secondField-select"]')).toBeFocused();
     });
   });
 

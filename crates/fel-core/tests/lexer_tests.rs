@@ -371,11 +371,13 @@ fn unexpected_character_rejected() {
     assert!(err.contains("unexpected character"), "got: {err}");
 }
 
-/// Spec: fel-grammar.md §7 L376-377 — bare ! without = is invalid
+/// Prefix `!` lexes as `Token::Bang` (distinct from keyword `not` for printer fidelity); `!=` is inequality.
 #[test]
-fn bare_bang_rejected() {
-    let err = lex("!").unwrap_err();
-    assert!(err.contains("unexpected character '!'"), "got: {err}");
+fn bang_logical_not_prefix_lexes() {
+    assert_eq!(
+        tokens("!(true)"),
+        vec![Token::Bang, Token::LParen, Token::True, Token::RParen]
+    );
 }
 
 /// Correctness: unterminated single-quoted string

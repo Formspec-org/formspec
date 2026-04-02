@@ -1,6 +1,6 @@
 # Formspec Expression Language (FEL) — Normative Grammar
 
-**Version:** 1.0 
+**Version:** 1.0
 **Status:** Normative companion to Formspec v1.0 §3
 
 ---
@@ -225,6 +225,7 @@ Multiplication ← Unary ((_ '*' / _ '/' / _ '%') _ Unary)*
 
 # --- Unary prefix (precedence 10, right-associative) ---
 Unary          ← 'not' !IdContinue _ Unary
+               / '!' _ Unary
                / '-' _ Unary
                / Postfix
 
@@ -313,7 +314,7 @@ precedence. This table is normative and matches the structural encoding in §4.
 | 7 | `??` | Null-coalescing| Left | `$x ?? 0` |
 | 8 | `+` `-` `&` | Add / Concat | Left | `$a + $b`, `$s & '!'` |
 | 9 | `*` `/` `%` | Multiply | Left | `$a * $b` |
-| 10 | `not` (prefix), `-` (negate) | Unary | Right | `not $flag`, `-$x` |
+| 10 | `not` / `!` (prefix), `-` (negate) | Unary | Right | `not $flag`, `!$flag`, `-$x` |
 
 Parenthesised sub-expressions (`( … )`) override precedence as usual.
 Postfix operators (`.field`, `[index]`) bind tighter than all prefix

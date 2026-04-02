@@ -73,9 +73,36 @@ describe('ValidationSummary — source: live', () => {
 
         // Banner should now be visible
         expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(true);
-        const header = summary.querySelector('.formspec-validation-summary-header');
+        const header = summary.querySelector('.formspec-validation-summary-title');
         expect(header).not.toBeNull();
         expect(header?.textContent).toMatch(/error/i);
+    });
+
+    it('shows the banner after clicking the injected submit button', () => {
+        const el = renderWithValidationSummary({ source: 'live', mode: 'submit', showFieldErrors: true });
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+        const submit = el.querySelector('.formspec-submit') as HTMLButtonElement;
+
+        expect(submit).not.toBeNull();
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(false);
+
+        submit.click();
+
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(true);
+        expect(summary.textContent).toContain('Name');
+    });
+
+    it('shows field errors by default after submit', () => {
+        const el = renderWithValidationSummary();
+        const summary = el.querySelector('.formspec-validation-summary') as HTMLElement;
+        const submit = el.querySelector('.formspec-submit') as HTMLButtonElement;
+
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(false);
+
+        submit.click();
+
+        expect(summary.classList.contains('formspec-validation-summary--visible')).toBe(true);
+        expect(summary.textContent).toContain('Name');
     });
 
     it('remains hidden on initial load when the form is valid', () => {

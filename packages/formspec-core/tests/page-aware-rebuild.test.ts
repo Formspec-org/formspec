@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createRawProject } from '../src/index.js';
 
-/** Get Page nodes from the generated component tree. */
+/** Get Page nodes from the component tree. */
 function getPageNodes(project: ReturnType<typeof createRawProject>): any[] {
-  const tree = project.generatedComponent.tree;
+  const tree = project.component.tree;
   return (tree?.children ?? []).filter((c: any) => c.component === 'Page');
 }
 
@@ -14,12 +14,35 @@ function getPageId(project: ReturnType<typeof createRawProject>, index = 0): str
   return pages[index].nodeId;
 }
 
+function addPage(project: ReturnType<typeof createRawProject>, title: string, id?: string, description?: string): string {
+  project.dispatch({
+    type: 'definition.setFormPresentation',
+    payload: { property: 'pageMode', value: 'wizard' },
+  });
+  const result = project.dispatch({
+    type: 'component.addNode',
+    payload: {
+      parent: { nodeId: 'root' },
+      component: 'Page',
+      props: { ...(id ? { nodeId: id } : {}), title, ...(description ? { description } : {}) },
+    },
+  }) as any;
+  return id ?? result.nodeRef.nodeId;
+}
+
+function placeOnPage(project: ReturnType<typeof createRawProject>, pageId: string, bind: string) {
+  project.dispatch({
+    type: 'component.moveNode',
+    payload: { source: { bind }, targetParent: { nodeId: pageId } },
+  });
+}
+
 describe('page-aware component tree rebuild', () => {
   it('generates flat Stack when no pages exist', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
 
-    const tree = project.generatedComponent.tree;
+    const tree = project.component.tree;
     expect(tree.component).toBe('Stack');
     expect(tree.children).toHaveLength(1);
     expect(tree.children[0].bind).toBe('name');
@@ -28,14 +51,13 @@ describe('page-aware component tree rebuild', () => {
   it('generates flat Stack in single mode even when pages exist (dormant)', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
-    const pageId = getPageId(project);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
+    const pageId = addPage(project, 'Step 1');
+    placeOnPage(project, pageId, 'name');
 
     // Switch to single — pages are dormant but still in tree
-    project.dispatch({ type: 'pages.setMode', payload: { mode: 'single' } });
+    project.dispatch({ type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: 'single' } });
 
-    const tree = project.generatedComponent.tree;
+    const tree = project.component.tree;
     expect(tree.component).toBe('Stack');
     // Page nodes are still present (dormant), but root is Stack not Wizard
     // The renderer ignores Page nodes when pageMode is 'single'
@@ -45,14 +67,12 @@ describe('page-aware component tree rebuild', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'email' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 2' } });
-    const pageId1 = getPageId(project, 0);
-    const pageId2 = getPageId(project, 1);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId: pageId1, key: 'name' } });
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId: pageId2, key: 'email' } });
+    const pageId1 = addPage(project, 'Step 1');
+    const pageId2 = addPage(project, 'Step 2');
+    placeOnPage(project, pageId1, 'name');
+    placeOnPage(project, pageId2, 'email');
 
-    const tree = project.generatedComponent.tree;
+    const tree = project.component.tree;
     expect(tree.component).toBe('Stack');
     const pages = getPageNodes(project);
     expect(pages).toHaveLength(2);
@@ -65,9 +85,9 @@ describe('page-aware component tree rebuild', () => {
   it('sets Page title and description from handler payload', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'My Step', description: 'Do this' } });
+    addPage(project, 'My Step', undefined, 'Do this');
     const pageId = getPageId(project);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
+    placeOnPage(project, pageId, 'name');
 
     const pages = getPageNodes(project);
     expect(pages[0].title).toBe('My Step');
@@ -77,14 +97,13 @@ describe('page-aware component tree rebuild', () => {
   it('preserves Page structure after definition item changes trigger reconcile', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
-    const pageId = getPageId(project);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
+    const pageId = addPage(project, 'Step 1');
+    placeOnPage(project, pageId, 'name');
 
     // Adding another item triggers a reconcile
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'email' } });
 
-    const tree = project.generatedComponent.tree;
+    const tree = project.component.tree;
     expect(tree.component).toBe('Stack');
     const pages = getPageNodes(project);
     // Page should survive the reconcile (_layout: true preserves it)
@@ -97,19 +116,18 @@ describe('page-aware component tree rebuild', () => {
   it('generates empty Page when no items are assigned to it', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Empty Page' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Full Page' } });
-    const fullPageId = getPageId(project, 1);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId: fullPageId, key: 'name' } });
+    addPage(project, 'Empty Page');
+    const fullPageId = addPage(project, 'Full Page');
+    placeOnPage(project, fullPageId, 'name');
 
     const pages = getPageNodes(project);
     const emptyPage = pages.find((c: any) => c.title === 'Empty Page');
     const fullPage = pages.find((c: any) => c.title === 'Full Page');
-    expect(emptyPage.children).toEqual([]);
+    expect(emptyPage.children ?? []).toEqual([]);
     expect(fullPage.children).toHaveLength(1);
   });
 
-  it('does not rebuild component tree when an authored tree exists', () => {
+  it('reconciles authored trees while preserving page structure', () => {
     const project = createRawProject({
       seed: {
         component: {
@@ -119,11 +137,11 @@ describe('page-aware component tree rebuild', () => {
       },
     });
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
+    addPage(project, 'Step 1');
 
-    // Authored tree is preserved — rebuild skipped
     const tree = project.component.tree;
-    expect(tree.nodeId).toBe('custom-root');
+    expect(tree.nodeId).toBe('root');
+    expect(getPageNodes(project)).toHaveLength(1);
   });
 
   it('addPage promotes pageMode to wizard', () => {
@@ -133,7 +151,7 @@ describe('page-aware component tree rebuild', () => {
     // No pageMode set initially
     expect((project.definition as any).formPresentation?.pageMode).toBeUndefined();
 
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
+    addPage(project, 'Step 1');
 
     // addPage should set pageMode to wizard
     expect((project.definition as any).formPresentation?.pageMode).toBe('wizard');
@@ -142,9 +160,8 @@ describe('page-aware component tree rebuild', () => {
   it('does not generate unassigned Page when all items are assigned', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'name' } });
-    project.dispatch({ type: 'pages.addPage', payload: { title: 'Step 1' } });
-    const pageId = getPageId(project);
-    project.dispatch({ type: 'pages.assignItem', payload: { pageId, key: 'name' } });
+    const pageId = addPage(project, 'Step 1');
+    placeOnPage(project, pageId, 'name');
 
     const pages = getPageNodes(project);
     expect(pages).toHaveLength(1);

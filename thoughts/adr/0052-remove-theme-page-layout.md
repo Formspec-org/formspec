@@ -37,7 +37,7 @@ The Rust layout planner (ADR-0051) further clarified the architecture: the plann
 
 ## Decision
 
-**Remove the page layout system from the Theme specification.** Theme retains the cascade (defaults/selectors/items), tokens, breakpoints, and all styling capabilities. Layout lives exclusively in Tier 1 hints (simple forms) and Tier 3 component trees (complex forms).
+**Remove the page layout system from the Theme specification.** Theme retains the cascade (defaults/selectors/items), tokens, breakpoints, and all styling capabilities. Layout structure lives in Tier 3 component trees. Page navigation behavior lives in Tier 1 `formPresentation`.
 
 ### What Theme Keeps
 
@@ -70,11 +70,11 @@ The middle tier (styled forms without component trees) loses the ability to rear
 |---------|-------|
 | Data structure and semantics | Definition (Tier 1) |
 | Behavioral logic (binds, shapes) | Definition (Tier 1) |
-| Advisory pagination hints | Definition `formPresentation.pageMode` + group `layout.page` (Tier 1) |
+| Page navigation behavior | Definition `formPresentation.pageMode` + related mode properties (Tier 1) |
+| Advisory/bootstrap page hints | Group `layout.page` (Tier 1) |
 | Widget selection | Cascade: Tier 1 `widgetHint` → Tier 2 defaults/selectors/items → Tier 3 component type |
 | Styling, tokens, design system | Theme cascade + tokens (Tier 2) |
-| Spatial layout and navigation | Component tree (Tier 3) |
-| Interaction behavior (wizard gating, progress, skip) | Component tree (Tier 3) |
+| Spatial layout and page structure | Component tree (Tier 3) |
 
 ## Consequences
 
@@ -98,6 +98,7 @@ The middle tier (styled forms without component trees) loses the ability to rear
 | `formspec-core` handlers (`handlers/pages.ts`) | The 14 page commands (`pages.addPage`, `pages.deletePage`, `pages.addRegion`, etc.) currently write to `theme.pages`. These either move to operate on Component tree nodes directly, or are reimplemented as Component tree generation helpers. |
 | `formspec-core` page resolution (`page-resolution.ts`) | Simplify or remove. Currently resolves Theme pages → `ResolvedPageStructure`. With Theme pages gone, page structure is derived from Component tree inspection. |
 | `formspec-core` tree reconciler (`tree-reconciler.ts`) | Currently generates `Wizard > Page` component trees FROM `theme.pages`. This becomes the primary authoring path — Studio page commands generate Component tree nodes directly rather than writing to Theme and then deriving a Component tree. |
+| `formspec-studio-core` | Own page normalization, migration from legacy `theme.pages`, page queries, and other non-UI authoring logic. `formspec-studio` remains a UI layer only. |
 | `formspec-webcomponent` | No changes. Already renders LayoutNodes from the planner, not Theme pages. |
 | Python validator (`src/formspec/`) | Remove Theme page validation rules. |
 | Test suites | Update conformance tests, schema tests, and E2E fixtures that reference `theme.pages`. |
@@ -113,6 +114,17 @@ ADR-0039's design principles remain valid:
 - "Mode is rendering style, not structure" — still true. `formPresentation.pageMode` stays in Tier 1.
 
 The specific implementation changes from ADR-0039 (page handlers, tree rebuild, `ResolvedPageStructure`) are superseded by this ADR's simpler model where page commands operate on Component tree structure directly.
+
+## Studio Normalization Rule
+
+Studio should normalize page authority one-way:
+
+1. If the Component tree already contains authored `Page` nodes, that tree is authoritative.
+2. If there are no authored pages but `theme.pages` exists, Studio may migrate it into a Component-backed page tree once.
+3. After migration, Studio stops writing to `theme.pages` and does not attempt bidirectional sync.
+4. Tier 1 `layout.page` hints remain bootstrap input only; they are not treated as a concurrent page-authoring surface once Component pages exist.
+
+This avoids the current state where three page representations appear active at once.
 
 ### Risks
 
@@ -130,7 +142,7 @@ A lighter-weight path exists that solves the practical problem without touching 
 
 Currently, Studio page commands (`pages.addPage`, `pages.addRegion`, etc.) write to `theme.pages`, then the tree reconciler derives a Component tree from that state. This is the roundtrip that ADR-0039 designed. The alternative eliminates the roundtrip:
 
-- Studio page commands write directly to the Component tree (`Wizard > Page` nodes, `Grid`/`Stack` layout nodes)
+- Studio page commands write directly to the Component tree (`Stack > Page*` plus nested `Grid`/`Stack` layout nodes)
 - `theme.pages` is no longer written or read by Studio for layout purposes
 - Theme keeps its cascade, tokens, and styling role — Studio still writes to Theme for those concerns
 - The spec retains `theme.pages` as a valid authoring format for non-Studio consumers (hand-authored forms, simpler tooling, external integrations)
@@ -147,9 +159,9 @@ Currently, Studio page commands (`pages.addPage`, `pages.addRegion`, etc.) write
 
 | Artifact | Change |
 |----------|--------|
-| `formspec-core` page handlers (`handlers/pages.ts`) | Rewrite to operate on Component tree nodes instead of `theme.pages`. `pages.addPage` creates a `Page` node in the component tree. `pages.addRegion` places an item-bound component inside a `Page`. `pages.setMode` wraps/unwraps pages in `Wizard`/`Tabs`. |
+| `formspec-core` page handlers (`handlers/pages.ts`) | Rewrite to operate on Component tree nodes instead of `theme.pages`. `pages.addPage` creates a `Page` node in the component tree. `pages.addRegion` places an item-bound component inside a `Page`. `pages.setMode` writes `formPresentation.pageMode` without restructuring the tree. |
 | `formspec-core` tree reconciler (`tree-reconciler.ts`) | Remove the `theme.pages` → Component tree derivation path. Page structure is authored directly in the component tree. |
-| `formspec-core` page resolution (`page-resolution.ts`) | Rewrite to inspect the Component tree for `Page`/`Wizard`/`Tabs` nodes instead of reading `theme.pages`. |
+| `formspec-core` page resolution (`page-resolution.ts`) | Rewrite to inspect the Component tree for `Page` nodes plus `formPresentation.pageMode` instead of reading `theme.pages`. |
 | Everything else | No changes. Spec, schemas, planner, webcomponent, Python — all untouched. |
 
 ### Tradeoff

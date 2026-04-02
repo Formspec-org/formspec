@@ -1,6 +1,6 @@
 # Definition Schema Reference Map
 
-> schemas/definition.schema.json -- 1685 lines -- Tier 1 core form definition
+> schemas/definition.schema.json -- 1729 lines -- Formspec Definition document per v1.0 specification
 
 ## Overview
 
@@ -42,6 +42,12 @@ The root object has `additionalProperties: false` -- no unlisted properties are 
 | `labelPosition` | enum: `top`, `start`, `hidden` | `top` | Default label placement for fields. |
 | `density` | enum: `compact`, `comfortable`, `spacious` | `comfortable` | Spacing density hint. |
 | `defaultCurrency` | `string` (pattern: `^[A-Z]{3}$`) | -- | ISO 4217 currency code for all money fields without explicit currency. |
+| `direction` | enum: `ltr`, `rtl`, `auto` | `ltr` | Base text direction. `auto` derives from active locale code. |
+| `showProgress` | `boolean` | `true` | Wizard mode: display a step progress indicator. |
+| `allowSkip` | `boolean` | `false` | Wizard mode: allow navigating forward without validating the current page. |
+| `sidenav` | `boolean` | `false` | Wizard mode: render vertical side navigation listing all steps instead of horizontal progress bar. |
+| `defaultTab` | `integer` (minimum: 0) | `0` | Tabs mode: zero-based index of the initially selected tab. |
+| `tabPosition` | enum: `top`, `bottom`, `left`, `right` | `top` | Tabs mode: position of the tab bar relative to content. |
 
 `formPresentation` has `additionalProperties: false`.
 
@@ -50,16 +56,16 @@ The root object has `additionalProperties: false` -- no unlisted properties are 
 | Definition | Description | Key Properties | Used By |
 |---|---|---|---|
 | **Item** | A node in the form's structural tree. Uses `if/then` polymorphism based on `type` (`group`, `field`, `display`). | `key`, `type`, `label`, plus type-specific properties | `properties.items`, `Screener.items`, Group `children`, Field `children` (recursive) |
-| **Bind** | Behavioral declaration attaching FEL expressions to data nodes by path. | `path`, `calculate`, `relevant`, `required`, `readonly`, `constraint`, `constraintMessage`, `default`, `whitespace`, `excludedValue`, `nonRelevantBehavior`, `disabledDisplay` | `properties.binds`, `Screener.binds` |
-| **Shape** | Named, composable validation rule set (SHACL-inspired). Must have at least one of: `constraint`, `and`, `or`, `not`, `xone`. | `id`, `target`, `severity`, `constraint`, `message`, `code`, `context`, `activeWhen`, `timing`, `and`, `or`, `not`, `xone` | `properties.shapes` |
-| **Instance** | Named secondary data source for FEL `@instance()`. Must have `source` or `data`. | `description`, `source`, `static`, `data`, `schema`, `readonly` | `properties.instances` (as additionalProperties) |
-| **Variable** | Named computed value with lexical scoping. | `name`, `expression`, `scope` | `properties.variables` |
-| **OptionSet** | Reusable option list for choice fields. Must have `options` or `source`. | `options`, `source`, `valueField`, `labelField` | `properties.optionSets` (as additionalProperties) |
-| **OptionEntry** | Single permitted value for a choice/multiChoice field. | `value`, `label` | `OptionSet.options`, Field `options` (inline array) |
-| **Screener** | Routing mechanism with screening questions and ordered routes. | `items`, `routes`, `binds` | `properties.screener` |
-| **Route** | Single routing rule within a Screener. | `condition`, `target`, `label`, `message` | `Screener.routes` |
-| **Migrations** | Container for version migration descriptors. | `from` | `properties.migrations` |
-| **MigrationDescriptor** | Transform rules from a single prior version to current. | `description`, `fieldMap`, `defaults` | `Migrations.from` (as additionalProperties) |
+| **Bind** | Behavioral declaration attaching FEL expressions to data nodes by path. | `path`, `calculate`, `relevant`, `required`, `readonly`, `constraint`, `constraintMessage`, `default`, `whitespace`, `excludedValue`, `nonRelevantBehavior`, `disabledDisplay`, `extensions` | `properties.binds`, `Screener.binds` |
+| **Shape** | Named, composable validation rule set (SHACL-inspired). Must have at least one of: `constraint`, `and`, `or`, `not`, `xone`. | `id`, `target`, `severity`, `constraint`, `message`, `code`, `context`, `activeWhen`, `timing`, `and`, `or`, `not`, `xone`, `extensions` | `properties.shapes` |
+| **Instance** | Named secondary data source for FEL `@instance()`. Must have `source` or `data`. | `description`, `source`, `static`, `data`, `schema`, `readonly`, `extensions` | `properties.instances` (as additionalProperties) |
+| **Variable** | Named computed value with lexical scoping. | `name`, `expression`, `scope`, `extensions` | `properties.variables` |
+| **OptionSet** | Reusable option list for choice fields. Must have `options` or `source`. | `options`, `source`, `valueField`, `labelField`, `extensions` | `properties.optionSets` (as additionalProperties) |
+| **OptionEntry** | Single permitted value for a choice/multiChoice field. | `value`, `label`, `keywords`, `extensions` | `OptionSet.options`, Field `options` (inline array) |
+| **Screener** | Routing mechanism with screening questions and ordered routes. | `items`, `routes`, `binds`, `extensions` | `properties.screener` |
+| **Route** | Single routing rule within a Screener. | `condition`, `target`, `label`, `message`, `extensions` | `Screener.routes` |
+| **Migrations** | Container for version migration descriptors. | `from`, `extensions` | `properties.migrations` |
+| **MigrationDescriptor** | Transform rules from a single prior version to current. | `description`, `fieldMap`, `defaults`, `extensions` | `Migrations.from` (as additionalProperties) |
 | **Presentation** | Advisory presentation hints for an Item. | `widgetHint`, `layout`, `styleHints`, `accessibility` | Group items, Field items, Display items (via `$ref: Presentation`) |
 | **FELExpression** | A FEL v1.0 expression string. | (string, minLength: 1) | `Bind.calculate`, `Bind.relevant`, `Bind.required`, `Bind.readonly`, `Bind.constraint`, `Shape.constraint`, `Shape.activeWhen`, `Shape.context` values, `Route.condition`, `Variable.expression`, `MigrationDescriptor.fieldMap[].expression` |
 
@@ -123,6 +129,8 @@ The root object has `additionalProperties: false` -- no unlisted properties are 
 | `pageMode` | `single`, `wizard`, `tabs` | `formPresentation.pageMode` |
 | `labelPosition` | `top`, `start`, `hidden` | `formPresentation.labelPosition` |
 | `density` | `compact`, `comfortable`, `spacious` | `formPresentation.density` |
+| `direction` | `ltr`, `rtl`, `auto` | `formPresentation.direction` |
+| `tabPosition` | `top`, `bottom`, `left`, `right` | `formPresentation.tabPosition` |
 | `whitespace` | `preserve`, `trim`, `normalize`, `remove` | `Bind.whitespace` |
 | `excludedValue` | `preserve`, `null` | `Bind.excludedValue` |
 | `disabledDisplay` | `hidden`, `protected` | `Bind.disabledDisplay` |
@@ -165,7 +173,7 @@ The definition schema is self-contained. It does not `$ref` any other schema fil
 ## Extension Points
 
 ### Extension Objects (propertyNames pattern: `^x-`)
-Extensions are supported at six levels, each with `propertyNames: { pattern: "^x-" }`:
+Extensions are supported at twelve levels, each with `propertyNames: { pattern: "^x-" }`:
 
 1. **Top-level** `extensions` -- form-wide domain-specific data
 2. **Item-level** `extensions` -- per-item metadata (on all three item types)
@@ -254,7 +262,7 @@ Within the field `then` block, three nested `if/then` blocks use `allOf` to rest
 | Constraint | Applied To |
 |---|---|
 | `minLength: 1` | `version`, `Bind.path`, `Shape.target`, `FELExpression`, `Presentation.layout.page` |
-| `minimum: 0` | `Group.minRepeat`, `Field.precision` |
+| `minimum: 0` | `Group.minRepeat`, `Field.precision`, `formPresentation.defaultTab` |
 | `minimum: 1` | `Group.maxRepeat`, `Presentation.layout.columns`, `Presentation.layout.colSpan` |
 | `maximum: 12` | `Presentation.layout.columns`, `Presentation.layout.colSpan` |
 | `minItems: 1` | `Screener.routes` (must have at least one route) |
@@ -286,6 +294,12 @@ Within the field `then` block, three nested `if/then` blocks use `allOf` to rest
 | `formPresentation.pageMode` | `"single"` |
 | `formPresentation.labelPosition` | `"top"` |
 | `formPresentation.density` | `"comfortable"` |
+| `formPresentation.direction` | `"ltr"` |
+| `formPresentation.showProgress` | `true` |
+| `formPresentation.allowSkip` | `false` |
+| `formPresentation.sidenav` | `false` |
+| `formPresentation.defaultTab` | `0` |
+| `formPresentation.tabPosition` | `"top"` |
 | `Group.repeatable` | `false` |
 | `Bind.whitespace` | `"preserve"` |
 | `Bind.excludedValue` | `"preserve"` |
@@ -347,3 +361,8 @@ Most definitions use `additionalProperties: false`, meaning only declared proper
 - `Group.maxRepeat`, when present, MUST be >= `minRepeat`.
 - Migration target can be `null` (meaning the field is dropped) -- `target` type is `["string", "null"]`.
 - `Variable` dependencies MUST NOT form circular references.
+- `formPresentation.direction` `auto` derives direction from the active locale code (RTL for ar, he, fa, ur, ps, sd, yi).
+- `formPresentation.showProgress`, `allowSkip`, and `sidenav` are only meaningful when `pageMode` is `wizard`.
+- `formPresentation.defaultTab` and `tabPosition` are only meaningful when `pageMode` is `tabs`.
+- Processors that do not support a declared `pageMode` SHOULD fall back to `single`.
+- `OptionEntry.keywords` are matched case-insensitively in addition to label and value for combobox/searchable filtering.

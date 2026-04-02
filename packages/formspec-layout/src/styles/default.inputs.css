@@ -1,0 +1,716 @@
+/* @filedesc Input widgets and field-specific affordances for the default Formspec skin. */
+
+.formspec-money,
+.formspec-money-field,
+.formspec-stepper {
+  border: 1px solid var(--formspec-default-border-input);
+  border-radius: var(--formspec-default-radius-sm);
+  overflow: hidden;
+  background: var(--formspec-default-surface);
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-money,
+.formspec-money-field {
+  display: flex;
+  align-items: stretch;
+}
+
+.formspec-money:focus-within,
+.formspec-money-field:focus-within,
+.formspec-stepper:focus-within {
+  border-color: var(--formspec-default-focus);
+  box-shadow: var(--formspec-default-focus-shadow);
+}
+
+.formspec-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* Scoped track tokens so React/WC match (parent .formspec-input / theme slots won’t skew gray). */
+  --formspec-toggle-track-off: color-mix(in srgb, var(--formspec-default-text) 32%, var(--formspec-default-bg));
+  --formspec-toggle-track-on: var(--formspec-default-primary);
+}
+
+.formspec-toggle-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--formspec-default-text-subtle);
+  user-select: none;
+}
+
+/* Active side: stronger hue + weight for contrast */
+.formspec-toggle:not(.formspec-toggle--on) .formspec-toggle-off {
+  color: var(--formspec-default-primary-strong);
+  font-weight: 700;
+}
+
+.formspec-toggle--on .formspec-toggle-on {
+  color: var(--formspec-default-primary-strong);
+  font-weight: 700;
+}
+
+.formspec-toggle input[type="checkbox"][role="switch"] {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-color: var(--formspec-toggle-track-off);
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.formspec-toggle input[type="checkbox"][role="switch"]::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.5rem - 6px);
+  height: calc(1.5rem - 6px);
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
+}
+
+.formspec-toggle input[type="checkbox"][role="switch"]:checked {
+  background-color: var(--formspec-toggle-track-on);
+}
+
+.formspec-toggle input[type="checkbox"][role="switch"]:checked::after {
+  transform: translateX(1.25rem);
+}
+
+.formspec-checkbox-group,
+.formspec-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--formspec-default-border-subtle);
+}
+
+.formspec-checkbox-group[data-columns] {
+  display: grid;
+}
+
+.formspec-radio-group[data-orientation="horizontal"] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.formspec-checkbox-group[data-columns="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.formspec-checkbox-group[data-columns="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.formspec-checkbox-group[data-columns="4"] {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.formspec-checkbox-group label,
+.formspec-radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+/* Native select — bordered control + custom chevron (matches text inputs) */
+.formspec-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  max-width: 100%;
+  border: 1px solid var(--formspec-default-border-input);
+  border-radius: var(--formspec-default-radius-sm);
+  background: var(--formspec-default-surface);
+  transition: var(--formspec-default-transition-fast);
+}
+
+/* Match standalone inputs: crisp outline + border tint; skip the extra focus glow (reads too soft on wrappers). */
+.formspec-select-wrapper:focus-within {
+  border-color: var(--formspec-default-focus);
+  outline: 2px solid var(--formspec-default-focus);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+/* Wrapper supplies the focus ring; inner select has no radius — avoid a square outline on the control. */
+.formspec-select-wrapper select.formspec-input:focus,
+.formspec-select-wrapper select.formspec-select-native:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.formspec-select-wrapper select.formspec-input,
+.formspec-select-wrapper select.formspec-select-native {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.55rem 2.25rem 0.55rem 0.75rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--formspec-default-text);
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.formspec-select-wrapper::after {
+  content: '';
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: -0.35rem;
+  border-right: 2px solid var(--formspec-default-text-subtle);
+  border-bottom: 2px solid var(--formspec-default-text-subtle);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.formspec-select-clear {
+  position: absolute;
+  right: 1.75rem;
+  top: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: -0.75rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--formspec-default-radius-sm);
+  background: transparent;
+  color: var(--formspec-default-text-subtle);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.formspec-select-clear:hover {
+  color: var(--formspec-default-text);
+  background: var(--formspec-default-surface-muted);
+}
+
+/* Combobox (searchable / multi Select) */
+.formspec-combobox.formspec-select-searchable {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-width: 100%;
+}
+
+.formspec-combobox-popover {
+  position: relative;
+}
+
+.formspec-combobox-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-height: 0;
+}
+
+.formspec-combobox-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--formspec-default-border-input);
+  border-radius: var(--formspec-default-radius-pill);
+  background: var(--formspec-default-surface-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--formspec-default-text);
+}
+
+.formspec-combobox-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.formspec-combobox-chip-remove:hover {
+  opacity: 1;
+}
+
+.formspec-combobox-row {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--formspec-default-border-input);
+  border-radius: var(--formspec-default-radius-sm);
+  background: var(--formspec-default-surface);
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-combobox-row:focus-within {
+  border-color: var(--formspec-default-focus);
+  outline: 2px solid var(--formspec-default-focus);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
+.formspec-combobox-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0.55rem 0.5rem 0.55rem 0.75rem !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--formspec-default-text);
+  transition: var(--formspec-default-transition-fast);
+}
+
+/* Row supplies the ring; kill UA / inherited focus chrome on the inner control. */
+.formspec-combobox-input:focus,
+.formspec-combobox-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.formspec-combobox-clear {
+  flex-shrink: 0;
+  align-self: center;
+  margin-right: 0.25rem;
+  padding: 0.25rem 0.45rem;
+  border: none;
+  border-radius: var(--formspec-default-radius-sm);
+  background: transparent;
+  color: var(--formspec-default-text-subtle);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.formspec-combobox-clear:hover {
+  color: var(--formspec-default-text);
+  background: var(--formspec-default-surface-muted);
+}
+
+.formspec-combobox-chevron {
+  flex-shrink: 0;
+  align-self: center;
+  width: 2rem;
+  margin-right: 0.15rem;
+  font-size: 0.65rem;
+  line-height: 1;
+  color: var(--formspec-default-text-subtle);
+  text-align: center;
+  user-select: none;
+  pointer-events: none;
+}
+
+.formspec-combobox-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.15rem);
+  margin: 0;
+  padding: 0.25rem 0;
+  max-height: 14rem;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--formspec-default-border-input);
+  border-radius: var(--formspec-default-radius-sm);
+  background: var(--formspec-default-surface);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+}
+
+.formspec-combobox-list[hidden] {
+  display: none !important;
+}
+
+.formspec-combobox-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--formspec-default-text);
+}
+
+.formspec-combobox-option:hover,
+.formspec-combobox-option.formspec-option--highlighted {
+  background: var(--formspec-default-surface-muted);
+}
+
+.formspec-combobox-option.formspec-option--selected {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--formspec-default-primary) 12%, var(--formspec-default-surface));
+}
+
+.formspec-combobox-option input[type='checkbox'] {
+  flex-shrink: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.formspec-money-currency {
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  border-right: 1px solid var(--formspec-default-border-strong);
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--formspec-default-text-subtle);
+  background: var(--formspec-default-surface-muted);
+}
+
+.formspec-money .formspec-input,
+.formspec-money-field input {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  border-radius: 0;
+}
+
+.formspec-stepper {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+}
+
+.formspec-stepper input[type="number"] {
+  width: 3.5rem;
+  padding: 0.625rem 0.5rem;
+  border: none;
+  border-left: 1px solid var(--formspec-default-border-strong);
+  border-right: 1px solid var(--formspec-default-border-strong);
+  background: transparent;
+  color: var(--formspec-default-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.formspec-stepper input[type="number"]::-webkit-inner-spin-button,
+.formspec-stepper input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.formspec-stepper-decrement,
+.formspec-stepper-increment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--formspec-default-text);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: var(--formspec-default-transition-fast);
+  flex-shrink: 0;
+}
+
+.formspec-stepper-decrement:focus-visible,
+.formspec-stepper-increment:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
+.formspec-stepper-decrement:hover:not(:disabled),
+.formspec-stepper-increment:hover:not(:disabled) {
+  color: var(--formspec-default-primary);
+  background: var(--formspec-default-surface-muted);
+}
+
+.formspec-stepper-decrement:active:not(:disabled),
+.formspec-stepper-increment:active:not(:disabled) {
+  background: color-mix(in srgb, var(--formspec-default-primary) 12%, transparent);
+}
+
+.formspec-stepper-decrement:disabled,
+.formspec-stepper-increment:disabled {
+  opacity: 0.45;
+  color: var(--formspec-default-text-muted);
+  cursor: not-allowed;
+}
+
+.formspec-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.formspec-slider-track {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.formspec-slider-track input[type="range"] {
+  flex: 1;
+}
+
+.formspec-slider-value {
+  min-width: 2rem;
+  color: var(--formspec-default-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.formspec-rating {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.formspec-rating-stars {
+  display: flex;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 24px;
+}
+
+.formspec-rating-star {
+  display: inline-block;
+  color: #c2c7cf;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.formspec-rating-star:hover {
+  color: #d8a23a;
+}
+
+.formspec-rating-star--selected {
+  color: #c78a17;
+}
+
+.formspec-rating-star--half {
+  background: linear-gradient(90deg, rgb(245, 166, 35) 50%, rgb(204, 204, 204) 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.formspec-file-upload,
+.formspec-signature {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.formspec-file-upload {
+  align-items: center;
+}
+
+.formspec-signature {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formspec-file-name {
+  max-width: 20rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  color: var(--formspec-default-text-faint);
+}
+
+.formspec-file-size-error,
+.formspec-file-list-actions {
+  margin-top: 0.25rem;
+}
+
+.formspec-file-browse-btn,
+.formspec-signature-clear {
+  align-self: flex-start;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--formspec-default-border-subtle);
+  border-radius: 5px;
+  background: var(--formspec-default-surface);
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-file-browse-btn {
+  display: inline-flex;
+  align-items: center;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.formspec-file-browse-btn:hover:not(:disabled) {
+  border-color: var(--formspec-default-text-subtle);
+  background: var(--formspec-default-surface-soft);
+}
+
+.formspec-file-browse-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.formspec-file-drop-zone {
+  width: 100%;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  border: 2px dashed var(--formspec-default-border-control);
+  border-radius: var(--formspec-default-radius-md);
+  text-align: center;
+  background: var(--formspec-default-surface-quiet);
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-file-drop-zone--active {
+  border-color: var(--formspec-default-primary);
+  background: #e8f0fe;
+}
+
+.formspec-file-drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.formspec-file-drop-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--formspec-default-text-faint);
+}
+
+.formspec-file-drop-label {
+  font-size: 0.9375rem;
+  color: var(--formspec-default-text-subtle);
+}
+
+.formspec-file-list {
+  width: 100%;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.formspec-file-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--formspec-default-border-subtle);
+  border-radius: var(--formspec-default-radius-sm);
+  background: var(--formspec-default-surface-quiet);
+  font-size: 0.875rem;
+}
+
+.formspec-file-list-item + .formspec-file-list-item {
+  margin-top: 0.25rem;
+}
+
+.formspec-file-list-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formspec-file-list-size,
+.formspec-file-list-clear {
+  color: var(--formspec-default-text-faint);
+}
+
+.formspec-file-list-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--formspec-default-text-faint);
+  font-size: 0.875rem;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-file-list-remove:hover {
+  color: #dc2626;
+  background: #fde8e8;
+}
+
+.formspec-file-list-clear {
+  padding: 0.125rem 0;
+  border: none;
+  background: none;
+  font-size: 0.75rem;
+  text-decoration: underline;
+}
+
+.formspec-file-list-clear:hover {
+  color: #dc2626;
+}
+
+.formspec-signature-canvas {
+  display: block;
+  max-width: 100%;
+  border: 1px solid var(--formspec-default-border-subtle);
+  border-radius: var(--formspec-default-radius-sm);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.formspec-signature-clear {
+  margin-top: 6px;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--formspec-default-danger);
+  border-radius: var(--formspec-default-radius-sm);
+  background: transparent;
+  color: var(--formspec-default-danger);
+  font-size: 0.875rem;
+}
+
+.formspec-signature-clear:hover {
+  background: color-mix(in srgb, var(--formspec-default-danger) 8%, transparent);
+}

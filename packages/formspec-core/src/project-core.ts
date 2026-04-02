@@ -39,8 +39,6 @@ export interface IProjectCore {
   readonly state: Readonly<ProjectState>;
   readonly definition: Readonly<FormDefinition>;
   readonly component: Readonly<ComponentDocument>;
-  readonly artifactComponent: Readonly<ComponentDocument>;
-  readonly generatedComponent: Readonly<ComponentDocument>;
   readonly theme: Readonly<ThemeDocument>;
   readonly mapping: Readonly<MappingDocument>;
   readonly mappings: Readonly<Record<string, MappingDocument>>;
@@ -69,7 +67,7 @@ export interface IProjectCore {
    * (snapshot-and-replay). History stack is cleared on restore because
    * the changeset is the undo mechanism during its lifetime.
    *
-   * Invalidates all cached views (component, generated component).
+   * Invalidates all cached views.
    */
   restoreState(snapshot: ProjectState): void;
 

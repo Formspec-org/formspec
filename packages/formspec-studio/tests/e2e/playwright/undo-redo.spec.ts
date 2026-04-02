@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addFromPalette, importDefinition, waitForApp } from './helpers';
+import { addFromPalette, editorFieldRows, importDefinition, waitForApp } from './helpers';
 
 test.describe('Undo / Redo', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,7 +9,7 @@ test.describe('Undo / Redo', () => {
   });
 
   test('Undo button removes last added field', async ({ page }) => {
-    const fields = page.locator('[data-testid^="field-"]');
+    const fields = editorFieldRows(page);
 
     await addFromPalette(page, 'Text');
     await expect(fields).toHaveCount(1);
@@ -19,7 +19,7 @@ test.describe('Undo / Redo', () => {
   });
 
   test('Redo button re-applies the undone change', async ({ page }) => {
-    const fields = page.locator('[data-testid^="field-"]');
+    const fields = editorFieldRows(page);
 
     await addFromPalette(page, 'Text');
     await expect(fields).toHaveCount(1);
@@ -32,7 +32,7 @@ test.describe('Undo / Redo', () => {
   });
 
   test('keyboard Cmd+Z undoes last change', async ({ page }) => {
-    const fields = page.locator('[data-testid^="field-"]');
+    const fields = editorFieldRows(page);
 
     await addFromPalette(page, 'Text');
     await expect(fields).toHaveCount(1);
@@ -43,7 +43,7 @@ test.describe('Undo / Redo', () => {
   });
 
   test('keyboard Cmd+Shift+Z redoes the undone change', async ({ page }) => {
-    const fields = page.locator('[data-testid^="field-"]');
+    const fields = editorFieldRows(page);
 
     await addFromPalette(page, 'Text');
     await expect(fields).toHaveCount(1);
@@ -57,7 +57,7 @@ test.describe('Undo / Redo', () => {
   });
 
   test('multiple undo steps walk back through history', async ({ page }) => {
-    const fields = page.locator('[data-testid^="field-"]');
+    const fields = editorFieldRows(page);
 
     await addFromPalette(page, 'Text');
     await addFromPalette(page, 'Integer');

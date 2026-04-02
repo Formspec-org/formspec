@@ -1,10 +1,10 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { MappingPreview } from '../../../src/workspaces/mapping/MappingPreview';
 
-// Mock FormEngine to avoid actual heavy logic if needed, 
+// Mock FormEngine to avoid actual heavy logic if needed,
 // but we want to test the integration, so let's ensure it works with a real-ish setup.
 
 function renderMappingPreview(project: any) {
@@ -16,7 +16,7 @@ function renderMappingPreview(project: any) {
 }
 
 describe('MappingPreview Sync', () => {
-  it('generates sample data from form definition when Sync button is clicked', () => {
+  it('generates sample data from form definition when Sync button is clicked', async () => {
     const project = createProject({
       seed: {
         definition: {
@@ -44,25 +44,28 @@ describe('MappingPreview Sync', () => {
     // Initial state check (static sample)
     expect(screen.getByDisplayValue(/Jane/i)).toBeInTheDocument();
 
-    // Click Sync
+    // Click Sync — generateDefinitionSampleData is now async
     const syncBtn = screen.getByRole('button', { name: /sync with form/i });
     fireEvent.click(syncBtn);
 
-    // The textarea should now contain keys from our definition
+    // Wait for the async sample generation to complete and update the textarea
+    await waitFor(() => {
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const content = textarea.value;
+      expect(content).toContain('user_name');
+    });
+
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     const content = textarea.value;
-    
-    // We expect user_name and user_age to be in the generated JSON
-    expect(content).toContain('user_name');
     expect(content).toContain('user_age');
-    
+
     // Verify it produced a valid JSON
     const parsed = JSON.parse(content);
     expect(parsed).toHaveProperty('user_name');
     expect(parsed).toHaveProperty('user_age');
   });
 
-  it('handles repeatable groups by adding at least one instance', () => {
+  it('handles repeatable groups by adding at least one instance', async () => {
     const project = createProject({
       seed: {
         definition: {
@@ -70,9 +73,9 @@ describe('MappingPreview Sync', () => {
           url: 'urn:test-repeat',
           version: '1.0.0',
           items: [
-            { 
-              key: 'children', 
-              type: 'group', 
+            {
+              key: 'children',
+              type: 'group',
               repeatable: true,
               children: [
                 { key: 'child_name', type: 'field', dataType: 'string' }
@@ -90,9 +93,15 @@ describe('MappingPreview Sync', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /sync with form/i }));
 
+    // Wait for the async sample generation to complete
+    await waitFor(() => {
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      const parsed = JSON.parse(textarea.value);
+      expect(Array.isArray(parsed.children)).toBe(true);
+    });
+
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     const parsed = JSON.parse(textarea.value);
-    expect(Array.isArray(parsed.children)).toBe(true);
     expect(parsed.children.length).toBeGreaterThan(0);
     expect(parsed.children[0]).toHaveProperty('child_name');
   });

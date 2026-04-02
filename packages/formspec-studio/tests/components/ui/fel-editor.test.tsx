@@ -33,18 +33,15 @@ describe('FELEditor', () => {
     expect(screen.getByRole('textbox')).toHaveValue('1 + 2');
   });
 
-  it('shows syntax highlighting tokens', () => {
+  it('shows syntax highlighting tokens with merged path references', () => {
     renderEditor({ value: 'sum($age)', onSave: vi.fn() });
-    // The highlight overlay is present
-    // We use a matcher function because syntax highlighting breaks text into spans
+    // Function token
     expect(screen.getByText((content, element) => {
       return element?.tagName.toLowerCase() === 'span' && content === 'sum';
     })).toBeInTheDocument();
+    // Full path reference merged into one token
     expect(screen.getByText((content, element) => {
-      return element?.tagName.toLowerCase() === 'span' && content === '$';
-    })).toBeInTheDocument();
-    expect(screen.getByText((content, element) => {
-      return element?.tagName.toLowerCase() === 'span' && content === 'age';
+      return element?.tagName.toLowerCase() === 'span' && content === '$age';
     })).toBeInTheDocument();
   });
 

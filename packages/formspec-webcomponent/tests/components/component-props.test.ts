@@ -51,6 +51,118 @@ describe('component props — NumberInput', () => {
     });
 });
 
+describe('component props — NumberInput stepper', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('renders stepper wrapper with decrement and increment buttons when showStepper is true', () => {
+        const el = renderWith(
+            [{ key: 'qty', type: 'field', dataType: 'integer', label: 'Quantity' }],
+            {
+                component: 'Page',
+                children: [{ component: 'NumberInput', bind: 'qty', showStepper: true, min: 0, max: 10, step: 1 }],
+            },
+        );
+        const stepper = el.querySelector('.formspec-stepper') as HTMLElement;
+        expect(stepper).not.toBeNull();
+        const decBtn = stepper.querySelector('.formspec-stepper-decrement') as HTMLButtonElement;
+        const incBtn = stepper.querySelector('.formspec-stepper-increment') as HTMLButtonElement;
+        expect(decBtn).not.toBeNull();
+        expect(incBtn).not.toBeNull();
+        expect(decBtn.getAttribute('aria-label')).toBe('Decrease Quantity');
+        expect(incBtn.getAttribute('aria-label')).toBe('Increase Quantity');
+    });
+
+    it('renders a plain number input when showStepper is false or absent', () => {
+        const el = renderWith(
+            [{ key: 'qty', type: 'field', dataType: 'integer', label: 'Quantity' }],
+            {
+                component: 'Page',
+                children: [{ component: 'NumberInput', bind: 'qty', min: 0, max: 10 }],
+            },
+        );
+        expect(el.querySelector('.formspec-stepper')).toBeNull();
+        expect(el.querySelector('input[type="number"]')).not.toBeNull();
+    });
+
+    it('stepper defaults step to 1 when not specified', () => {
+        const el = renderWith(
+            [{ key: 'qty', type: 'field', dataType: 'integer', label: 'Quantity' }],
+            {
+                component: 'Page',
+                children: [{ component: 'NumberInput', bind: 'qty', showStepper: true, min: 0, max: 10 }],
+            },
+        );
+        const stepper = el.querySelector('.formspec-stepper') as HTMLElement;
+        expect(stepper).not.toBeNull();
+        // The input should still be present inside the stepper
+        const input = stepper.querySelector('input[type="number"]') as HTMLInputElement;
+        expect(input).not.toBeNull();
+    });
+});
+
+describe('component props — MoneyInput aria-describedby', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('links currency badge to amount input via aria-describedby', () => {
+        const el = renderWith(
+            [{ key: 'price', type: 'field', dataType: 'money', label: 'Price', currency: 'USD' }],
+            {
+                component: 'Page',
+                children: [{ component: 'MoneyInput', bind: 'price' }],
+            },
+        );
+        const badge = el.querySelector('.formspec-money-currency') as HTMLElement;
+        expect(badge).not.toBeNull();
+        expect(badge.id).toBeTruthy();
+        const amountInput = el.querySelector('.formspec-money input') as HTMLInputElement;
+        expect(amountInput).not.toBeNull();
+        const describedBy = amountInput.getAttribute('aria-describedby') || '';
+        expect(describedBy).toContain(badge.id);
+    });
+});
+
+describe('component props — MoneyInput currency prefix position', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('renders currency symbol BEFORE the amount input (prefix)', () => {
+        const el = renderWith(
+            [{ key: 'price', type: 'field', dataType: 'money', label: 'Price', currency: 'USD' }],
+            {
+                component: 'Page',
+                children: [{ component: 'MoneyInput', bind: 'price' }],
+            },
+        );
+        const container = el.querySelector('.formspec-money') as HTMLElement;
+        expect(container).not.toBeNull();
+        const children = Array.from(container.children);
+        const badgeIdx = children.findIndex(c => c.classList.contains('formspec-money-currency'));
+        const inputIdx = children.findIndex(c => c.tagName === 'INPUT');
+        expect(badgeIdx).toBeGreaterThanOrEqual(0);
+        expect(inputIdx).toBeGreaterThanOrEqual(0);
+        expect(badgeIdx).toBeLessThan(inputIdx);
+    });
+
+    it('renders amount input as type="text" with inputmode="decimal"', () => {
+        const el = renderWith(
+            [{ key: 'amt', type: 'field', dataType: 'money', label: 'Amount', currency: 'USD' }],
+            {
+                component: 'Page',
+                children: [{ component: 'MoneyInput', bind: 'amt' }],
+            },
+        );
+        const input = el.querySelector('.formspec-money input') as HTMLInputElement;
+        expect(input).not.toBeNull();
+        expect(input.type).toBe('text');
+        expect(input.inputMode).toBe('decimal');
+    });
+});
+
 describe('component props — Select', () => {
     afterEach(() => {
         document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
@@ -80,6 +192,25 @@ describe('component props — Select', () => {
         expect((options[0] as HTMLOptionElement).textContent).toBe('Choose a size');
         expect((options[0] as HTMLOptionElement).disabled).toBe(true);
         expect((options[1] as HTMLOptionElement).textContent).toBe('— Clear —');
+    });
+
+    it('searchable Select wraps combobox input in .formspec-combobox-row', () => {
+        const el = renderWith(
+            [{
+                key: 'dept',
+                type: 'field',
+                dataType: 'choice',
+                label: 'Dept',
+                options: [{ value: 'a', label: 'A' }],
+            }],
+            {
+                component: 'Page',
+                children: [{ component: 'Select', bind: 'dept', searchable: true }],
+            },
+        );
+        const input = el.querySelector('input[role="combobox"]') as HTMLInputElement;
+        expect(input).not.toBeNull();
+        expect(input.closest('.formspec-combobox-row')).not.toBeNull();
     });
 });
 
@@ -172,5 +303,103 @@ describe('component props — Page description', () => {
         const desc = el.querySelector('.formspec-page-description') as HTMLElement;
         expect(desc).not.toBeNull();
         expect(desc.textContent).toBe('Please fill out this form carefully.');
+    });
+});
+
+describe('component props — Heading level', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('renders the correct heading element for the specified level', () => {
+        const el = renderWith(
+            [],
+            {
+                component: 'Page',
+                children: [
+                    { component: 'Heading', level: 3, text: 'Level 3' },
+                ],
+            },
+        );
+        const h3 = el.querySelector('h3.formspec-heading') as HTMLElement;
+        expect(h3, 'should render an h3 element').not.toBeNull();
+        expect(h3.textContent).toBe('Level 3');
+    });
+
+    it('defaults to h2 when no level is specified', () => {
+        const el = renderWith(
+            [],
+            {
+                component: 'Page',
+                children: [
+                    { component: 'Heading', text: 'No level' },
+                ],
+            },
+        );
+        const h2 = el.querySelector('h2.formspec-heading') as HTMLElement;
+        expect(h2, 'should default to h2').not.toBeNull();
+        expect(h2.textContent).toBe('No level');
+    });
+
+    it('renders h1 through h6 for each level value', () => {
+        const el = renderWith(
+            [],
+            {
+                component: 'Page',
+                children: [
+                    { component: 'Heading', level: 1, text: 'H1' },
+                    { component: 'Heading', level: 2, text: 'H2' },
+                    { component: 'Heading', level: 4, text: 'H4' },
+                    { component: 'Heading', level: 6, text: 'H6' },
+                ],
+            },
+        );
+        expect(el.querySelector('h1.formspec-heading')?.textContent).toBe('H1');
+        expect(el.querySelector('h2.formspec-heading')?.textContent).toBe('H2');
+        expect(el.querySelector('h4.formspec-heading')?.textContent).toBe('H4');
+        expect(el.querySelector('h6.formspec-heading')?.textContent).toBe('H6');
+    });
+});
+
+describe('definition fallback — display item with widgetHint heading', () => {
+    afterEach(() => {
+        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
+    });
+
+    it('renders a Heading component for a display item with widgetHint heading', () => {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:form',
+            version: '1.0.0',
+            title: 'Test',
+            items: [
+                { key: 'header', type: 'display', label: 'Section Title', presentation: { widgetHint: 'heading' } },
+            ],
+        };
+        el.render();
+        const heading = el.querySelector('.formspec-heading') as HTMLElement;
+        expect(heading, 'display item with heading hint should render a heading').not.toBeNull();
+        expect(heading.tagName).toBe('H2');
+        expect(heading.textContent).toBe('Section Title');
+    });
+
+    it('forwards presentation level to the Heading component', () => {
+        const el = document.createElement('formspec-render') as any;
+        document.body.appendChild(el);
+        el.definition = {
+            $formspec: '1.0',
+            url: 'urn:test:form',
+            version: '1.0.0',
+            title: 'Test',
+            items: [
+                { key: 'header', type: 'display', label: 'Section Title', presentation: { widgetHint: 'heading', level: 3 } },
+            ],
+        };
+        el.render();
+        const heading = el.querySelector('.formspec-heading') as HTMLElement;
+        expect(heading, 'should render an h3 when level 3 is specified').not.toBeNull();
+        expect(heading.tagName).toBe('H3');
     });
 });

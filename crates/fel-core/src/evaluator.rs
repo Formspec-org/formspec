@@ -221,7 +221,7 @@ impl<'a> Evaluator<'a> {
             Expr::ContextRef { name, arg, tail } => {
                 self.env.resolve_context(name, arg.as_deref(), tail)
             }
-            Expr::UnaryOp { op, operand } => {
+            Expr::UnaryOp { op, operand, .. } => {
                 let val = self.eval(operand);
                 self.eval_unary(*op, val)
             }

@@ -18,6 +18,7 @@ pub mod environment;
 pub mod error;
 pub mod evaluator;
 pub mod extensions;
+pub mod interpolation;
 pub mod lexer;
 pub mod parser;
 pub mod prepare_host;
@@ -36,10 +37,11 @@ pub use dependencies::{
 };
 pub use environment::{FormspecEnvironment, MipState, RepeatContext};
 pub use error::{
-    Diagnostic, FelError, Severity, reject_undefined_functions,
+    Diagnostic, FelError, Severity, has_error_diagnostics, reject_undefined_functions,
     undefined_function_names_from_diagnostics,
 };
 pub use evaluator::{Environment, EvalResult, Evaluator, MapEnvironment, evaluate};
+pub use interpolation::expr_is_interpolation_static_literal;
 pub use extensions::{
     BuiltinFunctionCatalogEntry, ExtensionError, ExtensionRegistry, builtin_function_catalog,
     builtin_function_catalog_json_value,
@@ -86,6 +88,7 @@ fn token_type_name(token: &lexer::Token) -> &'static str {
         lexer::Token::And => "And",
         lexer::Token::Or => "Or",
         lexer::Token::Not => "Not",
+        lexer::Token::Bang => "Bang",
         lexer::Token::Plus => "Plus",
         lexer::Token::Minus => "Minus",
         lexer::Token::Star => "Asterisk",

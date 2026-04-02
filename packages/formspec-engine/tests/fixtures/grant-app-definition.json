@@ -23,69 +23,6 @@
     "density": "comfortable",
     "defaultCurrency": "USD"
   },
-  "screener": {
-    "items": [
-      {
-        "key": "applicantType",
-        "type": "field",
-        "dataType": "choice",
-        "label": "What type of organization are you?",
-        "hint": "Select the category that best describes your organization.",
-        "options": [
-          { "value": "nonprofit", "label": "Nonprofit (501(c)(3))" },
-          { "value": "government", "label": "State/Local Government" },
-          { "value": "tribal", "label": "Tribal Organization" },
-          { "value": "forprofit", "label": "For-Profit Entity" }
-        ]
-      },
-      {
-        "key": "isReturning",
-        "type": "field",
-        "dataType": "boolean",
-        "label": "Have you received this grant before?",
-        "hint": "Select yes if your organization has been previously awarded under this program."
-      },
-      {
-        "key": "requestedAmount",
-        "type": "field",
-        "dataType": "money",
-        "label": "Estimated award amount",
-        "hint": "Approximate amount you plan to request."
-      }
-    ],
-    "binds": [
-      { "path": "applicantType", "required": "true" },
-      { "path": "requestedAmount", "required": "true" }
-    ],
-    "routes": [
-      {
-        "condition": "$applicantType = 'forprofit'",
-        "target": "https://example.gov/forms/grant-application-forprofit/1.0.0",
-        "label": "For-Profit Application",
-        "extensions": {
-          "x-route-category": "restricted"
-        }
-      },
-      {
-        "condition": "$isReturning = true and moneyAmount($requestedAmount) < 250000",
-        "target": "https://example.gov/forms/grant-application-renewal-short/1.0.0",
-        "label": "Simplified Renewal (Under $250K)"
-      },
-      {
-        "condition": "$isReturning = true",
-        "target": "https://example.gov/forms/grant-application-renewal/1.0.0",
-        "label": "Standard Renewal Application"
-      },
-      {
-        "condition": "true",
-        "target": "https://example.gov/forms/grant-application/1.0.0",
-        "label": "New Application"
-      }
-    ],
-    "extensions": {
-      "x-screener-version": "1.0"
-    }
-  },
   "instances": {
     "agencyData": {
       "description": "Agency-provided reference data injected at form load",

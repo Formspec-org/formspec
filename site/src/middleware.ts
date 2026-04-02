@@ -1,18 +1,23 @@
-/** @filedesc HTTP redirect to the references SPA entry — avoids defineConfig redirects, which emit HTML at /references/* and overwrite public/references/index.html. */
+/** @filedesc HTTP redirects for SPA entries — avoids defineConfig redirects that overwrite static index.html files. */
 import { defineMiddleware } from "astro:middleware";
 
-const REFERENCES_ALIASES = new Set([
-  "/references",
-  "/references/",
-  "/refrences",
-  "/refrences/",
-]);
+const SPA_REDIRECTS: Record<string, string> = {
+  "/references": "/references/index.html",
+  "/references/": "/references/index.html",
+  "/refrences": "/references/index.html",
+  "/refrences/": "/references/index.html",
+  "/react": "/react/index.html",
+  "/react/": "/react/index.html",
+  "/uswds-grant": "/uswds-grant/index.html",
+  "/uswds-grant/": "/uswds-grant/index.html",
+};
 
 export const onRequest = defineMiddleware((context, next) => {
-  if (REFERENCES_ALIASES.has(context.url.pathname)) {
-    const dest = new URL("/references/index.html", context.url);
-    dest.search = context.url.search;
-    return Response.redirect(dest.toString(), 302);
+  const dest = SPA_REDIRECTS[context.url.pathname];
+  if (dest) {
+    const url = new URL(dest, context.url);
+    url.search = context.url.search;
+    return Response.redirect(url.toString(), 302);
   }
   return next();
 });

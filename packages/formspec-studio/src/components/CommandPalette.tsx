@@ -1,8 +1,8 @@
 /** @filedesc Keyboard-driven command palette for searching and navigating items, variables, binds, and shapes. */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { normalizeBindEntries, flatItems } from '@formspec-org/studio-core';
 import { useDefinition } from '../state/useDefinition';
 import { useSelection } from '../state/useSelection';
-import { flatItems } from '../lib/field-helpers';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -18,24 +18,6 @@ interface PaletteResult {
   keywords: string[];
   onSelect: () => void;
   actionable?: boolean;
-}
-
-function normalizeBinds(binds: unknown): Array<{ path: string; entries: Record<string, string> }> {
-  if (Array.isArray(binds)) {
-    return binds.map((bind: any) => {
-      const entries = Object.fromEntries(
-        Object.entries(bind ?? {}).filter(([key, value]) => key !== 'path' && typeof value === 'string')
-      ) as Record<string, string>;
-      return { path: bind.path ?? '', entries };
-    });
-  }
-
-  return Object.entries((binds as Record<string, Record<string, string>>) ?? {}).map(([path, value]) => ({
-    path,
-    entries: Object.fromEntries(
-      Object.entries(value ?? {}).filter(([, entryValue]) => typeof entryValue === 'string')
-    ) as Record<string, string>,
-  }));
 }
 
 export function CommandPalette({ open, onClose }: CommandPaletteProps) {
@@ -59,7 +41,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   const items = definition.items ? flatItems(definition.items) : [];
   const variables = definition.variables ?? [];
-  const binds = normalizeBinds(definition.binds);
+  const binds = normalizeBindEntries(definition.binds);
   const shapes = (definition.shapes ?? []) as Array<Record<string, any>>;
 
   const results = useMemo<PaletteResult[]>(() => {
@@ -70,7 +52,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       subtitle: fi.item.label || undefined,
       keywords: [fi.path, fi.item.label ?? ''],
       onSelect: () => {
-        select(fi.path, fi.item.type);
+        select(fi.path, fi.item.type, { tab: 'editor' });
         onClose();
       },
       actionable: true,
@@ -100,7 +82,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         subtitle: detail,
         keywords: ['rule', 'bind', bind.path, ...Object.keys(bind.entries), ...Object.values(bind.entries)],
         onSelect: () => {
-          select(bind.path, 'field');
+          select(bind.path, 'field', { tab: 'editor' });
           onClose();
         },
         actionable: true,

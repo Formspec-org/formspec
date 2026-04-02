@@ -23,10 +23,11 @@
   "dependencies": {
     "@formspec-org/core": "*",
     "@formspec-org/engine": "*",
-    "@formspec-org/types": "*"
+    "@formspec-org/layout": "*",
+    "@formspec-org/types": "*",
+    "@formspec-org/webcomponent": "*"
   },
   "devDependencies": {
-    "vitest": "^3.2.4",
     "typescript": "^5.0.0"
   }
 }

@@ -19,17 +19,21 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
 
     if (behavior.totalSteps() === 0) return;
 
-    // Step indicator (USWDS)
+    const stepContent = document.createElement('div');
+    stepContent.className = 'formspec-uswds-wizard__content';
+    root.appendChild(stepContent);
+
     let stepIndicator: HTMLElement | undefined;
     let segmentsList: HTMLOListElement | undefined;
     let currentStepSpan: HTMLElement | undefined;
     let totalStepsSpan: HTMLElement | undefined;
     let headingText: HTMLElement | undefined;
+    let skipBtn: HTMLButtonElement | undefined;
 
     if (behavior.showProgress) {
-        stepIndicator = document.createElement('div');
+        stepIndicator = document.createElement('nav');
         stepIndicator.className = 'usa-step-indicator';
-        stepIndicator.setAttribute('aria-label', 'progress');
+        stepIndicator.setAttribute('aria-label', 'Form progress');
 
         segmentsList = document.createElement('ol');
         segmentsList.className = 'usa-step-indicator__segments';
@@ -65,36 +69,43 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
 
         header.appendChild(heading);
         stepIndicator.appendChild(header);
-        root.appendChild(stepIndicator);
+        stepContent.appendChild(stepIndicator);
     }
 
-    // Step panels
     const panels: HTMLElement[] = [];
     for (let i = 0; i < behavior.totalSteps(); i++) {
         const panel = document.createElement('div');
         panel.className = 'formspec-wizard-panel';
         panel.setAttribute('role', 'region');
-        panel.setAttribute('aria-label', behavior.steps[i]?.title || `Step ${i + 1}`);
+        panel.tabIndex = -1;
+        const panelLabelId = `${behavior.id || 'formspec-wizard'}-step-${i + 1}-label`;
+        panel.setAttribute('aria-labelledby', panelLabelId);
         if (i !== 0) panel.classList.add('formspec-hidden');
+
+        const panelHeading = document.createElement('h2');
+        panelHeading.id = panelLabelId;
+        panelHeading.className = 'usa-step-indicator__heading formspec-uswds-wizard__panel-heading';
+        panelHeading.textContent = behavior.steps[i]?.title || `Step ${i + 1}`;
+        panel.appendChild(panelHeading);
+
         behavior.renderStep(i, panel);
-        root.appendChild(panel);
+        stepContent.appendChild(panel);
         panels.push(panel);
     }
 
-    // Navigation buttons
     const nav = document.createElement('div');
-    nav.className = 'formspec-wizard-nav';
+    nav.className = 'formspec-wizard-nav usa-button-group';
 
     const prevBtn = document.createElement('button');
     prevBtn.type = 'button';
-    prevBtn.className = 'usa-button usa-button--outline';
+    prevBtn.className = 'formspec-wizard-prev usa-button usa-button--outline';
     prevBtn.textContent = 'Previous';
     nav.appendChild(prevBtn);
 
     if (behavior.allowSkip) {
-        const skipBtn = document.createElement('button');
+        skipBtn = document.createElement('button');
         skipBtn.type = 'button';
-        skipBtn.className = 'usa-button usa-button--unstyled';
+        skipBtn.className = 'formspec-wizard-skip usa-button usa-button--unstyled';
         skipBtn.textContent = 'Skip';
         skipBtn.addEventListener('click', () => {
             if (behavior.canGoNext()) behavior.goToStep(behavior.activeStep() + 1);
@@ -104,14 +115,18 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
 
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
-    nextBtn.className = 'usa-button';
+    nextBtn.className = 'formspec-wizard-next usa-button';
     nextBtn.textContent = 'Next';
     nav.appendChild(nextBtn);
 
-    root.appendChild(nav);
+    stepContent.appendChild(nav);
 
-    // Update step indicator reactively via bind()
-    // We build segments once per render — bind() handles active step updates
+    const announcer = document.createElement('div');
+    announcer.className = 'usa-sr-only';
+    announcer.setAttribute('aria-live', 'polite');
+    announcer.setAttribute('role', 'status');
+    stepContent.appendChild(announcer);
+
     if (segmentsList) {
         for (let i = 0; i < behavior.totalSteps(); i++) {
             const segment = document.createElement('li');
@@ -134,25 +149,10 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
         ? Array.from(segmentsList.children) as HTMLElement[]
         : undefined;
 
-    const dispose = behavior.bind({
-        root,
-        panels,
-        stepIndicators,
-        stepContent: root,
-        prevButton: prevBtn,
-        nextButton: nextBtn,
-    });
-    actx.onDispose(dispose);
+    const updateIndicator = (activeIdx: number) => {
+        if (activeIdx < 0) return;
 
-    // Step indicator class updates — listen for step changes via a MutationObserver
-    // on panel visibility, or use a simpler approach: patch after bind sets up effects.
-    // Since bind() manages panel visibility and button state, we piggyback on panel
-    // visibility to update the USWDS step indicator classes.
-    if (segmentsList && stepIndicators) {
-        const updateIndicator = () => {
-            const activeIdx = panels.findIndex(p => !p.classList.contains('formspec-hidden'));
-            if (activeIdx < 0) return;
-
+        if (stepIndicators) {
             for (let i = 0; i < stepIndicators.length; i++) {
                 const seg = stepIndicators[i];
                 seg.classList.remove(
@@ -163,7 +163,6 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
                     seg.classList.add('usa-step-indicator__segment--current');
                 } else if (i < activeIdx) {
                     seg.classList.add('usa-step-indicator__segment--complete');
-                    // Add sr-only completed text
                     const label = seg.querySelector('.usa-step-indicator__segment-label');
                     if (label && !label.querySelector('.usa-sr-only')) {
                         const sr = document.createElement('span');
@@ -177,19 +176,22 @@ export const renderWizard: AdapterRenderFn<WizardBehavior> = (
                     if (sr) sr.remove();
                 }
             }
-            if (currentStepSpan) currentStepSpan.textContent = String(activeIdx + 1);
-            if (headingText) {
-                headingText.textContent = behavior.steps[activeIdx]?.title || `Step ${activeIdx + 1}`;
-            }
-        };
-
-        // Use MutationObserver on panels to detect visibility changes driven by bind()
-        const observer = new MutationObserver(updateIndicator);
-        for (const panel of panels) {
-            observer.observe(panel, { attributes: true, attributeFilter: ['style', 'class'] });
         }
-        actx.onDispose(() => observer.disconnect());
-        // Initial update
-        updateIndicator();
-    }
+        if (currentStepSpan) currentStepSpan.textContent = String(activeIdx + 1);
+        if (headingText) {
+            headingText.textContent = behavior.steps[activeIdx]?.title || `Step ${activeIdx + 1}`;
+        }
+    };
+
+    const dispose = behavior.bind({
+        root,
+        panels,
+        stepIndicators,
+        stepContent,
+        prevButton: prevBtn,
+        nextButton: nextBtn,
+        skipButton: skipBtn,
+        onStepChange: (stepIndex) => updateIndicator(stepIndex),
+    });
+    actx.onDispose(dispose);
 };

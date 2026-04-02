@@ -1,7 +1,6 @@
-/** @filedesc Utilities for creating, splitting, and selecting component document states. */
+/** @filedesc Utilities for normalizing and selecting the single component document state. */
 import type {
   ComponentState,
-  GeneratedLayoutState,
   ProjectState,
 } from './types.js';
 
@@ -10,59 +9,34 @@ export function isAuthoredComponentDocument(doc: unknown): doc is ComponentState
 }
 
 export function hasAuthoredComponentTree(doc: unknown): doc is ComponentState {
-  return isAuthoredComponentDocument(doc) && !!(doc as ComponentState).tree;
+  return !!doc && typeof doc === 'object' && !!(doc as ComponentState).tree;
 }
 
 export function createComponentArtifact(url?: string): ComponentState {
   return url ? { targetDefinition: { url } } : {};
 }
 
-export function createGeneratedLayoutDocument(
-  url?: string,
-  seed?: Partial<ComponentState> | null,
-): GeneratedLayoutState {
-  return {
-    ...(seed ?? {}),
-    ...(url ? { targetDefinition: { url } } : {}),
-    'x-studio-generated': true,
-  };
-}
-
-export function splitComponentState(
+export function normalizeComponentState(
   component: ComponentState | undefined,
   url?: string,
-): { component: ComponentState; generatedComponent: GeneratedLayoutState } {
-  if (hasAuthoredComponentTree(component) || (isAuthoredComponentDocument(component) && !('x-studio-generated' in (component as Record<string, unknown>)))) {
-    return {
-      component: {
-        ...component!,
-        ...(url ? { targetDefinition: { ...(component?.targetDefinition ?? {}), url } } : {}),
-      },
-      generatedComponent: createGeneratedLayoutDocument(url),
-    };
-  }
+): ComponentState {
+  const normalized = {
+    ...(component ?? {}),
+    ...(url ? { targetDefinition: { ...(component?.targetDefinition ?? {}), url } } : {}),
+  } as ComponentState;
 
-  return {
-    component: createComponentArtifact(url),
-    generatedComponent: createGeneratedLayoutDocument(url, component ?? undefined),
-  };
+  delete (normalized as Record<string, unknown>)['x-studio-generated'];
+  return normalized;
 }
 
 export function getEditableComponentDocument(
-  state: Pick<ProjectState, 'component' | 'generatedComponent'>,
-): ComponentState | GeneratedLayoutState {
-  return hasAuthoredComponentTree(state.component) ? state.component : state.generatedComponent;
+  state: Pick<ProjectState, 'component'>,
+): ComponentState {
+  return state.component;
 }
 
 export function getCurrentComponentDocument(
-  state: Pick<ProjectState, 'component' | 'generatedComponent'>,
-): ComponentState | GeneratedLayoutState {
-  if (hasAuthoredComponentTree(state.component)) {
-    return state.component;
-  }
-
-  return Object.assign({}, state.component, state.generatedComponent, {
-    tree: state.generatedComponent.tree,
-    'x-studio-generated': true as const,
-  }) as GeneratedLayoutState;
+  state: Pick<ProjectState, 'component'>,
+): ComponentState {
+  return state.component;
 }

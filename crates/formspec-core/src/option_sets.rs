@@ -128,4 +128,23 @@ mod tests {
         resolve_option_sets_on_definition(&mut def);
         assert_eq!(def["items"][0]["options"].as_array().unwrap().len(), 1);
     }
+
+    #[test]
+    fn inlines_preserves_keywords_on_options() {
+        let mut def = json!({
+            "items": [
+                { "key": "c", "type": "field", "dataType": "choice", "optionSet": "states" }
+            ],
+            "optionSets": {
+                "states": [
+                    { "value": "ca", "label": "California", "keywords": ["CA", "Calif"] }
+                ]
+            }
+        });
+        resolve_option_sets_on_definition(&mut def);
+        assert_eq!(
+            def["items"][0]["options"][0]["keywords"],
+            json!(["CA", "Calif"])
+        );
+    }
 }

@@ -27,6 +27,7 @@ pub mod rebuild;
 pub mod recalculate;
 pub mod revalidate;
 pub mod screener;
+pub mod screener_eval;
 pub mod types;
 
 mod eval_json;
@@ -53,7 +54,9 @@ pub use recalculate::{recalculate, topo_sort_variables};
 pub use registry_constraints::extension_constraints_from_registry_documents;
 pub use revalidate::revalidate;
 pub use screener::{ScreenerRouteResult, evaluate_screener};
+pub use screener_eval::evaluate_screener_document;
 pub use types::{
-    EvalContext, EvalTrigger, EvaluationResult, ExtensionConstraint, ItemInfo, NrbMode,
-    ValidationResult, VariableDef, WhitespaceMode,
+    AnswerInput, AnswerState, DeterminationRecord, EvalContext, EvalTrigger, EvaluationResult,
+    ExtensionConstraint, InputEntry, ItemInfo, NrbMode, OverrideBlock, PhaseResult, RouteResult,
+    ScreenerRef, ValidityBlock, ValidationResult, VariableDef, WhitespaceMode,
 };

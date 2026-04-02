@@ -1,4 +1,4 @@
-# formspec-chat — API Reference
+# @formspec/chat — API Reference
 
 *Auto-generated from TypeScript declarations — do not hand-edit.*
 

@@ -7,14 +7,15 @@ import { waitForWasm } from '../helpers/harness';
  * This gives us the raw screener UI to interact with.
  */
 async function mountWithScreener(page: any) {
-  const { definition, component, theme, registry } = loadGrantArtifacts();
+  const { definition, screener, component, theme, registry } = loadGrantArtifacts();
   await page.goto('/');
   await page.waitForSelector('formspec-render', { state: 'attached' });
   await waitForWasm(page);
-  await page.evaluate(({ def, comp, thm, reg }: any) => {
+  await page.evaluate(({ def, scr, comp, thm, reg }: any) => {
     try {
       const el: any = document.querySelector('formspec-render');
       el.registryDocuments = reg;
+      el.screenerDocument = scr;
       el.definition = def;
       el.componentDocument = comp;
       el.themeDocument = thm;
@@ -22,13 +23,13 @@ async function mountWithScreener(page: any) {
       console.error('Error in mountWithScreener evaluate:', e.message, e.stack);
       throw e;
     }
-  }, { def: definition, comp: component, thm: theme, reg: registry });
+  }, { def: definition, scr: screener, comp: component, thm: theme, reg: registry });
   await page.waitForTimeout(200);
 }
 
 test.describe('Screener: Rendering and Route Selection', () => {
 
-  test('should render screener panel when definition has a screener', async ({ page }) => {
+  test('should render screener panel when screenerDocument is set', async ({ page }) => {
     await mountWithScreener(page);
 
     // Screener panel should be visible
@@ -225,25 +226,26 @@ test.describe('Screener: Rendering and Route Selection', () => {
   });
 
   test('skipScreener bypasses screener and goes straight to main form', async ({ page }) => {
-    const { definition, component, theme, registry } = loadGrantArtifacts();
+    const { definition, screener: screenerDoc, component, theme, registry } = loadGrantArtifacts();
     await page.goto('/');
     await page.waitForSelector('formspec-render', { state: 'attached' });
     await waitForWasm(page);
-    await page.evaluate(({ def, comp, thm, reg }: any) => {
+    await page.evaluate(({ def, scr, comp, thm, reg }: any) => {
       const el: any = document.querySelector('formspec-render');
       el.registryDocuments = reg;
+      el.screenerDocument = scr;
       el.definition = def;
       el.skipScreener();
       el.componentDocument = comp;
       el.themeDocument = thm;
-    }, { def: definition, comp: component, thm: theme, reg: registry });
+    }, { def: definition, scr: screenerDoc, comp: component, thm: theme, reg: registry });
     await page.waitForTimeout(200);
 
     // Main form should be visible, no screener
     const wizard = page.locator('.formspec-wizard');
     await expect(wizard).toBeVisible();
-    const screener = page.locator('.formspec-screener');
-    await expect(screener).toHaveCount(0);
+    const screenerPanel = page.locator('.formspec-screener');
+    await expect(screenerPanel).toHaveCount(0);
   });
 
   // ── Validation & Boolean Semantics ─────────────────────────────────

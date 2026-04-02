@@ -11,6 +11,7 @@ export function PropInput({
   type = 'text',
   help,
   min,
+  onCleared,
 }: {
   path: string;
   property: string;
@@ -20,10 +21,11 @@ export function PropInput({
   type?: string;
   help?: string;
   min?: number;
+  onCleared?: () => void;
 }) {
   return (
     <div className="space-y-1.5 mb-2">
-      <label className="font-mono text-[10px] text-muted uppercase tracking-wider block" htmlFor={`${path}-${property}`}>
+      <label className="font-mono text-[10px] text-ink/70 uppercase tracking-wider block" htmlFor={`${path}-${property}`}>
         {help ? <HelpTip text={help}>{label}</HelpTip> : label}
       </label>
       <input
@@ -41,6 +43,7 @@ export function PropInput({
             nextValue = Number.isNaN(parsed) ? null : parsed;
           }
           project.updateItem(path, { [property]: nextValue || null });
+          if (!nextValue) onCleared?.();
         }}
       />
     </div>

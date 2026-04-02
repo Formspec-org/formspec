@@ -133,7 +133,7 @@
         },
         "compatibleVersions": {
           "type": "string",
-          "description": "Semver range expression describing which Definition versions this document supports. When absent, compatible with any version."
+          "description": "Semver range expression using node/npm-style range syntax describing which Definition versions this document supports. When absent, compatible with any version."
         }
       }
     },
@@ -556,18 +556,20 @@
         "level": "core",
         "children": false,
         "bind": "required",
-        "compatibleDataTypes": ["choice"]
+        "compatibleDataTypes": ["choice", "multiChoice"]
       },
       "properties": {
         "component": { "const": "Select" },
         "bind": { "type": "string", "description": "Item key from the target Definition." },
-        "searchable": { "type": "boolean", "description": "Enable type-ahead search/filtering of options." },
+        "searchable": { "type": "boolean", "description": "Use a combobox (text input + listbox) with optional type-ahead filtering. When false and multiple is false, a native <select> is used." },
+        "multiple": { "type": "boolean", "description": "Allow multiple values (array). Bind to a multiChoice field. Implies a combobox list with checkboxes; combine with searchable for filtering." },
         "placeholder": { "type": "string", "description": "Placeholder text when no option is selected." },
         "clearable": { "type": "boolean", "description": "Whether the user can clear the selection to null." }
       },
       "unevaluatedProperties": false,
       "examples": [
-        { "component": "Select", "bind": "department", "searchable": true, "placeholder": "Choose a department" }
+        { "component": "Select", "bind": "department", "searchable": true, "placeholder": "Choose a department" },
+        { "component": "Select", "bind": "tags", "multiple": true, "searchable": true }
       ]
     },
 
@@ -1012,7 +1014,7 @@
         "min": { "type": "number", "description": "Minimum allowed amount." },
         "max": { "type": "number", "description": "Maximum allowed amount." },
         "showStepper": { "type": "boolean", "description": "Whether to show increment/decrement buttons (amount input)." },
-        "currency": { "type": "string", "description": "ISO 4217 currency code (e.g. 'USD', 'EUR', 'GBP')." },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO 4217 currency code (e.g. 'USD', 'EUR', 'GBP')." },
         "showCurrency": { "type": "boolean", "description": "Whether to display the currency symbol." },
         "locale": { "type": "string", "description": "Locale for number/currency formatting (e.g. 'en-US')." }
       },
@@ -1389,6 +1391,17 @@
         },
         "triggerLabel": { "type": "string", "description": "Label for the trigger button when trigger is 'button'." },
         "closable": { "type": "boolean", "description": "Whether the modal can be dismissed by the user." },
+        "headingLevel": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6,
+          "description": "Heading level for the modal title (default 2)."
+        },
+        "placement": {
+          "type": "string",
+          "enum": ["top", "right", "bottom", "left"],
+          "description": "When set, anchors the opened dialog near the trigger with fixed positioning; omit for native centered modal."
+        },
         "children": { "$ref": "#/$defs/ChildrenArray" }
       },
       "unevaluatedProperties": false,

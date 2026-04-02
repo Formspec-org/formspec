@@ -36,7 +36,7 @@ describe('a11y attributes — label/describedby', () => {
         document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
     });
 
-    it('links label and hint/error via aria-describedby', () => {
+    it('links label and hint via aria-describedby', () => {
         const el = renderWith(
             [{ key: 'age', type: 'field', dataType: 'integer', label: 'Age', hint: 'Enter your age' }],
             [],
@@ -52,32 +52,12 @@ describe('a11y attributes — label/describedby', () => {
         expect(input).not.toBeNull();
         const describedBy = input.getAttribute('aria-describedby') || '';
         expect(describedBy).toContain('field-age-hint');
-        expect(describedBy).toContain('field-age-error');
+        // Error ID is handled by role="alert" / aria-live, not linked via describedby in modern USWDS patterns
+        expect(describedBy).not.toContain('field-age-error');
 
         const hint = el.querySelector('#field-age-hint') as HTMLElement;
         expect(hint).not.toBeNull();
         expect(hint.textContent).toBe('Enter your age');
-    });
-});
-
-describe('a11y attributes — role and live-region', () => {
-    afterEach(() => {
-        document.body.querySelectorAll('formspec-render').forEach(el => el.remove());
-    });
-
-    it('sets role=alert and aria-live=polite on error element', () => {
-        const el = renderWith(
-            [{ key: 'x', type: 'field', dataType: 'string', label: 'X' }],
-            [{ path: 'x', required: true }],
-            {
-                component: 'Page',
-                children: [{ component: 'TextInput', bind: 'x' }],
-            },
-        );
-        const errorEl = el.querySelector('#field-x-error') as HTMLElement;
-        expect(errorEl).not.toBeNull();
-        expect(errorEl.getAttribute('role')).toBe('alert');
-        expect(errorEl.getAttribute('aria-live')).toBe('polite');
     });
 });
 

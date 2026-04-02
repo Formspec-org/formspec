@@ -1,10 +1,10 @@
 # Component Schema Reference Map
 
-> schemas/component.schema.json -- 1511 lines -- Tier 3 component tree document
+> schemas/component.schema.json -- 1490 lines -- Tier 3 component tree document
 
 ## Overview
 
-The Component Schema defines the structure of a Formspec Component Document -- a Tier 3 parallel presentation tree of UI components that are bound to a Formspec Definition's items via slot binding. The component tree controls layout and widget selection but cannot override core behavioral semantics (required, relevant, readonly, calculate, constraint) from the Definition. Multiple Component Documents MAY target the same Definition for platform-specific presentations.
+The Component Schema defines the structure of a Formspec Component Document -- a Tier 3 parallel presentation tree of UI components that are bound to a Formspec Definition's items via slot binding. The component tree controls layout and widget selection but cannot override core behavioral semantics (required, relevant, readonly, calculate, constraint) from the Definition. Multiple Component Documents MAY target the same Definition for platform-specific presentations. This schema corresponds to the Component Specification v1.0.
 
 ## Top-Level Structure
 
@@ -30,16 +30,30 @@ The Component Schema defines the structure of a Formspec Component Document -- a
 
 | Definition | Description | Key Properties | Used By |
 |---|---|---|---|
-| `TargetDefinition` | Binding to a target Formspec Definition with optional semver compatibility range. | `url` (string, uri, required), `compatibleVersions` (string) | Top-level `targetDefinition` |
-| `Tokens` | Flat design token map; keys are dot-delimited names, values are strings or numbers. | `additionalProperties`: string or number | Top-level `tokens` |
-| `Breakpoints` | Named viewport breakpoints; keys are names, values are non-negative integer pixel widths. | `additionalProperties`: integer (minimum: 0) | Top-level `breakpoints` |
-| `StyleMap` | Flat style map; values MAY contain `$token.path` references. Not CSS -- renderers map to platform equivalents. | `additionalProperties`: string or number | `ComponentBase.style` |
-| `AccessibilityBlock` | Accessibility overrides for a component's root element (role, description, liveRegion). | `role` (string), `description` (string), `liveRegion` (enum) | `ComponentBase.accessibility` |
-| `ResponsiveOverrides` | Breakpoint-keyed prop overrides; values are objects of props to shallow-merge at that breakpoint. | `additionalProperties`: object | `ComponentBase.responsive` |
-| `ChildrenArray` | Ordered array of child `AnyComponent` nodes; renderers MUST preserve array order. | `items`: `$ref AnyComponent` | All container/layout components' `children` prop |
-| `CustomComponentDef` | Reusable component template with parameters and a subtree. Templates MUST NOT self-reference. | `params` (string[]), `tree` (`$ref AnyComponent`, required) | Top-level `components` registry entries |
-| `ComponentBase` | Base properties shared by all component objects via `$ref` inheritance. | `component` (string, required), `when`, `responsive`, `style`, `accessibility`, `cssClass` | Every concrete component definition |
-| `AnyComponent` | Discriminated union of all 36 component types via `oneOf`. | `component` (string, required) | `tree`, `ChildrenArray.items`, `CustomComponentDef.tree` |
+| **TargetDefinition** | Binding to a target Formspec Definition with optional semver compatibility range. | `url` (string, uri, required), `compatibleVersions` (string) | Top-level `targetDefinition` |
+| **Tokens** | Flat design token map; keys are dot-delimited names, values are strings or numbers. | `additionalProperties`: string or number | Top-level `tokens` |
+| **Breakpoints** | Named viewport breakpoints; keys are names, values are non-negative integer pixel widths. | `additionalProperties`: integer (minimum: 0) | Top-level `breakpoints` |
+| **StyleMap** | Flat style map; values MAY contain `$token.path` references. Not CSS -- renderers map to platform equivalents. | `additionalProperties`: string or number | `ComponentBase.style` |
+| **AccessibilityBlock** | Accessibility overrides for a component's root element (role, description, liveRegion). | `role` (string), `description` (string), `liveRegion` (enum: off, polite, assertive) | `ComponentBase.accessibility` |
+| **ResponsiveOverrides** | Breakpoint-keyed prop overrides; values are objects of props to shallow-merge at that breakpoint. MUST NOT contain component, bind, when, children, or responsive. | `additionalProperties`: object | `ComponentBase.responsive` |
+| **ChildrenArray** | Ordered array of child `AnyComponent` nodes; renderers MUST preserve array order. | `items`: `$ref AnyComponent` | All container/layout components' `children` prop |
+| **CustomComponentDef** | Reusable component template with parameters and a subtree. Templates MUST NOT self-reference (directly or indirectly). | `params` (string[]), `tree` (`$ref AnyComponent`, required) | Top-level `components` registry entries |
+| **ComponentBase** | Base properties shared by all component objects via `$ref` inheritance. | `id` (string, pattern), `component` (string, required), `when`, `responsive`, `style`, `accessibility`, `cssClass` | Every concrete component definition |
+| **AnyComponent** | Discriminated union of all 36 component types via `oneOf`. | `component` (string, required) | `tree`, `ChildrenArray.items`, `CustomComponentDef.tree` |
+
+## ComponentBase Properties
+
+All components inherit these properties from `ComponentBase`:
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `id` | `string` (pattern: `^[a-zA-Z][a-zA-Z0-9_\-]*$`) | No | Unique identifier within the component tree. Used for locale string addressing (`$component.<id>.prop`), test selectors, and accessibility anchoring. When present, MUST be unique across the entire document. Inside repeat templates, the id identifies the template node -- all rendered instances share it. |
+| `component` | `string` (minLength: 1) | Yes | Component type name. MUST be a built-in name or a key in the components registry. |
+| `when` | `string` | No | FEL boolean expression for conditional rendering. false/null hides the component and all children. Presentation-only -- does NOT affect data (unlike Bind relevant which may clear data). When BOTH when and relevant apply: relevant=false always wins; when=false hides but preserves data. |
+| `responsive` | `$ref: ResponsiveOverrides` | No | Breakpoint-keyed prop overrides for responsive design. Mobile-first cascade. |
+| `style` | `$ref: StyleMap` | No | Flat style map. Values MAY contain `$token.path` references. |
+| `accessibility` | `$ref: AccessibilityBlock` | No | Accessibility overrides for the component's root element. |
+| `cssClass` | `oneOf: [string, string[]]` | No | CSS class name(s) applied to root element. Additive to renderer-generated classes. Non-web renderers MAY ignore. Values MAY contain `$token.` references. |
 
 ## Component Types
 
@@ -50,13 +64,10 @@ The Component Schema defines the structure of a Formspec Component Document -- a
 | Page | `"Page"` | layout | core | `title`, `description`, `children` | `component` | Yes | forbidden |
 | Stack | `"Stack"` | layout | core | `direction`, `gap`, `align`, `wrap`, `children` | `component` | Yes | forbidden |
 | Grid | `"Grid"` | layout | core | `columns`, `gap`, `rowGap`, `children` | `component` | Yes | forbidden |
-| Wizard | `"Wizard"` | layout | core | `showProgress`, `allowSkip`, `children` | `component` | Yes | forbidden |
 | Spacer | `"Spacer"` | layout | core | `size` | `component` | No | forbidden |
 | Columns | `"Columns"` | layout | progressive | `widths`, `gap`, `children` | `component` | Yes | forbidden |
 | Tabs | `"Tabs"` | layout | progressive | `position`, `tabLabels`, `defaultTab`, `children` | `component` | Yes | forbidden |
-| Accordion | `"Accordion"` | layout | progressive | `bind`, `allowMultiple`, `defaultOpen`, `labels`, `children` | `component` | Yes | forbidden* |
-
-*Accordion has an optional `bind` for repeating groups but is categorized with bind "forbidden" in x-lm.
+| Accordion | `"Accordion"` | layout | progressive | `bind`, `allowMultiple`, `defaultOpen`, `labels`, `children` | `component` | Yes | optional |
 
 ### Input Components
 
@@ -65,7 +76,7 @@ The Component Schema defines the structure of a Formspec Component Document -- a
 | TextInput | `"TextInput"` | input | core | `bind`, `placeholder`, `maxLines`, `inputMode`, `prefix`, `suffix` | `component`, `bind` | string | -- |
 | NumberInput | `"NumberInput"` | input | core | `bind`, `step`, `min`, `max`, `showStepper`, `locale` | `component`, `bind` | integer, number | -- |
 | DatePicker | `"DatePicker"` | input | core | `bind`, `format`, `minDate`, `maxDate`, `showTime` | `component`, `bind` | date, dateTime, time | -- |
-| Select | `"Select"` | input | core | `bind`, `searchable`, `placeholder`, `clearable` | `component`, `bind` | choice | -- |
+| Select | `"Select"` | input | core | `bind`, `searchable`, `multiple`, `placeholder`, `clearable` | `component`, `bind` | choice, multiChoice | -- |
 | CheckboxGroup | `"CheckboxGroup"` | input | core | `bind`, `columns`, `selectAll` | `component`, `bind` | multiChoice | -- |
 | Toggle | `"Toggle"` | input | core | `bind`, `onLabel`, `offLabel` | `component`, `bind` | boolean | -- |
 | FileUpload | `"FileUpload"` | input | core | `bind`, `accept`, `maxSize`, `multiple`, `dragDrop` | `component`, `bind` | attachment | -- |
@@ -98,7 +109,7 @@ The Component Schema defines the structure of a Formspec Component Document -- a
 | Collapsible | `"Collapsible"` | container | core | `title`, `defaultOpen`, `children` | `component`, `title` | Yes | -- |
 | ConditionalGroup | `"ConditionalGroup"` | container | core | `fallback`, `children` | `component`, `when` | Yes | -- |
 | Panel | `"Panel"` | container | progressive | `position`, `title`, `width`, `children` | `component` | Yes | Card |
-| Modal | `"Modal"` | container | progressive | `title`, `size`, `trigger`, `triggerLabel`, `closable`, `children` | `component`, `title` | Yes | Collapsible |
+| Modal | `"Modal"` | container | progressive | `title`, `size`, `trigger`, `triggerLabel`, `closable`, `headingLevel`, `placement`, `children` | `component`, `title` | Yes | Collapsible |
 | Popover | `"Popover"` | container | progressive | `triggerBind`, `triggerLabel`, `placement`, `children` | `component` | Yes | Collapsible |
 
 ### Custom Components
@@ -127,6 +138,7 @@ The Component Schema defines the structure of a Formspec Component Document -- a
 - `component`
 
 ### Components with additional required fields beyond `component`
+
 | Component | Additional Required Fields |
 |---|---|
 | TextInput | `bind` |
@@ -176,15 +188,25 @@ The Component Schema defines the structure of a Formspec Component Document -- a
 | Panel position | `"left"`, `"right"` | `Panel.position` |
 | Modal size | `"sm"`, `"md"`, `"lg"`, `"xl"`, `"full"` | `Modal.size` |
 | Modal trigger | `"button"`, `"auto"` | `Modal.trigger` |
+| Modal placement | `"top"`, `"right"`, `"bottom"`, `"left"` | `Modal.placement` |
 | Popover placement | `"top"`, `"right"`, `"bottom"`, `"left"` | `Popover.placement` |
 
 ### Const Values (component type discriminators)
 
 Every built-in component definition constrains its `component` property to a `const` string:
 
-`"Page"`, `"Stack"`, `"Grid"`, `"Wizard"`, `"Spacer"`, `"TextInput"`, `"NumberInput"`, `"DatePicker"`, `"Select"`, `"CheckboxGroup"`, `"Toggle"`, `"FileUpload"`, `"Heading"`, `"Text"`, `"Divider"`, `"Card"`, `"Collapsible"`, `"ConditionalGroup"`, `"Columns"`, `"Tabs"`, `"SubmitButton"`, `"Accordion"`, `"RadioGroup"`, `"MoneyInput"`, `"Slider"`, `"Rating"`, `"Signature"`, `"Alert"`, `"Badge"`, `"ProgressBar"`, `"Summary"`, `"ValidationSummary"`, `"DataTable"`, `"Panel"`, `"Modal"`, `"Popover"`
+`"Page"`, `"Stack"`, `"Grid"`, `"Spacer"`, `"TextInput"`, `"NumberInput"`, `"DatePicker"`, `"Select"`, `"CheckboxGroup"`, `"Toggle"`, `"FileUpload"`, `"Heading"`, `"Text"`, `"Divider"`, `"Card"`, `"Collapsible"`, `"ConditionalGroup"`, `"Columns"`, `"Tabs"`, `"SubmitButton"`, `"Accordion"`, `"RadioGroup"`, `"MoneyInput"`, `"Slider"`, `"Rating"`, `"Signature"`, `"Alert"`, `"Badge"`, `"ProgressBar"`, `"Summary"`, `"ValidationSummary"`, `"DataTable"`, `"Panel"`, `"Modal"`, `"Popover"`
 
 `CustomComponentRef` uses `"not": { "enum": [...] }` to match any string that is NOT one of the 35 built-in names.
+
+### Patterns
+
+| Property Path | Pattern | Description |
+|---|---|---|
+| `ComponentBase.id` | `^[a-zA-Z][a-zA-Z0-9_\-]*$` | Alphanumeric + underscore/hyphen, must start with a letter |
+| `components` keys | `^[A-Z][a-zA-Z0-9]*$` | PascalCase enforcement for custom component names |
+| `MoneyInput.currency` | `^[A-Z]{3}$` | ISO 4217 three-letter uppercase currency code |
+| Top-level `patternProperties` | `^x-` | Extension namespace |
 
 ## Cross-References
 
@@ -264,7 +286,6 @@ Every component definition carries an `x-lm` block with the following fields:
 | `compatibleDataTypes` | string[] | (inputs only) Which Definition data types the component can render |
 | `fallback` | string | (progressive only) Core component name to degrade to when unsupported |
 | `fallbackNotes` | string | (progressive only) Notes on how to map props during degradation |
-| `childConstraint` | string | (Wizard only) Constraint on children: `"Page only"` |
 | `bindNote` | string | (DataTable only) Clarification: "Binds to a repeatable group key, not a field key." |
 
 #### Full x-lm by Component
@@ -274,12 +295,11 @@ Every component definition carries an `x-lm` block with the following fields:
 | Page | layout | core | true | forbidden | -- | -- | -- |
 | Stack | layout | core | true | forbidden | -- | -- | -- |
 | Grid | layout | core | true | forbidden | -- | -- | -- |
-| Wizard | layout | core | true | forbidden | -- | -- | -- |
 | Spacer | layout | core | false | forbidden | -- | -- | -- |
 | TextInput | input | core | false | required | string | -- | -- |
 | NumberInput | input | core | false | required | integer, number | -- | -- |
 | DatePicker | input | core | false | required | date, dateTime, time | -- | -- |
-| Select | input | core | false | required | choice | -- | -- |
+| Select | input | core | false | required | choice, multiChoice | -- | -- |
 | CheckboxGroup | input | core | false | required | multiChoice | -- | -- |
 | Toggle | input | core | false | required | boolean | -- | -- |
 | FileUpload | input | core | false | required | attachment | -- | -- |
@@ -292,7 +312,7 @@ Every component definition carries an `x-lm` block with the following fields:
 | SubmitButton | display | core | false | forbidden | -- | -- | -- |
 | Columns | layout | progressive | true | forbidden | -- | Grid | "columns set to child count; gap preserved." |
 | Tabs | layout | progressive | true | forbidden | -- | Stack | "Each child preceded by a Heading (level 3) with tab label. All children rendered visibly." |
-| Accordion | layout | progressive | true | forbidden | -- | Stack | "Each child wrapped in Collapsible. First defaults open; rest closed." |
+| Accordion | layout | progressive | true | optional | -- | Stack | "Each child wrapped in Collapsible. First defaults open; rest closed." |
 | RadioGroup | input | progressive | false | required | choice | Select | "columns discarded." |
 | MoneyInput | input | progressive | false | required | money | NumberInput | "Currency symbol rendered as prefix if bound item has prefix hint." |
 | Slider | input | progressive | false | required | integer, number | NumberInput | "min, max, step preserved." |
@@ -326,7 +346,7 @@ Each concrete component definition uses the pattern:
 }
 ```
 
-The `$ref` to `ComponentBase` brings in the shared properties (`component`, `when`, `responsive`, `style`, `accessibility`, `cssClass`). `unevaluatedProperties: false` then seals each component -- only properties declared in either `ComponentBase` or the specific component definition are allowed. This prevents typos and unknown properties from silently passing validation.
+The `$ref` to `ComponentBase` brings in the shared properties (`id`, `component`, `when`, `responsive`, `style`, `accessibility`, `cssClass`). `unevaluatedProperties: false` then seals each component -- only properties declared in either `ComponentBase` or the specific component definition are allowed. This prevents typos and unknown properties from silently passing validation.
 
 ### `additionalProperties: false` Locations
 
@@ -351,20 +371,18 @@ All 36 concrete component definitions use this to seal allowed properties after 
 |---|---|---|
 | `const: "1.0"` | `$formspecComponent` | Pins schema version |
 | `minLength: 1` | `version`, `ComponentBase.component` | Non-empty strings required |
-| `minimum: 0` | Breakpoints values, Heading.level, Tabs.defaultTab, Accordion.defaultOpen | Non-negative integers |
-| `minimum: 1` | Grid.columns (integer), Heading.level, CheckboxGroup.columns, RadioGroup.columns, Rating.max | Positive integers |
-| `maximum: 6` | Heading.level | HTML heading range |
+| `minimum: 0` | Breakpoints values, Tabs.defaultTab, Accordion.defaultOpen, Card.elevation | Non-negative integers |
+| `minimum: 1` | Grid.columns (integer), Heading.level, CheckboxGroup.columns, RadioGroup.columns, Rating.max, TextInput.maxLines, Modal.headingLevel | Positive integers |
+| `maximum: 6` | Heading.level, Modal.headingLevel | HTML heading range |
 | `format: "uri"` | `url`, `TargetDefinition.url` | URI validation |
 | `oneOf: [string, number]` | Stack.gap, Grid.gap, Grid.rowGap, Columns.gap, Spacer.size, Signature.height, Panel.width | Flexible sizing (CSS string or pixel number) |
 | `oneOf: [string, integer]` | Grid.columns | Column count or CSS grid-template-columns |
 | `oneOf: [string, array]` | ComponentBase.cssClass | Single class or class array |
+| Pattern: `^[a-zA-Z][a-zA-Z0-9_\-]*$` | ComponentBase.id | Node identifier format |
 | Pattern: `^[A-Z][a-zA-Z0-9]*$` | `components` keys | PascalCase enforcement for custom component names |
+| Pattern: `^[A-Z]{3}$` | MoneyInput.currency | ISO 4217 currency code |
 | Pattern: `^x-` | Top-level `patternProperties` | Extension namespace |
 | `not: { enum: [...] }` | CustomComponentRef.component | Excludes all 35 built-in names |
-
-### Wizard Child Constraint
-
-The Wizard component annotates via `x-lm.childConstraint: "Page only"` that each child MUST be a Page component, but this is a semantic constraint -- it is not enforced structurally in the schema (children use the generic `ChildrenArray` type).
 
 ### Default Values
 

@@ -492,26 +492,44 @@ export function createFormspecServer(registry: ProjectRegistry): McpServer {
 
   server.registerTool('formspec_screener', {
     title: 'Screener',
-    description: 'Manage the pre-form screening section.',
+    description: 'Manage standalone Screener Documents: items, phases, routes, and lifecycle.',
     inputSchema: {
       project_id: z.string(),
-      action: z.enum(['enable', 'add_field', 'remove_field', 'add_route', 'update_route', 'reorder_route', 'remove_route']),
-      enabled: z.boolean().optional(),
+      action: z.enum([
+        'create_document', 'delete_document',
+        'add_field', 'remove_field',
+        'add_phase', 'remove_phase', 'set_phase_strategy',
+        'add_route', 'update_route', 'reorder_route', 'remove_route',
+        'set_lifecycle',
+      ]),
+      url: z.string().optional(),
+      title: z.string().optional(),
       key: z.string().optional(),
       label: z.string().optional(),
       type: z.string().optional(),
       props: fieldPropsSchema.optional(),
+      phase_id: z.string().optional(),
+      strategy: z.string().optional(),
+      config: z.record(z.unknown()).optional(),
       condition: z.string().optional(),
       target: z.string().optional(),
       message: z.string().optional(),
+      score: z.string().optional(),
+      threshold: z.number().optional(),
+      override: z.boolean().optional(),
+      terminal: z.boolean().optional(),
       route_index: z.number().optional(),
-      changes: z.object({ condition: z.string(), target: z.string(), label: z.string(), message: z.string() }).partial().optional(),
+      changes: z.record(z.unknown()).optional(),
       direction: z.enum(['up', 'down']).optional(),
+      insert_index: z.number().optional(),
+      availability_from: z.string().nullable().optional(),
+      availability_until: z.string().nullable().optional(),
+      result_validity: z.string().nullable().optional(),
     },
     annotations: DESTRUCTIVE,
-  }, async ({ project_id, action, enabled, key, label, type, props, condition, target, message, route_index, changes, direction }) => {
+  }, async ({ project_id, ...params }) => {
     return bracketMutation(registry, project_id, 'formspec_screener', () =>
-      handleScreener(registry, project_id, { action, enabled, key, label, type, props, condition, target, message, route_index, changes, direction }),
+      handleScreener(registry, project_id, params as any),
     );
   });
 

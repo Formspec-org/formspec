@@ -57,7 +57,7 @@ export function handleComponent(
 // ── Internal helpers ─────────────────────────────────────────────────
 
 function listNodes(project: Project) {
-  const componentDoc = project.effectiveComponent;
+  const componentDoc = project.component;
   const tree = (componentDoc as any)?.tree ?? null;
   return successResponse({ tree });
 }

@@ -6,16 +6,13 @@ import { createFieldDOM, finalizeFieldDOM, applyControlSlotClass } from './share
 export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
     behavior, parent, actx
 ) => {
-    const fieldDOM = createFieldDOM(behavior, actx, { labelFor: false });
-
-    const labelId = `${behavior.id}-label`;
-    fieldDOM.label.id = labelId;
+    const fieldDOM = createFieldDOM(behavior, actx, { asGroup: true });
 
     const container = document.createElement('div');
     container.className = 'formspec-checkbox-group';
     container.setAttribute('role', 'group');
-    container.setAttribute('aria-labelledby', labelId);
-    container.setAttribute('aria-describedby', fieldDOM.describedBy.join(' '));
+    container.setAttribute('aria-labelledby', fieldDOM.label.id);
+    container.setAttribute('aria-describedby', fieldDOM.initialDescribedBy);
     if (behavior.columns && behavior.columns > 1) {
         container.dataset.columns = String(behavior.columns);
     }
@@ -37,7 +34,7 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
             behavior.setValue(checked);
         });
         selectAllLbl.appendChild(selectAllCb);
-        selectAllLbl.appendChild(document.createTextNode(' Select All'));
+        selectAllLbl.appendChild(document.createTextNode(' Select all'));
         container.appendChild(selectAllLbl);
     }
 
@@ -65,6 +62,7 @@ export const renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior> = (
         hint: fieldDOM.hint,
         error: fieldDOM.error,
         optionControls,
+        skipAriaDescribedBy: true,
     });
     actx.onDispose(dispose);
 };

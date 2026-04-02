@@ -6,7 +6,7 @@ import {
   normalizeComponentDoc,
   normalizeDefinitionDoc,
   normalizeThemeDoc,
-} from './preview-documents';
+} from '@formspec-org/studio-core';
 
 const DOC_IDS = ['Definition', 'Component', 'Theme', 'Mapping'] as const;
 type DocId = (typeof DOC_IDS)[number];
@@ -27,7 +27,7 @@ export function JsonDocumentsView() {
   const normalizedDef = normalizeDefinitionDoc(state.definition);
   const doc = {
     Definition: normalizedDef,
-    Component: normalizeComponentDoc(project.effectiveComponent, normalizedDef),
+    Component: normalizeComponentDoc(project.component, normalizedDef),
     Theme: normalizeThemeDoc(state.theme, state.definition),
     Mapping: state.mappings,
   }[active];

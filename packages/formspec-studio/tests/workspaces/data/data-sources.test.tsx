@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider } from '../../../src/state/useSelection';
-import { DataSources } from '../../../src/workspaces/data/DataSources';
+import { DataSources } from '../../../src/workspaces/editor/DataSources';
 
 const dataDef = {
   $formspec: '1.0', url: 'urn:test', version: '1.0.0',
@@ -104,8 +104,8 @@ describe('DataSources', () => {
     await act(async () => {
       fireEvent.click(within(card).getByText('counties'));
     });
-    // Source field should show the current value
-    expect(screen.getByText('https://api.example.com/counties')).toBeInTheDocument();
+    // Source field shows the value via InlineExpression (syntax-highlighted, found by title)
+    expect(screen.getByTitle('https://api.example.com/counties')).toBeInTheDocument();
   });
 
   it('expanded card shows description textarea', async () => {
@@ -135,7 +135,7 @@ describe('DataSources', () => {
     });
 
     // Click the InlineExpression source value to enter edit mode
-    fireEvent.click(screen.getByText('https://api.example.com/counties'));
+    fireEvent.click(screen.getByTitle('https://api.example.com/counties'));
     // The InlineExpression renders a textarea; the description field is also a textbox,
     // so target the one with the source URL value.
     const textareas = screen.getAllByRole('textbox');

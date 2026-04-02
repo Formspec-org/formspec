@@ -493,12 +493,16 @@ describe('bracketMutation with each mutation tool', () => {
     expect(project.proposals!.changeset!.aiEntries).toHaveLength(1);
   });
 
-  it('formspec_screener (enable)', () => {
+  it('formspec_screener (create_document)', () => {
     const { registry, projectId, project } = registryWithProject();
     handleChangesetOpen(registry, projectId);
 
     bracketMutation(registry, projectId, 'formspec_screener', () =>
-      handleScreener(registry, projectId, { action: 'enable', enabled: true }),
+      handleScreener(registry, projectId, {
+        action: 'create_document',
+        title: 'Gate',
+        url: 'urn:test:gate',
+      }),
     );
 
     expect(project.proposals!.changeset!.aiEntries).toHaveLength(1);

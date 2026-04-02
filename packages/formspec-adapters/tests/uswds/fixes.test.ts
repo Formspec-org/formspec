@@ -9,11 +9,12 @@ import { renderTextInput } from '../../src/uswds/text-input';
 import { renderNumberInput } from '../../src/uswds/number-input';
 import { renderSelect } from '../../src/uswds/select';
 import { renderCheckbox } from '../../src/uswds/checkbox';
+import { renderCheckboxGroup } from '../../src/uswds/checkbox-group';
 import { renderToggle } from '../../src/uswds/toggle';
 import { renderRating } from '../../src/uswds/rating';
 import { renderSignature } from '../../src/uswds/signature';
 import {
-    mockTextInput, mockNumberInput, mockSelect, mockFieldBehavior, mockToggle,
+    mockTextInput, mockNumberInput, mockSelect, mockFieldBehavior, mockToggle, mockCheckboxGroup,
     mockRating, mockSignature, mockAdapterContext, captureBindRefs,
     mockCanvasContext,
 } from '../helpers';
@@ -65,12 +66,49 @@ describe('Error-class toggling (onValidationChange)', () => {
         expect(input.classList.contains('usa-input--error')).toBe(true);
     });
 
+    it('TextInput onValidationChange toggles usa-label--error on the label', () => {
+        const parent = makeParent();
+        const b = mockTextInput();
+        renderTextInput(b, parent, mockAdapterContext());
+        const refs = captureBindRefs(b);
+
+        refs.onValidationChange!(true, 'Required');
+        const label = parent.querySelector('.usa-label')!;
+        expect(label.classList.contains('usa-label--error')).toBe(true);
+    });
+
     it('NumberInput passes onValidationChange to bind()', () => {
         const parent = makeParent();
         const b = mockNumberInput();
         renderNumberInput(b, parent, mockAdapterContext());
         const refs = captureBindRefs(b);
         expect(typeof refs.onValidationChange).toBe('function');
+    });
+
+    it('Select onValidationChange uses usa-input--error and usa-label--error', () => {
+        const parent = makeParent();
+        const b = mockSelect();
+        renderSelect(b, parent, mockAdapterContext());
+        const refs = captureBindRefs(b);
+
+        refs.onValidationChange!(true, 'Required');
+        const label = parent.querySelector('.usa-label')!;
+        const select = parent.querySelector('.usa-select')!;
+        expect(label.classList.contains('usa-label--error')).toBe(true);
+        expect(select.classList.contains('usa-input--error')).toBe(true);
+    });
+
+    it('CheckboxGroup onValidationChange uses usa-form-group--error and legend error styling', () => {
+        const parent = makeParent();
+        const b = mockCheckboxGroup();
+        renderCheckboxGroup(b, parent, mockAdapterContext());
+        const refs = captureBindRefs(b);
+
+        refs.onValidationChange!(true, 'Required');
+        const fieldset = parent.querySelector('.usa-fieldset')!;
+        const legend = parent.querySelector('.usa-legend')!;
+        expect(fieldset.classList.contains('usa-form-group--error')).toBe(true);
+        expect(legend.classList.contains('usa-label--error')).toBe(true);
     });
 });
 
@@ -81,40 +119,40 @@ describe('Error-class toggling (onValidationChange)', () => {
 // ════════════════════════════════════════════════════════════════════
 
 describe('aria-describedby gaps', () => {
-    it('Checkbox sets aria-describedby on input', () => {
+    it('Checkbox passes hint and error to bind()', () => {
         const parent = makeParent();
         const b = mockFieldBehavior({ hint: 'Must agree to terms' });
         renderCheckbox(b, parent, mockAdapterContext());
-        const input = parent.querySelector('.usa-checkbox__input') as HTMLInputElement;
-        const describedBy = input.getAttribute('aria-describedby') || '';
-        expect(describedBy).toContain(`${b.id}-error`);
+        const refs = captureBindRefs(b);
+        expect(refs.hint).toBeTruthy();
+        expect(refs.error).toBeTruthy();
     });
 
-    it('Toggle sets aria-describedby on input', () => {
+    it('Toggle passes hint and error to bind()', () => {
         const parent = makeParent();
         const b = mockToggle({ hint: 'Enable notifications' });
         renderToggle(b, parent, mockAdapterContext());
-        const input = parent.querySelector('.usa-checkbox__input') as HTMLInputElement;
-        const describedBy = input.getAttribute('aria-describedby') || '';
-        expect(describedBy).toContain(`${b.id}-error`);
+        const refs = captureBindRefs(b);
+        expect(refs.hint).toBeTruthy();
+        expect(refs.error).toBeTruthy();
     });
 
-    it('Rating sets aria-describedby on container', () => {
+    it('Rating passes hint and error to bind()', () => {
         const parent = makeParent();
         const b = mockRating({ hint: 'Rate from 1 to 5' });
         renderRating(b, parent, mockAdapterContext());
-        const container = parent.querySelector('.formspec-rating-stars')!;
-        const describedBy = container.getAttribute('aria-describedby') || '';
-        expect(describedBy).toContain(`${b.id}-error`);
+        const refs = captureBindRefs(b);
+        expect(refs.hint).toBeTruthy();
+        expect(refs.error).toBeTruthy();
     });
 
-    it('Signature sets aria-describedby on canvas', () => {
+    it('Signature passes hint and error to bind()', () => {
         const parent = makeParent();
         const b = mockSignature({ hint: 'Draw your signature' });
         renderSignature(b, parent, mockAdapterContext());
-        const canvas = parent.querySelector('canvas')!;
-        const describedBy = canvas.getAttribute('aria-describedby') || '';
-        expect(describedBy).toContain(`${b.id}-error`);
+        const refs = captureBindRefs(b);
+        expect(refs.hint).toBeTruthy();
+        expect(refs.error).toBeTruthy();
     });
 });
 

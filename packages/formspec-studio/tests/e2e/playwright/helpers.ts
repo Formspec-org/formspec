@@ -19,6 +19,26 @@ export async function switchTab(page: Page, tabName: string) {
   await page.waitForSelector(`[data-testid="workspace-${tabName}"]`);
 }
 
+/** Canonical desktop properties rail locator. */
+export function propertiesPanel(page: Page) {
+  return page.locator('[data-testid="properties-panel"]');
+}
+
+/** Top-level editor field rows, excluding nested summary/detail elements. */
+export function editorFieldRows(page: Page) {
+  return page.locator('[data-testid="workspace-Editor"] [data-editor-path][data-testid^="field-"]');
+}
+
+/** Top-level editor group rows, excluding nested summary/detail elements. */
+export function editorGroupRows(page: Page) {
+  return page.locator('[data-testid="workspace-Editor"] [data-editor-path][data-testid^="group-"]');
+}
+
+/** Top-level editor display rows, excluding nested summary/detail elements. */
+export function editorDisplayRows(page: Page) {
+  return page.locator('[data-testid="workspace-Editor"] [data-editor-path][data-testid^="display-"]');
+}
+
 /**
  * Import a definition via the Import Dialog UI.
  * The import remains in undo history.
@@ -59,6 +79,15 @@ export async function importProject(page: Page, state: Record<string, unknown>) 
 /** Add an item from the Add Item Palette by clicking its button. */
 export async function addFromPalette(page: Page, label: string) {
   await page.click('[data-testid="add-item"]');
+  const palette = page.locator('[data-testid="add-item-palette"]');
+  await palette.waitFor();
+  await palette.getByRole('button', { name: new RegExp(`^${label}\\b`) }).first().click();
+}
+
+/** Add a definition item from the Layout workspace palette (display, fields, groups — full catalog). */
+export async function addFromLayoutPalette(page: Page, label: string) {
+  await switchTab(page, 'Layout');
+  await page.click('[data-testid="layout-add-item"]');
   const palette = page.locator('[data-testid="add-item-palette"]');
   await palette.waitFor();
   await palette.getByRole('button', { name: new RegExp(`^${label}\\b`) }).first().click();

@@ -86,13 +86,41 @@ export function bindSharedFieldEffects(
         const currentLabel = vm ? vm.label.value : staticLabel;
         refs.label.textContent = currentLabel;
         if (isRequired) {
-            const indicator = document.createElement('span');
-            indicator.className = 'formspec-required';
-            indicator.setAttribute('aria-hidden', 'true');
+            const indicator = document.createElement('abbr');
+            indicator.className = 'formspec-required usa-label--required';
+            indicator.setAttribute('title', 'required');
             indicator.textContent = ' *';
             refs.label.appendChild(indicator);
         }
         actualInput.setAttribute('aria-required', String(isRequired));
+    }));
+
+    // ARIA describedby — supplementary text only (USWDS form templates / file-input pattern).
+    // Error text stays in the live role="alert" region; do not reference it here.
+    disposers.push(effect(() => {
+        if (refs.skipAriaDescribedBy) return;
+
+        const ids: string[] = [];
+        const existing = actualInput.getAttribute('data-describedby-base');
+        if (existing) ids.push(...existing.split(/\s+/).filter(Boolean));
+
+        const descEl = refs.root.querySelector('.formspec-description[id]') as HTMLElement | null;
+        if (descEl?.id) ids.push(descEl.id);
+
+        if (refs.hint?.id) ids.push(refs.hint.id);
+
+        refs.control.querySelectorAll('.formspec-prefix[id], .formspec-suffix[id]').forEach((el) => {
+            if (el.id) ids.push(el.id);
+        });
+        const currencyBadge = refs.control.querySelector('.formspec-money-currency[id]') as HTMLElement | null;
+        if (currencyBadge?.id) ids.push(currencyBadge.id);
+
+        const toggleOn = refs.control.querySelector('.formspec-toggle-on[id]') as HTMLElement | null;
+        if (toggleOn?.id) ids.push(toggleOn.id);
+
+        const finalIds = [...new Set(ids.filter(Boolean))].join(' ');
+        if (finalIds) actualInput.setAttribute('aria-describedby', finalIds);
+        else actualInput.removeAttribute('aria-describedby');
     }));
 
     // Validation display
@@ -113,7 +141,9 @@ export function bindSharedFieldEffects(
             effectiveError = error || submitError;
         }
 
-        const showError = ctx.touchedFields.has(fieldPath) ? (effectiveError || '') : '';
+        const submitOccurred = ctx.latestSubmitDetailSignal?.value !== null;
+        const shouldShowError = ctx.touchedFields.has(fieldPath) || submitOccurred;
+        const showError = shouldShowError ? (effectiveError || '') : '';
         if (refs.error) refs.error.textContent = showError;
         actualInput.setAttribute('aria-invalid', String(!!showError));
         if (refs.onValidationChange) refs.onValidationChange(!!showError, showError);
@@ -124,10 +154,12 @@ export function bindSharedFieldEffects(
         const isReadonly = vm
             ? vm.readonly.value
             : (ctx.engine.readonlySignals[fieldPath]?.value ?? false);
-        if (actualInput instanceof HTMLInputElement || actualInput instanceof HTMLTextAreaElement) {
-            actualInput.readOnly = isReadonly;
-        } else if (actualInput instanceof HTMLSelectElement) {
-            actualInput.disabled = isReadonly;
+        if (!refs.skipSharedReadonlyControl) {
+            if (actualInput instanceof HTMLInputElement || actualInput instanceof HTMLTextAreaElement) {
+                actualInput.readOnly = isReadonly;
+            } else if (actualInput instanceof HTMLSelectElement) {
+                actualInput.disabled = isReadonly;
+            }
         }
         actualInput.setAttribute('aria-readonly', String(isReadonly));
         refs.root.classList.toggle('formspec-field--readonly', isReadonly);

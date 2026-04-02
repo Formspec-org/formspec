@@ -28,7 +28,7 @@ el.componentDocument = myComponentDoc;
 el.themeDocument = myTheme;
 ```
 
-Importing `FormspecRender` loads structural `formspec-layout.css` (grid, stack, wizard chrome). Import `formspec-default.css` when you use the built-in renderer’s field styling; omit it for custom adapters (for example Tailwind) so global `input` / `label` rules do not override utility classes.
+Import `formspec-default.css` when you use the built-in renderer’s field styling; it now includes the structural layout rules as well. Import `formspec-layout.css` only when you want structural layout primitives without the default visual skin, such as for a custom adapter or utility-first design system. Both CSS files are canonically owned by `@formspec-org/layout` and re-exported here for compatibility.
 
 The element is exported but not auto-registered. Call `customElements.define()` with your preferred tag name.
 
@@ -246,9 +246,18 @@ Each input component receives a fully wired field wrapper with label, hint, erro
 
 ### Hydrating from saved or external `data`
 
-Use **`element.initialData = response.data`** (same shape as a Formspec response payload) **before** **`element.definition = …`**. On engine creation the element splits out screener keys, applies the rest with `applyResponseDataToEngine`, and pre-fills or auto-skips the screener—one assignment, same as the old “walk `data` + setValue” flow, without separate screener plumbing.
+Screener fields live in a **standalone Screener document** (`$formspecScreener`), not on the definition. Set **`element.screenerDocument = …`** before **`element.definition = …`** when you use the gate.
 
-For hydration **after** the element already has a definition, call **`applyResponseDataToEngine(engine, data)`** from this package. Optional: **`extractScreenerSeedFromData`** / **`omitScreenerKeysFromData`** / **`element.screenerSeedAnswers`** only if you need fine-grained control.
+Use **`element.initialData = response.data`** (same shape as a Formspec response payload) **before** **`element.definition = …`**. On engine creation the element uses the screener document’s `items` to split out screener keys, applies the rest with `applyResponseDataToEngine`, and pre-fills or auto-skips the screener.
+
+For hydration **after** the element already has a definition, call **`applyResponseDataToEngine(engine, data)`** from this package.
+
+Fine-grained helpers (both take the **screener document** as the first argument, not the definition):
+
+- **`extractScreenerSeedFromData(screenerDocument, data)`** — pick entries from `data` whose keys match screener item keys.
+- **`omitScreenerKeysFromData(screenerDocument, data)`** — shallow copy of `data` without those keys.
+
+You can also assign **`element.screenerSeedAnswers`** directly when you already have a seed object.
 
 ## Exports
 
@@ -278,7 +287,7 @@ export type { RenderContext, ComponentPlugin, ValidationTargetMetadata, Screener
 export type { ThemeDocument, PresentationBlock, ItemDescriptor, AccessibilityBlock, ThemeSelector, SelectorMatch, Tier1Hints, FormspecDataType, Page, Region, LayoutHints, StyleHints };
 
 // Default theme
-import defaultThemeJson from './default-theme.json';
+import defaultThemeJson from '@formspec-org/layout/default-theme';
 export { defaultThemeJson as defaultTheme };
 
 // Headless adapter public API

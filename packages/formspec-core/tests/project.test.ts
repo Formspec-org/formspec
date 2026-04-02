@@ -49,8 +49,7 @@ describe('createRawProject', () => {
     const project = createRawProject();
 
     expect(project.definition).toBe(project.state.definition);
-    expect(project.artifactComponent).toBe(project.state.component);
-    expect(project.generatedComponent).toBe(project.state.generatedComponent);
+    expect(project.component).toBe(project.state.component);
     expect(project.theme).toBe(project.state.theme);
     expect(project.mapping).toBeDefined();
     expect(project.mappings).toBe(project.state.mappings);

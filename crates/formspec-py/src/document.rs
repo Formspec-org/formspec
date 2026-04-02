@@ -12,10 +12,10 @@ use formspec_core::{
     resolve_option_sets_on_definition as resolve_option_sets_on_definition_core,
 };
 use formspec_eval::{
-    EvalContext, eval_context_from_json_object,
+    AnswerInput, AnswerState, EvalContext, eval_context_from_json_object,
     evaluate_definition_full_with_instances_and_context, evaluate_screener,
-    evaluation_result_to_json_value_styled, extension_constraints_from_registry_documents,
-    screener_route_to_json_value,
+    evaluate_screener_document, evaluation_result_to_json_value_styled,
+    extension_constraints_from_registry_documents, screener_route_to_json_value,
 };
 use formspec_lint::{LintMode, LintOptions, lint_result_to_json_value, lint_with_options};
 
@@ -247,5 +247,81 @@ pub fn evaluate_screener_py(
 
     let route = evaluate_screener(&def, &ans_map);
     let json = screener_route_to_json_value(route.as_ref());
+    json_to_python(py, &json)
+}
+
+// ── Standalone Screener Document Evaluation ────────────────────
+
+/// Evaluate a standalone Screener Document against respondent inputs.
+///
+/// Args:
+///     screener: Python dict of the Screener Document
+///     answers: Python dict of screener answers (key → value)
+///     context: Optional Python dict with `answerStates` and `nowIso`
+///
+/// Returns:
+///     A dict representing the Determination Record (always non-None).
+#[pyfunction(signature = (screener, answers, context=None))]
+pub fn evaluate_screener_document_py(
+    py: Python,
+    screener: &Bound<'_, PyAny>,
+    answers: &Bound<'_, PyAny>,
+    context: Option<&Bound<'_, PyAny>>,
+) -> PyResult<PyObject> {
+    let screener_val: Value = depythonize_json(screener)?;
+    let raw_answers = json_object_to_string_map(&depythonize_json(answers)?);
+
+    // Parse context for answerStates and nowIso
+    let (answer_states, now_iso) = match context {
+        Some(ctx) => {
+            let ctx_val: Value = depythonize_json(ctx)?;
+            let states = ctx_val
+                .get("answerStates")
+                .and_then(Value::as_object)
+                .cloned();
+            let now = ctx_val
+                .get("nowIso")
+                .and_then(Value::as_str)
+                .map(String::from);
+            (states, now)
+        }
+        None => (None, None),
+    };
+
+    // Build HashMap<String, AnswerInput>
+    let mut answer_inputs: HashMap<String, AnswerInput> = raw_answers
+        .into_iter()
+        .map(|(key, value)| {
+            let state = answer_states
+                .as_ref()
+                .and_then(|s| s.get(&key))
+                .and_then(Value::as_str)
+                .map(|s| match s {
+                    "declined" => AnswerState::Declined,
+                    "not-presented" => AnswerState::NotPresented,
+                    _ => AnswerState::Answered,
+                })
+                .unwrap_or(AnswerState::Answered);
+            (key, AnswerInput { value, state })
+        })
+        .collect();
+
+    // SC-01: Add declined/not-presented items that weren't in raw_answers
+    if let Some(ref states) = answer_states {
+        for (key, state_val) in states {
+            if !answer_inputs.contains_key(key) {
+                let state = state_val.as_str().map(|s| match s {
+                    "declined" => AnswerState::Declined,
+                    "not-presented" => AnswerState::NotPresented,
+                    _ => AnswerState::Answered,
+                }).unwrap_or(AnswerState::Answered);
+                answer_inputs.insert(key.clone(), AnswerInput { value: Value::Null, state });
+            }
+        }
+    }
+
+    let record = evaluate_screener_document(&screener_val, &answer_inputs, now_iso.as_deref());
+    let json = serde_json::to_value(&record)
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("serialization: {e}")))?;
     json_to_python(py, &json)
 }

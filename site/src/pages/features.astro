@@ -159,8 +159,8 @@ import CallToAction from "../components/CallToAction.astro";
               <td>Bind form fields to external ontologies — FHIR, schema.org, ICD-10, Dublin Core, and more. Two independently authored forms that align to the same concept can have their data mechanically merged. No guesswork, no column-name matching.</td>
             </tr>
             <tr>
-              <td>Multi-language forms</td>
-              <td>Provide translated labels, help text, error messages, and option labels via locale sidecar documents. Multiple locales per form, independently versioned. Add a language without touching the form definition.</td>
+              <td>i18n — multi-language forms</td>
+              <td>Locale sidecar documents provide translated labels, help text, error messages, option labels, and page titles — all without modifying the form definition. Multiple locales per form, each independently versioned. A fallback cascade (regional → base language → inline defaults) guarantees every field always has text to display, even with partial translations. Dynamic values update live in every language.</td>
             </tr>
             <tr>
               <td>No vendor lock-in</td>
@@ -543,6 +543,41 @@ import CallToAction from "../components/CallToAction.astro";
         <div class="feature-card">
           <h3>Privacy-first</h3>
           <p>All profile data stays on-device by default. Encrypted at rest with hardware-backed keys (Touch ID, Windows Hello). Every autofill requires explicit user approval. No telemetry, no cloud sync unless you opt in.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Section: Internationalization ─── -->
+    <section class="features-section reveal">
+      <div class="section-eyebrow">i18n</div>
+      <h2>Add a language without touching the form.</h2>
+      <p class="section-lead">
+        Translations live in separate locale documents — not embedded in your form definition. Add French by adding a file. Remove a language by removing its file. The form itself never changes.
+      </p>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Sidecar architecture</h3>
+          <p>Each locale is a standalone JSON file that sits alongside your form definition. Add, update, or remove translations independently — the form's logic, validation, and structure stay untouched.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Smart fallbacks — no blank fields</h3>
+          <p>French Canadian falls back to French, which falls back to the form's built-in text. Every field always has something to display, even when a specific translation is missing. No broken forms, no empty labels.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Dynamic values in every language</h3>
+          <p>"You have 3 items remaining" updates live — in English, Spanish, French, or any language. Translated strings can include live form values that recalculate as the user types.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Everything is translatable</h3>
+          <p>Field labels, descriptions, hints, error messages, option labels, page titles, validation messages, and component text — all addressable through path-based keys. Nothing is hardcoded.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Independent release schedule</h3>
+          <p>Each locale document carries its own version and declares compatibility with the form definition. Update Spanish labels without waiting for the next form release. Compatibility tracking warns you when translations fall out of sync.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Translations never change the rules</h3>
+          <p>Localization affects what the user sees — never what gets collected, validated, or exported. A Spanish form and an English form produce identical response data with identical validation results.</p>
         </div>
       </div>
     </section>

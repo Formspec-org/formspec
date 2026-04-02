@@ -144,7 +144,7 @@ The `targetDefinition` object binds this theme to a specific Definition.
 | Property | Type | Cardinality | Description |
 |---|---|---|---|
 | `url` | string (URI) | **1..1** (REQUIRED) | Canonical URL of the target Definition (`url` property from the Definition). |
-| `compatibleVersions` | string | **0..1** (OPTIONAL) | Semver range expression (e.g., `">=1.0.0 <2.0.0"`) describing which Definition versions this theme supports. When absent, the theme is assumed compatible with any version. |
+| `compatibleVersions` | string | **0..1** (OPTIONAL) | Semver range expression using node/npm-style range syntax (e.g., `">=1.0.0 <2.0.0"`) describing which Definition versions this theme supports. When absent, the theme is assumed compatible with any version. |
 
 When `compatibleVersions` is present, a processor SHOULD verify that the
 Definition's `version` satisfies the range before applying the theme.

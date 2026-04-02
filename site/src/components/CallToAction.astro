@@ -1,7 +1,6 @@
 ---
 // Bottom CTA — close the loop with a clear next action.
 // Understated: this isn't a sales page closer, it's an invitation.
-import Newsletter from "./Newsletter.astro";
 ---
 
 <section class="cta-section" aria-labelledby="cta-heading">
@@ -64,9 +63,6 @@ import Newsletter from "./Newsletter.astro";
         </a>
       </div>
 
-      <div class="cta-newsletter">
-        <Newsletter variant="inline" />
-      </div>
     </div>
   </div>
 </section>
@@ -187,12 +183,6 @@ import Newsletter from "./Newsletter.astro";
   .cta-btn-ghost:hover {
     border-color: var(--color-accent);
     color: var(--color-accent);
-  }
-
-  .cta-newsletter {
-    margin-top: 2.5rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--color-border);
   }
 
   @media (max-width: 700px) {

@@ -98,6 +98,16 @@ export function ValidationSummary({
     const warnings = useMemo(() => deduped.filter(r => r.severity === 'warning'), [deduped]);
     const hasErrors = errors.length > 0;
     const hasWarnings = warnings.length > 0;
+    const summaryClassName = className
+        ? `formspec-validation-summary formspec-validation-summary--visible ${className}`
+        : 'formspec-validation-summary formspec-validation-summary--visible';
+    const headerText = hasErrors
+        ? (errors.length === 1
+            ? 'Please fix this error before continuing:'
+            : `Please fix these ${errors.length} errors before continuing:`)
+        : (warnings.length === 1
+            ? 'Please review this warning before continuing:'
+            : `Please review these ${warnings.length} warnings before continuing:`);
 
     // Auto-focus the summary container when errors appear
     useEffect(() => {
@@ -106,8 +116,7 @@ export function ValidationSummary({
         }
     }, [autoFocus, hasErrors]);
 
-    const handleJump = useCallback((e: React.MouseEvent, fieldId: string) => {
-        e.preventDefault();
+    const handleJump = useCallback((fieldId: string) => {
         const el = document.getElementById(fieldId);
         if (!el) return;
 
@@ -132,28 +141,30 @@ export function ValidationSummary({
     // role="alert" when errors are present (assertive), role="status" for warnings-only (polite)
     const containerRole = hasErrors ? 'alert' : 'status';
 
-    const renderList = (items: ResolvedResult[], modifier: string) => (
-        <ul className="formspec-validation-summary__list">
-            {items.map((r, i) => (
-                <li
-                    key={i}
-                    className={`formspec-validation-summary__item formspec-validation-summary__item--${modifier}`}
-                >
-                    {r.fieldId ? (
-                        <a
-                            href={`#${r.fieldId}`}
-                            className="formspec-validation-summary__link"
-                            onClick={(e) => handleJump(e, r.fieldId)}
-                        >
-                            {r.label}
-                        </a>
-                    ) : (
-                        <span>{r.label}</span>
-                    )}
-                    {': '}{r.message}
-                </li>
-            ))}
-        </ul>
+    const renderRows = (items: ResolvedResult[]) => (
+        <>
+            {items.map((r, i) => {
+                const severityClass = `formspec-shape-${r.severity || 'error'}`;
+                const severityIcon = r.severity === 'warning' ? '!' : r.severity === 'info' ? 'i' : '✕';
+                const content = `${r.label}: ${r.message}`;
+                return (
+                    <div key={i} className={severityClass}>
+                        <span className="formspec-shape-icon" aria-hidden="true">{severityIcon}</span>
+                        {r.fieldId ? (
+                            <button
+                                type="button"
+                                className="formspec-validation-summary-link"
+                                onClick={() => handleJump(r.fieldId)}
+                            >
+                                {content}
+                            </button>
+                        ) : (
+                            <span>{content}</span>
+                        )}
+                    </div>
+                );
+            })}
+        </>
     );
 
     return (
@@ -161,29 +172,11 @@ export function ValidationSummary({
             ref={containerRef}
             tabIndex={-1}
             role={containerRole}
-            className={className || 'formspec-validation-summary'}
+            className={summaryClassName}
         >
-            {hasErrors && (
-                <div className="formspec-validation-summary__errors">
-                    <h3 className="formspec-validation-summary__heading">
-                        {errors.length === 1
-                            ? '1 error found'
-                            : `${errors.length} errors found`}
-                    </h3>
-                    {renderList(errors, 'error')}
-                </div>
-            )}
-
-            {hasWarnings && (
-                <div className="formspec-validation-summary__warnings">
-                    <h3 className="formspec-validation-summary__heading">
-                        {warnings.length === 1
-                            ? '1 warning found'
-                            : `${warnings.length} warnings found`}
-                    </h3>
-                    {renderList(warnings, 'warning')}
-                </div>
-            )}
+            <h2 className="formspec-validation-summary-title">{headerText}</h2>
+            {renderRows(errors)}
+            {renderRows(warnings)}
         </div>
     );
 }

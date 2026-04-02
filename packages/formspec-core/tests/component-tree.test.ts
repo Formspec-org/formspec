@@ -17,7 +17,7 @@ describe('component.addNode', () => {
     expect(result).toHaveProperty('nodeRef');
   });
 
-  it('marks blank component trees as studio-generated internal state', () => {
+  it('creates a real component document when editing a blank tree', () => {
     const project = createRawProject();
 
     project.dispatch({
@@ -25,9 +25,9 @@ describe('component.addNode', () => {
       payload: { parent: { nodeId: 'root' }, component: 'Card' },
     });
 
-    expect((project.component as any)['x-studio-generated']).toBe(true);
-    expect((project.component as any).$formspecComponent).toBeUndefined();
-    expect((project.component as any).version).toBeUndefined();
+    expect((project.component as any)['x-studio-generated']).toBeUndefined();
+    expect((project.component as any).$formspecComponent).toBe('1.0');
+    expect((project.component as any).version).toBe('0.1.0');
     expect((project.component.tree as any).component).toBe('Stack');
   });
 

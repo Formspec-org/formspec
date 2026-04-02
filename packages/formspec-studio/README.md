@@ -4,6 +4,17 @@
 
 All mutations flow through `formspec-studio-core`'s command dispatch. The UI is a visual surface over the command catalog — nothing more. Undo, redo, and import/export come for free from the core layer.
 
+Studio is intentionally opinionated about authoring surfaces, but Formspec
+itself remains layered:
+
+- `definition.json` alone is valid
+- `theme.json` remains a supported optional layer
+- `component.json` remains a supported optional highest-precedence layer
+
+The Studio split only changes the editing UX: Studio edits Definition and
+Component layout directly, while still preserving Theme as a valid artifact and
+runtime layer.
+
 ---
 
 ## Install and dev setup
@@ -36,7 +47,7 @@ Vite aliases `formspec-studio-core`, `formspec-engine`, and `formspec-layout` to
 StudioApp
  └─ ProjectProvider          formspec-studio-core Project instance
     └─ SelectionProvider      pure React state, persists across tab switches
-       └─ ActiveGroupProvider  active page in multi-page forms
+       └─ ActiveGroupProvider  active layout page in multi-page forms
           └─ Shell
              ├─ Header        workspace tabs, undo/redo, import/export
              ├─ Blueprint      sidebar — 9 navigable sections with count badges
@@ -61,10 +72,10 @@ Derived hooks (`useDefinition`, `useComponent`, `useTheme`, `useMapping`) select
 
 | Tab | Component | Purpose |
 |-----|-----------|---------|
-| Editor | `EditorCanvas` | Block-based item canvas with bind pills and DnD reordering |
+| Editor | `DefinitionTreeEditor` | Definition tree — items, types, structure, and bind behavior |
 | Logic | `LogicTab` | Variables, binds by type, validation shapes |
 | Data | `DataTab` | Response schema, data source instances, option sets, test response |
-| Pages | `PagesTab` | Multi-page form structure — wizard, tabs, page assignments |
+| Layout | `LayoutCanvas` | Visual form builder — pages, layout containers, placement, and widget selection |
 | Theme | `ThemeTab` | Token editor, defaults, selector cascade, item overrides |
 | Mapping | `MappingTab` | Transform rules, adapter config, mapping preview |
 | Preview | `PreviewTab` | Live form preview with viewport switcher and JSON view |
@@ -152,7 +163,7 @@ src/
 │   ├── editor/               Block rendering, DnD, context menu, properties
 │   ├── logic/                Variables, binds, shapes
 │   ├── data/                 Schema viewer, instances, option sets
-│   ├── pages/                Multi-page structure editor
+│   ├── layout/               Visual layout and page composition
 │   ├── theme/                Tokens, defaults, selectors, layouts
 │   ├── mapping/              Rules, adapter config, preview
 │   └── preview/              Component renderer, viewport switcher, wizard nav

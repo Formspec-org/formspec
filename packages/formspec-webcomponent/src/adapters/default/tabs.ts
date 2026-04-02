@@ -47,8 +47,8 @@ export const renderTabs: AdapterRenderFn<TabsBehavior> = (
     for (let i = 0; i < count; i++) {
         const btn = document.createElement('button');
         btn.type = 'button';
+        btn.className = 'formspec-tab formspec-focus-ring';
         btn.textContent = behavior.tabLabels[i] || `Tab ${i + 1}`;
-        btn.className = 'formspec-tab';
         btn.setAttribute('role', 'tab');
         btn.id = `${idBase}-tab-${i}`;
         btn.setAttribute('aria-controls', `${idBase}-panel-${i}`);

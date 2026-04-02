@@ -15,7 +15,7 @@ export interface LayoutNode {
     component: string;
 
     /** Node classification for renderer dispatch. */
-    category: 'layout' | 'field' | 'display' | 'interactive' | 'special';
+    category: 'layout' | 'container' | 'field' | 'display' | 'interactive' | 'special';
 
     /** All resolved component props (tokens resolved, responsive merged). JSON-serializable. */
     props: Record<string, unknown>;
@@ -45,6 +45,7 @@ export interface LayoutNode {
         dataType?: string;
         options?: Array<{ value: string; label: string }>;
         optionSet?: string;
+        extensions?: Record<string, boolean>;
     };
 
     /** Resolved presentation block from 5-level theme cascade. */
