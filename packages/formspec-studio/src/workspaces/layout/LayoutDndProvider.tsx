@@ -1,6 +1,7 @@
 /** @filedesc DnD wrapper for the Layout canvas — reorders component tree nodes. */
 import { useState, useCallback, type ReactNode } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
+import { LayoutDragContext } from './LayoutDragContext';
 import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { useProject } from '../../state/useProject';
 import { useSelection } from '../../state/useSelection';
@@ -182,7 +183,9 @@ export function LayoutDndProvider({ children, activePageId = null }: LayoutDndPr
         }),
       ]}
     >
-      {children}
+      <LayoutDragContext.Provider value={{ isDragActive: activeId !== null }}>
+        {children}
+      </LayoutDragContext.Provider>
     </DragDropProvider>
   );
 }

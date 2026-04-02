@@ -4,6 +4,7 @@ import { LayoutPageSection } from './LayoutPageSection';
 import { LayoutContainer } from './LayoutContainer';
 import { FieldBlock, type LayoutContext } from './FieldBlock';
 import { DisplayBlock } from './DisplayBlock';
+import { useLayoutDragActive } from './LayoutDragContext';
 
 interface CompNode {
   component: string;
@@ -50,6 +51,8 @@ export interface LayoutRenderContext {
   onStyleAdd?: (selectionKey: string, key: string, value: string) => void;
   /** Remove a style override from a component node. */
   onStyleRemove?: (selectionKey: string, key: string) => void;
+  /** Resize a node's grid column span. */
+  onResizeColSpan?: (selectionKey: string, newSpan: number) => void;
 }
 
 /** Layout context propagated from a parent container down to its children. */
@@ -119,17 +122,19 @@ export function renderLayoutTree(
             currentColSpan: parseColSpan(node.style?.gridColumn),
           }
         : undefined;
+      const nodeSelKey = `__node:${node.nodeId!}`;
       result.push(
         <DisplayBlock
           key={`node:${node.nodeId}`}
           itemKey={node.nodeId!}
-          selectionKey={`__node:${node.nodeId!}`}
+          selectionKey={nodeSelKey}
           label={label}
           widgetHint={node.component}
-          selected={ctx.selectedKey === `__node:${node.nodeId!}`}
+          selected={ctx.selectedKey === nodeSelKey}
           onSelect={(selectionKey) => ctx.onSelect(selectionKey, 'layout')}
           layoutContext={displayLayoutCtx}
           nodeStyle={node.style as Record<string, unknown> | undefined}
+          onResizeColSpan={ctx.onResizeColSpan ? (n) => ctx.onResizeColSpan!(nodeSelKey, n) : undefined}
         />,
       );
       continue;
@@ -277,17 +282,19 @@ export function renderLayoutTree(
             currentColSpan: parseColSpan(node.style?.gridColumn),
           }
         : undefined;
+      const displaySelKey = defPath || node.nodeId;
       result.push(
         <DisplayBlock
-          key={defPath || node.nodeId}
+          key={displaySelKey}
           itemKey={node.nodeId}
-          selectionKey={defPath || node.nodeId}
+          selectionKey={displaySelKey}
           label={label}
           widgetHint={node.component !== 'Text' ? node.component : undefined}
-          selected={ctx.selectedKey === (defPath || node.nodeId)}
+          selected={ctx.selectedKey === displaySelKey}
           onSelect={(selectionKey) => ctx.onSelect(selectionKey, 'display')}
           layoutContext={displayLayoutCtx2}
           nodeStyle={node.style as Record<string, unknown> | undefined}
+          onResizeColSpan={ctx.onResizeColSpan ? (n) => ctx.onResizeColSpan!(displaySelKey, n) : undefined}
         />,
       );
     }

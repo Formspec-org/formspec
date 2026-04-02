@@ -1,8 +1,9 @@
 /** @filedesc Layout canvas wrapper for layout nodes — applies real CSS layout per container type (Grid, Stack, Card, Panel, Collapsible, Accordion). */
-import { useState, useRef, type ReactNode } from 'react';
+import React, { useState, useRef, type ReactNode } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/react';
 import { InlineToolbar } from './InlineToolbar';
 import { PropertyPopover } from './PropertyPopover';
+import { useLayoutDragActive } from './LayoutDragContext';
 
 export interface LayoutContainerProps {
   component: string;
@@ -96,6 +97,23 @@ function buildContentStyle(props: LayoutContainerProps): React.CSSProperties {
   }
 }
 
+/** A single droppable insert slot registered with dnd-kit. */
+function InsertSlot({ nodeId, index }: { nodeId: string; index: number }) {
+  const { ref } = useDroppable({
+    id: `slot-${nodeId}-${index}`,
+    data: { type: 'insert-slot', containerId: nodeId, insertIndex: index },
+  });
+  return (
+    <div
+      ref={ref}
+      data-testid={`insert-slot-${nodeId}-${index}`}
+      data-insert-index={String(index)}
+      data-container-id={nodeId}
+      className="h-1 rounded bg-accent/30 transition-all"
+    />
+  );
+}
+
 /** Renders N+1 droppable insert slots interleaved with N children. */
 function InsertSlotChildren({ nodeId, children }: { nodeId: string; children?: ReactNode }) {
   const childArray = children ? (Array.isArray(children) ? children : [children]) : [];
@@ -104,16 +122,10 @@ function InsertSlotChildren({ nodeId, children }: { nodeId: string; children?: R
   return (
     <>
       {Array.from({ length: slotCount }, (_, i) => (
-        <>
-          <div
-            key={`slot-${i}`}
-            data-testid={`insert-slot-${nodeId}-${i}`}
-            data-insert-index={String(i)}
-            data-container-id={nodeId}
-            className="h-1 rounded bg-accent/30 transition-all"
-          />
+        <React.Fragment key={`slot-group-${i}`}>
+          <InsertSlot nodeId={nodeId} index={i} />
           {i < childArray.length && childArray[i]}
-        </>
+        </React.Fragment>
       ))}
     </>
   );
@@ -142,8 +154,12 @@ export function LayoutContainer(props: LayoutContainerProps) {
     onRemove,
     onStyleAdd,
     onStyleRemove,
-    isDragActive = false,
+    isDragActive: isDragActiveProp = false,
   } = props;
+
+  // OBJ-4-02: read from DnD context so containers know drag is active without prop threading
+  const isDragActiveCtx = useLayoutDragActive();
+  const isDragActive = isDragActiveProp || isDragActiveCtx;
 
   const [open, setOpen] = useState(defaultOpen);
   const [popoverOpen, setPopoverOpen] = useState(false);

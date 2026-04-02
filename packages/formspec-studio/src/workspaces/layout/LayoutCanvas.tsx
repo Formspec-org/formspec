@@ -27,7 +27,7 @@ import { ThemeOverridePopover } from './ThemeOverridePopover';
 import { FormspecPreviewHost } from '../preview/FormspecPreviewHost';
 import { useOptionalLayoutMode } from './LayoutModeContext';
 import { type LayoutMode } from './LayoutThemeToggle';
-import { setThemeOverride, clearThemeOverride } from '@formspec-org/studio-core';
+import { setThemeOverride, clearThemeOverride, setColumnSpan } from '@formspec-org/studio-core';
 
 interface CompNode {
   component: string;
@@ -212,6 +212,13 @@ export function LayoutCanvas() {
     const currentStyle = { ...(current?.style as Record<string, unknown>) ?? {} };
     delete currentStyle[key];
     project.setLayoutNodeProp(selectionKey, 'style', currentStyle);
+  }, [project]);
+
+  const handleResizeColSpan = useCallback((selectionKey: string, newSpan: number) => {
+    const ref = selectionKey.startsWith('__node:')
+      ? { nodeId: selectionKey.slice(7) }
+      : { bind: selectionKey };
+    setColumnSpan(project, ref, newSpan);
   }, [project]);
 
   const handleAddContainer = useCallback((componentName: typeof CONTAINER_PRESETS[number]) => {
@@ -437,6 +444,7 @@ export function LayoutCanvas() {
                 onRemoveNode: handleRemoveNode,
                 onStyleAdd: handleStyleAdd,
                 onStyleRemove: handleStyleRemove,
+                onResizeColSpan: handleResizeColSpan,
               }, '')}
 
               {visibleTreeChildren.length === 0 && (
