@@ -128,24 +128,22 @@ export type CategorySummaries = Record<string, string>;
 export function buildCategorySummaries(item: FormItem, binds: Record<string, string>): CategorySummaries {
   if (item.type === 'display') {
     return {
-      Visibility: binds.relevant?.trim() ? summarizeExpression(binds.relevant) : 'Always',
-      Description: typeof item.description === 'string' && item.description.trim() ? item.description : '\u2014',
+      Visibility: binds.relevant?.trim() ? summarizeExpression(binds.relevant) : '',
+      Description: typeof item.description === 'string' && item.description.trim() ? item.description : '',
     };
   }
 
   // Visibility
-  const visibility = binds.relevant?.trim() ? summarizeExpression(binds.relevant) : 'Always';
+  const visibility = binds.relevant?.trim() ? summarizeExpression(binds.relevant) : '';
 
-  // Validation: count required + constraint
-  let validationCount = 0;
-  if (binds.required?.trim()) validationCount++;
-  if (binds.constraint?.trim()) validationCount++;
-  const validation = validationCount === 0
-    ? '\u2014'
-    : `${validationCount} ${validationCount === 1 ? 'rule' : 'rules'}`;
+  // Validation: name each rule for scannability
+  const validationParts: string[] = [];
+  if (binds.required?.trim()) validationParts.push('Required');
+  if (binds.constraint?.trim()) validationParts.push('Constraint');
+  const validation = validationParts.join(' \u00b7 ');
 
   // Value: primary source, plus explicit readonly when it stacks (e.g. formula · locked).
-  let value = '\u2014';
+  let value = '';
   if (binds.calculate?.trim()) {
     value = 'formula';
   } else if (item.initialValue != null && String(item.initialValue).trim()) {
@@ -161,7 +159,7 @@ export function buildCategorySummaries(item: FormItem, binds: Record<string, str
   const hasExplicitReadonly = Boolean(binds.readonly?.trim());
   if (
     hasExplicitReadonly &&
-    value !== '\u2014' &&
+    value !== '' &&
     value !== 'locked'
   ) {
     value = `${value} \u00b7 locked`;
@@ -175,7 +173,7 @@ export function buildCategorySummaries(item: FormItem, binds: Record<string, str
   if (typeof item.precision === 'number') {
     formatParts.push(`${item.precision}dp`);
   }
-  const format = formatParts.length > 0 ? formatParts.join(' ') : '\u2014';
+  const format = formatParts.join(' ');
 
   const result: CategorySummaries = { Visibility: visibility, Validation: validation, Value: value, Format: format };
 
@@ -184,7 +182,7 @@ export function buildCategorySummaries(item: FormItem, binds: Record<string, str
   if (Array.isArray(rawChoiceOptions) && rawChoiceOptions.length > 0) {
     result.Options = `${rawChoiceOptions.length} ${rawChoiceOptions.length === 1 ? 'choice' : 'choices'}`;
   } else if (['choice', 'multiChoice', 'select', 'select1'].includes(String(item.dataType ?? ''))) {
-    result.Options = '\u2014';
+    result.Options = '';
   }
 
   return result;
