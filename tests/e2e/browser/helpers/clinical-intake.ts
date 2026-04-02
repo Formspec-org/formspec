@@ -11,9 +11,10 @@ const REGISTRIES_DIR = path.join(ROOT, 'registries');
 export function loadClinicalIntakeArtifacts() {
   return {
     definition: JSON.parse(fs.readFileSync(path.join(INTAKE_DIR, 'intake.definition.json'), 'utf8')),
-    component:  JSON.parse(fs.readFileSync(path.join(INTAKE_DIR, 'intake.component.json'),  'utf8')),
-    theme:      JSON.parse(fs.readFileSync(path.join(INTAKE_DIR, 'intake.theme.json'),       'utf8')),
-    registry:   JSON.parse(fs.readFileSync(path.join(REGISTRIES_DIR, 'formspec-common.registry.json'), 'utf8')),
+    screener: JSON.parse(fs.readFileSync(path.join(INTAKE_DIR, 'screener.json'), 'utf8')),
+    component: JSON.parse(fs.readFileSync(path.join(INTAKE_DIR, 'intake.component.json'), 'utf8')),
+    theme: JSON.parse(fs.readFileSync(path.join(INTAKE_DIR, 'intake.theme.json'), 'utf8')),
+    registry: JSON.parse(fs.readFileSync(path.join(REGISTRIES_DIR, 'formspec-common.registry.json'), 'utf8')),
   };
 }
 
@@ -22,17 +23,18 @@ export function loadClinicalIntakeArtifacts() {
  * The screener must be completed before the main wizard appears.
  */
 export async function mountClinicalIntakeWithScreener(page: Page): Promise<void> {
-  const { definition, component, theme, registry } = loadClinicalIntakeArtifacts();
+  const { definition, screener, component, theme, registry } = loadClinicalIntakeArtifacts();
   await page.goto('/');
   await page.waitForSelector('formspec-render', { state: 'attached' });
   await waitForWasm(page);
-  await page.evaluate(({ def, comp, thm, reg }) => {
+  await page.evaluate(({ def, scr, comp, thm, reg }) => {
     const el: any = document.querySelector('formspec-render');
     el.registryDocuments = reg;
-    el.definition        = def;
+    el.screenerDocument = scr;
+    el.definition = def;
     el.componentDocument = comp;
-    el.themeDocument     = thm;
-  }, { def: definition, comp: component, thm: theme, reg: registry });
+    el.themeDocument = thm;
+  }, { def: definition, scr: screener, comp: component, thm: theme, reg: registry });
   await page.waitForTimeout(200);
 }
 

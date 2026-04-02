@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest';
+import type { ScreenerDocument } from '@formspec-org/types';
 import { createRawProject } from '../src/index.js';
+
+function emptyScreenerDoc(): ScreenerDocument {
+  return {
+    $formspecScreener: '1.0',
+    url: 'urn:test:screener',
+    version: '1.0.0',
+    title: 'Test Screener',
+    items: [],
+    evaluation: [],
+  } as ScreenerDocument;
+}
 
 describe('fieldPaths', () => {
   it('returns all leaf field paths', () => {
@@ -146,13 +158,17 @@ describe('statistics', () => {
     expect(stats.screenerRouteCount).toBe(0);
   });
 
-  it('reports zero screener counts when screener is disabled', () => {
+  it('reports zero screener counts when screener document is removed', () => {
     const project = createRawProject();
     project.batch([
-      { type: 'definition.setScreener', payload: { enabled: true } },
-      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'age', dataType: 'integer' } },
-      { type: 'definition.addRoute', payload: { condition: '$age >= 18', target: 'urn:form:adults' } },
-      { type: 'definition.setScreener', payload: { enabled: false } },
+      { type: 'screener.setDocument', payload: emptyScreenerDoc() },
+      { type: 'screener.addPhase', payload: { id: 'main', strategy: 'first-match' } },
+      { type: 'screener.addItem', payload: { type: 'field', key: 'age', dataType: 'integer' } },
+      {
+        type: 'screener.addRoute',
+        payload: { phaseId: 'main', route: { condition: '$age >= 18', target: 'urn:form:adults' } },
+      },
+      { type: 'screener.remove', payload: {} },
     ]);
 
     const stats = project.statistics();
@@ -163,12 +179,19 @@ describe('statistics', () => {
   it('counts screener fields and routes', () => {
     const project = createRawProject();
     project.batch([
-      { type: 'definition.setScreener', payload: { enabled: true } },
-      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'age', dataType: 'integer' } },
-      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'country', dataType: 'string' } },
-      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'language', dataType: 'choice' } },
-      { type: 'definition.addRoute', payload: { condition: '$age >= 18', target: 'urn:form:adults' } },
-      { type: 'definition.addRoute', payload: { condition: '$age < 18', target: 'urn:form:minors' } },
+      { type: 'screener.setDocument', payload: emptyScreenerDoc() },
+      { type: 'screener.addPhase', payload: { id: 'main', strategy: 'first-match' } },
+      { type: 'screener.addItem', payload: { type: 'field', key: 'age', dataType: 'integer' } },
+      { type: 'screener.addItem', payload: { type: 'field', key: 'country', dataType: 'string' } },
+      { type: 'screener.addItem', payload: { type: 'field', key: 'language', dataType: 'choice' } },
+      {
+        type: 'screener.addRoute',
+        payload: { phaseId: 'main', route: { condition: '$age >= 18', target: 'urn:form:adults' } },
+      },
+      {
+        type: 'screener.addRoute',
+        payload: { phaseId: 'main', route: { condition: '$age < 18', target: 'urn:form:minors' } },
+      },
     ]);
 
     const stats = project.statistics();
@@ -181,9 +204,13 @@ describe('statistics', () => {
     project.batch([
       { type: 'definition.addItem', payload: { type: 'field', key: 'name' } },
       { type: 'definition.addItem', payload: { type: 'field', key: 'email' } },
-      { type: 'definition.setScreener', payload: { enabled: true } },
-      { type: 'definition.addScreenerItem', payload: { type: 'field', key: 'eligible', dataType: 'boolean' } },
-      { type: 'definition.addRoute', payload: { condition: '$eligible = true', target: 'urn:form:main' } },
+      { type: 'screener.setDocument', payload: emptyScreenerDoc() },
+      { type: 'screener.addPhase', payload: { id: 'main', strategy: 'first-match' } },
+      { type: 'screener.addItem', payload: { type: 'field', key: 'eligible', dataType: 'boolean' } },
+      {
+        type: 'screener.addRoute',
+        payload: { phaseId: 'main', route: { condition: '$eligible = true', target: 'urn:form:main' } },
+      },
     ]);
 
     const stats = project.statistics();
