@@ -1,14 +1,19 @@
 /** @filedesc Tests for the useScreener hook — FEL required evaluation and explicit routeType. */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { createFormEngine, initFormspecEngine } from '@formspec-org/engine';
+import * as engineModule from '@formspec-org/engine';
 import { useScreener, isItemRequired } from '../src/screener/use-screener';
 import type { UseScreenerResult } from '../src/screener/types';
 
 beforeAll(async () => {
     await initFormspecEngine();
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
 });
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -58,6 +63,15 @@ describe('isItemRequired', () => {
     });
 
     it('evaluates FEL expression in required bind using the engine', () => {
+        const screener = {
+            items: [
+                { key: 'awardType', label: 'Award Type' },
+                { key: 'details', label: 'Details' },
+            ],
+            binds: [
+                { path: 'details', required: "$awardType = 'grant'" },
+            ],
+        };
         const definition = {
             $formspec: '1.0',
             url: 'urn:screener-test',
@@ -66,16 +80,6 @@ describe('isItemRequired', () => {
                 { key: 'awardType', type: 'field', dataType: 'choice' },
                 { key: 'details', type: 'field', dataType: 'string' },
             ],
-            screener: {
-                items: [
-                    { key: 'awardType', label: 'Award Type' },
-                    { key: 'details', label: 'Details' },
-                ],
-                binds: [
-                    { path: 'details', required: "$awardType = 'grant'" },
-                ],
-                routes: [],
-            },
         };
 
         const engine = createFormEngine(definition as any);
@@ -83,7 +87,7 @@ describe('isItemRequired', () => {
         // When awardType is not 'grant', details should NOT be required
         expect(isItemRequired(
             { key: 'details' },
-            definition.screener,
+            screener,
             engine,
             { awardType: 'loan' },
         )).toBe(false);
@@ -91,7 +95,7 @@ describe('isItemRequired', () => {
         // When awardType IS 'grant', details SHOULD be required
         expect(isItemRequired(
             { key: 'details' },
-            definition.screener,
+            screener,
             engine,
             { awardType: 'grant' },
         )).toBe(true);
@@ -117,15 +121,25 @@ describe('useScreener routeType', () => {
             url: 'urn:screener-test',
             version: '1.0.0',
             items: [],
-            screener: {
-                items: [
-                    { key: 'eligible', label: 'Are you eligible?', dataType: 'choice', options: [{ value: 'yes' }, { value: 'no' }] },
-                ],
-                routes: [
-                    { condition: "$eligible = 'yes'", target: 'urn:screener-test', routeType: 'internal' },
-                    { condition: "$eligible = 'no'", target: 'https://example.com/denied', routeType: 'external' },
-                ],
-            },
+        };
+        const screenerDocument = {
+            $formspecScreener: '1.0',
+            url: 'urn:screener-test:gate',
+            version: '1.0.0',
+            title: 'Eligibility',
+            items: [
+                { key: 'eligible', label: 'Are you eligible?', dataType: 'choice', options: [{ value: 'yes' }, { value: 'no' }] },
+            ],
+            evaluation: [
+                {
+                    id: 'main',
+                    strategy: 'first-match',
+                    routes: [
+                        { condition: "$eligible = 'yes'", target: 'urn:screener-test', routeType: 'internal' },
+                        { condition: "$eligible = 'no'", target: 'https://example.com/denied', routeType: 'external' },
+                    ],
+                },
+            ],
         };
 
         const engine = createFormEngine(definition as any);
@@ -133,6 +147,7 @@ describe('useScreener routeType', () => {
         let capturedResult: UseScreenerResult['routeResult'] = null;
         const { result } = renderHook(() =>
             useScreener(engine, definition, {
+                screenerDocument,
                 onRoute: (route, routeType) => {
                     capturedResult = { route, routeType };
                 },
@@ -145,5 +160,119 @@ describe('useScreener routeType', () => {
 
         expect(capturedResult).not.toBeNull();
         expect(capturedResult!.routeType).toBe('external');
+    });
+
+    it('preserves plain-object route extensions from WASM matches', () => {
+        const definition = {
+            $formspec: '1.0',
+            url: 'urn:screener-test',
+            version: '1.0.0',
+            items: [],
+        };
+        const screenerDocument = {
+            $formspecScreener: '1.0',
+            url: 'urn:screener-test:gate',
+            version: '1.0.0',
+            title: 'Eligibility',
+            items: [
+                { key: 'eligible', label: 'Are you eligible?', dataType: 'choice', options: [{ value: 'yes' }, { value: 'no' }] },
+            ],
+            evaluation: [
+                {
+                    id: 'main',
+                    strategy: 'first-match',
+                    routes: [
+                        { condition: "$eligible = 'yes'", target: 'urn:screener-test' },
+                    ],
+                },
+            ],
+        };
+
+        const engine = createFormEngine(definition as any);
+        let capturedResult: UseScreenerResult['routeResult'] = null;
+
+        vi.spyOn(engineModule, 'wasmEvaluateScreenerDocument').mockReturnValue({
+            overrides: {
+                matched: [
+                    {
+                        target: 'urn:screener-test',
+                        label: 'Eligible',
+                        extensions: { audience: 'grant', allowFastTrack: true },
+                    },
+                ],
+            },
+            phases: [],
+        } as any);
+
+        const { result } = renderHook(() =>
+            useScreener(engine, definition, {
+                screenerDocument,
+                onRoute: (route, routeType) => {
+                    capturedResult = { route, routeType };
+                },
+            }),
+        );
+
+        flushSync(() => result.current.setAnswer('eligible', 'yes'));
+        flushSync(() => result.current.submit());
+
+        expect(capturedResult).not.toBeNull();
+        expect(capturedResult!.route.extensions).toEqual({
+            audience: 'grant',
+            allowFastTrack: true,
+        });
+    });
+
+    it('degrades to a none route when WASM evaluation throws', () => {
+        const definition = {
+            $formspec: '1.0',
+            url: 'urn:screener-test',
+            version: '1.0.0',
+            items: [],
+        };
+        const screenerDocument = {
+            $formspecScreener: '1.0',
+            url: 'urn:screener-test:gate',
+            version: '1.0.0',
+            title: 'Eligibility',
+            items: [
+                { key: 'eligible', label: 'Are you eligible?', dataType: 'choice', options: [{ value: 'yes' }, { value: 'no' }] },
+            ],
+            evaluation: [
+                {
+                    id: 'main',
+                    strategy: 'first-match',
+                    routes: [
+                        { condition: "$eligible = 'yes'", target: 'urn:screener-test' },
+                    ],
+                },
+            ],
+        };
+
+        const engine = createFormEngine(definition as any);
+        let capturedResult: UseScreenerResult['routeResult'] = null;
+
+        vi.spyOn(engineModule, 'wasmEvaluateScreenerDocument').mockImplementation(() => {
+            throw new Error('boom');
+        });
+
+        const { result } = renderHook(() =>
+            useScreener(engine, definition, {
+                screenerDocument,
+                onRoute: (route, routeType) => {
+                    capturedResult = { route, routeType };
+                },
+            }),
+        );
+
+        flushSync(() => result.current.setAnswer('eligible', 'yes'));
+
+        expect(() => {
+            flushSync(() => result.current.submit());
+        }).not.toThrow();
+        expect(capturedResult).toEqual({
+            route: { target: '' },
+            routeType: 'none',
+        });
     });
 });

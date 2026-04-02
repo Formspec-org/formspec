@@ -67,6 +67,29 @@ function buildSeedAnswers(items: any[], seed: Record<string, any> | undefined): 
     return out;
 }
 
+function asRouteExtensionsRecord(value: unknown): Record<string, any> | undefined {
+    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+        return undefined;
+    }
+    return value as Record<string, any>;
+}
+
+function firstMatchedRouteFromDetermination(
+    determination: any,
+): { target: string; label?: string; extensions?: Record<string, any> } | null {
+    const matched =
+        determination.overrides?.matched?.[0] ?? determination.phases?.flatMap((p: any) => p.matched)?.[0];
+    if (!matched) {
+        return null;
+    }
+    return {
+        target: matched.target,
+        label: matched.label,
+        extensions:
+            asRouteExtensionsRecord(matched.extensions) ?? asRouteExtensionsRecord(matched.metadata),
+    };
+}
+
 export function useScreener(
     engine: IFormEngine,
     definition: any,
@@ -107,7 +130,7 @@ export function useScreener(
 
         if (hasExplicitRequired) {
             for (const item of items) {
-                if (isItemRequired(item, screener, engine, answers)) {
+                if (isItemRequired(item, screenerDoc, engine, answers)) {
                     const val = answers[item.key];
                     if (val === undefined || val === null || val === '') {
                         newErrors[item.key] = `${item.label || item.key} is required`;
@@ -137,11 +160,11 @@ export function useScreener(
         // Evaluate via WASM and extract first matched route from determination
         let result: { target: string; label?: string; extensions?: Record<string, any> } | null = null;
         if (screenerDoc) {
-            const determination = wasmEvaluateScreenerDocument(screenerDoc, answers);
-            const matched = determination.overrides?.matched?.[0]
-                ?? determination.phases?.flatMap((p: any) => p.matched)?.[0];
-            if (matched) {
-                result = { target: matched.target, label: matched.label };
+            try {
+                const determination = wasmEvaluateScreenerDocument(screenerDoc, answers);
+                result = firstMatchedRouteFromDetermination(determination);
+            } catch {
+                result = null;
             }
         }
         if (!result) {
@@ -153,9 +176,11 @@ export function useScreener(
 
         // Determine route type: prefer explicit `routeType` on the matched
         // route definition, then fall back to URL-based heuristics.
-        const matchedRoute = routes.find(
-            (r: any) => r.target === result.target || r.label === result.target,
-        );
+        const matchedRoute = routes.find((r: any) => {
+            if (r.target === result.target) return true;
+            if (result.label != null && result.label !== '' && r.label === result.label) return true;
+            return false;
+        });
 
         let routeType: ScreenerRouteType = 'internal';
         if (matchedRoute?.routeType === 'internal' || matchedRoute?.routeType === 'external' || matchedRoute?.routeType === 'none') {
@@ -181,7 +206,7 @@ export function useScreener(
         setRouteResult({ route, routeType });
         setState('routed');
         options.onRoute?.(route, routeType, answers);
-    }, [engine, answers, items, routes, screener, definition, options]);
+    }, [engine, answers, items, routes, screenerDoc, definition, options]);
 
     const restart = useCallback(() => {
         setAnswers(buildSeedAnswers(items, options.seedAnswers));
