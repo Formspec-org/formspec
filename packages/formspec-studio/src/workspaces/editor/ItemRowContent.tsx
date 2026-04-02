@@ -12,6 +12,14 @@ import {
 } from './item-row-shared';
 import { CategoryCell } from './CategoryCell';
 
+/** Hover hints for category cells — surfaces what each category configures before expanding. */
+const CATEGORY_HINTS: Record<string, string> = {
+  Visibility: 'When does this field show?',
+  Validation: 'Required rules and constraints.',
+  Value: 'Calculations, initial data, pre-fill, read-only.',
+  Format: 'Display format, currency, and field metadata.',
+};
+
 /** Identifying data for the item row. */
 export interface ItemRowIdentity {
   testId: string;
@@ -337,22 +345,31 @@ function SummaryColumn({
 
   return (
     <div className='min-w-0 flex flex-col gap-3'>
-      <dl
-        data-testid={`${testId}-summary`}
-        className={`grid gap-x-5 gap-y-3 ${Object.keys(categorySummaries).length <= 2 ? 'grid-cols-2' : Object.keys(categorySummaries).length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}
-      >
-        {Object.entries(categorySummaries).map(([category, value]) => (
-          <CategoryCell
-            key={category}
-            category={category}
-            value={value}
-            isExpanded={expandedCategoryKey === category}
-            selected={selected}
-            testId={`${testId}-category-${category}`}
-            onOpen={onOpenEditorForSummary}
-          />
-        ))}
-      </dl>
+      {(() => {
+        const visibleCategories = selected
+          ? Object.entries(categorySummaries)
+          : Object.entries(categorySummaries).filter(([, v]) => v);
+        if (visibleCategories.length === 0) return null;
+        return (
+          <dl
+            data-testid={`${testId}-summary`}
+            className={`grid gap-x-5 gap-y-3 ${visibleCategories.length <= 2 ? 'grid-cols-2' : visibleCategories.length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}
+          >
+            {visibleCategories.map(([category, value]) => (
+              <CategoryCell
+                key={category}
+                category={category}
+                value={value}
+                isExpanded={expandedCategoryKey === category}
+                selected={selected}
+                testId={`${testId}-category-${category}`}
+                title={CATEGORY_HINTS[category]}
+                onOpen={onOpenEditorForSummary}
+              />
+            ))}
+          </dl>
+        );
+      })()}
 
       {statusPills.length > 0 && (
         <div

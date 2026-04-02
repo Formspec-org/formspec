@@ -209,11 +209,10 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
     await row.click();
     await expect(row).toHaveClass(/border-accent/);
 
-    // The category summary should show an Options slot — click the value to open modal
-    const optionsSlot = row.locator('[data-testid="field-status-summary"]').getByText('Options');
-    await expect(optionsSlot).toBeVisible();
-    // Click the dd (value) next to the Options label to trigger openEditorForSummary
-    await optionsSlot.locator('..').locator('dd').click();
+    // The category summary should show an Options slot — click it to open the modal
+    const optionsCell = row.locator('[data-testid="field-status-category-Options"]');
+    await expect(optionsCell).toBeVisible();
+    await optionsCell.locator('dd').click();
 
     // The options modal should appear with choice items
     const dialog = page.getByRole('dialog');

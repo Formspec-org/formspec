@@ -6,6 +6,7 @@ interface CategoryCellProps {
   isExpanded: boolean;
   selected: boolean | undefined;
   testId: string;
+  title?: string;
   onOpen: (category: string) => void;
 }
 
@@ -15,6 +16,7 @@ export function CategoryCell({
   isExpanded,
   selected,
   testId,
+  title,
   onOpen,
 }: CategoryCellProps) {
   const isEmpty = !value;
@@ -27,12 +29,12 @@ export function CategoryCell({
         selected ? 'cursor-pointer' : '',
       ].join(' ')}
       onClick={(event) => {
-        if (!selected || isExpanded) return;
+        if (!selected) return;
         event.stopPropagation();
         onOpen(category);
       }}
     >
-      <dt className="font-mono text-[11px] tracking-[0.14em] text-ink/72">
+      <dt className="font-mono text-[11px] tracking-[0.14em] text-ink/72" title={title}>
         {category}
       </dt>
       <dd
