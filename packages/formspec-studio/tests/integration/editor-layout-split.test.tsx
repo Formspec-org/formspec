@@ -8,7 +8,6 @@ import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
 import { DefinitionTreeEditor } from '../../src/workspaces/editor/DefinitionTreeEditor';
 import { LayoutCanvas } from '../../src/workspaces/layout/LayoutCanvas';
 import { EditorPropertiesPanel } from '../../src/workspaces/editor/properties/EditorPropertiesPanel';
-import { ComponentProperties } from '../../src/workspaces/layout/properties/ComponentProperties';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -285,56 +284,33 @@ describe('Editor properties shows only definition props', () => {
   });
 });
 
-describe('Layout properties shows only component props', () => {
-  it('shows appearance and accessibility but NOT definition-tier props', async () => {
+describe('Layout inline toolbar — Tier 2/3 only', () => {
+  it('selecting a field in the canvas shows the inline toolbar (not a sidebar panel)', () => {
     render(
       <Providers project={makeProject(BOUND_DEF)}>
-        <SelectItem itemKey="name" itemType="field" tab="layout">
-          <ComponentProperties />
-        </SelectItem>
-      </Providers>,
-    );
-
-    await act(async () => { screen.getByTestId('do-select').click(); });
-
-    // Tier 2/3 sections present
-    expect(screen.getByText(/appearance/i)).toBeInTheDocument();
-    expect(screen.getByText(/accessibility/i)).toBeInTheDocument();
-    expect(screen.getByText(/visual condition/i)).toBeInTheDocument();
-  });
-
-  it('does NOT show key, label, or behavior rules for a field', async () => {
-    render(
-      <Providers project={makeProject(BOUND_DEF)}>
-        <SelectItem itemKey="name" itemType="field" tab="layout">
-          <ComponentProperties />
-        </SelectItem>
-      </Providers>,
-    );
-
-    await act(async () => { screen.getByTestId('do-select').click(); });
-
-    // Tier 1 sections absent
-    expect(screen.queryByLabelText(/^key$/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/behavior rules/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/validates/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/must fill/i)).not.toBeInTheDocument();
-  });
-
-  it('selecting from LayoutCanvas updates the layout-scoped inspector', () => {
-    render(
-      <Providers project={makeProject(BOUND_DEF)}>
-        <>
-          <LayoutCanvas />
-          <ComponentProperties />
-        </>
+        <LayoutCanvas />
       </Providers>,
     );
 
     fireEvent.click(screen.getByTestId('layout-field-name'));
 
-    expect(screen.getByText('Component')).toBeInTheDocument();
-    expect(screen.getAllByText(/full name/i).length).toBeGreaterThan(1);
-    expect(screen.getByText(/appearance/i)).toBeInTheDocument();
+    // The inline toolbar overflow button appears when a field is selected
+    expect(screen.getByTestId('toolbar-overflow')).toBeInTheDocument();
+    // The condition chip is visible
+    expect(screen.getByTestId('toolbar-condition-chip')).toBeInTheDocument();
+  });
+
+  it('the layout canvas does NOT show definition-tier sections (key, behavior rules)', () => {
+    render(
+      <Providers project={makeProject(BOUND_DEF)}>
+        <LayoutCanvas />
+      </Providers>,
+    );
+
+    fireEvent.click(screen.getByTestId('layout-field-name'));
+
+    // Tier 1 sections never present in layout canvas
+    expect(screen.queryByLabelText(/^key$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/behavior rules/i)).not.toBeInTheDocument();
   });
 });

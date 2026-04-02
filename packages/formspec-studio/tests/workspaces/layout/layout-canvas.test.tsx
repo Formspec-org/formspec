@@ -6,7 +6,6 @@ import { ProjectProvider } from '../../../src/state/ProjectContext';
 import { SelectionProvider } from '../../../src/state/useSelection';
 import { ActiveGroupProvider } from '../../../src/state/useActiveGroup';
 import { LayoutCanvas } from '../../../src/workspaces/layout/LayoutCanvas';
-import { ComponentProperties } from '../../../src/workspaces/layout/properties/ComponentProperties';
 
 function renderLayout(project: Project) {
   return {
@@ -154,7 +153,7 @@ describe('LayoutCanvas', () => {
     expect(screen.getByTestId('page-nav')).toBeInTheDocument();
   });
 
-  it('selects a field from the canvas and shows component properties', async () => {
+  it('selects a field from the canvas when clicked', async () => {
     const project = makeProject({
       $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
       items: [
@@ -162,24 +161,12 @@ describe('LayoutCanvas', () => {
       ],
     });
 
-    render(
-      <ProjectProvider project={project}>
-        <SelectionProvider>
-          <ActiveGroupProvider>
-            <>
-              <LayoutCanvas />
-              <ComponentProperties />
-            </>
-          </ActiveGroupProvider>
-        </SelectionProvider>
-      </ProjectProvider>,
-    );
+    renderLayout(project);
 
-    expect(screen.getByText(/select a component/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('layout-field-name'));
-
-    expect(screen.getByText('Component')).toBeInTheDocument();
-    expect(screen.getAllByText(/full name/i).length).toBeGreaterThan(1);
+    const fieldBlock = screen.getByTestId('layout-field-name');
+    expect(fieldBlock.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(fieldBlock);
+    expect(fieldBlock.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('changes the visible page when selecting a different page in wizard mode', () => {

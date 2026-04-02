@@ -746,4 +746,57 @@ describe('Shell', () => {
     const manageLabel = manageRadio.closest('label') ?? manageRadio.parentElement;
     expect(manageLabel?.textContent).toContain('6');
   });
+
+  // Layout sidebar — live preview
+  it('shows live preview panel (not ComponentProperties) in the Layout right sidebar', async () => {
+    renderShell(seededDefinition, 1440);
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Layout' }).click();
+    });
+
+    // The right sidebar should contain the layout preview header
+    const panel = screen.getByTestId('properties-panel');
+    expect(within(panel).getByTestId('layout-preview-header')).toBeInTheDocument();
+  });
+
+  it('does not show compact properties modal when on Layout tab (replaced by preview sheet)', async () => {
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Layout' }).click();
+    });
+
+    // Old compact properties modal should not be present
+    expect(screen.queryByRole('dialog', { name: /properties/i })).toBeNull();
+  });
+
+  it('shows a Preview button in compact Layout mode', async () => {
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Layout' }).click();
+    });
+
+    const previewBtn = screen.getByRole('button', { name: /preview/i });
+    expect(previewBtn).toBeInTheDocument();
+  });
+
+  it('opens preview bottom sheet when Preview button is clicked in compact Layout mode', async () => {
+    renderShell(seededDefinition, 768);
+    fireEvent(window, new Event('resize'));
+
+    await act(async () => {
+      screen.getByRole('tab', { name: 'Layout' }).click();
+    });
+
+    const previewBtn = screen.getByRole('button', { name: /preview/i });
+    await act(async () => {
+      previewBtn.click();
+    });
+
+    expect(screen.getByRole('dialog', { name: /live preview/i })).toBeInTheDocument();
+  });
 });
