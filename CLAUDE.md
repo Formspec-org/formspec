@@ -108,6 +108,7 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
 
 ## Spec Authoring Contract
 
+- **Use the `/formspec-specs` skill** (invoke via `Skill` tool with `skill: "formspec-specs:formspec-specs"`) whenever you need to look up spec semantics, parse or validate schemas, understand cross-tier behavior, interpret FEL grammar, or answer any question about what the Formspec specification says. Do not guess from code — the skill has authoritative spec knowledge. This applies to all agents and subagents.
 - Structural truth lives in `schemas/*.json`.
 - Behavioral semantics that schemas cannot encode live in canonical spec markdown (`specs/**/*.md`).
 - Nodes marked `x-lm.critical=true` in schemas MUST include both `description` and at least one `examples` entry.
