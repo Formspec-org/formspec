@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { addFromPalette, editorDisplayRows, importDefinition, propertiesPanel, switchTab, waitForApp } from './helpers';
+import { addFromLayoutPalette, addFromPalette, importDefinition, propertiesPanel, switchTab, waitForApp } from './helpers';
 
 const SEED_DEF = {
   $formspec: '1.0',
@@ -96,17 +96,15 @@ test.describe('Layout Components', () => {
 
   test.describe('Content sub-types', () => {
     test('adds a Heading display item', async ({ page }) => {
-      await addFromPalette(page, 'Heading');
+      await addFromLayoutPalette(page, 'Heading');
 
-      const display = editorDisplayRows(page);
-      await expect(display).toHaveCount(1);
+      await expect(page.locator('[data-testid^="layout-display-"]')).toHaveCount(1);
     });
 
     test('adds a Divider display item', async ({ page }) => {
-      await addFromPalette(page, 'Divider');
+      await addFromLayoutPalette(page, 'Divider');
 
-      const display = editorDisplayRows(page);
-      await expect(display).toHaveCount(1);
+      await expect(page.locator('[data-testid^="layout-display-"]')).toHaveCount(1);
     });
 
     // Spacer is itemType: 'layout' (Component Spec §5.5) — excluded from
@@ -277,15 +275,13 @@ test.describe('Layout Components', () => {
       await expect(palette.locator('[data-testid="add-item-grid"]')).toHaveCount(0);
     });
 
-    test('searching "heading" in palette filters to the Heading option', async ({ page }) => {
+    test('searching "heading" in the editor palette does not surface display items', async ({ page }) => {
       await page.click('[data-testid="add-item"]');
       const palette = page.locator('[data-testid="add-item-palette"]');
       await palette.locator('input').fill('heading');
 
-      const grid = palette.locator('[data-testid="add-item-grid"]');
-      const buttons = grid.locator('button');
-      await expect(buttons).toHaveCount(1);
-      await expect(buttons.first()).toContainText('Heading');
+      await expect(palette).toContainText('No field types match');
+      await expect(palette.locator('[data-testid="add-item-grid"]')).toHaveCount(0);
     });
   });
 

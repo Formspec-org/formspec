@@ -35,11 +35,11 @@ describe('AddItemPalette', () => {
     expect(screen.queryByRole('button', { name: /^Stack\b/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Group\b/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Text Short text\b/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Heading\b/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Divider\b/i })).toBeInTheDocument();
-    // Spacer is a layout component — hidden in editor scope along with other layout items
+    // Editor scope excludes display and layout catalog entries (Layout workspace adds those).
+    expect(screen.queryByRole('button', { name: /^Heading\b/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Divider\b/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Text Block\b/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Spacer\b/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Text Block\b/i })).toBeInTheDocument();
   });
 
   it('uses a scoped search prompt in editor scope', () => {

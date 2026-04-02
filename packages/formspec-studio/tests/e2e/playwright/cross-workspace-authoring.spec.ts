@@ -23,12 +23,10 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(canvas.locator('[data-testid="field-lastName"]')).toBeVisible();
     await expect(canvas.locator('[data-testid="field-dob"]')).toBeVisible();
 
-    // Switch to Manage view — verify fields appear in the Response Inspector
-    await page.getByText('Response Inspector').click();
-    const panel = page.locator('[data-testid="response-inspector-content"]');
-    await expect(panel).toContainText('firstName');
-    await expect(panel).toContainText('lastName');
-    await expect(panel).toContainText('dob');
+    const outputBlueprint = page.locator('[data-testid="output-blueprint"]');
+    await expect(outputBlueprint).toContainText('firstName');
+    await expect(outputBlueprint).toContainText('lastName');
+    await expect(outputBlueprint).toContainText('dob');
 
     await switchTab(page, 'Preview');
     const previewWorkspace = page.locator('[data-testid="workspace-Preview"]');
@@ -111,8 +109,7 @@ test.describe('Cross-Workspace Authoring', () => {
 
     // Verify data content in Manage view (Response Inspector is in Form Health panel)
     await page.getByRole('radio', { name: 'Build' }).click();
-    await page.getByText('Response Inspector').click();
-    const responsePanel = page.locator('[data-testid="response-inspector-content"]');
+    const responsePanel = page.locator('[data-testid="output-blueprint"]');
     await expect(responsePanel).toContainText('name');
     await expect(responsePanel).toContainText('email');
 

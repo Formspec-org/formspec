@@ -107,17 +107,14 @@ test.describe('Bug #10 — inactive page tabs show label text', () => {
   });
 });
 
-// BUG #11 — Page mode hides root-level non-group items
-// RESOLVED by Editor/Layout split: The DefinitionTreeEditor renders ALL items
-// in a flat tree, regardless of page mode. There is no page filtering.
+// BUG #11 — Editor definition tree omits display-tier rows (they are authored in Layout).
 test.describe('Bug #11 — root-level non-group items visible in paged editor', () => {
-  test('root-level field outside groups is visible in the Editor tree [BUG-011]', async ({ page }) => {
+  test('root-level field and group visible in Editor; display rows are layout-only [BUG-011]', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, {
       $formspec: '1.0',
       formPresentation: { pageMode: 'wizard' },
       items: [
-        // A root-level display that is NOT inside any group
         { key: 'introText', type: 'display', label: 'Introduction' },
         {
           key: 'pageOne',
@@ -128,12 +125,10 @@ test.describe('Bug #11 — root-level non-group items visible in paged editor', 
       ],
     });
 
-    // The display item at the root is always visible in the flat Editor tree
-    const canvas = page.locator('[data-testid="workspace-Editor"]');
-    await expect(canvas.locator('[data-testid="display-introText"]')).toBeVisible({ timeout: 5000 });
-    // Group and its child are also visible
-    await expect(canvas.locator('[data-testid="group-pageOne"]')).toBeVisible();
-    await expect(canvas.locator('[data-testid="field-myField"]')).toBeVisible();
+    const editor = page.locator('[data-testid="workspace-Editor"]');
+    await expect(editor.locator('[data-testid="group-pageOne"]')).toBeVisible();
+    await expect(editor.locator('[data-testid="field-myField"]')).toBeVisible();
+    await expect(editor.locator('[data-testid="display-introText"]')).toHaveCount(0);
   });
 });
 

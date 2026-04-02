@@ -18,10 +18,17 @@ const seededDefinition = {
   ],
 };
 
-function renderShell(definition?: FormDefinition, width = 1440) {
+function renderShell(definition?: FormDefinition, width = 1440, screener?: unknown) {
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
   Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: width });
-  const project = definition ? createProject({ seed: { definition } }) : createProject();
+  const project = definition
+    ? createProject({
+        seed: {
+          definition,
+          ...(screener !== undefined ? { screener: screener as any } : {}),
+        },
+      })
+    : createProject();
   return {
     ...render(
       <ProjectProvider project={project}>
@@ -557,10 +564,27 @@ describe('Shell', () => {
       instances: {
         lookup1: { data: { rows: [] } },
       },
-      // screener is now a standalone document on state.screener, not on definition
     };
 
-    renderShell(definition, 1440);
+    const screenerDoc = {
+      $formspecScreener: '1.0',
+      url: 'urn:shell:screener',
+      version: '1.0.0',
+      title: 'Gate',
+      items: [],
+      evaluation: [
+        {
+          id: 'main',
+          strategy: 'first-match',
+          routes: [
+            { condition: 'true', target: 'urn:a' },
+            { condition: 'true', target: 'urn:b' },
+          ],
+        },
+      ],
+    };
+
+    renderShell(definition, 1440, screenerDoc);
 
     // Total should be: 1 bind + 1 shape + 1 variable + 2 optionSets + 1 instance + 2 routes = 8
     // The Manage radio button label includes the count in parentheses

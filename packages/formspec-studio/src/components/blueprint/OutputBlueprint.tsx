@@ -313,7 +313,7 @@ export function OutputBlueprint() {
   const defVersion = definition?.version || '1.0.0';
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="output-blueprint">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-muted/60 text-[10px] tracking-wider uppercase font-sans font-bold">Response Document</div>

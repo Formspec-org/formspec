@@ -43,7 +43,8 @@ describe('Import/Export', () => {
     expect(screen.getByText('Last Name')).toBeInTheDocument();
     expect(screen.getByText('Date of Birth')).toBeInTheDocument();
     expect(screen.getByText('Annual Income')).toBeInTheDocument();
-    expect(screen.getByText('Terms and Conditions')).toBeInTheDocument();
+    // Display-tier items are edited in Layout, not listed in the definition tree canvas.
+    expect(project.definition.items.some((i: { key: string }) => i.key === 'disclaimer')).toBe(true);
   });
 
   it('export matches import', () => {

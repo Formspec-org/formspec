@@ -456,9 +456,9 @@ describe('DefinitionTreeEditor', () => {
     });
 
     const outerChildren = screen.getByTestId('group-outer-children');
-    expect(outerChildren.className).toContain('ml-5');
-    expect(outerChildren.className).toContain('border-l');
-    expect(outerChildren.className).toContain('pl-4');
+    expect(outerChildren.className).toContain('mt-2');
+    expect(outerChildren.className).toContain('flex');
+    expect(outerChildren.className).toMatch(/px-4|md:px-6/);
   });
 
   it('falls back to itemKey when label is missing', () => {

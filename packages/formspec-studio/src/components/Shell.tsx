@@ -115,7 +115,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
       Object.keys(def.optionSets ?? {}).length +
       Object.keys(def.instances ?? {}).length +
       screenerRoutes;
-  }, [project.definition]);
+  }, [project.definition, project.state.screener]);
   const viewportWidth = typeof window !== 'undefined'
     ? Math.min(window.innerWidth, document.documentElement?.clientWidth || window.innerWidth)
     : Infinity;

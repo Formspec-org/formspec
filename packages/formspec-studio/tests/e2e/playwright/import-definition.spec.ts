@@ -46,8 +46,11 @@ test.describe('Import Definition', () => {
     const canvas = page.locator('[data-testid="workspace-Editor"]');
     await expect(canvas.locator('[data-testid="field-name"]')).toBeVisible();
     await expect(canvas.locator('[data-testid="field-age"]')).toBeVisible();
-    await expect(canvas.locator('[data-testid="display-notes"]')).toBeVisible();
+    await switchTab(page, 'Layout');
+    const layout = page.locator('[data-testid="workspace-Layout"]');
+    await expect(layout.locator('[data-testid="layout-display-notes"]')).toBeVisible();
 
+    await switchTab(page, 'Editor');
     // Switch to Manage view to verify logic content imported
     await page.getByRole('radio', { name: 'Manage' }).click();
     const workspace = page.locator('[data-testid="workspace-Editor"]');

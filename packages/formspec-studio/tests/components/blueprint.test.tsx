@@ -75,14 +75,24 @@ describe('Blueprint', () => {
       definition: {
         $formspec: '1.0', url: 'urn:test', version: '1.0.0', title: 'Test',
         items: [],
-        screener: {
-          items: [{ key: 'age', type: 'field', dataType: 'integer', label: 'Age' }],
-          routes: [
-            { condition: '$age >= 18', target: 'adult' },
-            { condition: 'true', target: 'rejected' },
-          ],
-        },
       } as any,
+      screener: {
+        $formspecScreener: '1.0',
+        url: 'urn:test:gate',
+        version: '1.0.0',
+        title: 'Gate',
+        items: [{ key: 'age', type: 'field', dataType: 'integer', label: 'Age' }],
+        evaluation: [
+          {
+            id: 'main',
+            strategy: 'first-match',
+            routes: [
+              { condition: '$age >= 18', target: 'adult' },
+              { condition: 'true', target: 'rejected' },
+            ],
+          },
+        ],
+      },
     } });
     render(
       <ProjectProvider project={project}>

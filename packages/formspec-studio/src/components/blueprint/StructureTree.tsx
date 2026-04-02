@@ -175,7 +175,7 @@ export function StructureTree() {
     <>
       <AddItemPalette
         open={paletteOpen}
-        scope="editor"
+        scope="all"
         onClose={() => setPaletteOpen(false)}
         onAdd={handleAddFromPalette}
       />

@@ -60,6 +60,11 @@ async function switchToManage(page: import('@playwright/test').Page) {
   await page.getByRole('radio', { name: 'Manage' }).click();
 }
 
+async function scrollToManageVariables(page: import('@playwright/test').Page) {
+  const section = page.locator('[data-testid="manage-section-variables"]');
+  await section.scrollIntoViewIfNeeded();
+}
+
 test.describe('Editor Manage View — Logic', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
@@ -87,10 +92,11 @@ test.describe('Editor Manage View — Logic', () => {
   });
 
   test('shows variables section', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Editor"]');
-    await expect(workspace.getByText('@taxRate', { exact: true })).toBeVisible();
-    await expect(workspace.getByText('0.25', { exact: true })).toBeVisible();
-    await expect(workspace.getByText('@netIncome', { exact: true })).toBeVisible();
+    await scrollToManageVariables(page);
+    const vars = page.locator('[data-testid="manage-section-variables"]');
+    await expect(vars.getByText('@taxRate', { exact: true }).first()).toBeVisible();
+    await expect(vars.getByText('0.25', { exact: true }).first()).toBeVisible();
+    await expect(vars.getByText('@netIncome', { exact: true }).first()).toBeVisible();
   });
 
   test('clicking a filter chip narrows the binds shown', async ({ page }) => {
@@ -154,6 +160,8 @@ test.describe('Editor Manage View — FEL reference popup function click (#55)',
 
   test('clicking a function entry in the FEL reference popup copies its signature to the clipboard', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Editor"]');
+    await scrollToManageVariables(page);
+    await workspace.locator('[data-testid="manage-section-variables"]').getByText('0.25', { exact: true }).click();
 
     const felButton = workspace.locator('button[aria-label="FEL Reference"]').first();
     await felButton.click();
@@ -175,6 +183,8 @@ test.describe('Editor Manage View — FEL reference popup function click (#55)',
 
   test('clicking a function entry shows a detail panel or highlight for that function', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Editor"]');
+    await scrollToManageVariables(page);
+    await workspace.locator('[data-testid="manage-section-variables"]').getByText('0.25', { exact: true }).click();
 
     const felButton = workspace.locator('button[aria-label="FEL Reference"]').first();
     await felButton.click();

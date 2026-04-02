@@ -135,28 +135,32 @@ describe('ManageView', () => {
   });
 
   it('renders screener section with active status and counts', () => {
-    const defWithScreener = {
-      ...RICH_DEF,
-      screener: {
-        items: [
-          { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
-        ],
-        routes: [
-          { condition: '$age >= 18', target: 'adult-form' },
-          { condition: 'true', target: 'rejected' },
-        ],
-      },
+    const screener = {
+      $formspecScreener: '1.0',
+      url: 'urn:manage:gate',
+      version: '1.0.0',
+      title: 'Gate',
+      items: [
+        { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
+      ],
+      evaluation: [
+        {
+          id: 'main',
+          strategy: 'first-match',
+          routes: [
+            { condition: '$age >= 18', target: 'adult-form' },
+            { condition: 'true', target: 'rejected' },
+          ],
+        },
+      ],
     };
-    const project = createProject({ seed: { definition: defWithScreener } });
+    const project = createProject({ seed: { definition: RICH_DEF, screener } });
     render(<Providers project={project}><ManageView /></Providers>);
 
     const screenerSection = screen.getByTestId('manage-section-screener');
     expect(screenerSection).toBeInTheDocument();
-    // Should show active status pill
     expect(within(screenerSection).getByText('Active')).toBeInTheDocument();
-    // Should show question and route counts
-    expect(within(screenerSection).getByText(/1 question/)).toBeInTheDocument();
-    expect(within(screenerSection).getByText(/2 routes/)).toBeInTheDocument();
+    expect(within(screenerSection).getByText(/1 question, 1 phase, 2 routes/)).toBeInTheDocument();
   });
 
   it('renders all sections with an empty definition without errors', () => {

@@ -84,6 +84,15 @@ export async function addFromPalette(page: Page, label: string) {
   await palette.getByRole('button', { name: new RegExp(`^${label}\\b`) }).first().click();
 }
 
+/** Add a definition item from the Layout workspace palette (display, fields, groups — full catalog). */
+export async function addFromLayoutPalette(page: Page, label: string) {
+  await switchTab(page, 'Layout');
+  await page.click('[data-testid="layout-add-item"]');
+  const palette = page.locator('[data-testid="add-item-palette"]');
+  await palette.waitFor();
+  await palette.getByRole('button', { name: new RegExp(`^${label}\\b`) }).first().click();
+}
+
 /** Click a field block in the editor canvas. */
 export async function selectField(page: Page, key: string) {
   await page.click(`[data-testid="field-${key}"]`);
