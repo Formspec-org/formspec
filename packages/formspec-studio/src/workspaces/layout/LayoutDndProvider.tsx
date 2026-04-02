@@ -4,11 +4,45 @@ import { DragDropProvider } from '@dnd-kit/react';
 import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { useProject } from '../../state/useProject';
 import { useSelection } from '../../state/useSelection';
+import type { Project } from '@formspec-org/studio-core';
 
 const LAYOUT_TAB = 'layout';
 
 interface LayoutDndProviderProps {
   children: ReactNode;
+  activePageId?: string | null;
+}
+
+type NodeRef = { bind: string } | { nodeId: string };
+type UnassignedItemData = { key: string; label: string; itemType: 'field' | 'group' | 'display' };
+
+/**
+ * Pure handler: place a tray item onto the canvas via project.addItemToLayout.
+ * Exported for unit testing.
+ */
+export function handleTrayDrop(
+  project: Project,
+  item: UnassignedItemData,
+  activePageId: string | null,
+): void {
+  project.addItemToLayout(
+    { itemType: item.itemType, label: item.label, key: item.key },
+    activePageId ?? undefined,
+  );
+}
+
+/**
+ * Pure handler: reorder a component tree node via project.reorderComponentNode.
+ * Direction is determined by the caller (source before/after target).
+ * Exported for unit testing.
+ */
+export function handleTreeReorder(
+  project: Project,
+  sourceRef: NodeRef,
+  _targetRef: NodeRef,
+  direction: 'up' | 'down',
+): void {
+  project.reorderComponentNode(sourceRef, direction);
 }
 
 /**
@@ -18,7 +52,7 @@ interface LayoutDndProviderProps {
  * 1. Component-tree node reordering (drag a node to reorder among siblings)
  * 2. Tray-to-canvas (drag an unassigned item onto the canvas to bind it)
  */
-export function LayoutDndProvider({ children }: LayoutDndProviderProps) {
+export function LayoutDndProvider({ children, activePageId = null }: LayoutDndProviderProps) {
   const project = useProject();
   const { select } = useSelection();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -42,30 +76,22 @@ export function LayoutDndProvider({ children }: LayoutDndProviderProps) {
 
     // Tray-to-canvas: unassigned item dragged onto the tree
     if (sourceData?.type === 'unassigned-item') {
-      // Add the item to the component tree at the target location
-      // For now, add to root of tree
-      (project as any).core.dispatch({
-        type: 'component.addNode',
-        payload: {
-          parent: { nodeId: '__root' },
-          node: { component: 'TextInput', bind: sourceData.key },
-        },
-      });
-      select(sourceData.key, 'field', { tab: LAYOUT_TAB });
+      handleTrayDrop(project, sourceData as UnassignedItemData, activePageId);
+      select(sourceData.key, sourceData.itemType, { tab: LAYOUT_TAB });
       return;
     }
 
     // Component-tree reorder: move sourceId before/after targetId
-    const sourceRef = sourceData?.nodeRef;
-    const targetRef = event.operation?.target?.data?.nodeRef;
+    const sourceRef: NodeRef | undefined = sourceData?.nodeRef;
+    const targetRef: NodeRef | undefined = event.operation?.target?.data?.nodeRef;
     if (sourceRef && targetRef) {
-      // Use the component tree reorder command
-      (project as any).core.dispatch({
-        type: 'component.reorderNode',
-        payload: { node: sourceRef, direction: 'down' },
-      });
+      // Determine direction: if source index > target index, moving up
+      const sourceIndex = event.operation?.source?.data?.index ?? 0;
+      const targetIndex = event.operation?.target?.data?.index ?? 0;
+      const direction: 'up' | 'down' = sourceIndex > targetIndex ? 'up' : 'down';
+      handleTreeReorder(project, sourceRef, targetRef, direction);
     }
-  }, [project, select]);
+  }, [project, select, activePageId]);
 
   return (
     <DragDropProvider

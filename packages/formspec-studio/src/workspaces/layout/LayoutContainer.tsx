@@ -1,5 +1,6 @@
-/** @filedesc Layout canvas wrapper for layout nodes (Card, Grid, Panel, Stack). */
+/** @filedesc Layout canvas wrapper for layout nodes (Card, Grid, Panel, Stack), supports drag reordering. */
 import type { ReactNode } from 'react';
+import { useDraggable, useDroppable } from '@dnd-kit/react';
 
 interface LayoutContainerProps {
   component: string;
@@ -8,6 +9,7 @@ interface LayoutContainerProps {
   bindPath?: string;
   nodeId?: string;
   selected?: boolean;
+  index?: number;
   onSelect?: () => void;
   children?: ReactNode;
 }
@@ -19,17 +21,34 @@ export function LayoutContainer({
   bindPath,
   nodeId,
   selected = false,
+  index = 0,
   onSelect,
   children,
 }: LayoutContainerProps) {
+  const dragId = nodeId ? `node:${nodeId}` : `bind:${bind ?? component}`;
+  const nodeRef = nodeId ? { nodeId } : bind ? { bind } : undefined;
+
+  const { ref: dragRef, isDragging } = useDraggable({
+    id: dragId,
+    data: { nodeRef, index, type: 'tree-node' },
+  });
+
+  const { ref: dropRef } = useDroppable({
+    id: `drop:${dragId}`,
+    data: { nodeRef, index, type: 'container-drop', component },
+  });
+
   return (
     <div
+      ref={(el) => { dragRef(el); dropRef(el); }}
       data-testid={`layout-container-${nodeId ?? bind ?? component}`}
       data-layout-node
       data-layout-node-type={nodeType}
       {...(bindPath ? { 'data-layout-bind': bindPath } : {})}
       {...(nodeId ? { 'data-layout-node-id': nodeId } : {})}
       className={`rounded border border-dashed bg-surface px-3 py-2 transition-colors ${
+        isDragging ? 'opacity-40' : ''
+      } ${
         selected
           ? 'border-accent bg-accent/5 shadow-sm'
           : 'border-muted'
