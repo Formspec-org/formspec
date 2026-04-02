@@ -120,7 +120,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   // #12 "add behavior rule" button
   // The AddBehaviorMenu component renders a button labeled "+ add behavior rule"
   // (lowercase). Clicking it should open a dropdown menu of available rule types.
-  test('#12 clicking add behavior menu opens a behavior type menu', async ({ page }) => {
+  test('#12 single-option add behavior menu fires directly without dropdown', async ({ page }) => {
     await waitForApp(page);
     await importDefinition(page, {
       $formspec: '1.0',
@@ -139,12 +139,31 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
     const row = page.locator('[data-testid="field-age"]');
     await row.getByTestId('field-age-category-Validation').click();
 
-    // The AddBehaviorMenu renders "+ Add validation rule" in the Validation section
+    // Only "constraint" remains — single-option auto-add fires directly on click
     await row.getByRole('button', { name: /add validation rule/i }).click();
 
-    // After clicking, the dropdown menu of rule types should appear.
-    // "required" is already used, so "constraint" should be available.
-    const menuItems = page.locator('button').filter({ hasText: /constraint/i });
+    // A constraint BindCard should appear immediately (no dropdown step).
+    await expect(row.getByRole('button', { name: 'Remove constraint' })).toBeVisible();
+  });
+
+  test('#12b multi-option add behavior menu opens dropdown', async ({ page }) => {
+    await waitForApp(page);
+    await importDefinition(page, {
+      $formspec: '1.0',
+      url: 'urn:add-rule-multi-test',
+      items: [
+        { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
+      ],
+    });
+
+    // Select the field, open Value panel (has 3 options: calculate, pre-populate, readonly)
+    await page.click('[data-testid="field-age"]');
+    const row = page.locator('[data-testid="field-age"]');
+    await row.getByTestId('field-age-category-Value').click();
+
+    // Multiple options available — should open a dropdown menu
+    await row.getByRole('button', { name: /add calculation/i }).click();
+    const menuItems = page.locator('button').filter({ hasText: /calculate/i });
     await expect(menuItems.first()).toBeVisible();
   });
 

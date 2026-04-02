@@ -65,7 +65,7 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
 
   function autoResize(el: HTMLTextAreaElement) {
     el.style.height = 'auto';
-    el.style.height = Math.max(28, el.scrollHeight) + 'px';
+    el.style.height = Math.max(36, el.scrollHeight) + 'px';
   }
 
   // Floating UI for autocomplete menu
@@ -97,7 +97,7 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
   const makeCaretReference = (trigger: FELAutocompleteTrigger) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-    const fontSize = 11;
+    const fontSize = 14;
     const lineHeight = 1.6;
     const padding = 8;
     const lines = textarea.value.slice(0, trigger.start).split('\n');
@@ -306,7 +306,7 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
         <div className="relative">
           {/* Highlighting Overlay */}
           <div 
-            className="absolute inset-0 z-20 pointer-events-none font-mono text-[11px] px-2 py-1.5 whitespace-pre-wrap break-all select-none overflow-hidden leading-relaxed"
+            className="absolute inset-0 z-20 pointer-events-none font-mono text-[14px] px-2 py-1.5 whitespace-pre-wrap break-all select-none overflow-hidden leading-relaxed"
             aria-hidden="true"
           >
             {highlightTokens.length === 0 && placeholder && (
@@ -342,7 +342,11 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
               openAutocomplete(val, e.target.selectionStart);
             }}
             onKeyDown={handleKeyDown}
-            onBlur={() => {
+            onBlur={(e) => {
+              // Don't save if focus moved to a sibling (e.g. the FEL reference popup).
+              const container = e.currentTarget.closest('[data-fel-editor-root]');
+              const next = e.relatedTarget as Node | null;
+              if (container && next && container.contains(next)) return;
               setTimeout(() => {
                 setAutocomplete(null);
                 setAutocompleteKind(null);
@@ -350,7 +354,7 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
               }, 150);
             }}
             style={{ caretColor: 'var(--studio-color-ink)' }}
-            className={`w-full font-mono text-[11px] text-transparent border rounded-[4px] px-2 py-1.5 resize-none overflow-hidden outline-none transition-all leading-relaxed relative z-10 block min-h-[28px] ${
+            className={`w-full font-mono text-[14px] text-transparent border rounded-[4px] px-2 py-1.5 resize-none overflow-hidden outline-none transition-all leading-relaxed relative z-10 block min-h-[36px] ${
               syntaxError
                 ? 'border-error bg-error/5'
                 : 'bg-transparent border-border/80 focus:border-accent/40 focus:bg-surface/50'
@@ -376,8 +380,8 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
           <FloatingPortal>
             <div
               ref={refs.setFloating}
-              style={{ ...floatingStyles, visibility: isPositioned ? 'visible' : 'hidden' }}
-              className="z-[100] flex bg-surface border border-border rounded-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+              style={{ ...floatingStyles, opacity: isPositioned ? 1 : 0, transition: 'opacity 100ms ease-out' }}
+              className="z-[100] flex bg-surface border border-border rounded-lg shadow-2xl overflow-hidden"
             >
               {/* Menu List */}
               <div className="w-64 border-r border-border/50">

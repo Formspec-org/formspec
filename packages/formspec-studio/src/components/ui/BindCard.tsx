@@ -75,7 +75,8 @@ export function BindCard({ bindType, expression, humanized, message, children, o
         </div>
       </div>
 
-      {humanized && (
+      {/* Show humanized description only when there's no inline editor (children). */}
+      {humanized && !children && (
         <div className="font-ui text-[12px] text-ink leading-snug mb-1">
           {humanized}
         </div>

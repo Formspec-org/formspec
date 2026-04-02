@@ -63,6 +63,11 @@ export interface ItemRowCategoryPanelProps {
   orphanFieldDetailLabel: string | null;
   handleOrphanFieldDetailBlur: FocusEventHandler<HTMLInputElement>;
   onUpdateItem?: (changes: Record<string, unknown>) => void;
+  /** Bind type that was just auto-created — InlineExpression starts in edit mode. */
+  justCreatedBind?: string | null;
+  onClearJustCreatedBind?: () => void;
+  /** Signal that a bind was just created (for auto-edit). */
+  onBindCreated?: (bindType: string) => void;
 }
 
 const CATEGORY_INTRO: Record<
@@ -105,6 +110,9 @@ export const ItemRowCategoryPanel = forwardRef<
     orphanFieldDetailLabel,
     handleOrphanFieldDetailBlur,
     onUpdateItem,
+    justCreatedBind,
+    onClearJustCreatedBind,
+    onBindCreated,
   },
   ref,
 ) {
@@ -192,7 +200,11 @@ export const ItemRowCategoryPanel = forwardRef<
             >
               <InlineExpression
                 value={binds.relevant}
-                onSave={(value) => onUpdateItem?.({ relevant: value ?? null })}
+                autoEdit={justCreatedBind === 'relevant'}
+                onSave={(value) => {
+                  onClearJustCreatedBind?.();
+                  onUpdateItem?.({ relevant: value || null });
+                }}
                 placeholder='Click to add expression'
               />
             </BindCard>
@@ -204,7 +216,10 @@ export const ItemRowCategoryPanel = forwardRef<
                 (k) => binds[k] != null,
               )}
               allowedTypes={['relevant']}
-              onAdd={(type) => onUpdateItem?.({ [type]: 'true' })}
+              onAdd={(type) => {
+                onUpdateItem?.({ [type]: '' });
+                onBindCreated?.(type);
+              }}
               className='mt-1'
             />
           )}
@@ -263,7 +278,7 @@ export const ItemRowCategoryPanel = forwardRef<
         )}
 
         {expandedCategory === 'Visibility' && (
-          <div className='space-y-3 border-l-2 border-l-logic pl-3'>
+          <div className='space-y-3'>
             {hasRelevant && (
               <BindCard
                 bindType='relevant'
@@ -273,9 +288,11 @@ export const ItemRowCategoryPanel = forwardRef<
               >
                 <InlineExpression
                   value={binds.relevant}
-                  onSave={(value) =>
-                    onUpdateItem?.({ relevant: value ?? null })
-                  }
+                  autoEdit={justCreatedBind === 'relevant'}
+                  onSave={(value) => {
+                    onClearJustCreatedBind?.();
+                    onUpdateItem?.({ relevant: value || null });
+                  }}
                   placeholder='Click to add expression'
                 />
               </BindCard>
@@ -288,7 +305,8 @@ export const ItemRowCategoryPanel = forwardRef<
                 )}
                 allowedTypes={['relevant']}
                 onAdd={(type) => {
-                  onUpdateItem?.({ [type]: 'true' });
+                  onUpdateItem?.({ [type]: '' });
+                  onBindCreated?.(type);
                   onExpandCategory('Visibility');
                 }}
                 className='mt-1'
@@ -298,7 +316,7 @@ export const ItemRowCategoryPanel = forwardRef<
         )}
 
         {expandedCategory === 'Validation' && (
-          <div className='space-y-3 border-l-2 border-l-accent pl-3'>
+          <div className='space-y-3'>
             {hasRequired && (
               <BindCard
                 bindType='required'
@@ -308,9 +326,11 @@ export const ItemRowCategoryPanel = forwardRef<
               >
                 <InlineExpression
                   value={binds.required}
-                  onSave={(value) =>
-                    onUpdateItem?.({ required: value ?? null })
-                  }
+                  autoEdit={justCreatedBind === 'required'}
+                  onSave={(value) => {
+                    onClearJustCreatedBind?.();
+                    onUpdateItem?.({ required: value || null });
+                  }}
                   placeholder='Click to add expression'
                 />
               </BindCard>
@@ -325,9 +345,11 @@ export const ItemRowCategoryPanel = forwardRef<
               >
                 <InlineExpression
                   value={binds.constraint}
-                  onSave={(value) =>
-                    onUpdateItem?.({ constraint: value ?? null })
-                  }
+                  autoEdit={justCreatedBind === 'constraint'}
+                  onSave={(value) => {
+                    onClearJustCreatedBind?.();
+                    onUpdateItem?.({ constraint: value || null });
+                  }}
                   placeholder='Click to add expression'
                 />
               </BindCard>
@@ -339,7 +361,8 @@ export const ItemRowCategoryPanel = forwardRef<
               )}
               allowedTypes={['required', 'constraint']}
               onAdd={(type) => {
-                onUpdateItem?.({ [type]: 'true' });
+                onUpdateItem?.({ [type]: '' });
+                onBindCreated?.(type);
                 onExpandCategory('Validation');
               }}
               className='mt-1'
@@ -348,7 +371,7 @@ export const ItemRowCategoryPanel = forwardRef<
         )}
 
         {expandedCategory === 'Value' && (
-          <div className='space-y-3 border-l-2 border-l-green pl-3'>
+          <div className='space-y-3'>
             {hasCalculate && (
               <BindCard
                 bindType='calculate'
@@ -358,9 +381,11 @@ export const ItemRowCategoryPanel = forwardRef<
               >
                 <InlineExpression
                   value={binds.calculate}
-                  onSave={(value) =>
-                    onUpdateItem?.({ calculate: value ?? null })
-                  }
+                  autoEdit={justCreatedBind === 'calculate'}
+                  onSave={(value) => {
+                    onClearJustCreatedBind?.();
+                    onUpdateItem?.({ calculate: value || null });
+                  }}
                   placeholder='Click to add expression'
                 />
               </BindCard>
@@ -399,9 +424,11 @@ export const ItemRowCategoryPanel = forwardRef<
               >
                 <InlineExpression
                   value={binds.readonly}
-                  onSave={(value) =>
-                    onUpdateItem?.({ readonly: value ?? null })
-                  }
+                  autoEdit={justCreatedBind === 'readonly'}
+                  onSave={(value) => {
+                    onClearJustCreatedBind?.();
+                    onUpdateItem?.({ readonly: value || null });
+                  }}
                   placeholder='Click to add expression'
                 />
               </BindCard>
@@ -420,8 +447,10 @@ export const ItemRowCategoryPanel = forwardRef<
                   onUpdateItem?.({ prePopulate: { instance: '', path: '' } });
                 } else if (type === 'calculate') {
                   onUpdateItem?.({ calculate: '' });
+                  onBindCreated?.('calculate');
                 } else if (type === 'readonly') {
-                  onUpdateItem?.({ readonly: 'true' });
+                  onUpdateItem?.({ readonly: '' });
+                  onBindCreated?.('readonly');
                 }
                 onExpandCategory('Value');
               }}
@@ -431,7 +460,7 @@ export const ItemRowCategoryPanel = forwardRef<
         )}
 
         {expandedCategory === 'Format' && (
-          <div className='space-y-3 border-l-2 border-l-muted pl-3'>
+          <div className='space-y-3'>
             {orphanFieldDetailLabel &&
             !['Pre-fill', 'Initial'].includes(orphanFieldDetailLabel) ? (
               <div

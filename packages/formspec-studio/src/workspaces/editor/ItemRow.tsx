@@ -92,6 +92,8 @@ export function ItemRow({
   // SI-4: Capture original value when opening inline summary; Escape restores it.
   const [inlineSummaryOriginal, setInlineSummaryOriginal] = useState('');
   const [optionsModalOpen, setOptionsModalOpen] = useState(false);
+  // Track bind type that was just auto-created so InlineExpression can start in edit mode.
+  const [justCreatedBind, setJustCreatedBind] = useState<string | null>(null);
   const categoryPanelRef = useRef<HTMLDivElement>(null);
   const prevShowCategoryPanelRef = useRef(false);
 
@@ -110,6 +112,7 @@ export function ItemRow({
       setActiveIdentityField(null);
       setExpandedCategory(null);
       setActiveInlineSummary(null);
+      setJustCreatedBind(null);
     }
   }, [selected]);
 
@@ -220,8 +223,17 @@ export function ItemRow({
       label === 'Value' ||
       label === 'Format'
     ) {
+      const nextCategory = label as ExpandedSummaryCategory;
+      // Direct cell action: clicking an empty category auto-adds the default behavior.
+      // Direct cell action: only auto-add for single-option categories.
+      if (isField && onUpdateItem) {
+        if (label === 'Visibility' && !binds.relevant?.trim()) {
+          onUpdateItem({ relevant: '' });
+          setJustCreatedBind('relevant');
+        }
+      }
       setExpandedCategory((c) =>
-        c === label ? null : (label as ExpandedSummaryCategory),
+        c === nextCategory ? null : nextCategory,
       );
       setActiveInlineSummary(null);
       return;
@@ -330,7 +342,8 @@ export function ItemRow({
     const prev = prevExpandedCategoryRef.current;
     prevExpandedCategoryRef.current = expandedCategory;
     prevShowCategoryPanelRef.current = Boolean(showCategoryPanel);
-    if (showCategoryPanel && expandedCategory !== prev && effectiveSelected) {
+    // Skip panel focus when a bind was just created — the FELEditor should keep focus.
+    if (showCategoryPanel && expandedCategory !== prev && effectiveSelected && !justCreatedBind) {
       categoryPanelRef.current?.focus();
     }
   }, [showCategoryPanel, expandedCategory, selected]);
@@ -538,6 +551,9 @@ export function ItemRow({
         orphanFieldDetailLabel={orphanFieldDetailLabel}
         handleOrphanFieldDetailBlur={handleOrphanFieldDetailBlur}
         onUpdateItem={onUpdateItem}
+        justCreatedBind={justCreatedBind}
+        onClearJustCreatedBind={() => setJustCreatedBind(null)}
+        onBindCreated={setJustCreatedBind}
       />
     ) : null;
 

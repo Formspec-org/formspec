@@ -9,6 +9,8 @@ interface InlineExpressionProps {
   onSave: (newValue: string) => void;
   placeholder?: string;
   className?: string;
+  /** Start in edit mode immediately (e.g. when the bind was just created). */
+  autoEdit?: boolean;
 }
 
 function EditPencilIcon({ className }: { className?: string }) {
@@ -47,8 +49,8 @@ export function HighlightedExpression({ expression }: { expression: string }) {
   );
 }
 
-export function InlineExpression({ value, onSave, placeholder, className }: InlineExpressionProps) {
-  const [editing, setEditing] = useState(false);
+export function InlineExpression({ value, onSave, placeholder, className, autoEdit }: InlineExpressionProps) {
+  const [editing, setEditing] = useState(Boolean(autoEdit));
   const [draft, setDraft] = useState(value);
 
   function enterEdit() {
@@ -58,7 +60,9 @@ export function InlineExpression({ value, onSave, placeholder, className }: Inli
 
   function saveWith(val: string) {
     setEditing(false);
-    if (val !== value) {
+    // Always fire onSave when empty (so the caller can delete the bind)
+    // or when the value actually changed.
+    if (val !== value || !val.trim()) {
       onSave(val);
     }
   }
@@ -70,7 +74,7 @@ export function InlineExpression({ value, onSave, placeholder, className }: Inli
 
   if (editing) {
     return (
-      <div className={`flex items-start gap-1 ${className ?? ''}`}>
+      <div data-fel-editor-root className={`flex items-start gap-1 ${className ?? ''}`}>
         <FELEditor
           value={draft}
           onSave={saveWith}

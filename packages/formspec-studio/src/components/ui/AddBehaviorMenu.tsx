@@ -68,15 +68,21 @@ export function AddBehaviorMenu({
       <button
         type="button"
         aria-label={triggerAriaLabel}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onClick={() => setOpen(!open)}
+        aria-expanded={available.length > 1 ? open : undefined}
+        aria-haspopup={available.length > 1 ? 'menu' : undefined}
+        onClick={() => {
+          if (available.length === 1) {
+            onAdd(available[0].id);
+          } else {
+            setOpen(!open);
+          }
+        }}
         className={triggerClassName ?? defaultTriggerClass}
       >
         <span className="text-[14px] leading-none">+</span> {label}
       </button>
 
-      {open && (
+      {open && available.length > 1 && (
         <div className="absolute left-0 bottom-full mb-2 w-48 bg-surface border border-border rounded-[6px] shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-bottom-left">
           <div className="py-1">
             {available.map(type => (
