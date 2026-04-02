@@ -34,7 +34,8 @@
         "./agents/formspec-test.md",  
         "./agents/skill-updater.md",  
         "./agents/schema-reference-writer.md",
-        "./agents/spec-reference-writer.md"
+        "./agents/spec-reference-writer.md",
+        "./agents/platform-strategist.md"
       ],
       "commands": [
         "./commands"
