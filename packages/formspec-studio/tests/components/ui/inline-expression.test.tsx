@@ -101,4 +101,17 @@ describe('InlineExpression', () => {
     expect(pathSpan).toBeTruthy();
     expect(pathSpan!.className).toContain('text-green');
   });
+
+  it('RED test: when rendering condition — callout visible when editing', () => {
+    // When InlineExpression is used to edit a "when" (rendering condition) expression,
+    // a callout must appear in the FELEditor explaining:
+    // - This condition controls rendering visibility only (NOT data filtering)
+    // - Use "relevant" binding in Editor workspace for data inclusion rules
+    // Currently this callout does NOT exist, so this test will FAIL.
+    render(<InlineExpression value="" onSave={vi.fn()} placeholder="When..." />);
+    fireEvent.click(screen.getByText('When...'));
+    // After clicking to enter edit mode, the FELEditor should render with a callout
+    // Look for a callout element with text about "relevant" or "rendering visibility"
+    expect(screen.queryByTestId('when-rendering-callout')).toBeInTheDocument();
+  });
 });
