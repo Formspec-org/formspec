@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { type ColorScheme } from '../hooks/useColorScheme';
 import JSZip from 'jszip';
-import { createProject, handleKeyboardShortcut, buildDefLookup, type Project } from '@formspec-org/studio-core';
+import { createProject, handleKeyboardShortcut, buildDefLookup, isLayoutId, nodeIdFromLayoutId, type Project } from '@formspec-org/studio-core';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
@@ -320,7 +320,15 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         redo: () => project.redo(),
         delete: () => {
           if (scopedSelectedKey) {
-            project.removeItem(scopedSelectedKey);
+            if (activeTab === 'Layout') {
+              if (isLayoutId(scopedSelectedKey)) {
+                project.deleteLayoutNode(nodeIdFromLayoutId(scopedSelectedKey));
+              } else {
+                project.deleteComponentNode({ bind: scopedSelectedKey });
+              }
+            } else {
+              project.removeItem(scopedSelectedKey);
+            }
             deselect();
           }
         },

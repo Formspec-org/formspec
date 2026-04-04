@@ -1,5 +1,5 @@
 /** @filedesc Layout canvas block for display-only items (heading, divider, paragraph). Supports column-span resize when inside a Grid. */
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { LayoutContext } from './FieldBlock';
 import { useResizeHandle } from './useResizeHandle';
 
@@ -41,15 +41,17 @@ export function DisplayBlock({
   const showColHandle = isInGrid && !spansAllColumns;
 
   const pixelsPerUnitRef = useRef<number | undefined>(undefined);
+  const [dragSpan, setDragSpan] = useState(currentColSpan);
 
-  const { handleProps } = useResizeHandle({
+  const { handleProps, isDragging: isResizing, dragValue } = useResizeHandle({
     axis: 'x',
     min: 1,
     max: parentGridColumns,
     snap: 1,
     initialValue: currentColSpan,
     pixelsPerUnit: pixelsPerUnitRef.current,
-    onResize: (newSpan) => onResizeColSpan?.(newSpan),
+    onDrag: (newSpan) => setDragSpan(newSpan),
+    onCommit: (newSpan) => onResizeColSpan?.(newSpan),
   });
 
   const onHandlePointerDown = (e: React.PointerEvent<HTMLSpanElement>) => {
@@ -60,8 +62,11 @@ export function DisplayBlock({
     handleProps.onPointerDown(e as unknown as React.PointerEvent);
   };
 
-  const gridColumnStyle: React.CSSProperties =
-    isInGrid && nodeStyle?.gridColumn ? { gridColumn: nodeStyle.gridColumn as string } : {};
+  // During drag, use local dragSpan to update CSS grid-column; after commit, use nodeStyle
+  const effectiveColSpan = isResizing ? dragSpan : currentColSpan;
+  const gridColumnStyle: React.CSSProperties = isInGrid
+    ? { gridColumn: `span ${effectiveColSpan}` }
+    : {};
 
   return (
     <button

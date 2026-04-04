@@ -10,6 +10,8 @@ import {
   buildBindKeyMap,
   buildLayoutContextMenuItems,
   executeLayoutAction,
+  isLayoutId,
+  nodeIdFromLayoutId,
   type LayoutContextMenuState,
 } from '@formspec-org/studio-core';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
@@ -186,20 +188,20 @@ export function LayoutCanvas() {
   }, [project]);
 
   const handleUnwrapNode = useCallback((selectionKey: string) => {
-    const nodeId = selectionKey.startsWith('__node:') ? selectionKey.slice(7) : selectionKey;
+    const nodeId = nodeIdFromLayoutId(selectionKey);
     project.unwrapLayoutNode(nodeId);
     deselect();
   }, [project, deselect]);
 
   const handleRemoveNode = useCallback((selectionKey: string) => {
-    const nodeId = selectionKey.startsWith('__node:') ? selectionKey.slice(7) : selectionKey;
+    const nodeId = nodeIdFromLayoutId(selectionKey);
     project.deleteLayoutNode(nodeId);
     deselect();
   }, [project, deselect]);
 
   const handleStyleAdd = useCallback((selectionKey: string, key: string, value: string) => {
     const current = project.componentFor(
-      selectionKey.startsWith('__node:') ? selectionKey.slice(7) : selectionKey,
+      nodeIdFromLayoutId(selectionKey),
     ) as Record<string, unknown> | undefined;
     const currentStyle = (current?.style as Record<string, unknown>) ?? {};
     project.setLayoutNodeProp(selectionKey, 'style', { ...currentStyle, [key]: value });
@@ -207,7 +209,7 @@ export function LayoutCanvas() {
 
   const handleStyleRemove = useCallback((selectionKey: string, key: string) => {
     const current = project.componentFor(
-      selectionKey.startsWith('__node:') ? selectionKey.slice(7) : selectionKey,
+      nodeIdFromLayoutId(selectionKey),
     ) as Record<string, unknown> | undefined;
     const currentStyle = { ...(current?.style as Record<string, unknown>) ?? {} };
     delete currentStyle[key];
@@ -215,8 +217,8 @@ export function LayoutCanvas() {
   }, [project]);
 
   const handleResizeColSpan = useCallback((selectionKey: string, newSpan: number) => {
-    const ref = selectionKey.startsWith('__node:')
-      ? { nodeId: selectionKey.slice(7) }
+    const ref = isLayoutId(selectionKey)
+      ? { nodeId: nodeIdFromLayoutId(selectionKey) }
       : { bind: selectionKey };
     setColumnSpan(project, ref, newSpan);
   }, [project]);

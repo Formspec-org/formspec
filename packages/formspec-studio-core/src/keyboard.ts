@@ -78,7 +78,7 @@ export function handleKeyboardShortcut(
   if (key === 'Delete' || key === 'Backspace') {
     if (editing) return;
     const workspace = options.activeWorkspace ?? resolveWorkspace(event);
-    if (workspace && workspace !== 'Editor') return;
+    if (workspace && workspace !== 'Editor' && workspace !== 'Layout') return;
     handlers.delete();
   }
 }

@@ -19,8 +19,10 @@ export interface UseResizeHandleOptions {
    * E.g. pixelsPerUnit = containerWidth / numColumns.
    */
   pixelsPerUnit?: number;
-  /** Called whenever the dragged value changes. */
-  onResize: (value: number) => void;
+  /** Called on every pointermove during drag for visual updates (e.g. local CSS update). */
+  onDrag?: (value: number) => void;
+  /** Called once on pointerup with the final value — commits change to project/state. */
+  onCommit?: (value: number) => void;
 }
 
 /**
@@ -43,8 +45,9 @@ export function snapAndClamp(raw: number, min: number, max: number, snap?: numbe
  * The hook stops propagation on pointerdown to prevent dnd-kit reorder drags.
  */
 export function useResizeHandle(options: UseResizeHandleOptions) {
-  const { axis, min, max, snap, initialValue, pixelsPerUnit, onResize } = options;
+  const { axis, min, max, snap, initialValue, pixelsPerUnit, onDrag, onCommit } = options;
   const [isDragging, setIsDragging] = useState(false);
+  const [dragValue, setDragValue] = useState(initialValue);
   const startRef = useRef<{ pos: number; value: number } | null>(null);
 
   const onPointerDown = useCallback(
@@ -53,6 +56,7 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
       e.stopPropagation();
       e.currentTarget.setPointerCapture(e.pointerId);
       setIsDragging(true);
+      setDragValue(initialValue);
       startRef.current = {
         pos: axis === 'x' ? e.clientX : e.clientY,
         value: initialValue,
@@ -69,18 +73,23 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
       const unitDelta = pixelsPerUnit && pixelsPerUnit > 0 ? pixelDelta / pixelsPerUnit : pixelDelta;
       const rawValue = startRef.current.value + unitDelta;
       const snapped = snapAndClamp(rawValue, min, max, snap);
-      onResize(snapped);
+      setDragValue(snapped);
+      onDrag?.(snapped);
     },
-    [axis, min, max, snap, pixelsPerUnit, onResize],
+    [axis, min, max, snap, pixelsPerUnit, onDrag],
   );
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent) => {
       e.currentTarget.releasePointerCapture(e.pointerId);
       setIsDragging(false);
+      // Commit final value on pointerup
+      if (startRef.current) {
+        onCommit?.(dragValue);
+      }
       startRef.current = null;
     },
-    [],
+    [dragValue, onCommit],
   );
 
   // onPointerCancel: same cleanup as onPointerUp — fires when pointer is interrupted
@@ -102,5 +111,5 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
     onPointerCancel,
   };
 
-  return { handleProps, isDragging };
+  return { handleProps, isDragging, dragValue };
 }

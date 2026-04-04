@@ -37,7 +37,7 @@ export function buildLayoutContextMenuItems(
     { label: 'Wrap in Panel', action: 'wrapInPanel' },
     { label: 'Wrap in Accordion', action: 'wrapInAccordion' },
     { label: 'Wrap in Collapsible', action: 'wrapInCollapsible' },
-    { label: 'Wrap in Conditional Group', action: 'wrapInConditionalGroup' },
+    { label: 'Wrap in Conditional Group (data preserved)', action: 'wrapInConditionalGroup' },
     { label: 'Move Up', action: 'moveUp' },
     { label: 'Move Down', action: 'moveDown' },
     { label: 'Remove from Tree', action: 'removeFromTree', separator: true },

@@ -44,11 +44,16 @@ export interface LayoutContainerProps {
   /** Called when "Remove from Tree" action is triggered from the PropertyPopover. */
   onRemove?: () => void;
   /** Called when style is added from the PropertyPopover. */
-  onStyleAdd?: (key: string, value: string) => void;
-  /** Called when style is removed from the PropertyPopover. */
+  onStyleAdd?: (key: string, value: string) => void;  /** Called when style is removed from the PropertyPopover. */
   onStyleRemove?: (styleKey: string) => void;
   /** When true, renders N+1 insert slots between/around children for spatial DnD. */
   isDragActive?: boolean;
+  /** True when a child is being resized (column span drag). */
+  isChildResizing?: boolean;
+  /** Current span value during child resize drag. */
+  childDragValue?: number;
+  /** Cursor position during child resize for tooltip (for future use). */
+  childDragCursorX?: number;
 }
 
 const ELEVATION_SHADOW: Record<number, string> = {
@@ -152,9 +157,12 @@ export function LayoutContainer(props: LayoutContainerProps) {
     onSetStyle,
     onUnwrap,
     onRemove,
-    onStyleAdd,
+
     onStyleRemove,
     isDragActive: isDragActiveProp = false,
+    isChildResizing = false,
+    childDragValue = 0,
+    childDragCursorX = 0,
   } = props;
 
   // OBJ-4-02: read from DnD context so containers know drag is active without prop threading
@@ -163,7 +171,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
 
   const [open, setOpen] = useState(defaultOpen);
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const overflowRef = useRef<HTMLButtonElement>(null);
+  const overflowButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const dragId = nodeId ? `node:${nodeId}` : `bind:${bind ?? component}`;
   const nodeRef = nodeId ? { nodeId } : bind ? { bind } : undefined;
@@ -182,6 +190,10 @@ export function LayoutContainer(props: LayoutContainerProps) {
   const contentStyle = buildContentStyle(props);
   const containerStyle: React.CSSProperties = component === 'Panel' && width ? { width } : {};
   const displayTitle = title ?? undefined;
+
+  // Column guides overlay for Grid when child is resizing
+  const numColumns = component === 'Grid' ? (props.columns ?? 2) : 0;
+  const showColumnGuides = isChildResizing && numColumns > 0 && component === 'Grid';
 
   // Determine if any Tier 3 properties are set (for dot indicator on "...")
   const resolvedNodeProps = nodeProps ?? {};
@@ -246,18 +258,24 @@ export function LayoutContainer(props: LayoutContainerProps) {
             onSetStyle={onSetStyle}
             onOpenPopover={() => setPopoverOpen(true)}
             hasPopoverContent={hasPopoverContent}
+            overflowButtonRef={overflowButtonRef}
           />
         )}
       </div>
 
+
+      {/* SD-06: ConditionalGroup data preservation note */}
+      {component === 'ConditionalGroup' && selected && (
+        <div className="mx-3 mb-1 rounded bg-amber-50 border border-amber-200 px-2 py-1 text-[11px] text-amber-700 dark:bg-amber-950/30 dark:border-amber-800/50 dark:text-amber-400 select-none">
+          Data is still submitted when hidden
+        </div>
+      )}
       {/* PropertyPopover — anchored to overflow button */}
       {showToolbar && popoverOpen && (
         <PropertyPopover
           open={popoverOpen}
-          anchorRef={overflowRef}
+          anchorRef={overflowButtonRef}
           nodeProps={resolvedNodeProps}
-          selectionKey={selectionKey!}
-          nodeId={nodeId}
           isContainer={true}
           onSetProp={onSetProp!}
           onStyleAdd={onStyleAdd ?? (() => {})}
@@ -273,8 +291,41 @@ export function LayoutContainer(props: LayoutContainerProps) {
         <div
           data-layout-content
           style={contentStyle}
-          className="px-3 pb-2"
+          className="relative px-3 pb-2"
         >
+          {/* Column guides overlay when child is resizing in a Grid */}
+          {showColumnGuides && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${numColumns}, 1fr)`,
+                gap: contentStyle.gap as string | undefined,
+              }}
+            >
+              {Array.from({ length: numColumns }).map((_, i) => (
+                <div
+                  key={`guide-${i}`}
+                  className="border-l border-dashed border-accent/30"
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Numeric tooltip during resize */}
+          {showColumnGuides && (
+            <div
+              className="fixed bg-accent/90 text-background px-2 py-1 rounded text-[11px] font-semibold pointer-events-none z-50"
+              style={{
+                left: `${childDragCursorX}px`,
+                top: '0px',
+                transform: 'translateX(-50%)',
+              }}
+            >
+              {childDragValue} col
+            </div>
+          )}
+
           {isDragActive && nodeId ? (
             <InsertSlotChildren nodeId={nodeId}>{children}</InsertSlotChildren>
           ) : (

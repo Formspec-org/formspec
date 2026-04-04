@@ -8,8 +8,6 @@ function makeProps(overrides: Partial<PropertyPopoverProps> = {}): PropertyPopov
     open: true,
     anchorRef: { current: null },
     nodeProps: {},
-    selectionKey: '__node:n1',
-    nodeId: 'n1',
     isContainer: true,
     onSetProp: vi.fn(),
     onStyleAdd: vi.fn(),
@@ -110,14 +108,14 @@ describe('PropertyPopover — style overrides', () => {
     expect(screen.getByTestId('style-new-value-input')).toBeInTheDocument();
   });
 
-  it('calls onStyleAdd when new style entry committed', () => {
-    const onStyleAdd = vi.fn();
+  it('calls onSetStyle when new style entry committed', () => {
+    const onSetStyle = vi.fn();
     render(<PropertyPopover {...makeProps({ onStyleAdd })} />);
     fireEvent.click(screen.getByTestId('popover-style-add'));
     fireEvent.change(screen.getByTestId('style-new-key-input'), { target: { value: 'padding' } });
     fireEvent.change(screen.getByTestId('style-new-value-input'), { target: { value: '16px' } });
     fireEvent.click(screen.getByTestId('style-new-commit'));
-    expect(onStyleAdd).toHaveBeenCalledWith('padding', '16px');
+    expect(onSetStyle).toHaveBeenCalledWith('padding', '16px');
   });
 });
 

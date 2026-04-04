@@ -1,4 +1,5 @@
 /** @filedesc Overflow popover for Tier 3 layout properties (accessibility, style overrides, CSS class) with dirty guard. */
+import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -8,12 +9,10 @@ export interface PropertyPopoverProps {
   anchorRef: React.RefObject<HTMLElement | null>;
   /** Full component node props (read-only, for initial values). */
   nodeProps: Record<string, unknown>;
-  selectionKey: string;
-  nodeId?: string;
   /** Whether this is a container node (shows Unwrap action). */
   isContainer: boolean;
   onSetProp: (key: string, value: unknown) => void;
-  onStyleAdd: (key: string, value: string) => void;
+  onSetStyle: (key: string, value: string) => void;
   onStyleRemove: (key: string) => void;
   onUnwrap: () => void;
   onRemove: () => void;
@@ -99,6 +98,7 @@ function PopoverInput({
 
 export function PropertyPopover({
   open,
+  anchorRef,
   nodeProps,
   isContainer,
   onSetProp,
@@ -113,6 +113,22 @@ export function PropertyPopover({
   const [addingStyle, setAddingStyle] = useState(false);
   const [newStyleKey, setNewStyleKey] = useState('');
   const [newStyleValue, setNewStyleValue] = useState('');
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  // Compute position from anchor element's bounding rect
+  useEffect(() => {
+    if (!open || !anchorRef.current) {
+      setPosition(null);
+      return;
+    }
+
+    const rect = anchorRef.current.getBoundingClientRect();
+    // Position popover to the right of the anchor, aligned to top
+    setPosition({
+      top: rect.top,
+      left: rect.right + 8, // 8px gap from anchor
+    });
+  }, [open, anchorRef]);
 
   // Reset dirty state when the popover opens/closes
   useEffect(() => {
@@ -148,7 +164,7 @@ export function PropertyPopover({
     }
   }
 
-  if (!open) return null;
+  if (!open || !position) return null;
 
   const accessibility = (nodeProps.accessibility as Record<string, unknown>) ?? {};
   const style = (nodeProps.style as Record<string, unknown>) ?? {};
@@ -162,21 +178,27 @@ export function PropertyPopover({
 
   function commitStyleAdd() {
     if (newStyleKey.trim()) {
-      onStyleAdd(newStyleKey.trim(), newStyleValue);
+      onSetStyle(newStyleKey.trim(), newStyleValue);
       setNewStyleKey('');
       setNewStyleValue('');
       setAddingStyle(false);
     }
   }
 
-  return (
+  const popoverContent = (
     <div
       data-testid="property-popover"
       role="dialog"
       aria-label="Component properties"
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="relative z-50 w-72 rounded border border-border bg-surface shadow-lg flex flex-col overflow-hidden"
+      style={{
+        position: 'fixed',
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+        zIndex: 50,
+      }}
+      className="w-72 rounded border border-border bg-surface shadow-lg flex flex-col overflow-hidden"
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface shrink-0">
         <span className="text-[13px] font-semibold text-ink font-ui">Properties</span>
@@ -324,4 +346,6 @@ export function PropertyPopover({
       )}
     </div>
   );
+
+  return createPortal(popoverContent, document.body);
 }

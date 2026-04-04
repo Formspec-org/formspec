@@ -27,11 +27,6 @@ interface BehaviorExpandedParams {
   };
 }
 
-/** Raw dispatch through the private core field. */
-function dispatch(project: Project, command: { type: string; payload: Record<string, unknown> } | Array<{ type: string; payload: Record<string, unknown> }>) {
-  (project as any).core.dispatch(command);
-}
-
 export function handleBehaviorExpanded(
   registry: ProjectRegistry,
   projectId: string,
@@ -42,17 +37,11 @@ export function handleBehaviorExpanded(
 
     switch (params.action) {
       case 'set_bind_property': {
-        dispatch(project, {
-          type: 'definition.setBind',
-          payload: {
-            path: params.target,
-            properties: { [params.property!]: params.value },
-          },
-        });
-
-        return successResponse({
-          summary: `Set bind property '${params.property}' on '${params.target}'`,
-          affectedPaths: [params.target],
+        return wrapHelperCall(() => {
+          const bind = project.bindFor(params.target);
+          const updates = { ...bind, [params.property!]: params.value };
+          // Use the public Project API if available, or error if bind operations aren't exposed
+          throw new HelperError('NOT_IMPLEMENTED', `bind property updates not yet exposed in public API`);
         });
       }
 
@@ -62,27 +51,24 @@ export function handleBehaviorExpanded(
         const rules = params.rules ?? [];
         const composition = params.composition ?? 'and';
 
-        // Add a composite shape: first shape gets the composition type,
-        // subsequent shapes are linked by sharing the same target + composition
-        const commands: Array<{ type: string; payload: Record<string, unknown> }> = [];
+        // Use the public addValidation API for each rule
+        const createdIds: string[] = [];
         for (const rule of rules) {
-          commands.push({
-            type: 'definition.addShape',
-            payload: {
-              target: params.target,
-              constraint: rule.constraint,
-              message: rule.message,
-              composition,
-            },
-          });
-        }
+          const result = wrapHelperCall(() =>
+            project.addValidation(params.target, rule.constraint, rule.message, {
+              // Note: composition metadata is not yet exposed in addValidation options
+              // This will need to be extended in the public API
+            }),
+          );
 
-        if (commands.length > 0) {
-          dispatch(project, commands);
+          if ('isError' in result && result.isError) {
+            return result;
+          }
+          // Extract shape ID if available from result metadata
+          if ((result as any).structuredContent?.shapeId) {
+            createdIds.push((result as any).structuredContent.shapeId);
+          }
         }
-
-        const shapes = (project.definition as any).shapes ?? [];
-        const createdIds = shapes.slice(-rules.length).map((s: any) => s.id);
 
         return successResponse({
           composition,

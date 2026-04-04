@@ -39,11 +39,12 @@ interface FieldBlockProps {
   nodeProps?: Record<string, unknown>;
   /** Called when toolbar writes a property to the component node. */
   onSetProp?: (key: string, value: unknown) => void;
+  /** Called when toolbar writes a style property (via style map, not direct prop). */
+  onSetStyle?: (key: string, value: string) => void;
   /** Called when "Remove from Tree" action is triggered from the PropertyPopover. */
   onRemove?: () => void;
   /** Called when style is added from the PropertyPopover. */
-  onStyleAdd?: (key: string, value: string) => void;
-  /** Called when style is removed from the PropertyPopover. */
+  onStyleAdd?: (key: string, value: string) => void;  /** Called when style is removed from the PropertyPopover. */
   onStyleRemove?: (styleKey: string) => void;
 }
 
@@ -62,11 +63,12 @@ export function FieldBlock({
   onResizeColSpan,
   nodeProps,
   onSetProp,
+  onSetStyle,
   onRemove,
-  onStyleAdd,
   onStyleRemove,
 }: FieldBlockProps) {
   const buttonRef = useRef<HTMLDivElement | null>(null);
+  const overflowButtonRef = useRef<HTMLButtonElement | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const { ref: dragRef, isDragging } = useDraggable({
@@ -86,15 +88,17 @@ export function FieldBlock({
 
   // pixelsPerUnit: width of one column span, measured from the element at drag start.
   const pixelsPerUnitRef = useRef<number | undefined>(undefined);
+  const [dragSpan, setDragSpan] = useState(currentColSpan);
 
-  const { handleProps } = useResizeHandle({
+  const { handleProps, isDragging: isResizing, dragValue } = useResizeHandle({
     axis: 'x',
     min: 1,
     max: parentGridColumns,
     snap: 1,
     initialValue: currentColSpan,
     pixelsPerUnit: pixelsPerUnitRef.current,
-    onResize: (newSpan) => onResizeColSpan?.(newSpan),
+    onDrag: (newSpan) => setDragSpan(newSpan),
+    onCommit: (newSpan) => onResizeColSpan?.(newSpan),
   });
 
   const onHandlePointerDown = (e: React.PointerEvent<HTMLSpanElement>) => {
@@ -106,8 +110,11 @@ export function FieldBlock({
   };
 
   // Apply gridColumn style only when inside a grid container
-  const gridColumnStyle: React.CSSProperties =
-    isInGrid && nodeStyle?.gridColumn ? { gridColumn: nodeStyle.gridColumn as string } : {};
+  // During drag, use local dragSpan to update CSS grid-column; after commit, use nodeStyle
+  const effectiveColSpan = isResizing ? dragSpan : currentColSpan;
+  const gridColumnStyle: React.CSSProperties = isInGrid
+    ? { gridColumn: `span ${effectiveColSpan}` }
+    : {};
 
   const resolvedNodeProps = nodeProps ?? {};
 
@@ -162,8 +169,10 @@ export function FieldBlock({
           itemDataType={dataType}
           layoutContext={layoutContext}
           onSetProp={onSetProp!}
+          onSetStyle={onSetStyle}
           onOpenPopover={() => setPopoverOpen(true)}
           hasPopoverContent={hasPopoverContent}
+          overflowButtonRef={overflowButtonRef}
         />
       )}
 
@@ -171,9 +180,8 @@ export function FieldBlock({
       {showToolbar && popoverOpen && (
         <PropertyPopover
           open={popoverOpen}
-          anchorRef={{ current: null }}
+          anchorRef={overflowButtonRef}
           nodeProps={resolvedNodeProps}
-          selectionKey={selectionKey}
           isContainer={false}
           onSetProp={onSetProp!}
           onStyleAdd={onStyleAdd ?? (() => {})}

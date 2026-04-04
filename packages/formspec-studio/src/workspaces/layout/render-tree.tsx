@@ -175,7 +175,6 @@ export function renderLayoutTree(
           onSetStyle={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(nodeSelKey, k, v) : undefined}
           onUnwrap={ctx.onUnwrapNode ? () => ctx.onUnwrapNode!(nodeSelKey) : undefined}
           onRemove={ctx.onRemoveNode ? () => ctx.onRemoveNode!(nodeSelKey) : undefined}
-          onStyleAdd={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(nodeSelKey, k, v) : undefined}
           onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(nodeSelKey, k) : undefined}
         >
           {children}
@@ -227,7 +226,6 @@ export function renderLayoutTree(
             onSetStyle={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(groupSelKey, k, v) : undefined}
             onUnwrap={ctx.onUnwrapNode ? () => ctx.onUnwrapNode!(groupSelKey) : undefined}
             onRemove={ctx.onRemoveNode ? () => ctx.onRemoveNode!(groupSelKey) : undefined}
-            onStyleAdd={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(groupSelKey, k, v) : undefined}
             onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(groupSelKey, k) : undefined}
           >
             {children}
@@ -259,8 +257,8 @@ export function renderLayoutTree(
           nodeStyle={node.style}
           nodeProps={node as Record<string, unknown>}
           onSetProp={ctx.onSetNodeProp ? (k, v) => ctx.onSetNodeProp!(defPath, k, v) : undefined}
+          onSetStyle={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(defPath, k, v) : undefined}
           onRemove={ctx.onRemoveNode ? () => ctx.onRemoveNode!(defPath) : undefined}
-          onStyleAdd={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(defPath, k, v) : undefined}
           onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(defPath, k) : undefined}
         />,
       );

@@ -35,23 +35,23 @@ export function handleTheme(
 
     switch (params.action) {
       case 'set_token':
-        return wrapMutation(project, 'theme.setToken', { key: params.key!, value: params.value });
+        return successResponse(project.setToken(params.key!, params.value as string));
 
       case 'remove_token':
         // setToken with null removes the key
-        return wrapMutation(project, 'theme.setToken', { key: params.key!, value: null });
+        return successResponse(project.setToken(params.key!, null));
 
       case 'list_tokens':
         return successResponse({ tokens: project.theme.tokens ?? {} });
 
       case 'set_default':
-        return wrapMutation(project, 'theme.setDefaults', { property: params.property!, value: params.value });
+        return successResponse(project.setThemeDefault(params.property!, params.value));
 
       case 'list_defaults':
         return successResponse({ defaults: project.theme.defaults ?? {} });
 
       case 'add_selector':
-        return wrapMutation(project, 'theme.addSelector', { match: params.match!, apply: params.apply! });
+        throw new HelperError('NOT_IMPLEMENTED', 'Theme selector management not yet exposed in public API');
 
       case 'list_selectors':
         return successResponse({ selectors: (project.theme as any).selectors ?? [] });
@@ -65,21 +65,3 @@ export function handleTheme(
   }
 }
 
-// ── Internal helpers ─────────────────────────────────────────────────
-
-function wrapMutation(project: Project, type: string, payload: Record<string, unknown>) {
-  try {
-    (project as any).core.dispatch({ type, payload });
-    return successResponse({
-      summary: `${type} applied`,
-      affectedPaths: [],
-      warnings: [],
-    });
-  } catch (err) {
-    if (err instanceof HelperError) {
-      return errorResponse(formatToolError(err.code, err.message, err.detail as Record<string, unknown>));
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    return errorResponse(formatToolError('COMMAND_FAILED', message));
-  }
-}

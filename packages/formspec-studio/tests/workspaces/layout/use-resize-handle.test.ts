@@ -47,9 +47,10 @@ describe('snapAndClamp', () => {
 
 describe('useResizeHandle — initialValue', () => {
   it('drags from initialValue, not from min', () => {
-    const onResize = vi.fn();
+    const onDrag = vi.fn();
+    const onCommit = vi.fn();
     const { result } = renderHook(() =>
-      useResizeHandle({ axis: 'x', min: 1, max: 12, snap: 1, initialValue: 3, onResize }),
+      useResizeHandle({ axis: 'x', min: 1, max: 12, snap: 1, initialValue: 3, onDrag, onCommit }),
     );
 
     const element = {
@@ -77,13 +78,15 @@ describe('useResizeHandle — initialValue', () => {
       } as unknown as React.PointerEvent);
     });
 
-    expect(onResize).toHaveBeenCalledWith(5);
+    expect(onDrag).toHaveBeenCalledWith(5);
+    expect(onCommit).not.toHaveBeenCalled();
   });
 
   it('pixelsPerUnit=200: 180px drag from initialValue=1 produces span delta ~0.9 → snaps to 2', () => {
-    const onResize = vi.fn();
+    const onDrag = vi.fn();
+    const onCommit = vi.fn();
     const { result } = renderHook(() =>
-      useResizeHandle({ axis: 'x', min: 1, max: 4, snap: 1, initialValue: 1, pixelsPerUnit: 200, onResize }),
+      useResizeHandle({ axis: 'x', min: 1, max: 4, snap: 1, initialValue: 1, pixelsPerUnit: 200, onDrag, onCommit }),
     );
 
     const element = {
@@ -110,13 +113,15 @@ describe('useResizeHandle — initialValue', () => {
       } as unknown as React.PointerEvent);
     });
 
-    expect(onResize).toHaveBeenCalledWith(2);
+    expect(onDrag).toHaveBeenCalledWith(2);
+    expect(onCommit).not.toHaveBeenCalled();
   });
 
   it('pixelsPerUnit=200: 50px drag from initialValue=2 stays at 2 (delta 0.25 rounds down)', () => {
-    const onResize = vi.fn();
+    const onDrag = vi.fn();
+    const onCommit = vi.fn();
     const { result } = renderHook(() =>
-      useResizeHandle({ axis: 'x', min: 1, max: 4, snap: 1, initialValue: 2, pixelsPerUnit: 200, onResize }),
+      useResizeHandle({ axis: 'x', min: 1, max: 4, snap: 1, initialValue: 2, pixelsPerUnit: 200, onDrag, onCommit }),
     );
 
     const element = {
@@ -143,13 +148,15 @@ describe('useResizeHandle — initialValue', () => {
       } as unknown as React.PointerEvent);
     });
 
-    expect(onResize).toHaveBeenCalledWith(2);
+    expect(onDrag).toHaveBeenCalledWith(2);
+    expect(onCommit).not.toHaveBeenCalled();
   });
 
   it('without pixelsPerUnit: raw pixel delta used (backward compat)', () => {
-    const onResize = vi.fn();
+    const onDrag = vi.fn();
+    const onCommit = vi.fn();
     const { result } = renderHook(() =>
-      useResizeHandle({ axis: 'x', min: 1, max: 12, snap: 1, initialValue: 1, onResize }),
+      useResizeHandle({ axis: 'x', min: 1, max: 12, snap: 1, initialValue: 1, onDrag, onCommit }),
     );
 
     const element = {
@@ -176,13 +183,15 @@ describe('useResizeHandle — initialValue', () => {
       } as unknown as React.PointerEvent);
     });
 
-    expect(onResize).toHaveBeenCalledWith(4);
+    expect(onDrag).toHaveBeenCalledWith(4);
+    expect(onCommit).not.toHaveBeenCalled();
   });
 
   it('drag from initialValue=3 with negative delta clamps to min', () => {
-    const onResize = vi.fn();
+    const onDrag = vi.fn();
+    const onCommit = vi.fn();
     const { result } = renderHook(() =>
-      useResizeHandle({ axis: 'x', min: 1, max: 12, snap: 1, initialValue: 3, onResize }),
+      useResizeHandle({ axis: 'x', min: 1, max: 12, snap: 1, initialValue: 3, onDrag, onCommit }),
     );
 
     const element = {
@@ -209,6 +218,7 @@ describe('useResizeHandle — initialValue', () => {
       } as unknown as React.PointerEvent);
     });
 
-    expect(onResize).toHaveBeenCalledWith(1);
+    expect(onDrag).toHaveBeenCalledWith(1);
+    expect(onCommit).not.toHaveBeenCalled();
   });
 });

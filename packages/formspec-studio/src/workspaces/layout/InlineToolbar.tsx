@@ -31,6 +31,8 @@ export interface InlineToolbarProps {
   onOpenPopover: () => void;
   /** Whether any Tier 3 properties are set — controls dot indicator on "..." button. */
   hasPopoverContent: boolean;
+  /** Ref to the overflow button — used by PropertyPopover for positioning. */
+  overflowButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 // ── Spacing token list ────────────────────────────────────────────────────
@@ -420,6 +422,7 @@ export function InlineToolbar(props: InlineToolbarProps) {
     onSetStyle,
     onOpenPopover,
     hasPopoverContent,
+    overflowButtonRef,
   } = props;
 
   const componentWhen = (nodeProps.when as string) ?? '';
@@ -474,6 +477,7 @@ export function InlineToolbar(props: InlineToolbarProps) {
 
       {/* Overflow "..." button */}
       <button
+        ref={overflowButtonRef}
         type="button"
         data-testid="toolbar-overflow"
         aria-label="More properties"
