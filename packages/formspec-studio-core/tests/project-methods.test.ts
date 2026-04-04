@@ -3596,7 +3596,7 @@ describe('moveComponentNodeToContainer', () => {
     const wrapResult = project.wrapInLayoutComponent('name', 'Card');
     const containerNodeId = wrapResult.createdId!;
 
-    const result = project.moveComponentNodeToContainer({ bind: 'email' }, containerNodeId);
+    const result = project.moveComponentNodeToContainer({ bind: 'email' }, { nodeId: containerNodeId });
     expect(result.summary).toBeDefined();
     expect(result.action.helper).toBe('moveComponentNodeToContainer');
 
@@ -3614,7 +3614,7 @@ describe('moveComponentNodeToContainer', () => {
     const cardA = project.wrapInLayoutComponent('a', 'Card').createdId!;
     const cardB = project.wrapInLayoutComponent('b', 'Card').createdId!;
 
-    project.moveComponentNodeToContainer({ nodeId: cardA }, cardB);
+    project.moveComponentNodeToContainer({ nodeId: cardA }, { nodeId: cardB });
 
     const tree = (project.component as any)?.tree;
     const cardBNode = findNodeById(tree, cardB);
@@ -3627,8 +3627,24 @@ describe('moveComponentNodeToContainer', () => {
     const cardId = project.wrapInLayoutComponent('x', 'Card').createdId!;
     project.addField('y', 'Y', 'text');
 
-    const result = project.moveComponentNodeToContainer({ bind: 'y' }, cardId);
+    const result = project.moveComponentNodeToContainer({ bind: 'y' }, { nodeId: cardId });
     expect(Array.isArray(result.affectedPaths)).toBe(true);
+  });
+
+  it('moves into a container identified by bind (layout node without nodeId)', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    project.addField('email', 'Email', 'email');
+    project.core.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'Stack', bind: 'section' },
+    });
+
+    project.moveComponentNodeToContainer({ bind: 'email' }, { bind: 'section' });
+
+    const tree = (project.component as any)?.tree;
+    const section = findNodeByBind(tree, 'section');
+    expect(section?.children?.some((c: any) => c.bind === 'email')).toBe(true);
   });
 });
 
@@ -3679,6 +3695,17 @@ function findNodeById(root: any, nodeId: string): any {
   if (root.nodeId === nodeId) return root;
   for (const child of root.children ?? []) {
     const found = findNodeById(child, nodeId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** Helper: find a component tree node by definition bind key (BFS). */
+function findNodeByBind(root: any, bind: string): any {
+  if (!root) return undefined;
+  if (root.bind === bind) return root;
+  for (const child of root.children ?? []) {
+    const found = findNodeByBind(child, bind);
     if (found) return found;
   }
   return undefined;

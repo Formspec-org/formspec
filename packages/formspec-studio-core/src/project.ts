@@ -3341,16 +3341,20 @@ export class Project {
   }
 
   /** Move a component node (by bind or nodeId ref) as the last child of a target container. */
-  moveComponentNodeToContainer(ref: { bind?: string; nodeId?: string }, targetContainerId: string): HelperResult {
+  moveComponentNodeToContainer(
+    ref: { bind?: string; nodeId?: string },
+    targetParent: { bind?: string; nodeId?: string },
+  ): HelperResult {
     this.core.dispatch({
       type: 'component.moveNode',
-      payload: { source: ref, targetParent: { nodeId: targetContainerId } },
+      payload: { source: ref, targetParent },
     } as AnyCommand);
     const id = 'bind' in ref && ref.bind ? ref.bind : (ref as any).nodeId;
+    const targetKey = targetParent.nodeId ?? targetParent.bind ?? '';
     return {
-      summary: `Moved node '${id}' into container '${targetContainerId}'`,
-      action: { helper: 'moveComponentNodeToContainer', params: { ref, targetContainerId } },
-      affectedPaths: [targetContainerId],
+      summary: `Moved node '${id}' into container '${targetKey}'`,
+      action: { helper: 'moveComponentNodeToContainer', params: { ref, targetParent } },
+      affectedPaths: targetKey ? [targetKey] : [],
     };
   }
 

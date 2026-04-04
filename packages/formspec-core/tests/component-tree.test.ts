@@ -226,6 +226,29 @@ describe('component.moveNode', () => {
     expect(tree.children[1].children).toHaveLength(1);
     expect(tree.children[1].children[0].component).toBe('Stack');
   });
+
+  it('resolves target parent by bind when the container has no nodeId', () => {
+    const project = createRawProject();
+
+    project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'Stack', bind: 'groupPath' },
+    });
+
+    const field = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'TextInput', bind: 'f1' },
+    }) as any).nodeRef;
+
+    project.dispatch({
+      type: 'component.moveNode',
+      payload: { source: field, targetParent: { bind: 'groupPath' } },
+    });
+
+    const tree = project.component.tree as any;
+    const group = tree.children.find((c: any) => c.bind === 'groupPath');
+    expect(group?.children?.some((c: any) => c.bind === 'f1')).toBe(true);
+  });
 });
 
 describe('component.reorderNode', () => {

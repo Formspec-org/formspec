@@ -92,7 +92,7 @@ describe('handleSpatialDrop — spatial reorder into container at index', () => 
 });
 
 describe('handleContainerDrop — drop onto container as last child', () => {
-  it('calls project.moveComponentNodeToContainer with sourceRef and targetContainerId', () => {
+  it('calls project.moveComponentNodeToContainer with sourceRef and targetParent nodeId', () => {
     const project = makeProject();
     const moveToContainer = vi.spyOn(project, 'moveComponentNodeToContainer').mockReturnValue({
       summary: 'ok',
@@ -100,10 +100,10 @@ describe('handleContainerDrop — drop onto container as last child', () => {
       affectedPaths: [],
     });
 
-    handleContainerDrop(project, { bind: 'email' }, 'grid-container-1');
+    handleContainerDrop(project, { bind: 'email' }, { nodeId: 'grid-container-1' });
 
     expect(moveToContainer).toHaveBeenCalledOnce();
-    expect(moveToContainer).toHaveBeenCalledWith({ bind: 'email' }, 'grid-container-1');
+    expect(moveToContainer).toHaveBeenCalledWith({ bind: 'email' }, { nodeId: 'grid-container-1' });
   });
 
   it('works with nodeId ref', () => {
@@ -114,9 +114,9 @@ describe('handleContainerDrop — drop onto container as last child', () => {
       affectedPaths: [],
     });
 
-    handleContainerDrop(project, { nodeId: 'node-xyz' }, 'panel-1');
+    handleContainerDrop(project, { nodeId: 'node-xyz' }, { nodeId: 'panel-1' });
 
-    expect(moveToContainer).toHaveBeenCalledWith({ nodeId: 'node-xyz' }, 'panel-1');
+    expect(moveToContainer).toHaveBeenCalledWith({ nodeId: 'node-xyz' }, { nodeId: 'panel-1' });
   });
 });
 
@@ -196,7 +196,22 @@ describe('handleDragEnd routing — insert-slot drops', () => {
       target: { id: 'drop:node:card-1', data: { type: 'container-drop', nodeRef: { nodeId: 'card-1' } } },
     }, null, vi.fn());
 
-    expect(moveToContainer).toHaveBeenCalledWith({ bind: 'email' }, 'card-1');
+    expect(moveToContainer).toHaveBeenCalledWith({ bind: 'email' }, { nodeId: 'card-1' });
+  });
+
+  it('routes container-drop target with bind (bound layout container) to handleContainerDrop', () => {
+    const project = makeProject();
+    const moveToContainer = vi.spyOn(project, 'moveComponentNodeToContainer').mockReturnValue({
+      summary: 'ok', action: { helper: 'moveComponentNodeToContainer', params: {} }, affectedPaths: [],
+    });
+
+    handleDragEnd(project, {
+      canceled: false,
+      source: { id: 'field:email', data: { nodeRef: { bind: 'email' }, type: 'tree-node', index: 0 } },
+      target: { id: 'drop:bind:participants', data: { type: 'container-drop', nodeRef: { bind: 'participants' } } },
+    }, null, vi.fn());
+
+    expect(moveToContainer).toHaveBeenCalledWith({ bind: 'email' }, { bind: 'participants' });
   });
 
   it('skips when event is canceled', () => {

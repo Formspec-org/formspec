@@ -68,9 +68,9 @@ export function handleSpatialDrop(
 export function handleContainerDrop(
   project: Project,
   sourceRef: NodeRef,
-  targetContainerId: string,
+  targetParent: { bind?: string; nodeId?: string },
 ): void {
-  project.moveComponentNodeToContainer(sourceRef, targetContainerId);
+  project.moveComponentNodeToContainer(sourceRef, targetParent);
 }
 
 /** Normalized event shape used by handleDragEnd (pure, testable). */
@@ -120,9 +120,8 @@ export function handleDragEnd(
   // Container drop: target carries { type: 'container-drop', nodeRef } — places as last child
   if (targetData.type === 'container-drop' && targetData.nodeRef) {
     const containerRef = targetData.nodeRef as { nodeId?: string; bind?: string };
-    const containerId = containerRef.nodeId ?? (containerRef.bind as string | undefined);
-    if (containerId) {
-      handleContainerDrop(project, sourceRef, containerId);
+    if (containerRef.nodeId || containerRef.bind) {
+      handleContainerDrop(project, sourceRef, containerRef);
       return;
     }
   }
