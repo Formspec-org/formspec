@@ -10,7 +10,7 @@ function makeProps(overrides: Partial<PropertyPopoverProps> = {}): PropertyPopov
     nodeProps: {},
     isContainer: true,
     onSetProp: vi.fn(),
-    onStyleAdd: vi.fn(),
+    onSetStyle: vi.fn(),
     onStyleRemove: vi.fn(),
     onUnwrap: vi.fn(),
     onRemove: vi.fn(),
@@ -110,7 +110,7 @@ describe('PropertyPopover — style overrides', () => {
 
   it('calls onSetStyle when new style entry committed', () => {
     const onSetStyle = vi.fn();
-    render(<PropertyPopover {...makeProps({ onStyleAdd })} />);
+    render(<PropertyPopover {...makeProps({ onSetStyle })} />);
     fireEvent.click(screen.getByTestId('popover-style-add'));
     fireEvent.change(screen.getByTestId('style-new-key-input'), { target: { value: 'padding' } });
     fireEvent.change(screen.getByTestId('style-new-value-input'), { target: { value: '16px' } });

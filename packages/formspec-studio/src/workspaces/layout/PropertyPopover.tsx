@@ -102,7 +102,7 @@ export function PropertyPopover({
   nodeProps,
   isContainer,
   onSetProp,
-  onStyleAdd,
+  onSetStyle,
   onStyleRemove,
   onUnwrap,
   onRemove,

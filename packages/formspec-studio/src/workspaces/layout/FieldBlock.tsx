@@ -184,7 +184,7 @@ export function FieldBlock({
           nodeProps={resolvedNodeProps}
           isContainer={false}
           onSetProp={onSetProp!}
-          onStyleAdd={onStyleAdd ?? (() => {})}
+          onSetStyle={onSetStyle ?? (() => {})}
           onStyleRemove={onStyleRemove ?? (() => {})}
           onUnwrap={() => {}}
           onRemove={onRemove ?? (() => {})}

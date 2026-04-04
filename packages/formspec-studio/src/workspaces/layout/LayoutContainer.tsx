@@ -278,7 +278,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
           nodeProps={resolvedNodeProps}
           isContainer={true}
           onSetProp={onSetProp!}
-          onStyleAdd={onStyleAdd ?? (() => {})}
+          onSetStyle={onSetStyle ?? (() => {})}
           onStyleRemove={onStyleRemove ?? (() => {})}
           onUnwrap={onUnwrap ?? (() => {})}
           onRemove={onRemove ?? (() => {})}
