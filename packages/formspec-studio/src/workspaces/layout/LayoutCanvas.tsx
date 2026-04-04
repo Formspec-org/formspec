@@ -12,6 +12,7 @@ import {
   executeLayoutAction,
   isLayoutId,
   nodeIdFromLayoutId,
+  type CompNode,
   type LayoutContextMenuState,
 } from '@formspec-org/studio-core';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
@@ -29,19 +30,7 @@ import { ThemeOverridePopover } from './ThemeOverridePopover';
 import { FormspecPreviewHost } from '../preview/FormspecPreviewHost';
 import { useOptionalLayoutMode } from './LayoutModeContext';
 import { type LayoutMode } from './LayoutThemeToggle';
-import { setThemeOverride, clearThemeOverride, setColumnSpan } from '@formspec-org/studio-core';
-
-interface CompNode {
-  component: string;
-  bind?: string;
-  nodeId?: string;
-  title?: string;
-  syntheticPage?: boolean;
-  groupPath?: string;
-  _layout?: boolean;
-  children?: CompNode[];
-  [key: string]: unknown;
-}
+import { setThemeOverride, clearThemeOverride, setColumnSpan, setRowSpan } from '@formspec-org/studio-core';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -224,6 +213,13 @@ export function LayoutCanvas() {
     setColumnSpan(project, ref, newSpan);
   }, [project]);
 
+  const handleResizeRowSpan = useCallback((selectionKey: string, newSpan: number) => {
+    const ref = isLayoutId(selectionKey)
+      ? { nodeId: nodeIdFromLayoutId(selectionKey) }
+      : { bind: selectionKey };
+    setRowSpan(project, ref, newSpan);
+  }, [project]);
+
   const handleAddContainer = useCallback((componentName: typeof CONTAINER_PRESETS[number]) => {
     const pageIdMap = materializePagedLayout();
     const resolvedActivePageId = activePageId ? (pageIdMap.get(activePageId) ?? activePageId) : null;
@@ -373,6 +369,7 @@ export function LayoutCanvas() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <ModeSelector mode={structure.mode} onSetMode={(mode) => project.setFlow(mode)} />
+              <div className="w-px h-5 bg-border/40" />
               <LayoutThemeToggle activeMode={layoutMode} onModeChange={handleModeChange} />
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -396,21 +393,30 @@ export function LayoutCanvas() {
                   + Page
                 </button>
               )}
-              <div
-                aria-label="Add layout container"
-                className="flex flex-wrap items-center gap-2"
-              >
-                {CONTAINER_PRESETS.map((componentName) => (
-                  <button
-                    key={componentName}
-                    type="button"
-                    data-testid={`layout-add-${componentName.toLowerCase()}`}
-                    className="rounded-full border border-border/80 bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
-                    onClick={() => handleAddContainer(componentName)}
-                  >
-                    + {componentName}
-                  </button>
-                ))}
+              <div className="relative group">
+                <button
+                  type="button"
+                  data-testid="layout-add-container"
+                  aria-label="Add layout container"
+                  className="rounded-full border border-border/80 bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+                >
+                  + Add Container
+                </button>
+                <div className="absolute right-0 top-full mt-1 hidden group-hover:flex flex-col bg-surface border border-border/60 rounded shadow-lg py-1 min-w-[140px] z-50">
+                  {CONTAINER_PRESETS.map((componentName) => (
+                    <button
+                      key={componentName}
+                      type="button"
+                      data-testid={`layout-add-${componentName.toLowerCase()}`}
+                      className="px-3 py-1.5 text-[12px] text-ink hover:bg-subtle hover:text-accent transition-colors text-left"
+                      onClick={() => {
+                        handleAddContainer(componentName);
+                      }}
+                    >
+                      {componentName}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -461,6 +467,7 @@ export function LayoutCanvas() {
                 onStyleAdd: handleStyleAdd,
                 onStyleRemove: handleStyleRemove,
                 onResizeColSpan: handleResizeColSpan,
+                onResizeRowSpan: handleResizeRowSpan,
               }, '')}
 
               {visibleTreeChildren.length === 0 && (

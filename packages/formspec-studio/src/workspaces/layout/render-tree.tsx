@@ -1,30 +1,9 @@
 /** @filedesc Recursive Layout canvas renderer for authored Page sections, layout containers, and bound nodes. Passes layout context (parentContainerType, parentGridColumns) to children. */
-import type { DefLookupEntry } from '@formspec-org/studio-core';
+import type { CompNode, DefLookupEntry } from '@formspec-org/studio-core';
 import { LayoutPageSection } from './LayoutPageSection';
 import { LayoutContainer } from './LayoutContainer';
 import { FieldBlock, type LayoutContext } from './FieldBlock';
 import { DisplayBlock } from './DisplayBlock';
-
-interface CompNode {
-  component: string;
-  bind?: string;
-  nodeId?: string;
-  title?: string;
-  _layout?: boolean;
-  children?: CompNode[];
-  // Layout props (from component tree node)
-  columns?: number;
-  gap?: string;
-  direction?: string;
-  wrap?: boolean;
-  align?: string;
-  elevation?: number;
-  width?: string;
-  position?: string;
-  defaultOpen?: boolean;
-  style?: Record<string, unknown>;
-  [key: string]: unknown;
-}
 
 interface Item {
   key: string;
@@ -52,6 +31,8 @@ export interface LayoutRenderContext {
   onStyleRemove?: (selectionKey: string, key: string) => void;
   /** Resize a node's grid column span. */
   onResizeColSpan?: (selectionKey: string, newSpan: number) => void;
+  /** Resize a node's grid row span. */
+  onResizeRowSpan?: (selectionKey: string, newSpan: number) => void;
 }
 
 /** Layout context propagated from a parent container down to its children. */
@@ -80,6 +61,61 @@ function parseColSpan(gridColumn: unknown): number {
   if (typeof gridColumn !== 'string') return 1;
   const m = gridColumn.match(/span\s+(\d+)/i);
   return m ? parseInt(m[1], 10) : 1;
+}
+
+/** Parse row span from a style.gridRow value like "span 2". */
+function parseRowSpan(gridRow: unknown): number {
+  if (typeof gridRow !== 'string') return 1;
+  const m = gridRow.match(/span\s+(\d+)/i);
+  return m ? parseInt(m[1], 10) : 1;
+}
+
+/** Render a LayoutContainer with shared props. */
+function renderContainer(
+  key: React.Key,
+  node: CompNode,
+  nodeType: 'layout' | 'group',
+  selectionKey: string,
+  ctx: LayoutRenderContext,
+  children: React.ReactNode,
+  extraProps?: Partial<{
+    bind: string;
+    bindPath: string;
+    nodeId: string;
+  }>,
+) {
+  return (
+    <LayoutContainer
+      key={key}
+      component={node.component}
+      nodeType={nodeType}
+      bind={extraProps?.bind}
+      bindPath={extraProps?.bindPath}
+      nodeId={extraProps?.nodeId}
+      selectionKey={selectionKey}
+      selected={ctx.selectedKey === selectionKey}
+      onSelect={() => ctx.onSelect(selectionKey, nodeType === 'layout' ? 'layout' : 'group')}
+      columns={node.columns}
+      gap={node.gap}
+      direction={node.direction}
+      wrap={node.wrap}
+      align={node.align}
+      elevation={node.elevation}
+      width={node.width}
+      position={node.position}
+      title={node.title}
+      defaultOpen={node.defaultOpen}
+      nodeStyle={node.style}
+      nodeProps={node as Record<string, unknown>}
+      onSetProp={ctx.onSetNodeProp ? (k, v) => ctx.onSetNodeProp!(selectionKey, k, v) : undefined}
+      onSetStyle={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(selectionKey, k, v) : undefined}
+      onUnwrap={ctx.onUnwrapNode ? () => ctx.onUnwrapNode!(selectionKey) : undefined}
+      onRemove={ctx.onRemoveNode ? () => ctx.onRemoveNode!(selectionKey) : undefined}
+      onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(selectionKey, k) : undefined}
+    >
+      {children}
+    </LayoutContainer>
+  );
 }
 
 export function renderLayoutTree(
@@ -119,6 +155,7 @@ export function renderLayoutTree(
             parentContainerType: parentCtx.parentContainerType,
             parentGridColumns: parentCtx.parentGridColumns,
             currentColSpan: parseColSpan(node.style?.gridColumn),
+            currentRowSpan: parseRowSpan(node.style?.gridRow),
           }
         : undefined;
       const nodeSelKey = `__node:${node.nodeId!}`;
@@ -134,6 +171,7 @@ export function renderLayoutTree(
           layoutContext={displayLayoutCtx}
           nodeStyle={node.style as Record<string, unknown> | undefined}
           onResizeColSpan={ctx.onResizeColSpan ? (n) => ctx.onResizeColSpan!(nodeSelKey, n) : undefined}
+          onResizeRowSpan={ctx.onResizeRowSpan ? (n) => ctx.onResizeRowSpan!(nodeSelKey, n) : undefined}
         />,
       );
       continue;
@@ -151,34 +189,7 @@ export function renderLayoutTree(
         : null;
       const nodeSelKey = `__node:${node.nodeId!}`;
       result.push(
-        <LayoutContainer
-          key={`node:${node.nodeId}`}
-          component={node.component}
-          nodeType="layout"
-          nodeId={node.nodeId!}
-          selectionKey={nodeSelKey}
-          selected={ctx.selectedKey === nodeSelKey}
-          onSelect={() => ctx.onSelect(nodeSelKey, 'layout')}
-          columns={node.columns}
-          gap={node.gap}
-          direction={node.direction}
-          wrap={node.wrap}
-          align={node.align}
-          elevation={node.elevation}
-          width={node.width}
-          position={node.position}
-          title={node.title}
-          defaultOpen={node.defaultOpen}
-          nodeStyle={node.style}
-          nodeProps={node as Record<string, unknown>}
-          onSetProp={ctx.onSetNodeProp ? (k, v) => ctx.onSetNodeProp!(nodeSelKey, k, v) : undefined}
-          onSetStyle={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(nodeSelKey, k, v) : undefined}
-          onUnwrap={ctx.onUnwrapNode ? () => ctx.onUnwrapNode!(nodeSelKey) : undefined}
-          onRemove={ctx.onRemoveNode ? () => ctx.onRemoveNode!(nodeSelKey) : undefined}
-          onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(nodeSelKey, k) : undefined}
-        >
-          {children}
-        </LayoutContainer>,
+        renderContainer(`node:${node.nodeId}`, node, 'layout', nodeSelKey, ctx, children, { nodeId: node.nodeId! }),
       );
       continue;
     }
@@ -201,35 +212,10 @@ export function renderLayoutTree(
           : null;
         const groupSelKey = defPath;
         result.push(
-          <LayoutContainer
-            key={defPath}
-            component={node.component}
-            nodeType="group"
-            bind={item.key}
-            bindPath={defPath}
-            selectionKey={groupSelKey}
-            selected={ctx.selectedKey === groupSelKey}
-            onSelect={() => ctx.onSelect(groupSelKey, 'group')}
-            columns={node.columns as number | undefined}
-            gap={node.gap as string | undefined}
-            direction={node.direction as string | undefined}
-            wrap={node.wrap as boolean | undefined}
-            align={node.align as string | undefined}
-            elevation={node.elevation as number | undefined}
-            width={node.width as string | undefined}
-            position={node.position as string | undefined}
-            title={node.title as string | undefined}
-            defaultOpen={node.defaultOpen as boolean | undefined}
-            nodeStyle={node.style as Record<string, unknown> | undefined}
-            nodeProps={node as Record<string, unknown>}
-            onSetProp={ctx.onSetNodeProp ? (k, v) => ctx.onSetNodeProp!(groupSelKey, k, v) : undefined}
-            onSetStyle={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(groupSelKey, k, v) : undefined}
-            onUnwrap={ctx.onUnwrapNode ? () => ctx.onUnwrapNode!(groupSelKey) : undefined}
-            onRemove={ctx.onRemoveNode ? () => ctx.onRemoveNode!(groupSelKey) : undefined}
-            onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(groupSelKey, k) : undefined}
-          >
-            {children}
-          </LayoutContainer>,
+          renderContainer(defPath, node, 'group', groupSelKey, ctx, children, {
+            bind: item.key,
+            bindPath: defPath,
+          }),
         );
         continue;
       }
@@ -239,6 +225,7 @@ export function renderLayoutTree(
             parentContainerType: parentCtx.parentContainerType,
             parentGridColumns: parentCtx.parentGridColumns,
             currentColSpan: parseColSpan(node.style?.gridColumn),
+            currentRowSpan: parseRowSpan(node.style?.gridRow),
           }
         : undefined;
 
@@ -258,6 +245,8 @@ export function renderLayoutTree(
           nodeProps={node as Record<string, unknown>}
           onSetProp={ctx.onSetNodeProp ? (k, v) => ctx.onSetNodeProp!(defPath, k, v) : undefined}
           onSetStyle={ctx.onStyleAdd ? (k, v) => ctx.onStyleAdd!(defPath, k, v) : undefined}
+          onResizeColSpan={ctx.onResizeColSpan ? (n) => ctx.onResizeColSpan!(defPath, n) : undefined}
+          onResizeRowSpan={ctx.onResizeRowSpan ? (n) => ctx.onResizeRowSpan!(defPath, n) : undefined}
           onRemove={ctx.onRemoveNode ? () => ctx.onRemoveNode!(defPath) : undefined}
           onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(defPath, k) : undefined}
         />,
@@ -277,6 +266,7 @@ export function renderLayoutTree(
             parentContainerType: parentCtx.parentContainerType,
             parentGridColumns: parentCtx.parentGridColumns,
             currentColSpan: parseColSpan(node.style?.gridColumn),
+            currentRowSpan: parseRowSpan(node.style?.gridRow),
           }
         : undefined;
       const displaySelKey = defPath || node.nodeId;
@@ -292,6 +282,7 @@ export function renderLayoutTree(
           layoutContext={displayLayoutCtx2}
           nodeStyle={node.style as Record<string, unknown> | undefined}
           onResizeColSpan={ctx.onResizeColSpan ? (n) => ctx.onResizeColSpan!(displaySelKey, n) : undefined}
+          onResizeRowSpan={ctx.onResizeRowSpan ? (n) => ctx.onResizeRowSpan!(displaySelKey, n) : undefined}
         />,
       );
     }

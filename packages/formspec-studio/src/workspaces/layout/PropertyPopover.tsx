@@ -1,6 +1,8 @@
 /** @filedesc Overflow popover for Tier 3 layout properties (accessibility, style overrides, CSS class) with dirty guard. */
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
+import { DirtyGuardConfirm } from './DirtyGuardConfirm';
+import { useOptionalLayoutMode } from './LayoutModeContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -11,43 +13,14 @@ export interface PropertyPopoverProps {
   nodeProps: Record<string, unknown>;
   /** Whether this is a container node (shows Unwrap action). */
   isContainer: boolean;
+  /** Item key for theme mode navigation (optional, enables "Theme properties →" link). */
+  itemKey?: string;
   onSetProp: (key: string, value: unknown) => void;
   onSetStyle: (key: string, value: string) => void;
   onStyleRemove: (key: string) => void;
   onUnwrap: () => void;
   onRemove: () => void;
   onClose: () => void;
-}
-
-// ── DirtyGuard confirm dialog ─────────────────────────────────────────────
-
-function DirtyGuardConfirm({ onDiscard, onCancel }: { onDiscard: () => void; onCancel: () => void }) {
-  return (
-    <div
-      data-testid="dirty-guard-confirm"
-      className="absolute inset-x-0 bottom-0 rounded-b border-t border-border bg-surface p-3 shadow-lg"
-    >
-      <p className="text-[12px] font-ui text-ink mb-2">Discard unsaved changes?</p>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          data-testid="dirty-guard-discard"
-          onClick={onDiscard}
-          className="rounded-full border border-error bg-surface px-3 py-1 text-[12px] font-semibold text-error hover:bg-error/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/70"
-        >
-          Discard
-        </button>
-        <button
-          type="button"
-          data-testid="dirty-guard-cancel"
-          onClick={onCancel}
-          className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
-        >
-          Keep editing
-        </button>
-      </div>
-    </div>
-  );
 }
 
 // ── Blur-to-commit text input ─────────────────────────────────────────────
@@ -101,6 +74,7 @@ export function PropertyPopover({
   anchorRef,
   nodeProps,
   isContainer,
+  itemKey,
   onSetProp,
   onSetStyle,
   onStyleRemove,
@@ -108,6 +82,7 @@ export function PropertyPopover({
   onRemove,
   onClose,
 }: PropertyPopoverProps) {
+  const layoutMode = useOptionalLayoutMode();
   const [dirtyInputs, setDirtyInputs] = useState<Set<string>>(new Set());
   const [showDirtyGuard, setShowDirtyGuard] = useState(false);
   const [addingStyle, setAddingStyle] = useState(false);
@@ -315,6 +290,20 @@ export function PropertyPopover({
         <section>
           <p className="text-[10px] font-mono text-muted uppercase tracking-wider mb-1.5">Actions</p>
           <div className="flex flex-wrap gap-2">
+            {itemKey && layoutMode && (
+              <button
+                type="button"
+                data-testid="popover-theme-properties"
+                onClick={() => {
+                  layoutMode.setLayoutMode('theme');
+                  layoutMode.setThemeSelectedKey(itemKey);
+                  onClose();
+                }}
+                className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+              >
+                Theme properties →
+              </button>
+            )}
             {isContainer && (
               <button
                 type="button"

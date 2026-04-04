@@ -3,20 +3,13 @@ import { useMemo } from 'react';
 import type { FormItem } from '@formspec-org/types';
 import {
   computeUnassignedItems,
+  type CompNode,
   type UnassignedItem,
 } from '@formspec-org/studio-core';
 
-interface CompNode {
-  component: string;
-  bind?: string;
-  nodeId?: string;
-  children?: CompNode[];
-  [key: string]: unknown;
-}
-
 interface UnassignedTrayProps {
   items: FormItem[];
-  treeChildren: CompNode[];
+  treeChildren: Pick<CompNode, 'component' | 'bind' | 'nodeId' | 'children'>[];
   activePageId?: string | null;
   onPlaceItem?: (item: UnassignedItem) => void;
 }

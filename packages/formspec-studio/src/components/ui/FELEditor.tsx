@@ -38,6 +38,8 @@ interface FELEditorProps {
   autoFocus?: boolean;
   /** Type of expression being edited — determines if rendering-only callout should appear. */
   expressionType?: 'when' | 'calculate' | 'default';
+  /** For 'when' expressions: the item key being configured, to enable Editor navigation. */
+  itemKey?: string;
 }
 
 type AutocompleteOption =
@@ -45,13 +47,25 @@ type AutocompleteOption =
   | { kind: 'path'; path: string; label: string; dataType?: string }
   | { kind: 'function'; name: string; label: string; signature?: string; description?: string; category?: string };
 
-export function FELEditor({ value, onSave, onCancel, placeholder, className, autoFocus, expressionType }: FELEditorProps) {
+export function FELEditor({ value, onSave, onCancel, placeholder, className, autoFocus, expressionType, itemKey }: FELEditorProps) {
   const definition = useOptionalDefinition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState(value);
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
   const [autocomplete, setAutocomplete] = useState<FELAutocompleteTrigger | null>(null);
   const [autocompleteKind, setAutocompleteKind] = useState<'path' | 'function' | 'instanceName' | null>(null);
+
+  function navigateToEditor() {
+    if (itemKey) {
+      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
+        detail: {
+          tab: 'Editor',
+          view: 'bindings',
+          section: itemKey,
+        },
+      }));
+    }
+  }
 
   // Sync draft with value when not editing
   useEffect(() => {
@@ -308,9 +322,21 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
         {expressionType === 'when' && (
           <div
             data-testid="when-rendering-callout"
-            className="mb-2 px-2 py-1.5 bg-info/10 border border-info/20 rounded-[4px] text-[11px] text-info"
+            className="mb-2 px-2 py-1.5 bg-info/10 border border-info/20 rounded-[4px] text-[11px] text-info flex items-start justify-between gap-2"
           >
-            <strong>Rendering visibility only.</strong> This condition controls whether the field is shown. Use the <strong>"relevant"</strong> binding in the Editor workspace to include/exclude data.
+            <div>
+              <strong>Rendering visibility only.</strong> This condition controls whether the field is shown. Use the <strong>"relevant"</strong> binding in the Editor workspace to include/exclude data.
+            </div>
+            {itemKey && (
+              <button
+                type="button"
+                data-testid="when-configure-in-editor"
+                onClick={navigateToEditor}
+                className="shrink-0 ml-2 font-semibold text-info hover:text-info/80 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-info/50 whitespace-nowrap"
+              >
+                Configure in Editor →
+              </button>
+            )}
           </div>
         )}
         <div className="relative">

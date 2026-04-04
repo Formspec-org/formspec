@@ -2,6 +2,45 @@
 import type { HelperResult } from './helper-types.js';
 import type { Project } from './project.js';
 
+/** Canonical CompNode type for layout tree traversal and rendering. */
+export interface CompNode {
+  component: string;
+  bind?: string;
+  nodeId?: string;
+  title?: string;
+  syntheticPage?: boolean;
+  groupPath?: string;
+  _layout?: boolean;
+  children?: CompNode[];
+  // Layout props (from component tree node)
+  columns?: number;
+  gap?: string;
+  direction?: string;
+  wrap?: boolean;
+  align?: string;
+  elevation?: number;
+  width?: string;
+  position?: string;
+  defaultOpen?: boolean;
+  style?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** Layout-specific properties extracted from LayoutContainerProps. */
+export interface ContainerLayoutProps {
+  columns?: number;
+  gap?: string;
+  direction?: string;
+  wrap?: boolean;
+  align?: string;
+  elevation?: number;
+  width?: string;
+  position?: string;
+  title?: string;
+  defaultOpen?: boolean;
+  nodeStyle?: Record<string, unknown>;
+}
+
 /** A node reference — either a nodeId or a bind key, matching component.setNodeStyle's NodeRef. */
 export interface NodeRef {
   nodeId?: string;
@@ -16,6 +55,34 @@ export interface PropertySource {
   sourceDetail?: string;
   /** The value at this cascade level. */
   value: unknown;
+}
+
+/** Type-aware theme property descriptor returned by getEditableThemeProperties. */
+export interface EditableThemeProperty {
+  /** Property name (e.g. 'labelPosition', 'widget'). */
+  prop: string;
+  /** Property type: enum has fixed valid values, string is free text, object is complex. */
+  type: 'enum' | 'string' | 'object';
+  /** Valid enum values (only when type === 'enum'). */
+  options?: string[];
+}
+
+// ── Tier 3 content detection ────────────────────────────────────────────
+
+/**
+ * Check if a component node has any Tier 3 (presentation) properties set.
+ * Used to show a dot indicator on overflow buttons when the node has custom styles,
+ * accessibility info, or CSS classes.
+ */
+export function hasTier3Content(nodeProps: Record<string, unknown> | undefined): boolean {
+  if (!nodeProps) return false;
+  const accessibility = nodeProps.accessibility as Record<string, unknown> | undefined;
+  return !!(
+    accessibility?.description ||
+    accessibility?.role ||
+    nodeProps.cssClass ||
+    Object.keys((nodeProps.style as Record<string, unknown>) ?? {}).length > 0
+  );
 }
 
 // ── Style helpers (Tier 3 — Component node style) ────────────────────
@@ -114,26 +181,153 @@ export function getPropertySources(
   return sources;
 }
 
-/** Fixed list of PresentationBlock properties available for per-item theme override. */
-const EDITABLE_THEME_PROPERTIES: string[] = [
-  'labelPosition',
-  'widget',
-  'widgetConfig',
-  'style',
-  'cssClass',
-  'accessibility',
-  'fallback',
-];
+// ── Type-aware theme property definitions ───────────────────────────────────
 
 /**
- * Returns the list of PresentationBlock property names that can be overridden
- * on a per-item basis in the Theme cascade.
+ * Display components (Heading, Text, Divider, Alert, Badge, etc.)
+ * that do not have a label and should not show labelPosition.
+ */
+const DISPLAY_COMPONENTS = new Set([
+  'Heading',
+  'Text',
+  'Divider',
+  'Alert',
+  'Badge',
+  'Summary',
+  'Message',
+]);
+
+/**
+ * Group/layout components (Stack, Grid, Card, Panel, etc.)
+ * that do not have a label themselves.
+ */
+const GROUP_COMPONENTS = new Set([
+  'Stack',
+  'Grid',
+  'Flex',
+  'Card',
+  'Panel',
+  'Collapsible',
+  'Accordion',
+  'Tab',
+  'Tabs',
+  'Section',
+]);
+
+/**
+ * Valid enum values for theme properties.
+ */
+const LABEL_POSITION_ENUM = ['top', 'start', 'hidden'];
+
+/**
+ * Returns type-aware theme properties that can be overridden for a given item.
+ * Properties returned vary by component type:
+ * - Display components: no labelPosition, widget, or fallback
+ * - Group components: no labelPosition or fallback
+ * - Input components: all properties available
+ * - Other: all properties available
  */
 export function getEditableThemeProperties(
-  _project: Project,
-  _itemKey: string,
-): string[] {
-  return EDITABLE_THEME_PROPERTIES;
+  project: Project,
+  itemKey: string,
+): EditableThemeProperty[] {
+  // Determine the component type and item type
+  const definition = project.state.definition;
+  const core = definition.core ?? {};
+  const items = (core.items ?? []) as Array<{
+    key?: string;
+    type?: string;
+    dataType?: string;
+  }>;
+  const item = items.find((i) => i.key === itemKey);
+  const itemType = item?.type ?? 'field';
+
+  // Look up the component that renders this item
+  let component = '';
+  if (itemType === 'field' && item?.key) {
+    // For fields, find the component in the layout's render tree
+    const layout = definition.layout ?? {};
+    const findComponent = (node: unknown): string => {
+      if (typeof node !== 'object' || node === null) return '';
+      const n = node as Record<string, unknown>;
+      // Check if this is a field binding
+      if (n.bind === itemKey && typeof n.component === 'string') {
+        return n.component;
+      }
+      // Recurse into children
+      const children = n.children as unknown[];
+      if (Array.isArray(children)) {
+        for (const child of children) {
+          const found = findComponent(child);
+          if (found) return found;
+        }
+      }
+      return '';
+    };
+    if (typeof layout === 'object' && layout !== null) {
+      component = findComponent(layout);
+    }
+    // If no component found yet, assume TextInput as a safe default
+    if (!component) {
+      component = 'TextInput';
+    }
+  }
+
+  const isDisplayComponent = DISPLAY_COMPONENTS.has(component);
+  const isGroupComponent = GROUP_COMPONENTS.has(component);
+
+  const props: EditableThemeProperty[] = [];
+
+  // labelPosition: only for input components (not display or groups)
+  if (!isDisplayComponent && !isGroupComponent) {
+    props.push({
+      prop: 'labelPosition',
+      type: 'enum',
+      options: LABEL_POSITION_ENUM,
+    });
+  }
+
+  // widget: all components except layout-only groups
+  if (!isGroupComponent || itemType === 'field' || itemType === 'display') {
+    props.push({
+      prop: 'widget',
+      type: 'string', // widget values are flexible/extensible, not a fixed enum
+    });
+  }
+
+  // widgetConfig: all components
+  props.push({
+    prop: 'widgetConfig',
+    type: 'object',
+  });
+
+  // style: all components
+  props.push({
+    prop: 'style',
+    type: 'object',
+  });
+
+  // cssClass: all components
+  props.push({
+    prop: 'cssClass',
+    type: 'string',
+  });
+
+  // accessibility: all components
+  props.push({
+    prop: 'accessibility',
+    type: 'object',
+  });
+
+  // fallback: only for input components (not display or groups)
+  if (!isDisplayComponent && !isGroupComponent) {
+    props.push({
+      prop: 'fallback',
+      type: 'string',
+    });
+  }
+
+  return props;
 }
 
 /**

@@ -1,5 +1,5 @@
 /** @filedesc Compact inline property toolbar rendered inside layout container and field block headers. */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { compatibleWidgets } from '@formspec-org/studio-core';
 import { InlineExpression } from '../../components/ui/InlineExpression';
 import type { LayoutContext } from './FieldBlock';
@@ -260,17 +260,17 @@ function CardControls({ nodeProps, onSetProp, onSetStyle }: { nodeProps: Record<
   const padding = ((nodeProps.style as Record<string, unknown> | undefined)?.padding as string) ?? '';
   return (
     <>
-      {([0, 1, 2, 3] as const).map((level) => (
-        <ToolbarIconBtn
-          key={level}
-          testId={`toolbar-elevation-${level}`}
-          ariaLabel={`Elevation ${level}`}
-          active={elevation === level}
-          onClick={() => onSetProp('elevation', level)}
-        >
-          {level}
-        </ToolbarIconBtn>
-      ))}
+      <Stepper
+        decTestId="toolbar-elevation-dec"
+        incTestId="toolbar-elevation-inc"
+        valueTestId="toolbar-elevation-value"
+        value={elevation}
+        min={0}
+        max={3}
+        ariaLabel="elevation"
+        onDecrement={() => onSetProp('elevation', elevation - 1)}
+        onIncrement={() => onSetProp('elevation', elevation + 1)}
+      />
       <ToolbarSelect
         testId="toolbar-padding"
         value={padding}
@@ -426,73 +426,180 @@ export function InlineToolbar(props: InlineToolbarProps) {
   } = props;
 
   const componentWhen = (nodeProps.when as string) ?? '';
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarWidth, setToolbarWidth] = useState(0);
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(() => {
+      if (toolbarRef.current) {
+        setToolbarWidth(toolbarRef.current.offsetWidth);
+      }
+    });
+    if (toolbarRef.current) {
+      resizeObserver.observe(toolbarRef.current);
+    }
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // Stop click propagation on the whole toolbar so it doesn't trigger parent selection
   function stopProp(e: React.MouseEvent) {
     e.stopPropagation();
   }
 
+  // Determine responsive mode based on container width
+  const isCollapsed = toolbarWidth < 180;
+  const isCompact = toolbarWidth < 300 && toolbarWidth >= 180;
+
+  // Widget badge indicator for collapsed mode
+  const componentBadge = component.slice(0, 3).toUpperCase();
+
   return (
     <div
+      ref={toolbarRef}
       className="flex items-center gap-1 flex-1 min-w-0"
       onClick={stopProp}
     >
-      {/* Per-type controls */}
-      {component === 'Grid' && (
-        <GridControls nodeProps={nodeProps} onSetProp={onSetProp} onSetStyle={onSetStyle} />
-      )}
-      {component === 'Stack' && (
-        <StackControls nodeProps={nodeProps} onSetProp={onSetProp} />
-      )}
-      {component === 'Card' && (
-        <CardControls nodeProps={nodeProps} onSetProp={onSetProp} onSetStyle={onSetStyle} />
-      )}
-      {component === 'Panel' && (
-        <PanelControls nodeProps={nodeProps} onSetProp={onSetProp} />
-      )}
-      {(component === 'Collapsible' || component === 'Accordion') && (
-        <CollapsibleControls nodeProps={nodeProps} onSetProp={onSetProp} />
-      )}
-      {/* Field-type controls (widget dropdown + span stepper) */}
-      {itemType === 'field' && (
-        <FieldControls
-          nodeProps={nodeProps}
-          itemType={itemType}
-          itemDataType={itemDataType}
-          layoutContext={layoutContext}
-          onSetProp={onSetProp}
-          onSetStyle={onSetStyle}
-        />
-      )}
+      {isCollapsed ? (
+        <>
+          {/* Collapsed: show type badge + [...] only */}
+          <span className="inline-flex h-6 px-1.5 items-center justify-center rounded border border-border bg-subtle text-[10px] font-mono font-bold text-ink flex-shrink-0">
+            {componentBadge}
+          </span>
+          <button
+            ref={overflowButtonRef}
+            type="button"
+            data-testid="toolbar-overflow"
+            aria-label="More properties"
+            onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
+            className="relative ml-auto inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-[11px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+          >
+            ...
+            {hasPopoverContent && (
+              <span
+                data-testid="toolbar-overflow-dot"
+                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
+                aria-hidden="true"
+              />
+            )}
+          </button>
+        </>
+      ) : isCompact ? (
+        <>
+          {/* Compact: show 1-2 critical controls + icon-only condition chip + [...] */}
+          {component === 'Grid' && (
+            <Stepper
+              decTestId="toolbar-columns-dec"
+              incTestId="toolbar-columns-inc"
+              valueTestId="toolbar-columns-value"
+              value={(nodeProps.columns as number) ?? 2}
+              min={1}
+              max={12}
+              ariaLabel="columns"
+              onDecrement={() => onSetProp('columns', ((nodeProps.columns as number) ?? 2) - 1)}
+              onIncrement={() => onSetProp('columns', ((nodeProps.columns as number) ?? 2) + 1)}
+            />
+          )}
+          {component === 'Stack' && (
+            <ToolbarIconBtn
+              testId="toolbar-direction-row"
+              ariaLabel="Direction: row"
+              active={(nodeProps.direction as string) === 'row'}
+              onClick={() => onSetProp('direction', 'row')}
+            >
+              →
+            </ToolbarIconBtn>
+          )}
+          {component === 'Card' && (
+            <span className="text-[11px] text-muted">E:</span>
+          )}
 
-      {/* Visual condition chip — all types */}
-      <span data-testid="toolbar-condition-chip" className="flex items-center">
-        <InlineExpression
-          value={componentWhen}
-          onSave={(val) => onSetProp('when', val)}
-          placeholder="Always visible"
-          expressionType="when"
-        />
-      </span>
+          {/* Icon-only condition chip for compact mode */}
+          {componentWhen && (
+            <span
+              data-testid="toolbar-condition-chip-compact"
+              className="inline-flex h-6 px-1 items-center justify-center rounded border border-border/60 bg-subtle text-[10px] cursor-pointer hover:bg-subtle/80 transition-colors flex-shrink-0"
+              title={componentWhen}
+            >
+              ⚙
+            </span>
+          )}
 
-      {/* Overflow "..." button */}
-      <button
-        ref={overflowButtonRef}
-        type="button"
-        data-testid="toolbar-overflow"
-        aria-label="More properties"
-        onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
-        className="relative inline-flex h-6 w-6 items-center justify-center rounded border border-border bg-surface text-[11px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
-      >
-        ...
-        {hasPopoverContent && (
-          <span
-            data-testid="toolbar-overflow-dot"
-            className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
-            aria-hidden="true"
-          />
-        )}
-      </button>
+          <button
+            ref={overflowButtonRef}
+            type="button"
+            data-testid="toolbar-overflow"
+            aria-label="More properties"
+            onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
+            className="relative ml-auto inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-[11px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+          >
+            ...
+            {hasPopoverContent && (
+              <span
+                data-testid="toolbar-overflow-dot"
+                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
+                aria-hidden="true"
+              />
+            )}
+          </button>
+        </>
+      ) : (
+        <>
+          {/* Full: all controls */}
+          {component === 'Grid' && (
+            <GridControls nodeProps={nodeProps} onSetProp={onSetProp} onSetStyle={onSetStyle} />
+          )}
+          {component === 'Stack' && (
+            <StackControls nodeProps={nodeProps} onSetProp={onSetProp} />
+          )}
+          {component === 'Card' && (
+            <CardControls nodeProps={nodeProps} onSetProp={onSetProp} onSetStyle={onSetStyle} />
+          )}
+          {component === 'Panel' && (
+            <PanelControls nodeProps={nodeProps} onSetProp={onSetProp} />
+          )}
+          {(component === 'Collapsible' || component === 'Accordion') && (
+            <CollapsibleControls nodeProps={nodeProps} onSetProp={onSetProp} />
+          )}
+          {itemType === 'field' && (
+            <FieldControls
+              nodeProps={nodeProps}
+              itemType={itemType}
+              itemDataType={itemDataType}
+              layoutContext={layoutContext}
+              onSetProp={onSetProp}
+              onSetStyle={onSetStyle}
+            />
+          )}
+
+          {/* Full condition chip */}
+          <span data-testid="toolbar-condition-chip" className="flex items-center">
+            <InlineExpression
+              value={componentWhen}
+              onSave={(val) => onSetProp('when', val)}
+              placeholder="Always shown (rendering only)"
+              expressionType="when"
+            />
+          </span>
+
+          <button
+            ref={overflowButtonRef}
+            type="button"
+            data-testid="toolbar-overflow"
+            aria-label="More properties"
+            onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
+            className="relative inline-flex h-6 w-6 items-center justify-center rounded border border-border bg-surface text-[11px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+          >
+            ...
+            {hasPopoverContent && (
+              <span
+                data-testid="toolbar-overflow-dot"
+                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
+                aria-hidden="true"
+              />
+            )}
+          </button>
+        </>
+      )}
     </div>
   );
 }

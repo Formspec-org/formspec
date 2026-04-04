@@ -1,6 +1,7 @@
 /** @filedesc Layout canvas block for bound field items — shows label and data type, supports drag reordering, column span resize, and inline toolbar. */
 import { useRef, useState } from 'react';
 import { useDraggable } from '@dnd-kit/react';
+import { hasTier3Content } from '@formspec-org/studio-core';
 import { useResizeHandle } from './useResizeHandle';
 import { InlineToolbar } from './InlineToolbar';
 import { PropertyPopover } from './PropertyPopover';
@@ -13,6 +14,8 @@ export interface LayoutContext {
   parentGridColumns: number;
   /** Current column span of this field (used to determine if right-edge handle should be shown). */
   currentColSpan: number;
+  /** Current row span of this field (used by row span resize handle). */
+  currentRowSpan?: number;
 }
 
 interface FieldBlockProps {
@@ -32,6 +35,8 @@ interface FieldBlockProps {
   nodeStyle?: Record<string, unknown>;
   /** Called when the user drag-resizes the column span. */
   onResizeColSpan?: (newSpan: number) => void;
+  /** Called when the user drag-resizes the row span. */
+  onResizeRowSpan?: (newSpan: number) => void;
   /**
    * Full raw node props for the field's component node — used by InlineToolbar.
    * When provided with onSetProp, enables the inline toolbar.
@@ -61,6 +66,7 @@ export function FieldBlock({
   layoutContext,
   nodeStyle,
   onResizeColSpan,
+  onResizeRowSpan,
   nodeProps,
   onSetProp,
   onSetStyle,
@@ -84,9 +90,10 @@ export function FieldBlock({
 
   const showColHandle = isInGrid && !spansAllColumns;
   const currentColSpan = layoutContext?.currentColSpan ?? 1;
+  const currentRowSpan = layoutContext?.currentRowSpan ?? 1;
   const parentGridColumns = layoutContext?.parentGridColumns ?? 1;
 
-  // pixelsPerUnit: width of one column span, measured from the element at drag start.
+  // Column span resize
   const pixelsPerUnitRef = useRef<number | undefined>(undefined);
   const [dragSpan, setDragSpan] = useState(currentColSpan);
 
@@ -106,7 +113,30 @@ export function FieldBlock({
     if (el && currentColSpan > 0) {
       pixelsPerUnitRef.current = el.offsetWidth / currentColSpan;
     }
-    handleProps.onPointerDown(e as unknown as React.PointerEvent);
+    handleProps.onPointerDown(e);
+  };
+
+  // Row span resize
+  const pixelsPerUnitRowRef = useRef<number | undefined>(undefined);
+  const [dragRowSpan, setDragRowSpan] = useState(currentRowSpan);
+
+  const { handleProps: rowHandleProps, isDragging: isResizingRow } = useResizeHandle({
+    axis: 'y',
+    min: 1,
+    max: 12,
+    snap: 1,
+    initialValue: currentRowSpan,
+    pixelsPerUnit: pixelsPerUnitRowRef.current,
+    onDrag: (newSpan) => setDragRowSpan(newSpan),
+    onCommit: (newSpan) => onResizeRowSpan?.(newSpan),
+  });
+
+  const onRowHandlePointerDown = (e: React.PointerEvent<HTMLSpanElement>) => {
+    const el = buttonRef.current;
+    if (el && currentRowSpan > 0) {
+      pixelsPerUnitRowRef.current = el.offsetHeight / currentRowSpan;
+    }
+    rowHandleProps.onPointerDown(e);
   };
 
   // Apply gridColumn style only when inside a grid container
@@ -119,12 +149,7 @@ export function FieldBlock({
   const resolvedNodeProps = nodeProps ?? {};
 
   // Determine dot indicator for overflow button
-  const hasPopoverContent = !!(
-    (resolvedNodeProps.accessibility as Record<string, unknown> | undefined)?.description ||
-    (resolvedNodeProps.accessibility as Record<string, unknown> | undefined)?.role ||
-    resolvedNodeProps.cssClass ||
-    Object.keys((resolvedNodeProps.style as Record<string, unknown>) ?? {}).length > 0
-  );
+  const hasPopoverContent = hasTier3Content(resolvedNodeProps);
 
   const showToolbar = selected && !!onSetProp;
 
@@ -183,6 +208,7 @@ export function FieldBlock({
           anchorRef={overflowButtonRef}
           nodeProps={resolvedNodeProps}
           isContainer={false}
+          itemKey={itemKey}
           onSetProp={onSetProp!}
           onSetStyle={onSetStyle ?? (() => {})}
           onStyleRemove={onStyleRemove ?? (() => {})}
@@ -192,17 +218,54 @@ export function FieldBlock({
         />
       )}
 
-      {/* Right-edge column-span resize handle */}
+      {/* Right-edge column-span resize handle with touch zone */}
       {showColHandle && (
-        <span
-          data-testid="resize-handle-col"
-          aria-hidden="true"
-          className="absolute inset-y-0 right-0 w-2 cursor-col-resize hover:bg-accent/30 rounded-r"
-          onPointerDown={onHandlePointerDown}
-          onPointerMove={handleProps.onPointerMove}
-          onPointerUp={handleProps.onPointerUp}
-          onPointerCancel={handleProps.onPointerCancel}
-        />
+        <>
+          {/* Visible handle */}
+          <span
+            data-testid="resize-handle-col"
+            aria-hidden="true"
+            className="absolute inset-y-0 right-0 w-2 cursor-col-resize hover:bg-accent/30 rounded-r"
+            onPointerMove={handleProps.onPointerMove}
+            onPointerUp={handleProps.onPointerUp}
+            onPointerCancel={handleProps.onPointerCancel}
+          />
+          {/* Invisible 24px touch zone */}
+          <span
+            data-testid="resize-handle-col-touch-zone"
+            aria-hidden="true"
+            className="absolute inset-y-0 -right-2 w-6 cursor-col-resize"
+            onPointerDown={onHandlePointerDown}
+            onPointerMove={handleProps.onPointerMove}
+            onPointerUp={handleProps.onPointerUp}
+            onPointerCancel={handleProps.onPointerCancel}
+          />
+        </>
+      )}
+
+      {/* Bottom-edge row-span resize handle with touch zone */}
+      {isInGrid && (
+        <>
+          {/* Visible handle */}
+          <span
+            data-testid="resize-handle-row"
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-2 cursor-row-resize hover:bg-accent/30 rounded-b"
+            onPointerMove={rowHandleProps.onPointerMove}
+            onPointerUp={rowHandleProps.onPointerUp}
+            onPointerCancel={rowHandleProps.onPointerCancel}
+          />
+          {/* Invisible 24px touch zone */}
+          <span
+            data-testid="resize-handle-row-touch-zone"
+            aria-hidden="true"
+            className="absolute inset-x-0 -bottom-2 h-6 cursor-row-resize"
+            onPointerDown={onRowHandlePointerDown}
+            onPointerMove={rowHandleProps.onPointerMove}
+            onPointerUp={rowHandleProps.onPointerUp}
+            onPointerCancel={rowHandleProps.onPointerCancel}
+          />
+        </>
       )}
     </div>
   );

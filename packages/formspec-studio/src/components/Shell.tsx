@@ -144,6 +144,7 @@ function LayoutRightPanelGate({
 /**
  * Blueprint sidebar inner — reads layoutMode from LayoutModeProvider context to supply
  * theme-specific sections when in Theme mode. Must render inside <LayoutModeProvider>.
+ * Also syncs sidebar section state per mode via context.
  */
 function BlueprintSidebarInner({
   activeTab,
@@ -162,6 +163,27 @@ function BlueprintSidebarInner({
 }) {
   const layoutModeCtx = useOptionalLayoutMode();
   const isThemeMode = activeTab === 'Layout' && layoutModeCtx?.layoutMode === 'theme';
+
+  // Sync section state to context per mode
+  useEffect(() => {
+    if (activeTab !== 'Layout') return;
+    if (isThemeMode) {
+      layoutModeCtx?.setThemeModeSection(activeSection);
+    } else {
+      layoutModeCtx?.setLayoutModeSection(activeSection);
+    }
+  }, [activeTab, activeSection, isThemeMode, layoutModeCtx]);
+
+  // Restore section from context when switching modes
+  useEffect(() => {
+    if (activeTab !== 'Layout') return;
+    const contextSection = isThemeMode
+      ? layoutModeCtx?.themeModeSection
+      : layoutModeCtx?.layoutModeSection;
+    if (contextSection && contextSection !== activeSection) {
+      onSectionChange(contextSection);
+    }
+  }, [activeTab, isThemeMode, layoutModeCtx?.layoutModeSection, layoutModeCtx?.themeModeSection]);
 
   const visibleSections = isThemeMode
     ? THEME_MODE_BLUEPRINT_SECTIONS
@@ -295,6 +317,13 @@ export function Shell({ colorScheme }: ShellProps = {}) {
       }
     }
   })();
+
+  // Reset right panel visibility when entering Layout tab
+  useEffect(() => {
+    if (activeTab === 'Layout') {
+      setShowRightPanel(true);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (!compactLayout || activeTab !== 'Editor') return;

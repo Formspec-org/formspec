@@ -1,6 +1,7 @@
 /** @filedesc Layout canvas wrapper for layout nodes — applies real CSS layout per container type (Grid, Stack, Card, Panel, Collapsible, Accordion). */
 import React, { useState, useRef, type ReactNode } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/react';
+import { hasTier3Content, type ContainerLayoutProps } from '@formspec-org/studio-core';
 import { InlineToolbar } from './InlineToolbar';
 import { PropertyPopover } from './PropertyPopover';
 import { useLayoutDragActive } from './LayoutDragContext';
@@ -63,8 +64,8 @@ const ELEVATION_SHADOW: Record<number, string> = {
   3: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
 };
 
-function buildContentStyle(props: LayoutContainerProps): React.CSSProperties {
-  const { component, columns, gap, direction, wrap, align, elevation, nodeStyle } = props;
+function buildContentStyle(component: string, layoutProps: ContainerLayoutProps): React.CSSProperties {
+  const { columns, gap, direction, wrap, align, elevation, nodeStyle } = layoutProps;
 
   switch (component) {
     case 'Grid':
@@ -187,7 +188,9 @@ export function LayoutContainer(props: LayoutContainerProps) {
   });
 
   const isCollapsible = component === 'Collapsible' || component === 'Accordion';
-  const contentStyle = buildContentStyle(props);
+  const contentStyle = buildContentStyle(component, {
+    columns, gap, direction, wrap, align, elevation, width, position, title, defaultOpen, nodeStyle,
+  });
   const containerStyle: React.CSSProperties = component === 'Panel' && width ? { width } : {};
   const displayTitle = title ?? undefined;
 
@@ -197,12 +200,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
 
   // Determine if any Tier 3 properties are set (for dot indicator on "...")
   const resolvedNodeProps = nodeProps ?? {};
-  const hasPopoverContent = !!(
-    (resolvedNodeProps.accessibility as Record<string, unknown> | undefined)?.description ||
-    (resolvedNodeProps.accessibility as Record<string, unknown> | undefined)?.role ||
-    resolvedNodeProps.cssClass ||
-    Object.keys((resolvedNodeProps.style as Record<string, unknown>) ?? {}).length > 0
-  );
+  const hasPopoverContent = hasTier3Content(resolvedNodeProps);
 
   const showToolbar = selected && !!onSetProp && !!selectionKey;
 
@@ -277,6 +275,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
           anchorRef={overflowButtonRef}
           nodeProps={resolvedNodeProps}
           isContainer={true}
+          itemKey={bind ? bind.key : undefined}
           onSetProp={onSetProp!}
           onSetStyle={onSetStyle ?? (() => {})}
           onStyleRemove={onStyleRemove ?? (() => {})}

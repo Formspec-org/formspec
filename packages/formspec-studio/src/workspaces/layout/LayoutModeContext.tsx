@@ -14,6 +14,11 @@ interface LayoutModeState {
   hasDirtyPopover: boolean;
   registerDirtyPopover: (popoverId: string) => void;
   clearDirtyPopover: (popoverId: string) => void;
+  // Per-mode sidebar section state
+  layoutModeSection: string | null;
+  setLayoutModeSection: (section: string | null) => void;
+  themeModeSection: string | null;
+  setThemeModeSection: (section: string | null) => void;
 }
 
 const LayoutModeContext = createContext<LayoutModeState | null>(null);
@@ -23,6 +28,8 @@ export function LayoutModeProvider({ children }: { children: ReactNode }) {
   const [themeSelectedKey, setThemeSelectedKey] = useState<string | null>(null);
   const [themePopoverPosition, setThemePopoverPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [dirtyPopovers, setDirtyPopovers] = useState<Set<string>>(new Set());
+  const [layoutModeSection, setLayoutModeSection] = useState<string | null>(null);
+  const [themeModeSection, setThemeModeSection] = useState<string | null>(null);
 
   const setLayoutMode = useCallback((mode: LayoutMode) => setLayoutModeSt(mode), []);
 
@@ -51,8 +58,12 @@ export function LayoutModeProvider({ children }: { children: ReactNode }) {
       hasDirtyPopover,
       registerDirtyPopover,
       clearDirtyPopover,
+      layoutModeSection,
+      setLayoutModeSection,
+      themeModeSection,
+      setThemeModeSection,
     }),
-    [layoutMode, setLayoutMode, themeSelectedKey, themePopoverPosition, hasDirtyPopover, registerDirtyPopover, clearDirtyPopover],
+    [layoutMode, setLayoutMode, themeSelectedKey, themePopoverPosition, hasDirtyPopover, registerDirtyPopover, clearDirtyPopover, layoutModeSection, themeModeSection],
   );
   return <LayoutModeContext.Provider value={value}>{children}</LayoutModeContext.Provider>;
 }

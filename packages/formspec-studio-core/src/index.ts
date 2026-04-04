@@ -203,6 +203,7 @@ export type {
 
 // ── Layout spatial + theme helpers ────────────────────────────────
 export {
+  hasTier3Content,
   setColumnSpan,
   setRowSpan,
   setPadding,
@@ -211,7 +212,7 @@ export {
   setThemeOverride,
   clearThemeOverride,
 } from './layout-helpers.js';
-export type { NodeRef, PropertySource } from './layout-helpers.js';
+export type { CompNode, ContainerLayoutProps, EditableThemeProperty, NodeRef, PropertySource } from './layout-helpers.js';
 
 // ── Layout UI business logic helpers (extracted from Studio UI) ──────
 export {

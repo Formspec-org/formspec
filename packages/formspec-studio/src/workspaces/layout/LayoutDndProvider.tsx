@@ -1,6 +1,6 @@
 /** @filedesc DnD wrapper for the Layout canvas — reorders component tree nodes. */
 import { useState, useCallback, type ReactNode } from 'react';
-import { DragDropProvider } from '@dnd-kit/react';
+import { DragDropProvider, type DragStartEvent, type DragEndEvent as DnDKitDragEndEvent } from '@dnd-kit/react';
 import { LayoutDragContext } from './LayoutDragContext';
 import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { useProject } from '../../state/useProject';
@@ -16,6 +16,10 @@ interface LayoutDndProviderProps {
 
 type NodeRef = { bind?: string; nodeId?: string };
 type UnassignedItemData = { key: string; label: string; itemType: 'field' | 'group' | 'display' };
+
+function isUnassignedItemData(data: unknown): data is UnassignedItemData {
+  return !!data && typeof data === 'object' && 'key' in data && 'label' in data && 'itemType' in data;
+}
 
 /**
  * Pure handler: place a tray item onto the canvas via project.addItemToLayout.
@@ -99,9 +103,9 @@ export function handleDragEnd(
   const sourceData = event.source?.data ?? {};
 
   // Tray-to-canvas: unassigned item dragged onto the tree
-  if (sourceData.type === 'unassigned-item') {
-    handleTrayDrop(project, sourceData as unknown as UnassignedItemData, activePageId);
-    selectFn(sourceData.key as string, sourceData.itemType as string, { tab: LAYOUT_TAB });
+  if (sourceData.type === 'unassigned-item' && isUnassignedItemData(sourceData)) {
+    handleTrayDrop(project, sourceData, activePageId);
+    selectFn(sourceData.key, sourceData.itemType, { tab: LAYOUT_TAB });
     return;
   }
 
@@ -148,13 +152,13 @@ export function LayoutDndProvider({ children, activePageId = null }: LayoutDndPr
   const { select } = useSelection();
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const onDragStart = useCallback((event: any) => {
+  const onDragStart = useCallback((event: DragStartEvent) => {
     const sourceId = String(event.operation?.source?.id ?? '');
     if (!sourceId) return;
     setActiveId(sourceId);
   }, []);
 
-  const onDragEnd = useCallback((event: any) => {
+  const onDragEnd = useCallback((event: DnDKitDragEndEvent) => {
     setActiveId(null);
     const source = event.operation?.source;
     const target = event.operation?.target;

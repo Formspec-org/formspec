@@ -4,8 +4,10 @@ import {
   getPropertySources,
   getEditableThemeProperties,
   type PropertySource,
+  type EditableThemeProperty,
 } from '@formspec-org/studio-core';
 import type { Project } from '@formspec-org/studio-core';
+import { DirtyGuardConfirm } from './DirtyGuardConfirm';
 
 export interface ThemeOverridePopoverProps {
   open: boolean;
@@ -16,37 +18,6 @@ export interface ThemeOverridePopoverProps {
   onClose: () => void;
   onSetOverride: (itemKey: string, prop: string, value: string) => void;
   onClearOverride: (itemKey: string, prop: string) => void;
-}
-
-// ── DirtyGuardConfirm (same pattern as PropertyPopover) ──────────────────────
-
-function DirtyGuardConfirm({ onDiscard, onCancel }: { onDiscard: () => void; onCancel: () => void }) {
-  return (
-    <div
-      data-testid="dirty-guard-confirm"
-      className="absolute inset-x-0 bottom-0 rounded-b border-t border-border bg-surface p-3 shadow-lg"
-    >
-      <p className="text-[12px] font-ui text-ink mb-2">Discard unsaved changes?</p>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          data-testid="dirty-guard-discard"
-          onClick={onDiscard}
-          className="rounded-full border border-error bg-surface px-3 py-1 text-[12px] font-semibold text-error hover:bg-error/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/70"
-        >
-          Discard
-        </button>
-        <button
-          type="button"
-          data-testid="dirty-guard-cancel"
-          onClick={onCancel}
-          className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
-        >
-          Keep editing
-        </button>
-      </div>
-    </div>
-  );
 }
 
 // ── Cascade source badge ──────────────────────────────────────────────────────
@@ -70,14 +41,15 @@ function SourceBadge({ source, detail, prop }: { source: PropertySource['source'
 // ── Per-property override row ─────────────────────────────────────────────────
 
 interface OverrideRowProps {
-  prop: string;
+  propInfo: EditableThemeProperty;
   sources: PropertySource[];
   onCommit: (prop: string, value: string) => void;
   onClear: (prop: string) => void;
   onDirtyChange: (id: string, isDirty: boolean) => void;
 }
 
-function OverrideRow({ prop, sources, onCommit, onClear, onDirtyChange }: OverrideRowProps) {
+function OverrideRow({ propInfo, sources, onCommit, onClear, onDirtyChange }: OverrideRowProps) {
+  const prop = propInfo.prop;
   const hasOverride = sources.some((s) => s.source === 'item-override');
   const overrideSource = sources.find((s) => s.source === 'item-override');
   const initialValue = typeof overrideSource?.value === 'string' ? overrideSource.value : '';
@@ -86,6 +58,16 @@ function OverrideRow({ prop, sources, onCommit, onClear, onDirtyChange }: Overri
   useEffect(() => {
     setDraft(initialValue);
   }, [initialValue]);
+
+  const handleChange = (value: string) => {
+    setDraft(value);
+    onDirtyChange(`override-input-${prop}`, value !== initialValue);
+  };
+
+  const handleBlur = () => {
+    onDirtyChange(`override-input-${prop}`, false);
+    onCommit(prop, draft.trim());
+  };
 
   return (
     <div data-testid={`theme-prop-${prop}`} className="space-y-1.5">
@@ -98,23 +80,33 @@ function OverrideRow({ prop, sources, onCommit, onClear, onDirtyChange }: Overri
         </div>
       </div>
       <div className="flex items-center gap-1.5">
-        <input
-          type="text"
-          data-testid={`override-input-${prop}`}
-          aria-label={prop}
-          value={draft}
-          placeholder="Override value…"
-          onChange={(e) => {
-            setDraft(e.currentTarget.value);
-            onDirtyChange(`override-input-${prop}`, e.currentTarget.value !== initialValue);
-          }}
-          onBlur={(e) => {
-            onDirtyChange(`override-input-${prop}`, false);
-            onCommit(prop, e.currentTarget.value.trim());
-          }}
-          onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
-          className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[12px] font-mono text-ink outline-none placeholder:text-muted/40 focus:border-accent transition-colors"
-        />
+        {propInfo.type === 'enum' && propInfo.options ? (
+          <select
+            data-testid={`override-select-${prop}`}
+            aria-label={prop}
+            value={draft}
+            onChange={(e) => handleChange(e.currentTarget.value)}
+            onBlur={handleBlur}
+            className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[12px] font-mono text-ink outline-none focus:border-accent transition-colors"
+          >
+            <option value="">—</option>
+            {propInfo.options.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type="text"
+            data-testid={`override-input-${prop}`}
+            aria-label={prop}
+            value={draft}
+            placeholder={propInfo.type === 'object' ? 'Object…' : 'Override value…'}
+            onChange={(e) => handleChange(e.currentTarget.value)}
+            onBlur={handleBlur}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
+            className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[12px] font-mono text-ink outline-none placeholder:text-muted/40 focus:border-accent transition-colors"
+          />
+        )}
         {hasOverride && (
           <button
             type="button"
@@ -172,6 +164,12 @@ export function ThemeOverridePopover({
 
   const props = getEditableThemeProperties(project, itemKey);
 
+  // Calculate clamped position to prevent viewport overflow
+  const popoverWidth = 320; // w-80 = 320px
+  const popoverHeight = 480; // maxHeight: 480px
+  const clampedLeft = Math.min(position.x, (typeof window !== 'undefined' ? window.innerWidth : Infinity) - popoverWidth);
+  const clampedTop = Math.min(position.y, (typeof window !== 'undefined' ? window.innerHeight : Infinity) - popoverHeight);
+
   return (
     <div
       data-testid="theme-override-popover"
@@ -179,7 +177,11 @@ export function ThemeOverridePopover({
       aria-label={`Theme overrides for ${itemKey}`}
       tabIndex={-1}
       className="fixed z-50 w-80 rounded border border-border bg-surface shadow-lg flex flex-col overflow-hidden"
-      style={{ left: position.x, top: position.y }}
+      style={{
+        left: Math.max(0, clampedLeft),
+        top: Math.max(0, clampedTop),
+        maxHeight: 'min(480px, calc(100vh - 32px))',
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface shrink-0">
@@ -199,12 +201,12 @@ export function ThemeOverridePopover({
 
       {/* Property rows */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
-        {props.map((prop) => {
-          const sources = getPropertySources(project, itemKey, prop);
+        {props.map((propInfo) => {
+          const sources = getPropertySources(project, itemKey, propInfo.prop);
           return (
             <OverrideRow
-              key={prop}
-              prop={prop}
+              key={propInfo.prop}
+              propInfo={propInfo}
               sources={sources}
               onCommit={(p, v) => onSetOverride(itemKey, p, v)}
               onClear={(p) => onClearOverride(itemKey, p)}
