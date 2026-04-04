@@ -36,6 +36,8 @@ interface FELEditorProps {
   placeholder?: string;
   className?: string;
   autoFocus?: boolean;
+  /** Type of expression being edited — determines if rendering-only callout should appear. */
+  expressionType?: 'when' | 'calculate' | 'default';
 }
 
 type AutocompleteOption =
@@ -43,7 +45,7 @@ type AutocompleteOption =
   | { kind: 'path'; path: string; label: string; dataType?: string }
   | { kind: 'function'; name: string; label: string; signature?: string; description?: string; category?: string };
 
-export function FELEditor({ value, onSave, onCancel, placeholder, className, autoFocus }: FELEditorProps) {
+export function FELEditor({ value, onSave, onCancel, placeholder, className, autoFocus, expressionType }: FELEditorProps) {
   const definition = useOptionalDefinition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState(value);
@@ -303,6 +305,14 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
       </div>
 
       <div className={`flex-1 flex flex-col min-w-0`}>
+        {expressionType === 'when' && (
+          <div
+            data-testid="when-rendering-callout"
+            className="mb-2 px-2 py-1.5 bg-info/10 border border-info/20 rounded-[4px] text-[11px] text-info"
+          >
+            <strong>Rendering visibility only.</strong> This condition controls whether the field is shown. Use the <strong>"relevant"</strong> binding in the Editor workspace to include/exclude data.
+          </div>
+        )}
         <div className="relative">
           {/* Highlighting Overlay */}
           <div 

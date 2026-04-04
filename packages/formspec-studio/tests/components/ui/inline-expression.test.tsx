@@ -108,7 +108,7 @@ describe('InlineExpression', () => {
     // - This condition controls rendering visibility only (NOT data filtering)
     // - Use "relevant" binding in Editor workspace for data inclusion rules
     // Currently this callout does NOT exist, so this test will FAIL.
-    render(<InlineExpression value="" onSave={vi.fn()} placeholder="When..." />);
+    render(<InlineExpression value="" onSave={vi.fn()} placeholder="When..." expressionType="when" />);
     fireEvent.click(screen.getByText('When...'));
     // After clicking to enter edit mode, the FELEditor should render with a callout
     // Look for a callout element with text about "relevant" or "rendering visibility"

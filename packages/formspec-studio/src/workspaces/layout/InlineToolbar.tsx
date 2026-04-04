@@ -468,6 +468,7 @@ export function InlineToolbar(props: InlineToolbarProps) {
           value={componentWhen}
           onSave={(val) => onSetProp('when', val)}
           placeholder="Always visible"
+          expressionType="when"
         />
       </span>
 

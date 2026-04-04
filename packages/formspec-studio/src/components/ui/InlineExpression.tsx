@@ -11,6 +11,8 @@ interface InlineExpressionProps {
   className?: string;
   /** Start in edit mode immediately (e.g. when the bind was just created). */
   autoEdit?: boolean;
+  /** Type of expression being edited — determines if rendering-only callout should appear. */
+  expressionType?: 'when' | 'calculate' | 'default';
 }
 
 function EditPencilIcon({ className }: { className?: string }) {
@@ -49,7 +51,7 @@ export function HighlightedExpression({ expression }: { expression: string }) {
   );
 }
 
-export function InlineExpression({ value, onSave, placeholder, className, autoEdit }: InlineExpressionProps) {
+export function InlineExpression({ value, onSave, placeholder, className, autoEdit, expressionType }: InlineExpressionProps) {
   const [editing, setEditing] = useState(Boolean(autoEdit));
   const [draft, setDraft] = useState(value);
 
@@ -82,6 +84,7 @@ export function InlineExpression({ value, onSave, placeholder, className, autoEd
           placeholder={placeholder}
           className="flex-1"
           autoFocus
+          expressionType={expressionType}
         />
         <FELReferencePopup />
       </div>
