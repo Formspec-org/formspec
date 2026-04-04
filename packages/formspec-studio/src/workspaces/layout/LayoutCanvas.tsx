@@ -91,11 +91,12 @@ export function LayoutCanvas() {
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [localLayoutMode, setLocalLayoutMode] = useState<LayoutMode>('layout');
-  // Per-mode selection: layout mode tracks its own key, theme mode tracks its own
-  const [themeSelectedKey, setThemeSelectedKey] = useState<string | null>(null);
-  const [themePopoverPosition, setThemePopoverPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const layoutModeCtx = useOptionalLayoutMode();
   const layoutMode = layoutModeCtx?.layoutMode ?? localLayoutMode;
+  const themeSelectedKey = layoutModeCtx?.themeSelectedKey ?? null;
+  const setThemeSelectedKey = layoutModeCtx?.setThemeSelectedKey ?? (() => {});
+  const themePopoverPosition = layoutModeCtx?.themePopoverPosition ?? { x: 0, y: 0 };
+  const setThemePopoverPosition = layoutModeCtx?.setThemePopoverPosition ?? (() => {});
 
   const items = definition?.items ?? [];
   const tree = component?.tree as CompNode | undefined;
@@ -289,11 +290,24 @@ export function LayoutCanvas() {
       // Transfer canvas selection to theme mode
       const canvasKey = selectedKeyForTab('layout');
       setThemeSelectedKey(canvasKey);
+
+      // Update popover position based on selected element's DOM position
+      if (canvasKey) {
+        const element = document.querySelector(`[data-bind="${CSS.escape(canvasKey)}"]`);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          setThemePopoverPosition({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height,
+          });
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
     }
     // When switching back to layout, existing layout tab selection is preserved
     setLocalLayoutMode(mode);
     layoutModeCtx?.setLayoutMode(mode);
-  }, [selectedKeyForTab, layoutModeCtx]);
+  }, [selectedKeyForTab, layoutModeCtx, setThemeSelectedKey, setThemePopoverPosition]);
 
   const handleThemeFieldSelect = useCallback((itemKey: string, position: { x: number; y: number }) => {
     setThemeSelectedKey(itemKey);

@@ -5,14 +5,55 @@ import { type LayoutMode } from './LayoutThemeToggle';
 interface LayoutModeState {
   layoutMode: LayoutMode;
   setLayoutMode: (mode: LayoutMode) => void;
+  // Theme mode state
+  themeSelectedKey: string | null;
+  setThemeSelectedKey: (key: string | null) => void;
+  themePopoverPosition: { x: number; y: number };
+  setThemePopoverPosition: (position: { x: number; y: number }) => void;
+  // Dirty state tracking for popovers
+  hasDirtyPopover: boolean;
+  registerDirtyPopover: (popoverId: string) => void;
+  clearDirtyPopover: (popoverId: string) => void;
 }
 
 const LayoutModeContext = createContext<LayoutModeState | null>(null);
 
 export function LayoutModeProvider({ children }: { children: ReactNode }) {
   const [layoutMode, setLayoutModeSt] = useState<LayoutMode>('layout');
+  const [themeSelectedKey, setThemeSelectedKey] = useState<string | null>(null);
+  const [themePopoverPosition, setThemePopoverPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [dirtyPopovers, setDirtyPopovers] = useState<Set<string>>(new Set());
+
   const setLayoutMode = useCallback((mode: LayoutMode) => setLayoutModeSt(mode), []);
-  const value = useMemo(() => ({ layoutMode, setLayoutMode }), [layoutMode, setLayoutMode]);
+
+  const registerDirtyPopover = useCallback((popoverId: string) => {
+    setDirtyPopovers((prev) => new Set(prev).add(popoverId));
+  }, []);
+
+  const clearDirtyPopover = useCallback((popoverId: string) => {
+    setDirtyPopovers((prev) => {
+      const next = new Set(prev);
+      next.delete(popoverId);
+      return next;
+    });
+  }, []);
+
+  const hasDirtyPopover = dirtyPopovers.size > 0;
+
+  const value = useMemo(
+    () => ({
+      layoutMode,
+      setLayoutMode,
+      themeSelectedKey,
+      setThemeSelectedKey,
+      themePopoverPosition,
+      setThemePopoverPosition,
+      hasDirtyPopover,
+      registerDirtyPopover,
+      clearDirtyPopover,
+    }),
+    [layoutMode, setLayoutMode, themeSelectedKey, themePopoverPosition, hasDirtyPopover, registerDirtyPopover, clearDirtyPopover],
+  );
   return <LayoutModeContext.Provider value={value}>{children}</LayoutModeContext.Provider>;
 }
 
